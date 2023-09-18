@@ -2,6 +2,14 @@
 name = "hornvale"
 version = "0.1.0"
 edition = "2021"
+authors = ["Nathan Douglas <github@darkdell.net>"]
+license = "Unlicense"
+homepage = "https://hornvale.github.io/hornvale/"
+repository = "https://github.com/hornvale/hornvale/"
+documentation = "https://hornvale.github.io/hornvale/"
+readme = "README.md"
+keywords = ["hornvale"]
+default-run = "hornvale"
 
 [lib]
 name = "hornvale"
