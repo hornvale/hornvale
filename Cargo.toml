@@ -1,0 +1,14 @@
+[package]
+name = "hornvale"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "hornvale"
+path = "src/lib.rs"
+
+[[bin]]
+name = "hornvale"
+path = "src/main.rs"
+
+[dependencies]
