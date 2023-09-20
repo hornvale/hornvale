@@ -1,1 +1,39 @@
+#![allow(unused_macros)]
 
+#[allow(unused_imports)]
+#[macro_use]
+extern crate anyhow;
+#[macro_use]
+extern crate derivative;
+#[macro_use]
+extern crate derive_more;
+#[macro_use]
+extern crate log;
+extern crate pretty_env_logger;
+extern crate specs;
+#[macro_use]
+extern crate specs_derive;
+#[macro_use]
+extern crate thiserror;
+
+pub use log::*;
+pub use pretty_env_logger::env_logger::builder as pretty_env_logger_builder;
+pub use pretty_env_logger::init as init_pretty_env_logger;
+
+pub mod ecs;
+pub mod game;
+
+#[cfg(test)]
+pub mod test {
+
+  use pretty_env_logger::env_logger::builder;
+  use std::env::set_var;
+
+  #[allow(unused_imports)]
+  use super::*;
+
+  pub fn init() {
+    let _ = builder().is_test(true).try_init();
+    set_var("RUST_BACKTRACE", "1");
+  }
+}
