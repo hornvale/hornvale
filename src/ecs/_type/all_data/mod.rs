@@ -1,9 +1,7 @@
 use specs::prelude::*;
 use specs::shrev::EventChannel;
 
-use crate::ecs::component::*;
 use crate::ecs::event::*;
-use crate::ecs::resource::*;
 
 /// The `AllData` type.
 ///
@@ -14,4 +12,6 @@ use crate::ecs::resource::*;
 #[derive(SystemData)]
 pub struct AllData<'data> {
   pub entities: Entities<'data>,
+  pub input_event_channel: Read<'data, EventChannel<InputEvent>>,
+  pub output_event_channel: Write<'data, EventChannel<OutputEvent>>,
 }

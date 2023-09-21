@@ -1,9 +1,8 @@
-use rustyline_async::{Readline, ReadlineEvent, SharedWriter};
+use rustyline_async::{ReadlineEvent, SharedWriter};
 use specs::prelude::*;
 use specs::shrev::EventChannel;
 use std::io::Write;
 use std::time::Duration;
-use tokio::time;
 
 use crate::ecs::component::register_components;
 use crate::ecs::event::insert_event_channels;
@@ -94,7 +93,6 @@ impl Game {
           self.tick_dispatcher.dispatch(&self.ecs);
           tick += 1;
           if tick % 10 == 0 {
-            writeln!(stdout, "You entered nothing!")?;
             self.deca_tick_dispatcher.dispatch(&self.ecs);
             if tick % 100 == 0 {
               self.hecto_tick_dispatcher.dispatch(&self.ecs);
