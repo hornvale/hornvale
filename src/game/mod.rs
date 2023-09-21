@@ -5,10 +5,10 @@ use std::io::Write;
 use std::time::Duration;
 
 use crate::ecs::component::register_components;
+use crate::ecs::dispatcher::*;
 use crate::ecs::event::insert_event_channels;
 use crate::ecs::event::InputEvent;
 use crate::ecs::resource::*;
-use crate::ecs::system::*;
 
 pub mod _constant;
 use _constant::*;
@@ -131,7 +131,6 @@ impl Game {
         },
       }
     }
-    // Ok(())
   }
 }
 
