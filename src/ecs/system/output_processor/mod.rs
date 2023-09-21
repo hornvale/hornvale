@@ -1,12 +1,15 @@
-use crate::ecs::event::OutputEvent;
-use crate::ecs::resource::*;
-use crate::formatting::format_string;
+use rustyline_async::SharedWriter;
 use specs::prelude::*;
 use specs::shrev::{EventChannel, ReaderId};
 use std::io::Write as _;
 
+use crate::ecs::event::OutputEvent;
+use crate::ecs::resource::*;
+use crate::formatting::format_string;
+
 pub struct OutputProcessor {
   pub reader_id: ReaderId<OutputEvent>,
+  pub output: SharedWriter,
 }
 
 impl OutputProcessor {}
@@ -31,7 +34,7 @@ impl<'a> System<'a> for OutputProcessor {
     if event_count == 0 {
       return;
     }
-    let mut output = clone_output!(data);
+    let output = &mut self.output;
     info!("Processing {} output event(s)...", event_count);
     for event in output_events.iter() {
       let string = format_string(event.string.trim());

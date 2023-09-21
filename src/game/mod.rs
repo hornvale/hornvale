@@ -71,7 +71,7 @@ impl Game {
     // If we need to print without sending it through the whole thing.
     let mut stdout = self.output.clone();
     // It'd be interesting to store this in a resource and possibly modify it
-    // on the fly.  Very FRP.  Much signal.
+    // on the fly. Very FRP. Much signal.
     let mut tick_timer = tokio::time::interval(Duration::from_millis(TICK_INTERVAL));
     // A local tick counter; just for performing less frequent operations.
     let mut tick: u64 = 0;

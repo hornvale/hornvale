@@ -2,6 +2,7 @@ use specs::prelude::*;
 use specs::shrev::EventChannel;
 
 use crate::ecs::event::*;
+use crate::ecs::resource::*;
 
 pub mod input_processor;
 pub use input_processor::InputProcessor;
@@ -18,9 +19,13 @@ pub fn get_tick_dispatcher(_ecs: &mut World) -> Dispatcher<'static, 'static> {
 
 /// Every ten ticks.
 pub fn get_deca_tick_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static> {
+  let output = {
+    let output_resource = ecs.read_resource::<OutputResource>();
+    output_resource.0.as_ref().unwrap().clone()
+  };
   let output_processor_system = {
     let reader_id = ecs.fetch_mut::<EventChannel<OutputEvent>>().register_reader();
-    OutputProcessor { reader_id }
+    OutputProcessor { reader_id, output }
   };
   let input_processor_system = {
     let reader_id = ecs.fetch_mut::<EventChannel<InputEvent>>().register_reader();
