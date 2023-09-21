@@ -120,11 +120,9 @@ impl Game {
                 input: line.to_owned(),
               });
           },
-          Ok(ReadlineEvent::Eof) => {
-            writeln!(stdout, "<EOF>")?;
-          },
+          Ok(ReadlineEvent::Eof) => {},
           Ok(ReadlineEvent::Interrupted) => {
-            writeln!(stdout, "^C")?;
+            writeln!(stdout, "Just type `quit` to quit, or `help` for help.")?;
           },
           Err(error) => {
             writeln!(stdout, "Error: {error:?}")?;

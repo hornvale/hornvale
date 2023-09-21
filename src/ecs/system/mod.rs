@@ -19,11 +19,11 @@ pub fn get_tick_dispatcher(_ecs: &mut World) -> Dispatcher<'static, 'static> {
 
 /// Every ten ticks.
 pub fn get_deca_tick_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static> {
-  let output = {
-    let output_resource = ecs.read_resource::<OutputResource>();
-    output_resource.0.as_ref().unwrap().clone()
-  };
   let output_processor_system = {
+    let output = {
+      let output_resource = ecs.read_resource::<OutputResource>();
+      output_resource.0.as_ref().unwrap().clone()
+    };
     let reader_id = ecs.fetch_mut::<EventChannel<OutputEvent>>().register_reader();
     OutputProcessor { reader_id, output }
   };
