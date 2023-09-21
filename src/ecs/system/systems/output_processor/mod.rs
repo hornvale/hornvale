@@ -5,7 +5,7 @@ use std::io::Write as _;
 
 use crate::ecs::event::OutputEvent;
 use crate::ecs::resource::*;
-use crate::formatting::format_string;
+use crate::output::formatting::format_string;
 
 pub struct OutputProcessor {
   pub reader_id: ReaderId<OutputEvent>,

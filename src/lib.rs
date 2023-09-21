@@ -40,8 +40,9 @@ pub use _macro::*;
 // Remaining modules.
 pub mod command;
 pub mod ecs;
-pub mod formatting;
 pub mod game;
+pub mod input;
+pub mod output;
 
 #[cfg(test)]
 pub mod test {
