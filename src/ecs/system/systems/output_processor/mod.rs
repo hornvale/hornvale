@@ -37,7 +37,7 @@ impl<'a> System<'a> for OutputProcessor {
     let output = &mut self.output;
     info!("Processing {} output event(s)...", event_count);
     for event in output_events.iter() {
-      let string = format_string(event.string.trim());
+      let string = format_string(event.output.trim());
       writeln!(output, "{}\n", string).unwrap();
     }
   }

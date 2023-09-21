@@ -1,6 +1,7 @@
 use specs::prelude::*;
 use specs::shrev::{EventChannel, ReaderId};
 
+use crate::command::Command;
 use crate::ecs::event::*;
 
 pub struct InputProcessor {
@@ -13,6 +14,7 @@ impl InputProcessor {}
 pub struct Data<'a> {
   pub entities: Entities<'a>,
   pub input_event_channel: Read<'a, EventChannel<InputEvent>>,
+  pub command_event_channel: Write<'a, EventChannel<CommandEvent>>,
   pub output_event_channel: Write<'a, EventChannel<OutputEvent>>,
 }
 
@@ -32,8 +34,8 @@ impl<'a> System<'a> for InputProcessor {
     }
     info!("Processing {} input event(s)...", event_count);
     for event in input_events.iter() {
-      let input_string = &event.input;
-      write_output_event!(data, input_string);
+      let _input_string = &event.input;
+      write_command_event!(data, Command {});
     }
   }
 }

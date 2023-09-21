@@ -13,5 +13,6 @@ use crate::ecs::event::*;
 pub struct AllData<'data> {
   pub entities: Entities<'data>,
   pub input_event_channel: Read<'data, EventChannel<InputEvent>>,
+  pub command_event_channel: Read<'data, EventChannel<CommandEvent>>,
   pub output_event_channel: Write<'data, EventChannel<OutputEvent>>,
 }

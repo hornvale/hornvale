@@ -38,6 +38,7 @@ pub mod _macro;
 pub use _macro::*;
 
 // Remaining modules.
+pub mod command;
 pub mod ecs;
 pub mod formatting;
 pub mod game;

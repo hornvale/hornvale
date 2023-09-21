@@ -27,9 +27,14 @@ pub fn get_deca_tick_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static>
     let reader_id = ecs.fetch_mut::<EventChannel<InputEvent>>().register_reader();
     InputProcessor { reader_id }
   };
+  let command_processor_system = {
+    let reader_id = ecs.fetch_mut::<EventChannel<CommandEvent>>().register_reader();
+    CommandProcessor { reader_id }
+  };
   let dispatcher = DispatcherBuilder::new()
     .with(output_processor_system, "output_processor", &[])
     .with(input_processor_system, "input_processor", &[])
+    .with(command_processor_system, "command_processor", &[])
     .build();
   dispatcher
 }
