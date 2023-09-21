@@ -4,10 +4,8 @@ use specs::shrev::EventChannel;
 use crate::ecs::event::*;
 use crate::ecs::resource::*;
 
-pub mod input_processor;
-pub use input_processor::InputProcessor;
-pub mod output_processor;
-pub use output_processor::OutputProcessor;
+pub mod systems;
+use systems::*;
 
 pub fn run_initial_systems(_ecs: &mut World) {}
 

@@ -1,10 +1,8 @@
 use rustyline_async::Readline;
 use specs::prelude::*;
 
-pub mod input;
-pub use input::Input as InputResource;
-pub mod output;
-pub use output::Output as OutputResource;
+pub mod resources;
+pub use resources::*;
 
 pub fn insert_resources(ecs: &mut World, _seed: &str) {
   let (input, stdout) = Readline::new("> ".to_owned()).unwrap();

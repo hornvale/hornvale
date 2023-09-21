@@ -1,6 +1,8 @@
 use specs::prelude::*;
 use specs::world::Index;
 
+use crate::ecs::entity::ids::*;
+
 /// The `EntityId` type.
 ///
 /// We do this so that we can perform some compile-time type-checking with IDs.
@@ -9,3 +11,9 @@ use specs::world::Index;
 )]
 #[repr(transparent)]
 pub struct Id(pub Index);
+
+impl From<ObjectId> for Id {
+  fn from(id: ObjectId) -> Self {
+    Self(id.0)
+  }
+}

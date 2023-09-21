@@ -1,10 +1,8 @@
 use specs::prelude::*;
 use specs::shrev::EventChannel;
 
-pub mod input;
-pub use input::Input as InputEvent;
-pub mod output;
-pub use output::Output as OutputEvent;
+pub mod events;
+pub use events::*;
 
 pub fn insert_event_channels(ecs: &mut World) {
   ecs.insert(EventChannel::<InputEvent>::new());
