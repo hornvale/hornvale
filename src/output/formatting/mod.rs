@@ -86,5 +86,7 @@ pub mod test {
   pub fn test_format_string() {
     init();
     assert_eq!("innocuous string\u{1b}[0m", format_string("innocuous string"));
+    assert_eq!("\u{1b}[38;5;1mred\u{1b}[0m", format_string("<fg_ext1>red"));
+    assert_eq!("\u{1b}[48;5;1mred\u{1b}[0m", format_string("<bg_ext1>red"));
   }
 }

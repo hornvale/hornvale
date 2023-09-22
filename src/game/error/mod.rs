@@ -1,3 +1,4 @@
+use anyhow::Error as AnyhowError;
 use rustyline_async::ReadlineError;
 use std::error::Error as StdError;
 use std::io::Error as IoError;
@@ -14,4 +15,7 @@ pub enum Error {
   /// A Readline error occurred.
   #[error("a Readline error occurred ({0})")]
   ReadlineError(#[from] ReadlineError),
+  /// Any other error occurred.
+  #[error("an error occurred ({0})")]
+  AnyhowError(#[from] AnyhowError),
 }

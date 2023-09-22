@@ -13,23 +13,31 @@ impl InputProcessor {}
 
 #[derive(Derivative, SystemData)]
 #[derivative(Debug)]
-pub struct Data<'a> {
+pub struct Data<'data> {
   #[derivative(Debug = "ignore")]
-  pub entities: Entities<'a>,
+  pub entities: Entities<'data>,
   #[derivative(Debug = "ignore")]
-  pub input_event_channel: Read<'a, EventChannel<InputEvent>>,
+  pub input_event_channel: Read<'data, EventChannel<InputEvent>>,
   #[derivative(Debug = "ignore")]
-  pub command_event_channel: Write<'a, EventChannel<CommandEvent>>,
+  pub command_event_channel: Write<'data, EventChannel<CommandEvent>>,
   #[derivative(Debug = "ignore")]
-  pub output_event_channel: Write<'a, EventChannel<OutputEvent>>,
+  pub output_event_channel: Write<'data, EventChannel<OutputEvent>>,
 }
 
-impl<'a> System<'a> for InputProcessor {
-  type SystemData = Data<'a>;
+impl<'data> System<'data> for InputProcessor {
+  type SystemData = Data<'data>;
 
   /// Run system.
   fn run(&mut self, mut data: Self::SystemData) {
-    for event in data.input_event_channel.read(&mut self.reader_id) {
+    let events = data
+      .input_event_channel
+      .read(&mut self.reader_id)
+      .cloned()
+      .collect::<Vec<_>>();
+    if events.is_empty() {
+      return;
+    }
+    for event in events {
       let input_string = &event.input;
       let mut handled = false;
       for parser in &self.parsers {
@@ -40,7 +48,7 @@ impl<'a> System<'a> for InputProcessor {
         }
       }
       if !handled {
-        write_output_event!(data, format!("Unknown command: {}", input_string));
+        write_output_error!(data, format!("Unknown command: {}", input_string));
       }
     }
   }

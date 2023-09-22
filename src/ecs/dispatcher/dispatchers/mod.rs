@@ -10,13 +10,7 @@ use crate::ecs::system::*;
 pub fn run_initial_systems(_ecs: &mut World) {}
 
 /// Every tick.
-pub fn get_tick_dispatcher(_ecs: &mut World) -> Dispatcher<'static, 'static> {
-  let dispatcher = DispatcherBuilder::new().build();
-  dispatcher
-}
-
-/// Every ten ticks.
-pub fn get_deca_tick_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static> {
+pub fn get_tick_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static> {
   let output_processor_system = {
     let output = {
       let output_resource = ecs.read_resource::<OutputResource>();
@@ -40,6 +34,12 @@ pub fn get_deca_tick_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static>
     .with(input_processor_system, "input_processor", &[])
     .with(command_processor_system, "command_processor", &[])
     .build();
+  dispatcher
+}
+
+/// Every ten ticks.
+pub fn get_deca_tick_dispatcher(_ecs: &mut World) -> Dispatcher<'static, 'static> {
+  let dispatcher = DispatcherBuilder::new().build();
   dispatcher
 }
 

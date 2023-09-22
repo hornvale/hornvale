@@ -11,25 +11,26 @@ pub struct CommandProcessor {
 
 impl CommandProcessor {}
 
-impl<'a> System<'a> for CommandProcessor {
-  type SystemData = AllData<'a>;
+impl<'data> System<'data> for CommandProcessor {
+  type SystemData = AllData<'data>;
 
   /// Run the system.
   fn run(&mut self, mut data: Self::SystemData) {
-    let commands = data
+    let events = data
       .command_event_channel
       .read(&mut self.reader_id)
       .cloned()
-      .map(|event| event.command)
       .collect::<Vec<_>>();
-    for command in commands {
-      debug!("Processing next command {:?}", command);
-      {
-        let mut context = CommandContext::new(&mut data);
-        let result = command.execute(&mut context);
-        if let Err(error) = result {
-          write_output_event!(data, format!("Error: {}", error));
-        }
+    if events.is_empty() {
+      return;
+    }
+    for event in events {
+      debug!("Processing next event {:?}", event);
+      let command = event.command;
+      let mut context = CommandContext::new(&mut data);
+      let result = command.execute(&mut context);
+      if let Err(error) = result {
+        write_output_error!(data, format!("Error: {}", error));
       }
     }
   }
