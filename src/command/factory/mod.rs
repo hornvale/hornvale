@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use crate::command::NoOpCommand;
 use crate::command::_trait::Command;
 use crate::command::_type::CommandConstructor;
+use crate::command::commands::*;
 
 /// The `Factory` struct, which represents a command factory.
 #[derive(Derivative)]
@@ -40,6 +40,9 @@ impl Default for Factory {
   fn default() -> Self {
     let mut result = Self::new();
     result.register_command::<NoOpCommand>();
+    result.register_command::<LookCommand>();
+    result.register_command::<QuitCommand>();
+    result.register_command::<WaitCommand>();
     result
   }
 }

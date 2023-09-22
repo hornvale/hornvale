@@ -41,7 +41,7 @@ impl<'data> System<'data> for OutputProcessor {
     }
     for event in events {
       let string = format_string(event.output.trim());
-      writeln!(output, "{}\n", string).unwrap();
+      writeln!(output, "{}", string).unwrap();
     }
   }
 }

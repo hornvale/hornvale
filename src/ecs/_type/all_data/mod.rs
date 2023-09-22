@@ -15,6 +15,8 @@ pub struct AllData<'data> {
   #[derivative(Debug = "ignore")]
   pub entities: Entities<'data>,
   #[derivative(Debug = "ignore")]
+  pub action_event_channel: Write<'data, EventChannel<ActionEvent>>,
+  #[derivative(Debug = "ignore")]
   pub input_event_channel: Read<'data, EventChannel<InputEvent>>,
   #[derivative(Debug = "ignore")]
   pub command_event_channel: Read<'data, EventChannel<CommandEvent>>,

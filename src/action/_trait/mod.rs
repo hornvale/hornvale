@@ -1,7 +1,8 @@
 use std::fmt::Debug;
 
+use crate::action::ActionContext;
 use crate::action::ActionError;
-use crate::ecs::AllData;
+use crate::action::ActionResult;
 
 /// The `Action` trait.
 ///
@@ -12,5 +13,5 @@ pub trait Action: Debug + Send + Sync {
   ///
   /// This method returns a `Result` that indicates whether the action was
   /// executed successfully, and if so, whether it produced any output.
-  fn execute(&self, data: &mut AllData) -> Result<(), ActionError>;
+  fn execute(&self, _context: &mut ActionContext) -> Result<ActionResult, ActionError>;
 }

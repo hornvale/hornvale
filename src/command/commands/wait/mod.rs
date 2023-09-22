@@ -3,16 +3,16 @@ use crate::command::CommandContext;
 use crate::command::CommandError;
 use crate::command::CommandResult;
 
-/// The `NoOp` command struct.
+/// The `Wait` command struct.
 #[derive(Clone, Debug, Default)]
-pub struct NoOp {}
+pub struct Wait {}
 
-impl Command for NoOp {
+impl Command for Wait {
   fn get_name(&self) -> &str {
-    "no-op"
+    "wait"
   }
 
   fn execute(&self, _context: &mut CommandContext) -> Result<CommandResult, CommandError> {
-    Ok(CommandResult::SucceededQuietly)
+    Ok(CommandResult::SucceededWithOutput("Time passes...".to_string()))
   }
 }

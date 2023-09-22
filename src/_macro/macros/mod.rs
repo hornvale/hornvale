@@ -9,6 +9,10 @@ pub mod write_output_event;
 #[macro_use]
 pub mod write_output_error;
 #[macro_use]
+pub mod write_action_event;
+#[macro_use]
 pub mod write_input_event;
+#[macro_use]
+pub mod get_action_event_channel;
 #[macro_use]
 pub mod write_command_event;

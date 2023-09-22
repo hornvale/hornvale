@@ -2,6 +2,7 @@ use specs::prelude::*;
 use specs::shrev::ReaderId;
 
 use crate::command::CommandContext;
+use crate::command::CommandResult;
 use crate::ecs::event::*;
 use crate::ecs::AllData;
 
@@ -29,8 +30,25 @@ impl<'data> System<'data> for CommandProcessor {
       let command = event.command;
       let mut context = CommandContext::new(&mut data);
       let result = command.execute(&mut context);
-      if let Err(error) = result {
-        write_output_error!(data, format!("Error: {}", error));
+      match result {
+        Ok(result) => {
+          debug!("Command succeeded with result {:?}", result);
+          match result {
+            CommandResult::SucceededQuietly => {
+              write_output_event!(data, "");
+            },
+            CommandResult::SucceededWithOutput(output) => {
+              write_output_event!(data, output);
+            },
+            CommandResult::Action(action) => {
+              write_action_event!(data, action.into());
+            },
+          }
+        },
+        Err(error) => {
+          debug!("Command failed with error {:?}", error);
+          write_output_error!(data, format!("Error: {}", error));
+        },
       }
     }
   }

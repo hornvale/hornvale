@@ -1,6 +1,8 @@
-pub mod command;
-pub use command::Command as CommandEvent;
 pub mod input;
 pub use input::Input as InputEvent;
 pub mod output;
 pub use output::Output as OutputEvent;
+pub mod action;
+pub use action::Action as ActionEvent;
+pub mod command;
+pub use command::Command as CommandEvent;

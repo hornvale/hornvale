@@ -108,9 +108,6 @@ impl Game {
             // from here rather than sending them through the system, but I
             // think that's a bad architectural decision.
             let line = line.trim();
-            if line == "quit" {
-              return Ok(());
-            }
             stdin.add_history_entry(line.to_owned());
             // We could write "input" in other places.  This might be a way
             // (however unsophisticated) of building macros into the UI.
