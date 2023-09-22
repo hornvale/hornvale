@@ -9,6 +9,7 @@ fn main() {
   generate_mod_with_export("src", "action", "Action");
   generate_mod_with_export("src", "command", "Command");
   generate_mod_with_export("src/ecs", "event", "Event");
+  generate_mod_with_export("src/ecs", "system", "System");
   generate_insert_event_channels();
 }
 
@@ -16,6 +17,11 @@ fn generate_insert_event_channels() {
   let dir = Path::new("src/ecs/event/events");
   let subdirs = get_subdirs_in_dir(dir);
   let mut content = String::new();
+  writeln!(
+    content,
+    "// This file is generated (see build.rs). Please do not edit manually."
+  )
+  .expect("Failed to write to content string");
   writeln!(content, "use specs::prelude::*;").expect("Failed to write to content string");
   writeln!(content, "use specs::shrev::EventChannel;").expect("Failed to write to content string");
   writeln!(content).expect("Failed to write to content string");
@@ -36,6 +42,11 @@ fn generate_macro_mod() {
   let dir = Path::new("src/_macro/macros");
   let files = get_files_in_dir(dir);
   let mut content = String::new();
+  writeln!(
+    content,
+    "// This file is generated (see build.rs). Please do not edit manually."
+  )
+  .expect("Failed to write to content string");
   for file in &files {
     writeln!(content, "#[macro_use]\npub mod {};", file).expect("Failed to write to content string");
   }
@@ -46,6 +57,11 @@ fn generate_component_mod() {
   let dir = Path::new("src/ecs/component/components");
   let subdirs = get_subdirs_in_dir(dir);
   let mut content = String::new();
+  writeln!(
+    content,
+    "// This file is generated (see build.rs). Please do not edit manually."
+  )
+  .expect("Failed to write to content string");
   writeln!(content, "use specs::prelude::*;\n").expect("Failed to write to content string");
   for subdir in &subdirs {
     let struct_name = subdir.to_case(Case::UpperCamel);
@@ -67,6 +83,11 @@ fn generate_mod_with_export(base_dir: &str, base: &str, suffix: &str) {
   let dir = Path::new(&path);
   let subdirs = get_subdirs_in_dir(dir);
   let mut content = String::new();
+  writeln!(
+    content,
+    "// This file is generated (see build.rs). Please do not edit manually."
+  )
+  .expect("Failed to write to content string");
   for subdir in &subdirs {
     let struct_name = format!("{}{}", subdir.to_case(Case::UpperCamel), suffix);
     writeln!(content, "pub mod {};", subdir).expect("Failed to write to content string");

@@ -1,3 +1,4 @@
+// This file is generated (see build.rs). Please do not edit manually.
 use specs::prelude::*;
 
 pub mod is_an_object;

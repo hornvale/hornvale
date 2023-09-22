@@ -1,3 +1,4 @@
+// This file is generated (see build.rs). Please do not edit manually.
 #[macro_use]
 pub mod get_output_event_channel;
 #[macro_use]

@@ -17,17 +17,17 @@ pub fn get_tick_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static> {
       output_resource.0.as_ref().unwrap().clone()
     };
     let reader_id = ecs.fetch_mut::<EventChannel<OutputEvent>>().register_reader();
-    OutputProcessor { reader_id, output }
+    OutputProcessorSystem { reader_id, output }
   };
   let input_processor_system = {
     let reader_id = ecs.fetch_mut::<EventChannel<InputEvent>>().register_reader();
     let parsers: Vec<Box<dyn ParsingStrategy>> =
       vec![Box::<SimpleParsingStrategy>::default() as Box<dyn ParsingStrategy + Send + Sync>];
-    InputProcessor { reader_id, parsers }
+    InputProcessorSystem { reader_id, parsers }
   };
   let command_processor_system = {
     let reader_id = ecs.fetch_mut::<EventChannel<CommandEvent>>().register_reader();
-    CommandProcessor { reader_id }
+    CommandProcessorSystem { reader_id }
   };
   let dispatcher = DispatcherBuilder::new()
     .with(output_processor_system, "output_processor", &[])

@@ -1,3 +1,4 @@
+// This file is generated (see build.rs). Please do not edit manually.
 use specs::prelude::*;
 use specs::shrev::EventChannel;
 

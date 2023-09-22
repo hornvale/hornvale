@@ -1,3 +1,4 @@
+// This file is generated (see build.rs). Please do not edit manually.
 pub mod input;
 pub use input::Input as InputEvent;
 pub mod output;
