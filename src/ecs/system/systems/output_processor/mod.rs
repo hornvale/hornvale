@@ -14,10 +14,14 @@ pub struct OutputProcessor {
 
 impl OutputProcessor {}
 
-#[derive(SystemData)]
+#[derive(Derivative, SystemData)]
+#[derivative(Debug)]
 pub struct Data<'a> {
+  #[derivative(Debug = "ignore")]
   pub entities: Entities<'a>,
+  #[derivative(Debug = "ignore")]
   pub output_resource: Write<'a, OutputResource>,
+  #[derivative(Debug = "ignore")]
   pub output_event_channel: Read<'a, EventChannel<OutputEvent>>,
 }
 
@@ -26,17 +30,8 @@ impl<'a> System<'a> for OutputProcessor {
 
   /// Run the system.
   fn run(&mut self, data: Self::SystemData) {
-    let output_events = data
-      .output_event_channel
-      .read(&mut self.reader_id)
-      .collect::<Vec<&OutputEvent>>();
-    let event_count = output_events.len();
-    if event_count == 0 {
-      return;
-    }
     let output = &mut self.output;
-    info!("Processing {} output event(s)...", event_count);
-    for event in output_events.iter() {
+    for event in data.output_event_channel.read(&mut self.reader_id) {
       let string = format_string(event.output.trim());
       writeln!(output, "{}\n", string).unwrap();
     }

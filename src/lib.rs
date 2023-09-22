@@ -38,10 +38,10 @@ pub mod _macro;
 pub use _macro::*;
 
 // Remaining modules.
+pub mod action;
 pub mod command;
 pub mod ecs;
 pub mod game;
-pub mod input;
 pub mod output;
 
 #[cfg(test)]

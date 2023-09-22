@@ -1,20 +1,26 @@
 use specs::prelude::*;
 use specs::shrev::{EventChannel, ReaderId};
 
-use crate::command::Command;
+use crate::command::ParsingStrategy;
 use crate::ecs::event::*;
 
 pub struct InputProcessor {
   pub reader_id: ReaderId<InputEvent>,
+  pub parsers: Vec<Box<dyn ParsingStrategy>>,
 }
 
 impl InputProcessor {}
 
-#[derive(SystemData)]
+#[derive(Derivative, SystemData)]
+#[derivative(Debug)]
 pub struct Data<'a> {
+  #[derivative(Debug = "ignore")]
   pub entities: Entities<'a>,
+  #[derivative(Debug = "ignore")]
   pub input_event_channel: Read<'a, EventChannel<InputEvent>>,
+  #[derivative(Debug = "ignore")]
   pub command_event_channel: Write<'a, EventChannel<CommandEvent>>,
+  #[derivative(Debug = "ignore")]
   pub output_event_channel: Write<'a, EventChannel<OutputEvent>>,
 }
 
@@ -23,19 +29,19 @@ impl<'a> System<'a> for InputProcessor {
 
   /// Run system.
   fn run(&mut self, mut data: Self::SystemData) {
-    let input_events = data
-      .input_event_channel
-      .read(&mut self.reader_id)
-      .cloned()
-      .collect::<Vec<InputEvent>>();
-    let event_count = input_events.len();
-    if event_count == 0 {
-      return;
-    }
-    info!("Processing {} input event(s)...", event_count);
-    for event in input_events.iter() {
-      let _input_string = &event.input;
-      write_command_event!(data, Command {});
+    for event in data.input_event_channel.read(&mut self.reader_id) {
+      let input_string = &event.input;
+      let mut handled = false;
+      for parser in &self.parsers {
+        if let Some(command) = parser.parse(input_string) {
+          handled = true;
+          write_command_event!(data, command);
+          break;
+        }
+      }
+      if !handled {
+        write_output_event!(data, format!("Unknown command: {}", input_string));
+      }
     }
   }
 }
