@@ -16,13 +16,20 @@ fn generate_insert_event_channels() {
   let dir = Path::new("src/ecs/event/events");
   let subdirs = get_subdirs_in_dir(dir);
   let mut content = String::new();
-  writeln!(content, "use specs::prelude::*;\nuse specs::shrev::EventChannel;\n\npub mod events;\npub use events::*;\n\npub fn insert_event_channels(ecs: &mut World) {{").expect("Failed to write to content string");
+  writeln!(content, "use specs::prelude::*;").expect("Failed to write to content string");
+  writeln!(content, "use specs::shrev::EventChannel;").expect("Failed to write to content string");
+  writeln!(content).expect("Failed to write to content string");
+  writeln!(content, "use crate::ecs::event::events::*;").expect("Failed to write to content string");
+  writeln!(content).expect("Failed to write to content string");
+  writeln!(content, "pub fn insert_event_channels(ecs: &mut World) {{").expect("Failed to write to content string");
   for subdir in &subdirs {
     let struct_name = format!("{}Event", subdir.to_case(Case::UpperCamel));
     writeln!(content, "  ecs.insert(EventChannel::<{}>::new());", struct_name)
       .expect("Failed to write to content string");
   }
   writeln!(content, "}}").expect("Failed to write to content string");
+  fs::write(Path::new("src/ecs/event/channels/mod.rs"), content)
+    .expect("Failed to write src/ecs/event/channels/mod.rs");
 }
 
 fn generate_macro_mod() {
