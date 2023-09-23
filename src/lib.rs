@@ -41,6 +41,7 @@ pub use _macro::*;
 pub mod action;
 pub mod command;
 pub mod component;
+pub mod dispatcher;
 pub mod ecs;
 pub mod effect;
 pub mod game;

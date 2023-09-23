@@ -1,5 +1,3 @@
-pub mod dispatcher;
-pub use dispatcher::*;
 pub mod entity;
 pub use entity::*;
 pub mod event;
