@@ -12,5 +12,5 @@ pub trait Effect: Debug + Send + Sync {
   ///
   /// This method returns a `Result` that indicates whether the effect was
   /// executed successfully.
-  fn apply(&self, _context: &mut EffectContext) -> Result<(), EffectError>;
+  fn apply(&self, context: &mut EffectContext) -> Result<(), EffectError>;
 }
