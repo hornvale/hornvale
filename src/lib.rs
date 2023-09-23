@@ -48,6 +48,7 @@ pub mod entity;
 pub mod event;
 pub mod game;
 pub mod output;
+pub mod resource;
 
 #[cfg(test)]
 pub mod test {

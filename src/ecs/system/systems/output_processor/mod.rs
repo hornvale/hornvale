@@ -3,9 +3,9 @@ use specs::prelude::*;
 use specs::shrev::{EventChannel, ReaderId};
 use std::io::Write as _;
 
-use crate::ecs::resource::*;
 use crate::event::OutputEvent;
 use crate::output::formatting::format_string;
+use crate::resource::*;
 
 pub struct OutputProcessor {
   pub reader_id: ReaderId<OutputEvent>,

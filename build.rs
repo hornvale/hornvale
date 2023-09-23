@@ -10,7 +10,7 @@ fn main() {
   generate_mod_with_export("src", "command", "Command");
   generate_mod_with_export("src", "effect", "Effect");
   generate_mod_with_export("src", "event", "Event");
-  generate_mod_with_export("src/ecs", "resource", "Resource");
+  generate_mod_with_export("src", "resource", "Resource");
   generate_mod_with_export("src/ecs", "system", "System");
   generate_system_data_traits_mod();
   generate_insert_event_channels();
