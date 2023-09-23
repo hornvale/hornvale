@@ -4,11 +4,11 @@ use crate::ecs::AllData;
 #[derive(Debug)]
 pub struct Context<'context, 'data> {
   /// All data.
-  pub all_data: &'context mut AllData<'data>,
+  pub data: &'context mut AllData<'data>,
 }
 
 impl<'context, 'data> Context<'context, 'data> {
-  pub fn new(all_data: &'context mut AllData<'data>) -> Self {
-    Context { all_data }
+  pub fn new(data: &'context mut AllData<'data>) -> Self {
+    Context { data }
   }
 }

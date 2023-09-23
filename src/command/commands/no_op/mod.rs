@@ -1,7 +1,6 @@
 use crate::command::Command;
 use crate::command::CommandContext;
 use crate::command::CommandError;
-use crate::command::CommandResult;
 
 /// The `NoOp` command struct.
 #[derive(Clone, Debug, Default)]
@@ -12,7 +11,7 @@ impl Command for NoOp {
     "no-op"
   }
 
-  fn execute(&self, _context: &mut CommandContext) -> Result<CommandResult, CommandError> {
-    Ok(CommandResult::SucceededQuietly)
+  fn execute(&self, _context: &mut CommandContext) -> Result<(), CommandError> {
+    Ok(())
   }
 }

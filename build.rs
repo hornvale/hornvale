@@ -8,7 +8,9 @@ fn main() {
   generate_component_mod();
   generate_mod_with_export("src", "action", "Action");
   generate_mod_with_export("src", "command", "Command");
+  generate_mod_with_export("src", "effect", "Effect");
   generate_mod_with_export("src/ecs", "event", "Event");
+  generate_mod_with_export("src/ecs", "resource", "Resource");
   generate_mod_with_export("src/ecs", "system", "System");
   generate_insert_event_channels();
 }

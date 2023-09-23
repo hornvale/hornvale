@@ -1,7 +1,6 @@
 use crate::command::Command;
 use crate::command::CommandContext;
 use crate::command::CommandError;
-use crate::command::CommandResult;
 
 /// The `Wait` command struct.
 #[derive(Clone, Debug, Default)]
@@ -12,7 +11,8 @@ impl Command for Wait {
     "wait"
   }
 
-  fn execute(&self, _context: &mut CommandContext) -> Result<CommandResult, CommandError> {
-    Ok(CommandResult::SucceededWithOutput("Time passes...".to_string()))
+  fn execute(&self, context: &mut CommandContext) -> Result<(), CommandError> {
+    write_output_event!(context.data, "Time passes...");
+    Ok(())
   }
 }

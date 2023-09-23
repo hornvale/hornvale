@@ -12,5 +12,3 @@ pub mod factory;
 pub use factory::Factory as CommandFactory;
 pub mod parsing;
 pub use parsing::*;
-pub mod result;
-pub use result::Result as CommandResult;

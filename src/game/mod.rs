@@ -1,3 +1,8 @@
+use crossterm::{
+  cursor::MoveToColumn,
+  execute,
+  terminal::{disable_raw_mode, Clear, ClearType},
+};
 use rustyline_async::{ReadlineEvent, SharedWriter};
 use specs::prelude::*;
 use specs::shrev::EventChannel;
@@ -65,6 +70,21 @@ impl Game {
     }
   }
 
+  /// Clear the last line (remove prompt).
+  pub fn clear_last_line(&self) -> Result<(), Error> {
+    disable_raw_mode()?;
+    execute!(std::io::stdout(), MoveToColumn(0), Clear(ClearType::CurrentLine))?;
+    Ok(())
+  }
+
+  /// Quit with a specified message.
+  pub fn quit(&self, message: &str) -> Result<(), Error> {
+    self.clear_last_line()?;
+    println!("Quit: {}", message);
+    println!("Goodbye!");
+    Ok(())
+  }
+
   /// Run.
   pub async fn run(&mut self) -> Result<(), Error> {
     run_initial_systems(&mut self.ecs);
@@ -80,6 +100,14 @@ impl Game {
       // Maintain after every tick.  This enables the use of the lazy systems,
       // which should make it easier to have simple, concise systems.
       self.ecs.maintain();
+      // Check the quit flag resource.
+      {
+        let quit_flag_resource = self.ecs.read_resource::<QuitFlagResource>();
+        if quit_flag_resource.0.is_some() {
+          self.quit(quit_flag_resource.0.as_ref().unwrap())?;
+          return Ok(());
+        }
+      }
       // This is how we read input.
       let mut input_resource = self.ecs.write_resource::<InputResource>();
       // Probably move to a prompt system?  Or not?  IDK.

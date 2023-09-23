@@ -9,4 +9,5 @@ pub fn insert_resources(ecs: &mut World, _seed: &str) {
   input.should_print_line_on(true, false);
   ecs.insert(InputResource(Some(input)));
   ecs.insert(OutputResource(Some(stdout)));
+  ecs.insert(QuitFlagResource(None));
 }

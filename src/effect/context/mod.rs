@@ -1,9 +1,9 @@
 use crate::ecs::AllData;
 
-/// The `Context` struct, which represents the context of a command execution.
+/// The `Context` struct, which represents the context of a effect application.
 #[derive(Debug)]
 pub struct Context<'context, 'data> {
-  /// The data.
+  /// All data.
   pub data: &'context mut AllData<'data>,
 }
 

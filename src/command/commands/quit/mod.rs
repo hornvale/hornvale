@@ -1,8 +1,9 @@
+use std::sync::Arc;
+
 use crate::action::QuitAction;
 use crate::command::Command;
 use crate::command::CommandContext;
 use crate::command::CommandError;
-use crate::command::CommandResult;
 
 /// The `Quit` command struct.
 #[derive(Clone, Debug, Default)]
@@ -13,7 +14,8 @@ impl Command for Quit {
     "quit"
   }
 
-  fn execute(&self, _context: &mut CommandContext) -> Result<CommandResult, CommandError> {
-    Ok(CommandResult::Action(Box::new(QuitAction {})))
+  fn execute(&self, context: &mut CommandContext) -> Result<(), CommandError> {
+    write_action_event!(context.data, Arc::new(QuitAction {}));
+    Ok(())
   }
 }
