@@ -1,7 +1,7 @@
 use specs::prelude::*;
 use specs::world::Index;
 
-use crate::ecs::entity::ids::*;
+use crate::entity::ids::*;
 
 /// The `EntityId` type.
 ///

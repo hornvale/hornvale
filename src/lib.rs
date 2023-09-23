@@ -44,6 +44,7 @@ pub mod component;
 pub mod dispatcher;
 pub mod ecs;
 pub mod effect;
+pub mod entity;
 pub mod game;
 pub mod output;
 
