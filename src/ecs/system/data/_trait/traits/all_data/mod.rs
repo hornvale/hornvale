@@ -3,6 +3,7 @@ use mockall::*;
 use std::sync::Arc;
 
 use crate::action::ActionTrait;
+use crate::command::CommandTrait;
 use crate::ecs::system::data::_trait::traits::*;
 use crate::effect::EffectTrait;
 
@@ -13,6 +14,9 @@ mock! {
   pub AllDataMerged {}
   impl WriteActionEventTrait for AllDataMerged {
     fn write_action_event(&mut self, action: Arc<dyn ActionTrait>);
+  }
+  impl WriteCommandEventTrait for AllDataMerged {
+    fn write_command_event(&mut self, command: Arc<dyn CommandTrait>);
   }
   impl WriteEffectEventTrait for AllDataMerged {
     fn write_effect_event(&mut self, effect: Arc<dyn EffectTrait>);

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::action::QuitAction;
 use crate::command::CommandContext;
 use crate::command::CommandError;
@@ -13,7 +15,7 @@ impl CommandTrait for Quit {
   }
 
   fn execute(&self, context: &mut CommandContext) -> Result<(), CommandError> {
-    write_action_event!(context.data, QuitAction {});
+    write_action_event!(context.data, Arc::new(QuitAction {}));
     Ok(())
   }
 }

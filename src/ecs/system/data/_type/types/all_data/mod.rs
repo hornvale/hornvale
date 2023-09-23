@@ -4,6 +4,7 @@ use specs::prelude::*;
 use specs::shrev::EventChannel;
 
 use crate::action::ActionTrait;
+use crate::command::CommandTrait;
 use crate::ecs::event::*;
 use crate::ecs::resource::*;
 use crate::ecs::system::*;
@@ -30,7 +31,7 @@ pub struct AllData<'data> {
   #[derivative(Debug = "ignore")]
   pub input_event_channel: Read<'data, EventChannel<InputEvent>>,
   #[derivative(Debug = "ignore")]
-  pub command_event_channel: Read<'data, EventChannel<CommandEvent>>,
+  pub command_event_channel: Write<'data, EventChannel<CommandEvent>>,
   #[derivative(Debug = "ignore")]
   pub output_event_channel: Write<'data, EventChannel<OutputEvent>>,
   // Resources
@@ -43,6 +44,12 @@ impl<'data> AllDataTrait for AllData<'data> {}
 impl<'data> WriteActionEventTrait for AllData<'data> {
   fn write_action_event(&mut self, action: Arc<dyn ActionTrait>) {
     self.action_event_channel.single_write(ActionEvent { action });
+  }
+}
+
+impl<'data> WriteCommandEventTrait for AllData<'data> {
+  fn write_command_event(&mut self, command: Arc<dyn CommandTrait>) {
+    self.command_event_channel.single_write(CommandEvent { command });
   }
 }
 

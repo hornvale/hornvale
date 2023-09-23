@@ -1,8 +1,11 @@
 use specs::prelude::*;
 use specs::shrev::{EventChannel, ReaderId};
+use std::sync::Arc;
 
+use crate::command::CommandTrait;
 use crate::command::ParsingStrategyTrait;
 use crate::ecs::event::*;
+use crate::ecs::WriteCommandEventTrait;
 
 pub struct InputProcessor {
   pub reader_id: ReaderId<InputEvent>,
@@ -24,6 +27,12 @@ pub struct Data<'data> {
   pub output_event_channel: Write<'data, EventChannel<OutputEvent>>,
 }
 
+impl WriteCommandEventTrait for Data<'_> {
+  fn write_command_event(&mut self, command: Arc<dyn CommandTrait>) {
+    self.command_event_channel.single_write(CommandEvent { command });
+  }
+}
+
 impl<'data> System<'data> for InputProcessor {
   type SystemData = Data<'data>;
 
@@ -43,7 +52,7 @@ impl<'data> System<'data> for InputProcessor {
       for parser in &self.parsers {
         if let Some(command) = parser.parse(input_string) {
           handled = true;
-          write_command_event!(data, command);
+          write_command_event!(data, Into::<Arc<dyn CommandTrait>>::into(command));
           break;
         }
       }
