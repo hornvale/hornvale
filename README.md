@@ -1,3 +1,6 @@
+![CI](https://github.com/hornvale/hornvale/actions/workflows/continuous_integration.yml/badge.svg?branch=main)
+[![codecov](https://codecov.io/gh/hornvale/hornvale/graph/badge.svg?token=PRV624GM5C)](https://codecov.io/gh/hornvale/hornvale)
+
 # Hornvale
 
 Hornvale[📖](https://hornvale.github.io/hornvale/)  is an experimental, idiosyncratic game written in Rust.  I was referring to it as a "prose-based roguelike", but now I'm thinking it might be more like "open-world interactive fiction".  
@@ -16,3 +19,5 @@ But maybe this will be something that grows over time into something worth looki
 
 ## Prior Incarnation
 A previous iteration, purely exploratory, can be found [here](https://github.com/ndouglas/hornvale-rust/).  It was/is mostly just investigatory, figuring out what was possible, and whether I could bear to do it in Rust.
+
+![Code Coverage Graph](https://codecov.io/gh/hornvale/hornvale/graphs/icicle.svg?token=PRV624GM5C)
