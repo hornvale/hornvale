@@ -4,6 +4,9 @@ Hornvale[📖](https://hornvale.github.io/hornvale/)  is an experimental, idiosy
 
 I don't know if this is stupid or not.  It's a more personal project than I typically throw on GitHub, and I'm making it up as I go.
 
+## Latest Recording
+[![Latest Hornvale Screen Recording]](https://hornvale.github.io/hornvale/recordings/svg/latest.svg)
+
 ## Major Ideas
 The main thing I want to play with, that ties this to the roguelike tradition, is procedural content generation.  But I'm also deeply embedded in interactive (and non-interactive) fiction, and MUDs, both of which tend to be intentionally authored experiences.  The former is deeply invested in a notion of efficient storytelling, the latter in a more open-world concept with multiple narratives.  I'd like to explore this area and figure out what sort of messes I can cause.
 
