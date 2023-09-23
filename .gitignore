@@ -16,3 +16,6 @@ Cargo.lock
 
 # ASCIInema cast files.
 *.cast
+
+# mdBook
+docs/book
