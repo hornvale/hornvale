@@ -40,6 +40,7 @@ pub use _macro::*;
 // Remaining modules.
 pub mod action;
 pub mod command;
+pub mod component;
 pub mod ecs;
 pub mod effect;
 pub mod game;

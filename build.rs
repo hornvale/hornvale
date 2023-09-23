@@ -57,7 +57,7 @@ fn generate_macro_mod() {
 }
 
 fn generate_component_mod() {
-  let dir = Path::new("src/ecs/component/components");
+  let dir = Path::new("src/component/components");
   let subdirs = get_subdirs_in_dir(dir);
   let mut content = String::new();
   writeln!(

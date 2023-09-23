@@ -1,5 +1,3 @@
-pub mod component;
-pub use component::*;
 pub mod dispatcher;
 pub use dispatcher::*;
 pub mod entity;
