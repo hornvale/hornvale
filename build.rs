@@ -9,7 +9,7 @@ fn main() {
   generate_mod_with_export("src", "action", "Action");
   generate_mod_with_export("src", "command", "Command");
   generate_mod_with_export("src", "effect", "Effect");
-  generate_mod_with_export("src/ecs", "event", "Event");
+  generate_mod_with_export("src", "event", "Event");
   generate_mod_with_export("src/ecs", "resource", "Resource");
   generate_mod_with_export("src/ecs", "system", "System");
   generate_system_data_traits_mod();
@@ -17,7 +17,7 @@ fn main() {
 }
 
 fn generate_insert_event_channels() {
-  let dir = Path::new("src/ecs/event/events");
+  let dir = Path::new("src/event/events");
   let subdirs = get_subdirs_in_dir(dir);
   let mut content = String::new();
   writeln!(
@@ -28,7 +28,7 @@ fn generate_insert_event_channels() {
   writeln!(content, "use specs::prelude::*;").expect("Failed to write to content string");
   writeln!(content, "use specs::shrev::EventChannel;").expect("Failed to write to content string");
   writeln!(content).expect("Failed to write to content string");
-  writeln!(content, "use crate::ecs::event::events::*;").expect("Failed to write to content string");
+  writeln!(content, "use crate::event::events::*;").expect("Failed to write to content string");
   writeln!(content).expect("Failed to write to content string");
   writeln!(content, "pub fn insert_event_channels(ecs: &mut World) {{").expect("Failed to write to content string");
   for subdir in &subdirs {
@@ -37,8 +37,7 @@ fn generate_insert_event_channels() {
       .expect("Failed to write to content string");
   }
   writeln!(content, "}}").expect("Failed to write to content string");
-  fs::write(Path::new("src/ecs/event/channels/mod.rs"), content)
-    .expect("Failed to write src/ecs/event/channels/mod.rs");
+  fs::write(Path::new("src/event/channels/mod.rs"), content).expect("Failed to write src/event/channels/mod.rs");
 }
 
 fn generate_macro_mod() {

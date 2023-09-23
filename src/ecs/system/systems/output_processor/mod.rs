@@ -3,8 +3,8 @@ use specs::prelude::*;
 use specs::shrev::{EventChannel, ReaderId};
 use std::io::Write as _;
 
-use crate::ecs::event::OutputEvent;
 use crate::ecs::resource::*;
+use crate::event::OutputEvent;
 use crate::output::formatting::format_string;
 
 pub struct OutputProcessor {

@@ -2,7 +2,7 @@
 use specs::prelude::*;
 use specs::shrev::EventChannel;
 
-use crate::ecs::event::events::*;
+use crate::event::events::*;
 
 pub fn insert_event_channels(ecs: &mut World) {
   ecs.insert(EventChannel::<InputEvent>::new());

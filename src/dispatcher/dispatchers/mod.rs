@@ -3,9 +3,9 @@ use specs::shrev::EventChannel;
 
 use crate::command::ParsingStrategyTrait;
 use crate::command::SimpleParsingStrategy;
-use crate::ecs::event::*;
 use crate::ecs::resource::*;
 use crate::ecs::system::*;
+use crate::event::*;
 
 pub fn run_initial_systems(_ecs: &mut World) {}
 

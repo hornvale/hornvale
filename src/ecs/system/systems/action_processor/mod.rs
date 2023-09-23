@@ -2,8 +2,8 @@ use specs::prelude::*;
 use specs::shrev::ReaderId;
 
 use crate::action::ActionContext;
-use crate::ecs::event::*;
 use crate::ecs::AllData;
+use crate::event::*;
 
 pub struct ActionProcessor {
   pub reader_id: ReaderId<ActionEvent>,

@@ -1,9 +1,9 @@
 use specs::prelude::*;
 use specs::shrev::ReaderId;
 
-use crate::ecs::event::*;
 use crate::ecs::AllData;
 use crate::effect::EffectContext;
+use crate::event::*;
 
 pub struct EffectProcessor {
   pub reader_id: ReaderId<EffectEvent>,

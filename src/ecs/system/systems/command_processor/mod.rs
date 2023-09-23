@@ -2,8 +2,8 @@ use specs::prelude::*;
 use specs::shrev::ReaderId;
 
 use crate::command::CommandContext;
-use crate::ecs::event::*;
 use crate::ecs::AllData;
+use crate::event::*;
 
 pub struct CommandProcessor {
   pub reader_id: ReaderId<CommandEvent>,
