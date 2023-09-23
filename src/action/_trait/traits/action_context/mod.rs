@@ -3,7 +3,7 @@ use mockall::*;
 
 use crate::action::ActionContextDataTrait;
 
-/// The `ActionContext` struct, which represents the context of a command
+/// The `ActionContext` struct, which represents the context of an action
 /// execution.
 #[automock]
 pub trait ActionContext {

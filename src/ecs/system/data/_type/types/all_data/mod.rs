@@ -3,6 +3,7 @@ use std::sync::Arc;
 use specs::prelude::*;
 use specs::shrev::EventChannel;
 
+use crate::action::ActionTrait;
 use crate::ecs::event::*;
 use crate::ecs::resource::*;
 use crate::ecs::system::*;
@@ -38,6 +39,12 @@ pub struct AllData<'data> {
 }
 
 impl<'data> AllDataTrait for AllData<'data> {}
+
+impl<'data> WriteActionEventTrait for AllData<'data> {
+  fn write_action_event(&mut self, action: Arc<dyn ActionTrait>) {
+    self.action_event_channel.single_write(ActionEvent { action });
+  }
+}
 
 impl<'data> WriteEffectEventTrait for AllData<'data> {
   fn write_effect_event(&mut self, effect: Arc<dyn EffectTrait>) {
