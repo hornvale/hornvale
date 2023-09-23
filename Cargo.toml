@@ -26,7 +26,7 @@ convert_case = "0.6.0"
 anyhow = "1.0.75"
 convert_case = "0.6.0"
 # Via Rustyline-Async.
-crossterm = { version = "0.25.0", features = ["event-stream"] }
+crossterm = { version = "0.27.0", features = ["event-stream"] }
 derivative = "2.2.0"
 derive_more = "0.99.17"
 futures = "0.3.28"
