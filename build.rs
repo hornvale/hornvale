@@ -12,6 +12,7 @@ fn main() {
   generate_mod_with_export("src/ecs", "event", "Event");
   generate_mod_with_export("src/ecs", "resource", "Resource");
   generate_mod_with_export("src/ecs", "system", "System");
+  generate_system_data_traits_mod();
   generate_insert_event_channels();
 }
 
@@ -101,6 +102,25 @@ fn generate_mod_with_export(base_dir: &str, base: &str, suffix: &str) {
       struct_name
     )
     .expect("Failed to write to content string");
+  }
+  fs::write(dir.join("mod.rs"), content).expect("Failed to write mod.rs");
+}
+
+fn generate_system_data_traits_mod() {
+  let dir = Path::new("src/ecs/system/data/_trait/traits");
+  let subdirs = get_subdirs_in_dir(dir);
+  let mut content = String::new();
+  writeln!(
+    content,
+    "// This file is generated (see build.rs). Please do not edit manually."
+  )
+  .expect("Failed to write to content string");
+  for subdir in &subdirs {
+    let trait_name = subdir.to_case(Case::UpperCamel);
+    let trait_full_name = format!("{}Trait", trait_name);
+    writeln!(content, "pub mod {};", subdir).expect("Failed to write to content string");
+    writeln!(content, "pub use {}::{} as {};", subdir, trait_name, trait_full_name)
+      .expect("Failed to write to content string");
   }
   fs::write(dir.join("mod.rs"), content).expect("Failed to write mod.rs");
 }

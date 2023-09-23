@@ -1,8 +1,12 @@
+use std::sync::Arc;
+
 use specs::prelude::*;
 use specs::shrev::EventChannel;
 
 use crate::ecs::event::*;
 use crate::ecs::resource::*;
+use crate::ecs::system::*;
+use crate::effect::EffectTrait;
 
 /// The `AllData` type.
 ///
@@ -31,4 +35,10 @@ pub struct AllData<'data> {
   // Resources
   #[derivative(Debug = "ignore")]
   pub quit_flag_resource: Write<'data, QuitFlagResource>,
+}
+
+impl<'data> WriteEffectEventTrait for AllData<'data> {
+  fn write_effect_event(&mut self, effect: Arc<dyn EffectTrait>) {
+    self.effect_event_channel.single_write(EffectEvent { effect });
+  }
 }

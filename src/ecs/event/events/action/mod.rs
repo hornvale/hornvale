@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::action::Action as ActionTrait;
+use crate::action::ActionTrait;
 
 /// The `ActionEvent` type.
 ///

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::effect::Effect as EffectTrait;
+use crate::effect::EffectTrait;
 
 /// The `EffectEvent` type.
 ///

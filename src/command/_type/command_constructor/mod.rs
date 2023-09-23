@@ -1,4 +1,4 @@
-use crate::command::_trait::Command;
+use crate::command::CommandTrait;
 
 /// The `CommandConstructor` type.
-pub type CommandConstructor = Box<dyn Fn() -> Box<dyn Command> + Send>;
+pub type CommandConstructor = Box<dyn Fn() -> Box<dyn CommandTrait> + Send>;

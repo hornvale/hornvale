@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::command::Command as CommandTrait;
+use crate::command::CommandTrait;
 
 /// The `CommandEvent` type.
 ///

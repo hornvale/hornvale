@@ -1,5 +1,5 @@
-use crate::command::Command;
 use crate::command::CommandFactory;
+use crate::command::CommandTrait;
 use crate::command::ParsingStrategy;
 
 /// A simple verb-noun parsing strategy, similar to that of a MUD.
@@ -32,7 +32,7 @@ impl Default for Simple {
 
 impl ParsingStrategy for Simple {
   /// Parse input.
-  fn parse(&self, input: &str) -> Option<Box<dyn Command>> {
+  fn parse(&self, input: &str) -> Option<Box<dyn CommandTrait>> {
     let input = input.trim();
     if input.is_empty() {
       return None;
