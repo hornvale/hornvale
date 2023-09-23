@@ -13,11 +13,11 @@ jobs:
       - name: Checkout project
         uses: actions/checkout@v4
 
-      - name: Update toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Update local toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: nightly
-          override: true
+          toolchain: stable
+          components: clippy,rustfmt
 
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
