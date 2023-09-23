@@ -1,11 +1,5 @@
 // This file is generated (see build.rs). Please do not edit manually.
 #[macro_use]
-pub mod get_output_event_channel;
-#[macro_use]
-pub mod get_command_event_channel;
-#[macro_use]
-pub mod get_input_event_channel;
-#[macro_use]
 pub mod write_output_event;
 #[macro_use]
 pub mod write_output_error;
@@ -14,10 +8,6 @@ pub mod write_action_event;
 #[macro_use]
 pub mod write_input_event;
 #[macro_use]
-pub mod get_action_event_channel;
-#[macro_use]
 pub mod write_effect_event;
-#[macro_use]
-pub mod get_effect_event_channel;
 #[macro_use]
 pub mod write_command_event;
