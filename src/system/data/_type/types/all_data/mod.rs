@@ -5,10 +5,10 @@ use specs::shrev::EventChannel;
 
 use crate::action::ActionTrait;
 use crate::command::CommandTrait;
-use crate::ecs::system::*;
 use crate::effect::EffectTrait;
 use crate::event::*;
 use crate::resource::*;
+use crate::system::*;
 
 /// The `AllData` type.
 ///

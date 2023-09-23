@@ -6,12 +6,12 @@ use std::path::Path;
 fn main() {
   generate_macro_mod();
   generate_component_mod();
-  generate_mod_with_export("src", "action", "Action");
-  generate_mod_with_export("src", "command", "Command");
-  generate_mod_with_export("src", "effect", "Effect");
-  generate_mod_with_export("src", "event", "Event");
-  generate_mod_with_export("src", "resource", "Resource");
-  generate_mod_with_export("src/ecs", "system", "System");
+  generate_mod_with_export("action", "Action");
+  generate_mod_with_export("command", "Command");
+  generate_mod_with_export("effect", "Effect");
+  generate_mod_with_export("event", "Event");
+  generate_mod_with_export("resource", "Resource");
+  generate_mod_with_export("system", "System");
   generate_system_data_traits_mod();
   generate_insert_event_channels();
 }
@@ -80,8 +80,8 @@ fn generate_component_mod() {
   fs::write(dir.join("mod.rs"), content).expect("Failed to write mod.rs");
 }
 
-fn generate_mod_with_export(base_dir: &str, base: &str, suffix: &str) {
-  let path = format!("{}/{}/{}s", base_dir, base, base);
+fn generate_mod_with_export(base: &str, suffix: &str) {
+  let path = format!("src/{}/{}s", base, base);
   let dir = Path::new(&path);
   let subdirs = get_subdirs_in_dir(dir);
   let mut content = String::new();
@@ -106,7 +106,7 @@ fn generate_mod_with_export(base_dir: &str, base: &str, suffix: &str) {
 }
 
 fn generate_system_data_traits_mod() {
-  let dir = Path::new("src/ecs/system/data/_trait/traits");
+  let dir = Path::new("src/system/data/_trait/traits");
   let subdirs = get_subdirs_in_dir(dir);
   let mut content = String::new();
   writeln!(

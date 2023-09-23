@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use crate::action::ActionTrait;
 use crate::command::CommandTrait;
-use crate::ecs::system::data::_trait::traits::*;
 use crate::effect::EffectTrait;
+use crate::system::data::_trait::traits::*;
 
 /// The `AllData` trait, which inherits from all other data traits.
 pub trait AllData: WriteActionEventTrait + WriteEffectEventTrait {}

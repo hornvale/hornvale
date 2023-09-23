@@ -1,23 +1,23 @@
 use specs::prelude::*;
 use specs::shrev::ReaderId;
 
-use crate::ecs::AllData;
-use crate::effect::EffectContext;
+use crate::command::CommandContext;
 use crate::event::*;
+use crate::system::AllData;
 
-pub struct EffectProcessor {
-  pub reader_id: ReaderId<EffectEvent>,
+pub struct CommandProcessor {
+  pub reader_id: ReaderId<CommandEvent>,
 }
 
-impl EffectProcessor {}
+impl CommandProcessor {}
 
-impl<'data> System<'data> for EffectProcessor {
+impl<'data> System<'data> for CommandProcessor {
   type SystemData = AllData<'data>;
 
   /// Run the system.
   fn run(&mut self, mut data: Self::SystemData) {
     let events = data
-      .effect_event_channel
+      .command_event_channel
       .read(&mut self.reader_id)
       .cloned()
       .collect::<Vec<_>>();
@@ -26,13 +26,13 @@ impl<'data> System<'data> for EffectProcessor {
     }
     for event in events {
       debug!("Processing next event {:?}", event);
-      let effect = event.effect;
-      let mut context = EffectContext::new(&mut data);
-      let result = effect.apply(&mut context);
+      let command = event.command;
+      let mut context = CommandContext::new(&mut data);
+      let result = command.execute(&mut context);
       match result {
         Ok(()) => {},
         Err(error) => {
-          error!("Effect failed failed to apply with error {:?}", error);
+          error!("Command failed with error {:?}", error);
           write_output_error!(data, format!("Error: {}", error));
         },
       }

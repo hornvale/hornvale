@@ -42,13 +42,13 @@ pub mod action;
 pub mod command;
 pub mod component;
 pub mod dispatcher;
-pub mod ecs;
 pub mod effect;
 pub mod entity;
 pub mod event;
 pub mod game;
 pub mod output;
 pub mod resource;
+pub mod system;
 
 #[cfg(test)]
 pub mod test {

@@ -3,11 +3,11 @@ use mockall::*;
 use std::sync::Arc;
 
 use crate::action::ActionTrait;
-use crate::ecs::AllData;
-use crate::ecs::AllDataTrait;
-use crate::ecs::WriteActionEventTrait;
-use crate::ecs::WriteEffectEventTrait;
 use crate::effect::EffectTrait;
+use crate::system::AllData;
+use crate::system::AllDataTrait;
+use crate::system::WriteActionEventTrait;
+use crate::system::WriteEffectEventTrait;
 
 /// The `EffectContextData` struct, which represents the data in the context
 ///  of an effect application.

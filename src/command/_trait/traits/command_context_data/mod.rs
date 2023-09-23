@@ -4,12 +4,12 @@ use std::sync::Arc;
 
 use crate::action::ActionTrait;
 use crate::command::CommandTrait;
-use crate::ecs::AllData;
-use crate::ecs::AllDataTrait;
-use crate::ecs::WriteActionEventTrait;
-use crate::ecs::WriteCommandEventTrait;
-use crate::ecs::WriteEffectEventTrait;
 use crate::effect::EffectTrait;
+use crate::system::AllData;
+use crate::system::AllDataTrait;
+use crate::system::WriteActionEventTrait;
+use crate::system::WriteCommandEventTrait;
+use crate::system::WriteEffectEventTrait;
 
 /// The `CommandContext` struct, which represents the data in the context of a
 /// command execution.

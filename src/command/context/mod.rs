@@ -1,4 +1,4 @@
-use crate::ecs::AllData;
+use crate::system::AllData;
 
 /// The `Context` struct, which represents the context of a command execution.
 #[derive(Debug)]
