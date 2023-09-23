@@ -6,6 +6,7 @@ use crate::command::CommandTrait;
 use crate::command::ParsingStrategyTrait;
 use crate::ecs::event::*;
 use crate::ecs::WriteCommandEventTrait;
+use crate::ecs::WriteOutputEventTrait;
 
 pub struct InputProcessor {
   pub reader_id: ReaderId<InputEvent>,
@@ -30,6 +31,12 @@ pub struct Data<'data> {
 impl WriteCommandEventTrait for Data<'_> {
   fn write_command_event(&mut self, command: Arc<dyn CommandTrait>) {
     self.command_event_channel.single_write(CommandEvent { command });
+  }
+}
+
+impl WriteOutputEventTrait for Data<'_> {
+  fn write_output_event(&mut self, output: String) {
+    self.output_event_channel.single_write(OutputEvent { output });
   }
 }
 

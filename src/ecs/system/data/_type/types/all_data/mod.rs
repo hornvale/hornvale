@@ -29,7 +29,7 @@ pub struct AllData<'data> {
   #[derivative(Debug = "ignore")]
   pub effect_event_channel: Write<'data, EventChannel<EffectEvent>>,
   #[derivative(Debug = "ignore")]
-  pub input_event_channel: Read<'data, EventChannel<InputEvent>>,
+  pub input_event_channel: Write<'data, EventChannel<InputEvent>>,
   #[derivative(Debug = "ignore")]
   pub command_event_channel: Write<'data, EventChannel<CommandEvent>>,
   #[derivative(Debug = "ignore")]
@@ -56,5 +56,17 @@ impl<'data> WriteCommandEventTrait for AllData<'data> {
 impl<'data> WriteEffectEventTrait for AllData<'data> {
   fn write_effect_event(&mut self, effect: Arc<dyn EffectTrait>) {
     self.effect_event_channel.single_write(EffectEvent { effect });
+  }
+}
+
+impl<'data> WriteInputEventTrait for AllData<'data> {
+  fn write_input_event(&mut self, input: String) {
+    self.input_event_channel.single_write(InputEvent { input });
+  }
+}
+
+impl<'data> WriteOutputEventTrait for AllData<'data> {
+  fn write_output_event(&mut self, output: String) {
+    self.output_event_channel.single_write(OutputEvent { output });
   }
 }
