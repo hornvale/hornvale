@@ -1,8 +1,12 @@
-pub mod _type;
-pub use _type::AllData;
 pub mod component;
+pub use component::*;
 pub mod dispatcher;
+pub use dispatcher::*;
 pub mod entity;
+pub use entity::*;
 pub mod event;
+pub use event::*;
 pub mod resource;
+pub use resource::*;
 pub mod system;
+pub use system::*;

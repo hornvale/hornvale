@@ -37,6 +37,8 @@ pub struct AllData<'data> {
   pub quit_flag_resource: Write<'data, QuitFlagResource>,
 }
 
+impl<'data> AllDataTrait for AllData<'data> {}
+
 impl<'data> WriteEffectEventTrait for AllData<'data> {
   fn write_effect_event(&mut self, effect: Arc<dyn EffectTrait>) {
     self.effect_event_channel.single_write(EffectEvent { effect });
