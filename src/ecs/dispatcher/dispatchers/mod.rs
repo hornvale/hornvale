@@ -1,7 +1,7 @@
 use specs::prelude::*;
 use specs::shrev::EventChannel;
 
-use crate::command::ParsingStrategy;
+use crate::command::ParsingStrategyTrait;
 use crate::command::SimpleParsingStrategy;
 use crate::ecs::event::*;
 use crate::ecs::resource::*;
@@ -21,8 +21,8 @@ pub fn get_tick_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static> {
   };
   let input_processor_system = {
     let reader_id = ecs.fetch_mut::<EventChannel<InputEvent>>().register_reader();
-    let parsers: Vec<Box<dyn ParsingStrategy>> =
-      vec![Box::<SimpleParsingStrategy>::default() as Box<dyn ParsingStrategy + Send + Sync>];
+    let parsers: Vec<Box<dyn ParsingStrategyTrait>> =
+      vec![Box::<SimpleParsingStrategy>::default() as Box<dyn ParsingStrategyTrait + Send + Sync>];
     InputProcessorSystem { reader_id, parsers }
   };
   let action_processor_system = {

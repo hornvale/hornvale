@@ -1,12 +1,12 @@
 use specs::prelude::*;
 use specs::shrev::{EventChannel, ReaderId};
 
-use crate::command::ParsingStrategy;
+use crate::command::ParsingStrategyTrait;
 use crate::ecs::event::*;
 
 pub struct InputProcessor {
   pub reader_id: ReaderId<InputEvent>,
-  pub parsers: Vec<Box<dyn ParsingStrategy>>,
+  pub parsers: Vec<Box<dyn ParsingStrategyTrait>>,
 }
 
 impl InputProcessor {}
