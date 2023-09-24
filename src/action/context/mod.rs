@@ -7,7 +7,7 @@ use crate::action::ActionContextTrait;
 pub struct Context<'context> {
   /// All data.
   #[derivative(Debug = "ignore")]
-  pub data: &'context mut dyn ActionContextDataTrait,
+  data: &'context mut dyn ActionContextDataTrait,
 }
 
 impl<'context> Context<'context> {
