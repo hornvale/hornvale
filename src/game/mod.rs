@@ -8,6 +8,7 @@ use specs::prelude::*;
 use specs::shrev::EventChannel;
 use std::io::Write;
 use std::time::Duration;
+use tokio::time::interval;
 
 use crate::component::register_components;
 use crate::dispatcher::*;
@@ -92,7 +93,7 @@ impl Game {
     let mut stdout = self.output.clone();
     // It'd be interesting to store this in a resource and possibly modify it
     // on the fly. Very FRP. Much signal.
-    let mut tick_timer = tokio::time::interval(Duration::from_millis(TICK_INTERVAL));
+    let mut tick_timer = interval(Duration::from_millis(TICK_INTERVAL));
     // A local tick counter; just for performing less frequent operations.
     let mut tick: u64 = 0;
     // Main game loop, such as it is.
