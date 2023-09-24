@@ -43,7 +43,7 @@ pub mod command;
 pub mod component;
 pub mod dispatcher;
 pub mod effect;
-pub mod entity;
+pub mod entity_id;
 pub mod event;
 pub mod event_channel;
 pub mod game;

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use crate::command::commands::*;
 use crate::command::CommandConstructor;
 use crate::command::CommandTrait;
+use crate::command::_list::*;
 
 /// The `Factory` struct, which represents a command factory.
 #[derive(Derivative)]

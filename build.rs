@@ -6,76 +6,83 @@ use std::path::Path;
 
 fn main() {
   generate_macro_mod();
-  generate_component_mod();
-  generate_mod_with_export("src", "action", "Action");
-  // generate_mod_with_export("command", "Command");
-  // generate_mod_with_export("effect", "Effect");
-  // generate_mod_with_export("event", "Event");
-  // generate_mod_with_export("resource", "Resource");
-  // generate_mod_with_export("system", "System");
-  generate_system_data_traits_mod();
-  generate_insert_event_channels();
+  generate_list_mod_with_alias("src/action", "Action");
+  generate_list_mod_with_alias("src/action/_trait", "Trait");
+  generate_list_mod_with_alias("src/command", "Command");
+  generate_list_mod_with_alias("src/command/_trait", "Trait");
+  generate_list_mod_with_export("src/command/_type");
+  generate_list_mod_with_export("src/component");
+  generate_list_mod_with_alias("src/effect", "Effect");
+  generate_list_mod_with_alias("src/effect/_trait", "Trait");
+  generate_list_mod_with_alias("src/event", "Event");
+  generate_event_channel_register_mod();
+  generate_list_mod_with_alias("src/entity_id", "Id");
+  generate_list_mod_with_alias("src/resource", "Resource");
+  generate_list_mod_with_alias("src/system", "System");
+  generate_list_mod_with_alias("src/system_data/_trait", "Trait");
+  generate_list_mod_with_export("src/system_data/_type");
 }
+//  generate_component_register_mod();
 
-fn get_event_names() -> Vec<String> {
-  let dir = Path::new("src/event/events");
-  get_subdirs_in_dir(dir)
-}
+// generate_mod_with_export("event", "Event");
+// generate_mod_with_export("resource", "Resource");
+// generate_mod_with_export("system", "System");
+//  generate_system_data_traits_mod();
 
-fn generate_insert_event_channels() {
-  let dir = Path::new("src/event/events");
-  let subdirs = get_subdirs_in_dir(dir);
+fn generate_event_channel_register_mod() {
+  let event_names = get_event_names();
   let mut content = String::new();
-  writeln!(
-    content,
-    "// This file is generated (see build.rs). Please do not edit manually."
-  )
-  .expect("Failed to write to content string");
+  write_mod_header(&mut content);
   writeln!(content, "use specs::prelude::*;").expect("Failed to write to content string");
   writeln!(content, "use specs::shrev::EventChannel;").expect("Failed to write to content string");
   writeln!(content).expect("Failed to write to content string");
-  writeln!(content, "use crate::event::events::*;").expect("Failed to write to content string");
+  writeln!(content, "use crate::event::_list::*;").expect("Failed to write to content string");
   writeln!(content).expect("Failed to write to content string");
   writeln!(content, "pub fn insert_event_channels(ecs: &mut World) {{").expect("Failed to write to content string");
-  for subdir in &subdirs {
-    let struct_name = format!("{}Event", subdir.to_case(Case::UpperCamel));
+  for event_name in &event_names {
+    let struct_name = format!("{}Event", event_name.to_case(Case::UpperCamel));
     writeln!(content, "  ecs.insert(EventChannel::<{}>::new());", struct_name)
       .expect("Failed to write to content string");
   }
   writeln!(content, "}}").expect("Failed to write to content string");
-  fs::write(Path::new("src/event_channel/event_channels/mod.rs"), content)
-    .expect("Failed to write src/event_channel/event_channels/mod.rs");
+  fs::write(Path::new("src/event_channel/register/mod.rs"), content)
+    .expect("Failed to write src/event_channel/register/mod.rs");
 }
 
-fn generate_component_mod() {
-  let dir = Path::new("src/component/components");
-  let subdirs = get_subdirs_in_dir(dir);
+fn get_event_names() -> Vec<String> {
+  let dir = Path::new("src/event/_list");
+  let mut result = get_subdirs_in_dir(dir);
+  result.sort();
+  result
+}
+
+fn get_component_names() -> Vec<String> {
+  let dir = Path::new("src/component/_list");
+  let mut result = get_subdirs_in_dir(dir);
+  result.sort();
+  result
+}
+
+fn generate_component_register_mod() {
+  let component_names = get_component_names();
   let mut content = String::new();
-  writeln!(
-    content,
-    "// This file is generated (see build.rs). Please do not edit manually."
-  )
-  .expect("Failed to write to content string");
+  write_mod_header(&mut content);
   writeln!(content, "use specs::prelude::*;\n").expect("Failed to write to content string");
-  for subdir in &subdirs {
-    let struct_name = subdir.to_case(Case::UpperCamel);
-    writeln!(content, "pub mod {};", subdir).expect("Failed to write to content string");
-    writeln!(content, "pub use {}::{};", subdir, struct_name).expect("Failed to write to content string");
-  }
-  writeln!(content).expect("Failed to write to content string");
+  writeln!(content, "use crate::component::_list::*;\n").expect("Failed to write to content string");
   writeln!(content, "pub fn register_components(ecs: &mut World) {{").expect("Failed to write to content string");
-  for subdir in &subdirs {
-    let struct_name = subdir.to_case(Case::UpperCamel);
+  for component_name in &component_names {
+    let struct_name = component_name.to_case(Case::UpperCamel);
     writeln!(content, "  ecs.register::<{}>();", struct_name).expect("Failed to write to content string");
   }
   writeln!(content, "}}").expect("Failed to write to content string");
-  fs::write(dir.join("mod.rs"), content).expect("Failed to write mod.rs");
+  fs::write(Path::new("src/component/register/mod.rs"), content).expect("Failed to write mod.rs");
 }
 
-fn generate_mod_with_export(base_dir: &str, base: &str, suffix: &str) {
-  let path = format!("{}/{}/_list", base_dir, base);
+fn generate_list_mod_with_alias(base_dir: &str, suffix: &str) {
+  let path = format!("{}/_list", base_dir);
   let dir = Path::new(&path);
-  let subdirs = get_subdirs_in_dir(dir);
+  let mut subdirs = get_subdirs_in_dir(dir);
+  subdirs.sort();
   let mut content = String::new();
   write_mod_header(&mut content);
   for subdir in &subdirs {
@@ -89,6 +96,21 @@ fn generate_mod_with_export(base_dir: &str, base: &str, suffix: &str) {
       struct_name
     )
     .expect("Failed to write to content string");
+  }
+  fs::write(dir.join("mod.rs"), content).expect("Failed to write mod.rs");
+}
+
+fn generate_list_mod_with_export(base_dir: &str) {
+  let path = format!("{}/_list", base_dir);
+  let dir = Path::new(&path);
+  let mut subdirs = get_subdirs_in_dir(dir);
+  subdirs.sort();
+  let mut content = String::new();
+  write_mod_header(&mut content);
+  for subdir in &subdirs {
+    writeln!(content, "pub mod {};", subdir).expect("Failed to write to content string");
+    writeln!(content, "pub use {}::{};", subdir, subdir.to_case(Case::UpperCamel))
+      .expect("Failed to write to content string");
   }
   fs::write(dir.join("mod.rs"), content).expect("Failed to write mod.rs");
 }
@@ -129,7 +151,7 @@ fn get_files_in_dir(dir: &Path) -> Vec<String> {
 
 fn get_subdirs_in_dir(dir: &Path) -> Vec<String> {
   fs::read_dir(dir)
-    .expect("Failed to read directory")
+    .unwrap_or_else(|_| panic!("Failed to read directory {:?}", dir))
     .filter_map(|e| {
       if let Ok(entry) = e {
         let path = entry.path();
@@ -144,7 +166,8 @@ fn get_subdirs_in_dir(dir: &Path) -> Vec<String> {
 
 fn generate_macro_mod() {
   let dir = Path::new("src/_macro/_list");
-  let files = get_files_in_dir(dir);
+  let mut files = get_files_in_dir(dir);
+  files.sort();
   let mut content = String::new();
   write_mod_header(&mut content);
   for file in &files {
