@@ -10,6 +10,8 @@ fn main() {
   generate_list_mod_with_alias("src/action/_trait", "Trait");
   generate_list_mod_with_alias("src/command", "Command");
   generate_list_mod_with_alias("src/command/_trait", "Trait");
+  generate_list_mod_with_alias("src/command/parsing_strategy", "ParsingStrategy");
+  generate_list_mod_with_alias("src/command/parsing_strategy/_trait", "Trait");
   generate_list_mod_with_export("src/command/_type");
   generate_list_mod_with_export("src/component");
   generate_list_mod_with_alias("src/effect", "Effect");

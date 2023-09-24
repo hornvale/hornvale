@@ -10,5 +10,5 @@ pub mod error;
 pub use error::Error as CommandError;
 pub mod factory;
 pub use factory::Factory as CommandFactory;
-pub mod parsing;
-pub use parsing::*;
+pub mod parsing_strategy;
+pub use parsing_strategy::*;
