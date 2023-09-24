@@ -1,11 +1,6 @@
-use std::sync::Arc;
-
 use specs::prelude::*;
 use specs::shrev::EventChannel;
 
-use crate::action::ActionTrait;
-use crate::command::CommandTrait;
-use crate::effect::EffectTrait;
 use crate::event::*;
 use crate::resource::*;
 use crate::system_data::*;
@@ -39,34 +34,62 @@ pub struct AllData<'data> {
   pub quit_flag_resource: Write<'data, QuitFlagResource>,
 }
 
-impl<'data> AllDataTrait for AllData<'data> {}
-
-impl<'data> WriteActionEventTrait for AllData<'data> {
-  fn write_action_event(&mut self, action: Arc<dyn ActionTrait>) {
-    self.action_event_channel.single_write(ActionEvent { action });
+impl GetEventChannelTrait<ActionEvent> for AllData<'_> {
+  fn get_event_channel(&self) -> &EventChannel<ActionEvent> {
+    &self.action_event_channel
   }
 }
 
-impl<'data> WriteCommandEventTrait for AllData<'data> {
-  fn write_command_event(&mut self, command: Arc<dyn CommandTrait>) {
-    self.command_event_channel.single_write(CommandEvent { command });
+impl GetMutEventChannelTrait<ActionEvent> for AllData<'_> {
+  fn get_mut_event_channel(&mut self) -> &mut EventChannel<ActionEvent> {
+    &mut self.action_event_channel
   }
 }
 
-impl<'data> WriteEffectEventTrait for AllData<'data> {
-  fn write_effect_event(&mut self, effect: Arc<dyn EffectTrait>) {
-    self.effect_event_channel.single_write(EffectEvent { effect });
+impl GetEventChannelTrait<CommandEvent> for AllData<'_> {
+  fn get_event_channel(&self) -> &EventChannel<CommandEvent> {
+    &self.command_event_channel
   }
 }
 
-impl<'data> WriteInputEventTrait for AllData<'data> {
-  fn write_input_event(&mut self, input: String) {
-    self.input_event_channel.single_write(InputEvent { input });
+impl GetMutEventChannelTrait<CommandEvent> for AllData<'_> {
+  fn get_mut_event_channel(&mut self) -> &mut EventChannel<CommandEvent> {
+    &mut self.command_event_channel
   }
 }
 
-impl<'data> WriteOutputEventTrait for AllData<'data> {
-  fn write_output_event(&mut self, output: String) {
-    self.output_event_channel.single_write(OutputEvent { output });
+impl GetEventChannelTrait<EffectEvent> for AllData<'_> {
+  fn get_event_channel(&self) -> &EventChannel<EffectEvent> {
+    &self.effect_event_channel
+  }
+}
+
+impl GetMutEventChannelTrait<EffectEvent> for AllData<'_> {
+  fn get_mut_event_channel(&mut self) -> &mut EventChannel<EffectEvent> {
+    &mut self.effect_event_channel
+  }
+}
+
+impl GetEventChannelTrait<InputEvent> for AllData<'_> {
+  fn get_event_channel(&self) -> &EventChannel<InputEvent> {
+    &self.input_event_channel
+  }
+}
+
+impl GetMutEventChannelTrait<InputEvent> for AllData<'_> {
+  fn get_mut_event_channel(&mut self) -> &mut EventChannel<InputEvent> {
+    &mut self.input_event_channel
+  }
+}
+
+impl GetEventChannelTrait<OutputEvent> for AllData<'_> {
+  fn get_event_channel(&self) -> &EventChannel<OutputEvent> {
+    &self.output_event_channel
+  }
+}
+
+impl GetMutEventChannelTrait<OutputEvent> for AllData<'_> {
+  fn get_mut_event_channel(&mut self) -> &mut EventChannel<OutputEvent> {
+    &mut self.output_event_channel
   }
 }

@@ -4,7 +4,7 @@ macro_rules! write_command_event {
     #[allow(unused_imports)]
     use $crate::event::CommandEvent;
     #[allow(unused_imports)]
-    use $crate::system_data::WriteCommandEventTrait;
-    $data.write_command_event($command);
+    use $crate::system_data::WriteEventTrait;
+    $data.write_event(CommandEvent { command: $command });
   }};
 }

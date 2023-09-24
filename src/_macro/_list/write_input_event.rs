@@ -4,7 +4,7 @@ macro_rules! write_input_event {
     #[allow(unused_imports)]
     use $crate::event::InputEvent;
     #[allow(unused_imports)]
-    use $crate::system::WriteInputEventTrait;
-    $data.write_input_event($string.to_string());
+    use $crate::system::WriteEventTrait;
+    $data.write_event(InputEvent::new($string.to_string()));
   }};
 }

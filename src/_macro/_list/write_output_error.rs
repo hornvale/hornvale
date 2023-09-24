@@ -4,7 +4,9 @@ macro_rules! write_output_error {
     #[allow(unused_imports)]
     use $crate::event::OutputEvent;
     #[allow(unused_imports)]
-    use $crate::system_data::WriteOutputEventTrait;
-    $data.write_output_event(format!("<red>{}<reset>", $error).to_string());
+    use $crate::system_data::WriteEventTrait;
+    $data.write_event(OutputEvent {
+      output: format!("<red>{}<reset>", $error).to_string(),
+    });
   }};
 }

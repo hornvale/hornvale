@@ -1,12 +1,11 @@
 use specs::prelude::*;
-use specs::shrev::{EventChannel, ReaderId};
+use specs::shrev::ReaderId;
 use std::sync::Arc;
 
 use crate::command::CommandTrait;
 use crate::command::ParsingStrategyTrait;
 use crate::event::*;
-use crate::system_data::WriteCommandEventTrait;
-use crate::system_data::WriteOutputEventTrait;
+use crate::system_data::AllData;
 
 pub struct InputProcessor {
   pub reader_id: ReaderId<InputEvent>,
@@ -15,33 +14,8 @@ pub struct InputProcessor {
 
 impl InputProcessor {}
 
-#[derive(Derivative, SystemData)]
-#[derivative(Debug)]
-pub struct Data<'data> {
-  #[derivative(Debug = "ignore")]
-  pub entities: Entities<'data>,
-  #[derivative(Debug = "ignore")]
-  pub input_event_channel: Read<'data, EventChannel<InputEvent>>,
-  #[derivative(Debug = "ignore")]
-  pub command_event_channel: Write<'data, EventChannel<CommandEvent>>,
-  #[derivative(Debug = "ignore")]
-  pub output_event_channel: Write<'data, EventChannel<OutputEvent>>,
-}
-
-impl WriteCommandEventTrait for Data<'_> {
-  fn write_command_event(&mut self, command: Arc<dyn CommandTrait>) {
-    self.command_event_channel.single_write(CommandEvent { command });
-  }
-}
-
-impl WriteOutputEventTrait for Data<'_> {
-  fn write_output_event(&mut self, output: String) {
-    self.output_event_channel.single_write(OutputEvent { output });
-  }
-}
-
 impl<'data> System<'data> for InputProcessor {
-  type SystemData = Data<'data>;
+  type SystemData = AllData<'data>;
 
   /// Run system.
   fn run(&mut self, mut data: Self::SystemData) {
