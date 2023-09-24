@@ -4,7 +4,7 @@ macro_rules! write_output_event {
     #[allow(unused_imports)]
     use $crate::event::OutputEvent;
     #[allow(unused_imports)]
-    use $crate::system::WriteOutputEventTrait;
+    use $crate::system_data::WriteOutputEventTrait;
     $data.write_output_event($string.to_string());
   }};
 }

@@ -4,7 +4,7 @@ macro_rules! write_action_event {
     #[allow(unused_imports)]
     use $crate::event::ActionEvent;
     #[allow(unused_imports)]
-    use $crate::system::WriteActionEventTrait;
+    use $crate::system_data::WriteActionEventTrait;
     $data.write_action_event($action);
   }};
 }

@@ -3,7 +3,7 @@ use specs::shrev::ReaderId;
 
 use crate::effect::EffectContext;
 use crate::event::*;
-use crate::system::AllData;
+use crate::system_data::AllData;
 
 pub struct EffectProcessor {
   pub reader_id: ReaderId<EffectEvent>,

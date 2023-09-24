@@ -4,10 +4,10 @@ use std::sync::Arc;
 
 use crate::action::ActionTrait;
 use crate::effect::EffectTrait;
-use crate::system::AllData;
-use crate::system::AllDataTrait;
-use crate::system::WriteActionEventTrait;
-use crate::system::WriteEffectEventTrait;
+use crate::system_data::AllData;
+use crate::system_data::AllDataTrait;
+use crate::system_data::WriteActionEventTrait;
+use crate::system_data::WriteEffectEventTrait;
 
 /// The `EffectContextData` struct, which represents the data in the context
 ///  of an effect application.

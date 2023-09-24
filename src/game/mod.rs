@@ -11,8 +11,8 @@ use std::time::Duration;
 
 use crate::component::register_components;
 use crate::dispatcher::*;
-use crate::event::insert_event_channels;
 use crate::event::InputEvent;
+use crate::event_channel::insert_event_channels;
 use crate::resource::*;
 
 pub mod _constant;

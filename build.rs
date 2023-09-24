@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use convert_case::{Case, Casing};
 use std::fmt::Write as _;
 use std::fs;
@@ -14,6 +15,11 @@ fn main() {
   generate_mod_with_export("system", "System");
   generate_system_data_traits_mod();
   generate_insert_event_channels();
+}
+
+fn get_event_names() -> Vec<String> {
+  let dir = Path::new("src/event/events");
+  get_subdirs_in_dir(dir)
 }
 
 fn generate_insert_event_channels() {
@@ -37,7 +43,8 @@ fn generate_insert_event_channels() {
       .expect("Failed to write to content string");
   }
   writeln!(content, "}}").expect("Failed to write to content string");
-  fs::write(Path::new("src/event/channels/mod.rs"), content).expect("Failed to write src/event/channels/mod.rs");
+  fs::write(Path::new("src/event_channel/event_channels/mod.rs"), content)
+    .expect("Failed to write src/event_channel/event_channels/mod.rs");
 }
 
 fn generate_macro_mod() {
@@ -106,7 +113,7 @@ fn generate_mod_with_export(base: &str, suffix: &str) {
 }
 
 fn generate_system_data_traits_mod() {
-  let dir = Path::new("src/system/data/_trait/traits");
+  let dir = Path::new("src/system_data/_trait/traits");
   let subdirs = get_subdirs_in_dir(dir);
   let mut content = String::new();
   writeln!(

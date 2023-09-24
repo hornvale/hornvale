@@ -8,7 +8,7 @@ use crate::command::CommandTrait;
 use crate::effect::EffectTrait;
 use crate::event::*;
 use crate::resource::*;
-use crate::system::*;
+use crate::system_data::*;
 
 /// The `AllData` type.
 ///

@@ -5,8 +5,8 @@ use std::sync::Arc;
 use crate::command::CommandTrait;
 use crate::command::ParsingStrategyTrait;
 use crate::event::*;
-use crate::system::WriteCommandEventTrait;
-use crate::system::WriteOutputEventTrait;
+use crate::system_data::WriteCommandEventTrait;
+use crate::system_data::WriteOutputEventTrait;
 
 pub struct InputProcessor {
   pub reader_id: ReaderId<InputEvent>,

@@ -3,7 +3,7 @@ use specs::shrev::ReaderId;
 
 use crate::command::CommandContext;
 use crate::event::*;
-use crate::system::AllData;
+use crate::system_data::AllData;
 
 pub struct CommandProcessor {
   pub reader_id: ReaderId<CommandEvent>,

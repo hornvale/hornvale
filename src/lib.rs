@@ -45,10 +45,12 @@ pub mod dispatcher;
 pub mod effect;
 pub mod entity;
 pub mod event;
+pub mod event_channel;
 pub mod game;
 pub mod output;
 pub mod resource;
 pub mod system;
+pub mod system_data;
 
 #[cfg(test)]
 pub mod test {

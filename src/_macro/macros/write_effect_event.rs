@@ -4,7 +4,7 @@ macro_rules! write_effect_event {
     #[allow(unused_imports)]
     use $crate::event::EffectEvent;
     #[allow(unused_imports)]
-    use $crate::system::WriteEffectEventTrait;
+    use $crate::system_data::WriteEffectEventTrait;
     $data.write_effect_event($effect);
   }};
 }

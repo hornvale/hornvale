@@ -3,7 +3,7 @@ use specs::shrev::ReaderId;
 
 use crate::action::ActionContext;
 use crate::event::*;
-use crate::system::AllData;
+use crate::system_data::AllData;
 
 pub struct ActionProcessor {
   pub reader_id: ReaderId<ActionEvent>,
