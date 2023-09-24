@@ -24,9 +24,9 @@ impl ActionTrait for Quit {
 #[cfg(test)]
 mod test {
 
-  use crate::action::_trait::traits::action_context::MockActionContext;
-  use crate::action::_trait::traits::action_context_data::MockActionContextDataMerged;
-  use crate::action::_trait::traits::*;
+  use crate::action::_trait::_collection::action_context::MockActionContext;
+  use crate::action::_trait::_collection::action_context_data::MockActionContextDataMerged;
+  use crate::action::_trait::_collection::*;
   use crate::test::init;
 
   #[test]
