@@ -1,4 +1,5 @@
 use crate::command::CommandContext;
+use crate::command::CommandContextTrait;
 use crate::command::CommandError;
 use crate::command::CommandTrait;
 
@@ -12,7 +13,7 @@ impl CommandTrait for Look {
   }
 
   fn execute(&self, context: &mut CommandContext) -> Result<(), CommandError> {
-    write_output_event!(context.data, "You look around.");
+    write_output_event!(context.get_data_mut(), "You look around.");
     Ok(())
   }
 }
