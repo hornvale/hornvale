@@ -1,12 +1,9 @@
-use mockall::predicate::*;
-use mockall::*;
-
 use crate::action::ActionContextDataTrait;
 
 /// The `ActionContext` struct, which represents the context of an action
 /// execution.
-#[automock]
-pub trait ActionContext {
-  fn get_data(&self) -> &dyn ActionContextDataTrait;
-  fn get_data_mut(&mut self) -> &mut dyn ActionContextDataTrait;
+pub trait ActionContext<'context> {
+  type Data: ActionContextDataTrait + 'context;
+  fn get_data(&self) -> &Self::Data;
+  fn get_data_mut(&mut self) -> &mut Self::Data;
 }

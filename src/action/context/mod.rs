@@ -1,27 +1,29 @@
-use crate::action::ActionContextDataTrait;
 use crate::action::ActionContextTrait;
+
+use crate::system_data::AllData;
 
 /// The `Context` struct, which represents the context of a command execution.
 #[derive(Derivative)]
 #[derivative(Debug)]
-pub struct Context<'context> {
+pub struct Context<'context, 'data> {
   /// All data.
   #[derivative(Debug = "ignore")]
-  data: &'context mut dyn ActionContextDataTrait,
+  data: &'context mut AllData<'data>,
 }
 
-impl<'context> Context<'context> {
-  pub fn new(data: &'context mut dyn ActionContextDataTrait) -> Self {
+impl<'context, 'data> Context<'context, 'data> {
+  pub fn new(data: &'context mut AllData<'data>) -> Self {
     Context { data }
   }
 }
 
-impl ActionContextTrait for Context<'_> {
-  fn get_data(&self) -> &dyn ActionContextDataTrait {
+impl<'context, 'data> ActionContextTrait<'context> for Context<'context, 'data> {
+  type Data = AllData<'data>;
+  fn get_data(&self) -> &Self::Data {
     self.data
   }
 
-  fn get_data_mut(&mut self) -> &mut dyn ActionContextDataTrait {
+  fn get_data_mut(&mut self) -> &mut Self::Data {
     self.data
   }
 }

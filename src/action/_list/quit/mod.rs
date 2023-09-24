@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::action::ActionContext;
 use crate::action::ActionContextTrait;
 use crate::action::ActionError;
 use crate::action::ActionTrait;
@@ -10,7 +11,7 @@ use crate::effect::QuitGameEffect;
 pub struct Quit {}
 
 impl ActionTrait for Quit {
-  fn execute(&self, context: &mut dyn ActionContextTrait) -> Result<(), ActionError> {
+  fn execute(&self, context: &mut ActionContext) -> Result<(), ActionError> {
     write_effect_event!(
       context.get_data_mut(),
       Arc::new(QuitGameEffect {

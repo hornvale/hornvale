@@ -7,17 +7,17 @@ use crate::system_data::AllData;
 pub struct Context<'context, 'data> {
   /// All data.
   #[derivative(Debug = "ignore")]
-  data: &'data mut AllData<'context>,
+  data: &'context mut AllData<'data>,
 }
 
 impl<'context, 'data> Context<'context, 'data> {
-  pub fn new(data: &'data mut AllData<'context>) -> Self {
+  pub fn new(data: &'context mut AllData<'data>) -> Self {
     Context { data }
   }
 }
 
 impl<'context, 'data> CommandContextTrait<'context> for Context<'context, 'data> {
-  type Data = AllData<'context>;
+  type Data = AllData<'data>;
   fn get_data(&self) -> &Self::Data {
     self.data
   }
