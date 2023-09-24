@@ -7,12 +7,12 @@ use std::path::Path;
 fn main() {
   generate_macro_mod();
   generate_component_mod();
-  generate_mod_with_export("action", "Action");
-  generate_mod_with_export("command", "Command");
-  generate_mod_with_export("effect", "Effect");
-  generate_mod_with_export("event", "Event");
-  generate_mod_with_export("resource", "Resource");
-  generate_mod_with_export("system", "System");
+  generate_mod_with_export("src", "action", "Action");
+  // generate_mod_with_export("command", "Command");
+  // generate_mod_with_export("effect", "Effect");
+  // generate_mod_with_export("event", "Event");
+  // generate_mod_with_export("resource", "Resource");
+  // generate_mod_with_export("system", "System");
   generate_system_data_traits_mod();
   generate_insert_event_channels();
 }
@@ -47,21 +47,6 @@ fn generate_insert_event_channels() {
     .expect("Failed to write src/event_channel/event_channels/mod.rs");
 }
 
-fn generate_macro_mod() {
-  let dir = Path::new("src/_macro/_collection");
-  let files = get_files_in_dir(dir);
-  let mut content = String::new();
-  writeln!(
-    content,
-    "// This file is generated (see build.rs). Please do not edit manually."
-  )
-  .expect("Failed to write to content string");
-  for file in &files {
-    writeln!(content, "#[macro_use]\npub mod {};", file).expect("Failed to write to content string");
-  }
-  fs::write(dir.join("mod.rs"), content).expect("Failed to write mod.rs");
-}
-
 fn generate_component_mod() {
   let dir = Path::new("src/component/components");
   let subdirs = get_subdirs_in_dir(dir);
@@ -87,16 +72,12 @@ fn generate_component_mod() {
   fs::write(dir.join("mod.rs"), content).expect("Failed to write mod.rs");
 }
 
-fn generate_mod_with_export(base: &str, suffix: &str) {
-  let path = format!("src/{}/{}s", base, base);
+fn generate_mod_with_export(base_dir: &str, base: &str, suffix: &str) {
+  let path = format!("{}/{}/_list", base_dir, base);
   let dir = Path::new(&path);
   let subdirs = get_subdirs_in_dir(dir);
   let mut content = String::new();
-  writeln!(
-    content,
-    "// This file is generated (see build.rs). Please do not edit manually."
-  )
-  .expect("Failed to write to content string");
+  write_mod_header(&mut content);
   for subdir in &subdirs {
     let struct_name = format!("{}{}", subdir.to_case(Case::UpperCamel), suffix);
     writeln!(content, "pub mod {};", subdir).expect("Failed to write to content string");
@@ -159,4 +140,23 @@ fn get_subdirs_in_dir(dir: &Path) -> Vec<String> {
       None
     })
     .collect()
+}
+
+fn generate_macro_mod() {
+  let dir = Path::new("src/_macro/_list");
+  let files = get_files_in_dir(dir);
+  let mut content = String::new();
+  write_mod_header(&mut content);
+  for file in &files {
+    writeln!(content, "#[macro_use]\npub mod {};", file).expect("Failed to write to content string");
+  }
+  fs::write(dir.join("mod.rs"), content).expect("Failed to write mod.rs");
+}
+
+fn write_mod_header(content: &mut String) {
+  writeln!(
+    content,
+    "// This file is generated (see build.rs). Please do not edit manually."
+  )
+  .expect("Failed to write to content string");
 }
