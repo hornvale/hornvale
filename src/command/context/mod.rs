@@ -7,7 +7,7 @@ use crate::command::CommandContextTrait;
 pub struct Context<'context> {
   /// All data.
   #[derivative(Debug = "ignore")]
-  pub data: &'context mut dyn CommandContextDataTrait,
+  data: &'context mut dyn CommandContextDataTrait,
 }
 
 impl<'context> Context<'context> {

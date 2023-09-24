@@ -1,4 +1,5 @@
 use crate::command::CommandContext;
+use crate::command::CommandContextTrait;
 use crate::command::CommandError;
 use crate::command::CommandTrait;
 
@@ -12,7 +13,7 @@ impl CommandTrait for Wait {
   }
 
   fn execute(&self, context: &mut CommandContext) -> Result<(), CommandError> {
-    write_output_event!(context.data, "Time passes...");
+    write_output_event!(context.get_data_mut(), "Time passes...");
     Ok(())
   }
 }
