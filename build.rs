@@ -48,7 +48,7 @@ fn generate_insert_event_channels() {
 }
 
 fn generate_macro_mod() {
-  let dir = Path::new("src/_macro/macros");
+  let dir = Path::new("src/_macro/_collection");
   let files = get_files_in_dir(dir);
   let mut content = String::new();
   writeln!(
