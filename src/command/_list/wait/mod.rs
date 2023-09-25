@@ -1,3 +1,6 @@
+use std::sync::Arc;
+
+use crate::action::WaitAction;
 use crate::command::CommandContext;
 use crate::command::CommandContextTrait;
 use crate::command::CommandError;
@@ -13,7 +16,7 @@ impl CommandTrait for Wait {
   }
 
   fn execute(&self, context: &mut CommandContext) -> Result<(), CommandError> {
-    write_output_event!(context.get_data_mut(), "Time passes...");
+    write_action_event!(context.get_data_mut(), Arc::new(WaitAction {}));
     Ok(())
   }
 }

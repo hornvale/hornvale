@@ -31,6 +31,8 @@ pub struct AllData<'data> {
   pub output_event_channel: Write<'data, EventChannel<OutputEvent>>,
   // Resources
   #[derivative(Debug = "ignore")]
+  pub input_ready_flag_resource: Write<'data, InputReadyFlagResource>,
+  #[derivative(Debug = "ignore")]
   pub quit_flag_resource: Write<'data, QuitFlagResource>,
 }
 
@@ -91,5 +93,17 @@ impl GetEventChannelTrait<OutputEvent> for AllData<'_> {
 impl GetMutEventChannelTrait<OutputEvent> for AllData<'_> {
   fn get_mut_event_channel(&mut self) -> &mut EventChannel<OutputEvent> {
     &mut self.output_event_channel
+  }
+}
+
+impl SetInputReadyFlagTrait for AllData<'_> {
+  fn set_input_ready_flag(&mut self, value: bool) {
+    self.input_ready_flag_resource.0 = value;
+  }
+}
+
+impl SetQuitFlagTrait for AllData<'_> {
+  fn set_quit_flag(&mut self, value: Option<String>) {
+    self.quit_flag_resource.0 = value;
   }
 }

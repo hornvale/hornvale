@@ -3,12 +3,13 @@ use crossterm::{
   execute,
   terminal::{disable_raw_mode, Clear, ClearType},
 };
-use rustyline_async::{ReadlineEvent, SharedWriter};
+use rustyline_async::{Readline, ReadlineError, ReadlineEvent, SharedWriter};
 use specs::prelude::*;
 use specs::shrev::EventChannel;
 use std::io::Write;
 use std::time::Duration;
 use tokio::time::interval;
+use tokio::time::sleep;
 
 use crate::component::register_components;
 use crate::dispatcher::*;
@@ -86,6 +87,15 @@ impl Game {
     Ok(())
   }
 
+  pub async fn read_input_or_wait(&self, stdin: &mut Readline) -> Result<ReadlineEvent, ReadlineError> {
+    if self.ecs.read_resource::<InputReadyFlagResource>().0 {
+      stdin.readline().await
+    } else {
+      sleep(Duration::from_millis(10)).await;
+      Ok(ReadlineEvent::Eof)
+    }
+  }
+
   /// Run.
   pub async fn run(&mut self) -> Result<(), Error> {
     run_initial_systems(&mut self.ecs);
@@ -131,13 +141,16 @@ impl Game {
             }
           }
         }
-        command = stdin.readline() => match command {
+        command = self.read_input_or_wait(stdin) => match command {
           Ok(ReadlineEvent::Line(line)) => {
+            // Disable further input for the moment.
             // We could conceivably be parsing some commands (like Quit, etc)
             // from here rather than sending them through the system, but I
             // think that's a bad architectural decision.
             let line = line.trim();
             stdin.add_history_entry(line.to_owned());
+            // Echo the input to the output.
+            writeln!(stdout, "> {}", line)?;
             // We could write "input" in other places.  This might be a way
             // (however unsophisticated) of building macros into the UI.
             self.ecs
@@ -145,9 +158,9 @@ impl Game {
               .single_write(InputEvent {
                 input: line.to_owned(),
               });
+            self.ecs.write_resource::<InputReadyFlagResource>().0 = false;
           },
           Ok(ReadlineEvent::Eof) => {
-            return Ok(());
           },
           Ok(ReadlineEvent::Interrupted) => {
             return Ok(());
@@ -156,7 +169,7 @@ impl Game {
             writeln!(stdout, "Error: {error:?}")?;
             return Err(error.into())
           },
-        },
+        }
       }
     }
   }

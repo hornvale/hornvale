@@ -21,6 +21,7 @@ impl<'data> System<'data> for EffectProcessor {
       .read(&mut self.reader_id)
       .cloned()
       .collect::<Vec<_>>();
+    // data.set_input_ready_flag(true);
     if events.is_empty() {
       return;
     }
