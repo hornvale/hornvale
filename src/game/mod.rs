@@ -3,7 +3,7 @@ use crossterm::{
   execute,
   terminal::{disable_raw_mode, Clear, ClearType},
 };
-use rustyline_async::{Readline, ReadlineError, ReadlineEvent, SharedWriter};
+use rustyline_async::{ReadlineError, ReadlineEvent};
 use specs::prelude::*;
 use specs::shrev::EventChannel;
 use std::io::Write;
@@ -26,50 +26,11 @@ pub use error::Error as GameError;
 /// The `Game` struct.
 #[derive(Derivative)]
 #[derivative(Debug)]
-pub struct Game {
-  /// The world state, generally all of the information available.
-  #[derivative(Debug = "ignore")]
-  pub ecs: World,
-  /// The tick dispatcher.
-  #[derivative(Debug = "ignore")]
-  pub tick_dispatcher: Dispatcher<'static, 'static>,
-  /// Every tenth tick (roughly).
-  #[derivative(Debug = "ignore")]
-  pub deca_tick_dispatcher: Dispatcher<'static, 'static>,
-  /// Every hundredth tick (roughly).
-  #[derivative(Debug = "ignore")]
-  pub hecto_tick_dispatcher: Dispatcher<'static, 'static>,
-  /// Every thousandth tick (roughly).
-  #[derivative(Debug = "ignore")]
-  pub kilo_tick_dispatcher: Dispatcher<'static, 'static>,
-  /// Raw output channel.
-  #[derivative(Debug = "ignore")]
-  pub output: SharedWriter,
-}
+pub struct Game {}
 
 impl Game {
-  /// Initialize ECS.
-  pub fn new(seed: &str) -> Self {
-    let mut ecs = World::new();
-    insert_resources(&mut ecs, seed);
-    insert_event_channels(&mut ecs);
-    register_components(&mut ecs);
-    let tick_dispatcher = get_tick_dispatcher(&mut ecs);
-    let deca_tick_dispatcher = get_deca_tick_dispatcher(&mut ecs);
-    let hecto_tick_dispatcher = get_hecto_tick_dispatcher(&mut ecs);
-    let kilo_tick_dispatcher = get_kilo_tick_dispatcher(&mut ecs);
-    let output = {
-      let output_resource = ecs.read_resource::<OutputResource>();
-      output_resource.0.as_ref().unwrap().clone()
-    };
-    Self {
-      ecs,
-      tick_dispatcher,
-      deca_tick_dispatcher,
-      hecto_tick_dispatcher,
-      kilo_tick_dispatcher,
-      output,
-    }
+  pub fn new() -> Self {
+    Self {}
   }
 
   /// Clear the last line (remove prompt).
@@ -87,8 +48,10 @@ impl Game {
     Ok(())
   }
 
-  pub async fn read_input_or_wait(&self, stdin: &mut Readline) -> Result<ReadlineEvent, ReadlineError> {
-    if self.ecs.read_resource::<InputReadyFlagResource>().0 {
+  pub async fn read_input_or_wait(&self, ecs: &mut World) -> Result<ReadlineEvent, ReadlineError> {
+    if ecs.read_resource::<InputReadyFlagResource>().0 {
+      let mut input_resource = ecs.write_resource::<InputResource>();
+      let stdin = input_resource.0.as_mut().unwrap();
       stdin.readline().await
     } else {
       sleep(Duration::from_millis(10)).await;
@@ -97,10 +60,22 @@ impl Game {
   }
 
   /// Run.
-  pub async fn run(&mut self) -> Result<(), Error> {
-    run_initial_systems(&mut self.ecs);
+  pub async fn run(&self, seed: &str) -> Result<(), Error> {
+    let mut ecs = World::new();
+    insert_resources(&mut ecs, seed);
+    insert_event_channels(&mut ecs);
+    register_components(&mut ecs);
+    let mut tick_dispatcher = get_tick_dispatcher(&mut ecs);
+    let mut deca_tick_dispatcher = get_deca_tick_dispatcher(&mut ecs);
+    let mut hecto_tick_dispatcher = get_hecto_tick_dispatcher(&mut ecs);
+    let mut kilo_tick_dispatcher = get_kilo_tick_dispatcher(&mut ecs);
+    let output = {
+      let output_resource = ecs.read_resource::<OutputResource>();
+      output_resource.0.as_ref().unwrap().clone()
+    };
+    run_initial_systems(&mut ecs);
     // If we need to print without sending it through the whole thing.
-    let mut stdout = self.output.clone();
+    let mut stdout = output.clone();
     // It'd be interesting to store this in a resource and possibly modify it
     // on the fly. Very FRP. Much signal.
     let mut tick_timer = interval(Duration::from_millis(TICK_INTERVAL));
@@ -110,39 +85,39 @@ impl Game {
     loop {
       // Maintain after every tick.  This enables the use of the lazy systems,
       // which should make it easier to have simple, concise systems.
-      self.ecs.maintain();
+      ecs.maintain();
       // Check the quit flag resource.
       {
-        let quit_flag_resource = self.ecs.read_resource::<QuitFlagResource>();
+        let quit_flag_resource = ecs.read_resource::<QuitFlagResource>();
         if quit_flag_resource.0.is_some() {
           self.quit(quit_flag_resource.0.as_ref().unwrap())?;
           return Ok(());
         }
       }
-      // This is how we read input.
-      let mut input_resource = self.ecs.write_resource::<InputResource>();
-      // Probably move to a prompt system?  Or not?  IDK.
-      let stdin = input_resource.0.as_mut().unwrap();
       // Select the next future to complete.
       tokio::select! {
         _ = tick_timer.tick() => {
           // Each tick, run all of the systems.  We could have multiple
           // dispatchers, each running a subset of the systems, and scheduled
           // differently.
-          self.tick_dispatcher.dispatch(&self.ecs);
+          tick_dispatcher.dispatch(&ecs);
           tick += 1;
           if tick % 10 == 0 {
-            self.deca_tick_dispatcher.dispatch(&self.ecs);
+            deca_tick_dispatcher.dispatch(&ecs);
             if tick % 100 == 0 {
-              self.hecto_tick_dispatcher.dispatch(&self.ecs);
+              hecto_tick_dispatcher.dispatch(&ecs);
               if tick % 1000 == 0 {
-                self.kilo_tick_dispatcher.dispatch(&self.ecs);
+                kilo_tick_dispatcher.dispatch(&ecs);
               }
             }
           }
         }
-        command = self.read_input_or_wait(stdin) => match command {
+        command = self.read_input_or_wait(&mut ecs) => match command {
           Ok(ReadlineEvent::Line(line)) => {
+            // This is how we read input.
+            let mut input_resource = ecs.write_resource::<InputResource>();
+            // Probably move to a prompt system?  Or not?  IDK.
+            let stdin = input_resource.0.as_mut().unwrap();
             // Disable further input for the moment.
             // We could conceivably be parsing some commands (like Quit, etc)
             // from here rather than sending them through the system, but I
@@ -153,12 +128,12 @@ impl Game {
             writeln!(stdout, "> {}", line)?;
             // We could write "input" in other places.  This might be a way
             // (however unsophisticated) of building macros into the UI.
-            self.ecs
+            ecs
               .write_resource::<EventChannel<InputEvent>>()
               .single_write(InputEvent {
                 input: line.to_owned(),
               });
-            self.ecs.write_resource::<InputReadyFlagResource>().0 = false;
+            ecs.write_resource::<InputReadyFlagResource>().0 = false;
           },
           Ok(ReadlineEvent::Eof) => {
           },
@@ -177,6 +152,6 @@ impl Game {
 
 impl Default for Game {
   fn default() -> Self {
-    Self::new("goat boy")
+    Self::new()
   }
 }

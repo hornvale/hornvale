@@ -19,10 +19,9 @@ fn clear_last_line() -> Result<(), GameError> {
 
 #[tokio::main]
 async fn main() -> Result<(), GameError> {
-  let mut game = Game::new("goat boy");
-  let stdout = game.output.clone();
-  WriteLogger::init(LevelFilter::Off, Config::default(), stdout).unwrap();
-  match game.run().await {
+  let game = Game::new();
+  WriteLogger::init(LevelFilter::Off, Config::default(), std::io::stdout()).unwrap();
+  match game.run("goat boy").await {
     Ok(_) => {
       clear_last_line()?;
     },
