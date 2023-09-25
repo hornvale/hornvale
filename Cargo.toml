@@ -39,7 +39,7 @@ rustyline-async = "0.4.0"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.107"
 simplelog = "0.12.1"
-specs = { version = "0.19.0", features = ["shred-derive", "specs-derive"] }
+specs = { version = "0.20.0", features = ["shred-derive", "specs-derive"] }
 specs-derive = "0.4.1"
 thiserror = "1.0.48"
 tokio = { version = "1.32.0", features = ["full"] }
