@@ -42,6 +42,7 @@ pub mod action;
 pub mod command;
 pub mod component;
 pub mod dispatcher;
+pub mod dispatcher_clock;
 pub mod effect;
 pub mod entity_id;
 pub mod event;
