@@ -1,6 +1,7 @@
 use anyhow::Error as AnyError;
 
 use crate::game_state::GameState;
+use crate::game_state::InputReadyFlagTrait;
 use crate::game_state::QuitFlagTrait;
 use crate::system::CommandSystem;
 use crate::system::InputSystem;
@@ -34,14 +35,17 @@ impl Game {
     let output_system = OutputSystem::default();
 
     loop {
-      // Read input from the user.
-      input_system.run(&mut game_state);
+      if game_state.get_input_ready_flag() {
+        // Read input from the user.
+        input_system.run(&mut game_state);
+      }
       // Parse input into a command or commands.
       parser_system.run(&mut game_state);
       // Execute the command or commands.
       command_system.run(&mut game_state);
       // Display accumulated output to the user.
       output_system.run(&mut game_state);
+      // We've been told to quit.
       if game_state.get_quit_flag() {
         break;
       }

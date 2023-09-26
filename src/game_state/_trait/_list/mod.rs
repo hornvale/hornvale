@@ -9,3 +9,5 @@ pub mod output_queue;
 pub use output_queue::OutputQueue as OutputQueueTrait;
 pub mod quit_flag;
 pub use quit_flag::QuitFlag as QuitFlagTrait;
+pub mod tick_counter;
+pub use tick_counter::TickCounter as TickCounterTrait;

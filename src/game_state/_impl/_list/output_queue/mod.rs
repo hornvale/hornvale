@@ -17,8 +17,11 @@ impl OutputQueueTrait for GameState {
 mod tests {
   use super::*;
 
+  use crate::test::init;
+
   #[test]
   fn test_enqueue_output() {
+    init();
     let mut game_state = GameState::new();
     game_state.enqueue_output("Hello, world!".to_string());
     assert_eq!(game_state.output.len(), 1);
@@ -26,6 +29,7 @@ mod tests {
 
   #[test]
   fn test_dequeue_output() {
+    init();
     let mut game_state = GameState::new();
     game_state.enqueue_output("Hello, world!".to_string());
     assert_eq!(game_state.output.len(), 1);

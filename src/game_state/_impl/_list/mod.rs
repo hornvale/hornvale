@@ -2,6 +2,12 @@
 // See <project_root>/build.rs for details.
 // Remember not to edit it manually.
 pub mod game_state;
+pub use game_state::*;
 pub mod input_ready_flag;
+pub use input_ready_flag::*;
 pub mod output_queue;
+pub use output_queue::*;
 pub mod quit_flag;
+pub use quit_flag::*;
+pub mod tick_counter;
+pub use tick_counter::*;

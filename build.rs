@@ -7,6 +7,7 @@ use std::path::Path;
 fn main() {
   generate_macro_mod();
   generate_list_mod("src/game_state/_impl");
+  generate_list_mod("src/game_state/_type");
   generate_list_mod_with_alias("src/game_state/_trait", "Trait");
   generate_list_mod_with_alias("src/system", "System");
   generate_list_mod_with_alias("src/system/_trait", "Trait");
@@ -41,6 +42,7 @@ fn generate_list_mod(base_dir: &str) {
   write_mod_header(&mut content);
   for subdir in &subdirs {
     writeln!(content, "pub mod {};", subdir).expect("Failed to write to content string");
+    writeln!(content, "pub use {}::*;", subdir).expect("Failed to write to content string");
   }
   fs::write(dir.join("mod.rs"), content).expect("Failed to write mod.rs");
 }
