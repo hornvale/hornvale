@@ -7,6 +7,8 @@ use std::path::Path;
 fn main() {
   generate_macro_mod();
   generate_list_mod_with_alias("src/game_state/_trait", "Trait");
+  generate_list_mod_with_alias("src/system", "System");
+  generate_list_mod_with_alias("src/system/_trait", "Trait");
 }
 
 fn generate_macro_mod() {
@@ -53,7 +55,7 @@ fn generate_list_mod_with_alias(base_dir: &str, suffix: &str) {
 
 fn get_files_in_dir(dir: &Path) -> Vec<String> {
   fs::read_dir(dir)
-    .expect(format!("Failed to read directory {:?}", dir).as_str())
+    .unwrap_or_else(|_| panic!("Failed to read directory {:?}", dir))
     .filter_map(|e| {
       if let Ok(entry) = e {
         let path = entry.path();

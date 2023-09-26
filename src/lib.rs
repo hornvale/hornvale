@@ -30,6 +30,7 @@ pub use _macro::*;
 // Remaining modules.
 pub mod game;
 pub mod game_state;
+pub mod system;
 
 #[cfg(test)]
 pub mod test {
