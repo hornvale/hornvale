@@ -1,7 +1,8 @@
 use std::io::{stdin, stdout, Write};
 
 use crate::game_state::GameState;
-use crate::game_state::GameStateTrait;
+use crate::game_state::OutputQueueTrait;
+use crate::game_state::QuitFlagTrait;
 use crate::system::SystemTrait;
 
 /// The `Input` struct.

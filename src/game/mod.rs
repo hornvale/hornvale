@@ -1,9 +1,11 @@
 use anyhow::Error as AnyError;
 
 use crate::game_state::GameState;
-use crate::game_state::GameStateTrait;
+use crate::game_state::QuitFlagTrait;
+use crate::system::CommandSystem;
 use crate::system::InputSystem;
 use crate::system::OutputSystem;
+use crate::system::ParserSystem;
 use crate::system::SystemTrait;
 
 /// The `Game` struct.
@@ -25,12 +27,20 @@ impl Game {
     // Initialization
     println!("Welcome to Hornvale!");
 
-    let mut game_state = GameState::new();
-    let input_system = InputSystem::new();
-    let output_system = OutputSystem::new();
+    let mut game_state = GameState::default();
+    let input_system = InputSystem::default();
+    let parser_system = ParserSystem::default();
+    let command_system = CommandSystem::default();
+    let output_system = OutputSystem::default();
 
     loop {
+      // Read input from the user.
       input_system.run(&mut game_state);
+      // Parse input into a command or commands.
+      parser_system.run(&mut game_state);
+      // Execute the command or commands.
+      command_system.run(&mut game_state);
+      // Display accumulated output to the user.
       output_system.run(&mut game_state);
       if game_state.get_quit_flag() {
         break;

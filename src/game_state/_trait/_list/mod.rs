@@ -3,3 +3,9 @@
 // Remember not to edit it manually.
 pub mod game_state;
 pub use game_state::GameState as GameStateTrait;
+pub mod input_ready_flag;
+pub use input_ready_flag::InputReadyFlag as InputReadyFlagTrait;
+pub mod output_queue;
+pub use output_queue::OutputQueue as OutputQueueTrait;
+pub mod quit_flag;
+pub use quit_flag::QuitFlag as QuitFlagTrait;

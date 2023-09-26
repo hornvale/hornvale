@@ -1,5 +1,5 @@
 use crate::game_state::GameState;
-use crate::game_state::GameStateTrait;
+use crate::game_state::OutputQueueTrait;
 use crate::system::SystemTrait;
 
 /// The `Output` struct.
