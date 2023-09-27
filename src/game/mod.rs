@@ -3,9 +3,8 @@ use anyhow::Error as AnyError;
 use crate::game_state::GameState;
 use crate::game_state::InputReadyFlagTrait;
 use crate::game_state::QuitFlagTrait;
-use crate::system::ActionSystem;
 use crate::system::CommandSystem;
-use crate::system::EffectSystem;
+use crate::system::EventSystem;
 use crate::system::InputSystem;
 use crate::system::OutputSystem;
 use crate::system::ParserSystem;
@@ -31,26 +30,27 @@ impl Game {
     println!("Welcome to Hornvale!");
 
     let mut game_state = GameState::default();
-    let action_system = ActionSystem::default();
     let command_system = CommandSystem::default();
-    let effect_system = EffectSystem::default();
+    let event_system = EventSystem::default();
     let input_system = InputSystem::default();
     let output_system = OutputSystem::default();
     let parser_system = ParserSystem::default();
     game_state.set_input_ready_flag(true);
     loop {
+      // Long-running diegetic actions will set the input_ready flag to false.
+      // We don't want to read input until they resolve.
       if game_state.get_input_ready_flag() {
         // Read input from the user.
         input_system.run(&mut game_state);
       }
-      // Parse input into a command or commands.
+      // Parse player input into a command or commands.
       parser_system.run(&mut game_state);
-      // Execute the command or commands.
+      // Execute the command or commands entered by the player, which will
+      // create events that invoke actions.
       command_system.run(&mut game_state);
-      // Execute any actions that have been queued.
-      action_system.run(&mut game_state);
-      // Apply any effects that have been queued.
-      effect_system.run(&mut game_state);
+      // Process event queue, which will execute actions and apply effects
+      // and cancel other events and so forth and so on.
+      event_system.run(&mut game_state);
       // Display accumulated output to the user.
       output_system.run(&mut game_state);
       // We've been told to quit.

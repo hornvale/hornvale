@@ -1,11 +1,11 @@
 use anyhow::Error as AnyError;
 
-use crate::action::QuitAction;
 use crate::command::CommandTrait;
-use crate::game_state::ActionQueueTrait;
+use crate::event::QuitEvent;
+use crate::game_state::EventQueueTrait;
 use crate::game_state::GameState;
 
-/// The `Quit` struct.
+/// The `Quit` command.
 #[derive(Debug, Default)]
 pub struct Quit {}
 
@@ -24,7 +24,7 @@ impl CommandTrait<GameState> for Quit {
   /// Runs the `Quit` command.
   fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Running quit command.");
-    game_state.enqueue_action(Box::new(QuitAction::new()));
+    game_state.enqueue_event(Box::new(QuitEvent::new()));
     Ok(())
   }
 }

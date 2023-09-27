@@ -1,6 +1,6 @@
+use crate::effect::EffectTrait;
 use crate::effect::SetInputReadyFlagEffect;
 use crate::game_state::CommandQueueTrait;
-use crate::game_state::EffectQueueTrait;
 use crate::game_state::GameState;
 use crate::system::SystemTrait;
 
@@ -27,6 +27,6 @@ impl SystemTrait<GameState> for Command {
         .map_err(|error| error!("Error running command: {}", error))
         .ok();
     }
-    game_state.enqueue_effect(Box::new(SetInputReadyFlagEffect::new(true)));
+    SetInputReadyFlagEffect::new(true).apply(game_state).ok();
   }
 }

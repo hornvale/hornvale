@@ -31,6 +31,7 @@ pub use _macro::*;
 pub mod action;
 pub mod command;
 pub mod effect;
+pub mod event;
 pub mod game;
 pub mod game_state;
 pub mod parser;

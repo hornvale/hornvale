@@ -1,8 +1,8 @@
 use anyhow::Error as AnyError;
 
-use crate::action::NoOpAction;
 use crate::command::CommandTrait;
-use crate::game_state::ActionQueueTrait;
+use crate::event::NoOpEvent;
+use crate::game_state::EventQueueTrait;
 use crate::game_state::GameState;
 
 /// The `NoOp` struct.
@@ -24,7 +24,7 @@ impl CommandTrait<GameState> for NoOp {
   /// Runs the `NoOp` command.
   fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Running no-op command.");
-    game_state.enqueue_action(Box::new(NoOpAction::new()));
+    game_state.enqueue_event(Box::new(NoOpEvent::new()));
     Ok(())
   }
 }

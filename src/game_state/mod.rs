@@ -1,8 +1,7 @@
 use std::collections::VecDeque;
 
-use crate::action::ActionTrait;
 use crate::command::CommandTrait;
-use crate::effect::EffectTrait;
+use crate::event::EventTrait;
 
 pub mod _impl;
 pub use _impl::*;
@@ -26,11 +25,9 @@ pub struct GameState {
   /// Queues.
   pub input_queue: VecDeque<String>,
   #[derivative(Debug = "ignore")]
-  pub action_queue: VecDeque<Box<dyn ActionTrait<GameState>>>,
-  #[derivative(Debug = "ignore")]
   pub command_queue: VecDeque<Box<dyn CommandTrait<GameState>>>,
   #[derivative(Debug = "ignore")]
-  pub effect_queue: VecDeque<Box<dyn EffectTrait<GameState>>>,
+  pub event_queue: VecDeque<Box<dyn EventTrait<GameState>>>,
   pub output_queue: VecDeque<String>,
 }
 

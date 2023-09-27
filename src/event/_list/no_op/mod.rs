@@ -1,11 +1,11 @@
 use anyhow::Error as AnyError;
 
-use crate::action::ActionTrait;
 use crate::effect::EffectTrait;
 use crate::effect::NoOpEffect;
+use crate::event::EventTrait;
 use crate::game_state::GameState;
 
-/// The `NoOp` action.
+/// The `NoOp` event.
 #[derive(Debug, Default)]
 pub struct NoOp {}
 
@@ -16,10 +16,10 @@ impl NoOp {
   }
 }
 
-impl ActionTrait<GameState> for NoOp {
-  /// Runs the `NoOp` action.
-  fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
-    debug!("Running no-op action.");
+impl EventTrait<GameState> for NoOp {
+  /// Processes the `NoOp` event.
+  fn process(&self, game_state: &mut GameState) -> Result<(), AnyError> {
+    debug!("Applying no-op event.");
     NoOpEffect::new().apply(game_state)?;
     Ok(())
   }
