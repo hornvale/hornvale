@@ -1,4 +1,6 @@
 #![allow(unused_macros)]
+#![allow(unknown_lints)]
+#![allow(ambiguous_glob_reexports)]
 
 // Crate-wide configuration.
 #[allow(unused_imports)]
