@@ -1,9 +1,11 @@
+use crate::game_state::CommandQueueTrait;
 use crate::game_state::GameState;
+use crate::game_state::InputReadyFlagTrait;
 use crate::system::SystemTrait;
 
 /// The `Command` struct.
 ///
-/// This system translates parsed input into commands.
+/// This system dequeues commands from the `GameState` and runs them.
 #[derive(Debug, Default)]
 pub struct Command {}
 
@@ -16,5 +18,14 @@ impl Command {
 
 impl SystemTrait<GameState> for Command {
   /// Runs the `Command`.
-  fn run(&self, _game_state: &mut GameState) {}
+  fn run(&self, game_state: &mut GameState) {
+    debug!("Running command system.");
+    while let Some(command) = game_state.dequeue_command() {
+      command
+        .run(game_state)
+        .map_err(|error| error!("Error running command: {}", error))
+        .ok();
+    }
+    game_state.set_input_ready_flag(true);
+  }
 }

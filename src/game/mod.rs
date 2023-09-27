@@ -33,7 +33,7 @@ impl Game {
     let parser_system = ParserSystem::default();
     let command_system = CommandSystem::default();
     let output_system = OutputSystem::default();
-
+    game_state.set_input_ready_flag(true);
     loop {
       if game_state.get_input_ready_flag() {
         // Read input from the user.

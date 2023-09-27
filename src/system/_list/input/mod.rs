@@ -1,13 +1,12 @@
 use std::io::{stdin, stdout, Write};
 
 use crate::game_state::GameState;
-use crate::game_state::OutputQueueTrait;
-use crate::game_state::QuitFlagTrait;
+use crate::game_state::InputQueueTrait;
 use crate::system::SystemTrait;
 
 /// The `Input` struct.
 ///
-/// This system handles input from the user.
+/// This system reads input from the user and enqueues input.
 #[derive(Debug, Default)]
 pub struct Input {}
 
@@ -33,11 +32,6 @@ impl SystemTrait<GameState> for Input {
   /// Runs the `Input`.
   fn run(&self, game_state: &mut GameState) {
     let input = self.read_input();
-    // Process Input
-    if input == "quit" {
-      game_state.set_quit_flag(true);
-    } else {
-      game_state.enqueue_output(format!("You entered: {}", input));
-    }
+    game_state.enqueue_input(input);
   }
 }

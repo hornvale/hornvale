@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+use crate::command::CommandTrait;
+
 pub mod _impl;
 pub use _impl::*;
 pub mod _trait;
@@ -10,15 +12,19 @@ pub use _type::*;
 /// The `GameState` struct.
 ///
 /// This is an object holding the state of the game.
-#[derive(Debug, Default)]
+#[derive(Derivative, Default)]
+#[derivative(Debug)]
 pub struct GameState {
   /// Flags.
   pub quit_flag: bool,
   pub input_ready_flag: bool,
   /// Counters.
   pub tick_counter: TickCounter,
-  /// Output queue.
-  pub output: VecDeque<String>,
+  /// Queues.
+  pub input_queue: VecDeque<String>,
+  #[derivative(Debug = "ignore")]
+  pub command_queue: VecDeque<Box<dyn CommandTrait<GameState>>>,
+  pub output_queue: VecDeque<String>,
 }
 
 impl GameState {
