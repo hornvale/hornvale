@@ -5,6 +5,8 @@ pub mod action;
 pub use action::Action as ActionSystem;
 pub mod command;
 pub use command::Command as CommandSystem;
+pub mod effect;
+pub use effect::Effect as EffectSystem;
 pub mod input;
 pub use input::Input as InputSystem;
 pub mod output;

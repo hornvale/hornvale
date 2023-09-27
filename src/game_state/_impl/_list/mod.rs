@@ -7,6 +7,8 @@ pub mod command_queue;
 pub use command_queue::*;
 pub mod diegetic_flag;
 pub use diegetic_flag::*;
+pub mod effect_queue;
+pub use effect_queue::*;
 pub mod game_state;
 pub use game_state::*;
 pub mod input_queue;

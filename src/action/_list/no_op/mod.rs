@@ -1,6 +1,8 @@
 use anyhow::Error as AnyError;
 
 use crate::action::ActionTrait;
+use crate::effect::NoOpEffect;
+use crate::game_state::EffectQueueTrait;
 use crate::game_state::GameState;
 
 /// The `NoOp` action.
@@ -16,8 +18,9 @@ impl NoOp {
 
 impl ActionTrait<GameState> for NoOp {
   /// Runs the `NoOp` action.
-  fn run(&self, _game_state: &mut GameState) -> Result<(), AnyError> {
+  fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Running no-op action.");
+    game_state.enqueue_effect(Box::new(NoOpEffect::new()));
     Ok(())
   }
 }

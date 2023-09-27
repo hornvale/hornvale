@@ -30,6 +30,7 @@ pub use _macro::*;
 // Remaining modules.
 pub mod action;
 pub mod command;
+pub mod effect;
 pub mod game;
 pub mod game_state;
 pub mod parser;

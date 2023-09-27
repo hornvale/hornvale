@@ -17,7 +17,7 @@ impl Quit {
 
 impl ActionTrait<GameState> for Quit {
   /// Runs the `Quit` action.
-  fn run(&self, game_state: &mut GameState) -> Result<(), AnyError> {
+  fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Running quit action.");
     game_state.set_quit_flag(true);
     Ok(())

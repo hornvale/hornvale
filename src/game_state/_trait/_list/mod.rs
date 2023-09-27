@@ -7,6 +7,8 @@ pub mod command_queue;
 pub use command_queue::CommandQueue as CommandQueueTrait;
 pub mod diegetic_flag;
 pub use diegetic_flag::DiegeticFlag as DiegeticFlagTrait;
+pub mod effect_queue;
+pub use effect_queue::EffectQueue as EffectQueueTrait;
 pub mod game_state;
 pub use game_state::GameState as GameStateTrait;
 pub mod input_queue;

@@ -12,6 +12,8 @@ fn main() {
   generate_list_mod_with_alias("src/action/_trait", "Trait");
   generate_list_mod_with_alias("src/command", "Command");
   generate_list_mod_with_alias("src/command/_trait", "Trait");
+  generate_list_mod_with_alias("src/effect", "Effect");
+  generate_list_mod_with_alias("src/effect/_trait", "Trait");
   generate_list_mod_with_alias("src/game_state/_trait", "Trait");
   generate_list_mod_with_alias("src/system", "System");
   generate_list_mod_with_alias("src/system/_trait", "Trait");

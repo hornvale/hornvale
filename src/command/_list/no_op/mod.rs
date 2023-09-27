@@ -22,7 +22,7 @@ impl CommandTrait<GameState> for NoOp {
     false
   }
   /// Runs the `NoOp` command.
-  fn run(&self, game_state: &mut GameState) -> Result<(), AnyError> {
+  fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Running no-op command.");
     game_state.enqueue_action(Box::new(NoOpAction::new()));
     Ok(())

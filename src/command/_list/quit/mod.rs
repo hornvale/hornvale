@@ -22,7 +22,7 @@ impl CommandTrait<GameState> for Quit {
     false
   }
   /// Runs the `Quit` command.
-  fn run(&self, game_state: &mut GameState) -> Result<(), AnyError> {
+  fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Running quit command.");
     game_state.enqueue_action(Box::new(QuitAction::new()));
     Ok(())

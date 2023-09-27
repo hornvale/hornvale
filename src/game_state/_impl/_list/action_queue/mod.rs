@@ -31,7 +31,7 @@ mod tests {
   }
 
   #[test]
-  fn test_dequeue_command() {
+  fn test_dequeue_action() {
     init();
     let mut game_state = GameState::new();
     let action = Box::new(NoOpAction::new());

@@ -21,7 +21,7 @@ impl SystemTrait<GameState> for Action {
     debug!("Running action system.");
     while let Some(action) = game_state.dequeue_action() {
       action
-        .run(game_state)
+        .execute(game_state)
         .map_err(|error| error!("Error running action: {}", error))
         .ok();
     }
