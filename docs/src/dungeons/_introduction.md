@@ -32,7 +32,7 @@ Even in the graphical CRPGs of the time, they frequently had to add text to fill
 
 Seriously, what is _that_ about?  Of course, you can't ask, because you don't have any kind of prompt except in the brief dialogues you can enter with a few of the NPCs.
 
-I think it's worth thinking about _Zork_, a dungeon crawler text adventure, _Bane of the Cosmic Forge_, a first-person dungeon crawler, an LPMUD like _After the Plague II_, and the general _Rogue_like top-down grid-based dungeon crawler.  Compare and contrast.  Discuss their strengths and weaknesses.
+I think it's worth thinking about _Zork_, a dungeon crawler text adventure, _Bane of the Cosmic Forge_, a first-person dungeon crawler, an LPMUD like _After the Plague II_, and the general _Rogue_-like top-down grid-based dungeon crawler.  Compare and contrast. Discuss their strengths and weaknesses.
 
 _Zork_ has by far the most interesting environments, but it cannot graphically render them.  Similarly, an LPMUD can have quite wonderful environments, better than _Zork's_ conceivably, but in practice this is limited by the literary abilities of the users crafting the MUD. _Bane of the Cosmic Forge_ and _Rogue_ are similarly limited to extremely repetitive views, and both can conceivably lean on text to add a bit of flavor that would otherwise be lacking.  
 
