@@ -27,6 +27,7 @@ mod tests {
     let mut game_state = GameState::new();
     let command = Box::new(NoOpCommand::new());
     game_state.enqueue_command(command);
+    assert_eq!(game_state.command_queue.len(), 1);
   }
 
   #[test]

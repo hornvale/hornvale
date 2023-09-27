@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 
+use crate::action::ActionTrait;
 use crate::command::CommandTrait;
 
 pub mod _impl;
@@ -16,12 +17,15 @@ pub use _type::*;
 #[derivative(Debug)]
 pub struct GameState {
   /// Flags.
-  pub quit_flag: bool,
+  pub diegetic_flag: bool,
   pub input_ready_flag: bool,
+  pub quit_flag: bool,
   /// Counters.
   pub tick_counter: TickCounter,
   /// Queues.
   pub input_queue: VecDeque<String>,
+  #[derivative(Debug = "ignore")]
+  pub action_queue: VecDeque<Box<dyn ActionTrait<GameState>>>,
   #[derivative(Debug = "ignore")]
   pub command_queue: VecDeque<Box<dyn CommandTrait<GameState>>>,
   pub output_queue: VecDeque<String>,

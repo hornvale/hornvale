@@ -27,7 +27,7 @@ mod tests {
   }
 
   #[test]
-  fn test_set_input_ready_flag_flag() {
+  fn test_set_input_ready_flag() {
     init();
     let mut game_state = GameState::new();
     game_state.set_input_ready_flag(true);

@@ -1,6 +1,8 @@
 use anyhow::Error as AnyError;
 
+use crate::action::NoOpAction;
 use crate::command::CommandTrait;
+use crate::game_state::ActionQueueTrait;
 use crate::game_state::GameState;
 
 /// The `NoOp` struct.
@@ -15,8 +17,14 @@ impl NoOp {
 }
 
 impl CommandTrait<GameState> for NoOp {
+  /// Is this diegetic?
+  fn is_diegetic(&self) -> bool {
+    false
+  }
   /// Runs the `NoOp` command.
-  fn run(&self, _game_state: &mut GameState) -> Result<(), AnyError> {
+  fn run(&self, game_state: &mut GameState) -> Result<(), AnyError> {
+    debug!("Running no-op command.");
+    game_state.enqueue_action(Box::new(NoOpAction::new()));
     Ok(())
   }
 }

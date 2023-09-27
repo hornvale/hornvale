@@ -3,6 +3,7 @@ use anyhow::Error as AnyError;
 use crate::game_state::GameState;
 use crate::game_state::InputReadyFlagTrait;
 use crate::game_state::QuitFlagTrait;
+use crate::system::ActionSystem;
 use crate::system::CommandSystem;
 use crate::system::InputSystem;
 use crate::system::OutputSystem;
@@ -31,6 +32,7 @@ impl Game {
     let mut game_state = GameState::default();
     let input_system = InputSystem::default();
     let parser_system = ParserSystem::default();
+    let action_system = ActionSystem::default();
     let command_system = CommandSystem::default();
     let output_system = OutputSystem::default();
     game_state.set_input_ready_flag(true);
@@ -43,6 +45,8 @@ impl Game {
       parser_system.run(&mut game_state);
       // Execute the command or commands.
       command_system.run(&mut game_state);
+      // Execute any actions that have been queued.
+      action_system.run(&mut game_state);
       // Display accumulated output to the user.
       output_system.run(&mut game_state);
       // We've been told to quit.

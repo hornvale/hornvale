@@ -8,6 +8,8 @@ fn main() {
   generate_macro_mod();
   generate_list_mod("src/game_state/_impl");
   generate_list_mod("src/game_state/_type");
+  generate_list_mod_with_alias("src/action", "Action");
+  generate_list_mod_with_alias("src/action/_trait", "Trait");
   generate_list_mod_with_alias("src/command", "Command");
   generate_list_mod_with_alias("src/command/_trait", "Trait");
   generate_list_mod_with_alias("src/game_state/_trait", "Trait");

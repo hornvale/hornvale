@@ -4,6 +4,8 @@ use crate::game_state::GameStateTrait;
 
 /// The `Command` trait.
 pub trait Command<T: GameStateTrait> {
+  /// Is this diegetic?
+  fn is_diegetic(&self) -> bool;
   /// Runs the `Command`.
   fn run(&self, game_state: &mut T) -> Result<(), AnyError>;
 }
