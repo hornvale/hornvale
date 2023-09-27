@@ -12,7 +12,7 @@
 
 # ⛏️ Dungeons and the Underdark
 
-- [Dungeons and the Underdark](downdelving/_introduction.md)
+- [Dungeons and the Underdark](dungeons/_introduction.md)
 
 # 💫 Astronomy
 
@@ -25,15 +25,3 @@
 # 🧑‍🤝‍🧑 Sociology
 
 - [The Sociology of the Goblin Village](sociology/_introduction.md)
-
-<!--
-# 🧬 Appleton
-# 🏦 Casterlyrock
-# ⛏️ Downdelving
-# 🧍‍♂️ Dreadfort
-# 🌿 Ivyhall
-# 🪦 Kingsgrave
-# 💬 Lemonwood
-# 🧠 Pyke
-# 🌋 Stonedance
--->
