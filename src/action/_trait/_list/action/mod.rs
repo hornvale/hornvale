@@ -1,13 +1,9 @@
-use std::fmt::Debug;
+use anyhow::Error as AnyError;
 
-use crate::action::ActionContext;
-use crate::action::ActionError;
+use crate::game_state::GameStateTrait;
 
 /// The `Action` trait.
-///
-/// This trait represents an action that can be executed by any entity within
-/// the game.
-pub trait Action: Debug + Send + Sync {
-  /// Executes this action.
-  fn execute(&self, context: &mut ActionContext) -> Result<(), ActionError>;
+pub trait Action<T: GameStateTrait> {
+  /// Runs the `Action`.
+  fn execute(&self, game_state: &mut T) -> Result<(), AnyError>;
 }

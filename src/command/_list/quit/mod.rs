@@ -1,22 +1,30 @@
-use std::sync::Arc;
+use anyhow::Error as AnyError;
 
-use crate::action::QuitAction;
-use crate::command::CommandContext;
-use crate::command::CommandContextTrait;
-use crate::command::CommandError;
 use crate::command::CommandTrait;
+use crate::event::QuitEvent;
+use crate::game_state::EventQueueTrait;
+use crate::game_state::GameState;
 
-/// The `Quit` command struct.
-#[derive(Clone, Debug, Default)]
+/// The `Quit` command.
+#[derive(Debug, Default)]
 pub struct Quit {}
 
-impl CommandTrait for Quit {
-  fn get_name(&self) -> &str {
-    "quit"
+impl Quit {
+  /// Creates a new `Quit` command.
+  pub fn new() -> Self {
+    Self {}
   }
+}
 
-  fn execute(&self, context: &mut CommandContext) -> Result<(), CommandError> {
-    write_action_event!(context.get_data_mut(), Arc::new(QuitAction {}));
+impl CommandTrait<GameState> for Quit {
+  /// Is this diegetic?
+  fn is_diegetic(&self) -> bool {
+    false
+  }
+  /// Runs the `Quit` command.
+  fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
+    debug!("Running quit command.");
+    game_state.enqueue_event(Box::new(QuitEvent::new()));
     Ok(())
   }
 }

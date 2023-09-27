@@ -1,18 +1,28 @@
-use crate::effect::EffectContext;
-use crate::effect::EffectContextTrait;
-use crate::effect::EffectError;
-use crate::effect::EffectTrait;
-use crate::system_data::SetInputReadyFlagTrait;
+use anyhow::Error as AnyError;
 
-/// The `SetInputReadyFlag` effect struct.
-#[derive(Clone, Debug, Default)]
+use crate::effect::EffectTrait;
+use crate::game_state::GameState;
+use crate::game_state::InputReadyFlagTrait;
+
+/// The `SetInputReadyFlag` effect.
+#[derive(Debug, Default)]
 pub struct SetInputReadyFlag {
+  /// The intended value.
   pub value: bool,
 }
 
-impl EffectTrait for SetInputReadyFlag {
-  fn apply(&self, context: &mut EffectContext) -> Result<(), EffectError> {
-    context.get_data_mut().set_input_ready_flag(self.value);
+impl SetInputReadyFlag {
+  /// Creates a new `Effect`.
+  pub fn new(value: bool) -> Self {
+    Self { value }
+  }
+}
+
+impl EffectTrait<GameState> for SetInputReadyFlag {
+  /// Applies this effect.
+  fn apply(&self, game_state: &mut GameState) -> Result<(), AnyError> {
+    debug!("Applying set-input-ready-flag effect.");
+    game_state.set_input_ready_flag(self.value);
     Ok(())
   }
 }

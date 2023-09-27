@@ -1,4 +1,6 @@
 #![allow(unused_macros)]
+#![allow(unknown_lints)]
+#![allow(ambiguous_glob_reexports)]
 
 // Crate-wide configuration.
 #[allow(unused_imports)]
@@ -12,25 +14,15 @@ extern crate derivative;
 extern crate derive_more;
 #[allow(unused_imports)]
 #[macro_use]
-extern crate lazy_static;
-#[allow(unused_imports)]
-#[macro_use]
 extern crate log;
 extern crate pretty_env_logger;
-#[macro_use]
-extern crate serde;
-extern crate specs;
 #[allow(unused_imports)]
 #[macro_use]
-extern crate specs_derive;
+extern crate serde;
+extern crate serde_json;
 #[allow(unused_imports)]
 #[macro_use]
 extern crate thiserror;
-
-// Re-exports.
-pub use log::*;
-pub use pretty_env_logger::env_logger::builder as pretty_env_logger_builder;
-pub use pretty_env_logger::init as init_pretty_env_logger;
 
 // Utilities shared and relied upon by all systems.
 #[macro_use]
@@ -40,18 +32,12 @@ pub use _macro::*;
 // Remaining modules.
 pub mod action;
 pub mod command;
-pub mod component;
-pub mod dispatcher;
-pub mod dispatcher_clock;
 pub mod effect;
-pub mod entity_id;
 pub mod event;
-pub mod event_channel;
 pub mod game;
-pub mod output;
-pub mod resource;
+pub mod game_state;
+pub mod parser;
 pub mod system;
-pub mod system_data;
 
 #[cfg(test)]
 pub mod test {
@@ -62,8 +48,11 @@ pub mod test {
   #[allow(unused_imports)]
   use super::*;
 
+  // Call this function at the beginning of each test module.
   pub fn init() {
+    // Enable logging for tests.
     let _ = builder().is_test(true).try_init();
+    // Enable backtraces.
     set_var("RUST_BACKTRACE", "1");
   }
 }

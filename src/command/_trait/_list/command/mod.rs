@@ -1,14 +1,11 @@
-use std::fmt::Debug;
+use anyhow::Error as AnyError;
 
-use crate::command::context::Context as CommandContext;
-use crate::command::error::Error as CommandError;
+use crate::game_state::GameStateTrait;
 
 /// The `Command` trait.
-///
-/// This trait is used to represent a command.
-pub trait Command: Debug + Send + Sync {
-  /// Get the name of the command.
-  fn get_name(&self) -> &str;
-  /// Execute the command.
-  fn execute(&self, context: &mut CommandContext) -> Result<(), CommandError>;
+pub trait Command<T: GameStateTrait> {
+  /// Is this diegetic?
+  fn is_diegetic(&self) -> bool;
+  /// Runs the `Command`.
+  fn execute(&self, game_state: &mut T) -> Result<(), AnyError>;
 }

@@ -1,34 +1,15 @@
-use crossterm::{
-  cursor::MoveToColumn,
-  execute,
-  terminal::{disable_raw_mode, Clear, ClearType},
-};
-use log::LevelFilter;
-use simplelog::Config;
-use simplelog::WriteLogger;
-use std::io::stdout;
-
+use anyhow::Error as AnyError;
 use hornvale::game::Game;
-use hornvale::game::GameError;
+use log::LevelFilter;
+use pretty_env_logger::env_logger::builder as pretty_env_logger_builder;
 
-fn clear_last_line() -> Result<(), GameError> {
-  disable_raw_mode()?;
-  execute!(stdout(), MoveToColumn(0), Clear(ClearType::CurrentLine))?;
-  Ok(())
-}
-
-#[tokio::main]
-async fn main() -> Result<(), GameError> {
-  let game = Game::new();
-  WriteLogger::init(LevelFilter::Off, Config::default(), std::io::stdout()).unwrap();
-  match game.run("goat boy").await {
-    Ok(_) => {
-      clear_last_line()?;
-    },
-    Err(e) => {
-      clear_last_line()?;
-      eprintln!("{}", e);
-    },
-  }
+fn main() -> Result<(), AnyError> {
+  // Set up logging.
+  // At least for development, I'll just control the log level in code.
+  pretty_env_logger_builder().filter_level(LevelFilter::Debug).init();
+  // Create and run the game.
+  let mut game = Game::new();
+  game.run()?;
+  // Fallback.
   Ok(())
 }

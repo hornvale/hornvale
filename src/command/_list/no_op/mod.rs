@@ -1,17 +1,30 @@
-use crate::command::CommandContext;
-use crate::command::CommandError;
-use crate::command::CommandTrait;
+use anyhow::Error as AnyError;
 
-/// The `NoOp` command struct.
-#[derive(Clone, Debug, Default)]
+use crate::command::CommandTrait;
+use crate::event::NoOpEvent;
+use crate::game_state::EventQueueTrait;
+use crate::game_state::GameState;
+
+/// The `NoOp` struct.
+#[derive(Debug, Default)]
 pub struct NoOp {}
 
-impl CommandTrait for NoOp {
-  fn get_name(&self) -> &str {
-    "no-op"
+impl NoOp {
+  /// Creates a new `NoOp`.
+  pub fn new() -> Self {
+    Self {}
   }
+}
 
-  fn execute(&self, _context: &mut CommandContext) -> Result<(), CommandError> {
+impl CommandTrait<GameState> for NoOp {
+  /// Is this diegetic?
+  fn is_diegetic(&self) -> bool {
+    false
+  }
+  /// Runs the `NoOp` command.
+  fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
+    debug!("Running no-op command.");
+    game_state.enqueue_event(Box::new(NoOpEvent::new()));
     Ok(())
   }
 }

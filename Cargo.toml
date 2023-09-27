@@ -23,23 +23,14 @@ path = "src/main.rs"
 convert_case = "0.6.0"
 
 [dependencies]
-anyhow = "1.0.75"
-convert_case = "0.6.0"
-# Via Rustyline-Async.
-crossterm = { version = "0.27.0", features = ["event-stream"] }
+anyhow = { version = "1.0.75", features = ["backtrace"] }
 derivative = "2.2.0"
 derive_more = "0.99.17"
-futures = "0.3.28"
-lazy_static = "1.4.0"
 log = "0.4.20"
 mockall = "0.11.4"
 pretty_env_logger = "0.5.0"
 regex = "1.9.5"
-rustyline-async = "0.4.0"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.107"
 simplelog = "0.12.1"
-specs = { version = "0.19.0", features = ["shred-derive", "specs-derive"] }
-specs-derive = "0.4.1"
 thiserror = "1.0.48"
-tokio = { version = "1.32.0", features = ["full"] }
