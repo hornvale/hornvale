@@ -1,20 +1,16 @@
 use anyhow::Error as AnyError;
 
-use crate::event::EventMetadata;
 use crate::event::EventTrait;
 use crate::game_state::GameState;
 
 /// The `StartGame` event.
 #[derive(Clone, Debug, Default)]
-pub struct StartGame {
-  metadata: EventMetadata,
-}
+pub struct StartGame {}
 
 impl StartGame {
   /// Creates a new `StartGame`.
   pub fn new() -> Self {
-    let metadata = EventMetadata::new();
-    Self { metadata }
+    Self {}
   }
 }
 
@@ -22,16 +18,6 @@ impl EventTrait<GameState> for StartGame {
   /// Get the name of this event.
   fn get_name(&self) -> &'static str {
     "StartGame"
-  }
-
-  /// Get the metadata for this event.
-  fn get_metadata(&self) -> &EventMetadata {
-    &self.metadata
-  }
-
-  /// Get (mutably) the metadata for this event.
-  fn get_metadata_mut(&mut self) -> &mut EventMetadata {
-    &mut self.metadata
   }
 
   /// Processes the `StartGame` event.

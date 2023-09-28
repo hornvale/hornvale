@@ -2,21 +2,17 @@ use anyhow::Error as AnyError;
 
 use crate::effect::EffectTrait;
 use crate::effect::NoOpEffect;
-use crate::event::EventMetadata;
 use crate::event::EventTrait;
 use crate::game_state::GameState;
 
 /// The `NoOp` event.
 #[derive(Clone, Debug, Default)]
-pub struct NoOp {
-  metadata: EventMetadata,
-}
+pub struct NoOp {}
 
 impl NoOp {
   /// Creates a new `NoOp`.
   pub fn new() -> Self {
-    let metadata = EventMetadata::new();
-    Self { metadata }
+    Self {}
   }
 }
 
@@ -24,16 +20,6 @@ impl EventTrait<GameState> for NoOp {
   /// Get the name of this event.
   fn get_name(&self) -> &'static str {
     "NoOp"
-  }
-
-  /// Get the metadata for this event.
-  fn get_metadata(&self) -> &EventMetadata {
-    &self.metadata
-  }
-
-  /// Get (mutably) the metadata for this event.
-  fn get_metadata_mut(&mut self) -> &mut EventMetadata {
-    &mut self.metadata
   }
 
   /// Processes the `NoOp` event.

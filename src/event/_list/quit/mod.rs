@@ -2,21 +2,17 @@ use anyhow::Error as AnyError;
 
 use crate::effect::EffectTrait;
 use crate::effect::SetQuitFlagEffect;
-use crate::event::EventMetadata;
 use crate::event::EventTrait;
 use crate::game_state::GameState;
 
 /// The `Quit` event.
 #[derive(Clone, Debug, Default)]
-pub struct Quit {
-  metadata: EventMetadata,
-}
+pub struct Quit {}
 
 impl Quit {
   /// Creates a new `Quit`.
   pub fn new() -> Self {
-    let metadata = EventMetadata::new();
-    Self { metadata }
+    Self {}
   }
 }
 
@@ -24,16 +20,6 @@ impl EventTrait<GameState> for Quit {
   /// Get the name of this event.
   fn get_name(&self) -> &'static str {
     "Quit"
-  }
-
-  /// Get the metadata for this event.
-  fn get_metadata(&self) -> &EventMetadata {
-    &self.metadata
-  }
-
-  /// Get (mutably) the metadata for this event.
-  fn get_metadata_mut(&mut self) -> &mut EventMetadata {
-    &mut self.metadata
   }
 
   /// Processes the `Quit` event.

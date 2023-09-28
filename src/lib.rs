@@ -44,6 +44,7 @@ pub mod game;
 pub mod game_state;
 pub mod parser;
 pub mod system;
+pub mod time;
 
 #[cfg(test)]
 pub mod test {
