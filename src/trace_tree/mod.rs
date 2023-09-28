@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::borrow::BorrowMut;
 
 pub mod node;
@@ -21,6 +22,11 @@ impl TraceTree {
   /// Gets the root node of the `TraceTree`.
   pub fn get_root(&self) -> Option<&TraceTreeNode> {
     self.root.as_ref()
+  }
+
+  /// Backtrace the tree from the given node.
+  pub fn backtrace(&self, node: &TraceTreeNode) -> Vec<String> {
+    node.borrow().backtrace()
   }
 
   /// Prune the tree of any branches whose nodes are older than the given

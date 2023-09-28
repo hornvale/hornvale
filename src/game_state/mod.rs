@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 
 use crate::command::CommandTrait;
 use crate::event::EventTrait;
+use crate::trace_tree::TraceTree;
 
 pub mod _impl;
 pub use _impl::*;
@@ -29,6 +30,9 @@ pub struct GameState {
   #[derivative(Debug = "ignore")]
   pub event_queue: VecDeque<Box<dyn EventTrait<GameState>>>,
   pub output_queue: VecDeque<String>,
+  /// Other.
+  #[derivative(Debug = "ignore")]
+  pub trace_tree: TraceTree,
 }
 
 impl GameState {

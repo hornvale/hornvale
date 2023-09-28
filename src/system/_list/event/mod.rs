@@ -22,7 +22,7 @@ impl SystemTrait<GameState> for Event {
     while let Some(event) = game_state.dequeue_event() {
       event
         .process(game_state)
-        .map_err(|error| error!("Error running event: {}", error))
+        .map_err(|error| error!("Error running event: {}\n{}", error, 3))
         .ok();
     }
   }
