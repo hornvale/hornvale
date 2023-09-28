@@ -7,7 +7,6 @@ pub mod _trait;
 pub use _trait::*;
 
 use crate::event::EventTrait;
-use crate::event_publisher::EventPublisherTrait;
 use crate::event_subscriber::EventSubscriberTrait;
 use crate::game_state::GameState;
 
