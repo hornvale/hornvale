@@ -19,6 +19,10 @@ impl SetInputReadyFlag {
 }
 
 impl EffectTrait<GameState> for SetInputReadyFlag {
+  /// Get the name of this effect.
+  fn get_name(&self) -> &'static str {
+    "SetInputReadyFlag"
+  }
   /// Applies this effect.
   fn apply(&self, game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Applying set-input-ready-flag effect.");

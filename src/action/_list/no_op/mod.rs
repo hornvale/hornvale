@@ -17,6 +17,9 @@ impl NoOp {
 }
 
 impl ActionTrait<GameState> for NoOp {
+  fn get_name(&self) -> &'static str {
+    "NoOp"
+  }
   /// Runs the `NoOp` action.
   fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Running no-op action.");

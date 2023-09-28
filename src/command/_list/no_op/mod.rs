@@ -17,10 +17,16 @@ impl NoOp {
 }
 
 impl CommandTrait<GameState> for NoOp {
+  /// Get the name of this command.
+  fn get_name(&self) -> &'static str {
+    "NoOp"
+  }
+
   /// Is this diegetic?
   fn is_diegetic(&self) -> bool {
     false
   }
+
   /// Runs the `NoOp` command.
   fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Running no-op command.");

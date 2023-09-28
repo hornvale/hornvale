@@ -15,6 +15,10 @@ impl NoOp {
 }
 
 impl EffectTrait<GameState> for NoOp {
+  /// Get the name of this effect.
+  fn get_name(&self) -> &'static str {
+    "NoOp"
+  }
   /// Runs the `NoOp` effect.
   fn apply(&self, _game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Applying no-op effect.");

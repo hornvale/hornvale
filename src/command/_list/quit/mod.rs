@@ -17,10 +17,16 @@ impl Quit {
 }
 
 impl CommandTrait<GameState> for Quit {
+  /// Get the name of this command.
+  fn get_name(&self) -> &'static str {
+    "Quit"
+  }
+
   /// Is this diegetic?
   fn is_diegetic(&self) -> bool {
     false
   }
+
   /// Runs the `Quit` command.
   fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Running quit command.");

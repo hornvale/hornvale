@@ -19,6 +19,10 @@ impl SetDiegeticFlag {
 }
 
 impl EffectTrait<GameState> for SetDiegeticFlag {
+  /// Get the name of this effect.
+  fn get_name(&self) -> &'static str {
+    "SetDiegeticFlag"
+  }
   /// Applies this effect.
   fn apply(&self, game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Applying set-diegetic-flag effect.");

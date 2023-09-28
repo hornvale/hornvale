@@ -16,6 +16,9 @@ impl Quit {
 }
 
 impl ActionTrait<GameState> for Quit {
+  fn get_name(&self) -> &'static str {
+    "Quit"
+  }
   /// Runs the `Quit` action.
   fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Running quit action.");

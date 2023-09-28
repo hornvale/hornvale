@@ -19,6 +19,10 @@ impl SetQuitFlag {
 }
 
 impl EffectTrait<GameState> for SetQuitFlag {
+  /// Get the name of this effect.
+  fn get_name(&self) -> &'static str {
+    "SetQuitFlag"
+  }
   /// Applies this effect.
   fn apply(&self, game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Applying set-quit-flag effect.");
