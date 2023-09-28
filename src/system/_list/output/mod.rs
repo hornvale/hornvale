@@ -18,6 +18,7 @@ impl Output {
 impl SystemTrait<GameState> for Output {
   /// Runs the `Output`.
   fn run(&self, game_state: &mut GameState) {
+    debug!("Running output system.");
     while let Some(output) = game_state.dequeue_output() {
       println!("{}", output);
     }

@@ -13,6 +13,19 @@ use crate::system::SystemTrait;
 /// The `Game` struct.
 ///
 /// This is basically a wrapper around the run loop.
+///
+/// General flow:
+///   1. Initialization: print welcome message, set up game state, etc.
+///   2. Run loop: read input, parse input, execute command, process events,
+///      display output, repeat.
+///   3. Termination: print goodbye message, clean up game state, etc.
+///
+/// The run loop is the heart of the game. It's where the player interacts with
+/// the game world. It's where the game world interacts with the player. It's
+/// where the magic happens.
+///
+/// For more detail on the run loop, see the documentation for the `run` method
+/// and the `ARCHITECTURE.md` file in the root of the project.
 #[derive(Debug, Default)]
 pub struct Game {}
 
@@ -45,8 +58,8 @@ impl Game {
       }
       // Parse player input into a command or commands.
       parser_system.run(&mut game_state);
-      // Execute the command or commands entered by the player, which will
-      // create events that invoke actions.
+      // Execute the command or commands entered by the player. This normally
+      // enqueues one or more events.
       command_system.run(&mut game_state);
       // Process event queue, which will execute actions and apply effects
       // and cancel other events and so forth and so on.

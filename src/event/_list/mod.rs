@@ -5,3 +5,5 @@ pub mod no_op;
 pub use no_op::NoOp as NoOpEvent;
 pub mod quit;
 pub use quit::Quit as QuitEvent;
+pub mod start_game;
+pub use start_game::StartGame as StartGameEvent;

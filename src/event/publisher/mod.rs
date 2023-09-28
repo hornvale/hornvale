@@ -6,8 +6,8 @@ use std::rc::Rc;
 pub mod _trait;
 pub use _trait::*;
 
+use crate::event::EventSubscriberTrait;
 use crate::event::EventTrait;
-use crate::event_subscriber::EventSubscriberTrait;
 use crate::game_state::GameState;
 
 /// The default implementation of the `EventPublisherTrait` trait.
@@ -56,35 +56,35 @@ impl EventPublisherTrait<GameState> for EventPublisher {
     event: &mut dyn EventTrait<GameState>,
     game_state: &mut GameState,
   ) -> Result<(), AnyError> {
-    if self.should_occur(event, game_state)? {
-      self.will_occur(event, game_state)?;
+    if self.should_process(event, game_state)? {
+      self.will_process(event, game_state)?;
       event.process(game_state)?;
-      self.did_occur(event, game_state)?;
+      self.did_process(event, game_state)?;
     }
     Ok(())
   }
 
-  fn should_occur(&self, event: &dyn EventTrait<GameState>, game_state: &mut GameState) -> Result<bool, AnyError> {
+  fn should_process(&self, event: &dyn EventTrait<GameState>, game_state: &mut GameState) -> Result<bool, AnyError> {
     let result = self
       .subscribers
       .iter()
-      .all(|s| s.borrow().should_occur(event, game_state) != Some(false));
+      .all(|s| s.borrow().should_process(event, game_state) != Some(false));
     Ok(result)
   }
 
-  fn will_occur(&mut self, event: &mut dyn EventTrait<GameState>, game_state: &GameState) -> Result<(), AnyError> {
+  fn will_process(&mut self, event: &mut dyn EventTrait<GameState>, game_state: &GameState) -> Result<(), AnyError> {
     self
       .subscribers
       .iter_mut()
-      .for_each(|s| s.borrow_mut().will_occur(event, game_state));
+      .for_each(|s| s.borrow_mut().will_process(event, game_state));
     Ok(())
   }
 
-  fn did_occur(&mut self, event: &dyn EventTrait<GameState>, game_state: &mut GameState) -> Result<(), AnyError> {
+  fn did_process(&mut self, event: &dyn EventTrait<GameState>, game_state: &mut GameState) -> Result<(), AnyError> {
     self
       .subscribers
       .iter_mut()
-      .for_each(|s| s.borrow_mut().did_occur(event, game_state));
+      .for_each(|s| s.borrow_mut().did_process(event, game_state));
     Ok(())
   }
 }
@@ -93,23 +93,23 @@ impl EventPublisherTrait<GameState> for EventPublisher {
 mod tests {
   use super::*;
 
+  use crate::event::EventSubscriberTrait;
   use crate::event::EventTrait;
   use crate::event::NoOpEvent;
-  use crate::event_subscriber::EventSubscriberTrait;
   use crate::game_state::GameState;
 
   struct TestEventSubscriber {
-    should_occur: Option<bool>,
-    will_occur: bool,
-    did_occur: bool,
+    should_process: Option<bool>,
+    will_process: bool,
+    did_process: bool,
   }
 
   impl TestEventSubscriber {
-    fn new(should_occur: Option<bool>, will_occur: bool, did_occur: bool) -> Self {
+    fn new(should_process: Option<bool>, will_process: bool, did_process: bool) -> Self {
       Self {
-        should_occur,
-        will_occur,
-        did_occur,
+        should_process,
+        will_process,
+        did_process,
       }
     }
   }
@@ -118,16 +118,16 @@ mod tests {
     fn get_id(&self) -> &str {
       "test_event_subscriber"
     }
-    fn should_occur(&self, _event: &dyn EventTrait<GameState>, _game_state: &GameState) -> Option<bool> {
-      self.should_occur
+    fn should_process(&self, _event: &dyn EventTrait<GameState>, _game_state: &GameState) -> Option<bool> {
+      self.should_process
     }
 
-    fn will_occur(&mut self, _event: &mut dyn EventTrait<GameState>, _game_state: &GameState) {
-      self.will_occur = true;
+    fn will_process(&mut self, _event: &mut dyn EventTrait<GameState>, _game_state: &GameState) {
+      self.will_process = true;
     }
 
-    fn did_occur(&mut self, _event: &dyn EventTrait<GameState>, _game_state: &mut GameState) {
-      self.did_occur = true;
+    fn did_process(&mut self, _event: &dyn EventTrait<GameState>, _game_state: &mut GameState) {
+      self.did_process = true;
     }
   }
 
@@ -154,73 +154,73 @@ mod tests {
     let mut event = NoOpEvent::new();
     let mut game_state = GameState::new();
     event_publisher.publish_event(&mut event, &mut game_state).unwrap();
-    assert_eq!(subscriber.borrow().will_occur, true);
-    assert_eq!(subscriber.borrow().did_occur, true);
+    assert_eq!(subscriber.borrow().will_process, true);
+    assert_eq!(subscriber.borrow().did_process, true);
   }
 
   #[test]
-  fn test_should_occur() {
+  fn test_should_process() {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(Some(true), false, false)));
     event_publisher.add_subscriber(subscriber.clone());
     let event = NoOpEvent::new();
     let mut game_state = GameState::new();
-    let result = event_publisher.should_occur(&event, &mut game_state);
+    let result = event_publisher.should_process(&event, &mut game_state);
     assert_eq!(result.unwrap(), true);
   }
 
   #[test]
-  fn test_will_occur() {
+  fn test_will_process() {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(None, false, false)));
     event_publisher.add_subscriber(subscriber.clone());
     let mut event = NoOpEvent::new();
     let game_state = GameState::new();
-    event_publisher.will_occur(&mut event, &game_state).unwrap();
-    assert_eq!(subscriber.borrow().will_occur, true);
+    event_publisher.will_process(&mut event, &game_state).unwrap();
+    assert_eq!(subscriber.borrow().will_process, true);
   }
 
   #[test]
-  fn test_did_occur() {
+  fn test_did_process() {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(None, false, false)));
     event_publisher.add_subscriber(subscriber.clone());
     let event = NoOpEvent::new();
     let mut game_state = GameState::new();
-    event_publisher.did_occur(&event, &mut game_state).unwrap();
-    assert_eq!(subscriber.borrow().did_occur, true);
+    event_publisher.did_process(&event, &mut game_state).unwrap();
+    assert_eq!(subscriber.borrow().did_process, true);
   }
 
   #[test]
-  fn test_should_occur_false() {
+  fn test_should_process_false() {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(Some(false), false, false)));
     event_publisher.add_subscriber(subscriber.clone());
     let event = NoOpEvent::new();
     let mut game_state = GameState::new();
-    let result = event_publisher.should_occur(&event, &mut game_state);
+    let result = event_publisher.should_process(&event, &mut game_state);
     assert_eq!(result.unwrap(), false);
   }
 
   #[test]
-  fn test_should_occur_true() {
+  fn test_should_process_true() {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(Some(true), false, false)));
     event_publisher.add_subscriber(subscriber.clone());
     let event = NoOpEvent::new();
     let mut game_state = GameState::new();
-    let result = event_publisher.should_occur(&event, &mut game_state);
+    let result = event_publisher.should_process(&event, &mut game_state);
     assert_eq!(result.unwrap(), true);
   }
 
   #[test]
-  fn test_should_occur_none() {
+  fn test_should_process_none() {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(None, false, false)));
     event_publisher.add_subscriber(subscriber.clone());
     let event = NoOpEvent::new();
     let mut game_state = GameState::new();
-    let result = event_publisher.should_occur(&event, &mut game_state);
+    let result = event_publisher.should_process(&event, &mut game_state);
     assert_eq!(result.unwrap(), true);
   }
 }

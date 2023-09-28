@@ -1,29 +1,27 @@
 use anyhow::Error as AnyError;
 
-use crate::effect::EffectTrait;
-use crate::effect::NoOpEffect;
 use crate::event::EventMetadata;
 use crate::event::EventTrait;
 use crate::game_state::GameState;
 
-/// The `NoOp` event.
+/// The `StartGame` event.
 #[derive(Clone, Debug, Default)]
-pub struct NoOp {
+pub struct StartGame {
   metadata: EventMetadata,
 }
 
-impl NoOp {
-  /// Creates a new `NoOp`.
+impl StartGame {
+  /// Creates a new `StartGame`.
   pub fn new() -> Self {
     let metadata = EventMetadata::new();
     Self { metadata }
   }
 }
 
-impl EventTrait<GameState> for NoOp {
+impl EventTrait<GameState> for StartGame {
   /// Get the name of this event.
   fn get_name(&self) -> &'static str {
-    "NoOp"
+    "StartGame"
   }
 
   /// Get the metadata for this event.
@@ -36,10 +34,12 @@ impl EventTrait<GameState> for NoOp {
     &mut self.metadata
   }
 
-  /// Processes the `NoOp` event.
-  fn process(&self, game_state: &mut GameState) -> Result<(), AnyError> {
-    debug!("Applying no-op event.");
-    NoOpEffect::new().apply(game_state)?;
+  /// Processes the `StartGame` event.
+  ///
+  /// This does not do anything by itself, but its subscribers will perform
+  /// actions to start the game.
+  fn process(&self, _game_state: &mut GameState) -> Result<(), AnyError> {
+    debug!("Applying start-game event.");
     Ok(())
   }
 }

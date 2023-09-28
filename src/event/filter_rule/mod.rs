@@ -1,8 +1,8 @@
-use crate::event_tag::EventTag;
+use crate::event::EventTag;
 
 /// Rules for filtering event subscriptions.
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, Serialize)]
-pub enum EventFilterRule {
+pub enum FilterRule {
   /// Always matches.
   Always,
   /// Never matches.
@@ -18,19 +18,19 @@ pub enum EventFilterRule {
   /// Matches none of the specified tags.
   MatchesNoneOf(Vec<EventTag>),
   /// Matches the following rules.
-  MatchesRules(Vec<EventFilterRule>),
+  MatchesRules(Vec<FilterRule>),
   /// Matches any of the following rules.
-  MatchesAnyOfRules(Vec<EventFilterRule>),
+  MatchesAnyOfRules(Vec<FilterRule>),
   /// Matches all of the following rules.
-  MatchesAllOfRules(Vec<EventFilterRule>),
+  MatchesAllOfRules(Vec<FilterRule>),
   /// Matches none of the following rules.
-  MatchesNoneOfRules(Vec<EventFilterRule>),
+  MatchesNoneOfRules(Vec<FilterRule>),
 }
 
-impl EventFilterRule {
+impl FilterRule {
   /// Returns `true` if the specified tag matches this rule.
   pub fn matches(&self, tag: &EventTag) -> bool {
-    use EventFilterRule::*;
+    use FilterRule::*;
     match self {
       Always => true,
       Never => false,
@@ -53,7 +53,7 @@ mod tests {
 
   #[test]
   fn test_matches() {
-    use EventFilterRule::*;
+    use FilterRule::*;
     let tag = EventTag::HasName("Test".to_string());
     assert!(Always.matches(&tag));
     assert!(!Never.matches(&tag));

@@ -20,6 +20,7 @@ impl Input {
 impl Input {
   /// Read the input from the user.
   fn read_input(&self) -> String {
+    debug!("Running input system.");
     print!("> ");
     stdout().flush().unwrap();
     let mut input = String::new();

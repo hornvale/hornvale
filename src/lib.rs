@@ -24,6 +24,11 @@ extern crate serde_json;
 #[macro_use]
 extern crate thiserror;
 
+// Derive macros from hornvale_derive.
+#[allow(unused_imports)]
+#[macro_use]
+extern crate hornvale_derive;
+
 // Utilities shared and relied upon by all systems.
 #[macro_use]
 pub mod _macro;
@@ -35,10 +40,6 @@ pub mod command;
 pub mod effect;
 pub mod entity_id;
 pub mod event;
-pub mod event_filter_rule;
-pub mod event_publisher;
-pub mod event_subscriber;
-pub mod event_tag;
 pub mod game;
 pub mod game_state;
 pub mod parser;
