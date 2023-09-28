@@ -6,7 +6,7 @@ use crate::event::EventTrait;
 use crate::game_state::GameState;
 
 /// The `Quit` event.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Quit {}
 
 impl Quit {
@@ -17,6 +17,11 @@ impl Quit {
 }
 
 impl EventTrait<GameState> for Quit {
+  /// Get the name of this event.
+  fn get_name(&self) -> &'static str {
+    "Quit"
+  }
+
   /// Processes the `Quit` event.
   fn process(&self, game_state: &mut GameState) -> Result<(), AnyError> {
     debug!("Applying quit event.");

@@ -1,0 +1,24 @@
+use crate::entity_id::BaseId;
+use crate::entity_id::IntoEntityIdTrait;
+
+/// The `EntityId` type.
+///
+/// We do this so that we can perform some compile-time type-checking with IDs.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Display, Eq, Hash, PartialEq, Ord, PartialOrd, Serialize)]
+#[repr(transparent)]
+pub struct EntityId(BaseId);
+
+impl From<BaseId> for EntityId {
+  fn from(id: BaseId) -> Self {
+    Self(id)
+  }
+}
+
+impl<T> From<T> for EntityId
+where
+  T: IntoEntityIdTrait,
+{
+  fn from(id: T) -> Self {
+    Self(id.into_base_id())
+  }
+}

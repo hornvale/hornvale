@@ -14,8 +14,12 @@ fn main() {
   generate_list_mod_with_alias("src/command/_trait", "Trait");
   generate_list_mod_with_alias("src/effect", "Effect");
   generate_list_mod_with_alias("src/effect/_trait", "Trait");
+  generate_list_mod_with_alias("src/entity_id/_trait", "Trait");
+  generate_list_mod("src/entity_id/_type");
   generate_list_mod_with_alias("src/event", "Event");
   generate_list_mod_with_alias("src/event/_trait", "Trait");
+  generate_list_mod_with_alias("src/event_publisher/_trait", "Trait");
+  generate_list_mod_with_alias("src/event_subscriber/_trait", "Trait");
   generate_list_mod_with_alias("src/game_state/_trait", "Trait");
   generate_list_mod_with_alias("src/system", "System");
   generate_list_mod_with_alias("src/system/_trait", "Trait");
