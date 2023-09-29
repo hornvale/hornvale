@@ -5,5 +5,5 @@ use crate::game_state::GameStateTrait;
 /// This is a trait describing any `System` struct.
 pub trait System<T: GameStateTrait> {
   /// Runs the `System`.
-  fn run(&self, game_state: &mut T);
+  fn run(&mut self, game_state: &mut T);
 }

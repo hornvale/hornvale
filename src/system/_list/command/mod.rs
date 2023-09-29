@@ -19,7 +19,7 @@ impl Command {
 
 impl SystemTrait<GameState> for Command {
   /// Runs the `Command`.
-  fn run(&self, game_state: &mut GameState) {
+  fn run(&mut self, game_state: &mut GameState) {
     debug!("Running command system.");
     while let Some(command) = game_state.dequeue_command() {
       command

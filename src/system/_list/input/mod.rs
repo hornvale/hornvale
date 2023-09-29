@@ -31,7 +31,7 @@ impl Input {
 
 impl SystemTrait<GameState> for Input {
   /// Runs the `Input`.
-  fn run(&self, game_state: &mut GameState) {
+  fn run(&mut self, game_state: &mut GameState) {
     let input = self.read_input();
     game_state.enqueue_input(input);
   }

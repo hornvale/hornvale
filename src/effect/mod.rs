@@ -30,7 +30,7 @@ impl Effect {
   }
 
   pub fn apply(&self, game_state: &mut GameState) -> Result<(), AnyError> {
-    debug!("Applying {:?} event.", self.r#type);
+    debug!("Applying {:#?} event.", self.r#type);
     self.r#type.apply(self, game_state)?;
     Ok(())
   }

@@ -30,7 +30,7 @@ impl Action {
   }
 
   pub fn attempt(&self, game_state: &mut GameState) -> Result<(), AnyError> {
-    debug!("Attempting {:?} action.", self.r#type);
+    debug!("Attempting {:#?} action.", self.r#type);
     self.r#type.attempt(self, game_state)?;
     Ok(())
   }

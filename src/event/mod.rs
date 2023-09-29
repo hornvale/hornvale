@@ -38,7 +38,7 @@ impl Event {
   }
 
   pub fn process(&self, game_state: &mut GameState) -> Result<(), AnyError> {
-    debug!("Processing {:?} event.", self.r#type);
+    debug!("Processing {:#?} event.", self.r#type);
     self.r#type.process(self, game_state)?;
     Ok(())
   }

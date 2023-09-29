@@ -23,7 +23,7 @@ impl Type {
   }
 
   pub fn attempt(&self, action: &Action, game_state: &mut GameState) -> Result<(), AnyError> {
-    debug!("Attempting {:?} action.", self);
+    debug!("Attempting {:#?} action.", self);
     use Type::*;
     #[allow(unreachable_patterns)]
     match self {

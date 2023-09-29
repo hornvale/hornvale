@@ -32,7 +32,7 @@ impl Type {
   }
 
   pub fn apply(&self, _effect: &Effect, game_state: &mut GameState) -> Result<(), AnyError> {
-    debug!("Applying {:?} effect.", &self);
+    debug!("Applying {:#?} effect.", &self);
     use Type::*;
     #[allow(unreachable_patterns)]
     match self {

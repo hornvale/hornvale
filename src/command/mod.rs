@@ -29,7 +29,7 @@ impl Command {
   }
 
   pub fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
-    debug!("Executing {:?} command.", self.r#type);
+    debug!("Executing {:#?} command.", self.r#type);
     self.r#type.execute(self, game_state)?;
     Ok(())
   }

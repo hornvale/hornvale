@@ -1,6 +1,11 @@
 use anyhow::Error as AnyError;
+use std::cell::RefCell;
+use std::rc::Rc;
 
+use crate::event::DebugLoggerEventSubscriber;
 use crate::event::Event;
+use crate::event::EventPublisherTrait;
+use crate::event::EventSubscriberTrait;
 use crate::event::EventType;
 use crate::game_state::EventQueueTrait;
 use crate::game_state::GameState;
@@ -49,13 +54,18 @@ impl Game {
     println!("Welcome to Hornvale!");
 
     let mut game_state = GameState::new();
-    let command_system = CommandSystem::default();
-    let event_system = EventSystem::default();
-    let input_system = InputSystem::default();
-    let loop_timer_system = LoopTimerSystem::default();
-    let output_system = OutputSystem::default();
-    let parser_system = ParserSystem::default();
-    let tick_system = TickSystem::default();
+    let mut command_system = CommandSystem::default();
+    let mut event_system = EventSystem::default();
+    let mut input_system = InputSystem::default();
+    let mut loop_timer_system = LoopTimerSystem::default();
+    let mut output_system = OutputSystem::default();
+    let mut parser_system = ParserSystem::default();
+    let debug_logger = DebugLoggerEventSubscriber::new();
+    let _debug_logger_id = debug_logger.get_id();
+    event_system
+      .event_publisher
+      .add_subscriber(Rc::new(RefCell::new(debug_logger)));
+    let mut tick_system = TickSystem::default();
     game_state.set_input_ready_flag(false);
     let start_game_event = Event::new(EventType::StartedGame, Vec::new());
     game_state.enqueue_event(start_game_event);

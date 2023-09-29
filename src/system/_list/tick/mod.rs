@@ -17,7 +17,7 @@ impl Tick {
 
 impl SystemTrait<GameState> for Tick {
   /// Runs the `Tick` system.
-  fn run(&self, game_state: &mut GameState) {
+  fn run(&mut self, game_state: &mut GameState) {
     debug!("Running tick system.");
     let effect = Effect::new(EffectType::IncrementTickCounter, vec![]);
     effect.apply(game_state).ok();

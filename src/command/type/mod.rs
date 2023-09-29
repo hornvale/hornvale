@@ -25,7 +25,7 @@ impl Type {
   }
 
   pub fn execute(&self, command: &Command, game_state: &mut GameState) -> Result<(), AnyError> {
-    debug!("Executing {:?} command.", self);
+    debug!("Executing {:#?} command.", self);
     use Type::*;
     #[allow(unreachable_patterns)]
     match self {

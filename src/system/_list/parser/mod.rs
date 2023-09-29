@@ -20,7 +20,7 @@ impl Parser {
 
 impl SystemTrait<GameState> for Parser {
   /// Runs the `Parser`.
-  fn run(&self, game_state: &mut GameState) {
+  fn run(&mut self, game_state: &mut GameState) {
     debug!("Running parser system.");
     while let Some(input) = game_state.dequeue_input() {
       let command: Command = match input.as_str() {

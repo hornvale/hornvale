@@ -17,9 +17,9 @@ impl LoopTimer {
 
 impl SystemTrait<GameState> for LoopTimer {
   /// Runs the `LoopTimer` system.
-  fn run(&self, game_state: &mut GameState) {
+  fn run(&mut self, game_state: &mut GameState) {
     debug!("Running loop-timer system.");
     let duration = game_state.get_loop_timer();
-    debug!("Loop timer: {:?}", duration);
+    debug!("Loop timer: {:#?}", duration);
   }
 }
