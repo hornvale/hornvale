@@ -19,5 +19,3 @@ pub mod quit_flag;
 pub use quit_flag::QuitFlag as QuitFlagTrait;
 pub mod tick_counter;
 pub use tick_counter::TickCounter as TickCounterTrait;
-pub mod trace_tree;
-pub use trace_tree::TraceTree as TraceTreeTrait;

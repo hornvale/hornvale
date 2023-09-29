@@ -8,16 +8,8 @@ fn main() {
   generate_macro_mod();
   generate_list_mod("src/game_state/_impl");
   generate_list_mod("src/game_state/_type");
-  generate_list_mod_with_alias("src/action", "Action");
-  generate_list_mod_with_alias("src/action/_trait", "Trait");
-  generate_list_mod_with_alias("src/command", "Command");
-  generate_list_mod_with_alias("src/command/_trait", "Trait");
-  generate_list_mod_with_alias("src/effect", "Effect");
-  generate_list_mod_with_alias("src/effect/_trait", "Trait");
   generate_list_mod_with_alias("src/entity_id/_trait", "Trait");
   generate_list_mod("src/entity_id/_type");
-  generate_list_mod_with_alias("src/event", "Event");
-  generate_list_mod_with_alias("src/event/_trait", "Trait");
   generate_list_mod_with_alias("src/event/publisher/_trait", "Trait");
   generate_list_mod_with_alias("src/event/subscriber/_trait", "Trait");
   generate_list_mod_with_alias("src/game_state/_trait", "Trait");

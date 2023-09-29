@@ -6,8 +6,8 @@ use std::rc::Rc;
 pub mod _trait;
 pub use _trait::*;
 
+use crate::event::Event;
 use crate::event::EventSubscriberTrait;
-use crate::event::EventTrait;
 use crate::game_state::GameState;
 
 /// The default implementation of the `EventPublisherTrait` trait.
@@ -51,11 +51,7 @@ impl EventPublisherTrait<GameState> for EventPublisher {
     }
   }
 
-  fn publish_event(
-    &mut self,
-    event: &mut dyn EventTrait<GameState>,
-    game_state: &mut GameState,
-  ) -> Result<(), AnyError> {
+  fn publish_event(&mut self, event: &mut Event, game_state: &mut GameState) -> Result<(), AnyError> {
     if self.should_process(event, game_state)? {
       self.will_process(event, game_state)?;
       event.process(game_state)?;
@@ -64,7 +60,7 @@ impl EventPublisherTrait<GameState> for EventPublisher {
     Ok(())
   }
 
-  fn should_process(&self, event: &dyn EventTrait<GameState>, game_state: &mut GameState) -> Result<bool, AnyError> {
+  fn should_process(&self, event: &Event, game_state: &mut GameState) -> Result<bool, AnyError> {
     let result = self
       .subscribers
       .iter()
@@ -72,7 +68,7 @@ impl EventPublisherTrait<GameState> for EventPublisher {
     Ok(result)
   }
 
-  fn will_process(&mut self, event: &mut dyn EventTrait<GameState>, game_state: &GameState) -> Result<(), AnyError> {
+  fn will_process(&mut self, event: &mut Event, game_state: &GameState) -> Result<(), AnyError> {
     self
       .subscribers
       .iter_mut()
@@ -80,7 +76,7 @@ impl EventPublisherTrait<GameState> for EventPublisher {
     Ok(())
   }
 
-  fn did_process(&mut self, event: &dyn EventTrait<GameState>, game_state: &mut GameState) -> Result<(), AnyError> {
+  fn did_process(&mut self, event: &Event, game_state: &mut GameState) -> Result<(), AnyError> {
     self
       .subscribers
       .iter_mut()
@@ -93,9 +89,9 @@ impl EventPublisherTrait<GameState> for EventPublisher {
 mod tests {
   use super::*;
 
+  use crate::event::Event;
   use crate::event::EventSubscriberTrait;
-  use crate::event::EventTrait;
-  use crate::event::NoOpEvent;
+  use crate::event::EventType;
   use crate::game_state::GameState;
 
   struct TestEventSubscriber {
@@ -118,15 +114,15 @@ mod tests {
     fn get_id(&self) -> &str {
       "test_event_subscriber"
     }
-    fn should_process(&self, _event: &dyn EventTrait<GameState>, _game_state: &GameState) -> Option<bool> {
+    fn should_process(&self, _event: &Event, _game_state: &GameState) -> Option<bool> {
       self.should_process
     }
 
-    fn will_process(&mut self, _event: &mut dyn EventTrait<GameState>, _game_state: &GameState) {
+    fn will_process(&mut self, _event: &mut Event, _game_state: &GameState) {
       self.will_process = true;
     }
 
-    fn did_process(&mut self, _event: &dyn EventTrait<GameState>, _game_state: &mut GameState) {
+    fn did_process(&mut self, _event: &Event, _game_state: &mut GameState) {
       self.did_process = true;
     }
   }
@@ -151,7 +147,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(None, false, false)));
     event_publisher.add_subscriber(subscriber.clone());
-    let mut event = NoOpEvent::new();
+    let mut event = Event::new(EventType::NoOp, Vec::new());
     let mut game_state = GameState::new();
     event_publisher.publish_event(&mut event, &mut game_state).unwrap();
     assert_eq!(subscriber.borrow().will_process, true);
@@ -163,7 +159,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(Some(true), false, false)));
     event_publisher.add_subscriber(subscriber.clone());
-    let event = NoOpEvent::new();
+    let event = Event::new(EventType::NoOp, Vec::new());
     let mut game_state = GameState::new();
     let result = event_publisher.should_process(&event, &mut game_state);
     assert_eq!(result.unwrap(), true);
@@ -174,7 +170,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(None, false, false)));
     event_publisher.add_subscriber(subscriber.clone());
-    let mut event = NoOpEvent::new();
+    let mut event = Event::new(EventType::NoOp, Vec::new());
     let game_state = GameState::new();
     event_publisher.will_process(&mut event, &game_state).unwrap();
     assert_eq!(subscriber.borrow().will_process, true);
@@ -185,7 +181,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(None, false, false)));
     event_publisher.add_subscriber(subscriber.clone());
-    let event = NoOpEvent::new();
+    let event = Event::new(EventType::NoOp, Vec::new());
     let mut game_state = GameState::new();
     event_publisher.did_process(&event, &mut game_state).unwrap();
     assert_eq!(subscriber.borrow().did_process, true);
@@ -196,7 +192,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(Some(false), false, false)));
     event_publisher.add_subscriber(subscriber.clone());
-    let event = NoOpEvent::new();
+    let event = Event::new(EventType::NoOp, Vec::new());
     let mut game_state = GameState::new();
     let result = event_publisher.should_process(&event, &mut game_state);
     assert_eq!(result.unwrap(), false);
@@ -207,7 +203,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(Some(true), false, false)));
     event_publisher.add_subscriber(subscriber.clone());
-    let event = NoOpEvent::new();
+    let event = Event::new(EventType::NoOp, Vec::new());
     let mut game_state = GameState::new();
     let result = event_publisher.should_process(&event, &mut game_state);
     assert_eq!(result.unwrap(), true);
@@ -218,7 +214,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(None, false, false)));
     event_publisher.add_subscriber(subscriber.clone());
-    let event = NoOpEvent::new();
+    let event = Event::new(EventType::NoOp, Vec::new());
     let mut game_state = GameState::new();
     let result = event_publisher.should_process(&event, &mut game_state);
     assert_eq!(result.unwrap(), true);

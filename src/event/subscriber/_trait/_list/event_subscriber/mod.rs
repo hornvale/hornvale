@@ -1,5 +1,5 @@
+use crate::event::Event;
 use crate::event::EventFilterRule;
-use crate::event::EventTrait;
 use crate::game_state::GameStateTrait;
 
 /// The `EventSubscriber` trait.
@@ -19,11 +19,11 @@ pub trait EventSubscriber<T: GameStateTrait> {
   /// - `Some(true)` if this subscriber ensures the event.
   /// - `Some(false)` if this subscriber prevents the event.
   /// - `None` if this subscriber allows the event.
-  fn should_process(&self, _event: &dyn EventTrait<T>, _game_state: &T) -> Option<bool> {
+  fn should_process(&self, _event: &Event, _game_state: &T) -> Option<bool> {
     None
   }
   /// Notify this subscriber that an event will occur.
-  fn will_process(&mut self, _event: &mut dyn EventTrait<T>, _game_state: &T) {}
+  fn will_process(&mut self, _event: &mut Event, _game_state: &T) {}
   /// Notify this subscriber that an event has occurred.
-  fn did_process(&mut self, _event: &dyn EventTrait<T>, _game_state: &mut T) {}
+  fn did_process(&mut self, _event: &Event, _game_state: &mut T) {}
 }

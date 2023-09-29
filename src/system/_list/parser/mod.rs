@@ -1,6 +1,5 @@
-use crate::command::CommandTrait;
-use crate::command::NoOpCommand;
-use crate::command::QuitCommand;
+use crate::command::Command;
+use crate::command::CommandType;
 use crate::game_state::CommandQueueTrait;
 use crate::game_state::GameState;
 use crate::game_state::InputQueueTrait;
@@ -24,10 +23,10 @@ impl SystemTrait<GameState> for Parser {
   fn run(&self, game_state: &mut GameState) {
     debug!("Running parser system.");
     while let Some(input) = game_state.dequeue_input() {
-      let command: Box<dyn CommandTrait<GameState>> = match input.as_str() {
-        "quit" => Box::new(QuitCommand::new()),
-        "" => Box::new(NoOpCommand::new()),
-        _ => Box::new(NoOpCommand::new()),
+      let command: Command = match input.as_str() {
+        "quit" => Command::new(CommandType::QuitGame),
+        "" => Command::new(CommandType::NoOp),
+        _ => Command::new(CommandType::NoOp),
       };
       game_state.enqueue_command(command);
     }

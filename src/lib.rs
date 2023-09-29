@@ -45,7 +45,6 @@ pub mod game_state;
 pub mod parser;
 pub mod system;
 pub mod time;
-pub mod trace_tree;
 
 #[cfg(test)]
 pub mod test {
