@@ -1,5 +1,5 @@
-use crate::effect::EffectTrait;
-use crate::effect::SetInputReadyFlagEffect;
+use crate::effect::Effect;
+use crate::effect::EffectType;
 use crate::game_state::CommandQueueTrait;
 use crate::game_state::GameState;
 use crate::system::SystemTrait;
@@ -19,7 +19,7 @@ impl Command {
 
 impl SystemTrait<GameState> for Command {
   /// Runs the `Command`.
-  fn run(&self, game_state: &mut GameState) {
+  fn run(&mut self, game_state: &mut GameState) {
     debug!("Running command system.");
     while let Some(command) = game_state.dequeue_command() {
       command
@@ -27,6 +27,7 @@ impl SystemTrait<GameState> for Command {
         .map_err(|error| error!("Error running command: {}", error))
         .ok();
     }
-    SetInputReadyFlagEffect::new(true).apply(game_state).ok();
+    let effect = Effect::new(EffectType::SetInputReadyFlag(true), vec![]);
+    effect.apply(game_state).ok();
   }
 }

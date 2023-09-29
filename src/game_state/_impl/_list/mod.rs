@@ -13,6 +13,8 @@ pub mod input_queue;
 pub use input_queue::*;
 pub mod input_ready_flag;
 pub use input_ready_flag::*;
+pub mod loop_timer;
+pub use loop_timer::*;
 pub mod output_queue;
 pub use output_queue::*;
 pub mod quit_flag;

@@ -1,15 +1,15 @@
-use crate::command::CommandTrait;
+use crate::command::Command;
 use crate::game_state::CommandQueueTrait;
 use crate::game_state::GameState;
 
 impl CommandQueueTrait for GameState {
   /// Enqueue a command.
-  fn enqueue_command(&mut self, command: Box<dyn CommandTrait<GameState>>) {
+  fn enqueue_command(&mut self, command: Command) {
     self.command_queue.push_back(command);
   }
 
   /// Dequeue a command.
-  fn dequeue_command(&mut self) -> Option<Box<dyn CommandTrait<GameState>>> {
+  fn dequeue_command(&mut self) -> Option<Command> {
     self.command_queue.pop_front()
   }
 }
@@ -18,14 +18,14 @@ impl CommandQueueTrait for GameState {
 mod tests {
   use super::*;
 
-  use crate::command::NoOpCommand;
+  use crate::command::CommandType;
   use crate::test::init;
 
   #[test]
   fn test_enqueue_command() {
     init();
     let mut game_state = GameState::new();
-    let command = Box::new(NoOpCommand::new());
+    let command = Command::new(CommandType::NoOp);
     game_state.enqueue_command(command);
     assert_eq!(game_state.command_queue.len(), 1);
   }
@@ -34,8 +34,9 @@ mod tests {
   fn test_dequeue_command() {
     init();
     let mut game_state = GameState::new();
-    let command = Box::new(NoOpCommand::new());
+    let command = Command::new(CommandType::NoOp);
     game_state.enqueue_command(command);
-    let _command = game_state.dequeue_command();
+    game_state.dequeue_command().unwrap();
+    assert_eq!(game_state.command_queue.len(), 0);
   }
 }
