@@ -1,3 +1,4 @@
+use std::collections::BinaryHeap;
 use std::collections::VecDeque;
 use std::time::Instant;
 
@@ -30,7 +31,7 @@ pub struct GameState {
   #[derivative(Debug = "ignore")]
   pub command_queue: VecDeque<Command>,
   #[derivative(Debug = "ignore")]
-  pub event_queue: VecDeque<Event>,
+  pub event_queue: BinaryHeap<Event>,
   pub output_queue: VecDeque<String>,
 }
 
@@ -45,7 +46,7 @@ impl GameState {
       loop_timer: Instant::now(),
       input_queue: VecDeque::new(),
       command_queue: VecDeque::new(),
-      event_queue: VecDeque::new(),
+      event_queue: BinaryHeap::new(),
       output_queue: VecDeque::new(),
     }
   }

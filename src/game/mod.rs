@@ -7,6 +7,7 @@ use crate::event::Event;
 use crate::event::EventPublisherTrait;
 use crate::event::EventSubscriberTrait;
 use crate::event::EventType;
+use crate::event::DEFAULT_PRIORITY;
 use crate::game_state::EventQueueTrait;
 use crate::game_state::GameState;
 use crate::game_state::InputReadyFlagTrait;
@@ -67,7 +68,7 @@ impl Game {
       .add_subscriber(Rc::new(RefCell::new(debug_logger)));
     let mut tick_system = TickSystem::default();
     game_state.set_input_ready_flag(false);
-    let start_game_event = Event::new(EventType::StartedGame, Vec::new());
+    let start_game_event = Event::new(EventType::StartedGame, DEFAULT_PRIORITY, Vec::new());
     game_state.enqueue_event(start_game_event);
     loop {
       // Run tick system.
