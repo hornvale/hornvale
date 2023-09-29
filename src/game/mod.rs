@@ -1,5 +1,8 @@
 use anyhow::Error as AnyError;
 
+use crate::event::Event;
+use crate::event::EventType;
+use crate::game_state::EventQueueTrait;
 use crate::game_state::GameState;
 use crate::game_state::InputReadyFlagTrait;
 use crate::game_state::QuitFlagTrait;
@@ -9,6 +12,7 @@ use crate::system::InputSystem;
 use crate::system::OutputSystem;
 use crate::system::ParserSystem;
 use crate::system::SystemTrait;
+use crate::system::TickSystem;
 
 /// The `Game` struct.
 ///
@@ -48,8 +52,13 @@ impl Game {
     let input_system = InputSystem::default();
     let output_system = OutputSystem::default();
     let parser_system = ParserSystem::default();
-    game_state.set_input_ready_flag(true);
+    let tick_system = TickSystem::default();
+    game_state.set_input_ready_flag(false);
+    let start_game_event = Event::new(EventType::StartedGame, Vec::new());
+    game_state.enqueue_event(start_game_event);
     loop {
+      // Run tick system.
+      tick_system.run(&mut game_state);
       // Long-running diegetic actions will set the input_ready flag to false.
       // We don't want to read input until they resolve.
       if game_state.get_input_ready_flag() {

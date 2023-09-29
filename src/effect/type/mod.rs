@@ -5,6 +5,7 @@ use crate::game_state::DiegeticFlagTrait;
 use crate::game_state::GameState;
 use crate::game_state::InputReadyFlagTrait;
 use crate::game_state::QuitFlagTrait;
+use crate::game_state::TickCounterTrait;
 
 /// The `Type` enum.
 ///
@@ -14,6 +15,8 @@ pub enum Type {
   /// No-Op -- absolutely nothing happens.
   #[default]
   NoOp,
+  /// IncrementTickCounter -- increments the tick counter.
+  IncrementTickCounter,
   /// SetDiegeticFlag -- sets the diegetic flag.
   SetDiegeticFlag(bool),
   /// SetInputReadyFlag -- sets the input-ready flag.
@@ -35,6 +38,10 @@ impl Type {
     match self {
       NoOp => {
         debug!("Applying no-op effect.");
+      },
+      IncrementTickCounter => {
+        debug!("Applying increment-tick-counter effect.");
+        game_state.increment_tick_counter();
       },
       SetDiegeticFlag(value) => {
         debug!("Applying set-diegetic-flag effect.");
