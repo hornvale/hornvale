@@ -92,6 +92,7 @@ mod tests {
   use crate::event::Event;
   use crate::event::EventSubscriberTrait;
   use crate::event::EventType;
+  use crate::event::DEFAULT_PRIORITY;
   use crate::game_state::GameState;
 
   struct TestEventSubscriber {
@@ -147,7 +148,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(None, false, false)));
     event_publisher.add_subscriber(subscriber.clone());
-    let mut event = Event::new(EventType::NoOp, Vec::new());
+    let mut event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, Vec::new());
     let mut game_state = GameState::new();
     event_publisher.publish_event(&mut event, &mut game_state).unwrap();
     assert_eq!(subscriber.borrow().will_process, true);
@@ -159,7 +160,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(Some(true), false, false)));
     event_publisher.add_subscriber(subscriber);
-    let event = Event::new(EventType::NoOp, Vec::new());
+    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, Vec::new());
     let mut game_state = GameState::new();
     let result = event_publisher.should_process(&event, &mut game_state);
     assert_eq!(result.unwrap(), true);
@@ -170,7 +171,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(None, false, false)));
     event_publisher.add_subscriber(subscriber.clone());
-    let mut event = Event::new(EventType::NoOp, Vec::new());
+    let mut event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, Vec::new());
     let game_state = GameState::new();
     event_publisher.will_process(&mut event, &game_state).unwrap();
     assert_eq!(subscriber.borrow().will_process, true);
@@ -181,7 +182,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(None, false, false)));
     event_publisher.add_subscriber(subscriber.clone());
-    let event = Event::new(EventType::NoOp, Vec::new());
+    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, Vec::new());
     let mut game_state = GameState::new();
     event_publisher.did_process(&event, &mut game_state).unwrap();
     assert_eq!(subscriber.borrow().did_process, true);
@@ -192,7 +193,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(Some(false), false, false)));
     event_publisher.add_subscriber(subscriber);
-    let event = Event::new(EventType::NoOp, Vec::new());
+    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, Vec::new());
     let mut game_state = GameState::new();
     let result = event_publisher.should_process(&event, &mut game_state);
     assert_eq!(result.unwrap(), false);
@@ -203,7 +204,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(Some(true), false, false)));
     event_publisher.add_subscriber(subscriber);
-    let event = Event::new(EventType::NoOp, Vec::new());
+    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, Vec::new());
     let mut game_state = GameState::new();
     let result = event_publisher.should_process(&event, &mut game_state);
     assert_eq!(result.unwrap(), true);
@@ -214,7 +215,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(None, false, false)));
     event_publisher.add_subscriber(subscriber);
-    let event = Event::new(EventType::NoOp, Vec::new());
+    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, Vec::new());
     let mut game_state = GameState::new();
     let result = event_publisher.should_process(&event, &mut game_state);
     assert_eq!(result.unwrap(), true);
