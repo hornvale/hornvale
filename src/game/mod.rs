@@ -5,10 +5,12 @@ use crate::event::EventType;
 use crate::game_state::EventQueueTrait;
 use crate::game_state::GameState;
 use crate::game_state::InputReadyFlagTrait;
+use crate::game_state::LoopTimerTrait;
 use crate::game_state::QuitFlagTrait;
 use crate::system::CommandSystem;
 use crate::system::EventSystem;
 use crate::system::InputSystem;
+use crate::system::LoopTimerSystem;
 use crate::system::OutputSystem;
 use crate::system::ParserSystem;
 use crate::system::SystemTrait;
@@ -46,10 +48,11 @@ impl Game {
     // Initialization
     println!("Welcome to Hornvale!");
 
-    let mut game_state = GameState::default();
+    let mut game_state = GameState::new();
     let command_system = CommandSystem::default();
     let event_system = EventSystem::default();
     let input_system = InputSystem::default();
+    let loop_timer_system = LoopTimerSystem::default();
     let output_system = OutputSystem::default();
     let parser_system = ParserSystem::default();
     let tick_system = TickSystem::default();
@@ -65,6 +68,9 @@ impl Game {
         // Read input from the user.
         input_system.run(&mut game_state);
       }
+      // Reset the loop timer, which will be used to measure how long the last
+      // tick took to process (excluding input and output).
+      game_state.reset_loop_timer();
       // Parse player input into a command or commands.
       parser_system.run(&mut game_state);
       // Execute the command or commands entered by the player. This normally
@@ -73,6 +79,8 @@ impl Game {
       // Process event queue, which will execute actions and apply effects
       // and cancel other events and so forth and so on.
       event_system.run(&mut game_state);
+      // Run the loop timer.
+      loop_timer_system.run(&mut game_state);
       // Display accumulated output to the user.
       output_system.run(&mut game_state);
       // We've been told to quit.

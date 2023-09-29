@@ -138,7 +138,7 @@ mod tests {
   fn test_remove_subscriber() {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(None, false, false)));
-    event_publisher.add_subscriber(subscriber.clone());
+    event_publisher.add_subscriber(subscriber);
     let _subscriber = event_publisher.remove_subscriber("test_event_subscriber");
   }
 
@@ -158,7 +158,7 @@ mod tests {
   fn test_should_process() {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(Some(true), false, false)));
-    event_publisher.add_subscriber(subscriber.clone());
+    event_publisher.add_subscriber(subscriber);
     let event = Event::new(EventType::NoOp, Vec::new());
     let mut game_state = GameState::new();
     let result = event_publisher.should_process(&event, &mut game_state);
@@ -191,7 +191,7 @@ mod tests {
   fn test_should_process_false() {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(Some(false), false, false)));
-    event_publisher.add_subscriber(subscriber.clone());
+    event_publisher.add_subscriber(subscriber);
     let event = Event::new(EventType::NoOp, Vec::new());
     let mut game_state = GameState::new();
     let result = event_publisher.should_process(&event, &mut game_state);
@@ -202,7 +202,7 @@ mod tests {
   fn test_should_process_true() {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(Some(true), false, false)));
-    event_publisher.add_subscriber(subscriber.clone());
+    event_publisher.add_subscriber(subscriber);
     let event = Event::new(EventType::NoOp, Vec::new());
     let mut game_state = GameState::new();
     let result = event_publisher.should_process(&event, &mut game_state);
@@ -213,7 +213,7 @@ mod tests {
   fn test_should_process_none() {
     let mut event_publisher = EventPublisher::new();
     let subscriber = Rc::new(RefCell::new(TestEventSubscriber::new(None, false, false)));
-    event_publisher.add_subscriber(subscriber.clone());
+    event_publisher.add_subscriber(subscriber);
     let event = Event::new(EventType::NoOp, Vec::new());
     let mut game_state = GameState::new();
     let result = event_publisher.should_process(&event, &mut game_state);

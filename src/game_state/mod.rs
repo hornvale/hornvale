@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::time::Instant;
 
 use crate::command::Command;
 use crate::event::Event;
@@ -13,7 +14,7 @@ pub use _type::*;
 /// The `GameState` struct.
 ///
 /// This is an object holding the state of the game.
-#[derive(Derivative, Default)]
+#[derive(Derivative)]
 #[derivative(Debug)]
 pub struct GameState {
   /// Flags.
@@ -22,6 +23,8 @@ pub struct GameState {
   pub quit_flag: bool,
   /// Counters.
   pub tick_counter: TickCounter,
+  /// Times.
+  pub loop_timer: Instant,
   /// Queues.
   pub input_queue: VecDeque<String>,
   #[derivative(Debug = "ignore")]
@@ -34,7 +37,23 @@ pub struct GameState {
 impl GameState {
   /// Creates a new `GameState`.
   pub fn new() -> Self {
-    Self::default()
+    Self {
+      diegetic_flag: false,
+      input_ready_flag: false,
+      quit_flag: false,
+      tick_counter: 0,
+      loop_timer: Instant::now(),
+      input_queue: VecDeque::new(),
+      command_queue: VecDeque::new(),
+      event_queue: VecDeque::new(),
+      output_queue: VecDeque::new(),
+    }
+  }
+}
+
+impl Default for GameState {
+  fn default() -> Self {
+    Self::new()
   }
 }
 

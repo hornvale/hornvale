@@ -13,6 +13,8 @@ pub mod input_queue;
 pub use input_queue::InputQueue as InputQueueTrait;
 pub mod input_ready_flag;
 pub use input_ready_flag::InputReadyFlag as InputReadyFlagTrait;
+pub mod loop_timer;
+pub use loop_timer::LoopTimer as LoopTimerTrait;
 pub mod output_queue;
 pub use output_queue::OutputQueue as OutputQueueTrait;
 pub mod quit_flag;

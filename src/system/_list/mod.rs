@@ -7,6 +7,8 @@ pub mod event;
 pub use event::Event as EventSystem;
 pub mod input;
 pub use input::Input as InputSystem;
+pub mod loop_timer;
+pub use loop_timer::LoopTimer as LoopTimerSystem;
 pub mod output;
 pub use output::Output as OutputSystem;
 pub mod parser;
