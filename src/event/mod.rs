@@ -79,3 +79,71 @@ impl Ord for Event {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  use crate::game_state::GameState;
+  use std::collections::BinaryHeap;
+
+  #[test]
+  fn test_new() {
+    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![]);
+    assert_eq!(event.r#type, EventType::NoOp);
+    assert_eq!(event.backtrace.len(), 1);
+  }
+
+  #[test]
+  fn test_process() {
+    let mut game_state = GameState::new();
+    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![]);
+    event.process(&mut game_state).unwrap();
+  }
+
+  #[test]
+  fn test_priority_queue() {
+    let event_1 = Event::new(EventType::NoOp, 1, vec![]);
+    let event_2 = Event::new(EventType::NoOp, 2, vec![]);
+    let event_3 = Event::new(EventType::NoOp, 3, vec![]);
+    let event_4 = Event::new(EventType::NoOp, 4, vec![]);
+    let event_5 = Event::new(EventType::NoOp, 5, vec![]);
+    let event_6 = Event::new(EventType::NoOp, 6, vec![]);
+    let event_7 = Event::new(EventType::NoOp, 7, vec![]);
+    let event_8 = Event::new(EventType::NoOp, 8, vec![]);
+    let event_9 = Event::new(EventType::NoOp, 9, vec![]);
+    let event_10 = Event::new(EventType::NoOp, 10, vec![]);
+    let event_11 = Event::new(EventType::NoOp, 11, vec![]);
+    let event_12 = Event::new(EventType::NoOp, 12, vec![]);
+    let event_13 = Event::new(EventType::NoOp, 13, vec![]);
+    let mut priority_queue = BinaryHeap::new();
+    // Insert in semi-random order.
+    priority_queue.push(event_4);
+    priority_queue.push(event_11);
+    priority_queue.push(event_7);
+    priority_queue.push(event_12);
+    priority_queue.push(event_3);
+    priority_queue.push(event_10);
+    priority_queue.push(event_2);
+    priority_queue.push(event_6);
+    priority_queue.push(event_1);
+    priority_queue.push(event_5);
+    priority_queue.push(event_9);
+    priority_queue.push(event_13);
+    priority_queue.push(event_8);
+    // Pop in priority order.
+    assert_eq!(priority_queue.pop().unwrap().priority, 13);
+    assert_eq!(priority_queue.pop().unwrap().priority, 12);
+    assert_eq!(priority_queue.pop().unwrap().priority, 11);
+    assert_eq!(priority_queue.pop().unwrap().priority, 10);
+    assert_eq!(priority_queue.pop().unwrap().priority, 9);
+    assert_eq!(priority_queue.pop().unwrap().priority, 8);
+    assert_eq!(priority_queue.pop().unwrap().priority, 7);
+    assert_eq!(priority_queue.pop().unwrap().priority, 6);
+    assert_eq!(priority_queue.pop().unwrap().priority, 5);
+    assert_eq!(priority_queue.pop().unwrap().priority, 4);
+    assert_eq!(priority_queue.pop().unwrap().priority, 3);
+    assert_eq!(priority_queue.pop().unwrap().priority, 2);
+    assert_eq!(priority_queue.pop().unwrap().priority, 1);
+  }
+}
