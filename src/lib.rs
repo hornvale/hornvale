@@ -37,6 +37,7 @@ pub use _macro::*;
 
 // Remaining modules.
 pub mod action;
+pub mod chunk;
 pub mod command;
 pub mod effect;
 pub mod entity_id;
