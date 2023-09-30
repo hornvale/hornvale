@@ -38,3 +38,27 @@ impl Type {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod tests {
+
+  use super::*;
+
+  use crate::action::Action;
+  use crate::game_state::GameState;
+  use crate::test::init;
+
+  #[test]
+  fn test_new() {
+    init();
+    let _type = Type::new();
+  }
+
+  #[test]
+  fn test_attempt() {
+    init();
+    let mut game_state = GameState::new();
+    let action = Action::new(Type::NoOp, vec![]);
+    let _ = Type::NoOp.attempt(&action, &mut game_state);
+  }
+}
