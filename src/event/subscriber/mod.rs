@@ -7,6 +7,8 @@ use crate::event::DEFAULT_PRIORITY;
 
 pub mod _type;
 pub use _type::*;
+pub mod builder;
+pub use builder::Builder as EventSubscriberBuilder;
 
 /// The `EventSubscriber` struct.
 ///

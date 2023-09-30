@@ -2,7 +2,7 @@ use anyhow::Error as AnyError;
 use std::sync::Arc;
 
 use crate::event::Event;
-use crate::event::EventSubscriber;
+use crate::event::EventSubscriberBuilder;
 use crate::event::EventType;
 use crate::event::DEFAULT_PRIORITY;
 use crate::game_state::EventQueueTrait;
@@ -58,14 +58,15 @@ impl Game {
     let mut loop_timer_system = LoopTimerSystem::default();
     let mut output_system = OutputSystem::default();
     let mut parser_system = ParserSystem::default();
-    let mut debug_logger = EventSubscriber::default();
-    debug_logger.name = "Debug Logger".to_string();
-    debug_logger.will_process = Arc::new(|event: &mut Event, _game_state: &GameState| {
-      debug!("Will process event: {:#?}", event);
-    });
-    debug_logger.did_process = Arc::new(|event: &Event, _game_state: &mut GameState| {
-      debug!("Did process event: {:#?}", event);
-    });
+    let debug_logger = EventSubscriberBuilder::new()
+      .name("Debug Logger".to_string())
+      .will_process(Arc::new(|event: &mut Event, _game_state: &GameState| {
+        debug!("Will process event: {:#?}", event);
+      }))
+      .did_process(Arc::new(|event: &Event, _game_state: &mut GameState| {
+        debug!("Did process event: {:#?}", event);
+      }))
+      .build();
     let _debug_logger_uuid = debug_logger.uuid;
     event_system.event_publisher.add_subscriber(debug_logger);
     let mut tick_system = TickSystem::default();
