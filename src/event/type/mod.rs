@@ -2,13 +2,15 @@ use anyhow::Error as AnyError;
 
 use crate::effect::Effect;
 use crate::effect::EffectType;
+use crate::entity_id::EntityId;
+use crate::entity_id::RoomId;
 use crate::event::Event;
 use crate::game_state::GameState;
 
 /// The `Type` enum.
 ///
 /// This should be an exhaustive collection of events.
-#[derive(Clone, Copy, Debug, Default, Display, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Type {
   /// None -- never happens.
   #[default]
@@ -19,6 +21,10 @@ pub enum Type {
   StartedGame,
   /// QuitGame -- the player quit.
   QuitGame,
+  PlayerDidEnterRoom(RoomId),
+  PlayerDidExitRoom(RoomId),
+  EntityDidEnterRoom(EntityId, RoomId),
+  EntityDidExitRoom(EntityId, RoomId),
 }
 
 impl Type {
@@ -28,7 +34,7 @@ impl Type {
   }
 
   pub fn process(&self, event: &Event, game_state: &mut GameState) -> Result<(), AnyError> {
-    debug!("Processing {} event.", self);
+    debug!("Processing {:#?} event.", self);
     use Type::*;
     #[allow(unreachable_patterns)]
     match self {

@@ -7,5 +7,7 @@ pub mod base_id;
 pub use base_id::*;
 pub mod entity_id;
 pub use entity_id::*;
+pub mod player_id;
+pub use player_id::*;
 pub mod room_id;
 pub use room_id::*;

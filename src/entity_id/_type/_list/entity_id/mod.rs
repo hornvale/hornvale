@@ -8,9 +8,16 @@ use crate::entity_id::IntoEntityIdTrait;
 #[repr(transparent)]
 pub struct EntityId(BaseId);
 
-impl From<BaseId> for EntityId {
-  fn from(id: BaseId) -> Self {
-    Self(id)
+impl EntityId {
+  /// Create a new `EntityId`.
+  pub fn new() -> Self {
+    Self(BaseId::default())
+  }
+}
+
+impl From<EntityId> for BaseId {
+  fn from(id: EntityId) -> Self {
+    id.0
   }
 }
 

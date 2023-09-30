@@ -34,7 +34,7 @@ impl EventPublisher {
 
   pub fn add_subscriber(&mut self, subscriber: EventSubscriber) {
     let subscriber = Rc::new(RefCell::new(subscriber));
-    let event_type = subscriber.borrow().event_type;
+    let event_type = subscriber.borrow().event_type.clone();
     let uuid = subscriber.borrow().uuid;
     #[allow(clippy::mutable_key_type)]
     let subscribers_by_event_type = self
@@ -47,7 +47,7 @@ impl EventPublisher {
 
   pub fn remove_subscriber(&mut self, uuid: &Uuid) -> Result<EventSubscriber, AnyError> {
     if let Some(subscriber) = self.subscribers_by_id.remove(uuid) {
-      let event_type = subscriber.borrow().event_type;
+      let event_type = subscriber.borrow().event_type.clone();
       let discriminant = discriminant(&event_type);
       #[allow(clippy::mutable_key_type)]
       let subscribers_by_event_type = self.subscribers_by_event_type.get_mut(&discriminant).unwrap();
@@ -68,8 +68,7 @@ impl EventPublisher {
   }
 
   pub fn should_process(&self, event: &Event, game_state: &mut GameState) -> Result<bool, AnyError> {
-    let event_type = event.r#type;
-    let discriminant = discriminant(&event_type);
+    let discriminant = discriminant(&event.r#type);
     if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
       let result = subscribers
         .iter()
@@ -81,8 +80,7 @@ impl EventPublisher {
   }
 
   pub fn will_process(&mut self, event: &mut Event, game_state: &GameState) -> Result<(), AnyError> {
-    let event_type = event.r#type;
-    let discriminant = discriminant(&event_type);
+    let discriminant = discriminant(&event.r#type);
     if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
       subscribers
         .iter()
@@ -92,8 +90,7 @@ impl EventPublisher {
   }
 
   pub fn did_process(&mut self, event: &Event, game_state: &mut GameState) -> Result<(), AnyError> {
-    let event_type = event.r#type;
-    let discriminant = discriminant(&event_type);
+    let discriminant = discriminant(&event.r#type);
     if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
       subscribers
         .iter()

@@ -1,29 +1,29 @@
 use crate::entity_id::BaseId;
-use crate::entity_id::IntoRoomIdTrait;
+use crate::entity_id::IntoPlayerIdTrait;
 
-/// The `RoomId` type.
+/// The `PlayerId` type.
 ///
 /// We do this so that we can perform some compile-time type-checking with IDs.
 #[derive(Clone, Debug, Default, Deserialize, Display, Eq, Hash, PartialEq, Ord, PartialOrd, Serialize)]
 #[repr(transparent)]
-pub struct RoomId(BaseId);
+pub struct PlayerId(BaseId);
 
-impl RoomId {
-  /// Create a new `RoomId`.
+impl PlayerId {
+  /// Create a new `PlayerId`.
   pub fn new() -> Self {
     Self(BaseId::default())
   }
 }
 
-impl From<RoomId> for BaseId {
-  fn from(id: RoomId) -> Self {
+impl From<PlayerId> for BaseId {
+  fn from(id: PlayerId) -> Self {
     id.0
   }
 }
 
-impl<T> From<T> for RoomId
+impl<T> From<T> for PlayerId
 where
-  T: IntoRoomIdTrait,
+  T: IntoPlayerIdTrait,
 {
   fn from(id: T) -> Self {
     Self(id.into_base_id())

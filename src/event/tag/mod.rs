@@ -11,8 +11,6 @@ pub enum Tag {
   HasCreatorEntity(EntityId),
   /// The name of the event.
   HasName(String),
-  /// The timestamp at which the event was created.
-  HasTimestamp(u64),
   /// The ID of the room in which the event was created.
   OccursInRoom(RoomId),
 }
