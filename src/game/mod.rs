@@ -74,7 +74,7 @@ impl Game {
     let start_game_event = Event::new(EventType::StartedGame, DEFAULT_PRIORITY, Vec::new());
     game_state.enqueue_event(start_game_event);
     loop {
-      // Run tick system.
+      // Run tick system, which increments the tick counter.
       tick_system.run(&mut game_state);
       // Long-running diegetic actions will set the input_ready flag to false.
       // We don't want to read input until they resolve.
