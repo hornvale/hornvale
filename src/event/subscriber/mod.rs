@@ -2,6 +2,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::event::EventFilterRule;
+use crate::event::DEFAULT_PRIORITY;
 
 pub mod _type;
 pub use _type::*;
@@ -16,6 +17,8 @@ pub struct EventSubscriber {
   pub uuid: Uuid,
   /// A human-friendly name for the subscriber.
   pub name: String,
+  /// The priority of the subscriber.
+  pub priority: i64,
   /// The filter rule.
   pub filter_rule: EventFilterRule,
   /// The closure that determines if this subscriber should process an event.
@@ -33,6 +36,7 @@ impl EventSubscriber {
   /// Creates a new `EventSubscriber`.
   pub fn new(
     name: String,
+    priority: i64,
     filter_rule: EventFilterRule,
     should_process: ShouldProcessFn,
     will_process: WillProcessFn,
@@ -41,6 +45,7 @@ impl EventSubscriber {
     Self {
       uuid: Uuid::new_v4(),
       name,
+      priority,
       filter_rule,
       should_process,
       will_process,
@@ -55,6 +60,7 @@ impl Default for EventSubscriber {
     Self {
       uuid: Uuid::new_v4(),
       name: String::from("Default EventSubscriber"),
+      priority: DEFAULT_PRIORITY,
       filter_rule: EventFilterRule::Always,
       should_process: Arc::new(|_, _| None),
       will_process: Arc::new(|_, _| {}),
