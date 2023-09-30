@@ -82,16 +82,22 @@ impl EventPublisher {
 
 #[cfg(test)]
 mod tests {
+
+  use std::sync::Arc;
+
   use super::*;
 
   use crate::event::Event;
+  use crate::event::EventFilterRule;
   use crate::event::EventSubscriber;
   use crate::event::EventType;
   use crate::event::DEFAULT_PRIORITY;
   use crate::game_state::GameState;
+  use crate::test::init;
 
   #[test]
   fn test_add_subscriber() {
+    init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
     event_publisher.add_subscriber(subscriber);
@@ -99,6 +105,7 @@ mod tests {
 
   #[test]
   fn test_remove_subscriber() {
+    init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
     let uuid = subscriber.uuid.clone();
@@ -108,6 +115,7 @@ mod tests {
 
   #[test]
   fn test_publish_event() {
+    init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
     event_publisher.add_subscriber(subscriber);
@@ -118,6 +126,7 @@ mod tests {
 
   #[test]
   fn test_should_process() {
+    init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
     event_publisher.add_subscriber(subscriber);
@@ -128,6 +137,7 @@ mod tests {
 
   #[test]
   fn test_will_process() {
+    init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
     event_publisher.add_subscriber(subscriber);
@@ -138,6 +148,7 @@ mod tests {
 
   #[test]
   fn test_did_process() {
+    init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
     event_publisher.add_subscriber(subscriber);
@@ -148,8 +159,49 @@ mod tests {
 
   #[test]
   fn test_new() {
+    init();
     let event_publisher = EventPublisher::new();
     assert_eq!(event_publisher.subscribers.len(), 0);
     assert_eq!(event_publisher.subscribers_by_id.len(), 0);
+  }
+
+  #[test]
+  fn test_ordered_subscribers() {
+    init();
+    let mut event_publisher = EventPublisher::new();
+    let subscriber1 = EventSubscriber::new(
+      String::from("Subscriber 1"),
+      1,
+      EventFilterRule::Always,
+      Arc::new(|_, _| None),
+      Arc::new(|_, _| {}),
+      Arc::new(|_, _| {}),
+    );
+    let subscriber2 = EventSubscriber::new(
+      String::from("Subscriber 2"),
+      2,
+      EventFilterRule::Always,
+      Arc::new(|_, _| None),
+      Arc::new(|_, _| {}),
+      Arc::new(|_, _| {}),
+    );
+    let subscriber3 = EventSubscriber::new(
+      String::from("Subscriber 3"),
+      3,
+      EventFilterRule::Always,
+      Arc::new(|_, _| None),
+      Arc::new(|_, _| {}),
+      Arc::new(|_, _| {}),
+    );
+    event_publisher.add_subscriber(subscriber2);
+    event_publisher.add_subscriber(subscriber1);
+    event_publisher.add_subscriber(subscriber3);
+    let mut subscribers = event_publisher.subscribers.iter();
+    let subscriber = subscribers.next().unwrap();
+    assert_eq!(subscriber.borrow().priority, 3);
+    let subscriber = subscribers.next().unwrap();
+    assert_eq!(subscriber.borrow().priority, 2);
+    let subscriber = subscribers.next().unwrap();
+    assert_eq!(subscriber.borrow().priority, 1);
   }
 }
