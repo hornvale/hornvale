@@ -18,6 +18,6 @@ This is likely to be an incredible amount of work, and frankly, I don't really h
 But maybe this will be something that grows over time into something worth looking at.
 
 ## Prior Incarnation
-A previous iteration, purely exploratory, can be found [here](https://github.com/ndouglas/hornvale-rust/).  It was/is mostly just investigatory, figuring out what was possible, and whether I could bear to do it in Rust.
+A previous iteration, purely exploratory, can be found [here](https://github.com/ndouglas/hornvale-rust/).  It was/is mostly just investigatory, figuring out what was possible, and whether I could bear to do it in Rust. I ended up not following the patterns I established with it (namely, using the Specs ECS and a realtime approach), but I learned a lot doing it.
 
 ![Code Coverage Graph](https://codecov.io/gh/hornvale/hornvale/graphs/icicle.svg?token=PRV624GM5C)
