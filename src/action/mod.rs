@@ -35,3 +35,28 @@ impl Action {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod tests {
+
+  use super::*;
+
+  use crate::game_state::GameState;
+  use crate::test::init;
+
+  #[test]
+  fn test_new() {
+    init();
+    let action = Action::new(ActionType::NoOp, vec![]);
+    assert_eq!(action.r#type, ActionType::NoOp);
+    assert_eq!(action.backtrace.len(), 1);
+  }
+
+  #[test]
+  fn test_attempt() {
+    init();
+    let mut game_state = GameState::new();
+    let action = Action::new(ActionType::NoOp, vec![]);
+    action.attempt(&mut game_state).unwrap();
+  }
+}
