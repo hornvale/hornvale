@@ -1,9 +1,13 @@
 use std::collections::BinaryHeap;
+use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::time::Instant;
 
 use crate::command::Command;
+use crate::entity_id::PlayerId;
+use crate::entity_id::RoomId;
 use crate::event::Event;
+use crate::room::Room;
 
 pub mod _impl;
 pub use _impl::*;
@@ -24,8 +28,12 @@ pub struct GameState {
   pub quit_flag: bool,
   /// Counters.
   pub tick_counter: TickCounter,
-  /// Times.
+  /// Times and timers.
   pub loop_timer: Instant,
+  /// Entities.
+  pub rooms: HashMap<RoomId, Room>,
+  pub current_room_id: RoomId,
+  pub player_id: PlayerId,
   /// Queues.
   pub input_queue: VecDeque<String>,
   #[derivative(Debug = "ignore")]
@@ -44,6 +52,9 @@ impl GameState {
       quit_flag: false,
       tick_counter: 0,
       loop_timer: Instant::now(),
+      rooms: HashMap::new(),
+      current_room_id: RoomId::default(),
+      player_id: PlayerId::default(),
       input_queue: VecDeque::new(),
       command_queue: VecDeque::new(),
       event_queue: BinaryHeap::new(),

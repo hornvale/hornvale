@@ -2,20 +2,22 @@ use anyhow::Error as AnyError;
 use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
+use std::mem::{discriminant, Discriminant};
 use std::rc::Rc;
 use uuid::Uuid;
 
 use crate::event::Event;
 use crate::event::EventSubscriber;
+use crate::event::EventType;
 use crate::game_state::GameState;
 
-/// The default implementation of the `EventPublisherTrait` trait.
+/// The `EventPublisher` struct.
 #[derive(Derivative, Default)]
 #[derivative(Debug)]
 pub struct EventPublisher {
-  /// The priority queue of subscribers.
+  // Priority queues of subscribers, organized by event type discriminant.
   #[derivative(Debug = "ignore")]
-  subscribers: BTreeSet<Rc<RefCell<EventSubscriber>>>,
+  subscribers_by_event_type: HashMap<Discriminant<EventType>, BTreeSet<Rc<RefCell<EventSubscriber>>>>,
   /// Subscribers by their unique ID.
   #[derivative(Debug = "ignore")]
   subscribers_by_id: HashMap<Uuid, Rc<RefCell<EventSubscriber>>>,
@@ -25,21 +27,31 @@ impl EventPublisher {
   /// Creates a new `EventPublisher`.
   pub fn new() -> Self {
     Self {
-      subscribers: BTreeSet::new(),
+      subscribers_by_event_type: HashMap::new(),
       subscribers_by_id: HashMap::new(),
     }
   }
 
   pub fn add_subscriber(&mut self, subscriber: EventSubscriber) {
     let subscriber = Rc::new(RefCell::new(subscriber));
+    let event_type = subscriber.borrow().event_type.clone();
     let uuid = subscriber.borrow().uuid;
-    self.subscribers.insert(subscriber.clone());
+    #[allow(clippy::mutable_key_type)]
+    let subscribers_by_event_type = self
+      .subscribers_by_event_type
+      .entry(discriminant(&event_type))
+      .or_insert_with(BTreeSet::new);
+    subscribers_by_event_type.insert(subscriber.clone());
     self.subscribers_by_id.insert(uuid, subscriber);
   }
 
   pub fn remove_subscriber(&mut self, uuid: &Uuid) -> Result<EventSubscriber, AnyError> {
     if let Some(subscriber) = self.subscribers_by_id.remove(uuid) {
-      self.subscribers.remove(&subscriber);
+      let event_type = subscriber.borrow().event_type.clone();
+      let discriminant = discriminant(&event_type);
+      #[allow(clippy::mutable_key_type)]
+      let subscribers_by_event_type = self.subscribers_by_event_type.get_mut(&discriminant).unwrap();
+      subscribers_by_event_type.remove(&subscriber);
       Ok(subscriber.borrow().clone()) // Clone the inner value
     } else {
       Err(anyhow!("Subscriber not found: {}", uuid))
@@ -56,26 +68,34 @@ impl EventPublisher {
   }
 
   pub fn should_process(&self, event: &Event, game_state: &mut GameState) -> Result<bool, AnyError> {
-    let result = self
-      .subscribers
-      .iter()
-      .all(|s| (s.borrow().should_process)(event, game_state) != Some(false));
-    Ok(result)
+    let discriminant = discriminant(&event.r#type);
+    if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
+      let result = subscribers
+        .iter()
+        .all(|s| (s.borrow().should_process)(event, game_state) != Some(false));
+      Ok(result)
+    } else {
+      Ok(true)
+    }
   }
 
   pub fn will_process(&mut self, event: &mut Event, game_state: &GameState) -> Result<(), AnyError> {
-    self
-      .subscribers
-      .iter()
-      .for_each(|s| (s.borrow().will_process)(event, game_state));
+    let discriminant = discriminant(&event.r#type);
+    if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
+      subscribers
+        .iter()
+        .for_each(|s| (s.borrow().will_process)(event, game_state));
+    }
     Ok(())
   }
 
   pub fn did_process(&mut self, event: &Event, game_state: &mut GameState) -> Result<(), AnyError> {
-    self
-      .subscribers
-      .iter()
-      .for_each(|s| (s.borrow().did_process)(event, game_state));
+    let discriminant = discriminant(&event.r#type);
+    if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
+      subscribers
+        .iter()
+        .for_each(|s| (s.borrow().did_process)(event, game_state));
+    }
     Ok(())
   }
 }
@@ -161,7 +181,7 @@ mod tests {
   fn test_new() {
     init();
     let event_publisher = EventPublisher::new();
-    assert_eq!(event_publisher.subscribers.len(), 0);
+    assert_eq!(event_publisher.subscribers_by_event_type.len(), 0);
     assert_eq!(event_publisher.subscribers_by_id.len(), 0);
   }
 
@@ -172,6 +192,7 @@ mod tests {
     let subscriber1 = EventSubscriber::new(
       String::from("Subscriber 1"),
       1,
+      EventType::NoOp,
       EventFilterRule::Always,
       Arc::new(|_, _| None),
       Arc::new(|_, _| {}),
@@ -180,6 +201,7 @@ mod tests {
     let subscriber2 = EventSubscriber::new(
       String::from("Subscriber 2"),
       2,
+      EventType::NoOp,
       EventFilterRule::Always,
       Arc::new(|_, _| None),
       Arc::new(|_, _| {}),
@@ -188,6 +210,7 @@ mod tests {
     let subscriber3 = EventSubscriber::new(
       String::from("Subscriber 3"),
       3,
+      EventType::NoOp,
       EventFilterRule::Always,
       Arc::new(|_, _| None),
       Arc::new(|_, _| {}),
@@ -196,7 +219,11 @@ mod tests {
     event_publisher.add_subscriber(subscriber2);
     event_publisher.add_subscriber(subscriber1);
     event_publisher.add_subscriber(subscriber3);
-    let mut subscribers = event_publisher.subscribers.iter();
+    let mut subscribers = event_publisher
+      .subscribers_by_event_type
+      .get(&discriminant(&EventType::NoOp))
+      .unwrap()
+      .iter();
     let subscriber = subscribers.next().unwrap();
     assert_eq!(subscriber.borrow().priority, 3);
     let subscriber = subscribers.next().unwrap();

@@ -44,6 +44,7 @@ pub mod event;
 pub mod game;
 pub mod game_state;
 pub mod parser;
+pub mod room;
 pub mod system;
 pub mod time;
 

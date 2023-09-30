@@ -3,6 +3,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::event::EventFilterRule;
+use crate::event::EventType;
 use crate::event::DEFAULT_PRIORITY;
 
 pub mod _type;
@@ -22,6 +23,8 @@ pub struct EventSubscriber {
   pub name: String,
   /// The priority of the subscriber.
   pub priority: i64,
+  /// The event type that this subscriber is interested in.
+  pub event_type: EventType,
   /// The filter rule.
   pub filter_rule: EventFilterRule,
   /// The closure that determines if this subscriber should process an event.
@@ -40,15 +43,18 @@ impl EventSubscriber {
   pub fn new(
     name: String,
     priority: i64,
+    event_type: EventType,
     filter_rule: EventFilterRule,
     should_process: ShouldProcessFn,
     will_process: WillProcessFn,
     did_process: DidProcessFn,
   ) -> Self {
+    assert!(event_type != EventType::None, "Event type cannot be None.");
     Self {
       uuid: Uuid::new_v4(),
       name,
       priority,
+      event_type,
       filter_rule,
       should_process,
       will_process,
@@ -64,6 +70,7 @@ impl Default for EventSubscriber {
       uuid: Uuid::new_v4(),
       name: String::from("Default EventSubscriber"),
       priority: DEFAULT_PRIORITY,
+      event_type: EventType::default(),
       filter_rule: EventFilterRule::Always,
       should_process: Arc::new(|_, _| None),
       will_process: Arc::new(|_, _| {}),
@@ -74,7 +81,7 @@ impl Default for EventSubscriber {
 
 impl PartialEq for EventSubscriber {
   fn eq(&self, other: &Self) -> bool {
-    self.priority == other.priority && self.uuid == other.uuid
+    self.event_type == other.event_type && self.priority == other.priority && self.uuid == other.uuid
   }
 }
 
