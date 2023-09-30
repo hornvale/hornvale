@@ -33,7 +33,7 @@ impl Room {
   }
 
   /// Saves the `Room` in a serialized form.
-  pub fn save_room_to_yaml(&self, file_path: &str) -> Result<(), serde_yaml::Error> {
+  pub fn write_to_file(&self, file_path: &str) -> Result<(), serde_yaml::Error> {
     let yaml_string = serde_yaml::to_string(self)?;
     let mut file = File::create(file_path).expect("Unable to create file");
     file.write_all(yaml_string.as_bytes()).expect("Unable to write data");
@@ -41,7 +41,7 @@ impl Room {
   }
 
   /// Loads the `Room` from a serialized form.
-  pub fn load_room_from_yaml(file_path: &str) -> Result<Room, serde_yaml::Error> {
+  pub fn load_from_file(file_path: &str) -> Result<Room, serde_yaml::Error> {
     let file = File::open(file_path).expect("Unable to open file");
     let room: Room = serde_yaml::from_reader(file)?;
     Ok(room)
@@ -101,8 +101,8 @@ mod tests {
       "This is a test room.".to_string(),
     );
     let file_path = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_room.yaml");
-    room.save_room_to_yaml(&file_path).unwrap();
-    let room2 = Room::load_room_from_yaml(&file_path).unwrap();
+    room.write_to_file(&file_path).unwrap();
+    let room2 = Room::load_from_file(&file_path).unwrap();
     assert_eq!(room, room2);
   }
 }

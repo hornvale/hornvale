@@ -39,7 +39,7 @@ impl Chunk {
   }
 
   /// Saves the `Chunk` in a serialized form.
-  pub fn save_chunk_to_yaml(&self, file_path: &str) -> Result<(), serde_yaml::Error> {
+  pub fn write_to_file(&self, file_path: &str) -> Result<(), serde_yaml::Error> {
     let yaml_string = serde_yaml::to_string(self)?;
     let mut file = File::create(file_path).expect("Unable to create file");
     file.write_all(yaml_string.as_bytes()).expect("Unable to write data");
@@ -47,7 +47,7 @@ impl Chunk {
   }
 
   /// Loads the `Chunk` from a serialized form.
-  pub fn load_chunk_from_yaml(file_path: &str) -> Result<Chunk, serde_yaml::Error> {
+  pub fn load_from_file(file_path: &str) -> Result<Chunk, serde_yaml::Error> {
     let file = File::open(file_path).expect("Unable to open file");
     let chunk: Chunk = serde_yaml::from_reader(file)?;
     Ok(chunk)
@@ -114,8 +114,8 @@ mod tests {
       "This is a test chunk.".to_string(),
     );
     let file_path = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk.yaml");
-    chunk.save_chunk_to_yaml(&file_path).unwrap();
-    let loaded_chunk = Chunk::load_chunk_from_yaml(&file_path).unwrap();
+    chunk.write_to_file(&file_path).unwrap();
+    let loaded_chunk = Chunk::load_from_file(&file_path).unwrap();
     assert_eq!(chunk, loaded_chunk);
   }
 
@@ -138,8 +138,8 @@ mod tests {
     );
     chunk.rooms.insert(room_id, room);
     let file_path = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk2.yaml");
-    chunk.save_chunk_to_yaml(&file_path).unwrap();
-    let loaded_chunk = Chunk::load_chunk_from_yaml(&file_path).unwrap();
+    chunk.write_to_file(&file_path).unwrap();
+    let loaded_chunk = Chunk::load_from_file(&file_path).unwrap();
     assert_eq!(chunk, loaded_chunk);
   }
 }

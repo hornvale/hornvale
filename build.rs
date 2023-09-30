@@ -6,6 +6,7 @@ use std::path::Path;
 
 fn main() {
   generate_macro_mod();
+  generate_list_mod_with_alias("src/chunk_factory/strategies", "Strategy");
   generate_list_mod("src/game_state/_impl");
   generate_list_mod("src/game_state/_type");
   generate_list_mod_with_alias("src/entity_id/_trait", "Trait");
