@@ -12,3 +12,20 @@ impl PlayerIdTrait for GameState {
     self.player_id = player_id.clone();
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  use crate::test::init;
+
+  #[test]
+  fn test_set_player_id() {
+    init();
+    let mut game_state = GameState::new();
+    let player_id = PlayerId::default();
+    game_state.set_player_id(&player_id);
+    let player_id2 = game_state.get_player_id();
+    assert_eq!(player_id, player_id2.clone());
+  }
+}

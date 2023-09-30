@@ -22,26 +22,26 @@ impl Builder {
   }
 
   /// Sets the `Room`'s ID.
-  pub fn id(mut self, id: RoomId) -> Self {
-    self.id = id;
+  pub fn id(mut self, id: &RoomId) -> Self {
+    self.id = id.clone();
     self
   }
 
   /// Sets the `Room`'s type.
-  pub fn r#type(mut self, r#type: RoomType) -> Self {
-    self.r#type = r#type;
+  pub fn r#type(mut self, r#type: &RoomType) -> Self {
+    self.r#type = r#type.clone();
     self
   }
 
   /// Sets the `Room`'s name.
-  pub fn name(mut self, name: String) -> Self {
-    self.name = name;
+  pub fn name(mut self, name: &str) -> Self {
+    self.name = name.to_string();
     self
   }
 
   /// Sets the `Room`'s description.
-  pub fn description(mut self, description: String) -> Self {
-    self.description = description;
+  pub fn description(mut self, description: &str) -> Self {
+    self.description = description.to_string();
     self
   }
 
@@ -60,14 +60,14 @@ mod tests {
     let room_id = RoomId::default();
     let room_type = RoomType::default();
     let room = Builder::new()
-      .id(room_id.clone())
-      .r#type(room_type.clone())
-      .name("Room".to_string())
-      .description("A room.".to_string())
+      .id(&room_id)
+      .r#type(&room_type)
+      .name("Room")
+      .description("A room.")
       .build();
     assert_eq!(room.id, room_id);
     assert_eq!(room.r#type, room_type);
-    assert_eq!(room.name, "Room".to_string());
-    assert_eq!(room.description, "A room.".to_string());
+    assert_eq!(room.name, "Room");
+    assert_eq!(room.description, "A room.");
   }
 }

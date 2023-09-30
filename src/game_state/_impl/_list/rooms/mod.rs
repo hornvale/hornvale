@@ -21,3 +21,55 @@ impl RoomsTrait for GameState {
     self.rooms.remove(room_id)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  use crate::room::RoomBuilder;
+  use crate::test::init;
+
+  #[test]
+  fn test_get_room() {
+    init();
+    let mut game_state = GameState::new();
+    let room_id = RoomId::default();
+    let room = RoomBuilder::new().id(&room_id).build();
+    game_state.insert_room(room);
+    let room = game_state.get_room(&room_id);
+    assert!(room.is_some());
+  }
+
+  #[test]
+  fn test_get_room_mut() {
+    init();
+    let mut game_state = GameState::new();
+    let room_id = RoomId::default();
+    let room = RoomBuilder::new().id(&room_id).build();
+    game_state.insert_room(room);
+    let room = game_state.get_room_mut(&room_id);
+    assert!(room.is_some());
+  }
+
+  #[test]
+  fn test_insert_room() {
+    init();
+    let mut game_state = GameState::new();
+    let room_id = RoomId::default();
+    let room = RoomBuilder::new().id(&room_id).build();
+    game_state.insert_room(room);
+    let room = game_state.get_room(&room_id);
+    assert!(room.is_some());
+  }
+
+  #[test]
+  fn test_remove_room() {
+    init();
+    let mut game_state = GameState::new();
+    let room_id = RoomId::default();
+    let room = RoomBuilder::new().id(&room_id).build();
+    game_state.insert_room(room);
+    let room = game_state.remove_room(&room_id);
+    assert!(room.is_some());
+  }
+}

@@ -12,3 +12,20 @@ impl CurrentRoomIdTrait for GameState {
     self.current_room_id = room_id.clone();
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  use crate::test::init;
+
+  #[test]
+  fn test_set_current_room_id() {
+    init();
+    let mut game_state = GameState::new();
+    let room_id = RoomId::default();
+    game_state.set_current_room_id(&room_id);
+    let current_room_id = game_state.get_current_room_id();
+    assert_eq!(current_room_id, &room_id);
+  }
+}
