@@ -1,5 +1,4 @@
 use crate::event::EventPublisher;
-use crate::event::EventPublisherTrait;
 use crate::game_state::EventQueueTrait;
 use crate::game_state::GameState;
 use crate::system::SystemTrait;

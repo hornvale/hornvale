@@ -1,4 +1,64 @@
-pub mod _list;
-pub use _list::*;
-pub mod _trait;
-pub use _trait::*;
+use std::sync::Arc;
+use uuid::Uuid;
+
+use crate::event::EventFilterRule;
+
+pub mod _type;
+pub use _type::*;
+
+/// The `EventSubscriber` struct.
+///
+/// This is a generic event subscriber built around closures.
+#[derive(Clone, Derivative)]
+#[derivative(Debug)]
+pub struct EventSubscriber {
+  /// The UUID of the subscriber.
+  pub uuid: Uuid,
+  /// A human-friendly name for the subscriber.
+  pub name: String,
+  /// The filter rule.
+  pub filter_rule: EventFilterRule,
+  /// The closure that determines if this subscriber should process an event.
+  #[derivative(Debug = "ignore")]
+  pub should_process: ShouldProcessFn,
+  /// The closure that is called when an event is about to be processed.
+  #[derivative(Debug = "ignore")]
+  pub will_process: WillProcessFn,
+  /// The closure that is called after an event has been processed.
+  #[derivative(Debug = "ignore")]
+  pub did_process: DidProcessFn,
+}
+
+impl EventSubscriber {
+  /// Creates a new `EventSubscriber`.
+  pub fn new(
+    name: String,
+    filter_rule: EventFilterRule,
+    should_process: ShouldProcessFn,
+    will_process: WillProcessFn,
+    did_process: DidProcessFn,
+  ) -> Self {
+    Self {
+      uuid: Uuid::new_v4(),
+      name,
+      filter_rule,
+      should_process,
+      will_process,
+      did_process,
+    }
+  }
+}
+
+impl Default for EventSubscriber {
+  /// Creates a new `EventSubscriber`.
+  fn default() -> Self {
+    Self {
+      uuid: Uuid::new_v4(),
+      name: String::from("Default EventSubscriber"),
+      filter_rule: EventFilterRule::Always,
+      should_process: Arc::new(|_, _| None),
+      will_process: Arc::new(|_, _| {}),
+      did_process: Arc::new(|_, _| {}),
+    }
+  }
+}
