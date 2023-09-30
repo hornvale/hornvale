@@ -8,10 +8,12 @@ use crate::game_state::GameState;
 /// The `Type` enum.
 ///
 /// This should be an exhaustive collection of events.
-#[derive(Debug, Default, Display, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default, Display, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Type {
-  /// No-Op -- absolutely nothing happens.
+  /// None -- never happens.
   #[default]
+  None,
+  /// No-Op -- absolutely nothing happens.
   NoOp,
   /// StartedGame -- the game has started.
   StartedGame,

@@ -60,6 +60,7 @@ impl Game {
     let mut parser_system = ParserSystem::default();
     let debug_logger = EventSubscriberBuilder::new()
       .name("Debug Logger".to_string())
+      .event_type(EventType::StartedGame)
       .will_process(Arc::new(|event: &mut Event, _game_state: &GameState| {
         debug!("Will process event: {:#?}", event);
       }))

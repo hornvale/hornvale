@@ -4,6 +4,7 @@ use uuid::Uuid;
 use crate::event::DidProcessFn;
 use crate::event::EventFilterRule;
 use crate::event::EventSubscriber;
+use crate::event::EventType;
 use crate::event::ShouldProcessFn;
 use crate::event::WillProcessFn;
 use crate::event::DEFAULT_PRIORITY;
@@ -16,6 +17,8 @@ pub struct Builder {
   name: Option<String>,
   /// The priority of the subscriber.
   priority: Option<i64>,
+  /// The event type that this subscriber is interested in.
+  event_type: Option<EventType>,
   /// The filter rule.
   filter_rule: Option<EventFilterRule>,
   /// The closure that determines if this subscriber should process an event.
@@ -34,6 +37,7 @@ impl Builder {
     Builder {
       name: None,
       priority: None,
+      event_type: None,
       filter_rule: None,
       should_process: None,
       will_process: None,
@@ -48,6 +52,11 @@ impl Builder {
 
   pub fn priority(mut self, priority: i64) -> Self {
     self.priority = Some(priority);
+    self
+  }
+
+  pub fn event_type(mut self, event_type: EventType) -> Self {
+    self.event_type = Some(event_type);
     self
   }
 
@@ -76,6 +85,7 @@ impl Builder {
       uuid: Uuid::new_v4(),
       name: self.name.unwrap_or_else(|| String::from("Default EventSubscriber")),
       priority: self.priority.unwrap_or(DEFAULT_PRIORITY),
+      event_type: self.event_type.unwrap_or(EventType::default()),
       filter_rule: self.filter_rule.unwrap_or(EventFilterRule::Always),
       should_process: self.should_process.unwrap_or_else(|| Arc::new(|_, _| None)),
       will_process: self.will_process.unwrap_or_else(|| Arc::new(|_, _| {})),
