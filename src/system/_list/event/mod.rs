@@ -33,3 +33,25 @@ impl SystemTrait<GameState> for Event {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use crate::event::Event;
+  use crate::event::EventType;
+  use crate::event::DEFAULT_PRIORITY;
+  use crate::game_state::EventQueueTrait;
+  use crate::game_state::GameState;
+  use crate::game_state::QuitFlagTrait;
+  use crate::system::EventSystem;
+  use crate::system::SystemTrait;
+
+  #[test]
+  fn test_run() {
+    let mut game_state = GameState::new();
+    let mut event_system = EventSystem::new();
+    game_state.set_quit_flag(false);
+    game_state.enqueue_event(Event::new(EventType::QuitGame, DEFAULT_PRIORITY, vec![]));
+    event_system.run(&mut game_state);
+    assert_eq!(game_state.get_quit_flag(), true);
+  }
+}
