@@ -9,6 +9,8 @@ pub mod into_chunk_id;
 pub use into_chunk_id::IntoChunkId as IntoChunkIdTrait;
 pub mod into_entity_id;
 pub use into_entity_id::IntoEntityId as IntoEntityIdTrait;
+pub mod into_passage_id;
+pub use into_passage_id::IntoPassageId as IntoPassageIdTrait;
 pub mod into_player_id;
 pub use into_player_id::IntoPlayerId as IntoPlayerIdTrait;
 pub mod into_room_id;

@@ -9,6 +9,8 @@ pub mod chunk_id;
 pub use chunk_id::*;
 pub mod entity_id;
 pub use entity_id::*;
+pub mod passage_id;
+pub use passage_id::*;
 pub mod player_id;
 pub use player_id::*;
 pub mod room_id;
