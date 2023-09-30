@@ -21,10 +21,14 @@ pub enum Type {
   StartedGame,
   /// QuitGame -- the player quit.
   QuitGame,
-  PlayerDidEnterRoom(RoomId),
+  PlayerWillExitRoom(RoomId),
+  EntityWillExitRoom(EntityId, RoomId),
+  EntityDidExitRoom(EntityId, RoomId),
   PlayerDidExitRoom(RoomId),
   EntityDidEnterRoom(EntityId, RoomId),
-  EntityDidExitRoom(EntityId, RoomId),
+  PlayerDidEnterRoom(RoomId),
+  PlayerWillEnterRoom(RoomId),
+  EntityWillEnterRoom(EntityId, RoomId),
 }
 
 impl Type {

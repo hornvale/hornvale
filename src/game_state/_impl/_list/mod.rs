@@ -3,6 +3,8 @@
 // Remember not to edit it manually.
 pub mod command_queue;
 pub use command_queue::*;
+pub mod current_room_id;
+pub use current_room_id::*;
 pub mod diegetic_flag;
 pub use diegetic_flag::*;
 pub mod event_queue;
@@ -17,7 +19,11 @@ pub mod loop_timer;
 pub use loop_timer::*;
 pub mod output_queue;
 pub use output_queue::*;
+pub mod player_id;
+pub use player_id::*;
 pub mod quit_flag;
 pub use quit_flag::*;
+pub mod rooms;
+pub use rooms::*;
 pub mod tick_counter;
 pub use tick_counter::*;

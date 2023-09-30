@@ -1,4 +1,6 @@
 use crate::entity_id::BaseId;
+use crate::entity_id::IntoBaseIdTrait;
+use crate::entity_id::IntoEntityIdTrait;
 use crate::entity_id::IntoPlayerIdTrait;
 
 /// The `PlayerId` type.
@@ -7,6 +9,14 @@ use crate::entity_id::IntoPlayerIdTrait;
 #[derive(Clone, Debug, Default, Deserialize, Display, Eq, Hash, PartialEq, Ord, PartialOrd, Serialize)]
 #[repr(transparent)]
 pub struct PlayerId(BaseId);
+
+impl IntoBaseIdTrait for PlayerId {
+  fn into_base_id(self) -> BaseId {
+    self.0
+  }
+}
+
+impl IntoEntityIdTrait for PlayerId {}
 
 impl PlayerId {
   /// Create a new `PlayerId`.
