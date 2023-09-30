@@ -19,3 +19,7 @@ Cargo.lock
 
 # mdBook
 docs/book
+
+# Temporary test assets
+tests/assets/temporary
+!tests/assets/temporary/.gitkeep
