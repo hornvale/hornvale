@@ -70,6 +70,8 @@ impl Default for Chunk {
 mod tests {
   use super::*;
 
+  use crate::room::Room;
+  use crate::room::RoomType;
   use crate::test::init;
   use crate::test::TEMPORARY_TEST_DATA_DIRECTORY;
 
@@ -112,6 +114,30 @@ mod tests {
       "This is a test chunk.".to_string(),
     );
     let file_path = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk.yaml");
+    chunk.save_chunk_to_yaml(&file_path).unwrap();
+    let loaded_chunk = Chunk::load_chunk_from_yaml(&file_path).unwrap();
+    assert_eq!(chunk, loaded_chunk);
+  }
+
+  #[test]
+  fn test_chunk_with_rooms_save_and_load() {
+    init();
+    let chunk_id = ChunkId::default();
+    let mut chunk = Chunk::new(
+      chunk_id.clone(),
+      ChunkType::default(),
+      "Test Chunk".to_string(),
+      "This is a test chunk.".to_string(),
+    );
+    let room_id = RoomId::default();
+    let room = Room::new(
+      room_id.clone(),
+      RoomType::default(),
+      "Test Room".to_string(),
+      "This is a test room.".to_string(),
+    );
+    chunk.rooms.insert(room_id, room);
+    let file_path = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk2.yaml");
     chunk.save_chunk_to_yaml(&file_path).unwrap();
     let loaded_chunk = Chunk::load_chunk_from_yaml(&file_path).unwrap();
     assert_eq!(chunk, loaded_chunk);
