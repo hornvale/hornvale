@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -65,6 +66,32 @@ impl Default for EventSubscriber {
       should_process: Arc::new(|_, _| None),
       will_process: Arc::new(|_, _| {}),
       did_process: Arc::new(|_, _| {}),
+    }
+  }
+}
+
+impl PartialEq for EventSubscriber {
+  fn eq(&self, other: &Self) -> bool {
+    self.priority == other.priority && self.uuid == other.uuid
+  }
+}
+
+impl Eq for EventSubscriber {}
+
+impl PartialOrd for EventSubscriber {
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    match other.priority.partial_cmp(&self.priority) {
+      Some(Ordering::Equal) => self.uuid.partial_cmp(&other.uuid),
+      other => other,
+    }
+  }
+}
+
+impl Ord for EventSubscriber {
+  fn cmp(&self, other: &Self) -> Ordering {
+    match other.priority.cmp(&self.priority) {
+      Ordering::Equal => self.uuid.cmp(&other.uuid),
+      other => other,
     }
   }
 }

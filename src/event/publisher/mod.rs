@@ -1,5 +1,6 @@
 use anyhow::Error as AnyError;
 use std::cell::RefCell;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::rc::Rc;
 use uuid::Uuid;
@@ -12,9 +13,9 @@ use crate::game_state::GameState;
 #[derive(Derivative, Default)]
 #[derivative(Debug)]
 pub struct EventPublisher {
-  /// The list of subscribers.
+  /// The priority queue of subscribers.
   #[derivative(Debug = "ignore")]
-  subscribers: Vec<Rc<RefCell<EventSubscriber>>>,
+  subscribers: BTreeSet<Rc<RefCell<EventSubscriber>>>,
   /// Subscribers by their unique ID.
   #[derivative(Debug = "ignore")]
   subscribers_by_id: HashMap<Uuid, Rc<RefCell<EventSubscriber>>>,
@@ -24,7 +25,7 @@ impl EventPublisher {
   /// Creates a new `EventPublisher`.
   pub fn new() -> Self {
     Self {
-      subscribers: Vec::new(),
+      subscribers: BTreeSet::new(),
       subscribers_by_id: HashMap::new(),
     }
   }
@@ -32,13 +33,13 @@ impl EventPublisher {
   pub fn add_subscriber(&mut self, subscriber: EventSubscriber) {
     let subscriber = Rc::new(RefCell::new(subscriber));
     let uuid = subscriber.borrow().uuid;
-    self.subscribers.push(subscriber.clone());
+    self.subscribers.insert(subscriber.clone());
     self.subscribers_by_id.insert(uuid, subscriber);
   }
 
   pub fn remove_subscriber(&mut self, uuid: &Uuid) -> Result<EventSubscriber, AnyError> {
     if let Some(subscriber) = self.subscribers_by_id.remove(uuid) {
-      self.subscribers.retain(|s| s.borrow().uuid != *uuid);
+      self.subscribers.remove(&subscriber);
       Ok(subscriber.borrow().clone()) // Clone the inner value
     } else {
       Err(anyhow!("Subscriber not found: {}", uuid))
@@ -65,16 +66,16 @@ impl EventPublisher {
   pub fn will_process(&mut self, event: &mut Event, game_state: &GameState) -> Result<(), AnyError> {
     self
       .subscribers
-      .iter_mut()
-      .for_each(|s| (s.borrow_mut().will_process)(event, game_state));
+      .iter()
+      .for_each(|s| (s.borrow().will_process)(event, game_state));
     Ok(())
   }
 
   pub fn did_process(&mut self, event: &Event, game_state: &mut GameState) -> Result<(), AnyError> {
     self
       .subscribers
-      .iter_mut()
-      .for_each(|s| (s.borrow_mut().did_process)(event, game_state));
+      .iter()
+      .for_each(|s| (s.borrow().did_process)(event, game_state));
     Ok(())
   }
 }
