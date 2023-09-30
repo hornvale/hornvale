@@ -4,7 +4,7 @@ use crate::entity_id::IntoActorIdTrait;
 /// The `ActorId` type.
 ///
 /// We do this so that we can perform some compile-time type-checking with IDs.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Display, Eq, Hash, PartialEq, Ord, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Display, Eq, Hash, PartialEq, Ord, PartialOrd, Serialize)]
 #[repr(transparent)]
 pub struct ActorId(BaseId);
 
