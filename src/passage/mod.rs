@@ -4,6 +4,10 @@ use std::io::Write;
 use crate::entity_id::PassageId;
 use crate::entity_id::RoomId;
 
+pub mod builder;
+pub use builder::Builder as PassageBuilder;
+pub mod direction;
+pub use direction::Direction as PassageDirection;
 pub mod r#type;
 pub use r#type::Type as PassageType;
 
@@ -14,6 +18,8 @@ pub struct Passage {
   pub id: PassageId,
   /// The `Passage`'s type.
   pub r#type: PassageType,
+  /// The `Passage`'s direction.
+  pub direction: PassageDirection,
   /// The `Passage`'s name.
   pub name: String,
   /// The `Passage`'s description.
@@ -29,6 +35,7 @@ impl Passage {
   pub fn new(
     id: PassageId,
     r#type: PassageType,
+    direction: PassageDirection,
     name: String,
     description: String,
     origin: RoomId,
@@ -37,6 +44,7 @@ impl Passage {
     Self {
       id,
       r#type,
+      direction,
       name,
       description,
       origin,
@@ -65,6 +73,7 @@ impl Default for Passage {
     Self {
       id: PassageId::default(),
       r#type: PassageType::default(),
+      direction: PassageDirection::default(),
       name: "Default Passage".to_string(),
       description: "This is the default passage.".to_string(),
       origin: RoomId::default(),
@@ -86,6 +95,7 @@ mod tests {
     let passage = Passage::default();
     assert_ne!(passage.id, PassageId::default());
     assert_eq!(passage.r#type, PassageType::default());
+    assert_eq!(passage.direction, PassageDirection::default());
     assert_eq!(passage.name, "Default Passage");
     assert_eq!(passage.description, "This is the default passage.");
     assert_ne!(passage.origin, RoomId::default());

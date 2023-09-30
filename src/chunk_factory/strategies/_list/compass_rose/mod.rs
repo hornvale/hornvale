@@ -1,6 +1,9 @@
 use crate::chunk::Chunk;
 use crate::chunk::ChunkBuilder;
 use crate::chunk_factory::ChunkFactoryStrategyTrait;
+use crate::passage::PassageBuilder;
+use crate::passage::PassageDirection;
+use crate::passage::PassageType;
 use crate::room::RoomBuilder;
 
 /// The `CompassRoseStrategy` struct.
@@ -14,42 +17,276 @@ impl ChunkFactoryStrategyTrait for CompassRose {
       .name("Compass Rose")
       .description("A compass rose.")
       .build();
-    let nw_room = RoomBuilder::new()
+    let mut nw_room = RoomBuilder::new()
       .name("Northwest Room")
       .description("A room to the northwest.")
       .build();
-    let n_room = RoomBuilder::new()
+    let mut n_room = RoomBuilder::new()
       .name("North Room")
       .description("A room to the north.")
+      .add_passage(
+        &PassageDirection::West,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("West Path")
+          .description("A path to the west.")
+          .destination(&nw_room.id)
+          .build(),
+      )
       .build();
-    let ne_room = RoomBuilder::new()
+    nw_room.add_passage(
+      &PassageDirection::East,
+      &PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("East Path")
+        .description("A path to the east.")
+        .destination(&n_room.id)
+        .build(),
+    );
+    let mut ne_room = RoomBuilder::new()
       .name("Northeast Room")
       .description("A room to the northeast.")
+      .add_passage(
+        &PassageDirection::West,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("West Path")
+          .description("A path to the west.")
+          .destination(&n_room.id)
+          .build(),
+      )
       .build();
-    let w_room = RoomBuilder::new()
+    n_room.add_passage(
+      &PassageDirection::East,
+      &PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("East Path")
+        .description("A path to the east.")
+        .destination(&ne_room.id)
+        .build(),
+    );
+    let mut w_room = RoomBuilder::new()
       .name("West Room")
       .description("A room to the west.")
+      .add_passage(
+        &PassageDirection::North,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("North Path")
+          .description("A path to the north.")
+          .destination(&nw_room.id)
+          .build(),
+      )
       .build();
+    nw_room.add_passage(
+      &PassageDirection::South,
+      &PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("South Path")
+        .description("A path to the south.")
+        .destination(&w_room.id)
+        .build(),
+    );
     let e_room = RoomBuilder::new()
       .name("East Room")
       .description("A room to the east.")
+      .add_passage(
+        &PassageDirection::North,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("North Path")
+          .description("A path to the north.")
+          .destination(&ne_room.id)
+          .build(),
+      )
       .build();
-    let sw_room = RoomBuilder::new()
+    ne_room.add_passage(
+      &PassageDirection::South,
+      &PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("South Path")
+        .description("A path to the south.")
+        .destination(&e_room.id)
+        .build(),
+    );
+    let mut sw_room = RoomBuilder::new()
       .name("Southwest Room")
       .description("A room to the southwest.")
+      .add_passage(
+        &PassageDirection::North,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("North Path")
+          .description("A path to the north.")
+          .destination(&w_room.id)
+          .build(),
+      )
       .build();
-    let s_room = RoomBuilder::new()
+    w_room.add_passage(
+      &PassageDirection::East,
+      &PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("East Path")
+        .description("A path to the east.")
+        .destination(&sw_room.id)
+        .build(),
+    );
+    let mut s_room = RoomBuilder::new()
       .name("South Room")
       .description("A room to the south.")
+      .add_passage(
+        &PassageDirection::West,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("West Path")
+          .description("A path to the west.")
+          .destination(&sw_room.id)
+          .build(),
+      )
       .build();
-    let se_room = RoomBuilder::new()
+    sw_room.add_passage(
+      &PassageDirection::East,
+      &PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("East Path")
+        .description("A path to the east.")
+        .destination(&s_room.id)
+        .build(),
+    );
+    let mut se_room = RoomBuilder::new()
       .name("Southeast Room")
       .description("A room to the southeast.")
+      .add_passage(
+        &PassageDirection::West,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("West Path")
+          .description("A path to the west.")
+          .destination(&s_room.id)
+          .build(),
+      )
       .build();
+    s_room.add_passage(
+      &PassageDirection::East,
+      &PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("East Path")
+        .description("A path to the east.")
+        .destination(&se_room.id)
+        .build(),
+    );
     let center_room = RoomBuilder::new()
       .name("Center Room")
       .description("A room in the center.")
+      .add_passage(
+        &PassageDirection::North,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("North Path")
+          .description("A path to the north.")
+          .destination(&n_room.id)
+          .build(),
+      )
+      .add_passage(
+        &PassageDirection::South,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("South Path")
+          .description("A path to the south.")
+          .destination(&s_room.id)
+          .build(),
+      )
+      .add_passage(
+        &PassageDirection::West,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("West Path")
+          .description("A path to the west.")
+          .destination(&w_room.id)
+          .build(),
+      )
+      .add_passage(
+        &PassageDirection::East,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("East Path")
+          .description("A path to the east.")
+          .destination(&e_room.id)
+          .build(),
+      )
+      .add_passage(
+        &PassageDirection::Northwest,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("Northwest Path")
+          .description("A path to the northwest.")
+          .destination(&nw_room.id)
+          .build(),
+      )
+      .add_passage(
+        &PassageDirection::Northeast,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("Northeast Path")
+          .description("A path to the northeast.")
+          .destination(&ne_room.id)
+          .build(),
+      )
+      .add_passage(
+        &PassageDirection::Southwest,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("Southwest Path")
+          .description("A path to the southwest.")
+          .destination(&sw_room.id)
+          .build(),
+      )
+      .add_passage(
+        &PassageDirection::Southeast,
+        &PassageBuilder::new()
+          .r#type(&PassageType::Path)
+          .name("Southeast Path")
+          .description("A path to the southeast.")
+          .destination(&se_room.id)
+          .build(),
+      )
       .build();
+    nw_room.passages.insert(
+      PassageDirection::Southeast,
+      PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("Southeast Path")
+        .description("A path to the southeast.")
+        .destination(&center_room.id)
+        .build(),
+    );
+    ne_room.passages.insert(
+      PassageDirection::Southwest,
+      PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("Southwest Path")
+        .description("A path to the southwest.")
+        .destination(&center_room.id)
+        .build(),
+    );
+    sw_room.passages.insert(
+      PassageDirection::Northeast,
+      PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("Northeast Path")
+        .description("A path to the northeast.")
+        .destination(&center_room.id)
+        .build(),
+    );
+    se_room.passages.insert(
+      PassageDirection::Northwest,
+      PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("Northwest Path")
+        .description("A path to the northwest.")
+        .destination(&center_room.id)
+        .build(),
+    );
     chunk.rooms.insert(nw_room.id.clone(), nw_room);
     chunk.rooms.insert(n_room.id.clone(), n_room);
     chunk.rooms.insert(ne_room.id.clone(), ne_room);

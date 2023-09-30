@@ -135,6 +135,7 @@ mod tests {
       RoomType::default(),
       "Test Room".to_string(),
       "This is a test room.".to_string(),
+      HashMap::new(),
     );
     chunk.rooms.insert(room_id, room);
     let file_path = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk2.yaml");
