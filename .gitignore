@@ -23,3 +23,7 @@ docs/book
 # Temporary test assets
 tests/assets/temporary
 !tests/assets/temporary/.gitkeep
+
+# Temporary test data
+tests/data/temporary
+!tests/data/temporary/.gitkeep

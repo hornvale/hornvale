@@ -51,6 +51,12 @@ pub mod time;
 #[cfg(test)]
 pub mod test {
 
+  // Constants for paths.
+  pub const TEST_ASSETS_DIRECTORY: &str = "tests/assets";
+  pub const TEMPORARY_TEST_ASSETS_DIRECTORY: &str = "tests/assets/temporary";
+  pub const TEST_DATA_DIRECTORY: &str = "tests/data";
+  pub const TEMPORARY_TEST_DATA_DIRECTORY: &str = "tests/data/temporary";
+
   use pretty_env_logger::env_logger::builder;
   use std::env::set_var;
 
