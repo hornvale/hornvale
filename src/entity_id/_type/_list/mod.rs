@@ -5,6 +5,8 @@ pub mod actor_id;
 pub use actor_id::*;
 pub mod base_id;
 pub use base_id::*;
+pub mod chunk_id;
+pub use chunk_id::*;
 pub mod entity_id;
 pub use entity_id::*;
 pub mod player_id;

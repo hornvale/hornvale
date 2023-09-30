@@ -5,6 +5,8 @@ pub mod into_actor_id;
 pub use into_actor_id::IntoActorId as IntoActorIdTrait;
 pub mod into_base_id;
 pub use into_base_id::IntoBaseId as IntoBaseIdTrait;
+pub mod into_chunk_id;
+pub use into_chunk_id::IntoChunkId as IntoChunkIdTrait;
 pub mod into_entity_id;
 pub use into_entity_id::IntoEntityId as IntoEntityIdTrait;
 pub mod into_player_id;
