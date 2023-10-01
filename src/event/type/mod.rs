@@ -10,6 +10,8 @@ use crate::game_state::GameState;
 /// The `Type` enum.
 ///
 /// This should be an exhaustive collection of events.
+///
+/// Events should be phrased in the present tense.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Type {
   /// None -- never happens.
@@ -17,18 +19,14 @@ pub enum Type {
   None,
   /// No-Op -- absolutely nothing happens.
   NoOp,
-  /// StartedGame -- the game has started.
-  StartedGame,
-  /// QuitGame -- the player quit.
-  QuitGame,
-  PlayerWillExitRoom(RoomId),
-  EntityWillExitRoom(EntityId, RoomId),
-  EntityDidExitRoom(EntityId, RoomId),
-  PlayerDidExitRoom(RoomId),
-  EntityDidEnterRoom(EntityId, RoomId),
-  PlayerDidEnterRoom(RoomId),
-  PlayerWillEnterRoom(RoomId),
-  EntityWillEnterRoom(EntityId, RoomId),
+  /// StartsGame -- the game starts.
+  StartsGame,
+  /// QuitsGame -- the player quits.
+  QuitsGame,
+  /// An entity appeared in a room.
+  EntityAppearsInRoom(EntityId, RoomId),
+  /// EntityWalksFromRoomToRoom -- an entity walked from one room to another.
+  EntityWalksFromRoomToRoom(EntityId, RoomId, RoomId),
 }
 
 impl Type {
@@ -45,12 +43,20 @@ impl Type {
       NoOp => {
         debug!("Applying no-op event.");
       },
-      StartedGame => {
+      StartsGame => {
         debug!("Applying start-game event.");
       },
-      QuitGame => {
+      QuitsGame => {
         debug!("Applying quit-game event.");
         Effect::new(EffectType::SetQuitFlag(true), event.backtrace.clone()).apply(game_state)?;
+      },
+      EntityAppearsInRoom(entity_id, room_id) => {
+        debug!("Applying entity-appears-in-room event.");
+        Effect::new(
+          EffectType::PlaceEntityInRoom(entity_id.clone(), room_id.clone()),
+          event.backtrace.clone(),
+        )
+        .apply(game_state)?;
       },
       _ => {
         // By default, we let subscribers react to the event.

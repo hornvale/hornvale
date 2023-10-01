@@ -1,22 +1,24 @@
 use anyhow::Error as AnyError;
 
+use crate::action::Action;
+use crate::action::ActionType;
 use crate::command::Command;
-use crate::event::Event;
-use crate::event::EventType;
-use crate::event::DEFAULT_PRIORITY;
-use crate::game_state::EventQueueTrait;
 use crate::game_state::GameState;
+use crate::game_state::PlayerIdTrait;
+use crate::passage::PassageDirection;
 
 /// The `Type` enum.
 ///
 /// This should be an exhaustive collection of commands.
-#[derive(Clone, Debug, Default, Display, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub enum Type {
   /// No-Op -- absolutely nothing happens.
   #[default]
   NoOp,
   /// QuitGame -- the player quit.
   QuitGame,
+  /// Movement in a passage direction.
+  Walk(PassageDirection),
 }
 
 impl Type {
@@ -35,8 +37,17 @@ impl Type {
       },
       QuitGame => {
         debug!("Executing quit-game command.");
-        let event = Event::new(EventType::QuitGame, DEFAULT_PRIORITY, command.backtrace.clone());
-        game_state.enqueue_event(event);
+        let action = Action::new(ActionType::QuitGame, command.backtrace.clone());
+        action.attempt(game_state)?;
+      },
+      Walk(direction) => {
+        debug!("Executing walk command.");
+        let player_id = game_state.get_player_id();
+        let action = Action::new(
+          ActionType::Walk(player_id.clone().into(), direction.clone()),
+          command.backtrace.clone(),
+        );
+        action.attempt(game_state)?;
       },
       _ => {
         // By default, we let subscribers react to the event.

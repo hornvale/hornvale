@@ -1,8 +1,9 @@
-use anyhow::Error as AnyError;
 use uuid::Uuid;
 
 use crate::game_state::GameState;
 
+pub mod error;
+pub use error::Error as ActionError;
 pub mod r#type;
 pub use r#type::Type as ActionType;
 
@@ -29,7 +30,7 @@ impl Action {
     }
   }
 
-  pub fn attempt(&self, game_state: &mut GameState) -> Result<(), AnyError> {
+  pub fn attempt(&self, game_state: &mut GameState) -> Result<(), Box<ActionError>> {
     debug!("Attempting {:#?} action.", self.r#type);
     self.r#type.attempt(self, game_state)?;
     Ok(())

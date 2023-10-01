@@ -123,11 +123,11 @@ impl ChunkFactoryStrategyTrait for CompassRose {
       )
       .build();
     w_room.add_passage(
-      &PassageDirection::East,
+      &PassageDirection::South,
       &PassageBuilder::new()
         .r#type(&PassageType::Path)
-        .name("East Path")
-        .description("A path to the east.")
+        .name("South Path")
+        .description("A path to the south.")
         .destination(&sw_room.id)
         .build(),
     );
@@ -173,6 +173,15 @@ impl ChunkFactoryStrategyTrait for CompassRose {
         .name("East Path")
         .description("A path to the east.")
         .destination(&se_room.id)
+        .build(),
+    );
+    se_room.add_passage(
+      &PassageDirection::North,
+      &PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("North Path")
+        .description("A path to the north.")
+        .destination(&e_room.id)
         .build(),
     );
     let center_room = RoomBuilder::new()

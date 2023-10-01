@@ -1,8 +1,10 @@
 use anyhow::Error as AnyError;
+use log::Level as LogLevel;
 use std::sync::Arc;
 
 use crate::chunk_factory::ChunkFactory;
 use crate::chunk_factory::CompassRoseStrategy;
+use crate::event::attach_logger;
 use crate::event::Event;
 use crate::event::EventSubscriberBuilder;
 use crate::event::EventType;
@@ -70,55 +72,45 @@ impl Game {
     game_state.set_input_ready_flag(false);
 
     // Fire the StartedGame event.
-    let start_game_event = Event::new(EventType::StartedGame, DEFAULT_PRIORITY + 10000, Vec::new());
+    let start_game_event = Event::new(EventType::StartsGame, DEFAULT_PRIORITY + 10000, Vec::new());
     game_state.enqueue_event(start_game_event);
 
     // BEGIN TEMPORARY
 
     // Add a debug logger.
-    let debug_logger = EventSubscriberBuilder::new()
-      .name("Debug Logger".to_string())
-      .event_type(EventType::StartedGame)
-      .will_process(Arc::new(|event: &mut Event, _game_state: &GameState| {
-        println!("Will process event: {:#?}", event);
-      }))
-      .did_process(Arc::new(|event: &Event, _game_state: &mut GameState| {
-        println!("Did process event: {:#?}", event);
-      }))
-      .build();
-    let _debug_logger_uuid = debug_logger.uuid;
-    event_system.event_publisher.add_subscriber(debug_logger);
+    let _debug_logger_uuid = attach_logger(
+      EventType::StartsGame,
+      LogLevel::Error,
+      &mut event_system.event_publisher,
+    );
 
-    // Let's create a room and add it to the game state.
+    // Let's create a chunk and add its rooms to the game state.
     let chunk = ChunkFactory::new(CompassRoseStrategy {}).create_chunk();
     game_state.insert_rooms_from_chunk(&chunk);
     let start_room_id = game_state.rooms.keys().next().unwrap().clone();
 
-    // And throw the player in the room.
+    // And throw the player in one of the rooms.
     game_state.set_current_room_id(&start_room_id);
-    let entity_did_enter_room_event = Event::new(
-      EventType::EntityDidEnterRoom(
+    let entity_appears_in_room = Event::new(
+      EventType::EntityAppearsInRoom(
         game_state.get_player_id().clone().into(),
         game_state.get_current_room_id().clone(),
       ),
       DEFAULT_PRIORITY + 100,
       Vec::new(),
     );
-    game_state.enqueue_event(entity_did_enter_room_event);
-    let player_did_enter_room_event = Event::new(
-      EventType::PlayerDidEnterRoom(game_state.get_current_room_id().clone()),
-      DEFAULT_PRIORITY + 90,
-      Vec::new(),
-    );
-    game_state.enqueue_event(player_did_enter_room_event);
+    game_state.enqueue_event(entity_appears_in_room);
 
     // Print the name and description of the room when we enter it.
     let room_description_logger = EventSubscriberBuilder::new()
       .name("Room Description Logger".to_string())
-      .event_type(EventType::PlayerDidEnterRoom(game_state.get_current_room_id().clone()))
+      .event_type(EventType::EntityAppearsInRoom(
+        game_state.get_player_id().clone().into(),
+        game_state.get_current_room_id().clone(),
+      ))
       .did_process(Arc::new(|event: &Event, game_state: &mut GameState| {
         let room_id = match event.r#type {
-          EventType::PlayerDidEnterRoom(ref room_id) => room_id,
+          EventType::EntityAppearsInRoom(_, ref room_id) => room_id,
           _ => panic!("Unexpected event type."),
         };
         let room = game_state.get_room(room_id).unwrap();

@@ -8,6 +8,8 @@ pub mod _constant;
 pub use _constant::*;
 pub mod filter_rule;
 pub use filter_rule::FilterRule as EventFilterRule;
+pub mod logger;
+pub use logger::*;
 pub mod publisher;
 pub use publisher::*;
 pub mod subscriber;
