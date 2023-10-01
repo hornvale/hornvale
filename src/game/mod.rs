@@ -82,7 +82,7 @@ impl Game {
     // Add a debug logger.
     let _debug_logger_uuid = attach_logger(
       EventType::StartsGame,
-      LogLevel::Error,
+      LogLevel::Debug,
       &mut event_system.event_publisher,
     );
 
