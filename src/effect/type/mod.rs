@@ -73,8 +73,8 @@ impl Type {
           let room = game_state.get_room(room_id).unwrap();
           (room.name.clone(), room.description.clone())
         };
-        game_state.enqueue_output(room_name);
-        game_state.enqueue_output(room_description);
+        game_state.enqueue_output(&room_name);
+        game_state.enqueue_output(&room_description);
       },
       _ => unimplemented!(),
     }

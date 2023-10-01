@@ -34,7 +34,7 @@ impl Command {
     debug!("Executing {:#?} command.", self.r#type);
     if let Some(error) = self.r#type.execute(self, game_state).err() {
       error!("Error executing command:\n{:#?}\n{:#?}", self.clone(), error);
-      game_state.enqueue_output(error.to_string());
+      game_state.enqueue_output(&error.to_string());
     }
     Ok(())
   }
