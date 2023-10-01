@@ -1,6 +1,8 @@
 use anyhow::Error as AnyError;
 use std::sync::Arc;
 
+use crate::chunk_factory::ChunkFactory;
+use crate::chunk_factory::CompassRoseStrategy;
 use crate::event::Event;
 use crate::event::EventSubscriberBuilder;
 use crate::event::EventType;
@@ -13,7 +15,6 @@ use crate::game_state::LoopTimerTrait;
 use crate::game_state::PlayerIdTrait;
 use crate::game_state::QuitFlagTrait;
 use crate::game_state::RoomsTrait;
-use crate::room::Room;
 use crate::system::CommandSystem;
 use crate::system::EventSystem;
 use crate::system::InputSystem;
@@ -89,11 +90,12 @@ impl Game {
     event_system.event_publisher.add_subscriber(debug_logger);
 
     // Let's create a room and add it to the game state.
-    let room = Room::default();
-    game_state.insert_room(room.clone());
+    let chunk = ChunkFactory::new(CompassRoseStrategy {}).create_chunk();
+    game_state.insert_rooms_from_chunk(&chunk);
+    let start_room_id = game_state.rooms.keys().next().unwrap().clone();
 
     // And throw the player in the room.
-    game_state.set_current_room_id(&room.id);
+    game_state.set_current_room_id(&start_room_id);
     let entity_did_enter_room_event = Event::new(
       EventType::EntityDidEnterRoom(
         game_state.get_player_id().clone().into(),
