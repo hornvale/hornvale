@@ -1,4 +1,6 @@
 use log::Level as LogLevel;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -22,6 +24,6 @@ pub fn attach_logger(event_type: EventType, log_level: LogLevel, event_publisher
     }))
     .build();
   let debug_logger_uuid = debug_logger.uuid;
-  event_publisher.add_subscriber(debug_logger);
+  event_publisher.add_subscriber(Rc::new(RefCell::new(debug_logger)));
   debug_logger_uuid
 }

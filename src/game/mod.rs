@@ -1,5 +1,7 @@
 use anyhow::Error as AnyError;
 use log::Level as LogLevel;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::chunk_factory::ChunkFactory;
@@ -9,6 +11,7 @@ use crate::event::Event;
 use crate::event::EventSubscriberBuilder;
 use crate::event::EventType;
 use crate::event::DEFAULT_PRIORITY;
+use crate::game_rule::GameRuleManager;
 use crate::game_state::CurrentRoomIdTrait;
 use crate::game_state::EventQueueTrait;
 use crate::game_state::GameState;
@@ -67,6 +70,9 @@ impl Game {
     let mut output_system = OutputSystem::default();
     let mut parser_system = ParserSystem::default();
     let mut tick_system = TickSystem::default();
+    let mut game_rule_manager = GameRuleManager::default();
+    game_rule_manager.insert_stock_rules();
+    game_rule_manager.inject_rule_subscribers(&mut event_system.event_publisher);
 
     // Give us time (1 tick) to start up before we start reading input.
     game_state.set_input_ready_flag(false);
@@ -119,7 +125,9 @@ impl Game {
       }))
       .build();
     let _room_description_logger_uuid = room_description_logger.uuid;
-    event_system.event_publisher.add_subscriber(room_description_logger);
+    event_system
+      .event_publisher
+      .add_subscriber(Rc::new(RefCell::new(room_description_logger)));
 
     // END TEMPORARY
     loop {

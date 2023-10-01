@@ -32,8 +32,7 @@ impl EventPublisher {
     }
   }
 
-  pub fn add_subscriber(&mut self, subscriber: EventSubscriber) {
-    let subscriber = Rc::new(RefCell::new(subscriber));
+  pub fn add_subscriber(&mut self, subscriber: Rc<RefCell<EventSubscriber>>) {
     let event_type = subscriber.borrow().event_type.clone();
     let uuid = subscriber.borrow().uuid;
     #[allow(clippy::mutable_key_type)]
@@ -120,7 +119,7 @@ mod tests {
     init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
-    event_publisher.add_subscriber(subscriber);
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber)));
   }
 
   #[test]
@@ -129,7 +128,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
     let uuid = subscriber.uuid.clone();
-    event_publisher.add_subscriber(subscriber);
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber)));
     let _subscriber = event_publisher.remove_subscriber(&uuid);
   }
 
@@ -138,7 +137,7 @@ mod tests {
     init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
-    event_publisher.add_subscriber(subscriber);
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber)));
     let mut event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![]);
     let mut game_state = GameState::new();
     event_publisher.publish_event(&mut event, &mut game_state).unwrap();
@@ -149,7 +148,7 @@ mod tests {
     init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
-    event_publisher.add_subscriber(subscriber);
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber)));
     let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![]);
     let mut game_state = GameState::new();
     event_publisher.should_process(&event, &mut game_state).unwrap();
@@ -160,7 +159,7 @@ mod tests {
     init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
-    event_publisher.add_subscriber(subscriber);
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber)));
     let mut event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![]);
     let game_state = GameState::new();
     event_publisher.will_process(&mut event, &game_state).unwrap();
@@ -171,7 +170,7 @@ mod tests {
     init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
-    event_publisher.add_subscriber(subscriber);
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber)));
     let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![]);
     let mut game_state = GameState::new();
     event_publisher.did_process(&event, &mut game_state).unwrap();
@@ -219,9 +218,9 @@ mod tests {
       Arc::new(|_, _| {}),
       true,
     );
-    event_publisher.add_subscriber(subscriber2);
-    event_publisher.add_subscriber(subscriber1);
-    event_publisher.add_subscriber(subscriber3);
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber2)));
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber1)));
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber3)));
     let mut subscribers = event_publisher
       .subscribers_by_event_type
       .get(&discriminant(&EventType::NoOp))
