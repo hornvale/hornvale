@@ -1,7 +1,8 @@
 use crate::action::Action;
 use crate::action::ActionError;
-use crate::entity_id::EntityId;
+use crate::entity_id::ActorId;
 use crate::event::Event;
+use crate::event::EventTag;
 use crate::event::EventType;
 use crate::event::DEFAULT_PRIORITY;
 use crate::game_state::EventQueueTrait;
@@ -18,8 +19,8 @@ pub enum Type {
   NoOp,
   /// QuitGame -- the player quit.
   QuitGame,
-  /// Walk -- an entity walked in a passage direction.
-  Walk(EntityId, PassageDirection),
+  /// Walk -- an actor walked in a passage direction.
+  Walk(ActorId, PassageDirection),
 }
 
 impl Type {
@@ -35,15 +36,15 @@ impl Type {
     match self {
       NoOp => {
         debug!("Attempting no-op action.");
-        let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, action.backtrace.clone());
+        let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, action.backtrace.clone(), vec![]);
         game_state.enqueue_event(event);
       },
       QuitGame => {
         debug!("Attempting quit-game action.");
-        let event = Event::new(EventType::QuitsGame, DEFAULT_PRIORITY, action.backtrace.clone());
+        let event = Event::new(EventType::QuitsGame, DEFAULT_PRIORITY, action.backtrace.clone(), vec![]);
         game_state.enqueue_event(event);
       },
-      Walk(entity_id, direction) => {
+      Walk(actor_id, direction) => {
         debug!("Attempting walk action.");
         let current_room_id = game_state.current_room_id.clone();
         let current_room = if let Some(current_room) = game_state.rooms.get(&current_room_id) {
@@ -71,10 +72,16 @@ impl Type {
           }
         };
         let destination_room_id = passage.destination.clone();
+        let mut tags = Vec::new();
+        tags.push(EventTag::HasPrincipalActor(actor_id.clone()));
+        if actor_id == &game_state.player_id.clone().into() {
+          tags.push(EventTag::HasPlayerAsPrincipalActor);
+        }
         let event = Event::new(
-          EventType::EntityWalksFromRoomToRoom(entity_id.clone(), current_room_id, destination_room_id),
+          EventType::EntityWalksFromRoomToRoom(actor_id.clone().into(), current_room_id, destination_room_id),
           DEFAULT_PRIORITY,
           action.backtrace.clone(),
+          tags,
         );
         game_state.enqueue_event(event);
       },

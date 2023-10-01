@@ -50,7 +50,7 @@ mod tests {
     let mut game_state = GameState::new();
     let mut event_system = EventSystem::new();
     game_state.set_quit_flag(false);
-    game_state.enqueue_event(Event::new(EventType::QuitsGame, DEFAULT_PRIORITY, vec![]));
+    game_state.enqueue_event(Event::new(EventType::QuitsGame, DEFAULT_PRIORITY, vec![], vec![]));
     event_system.run(&mut game_state);
     assert_eq!(game_state.get_quit_flag(), true);
   }

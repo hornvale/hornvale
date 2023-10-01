@@ -1,4 +1,5 @@
 use crate::entity_id::BaseId;
+use crate::entity_id::IntoActorIdTrait;
 use crate::entity_id::IntoBaseIdTrait;
 use crate::entity_id::IntoEntityIdTrait;
 use crate::entity_id::IntoPlayerIdTrait;
@@ -15,6 +16,8 @@ impl IntoBaseIdTrait for PlayerId {
     self.0
   }
 }
+
+impl IntoActorIdTrait for PlayerId {}
 
 impl IntoEntityIdTrait for PlayerId {}
 

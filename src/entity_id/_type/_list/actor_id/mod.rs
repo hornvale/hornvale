@@ -1,6 +1,7 @@
 use crate::entity_id::BaseId;
 use crate::entity_id::IntoActorIdTrait;
 use crate::entity_id::IntoBaseIdTrait;
+use crate::entity_id::IntoEntityIdTrait;
 
 /// The `ActorId` type.
 ///
@@ -21,6 +22,8 @@ impl IntoBaseIdTrait for ActorId {
     self.0
   }
 }
+
+impl IntoEntityIdTrait for ActorId {}
 
 impl From<ActorId> for BaseId {
   fn from(id: ActorId) -> Self {

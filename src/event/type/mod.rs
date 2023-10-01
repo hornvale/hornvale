@@ -5,6 +5,7 @@ use crate::effect::EffectType;
 use crate::entity_id::EntityId;
 use crate::entity_id::RoomId;
 use crate::event::Event;
+use crate::event::DEFAULT_PRIORITY;
 use crate::game_state::GameState;
 
 /// The `Type` enum.
@@ -12,7 +13,7 @@ use crate::game_state::GameState;
 /// This should be an exhaustive collection of events.
 ///
 /// Events should be phrased in the present tense.
-#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum Type {
   /// None -- never happens.
   #[default]
@@ -23,6 +24,8 @@ pub enum Type {
   StartsGame,
   /// QuitsGame -- the player quits.
   QuitsGame,
+  /// ShowsRoomDescription -- a room description is shown.
+  ShowsRoomDescription(RoomId),
   /// An entity appeared in a room.
   EntityAppearsInRoom(EntityId, RoomId),
   /// EntityWalksFromRoomToRoom -- an entity walked from one room to another.
@@ -72,5 +75,14 @@ impl Type {
       },
     }
     Ok(())
+  }
+
+  pub fn get_priority(&self) -> i64 {
+    use Type::*;
+    match self {
+      StartsGame => 1000,
+      QuitsGame => 1000,
+      _ => DEFAULT_PRIORITY,
+    }
   }
 }

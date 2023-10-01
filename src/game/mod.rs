@@ -78,7 +78,7 @@ impl Game {
     game_state.set_input_ready_flag(false);
 
     // Fire the StartedGame event.
-    let start_game_event = Event::new(EventType::StartsGame, DEFAULT_PRIORITY + 10000, Vec::new());
+    let start_game_event = Event::new(EventType::StartsGame, DEFAULT_PRIORITY + 10000, Vec::new(), Vec::new());
     game_state.enqueue_event(start_game_event);
 
     // BEGIN TEMPORARY
@@ -103,6 +103,7 @@ impl Game {
         game_state.get_current_room_id().clone(),
       ),
       DEFAULT_PRIORITY + 100,
+      Vec::new(),
       Vec::new(),
     );
     game_state.enqueue_event(entity_appears_in_room);

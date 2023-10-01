@@ -3,24 +3,26 @@ use std::sync::Arc;
 use crate::entity_id::EntityId;
 use crate::entity_id::RoomId;
 use crate::event::DidProcessFn;
+use crate::event::EventBuilder;
 use crate::event::EventFilterRule;
 use crate::event::EventType;
 use crate::event::ShouldProcessFn;
 use crate::event::WillProcessFn;
+use crate::game_state::EventQueueTrait;
 
 /// The `GameRuleType` enum.
 #[derive(Clone, Copy, Debug, Deserialize, Display, Eq, Hash, PartialEq, PartialOrd, Serialize)]
 pub enum Type {
-  ShowRoomDescriptionWhenAppearingInRoom,
-  ShowRoomDescriptionWhenEnteringRoom,
+  ShowRoomDescriptionWhenPlayerAppearsInRoom,
+  ShowRoomDescriptionWhenPlayerEntersRoom,
 }
 
 impl Type {
   pub fn iterator() -> impl Iterator<Item = Type> {
     use Type::*;
     [
-      ShowRoomDescriptionWhenAppearingInRoom,
-      ShowRoomDescriptionWhenEnteringRoom,
+      ShowRoomDescriptionWhenPlayerAppearsInRoom,
+      ShowRoomDescriptionWhenPlayerEntersRoom,
     ]
     .iter()
     .copied()
@@ -30,8 +32,8 @@ impl Type {
   pub fn get_priority(&self) -> i64 {
     use Type::*;
     match self {
-      ShowRoomDescriptionWhenAppearingInRoom => 0,
-      ShowRoomDescriptionWhenEnteringRoom => 0,
+      ShowRoomDescriptionWhenPlayerAppearsInRoom => 0,
+      ShowRoomDescriptionWhenPlayerEntersRoom => 0,
     }
   }
 
@@ -39,8 +41,10 @@ impl Type {
   pub fn get_event_type(&self) -> EventType {
     use Type::*;
     match self {
-      ShowRoomDescriptionWhenAppearingInRoom => EventType::EntityAppearsInRoom(EntityId::default(), RoomId::default()),
-      ShowRoomDescriptionWhenEnteringRoom => {
+      ShowRoomDescriptionWhenPlayerAppearsInRoom => {
+        EventType::EntityAppearsInRoom(EntityId::default(), RoomId::default())
+      },
+      ShowRoomDescriptionWhenPlayerEntersRoom => {
         EventType::EntityWalksFromRoomToRoom(EntityId::default(), RoomId::default(), RoomId::default())
       },
     }
@@ -50,8 +54,8 @@ impl Type {
   pub fn get_filter_rule(&self) -> EventFilterRule {
     use Type::*;
     match self {
-      ShowRoomDescriptionWhenAppearingInRoom => EventFilterRule::Always,
-      ShowRoomDescriptionWhenEnteringRoom => EventFilterRule::Always,
+      ShowRoomDescriptionWhenPlayerAppearsInRoom => EventFilterRule::Always,
+      ShowRoomDescriptionWhenPlayerEntersRoom => EventFilterRule::Always,
     }
   }
 
@@ -59,8 +63,8 @@ impl Type {
   pub fn get_should_process(&self) -> ShouldProcessFn {
     use Type::*;
     match self {
-      ShowRoomDescriptionWhenAppearingInRoom => Arc::new(|_event, _game_state| None),
-      ShowRoomDescriptionWhenEnteringRoom => Arc::new(|_event, _game_state| None),
+      ShowRoomDescriptionWhenPlayerAppearsInRoom => Arc::new(|_event, _game_state| None),
+      ShowRoomDescriptionWhenPlayerEntersRoom => Arc::new(|_event, _game_state| None),
     }
   }
 
@@ -68,10 +72,10 @@ impl Type {
   pub fn get_will_process(&self) -> WillProcessFn {
     use Type::*;
     match self {
-      ShowRoomDescriptionWhenAppearingInRoom => Arc::new(|_event, _game_state| {
+      ShowRoomDescriptionWhenPlayerAppearsInRoom => Arc::new(|_event, _game_state| {
         println!("omg appeared in room");
       }),
-      ShowRoomDescriptionWhenEnteringRoom => Arc::new(|_event, _game_state| {
+      ShowRoomDescriptionWhenPlayerEntersRoom => Arc::new(|_event, _game_state| {
         println!("omg entered room");
       }),
     }
@@ -81,8 +85,24 @@ impl Type {
   pub fn get_did_process(&self) -> DidProcessFn {
     use Type::*;
     match self {
-      ShowRoomDescriptionWhenAppearingInRoom => Arc::new(|_event, _game_state| {}),
-      ShowRoomDescriptionWhenEnteringRoom => Arc::new(|_event, _game_state| {}),
+      ShowRoomDescriptionWhenPlayerAppearsInRoom => Arc::new(|_event, game_state| {
+        if let EventType::EntityAppearsInRoom(_entity_id, room_id) = &_event.r#type {
+          let event = EventBuilder::new()
+            .priority(0)
+            .r#type(EventType::ShowsRoomDescription(room_id.clone()))
+            .build();
+          game_state.enqueue_event(event);
+        }
+      }),
+      ShowRoomDescriptionWhenPlayerEntersRoom => Arc::new(|_event, game_state| {
+        if let EventType::EntityWalksFromRoomToRoom(_entity_id, _start_room_id, end_room_id) = &_event.r#type {
+          let event = EventBuilder::new()
+            .priority(0)
+            .r#type(EventType::ShowsRoomDescription(end_room_id.clone()))
+            .build();
+          game_state.enqueue_event(event);
+        }
+      }),
     }
   }
 
