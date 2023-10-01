@@ -197,6 +197,7 @@ mod tests {
       Arc::new(|_, _| None),
       Arc::new(|_, _| {}),
       Arc::new(|_, _| {}),
+      true,
     );
     let subscriber2 = EventSubscriber::new(
       String::from("Subscriber 2"),
@@ -206,6 +207,7 @@ mod tests {
       Arc::new(|_, _| None),
       Arc::new(|_, _| {}),
       Arc::new(|_, _| {}),
+      true,
     );
     let subscriber3 = EventSubscriber::new(
       String::from("Subscriber 3"),
@@ -215,6 +217,7 @@ mod tests {
       Arc::new(|_, _| None),
       Arc::new(|_, _| {}),
       Arc::new(|_, _| {}),
+      true,
     );
     event_publisher.add_subscriber(subscriber2);
     event_publisher.add_subscriber(subscriber1);

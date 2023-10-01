@@ -30,6 +30,8 @@ pub struct Builder {
   /// The closure that is called after an event has been processed.
   #[derivative(Debug = "ignore")]
   did_process: Option<DidProcessFn>,
+  /// Whether this is enabled or not.
+  is_enabled: Option<bool>,
 }
 
 impl Builder {
@@ -42,6 +44,7 @@ impl Builder {
       should_process: None,
       will_process: None,
       did_process: None,
+      is_enabled: None,
     }
   }
 
@@ -80,6 +83,11 @@ impl Builder {
     self
   }
 
+  pub fn is_enabled(mut self, is_enabled: bool) -> Self {
+    self.is_enabled = Some(is_enabled);
+    self
+  }
+
   pub fn build(self) -> EventSubscriber {
     EventSubscriber {
       uuid: Uuid::new_v4(),
@@ -90,6 +98,7 @@ impl Builder {
       should_process: self.should_process.unwrap_or_else(|| Arc::new(|_, _| None)),
       will_process: self.will_process.unwrap_or_else(|| Arc::new(|_, _| {})),
       did_process: self.did_process.unwrap_or_else(|| Arc::new(|_, _| {})),
+      is_enabled: self.is_enabled.unwrap_or(true),
     }
   }
 }

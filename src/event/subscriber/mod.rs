@@ -36,10 +36,13 @@ pub struct EventSubscriber {
   /// The closure that is called after an event has been processed.
   #[derivative(Debug = "ignore")]
   pub did_process: DidProcessFn,
+  /// Whether this is enabled or not.
+  pub is_enabled: bool,
 }
 
 impl EventSubscriber {
   /// Creates a new `EventSubscriber`.
+  #[allow(clippy::too_many_arguments)]
   pub fn new(
     name: String,
     priority: i64,
@@ -48,6 +51,7 @@ impl EventSubscriber {
     should_process: ShouldProcessFn,
     will_process: WillProcessFn,
     did_process: DidProcessFn,
+    is_enabled: bool,
   ) -> Self {
     assert!(event_type != EventType::None, "Event type cannot be None.");
     Self {
@@ -59,6 +63,7 @@ impl EventSubscriber {
       should_process,
       will_process,
       did_process,
+      is_enabled,
     }
   }
 }
@@ -75,6 +80,7 @@ impl Default for EventSubscriber {
       should_process: Arc::new(|_, _| None),
       will_process: Arc::new(|_, _| {}),
       did_process: Arc::new(|_, _| {}),
+      is_enabled: true,
     }
   }
 }

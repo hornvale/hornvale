@@ -44,6 +44,7 @@ pub mod effect;
 pub mod entity_id;
 pub mod event;
 pub mod game;
+pub mod game_rule;
 pub mod game_state;
 pub mod parser;
 pub mod passage;
