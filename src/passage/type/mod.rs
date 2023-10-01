@@ -6,4 +6,8 @@ pub enum Type {
   None,
   /// Path -- there is a path in this direction.
   Path,
+  /// Stub -- this is a placeholder for a passage that may or may not exist.
+  Stub,
+  /// Placeholder -- this is a placeholder for a passage to an unloaded room.
+  Placeholder,
 }
