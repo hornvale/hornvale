@@ -69,9 +69,17 @@ impl Type {
         )
         .apply(game_state)?;
       },
+      ShowsRoomDescription(room_id) => {
+        debug!("Applying show-room-description event.");
+        Effect::new(
+          EffectType::OutputRoomDescription(room_id.clone()),
+          event.backtrace.clone(),
+        )
+        .apply(game_state)?;
+      },
       _ => {
-        // By default, we let subscribers react to the event, but debug log that we did nothing.
-        debug!("Letting subscribers react to event {:#?}.", self);
+        // By default, we let subscribers react to the event, but error-log that we did nothing.
+        error!("Letting subscribers react to event {:#?}.", self);
       },
     }
     Ok(())

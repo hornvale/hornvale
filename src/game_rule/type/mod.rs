@@ -72,12 +72,8 @@ impl Type {
   pub fn get_will_process(&self) -> WillProcessFn {
     use Type::*;
     match self {
-      ShowRoomDescriptionWhenPlayerAppearsInRoom => Arc::new(|_event, _game_state| {
-        println!("omg appeared in room");
-      }),
-      ShowRoomDescriptionWhenPlayerEntersRoom => Arc::new(|_event, _game_state| {
-        println!("omg entered room");
-      }),
+      ShowRoomDescriptionWhenPlayerAppearsInRoom => Arc::new(|_event, _game_state| {}),
+      ShowRoomDescriptionWhenPlayerEntersRoom => Arc::new(|_event, _game_state| {}),
     }
   }
 

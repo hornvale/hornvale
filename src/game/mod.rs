@@ -1,14 +1,10 @@
 use anyhow::Error as AnyError;
 use log::Level as LogLevel;
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::sync::Arc;
 
 use crate::chunk_factory::ChunkFactory;
 use crate::chunk_factory::CompassRoseStrategy;
 use crate::event::attach_logger;
 use crate::event::Event;
-use crate::event::EventSubscriberBuilder;
 use crate::event::EventType;
 use crate::event::DEFAULT_PRIORITY;
 use crate::game_rule::GameRuleManager;
@@ -107,28 +103,6 @@ impl Game {
       Vec::new(),
     );
     game_state.enqueue_event(entity_appears_in_room);
-
-    // Print the name and description of the room when we enter it.
-    let room_description_logger = EventSubscriberBuilder::new()
-      .name("Room Description Logger".to_string())
-      .event_type(EventType::EntityAppearsInRoom(
-        game_state.get_player_id().clone().into(),
-        game_state.get_current_room_id().clone(),
-      ))
-      .did_process(Arc::new(|event: &Event, game_state: &mut GameState| {
-        let room_id = match event.r#type {
-          EventType::EntityAppearsInRoom(_, ref room_id) => room_id,
-          _ => panic!("Unexpected event type."),
-        };
-        let room = game_state.get_room(room_id).unwrap();
-        println!("You are in {}.", room.name);
-        println!("{}", room.description);
-      }))
-      .build();
-    let _room_description_logger_uuid = room_description_logger.uuid;
-    event_system
-      .event_publisher
-      .add_subscriber(Rc::new(RefCell::new(room_description_logger)));
 
     // END TEMPORARY
     loop {

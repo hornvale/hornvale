@@ -6,7 +6,9 @@ use crate::entity_id::RoomId;
 use crate::game_state::DiegeticFlagTrait;
 use crate::game_state::GameState;
 use crate::game_state::InputReadyFlagTrait;
+use crate::game_state::OutputQueueTrait;
 use crate::game_state::QuitFlagTrait;
+use crate::game_state::RoomsTrait;
 use crate::game_state::TickCounterTrait;
 
 /// The `Type` enum.
@@ -27,6 +29,8 @@ pub enum Type {
   SetQuitFlag(bool),
   /// Place an entity in a room.
   PlaceEntityInRoom(EntityId, RoomId),
+  /// Output a room description.
+  OutputRoomDescription(RoomId),
 }
 
 impl Type {
@@ -62,6 +66,15 @@ impl Type {
       PlaceEntityInRoom(_entity_id, room_id) => {
         debug!("Applying place-entity-in-room effect.");
         game_state.current_room_id = room_id.clone();
+      },
+      OutputRoomDescription(room_id) => {
+        debug!("Applying output-room-description effect.");
+        let (room_name, room_description) = {
+          let room = game_state.get_room(room_id).unwrap();
+          (room.name.clone(), room.description.clone())
+        };
+        game_state.enqueue_output(room_name);
+        game_state.enqueue_output(room_description);
       },
       _ => unimplemented!(),
     }
