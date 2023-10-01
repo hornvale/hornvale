@@ -87,7 +87,7 @@ impl ChunkFactoryStrategyTrait for CompassRose {
         .destination(&w_room.id)
         .build(),
     );
-    let e_room = RoomBuilder::new()
+    let mut e_room = RoomBuilder::new()
       .name("East Room")
       .description("A room to the east.")
       .add_passage(
@@ -293,6 +293,42 @@ impl ChunkFactoryStrategyTrait for CompassRose {
         .r#type(&PassageType::Path)
         .name("Northwest Path")
         .description("A path to the northwest.")
+        .destination(&center_room.id)
+        .build(),
+    );
+    n_room.passages.insert(
+      PassageDirection::South,
+      PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("South Path")
+        .description("A path to the south.")
+        .destination(&center_room.id)
+        .build(),
+    );
+    s_room.passages.insert(
+      PassageDirection::North,
+      PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("North Path")
+        .description("A path to the north.")
+        .destination(&center_room.id)
+        .build(),
+    );
+    w_room.passages.insert(
+      PassageDirection::East,
+      PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("East Path")
+        .description("A path to the east.")
+        .destination(&center_room.id)
+        .build(),
+    );
+    e_room.passages.insert(
+      PassageDirection::West,
+      PassageBuilder::new()
+        .r#type(&PassageType::Path)
+        .name("West Path")
+        .description("A path to the west.")
         .destination(&center_room.id)
         .build(),
     );

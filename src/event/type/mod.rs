@@ -58,8 +58,17 @@ impl Type {
         )
         .apply(game_state)?;
       },
+      EntityWalksFromRoomToRoom(entity_id, _start_room_id, end_room_id) => {
+        debug!("Applying entity-walks-from-room-to-room event.");
+        Effect::new(
+          EffectType::PlaceEntityInRoom(entity_id.clone(), end_room_id.clone()),
+          event.backtrace.clone(),
+        )
+        .apply(game_state)?;
+      },
       _ => {
-        // By default, we let subscribers react to the event.
+        // By default, we let subscribers react to the event, but debug log that we did nothing.
+        debug!("Letting subscribers react to event {:#?}.", self);
       },
     }
     Ok(())
