@@ -13,11 +13,15 @@ This is not by itself sufficient to render the game world and rules in the detai
 
 ### Input and Parsing
 
-The player provides _input_ as a raw string, something familiar to anyone who's played a MUD, Interactive Fiction, or larped as an adult on Slack during normal business hours. This input is parsed; the parser may eventually use a context-free grammar, or multiple strategies, but for now it's just a simple tokenizer that splits the input into a series of tokens. These tokens are then used to create a _command_ object, which is enqueued for evaluation.
+The player provides _input_ as a raw string, something familiar to anyone who's played a MUD, Interactive Fiction, or LARPed as an adult on Slack during normal business hours. This input is parsed; the parser may eventually use a context-free grammar, or multiple strategies, but for now it's just a simple tokenizer that splits the input into a series of tokens. These tokens are then used to create a _command_ object, which is enqueued for evaluation.
 
 ### Commands
 
-Commands themselves do not directly take action. Rather, this is simply the player's expressed intent. A command will enqueue some _event_ or events. Thus, we bring the player into the game engine as a first-class citizen, and allow them to interact with the game world in a way that is consistent with the rest of the game.
+Commands are merely a way of mapping human input into programmatic action. The execution of the command creates an _action_ object, the same as would be created by an AI, a game rule, or any other mechanism within the program. Thus, we bring the player into the game engine as a first-class citizen, and allow them to interact with the game world in a way that is consistent with the rest of the game.
+
+## Actions
+
+Actions are expressed intent to modify game state by any entity in the game world, whether it be the player character, a goblin, or a door. These normally contain some logic to check whether an action is _possible_ under universal game rules. For instance, attempting to walk northwest in a room without a northwest passage will fail immediately with output presented to the player. An action being attempted normally results in an _event_ being created and enqueued for processing.
 
 ### Events
 
@@ -26,10 +30,6 @@ Events are the building blocks of the game. They are managed in a priority queue
 ### Output
 
 As events are processed, they may generate output. This output is collected and presented to the player as scrolling text, familiar to anyone who's played a MUD or IF.
-
-## Actions
-
-Actions are expressed intent to modify game state by any entity in the game world, whether it be the player character, a goblin, or a door. These normally contain some logic and trigger (and be triggered by) other events. They are always triggered by an event.
 
 ## Effects
 
