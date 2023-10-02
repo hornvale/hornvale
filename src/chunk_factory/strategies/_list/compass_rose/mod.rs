@@ -1,6 +1,5 @@
 use crate::chunk::Chunk;
 use crate::chunk::ChunkBuilder;
-use crate::chunk_factory::ChunkFactoryStrategyTrait;
 use crate::passage::PassageBuilder;
 use crate::passage::PassageDirection;
 use crate::passage::PassageType;
@@ -10,9 +9,9 @@ use crate::room::RoomBuilder;
 #[derive(Clone)]
 pub struct CompassRose {}
 
-impl ChunkFactoryStrategyTrait for CompassRose {
+impl CompassRose {
   /// Creates a new `Chunk`.
-  fn create_chunk(&self) -> Chunk {
+  pub fn create_chunk(&self) -> Chunk {
     let mut chunk = ChunkBuilder::new()
       .name("Compass Rose")
       .description("A compass rose.")

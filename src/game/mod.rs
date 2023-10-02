@@ -2,7 +2,7 @@ use anyhow::Error as AnyError;
 use log::Level as LogLevel;
 
 use crate::chunk_factory::ChunkFactory;
-use crate::chunk_factory::CompassRoseStrategy;
+use crate::chunk_factory::ChunkFactoryStrategy;
 use crate::event::attach_logger;
 use crate::event::Event;
 use crate::event::EventType;
@@ -87,7 +87,7 @@ impl Game {
     );
 
     // Let's create a chunk and add its rooms to the game state.
-    let chunk = ChunkFactory::new(CompassRoseStrategy {}).create_chunk();
+    let chunk = ChunkFactory::new(ChunkFactoryStrategy::CompassRose).create_chunk();
     game_state.insert_rooms_from_chunk(&chunk);
     let start_room_id = game_state.rooms.keys().next().unwrap().clone();
 
