@@ -64,3 +64,26 @@ impl BidirectionalBuilder {
     (self.builder1.clone().build(), self.builder2.clone().build())
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_bidirectional_builder() {
+    let origin = RoomId::new();
+    let destination = RoomId::new();
+    let (passage1, passage2) = BidirectionalBuilder::new()
+      .origin(&origin)
+      .destination(&destination)
+      .r#type(&PassageType::default())
+      .id(&PassageId::default())
+      .name("Test Passage")
+      .description("This is a test passage.")
+      .build();
+    assert_eq!(passage1.origin, origin);
+    assert_eq!(passage1.destination, destination);
+    assert_eq!(passage2.origin, destination);
+    assert_eq!(passage2.destination, origin);
+  }
+}
