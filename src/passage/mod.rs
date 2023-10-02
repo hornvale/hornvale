@@ -4,6 +4,8 @@ use std::io::Write;
 use crate::entity_id::PassageId;
 use crate::entity_id::RoomId;
 
+pub mod bidirectional_builder;
+pub use bidirectional_builder::BidirectionalBuilder as PassageBidirectionalBuilder;
 pub mod builder;
 pub use builder::Builder as PassageBuilder;
 pub mod direction;

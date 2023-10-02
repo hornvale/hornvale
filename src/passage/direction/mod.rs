@@ -29,3 +29,24 @@ pub enum Direction {
   #[default]
   Thru,
 }
+
+impl Direction {
+  /// Returns the opposite direction.
+  pub fn opposite(&self) -> Self {
+    match self {
+      Self::North => Self::South,
+      Self::Northeast => Self::Southwest,
+      Self::Northwest => Self::Southeast,
+      Self::South => Self::North,
+      Self::East => Self::West,
+      Self::West => Self::East,
+      Self::Southeast => Self::Northwest,
+      Self::Southwest => Self::Northeast,
+      Self::Up => Self::Down,
+      Self::Down => Self::Up,
+      Self::In => Self::Out,
+      Self::Out => Self::In,
+      Self::Thru => Self::Thru,
+    }
+  }
+}

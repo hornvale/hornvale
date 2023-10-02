@@ -8,19 +8,19 @@ use crate::passage::PassageType;
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Builder {
   /// The `PassageId`.
-  id: Option<PassageId>,
+  pub id: Option<PassageId>,
   /// The `PassageType`.
-  r#type: Option<PassageType>,
+  pub r#type: Option<PassageType>,
   /// The `PassageDirection`.
-  direction: Option<PassageDirection>,
+  pub direction: Option<PassageDirection>,
   /// The `Passage`'s name.
-  name: Option<String>,
+  pub name: Option<String>,
   /// The `Passage`'s description.
-  description: Option<String>,
+  pub description: Option<String>,
   /// The `Passage`'s origin.
-  origin: Option<RoomId>,
+  pub origin: Option<RoomId>,
   /// The `Passage`'s destination.
-  destination: Option<RoomId>,
+  pub destination: Option<RoomId>,
 }
 
 impl Builder {
