@@ -69,12 +69,13 @@ impl Type {
       },
       OutputRoomDescription(room_id) => {
         debug!("Applying output-room-description effect.");
-        let (room_name, room_description) = {
+        let (room_name, room_description, room_passages) = {
           let room = game_state.get_room(room_id).unwrap();
-          (room.name.clone(), room.description.clone())
+          (room.name.clone(), room.description.clone(), room.describe_passages())
         };
         game_state.enqueue_output(&room_name);
         game_state.enqueue_output(&room_description);
+        game_state.enqueue_output(&room_passages);
       },
       _ => unimplemented!(),
     }
