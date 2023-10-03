@@ -56,4 +56,11 @@ mod tests {
     let actor_id = ActorId::from(base_id.clone());
     assert_eq!(base_id, actor_id.into_base_id());
   }
+
+  #[test]
+  fn test_actor_id_from_actor_id() {
+    let actor_id = ActorId::default();
+    let actor_id2 = ActorId::from(actor_id.clone());
+    assert_eq!(actor_id, actor_id2);
+  }
 }

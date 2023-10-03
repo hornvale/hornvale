@@ -39,3 +39,15 @@ where
     Self(id.into_base_id())
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_passage_id_from_base_id() {
+    let base_id = BaseId::default();
+    let passage_id = PassageId(base_id.clone());
+    assert_eq!(base_id, passage_id.into_base_id());
+  }
+}

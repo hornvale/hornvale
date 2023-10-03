@@ -42,3 +42,15 @@ where
     Self(id.into_base_id())
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_player_id_from_base_id() {
+    let base_id = BaseId::default();
+    let player_id = PlayerId(base_id.clone());
+    assert_eq!(base_id, player_id.into_base_id());
+  }
+}
