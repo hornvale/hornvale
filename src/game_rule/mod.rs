@@ -18,6 +18,7 @@ pub struct GameRule {
 
 impl GameRule {
   pub fn new(r#type: GameRuleType) -> Self {
+    let r#type = r#type;
     let subscriber = EventSubscriberBuilder::new()
       .name(format!("GameRule::{}", r#type))
       .priority(r#type.get_priority())

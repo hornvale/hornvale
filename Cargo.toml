@@ -37,3 +37,4 @@ simplelog = "0.12.1"
 thiserror = "1.0.48"
 uuid = { version = "1.4.1", features = ["v4", "fast-rng"] }
 serde_yaml = "0.9.25"
+colored = "2.0.4"

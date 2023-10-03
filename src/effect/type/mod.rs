@@ -8,7 +8,6 @@ use crate::game_state::GameState;
 use crate::game_state::InputReadyFlagTrait;
 use crate::game_state::OutputQueueTrait;
 use crate::game_state::QuitFlagTrait;
-use crate::game_state::RoomsTrait;
 use crate::game_state::TickCounterTrait;
 
 /// The `Type` enum.
@@ -29,8 +28,12 @@ pub enum Type {
   SetQuitFlag(bool),
   /// Place an entity in a room.
   PlaceEntityInRoom(EntityId, RoomId),
-  /// Output a room description.
-  OutputRoomDescription(RoomId),
+  /// Output (for general format) a room name.
+  OutputRoomNameAsPartOfRoomSummary(String),
+  /// Output (for general format) a room description.
+  OutputRoomDescriptionAsPartOfRoomSummary(String),
+  /// Output (for general format) a room's passages.
+  OutputRoomPassagesAsPartOfRoomSummary(String),
 }
 
 impl Type {
@@ -67,15 +70,17 @@ impl Type {
         debug!("Applying place-entity-in-room effect.");
         game_state.current_room_id = room_id.clone();
       },
-      OutputRoomDescription(room_id) => {
+      OutputRoomNameAsPartOfRoomSummary(room_name) => {
+        debug!("Applying output-room-name effect.");
+        game_state.enqueue_output(room_name);
+      },
+      OutputRoomDescriptionAsPartOfRoomSummary(room_description) => {
         debug!("Applying output-room-description effect.");
-        let (room_name, room_description, room_passages) = {
-          let room = game_state.get_room(room_id).unwrap();
-          (room.name.clone(), room.description.clone(), room.describe_passages())
-        };
-        game_state.enqueue_output(&room_name);
-        game_state.enqueue_output(&room_description);
-        game_state.enqueue_output(&room_passages);
+        game_state.enqueue_output(room_description);
+      },
+      OutputRoomPassagesAsPartOfRoomSummary(room_passages) => {
+        debug!("Applying output-room-passages effect.");
+        game_state.enqueue_output(room_passages);
       },
       _ => unimplemented!(),
     }
