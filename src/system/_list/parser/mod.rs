@@ -46,6 +46,7 @@ impl SystemTrait<GameState> for Parser {
         "d" | "down" | "go down" => Command::new(CommandType::Walk(PassageDirection::Down)),
         "in" | "inside" | "go inside" => Command::new(CommandType::Walk(PassageDirection::In)),
         "out" | "outside" | "go outside" => Command::new(CommandType::Walk(PassageDirection::Out)),
+        "look" | "look around" => Command::new(CommandType::LookAround),
         "" => Command::new(CommandType::NoOp),
         _ => Command::new(CommandType::NoOp),
       };

@@ -2,6 +2,7 @@ use anyhow::Error as AnyError;
 
 use crate::effect::Effect;
 use crate::effect::EffectType;
+use crate::entity_id::ActorId;
 use crate::entity_id::EntityId;
 use crate::entity_id::RoomId;
 use crate::event::Event;
@@ -38,7 +39,9 @@ pub enum Type {
   /// An entity appeared in a room.
   EntityAppearsInRoom(EntityId, RoomId),
   /// EntityWalksFromRoomToRoom -- an entity walked from one room to another.
-  EntityWalksFromRoomToRoom(EntityId, RoomId, RoomId),
+  EntityWalksFromRoomToRoom(ActorId, RoomId, RoomId),
+  /// EntityLooksAroundRoom -- an entity looked around a room.
+  EntityLooksAroundRoom(ActorId, RoomId),
   /// Outputs a blank line.
   OutputsBlankLine,
 }
@@ -75,10 +78,22 @@ impl Type {
       EntityWalksFromRoomToRoom(entity_id, _start_room_id, end_room_id) => {
         debug!("Processing entity-walks-from-room-to-room event.");
         Effect::new(
-          EffectType::PlaceEntityInRoom(entity_id.clone(), end_room_id.clone()),
+          EffectType::PlaceEntityInRoom(entity_id.clone().into(), end_room_id.clone()),
           event.backtrace.clone(),
         )
         .apply(game_state)?;
+      },
+      EntityLooksAroundRoom(_entity_id, room_id) => {
+        debug!("Processing entity-looks-around-room event.");
+        if event.tags.contains(&EventTag::HasPlayerAsPrincipalActor) {
+          let event = Event::new(
+            Type::ShowsRoomSummary(room_id.clone()),
+            1,
+            event.backtrace.clone(),
+            vec![EventTag::IsInRoom(room_id.clone())],
+          );
+          game_state.enqueue_event(event);
+        }
       },
       ShowsRoomSummary(room_id) => {
         debug!("Processing show-room-description event.");

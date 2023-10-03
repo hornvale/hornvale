@@ -1,6 +1,7 @@
 use crate::action::Action;
 use crate::action::ActionError;
 use crate::entity_id::ActorId;
+use crate::entity_id::RoomId;
 use crate::event::Event;
 use crate::event::EventTag;
 use crate::event::EventType;
@@ -12,6 +13,8 @@ use crate::passage::PassageDirection;
 /// The `ActionType` enum.
 ///
 /// This should be an exhaustive collection of actions.
+///
+/// Actions should be phrased in the imperative mood.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum Type {
   /// No-Op -- absolutely nothing happens.
@@ -19,6 +22,8 @@ pub enum Type {
   NoOp,
   /// QuitGame -- the player quit.
   QuitGame,
+  /// Look -- an actor looked around.
+  LookAround(ActorId, RoomId),
   /// Walk -- an actor walked in a passage direction.
   Walk(ActorId, PassageDirection),
 }
@@ -42,6 +47,22 @@ impl Type {
       QuitGame => {
         debug!("Attempting quit-game action.");
         let event = Event::new(EventType::QuitsGame, DEFAULT_PRIORITY, action.backtrace.clone(), vec![]);
+        game_state.enqueue_event(event);
+      },
+      LookAround(actor_id, room_id) => {
+        debug!("Actor {} is attempting look-around action in {}.", actor_id, room_id);
+        let mut tags = Vec::new();
+        tags.push(EventTag::HasPrincipalActor(actor_id.clone()));
+        tags.push(EventTag::IsInRoom(room_id.clone()));
+        if actor_id == &game_state.player_id.clone().into() {
+          tags.push(EventTag::HasPlayerAsPrincipalActor);
+        }
+        let event = Event::new(
+          EventType::EntityLooksAroundRoom(actor_id.clone(), room_id.clone()),
+          DEFAULT_PRIORITY,
+          action.backtrace.clone(),
+          tags,
+        );
         game_state.enqueue_event(event);
       },
       Walk(actor_id, direction) => {
@@ -78,14 +99,13 @@ impl Type {
           tags.push(EventTag::HasPlayerAsPrincipalActor);
         }
         let event = Event::new(
-          EventType::EntityWalksFromRoomToRoom(actor_id.clone().into(), current_room_id, destination_room_id),
+          EventType::EntityWalksFromRoomToRoom(actor_id.clone(), current_room_id, destination_room_id),
           DEFAULT_PRIORITY,
           action.backtrace.clone(),
           tags,
         );
         game_state.enqueue_event(event);
       },
-      _ => unimplemented!(),
     }
     Ok(())
   }

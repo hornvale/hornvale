@@ -14,7 +14,7 @@ use crate::game_state::TickCounterTrait;
 ///
 /// This should be an exhaustive collection of effects.
 ///
-/// Effects should be phrased as imperative commands.
+/// Effects should be phrased in the imperative mood.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub enum Type {
   /// No-Op -- absolutely nothing happens.
@@ -90,7 +90,6 @@ impl Type {
         debug!("Applying output-blank-line effect.");
         game_state.enqueue_output("");
       },
-      _ => unimplemented!(),
     }
     Ok(())
   }

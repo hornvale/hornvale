@@ -1,6 +1,7 @@
 use colored::*;
 use std::sync::Arc;
 
+use crate::entity_id::ActorId;
 use crate::entity_id::EntityId;
 use crate::entity_id::RoomId;
 use crate::event::DidProcessFn;
@@ -12,6 +13,8 @@ use crate::event::WillProcessFn;
 use crate::game_state::EventQueueTrait;
 
 /// The `GameRuleType` enum.
+///
+/// These should be phrased as directives or conditional statements.
 #[derive(Clone, Copy, Debug, Deserialize, Display, Eq, Hash, PartialEq, PartialOrd, Serialize)]
 pub enum Type {
   ShowRoomSummaryWhenPlayerAppearsInRoom,
@@ -56,7 +59,7 @@ impl Type {
     match self {
       ShowRoomSummaryWhenPlayerAppearsInRoom => EventType::EntityAppearsInRoom(EntityId::default(), RoomId::default()),
       ShowRoomSummaryWhenPlayerEntersRoom => {
-        EventType::EntityWalksFromRoomToRoom(EntityId::default(), RoomId::default(), RoomId::default())
+        EventType::EntityWalksFromRoomToRoom(ActorId::default(), RoomId::default(), RoomId::default())
       },
       StyleRoomNameWhenPartOfRoomSummary => EventType::ShowsRoomNameAsPartOfRoomSummary(String::default()),
       StyleRoomDescriptionWhenPartOfRoomSummary => {

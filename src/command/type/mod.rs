@@ -10,6 +10,8 @@ use crate::passage::PassageDirection;
 /// The `Type` enum.
 ///
 /// This should be an exhaustive collection of commands.
+///
+/// Commands should be phrased in the imperative mood.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum Type {
   /// No-Op -- absolutely nothing happens.
@@ -17,6 +19,8 @@ pub enum Type {
   NoOp,
   /// QuitGame -- the player quit.
   QuitGame,
+  /// LookAround -- the player looked around.
+  LookAround,
   /// Movement in a passage direction.
   Walk(PassageDirection),
 }
@@ -38,6 +42,16 @@ impl Type {
       QuitGame => {
         debug!("Executing quit-game command.");
         let action = Action::new(ActionType::QuitGame, command.backtrace.clone());
+        action.attempt(game_state)?;
+      },
+      LookAround => {
+        debug!("Executing look command.");
+        let player_id = game_state.get_player_id();
+        let current_room_id = game_state.current_room_id.clone();
+        let action = Action::new(
+          ActionType::LookAround(player_id.clone().into(), current_room_id),
+          command.backtrace.clone(),
+        );
         action.attempt(game_state)?;
       },
       Walk(direction) => {
