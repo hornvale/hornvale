@@ -13,6 +13,8 @@ use crate::game_state::TickCounterTrait;
 /// The `Type` enum.
 ///
 /// This should be an exhaustive collection of effects.
+///
+/// Effects should be phrased as imperative commands.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub enum Type {
   /// No-Op -- absolutely nothing happens.
@@ -28,12 +30,14 @@ pub enum Type {
   SetQuitFlag(bool),
   /// Place an entity in a room.
   PlaceEntityInRoom(EntityId, RoomId),
-  /// Output (for general format) a room name.
+  /// Output a room name as part of the room summary.
   OutputRoomNameAsPartOfRoomSummary(String),
-  /// Output (for general format) a room description.
+  /// Output a room description as part of the room summary.
   OutputRoomDescriptionAsPartOfRoomSummary(String),
-  /// Output (for general format) a room's passages.
+  /// Output a room's passages as part of the room summary.
   OutputRoomPassagesAsPartOfRoomSummary(String),
+  /// Output a blank line.
+  OutputBlankLine,
 }
 
 impl Type {
@@ -81,6 +85,10 @@ impl Type {
       OutputRoomPassagesAsPartOfRoomSummary(room_passages) => {
         debug!("Applying output-room-passages effect.");
         game_state.enqueue_output(room_passages);
+      },
+      OutputBlankLine => {
+        debug!("Applying output-blank-line effect.");
+        game_state.enqueue_output("");
       },
       _ => unimplemented!(),
     }

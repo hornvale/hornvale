@@ -19,6 +19,7 @@ pub enum Type {
   StyleRoomNameWhenPartOfRoomSummary,
   StyleRoomDescriptionWhenPartOfRoomSummary,
   StyleRoomPassagesWhenPartOfRoomSummary,
+  OutputBlankLineAfterRoomSummary,
 }
 
 impl Type {
@@ -30,6 +31,7 @@ impl Type {
       StyleRoomNameWhenPartOfRoomSummary,
       StyleRoomDescriptionWhenPartOfRoomSummary,
       StyleRoomPassagesWhenPartOfRoomSummary,
+      OutputBlankLineAfterRoomSummary,
     ]
     .iter()
     .copied()
@@ -44,6 +46,7 @@ impl Type {
       StyleRoomNameWhenPartOfRoomSummary => 0,
       StyleRoomDescriptionWhenPartOfRoomSummary => 0,
       StyleRoomPassagesWhenPartOfRoomSummary => 0,
+      OutputBlankLineAfterRoomSummary => -1,
     }
   }
 
@@ -60,6 +63,7 @@ impl Type {
         EventType::ShowsRoomDescriptionAsPartOfRoomSummary(String::default())
       },
       StyleRoomPassagesWhenPartOfRoomSummary => EventType::ShowsRoomPassagesAsPartOfRoomSummary(String::default()),
+      OutputBlankLineAfterRoomSummary => EventType::ShowsRoomPassagesAsPartOfRoomSummary(String::default()),
     }
   }
 
@@ -72,11 +76,12 @@ impl Type {
       StyleRoomNameWhenPartOfRoomSummary => EventFilterRule::Always,
       StyleRoomDescriptionWhenPartOfRoomSummary => EventFilterRule::Always,
       StyleRoomPassagesWhenPartOfRoomSummary => EventFilterRule::Always,
+      OutputBlankLineAfterRoomSummary => EventFilterRule::Always,
     }
   }
 
   /// Get the should process function.
-  pub fn get_should_process(&self) -> ShouldProcessFn {
+  pub fn get_should_process(&mut self) -> ShouldProcessFn {
     use Type::*;
     match self {
       ShowRoomSummaryWhenPlayerAppearsInRoom => Arc::new(|_event, _game_state| None),
@@ -84,11 +89,12 @@ impl Type {
       StyleRoomNameWhenPartOfRoomSummary => Arc::new(|_event, _game_state| None),
       StyleRoomDescriptionWhenPartOfRoomSummary => Arc::new(|_event, _game_state| None),
       StyleRoomPassagesWhenPartOfRoomSummary => Arc::new(|_event, _game_state| None),
+      OutputBlankLineAfterRoomSummary => Arc::new(|_event, _game_state| None),
     }
   }
 
   /// Get the will process function.
-  pub fn get_will_process(&self) -> WillProcessFn {
+  pub fn get_will_process(&mut self) -> WillProcessFn {
     use Type::*;
     match self {
       ShowRoomSummaryWhenPlayerAppearsInRoom => Arc::new(|_event, _game_state| {}),
@@ -108,11 +114,12 @@ impl Type {
           *room_passages = format!("{}", room_passages.cyan());
         }
       }),
+      OutputBlankLineAfterRoomSummary => Arc::new(|_event, _game_state| {}),
     }
   }
 
   /// Get the did process function.
-  pub fn get_did_process(&self) -> DidProcessFn {
+  pub fn get_did_process(&mut self) -> DidProcessFn {
     use Type::*;
     match self {
       ShowRoomSummaryWhenPlayerAppearsInRoom => Arc::new(|_event, game_state| {
@@ -136,6 +143,15 @@ impl Type {
       StyleRoomNameWhenPartOfRoomSummary => Arc::new(|_event, _game_state| {}),
       StyleRoomDescriptionWhenPartOfRoomSummary => Arc::new(|_event, _game_state| {}),
       StyleRoomPassagesWhenPartOfRoomSummary => Arc::new(|_event, _game_state| {}),
+      OutputBlankLineAfterRoomSummary => Arc::new(|_event, game_state| {
+        if let EventType::ShowsRoomPassagesAsPartOfRoomSummary(_room_passages) = &_event.r#type {
+          let event = EventBuilder::new()
+            .priority(0)
+            .r#type(EventType::OutputsBlankLine)
+            .build();
+          game_state.enqueue_event(event);
+        }
+      }),
     }
   }
 

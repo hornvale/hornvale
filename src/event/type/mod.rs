@@ -15,7 +15,7 @@ use crate::game_state::RoomsTrait;
 ///
 /// This should be an exhaustive collection of events.
 ///
-/// Events should be phrased in the present tense.
+/// Events should be phrased as third-person, present tense, indicative mood.
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum Type {
   /// None -- never happens.
@@ -39,6 +39,8 @@ pub enum Type {
   EntityAppearsInRoom(EntityId, RoomId),
   /// EntityWalksFromRoomToRoom -- an entity walked from one room to another.
   EntityWalksFromRoomToRoom(EntityId, RoomId, RoomId),
+  /// Outputs a blank line.
+  OutputsBlankLine,
 }
 
 impl Type {
@@ -88,19 +90,19 @@ impl Type {
           Type::ShowsRoomNameAsPartOfRoomSummary(room_name),
           3,
           event.backtrace.clone(),
-          vec![EventTag::OccursInRoom(room_id.clone())],
+          vec![EventTag::IsInRoom(room_id.clone())],
         ));
         game_state.enqueue_event(Event::new(
           Type::ShowsRoomDescriptionAsPartOfRoomSummary(room_description),
           2,
           event.backtrace.clone(),
-          vec![EventTag::OccursInRoom(room_id.clone())],
+          vec![EventTag::IsInRoom(room_id.clone())],
         ));
         game_state.enqueue_event(Event::new(
           Type::ShowsRoomPassagesAsPartOfRoomSummary(room_passages),
           1,
           event.backtrace.clone(),
-          vec![EventTag::OccursInRoom(room_id.clone())],
+          vec![EventTag::IsInRoom(room_id.clone())],
         ));
       },
       ShowsRoomNameAsPartOfRoomSummary(room_name) => {
@@ -126,6 +128,10 @@ impl Type {
           event.backtrace.clone(),
         )
         .apply(game_state)?;
+      },
+      OutputsBlankLine => {
+        debug!("Processing output-blank-line event.");
+        Effect::new(EffectType::OutputBlankLine, event.backtrace.clone()).apply(game_state)?;
       },
       _ => {
         // By default, we let subscribers react to the event, but error-log that we did nothing.

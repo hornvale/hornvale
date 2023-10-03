@@ -17,5 +17,5 @@ pub enum Tag {
   /// The type of event.
   HasType(EventType),
   /// The ID of the room in which the event was created.
-  OccursInRoom(RoomId),
+  IsInRoom(RoomId),
 }
