@@ -38,3 +38,6 @@ thiserror = "1.0.48"
 uuid = { version = "1.4.1", features = ["v4", "fast-rng"] }
 serde_yaml = "0.9.25"
 colored = "2.0.4"
+tempfile = "3.8.0"
+dirs = "5.0.1"
+lazy_static = "1.4.0"

@@ -1,8 +1,12 @@
+use serde_yaml::from_reader as serde_yaml_from_reader;
+use serde_yaml::to_string as serde_yaml_to_string;
+use serde_yaml::Error as SerdeError;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 
 use crate::entity_id::ChunkId;
+use crate::entity_id::ChunkPlaneId;
 use crate::entity_id::RoomId;
 use crate::room::Room;
 
@@ -14,6 +18,8 @@ pub use r#type::Type as ChunkType;
 /// The `Chunk` struct.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct Chunk {
+  /// The `Chunk`'s `ChunkPlane`'s ID.
+  pub chunk_plane_id: ChunkPlaneId,
   /// The `Chunk`'s ID.
   pub id: ChunkId,
   /// The `Chunk`'s type.
@@ -28,9 +34,11 @@ pub struct Chunk {
 
 impl Chunk {
   /// Creates a new `Chunk`.
-  pub fn new(id: ChunkId, r#type: ChunkType, name: String, description: String) -> Self {
+  pub fn new(id: ChunkId, chunk_plane_id: &ChunkPlaneId, r#type: ChunkType, name: String, description: String) -> Self {
+    let chunk_plane_id = chunk_plane_id.clone();
     Self {
       id,
+      chunk_plane_id,
       r#type,
       name,
       description,
@@ -39,17 +47,19 @@ impl Chunk {
   }
 
   /// Saves the `Chunk` in a serialized form.
-  pub fn write_to_file(&self, file_path: &str) -> Result<(), serde_yaml::Error> {
-    let yaml_string = serde_yaml::to_string(self)?;
+  pub fn store(&self, file_path: &str) -> Result<(), SerdeError> {
+    let yaml_string = serde_yaml_to_string(self)?;
     let mut file = File::create(file_path).expect("Unable to create file");
-    file.write_all(yaml_string.as_bytes()).expect("Unable to write data");
+    file
+      .write_all(yaml_string.as_bytes())
+      .expect("Unable to write chunk data");
     Ok(())
   }
 
   /// Loads the `Chunk` from a serialized form.
-  pub fn load_from_file(file_path: &str) -> Result<Chunk, serde_yaml::Error> {
-    let file = File::open(file_path).expect("Unable to open file");
-    let chunk: Chunk = serde_yaml::from_reader(file)?;
+  pub fn load(file_path: &str) -> Result<Chunk, SerdeError> {
+    let file = File::open(file_path).expect("Unable to open chunk file");
+    let chunk: Chunk = serde_yaml_from_reader(file)?;
     Ok(chunk)
   }
 }
@@ -58,6 +68,7 @@ impl Default for Chunk {
   fn default() -> Self {
     Self {
       id: ChunkId::default(),
+      chunk_plane_id: ChunkPlaneId::default(),
       r#type: ChunkType::default(),
       name: "Default Chunk".to_string(),
       description: "This is the default chunk.".to_string(),
@@ -80,6 +91,7 @@ mod tests {
     init();
     let chunk = Chunk::default();
     assert_ne!(chunk.id, ChunkId::default());
+    assert_ne!(chunk.chunk_plane_id, ChunkPlaneId::default());
     assert_eq!(chunk.r#type, ChunkType::default());
     assert_eq!(chunk.name, "Default Chunk".to_string());
     assert_eq!(chunk.description, "This is the default chunk.".to_string());
@@ -90,13 +102,16 @@ mod tests {
   fn test_chunk_new() {
     init();
     let chunk_id = ChunkId::default();
+    let chunk_plane_id = ChunkPlaneId::default();
     let chunk = Chunk::new(
       chunk_id.clone(),
+      &chunk_plane_id,
       ChunkType::default(),
       "Test Chunk".to_string(),
       "This is a test chunk.".to_string(),
     );
     assert_eq!(chunk.id, chunk_id);
+    assert_eq!(chunk.chunk_plane_id, chunk_plane_id);
     assert_eq!(chunk.r#type, ChunkType::default());
     assert_eq!(chunk.name, "Test Chunk".to_string());
     assert_eq!(chunk.description, "This is a test chunk.".to_string());
@@ -107,15 +122,17 @@ mod tests {
   fn test_chunk_save_and_load() {
     init();
     let chunk_id = ChunkId::default();
+    let chunk_plane_id = ChunkPlaneId::default();
     let chunk = Chunk::new(
       chunk_id.clone(),
+      &chunk_plane_id,
       ChunkType::default(),
       "Test Chunk".to_string(),
       "This is a test chunk.".to_string(),
     );
     let file_path = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk.yaml");
-    chunk.write_to_file(&file_path).unwrap();
-    let loaded_chunk = Chunk::load_from_file(&file_path).unwrap();
+    chunk.store(&file_path).unwrap();
+    let loaded_chunk = Chunk::load(&file_path).unwrap();
     assert_eq!(chunk, loaded_chunk);
   }
 
@@ -123,8 +140,10 @@ mod tests {
   fn test_chunk_with_rooms_save_and_load() {
     init();
     let chunk_id = ChunkId::default();
+    let chunk_plane_id = ChunkPlaneId::default();
     let mut chunk = Chunk::new(
       chunk_id.clone(),
+      &chunk_plane_id,
       ChunkType::default(),
       "Test Chunk".to_string(),
       "This is a test chunk.".to_string(),
@@ -139,8 +158,8 @@ mod tests {
     );
     chunk.rooms.insert(room_id, room);
     let file_path = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk2.yaml");
-    chunk.write_to_file(&file_path).unwrap();
-    let loaded_chunk = Chunk::load_from_file(&file_path).unwrap();
+    chunk.store(&file_path).unwrap();
+    let loaded_chunk = Chunk::load(&file_path).unwrap();
     assert_eq!(chunk, loaded_chunk);
   }
 }

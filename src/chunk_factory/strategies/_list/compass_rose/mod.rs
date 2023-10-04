@@ -368,13 +368,13 @@ mod tests {
     assert_eq!(chunk.description, "A compass rose.".to_string());
     assert_eq!(chunk.rooms.len(), 9);
     chunk
-      .write_to_file(&format!(
+      .store(&format!(
         "{}/{}",
         &crate::test::TEMPORARY_TEST_DATA_DIRECTORY,
         "test_compass_rose.yaml"
       ))
       .unwrap();
-    let chunk2 = Chunk::load_from_file(&format!(
+    let chunk2 = Chunk::load(&format!(
       "{}/{}",
       &crate::test::TEMPORARY_TEST_DATA_DIRECTORY,
       "test_compass_rose.yaml"

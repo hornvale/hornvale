@@ -15,6 +15,9 @@ extern crate derivative;
 extern crate derive_more;
 #[allow(unused_imports)]
 #[macro_use]
+extern crate lazy_static;
+#[allow(unused_imports)]
+#[macro_use]
 extern crate log;
 extern crate pretty_env_logger;
 #[allow(unused_imports)]
@@ -39,6 +42,7 @@ pub use _macro::*;
 pub mod action;
 pub mod chunk;
 pub mod chunk_factory;
+pub mod chunk_plane;
 pub mod command;
 pub mod effect;
 pub mod entity_id;
