@@ -43,6 +43,7 @@ pub mod action;
 pub mod chunk;
 pub mod chunk_factory;
 pub mod chunk_plane;
+pub mod chunk_seed;
 pub mod command;
 pub mod effect;
 pub mod entity_id;
