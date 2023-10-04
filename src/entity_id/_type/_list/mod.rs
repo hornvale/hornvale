@@ -9,6 +9,8 @@ pub mod chunk_id;
 pub use chunk_id::*;
 pub mod chunk_plane_id;
 pub use chunk_plane_id::*;
+pub mod chunk_seed_id;
+pub use chunk_seed_id::*;
 pub mod entity_id;
 pub use entity_id::*;
 pub mod object_id;

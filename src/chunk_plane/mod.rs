@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::Write;
 
 use crate::chunk::Chunk;
+use crate::chunk_seed::ChunkSeed;
 use crate::entity_id::ChunkId;
 use crate::entity_id::ChunkPlaneId;
 
@@ -16,6 +17,8 @@ pub struct ChunkPlane {
   pub id: ChunkPlaneId,
   /// The `Chunk` IDs.
   pub chunk_ids: Vec<ChunkId>,
+  /// The `ChunkSeed`s.
+  pub chunk_seeds: Vec<ChunkSeed>,
   /// The `Chunk`s, only managed as needed.
   #[serde(skip)]
   pub chunks: HashMap<ChunkId, Chunk>,

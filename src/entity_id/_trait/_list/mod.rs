@@ -9,6 +9,8 @@ pub mod into_chunk_id;
 pub use into_chunk_id::IntoChunkId as IntoChunkIdTrait;
 pub mod into_chunk_plane_id;
 pub use into_chunk_plane_id::IntoChunkPlaneId as IntoChunkPlaneIdTrait;
+pub mod into_chunk_seed_id;
+pub use into_chunk_seed_id::IntoChunkSeedId as IntoChunkSeedIdTrait;
 pub mod into_entity_id;
 pub use into_entity_id::IntoEntityId as IntoEntityIdTrait;
 pub mod into_object_id;
