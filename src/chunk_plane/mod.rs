@@ -93,6 +93,29 @@ impl ChunkPlane {
     // That means determining the Manhattan distances between the coordinate pair and each chunk seed.
     // The coordinate pair belongs to the chunk seed with the smallest Manhattan distance.
     // We'll then add the coordinate pair to the chunk seed's points.
+    let chunk_adjacencies = self.calculate_chunk_adjacencies()?;
+    // Now, we'll insert the adjacent chunk seeds into each chunk seed.
+    self.update_adjacencies(&chunk_adjacencies)?;
+    // Now, we'll determine which chunk seeds are "open", "half-open", and
+    // "closed". These terms refer to the vulnerability of the seeds to
+    // modification as the diagram is expanded outwards.
+    // Any seed whose corner touches a point along the edge of the diagram
+    // is considered "open". Any seed next to an "open" seed is considered
+    // "half-open". All remaining seeds are considered "closed".
+    self.mark_open_chunk_seeds()?;
+    // Now, we'll iterate through the chunk seeds and determine which ones are
+    // "half-open", that is, which ones are next to an "open" chunk seed.
+    self.mark_half_open_chunk_seeds()?;
+    // Now, we'll iterate through the chunk seeds and determine which ones are
+    // "closed", that is, which ones are not "open" or "half-open".
+    self.mark_closed_chunk_seeds()?;
+    // Now, we'll generate the chunks from the closed chunk seeds.
+    self.generate_chunks()?;
+    Ok(())
+  }
+
+  /// Calculate adjacencies between `ChunkSeed`s.
+  pub fn calculate_chunk_adjacencies(&mut self) -> Result<HashSet<(ChunkSeedId, ChunkSeedId)>, AnyError> {
     let mut chunk_adjacencies = HashSet::<(ChunkSeedId, ChunkSeedId)>::new();
     let mut last_columns_chunk_seed_ids =
       vec![ChunkSeedId::default(); (self.lower_right_corner.1 - self.upper_left_corner.1 + 1) as usize];
@@ -138,24 +161,7 @@ impl ChunkPlane {
         chunk_seed.points.insert(current_coordinates);
       }
     }
-    // Now, we'll insert the adjacent chunk seeds into each chunk seed.
-    self.update_adjacencies(&chunk_adjacencies)?;
-    // Now, we'll determine which chunk seeds are "open", "half-open", and
-    // "closed". These terms refer to the vulnerability of the seeds to
-    // modification as the diagram is expanded outwards.
-    // Any seed whose corner touches a point along the edge of the diagram
-    // is considered "open". Any seed next to an "open" seed is considered
-    // "half-open". All remaining seeds are considered "closed".
-    self.mark_open_chunk_seeds()?;
-    // Now, we'll iterate through the chunk seeds and determine which ones are
-    // "half-open", that is, which ones are next to an "open" chunk seed.
-    self.mark_half_open_chunk_seeds()?;
-    // Now, we'll iterate through the chunk seeds and determine which ones are
-    // "closed", that is, which ones are not "open" or "half-open".
-    self.mark_closed_chunk_seeds()?;
-    // Now, we'll generate the chunks from the closed chunk seeds.
-    self.generate_chunks()?;
-    Ok(())
+    Ok(chunk_adjacencies)
   }
 
   /// Update adjacencies between `ChunkSeed`s.
