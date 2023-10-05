@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
+use uuid::Uuid;
 
 use crate::chunk::Chunk;
 use crate::chunk::ChunkBuilder;
@@ -20,6 +21,10 @@ use crate::entity_id::ChunkPlaneId;
 use crate::entity_id::ChunkSeedId;
 
 /// The `ChunkPlane` struct.
+///
+/// Chunks are generated from chunk seeds, which are distributed randomly on an
+/// infinite plane. We'll start with a 100x100 square of chunk seeds, and then
+/// expand outwards as needed.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ChunkPlane {
   /// The ID.
@@ -41,11 +46,11 @@ pub struct ChunkPlane {
 
 impl ChunkPlane {
   /// Creates a new `ChunkPlane`.
-  pub fn new(id: &ChunkPlaneId) -> Self {
+  pub fn new(id: &ChunkPlaneId, seed_string: &str) -> Self {
     let id = id.clone();
     let upper_left_corner = (-50, -50);
     let lower_right_corner = (50, 50);
-    let seed_string = id.to_string();
+    let seed_string = seed_string.to_string();
     Self {
       id,
       chunk_ids: Vec::new(),
@@ -348,7 +353,8 @@ impl ChunkPlane {
 impl Default for ChunkPlane {
   fn default() -> Self {
     let id = ChunkPlaneId::default();
-    Self::new(&id)
+    let seed_string = Uuid::new_v4().to_string();
+    Self::new(&id, &seed_string)
   }
 }
 
@@ -366,7 +372,7 @@ mod tests {
   fn test_chunk_plane() -> Result<(), AnyError> {
     init();
     let mut chunk_plane = ChunkPlane::default();
-    chunk_plane.id = ChunkPlaneId::new();
+    chunk_plane.id = ChunkPlaneId::default();
     chunk_plane.generate_initial_chunk_seeds()?;
     chunk_plane.generate_initial_chunks()?;
     chunk_plane.export_png(&format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk_plane.png"))?;
