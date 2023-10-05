@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::chunk::Chunk;
+use crate::chunk::ChunkStatus;
 use crate::chunk::ChunkType;
 use crate::entity_id::ChunkId;
 use crate::entity_id::ChunkPlaneId;
@@ -19,6 +20,8 @@ pub struct Builder {
   pub chunk_seed_id: Option<ChunkSeedId>,
   /// The `Chunk`'s type.
   pub r#type: Option<ChunkType>,
+  /// The `Chunk`'s status.
+  pub status: Option<ChunkStatus>,
   /// The `Chunk`'s name.
   pub name: Option<String>,
   /// The `Chunk`'s description.
@@ -57,6 +60,12 @@ impl Builder {
     self
   }
 
+  /// Sets the `Chunk`'s status.
+  pub fn status(mut self, status: &ChunkStatus) -> Self {
+    self.status = Some(status.clone());
+    self
+  }
+
   /// Sets the `Chunk`'s name.
   pub fn name(mut self, name: &str) -> Self {
     self.name = Some(name.to_string());
@@ -87,6 +96,9 @@ impl Builder {
     );
     if let Some(rooms) = self.rooms {
       result.rooms = rooms;
+    }
+    if let Some(status) = self.status {
+      result.status = status;
     }
     result
   }

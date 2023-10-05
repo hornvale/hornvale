@@ -350,6 +350,7 @@ mod tests {
   use super::*;
 
   use anyhow::Error as AnyError;
+  use std::fs::create_dir_all;
 
   use crate::test::init;
   use crate::test::TEMPORARY_TEST_DATA_DIRECTORY;
@@ -364,8 +365,18 @@ mod tests {
     chunk_plane.export_png(&format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk_plane.png"))?;
     let file_path = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk_plane.yaml");
     chunk_plane.store(&file_path)?;
+    let mut index = 0;
+    for (_chunk_id, chunk) in chunk_plane.chunks.iter() {
+      create_dir_all(format!("{}/test_chunks", TEMPORARY_TEST_DATA_DIRECTORY))?;
+      let file_path = format!(
+        "{}/test_chunks/{}",
+        TEMPORARY_TEST_DATA_DIRECTORY,
+        format!("test_chunk_{}.yaml", index)
+      );
+      chunk.store(&file_path)?;
+      index += 1;
+    }
     let _chunk_plane = ChunkPlane::load(&file_path)?;
-    // assert_eq!(chunk_plane.chunk_ids.len(), chunk_plane.chunk_seeds.len());
     Ok(())
   }
 }

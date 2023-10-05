@@ -13,6 +13,8 @@ use crate::room::Room;
 
 pub mod builder;
 pub use builder::Builder as ChunkBuilder;
+pub mod status;
+pub use status::Status as ChunkStatus;
 pub mod r#type;
 pub use r#type::Type as ChunkType;
 
@@ -27,6 +29,8 @@ pub struct Chunk {
   pub id: ChunkId,
   /// The `Chunk`'s type.
   pub r#type: ChunkType,
+  /// The `Chunk`'s status.
+  pub status: ChunkStatus,
   /// The `Chunk`'s name.
   pub name: String,
   /// The `Chunk`'s description.
@@ -52,6 +56,7 @@ impl Chunk {
       chunk_plane_id,
       chunk_seed_id,
       r#type,
+      status: ChunkStatus::default(),
       name,
       description,
       rooms: HashMap::new(),
@@ -83,6 +88,7 @@ impl Default for Chunk {
       chunk_plane_id: ChunkPlaneId::default(),
       chunk_seed_id: ChunkSeedId::default(),
       r#type: ChunkType::default(),
+      status: ChunkStatus::default(),
       name: "Default Chunk".to_string(),
       description: "This is the default chunk.".to_string(),
       rooms: HashMap::new(),
