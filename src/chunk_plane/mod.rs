@@ -138,9 +138,28 @@ impl ChunkPlane {
       }
     }
     // Now, we'll insert the adjacent chunk seeds into each chunk seed.
+    self.update_adjacencies(&chunk_adjacencies)?;
+    // Now, we'll determine which chunk seeds are "open", "half-open", and
+    // "closed". These terms refer to the vulnerability of the seeds to
+    // modification as the diagram is expanded outwards.
+    // Any seed whose corner touches a point along the edge of the diagram
+    // is considered "open". Any seed next to an "open" seed is considered
+    // "half-open". All remaining seeds are considered "closed".
+    self.mark_open_chunk_seeds()?;
+    // Now, we'll iterate through the chunk seeds and determine which ones are
+    // "half-open", that is, which ones are next to an "open" chunk seed.
+    self.mark_half_open_chunk_seeds()?;
+    // Now, we'll iterate through the chunk seeds and determine which ones are
+    // "closed", that is, which ones are not "open" or "half-open".
+    self.mark_closed_chunk_seeds()?;
+    Ok(())
+  }
+
+  /// Update adjacencies between `ChunkSeed`s.
+  pub fn update_adjacencies(&mut self, adjacencies: &HashSet<(ChunkSeedId, ChunkSeedId)>) -> Result<(), AnyError> {
     for (chunk_seed_id, chunk_seed) in self.chunk_seeds.iter_mut() {
       let mut adjacent_chunk_seed_ids = HashSet::<ChunkSeedId>::new();
-      for (chunk_seed_id_1, chunk_seed_id_2) in chunk_adjacencies.iter() {
+      for (chunk_seed_id_1, chunk_seed_id_2) in adjacencies.iter() {
         if chunk_seed_id_1 == chunk_seed_id {
           adjacent_chunk_seed_ids.insert(chunk_seed_id_2.clone());
         } else if chunk_seed_id_2 == chunk_seed_id {
@@ -149,12 +168,11 @@ impl ChunkPlane {
       }
       chunk_seed.adjacent_chunk_seed_ids = adjacent_chunk_seed_ids.iter().cloned().collect();
     }
-    // Now, we'll determine which chunk seeds are "open", "half-open", and
-    // "closed". These terms refer to the vulnerability of the seeds to
-    // modification as the diagram is expanded outwards.
-    // Any seed whose corner touches a point along the edge of the diagram
-    // is considered "open". Any seed next to an "open" seed is considered
-    // "half-open". All remaining seeds are considered "closed".
+    Ok(())
+  }
+
+  /// Mark "open" `ChunkSeed`s.
+  pub fn mark_open_chunk_seeds(&mut self) -> Result<(), AnyError> {
     for x in self.upper_left_corner.0..=self.lower_right_corner.0 {
       for y in self.upper_left_corner.1..=self.lower_right_corner.1 {
         if x == self.upper_left_corner.0
@@ -168,8 +186,11 @@ impl ChunkPlane {
         }
       }
     }
-    // Now, we'll iterate through the chunk seeds and determine which ones are
-    // "half-open", that is, which ones are next to an "open" chunk seed.
+    Ok(())
+  }
+
+  /// Mark "half-open" `ChunkSeed`s.
+  pub fn mark_half_open_chunk_seeds(&mut self) -> Result<(), AnyError> {
     let mut chunk_seed_ids = Vec::<ChunkSeedId>::new();
     for chunk_seed in self.chunk_seeds.values() {
       if chunk_seed.r#type == ChunkSeedType::Unknown {
@@ -186,8 +207,11 @@ impl ChunkPlane {
       let chunk_seed = self.chunk_seeds.get_mut(&chunk_seed_id).unwrap();
       chunk_seed.r#type = ChunkSeedType::HalfOpen;
     }
-    // Now, we'll iterate through the chunk seeds and determine which ones are
-    // "closed", that is, which ones are not "open" or "half-open".
+    Ok(())
+  }
+
+  /// Mark "closed" `ChunkSeed`s.
+  pub fn mark_closed_chunk_seeds(&mut self) -> Result<(), AnyError> {
     for chunk_seed in self.chunk_seeds.values_mut() {
       if chunk_seed.r#type == ChunkSeedType::Unknown {
         chunk_seed.r#type = ChunkSeedType::Closed;
