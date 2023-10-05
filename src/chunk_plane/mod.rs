@@ -89,10 +89,10 @@ impl ChunkPlane {
     if self.chunk_seeds.is_empty() {
       return Err(anyhow!("Chunk seeds not yet generated."));
     }
-    // For every coordinate pair in the range, we'll determine which chunk seed it belongs to.
-    // That means determining the Manhattan distances between the coordinate pair and each chunk seed.
-    // The coordinate pair belongs to the chunk seed with the smallest Manhattan distance.
-    // We'll then add the coordinate pair to the chunk seed's points.
+    // For every coordinate pair in the range, we'll determine which chunk seed
+    // it belongs to. That means determining the distances between the pair and
+    // each chunk seed. The coordinate pair belongs to the chunk seed with the
+    // smallest distance. We'll then add the  pair to the chunk seed's points.
     let chunk_adjacencies = self.calculate_chunk_adjacencies()?;
     // Now, we'll insert the adjacent chunk seeds into each chunk seed.
     self.update_adjacencies(&chunk_adjacencies)?;
@@ -128,8 +128,9 @@ impl ChunkPlane {
         let mut closest_chunk_seed = None;
         for chunk_seed in self.chunk_seeds.values() {
           let chunk_seed_coordinates = chunk_seed.coordinates;
-          let distance = (chunk_seed_coordinates.0 - current_coordinates.0).abs()
-            + (chunk_seed_coordinates.1 - current_coordinates.1).abs();
+          let distance = (((chunk_seed_coordinates.0 - current_coordinates.0).pow(2)
+            + (chunk_seed_coordinates.1 - current_coordinates.1).pow(2)) as f64)
+            .sqrt();
           if closest_chunk_seed.is_none() {
             closest_chunk_seed = Some((chunk_seed, distance));
           } else {
