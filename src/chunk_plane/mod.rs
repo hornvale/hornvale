@@ -11,6 +11,7 @@ use std::fs::File;
 use std::io::Write;
 
 use crate::chunk::Chunk;
+use crate::chunk::ChunkBuilder;
 use crate::chunk_seed::ChunkSeed;
 use crate::chunk_seed::ChunkSeedBuilder;
 use crate::chunk_seed::ChunkSeedType;
@@ -152,6 +153,8 @@ impl ChunkPlane {
     // Now, we'll iterate through the chunk seeds and determine which ones are
     // "closed", that is, which ones are not "open" or "half-open".
     self.mark_closed_chunk_seeds()?;
+    // Now, we'll generate the chunks from the closed chunk seeds.
+    self.generate_chunks()?;
     Ok(())
   }
 
@@ -234,6 +237,37 @@ impl ChunkPlane {
       }
     }
     None
+  }
+
+  /// Generate chunks from the given `ChunkSeed`s.
+  pub fn generate_chunks(&mut self) -> Result<(), AnyError> {
+    let chunk_seeds = self
+      .chunk_seeds
+      .values()
+      .filter(|&chunk_seed| chunk_seed.r#type == ChunkSeedType::Closed && chunk_seed.chunk_id.is_none())
+      .cloned()
+      .collect::<Vec<ChunkSeed>>();
+    for chunk_seed in chunk_seeds {
+      let chunk_seed_id = chunk_seed.id.clone();
+      let chunk_seed = self.chunk_seeds.get_mut(&chunk_seed_id).unwrap();
+      let chunk_id = ChunkId::default();
+      chunk_seed.chunk_id = Some(chunk_id.clone());
+      let chunk = ChunkBuilder::new()
+        .id(&chunk_id)
+        .chunk_plane_id(&self.id)
+        .chunk_seed_id(&chunk_seed_id)
+        .name(&format!(
+          "Chunk ({}, {})",
+          chunk_seed.coordinates.0, chunk_seed.coordinates.1
+        ))
+        .description(&format!(
+          "This is a chunk at ({}, {}).",
+          chunk_seed.coordinates.0, chunk_seed.coordinates.1
+        ))
+        .build();
+      self.chunks.insert(chunk_id, chunk);
+    }
+    Ok(())
   }
 
   /// Get the `ChunkSeed` for the given coordinates.

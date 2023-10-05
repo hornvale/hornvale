@@ -7,6 +7,7 @@ use std::io::Write;
 
 use crate::entity_id::ChunkId;
 use crate::entity_id::ChunkPlaneId;
+use crate::entity_id::ChunkSeedId;
 use crate::entity_id::RoomId;
 use crate::room::Room;
 
@@ -20,6 +21,8 @@ pub use r#type::Type as ChunkType;
 pub struct Chunk {
   /// The `Chunk`'s `ChunkPlane`'s ID.
   pub chunk_plane_id: ChunkPlaneId,
+  /// The `Chunk`'s `ChunkSeed`'s ID.
+  pub chunk_seed_id: ChunkSeedId,
   /// The `Chunk`'s ID.
   pub id: ChunkId,
   /// The `Chunk`'s type.
@@ -34,11 +37,20 @@ pub struct Chunk {
 
 impl Chunk {
   /// Creates a new `Chunk`.
-  pub fn new(id: ChunkId, chunk_plane_id: &ChunkPlaneId, r#type: ChunkType, name: String, description: String) -> Self {
+  pub fn new(
+    id: ChunkId,
+    chunk_plane_id: &ChunkPlaneId,
+    chunk_seed_id: &ChunkSeedId,
+    r#type: ChunkType,
+    name: String,
+    description: String,
+  ) -> Self {
     let chunk_plane_id = chunk_plane_id.clone();
+    let chunk_seed_id = chunk_seed_id.clone();
     Self {
       id,
       chunk_plane_id,
+      chunk_seed_id,
       r#type,
       name,
       description,
@@ -69,6 +81,7 @@ impl Default for Chunk {
     Self {
       id: ChunkId::default(),
       chunk_plane_id: ChunkPlaneId::default(),
+      chunk_seed_id: ChunkSeedId::default(),
       r#type: ChunkType::default(),
       name: "Default Chunk".to_string(),
       description: "This is the default chunk.".to_string(),
@@ -103,15 +116,18 @@ mod tests {
     init();
     let chunk_id = ChunkId::default();
     let chunk_plane_id = ChunkPlaneId::default();
+    let chunk_seed_id = ChunkSeedId::default();
     let chunk = Chunk::new(
       chunk_id.clone(),
       &chunk_plane_id,
+      &chunk_seed_id,
       ChunkType::default(),
       "Test Chunk".to_string(),
       "This is a test chunk.".to_string(),
     );
     assert_eq!(chunk.id, chunk_id);
     assert_eq!(chunk.chunk_plane_id, chunk_plane_id);
+    assert_eq!(chunk.chunk_seed_id, chunk_seed_id);
     assert_eq!(chunk.r#type, ChunkType::default());
     assert_eq!(chunk.name, "Test Chunk".to_string());
     assert_eq!(chunk.description, "This is a test chunk.".to_string());
@@ -123,9 +139,11 @@ mod tests {
     init();
     let chunk_id = ChunkId::default();
     let chunk_plane_id = ChunkPlaneId::default();
+    let chunk_seed_id = ChunkSeedId::default();
     let chunk = Chunk::new(
       chunk_id.clone(),
       &chunk_plane_id,
+      &chunk_seed_id,
       ChunkType::default(),
       "Test Chunk".to_string(),
       "This is a test chunk.".to_string(),
@@ -141,9 +159,11 @@ mod tests {
     init();
     let chunk_id = ChunkId::default();
     let chunk_plane_id = ChunkPlaneId::default();
+    let chunk_seed_id = ChunkSeedId::default();
     let mut chunk = Chunk::new(
       chunk_id.clone(),
       &chunk_plane_id,
+      &chunk_seed_id,
       ChunkType::default(),
       "Test Chunk".to_string(),
       "This is a test chunk.".to_string(),
