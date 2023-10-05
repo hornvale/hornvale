@@ -1,6 +1,7 @@
 use serde_yaml::from_reader as serde_yaml_from_reader;
 use serde_yaml::to_string as serde_yaml_to_string;
 use serde_yaml::Error as SerdeError;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
 
@@ -14,7 +15,7 @@ pub mod r#type;
 pub use r#type::Type as ChunkSeedType;
 
 /// The `ChunkSeed` struct.
-#[derive(Clone, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ChunkSeed {
   /// The `ChunkSeed`'s ID.
   pub id: ChunkSeedId,
@@ -24,6 +25,10 @@ pub struct ChunkSeed {
   pub chunk_id: Option<ChunkId>,
   /// The coordinates in (i64, i64) plane.
   pub coordinates: (i64, i64),
+  /// The points contained by this `ChunkSeed`.
+  pub points: HashSet<(i64, i64)>,
+  /// The adjacent `ChunkSeed` IDs.
+  pub adjacent_chunk_seed_ids: Vec<ChunkSeedId>,
   /// The `ChunkSeed`'s type.
   pub r#type: ChunkSeedType,
 }
@@ -37,6 +42,8 @@ impl ChunkSeed {
       chunk_plane_id,
       chunk_id: None,
       coordinates,
+      points: HashSet::new(),
+      adjacent_chunk_seed_ids: Vec::new(),
       r#type,
     }
   }
@@ -56,6 +63,11 @@ impl ChunkSeed {
     let file = File::open(file_path).expect("Unable to open chunk_seed file");
     let chunk_seed: ChunkSeed = serde_yaml_from_reader(file)?;
     Ok(chunk_seed)
+  }
+
+  /// Whether this `ChunkSeed` contains the given coordinates.
+  pub fn contains(&self, coordinates: (i64, i64)) -> bool {
+    self.points.contains(&coordinates)
   }
 }
 

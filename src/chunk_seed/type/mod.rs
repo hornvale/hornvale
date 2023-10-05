@@ -1,8 +1,10 @@
 /// The `ChunkSeedType` enum.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Display, Eq, Hash, PartialEq, Serialize)]
 pub enum Type {
-  /// This chunk does not have a fully-defined area.
+  /// This chunk's status is unknown.
   #[default]
+  Unknown,
+  /// This chunk does not have a fully-defined area.
   Open,
   /// This chunk has a defined area, but it might be modified by further seeds.
   HalfOpen,

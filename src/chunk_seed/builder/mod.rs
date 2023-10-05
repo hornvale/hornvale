@@ -15,6 +15,8 @@ pub struct Builder {
   pub chunk_id: Option<ChunkId>,
   /// The coordinates in (i64, i64) plane.
   pub coordinates: Option<(i64, i64)>,
+  /// Adjacent `ChunkSeed` IDs.
+  pub adjacent_chunk_seed_ids: Option<Vec<ChunkSeedId>>,
   /// The `ChunkSeed`'s type.
   pub r#type: Option<ChunkSeedType>,
 }
@@ -55,6 +57,12 @@ impl Builder {
     self
   }
 
+  /// Sets the adjacent `ChunkSeed` IDs.
+  pub fn adjacent_chunk_seed_ids(mut self, adjacent_chunk_seed_ids: Vec<ChunkSeedId>) -> Self {
+    self.adjacent_chunk_seed_ids = Some(adjacent_chunk_seed_ids);
+    self
+  }
+
   /// Builds the `ChunkSeed`.
   pub fn build(self) -> ChunkSeed {
     let id = self.id.unwrap_or_default();
@@ -64,6 +72,7 @@ impl Builder {
     let r#type = self.r#type.unwrap_or_default();
     let mut result = ChunkSeed::new(id, &chunk_plane_id, coordinates, r#type);
     result.chunk_id = chunk_id;
+    result.adjacent_chunk_seed_ids = self.adjacent_chunk_seed_ids.unwrap_or_default();
     result
   }
 }
