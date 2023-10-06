@@ -358,6 +358,7 @@ mod tests {
   use super::*;
 
   use crate::test::init;
+  use crate::test::TEMPORARY_TEST_DATA_DIRECTORY;
 
   #[test]
   fn test_create_chunk() {
@@ -367,19 +368,9 @@ mod tests {
     assert_eq!(chunk.name, "Compass Rose".to_string());
     assert_eq!(chunk.description, "A compass rose.".to_string());
     assert_eq!(chunk.rooms.len(), 9);
-    chunk
-      .store(&format!(
-        "{}/{}",
-        &crate::test::TEMPORARY_TEST_DATA_DIRECTORY,
-        "test_compass_rose.yaml"
-      ))
-      .unwrap();
-    let chunk2 = Chunk::load(&format!(
-      "{}/{}",
-      &crate::test::TEMPORARY_TEST_DATA_DIRECTORY,
-      "test_compass_rose.yaml"
-    ))
-    .unwrap();
+    let base_dir = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_compass_rose_create_chunk");
+    chunk.store(&base_dir).unwrap();
+    let chunk2 = Chunk::load(&base_dir, &chunk.id).unwrap();
     assert_eq!(chunk2.name, "Compass Rose".to_string());
   }
 }

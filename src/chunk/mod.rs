@@ -1,7 +1,9 @@
+use anyhow::Context;
+use anyhow::Error as AnyError;
 use serde_yaml::from_reader as serde_yaml_from_reader;
 use serde_yaml::to_string as serde_yaml_to_string;
-use serde_yaml::Error as SerdeError;
 use std::collections::HashMap;
+use std::fs::create_dir_all;
 use std::fs::File;
 use std::io::Write;
 
@@ -64,7 +66,9 @@ impl Chunk {
   }
 
   /// Saves the `Chunk` in a serialized form.
-  pub fn store(&self, file_path: &str) -> Result<(), SerdeError> {
+  pub fn store(&self, base_dir: &str) -> Result<(), AnyError> {
+    let file_path = format!("{}/{}.yaml", base_dir, self.id);
+    create_dir_all(base_dir).with_context(|| format!("Unable to create directory at {}", base_dir))?;
     let yaml_string = serde_yaml_to_string(self)?;
     let mut file = File::create(file_path).expect("Unable to create file");
     file
@@ -74,8 +78,9 @@ impl Chunk {
   }
 
   /// Loads the `Chunk` from a serialized form.
-  pub fn load(file_path: &str) -> Result<Chunk, SerdeError> {
-    let file = File::open(file_path).expect("Unable to open chunk file");
+  pub fn load(base_dir: &str, chunk_id: &ChunkId) -> Result<Chunk, AnyError> {
+    let file_path = format!("{}/{}.yaml", base_dir, chunk_id);
+    let file = File::open(file_path.clone()).with_context(|| format!("Unable to create directory at {}", file_path))?;
     let chunk: Chunk = serde_yaml_from_reader(file)?;
     Ok(chunk)
   }
@@ -99,6 +104,8 @@ impl Default for Chunk {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  use std::fs::remove_dir_all;
 
   use crate::room::Room;
   use crate::room::RoomType;
@@ -154,9 +161,10 @@ mod tests {
       "Test Chunk".to_string(),
       "This is a test chunk.".to_string(),
     );
-    let file_path = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk.yaml");
-    chunk.store(&file_path).unwrap();
-    let loaded_chunk = Chunk::load(&file_path).unwrap();
+    let base_dir = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk_save_and_load");
+    remove_dir_all(&base_dir).ok();
+    chunk.store(&base_dir).unwrap();
+    let loaded_chunk = Chunk::load(&base_dir, &chunk_id.clone()).unwrap();
     assert_eq!(chunk, loaded_chunk);
   }
 
@@ -183,9 +191,13 @@ mod tests {
       HashMap::new(),
     );
     chunk.rooms.insert(room_id, room);
-    let file_path = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk2.yaml");
-    chunk.store(&file_path).unwrap();
-    let loaded_chunk = Chunk::load(&file_path).unwrap();
+    let base_dir = format!(
+      "{}/{}",
+      TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk_with_rooms_save_and_load"
+    );
+    remove_dir_all(&base_dir).ok();
+    chunk.store(&base_dir).unwrap();
+    let loaded_chunk = Chunk::load(&base_dir, &chunk_id).unwrap();
     assert_eq!(chunk, loaded_chunk);
   }
 }

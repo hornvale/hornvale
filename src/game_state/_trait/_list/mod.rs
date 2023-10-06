@@ -5,8 +5,6 @@ pub mod chunk_id_to_chunk_plane_id;
 pub use chunk_id_to_chunk_plane_id::ChunkIdToChunkPlaneId as ChunkIdToChunkPlaneIdTrait;
 pub mod chunk_plane_id_to_chunk_ids;
 pub use chunk_plane_id_to_chunk_ids::ChunkPlaneIdToChunkIds as ChunkPlaneIdToChunkIdsTrait;
-pub mod chunk_plane_management;
-pub use chunk_plane_management::ChunkPlaneManagement as ChunkPlaneManagementTrait;
 pub mod command_queue;
 pub use command_queue::CommandQueue as CommandQueueTrait;
 pub mod current_room_id;
