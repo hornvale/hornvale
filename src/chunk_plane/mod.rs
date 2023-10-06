@@ -38,9 +38,6 @@ pub struct ChunkPlane {
   pub lower_right_corner: (i64, i64),
   /// The seed string.
   pub seed_string: String,
-  /// The `Chunk`s, only managed as needed.
-  #[serde(skip)]
-  pub chunks: HashMap<ChunkId, Chunk>,
 }
 
 impl ChunkPlane {
@@ -57,7 +54,6 @@ impl ChunkPlane {
       upper_left_corner,
       lower_right_corner,
       seed_string,
-      chunks: HashMap::new(),
     }
   }
 
@@ -86,7 +82,7 @@ impl ChunkPlane {
   }
 
   /// Generates the `Chunk`s.
-  pub fn generate_initial_chunks(&mut self) -> Result<(), AnyError> {
+  pub fn generate_initial_chunks(&mut self) -> Result<Vec<Chunk>, AnyError> {
     if !self.chunk_ids.is_empty() {
       return Err(anyhow!("Chunks already generated."));
     }
@@ -113,8 +109,8 @@ impl ChunkPlane {
     // "closed", that is, which ones are not "open" or "half-open".
     self.mark_closed_chunk_seeds()?;
     // Now, we'll generate the chunks from the closed chunk seeds.
-    self.generate_chunks()?;
-    Ok(())
+    let chunks = self.generate_chunks()?;
+    Ok(chunks)
   }
 
   /// Calculate adjacencies between `ChunkSeed`s.
@@ -250,13 +246,14 @@ impl ChunkPlane {
   }
 
   /// Generate chunks from the given `ChunkSeed`s.
-  pub fn generate_chunks(&mut self) -> Result<(), AnyError> {
+  pub fn generate_chunks(&mut self) -> Result<Vec<Chunk>, AnyError> {
     let chunk_seeds = self
       .chunk_seeds
       .values()
       .filter(|&chunk_seed| chunk_seed.r#type == ChunkSeedType::Closed && chunk_seed.chunk_id.is_none())
       .cloned()
       .collect::<Vec<ChunkSeed>>();
+    let mut chunks = Vec::<Chunk>::new();
     for chunk_seed in chunk_seeds {
       let chunk_seed_id = chunk_seed.id.clone();
       let chunk_seed = self.chunk_seeds.get_mut(&chunk_seed_id).unwrap();
@@ -275,10 +272,10 @@ impl ChunkPlane {
           chunk_seed.coordinates.0, chunk_seed.coordinates.1
         ))
         .build();
-      self.chunks.insert(chunk_id.clone(), chunk);
       self.chunk_ids.insert(chunk_id);
+      chunks.push(chunk);
     }
-    Ok(())
+    Ok(chunks)
   }
 
   /// Get the `ChunkSeed` for the given coordinates.

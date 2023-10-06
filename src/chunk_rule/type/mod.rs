@@ -97,9 +97,12 @@ impl Type {
             debug!("Storing chunk plane.");
             game_state.chunk_manager.store_chunk_plane(&chunk_plane).ok();
             debug!("Generating initial chunks.");
-            game_state.chunk_manager.generate_initial_chunks(&mut chunk_plane).ok();
+            let chunks = game_state
+              .chunk_manager
+              .generate_initial_chunks(&mut chunk_plane)
+              .unwrap();
             debug!("Storing chunks.");
-            game_state.chunk_manager.store_chunks(&chunk_plane).ok();
+            game_state.chunk_manager.store_chunks(&chunks).ok();
           }
         }
       }),

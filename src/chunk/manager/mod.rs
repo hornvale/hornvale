@@ -1,7 +1,11 @@
 use anyhow::Error as AnyError;
 use std::collections::HashSet;
 
+use crate::chunk::Chunk;
 use crate::chunk::ChunkFileManager;
+use crate::chunk::ChunkMapBuilder;
+use crate::chunk::ChunkMapBuilderStrategy;
+use crate::chunk::ChunkStatus;
 use crate::chunk_plane::ChunkPlane;
 use crate::chunk_plane::ChunkPlaneFileManager;
 use crate::entity_id::ChunkPlaneId;
@@ -70,25 +74,41 @@ impl Manager {
   }
 
   /// Generates the initial `Chunk`s for a `ChunkPlane`.
-  pub fn generate_initial_chunks(&mut self, chunk_plane: &mut ChunkPlane) -> Result<(), AnyError> {
-    chunk_plane.generate_initial_chunks()?;
+  pub fn generate_initial_chunks(&mut self, chunk_plane: &mut ChunkPlane) -> Result<Vec<Chunk>, AnyError> {
+    let chunks = chunk_plane.generate_initial_chunks()?;
     self.store_chunk_plane(chunk_plane)?;
-    Ok(())
+    self.store_chunks(&chunks)?;
+    Ok(chunks)
   }
 
   /// Stores the `Chunk`s for a `ChunkPlane`.
-  pub fn store_chunks(&mut self, chunk_plane: &ChunkPlane) -> Result<(), AnyError> {
-    self
-      .chunk_file_manager
-      .store_multiple(&chunk_plane.chunks.values().cloned().collect())?;
+  pub fn store_chunks(&mut self, chunks: &Vec<Chunk>) -> Result<(), AnyError> {
+    self.chunk_file_manager.store_multiple(chunks)?;
     Ok(())
   }
 
-  /// Populate empty chunks.
+  /// Map empty chunks.
   pub fn map_empty_chunks(&mut self, chunk_plane: &mut ChunkPlane) -> Result<(), AnyError> {
-    // let closed_chunks = chunk_plane.get_closed_chunks();
-    // chunk_plane.map_closed_chunks()?;
-    self.store_chunk_plane(chunk_plane)?;
+    let chunk_ids = chunk_plane.chunk_ids.clone();
+    let empty_chunks = self
+      .chunk_file_manager
+      .load_multiple(&chunk_ids.iter().cloned().collect())?
+      .iter()
+      .filter(|chunk| chunk.status == ChunkStatus::Empty)
+      .cloned()
+      .collect::<Vec<Chunk>>();
+    for mut empty_chunk in empty_chunks {
+      self.map_empty_chunk(&mut empty_chunk)?;
+    }
+    Ok(())
+  }
+
+  /// Map an empty chunk.
+  pub fn map_empty_chunk(&mut self, chunk: &mut Chunk) -> Result<(), AnyError> {
+    let chunk_map_builder = ChunkMapBuilder::new(ChunkMapBuilderStrategy::BlankFill);
+    chunk_map_builder.map_chunk(chunk)?;
+    chunk.status = ChunkStatus::Mapped;
+    self.chunk_file_manager.store(chunk)?;
     Ok(())
   }
 }
