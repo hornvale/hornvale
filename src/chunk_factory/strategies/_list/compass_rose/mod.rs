@@ -357,6 +357,7 @@ impl CompassRose {
 mod tests {
   use super::*;
 
+  use crate::chunk::ChunkFileManager;
   use crate::test::init;
   use crate::test::TEMPORARY_TEST_DATA_DIRECTORY;
 
@@ -369,8 +370,9 @@ mod tests {
     assert_eq!(chunk.description, "A compass rose.".to_string());
     assert_eq!(chunk.rooms.len(), 9);
     let base_dir = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_compass_rose_create_chunk");
-    chunk.store(&base_dir).unwrap();
-    let chunk2 = Chunk::load(&base_dir, &chunk.id).unwrap();
+    let chunk_file_manager = ChunkFileManager::new(&base_dir);
+    chunk_file_manager.store(&chunk).unwrap();
+    let chunk2 = chunk_file_manager.load(&chunk.id).unwrap();
     assert_eq!(chunk2.name, "Compass Rose".to_string());
   }
 }
