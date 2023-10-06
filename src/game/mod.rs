@@ -4,6 +4,7 @@ use log::Level as LogLevel;
 use crate::chunk::Chunk;
 use crate::chunk::ChunkFactory;
 use crate::chunk::ChunkFactoryStrategy;
+use crate::chunk_rule::ChunkRuleManager;
 use crate::event::attach_logger;
 use crate::event::Event;
 use crate::event::EventType;
@@ -70,6 +71,9 @@ impl Game {
     let mut game_rule_manager = GameRuleManager::default();
     game_rule_manager.insert_stock_rules();
     game_rule_manager.inject_rule_subscribers(&mut event_system.event_publisher);
+    let mut chunk_rule_manager = ChunkRuleManager::default();
+    chunk_rule_manager.insert_stock_rules();
+    chunk_rule_manager.inject_rule_subscribers(&mut event_system.event_publisher);
 
     // Give us time (1 tick) to start up before we start reading input.
     game_state.set_input_ready_flag(false);
