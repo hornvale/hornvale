@@ -47,7 +47,7 @@ impl Type {
       LookAround => {
         debug!("Executing look command.");
         let player_id = game_state.get_player_id();
-        let current_room_id = game_state.current_room_id.clone();
+        let current_room_id = game_state.current_room_id.clone().unwrap();
         let action = Action::new(
           ActionType::LookAround(player_id.clone().into(), current_room_id),
           command.backtrace.clone(),

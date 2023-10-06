@@ -8,6 +8,7 @@ use crate::chunk::ChunkMapBuilderStrategy;
 use crate::chunk::ChunkStatus;
 use crate::chunk_plane::ChunkPlane;
 use crate::chunk_plane::ChunkPlaneFileManager;
+use crate::entity_id::ChunkId;
 use crate::entity_id::ChunkPlaneId;
 
 /// The `ChunkManager` struct.
@@ -81,10 +82,31 @@ impl Manager {
     Ok(chunks)
   }
 
+  /// Store a specific `Chunk`.
+  pub fn store_chunk(&mut self, chunk: &Chunk) -> Result<(), AnyError> {
+    self.chunk_file_manager.store(chunk)?;
+    Ok(())
+  }
+
   /// Stores the `Chunk`s for a `ChunkPlane`.
   pub fn store_chunks(&mut self, chunks: &Vec<Chunk>) -> Result<(), AnyError> {
     self.chunk_file_manager.store_multiple(chunks)?;
     Ok(())
+  }
+
+  /// Load a specific `Chunk`.
+  pub fn load_chunk(&mut self, chunk_id: &ChunkId) -> Result<Chunk, AnyError> {
+    let chunk = self.chunk_file_manager.load(chunk_id)?;
+    Ok(chunk)
+  }
+
+  /// Load all of the `Chunk`s for a `ChunkPlane`.
+  pub fn load_chunks(&mut self, chunk_plane: &ChunkPlane) -> Result<Vec<Chunk>, AnyError> {
+    let chunk_ids = chunk_plane.chunk_ids.clone();
+    let chunks = self
+      .chunk_file_manager
+      .load_multiple(&chunk_ids.iter().cloned().collect())?;
+    Ok(chunks)
   }
 
   /// Map empty chunks.

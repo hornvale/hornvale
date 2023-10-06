@@ -72,7 +72,7 @@ impl Type {
       },
       PlaceEntityInRoom(_entity_id, room_id) => {
         debug!("Applying place-entity-in-room effect.");
-        game_state.current_room_id = room_id.clone();
+        game_state.current_room_id = Some(room_id.clone());
       },
       OutputRoomNameAsPartOfRoomSummary(room_name) => {
         debug!("Applying output-room-name effect.");

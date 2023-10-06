@@ -67,7 +67,7 @@ impl Type {
       },
       Walk(actor_id, direction) => {
         debug!("Attempting walk action.");
-        let current_room_id = game_state.current_room_id.clone();
+        let current_room_id = game_state.current_room_id.clone().unwrap();
         let current_room = if let Some(current_room) = game_state.rooms.get(&current_room_id) {
           current_room
         } else {

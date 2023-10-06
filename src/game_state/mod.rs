@@ -41,7 +41,7 @@ pub struct GameState {
   pub loop_timer: Instant,
   // Entities.
   pub rooms: HashMap<RoomId, Room>,
-  pub current_room_id: RoomId,
+  pub current_room_id: Option<RoomId>,
   pub player_id: PlayerId,
   // Filesystem.
   pub local_data_dir: String,
@@ -56,6 +56,9 @@ pub struct GameState {
   pub chunk_data_dir: String,
   pub loaded_chunks: HashMap<ChunkId, Chunk>,
   pub chunk_manager: ChunkManager,
+  pub chunk_plane_id: Option<ChunkPlaneId>,
+  pub chunk_id: Option<ChunkId>,
+  pub chunk: Option<Chunk>,
   // Lookups.
   pub entity_id_to_room_id: HashMap<EntityId, RoomId>,
   pub room_id_to_entity_ids: HashMap<RoomId, Vec<EntityId>>,
@@ -82,7 +85,7 @@ impl GameState {
       loop_timer: Instant::now(),
       // Entities.
       rooms: HashMap::new(),
-      current_room_id: RoomId::default(),
+      current_room_id: None,
       player_id: PlayerId::default(),
       // Filesystem.
       local_data_dir: local_data_dir.to_string(),
@@ -95,6 +98,9 @@ impl GameState {
       chunk_data_dir: chunk_data_dir.clone(),
       loaded_chunks: HashMap::new(),
       chunk_manager: ChunkManager::new(&seed_string, &chunk_data_dir),
+      chunk_plane_id: None,
+      chunk_id: None,
+      chunk: None,
       // Lookups.
       entity_id_to_room_id: HashMap::new(),
       room_id_to_entity_ids: HashMap::new(),
