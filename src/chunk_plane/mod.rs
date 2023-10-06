@@ -1,16 +1,8 @@
-use anyhow::Context;
 use anyhow::Error as AnyError;
-use image::{ImageBuffer, Rgb};
 use rand::prelude::*;
 use rand_seeder::SipHasher;
-use serde_yaml::from_reader as serde_yaml_from_reader;
-use serde_yaml::to_string as serde_yaml_to_string;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fs::create_dir_all;
-use std::fs::remove_dir_all;
-use std::fs::File;
-use std::io::Write;
 use uuid::Uuid;
 
 use crate::chunk::Chunk;
@@ -21,6 +13,11 @@ use crate::chunk_seed::ChunkSeedType;
 use crate::entity_id::ChunkId;
 use crate::entity_id::ChunkPlaneId;
 use crate::entity_id::ChunkSeedId;
+
+pub mod export_png;
+pub use export_png::export_chunk_plane_png;
+pub mod file_manager;
+pub use file_manager::FileManager as ChunkPlaneFileManager;
 
 /// The `ChunkPlane` struct.
 ///
@@ -291,100 +288,6 @@ impl ChunkPlane {
       .values()
       .find(|&chunk_seed| chunk_seed.contains(coordinates))
   }
-
-  /// Exports the `ChunkPlane` as a PNG.
-  pub fn export_png(&self, file_path: &str) -> Result<(), AnyError> {
-    let width = (self.lower_right_corner.0 - self.upper_left_corner.0)
-      .try_into()
-      .unwrap();
-    let height = (self.lower_right_corner.1 - self.upper_left_corner.1)
-      .try_into()
-      .unwrap();
-    let mut imgbuf = ImageBuffer::new(width, height);
-    for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
-      let (local_x, local_y) = (self.upper_left_corner.0 + x as i64, self.upper_left_corner.1 + y as i64);
-      let chunk_seed = self.get_chunk_seed((local_x, local_y));
-      if chunk_seed.is_none() {
-        continue;
-      }
-      let color = {
-        let chunk_seed = chunk_seed.unwrap();
-        if chunk_seed.coordinates == (local_x, local_y) {
-          match chunk_seed.r#type {
-            ChunkSeedType::Open => (255, 255, 255),
-            ChunkSeedType::HalfOpen => (192, 192, 192),
-            ChunkSeedType::Closed => (64, 64, 64),
-            ChunkSeedType::Unknown => (0, 0, 0),
-          }
-        } else {
-          (
-            ((chunk_seed.coordinates.0.pow(2) + self.lower_right_corner.0.pow(2)) % 256) as u8,
-            ((chunk_seed.coordinates.1.pow(2) + self.upper_left_corner.1.pow(2)) % 256) as u8,
-            ((chunk_seed.coordinates.0.pow(2)
-              + self.lower_right_corner.0.pow(2)
-              + chunk_seed.coordinates.1.pow(2)
-              + self.upper_left_corner.1.pow(2))
-              % 256) as u8,
-          )
-        }
-      };
-      *pixel = Rgb([color.0, color.1, color.2]);
-    }
-    imgbuf.save(file_path)?;
-    Ok(())
-  }
-
-  /// Saves the `ChunkPlane` in a serialized form.
-  pub fn store(&self, base_dir: &str) -> Result<(), AnyError> {
-    let file_path = format!("{}/{}.yaml", base_dir, self.id);
-    let yaml_string = serde_yaml_to_string(self)?;
-    let mut file =
-      File::create(file_path.clone()).with_context(|| format!("Unable to create directory at {}", file_path))?;
-    file
-      .write_all(yaml_string.as_bytes())
-      .with_context(|| format!("Unable to write chunk plane at {}", file_path))?;
-    Ok(())
-  }
-
-  /// Loads the `ChunkPlane` from a serialized form.
-  pub fn load(file_path: &str, chunk_plane_id: &ChunkPlaneId) -> Result<ChunkPlane, AnyError> {
-    let file_path = format!("{}/{}.yaml", file_path, chunk_plane_id);
-    let file =
-      File::open(file_path.clone()).with_context(|| format!("Unable to read chunk plane file at {}", file_path))?;
-    let chunk_plane: ChunkPlane = serde_yaml_from_reader(file)?;
-    Ok(chunk_plane)
-  }
-
-  /// Store the `ChunkPlane` and all of its `Chunk`s.
-  pub fn store_all(&self, base_dir: &str) -> Result<(), AnyError> {
-    remove_dir_all(base_dir).ok();
-    create_dir_all(base_dir).with_context(|| format!("Unable to create directory at {}", base_dir))?;
-    let chunk_planes_path = format!("{}/chunk_planes", base_dir);
-    create_dir_all(chunk_planes_path.clone())
-      .with_context(|| format!("Unable to create directory at {}", chunk_planes_path))?;
-    self.store(&chunk_planes_path)?;
-    let chunk_path = format!("{}/chunks", base_dir);
-    create_dir_all(chunk_path.clone()).with_context(|| format!("Unable to create directory at {}", chunk_path))?;
-    for chunk_id in &self.chunk_ids {
-      if let Some(chunk) = self.chunks.get(chunk_id) {
-        chunk.store(&chunk_path)?;
-      }
-    }
-    Ok(())
-  }
-
-  /// Load the `ChunkPlane` and all of its `Chunk`s.
-  pub fn load_all(base_path: &str, chunk_plane_id: &ChunkPlaneId) -> Result<(), AnyError> {
-    let chunk_planes_path = format!("{}/chunk_planes", base_path);
-    let chunks_path = format!("{}/chunks", base_path);
-    let chunk_plane = ChunkPlane::load(&chunk_planes_path, chunk_plane_id)?;
-    let mut chunks = HashMap::new();
-    for chunk_id in &chunk_plane.chunk_ids {
-      let chunk = Chunk::load(&chunks_path, chunk_id)?;
-      chunks.insert(chunk_id.clone(), chunk);
-    }
-    Ok(())
-  }
 }
 
 impl Default for ChunkPlane {
@@ -402,7 +305,6 @@ mod tests {
   use anyhow::Error as AnyError;
 
   use crate::test::init;
-  use crate::test::TEMPORARY_TEST_DATA_DIRECTORY;
 
   #[test]
   fn test_chunk_plane() -> Result<(), AnyError> {
@@ -410,23 +312,6 @@ mod tests {
     let mut chunk_plane = ChunkPlane::default();
     chunk_plane.id = ChunkPlaneId::default();
     chunk_plane.generate_initial_chunks()?;
-    chunk_plane.export_png(&format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk_plane.png"))?;
-    let base_dir = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk_plane");
-    chunk_plane.store(&base_dir)?;
-    let _chunk_plane = ChunkPlane::load(&base_dir, &chunk_plane.id)?;
-    Ok(())
-  }
-
-  #[test]
-  fn test_chunk_plane_store_all() -> Result<(), AnyError> {
-    init();
-    let mut chunk_plane = ChunkPlane::default();
-    chunk_plane.id = ChunkPlaneId::default();
-    chunk_plane.generate_initial_chunks()?;
-    chunk_plane.export_png(&format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk_plane.png"))?;
-    let base_path = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk_plane_store_all");
-    chunk_plane.store_all(&base_path)?;
-    let _chunk_plane = ChunkPlane::load(&format!("{}/chunk_planes", base_path), &chunk_plane.id)?;
     Ok(())
   }
 }
