@@ -265,7 +265,7 @@ impl ChunkPlane {
       let chunk = ChunkBuilder::new()
         .id(&chunk_id)
         .chunk_plane_id(&self.id)
-        .chunk_seed_id(&chunk_seed_id)
+        .chunk_seed(chunk_seed)
         .name(&format!(
           "Chunk ({}, {})",
           chunk_seed.coordinates.0, chunk_seed.coordinates.1

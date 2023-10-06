@@ -48,6 +48,24 @@ impl FileManager {
       .with_context(|| format!("Unable to write chunk at {}", file_path))?;
     Ok(())
   }
+
+  /// Loads multiple `Chunk`s from disk.
+  pub fn load_multiple(&self, chunk_ids: &Vec<ChunkId>) -> Result<Vec<Chunk>, AnyError> {
+    let mut chunks = Vec::new();
+    for chunk_id in chunk_ids {
+      let chunk = self.load(chunk_id)?;
+      chunks.push(chunk);
+    }
+    Ok(chunks)
+  }
+
+  /// Saves multiple `Chunk`s to disk.
+  pub fn store_multiple(&self, chunks: &Vec<Chunk>) -> Result<(), AnyError> {
+    for chunk in chunks {
+      self.store(chunk)?;
+    }
+    Ok(())
+  }
 }
 
 #[cfg(test)]

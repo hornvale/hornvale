@@ -1,23 +1,14 @@
 use anyhow::Error as AnyError;
 use log::Level as LogLevel;
 
-use crate::chunk::Chunk;
-use crate::chunk::ChunkFactory;
-use crate::chunk::ChunkFactoryStrategy;
 use crate::chunk_rule::ChunkRuleManager;
 use crate::event::attach_logger;
-use crate::event::Event;
 use crate::event::EventType;
-use crate::event::DEFAULT_PRIORITY;
 use crate::game_rule::GameRuleManager;
-use crate::game_state::CurrentRoomIdTrait;
-use crate::game_state::EventQueueTrait;
 use crate::game_state::GameState;
 use crate::game_state::InputReadyFlagTrait;
 use crate::game_state::LoopTimerTrait;
-use crate::game_state::PlayerIdTrait;
 use crate::game_state::QuitFlagTrait;
-use crate::game_state::RoomsTrait;
 use crate::game_state::StartTrait;
 use crate::system::CommandSystem;
 use crate::system::EventSystem;
@@ -90,25 +81,6 @@ impl Game {
       LogLevel::Debug,
       &mut event_system.event_publisher,
     );
-
-    // Let's create a chunk and add its rooms to the game state.
-    let mut chunk = Chunk::default();
-    ChunkFactory::new(ChunkFactoryStrategy::CompassRose).modify_chunk(&mut chunk)?;
-    game_state.insert_rooms_from_chunk(&chunk);
-    let start_room_id = game_state.rooms.keys().next().unwrap().clone();
-
-    // And throw the player in one of the rooms.
-    game_state.set_current_room_id(&start_room_id);
-    let entity_appears_in_room = Event::new(
-      EventType::EntityAppearsInRoom(
-        game_state.get_player_id().clone().into(),
-        game_state.get_current_room_id().clone(),
-      ),
-      DEFAULT_PRIORITY + 100,
-      Vec::new(),
-      Vec::new(),
-    );
-    game_state.enqueue_event(entity_appears_in_room);
 
     // END TEMPORARY
     loop {

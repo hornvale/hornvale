@@ -1,10 +1,11 @@
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::path::PathBuf;
 use std::time::Instant;
+use uuid::Uuid;
 
 use crate::chunk::Chunk;
+use crate::chunk::ChunkManager;
 use crate::command::Command;
 use crate::entity_id::ChunkId;
 use crate::entity_id::ChunkPlaneId;
@@ -29,6 +30,7 @@ pub use _type::*;
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct GameState {
+  pub seed_string: String,
   // Flags.
   pub diegetic_flag: bool,
   pub input_ready_flag: bool,
@@ -42,7 +44,7 @@ pub struct GameState {
   pub current_room_id: RoomId,
   pub player_id: PlayerId,
   // Filesystem.
-  pub local_data_dir: PathBuf,
+  pub local_data_dir: String,
   // Queues.
   pub input_queue: VecDeque<String>,
   #[derivative(Debug = "ignore")]
@@ -51,7 +53,9 @@ pub struct GameState {
   pub event_queue: BinaryHeap<Event>,
   pub output_queue: VecDeque<String>,
   // Chunking system.
+  pub chunk_data_dir: String,
   pub loaded_chunks: HashMap<ChunkId, Chunk>,
+  pub chunk_manager: ChunkManager,
   // Lookups.
   pub entity_id_to_room_id: HashMap<EntityId, RoomId>,
   pub room_id_to_entity_ids: HashMap<RoomId, Vec<EntityId>>,
@@ -62,7 +66,12 @@ pub struct GameState {
 impl GameState {
   /// Creates a new `GameState`.
   pub fn new() -> Self {
+    let seed_string = Uuid::new_v4().to_string();
+    let local_data_dir = LOCAL_DATA_DIR.as_ref().unwrap();
+    let chunk_data_dir = format!("{}/{}", local_data_dir, "chunk_data");
     Self {
+      // Seed string.
+      seed_string: seed_string.clone(),
       // Flags.
       diegetic_flag: false,
       input_ready_flag: false,
@@ -76,17 +85,16 @@ impl GameState {
       current_room_id: RoomId::default(),
       player_id: PlayerId::default(),
       // Filesystem.
-      local_data_dir: LOCAL_DATA_DIR
-        .as_ref()
-        .expect("Unable to construct local data directory.")
-        .to_path_buf(),
+      local_data_dir: local_data_dir.to_string(),
       // Queues.
       input_queue: VecDeque::new(),
       command_queue: VecDeque::new(),
       event_queue: BinaryHeap::new(),
       output_queue: VecDeque::new(),
       // Chunking system.
+      chunk_data_dir: chunk_data_dir.clone(),
       loaded_chunks: HashMap::new(),
+      chunk_manager: ChunkManager::new(&seed_string, &chunk_data_dir),
       // Lookups.
       entity_id_to_room_id: HashMap::new(),
       room_id_to_entity_ids: HashMap::new(),

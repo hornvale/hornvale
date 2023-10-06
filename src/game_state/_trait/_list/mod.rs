@@ -17,6 +17,8 @@ pub mod entity_id_to_room_id;
 pub use entity_id_to_room_id::EntityIdToRoomId as EntityIdToRoomIdTrait;
 pub mod event_queue;
 pub use event_queue::EventQueue as EventQueueTrait;
+pub mod file_manager;
+pub use file_manager::FileManager as FileManagerTrait;
 pub mod game_state;
 pub use game_state::GameState as GameStateTrait;
 pub mod input_queue;

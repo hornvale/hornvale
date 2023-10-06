@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use crate::chunk::Chunk;
 use crate::chunk::ChunkStatus;
 use crate::chunk::ChunkType;
+use crate::chunk_seed::ChunkSeed;
 use crate::entity_id::ChunkId;
 use crate::entity_id::ChunkPlaneId;
-use crate::entity_id::ChunkSeedId;
 use crate::entity_id::RoomId;
 use crate::room::Room;
 
@@ -16,8 +16,8 @@ pub struct Builder {
   pub id: Option<ChunkId>,
   /// The `Chunk`'s `ChunkPlane`'s ID.
   pub chunk_plane_id: Option<ChunkPlaneId>,
-  /// The `Chunk`'s `ChunkSeed`'s ID.
-  pub chunk_seed_id: Option<ChunkSeedId>,
+  /// The `Chunk`'s `ChunkSeed`.
+  pub chunk_seed: Option<ChunkSeed>,
   /// The `Chunk`'s type.
   pub r#type: Option<ChunkType>,
   /// The `Chunk`'s status.
@@ -48,9 +48,9 @@ impl Builder {
     self
   }
 
-  /// Sets the `Chunk`'s `ChunkSeed`'s ID.
-  pub fn chunk_seed_id(mut self, chunk_seed_id: &ChunkSeedId) -> Self {
-    self.chunk_seed_id = Some(chunk_seed_id.clone());
+  /// Sets the `Chunk`'s `ChunkSeed`.
+  pub fn chunk_seed(mut self, chunk_seed: &ChunkSeed) -> Self {
+    self.chunk_seed = Some(chunk_seed.clone());
     self
   }
 
@@ -89,7 +89,7 @@ impl Builder {
     let mut result = Chunk::new(
       self.id.unwrap_or_default(),
       &self.chunk_plane_id.unwrap_or_default(),
-      &self.chunk_seed_id.unwrap_or_default(),
+      &self.chunk_seed.unwrap_or_default(),
       self.r#type.unwrap_or_default(),
       self.name.unwrap_or_default(),
       self.description.unwrap_or_default(),
