@@ -1,3 +1,5 @@
+use anyhow::Error as AnyError;
+
 use crate::chunk::Chunk;
 use crate::chunk_factory::strategies::CompassRoseStrategy;
 
@@ -14,12 +16,12 @@ pub enum Strategy {
 }
 
 impl Strategy {
-  /// Creates a new `Chunk`.
-  pub fn create_chunk(&self) -> Chunk {
+  /// Modifies an empty `Chunk`.
+  pub fn modify_chunk(&self, chunk: &mut Chunk) -> Result<(), AnyError> {
     use Strategy::*;
     match self {
-      Empty => Chunk::default(),
-      CompassRose => CompassRoseStrategy {}.create_chunk(),
+      Empty => Ok(()),
+      CompassRose => CompassRoseStrategy {}.modify_chunk(chunk),
     }
   }
 }

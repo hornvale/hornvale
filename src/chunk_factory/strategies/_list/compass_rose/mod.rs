@@ -1,5 +1,4 @@
 use crate::chunk::Chunk;
-use crate::chunk::ChunkBuilder;
 use crate::passage::PassageBuilder;
 use crate::passage::PassageDirection;
 use crate::passage::PassageType;
@@ -11,11 +10,7 @@ pub struct CompassRose {}
 
 impl CompassRose {
   /// Creates a new `Chunk`.
-  pub fn create_chunk(&self) -> Chunk {
-    let mut chunk = ChunkBuilder::new()
-      .name("Compass Rose")
-      .description("A compass rose.")
-      .build();
+  pub fn modify_chunk(&self, chunk: &mut Chunk) -> Result<(), anyhow::Error> {
     let mut nw_room = RoomBuilder::new()
       .name("Northwest Room")
       .description("A room to the northwest.")
@@ -349,7 +344,9 @@ impl CompassRose {
     chunk.rooms.insert(sw_room.id.clone(), sw_room);
     chunk.rooms.insert(s_room.id.clone(), s_room);
     chunk.rooms.insert(se_room.id.clone(), se_room);
-    chunk
+    chunk.name = "Compass Rose".to_string();
+    chunk.description = "A compass rose.".to_string();
+    Ok(())
   }
 }
 
@@ -365,7 +362,8 @@ mod tests {
   fn test_create_chunk() {
     init();
     let strategy = CompassRose {};
-    let chunk = strategy.create_chunk();
+    let mut chunk = Chunk::default();
+    strategy.modify_chunk(&mut chunk).unwrap();
     assert_eq!(chunk.name, "Compass Rose".to_string());
     assert_eq!(chunk.description, "A compass rose.".to_string());
     assert_eq!(chunk.rooms.len(), 9);
