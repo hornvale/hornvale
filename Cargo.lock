@@ -27,6 +27,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "all_asserts"
+version = "2.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca77caf0ca1057c274cda103cda1363d892b7cad5f2e646afde4df0697bea100"
+
+[[package]]
 name = "anyhow"
 version = "1.0.75"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -473,6 +479,7 @@ checksum = "d77f7ec81a6d05a3abb01ab6eb7590f6083d08449fe5a1c8b1e620283546ccb7"
 name = "hornvale"
 version = "0.1.0"
 dependencies = [
+ "all_asserts",
  "anyhow",
  "colored",
  "convert_case 0.6.0",

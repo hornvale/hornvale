@@ -12,6 +12,8 @@ pub mod factory;
 pub use factory::*;
 pub mod file_manager;
 pub use file_manager::FileManager as ChunkFileManager;
+pub mod manager;
+pub use manager::ChunkManager;
 pub mod status;
 pub use status::Status as ChunkStatus;
 pub mod r#type;

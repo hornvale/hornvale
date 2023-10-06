@@ -6,6 +6,8 @@
 // Crate-wide configuration.
 #[allow(unused_imports)]
 #[macro_use]
+extern crate all_asserts;
+#[macro_use]
 extern crate anyhow;
 #[allow(unused_imports)]
 #[macro_use]
@@ -41,7 +43,6 @@ pub use _macro::*;
 // Remaining modules.
 pub mod action;
 pub mod chunk;
-// pub mod chunk_manager;
 pub mod chunk_plane;
 pub mod chunk_seed;
 pub mod command;
