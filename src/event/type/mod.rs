@@ -3,6 +3,7 @@ use anyhow::Error as AnyError;
 use crate::effect::Effect;
 use crate::effect::EffectType;
 use crate::entity_id::ActorId;
+use crate::entity_id::ChunkId;
 use crate::entity_id::EntityId;
 use crate::entity_id::RoomId;
 use crate::event::Event;
@@ -28,22 +29,24 @@ pub enum Type {
   StartsGame,
   /// QuitsGame -- the player quits.
   QuitsGame,
-  /// ShowsRoomSummary -- a room name, description, etc is shown.
-  ShowsRoomSummary(RoomId),
-  /// Shows the room's name.
-  ShowsRoomNameAsPartOfRoomSummary(String),
-  /// Shows the room's description.
-  ShowsRoomDescriptionAsPartOfRoomSummary(String),
-  /// Shows the room's passages.
-  ShowsRoomPassagesAsPartOfRoomSummary(String),
-  /// An entity appeared in a room.
-  EntityAppearsInRoom(EntityId, RoomId),
-  /// EntityWalksFromRoomToRoom -- an entity walked from one room to another.
-  EntityWalksFromRoomToRoom(ActorId, RoomId, RoomId),
-  /// EntityLooksAroundRoom -- an entity looked around a room.
-  EntityLooksAroundRoom(ActorId, RoomId),
   /// Outputs a blank line.
   OutputsBlankLine,
+  /// An entity appeared in a room.
+  EntityAppearsInRoom(EntityId, RoomId),
+  /// EntityLooksAroundRoom -- an entity looked around a room.
+  EntityLooksAroundRoom(ActorId, RoomId),
+  /// EntityWalksFromRoomToRoom -- an entity walked from one room to another.
+  EntityWalksFromRoomToRoom(ActorId, RoomId, RoomId),
+  /// The player crosses a chunk boundary (old chunk, new chunk)
+  PlayerCrossesChunkBoundary(ChunkId, ChunkId),
+  /// Shows the room's description.
+  ShowsRoomDescriptionAsPartOfRoomSummary(String),
+  /// Shows the room's name.
+  ShowsRoomNameAsPartOfRoomSummary(String),
+  /// Shows the room's passages.
+  ShowsRoomPassagesAsPartOfRoomSummary(String),
+  /// ShowsRoomSummary -- a room name, description, etc is shown.
+  ShowsRoomSummary(RoomId),
 }
 
 impl Type {
@@ -95,6 +98,33 @@ impl Type {
           game_state.enqueue_event(event);
         }
       },
+      PlayerCrossesChunkBoundary(_from_chunk, _to_chunk) => {
+        debug!("Processing player-crosses-chunk-boundary event.");
+      },
+      ShowsRoomDescriptionAsPartOfRoomSummary(room_description) => {
+        debug!("Processing output-room-description event.");
+        Effect::new(
+          EffectType::OutputRoomDescriptionAsPartOfRoomSummary(room_description.clone()),
+          event.backtrace.clone(),
+        )
+        .apply(game_state)?;
+      },
+      ShowsRoomNameAsPartOfRoomSummary(room_name) => {
+        debug!("Processing output-room-name event.");
+        Effect::new(
+          EffectType::OutputRoomNameAsPartOfRoomSummary(room_name.clone()),
+          event.backtrace.clone(),
+        )
+        .apply(game_state)?;
+      },
+      ShowsRoomPassagesAsPartOfRoomSummary(room_passages) => {
+        debug!("Processing output-room-passages event.");
+        Effect::new(
+          EffectType::OutputRoomPassagesAsPartOfRoomSummary(room_passages.clone()),
+          event.backtrace.clone(),
+        )
+        .apply(game_state)?;
+      },
       ShowsRoomSummary(room_id) => {
         debug!("Processing show-room-description event.");
         let (room_name, room_description, room_passages) = {
@@ -119,30 +149,6 @@ impl Type {
           event.backtrace.clone(),
           vec![EventTag::IsInRoom(room_id.clone())],
         ));
-      },
-      ShowsRoomNameAsPartOfRoomSummary(room_name) => {
-        debug!("Processing output-room-name event.");
-        Effect::new(
-          EffectType::OutputRoomNameAsPartOfRoomSummary(room_name.clone()),
-          event.backtrace.clone(),
-        )
-        .apply(game_state)?;
-      },
-      ShowsRoomDescriptionAsPartOfRoomSummary(room_description) => {
-        debug!("Processing output-room-description event.");
-        Effect::new(
-          EffectType::OutputRoomDescriptionAsPartOfRoomSummary(room_description.clone()),
-          event.backtrace.clone(),
-        )
-        .apply(game_state)?;
-      },
-      ShowsRoomPassagesAsPartOfRoomSummary(room_passages) => {
-        debug!("Processing output-room-passages event.");
-        Effect::new(
-          EffectType::OutputRoomPassagesAsPartOfRoomSummary(room_passages.clone()),
-          event.backtrace.clone(),
-        )
-        .apply(game_state)?;
       },
       OutputsBlankLine => {
         debug!("Processing output-blank-line event.");
