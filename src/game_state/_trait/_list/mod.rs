@@ -3,6 +3,8 @@
 // Remember not to edit it manually.
 pub mod chunk_id_to_chunk_plane_id;
 pub use chunk_id_to_chunk_plane_id::ChunkIdToChunkPlaneId as ChunkIdToChunkPlaneIdTrait;
+pub mod chunk_management;
+pub use chunk_management::ChunkManagement as ChunkManagementTrait;
 pub mod chunk_plane_id_to_chunk_ids;
 pub use chunk_plane_id_to_chunk_ids::ChunkPlaneIdToChunkIds as ChunkPlaneIdToChunkIdsTrait;
 pub mod command_queue;
@@ -35,5 +37,7 @@ pub mod room_id_to_entity_ids;
 pub use room_id_to_entity_ids::RoomIdToEntityIds as RoomIdToEntityIdsTrait;
 pub mod rooms;
 pub use rooms::Rooms as RoomsTrait;
+pub mod start;
+pub use start::Start as StartTrait;
 pub mod tick_counter;
 pub use tick_counter::TickCounter as TickCounterTrait;

@@ -18,6 +18,7 @@ use crate::game_state::LoopTimerTrait;
 use crate::game_state::PlayerIdTrait;
 use crate::game_state::QuitFlagTrait;
 use crate::game_state::RoomsTrait;
+use crate::game_state::StartTrait;
 use crate::system::CommandSystem;
 use crate::system::EventSystem;
 use crate::system::InputSystem;
@@ -79,8 +80,7 @@ impl Game {
     game_state.set_input_ready_flag(false);
 
     // Fire the StartedGame event.
-    let start_game_event = Event::new(EventType::StartsGame, DEFAULT_PRIORITY + 10000, Vec::new(), Vec::new());
-    game_state.enqueue_event(start_game_event);
+    game_state.start()?;
 
     // BEGIN TEMPORARY
 

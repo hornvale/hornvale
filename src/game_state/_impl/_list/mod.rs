@@ -3,6 +3,8 @@
 // Remember not to edit it manually.
 pub mod chunk_id_to_chunk_plane_id;
 pub use chunk_id_to_chunk_plane_id::*;
+pub mod chunk_management;
+pub use chunk_management::*;
 pub mod chunk_plane_id_to_chunk_ids;
 pub use chunk_plane_id_to_chunk_ids::*;
 pub mod command_queue;
@@ -35,5 +37,7 @@ pub mod room_id_to_entity_ids;
 pub use room_id_to_entity_ids::*;
 pub mod rooms;
 pub use rooms::*;
+pub mod start;
+pub use start::*;
 pub mod tick_counter;
 pub use tick_counter::*;

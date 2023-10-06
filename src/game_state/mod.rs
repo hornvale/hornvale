@@ -4,6 +4,7 @@ use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::time::Instant;
 
+use crate::chunk::Chunk;
 use crate::command::Command;
 use crate::entity_id::ChunkId;
 use crate::entity_id::ChunkPlaneId;
@@ -50,6 +51,7 @@ pub struct GameState {
   pub event_queue: BinaryHeap<Event>,
   pub output_queue: VecDeque<String>,
   // Chunking system.
+  pub loaded_chunks: HashMap<ChunkId, Chunk>,
   // Lookups.
   pub entity_id_to_room_id: HashMap<EntityId, RoomId>,
   pub room_id_to_entity_ids: HashMap<RoomId, Vec<EntityId>>,
@@ -84,6 +86,7 @@ impl GameState {
       event_queue: BinaryHeap::new(),
       output_queue: VecDeque::new(),
       // Chunking system.
+      loaded_chunks: HashMap::new(),
       // Lookups.
       entity_id_to_room_id: HashMap::new(),
       room_id_to_entity_ids: HashMap::new(),
