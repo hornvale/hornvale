@@ -41,7 +41,6 @@ pub use _macro::*;
 // Remaining modules.
 pub mod action;
 pub mod chunk;
-pub mod chunk_factory;
 // pub mod chunk_manager;
 pub mod chunk_plane;
 pub mod chunk_seed;

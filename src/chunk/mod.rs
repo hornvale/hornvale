@@ -8,6 +8,8 @@ use crate::room::Room;
 
 pub mod builder;
 pub use builder::Builder as ChunkBuilder;
+pub mod factory;
+pub use factory::*;
 pub mod file_manager;
 pub use file_manager::FileManager as ChunkFileManager;
 pub mod status;

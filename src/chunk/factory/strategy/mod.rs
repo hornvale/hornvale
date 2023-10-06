@@ -1,9 +1,9 @@
 use anyhow::Error as AnyError;
 
+use crate::chunk::factory::strategies::CompassRoseStrategy;
 use crate::chunk::Chunk;
-use crate::chunk_factory::strategies::CompassRoseStrategy;
 
-/// The `ChunkFactoryStrategyTrait` enum.
+/// The `ChunkFactoryStrategy` enum.
 ///
 /// This is the strategy for creating a new `Chunk` in the `ChunkFactory`.
 #[derive(Clone, Debug, Default)]

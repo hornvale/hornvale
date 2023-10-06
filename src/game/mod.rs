@@ -2,8 +2,8 @@ use anyhow::Error as AnyError;
 use log::Level as LogLevel;
 
 use crate::chunk::Chunk;
-use crate::chunk_factory::ChunkFactory;
-use crate::chunk_factory::ChunkFactoryStrategy;
+use crate::chunk::ChunkFactory;
+use crate::chunk::ChunkFactoryStrategy;
 use crate::event::attach_logger;
 use crate::event::Event;
 use crate::event::EventType;
