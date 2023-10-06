@@ -15,7 +15,7 @@ use crate::entity_id::ChunkPlaneId;
 /// - creating new, empty `Chunk`s by their `ChunkPlane`s
 /// - populating empty `Chunk`s with the `ChunkFactory`.
 #[derive(Clone, Debug, Default)]
-pub struct ChunkManager {
+pub struct Manager {
   /// The seed string.
   pub seed_string: String,
   /// The base path.
@@ -28,7 +28,7 @@ pub struct ChunkManager {
   pub chunk_plane_ids: HashSet<ChunkPlaneId>,
 }
 
-impl ChunkManager {
+impl Manager {
   /// Creates a new `ChunkManager`.
   pub fn new(seed_string: &str, base_path: &str) -> Self {
     let seed_string = seed_string.to_string();
@@ -84,7 +84,7 @@ mod tests {
     init();
     let seed_string = "test_chunk_manager";
     let base_path = format!("{}/{}", TEMPORARY_TEST_DATA_DIRECTORY, "test_chunk_manager");
-    let mut chunk_manager = ChunkManager::new(seed_string, &base_path);
+    let mut chunk_manager = Manager::new(seed_string, &base_path);
     let mut chunk_plane = chunk_manager.create_chunk_plane("test")?;
     let chunk_plane_id = chunk_plane.id.clone();
     chunk_plane.generate_initial_chunks()?;
