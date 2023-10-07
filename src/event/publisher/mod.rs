@@ -39,7 +39,7 @@ impl EventPublisher {
     let subscribers_by_event_type = self
       .subscribers_by_event_type
       .entry(discriminant(&event_type))
-      .or_insert_with(BTreeSet::new);
+      .or_default();
     subscribers_by_event_type.insert(subscriber.clone());
     self.subscribers_by_id.insert(uuid, subscriber);
   }
