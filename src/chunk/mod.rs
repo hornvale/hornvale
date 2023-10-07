@@ -37,33 +37,14 @@ pub struct Chunk {
   pub name: String,
   /// The `Chunk`'s description.
   pub description: String,
+  /// The `Chunk`'s difficulty level.
+  pub difficulty: u8,
+  /// The `Chunk`'s starting room.
+  pub starting_room_id: Option<RoomId>,
   /// The `Chunk`'s rooms.
   pub rooms: HashMap<RoomId, Room>,
-}
-
-impl Chunk {
-  /// Creates a new `Chunk`.
-  pub fn new(
-    id: ChunkId,
-    chunk_plane_id: &ChunkPlaneId,
-    chunk_seed: &ChunkSeed,
-    r#type: ChunkType,
-    name: String,
-    description: String,
-  ) -> Self {
-    let chunk_plane_id = chunk_plane_id.clone();
-    let chunk_seed = chunk_seed.clone();
-    Self {
-      id,
-      chunk_plane_id,
-      chunk_seed,
-      r#type,
-      status: ChunkStatus::default(),
-      name,
-      description,
-      rooms: HashMap::new(),
-    }
-  }
+  /// Whether this is a viable start location.
+  pub is_startable: bool,
 }
 
 impl Default for Chunk {
@@ -76,7 +57,10 @@ impl Default for Chunk {
       status: ChunkStatus::default(),
       name: "Default Chunk".to_string(),
       description: "This is the default chunk.".to_string(),
+      difficulty: 0,
+      starting_room_id: None,
       rooms: HashMap::new(),
+      is_startable: false,
     }
   }
 }
@@ -105,14 +89,15 @@ mod tests {
     let chunk_id = ChunkId::default();
     let chunk_plane_id = ChunkPlaneId::default();
     let chunk_seed = ChunkSeed::default();
-    let chunk = Chunk::new(
-      chunk_id.clone(),
-      &chunk_plane_id,
-      &chunk_seed,
-      ChunkType::default(),
-      "Test Chunk".to_string(),
-      "This is a test chunk.".to_string(),
-    );
+    let chunk = Chunk {
+      id: chunk_id.clone(),
+      chunk_plane_id: chunk_plane_id.clone(),
+      chunk_seed: chunk_seed.clone(),
+      r#type: ChunkType::default(),
+      name: "Test Chunk".to_string(),
+      description: "This is a test chunk.".to_string(),
+      ..Default::default()
+    };
     assert_eq!(chunk.id, chunk_id);
     assert_eq!(chunk.chunk_plane_id, chunk_plane_id);
     assert_eq!(chunk.chunk_seed, chunk_seed);

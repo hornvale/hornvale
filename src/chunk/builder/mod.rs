@@ -26,8 +26,14 @@ pub struct Builder {
   pub name: Option<String>,
   /// The `Chunk`'s description.
   pub description: Option<String>,
+  /// The `Chunk`'s difficulty.
+  pub difficulty: Option<u8>,
+  /// The `Chunk`'s starting room.
+  pub starting_room_id: Option<RoomId>,
   /// The `Chunk`'s rooms.
   pub rooms: Option<HashMap<RoomId, Room>>,
+  /// Whether this is a viable start location.
+  pub is_startable: bool,
 }
 
 impl Builder {
@@ -78,29 +84,45 @@ impl Builder {
     self
   }
 
+  /// Sets the `Chunk`'s difficulty.
+  pub fn difficulty(mut self, difficulty: u8) -> Self {
+    self.difficulty = Some(difficulty);
+    self
+  }
+
+  /// Sets the `Chunk`'s starting room.
+  pub fn starting_room_id(mut self, starting_room_id: &RoomId) -> Self {
+    self.starting_room_id = Some(starting_room_id.clone());
+    self
+  }
+
   /// Sets the `Chunk`'s rooms.
   pub fn rooms(mut self, rooms: &HashMap<RoomId, Room>) -> Self {
     self.rooms = Some(rooms.clone());
     self
   }
 
+  /// Sets whether this is a viable start location.
+  pub fn is_startable(mut self, is_startable: bool) -> Self {
+    self.is_startable = is_startable;
+    self
+  }
+
   /// Builds the `Chunk`.
   pub fn build(self) -> Chunk {
-    let mut result = Chunk::new(
-      self.id.unwrap_or_default(),
-      &self.chunk_plane_id.unwrap_or_default(),
-      &self.chunk_seed.unwrap_or_default(),
-      self.r#type.unwrap_or_default(),
-      self.name.unwrap_or_default(),
-      self.description.unwrap_or_default(),
-    );
-    if let Some(rooms) = self.rooms {
-      result.rooms = rooms;
+    Chunk {
+      id: self.id.unwrap_or_default(),
+      chunk_plane_id: self.chunk_plane_id.unwrap_or_default(),
+      chunk_seed: self.chunk_seed.unwrap_or_default(),
+      r#type: self.r#type.unwrap_or_default(),
+      status: self.status.unwrap_or_default(),
+      name: self.name.unwrap_or_default(),
+      description: self.description.unwrap_or_default(),
+      difficulty: self.difficulty.unwrap_or_default(),
+      starting_room_id: self.starting_room_id,
+      rooms: self.rooms.unwrap_or_default(),
+      is_startable: self.is_startable,
     }
-    if let Some(status) = self.status {
-      result.status = status;
-    }
-    result
   }
 }
 

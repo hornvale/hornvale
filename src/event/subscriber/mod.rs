@@ -77,9 +77,9 @@ impl Default for EventSubscriber {
       priority: DEFAULT_PRIORITY,
       event_type: EventType::default(),
       filter_rule: EventFilterRule::Always,
-      should_process: Arc::new(|_, _| None),
-      will_process: Arc::new(|_, _| {}),
-      did_process: Arc::new(|_, _| {}),
+      should_process: Arc::new(|_, _| Ok(None)),
+      will_process: Arc::new(|_, _| Ok(())),
+      did_process: Arc::new(|_, _| Ok(())),
       is_enabled: true,
     }
   }

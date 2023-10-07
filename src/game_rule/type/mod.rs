@@ -87,12 +87,12 @@ impl Type {
   pub fn get_should_process(&mut self) -> ShouldProcessFn {
     use Type::*;
     match self {
-      ShowRoomSummaryWhenPlayerAppearsInRoom => Arc::new(|_event, _game_state| None),
-      ShowRoomSummaryWhenPlayerEntersRoom => Arc::new(|_event, _game_state| None),
-      StyleRoomNameWhenPartOfRoomSummary => Arc::new(|_event, _game_state| None),
-      StyleRoomDescriptionWhenPartOfRoomSummary => Arc::new(|_event, _game_state| None),
-      StyleRoomPassagesWhenPartOfRoomSummary => Arc::new(|_event, _game_state| None),
-      OutputBlankLineAfterRoomSummary => Arc::new(|_event, _game_state| None),
+      ShowRoomSummaryWhenPlayerAppearsInRoom => Arc::new(|_event, _game_state| Ok(None)),
+      ShowRoomSummaryWhenPlayerEntersRoom => Arc::new(|_event, _game_state| Ok(None)),
+      StyleRoomNameWhenPartOfRoomSummary => Arc::new(|_event, _game_state| Ok(None)),
+      StyleRoomDescriptionWhenPartOfRoomSummary => Arc::new(|_event, _game_state| Ok(None)),
+      StyleRoomPassagesWhenPartOfRoomSummary => Arc::new(|_event, _game_state| Ok(None)),
+      OutputBlankLineAfterRoomSummary => Arc::new(|_event, _game_state| Ok(None)),
     }
   }
 
@@ -100,24 +100,27 @@ impl Type {
   pub fn get_will_process(&mut self) -> WillProcessFn {
     use Type::*;
     match self {
-      ShowRoomSummaryWhenPlayerAppearsInRoom => Arc::new(|_event, _game_state| {}),
-      ShowRoomSummaryWhenPlayerEntersRoom => Arc::new(|_event, _game_state| {}),
+      ShowRoomSummaryWhenPlayerAppearsInRoom => Arc::new(|_event, _game_state| Ok(())),
+      ShowRoomSummaryWhenPlayerEntersRoom => Arc::new(|_event, _game_state| Ok(())),
       StyleRoomNameWhenPartOfRoomSummary => Arc::new(|_event, _game_state| {
         if let EventType::ShowsRoomNameAsPartOfRoomSummary(ref mut room_name) = &mut _event.r#type {
           *room_name = format!("{}", room_name.bold());
         }
+        Ok(())
       }),
       StyleRoomDescriptionWhenPartOfRoomSummary => Arc::new(|_event, _game_state| {
         if let EventType::ShowsRoomDescriptionAsPartOfRoomSummary(ref mut room_description) = &mut _event.r#type {
           *room_description = format!("{}", room_description.italic());
         }
+        Ok(())
       }),
       StyleRoomPassagesWhenPartOfRoomSummary => Arc::new(|_event, _game_state| {
         if let EventType::ShowsRoomPassagesAsPartOfRoomSummary(ref mut room_passages) = &mut _event.r#type {
           *room_passages = format!("{}", room_passages.cyan());
         }
+        Ok(())
       }),
-      OutputBlankLineAfterRoomSummary => Arc::new(|_event, _game_state| {}),
+      OutputBlankLineAfterRoomSummary => Arc::new(|_event, _game_state| Ok(())),
     }
   }
 
@@ -125,35 +128,38 @@ impl Type {
   pub fn get_did_process(&mut self) -> DidProcessFn {
     use Type::*;
     match self {
-      ShowRoomSummaryWhenPlayerAppearsInRoom => Arc::new(|_event, game_state| {
-        if let EventType::EntityAppearsInRoom(_entity_id, room_id) = &_event.r#type {
+      ShowRoomSummaryWhenPlayerAppearsInRoom => Arc::new(|event, game_state| {
+        if let EventType::EntityAppearsInRoom(_entity_id, room_id) = &event.r#type {
           let event = EventBuilder::new()
             .priority(0)
             .r#type(EventType::ShowsRoomSummary(room_id.clone()))
             .build();
           game_state.enqueue_event(event);
         }
+        Ok(())
       }),
-      ShowRoomSummaryWhenPlayerEntersRoom => Arc::new(|_event, game_state| {
-        if let EventType::EntityWalksFromRoomToRoom(_entity_id, _start_room_id, end_room_id) = &_event.r#type {
+      ShowRoomSummaryWhenPlayerEntersRoom => Arc::new(|event, game_state| {
+        if let EventType::EntityWalksFromRoomToRoom(_entity_id, _start_room_id, end_room_id) = &event.r#type {
           let event = EventBuilder::new()
             .priority(0)
             .r#type(EventType::ShowsRoomSummary(end_room_id.clone()))
             .build();
           game_state.enqueue_event(event);
         }
+        Ok(())
       }),
-      StyleRoomNameWhenPartOfRoomSummary => Arc::new(|_event, _game_state| {}),
-      StyleRoomDescriptionWhenPartOfRoomSummary => Arc::new(|_event, _game_state| {}),
-      StyleRoomPassagesWhenPartOfRoomSummary => Arc::new(|_event, _game_state| {}),
-      OutputBlankLineAfterRoomSummary => Arc::new(|_event, game_state| {
-        if let EventType::ShowsRoomPassagesAsPartOfRoomSummary(_room_passages) = &_event.r#type {
+      StyleRoomNameWhenPartOfRoomSummary => Arc::new(|_event, _game_state| Ok(())),
+      StyleRoomDescriptionWhenPartOfRoomSummary => Arc::new(|_event, _game_state| Ok(())),
+      StyleRoomPassagesWhenPartOfRoomSummary => Arc::new(|_event, _game_state| Ok(())),
+      OutputBlankLineAfterRoomSummary => Arc::new(|event, game_state| {
+        if let EventType::ShowsRoomPassagesAsPartOfRoomSummary(_room_passages) = &event.r#type {
           let event = EventBuilder::new()
             .priority(0)
             .r#type(EventType::OutputsBlankLine)
             .build();
           game_state.enqueue_event(event);
         }
+        Ok(())
       }),
     }
   }

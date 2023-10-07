@@ -71,7 +71,7 @@ impl EventPublisher {
     if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
       let result = subscribers
         .iter()
-        .all(|s| (s.borrow().should_process)(event, game_state) != Some(false));
+        .all(|s| (s.borrow().should_process)(event, game_state).ok() != Some(Some(false)));
       Ok(result)
     } else {
       Ok(true)
@@ -81,9 +81,9 @@ impl EventPublisher {
   pub fn will_process(&mut self, event: &mut Event, game_state: &GameState) -> Result<(), AnyError> {
     let discriminant = discriminant(&event.r#type);
     if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
-      subscribers
-        .iter()
-        .for_each(|s| (s.borrow().will_process)(event, game_state));
+      subscribers.iter().for_each(|s| {
+        (s.borrow().will_process)(event, game_state).ok();
+      });
     }
     Ok(())
   }
@@ -91,9 +91,9 @@ impl EventPublisher {
   pub fn did_process(&mut self, event: &Event, game_state: &mut GameState) -> Result<(), AnyError> {
     let discriminant = discriminant(&event.r#type);
     if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
-      subscribers
-        .iter()
-        .for_each(|s| (s.borrow().did_process)(event, game_state));
+      subscribers.iter().for_each(|s| {
+        (s.borrow().did_process)(event, game_state).ok();
+      });
     }
     Ok(())
   }
@@ -193,9 +193,9 @@ mod tests {
       1,
       EventType::NoOp,
       EventFilterRule::Always,
-      Arc::new(|_, _| None),
-      Arc::new(|_, _| {}),
-      Arc::new(|_, _| {}),
+      Arc::new(|_, _| Ok(None)),
+      Arc::new(|_, _| Ok(())),
+      Arc::new(|_, _| Ok(())),
       true,
     );
     let subscriber2 = EventSubscriber::new(
@@ -203,9 +203,9 @@ mod tests {
       2,
       EventType::NoOp,
       EventFilterRule::Always,
-      Arc::new(|_, _| None),
-      Arc::new(|_, _| {}),
-      Arc::new(|_, _| {}),
+      Arc::new(|_, _| Ok(None)),
+      Arc::new(|_, _| Ok(())),
+      Arc::new(|_, _| Ok(())),
       true,
     );
     let subscriber3 = EventSubscriber::new(
@@ -213,9 +213,9 @@ mod tests {
       3,
       EventType::NoOp,
       EventFilterRule::Always,
-      Arc::new(|_, _| None),
-      Arc::new(|_, _| {}),
-      Arc::new(|_, _| {}),
+      Arc::new(|_, _| Ok(None)),
+      Arc::new(|_, _| Ok(())),
+      Arc::new(|_, _| Ok(())),
       true,
     );
     event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber2)));

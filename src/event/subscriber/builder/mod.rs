@@ -95,9 +95,9 @@ impl Builder {
       priority: self.priority.unwrap_or(DEFAULT_PRIORITY),
       event_type: self.event_type.unwrap_or(EventType::default()),
       filter_rule: self.filter_rule.unwrap_or(EventFilterRule::Always),
-      should_process: self.should_process.unwrap_or_else(|| Arc::new(|_, _| None)),
-      will_process: self.will_process.unwrap_or_else(|| Arc::new(|_, _| {})),
-      did_process: self.did_process.unwrap_or_else(|| Arc::new(|_, _| {})),
+      should_process: self.should_process.unwrap_or_else(|| Arc::new(|_, _| Ok(None))),
+      will_process: self.will_process.unwrap_or_else(|| Arc::new(|_, _| Ok(()))),
+      did_process: self.did_process.unwrap_or_else(|| Arc::new(|_, _| Ok(()))),
       is_enabled: self.is_enabled.unwrap_or(true),
     }
   }

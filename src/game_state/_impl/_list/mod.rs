@@ -35,6 +35,8 @@ pub mod player_id;
 pub use player_id::*;
 pub mod quit_flag;
 pub use quit_flag::*;
+pub mod room_id_to_chunk_id;
+pub use room_id_to_chunk_id::*;
 pub mod room_id_to_entity_ids;
 pub use room_id_to_entity_ids::*;
 pub mod rooms;

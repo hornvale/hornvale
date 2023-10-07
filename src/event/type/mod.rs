@@ -4,6 +4,7 @@ use crate::effect::Effect;
 use crate::effect::EffectType;
 use crate::entity_id::ActorId;
 use crate::entity_id::ChunkId;
+use crate::entity_id::ChunkPlaneId;
 use crate::entity_id::EntityId;
 use crate::entity_id::RoomId;
 use crate::event::Event;
@@ -31,6 +32,14 @@ pub enum Type {
   QuitsGame,
   /// Outputs a blank line.
   OutputsBlankLine,
+  /// A chunk is loaded.
+  ChunkIsLoaded(ChunkId),
+  /// A chunk is unloaded.
+  ChunkIsUnloaded(ChunkId),
+  /// A chunk plane is loaded.
+  ChunkPlaneIsLoaded(ChunkPlaneId),
+  /// A chunk plane is unloaded.
+  ChunkPlaneIsUnloaded(ChunkPlaneId),
   /// An entity appeared in a room.
   EntityAppearsInRoom(EntityId, RoomId),
   /// EntityLooksAroundRoom -- an entity looked around a room.
@@ -69,6 +78,24 @@ impl Type {
       QuitsGame => {
         debug!("Processing quit-game event.");
         Effect::new(EffectType::SetQuitFlag(true), event.backtrace.clone()).apply(game_state)?;
+      },
+      ChunkIsLoaded(chunk_id) => {
+        debug!("Processing chunk-is-loaded event for chunk {}.", chunk_id);
+      },
+      ChunkIsUnloaded(chunk_id) => {
+        debug!("Processing chunk-is-unloaded event for chunk {}.", chunk_id);
+      },
+      ChunkPlaneIsLoaded(chunk_plane_id) => {
+        debug!(
+          "Processing chunk-plane-is-loaded event for chunk-plane {}.",
+          chunk_plane_id
+        );
+      },
+      ChunkPlaneIsUnloaded(chunk_plane_id) => {
+        debug!(
+          "Processing chunk-plane-is-unloaded event for chunk-plane {}.",
+          chunk_plane_id
+        );
       },
       EntityAppearsInRoom(entity_id, room_id) => {
         debug!("Processing entity-appears-in-room event.");

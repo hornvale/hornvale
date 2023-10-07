@@ -35,6 +35,8 @@ pub mod player_id;
 pub use player_id::PlayerId as PlayerIdTrait;
 pub mod quit_flag;
 pub use quit_flag::QuitFlag as QuitFlagTrait;
+pub mod room_id_to_chunk_id;
+pub use room_id_to_chunk_id::RoomIdToChunkId as RoomIdToChunkIdTrait;
 pub mod room_id_to_entity_ids;
 pub use room_id_to_entity_ids::RoomIdToEntityIds as RoomIdToEntityIdsTrait;
 pub mod rooms;

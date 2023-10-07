@@ -127,7 +127,7 @@ impl Manager {
 
   /// Map an empty chunk.
   pub fn map_empty_chunk(&mut self, chunk: &mut Chunk) -> Result<(), AnyError> {
-    let chunk_map_builder = ChunkMapBuilder::new(ChunkMapBuilderStrategy::BlankFill);
+    let chunk_map_builder = ChunkMapBuilder::new(ChunkMapBuilderStrategy::CompassRose);
     chunk_map_builder.map_chunk(chunk)?;
     chunk.status = ChunkStatus::Mapped;
     self.chunk_file_manager.store(chunk)?;

@@ -7,12 +7,13 @@ use crate::passage::PassageType;
 use crate::room::RoomBuilder;
 
 /// The `CompassRoseStrategy` struct.
-#[derive(Clone)]
+#[derive(Clone, Debug, Default, Display)]
 pub struct CompassRose {}
 
 impl CompassRose {
   /// Maps a new `Chunk`.
   pub fn map_chunk(&self, chunk: &mut Chunk) -> Result<(), AnyError> {
+    debug!("Mapping chunk: {} with {}", chunk.id, self);
     let mut nw_room = RoomBuilder::new()
       .name("Northwest Room")
       .description("A room to the northwest.")
@@ -341,13 +342,16 @@ impl CompassRose {
     chunk.rooms.insert(n_room.id.clone(), n_room);
     chunk.rooms.insert(ne_room.id.clone(), ne_room);
     chunk.rooms.insert(w_room.id.clone(), w_room);
-    chunk.rooms.insert(center_room.id.clone(), center_room);
+    chunk.rooms.insert(center_room.id.clone(), center_room.clone());
     chunk.rooms.insert(e_room.id.clone(), e_room);
     chunk.rooms.insert(sw_room.id.clone(), sw_room);
     chunk.rooms.insert(s_room.id.clone(), s_room);
     chunk.rooms.insert(se_room.id.clone(), se_room);
     chunk.name = "Compass Rose".to_string();
     chunk.description = "A compass rose.".to_string();
+    let center_room_id = center_room.id;
+    chunk.starting_room_id = Some(center_room_id);
+    chunk.is_startable = true;
     Ok(())
   }
 }
