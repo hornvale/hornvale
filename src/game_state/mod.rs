@@ -2,13 +2,22 @@ use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::time::Instant;
+use uuid::Uuid;
 
+use crate::chunk::Chunk;
+use crate::chunk::ChunkManager;
+use crate::chunk_plane::ChunkPlane;
 use crate::command::Command;
+use crate::entity_id::ChunkId;
+use crate::entity_id::ChunkPlaneId;
+use crate::entity_id::EntityId;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
 use crate::event::Event;
 use crate::room::Room;
 
+pub mod _constant;
+pub use _constant::*;
 pub mod _impl;
 pub use _impl::*;
 pub mod _trait;
@@ -22,43 +31,80 @@ pub use _type::*;
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct GameState {
-  /// Flags.
+  pub seed_string: String,
+  // Flags.
   pub diegetic_flag: bool,
   pub input_ready_flag: bool,
   pub quit_flag: bool,
-  /// Counters.
+  // Counters.
   pub tick_counter: TickCounter,
-  /// Times and timers.
+  // Times and timers.
   pub loop_timer: Instant,
-  /// Entities.
+  // Entities.
   pub rooms: HashMap<RoomId, Room>,
-  pub current_room_id: RoomId,
+  pub current_room_id: Option<RoomId>,
   pub player_id: PlayerId,
-  /// Queues.
+  // Filesystem.
+  pub local_data_dir: String,
+  // Queues.
   pub input_queue: VecDeque<String>,
   #[derivative(Debug = "ignore")]
   pub command_queue: VecDeque<Command>,
   #[derivative(Debug = "ignore")]
   pub event_queue: BinaryHeap<Event>,
   pub output_queue: VecDeque<String>,
+  // Chunking system.
+  pub chunk_data_dir: String,
+  pub chunk_manager: ChunkManager,
+  pub loaded_chunks: HashMap<ChunkId, Chunk>,
+  pub loaded_chunk_planes: HashMap<ChunkPlaneId, ChunkPlane>,
+  // Lookups.
+  pub entity_id_to_room_id: HashMap<EntityId, RoomId>,
+  pub room_id_to_chunk_id: HashMap<RoomId, ChunkId>,
+  pub room_id_to_entity_ids: HashMap<RoomId, Vec<EntityId>>,
+  pub chunk_id_to_chunk_plane_id: HashMap<ChunkId, ChunkPlaneId>,
+  pub chunk_plane_id_to_chunk_ids: HashMap<ChunkPlaneId, Vec<ChunkId>>,
 }
 
 impl GameState {
   /// Creates a new `GameState`.
   pub fn new() -> Self {
+    let seed_string = Uuid::new_v4().to_string();
+    let local_data_dir = LOCAL_DATA_DIR.as_ref().unwrap();
+    let chunk_data_dir = format!("{}/{}", local_data_dir, "chunk_data");
     Self {
+      // Seed string.
+      seed_string: seed_string.clone(),
+      // Flags.
       diegetic_flag: false,
       input_ready_flag: false,
       quit_flag: false,
+      // Counters.
       tick_counter: 0,
+      // Times and timers.
       loop_timer: Instant::now(),
+      // Entities.
       rooms: HashMap::new(),
-      current_room_id: RoomId::default(),
+      current_room_id: None,
       player_id: PlayerId::default(),
+      // Filesystem.
+      local_data_dir: local_data_dir.to_string(),
+      // Queues.
       input_queue: VecDeque::new(),
       command_queue: VecDeque::new(),
       event_queue: BinaryHeap::new(),
       output_queue: VecDeque::new(),
+      // Chunking system.
+      chunk_data_dir: chunk_data_dir.clone(),
+      chunk_manager: ChunkManager::new(&seed_string, &chunk_data_dir),
+      loaded_chunks: HashMap::new(),
+      loaded_chunk_planes: HashMap::new(),
+      // Lookups.
+      entity_id_to_room_id: HashMap::new(),
+      room_id_to_chunk_id: HashMap::new(),
+      room_id_to_entity_ids: HashMap::new(),
+      chunk_id_to_chunk_plane_id: HashMap::new(),
+      chunk_plane_id_to_chunk_ids: HashMap::new(),
     }
   }
 }

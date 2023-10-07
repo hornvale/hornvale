@@ -1,4 +1,5 @@
 use crate::entity_id::BaseId;
+use crate::entity_id::IntoBaseIdTrait;
 use crate::entity_id::IntoEntityIdTrait;
 
 /// The `EntityId` type.
@@ -15,6 +16,12 @@ impl EntityId {
   }
 }
 
+impl IntoBaseIdTrait for EntityId {
+  fn into_base_id(self) -> BaseId {
+    self.0
+  }
+}
+
 impl From<EntityId> for BaseId {
   fn from(id: EntityId) -> Self {
     id.0
@@ -27,5 +34,17 @@ where
 {
   fn from(id: T) -> Self {
     Self(id.into_base_id())
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_entity_id_from_base_id() {
+    let base_id = BaseId::default();
+    let entity_id = EntityId(base_id.clone());
+    assert_eq!(base_id, entity_id.into_base_id());
   }
 }

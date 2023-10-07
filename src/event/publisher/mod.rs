@@ -32,15 +32,14 @@ impl EventPublisher {
     }
   }
 
-  pub fn add_subscriber(&mut self, subscriber: EventSubscriber) {
-    let subscriber = Rc::new(RefCell::new(subscriber));
+  pub fn add_subscriber(&mut self, subscriber: Rc<RefCell<EventSubscriber>>) {
     let event_type = subscriber.borrow().event_type.clone();
     let uuid = subscriber.borrow().uuid;
     #[allow(clippy::mutable_key_type)]
     let subscribers_by_event_type = self
       .subscribers_by_event_type
       .entry(discriminant(&event_type))
-      .or_insert_with(BTreeSet::new);
+      .or_default();
     subscribers_by_event_type.insert(subscriber.clone());
     self.subscribers_by_id.insert(uuid, subscriber);
   }
@@ -72,7 +71,7 @@ impl EventPublisher {
     if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
       let result = subscribers
         .iter()
-        .all(|s| (s.borrow().should_process)(event, game_state) != Some(false));
+        .all(|s| (s.borrow().should_process)(event, game_state).ok() != Some(Some(false)));
       Ok(result)
     } else {
       Ok(true)
@@ -82,9 +81,9 @@ impl EventPublisher {
   pub fn will_process(&mut self, event: &mut Event, game_state: &GameState) -> Result<(), AnyError> {
     let discriminant = discriminant(&event.r#type);
     if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
-      subscribers
-        .iter()
-        .for_each(|s| (s.borrow().will_process)(event, game_state));
+      subscribers.iter().for_each(|s| {
+        (s.borrow().will_process)(event, game_state).ok();
+      });
     }
     Ok(())
   }
@@ -92,9 +91,9 @@ impl EventPublisher {
   pub fn did_process(&mut self, event: &Event, game_state: &mut GameState) -> Result<(), AnyError> {
     let discriminant = discriminant(&event.r#type);
     if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
-      subscribers
-        .iter()
-        .for_each(|s| (s.borrow().did_process)(event, game_state));
+      subscribers.iter().for_each(|s| {
+        (s.borrow().did_process)(event, game_state).ok();
+      });
     }
     Ok(())
   }
@@ -120,7 +119,7 @@ mod tests {
     init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
-    event_publisher.add_subscriber(subscriber);
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber)));
   }
 
   #[test]
@@ -129,7 +128,7 @@ mod tests {
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
     let uuid = subscriber.uuid.clone();
-    event_publisher.add_subscriber(subscriber);
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber)));
     let _subscriber = event_publisher.remove_subscriber(&uuid);
   }
 
@@ -138,8 +137,8 @@ mod tests {
     init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
-    event_publisher.add_subscriber(subscriber);
-    let mut event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![]);
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber)));
+    let mut event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![], vec![]);
     let mut game_state = GameState::new();
     event_publisher.publish_event(&mut event, &mut game_state).unwrap();
   }
@@ -149,8 +148,8 @@ mod tests {
     init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
-    event_publisher.add_subscriber(subscriber);
-    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![]);
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber)));
+    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![], vec![]);
     let mut game_state = GameState::new();
     event_publisher.should_process(&event, &mut game_state).unwrap();
   }
@@ -160,8 +159,8 @@ mod tests {
     init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
-    event_publisher.add_subscriber(subscriber);
-    let mut event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![]);
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber)));
+    let mut event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![], vec![]);
     let game_state = GameState::new();
     event_publisher.will_process(&mut event, &game_state).unwrap();
   }
@@ -171,8 +170,8 @@ mod tests {
     init();
     let mut event_publisher = EventPublisher::new();
     let subscriber = EventSubscriber::default();
-    event_publisher.add_subscriber(subscriber);
-    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![]);
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber)));
+    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![], vec![]);
     let mut game_state = GameState::new();
     event_publisher.did_process(&event, &mut game_state).unwrap();
   }
@@ -194,31 +193,34 @@ mod tests {
       1,
       EventType::NoOp,
       EventFilterRule::Always,
-      Arc::new(|_, _| None),
-      Arc::new(|_, _| {}),
-      Arc::new(|_, _| {}),
+      Arc::new(|_, _| Ok(None)),
+      Arc::new(|_, _| Ok(())),
+      Arc::new(|_, _| Ok(())),
+      true,
     );
     let subscriber2 = EventSubscriber::new(
       String::from("Subscriber 2"),
       2,
       EventType::NoOp,
       EventFilterRule::Always,
-      Arc::new(|_, _| None),
-      Arc::new(|_, _| {}),
-      Arc::new(|_, _| {}),
+      Arc::new(|_, _| Ok(None)),
+      Arc::new(|_, _| Ok(())),
+      Arc::new(|_, _| Ok(())),
+      true,
     );
     let subscriber3 = EventSubscriber::new(
       String::from("Subscriber 3"),
       3,
       EventType::NoOp,
       EventFilterRule::Always,
-      Arc::new(|_, _| None),
-      Arc::new(|_, _| {}),
-      Arc::new(|_, _| {}),
+      Arc::new(|_, _| Ok(None)),
+      Arc::new(|_, _| Ok(())),
+      Arc::new(|_, _| Ok(())),
+      true,
     );
-    event_publisher.add_subscriber(subscriber2);
-    event_publisher.add_subscriber(subscriber1);
-    event_publisher.add_subscriber(subscriber3);
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber2)));
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber1)));
+    event_publisher.add_subscriber(Rc::new(RefCell::new(subscriber3)));
     let mut subscribers = event_publisher
       .subscribers_by_event_type
       .get(&discriminant(&EventType::NoOp))

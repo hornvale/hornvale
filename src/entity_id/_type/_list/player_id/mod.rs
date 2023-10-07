@@ -1,4 +1,5 @@
 use crate::entity_id::BaseId;
+use crate::entity_id::IntoActorIdTrait;
 use crate::entity_id::IntoBaseIdTrait;
 use crate::entity_id::IntoEntityIdTrait;
 use crate::entity_id::IntoPlayerIdTrait;
@@ -15,6 +16,8 @@ impl IntoBaseIdTrait for PlayerId {
     self.0
   }
 }
+
+impl IntoActorIdTrait for PlayerId {}
 
 impl IntoEntityIdTrait for PlayerId {}
 
@@ -37,5 +40,17 @@ where
 {
   fn from(id: T) -> Self {
     Self(id.into_base_id())
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_player_id_from_base_id() {
+    let base_id = BaseId::default();
+    let player_id = PlayerId(base_id.clone());
+    assert_eq!(base_id, player_id.into_base_id());
   }
 }

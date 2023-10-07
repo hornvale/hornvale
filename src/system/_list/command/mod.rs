@@ -22,10 +22,12 @@ impl SystemTrait<GameState> for Command {
   fn run(&mut self, game_state: &mut GameState) {
     debug!("Running command system.");
     while let Some(command) = game_state.dequeue_command() {
-      command
+      if let Err(error) = command
         .execute(game_state)
         .map_err(|error| error!("Error running command: {}", error))
-        .ok();
+      {
+        eprintln!("{:?}", error);
+      }
     }
     let effect = Effect::new(EffectType::SetInputReadyFlag(true), vec![]);
     effect.apply(game_state).ok();

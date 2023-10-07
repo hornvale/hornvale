@@ -1,3 +1,4 @@
+use crate::chunk::Chunk;
 use crate::entity_id::RoomId;
 use crate::game_state::GameState;
 use crate::game_state::RoomsTrait;
@@ -14,11 +15,19 @@ impl RoomsTrait for GameState {
   }
   /// Insert a room.
   fn insert_room(&mut self, room: Room) {
-    self.rooms.insert(room.id.clone(), room);
+    if !self.rooms.contains_key(&room.id) {
+      self.rooms.insert(room.id.clone(), room);
+    }
   }
   /// Remove a room by its id.
   fn remove_room(&mut self, room_id: &RoomId) -> Option<Room> {
     self.rooms.remove(room_id)
+  }
+  /// Insert rooms from a Chunk.
+  fn insert_rooms_from_chunk(&mut self, chunk: &Chunk) {
+    for room in chunk.rooms.values() {
+      self.insert_room(room.clone());
+    }
   }
 }
 

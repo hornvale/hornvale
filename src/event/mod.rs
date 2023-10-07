@@ -6,8 +6,12 @@ use crate::game_state::GameState;
 
 pub mod _constant;
 pub use _constant::*;
+pub mod builder;
+pub use builder::*;
 pub mod filter_rule;
 pub use filter_rule::FilterRule as EventFilterRule;
+pub mod logger;
+pub use logger::*;
 pub mod publisher;
 pub use publisher::*;
 pub mod subscriber;
@@ -28,10 +32,12 @@ pub struct Event {
   pub backtrace: Vec<String>,
   /// Event priority.
   pub priority: i64,
+  /// Event tags.
+  pub tags: Vec<EventTag>,
 }
 
 impl Event {
-  pub fn new(r#type: EventType, priority: i64, backtrace: Vec<String>) -> Self {
+  pub fn new(r#type: EventType, priority: i64, backtrace: Vec<String>, tags: Vec<EventTag>) -> Self {
     let uuid = Uuid::new_v4();
     let mut backtrace = backtrace;
     backtrace.push(format!("Event {:?}:{}", r#type, uuid));
@@ -40,6 +46,7 @@ impl Event {
       uuid,
       priority,
       backtrace,
+      tags,
     }
   }
 
@@ -89,7 +96,7 @@ mod tests {
 
   #[test]
   fn test_new() {
-    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![]);
+    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![], vec![]);
     assert_eq!(event.r#type, EventType::NoOp);
     assert_eq!(event.backtrace.len(), 1);
   }
@@ -97,25 +104,25 @@ mod tests {
   #[test]
   fn test_process() {
     let mut game_state = GameState::new();
-    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![]);
+    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![], vec![]);
     event.process(&mut game_state).unwrap();
   }
 
   #[test]
   fn test_priority_queue() {
-    let event_1 = Event::new(EventType::NoOp, 1, vec![]);
-    let event_2 = Event::new(EventType::NoOp, 2, vec![]);
-    let event_3 = Event::new(EventType::NoOp, 3, vec![]);
-    let event_4 = Event::new(EventType::NoOp, 4, vec![]);
-    let event_5 = Event::new(EventType::NoOp, 5, vec![]);
-    let event_6 = Event::new(EventType::NoOp, 6, vec![]);
-    let event_7 = Event::new(EventType::NoOp, 7, vec![]);
-    let event_8 = Event::new(EventType::NoOp, 8, vec![]);
-    let event_9 = Event::new(EventType::NoOp, 9, vec![]);
-    let event_10 = Event::new(EventType::NoOp, 10, vec![]);
-    let event_11 = Event::new(EventType::NoOp, 11, vec![]);
-    let event_12 = Event::new(EventType::NoOp, 12, vec![]);
-    let event_13 = Event::new(EventType::NoOp, 13, vec![]);
+    let event_1 = Event::new(EventType::NoOp, 1, vec![], vec![]);
+    let event_2 = Event::new(EventType::NoOp, 2, vec![], vec![]);
+    let event_3 = Event::new(EventType::NoOp, 3, vec![], vec![]);
+    let event_4 = Event::new(EventType::NoOp, 4, vec![], vec![]);
+    let event_5 = Event::new(EventType::NoOp, 5, vec![], vec![]);
+    let event_6 = Event::new(EventType::NoOp, 6, vec![], vec![]);
+    let event_7 = Event::new(EventType::NoOp, 7, vec![], vec![]);
+    let event_8 = Event::new(EventType::NoOp, 8, vec![], vec![]);
+    let event_9 = Event::new(EventType::NoOp, 9, vec![], vec![]);
+    let event_10 = Event::new(EventType::NoOp, 10, vec![], vec![]);
+    let event_11 = Event::new(EventType::NoOp, 11, vec![], vec![]);
+    let event_12 = Event::new(EventType::NoOp, 12, vec![], vec![]);
+    let event_13 = Event::new(EventType::NoOp, 13, vec![], vec![]);
     let mut priority_queue = BinaryHeap::new();
     // Insert in semi-random order.
     priority_queue.push(event_4);

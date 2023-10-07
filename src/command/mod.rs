@@ -1,8 +1,10 @@
-use anyhow::Error as AnyError;
 use uuid::Uuid;
 
 use crate::game_state::GameState;
+use crate::game_state::OutputQueueTrait;
 
+pub mod error;
+pub use error::Error as CommandError;
 pub mod r#type;
 pub use r#type::Type as CommandType;
 
@@ -28,9 +30,12 @@ impl Command {
     }
   }
 
-  pub fn execute(&self, game_state: &mut GameState) -> Result<(), AnyError> {
+  pub fn execute(&self, game_state: &mut GameState) -> Result<(), CommandError> {
     debug!("Executing {:#?} command.", self.r#type);
-    self.r#type.execute(self, game_state)?;
+    if let Some(error) = self.r#type.execute(self, game_state).err() {
+      error!("Error executing command:\n{:#?}\n{:#?}", self.clone(), error);
+      game_state.enqueue_output(&error.to_string());
+    }
     Ok(())
   }
 }

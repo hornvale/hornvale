@@ -3,8 +3,8 @@ use crate::game_state::OutputQueueTrait;
 
 impl OutputQueueTrait for GameState {
   /// Enqueue a string for output.
-  fn enqueue_output(&mut self, output: String) {
-    self.output_queue.push_back(output);
+  fn enqueue_output(&mut self, output: &str) {
+    self.output_queue.push_back(output.to_string());
   }
 
   /// Dequeue a string for output.
@@ -23,7 +23,7 @@ mod tests {
   fn test_enqueue_output() {
     init();
     let mut game_state = GameState::new();
-    game_state.enqueue_output("Hello, world!".to_string());
+    game_state.enqueue_output("Hello, world!");
     assert_eq!(game_state.output_queue.len(), 1);
   }
 
@@ -31,7 +31,7 @@ mod tests {
   fn test_dequeue_output() {
     init();
     let mut game_state = GameState::new();
-    game_state.enqueue_output("Hello, world!".to_string());
+    game_state.enqueue_output("Hello, world!");
     assert_eq!(game_state.output_queue.len(), 1);
     let output = game_state.dequeue_output();
     assert_eq!(output, Some("Hello, world!".to_string()));

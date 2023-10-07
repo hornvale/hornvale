@@ -26,7 +26,7 @@ mod tests {
   fn test_enqueue_event() {
     init();
     let mut game_state = GameState::new();
-    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, Vec::new());
+    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, Vec::new(), Vec::new());
     game_state.enqueue_event(event);
     assert_eq!(game_state.event_queue.len(), 1);
   }
@@ -35,7 +35,7 @@ mod tests {
   fn test_dequeue_event() {
     init();
     let mut game_state = GameState::new();
-    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, Vec::new());
+    let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, Vec::new(), Vec::new());
     game_state.enqueue_event(event);
     game_state.dequeue_event().unwrap();
     assert_eq!(game_state.event_queue.len(), 0);

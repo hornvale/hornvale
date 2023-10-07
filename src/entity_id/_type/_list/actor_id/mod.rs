@@ -1,6 +1,7 @@
 use crate::entity_id::BaseId;
 use crate::entity_id::IntoActorIdTrait;
 use crate::entity_id::IntoBaseIdTrait;
+use crate::entity_id::IntoEntityIdTrait;
 
 /// The `ActorId` type.
 ///
@@ -21,6 +22,8 @@ impl IntoBaseIdTrait for ActorId {
     self.0
   }
 }
+
+impl IntoEntityIdTrait for ActorId {}
 
 impl From<ActorId> for BaseId {
   fn from(id: ActorId) -> Self {
@@ -52,5 +55,12 @@ mod tests {
     let base_id = BaseId::default();
     let actor_id = ActorId::from(base_id.clone());
     assert_eq!(base_id, actor_id.into_base_id());
+  }
+
+  #[test]
+  fn test_actor_id_from_actor_id() {
+    let actor_id = ActorId::default();
+    let actor_id2 = ActorId::from(actor_id.clone());
+    assert_eq!(actor_id, actor_id2);
   }
 }

@@ -1,3 +1,4 @@
+use crate::chunk::Chunk;
 use crate::entity_id::RoomId;
 use crate::room::Room;
 
@@ -11,4 +12,6 @@ pub trait Rooms {
   fn insert_room(&mut self, room: Room);
   /// Remove a room by its id.
   fn remove_room(&mut self, room_id: &RoomId) -> Option<Room>;
+  /// Insert rooms from a Chunk.
+  fn insert_rooms_from_chunk(&mut self, chunk: &Chunk);
 }

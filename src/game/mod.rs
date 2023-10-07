@@ -1,19 +1,15 @@
 use anyhow::Error as AnyError;
-use std::sync::Arc;
+use log::Level as LogLevel;
 
-use crate::event::Event;
-use crate::event::EventSubscriberBuilder;
+use crate::chunk_rule::ChunkRuleManager;
+use crate::event::attach_logger;
 use crate::event::EventType;
-use crate::event::DEFAULT_PRIORITY;
-use crate::game_state::CurrentRoomIdTrait;
-use crate::game_state::EventQueueTrait;
+use crate::game_rule::GameRuleManager;
 use crate::game_state::GameState;
 use crate::game_state::InputReadyFlagTrait;
 use crate::game_state::LoopTimerTrait;
-use crate::game_state::PlayerIdTrait;
 use crate::game_state::QuitFlagTrait;
-use crate::game_state::RoomsTrait;
-use crate::room::Room;
+use crate::game_state::StartTrait;
 use crate::system::CommandSystem;
 use crate::system::EventSystem;
 use crate::system::InputSystem;
@@ -64,68 +60,27 @@ impl Game {
     let mut output_system = OutputSystem::default();
     let mut parser_system = ParserSystem::default();
     let mut tick_system = TickSystem::default();
+    let mut game_rule_manager = GameRuleManager::default();
+    game_rule_manager.insert_stock_rules();
+    game_rule_manager.inject_rule_subscribers(&mut event_system.event_publisher);
+    let mut chunk_rule_manager = ChunkRuleManager::default();
+    chunk_rule_manager.insert_stock_rules();
+    chunk_rule_manager.inject_rule_subscribers(&mut event_system.event_publisher);
 
     // Give us time (1 tick) to start up before we start reading input.
     game_state.set_input_ready_flag(false);
 
     // Fire the StartedGame event.
-    let start_game_event = Event::new(EventType::StartedGame, DEFAULT_PRIORITY + 10000, Vec::new());
-    game_state.enqueue_event(start_game_event);
+    game_state.start()?;
 
     // BEGIN TEMPORARY
 
     // Add a debug logger.
-    let debug_logger = EventSubscriberBuilder::new()
-      .name("Debug Logger".to_string())
-      .event_type(EventType::StartedGame)
-      .will_process(Arc::new(|event: &mut Event, _game_state: &GameState| {
-        println!("Will process event: {:#?}", event);
-      }))
-      .did_process(Arc::new(|event: &Event, _game_state: &mut GameState| {
-        println!("Did process event: {:#?}", event);
-      }))
-      .build();
-    let _debug_logger_uuid = debug_logger.uuid;
-    event_system.event_publisher.add_subscriber(debug_logger);
-
-    // Let's create a room and add it to the game state.
-    let room = Room::default();
-    game_state.insert_room(room.clone());
-
-    // And throw the player in the room.
-    game_state.set_current_room_id(&room.id);
-    let entity_did_enter_room_event = Event::new(
-      EventType::EntityDidEnterRoom(
-        game_state.get_player_id().clone().into(),
-        game_state.get_current_room_id().clone(),
-      ),
-      DEFAULT_PRIORITY + 100,
-      Vec::new(),
+    let _debug_logger_uuid = attach_logger(
+      EventType::StartsGame,
+      LogLevel::Debug,
+      &mut event_system.event_publisher,
     );
-    game_state.enqueue_event(entity_did_enter_room_event);
-    let player_did_enter_room_event = Event::new(
-      EventType::PlayerDidEnterRoom(game_state.get_current_room_id().clone()),
-      DEFAULT_PRIORITY + 90,
-      Vec::new(),
-    );
-    game_state.enqueue_event(player_did_enter_room_event);
-
-    // Print the name and description of the room when we enter it.
-    let room_description_logger = EventSubscriberBuilder::new()
-      .name("Room Description Logger".to_string())
-      .event_type(EventType::PlayerDidEnterRoom(game_state.get_current_room_id().clone()))
-      .did_process(Arc::new(|event: &Event, game_state: &mut GameState| {
-        let room_id = match event.r#type {
-          EventType::PlayerDidEnterRoom(ref room_id) => room_id,
-          _ => panic!("Unexpected event type."),
-        };
-        let room = game_state.get_room(room_id).unwrap();
-        println!("You are in {}.", room.name);
-        println!("{}", room.description);
-      }))
-      .build();
-    let _room_description_logger_uuid = room_description_logger.uuid;
-    event_system.event_publisher.add_subscriber(room_description_logger);
 
     // END TEMPORARY
     loop {
