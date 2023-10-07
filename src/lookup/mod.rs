@@ -1,8 +1,13 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use crate::entity_id::ActorId;
 use crate::entity_id::ChunkId;
 use crate::entity_id::ChunkPlaneId;
+use crate::entity_id::EntityId;
+use crate::entity_id::ObjectId;
+use crate::entity_id::PlayerId;
+use crate::entity_id::RoomId;
 
 pub mod _impl;
 pub use _impl::*;
@@ -57,8 +62,44 @@ pub use _trait::*;
 /// - get_$entities_in_$entity
 #[derive(Debug, Default)]
 pub struct Lookup {
-  /// ChunkId -> ChunkPlaneId.
-  pub chunk2chunk_plane: HashMap<ChunkId, ChunkPlaneId>,
+  // The following data structures follow this graph, with each containing
+  // the IDs of the entities in the next level down:
+  //
+  // Chunk Planes -> Chunks -> Rooms -> Entities.
+  //
   /// ChunkPlaneId -> ChunkIds.
   pub chunk_plane2chunks: HashMap<ChunkPlaneId, HashSet<ChunkId>>,
+  /// ChunkId -> ChunkPlaneId.
+  pub chunk2chunk_plane: HashMap<ChunkId, ChunkPlaneId>,
+  /// ChunkId -> RoomIds.
+  pub chunk2rooms: HashMap<ChunkId, HashSet<RoomId>>,
+  /// RoomId -> ChunkId.
+  pub room2chunk: HashMap<RoomId, ChunkId>,
+  /// RoomId -> EntityIds.
+  pub room2entities: HashMap<RoomId, HashSet<EntityId>>,
+  /// EntityId -> RoomId.
+  pub entity2room: HashMap<EntityId, RoomId>,
+
+  // Entities can be one of multiple types:
+  // - Actor
+  // - Object
+  // - ???
+  //
+  // Consequently, we want to be able to perform lookups by type:
+  // - ActorId -> RoomId
+  // - ObjectId -> RoomId
+  // - ???
+  //
+  /// RoomId -> ActorIds.
+  pub room2actors: HashMap<RoomId, HashSet<ActorId>>,
+  /// ActorId -> RoomId.
+  pub actor2room: HashMap<ActorId, RoomId>,
+  /// RoomId -> ObjectId.
+  pub room2objects: HashMap<RoomId, HashSet<ObjectId>>,
+  /// ObjectId -> RoomId.
+  pub object2room: HashMap<ObjectId, RoomId>,
+  /// RoomId -> PlayerId.
+  pub room2players: HashMap<RoomId, HashSet<PlayerId>>,
+  /// PlayerId -> RoomId.
+  pub player2room: HashMap<PlayerId, RoomId>,
 }
