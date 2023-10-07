@@ -1,5 +1,5 @@
-use crate::lookup::Lookup;
-use crate::lookup::PlayerLookupTrait;
+use crate::lookup_service::Lookup;
+use crate::lookup_service::PlayerLookupTrait;
 
 /// Implementation of the `PlayerLookup` trait.
 impl PlayerLookupTrait for Lookup {}

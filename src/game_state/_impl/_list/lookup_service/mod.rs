@@ -1,6 +1,6 @@
 use crate::game_state::GameState;
 use crate::game_state::LookupServiceTrait;
-use crate::lookup::Lookup;
+use crate::lookup_service::Lookup;
 
 /// Implementation of the `LookupService` trait.
 impl LookupServiceTrait for GameState {

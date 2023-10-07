@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use crate::entity_id::ActorId;
 use crate::entity_id::ChunkId;
+use crate::entity_id::ChunkPlaneId;
 use crate::entity_id::RoomId;
 use crate::event::DidProcessFn;
 use crate::event::EventFilterRule;
@@ -15,9 +16,12 @@ use crate::event::WillProcessFn;
 /// These should be phrased as directives or conditional statements.
 #[derive(Clone, Copy, Debug, Deserialize, Display, Eq, Hash, PartialEq, PartialOrd, Serialize)]
 pub enum Type {
-  WhenChunkIsLoaded,
   WhenActorAppearsInRoom,
   WhenActorMovesFromRoomToRoom,
+  WhenChunkIsLoaded,
+  WhenChunkIsUnloaded,
+  WhenChunkPlaneIsLoaded,
+  WhenChunkPlaneIsUnloaded,
 }
 
 impl Type {
@@ -40,11 +44,14 @@ impl Type {
   pub fn get_event_type(&self) -> EventType {
     use Type::*;
     match self {
-      WhenChunkIsLoaded => EventType::ChunkIsLoaded(ChunkId::default()),
       WhenActorAppearsInRoom => EventType::ActorAppearsInRoom(ActorId::default(), RoomId::default()),
       WhenActorMovesFromRoomToRoom => {
         EventType::ActorMovesFromRoomToRoom(ActorId::default(), RoomId::default(), RoomId::default())
       },
+      WhenChunkIsLoaded => EventType::ChunkIsLoaded(ChunkId::default()),
+      WhenChunkIsUnloaded => EventType::ChunkIsUnloaded(ChunkId::default()),
+      WhenChunkPlaneIsLoaded => EventType::ChunkPlaneIsLoaded(ChunkPlaneId::default()),
+      WhenChunkPlaneIsUnloaded => EventType::ChunkPlaneIsUnloaded(ChunkPlaneId::default()),
     }
   }
 
@@ -62,6 +69,9 @@ impl Type {
       WhenActorAppearsInRoom => Arc::new(|_event, _game_state| Ok(None)),
       WhenActorMovesFromRoomToRoom => Arc::new(|_event, _game_state| Ok(None)),
       WhenChunkIsLoaded => Arc::new(|_event, _game_state| Ok(None)),
+      WhenChunkIsUnloaded => Arc::new(|_event, _game_state| Ok(None)),
+      WhenChunkPlaneIsLoaded => Arc::new(|_event, _game_state| Ok(None)),
+      WhenChunkPlaneIsUnloaded => Arc::new(|_event, _game_state| Ok(None)),
     }
   }
 
@@ -72,6 +82,9 @@ impl Type {
       WhenActorAppearsInRoom => Arc::new(|_event, _game_state| Ok(())),
       WhenActorMovesFromRoomToRoom => Arc::new(|_event, _game_state| Ok(())),
       WhenChunkIsLoaded => Arc::new(|_event, _game_state| Ok(())),
+      WhenChunkIsUnloaded => Arc::new(|_event, _game_state| Ok(())),
+      WhenChunkPlaneIsLoaded => Arc::new(|_event, _game_state| Ok(())),
+      WhenChunkPlaneIsUnloaded => Arc::new(|_event, _game_state| Ok(())),
     }
   }
 
@@ -92,6 +105,21 @@ impl Type {
       WhenChunkIsLoaded => Arc::new(|event, _game_state| {
         debug!("{}", "WhenChunkIsLoaded".blue());
         if let EventType::ChunkIsLoaded(_chunk_id) = &event.r#type {}
+        Ok(())
+      }),
+      WhenChunkIsUnloaded => Arc::new(|event, _game_state| {
+        debug!("{}", "WhenChunkIsUnloaded".blue());
+        if let EventType::ChunkIsUnloaded(_chunk_id) = &event.r#type {}
+        Ok(())
+      }),
+      WhenChunkPlaneIsLoaded => Arc::new(|event, _game_state| {
+        debug!("{}", "WhenChunkPlaneIsLoaded".blue());
+        if let EventType::ChunkPlaneIsLoaded(_chunk_plane_id) = &event.r#type {}
+        Ok(())
+      }),
+      WhenChunkPlaneIsUnloaded => Arc::new(|event, _game_state| {
+        debug!("{}", "WhenChunkPlaneIsUnloaded".blue());
+        if let EventType::ChunkPlaneIsUnloaded(_chunk_plane_id) = &event.r#type {}
         Ok(())
       }),
     }

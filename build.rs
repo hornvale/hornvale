@@ -11,10 +11,10 @@ fn main() {
   generate_list_mod("src/entity_id/_type");
   generate_list_mod("src/event/subscriber/_type");
   generate_list_mod("src/game_state/_impl");
-  generate_list_mod("src/game_state/_type");
-  generate_list_mod("src/lookup/_impl");
   generate_list_mod_with_alias("src/game_state/_trait", "Trait");
-  generate_list_mod_with_alias("src/lookup/_trait", "Trait");
+  generate_list_mod("src/game_state/_type");
+  generate_list_mod("src/lookup_service/_impl");
+  generate_list_mod_with_alias("src/lookup_service/_trait", "Trait");
   generate_list_mod_with_alias("src/system", "System");
   generate_list_mod_with_alias("src/system/_trait", "Trait");
 }

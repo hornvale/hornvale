@@ -3,8 +3,8 @@ use crate::entity_id::EntityId;
 use crate::entity_id::ObjectId;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
-use crate::lookup::EntityLookupTrait;
-use crate::lookup::Lookup;
+use crate::lookup_service::EntityLookupTrait;
+use crate::lookup_service::Lookup;
 
 /// Implementation of the `EntityLookup` trait.
 impl EntityLookupTrait for Lookup {

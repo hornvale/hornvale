@@ -13,7 +13,7 @@ use crate::entity_id::ChunkPlaneId;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
 use crate::event::Event;
-use crate::lookup::Lookup;
+use crate::lookup_service::Lookup;
 use crate::room::Room;
 
 pub mod _constant;

@@ -1,4 +1,4 @@
-use crate::lookup::Lookup;
+use crate::lookup_service::Lookup;
 
 /// The `LookupService` trait.
 pub trait LookupService {

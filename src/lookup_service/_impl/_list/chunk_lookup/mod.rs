@@ -5,8 +5,8 @@ use crate::entity_id::EntityId;
 use crate::entity_id::ObjectId;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
-use crate::lookup::ChunkLookupTrait;
-use crate::lookup::Lookup;
+use crate::lookup_service::ChunkLookupTrait;
+use crate::lookup_service::Lookup;
 
 /// Implementation of the `ChunkLookupTrait` trait.
 impl ChunkLookupTrait for Lookup {
