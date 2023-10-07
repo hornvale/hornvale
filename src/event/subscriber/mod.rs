@@ -95,10 +95,7 @@ impl Eq for EventSubscriber {}
 
 impl PartialOrd for EventSubscriber {
   fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-    match other.priority.partial_cmp(&self.priority) {
-      Some(Ordering::Equal) => self.uuid.partial_cmp(&other.uuid),
-      other => other,
-    }
+    Some(self.cmp(other))
   }
 }
 
