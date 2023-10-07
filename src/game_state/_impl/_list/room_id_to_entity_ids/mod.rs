@@ -12,11 +12,7 @@ impl RoomIdToEntityIdsTrait for GameState {
 
   /// Insert an entity into a room.
   fn insert_entity_into_room(&mut self, entity_id: EntityId, room_id: RoomId) {
-    self
-      .room_id_to_entity_ids
-      .entry(room_id)
-      .or_insert_with(Vec::new)
-      .push(entity_id);
+    self.room_id_to_entity_ids.entry(room_id).or_default().push(entity_id);
   }
 
   /// Remove an entity from a room.
