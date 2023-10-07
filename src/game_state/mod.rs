@@ -13,6 +13,7 @@ use crate::entity_id::ChunkPlaneId;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
 use crate::event::Event;
+use crate::lookup::Lookup;
 use crate::room::Room;
 
 pub mod _constant;
@@ -57,6 +58,8 @@ pub struct GameState {
   pub chunk_manager: ChunkManager,
   pub loaded_chunks: HashMap<ChunkId, Chunk>,
   pub loaded_chunk_planes: HashMap<ChunkPlaneId, ChunkPlane>,
+  // Lookup Service.
+  pub lookup_service: Lookup,
 }
 
 impl GameState {
@@ -92,6 +95,8 @@ impl GameState {
       chunk_manager: ChunkManager::new(&seed_string, &chunk_data_dir),
       loaded_chunks: HashMap::new(),
       loaded_chunk_planes: HashMap::new(),
+      // Lookup Service.
+      lookup_service: Lookup::new(),
     }
   }
 }

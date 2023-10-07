@@ -2,7 +2,6 @@ use colored::*;
 use std::sync::Arc;
 
 use crate::entity_id::ActorId;
-use crate::entity_id::EntityId;
 use crate::entity_id::RoomId;
 use crate::event::DidProcessFn;
 use crate::event::EventBuilder;
@@ -57,9 +56,9 @@ impl Type {
   pub fn get_event_type(&self) -> EventType {
     use Type::*;
     match self {
-      ShowRoomSummaryWhenPlayerAppearsInRoom => EventType::EntityAppearsInRoom(EntityId::default(), RoomId::default()),
+      ShowRoomSummaryWhenPlayerAppearsInRoom => EventType::ActorAppearsInRoom(ActorId::default(), RoomId::default()),
       ShowRoomSummaryWhenPlayerEntersRoom => {
-        EventType::EntityWalksFromRoomToRoom(ActorId::default(), RoomId::default(), RoomId::default())
+        EventType::ActorMovesFromRoomToRoom(ActorId::default(), RoomId::default(), RoomId::default())
       },
       StyleRoomNameWhenPartOfRoomSummary => EventType::ShowsRoomNameAsPartOfRoomSummary(String::default()),
       StyleRoomDescriptionWhenPartOfRoomSummary => {
@@ -129,7 +128,7 @@ impl Type {
     use Type::*;
     match self {
       ShowRoomSummaryWhenPlayerAppearsInRoom => Arc::new(|event, game_state| {
-        if let EventType::EntityAppearsInRoom(_entity_id, room_id) = &event.r#type {
+        if let EventType::ActorAppearsInRoom(_actor_id, room_id) = &event.r#type {
           let event = EventBuilder::new()
             .priority(0)
             .r#type(EventType::ShowsRoomSummary(room_id.clone()))
@@ -139,7 +138,7 @@ impl Type {
         Ok(())
       }),
       ShowRoomSummaryWhenPlayerEntersRoom => Arc::new(|event, game_state| {
-        if let EventType::EntityWalksFromRoomToRoom(_entity_id, _start_room_id, end_room_id) = &event.r#type {
+        if let EventType::ActorMovesFromRoomToRoom(_actor_id, _start_room_id, end_room_id) = &event.r#type {
           let event = EventBuilder::new()
             .priority(0)
             .r#type(EventType::ShowsRoomSummary(end_room_id.clone()))

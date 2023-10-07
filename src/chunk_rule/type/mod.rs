@@ -199,7 +199,7 @@ impl Type {
             game_state.set_current_room_id(Some(room.id.clone()));
           }
           let entity_appears_in_room = Event::new(
-            EventType::EntityAppearsInRoom(
+            EventType::ActorAppearsInRoom(
               game_state.get_player_id().clone().into(),
               game_state.get_current_room_id().unwrap(),
             ),
