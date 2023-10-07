@@ -93,7 +93,7 @@ impl Builder {
       uuid: Uuid::new_v4(),
       name: self.name.unwrap_or_else(|| String::from("Default EventSubscriber")),
       priority: self.priority.unwrap_or(DEFAULT_PRIORITY),
-      event_type: self.event_type.unwrap_or(EventType::default()),
+      event_type: self.event_type.unwrap_or_default(),
       filter_rule: self.filter_rule.unwrap_or(EventFilterRule::Always),
       should_process: self.should_process.unwrap_or_else(|| Arc::new(|_, _| Ok(None))),
       will_process: self.will_process.unwrap_or_else(|| Arc::new(|_, _| Ok(()))),
