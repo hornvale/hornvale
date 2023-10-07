@@ -13,7 +13,7 @@ use crate::entity_id::ChunkPlaneId;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
 use crate::event::Event;
-use crate::lookup_service::Lookup;
+use crate::lookup_service::LookupService;
 use crate::room::Room;
 
 pub mod _constant;
@@ -59,7 +59,7 @@ pub struct GameState {
   pub loaded_chunks: HashMap<ChunkId, Chunk>,
   pub loaded_chunk_planes: HashMap<ChunkPlaneId, ChunkPlane>,
   // Lookup Service.
-  pub lookup_service: Lookup,
+  pub lookup_service: LookupService,
 }
 
 impl GameState {
@@ -96,7 +96,7 @@ impl GameState {
       loaded_chunks: HashMap::new(),
       loaded_chunk_planes: HashMap::new(),
       // Lookup Service.
-      lookup_service: Lookup::default(),
+      lookup_service: LookupService::default(),
     }
   }
 }

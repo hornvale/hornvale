@@ -4,10 +4,10 @@ use crate::entity_id::ObjectId;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
 use crate::lookup_service::ActorLookupTrait;
-use crate::lookup_service::Lookup;
+use crate::lookup_service::LookupService;
 
 /// Implementation of the `ActorLookup` trait.
-impl ActorLookupTrait for Lookup {
+impl ActorLookupTrait for LookupService {
   /// List actors in room.
   fn get_actors_in_room(&self, room_id: &RoomId) -> Vec<ActorId> {
     self

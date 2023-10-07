@@ -4,11 +4,11 @@ use crate::entity_id::EntityId;
 use crate::entity_id::ObjectId;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
-use crate::lookup_service::Lookup;
+use crate::lookup_service::LookupService;
 use crate::lookup_service::RoomLookupTrait;
 
 /// Implementation of the `RoomLookup` trait.
-impl RoomLookupTrait for Lookup {
+impl RoomLookupTrait for LookupService {
   /// List rooms in chunk.
   fn get_rooms_in_chunk(&self, chunk_id: &ChunkId) -> Vec<RoomId> {
     self

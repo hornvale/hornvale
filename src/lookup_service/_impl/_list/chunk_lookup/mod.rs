@@ -6,10 +6,10 @@ use crate::entity_id::ObjectId;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
 use crate::lookup_service::ChunkLookupTrait;
-use crate::lookup_service::Lookup;
+use crate::lookup_service::LookupService;
 
 /// Implementation of the `ChunkLookupTrait` trait.
-impl ChunkLookupTrait for Lookup {
+impl ChunkLookupTrait for LookupService {
   /// List chunks in chunk plane.
   fn get_chunks_in_chunk_plane(&self, chunk_plane_id: &ChunkPlaneId) -> Vec<ChunkId> {
     self

@@ -61,7 +61,7 @@ pub use _trait::*;
 ///   // This is a one-to-many lookup.
 /// - get_$entities_in_$entity
 #[derive(Debug, Default)]
-pub struct Lookup {
+pub struct LookupService {
   // The following data structures follow this graph, with each containing
   // the IDs of the entities in the next level down:
   //

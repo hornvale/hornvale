@@ -3,11 +3,11 @@ use crate::entity_id::EntityId;
 use crate::entity_id::ObjectId;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
-use crate::lookup_service::Lookup;
+use crate::lookup_service::LookupService;
 use crate::lookup_service::ObjectLookupTrait;
 
 /// Implementation of the `ObjectLookup` trait.
-impl ObjectLookupTrait for Lookup {
+impl ObjectLookupTrait for LookupService {
   /// Get objects in room.
   fn get_objects_in_room(&self, room_id: &RoomId) -> Vec<ObjectId> {
     self

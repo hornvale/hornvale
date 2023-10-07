@@ -6,12 +6,12 @@ use crate::entity_id::ObjectId;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
 use crate::lookup_service::ChunkPlaneLookupTrait;
-use crate::lookup_service::Lookup;
+use crate::lookup_service::LookupService;
 
 /// The `ChunkPlaneLookup` trait.
 ///
 /// This helps chunk-plane-related lookups.
-impl ChunkPlaneLookupTrait for Lookup {
+impl ChunkPlaneLookupTrait for LookupService {
   /// Get chunk plane of actor.
   fn get_chunk_plane_of_actor(&self, actor_id: &ActorId) -> Option<ChunkPlaneId> {
     self
