@@ -12,7 +12,6 @@ use crate::game_state::GameState;
 
 /// Attach a logger to a specified event type.
 pub fn attach_logger(event_type: EventType, log_level: LogLevel, event_publisher: &mut EventPublisher) -> Uuid {
-  let log_level = log_level;
   let debug_logger = EventSubscriberBuilder::new()
     .name("Debug Logger".to_string())
     .event_type(event_type)
