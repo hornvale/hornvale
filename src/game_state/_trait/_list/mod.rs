@@ -21,6 +21,8 @@ pub mod input_ready_flag;
 pub use input_ready_flag::InputReadyFlag as InputReadyFlagTrait;
 pub mod local_data_dir;
 pub use local_data_dir::LocalDataDir as LocalDataDirTrait;
+pub mod lookup_service;
+pub use lookup_service::LookupService as LookupServiceTrait;
 pub mod loop_timer;
 pub use loop_timer::LoopTimer as LoopTimerTrait;
 pub mod output_queue;

@@ -21,6 +21,8 @@ pub mod input_ready_flag;
 pub use input_ready_flag::*;
 pub mod local_data_dir;
 pub use local_data_dir::*;
+pub mod lookup_service;
+pub use lookup_service::*;
 pub mod loop_timer;
 pub use loop_timer::*;
 pub mod output_queue;
