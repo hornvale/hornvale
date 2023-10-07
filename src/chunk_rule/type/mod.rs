@@ -23,10 +23,7 @@ use crate::game_state::RoomsTrait;
 /// These should be phrased as directives or conditional statements.
 #[derive(Clone, Copy, Debug, Deserialize, Display, Eq, Hash, PartialEq, PartialOrd, Serialize)]
 pub enum Type {
-  AddChunkRoomsToRoom2ChunkLookupWhenChunkIsLoaded,
-  AddChunkToChunk2ChunkPlaneLookupWhenChunkIsLoaded,
   AddChunkToLoadedChunksWhenChunkIsLoaded,
-  AddPlaneToChunkPlane2ChunkLookupWhenChunkPlaneIsLoaded,
   CreateChunkPlaneWhenGameStarts,
   MapEmptyChunksWhenChunkPlaneIsLoaded,
   MovePlayerToRoomWhenGameStarts,
@@ -37,10 +34,7 @@ impl Type {
   pub fn iterator() -> impl Iterator<Item = Type> {
     use Type::*;
     [
-      AddChunkRoomsToRoom2ChunkLookupWhenChunkIsLoaded,
-      AddChunkToChunk2ChunkPlaneLookupWhenChunkIsLoaded,
       AddChunkToLoadedChunksWhenChunkIsLoaded,
-      AddPlaneToChunkPlane2ChunkLookupWhenChunkPlaneIsLoaded,
       CreateChunkPlaneWhenGameStarts,
       MapEmptyChunksWhenChunkPlaneIsLoaded,
       MovePlayerToRoomWhenGameStarts,
@@ -54,10 +48,7 @@ impl Type {
   pub fn get_priority(&self) -> i64 {
     use Type::*;
     match self {
-      AddChunkRoomsToRoom2ChunkLookupWhenChunkIsLoaded => i64::MAX,
-      AddChunkToChunk2ChunkPlaneLookupWhenChunkIsLoaded => i64::MAX - 1,
       AddChunkToLoadedChunksWhenChunkIsLoaded => i64::MAX - 2,
-      AddPlaneToChunkPlane2ChunkLookupWhenChunkPlaneIsLoaded => i64::MAX - 3,
       CreateChunkPlaneWhenGameStarts => 100,
       MapEmptyChunksWhenChunkPlaneIsLoaded => i64::MAX,
       MovePlayerToRoomWhenGameStarts => 25,
@@ -69,10 +60,7 @@ impl Type {
   pub fn get_event_type(&self) -> EventType {
     use Type::*;
     match self {
-      AddChunkRoomsToRoom2ChunkLookupWhenChunkIsLoaded => EventType::ChunkIsLoaded(ChunkId::default()),
-      AddChunkToChunk2ChunkPlaneLookupWhenChunkIsLoaded => EventType::ChunkIsLoaded(ChunkId::default()),
       AddChunkToLoadedChunksWhenChunkIsLoaded => EventType::ChunkIsLoaded(ChunkId::default()),
-      AddPlaneToChunkPlane2ChunkLookupWhenChunkPlaneIsLoaded => EventType::ChunkPlaneIsLoaded(ChunkPlaneId::default()),
       CreateChunkPlaneWhenGameStarts => EventType::StartsGame,
       MapEmptyChunksWhenChunkPlaneIsLoaded => EventType::ChunkPlaneIsLoaded(ChunkPlaneId::default()),
       MovePlayerToRoomWhenGameStarts => EventType::StartsGame,
@@ -86,10 +74,7 @@ impl Type {
   pub fn get_filter_rule(&self) -> EventFilterRule {
     use Type::*;
     match self {
-      AddChunkRoomsToRoom2ChunkLookupWhenChunkIsLoaded => EventFilterRule::Always,
-      AddChunkToChunk2ChunkPlaneLookupWhenChunkIsLoaded => EventFilterRule::Always,
       AddChunkToLoadedChunksWhenChunkIsLoaded => EventFilterRule::Always,
-      AddPlaneToChunkPlane2ChunkLookupWhenChunkPlaneIsLoaded => EventFilterRule::Always,
       CreateChunkPlaneWhenGameStarts => EventFilterRule::Always,
       MapEmptyChunksWhenChunkPlaneIsLoaded => EventFilterRule::Always,
       MovePlayerToRoomWhenGameStarts => EventFilterRule::Always,
@@ -101,10 +86,7 @@ impl Type {
   pub fn get_should_process(&mut self) -> ShouldProcessFn {
     use Type::*;
     match self {
-      AddChunkRoomsToRoom2ChunkLookupWhenChunkIsLoaded => Arc::new(|_event, _game_state| Ok(None)),
-      AddChunkToChunk2ChunkPlaneLookupWhenChunkIsLoaded => Arc::new(|_event, _game_state| Ok(None)),
       AddChunkToLoadedChunksWhenChunkIsLoaded => Arc::new(|_event, _game_state| Ok(None)),
-      AddPlaneToChunkPlane2ChunkLookupWhenChunkPlaneIsLoaded => Arc::new(|_event, _game_state| Ok(None)),
       CreateChunkPlaneWhenGameStarts => Arc::new(|_event, _game_state| Ok(None)),
       MapEmptyChunksWhenChunkPlaneIsLoaded => Arc::new(|_event, _game_state| Ok(None)),
       MovePlayerToRoomWhenGameStarts => Arc::new(|_event, _game_state| Ok(None)),
@@ -116,10 +98,7 @@ impl Type {
   pub fn get_will_process(&mut self) -> WillProcessFn {
     use Type::*;
     match self {
-      AddChunkRoomsToRoom2ChunkLookupWhenChunkIsLoaded => Arc::new(|_event, _game_state| Ok(())),
-      AddChunkToChunk2ChunkPlaneLookupWhenChunkIsLoaded => Arc::new(|_event, _game_state| Ok(())),
       AddChunkToLoadedChunksWhenChunkIsLoaded => Arc::new(|_event, _game_state| Ok(())),
-      AddPlaneToChunkPlane2ChunkLookupWhenChunkPlaneIsLoaded => Arc::new(|_event, _game_state| Ok(())),
       CreateChunkPlaneWhenGameStarts => Arc::new(|_event, _game_state| Ok(())),
       MapEmptyChunksWhenChunkPlaneIsLoaded => Arc::new(|_event, _game_state| Ok(())),
       MovePlayerToRoomWhenGameStarts => Arc::new(|_event, _game_state| Ok(())),
@@ -131,38 +110,6 @@ impl Type {
   pub fn get_did_process(&mut self) -> DidProcessFn {
     use Type::*;
     match self {
-      AddChunkRoomsToRoom2ChunkLookupWhenChunkIsLoaded => Arc::new(|_event, game_state| {
-        debug!("AddChunkRoomsToRoom2ChunkLookupWhenChunkIsLoaded");
-        if let EventType::ChunkIsLoaded(chunk_id) = &_event.r#type {
-          debug!("Adding chunk rooms to room2chunk lookup.");
-          let chunk = game_state.loaded_chunks.get(chunk_id).with_context(|| {
-            format!(
-              "Could not find chunk with id {} in loaded chunks.",
-              chunk_id.to_string().red()
-            )
-          })?;
-          chunk.rooms.iter().for_each(|(room_id, _room)| {
-            game_state.room_id_to_chunk_id.insert(room_id.clone(), chunk.id.clone());
-          });
-        }
-        Ok(())
-      }),
-      AddChunkToChunk2ChunkPlaneLookupWhenChunkIsLoaded => Arc::new(|event, game_state| {
-        debug!("AddChunkToChunk2ChunkPlaneLookupWhenChunkIsLoaded");
-        if let EventType::ChunkIsLoaded(chunk_id) = &event.r#type {
-          debug!("Adding chunk to chunk2chunkplane lookup.");
-          let chunk = game_state.chunk_manager.load_chunk(chunk_id).with_context(|| {
-            format!(
-              "Could not find chunk with id {} in chunk manager.",
-              chunk_id.to_string().red()
-            )
-          })?;
-          game_state
-            .chunk_id_to_chunk_plane_id
-            .insert(chunk_id.clone(), chunk.chunk_plane_id);
-        }
-        Ok(())
-      }),
       AddChunkToLoadedChunksWhenChunkIsLoaded => Arc::new(|event, game_state| {
         debug!("AddChunkToLoadedChunksWhenChunkIsLoaded");
         if let EventType::ChunkIsLoaded(chunk_id) = &event.r#type {
@@ -174,25 +121,6 @@ impl Type {
             )
           })?;
           game_state.loaded_chunks.insert(chunk_id.clone(), chunk);
-        }
-        Ok(())
-      }),
-      AddPlaneToChunkPlane2ChunkLookupWhenChunkPlaneIsLoaded => Arc::new(|event, game_state| {
-        debug!("AddPlaneToChunkPlane2ChunkLookupWhenChunkPlaneIsLoaded");
-        if let EventType::ChunkPlaneIsLoaded(chunk_plane_id) = &event.r#type {
-          debug!("Adding chunk plane to chunkplane2chunk lookup.");
-          let chunk_plane = game_state
-            .chunk_manager
-            .load_chunk_plane(chunk_plane_id)
-            .with_context(|| {
-              format!(
-                "Could not find chunk plane with id {} in chunk manager.",
-                chunk_plane_id.to_string().red()
-              )
-            })?;
-          game_state
-            .chunk_plane_id_to_chunk_ids
-            .insert(chunk_plane_id.clone(), chunk_plane.chunk_ids.iter().cloned().collect());
         }
         Ok(())
       }),

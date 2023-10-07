@@ -53,6 +53,7 @@ pub mod event;
 pub mod game;
 pub mod game_rule;
 pub mod game_state;
+pub mod lookup;
 pub mod parser;
 pub mod passage;
 pub mod room;

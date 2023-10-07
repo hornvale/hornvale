@@ -10,7 +10,6 @@ use crate::chunk_plane::ChunkPlane;
 use crate::command::Command;
 use crate::entity_id::ChunkId;
 use crate::entity_id::ChunkPlaneId;
-use crate::entity_id::EntityId;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
 use crate::event::Event;
@@ -58,12 +57,6 @@ pub struct GameState {
   pub chunk_manager: ChunkManager,
   pub loaded_chunks: HashMap<ChunkId, Chunk>,
   pub loaded_chunk_planes: HashMap<ChunkPlaneId, ChunkPlane>,
-  // Lookups.
-  pub entity_id_to_room_id: HashMap<EntityId, RoomId>,
-  pub room_id_to_chunk_id: HashMap<RoomId, ChunkId>,
-  pub room_id_to_entity_ids: HashMap<RoomId, Vec<EntityId>>,
-  pub chunk_id_to_chunk_plane_id: HashMap<ChunkId, ChunkPlaneId>,
-  pub chunk_plane_id_to_chunk_ids: HashMap<ChunkPlaneId, Vec<ChunkId>>,
 }
 
 impl GameState {
@@ -99,12 +92,6 @@ impl GameState {
       chunk_manager: ChunkManager::new(&seed_string, &chunk_data_dir),
       loaded_chunks: HashMap::new(),
       loaded_chunk_planes: HashMap::new(),
-      // Lookups.
-      entity_id_to_room_id: HashMap::new(),
-      room_id_to_chunk_id: HashMap::new(),
-      room_id_to_entity_ids: HashMap::new(),
-      chunk_id_to_chunk_plane_id: HashMap::new(),
-      chunk_plane_id_to_chunk_ids: HashMap::new(),
     }
   }
 }
