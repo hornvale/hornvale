@@ -96,7 +96,7 @@ impl GameState {
       loaded_chunks: HashMap::new(),
       loaded_chunk_planes: HashMap::new(),
       // Lookup Service.
-      lookup_service: Lookup::new(),
+      lookup_service: Lookup::default(),
     }
   }
 }
