@@ -94,32 +94,32 @@ impl Type {
     match self {
       WhenActorAppearsInRoom => Arc::new(|event, _game_state| {
         debug!("{}", "WhenActorAppearsInRoom".blue());
-        if let EventType::ActorAppearsInRoom(_actor_id, _room_id) = &event.r#type {}
+        if let EventType::ActorAppearsInRoom(_actor_id, _room_id) = &event.event_type {}
         Ok(())
       }),
       WhenActorMovesFromRoomToRoom => Arc::new(|event, _game_state| {
         debug!("{}", "WhenActorMovesFromRoomToRoom".blue());
-        if let EventType::ActorMovesFromRoomToRoom(_actor_id, _start_room_id, _end_room_id) = &event.r#type {}
+        if let EventType::ActorMovesFromRoomToRoom(_actor_id, _start_room_id, _end_room_id) = &event.event_type {}
         Ok(())
       }),
       WhenChunkIsLoaded => Arc::new(|event, _game_state| {
         debug!("{}", "WhenChunkIsLoaded".blue());
-        if let EventType::ChunkIsLoaded(_chunk_id) = &event.r#type {}
+        if let EventType::ChunkIsLoaded(_chunk_id) = &event.event_type {}
         Ok(())
       }),
       WhenChunkIsUnloaded => Arc::new(|event, _game_state| {
         debug!("{}", "WhenChunkIsUnloaded".blue());
-        if let EventType::ChunkIsUnloaded(_chunk_id) = &event.r#type {}
+        if let EventType::ChunkIsUnloaded(_chunk_id) = &event.event_type {}
         Ok(())
       }),
       WhenChunkPlaneIsLoaded => Arc::new(|event, _game_state| {
         debug!("{}", "WhenChunkPlaneIsLoaded".blue());
-        if let EventType::ChunkPlaneIsLoaded(_chunk_plane_id) = &event.r#type {}
+        if let EventType::ChunkPlaneIsLoaded(_chunk_plane_id) = &event.event_type {}
         Ok(())
       }),
       WhenChunkPlaneIsUnloaded => Arc::new(|event, _game_state| {
         debug!("{}", "WhenChunkPlaneIsUnloaded".blue());
-        if let EventType::ChunkPlaneIsUnloaded(_chunk_plane_id) = &event.r#type {}
+        if let EventType::ChunkPlaneIsUnloaded(_chunk_plane_id) = &event.event_type {}
         Ok(())
       }),
     }

@@ -67,7 +67,7 @@ impl EventPublisher {
   }
 
   pub fn should_process(&self, event: &Event, game_state: &mut GameState) -> Result<bool, AnyError> {
-    let discriminant = discriminant(&event.r#type);
+    let discriminant = discriminant(&event.event_type);
     if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
       let result = subscribers
         .iter()
@@ -79,7 +79,7 @@ impl EventPublisher {
   }
 
   pub fn will_process(&mut self, event: &mut Event, game_state: &GameState) -> Result<(), AnyError> {
-    let discriminant = discriminant(&event.r#type);
+    let discriminant = discriminant(&event.event_type);
     if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
       subscribers.iter().for_each(|s| {
         (s.borrow().will_process)(event, game_state).ok();
@@ -89,7 +89,7 @@ impl EventPublisher {
   }
 
   pub fn did_process(&mut self, event: &Event, game_state: &mut GameState) -> Result<(), AnyError> {
-    let discriminant = discriminant(&event.r#type);
+    let discriminant = discriminant(&event.event_type);
     if let Some(subscribers) = self.subscribers_by_event_type.get(&discriminant) {
       subscribers.iter().for_each(|s| {
         (s.borrow().did_process)(event, game_state).ok();
