@@ -16,7 +16,7 @@ impl Manager {
   }
 
   pub fn add_rule(&mut self, rule: GameRule) {
-    self.rules.insert(rule.r#type, rule);
+    self.rules.insert(rule.game_rule_type, rule);
   }
 
   pub fn enable_rule(&mut self, rule_type: &GameRuleType) {

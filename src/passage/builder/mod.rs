@@ -10,7 +10,7 @@ pub struct Builder {
   /// The `PassageId`.
   pub id: Option<PassageId>,
   /// The `PassageType`.
-  pub r#type: Option<PassageType>,
+  pub passage_type: Option<PassageType>,
   /// The `PassageDirection`.
   pub direction: Option<PassageDirection>,
   /// The `Passage`'s name.
@@ -36,8 +36,8 @@ impl Builder {
   }
 
   /// Sets the `PassageType`.
-  pub fn r#type(mut self, r#type: &PassageType) -> Self {
-    self.r#type = Some(r#type.clone());
+  pub fn passage_type(mut self, passage_type: &PassageType) -> Self {
+    self.passage_type = Some(passage_type.clone());
     self
   }
 
@@ -75,7 +75,7 @@ impl Builder {
   pub fn build(self) -> Passage {
     Passage::new(
       self.id.unwrap_or_default(),
-      self.r#type.unwrap_or_default(),
+      self.passage_type.unwrap_or_default(),
       self.direction.unwrap_or_default(),
       self.name.unwrap_or_else(|| "Default Passage".to_string()),
       self
@@ -98,7 +98,7 @@ mod tests {
     init();
     let passage_builder = Builder::new();
     assert_eq!(passage_builder.id, None);
-    assert_eq!(passage_builder.r#type, None);
+    assert_eq!(passage_builder.passage_type, None);
     assert_eq!(passage_builder.direction, None);
     assert_eq!(passage_builder.name, None);
     assert_eq!(passage_builder.description, None);
@@ -116,8 +116,8 @@ mod tests {
   #[test]
   fn test_passage_builder_type() {
     init();
-    let passage_builder = Builder::new().r#type(&PassageType::default());
-    assert_eq!(passage_builder.r#type, Some(PassageType::default()));
+    let passage_builder = Builder::new().passage_type(&PassageType::default());
+    assert_eq!(passage_builder.passage_type, Some(PassageType::default()));
   }
 
   #[test]
@@ -160,7 +160,7 @@ mod tests {
     init();
     let passage = Builder::new().build();
     assert_ne!(passage.id, PassageId::default());
-    assert_eq!(passage.r#type, PassageType::default());
+    assert_eq!(passage.passage_type, PassageType::default());
     assert_eq!(passage.direction, PassageDirection::default());
     assert_eq!(passage.name, "Default Passage");
     assert_eq!(passage.description, "This is the default passage.");

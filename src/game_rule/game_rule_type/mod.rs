@@ -102,19 +102,19 @@ impl Type {
       ShowRoomSummaryWhenPlayerAppearsInRoom => Arc::new(|_event, _game_state| Ok(())),
       ShowRoomSummaryWhenPlayerEntersRoom => Arc::new(|_event, _game_state| Ok(())),
       StyleRoomNameWhenPartOfRoomSummary => Arc::new(|_event, _game_state| {
-        if let EventType::ShowsRoomNameAsPartOfRoomSummary(ref mut room_name) = &mut _event.r#type {
+        if let EventType::ShowsRoomNameAsPartOfRoomSummary(ref mut room_name) = &mut _event.event_type {
           *room_name = format!("{}", room_name.bold());
         }
         Ok(())
       }),
       StyleRoomDescriptionWhenPartOfRoomSummary => Arc::new(|_event, _game_state| {
-        if let EventType::ShowsRoomDescriptionAsPartOfRoomSummary(ref mut room_description) = &mut _event.r#type {
+        if let EventType::ShowsRoomDescriptionAsPartOfRoomSummary(ref mut room_description) = &mut _event.event_type {
           *room_description = format!("{}", room_description.italic());
         }
         Ok(())
       }),
       StyleRoomPassagesWhenPartOfRoomSummary => Arc::new(|_event, _game_state| {
-        if let EventType::ShowsRoomPassagesAsPartOfRoomSummary(ref mut room_passages) = &mut _event.r#type {
+        if let EventType::ShowsRoomPassagesAsPartOfRoomSummary(ref mut room_passages) = &mut _event.event_type {
           *room_passages = format!("{}", room_passages.cyan());
         }
         Ok(())
@@ -128,20 +128,20 @@ impl Type {
     use Type::*;
     match self {
       ShowRoomSummaryWhenPlayerAppearsInRoom => Arc::new(|event, game_state| {
-        if let EventType::ActorAppearsInRoom(_actor_id, room_id) = &event.r#type {
+        if let EventType::ActorAppearsInRoom(_actor_id, room_id) = &event.event_type {
           let event = EventBuilder::new()
             .priority(0)
-            .r#type(EventType::ShowsRoomSummary(room_id.clone()))
+            .event_type(EventType::ShowsRoomSummary(room_id.clone()))
             .build();
           game_state.enqueue_event(event);
         }
         Ok(())
       }),
       ShowRoomSummaryWhenPlayerEntersRoom => Arc::new(|event, game_state| {
-        if let EventType::ActorMovesFromRoomToRoom(_actor_id, _start_room_id, end_room_id) = &event.r#type {
+        if let EventType::ActorMovesFromRoomToRoom(_actor_id, _start_room_id, end_room_id) = &event.event_type {
           let event = EventBuilder::new()
             .priority(0)
-            .r#type(EventType::ShowsRoomSummary(end_room_id.clone()))
+            .event_type(EventType::ShowsRoomSummary(end_room_id.clone()))
             .build();
           game_state.enqueue_event(event);
         }
@@ -151,10 +151,10 @@ impl Type {
       StyleRoomDescriptionWhenPartOfRoomSummary => Arc::new(|_event, _game_state| Ok(())),
       StyleRoomPassagesWhenPartOfRoomSummary => Arc::new(|_event, _game_state| Ok(())),
       OutputBlankLineAfterRoomSummary => Arc::new(|event, game_state| {
-        if let EventType::ShowsRoomPassagesAsPartOfRoomSummary(_room_passages) = &event.r#type {
+        if let EventType::ShowsRoomPassagesAsPartOfRoomSummary(_room_passages) = &event.event_type {
           let event = EventBuilder::new()
             .priority(0)
-            .r#type(EventType::OutputsBlankLine)
+            .event_type(EventType::OutputsBlankLine)
             .build();
           game_state.enqueue_event(event);
         }

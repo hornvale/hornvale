@@ -10,8 +10,8 @@ pub mod builder;
 pub use builder::Builder as PassageBuilder;
 pub mod direction;
 pub use direction::Direction as PassageDirection;
-pub mod r#type;
-pub use r#type::Type as PassageType;
+pub mod passage_type;
+pub use passage_type::Type as PassageType;
 
 /// The `Passage` struct.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -19,7 +19,7 @@ pub struct Passage {
   /// The `Passage`'s ID.
   pub id: PassageId,
   /// The `Passage`'s type.
-  pub r#type: PassageType,
+  pub passage_type: PassageType,
   /// The `Passage`'s direction.
   pub direction: PassageDirection,
   /// The `Passage`'s name.
@@ -36,7 +36,7 @@ impl Passage {
   /// Creates a new `Passage`.
   pub fn new(
     id: PassageId,
-    r#type: PassageType,
+    passage_type: PassageType,
     direction: PassageDirection,
     name: String,
     description: String,
@@ -45,7 +45,7 @@ impl Passage {
   ) -> Self {
     Self {
       id,
-      r#type,
+      passage_type,
       direction,
       name,
       description,
@@ -74,7 +74,7 @@ impl Default for Passage {
   fn default() -> Self {
     Self {
       id: PassageId::default(),
-      r#type: PassageType::default(),
+      passage_type: PassageType::default(),
       direction: PassageDirection::default(),
       name: "Default Passage".to_string(),
       description: "This is the default passage.".to_string(),
@@ -96,7 +96,7 @@ mod tests {
     init();
     let passage = Passage::default();
     assert_ne!(passage.id, PassageId::default());
-    assert_eq!(passage.r#type, PassageType::default());
+    assert_eq!(passage.passage_type, PassageType::default());
     assert_eq!(passage.direction, PassageDirection::default());
     assert_eq!(passage.name, "Default Passage");
     assert_eq!(passage.description, "This is the default passage.");

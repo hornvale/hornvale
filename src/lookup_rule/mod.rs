@@ -6,31 +6,34 @@ use crate::event::EventSubscriberBuilder;
 
 pub mod manager;
 pub use manager::Manager as LookupRuleManager;
-pub mod r#type;
-pub use r#type::Type as LookupRuleType;
+pub mod lookup_rule_type;
+pub use lookup_rule_type::Type as LookupRuleType;
 
 /// The `LookupRule` struct.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LookupRule {
-  pub r#type: LookupRuleType,
+  pub lookup_rule_type: LookupRuleType,
   pub subscriber: Rc<RefCell<EventSubscriber>>,
 }
 
 impl LookupRule {
-  pub fn new(r#type: LookupRuleType) -> Self {
-    let mut r#type = r#type;
+  pub fn new(lookup_rule_type: LookupRuleType) -> Self {
+    let mut lookup_rule_type = lookup_rule_type;
     let subscriber = EventSubscriberBuilder::new()
-      .name(format!("LookupRule::{}", r#type))
-      .priority(r#type.get_priority())
-      .event_type(r#type.get_event_type())
-      .filter_rule(r#type.get_filter_rule())
-      .should_process(r#type.get_should_process())
-      .will_process(r#type.get_will_process())
-      .did_process(r#type.get_did_process())
-      .is_enabled(r#type.is_enabled())
+      .name(format!("LookupRule::{}", lookup_rule_type))
+      .priority(lookup_rule_type.get_priority())
+      .event_type(lookup_rule_type.get_event_type())
+      .filter_rule(lookup_rule_type.get_filter_rule())
+      .should_process(lookup_rule_type.get_should_process())
+      .will_process(lookup_rule_type.get_will_process())
+      .did_process(lookup_rule_type.get_did_process())
+      .is_enabled(lookup_rule_type.is_enabled())
       .build();
     let subscriber = Rc::new(RefCell::new(subscriber));
-    LookupRule { r#type, subscriber }
+    LookupRule {
+      lookup_rule_type,
+      subscriber,
+    }
   }
 
   pub fn enable(&mut self) {

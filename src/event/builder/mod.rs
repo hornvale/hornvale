@@ -8,7 +8,7 @@ use crate::event::EventType;
 #[derive(Clone, Debug)]
 pub struct EventBuilder {
   pub uuid: Option<Uuid>,
-  pub r#type: Option<EventType>,
+  pub event_type: Option<EventType>,
   pub priority: Option<i64>,
   pub backtrace: Option<Vec<String>>,
   pub tags: Option<Vec<EventTag>>,
@@ -18,7 +18,7 @@ impl EventBuilder {
   pub fn new() -> Self {
     EventBuilder {
       uuid: None,
-      r#type: None,
+      event_type: None,
       priority: None,
       backtrace: None,
       tags: None,
@@ -30,8 +30,8 @@ impl EventBuilder {
     self
   }
 
-  pub fn r#type(mut self, r#type: EventType) -> Self {
-    self.r#type = Some(r#type);
+  pub fn event_type(mut self, event_type: EventType) -> Self {
+    self.event_type = Some(event_type);
     self
   }
 
@@ -59,13 +59,13 @@ impl EventBuilder {
 
   pub fn build(self) -> Event {
     let uuid = self.uuid.unwrap_or_else(Uuid::new_v4);
-    let r#type = self.r#type.unwrap_or_default();
-    let priority = self.priority.unwrap_or_else(|| r#type.get_priority());
+    let event_type = self.event_type.unwrap_or_default();
+    let priority = self.priority.unwrap_or_else(|| event_type.get_priority());
     let backtrace = self.backtrace.unwrap_or_default();
     let tags = self.tags.unwrap_or_default();
     Event {
       uuid,
-      r#type,
+      event_type,
       priority,
       backtrace,
       tags,
@@ -87,7 +87,7 @@ mod tests {
   fn test_event_builder() {
     let event = EventBuilder::new().build();
     assert_eq!(event.uuid.get_version_num(), 4);
-    assert_eq!(event.r#type, EventType::default());
+    assert_eq!(event.event_type, EventType::default());
     assert_eq!(event.priority, 0);
     assert_eq!(event.backtrace, Vec::<String>::new());
   }
@@ -97,17 +97,17 @@ mod tests {
     let uuid = Uuid::new_v4();
     let event = EventBuilder::new().uuid(uuid).build();
     assert_eq!(event.uuid, uuid);
-    assert_eq!(event.r#type, EventType::default());
+    assert_eq!(event.event_type, EventType::default());
     assert_eq!(event.priority, 0);
     assert_eq!(event.backtrace, Vec::<String>::new());
   }
 
   #[test]
   fn test_event_builder_type() {
-    let r#type = EventType::NoOp;
-    let event = EventBuilder::new().r#type(r#type.clone()).build();
+    let event_type = EventType::NoOp;
+    let event = EventBuilder::new().event_type(event_type.clone()).build();
     assert_eq!(event.uuid.get_version_num(), 4);
-    assert_eq!(event.r#type, r#type);
+    assert_eq!(event.event_type, event_type);
     assert_eq!(event.priority, 0);
     assert_eq!(event.backtrace, Vec::<String>::new());
   }
@@ -117,7 +117,7 @@ mod tests {
     let priority = 1;
     let event = EventBuilder::new().priority(priority).build();
     assert_eq!(event.uuid.get_version_num(), 4);
-    assert_eq!(event.r#type, EventType::default());
+    assert_eq!(event.event_type, EventType::default());
     assert_eq!(event.priority, priority);
     assert_eq!(event.backtrace, Vec::<String>::new());
   }

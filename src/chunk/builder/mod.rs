@@ -19,7 +19,7 @@ pub struct Builder {
   /// The `Chunk`'s `ChunkSeed`.
   pub chunk_seed: Option<ChunkSeed>,
   /// The `Chunk`'s type.
-  pub r#type: Option<ChunkType>,
+  pub chunk_type: Option<ChunkType>,
   /// The `Chunk`'s status.
   pub status: Option<ChunkStatus>,
   /// The `Chunk`'s name.
@@ -61,8 +61,8 @@ impl Builder {
   }
 
   /// Sets the `Chunk`'s type.
-  pub fn r#type(mut self, r#type: &ChunkType) -> Self {
-    self.r#type = Some(r#type.clone());
+  pub fn chunk_type(mut self, chunk_type: &ChunkType) -> Self {
+    self.chunk_type = Some(chunk_type.clone());
     self
   }
 
@@ -114,7 +114,7 @@ impl Builder {
       id: self.id.unwrap_or_default(),
       chunk_plane_id: self.chunk_plane_id.unwrap_or_default(),
       chunk_seed: self.chunk_seed.unwrap_or_default(),
-      r#type: self.r#type.unwrap_or_default(),
+      chunk_type: self.chunk_type.unwrap_or_default(),
       status: self.status.unwrap_or_default(),
       name: self.name.unwrap_or_default(),
       description: self.description.unwrap_or_default(),

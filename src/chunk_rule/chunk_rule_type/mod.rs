@@ -100,7 +100,7 @@ impl Type {
     match self {
       CreateChunkPlaneWhenGameStarts => Arc::new(|event, game_state| {
         debug!("CreateChunkPlaneWhenGameStarts");
-        if let EventType::StartsGame = &event.r#type {
+        if let EventType::StartsGame = &event.event_type {
           debug!("Clearing game data directory (TEMPORARY).");
           let local_data_dir = game_state.local_data_dir.clone();
           game_state.clear_directory(&local_data_dir)?;
@@ -118,7 +118,7 @@ impl Type {
       }),
       MapEmptyChunksWhenChunkPlaneIsLoaded => Arc::new(|event, game_state| {
         debug!("MapEmptyChunksWhenChunkPlaneIsLoaded");
-        if let EventType::ChunkPlaneIsLoaded(chunk_plane_id) = &event.r#type {
+        if let EventType::ChunkPlaneIsLoaded(chunk_plane_id) = &event.event_type {
           debug!("Mapping closed chunks.");
           let mut chunk_plane = game_state.open_chunk_plane(chunk_plane_id).with_context(|| {
             format!(
@@ -137,7 +137,7 @@ impl Type {
       }),
       MovePlayerToRoomWhenGameStarts => Arc::new(|_event, _game_state| {
         debug!("MovePlayerToRoomWhenGameStarts");
-        if let EventType::StartsGame = &_event.r#type {
+        if let EventType::StartsGame = &_event.event_type {
           debug!("Selecting an arbitrary startable chunk.");
           /*
           let chunk = game_state
@@ -166,7 +166,7 @@ impl Type {
       }),
       OutputDebugMessageWhenCrossingChunkBoundary => Arc::new(|_event, _game_state| {
         debug!("OutputDebugMessageWhenCrossingChunkBoundary");
-        if let EventType::PlayerCrossesChunkBoundary(_from_chunk, _to_chunk) = &_event.r#type {
+        if let EventType::PlayerCrossesChunkBoundary(_from_chunk, _to_chunk) = &_event.event_type {
           debug!(
             "{} from {} to {}",
             "Player crosses chunk boundary".green(),

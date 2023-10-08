@@ -18,14 +18,14 @@ pub mod subscriber;
 pub use subscriber::*;
 pub mod tag;
 pub use tag::Tag as EventTag;
-pub mod r#type;
-pub use r#type::Type as EventType;
+pub mod event_type;
+pub use event_type::Type as EventType;
 
 /// The `Event` struct.
 #[derive(Debug, Default)]
 pub struct Event {
   /// The `Event`'s type.
-  pub r#type: EventType,
+  pub event_type: EventType,
   /// The `Event`'s UUID.
   pub uuid: Uuid,
   /// A backtrace.
@@ -37,12 +37,12 @@ pub struct Event {
 }
 
 impl Event {
-  pub fn new(r#type: EventType, priority: i64, backtrace: Vec<String>, tags: Vec<EventTag>) -> Self {
+  pub fn new(event_type: EventType, priority: i64, backtrace: Vec<String>, tags: Vec<EventTag>) -> Self {
     let uuid = Uuid::new_v4();
     let mut backtrace = backtrace;
-    backtrace.push(format!("Event {:?}:{}", r#type, uuid));
+    backtrace.push(format!("Event {:?}:{}", event_type, uuid));
     Self {
-      r#type,
+      event_type,
       uuid,
       priority,
       backtrace,
@@ -51,15 +51,15 @@ impl Event {
   }
 
   pub fn process(&self, game_state: &mut GameState) -> Result<(), AnyError> {
-    debug!("Processing {:#?} event.", self.r#type);
-    self.r#type.process(self, game_state)?;
+    debug!("Processing {:#?} event.", self.event_type);
+    self.event_type.process(self, game_state)?;
     Ok(())
   }
 }
 
 impl PartialEq for Event {
   fn eq(&self, other: &Self) -> bool {
-    self.r#type == other.r#type && self.uuid == other.uuid
+    self.event_type == other.event_type && self.uuid == other.uuid
   }
 }
 
@@ -75,7 +75,7 @@ impl Ord for Event {
   fn cmp(&self, other: &Self) -> Ordering {
     let priority_order = self.priority.cmp(&other.priority);
     if priority_order == Ordering::Equal {
-      let type_order = self.r#type.cmp(&other.r#type);
+      let type_order = self.event_type.cmp(&other.event_type);
       if type_order == Ordering::Equal {
         self.uuid.cmp(&other.uuid)
       } else {
@@ -97,7 +97,7 @@ mod tests {
   #[test]
   fn test_new() {
     let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, vec![], vec![]);
-    assert_eq!(event.r#type, EventType::NoOp);
+    assert_eq!(event.event_type, EventType::NoOp);
     assert_eq!(event.backtrace.len(), 1);
   }
 

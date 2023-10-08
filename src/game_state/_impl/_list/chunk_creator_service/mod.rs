@@ -15,7 +15,7 @@ impl ChunkCreatorServiceTrait for GameState {
   fn create_chunk_plane(&mut self) -> Result<ChunkPlane, AnyError> {
     let chunk_plane = self.chunk_creator_service.create_chunk_plane()?;
     let event = EventBuilder::new()
-      .r#type(EventType::ChunkPlaneIsCreated(chunk_plane.id.clone()))
+      .event_type(EventType::ChunkPlaneIsCreated(chunk_plane.id.clone()))
       .build();
     self.enqueue_event(event);
     Ok(chunk_plane)
@@ -26,7 +26,7 @@ impl ChunkCreatorServiceTrait for GameState {
     let chunks = self.chunk_creator_service.generate_initial_chunks(chunk_plane)?;
     for chunk in chunks.iter() {
       let event = EventBuilder::new()
-        .r#type(EventType::ChunkIsCreated(chunk.id.clone()))
+        .event_type(EventType::ChunkIsCreated(chunk.id.clone()))
         .build();
       self.enqueue_event(event);
     }
@@ -56,7 +56,7 @@ impl ChunkCreatorServiceTrait for GameState {
   fn map_chunk(&mut self, chunk: &mut Chunk) -> Result<(), AnyError> {
     self.chunk_creator_service.map_empty_chunk(chunk)?;
     let event = EventBuilder::new()
-      .r#type(EventType::ChunkIsMapped(chunk.id.clone()))
+      .event_type(EventType::ChunkIsMapped(chunk.id.clone()))
       .build();
     self.enqueue_event(event);
     Ok(())

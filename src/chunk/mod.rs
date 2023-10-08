@@ -15,8 +15,8 @@ pub mod file_manager;
 pub use file_manager::FileManager as ChunkFileManager;
 pub mod status;
 pub use status::Status as ChunkStatus;
-pub mod r#type;
-pub use r#type::Type as ChunkType;
+pub mod chunk_type;
+pub use chunk_type::Type as ChunkType;
 
 /// The `Chunk` struct.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -28,7 +28,7 @@ pub struct Chunk {
   /// The `Chunk`'s ID.
   pub id: ChunkId,
   /// The `Chunk`'s type.
-  pub r#type: ChunkType,
+  pub chunk_type: ChunkType,
   /// The `Chunk`'s status.
   pub status: ChunkStatus,
   /// The `Chunk`'s name.
@@ -51,7 +51,7 @@ impl Default for Chunk {
       id: ChunkId::default(),
       chunk_plane_id: ChunkPlaneId::default(),
       chunk_seed: ChunkSeed::default(),
-      r#type: ChunkType::default(),
+      chunk_type: ChunkType::default(),
       status: ChunkStatus::default(),
       name: "Default Chunk".to_string(),
       description: "This is the default chunk.".to_string(),
@@ -75,7 +75,7 @@ mod tests {
     let chunk = Chunk::default();
     assert_ne!(chunk.id, ChunkId::default());
     assert_ne!(chunk.chunk_plane_id, ChunkPlaneId::default());
-    assert_eq!(chunk.r#type, ChunkType::default());
+    assert_eq!(chunk.chunk_type, ChunkType::default());
     assert_eq!(chunk.name, "Default Chunk".to_string());
     assert_eq!(chunk.description, "This is the default chunk.".to_string());
     assert_eq!(chunk.rooms, HashMap::new());
@@ -91,7 +91,7 @@ mod tests {
       id: chunk_id.clone(),
       chunk_plane_id: chunk_plane_id.clone(),
       chunk_seed: chunk_seed.clone(),
-      r#type: ChunkType::default(),
+      chunk_type: ChunkType::default(),
       name: "Test Chunk".to_string(),
       description: "This is a test chunk.".to_string(),
       ..Default::default()
@@ -99,7 +99,7 @@ mod tests {
     assert_eq!(chunk.id, chunk_id);
     assert_eq!(chunk.chunk_plane_id, chunk_plane_id);
     assert_eq!(chunk.chunk_seed, chunk_seed);
-    assert_eq!(chunk.r#type, ChunkType::default());
+    assert_eq!(chunk.chunk_type, ChunkType::default());
     assert_eq!(chunk.name, "Test Chunk".to_string());
     assert_eq!(chunk.description, "This is a test chunk.".to_string());
     assert_eq!(chunk.rooms, HashMap::new());

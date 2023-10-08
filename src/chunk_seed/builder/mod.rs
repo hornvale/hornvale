@@ -18,7 +18,7 @@ pub struct Builder {
   /// Adjacent `ChunkSeed` IDs.
   pub adjacent_chunk_seed_ids: Option<Vec<ChunkSeedId>>,
   /// The `ChunkSeed`'s type.
-  pub r#type: Option<ChunkSeedType>,
+  pub chunk_seed_type: Option<ChunkSeedType>,
 }
 
 impl Builder {
@@ -52,8 +52,8 @@ impl Builder {
   }
 
   /// Sets the `ChunkSeed`'s type.
-  pub fn r#type(mut self, r#type: &ChunkSeedType) -> Self {
-    self.r#type = Some(*r#type);
+  pub fn chunk_seed_type(mut self, chunk_seed_type: &ChunkSeedType) -> Self {
+    self.chunk_seed_type = Some(*chunk_seed_type);
     self
   }
 
@@ -69,8 +69,8 @@ impl Builder {
     let chunk_plane_id = self.chunk_plane_id.unwrap_or_default();
     let chunk_id = self.chunk_id;
     let coordinates = self.coordinates.unwrap_or((0, 0));
-    let r#type = self.r#type.unwrap_or_default();
-    let mut result = ChunkSeed::new(id, &chunk_plane_id, coordinates, r#type);
+    let chunk_seed_type = self.chunk_seed_type.unwrap_or_default();
+    let mut result = ChunkSeed::new(id, &chunk_plane_id, coordinates, chunk_seed_type);
     result.chunk_id = chunk_id;
     result.adjacent_chunk_seed_ids = self.adjacent_chunk_seed_ids.unwrap_or_default();
     result
@@ -91,6 +91,6 @@ mod tests {
     assert_eq!(chunk_seed.chunk_plane_id.to_string().is_empty(), false);
     assert_eq!(chunk_seed.chunk_id.is_none(), true);
     assert_eq!(chunk_seed.coordinates, (0, 0));
-    assert_eq!(chunk_seed.r#type.to_string().is_empty(), false);
+    assert_eq!(chunk_seed.chunk_seed_type.to_string().is_empty(), false);
   }
 }

@@ -4,14 +4,14 @@ use crate::game_state::GameState;
 
 pub mod error;
 pub use error::Error as ActionError;
-pub mod r#type;
-pub use r#type::Type as ActionType;
+pub mod action_type;
+pub use action_type::Type as ActionType;
 
 /// The `Action` struct.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Action {
   /// The `Action` type.
-  pub r#type: ActionType,
+  pub action_type: ActionType,
   /// The `Action`'s UUID.
   pub uuid: Uuid,
   /// A backtrace.
@@ -19,20 +19,20 @@ pub struct Action {
 }
 
 impl Action {
-  pub fn new(r#type: ActionType, backtrace: Vec<String>) -> Self {
+  pub fn new(action_type: ActionType, backtrace: Vec<String>) -> Self {
     let uuid = Uuid::new_v4();
     let mut backtrace = backtrace;
-    backtrace.push(format!("Action {:?}:{}", r#type, uuid));
+    backtrace.push(format!("Action {:?}:{}", action_type, uuid));
     Self {
-      r#type,
+      action_type,
       uuid,
       backtrace,
     }
   }
 
   pub fn attempt(&self, game_state: &mut GameState) -> Result<(), Box<ActionError>> {
-    debug!("Attempting {:#?} action.", self.r#type);
-    self.r#type.attempt(self, game_state)?;
+    debug!("Attempting {:#?} action.", self.action_type);
+    self.action_type.attempt(self, game_state)?;
     Ok(())
   }
 }
@@ -49,7 +49,7 @@ mod tests {
   fn test_new() {
     init();
     let action = Action::new(ActionType::NoOp, vec![]);
-    assert_eq!(action.r#type, ActionType::NoOp);
+    assert_eq!(action.action_type, ActionType::NoOp);
     assert_eq!(action.backtrace.len(), 1);
   }
 

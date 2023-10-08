@@ -19,7 +19,7 @@ impl Manager {
   }
 
   pub fn add_rule(&mut self, rule: LookupRule) {
-    self.rules.insert(rule.r#type, rule);
+    self.rules.insert(rule.lookup_rule_type, rule);
   }
 
   pub fn enable_rule(&mut self, rule_type: &LookupRuleType) {

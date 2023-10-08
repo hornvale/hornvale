@@ -80,19 +80,19 @@ impl Room {
         let mut iter = self.passages.iter();
         let (direction1, passage1) = iter.next().unwrap();
         let (direction2, passage2) = iter.next().unwrap();
-        if passage1.r#type == passage2.r#type {
+        if passage1.passage_type == passage2.passage_type {
           format!(
             "There are {} to the {} and {}.",
-            passage1.r#type.to_plural_string(),
+            passage1.passage_type.to_plural_string(),
             direction1.to_lower_case_string(),
             direction2.to_lower_case_string()
           )
         } else {
           format!(
             "There is a {} to the {} and a {} to the {}.",
-            passage1.r#type,
+            passage1.passage_type,
             direction1.to_lower_case_string(),
-            passage2.r#type,
+            passage2.passage_type,
             direction2.to_lower_case_string()
           )
         }
@@ -102,13 +102,13 @@ impl Room {
         let mut type_names = self
           .passages
           .values()
-          .map(|passage| passage.r#type.to_string())
+          .map(|passage| passage.passage_type.to_string())
           .collect::<Vec<_>>();
         type_names.dedup();
         if type_names.len() == 1 {
           description.push_str(&format!(
             "{} ",
-            self.passages.values().next().unwrap().r#type.to_plural_string()
+            self.passages.values().next().unwrap().passage_type.to_plural_string()
           ));
           let mut iter = self.passages.iter();
           while let Some(passage) = iter.next() {
@@ -126,7 +126,7 @@ impl Room {
             }
             description.push_str(&format!(
               "a {} to the {}",
-              passage.1.r#type,
+              passage.1.passage_type,
               passage.0.to_lower_case_string()
             ));
             if iter.len() > 1 {

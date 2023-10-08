@@ -191,7 +191,7 @@ impl ChunkPlane {
         {
           let chunk_seed_id = self.get_chunk_seed_id((x, y)).unwrap();
           let chunk_seed = self.chunk_seeds.get_mut(&chunk_seed_id).unwrap();
-          chunk_seed.r#type = ChunkSeedType::Open;
+          chunk_seed.chunk_seed_type = ChunkSeedType::Open;
         }
       }
     }
@@ -202,10 +202,10 @@ impl ChunkPlane {
   pub fn mark_half_open_chunk_seeds(&mut self) -> Result<(), AnyError> {
     let mut chunk_seed_ids = Vec::<ChunkSeedId>::new();
     for chunk_seed in self.chunk_seeds.values() {
-      if chunk_seed.r#type == ChunkSeedType::Unknown {
+      if chunk_seed.chunk_seed_type == ChunkSeedType::Unknown {
         for adjacent_chunk_seed_id in chunk_seed.adjacent_chunk_seed_ids.iter() {
           let adjacent_chunk_seed = self.chunk_seeds.get(adjacent_chunk_seed_id).unwrap();
-          if adjacent_chunk_seed.r#type == ChunkSeedType::Open {
+          if adjacent_chunk_seed.chunk_seed_type == ChunkSeedType::Open {
             chunk_seed_ids.push(chunk_seed.id.clone());
             break;
           }
@@ -214,7 +214,7 @@ impl ChunkPlane {
     }
     for chunk_seed_id in chunk_seed_ids {
       let chunk_seed = self.chunk_seeds.get_mut(&chunk_seed_id).unwrap();
-      chunk_seed.r#type = ChunkSeedType::HalfOpen;
+      chunk_seed.chunk_seed_type = ChunkSeedType::HalfOpen;
     }
     Ok(())
   }
@@ -222,8 +222,8 @@ impl ChunkPlane {
   /// Mark "closed" `ChunkSeed`s.
   pub fn mark_closed_chunk_seeds(&mut self) -> Result<(), AnyError> {
     for chunk_seed in self.chunk_seeds.values_mut() {
-      if chunk_seed.r#type == ChunkSeedType::Unknown {
-        chunk_seed.r#type = ChunkSeedType::Closed;
+      if chunk_seed.chunk_seed_type == ChunkSeedType::Unknown {
+        chunk_seed.chunk_seed_type = ChunkSeedType::Closed;
       }
     }
     Ok(())
@@ -250,7 +250,7 @@ impl ChunkPlane {
     let chunk_seeds = self
       .chunk_seeds
       .values()
-      .filter(|&chunk_seed| chunk_seed.r#type == ChunkSeedType::Closed && chunk_seed.chunk_id.is_none())
+      .filter(|&chunk_seed| chunk_seed.chunk_seed_type == ChunkSeedType::Closed && chunk_seed.chunk_id.is_none())
       .cloned()
       .collect::<Vec<ChunkSeed>>();
     let mut chunks = Vec::<Chunk>::new();

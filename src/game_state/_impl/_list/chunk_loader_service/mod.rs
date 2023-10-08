@@ -19,7 +19,7 @@ impl ChunkLoaderServiceTrait for GameState {
     let chunk_plane_id = chunk_plane.id.clone();
     self.chunk_loader_service.load_chunk_plane(chunk_plane)?;
     let event = EventBuilder::new()
-      .r#type(EventType::ChunkPlaneIsLoaded(chunk_plane_id))
+      .event_type(EventType::ChunkPlaneIsLoaded(chunk_plane_id))
       .build();
     self.enqueue_event(event);
     Ok(())
@@ -29,7 +29,7 @@ impl ChunkLoaderServiceTrait for GameState {
   fn unload_chunk_plane(&mut self, chunk_plane_id: &ChunkPlaneId) -> Result<(), AnyError> {
     self.chunk_loader_service.unload_chunk_plane(chunk_plane_id)?;
     let event = EventBuilder::new()
-      .r#type(EventType::ChunkPlaneIsUnloaded(chunk_plane_id.clone()))
+      .event_type(EventType::ChunkPlaneIsUnloaded(chunk_plane_id.clone()))
       .build();
     self.enqueue_event(event);
     Ok(())
@@ -41,7 +41,9 @@ impl ChunkLoaderServiceTrait for GameState {
   fn load_chunk(&mut self, chunk: Chunk) -> Result<(), AnyError> {
     let chunk_id = chunk.id.clone();
     self.chunk_loader_service.load_chunk(chunk)?;
-    let event = EventBuilder::new().r#type(EventType::ChunkIsLoaded(chunk_id)).build();
+    let event = EventBuilder::new()
+      .event_type(EventType::ChunkIsLoaded(chunk_id))
+      .build();
     self.enqueue_event(event);
     Ok(())
   }
@@ -50,7 +52,7 @@ impl ChunkLoaderServiceTrait for GameState {
   fn unload_chunk(&mut self, chunk_id: &ChunkId) -> Result<(), AnyError> {
     self.chunk_loader_service.unload_chunk(chunk_id)?;
     let event = EventBuilder::new()
-      .r#type(EventType::ChunkIsUnloaded(chunk_id.clone()))
+      .event_type(EventType::ChunkIsUnloaded(chunk_id.clone()))
       .build();
     self.enqueue_event(event);
     Ok(())

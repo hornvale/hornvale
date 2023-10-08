@@ -16,7 +16,7 @@ impl ChunkFileServiceTrait for GameState {
   fn open_chunk(&mut self, chunk_id: &ChunkId) -> Result<Chunk, AnyError> {
     let chunk = self.chunk_file_service.open_chunk(chunk_id)?;
     let event = EventBuilder::new()
-      .r#type(EventType::ChunkIsOpened(chunk_id.clone()))
+      .event_type(EventType::ChunkIsOpened(chunk_id.clone()))
       .build();
     self.enqueue_event(event);
     Ok(chunk)
@@ -34,7 +34,9 @@ impl ChunkFileServiceTrait for GameState {
   fn save_chunk(&mut self, chunk: &Chunk) -> Result<(), AnyError> {
     let chunk_id = chunk.id.clone();
     self.chunk_file_service.save_chunk(chunk)?;
-    let event = EventBuilder::new().r#type(EventType::ChunkIsSaved(chunk_id)).build();
+    let event = EventBuilder::new()
+      .event_type(EventType::ChunkIsSaved(chunk_id))
+      .build();
     self.enqueue_event(event);
     Ok(())
   }
@@ -43,7 +45,7 @@ impl ChunkFileServiceTrait for GameState {
   fn open_chunk_plane(&mut self, chunk_plane_id: &ChunkPlaneId) -> Result<ChunkPlane, AnyError> {
     let chunk_plane = self.chunk_file_service.open_chunk_plane(chunk_plane_id)?;
     let event = EventBuilder::new()
-      .r#type(EventType::ChunkPlaneIsOpened(chunk_plane_id.clone()))
+      .event_type(EventType::ChunkPlaneIsOpened(chunk_plane_id.clone()))
       .build();
     self.enqueue_event(event);
     Ok(chunk_plane)
@@ -54,7 +56,7 @@ impl ChunkFileServiceTrait for GameState {
     let chunk_plane_id = chunk_plane.id.clone();
     self.chunk_file_service.save_chunk_plane(chunk_plane)?;
     let event = EventBuilder::new()
-      .r#type(EventType::ChunkPlaneIsSaved(chunk_plane_id))
+      .event_type(EventType::ChunkPlaneIsSaved(chunk_plane_id))
       .build();
     self.enqueue_event(event);
     Ok(())

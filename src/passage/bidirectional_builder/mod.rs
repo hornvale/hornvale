@@ -36,9 +36,9 @@ impl BidirectionalBuilder {
     self
   }
 
-  pub fn r#type(&mut self, r#type: &PassageType) -> &mut Self {
-    self.builder1.r#type = Some(r#type.clone());
-    self.builder2.r#type = Some(r#type.clone());
+  pub fn passage_type(&mut self, passage_type: &PassageType) -> &mut Self {
+    self.builder1.passage_type = Some(passage_type.clone());
+    self.builder2.passage_type = Some(passage_type.clone());
     self
   }
 
@@ -76,7 +76,7 @@ mod tests {
     let (passage1, passage2) = BidirectionalBuilder::new()
       .origin(&origin)
       .destination(&destination)
-      .r#type(&PassageType::default())
+      .passage_type(&PassageType::default())
       .id(&PassageId::default())
       .name("Test Passage")
       .description("This is a test passage.")

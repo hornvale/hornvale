@@ -6,31 +6,34 @@ use crate::event::EventSubscriberBuilder;
 
 pub mod manager;
 pub use manager::Manager as ChunkRuleManager;
-pub mod r#type;
-pub use r#type::Type as ChunkRuleType;
+pub mod chunk_rule_type;
+pub use chunk_rule_type::Type as ChunkRuleType;
 
 /// The `ChunkRule` struct.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChunkRule {
-  pub r#type: ChunkRuleType,
+  pub chunk_rule_type: ChunkRuleType,
   pub subscriber: Rc<RefCell<EventSubscriber>>,
 }
 
 impl ChunkRule {
-  pub fn new(r#type: ChunkRuleType) -> Self {
-    let mut r#type = r#type;
+  pub fn new(chunk_rule_type: ChunkRuleType) -> Self {
+    let mut chunk_rule_type = chunk_rule_type;
     let subscriber = EventSubscriberBuilder::new()
-      .name(format!("ChunkManagerRule::{}", r#type))
-      .priority(r#type.get_priority())
-      .event_type(r#type.get_event_type())
-      .filter_rule(r#type.get_filter_rule())
-      .should_process(r#type.get_should_process())
-      .will_process(r#type.get_will_process())
-      .did_process(r#type.get_did_process())
-      .is_enabled(r#type.is_enabled())
+      .name(format!("ChunkManagerRule::{}", chunk_rule_type))
+      .priority(chunk_rule_type.get_priority())
+      .event_type(chunk_rule_type.get_event_type())
+      .filter_rule(chunk_rule_type.get_filter_rule())
+      .should_process(chunk_rule_type.get_should_process())
+      .will_process(chunk_rule_type.get_will_process())
+      .did_process(chunk_rule_type.get_did_process())
+      .is_enabled(chunk_rule_type.is_enabled())
       .build();
     let subscriber = Rc::new(RefCell::new(subscriber));
-    ChunkRule { r#type, subscriber }
+    ChunkRule {
+      chunk_rule_type,
+      subscriber,
+    }
   }
 
   pub fn enable(&mut self) {
