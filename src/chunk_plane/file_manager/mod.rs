@@ -28,8 +28,8 @@ impl FileManager {
     }
   }
 
-  /// Loads a `ChunkPlane` from disk.
-  pub fn load(&self, chunk_plane_id: &ChunkPlaneId) -> Result<ChunkPlane, AnyError> {
+  /// Opens a `ChunkPlane` from disk.
+  pub fn open(&self, chunk_plane_id: &ChunkPlaneId) -> Result<ChunkPlane, AnyError> {
     let file_path = format!("{}/{}.yaml", self.base_path, chunk_plane_id);
     let file =
       File::open(file_path.clone()).with_context(|| format!("Unable to read chunk plane file at {}", file_path))?;
@@ -38,7 +38,7 @@ impl FileManager {
   }
 
   /// Saves the `ChunkPlane` in a serialized form.
-  pub fn store(&self, chunk_plane: &ChunkPlane) -> Result<(), AnyError> {
+  pub fn save(&self, chunk_plane: &ChunkPlane) -> Result<(), AnyError> {
     create_dir_all(&self.base_path).with_context(|| format!("Unable to create directory at {}", self.base_path))?;
     let file_path = format!("{}/{}.yaml", self.base_path, chunk_plane.id);
     let yaml_string = serde_yaml_to_string(chunk_plane)?;
@@ -68,8 +68,8 @@ mod tests {
     let mut chunk_plane = ChunkPlane::default();
     chunk_plane.id = ChunkPlaneId::default();
     chunk_plane.generate_initial_chunks()?;
-    chunk_plane_file_manager.store(&chunk_plane)?;
-    let _chunk_plane = chunk_plane_file_manager.load(&chunk_plane.id)?;
+    chunk_plane_file_manager.save(&chunk_plane)?;
+    let _chunk_plane = chunk_plane_file_manager.open(&chunk_plane.id)?;
     Ok(())
   }
 }

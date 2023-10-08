@@ -58,7 +58,7 @@ impl Type {
           tags.push(EventTag::HasPlayerAsPrincipalActor);
         }
         let event = Event::new(
-          EventType::EntityLooksAroundRoom(actor_id.clone(), room_id.clone()),
+          EventType::ActorLooksAroundRoom(actor_id.clone(), room_id.clone()),
           DEFAULT_PRIORITY,
           action.backtrace.clone(),
           tags,
@@ -99,7 +99,7 @@ impl Type {
           tags.push(EventTag::HasPlayerAsPrincipalActor);
         }
         let event = Event::new(
-          EventType::EntityWalksFromRoomToRoom(actor_id.clone(), current_room_id, destination_room_id),
+          EventType::ActorMovesFromRoomToRoom(actor_id.clone(), current_room_id, destination_room_id),
           DEFAULT_PRIORITY,
           action.backtrace.clone(),
           tags,

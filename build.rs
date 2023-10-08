@@ -7,12 +7,14 @@ use std::path::Path;
 fn main() {
   generate_macro_mod();
   generate_list_mod_with_alias("src/chunk/map_builder/strategies", "Strategy");
-  generate_list_mod("src/game_state/_impl");
-  generate_list_mod("src/game_state/_type");
   generate_list_mod_with_alias("src/entity_id/_trait", "Trait");
   generate_list_mod("src/entity_id/_type");
   generate_list_mod("src/event/subscriber/_type");
+  generate_list_mod("src/game_state/_impl");
   generate_list_mod_with_alias("src/game_state/_trait", "Trait");
+  generate_list_mod("src/game_state/_type");
+  generate_list_mod("src/lookup_service/_impl");
+  generate_list_mod_with_alias("src/lookup_service/_trait", "Trait");
   generate_list_mod_with_alias("src/system", "System");
   generate_list_mod_with_alias("src/system/_trait", "Trait");
 }

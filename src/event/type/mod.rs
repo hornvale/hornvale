@@ -5,7 +5,6 @@ use crate::effect::EffectType;
 use crate::entity_id::ActorId;
 use crate::entity_id::ChunkId;
 use crate::entity_id::ChunkPlaneId;
-use crate::entity_id::EntityId;
 use crate::entity_id::RoomId;
 use crate::event::Event;
 use crate::event::EventTag;
@@ -40,12 +39,26 @@ pub enum Type {
   ChunkPlaneIsLoaded(ChunkPlaneId),
   /// A chunk plane is unloaded.
   ChunkPlaneIsUnloaded(ChunkPlaneId),
-  /// An entity appeared in a room.
-  EntityAppearsInRoom(EntityId, RoomId),
-  /// EntityLooksAroundRoom -- an entity looked around a room.
-  EntityLooksAroundRoom(ActorId, RoomId),
-  /// EntityWalksFromRoomToRoom -- an entity walked from one room to another.
-  EntityWalksFromRoomToRoom(ActorId, RoomId, RoomId),
+  /// A chunk is saved.
+  ChunkIsSaved(ChunkId),
+  /// A chunk is opened.
+  ChunkIsOpened(ChunkId),
+  /// A chunk plane is saved.
+  ChunkPlaneIsSaved(ChunkPlaneId),
+  /// A chunk plane is opened.
+  ChunkPlaneIsOpened(ChunkPlaneId),
+  /// A chunk is created.
+  ChunkIsCreated(ChunkId),
+  /// A chunk plane is created.
+  ChunkPlaneIsCreated(ChunkPlaneId),
+  /// A chunk is mapped.
+  ChunkIsMapped(ChunkId),
+  /// An actor appeared in a room, via supernatural/OOC means.
+  ActorAppearsInRoom(ActorId, RoomId),
+  /// ActorLooksAroundRoom -- an actor looked around a room.
+  ActorLooksAroundRoom(ActorId, RoomId),
+  /// ActorMovesFromRoomToRoom -- an actor moved or was moved from one room to another.
+  ActorMovesFromRoomToRoom(ActorId, RoomId, RoomId),
   /// The player crosses a chunk boundary (old chunk, new chunk)
   PlayerCrossesChunkBoundary(ChunkId, ChunkId),
   /// Shows the room's description.
@@ -97,24 +110,24 @@ impl Type {
           chunk_plane_id
         );
       },
-      EntityAppearsInRoom(entity_id, room_id) => {
-        debug!("Processing entity-appears-in-room event.");
+      ActorAppearsInRoom(actor_id, room_id) => {
+        debug!("Processing actor-appears-in-room event.");
         Effect::new(
-          EffectType::PlaceEntityInRoom(entity_id.clone(), room_id.clone()),
+          EffectType::PlaceEntityInRoom(actor_id.clone().into(), room_id.clone()),
           event.backtrace.clone(),
         )
         .apply(game_state)?;
       },
-      EntityWalksFromRoomToRoom(entity_id, _start_room_id, end_room_id) => {
-        debug!("Processing entity-walks-from-room-to-room event.");
+      ActorMovesFromRoomToRoom(actor_id, _start_room_id, end_room_id) => {
+        debug!("Processing actor-moves-from-room-to-room event.");
         Effect::new(
-          EffectType::PlaceEntityInRoom(entity_id.clone().into(), end_room_id.clone()),
+          EffectType::PlaceEntityInRoom(actor_id.clone().into(), end_room_id.clone()),
           event.backtrace.clone(),
         )
         .apply(game_state)?;
       },
-      EntityLooksAroundRoom(_entity_id, room_id) => {
-        debug!("Processing entity-looks-around-room event.");
+      ActorLooksAroundRoom(_actor_id, room_id) => {
+        debug!("Processing actor-looks-around-room event.");
         if event.tags.contains(&EventTag::HasPlayerAsPrincipalActor) {
           let event = Event::new(
             Type::ShowsRoomSummary(room_id.clone()),

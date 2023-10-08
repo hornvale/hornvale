@@ -10,6 +10,7 @@ use crate::game_state::InputReadyFlagTrait;
 use crate::game_state::LoopTimerTrait;
 use crate::game_state::QuitFlagTrait;
 use crate::game_state::StartTrait;
+use crate::lookup_rule::LookupRuleManager;
 use crate::system::CommandSystem;
 use crate::system::EventSystem;
 use crate::system::InputSystem;
@@ -66,6 +67,9 @@ impl Game {
     let mut chunk_rule_manager = ChunkRuleManager::default();
     chunk_rule_manager.insert_stock_rules();
     chunk_rule_manager.inject_rule_subscribers(&mut event_system.event_publisher);
+    let mut lookup_rule_manager = LookupRuleManager::default();
+    lookup_rule_manager.insert_stock_rules();
+    lookup_rule_manager.inject_rule_subscribers(&mut event_system.event_publisher);
 
     // Give us time (1 tick) to start up before we start reading input.
     game_state.set_input_ready_flag(false);
