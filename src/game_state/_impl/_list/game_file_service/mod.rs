@@ -18,3 +18,22 @@ impl GameFileServiceTrait for GameState {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  use crate::event::DEFAULT_PRIORITY;
+  use crate::test::init;
+
+  #[test]
+  fn test_create_game_file_directory() {
+    init();
+    let mut game_state = GameState::new();
+    game_state.create_game_file_directory().unwrap();
+    assert_eq!(game_state.event_queue.len(), 1);
+    let event = game_state.dequeue_event().unwrap();
+    assert_eq!(event.event_type, EventType::GameFileDirectoryIsCreated);
+    assert_eq!(event.priority, DEFAULT_PRIORITY);
+  }
+}
