@@ -6,31 +6,34 @@ use crate::event::EventSubscriberBuilder;
 
 pub mod manager;
 pub use manager::Manager as GameRuleManager;
-pub mod r#type;
-pub use r#type::Type as GameRuleType;
+pub mod game_rule_type;
+pub use game_rule_type::Type as GameRuleType;
 
 /// The `GameRule` struct.
 #[derive(Clone, Debug, PartialEq)]
 pub struct GameRule {
-  pub r#type: GameRuleType,
+  pub game_rule_type: GameRuleType,
   pub subscriber: Rc<RefCell<EventSubscriber>>,
 }
 
 impl GameRule {
-  pub fn new(r#type: GameRuleType) -> Self {
-    let mut r#type = r#type;
+  pub fn new(game_rule_type: GameRuleType) -> Self {
+    let mut game_rule_type = game_rule_type;
     let subscriber = EventSubscriberBuilder::new()
-      .name(format!("GameRule::{}", r#type))
-      .priority(r#type.get_priority())
-      .event_type(r#type.get_event_type())
-      .filter_rule(r#type.get_filter_rule())
-      .should_process(r#type.get_should_process())
-      .will_process(r#type.get_will_process())
-      .did_process(r#type.get_did_process())
-      .is_enabled(r#type.is_enabled())
+      .name(format!("GameRule::{}", game_rule_type))
+      .priority(game_rule_type.get_priority())
+      .event_type(game_rule_type.get_event_type())
+      .filter_rule(game_rule_type.get_filter_rule())
+      .should_process(game_rule_type.get_should_process())
+      .will_process(game_rule_type.get_will_process())
+      .did_process(game_rule_type.get_did_process())
+      .is_enabled(game_rule_type.is_enabled())
       .build();
     let subscriber = Rc::new(RefCell::new(subscriber));
-    GameRule { r#type, subscriber }
+    GameRule {
+      game_rule_type,
+      subscriber,
+    }
   }
 
   pub fn enable(&mut self) {
