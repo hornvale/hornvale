@@ -17,6 +17,8 @@ pub mod event_queue;
 pub use event_queue::*;
 pub mod file_manager;
 pub use file_manager::*;
+pub mod game_file_service;
+pub use game_file_service::*;
 pub mod game_state;
 pub use game_state::*;
 pub mod input_queue;
