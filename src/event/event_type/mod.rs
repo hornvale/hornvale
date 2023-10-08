@@ -25,49 +25,28 @@ pub enum Type {
   None,
   /// No-Op -- absolutely nothing happens.
   NoOp,
-  /// StartsGame -- the game starts.
   StartsGame,
-  /// QuitsGame -- the player quits.
+  GameFileDirectoryIsCreated,
   QuitsGame,
-  /// Outputs a blank line.
   OutputsBlankLine,
-  /// A chunk is loaded.
   ChunkIsLoaded(ChunkId),
-  /// A chunk is unloaded.
   ChunkIsUnloaded(ChunkId),
-  /// A chunk plane is loaded.
   ChunkPlaneIsLoaded(ChunkPlaneId),
-  /// A chunk plane is unloaded.
   ChunkPlaneIsUnloaded(ChunkPlaneId),
-  /// A chunk is saved.
   ChunkIsSaved(ChunkId),
-  /// A chunk is opened.
   ChunkIsOpened(ChunkId),
-  /// A chunk plane is saved.
   ChunkPlaneIsSaved(ChunkPlaneId),
-  /// A chunk plane is opened.
   ChunkPlaneIsOpened(ChunkPlaneId),
-  /// A chunk is created.
   ChunkIsCreated(ChunkId),
-  /// A chunk plane is created.
   ChunkPlaneIsCreated(ChunkPlaneId),
-  /// A chunk is mapped.
   ChunkIsMapped(ChunkId),
-  /// An actor appeared in a room, via supernatural/OOC means.
   ActorAppearsInRoom(ActorId, RoomId),
-  /// ActorLooksAroundRoom -- an actor looked around a room.
   ActorLooksAroundRoom(ActorId, RoomId),
-  /// ActorMovesFromRoomToRoom -- an actor moved or was moved from one room to another.
   ActorMovesFromRoomToRoom(ActorId, RoomId, RoomId),
-  /// The player crosses a chunk boundary (old chunk, new chunk)
   PlayerCrossesChunkBoundary(ChunkId, ChunkId),
-  /// Shows the room's description.
   ShowsRoomDescriptionAsPartOfRoomSummary(String),
-  /// Shows the room's name.
   ShowsRoomNameAsPartOfRoomSummary(String),
-  /// Shows the room's passages.
   ShowsRoomPassagesAsPartOfRoomSummary(String),
-  /// ShowsRoomSummary -- a room name, description, etc is shown.
   ShowsRoomSummary(RoomId),
 }
 

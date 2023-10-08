@@ -11,6 +11,7 @@ use crate::command::Command;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
 use crate::event::Event;
+use crate::game_file_service::GameFileService;
 use crate::lookup_service::LookupService;
 use crate::room::Room;
 
@@ -55,6 +56,7 @@ pub struct GameState {
   chunk_creator_service: ChunkCreatorService,
   chunk_file_service: ChunkFileService,
   chunk_loader_service: ChunkLoaderService,
+  game_file_service: GameFileService,
   lookup_service: LookupService,
 }
 
@@ -63,7 +65,8 @@ impl GameState {
   pub fn new() -> Self {
     let seed_string = Uuid::new_v4().to_string();
     let local_data_dir = LOCAL_DATA_DIR.as_ref().unwrap();
-    let chunk_data_dir = format!("{}/{}", local_data_dir, "chunk_data");
+    let game_file_dir = format!("{}/{}", local_data_dir, "game_file");
+    let chunk_data_dir = format!("{}/{}", game_file_dir, "chunk_data");
     Self {
       // Seed string.
       seed_string: seed_string.clone(),
@@ -90,6 +93,7 @@ impl GameState {
       chunk_creator_service: ChunkCreatorService::new(&chunk_data_dir, &seed_string),
       chunk_file_service: ChunkFileService::new(&chunk_data_dir),
       chunk_loader_service: ChunkLoaderService::default(),
+      game_file_service: GameFileService::new(&game_file_dir),
       lookup_service: LookupService::default(),
     }
   }
