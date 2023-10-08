@@ -49,6 +49,8 @@ pub mod chunk_loader_service;
 pub mod chunk_plane;
 pub mod chunk_rule;
 pub mod chunk_seed;
+pub mod chunk_world;
+pub mod chunk_world_creator_service;
 pub mod command;
 pub mod effect;
 pub mod entity_id;
