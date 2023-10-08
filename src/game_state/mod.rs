@@ -7,6 +7,7 @@ use uuid::Uuid;
 use crate::chunk::Chunk;
 use crate::chunk::ChunkManager;
 use crate::chunk_plane::ChunkPlane;
+use crate::chunk_service::ChunkService;
 use crate::command::Command;
 use crate::entity_id::ChunkId;
 use crate::entity_id::ChunkPlaneId;
@@ -58,7 +59,8 @@ pub struct GameState {
   pub chunk_manager: ChunkManager,
   pub loaded_chunks: HashMap<ChunkId, Chunk>,
   pub loaded_chunk_planes: HashMap<ChunkPlaneId, ChunkPlane>,
-  // Lookup Service.
+  // Services.
+  pub chunk_service: ChunkService,
   pub lookup_service: LookupService,
 }
 
@@ -95,7 +97,8 @@ impl GameState {
       chunk_manager: ChunkManager::new(&seed_string, &chunk_data_dir),
       loaded_chunks: HashMap::new(),
       loaded_chunk_planes: HashMap::new(),
-      // Lookup Service.
+      // Services.
+      chunk_service: ChunkService::default(),
       lookup_service: LookupService::default(),
     }
   }

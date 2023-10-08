@@ -3,6 +3,8 @@
 // Remember not to edit it manually.
 pub mod chunk_management;
 pub use chunk_management::*;
+pub mod chunk_service;
+pub use chunk_service::*;
 pub mod command_queue;
 pub use command_queue::*;
 pub mod current_room_id;
