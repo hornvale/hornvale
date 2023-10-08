@@ -41,6 +41,8 @@ pub enum Type {
   ChunkPlaneIsOpened(ChunkPlaneId),
   ChunkPlaneIsCreated(ChunkPlaneId),
   ChunkWorldIsCreated,
+  ChunkWorldIsOpened,
+  ChunkWorldIsSaved,
   ActorAppearsInRoom(ActorId, RoomId),
   ActorLooksAroundRoom(ActorId, RoomId),
   ActorMovesFromRoomToRoom(ActorId, RoomId, RoomId),
