@@ -1,3 +1,5 @@
+use anyhow::Error as AnyError;
+
 use crate::chunk_world::ChunkWorld;
 use crate::chunk_world::ChunkWorldFileManager;
 
@@ -20,7 +22,8 @@ impl ChunkWorldCreatorService {
   }
 
   /// Creates a new `ChunkWorld`.
-  pub fn create_chunk_world(&self) -> ChunkWorld {
-    ChunkWorld::default()
+  pub fn create_chunk_world(&self) -> Result<ChunkWorld, AnyError> {
+    let chunk_world = ChunkWorld::default();
+    Ok(chunk_world)
   }
 }

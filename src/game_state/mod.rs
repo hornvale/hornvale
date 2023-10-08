@@ -7,6 +7,7 @@ use uuid::Uuid;
 use crate::chunk_creator_service::ChunkCreatorService;
 use crate::chunk_file_service::ChunkFileService;
 use crate::chunk_loader_service::ChunkLoaderService;
+use crate::chunk_world_creator_service::ChunkWorldCreatorService;
 use crate::command::Command;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
@@ -54,6 +55,7 @@ pub struct GameState {
   pub event_queue: BinaryHeap<Event>,
   pub output_queue: VecDeque<String>,
   // Services.
+  chunk_world_creator_service: ChunkWorldCreatorService,
   chunk_creator_service: ChunkCreatorService,
   chunk_file_service: ChunkFileService,
   chunk_loader_service: ChunkLoaderService,
@@ -92,6 +94,7 @@ impl GameState {
       event_queue: BinaryHeap::new(),
       output_queue: VecDeque::new(),
       // Services.
+      chunk_world_creator_service: ChunkWorldCreatorService::new(&chunk_data_dir),
       chunk_creator_service: ChunkCreatorService::new(&chunk_data_dir, &seed_string),
       chunk_file_service: ChunkFileService::new(&chunk_data_dir),
       chunk_loader_service: ChunkLoaderService::default(),

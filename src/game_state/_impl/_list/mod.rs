@@ -7,6 +7,8 @@ pub mod chunk_file_service;
 pub use chunk_file_service::*;
 pub mod chunk_loader_service;
 pub use chunk_loader_service::*;
+pub mod chunk_world_creator_service;
+pub use chunk_world_creator_service::*;
 pub mod command_queue;
 pub use command_queue::*;
 pub mod current_room_id;
