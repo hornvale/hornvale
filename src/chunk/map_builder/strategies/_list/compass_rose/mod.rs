@@ -24,7 +24,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::West,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("West Path")
           .description("A path to the west.")
           .destination(&nw_room.id)
@@ -34,7 +34,7 @@ impl CompassRose {
     nw_room.add_passage(
       &PassageDirection::East,
       &PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("East Path")
         .description("A path to the east.")
         .destination(&n_room.id)
@@ -46,7 +46,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::West,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("West Path")
           .description("A path to the west.")
           .destination(&n_room.id)
@@ -56,7 +56,7 @@ impl CompassRose {
     n_room.add_passage(
       &PassageDirection::East,
       &PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("East Path")
         .description("A path to the east.")
         .destination(&ne_room.id)
@@ -68,7 +68,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::North,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("North Path")
           .description("A path to the north.")
           .destination(&nw_room.id)
@@ -78,7 +78,7 @@ impl CompassRose {
     nw_room.add_passage(
       &PassageDirection::South,
       &PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("South Path")
         .description("A path to the south.")
         .destination(&w_room.id)
@@ -90,7 +90,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::North,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("North Path")
           .description("A path to the north.")
           .destination(&ne_room.id)
@@ -100,7 +100,7 @@ impl CompassRose {
     ne_room.add_passage(
       &PassageDirection::South,
       &PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("South Path")
         .description("A path to the south.")
         .destination(&e_room.id)
@@ -112,7 +112,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::North,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("North Path")
           .description("A path to the north.")
           .destination(&w_room.id)
@@ -122,7 +122,7 @@ impl CompassRose {
     w_room.add_passage(
       &PassageDirection::South,
       &PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("South Path")
         .description("A path to the south.")
         .destination(&sw_room.id)
@@ -134,7 +134,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::West,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("West Path")
           .description("A path to the west.")
           .destination(&sw_room.id)
@@ -144,7 +144,7 @@ impl CompassRose {
     sw_room.add_passage(
       &PassageDirection::East,
       &PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("East Path")
         .description("A path to the east.")
         .destination(&s_room.id)
@@ -156,7 +156,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::West,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("West Path")
           .description("A path to the west.")
           .destination(&s_room.id)
@@ -166,7 +166,7 @@ impl CompassRose {
     s_room.add_passage(
       &PassageDirection::East,
       &PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("East Path")
         .description("A path to the east.")
         .destination(&se_room.id)
@@ -175,7 +175,7 @@ impl CompassRose {
     se_room.add_passage(
       &PassageDirection::North,
       &PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("North Path")
         .description("A path to the north.")
         .destination(&e_room.id)
@@ -184,7 +184,7 @@ impl CompassRose {
     e_room.add_passage(
       &PassageDirection::South,
       &PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("South Path")
         .description("A path to the south.")
         .destination(&se_room.id)
@@ -196,7 +196,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::North,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("North Path")
           .description("A path to the north.")
           .destination(&n_room.id)
@@ -205,7 +205,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::South,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("South Path")
           .description("A path to the south.")
           .destination(&s_room.id)
@@ -214,7 +214,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::West,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("West Path")
           .description("A path to the west.")
           .destination(&w_room.id)
@@ -223,7 +223,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::East,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("East Path")
           .description("A path to the east.")
           .destination(&e_room.id)
@@ -232,7 +232,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::Northwest,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("Northwest Path")
           .description("A path to the northwest.")
           .destination(&nw_room.id)
@@ -241,7 +241,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::Northeast,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("Northeast Path")
           .description("A path to the northeast.")
           .destination(&ne_room.id)
@@ -250,7 +250,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::Southwest,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("Southwest Path")
           .description("A path to the southwest.")
           .destination(&sw_room.id)
@@ -259,7 +259,7 @@ impl CompassRose {
       .add_passage(
         &PassageDirection::Southeast,
         &PassageBuilder::new()
-          .r#type(&PassageType::Path)
+          .passage_type(&PassageType::Path)
           .name("Southeast Path")
           .description("A path to the southeast.")
           .destination(&se_room.id)
@@ -269,7 +269,7 @@ impl CompassRose {
     nw_room.passages.insert(
       PassageDirection::Southeast,
       PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("Southeast Path")
         .description("A path to the southeast.")
         .destination(&center_room.id)
@@ -278,7 +278,7 @@ impl CompassRose {
     ne_room.passages.insert(
       PassageDirection::Southwest,
       PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("Southwest Path")
         .description("A path to the southwest.")
         .destination(&center_room.id)
@@ -287,7 +287,7 @@ impl CompassRose {
     sw_room.passages.insert(
       PassageDirection::Northeast,
       PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("Northeast Path")
         .description("A path to the northeast.")
         .destination(&center_room.id)
@@ -296,7 +296,7 @@ impl CompassRose {
     se_room.passages.insert(
       PassageDirection::Northwest,
       PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("Northwest Path")
         .description("A path to the northwest.")
         .destination(&center_room.id)
@@ -305,7 +305,7 @@ impl CompassRose {
     n_room.passages.insert(
       PassageDirection::South,
       PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("South Path")
         .description("A path to the south.")
         .destination(&center_room.id)
@@ -314,7 +314,7 @@ impl CompassRose {
     s_room.passages.insert(
       PassageDirection::North,
       PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("North Path")
         .description("A path to the north.")
         .destination(&center_room.id)
@@ -323,7 +323,7 @@ impl CompassRose {
     w_room.passages.insert(
       PassageDirection::East,
       PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("East Path")
         .description("A path to the east.")
         .destination(&center_room.id)
@@ -332,7 +332,7 @@ impl CompassRose {
     e_room.passages.insert(
       PassageDirection::West,
       PassageBuilder::new()
-        .r#type(&PassageType::Path)
+        .passage_type(&PassageType::Path)
         .name("West Path")
         .description("A path to the west.")
         .destination(&center_room.id)
