@@ -39,6 +39,8 @@ pub mod quit_flag;
 pub use quit_flag::QuitFlag as QuitFlagTrait;
 pub mod rooms;
 pub use rooms::Rooms as RoomsTrait;
+pub mod seed_string_service;
+pub use seed_string_service::SeedStringService as SeedStringServiceTrait;
 pub mod start;
 pub use start::Start as StartTrait;
 pub mod tick_counter;
