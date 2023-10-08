@@ -39,6 +39,20 @@ pub enum Type {
   ChunkPlaneIsLoaded(ChunkPlaneId),
   /// A chunk plane is unloaded.
   ChunkPlaneIsUnloaded(ChunkPlaneId),
+  /// A chunk is saved.
+  ChunkIsSaved(ChunkId),
+  /// A chunk is opened.
+  ChunkIsOpened(ChunkId),
+  /// A chunk plane is saved.
+  ChunkPlaneIsSaved(ChunkPlaneId),
+  /// A chunk plane is opened.
+  ChunkPlaneIsOpened(ChunkPlaneId),
+  /// A chunk is created.
+  ChunkIsCreated(ChunkId),
+  /// A chunk plane is created.
+  ChunkPlaneIsCreated(ChunkPlaneId),
+  /// A chunk is mapped.
+  ChunkIsMapped(ChunkId),
   /// An actor appeared in a room, via supernatural/OOC means.
   ActorAppearsInRoom(ActorId, RoomId),
   /// ActorLooksAroundRoom -- an actor looked around a room.

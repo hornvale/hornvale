@@ -6,9 +6,10 @@ use crate::chunk_plane::ChunkPlane;
 use crate::entity_id::ChunkId;
 use crate::entity_id::ChunkPlaneId;
 
-/// The `ChunkService` struct.
+/// The `ChunkLoaderService` struct.
 ///
-/// The Chunk Service is responsible for managing the space of the game world.
+/// The Chunk Loader Service is responsible for managing the space of the game
+/// world.
 ///
 /// Chiefly, this means loading and unloading chunks and chunk planes as events
 /// dictate. It is a passive service, in that it does not initiate any actions
@@ -20,7 +21,7 @@ use crate::entity_id::ChunkPlaneId;
 /// This is concerned only with the in-memory operations. Filesystem operations
 /// are handled by the Chunk Filesystem Service.
 #[derive(Debug, Default)]
-pub struct ChunkService {
+pub struct ChunkLoaderService {
   // We really only need two data structures here:
   // - A HashMap of ChunkPlaneId to ChunkPlane.
   // - A HashMap of ChunkId to Chunk.
@@ -30,7 +31,7 @@ pub struct ChunkService {
   chunks: HashMap<ChunkId, Chunk>,
 }
 
-impl ChunkService {
+impl ChunkLoaderService {
   /// Create a new Chunk Service.
   pub fn new() -> Self {
     Self {
@@ -85,5 +86,35 @@ impl ChunkService {
   /// Get a chunk mutably.
   pub fn get_chunk_mut(&mut self, chunk_id: &ChunkId) -> Option<&mut Chunk> {
     self.chunks.get_mut(chunk_id)
+  }
+
+  /// Get an arbitrary chunk plane.
+  pub fn get_arbitrary_chunk_plane(&self) -> Option<&ChunkPlane> {
+    self.chunk_planes.values().next()
+  }
+
+  /// Get an arbitrary chunk plane mutably.
+  pub fn get_arbitrary_chunk_plane_mut(&mut self) -> Option<&mut ChunkPlane> {
+    self.chunk_planes.values_mut().next()
+  }
+
+  /// Get an arbitrary chunk.
+  pub fn get_arbitrary_chunk(&self) -> Option<&Chunk> {
+    self.chunks.values().next()
+  }
+
+  /// Get an arbitrary chunk mutably.
+  pub fn get_arbitrary_chunk_mut(&mut self) -> Option<&mut Chunk> {
+    self.chunks.values_mut().next()
+  }
+
+  /// Get an arbitrary startable chunk.
+  pub fn get_arbitrary_startable_chunk(&self) -> Option<&Chunk> {
+    self.chunks.values().find(|&chunk| chunk.is_startable)
+  }
+
+  /// Get an arbitrary startable chunk mutably.
+  pub fn get_arbitrary_startable_chunk_mut(&mut self) -> Option<&mut Chunk> {
+    self.chunks.values_mut().find(|chunk| chunk.is_startable)
   }
 }

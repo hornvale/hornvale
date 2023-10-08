@@ -5,25 +5,19 @@ use std::sync::Arc;
 use crate::entity_id::ChunkId;
 use crate::entity_id::ChunkPlaneId;
 use crate::event::DidProcessFn;
-use crate::event::Event;
 use crate::event::EventFilterRule;
 use crate::event::EventType;
 use crate::event::ShouldProcessFn;
 use crate::event::WillProcessFn;
-use crate::event::DEFAULT_PRIORITY;
-use crate::game_state::ChunkManagementTrait;
-use crate::game_state::CurrentRoomIdTrait;
-use crate::game_state::EventQueueTrait;
+use crate::game_state::ChunkCreatorServiceTrait;
+use crate::game_state::ChunkFileServiceTrait;
 use crate::game_state::FileManagerTrait;
-use crate::game_state::PlayerIdTrait;
-use crate::game_state::RoomsTrait;
 
 /// The `ChunkRuleType` enum.
 ///
 /// These should be phrased as directives or conditional statements.
 #[derive(Clone, Copy, Debug, Deserialize, Display, Eq, Hash, PartialEq, PartialOrd, Serialize)]
 pub enum Type {
-  AddChunkToLoadedChunksWhenChunkIsLoaded,
   CreateChunkPlaneWhenGameStarts,
   MapEmptyChunksWhenChunkPlaneIsLoaded,
   MovePlayerToRoomWhenGameStarts,
@@ -34,7 +28,6 @@ impl Type {
   pub fn iterator() -> impl Iterator<Item = Type> {
     use Type::*;
     [
-      AddChunkToLoadedChunksWhenChunkIsLoaded,
       CreateChunkPlaneWhenGameStarts,
       MapEmptyChunksWhenChunkPlaneIsLoaded,
       MovePlayerToRoomWhenGameStarts,
@@ -48,7 +41,6 @@ impl Type {
   pub fn get_priority(&self) -> i64 {
     use Type::*;
     match self {
-      AddChunkToLoadedChunksWhenChunkIsLoaded => i64::MAX - 2,
       CreateChunkPlaneWhenGameStarts => 100,
       MapEmptyChunksWhenChunkPlaneIsLoaded => i64::MAX,
       MovePlayerToRoomWhenGameStarts => 25,
@@ -60,7 +52,6 @@ impl Type {
   pub fn get_event_type(&self) -> EventType {
     use Type::*;
     match self {
-      AddChunkToLoadedChunksWhenChunkIsLoaded => EventType::ChunkIsLoaded(ChunkId::default()),
       CreateChunkPlaneWhenGameStarts => EventType::StartsGame,
       MapEmptyChunksWhenChunkPlaneIsLoaded => EventType::ChunkPlaneIsLoaded(ChunkPlaneId::default()),
       MovePlayerToRoomWhenGameStarts => EventType::StartsGame,
@@ -74,7 +65,6 @@ impl Type {
   pub fn get_filter_rule(&self) -> EventFilterRule {
     use Type::*;
     match self {
-      AddChunkToLoadedChunksWhenChunkIsLoaded => EventFilterRule::Always,
       CreateChunkPlaneWhenGameStarts => EventFilterRule::Always,
       MapEmptyChunksWhenChunkPlaneIsLoaded => EventFilterRule::Always,
       MovePlayerToRoomWhenGameStarts => EventFilterRule::Always,
@@ -86,7 +76,6 @@ impl Type {
   pub fn get_should_process(&mut self) -> ShouldProcessFn {
     use Type::*;
     match self {
-      AddChunkToLoadedChunksWhenChunkIsLoaded => Arc::new(|_event, _game_state| Ok(None)),
       CreateChunkPlaneWhenGameStarts => Arc::new(|_event, _game_state| Ok(None)),
       MapEmptyChunksWhenChunkPlaneIsLoaded => Arc::new(|_event, _game_state| Ok(None)),
       MovePlayerToRoomWhenGameStarts => Arc::new(|_event, _game_state| Ok(None)),
@@ -98,7 +87,6 @@ impl Type {
   pub fn get_will_process(&mut self) -> WillProcessFn {
     use Type::*;
     match self {
-      AddChunkToLoadedChunksWhenChunkIsLoaded => Arc::new(|_event, _game_state| Ok(())),
       CreateChunkPlaneWhenGameStarts => Arc::new(|_event, _game_state| Ok(())),
       MapEmptyChunksWhenChunkPlaneIsLoaded => Arc::new(|_event, _game_state| Ok(())),
       MovePlayerToRoomWhenGameStarts => Arc::new(|_event, _game_state| Ok(())),
@@ -110,20 +98,6 @@ impl Type {
   pub fn get_did_process(&mut self) -> DidProcessFn {
     use Type::*;
     match self {
-      AddChunkToLoadedChunksWhenChunkIsLoaded => Arc::new(|event, game_state| {
-        debug!("AddChunkToLoadedChunksWhenChunkIsLoaded");
-        if let EventType::ChunkIsLoaded(chunk_id) = &event.r#type {
-          debug!("Adding chunk to loaded chunks.");
-          let chunk = game_state.chunk_manager.load_chunk(chunk_id).with_context(|| {
-            format!(
-              "Could not find chunk with id {} in chunk manager.",
-              chunk_id.to_string().red()
-            )
-          })?;
-          game_state.loaded_chunks.insert(chunk_id.clone(), chunk);
-        }
-        Ok(())
-      }),
       CreateChunkPlaneWhenGameStarts => Arc::new(|event, game_state| {
         debug!("CreateChunkPlaneWhenGameStarts");
         if let EventType::StartsGame = &event.r#type {
@@ -131,18 +105,13 @@ impl Type {
           let local_data_dir = game_state.local_data_dir.clone();
           game_state.clear_directory(&local_data_dir)?;
           debug!("Creating chunk plane.");
-          if let Ok(mut chunk_plane) = game_state.chunk_manager.create_chunk_plane() {
-            debug!("Storing chunk plane.");
-            game_state.chunk_manager.store_chunk_plane(&chunk_plane).unwrap();
+          if let Ok(mut chunk_plane) = game_state.create_chunk_plane() {
             debug!("Generating initial chunks.");
-            let chunks = game_state
-              .chunk_manager
-              .generate_initial_chunks(&mut chunk_plane)
-              .unwrap();
+            let chunks = game_state.generate_initial_chunks(&mut chunk_plane).unwrap();
             debug!("Storing chunks.");
-            game_state.chunk_manager.store_chunks(&chunks)?;
+            game_state.save_chunks(&chunks)?;
             debug!("Reloading chunk plane.");
-            game_state.load_chunk_plane(&chunk_plane.id)?;
+            game_state.open_chunk_plane(&chunk_plane.id)?;
           }
         }
         Ok(())
@@ -151,46 +120,29 @@ impl Type {
         debug!("MapEmptyChunksWhenChunkPlaneIsLoaded");
         if let EventType::ChunkPlaneIsLoaded(chunk_plane_id) = &event.r#type {
           debug!("Mapping closed chunks.");
-          let mut chunk_plane = game_state
-            .chunk_manager
-            .load_chunk_plane(chunk_plane_id)
-            .with_context(|| {
-              format!(
-                "Could not find chunk plane with id {} in chunk manager.",
-                chunk_plane_id.to_string().red()
-              )
-            })?;
-          game_state
-            .chunk_manager
-            .map_empty_chunks(&mut chunk_plane)
-            .with_context(|| {
-              format!(
-                "Could not map empty chunks for chunk plane with id {} in chunk manager.",
-                chunk_plane_id.to_string().red()
-              )
-            })?;
+          let mut chunk_plane = game_state.open_chunk_plane(chunk_plane_id).with_context(|| {
+            format!(
+              "Could not find chunk plane with id {} in chunk manager.",
+              chunk_plane_id.to_string().red()
+            )
+          })?;
+          game_state.map_empty_chunks(&mut chunk_plane).with_context(|| {
+            format!(
+              "Could not map empty chunks for chunk plane with id {} in chunk manager.",
+              chunk_plane_id.to_string().red()
+            )
+          })?;
         }
         Ok(())
       }),
-      MovePlayerToRoomWhenGameStarts => Arc::new(|_event, game_state| {
+      MovePlayerToRoomWhenGameStarts => Arc::new(|_event, _game_state| {
         debug!("MovePlayerToRoomWhenGameStarts");
         if let EventType::StartsGame = &_event.r#type {
-          debug!("Selecting a chunk.");
-          // Get the first available chunk plane.
-          let chunk_plane_id = game_state.loaded_chunk_planes.keys().next().unwrap().clone();
-          let mut chunk_plane = game_state.chunk_manager.load_chunk_plane(&chunk_plane_id).unwrap();
-          game_state
-            .chunk_manager
-            .map_empty_chunks(&mut chunk_plane)
-            .with_context(|| {
-              format!(
-                "Could not map empty chunks for chunk plane with id {} in chunk manager.",
-                chunk_plane_id.to_string().red()
-              )
-            })?;
-          let chunks = game_state.chunk_manager.load_chunks(&chunk_plane).unwrap();
-          // Get the first chunk that is startable.
-          let chunk = chunks.iter().find(|c| c.is_startable).unwrap();
+          debug!("Selecting an arbitrary startable chunk.");
+          /*
+          let chunk = game_state
+            .get_arbitrary_startable_chunk()
+            .with_context(|| "Could not get arbitrary startable chunk.")?;
           game_state.insert_rooms_from_chunk(chunk);
           if chunk.starting_room_id.is_some() {
             game_state.set_current_room_id(chunk.starting_room_id.clone());
@@ -208,6 +160,7 @@ impl Type {
             Vec::new(),
           );
           game_state.enqueue_event(entity_appears_in_room);
+          */
         }
         Ok(())
       }),

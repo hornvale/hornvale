@@ -43,10 +43,12 @@ pub use _macro::*;
 // Remaining modules.
 pub mod action;
 pub mod chunk;
+pub mod chunk_creator_service;
+pub mod chunk_file_service;
+pub mod chunk_loader_service;
 pub mod chunk_plane;
 pub mod chunk_rule;
 pub mod chunk_seed;
-pub mod chunk_service;
 pub mod command;
 pub mod effect;
 pub mod entity_id;

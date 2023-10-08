@@ -4,13 +4,10 @@ use std::collections::VecDeque;
 use std::time::Instant;
 use uuid::Uuid;
 
-use crate::chunk::Chunk;
-use crate::chunk::ChunkManager;
-use crate::chunk_plane::ChunkPlane;
-use crate::chunk_service::ChunkService;
+use crate::chunk_creator_service::ChunkCreatorService;
+use crate::chunk_file_service::ChunkFileService;
+use crate::chunk_loader_service::ChunkLoaderService;
 use crate::command::Command;
-use crate::entity_id::ChunkId;
-use crate::entity_id::ChunkPlaneId;
 use crate::entity_id::PlayerId;
 use crate::entity_id::RoomId;
 use crate::event::Event;
@@ -54,14 +51,11 @@ pub struct GameState {
   #[derivative(Debug = "ignore")]
   pub event_queue: BinaryHeap<Event>,
   pub output_queue: VecDeque<String>,
-  // Chunking system.
-  pub chunk_data_dir: String,
-  pub chunk_manager: ChunkManager,
-  pub loaded_chunks: HashMap<ChunkId, Chunk>,
-  pub loaded_chunk_planes: HashMap<ChunkPlaneId, ChunkPlane>,
   // Services.
-  pub chunk_service: ChunkService,
-  pub lookup_service: LookupService,
+  chunk_creator_service: ChunkCreatorService,
+  chunk_file_service: ChunkFileService,
+  chunk_loader_service: ChunkLoaderService,
+  lookup_service: LookupService,
 }
 
 impl GameState {
@@ -92,13 +86,10 @@ impl GameState {
       command_queue: VecDeque::new(),
       event_queue: BinaryHeap::new(),
       output_queue: VecDeque::new(),
-      // Chunking system.
-      chunk_data_dir: chunk_data_dir.clone(),
-      chunk_manager: ChunkManager::new(&seed_string, &chunk_data_dir),
-      loaded_chunks: HashMap::new(),
-      loaded_chunk_planes: HashMap::new(),
       // Services.
-      chunk_service: ChunkService::default(),
+      chunk_creator_service: ChunkCreatorService::new(&chunk_data_dir, &seed_string),
+      chunk_file_service: ChunkFileService::new(&chunk_data_dir),
+      chunk_loader_service: ChunkLoaderService::default(),
       lookup_service: LookupService::default(),
     }
   }

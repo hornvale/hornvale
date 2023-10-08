@@ -28,8 +28,8 @@ impl FileManager {
     }
   }
 
-  /// Loads a `Chunk` from disk.
-  pub fn load(&self, chunk_id: &ChunkId) -> Result<Chunk, AnyError> {
+  /// Open a `Chunk` from disk.
+  pub fn open(&self, chunk_id: &ChunkId) -> Result<Chunk, AnyError> {
     let file_path = format!("{}/{}.yaml", self.base_path, chunk_id);
     let file = File::open(file_path.clone()).with_context(|| format!("Unable to read chunk file at {}", file_path))?;
     let chunk: Chunk = serde_yaml_from_reader(file)?;
@@ -37,7 +37,7 @@ impl FileManager {
   }
 
   /// Saves the `Chunk` in a serialized form.
-  pub fn store(&self, chunk: &Chunk) -> Result<(), AnyError> {
+  pub fn save(&self, chunk: &Chunk) -> Result<(), AnyError> {
     create_dir_all(&self.base_path).with_context(|| format!("Unable to create directory at {}", self.base_path))?;
     let file_path = format!("{}/{}.yaml", self.base_path, chunk.id);
     let yaml_string = serde_yaml_to_string(chunk)?;
@@ -49,20 +49,20 @@ impl FileManager {
     Ok(())
   }
 
-  /// Loads multiple `Chunk`s from disk.
-  pub fn load_multiple(&self, chunk_ids: &Vec<ChunkId>) -> Result<Vec<Chunk>, AnyError> {
+  /// Open multiple `Chunk`s from disk.
+  pub fn open_multiple(&self, chunk_ids: &Vec<ChunkId>) -> Result<Vec<Chunk>, AnyError> {
     let mut chunks = Vec::new();
     for chunk_id in chunk_ids {
-      let chunk = self.load(chunk_id)?;
+      let chunk = self.open(chunk_id)?;
       chunks.push(chunk);
     }
     Ok(chunks)
   }
 
   /// Saves multiple `Chunk`s to disk.
-  pub fn store_multiple(&self, chunks: &Vec<Chunk>) -> Result<(), AnyError> {
+  pub fn save_multiple(&self, chunks: &Vec<Chunk>) -> Result<(), AnyError> {
     for chunk in chunks {
-      self.store(chunk)?;
+      self.save(chunk)?;
     }
     Ok(())
   }
@@ -87,8 +87,8 @@ mod tests {
     remove_dir_all(&chunk_file_manager.base_path).ok();
     let mut chunk = Chunk::default();
     chunk.id = ChunkId::default();
-    chunk_file_manager.store(&chunk)?;
-    let _chunk = chunk_file_manager.load(&chunk.id)?;
+    chunk_file_manager.save(&chunk)?;
+    let _chunk = chunk_file_manager.open(&chunk.id)?;
     Ok(())
   }
 }
