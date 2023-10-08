@@ -11,8 +11,8 @@ use crate::entity_id::ChunkSeedId;
 
 pub mod builder;
 pub use builder::Builder as ChunkSeedBuilder;
-pub mod r#type;
-pub use r#type::Type as ChunkSeedType;
+pub mod chunk_seed_type;
+pub use chunk_seed_type::Type as ChunkSeedType;
 
 /// The `ChunkSeed` struct.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
@@ -30,12 +30,17 @@ pub struct ChunkSeed {
   /// The adjacent `ChunkSeed` IDs.
   pub adjacent_chunk_seed_ids: Vec<ChunkSeedId>,
   /// The `ChunkSeed`'s type.
-  pub r#type: ChunkSeedType,
+  pub chunk_seed_type: ChunkSeedType,
 }
 
 impl ChunkSeed {
   /// Creates a new `ChunkSeed`.
-  pub fn new(id: ChunkSeedId, chunk_plane_id: &ChunkPlaneId, coordinates: (i64, i64), r#type: ChunkSeedType) -> Self {
+  pub fn new(
+    id: ChunkSeedId,
+    chunk_plane_id: &ChunkPlaneId,
+    coordinates: (i64, i64),
+    chunk_seed_type: ChunkSeedType,
+  ) -> Self {
     let chunk_plane_id = chunk_plane_id.clone();
     Self {
       id,
@@ -44,7 +49,7 @@ impl ChunkSeed {
       coordinates,
       points: HashSet::new(),
       adjacent_chunk_seed_ids: Vec::new(),
-      r#type,
+      chunk_seed_type,
     }
   }
 
@@ -88,7 +93,7 @@ mod tests {
     chunk_seed.chunk_plane_id = ChunkPlaneId::new();
     chunk_seed.chunk_id = Some(ChunkId::new());
     chunk_seed.coordinates = (0, 0);
-    chunk_seed.r#type = ChunkSeedType::default();
+    chunk_seed.chunk_seed_type = ChunkSeedType::default();
     let file_path = format!("{}/test_chunk_seed.yml", TEMPORARY_TEST_DATA_DIRECTORY);
     chunk_seed.store(&file_path)?;
     let chunk_seed_loaded = ChunkSeed::load(&file_path)?;

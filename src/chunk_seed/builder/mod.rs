@@ -91,6 +91,6 @@ mod tests {
     assert_eq!(chunk_seed.chunk_plane_id.to_string().is_empty(), false);
     assert_eq!(chunk_seed.chunk_id.is_none(), true);
     assert_eq!(chunk_seed.coordinates, (0, 0));
-    assert_eq!(chunk_seed.r#type.to_string().is_empty(), false);
+    assert_eq!(chunk_seed.chunk_seed_type.to_string().is_empty(), false);
   }
 }

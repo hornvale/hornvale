@@ -20,7 +20,7 @@ pub fn export_chunk_plane_png(chunk_plane: &ChunkPlane, file_path: &str) -> Resu
     let color = {
       let chunk_seed = chunk_seed.unwrap();
       if chunk_seed.coordinates == (local_x, local_y) {
-        match chunk_seed.r#type {
+        match chunk_seed.chunk_seed_type {
           ChunkSeedType::Open => (255, 255, 255),
           ChunkSeedType::HalfOpen => (192, 192, 192),
           ChunkSeedType::Closed => (64, 64, 64),
