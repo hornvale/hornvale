@@ -17,3 +17,15 @@ impl ChunkWorldCreatorServiceTrait for GameState {
     Ok(chunk_world)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_create_chunk_world() -> Result<(), AnyError> {
+    let mut game_state = GameState::new();
+    let _chunk_world = game_state.create_chunk_world()?;
+    Ok(())
+  }
+}
