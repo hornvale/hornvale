@@ -14,6 +14,7 @@ use crate::event::Event;
 use crate::game_file_service::GameFileService;
 use crate::lookup_service::LookupService;
 use crate::room::Room;
+use crate::seed_string_service::SeedStringService;
 
 pub mod _constant;
 pub use _constant::*;
@@ -30,7 +31,7 @@ pub use _type::*;
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct GameState {
-  pub seed_string: String,
+  seed_string: String,
   // Flags.
   pub diegetic_flag: bool,
   pub input_ready_flag: bool,
@@ -58,6 +59,7 @@ pub struct GameState {
   chunk_loader_service: ChunkLoaderService,
   game_file_service: GameFileService,
   lookup_service: LookupService,
+  seed_string_service: SeedStringService,
 }
 
 impl GameState {
@@ -95,6 +97,7 @@ impl GameState {
       chunk_loader_service: ChunkLoaderService::default(),
       game_file_service: GameFileService::new(&game_file_dir),
       lookup_service: LookupService::default(),
+      seed_string_service: SeedStringService::new(&seed_string),
     }
   }
 }

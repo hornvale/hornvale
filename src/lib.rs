@@ -62,6 +62,7 @@ pub mod lookup_service;
 pub mod parser;
 pub mod passage;
 pub mod room;
+pub mod seed_string_service;
 pub mod system;
 pub mod time;
 

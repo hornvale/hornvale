@@ -39,6 +39,8 @@ pub mod quit_flag;
 pub use quit_flag::*;
 pub mod rooms;
 pub use rooms::*;
+pub mod seed_string_service;
+pub use seed_string_service::*;
 pub mod start;
 pub use start::*;
 pub mod tick_counter;
