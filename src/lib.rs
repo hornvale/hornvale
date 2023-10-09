@@ -60,6 +60,7 @@ pub mod event;
 pub mod game;
 pub mod game_file_service;
 pub mod game_rule;
+pub mod game_service;
 pub mod game_state;
 pub mod lookup_rule;
 pub mod lookup_service;
