@@ -1,9 +1,16 @@
 use anyhow::Error as AnyError;
 use specs::prelude::*;
+use specs::shrev::EventChannel;
+use std::io::{stdin, stdout, Write};
 
 use crate::component::register_components;
 use crate::event::insert_event_channels;
+use crate::event::InputEvent;
 use crate::resource::insert_resources;
+use crate::resource::InputReadyFlagResource;
+use crate::resource::QuitFlagResource;
+use crate::system::get_dispatcher;
+use crate::system::run_initial_systems;
 
 /// The `Game` struct.
 ///
@@ -28,6 +35,16 @@ impl Game {
     Self {}
   }
 
+  /// Read the input from the user.
+  pub fn read_input(&self) -> String {
+    debug!("Running input system.");
+    print!("> ");
+    stdout().flush().unwrap();
+    let mut input = String::new();
+    stdin().read_line(&mut input).unwrap();
+    input.trim().to_string()
+  }
+
   /// Runs the `Game`.
   pub fn run(&mut self, seed_string: &str) -> Result<(), AnyError> {
     // Create the ECS.
@@ -38,6 +55,8 @@ impl Game {
     insert_resources(&mut ecs, seed_string)?;
     insert_event_channels(&mut ecs)?;
     register_components(&mut ecs)?;
+    let mut dispatcher = get_dispatcher(&mut ecs);
+    run_initial_systems(&mut ecs)?;
 
     // Kicking off the game.
     debug!("Running game.");
@@ -45,11 +64,26 @@ impl Game {
     // Initialization.
     println!("Welcome to Hornvale!");
 
-    let mut counter: u32 = 0;
     // Game loop.
     loop {
-      counter += 1;
-      if counter > 10 {
+      // Long-running diegetic actions will set the input_ready flag to false.
+      // We don't want to read input until they resolve.
+      if ecs.fetch::<InputReadyFlagResource>().0 {
+        let input = self.read_input();
+        ecs.fetch_mut::<EventChannel<InputEvent>>().single_write(InputEvent {
+          input: input.to_owned(),
+        });
+      }
+
+      // Maintain after every tick.  This enables the use of the lazy systems,
+      // which should make it easier to have simple, concise systems.
+      ecs.maintain();
+
+      // Run the dispatcher.
+      dispatcher.dispatch(&ecs);
+
+      // Check for the quit flag.
+      if ecs.fetch::<QuitFlagResource>().0 {
         break;
       }
     }
