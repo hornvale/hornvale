@@ -7,6 +7,7 @@
 #[allow(unused_imports)]
 #[macro_use]
 extern crate all_asserts;
+#[allow(unused_imports)]
 #[macro_use]
 extern crate anyhow;
 #[allow(unused_imports)]
@@ -45,35 +46,7 @@ pub mod _macro;
 pub use _macro::*;
 
 // Remaining modules.
-pub mod action;
-pub mod chunk;
-pub mod chunk_creator_service;
-pub mod chunk_file_service;
-pub mod chunk_loader_service;
-pub mod chunk_plane;
-pub mod chunk_rule;
-pub mod chunk_seed;
-pub mod chunk_world;
-pub mod chunk_world_creator_service;
-pub mod chunk_world_file_service;
-pub mod chunk_world_processor_service;
-pub mod command;
-pub mod effect;
-pub mod entity_id;
-pub mod event;
 pub mod game;
-pub mod game_file_service;
-pub mod game_rule;
-pub mod game_service;
-pub mod game_state;
-pub mod lookup_rule;
-pub mod lookup_service;
-pub mod parser;
-pub mod passage;
-pub mod room;
-pub mod seed_string_service;
-pub mod system;
-pub mod time;
 
 #[cfg(test)]
 pub mod test {
