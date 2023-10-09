@@ -1,10 +1,10 @@
 use specs::prelude::*;
 
 /// The `ChunkPlane` component.
-#[derive(Clone, Component, Debug, Deserialize, Serialize)]
+#[derive(Clone, Component, Debug)]
 pub struct ChunkPlane {
-  /// The ID.
-  pub id: String,
+  /// The seed string for this chunk plane.
+  pub seed_string: String,
   /// The upper-left corner of the `ChunkPlane` in (i64, i64) plane.
   pub upper_left_corner: (i64, i64),
   /// The lower-right corner of the `ChunkPlane` in (i64, i64) plane.

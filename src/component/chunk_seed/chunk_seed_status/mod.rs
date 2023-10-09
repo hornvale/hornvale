@@ -1,6 +1,6 @@
-/// The `ChunkSeedType` enum.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Display, Eq, Hash, PartialEq, Serialize)]
-pub enum ChunkSeedType {
+/// The `ChunkSeedStatus` enum.
+#[derive(Clone, Copy, Debug, Default, Display, Eq, Hash, PartialEq)]
+pub enum ChunkSeedStatus {
   /// This chunk's status is unknown.
   #[default]
   Unknown,

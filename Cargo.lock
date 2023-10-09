@@ -1304,6 +1304,7 @@ dependencies = [
  "log",
  "nougat",
  "rayon",
+ "serde",
  "shred",
  "shrev",
  "specs-derive",
