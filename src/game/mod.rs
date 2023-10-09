@@ -1,4 +1,7 @@
 use anyhow::Error as AnyError;
+use specs::prelude::*;
+
+use crate::resource::insert_resources;
 
 /// The `Game` struct.
 ///
@@ -24,10 +27,18 @@ impl Game {
   }
 
   /// Runs the `Game`.
-  pub fn run(&mut self) -> Result<(), AnyError> {
+  pub fn run(&mut self, seed_string: &str) -> Result<(), AnyError> {
+    // Create the ECS.
+    let mut ecs = World::new();
+
+    // Initializing the game.
+    debug!("Initializing game.");
+    insert_resources(&mut ecs, seed_string)?;
+
+    // Kicking off the game.
     debug!("Running game.");
 
-    // Initialization
+    // Initialization.
     println!("Welcome to Hornvale!");
 
     let mut counter: u32 = 0;
@@ -39,9 +50,10 @@ impl Game {
       }
     }
 
-    // Termination
+    // Termination message.
     println!("Thanks for playing!");
 
+    // Exit, finally.
     Ok(())
   }
 }

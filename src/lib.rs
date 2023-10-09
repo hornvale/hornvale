@@ -46,7 +46,13 @@ pub mod _macro;
 pub use _macro::*;
 
 // Remaining modules.
+
+/// Where the core game loop lives.
 pub mod game;
+/// ECS resources shared by all systems.
+pub mod resource;
+/// Where the ECS lives.
+pub mod system;
 
 #[cfg(test)]
 pub mod test {
