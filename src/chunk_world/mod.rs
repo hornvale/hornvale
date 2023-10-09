@@ -4,6 +4,8 @@ use crate::entity_id::ChunkPlaneId;
 
 pub mod file_manager;
 pub use file_manager::FileManager as ChunkWorldFileManager;
+pub mod processor;
+pub use processor::*;
 
 /// The `ChunkWorld` struct.
 ///
