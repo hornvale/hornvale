@@ -6,8 +6,6 @@ use crate::event::{InputEvent, OutputEvent};
 
 pub mod chunk_plane_creator;
 pub use chunk_plane_creator::ChunkPlaneCreator as ChunkPlaneCreatorSystem;
-pub mod chunk_plane_seeder;
-pub use chunk_plane_seeder::ChunkPlaneSeeder as ChunkPlaneSeederSystem;
 pub mod output;
 pub use output::Output as OutputSystem;
 pub mod parser;
@@ -17,10 +15,8 @@ pub use tick::Tick as TickSystem;
 
 pub fn get_initial_dispatcher(_ecs: &mut World) -> Dispatcher<'static, 'static> {
   let chunk_plane_creator = ChunkPlaneCreatorSystem::default();
-  let chunk_plane_seeder = ChunkPlaneSeederSystem::default();
   let dispatcher = DispatcherBuilder::new()
     .with(chunk_plane_creator, "chunk_plane_creator", &[])
-    .with(chunk_plane_seeder, "chunk_plane_seeder", &["chunk_plane_creator"])
     .build();
   dispatcher
 }
