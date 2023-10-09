@@ -47,6 +47,10 @@ pub use _macro::*;
 
 // Remaining modules.
 
+/// Components, which are used to store data in the ECS.
+pub mod component;
+/// Events, which are used to communicate between systems.
+pub mod event;
 /// Where the core game loop lives.
 pub mod game;
 /// ECS resources shared by all systems.

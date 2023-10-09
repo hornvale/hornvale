@@ -1,6 +1,8 @@
 use anyhow::Error as AnyError;
 use specs::prelude::*;
 
+use crate::component::register_components;
+use crate::event::insert_event_channels;
 use crate::resource::insert_resources;
 
 /// The `Game` struct.
@@ -34,6 +36,8 @@ impl Game {
     // Initializing the game.
     debug!("Initializing game.");
     insert_resources(&mut ecs, seed_string)?;
+    insert_event_channels(&mut ecs)?;
+    register_components(&mut ecs)?;
 
     // Kicking off the game.
     debug!("Running game.");
