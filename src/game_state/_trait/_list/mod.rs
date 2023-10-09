@@ -11,6 +11,8 @@ pub mod chunk_world_creator_service;
 pub use chunk_world_creator_service::ChunkWorldCreatorService as ChunkWorldCreatorServiceTrait;
 pub mod chunk_world_file_service;
 pub use chunk_world_file_service::ChunkWorldFileService as ChunkWorldFileServiceTrait;
+pub mod chunk_world_processor_service;
+pub use chunk_world_processor_service::ChunkWorldProcessorService as ChunkWorldProcessorServiceTrait;
 pub mod command_queue;
 pub use command_queue::CommandQueue as CommandQueueTrait;
 pub mod current_room_id;

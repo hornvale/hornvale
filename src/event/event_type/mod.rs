@@ -43,6 +43,7 @@ pub enum Type {
   ChunkWorldIsCreated,
   ChunkWorldIsOpened,
   ChunkWorldIsSaved,
+  ChunkWorldIsProcessed,
   ActorAppearsInRoom(ActorId, RoomId),
   ActorLooksAroundRoom(ActorId, RoomId),
   ActorMovesFromRoomToRoom(ActorId, RoomId, RoomId),
