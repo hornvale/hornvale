@@ -5,7 +5,7 @@ use specs::prelude::*;
 /// A `ChunkPlane` is the largest spatial unit in the game. It is a 2D plane
 /// composed of `Chunk`s. Other areas, e.g. the Underdark, will be managed
 /// in different planes.
-#[derive(Builder, Clone, Component, Debug, Deserialize, Serialize)]
+#[derive(Builder, Clone, Component, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub struct ChunkPlane {
   /// The seed string, used for randomizing the chunk plane.
   pub seed_string: String,

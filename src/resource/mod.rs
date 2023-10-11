@@ -3,18 +3,8 @@ use rand_seeder::SipHasher;
 use specs::prelude::*;
 use std::io::stdout;
 
-pub mod input_ready_flag;
-pub use input_ready_flag::InputReadyFlag as InputReadyFlagResource;
-pub mod output;
-pub use output::Output as OutputResource;
-pub mod quit_flag;
-pub use quit_flag::QuitFlag as QuitFlagResource;
-pub mod random;
-pub use random::Random as RandomResource;
-pub mod seed_string;
-pub use seed_string::SeedString as SeedStringResource;
-pub mod tick;
-pub use tick::Tick as TickResource;
+pub mod _type;
+pub use _type::*;
 
 pub fn insert_resources(ecs: &mut World, seed_string: &str) -> Result<(), AnyError> {
   ecs.insert(InputReadyFlagResource(true));

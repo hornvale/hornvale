@@ -3,7 +3,6 @@ use specs::prelude::*;
 use specs::shrev::EventChannel;
 use std::io::{stdin, stdout, Write};
 
-use crate::component::register_components;
 use crate::event::insert_event_channels;
 use crate::event::InputEvent;
 use crate::resource::insert_resources;
@@ -54,7 +53,7 @@ impl Game {
     debug!("Initializing game.");
     insert_resources(&mut ecs, seed_string)?;
     insert_event_channels(&mut ecs)?;
-    register_components(&mut ecs)?;
+    // register_components(&mut ecs)?;
     let mut simulation_dispatcher = get_simulation_dispatcher(&mut ecs);
     run_initial_systems(&mut ecs)?;
 

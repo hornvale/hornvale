@@ -12,9 +12,26 @@ pub use parser::Parser as ParserSystem;
 pub mod tick;
 pub use tick::Tick as TickSystem;
 
+pub fn get_initial_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static> {
+  let mut dispatcher = DispatcherBuilder::new()
+    .with(
+      InitialChunkPlaneCreatorSystem::default(),
+      "initial_chunk_plane_creator",
+      &[],
+    )
+    .with(
+      InitialChunkCreatorSystem::default(),
+      "initial_chunk_creator",
+      &["initial_chunk_plane_creator"],
+    )
+    .build();
+  dispatcher.setup(ecs);
+  dispatcher
+}
+
 pub fn run_initial_systems(ecs: &mut World) -> Result<(), AnyError> {
-  InitialChunkPlaneCreatorSystem::default().run_now(ecs);
-  InitialChunkCreatorSystem::default().run_now(ecs);
+  let mut dispatcher = get_initial_dispatcher(ecs);
+  dispatcher.dispatch(ecs);
   Ok(())
 }
 
@@ -30,10 +47,11 @@ pub fn get_simulation_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static
     System::setup(&mut output_system, ecs);
     output_system
   };
-  let dispatcher = DispatcherBuilder::new()
+  let mut dispatcher = DispatcherBuilder::new()
     .with(TickSystem::default(), "tick", &[])
     .with(parser_system, "parser", &["tick"])
     .with(output_system, "output", &["parser"])
     .build();
+  dispatcher.setup(ecs);
   dispatcher
 }
