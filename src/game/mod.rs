@@ -63,7 +63,7 @@ impl Game {
       .single_write(ChunkPlaneRequestEvent {
         chunk_plane: ChunkPlaneBuilder::default()
           .name("default".to_string())
-          .seed_string(format!("{}{}", seed_string, "primary"))
+          .seed_string(format!("{}::{}", seed_string, "primary_chunk_plane"))
           .description("The primary chunk plane.".to_string())
           .build()
           .expect("Failed to build chunk plane."),

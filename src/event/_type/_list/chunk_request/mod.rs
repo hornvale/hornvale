@@ -5,5 +5,6 @@ use crate::chunk::Chunk;
 /// This represents a request to build a chunk.
 #[derive(Builder, Clone, Debug, Derivative, Deserialize, Hash, PartialEq, Serialize)]
 pub struct ChunkRequest {
+  pub chunk_plane_uuid: String,
   pub chunk: Chunk,
 }

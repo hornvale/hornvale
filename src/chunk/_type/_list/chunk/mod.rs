@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 use crate::chunk::ChunkCoordinates;
 use crate::chunk::ChunkStatus;
 
@@ -8,6 +10,9 @@ pub struct Chunk {
   pub coordinates: ChunkCoordinates,
   /// The `Chunk`'s seed string.
   pub seed_string: String,
+  /// The UUID of the chunk.
+  #[builder(default = "Uuid::new_v4().to_string()")]
+  pub uuid: String,
   /// The `Chunk`'s status.
   pub status: ChunkStatus,
   /// The `Chunk`'s name.

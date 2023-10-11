@@ -25,6 +25,8 @@ pub fn get_simulation_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static
   };
   let mut dispatcher = DispatcherBuilder::new()
     .with(TickSystem::default(), "tick", &[])
+    .with(ChunkPlaneCreatorSystem::default(), "chunk_plane_creator", &[])
+    .with(ChunkCreatorSystem::default(), "chunk_creator", &["chunk_plane_creator"])
     .with(parser_system, "parser", &["tick"])
     .with(output_system, "output", &["parser"])
     .build();
