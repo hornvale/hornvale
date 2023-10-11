@@ -15,6 +15,9 @@ extern crate anyhow;
 extern crate derivative;
 #[allow(unused_imports)]
 #[macro_use]
+extern crate derive_builder;
+#[allow(unused_imports)]
+#[macro_use]
 extern crate derive_more;
 #[allow(unused_imports)]
 #[macro_use]
@@ -33,6 +36,9 @@ extern crate specs;
 extern crate specs_derive;
 #[allow(unused_imports)]
 #[macro_use]
+extern crate strum;
+#[allow(unused_imports)]
+#[macro_use]
 extern crate thiserror;
 
 // Derive macros from hornvale_derive.
@@ -47,6 +53,8 @@ pub use _macro::*;
 
 // Remaining modules.
 
+/// Chunks, which are used to subdivide the game world and its contents.
+pub mod chunk;
 /// Components, which are used to store data in the ECS.
 pub mod component;
 /// Events, which are used to communicate between systems.

@@ -1,7 +1,4 @@
-use anyhow::Error as AnyError;
-use specs::prelude::*;
-
-/// Register all components.
-pub fn register_components(_ecs: &mut World) -> Result<(), AnyError> {
-  Ok(())
-}
+pub mod _type;
+pub use _type::*;
+pub mod register_components;
+pub use register_components::*;

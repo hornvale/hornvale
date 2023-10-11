@@ -5,10 +5,10 @@ use std::fs;
 use std::path::Path;
 
 fn main() {
-  // generate_macro_mod();
-  // generate_list_mod_with_alias("src/chunk/map_builder/strategies", "Strategy");
+  generate_macro_mod();
+  generate_list_mod("src/chunk/_type");
+  generate_list_mod_with_alias("src/component/_type", "Component");
   // generate_list_mod_with_alias("src/entity_id/_trait", "Trait");
-  // generate_list_mod("src/entity_id/_type");
   // generate_list_mod("src/event/subscriber/_type");
   // generate_list_mod("src/game_state/_impl");
   // generate_list_mod_with_alias("src/game_state/_trait", "Trait");

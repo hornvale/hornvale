@@ -5,8 +5,9 @@ use crate::event::{InputEvent, OutputEvent};
 use crate::resource::QuitFlagResource;
 
 /// The Parser system.
+#[derive(Default)]
 pub struct Parser {
-  pub reader_id: ReaderId<InputEvent>,
+  pub reader_id: Option<ReaderId<InputEvent>>,
 }
 
 impl Parser {}
@@ -26,7 +27,7 @@ impl<'data> System<'data> for Parser {
   fn run(&mut self, mut data: Self::SystemData) {
     let input_events = data
       .input_event_channel
-      .read(&mut self.reader_id)
+      .read(self.reader_id.as_mut().unwrap())
       .cloned()
       .collect::<Vec<InputEvent>>();
     let event_count = input_events.len();
@@ -43,5 +44,10 @@ impl<'data> System<'data> for Parser {
         });
       }
     }
+  }
+
+  fn setup(&mut self, world: &mut World) {
+    Self::SystemData::setup(world);
+    self.reader_id = Some(world.fetch_mut::<EventChannel<InputEvent>>().register_reader());
   }
 }

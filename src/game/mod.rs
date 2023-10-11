@@ -9,7 +9,7 @@ use crate::event::InputEvent;
 use crate::resource::insert_resources;
 use crate::resource::InputReadyFlagResource;
 use crate::resource::QuitFlagResource;
-use crate::system::get_dispatcher;
+use crate::system::get_simulation_dispatcher;
 use crate::system::run_initial_systems;
 
 /// The `Game` struct.
@@ -37,7 +37,7 @@ impl Game {
 
   /// Read the input from the user.
   pub fn read_input(&self) -> String {
-    debug!("Running input system.");
+    debug!("Reading input.");
     print!("> ");
     stdout().flush().unwrap();
     let mut input = String::new();
@@ -55,7 +55,7 @@ impl Game {
     insert_resources(&mut ecs, seed_string)?;
     insert_event_channels(&mut ecs)?;
     register_components(&mut ecs)?;
-    let mut dispatcher = get_dispatcher(&mut ecs);
+    let mut simulation_dispatcher = get_simulation_dispatcher(&mut ecs);
     run_initial_systems(&mut ecs)?;
 
     // Kicking off the game.
@@ -75,12 +75,12 @@ impl Game {
         });
       }
 
+      // Run the general simulation dispatcher.
+      simulation_dispatcher.dispatch(&ecs);
+
       // Maintain after every tick.  This enables the use of the lazy systems,
       // which should make it easier to have simple, concise systems.
       ecs.maintain();
-
-      // Run the dispatcher.
-      dispatcher.dispatch(&ecs);
 
       // Check for the quit flag.
       if ecs.fetch::<QuitFlagResource>().0 {
