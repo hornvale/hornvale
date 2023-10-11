@@ -2,6 +2,7 @@ use specs::prelude::*;
 use specs::shrev::{EventChannel, ReaderId};
 
 use crate::event::{InputEvent, OutputEvent};
+use crate::resource::InputReadyFlagResource;
 use crate::resource::QuitFlagResource;
 
 /// The Parser system.
@@ -17,6 +18,7 @@ pub struct Data<'data> {
   pub entities: Entities<'data>,
   pub input_event_channel: Read<'data, EventChannel<InputEvent>>,
   pub output_event_channel: Write<'data, EventChannel<OutputEvent>>,
+  pub input_ready_flag_resource: Write<'data, InputReadyFlagResource>,
   pub quit_flag_resource: Write<'data, QuitFlagResource>,
 }
 

@@ -3,13 +3,12 @@ use specs::prelude::*;
 use specs::shrev::EventChannel;
 use std::io::{stdin, stdout, Write};
 
-use crate::event::insert_event_channels;
 use crate::event::InputEvent;
-use crate::resource::insert_resources;
 use crate::resource::InputReadyFlagResource;
 use crate::resource::QuitFlagResource;
+use crate::resource::SeedStringResource;
+use crate::system::get_initial_dispatcher;
 use crate::system::get_simulation_dispatcher;
-use crate::system::run_initial_systems;
 
 /// The `Game` struct.
 ///
@@ -51,17 +50,18 @@ impl Game {
 
     // Initializing the game.
     debug!("Initializing game.");
-    insert_resources(&mut ecs, seed_string)?;
-    insert_event_channels(&mut ecs)?;
-    // register_components(&mut ecs)?;
-    let mut simulation_dispatcher = get_simulation_dispatcher(&mut ecs);
-    run_initial_systems(&mut ecs)?;
+    let mut initial_dispatcher = get_initial_dispatcher(&mut ecs);
+    ecs.fetch_mut::<SeedStringResource>().0 = seed_string.to_string();
+    debug!("Seed String: {}", ecs.fetch::<SeedStringResource>().0);
+    initial_dispatcher.dispatch(&ecs);
 
     // Kicking off the game.
     debug!("Running game.");
+    let mut simulation_dispatcher = get_simulation_dispatcher(&mut ecs);
 
     // Initialization.
     println!("Welcome to Hornvale!");
+    ecs.fetch_mut::<InputReadyFlagResource>().0 = true;
 
     // Game loop.
     loop {

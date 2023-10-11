@@ -1,4 +1,3 @@
-use anyhow::Error as AnyError;
 use specs::prelude::*;
 
 pub mod initial_chunk_creator;
@@ -27,12 +26,6 @@ pub fn get_initial_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static> {
     .build();
   dispatcher.setup(ecs);
   dispatcher
-}
-
-pub fn run_initial_systems(ecs: &mut World) -> Result<(), AnyError> {
-  let mut dispatcher = get_initial_dispatcher(ecs);
-  dispatcher.dispatch(ecs);
-  Ok(())
 }
 
 /// The standard dispatcher.
