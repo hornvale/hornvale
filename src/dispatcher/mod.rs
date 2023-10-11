@@ -31,3 +31,20 @@ pub fn get_simulation_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static
   dispatcher.setup(ecs);
   dispatcher
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_get_initial_dispatcher() {
+    let mut ecs = World::new();
+    let _dispatcher = get_initial_dispatcher(&mut ecs);
+  }
+
+  #[test]
+  fn test_get_simulation_dispatcher() {
+    let mut ecs = World::new();
+    let _dispatcher = get_simulation_dispatcher(&mut ecs);
+  }
+}
