@@ -3,12 +3,12 @@ use specs::prelude::*;
 use specs::shrev::EventChannel;
 use std::io::{stdin, stdout, Write};
 
+use crate::dispatcher::get_initial_dispatcher;
+use crate::dispatcher::get_simulation_dispatcher;
 use crate::event::InputEvent;
 use crate::resource::InputReadyFlagResource;
 use crate::resource::QuitFlagResource;
 use crate::resource::SeedStringResource;
-use crate::system::get_initial_dispatcher;
-use crate::system::get_simulation_dispatcher;
 
 /// The `Game` struct.
 ///

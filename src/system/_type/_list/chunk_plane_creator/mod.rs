@@ -4,11 +4,11 @@ use crate::chunk::ChunkPlaneBuilder;
 use crate::component::*;
 use crate::resource::SeedStringResource;
 
-/// The `InitialChunkPlaneCreator` system.
+/// The `ChunkPlaneCreator` system.
 ///
 /// This system creates the initial `ChunkPlane`.
 #[derive(Debug, Default)]
-pub struct InitialChunkPlaneCreator {
+pub struct ChunkPlaneCreator {
   /// The seed string.
   seed_string: Option<String>,
 }
@@ -20,7 +20,7 @@ pub struct Data<'data> {
   pub is_a_chunk_plane: WriteStorage<'data, IsAChunkPlaneComponent>,
 }
 
-impl<'data> System<'data> for InitialChunkPlaneCreator {
+impl<'data> System<'data> for ChunkPlaneCreator {
   type SystemData = Data<'data>;
 
   /// Run the system.
@@ -49,7 +49,7 @@ impl<'data> System<'data> for InitialChunkPlaneCreator {
   }
 }
 
-impl<'data> InitialChunkPlaneCreator {
+impl<'data> ChunkPlaneCreator {
   /// Sets the seed string, if not already set.
   pub fn set_seed_string(&mut self, seed_string: &str) {
     if self.seed_string.is_none() {

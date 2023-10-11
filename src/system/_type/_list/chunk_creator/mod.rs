@@ -5,11 +5,11 @@ use crate::chunk::ChunkStatus;
 use crate::component::*;
 use crate::resource::SeedStringResource;
 
-/// The `InitialChunkCreator` system.
+/// The `ChunkCreator` system.
 ///
 /// This system creates the initial `Chunk`.
 #[derive(Debug, Default)]
-pub struct InitialChunkCreator {
+pub struct ChunkCreator {
   /// The seed string.
   seed_string: Option<String>,
 }
@@ -22,7 +22,7 @@ pub struct Data<'data> {
   pub is_a_chunk: WriteStorage<'data, IsAChunkComponent>,
 }
 
-impl<'data> System<'data> for InitialChunkCreator {
+impl<'data> System<'data> for ChunkCreator {
   type SystemData = Data<'data>;
 
   /// Run the system.
@@ -46,7 +46,7 @@ impl<'data> System<'data> for InitialChunkCreator {
   }
 }
 
-impl<'data> InitialChunkCreator {
+impl<'data> ChunkCreator {
   /// Sets the seed string, if not already set.
   pub fn set_seed_string(&mut self, data: &mut Data<'data>) {
     if self.seed_string.is_none() {
