@@ -1,7 +1,8 @@
 use specs::prelude::*;
+use specs::shrev::EventChannel;
 
-use crate::chunk::ChunkPlaneBuilder;
 use crate::component::*;
+use crate::event::ChunkPlaneRequestEvent;
 use crate::resource::SeedStringResource;
 
 /// The `ChunkPlaneCreator` system.
@@ -10,12 +11,15 @@ use crate::resource::SeedStringResource;
 #[derive(Debug, Default)]
 pub struct ChunkPlaneCreator {
   /// The seed string.
-  seed_string: Option<String>,
+  pub seed_string: Option<String>,
+  /// The event reader ID.
+  pub reader_id: Option<ReaderId<ChunkPlaneRequestEvent>>,
 }
 
 #[derive(SystemData)]
 pub struct Data<'data> {
   pub entities: Entities<'data>,
+  pub cpr_channel: Read<'data, EventChannel<ChunkPlaneRequestEvent>>,
   pub seed_string_resource: Read<'data, SeedStringResource>,
   pub is_a_chunk_plane: WriteStorage<'data, IsAChunkPlaneComponent>,
 }
@@ -28,28 +32,29 @@ impl<'data> System<'data> for ChunkPlaneCreator {
     debug!("Running InitialChunkPlaneCreator system.");
     // If the seed string is not set, set it.
     self.set_seed_string(&data.seed_string_resource.0);
-    // If there is already a chunk plane, do nothing.
-    if self.has_chunk_plane(&data) {
-      return;
+    for event in data.cpr_channel.read(self.reader_id.as_mut().unwrap()) {
+      data
+        .is_a_chunk_plane
+        .insert(
+          data.entities.create(),
+          IsAChunkPlaneComponent(event.chunk_plane.clone()),
+        )
+        .unwrap();
+      debug!("Created chunk plane.");
     }
-    // Otherwise, create the chunk plane...
-    debug!("Creating chunk plane.");
-    let chunk_plane = ChunkPlaneBuilder::default()
-      .name("default".to_string())
-      .seed_string(format!("{}{}", self.seed_string.as_ref().unwrap(), "primary"))
-      .description("The primary chunk plane.".to_string())
-      .build()
-      .expect("Failed to build chunk plane.");
-    // ... and insert it.
-    data
-      .is_a_chunk_plane
-      .insert(data.entities.create(), IsAChunkPlaneComponent(chunk_plane))
-      .unwrap();
-    debug!("Created chunk plane.");
+  }
+
+  fn setup(&mut self, world: &mut World) {
+    Self::SystemData::setup(world);
+    self.reader_id = Some(
+      world
+        .fetch_mut::<EventChannel<ChunkPlaneRequestEvent>>()
+        .register_reader(),
+    );
   }
 }
 
-impl<'data> ChunkPlaneCreator {
+impl ChunkPlaneCreator {
   /// Sets the seed string, if not already set.
   pub fn set_seed_string(&mut self, seed_string: &str) {
     if self.seed_string.is_none() {
@@ -57,11 +62,5 @@ impl<'data> ChunkPlaneCreator {
       debug!("Setting seed string to {}.", seed_string);
       self.seed_string = Some(seed_string.to_string());
     }
-  }
-
-  /// Determine whether there is at least one chunk plane in existence.
-  pub fn has_chunk_plane(&self, data: &Data<'data>) -> bool {
-    let is_a_chunk_plane = &data.is_a_chunk_plane;
-    !is_a_chunk_plane.is_empty()
   }
 }

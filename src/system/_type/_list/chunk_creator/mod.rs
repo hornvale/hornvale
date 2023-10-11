@@ -11,7 +11,7 @@ use crate::resource::SeedStringResource;
 #[derive(Debug, Default)]
 pub struct ChunkCreator {
   /// The seed string.
-  seed_string: Option<String>,
+  pub seed_string: Option<String>,
 }
 
 #[derive(SystemData)]

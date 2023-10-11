@@ -1,13 +1,17 @@
 use anyhow::Error as AnyError;
+use rand_seeder::SipHasher;
 use specs::prelude::*;
 use specs::shrev::EventChannel;
 use std::io::{stdin, stdout, Write};
 
+use crate::chunk::ChunkPlaneBuilder;
 use crate::dispatcher::get_initial_dispatcher;
 use crate::dispatcher::get_simulation_dispatcher;
+use crate::event::ChunkPlaneRequestEvent;
 use crate::event::InputEvent;
 use crate::resource::InputReadyFlagResource;
 use crate::resource::QuitFlagResource;
+use crate::resource::RandomResource;
 use crate::resource::SeedStringResource;
 
 /// The `Game` struct.
@@ -53,6 +57,17 @@ impl Game {
     let mut initial_dispatcher = get_initial_dispatcher(&mut ecs);
     ecs.fetch_mut::<SeedStringResource>().0 = seed_string.to_string();
     debug!("Seed String: {}", ecs.fetch::<SeedStringResource>().0);
+    ecs.insert(RandomResource(SipHasher::from(seed_string).into_rng()));
+    ecs
+      .fetch_mut::<EventChannel<ChunkPlaneRequestEvent>>()
+      .single_write(ChunkPlaneRequestEvent {
+        chunk_plane: ChunkPlaneBuilder::default()
+          .name("default".to_string())
+          .seed_string(format!("{}{}", seed_string, "primary"))
+          .description("The primary chunk plane.".to_string())
+          .build()
+          .expect("Failed to build chunk plane."),
+      });
     initial_dispatcher.dispatch(&ecs);
 
     // Kicking off the game.
