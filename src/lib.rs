@@ -59,6 +59,8 @@ pub mod chunk;
 pub mod component;
 /// Dispatchers, which are used to run systems.
 pub mod dispatcher;
+/// Entity UUIDs, which are used to identify entities.
+pub mod entity_uuid;
 /// Events, which are used to communicate between systems.
 pub mod event;
 /// Where the core game loop lives.

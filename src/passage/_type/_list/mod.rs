@@ -9,6 +9,8 @@ pub mod passage_direction;
 pub use passage_direction::*;
 pub mod passage_kind;
 pub use passage_kind::*;
+pub mod passage_look_through;
+pub use passage_look_through::*;
 pub mod passage_resolver;
 pub use passage_resolver::*;
 pub mod passage_status;
