@@ -37,7 +37,7 @@ impl<'data> System<'data> for ChunkPlaneCreator {
     debug!("Running InitialChunkPlaneCreator system.");
     for event in data.cpr_channel.read(self.reader_id.as_mut().unwrap()) {
       debug!("Creating chunk plane.");
-      let chunk_plane = event.builder.build().expect("Failed to build chunk plane.");
+      let chunk_plane = event.chunk_plane.clone();
       data
         .is_a_chunk_plane
         .insert(data.entities.create(), IsAChunkPlaneComponent(chunk_plane.clone()))

@@ -61,11 +61,12 @@ impl Game {
     ecs
       .fetch_mut::<EventChannel<ChunkPlaneRequestEvent>>()
       .single_write(ChunkPlaneRequestEvent {
-        builder: ChunkPlaneBuilder::default()
+        chunk_plane: ChunkPlaneBuilder::default()
           .name("default".to_string())
           .seed_string(format!("{}::{}", seed_string, "primary_chunk_plane"))
           .description("The primary chunk plane.".to_string())
-          .clone(),
+          .build()
+          .expect("Failed to build chunk plane."),
       });
     initial_dispatcher.dispatch(&ecs);
 
