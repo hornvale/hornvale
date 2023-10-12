@@ -1,7 +1,10 @@
 use specs::prelude::*;
 use specs::shrev::{EventChannel, ReaderId};
 
-use crate::event::{InputEvent, OutputEvent};
+use crate::command::CommandBuilder;
+use crate::command::CommandType;
+use crate::event::{CommandEvent, InputEvent, OutputEvent};
+use crate::passage::PassageDirection;
 use crate::resource::InputReadyFlagResource;
 use crate::resource::QuitFlagResource;
 
@@ -18,6 +21,7 @@ pub struct Data<'data> {
   pub entities: Entities<'data>,
   pub input_event_channel: Read<'data, EventChannel<InputEvent>>,
   pub output_event_channel: Write<'data, EventChannel<OutputEvent>>,
+  pub command_event_channel: Write<'data, EventChannel<CommandEvent>>,
   pub input_ready_flag_resource: Write<'data, InputReadyFlagResource>,
   pub quit_flag_resource: Write<'data, QuitFlagResource>,
 }
@@ -38,13 +42,30 @@ impl<'data> System<'data> for Parser {
     }
     info!("Processing {} input event(s)...", event_count);
     for input_event in input_events.iter() {
-      if input_event.input == "quit" {
-        data.quit_flag_resource.0 = true;
-      } else {
-        data.output_event_channel.single_write(OutputEvent {
-          output: input_event.input.clone(),
-        });
-      }
+      let command_type: CommandType = match input_event.input.as_str() {
+        "quit" => CommandType::QuitGame,
+        "ne" | "northeast" | "north east" | "go northeast" | "go ne" => CommandType::Walk(PassageDirection::Northeast),
+        "nw" | "northwest" | "north west" | "go northwest" | "go nw" => CommandType::Walk(PassageDirection::Northwest),
+        "se" | "southeast" | "south east" | "go southeast" | "go se" => CommandType::Walk(PassageDirection::Southeast),
+        "sw" | "southwest" | "south west" | "go southwest" | "go sw" => CommandType::Walk(PassageDirection::Southwest),
+        "n" | "north" | "go north" => CommandType::Walk(PassageDirection::North),
+        "s" | "south" | "go south" => CommandType::Walk(PassageDirection::South),
+        "e" | "east" | "go east" => CommandType::Walk(PassageDirection::East),
+        "w" | "west" | "go west" => CommandType::Walk(PassageDirection::West),
+        "u" | "up" | "go up" => CommandType::Walk(PassageDirection::Up),
+        "d" | "down" | "go down" => CommandType::Walk(PassageDirection::Down),
+        "in" | "inside" | "go inside" => CommandType::Walk(PassageDirection::In),
+        "out" | "outside" | "go outside" => CommandType::Walk(PassageDirection::Out),
+        "thru" | "through" | "go thru" | "go through" => CommandType::Walk(PassageDirection::Thru),
+        "look" | "look around" => CommandType::LookAround,
+        "" => CommandType::NoOp,
+        _ => CommandType::NoOp,
+      };
+      let command = CommandBuilder::default()
+        .command_type(command_type)
+        .build()
+        .expect("Failed to build command.");
+      data.command_event_channel.single_write(CommandEvent { command });
     }
   }
 

@@ -5,6 +5,8 @@ pub mod chunk_plane_request;
 pub use chunk_plane_request::ChunkPlaneRequest as ChunkPlaneRequestEvent;
 pub mod chunk_request;
 pub use chunk_request::ChunkRequest as ChunkRequestEvent;
+pub mod command;
+pub use command::Command as CommandEvent;
 pub mod input;
 pub use input::Input as InputEvent;
 pub mod output;

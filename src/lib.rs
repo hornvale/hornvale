@@ -57,6 +57,8 @@ pub use _macro::*;
 pub mod actor;
 /// Chunks, which are used to subdivide the game world and its contents.
 pub mod chunk;
+/// Commands, which are reified player input.
+pub mod command;
 /// Components, which are used to store data in the ECS.
 pub mod component;
 /// Dispatchers, which are used to run systems.

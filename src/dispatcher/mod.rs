@@ -15,23 +15,15 @@ pub fn get_initial_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static> {
 
 /// The standard dispatcher.
 pub fn get_simulation_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static> {
-  let parser_system = {
-    let mut parser_system = ParserSystem::default();
-    System::setup(&mut parser_system, ecs);
-    parser_system
-  };
-  let output_system = {
-    let mut output_system = OutputSystem::default();
-    System::setup(&mut output_system, ecs);
-    output_system
-  };
   let mut dispatcher = DispatcherBuilder::new()
     .with(TickSystem::default(), "tick", &[])
     .with(ChunkPlaneCreatorSystem::default(), "chunk_plane_creator", &[])
     .with(ChunkCreatorSystem::default(), "chunk_creator", &["chunk_plane_creator"])
     .with(RoomCreatorSystem::default(), "room_creator", &["chunk_creator"])
-    .with(parser_system, "parser", &["tick"])
-    .with(output_system, "output", &["parser"])
+    .with(InsertPlayerSystem::default(), "insert_player", &["room_creator"])
+    .with(ParserSystem::default(), "parser", &["tick"])
+    .with(CommandSystem::default(), "command", &["parser"])
+    .with(OutputSystem::default(), "output", &["command"])
     .build();
   dispatcher.setup(ecs);
   dispatcher

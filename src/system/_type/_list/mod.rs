@@ -5,6 +5,8 @@ pub mod chunk_creator;
 pub use chunk_creator::ChunkCreator as ChunkCreatorSystem;
 pub mod chunk_plane_creator;
 pub use chunk_plane_creator::ChunkPlaneCreator as ChunkPlaneCreatorSystem;
+pub mod command;
+pub use command::Command as CommandSystem;
 pub mod insert_player;
 pub use insert_player::InsertPlayer as InsertPlayerSystem;
 pub mod output;
