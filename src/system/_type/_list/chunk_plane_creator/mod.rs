@@ -2,6 +2,7 @@ use specs::prelude::*;
 use specs::shrev::EventChannel;
 
 use crate::chunk::ChunkBuilder;
+use crate::chunk::ChunkFactory;
 use crate::chunk::ChunkStatus;
 use crate::component::*;
 use crate::event::ChunkPlaneRequestEvent;
@@ -52,6 +53,7 @@ impl<'data> System<'data> for ChunkPlaneCreator {
           .status(ChunkStatus::Unknown)
           .build()
           .expect("Failed to build chunk."),
+        chunk_factory: ChunkFactory::default(),
       });
       debug!("Created chunk plane.");
     }

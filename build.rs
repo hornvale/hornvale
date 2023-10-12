@@ -10,8 +10,8 @@ fn main() {
   generate_list_mod_with_alias("src/component/_type", "Component");
   generate_list_mod_with_alias("src/event/_type", "Event");
   generate_list_mod_with_alias("src/resource/_type", "Resource");
+  generate_list_mod("src/room/_type");
   generate_list_mod_with_alias("src/system/_type", "System");
-  // generate_list_mod("src/event/subscriber/_type");
   // generate_list_mod("src/game_state/_impl");
   // generate_list_mod_with_alias("src/game_state/_trait", "Trait");
   // generate_list_mod("src/game_state/_type");

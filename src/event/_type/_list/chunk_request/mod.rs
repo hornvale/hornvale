@@ -1,4 +1,5 @@
 use crate::chunk::Chunk;
+use crate::chunk::ChunkFactory;
 
 /// The `ChunkRequest` type.
 ///
@@ -8,4 +9,5 @@ use crate::chunk::Chunk;
 pub struct ChunkRequest {
   pub chunk_plane_uuid: String,
   pub chunk: Chunk,
+  pub chunk_factory: ChunkFactory,
 }

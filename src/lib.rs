@@ -65,6 +65,8 @@ pub mod event;
 pub mod game;
 /// ECS resources shared by all systems.
 pub mod resource;
+/// Rooms, which are used to subdivide chunks into individual play areas.
+pub mod room;
 /// Where the ECS lives.
 pub mod system;
 
