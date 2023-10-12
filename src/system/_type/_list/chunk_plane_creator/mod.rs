@@ -37,24 +37,20 @@ impl<'data> System<'data> for ChunkPlaneCreator {
     debug!("Running InitialChunkPlaneCreator system.");
     for event in data.cpr_channel.read(self.reader_id.as_mut().unwrap()) {
       debug!("Creating chunk plane.");
+      let chunk_plane = event.builder.build().expect("Failed to build chunk plane.");
       data
         .is_a_chunk_plane
-        .insert(
-          data.entities.create(),
-          IsAChunkPlaneComponent(event.chunk_plane.clone()),
-        )
+        .insert(data.entities.create(), IsAChunkPlaneComponent(chunk_plane.clone()))
         .unwrap();
-      let chunk = ChunkBuilder::default()
-        .coordinates((0, 0).into())
-        .seed_string(format!("{}::(0, 0)", event.chunk_plane.seed_string.clone()))
-        .status(ChunkStatus::Unknown)
-        .name("default".to_string())
-        .description("The primary chunk plane.".to_string())
-        .build()
-        .expect("Failed to build chunk.");
       data.cr_channel.single_write(ChunkRequestEvent {
-        chunk_plane_uuid: event.chunk_plane.uuid.clone(),
-        chunk,
+        chunk_plane_uuid: chunk_plane.uuid.clone(),
+        builder: ChunkBuilder::default()
+          .name("default".to_string())
+          .description("The primary chunk.".to_string())
+          .coordinates((0, 0).into())
+          .seed_string(format!("{}::(0, 0)", chunk_plane.seed_string.clone()))
+          .status(ChunkStatus::Unknown)
+          .clone(),
       });
       debug!("Created chunk plane.");
     }

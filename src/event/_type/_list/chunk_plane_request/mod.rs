@@ -1,9 +1,10 @@
-use crate::chunk::ChunkPlane;
+use crate::chunk::ChunkPlaneBuilder;
 
 /// The `ChunkPlaneRequest` type.
 ///
 /// This represents a request to build a chunk plane.
-#[derive(Builder, Clone, Debug, Derivative, Deserialize, Hash, PartialEq, Serialize)]
+#[derive(Builder, Clone, Debug, Derivative)]
+#[builder(derive(Debug))]
 pub struct ChunkPlaneRequest {
-  pub chunk_plane: ChunkPlane,
+  pub builder: ChunkPlaneBuilder,
 }

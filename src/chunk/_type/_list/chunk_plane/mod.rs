@@ -6,6 +6,7 @@ use uuid::Uuid;
 /// composed of `Chunk`s. Other areas, e.g. the Underdark, will be managed
 /// in different planes.
 #[derive(Builder, Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
+#[builder(derive(Debug))]
 pub struct ChunkPlane {
   /// The seed string, used for randomizing the chunk plane.
   pub seed_string: String,

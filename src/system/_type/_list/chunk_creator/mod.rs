@@ -7,7 +7,7 @@ use crate::resource::SeedStringResource;
 
 /// The `ChunkCreator` system.
 ///
-/// This system creates the initial `Chunk`.
+/// This system creates each chunk.
 #[derive(Debug, Default)]
 pub struct ChunkCreator {
   /// The event reader ID.
@@ -43,10 +43,8 @@ impl<'data> System<'data> for ChunkCreator {
         .has_a_chunk_plane
         .insert(chunk_entity, HasAChunkPlaneComponent(chunk_plane_entity))
         .unwrap();
-      data
-        .is_a_chunk
-        .insert(chunk_entity, IsAChunkComponent(event.chunk.clone()))
-        .unwrap();
+      let chunk = event.builder.clone().build().expect("Failed to build chunk.");
+      data.is_a_chunk.insert(chunk_entity, IsAChunkComponent(chunk)).unwrap();
       debug!("Created chunk.");
     }
   }
