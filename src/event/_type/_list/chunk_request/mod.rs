@@ -1,5 +1,6 @@
 use crate::chunk::Chunk;
 use crate::chunk::ChunkFactory;
+use crate::entity_uuid::ChunkPlaneUuid;
 
 /// The `ChunkRequest` type.
 ///
@@ -7,7 +8,7 @@ use crate::chunk::ChunkFactory;
 #[derive(Builder, Clone, Debug, Derivative)]
 #[builder(derive(Debug))]
 pub struct ChunkRequest {
-  pub chunk_plane_uuid: String,
+  pub chunk_plane_uuid: ChunkPlaneUuid,
   pub chunk: Chunk,
   pub chunk_factory: ChunkFactory,
 }

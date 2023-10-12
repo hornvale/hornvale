@@ -9,7 +9,7 @@ use crate::entity_uuid::IntoEntityUuidTrait;
 /// We do this so that we can perform some compile-time type-checking with UUIDs.
 #[derive(Clone, Debug, Default, Deserialize, Display, Eq, Hash, PartialEq, Ord, PartialOrd, Serialize)]
 #[repr(transparent)]
-pub struct EntityUuid(BaseUuid);
+pub struct EntityUuid(pub BaseUuid);
 
 impl_base_uuid_wrapper!(EntityUuid);
 

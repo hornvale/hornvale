@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use uuid::Uuid;
 
+use crate::entity_uuid::BaseUuidWrapperTrait;
+use crate::entity_uuid::RoomUuid;
 use crate::passage::Passage;
 use crate::passage::PassageDirection;
 use crate::room::RoomCoordinates;
@@ -15,8 +17,8 @@ pub struct Room {
   /// The `Room`'s seed string.
   pub seed_string: String,
   /// The UUID of the room.
-  #[builder(default = "Uuid::new_v4().to_string()")]
-  pub uuid: String,
+  #[builder(default = "RoomUuid::new(Uuid::new_v4().to_string())")]
+  pub uuid: RoomUuid,
   /// The `Room`'s status.
   pub status: RoomStatus,
   /// The `Room`'s name.
