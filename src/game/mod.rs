@@ -2,17 +2,23 @@ use anyhow::Error as AnyError;
 use rand_seeder::SipHasher;
 use specs::prelude::*;
 use specs::shrev::EventChannel;
+use std::collections::HashMap;
 use std::io::{stdin, stdout, Write};
 
 use crate::chunk::ChunkPlaneBuilder;
 use crate::dispatcher::get_initial_dispatcher;
 use crate::dispatcher::get_simulation_dispatcher;
+use crate::entity_uuid::ChunkUuid;
 use crate::event::ChunkPlaneRequestEvent;
 use crate::event::InputEvent;
+use crate::event::RoomRequestEvent;
 use crate::resource::InputReadyFlagResource;
 use crate::resource::QuitFlagResource;
 use crate::resource::RandomResource;
 use crate::resource::SeedStringResource;
+use crate::room::RoomBuilder;
+use crate::room::RoomFactory;
+use crate::room::RoomStatus;
 
 /// The `Game` struct.
 ///
@@ -67,6 +73,22 @@ impl Game {
           .description("The primary chunk plane.".to_string())
           .build()
           .expect("Failed to build chunk plane."),
+      });
+    ecs
+      .fetch_mut::<EventChannel<RoomRequestEvent>>()
+      .single_write(RoomRequestEvent {
+        room: RoomBuilder::default()
+          .name("default".to_string())
+          .seed_string(format!("{}::{}", seed_string, "primary_room"))
+          .description("The primary room.".to_string())
+          .coordinates((0, 0, 0).into())
+          .status(RoomStatus::Unknown)
+          .passages(HashMap::new())
+          .is_startable(true)
+          .build()
+          .expect("Failed to build room."),
+        chunk_uuid: ChunkUuid::default(),
+        room_factory: RoomFactory::default(),
       });
     initial_dispatcher.dispatch(&ecs);
 

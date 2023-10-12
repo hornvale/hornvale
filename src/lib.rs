@@ -53,6 +53,8 @@ pub use _macro::*;
 
 // Remaining modules.
 
+/// Actors, which are used to represent characters and monsters.
+pub mod actor;
 /// Chunks, which are used to subdivide the game world and its contents.
 pub mod chunk;
 /// Components, which are used to store data in the ECS.
@@ -67,6 +69,8 @@ pub mod event;
 pub mod game;
 /// Passages, which connect rooms.
 pub mod passage;
+/// The player character.
+pub mod player;
 /// ECS resources shared by all systems.
 pub mod resource;
 /// Rooms, which are used to subdivide chunks into individual play areas.

@@ -25,6 +25,8 @@ pub struct Room {
   pub name: String,
   /// The `Room`'s description.
   pub description: String,
+  /// Whether this room is startable.
+  pub is_startable: bool,
   /// The `Room`'s passages.
   pub passages: HashMap<PassageDirection, Passage>,
 }

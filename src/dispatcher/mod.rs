@@ -6,6 +6,8 @@ pub fn get_initial_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static> {
   let mut dispatcher = DispatcherBuilder::new()
     .with(ChunkPlaneCreatorSystem::default(), "chunk_plane_creator", &[])
     .with(ChunkCreatorSystem::default(), "chunk_creator", &["chunk_plane_creator"])
+    .with(RoomCreatorSystem::default(), "room_creator", &["chunk_creator"])
+    .with(InsertPlayerSystem::default(), "insert_player", &["room_creator"])
     .build();
   dispatcher.setup(ecs);
   dispatcher
@@ -27,6 +29,7 @@ pub fn get_simulation_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static
     .with(TickSystem::default(), "tick", &[])
     .with(ChunkPlaneCreatorSystem::default(), "chunk_plane_creator", &[])
     .with(ChunkCreatorSystem::default(), "chunk_creator", &["chunk_plane_creator"])
+    .with(RoomCreatorSystem::default(), "room_creator", &["chunk_creator"])
     .with(parser_system, "parser", &["tick"])
     .with(output_system, "output", &["parser"])
     .build();

@@ -9,6 +9,8 @@ pub mod is_a_chunk_plane;
 pub use is_a_chunk_plane::IsAChunkPlane as IsAChunkPlaneComponent;
 pub mod is_a_room;
 pub use is_a_room::IsARoom as IsARoomComponent;
+pub mod is_an_actor;
+pub use is_an_actor::IsAnActor as IsAnActorComponent;
 pub mod is_in_chunk;
 pub use is_in_chunk::IsInChunk as IsInChunkComponent;
 pub mod is_in_chunk_plane;

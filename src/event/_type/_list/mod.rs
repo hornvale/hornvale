@@ -9,3 +9,5 @@ pub mod input;
 pub use input::Input as InputEvent;
 pub mod output;
 pub use output::Output as OutputEvent;
+pub mod room_request;
+pub use room_request::RoomRequest as RoomRequestEvent;

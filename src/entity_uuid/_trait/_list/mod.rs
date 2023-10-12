@@ -3,6 +3,8 @@
 // Remember not to edit it manually.
 pub mod base_uuid_wrapper;
 pub use base_uuid_wrapper::BaseUuidWrapper as BaseUuidWrapperTrait;
+pub mod into_actor_uuid;
+pub use into_actor_uuid::IntoActorUuid as IntoActorUuidTrait;
 pub mod into_base_uuid;
 pub use into_base_uuid::IntoBaseUuid as IntoBaseUuidTrait;
 pub mod into_chunk_plane_uuid;
@@ -11,5 +13,7 @@ pub mod into_chunk_uuid;
 pub use into_chunk_uuid::IntoChunkUuid as IntoChunkUuidTrait;
 pub mod into_entity_uuid;
 pub use into_entity_uuid::IntoEntityUuid as IntoEntityUuidTrait;
+pub mod into_player_uuid;
+pub use into_player_uuid::IntoPlayerUuid as IntoPlayerUuidTrait;
 pub mod into_room_uuid;
 pub use into_room_uuid::IntoRoomUuid as IntoRoomUuidTrait;

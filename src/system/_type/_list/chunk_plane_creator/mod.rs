@@ -35,7 +35,7 @@ impl<'data> System<'data> for ChunkPlaneCreator {
 
   /// Run the system.
   fn run(&mut self, mut data: Self::SystemData) {
-    debug!("Running InitialChunkPlaneCreator system.");
+    debug!("Running ChunkPlaneCreator system.");
     for event in data.cpr_channel.read(self.reader_id.as_mut().unwrap()) {
       debug!("Creating chunk plane.");
       let chunk_plane = event.chunk_plane.clone();

@@ -6,6 +6,7 @@ use std::path::Path;
 
 fn main() {
   generate_macro_mod("src/_macro");
+  generate_list_mod("src/actor/_type");
   generate_list_mod("src/chunk/_type");
   generate_list_mod_with_alias("src/component/_type", "Component");
   generate_macro_mod("src/entity_uuid/_macro");

@@ -29,7 +29,7 @@ impl<'data> System<'data> for ChunkCreator {
 
   /// Run the system.
   fn run(&mut self, mut data: Self::SystemData) {
-    debug!("Running InitialChunkCreator system.");
+    debug!("Running ChunkCreator system.");
     for event in data.cp_channel.read(self.reader_id.as_mut().unwrap()) {
       debug!("Creating chunk.");
       let chunk_plane_uuid = event.chunk_plane_uuid.clone();
@@ -45,6 +45,7 @@ impl<'data> System<'data> for ChunkCreator {
         .unwrap();
       let chunk = event.chunk.clone();
       data.is_a_chunk.insert(chunk_entity, IsAChunkComponent(chunk)).unwrap();
+      let _chunk_factory = event.chunk_factory.clone();
       debug!("Created chunk.");
     }
   }

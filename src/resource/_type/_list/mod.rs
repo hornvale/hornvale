@@ -5,6 +5,8 @@ pub mod input_ready_flag;
 pub use input_ready_flag::InputReadyFlag as InputReadyFlagResource;
 pub mod output;
 pub use output::Output as OutputResource;
+pub mod player;
+pub use player::Player as PlayerResource;
 pub mod quit_flag;
 pub use quit_flag::QuitFlag as QuitFlagResource;
 pub mod random;
