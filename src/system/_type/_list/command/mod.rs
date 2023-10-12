@@ -26,7 +26,7 @@ impl<'data> System<'data> for Command {
     if event_count == 0 {
       return;
     }
-    info!("Processing {} input event(s)...", event_count);
+    info!("Processing {} command event(s)...", event_count);
     for command_event in command_events.iter() {
       if let Err(error) = command_event.command.execute(&mut data) {
         eprintln!("{}", error);

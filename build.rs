@@ -6,6 +6,7 @@ use std::path::Path;
 
 fn main() {
   generate_macro_mod("src/_macro");
+  generate_list_mod("src/action/_type");
   generate_list_mod("src/actor/_type");
   generate_list_mod("src/command/_type");
   generate_list_mod("src/chunk/_type");

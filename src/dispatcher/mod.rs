@@ -23,7 +23,8 @@ pub fn get_simulation_dispatcher(ecs: &mut World) -> Dispatcher<'static, 'static
     .with(InsertPlayerSystem::default(), "insert_player", &["room_creator"])
     .with(ParserSystem::default(), "parser", &["tick"])
     .with(CommandSystem::default(), "command", &["parser"])
-    .with(OutputSystem::default(), "output", &["command"])
+    .with(ActionSystem::default(), "action", &["command"])
+    .with(OutputSystem::default(), "output", &["action"])
     .build();
   dispatcher.setup(ecs);
   dispatcher

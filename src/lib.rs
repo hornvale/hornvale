@@ -53,23 +53,25 @@ pub use _macro::*;
 
 // Remaining modules.
 
-/// Actors, which are used to represent characters and monsters.
+/// Actions represent attempted actions by any actor.
+pub mod action;
+/// Actors represent characters and monsters.
 pub mod actor;
-/// Chunks, which are used to subdivide the game world and its contents.
+/// Chunks subdivide the game world and its contents.
 pub mod chunk;
-/// Commands, which are reified player input.
+/// Commands are reified player input.
 pub mod command;
-/// Components, which are used to store data in the ECS.
+/// Components store data in the ECS.
 pub mod component;
-/// Dispatchers, which are used to run systems.
+/// Dispatchers run systems.
 pub mod dispatcher;
-/// Entity UUIDs, which are used to identify entities.
+/// Entity UUIDs identify entities.
 pub mod entity_uuid;
-/// Events, which are used to communicate between systems.
+/// Events communicate between systems.
 pub mod event;
 /// Where the core game loop lives.
 pub mod game;
-/// Passages, which connect rooms.
+/// Passages connect rooms.
 pub mod passage;
 /// The player character.
 pub mod player;

@@ -3,6 +3,8 @@
 // Remember not to edit it manually.
 pub mod base_uuid_wrapper;
 pub use base_uuid_wrapper::BaseUuidWrapper as BaseUuidWrapperTrait;
+pub mod into_action_uuid;
+pub use into_action_uuid::IntoActionUuid as IntoActionUuidTrait;
 pub mod into_actor_uuid;
 pub use into_actor_uuid::IntoActorUuid as IntoActorUuidTrait;
 pub mod into_base_uuid;
