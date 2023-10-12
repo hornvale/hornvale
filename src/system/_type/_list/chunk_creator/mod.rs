@@ -19,7 +19,7 @@ pub struct Data<'data> {
   pub entities: Entities<'data>,
   pub seed_string_resource: Read<'data, SeedStringResource>,
   pub cp_channel: Read<'data, EventChannel<ChunkRequestEvent>>,
-  pub has_a_chunk_plane: WriteStorage<'data, HasAChunkPlaneComponent>,
+  pub has_a_chunk_plane: WriteStorage<'data, IsInChunkPlaneComponent>,
   pub is_a_chunk_plane: ReadStorage<'data, IsAChunkPlaneComponent>,
   pub is_a_chunk: WriteStorage<'data, IsAChunkComponent>,
 }
@@ -41,7 +41,7 @@ impl<'data> System<'data> for ChunkCreator {
       let chunk_entity = data.entities.create();
       data
         .has_a_chunk_plane
-        .insert(chunk_entity, HasAChunkPlaneComponent(chunk_plane_entity))
+        .insert(chunk_entity, IsInChunkPlaneComponent(chunk_plane_entity))
         .unwrap();
       let chunk = event.chunk.clone();
       data.is_a_chunk.insert(chunk_entity, IsAChunkComponent(chunk)).unwrap();
