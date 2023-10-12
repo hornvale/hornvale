@@ -63,6 +63,8 @@ pub mod dispatcher;
 pub mod event;
 /// Where the core game loop lives.
 pub mod game;
+/// Passages, which connect rooms.
+pub mod passage;
 /// ECS resources shared by all systems.
 pub mod resource;
 /// Rooms, which are used to subdivide chunks into individual play areas.

@@ -1,10 +1,13 @@
+use std::collections::HashMap;
 use uuid::Uuid;
 
+use crate::passage::Passage;
+use crate::passage::PassageDirection;
 use crate::room::RoomCoordinates;
 use crate::room::RoomStatus;
 
 /// The `Room` struct.
-#[derive(Builder, Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
+#[derive(Builder, Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[builder(derive(Debug))]
 pub struct Room {
   /// The `Room`'s coordinates in the `RoomPlane`.
@@ -20,4 +23,6 @@ pub struct Room {
   pub name: String,
   /// The `Room`'s description.
   pub description: String,
+  /// The `Room`'s passages.
+  pub passages: HashMap<PassageDirection, Passage>,
 }
