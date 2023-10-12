@@ -18,9 +18,11 @@ pub struct Command {
 
 impl Command {
   pub fn execute(&self, data: &mut CommandData) -> Result<(), AnyError> {
-    debug!("Executing {:#?} command.", self.command_type);
+    debug!("Executing {:#?} command.", self);
     if let Some(error) = self.command_type.execute(self, data).err() {
       error!("Error executing command:\n{:#?}\n{:#?}", self.clone(), error);
+    } else if self.is_diegetic() {
+      data.advance_flag_resource.0 = true;
     }
     Ok(())
   }
