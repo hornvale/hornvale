@@ -6,27 +6,16 @@ use crate::entity_uuid::IntoEntityUuidTrait;
 
 /// The `EntityUuid` type.
 ///
-/// We do this so that we can perform some compile-time type-checking with IDs.
+/// We do this so that we can perform some compile-time type-checking with UUIDs.
 #[derive(Clone, Debug, Default, Deserialize, Display, Eq, Hash, PartialEq, Ord, PartialOrd, Serialize)]
 #[repr(transparent)]
 pub struct EntityUuid(BaseUuid);
 
-impl EntityUuid {
-  /// Create a new `EntityUuid`.
-  pub fn new(uuid: String) -> Self {
-    Self(BaseUuid::new(uuid))
-  }
-}
+impl_base_uuid_wrapper!(EntityUuid);
 
 impl IntoBaseUuidTrait for EntityUuid {
   fn into_base_uuid(self) -> BaseUuid {
     self.0
-  }
-}
-
-impl From<EntityUuid> for BaseUuid {
-  fn from(uuid: EntityUuid) -> Self {
-    uuid.0
   }
 }
 

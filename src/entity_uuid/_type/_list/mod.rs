@@ -3,5 +3,7 @@
 // Remember not to edit it manually.
 pub mod base_uuid;
 pub use base_uuid::*;
+pub mod chunk_plane_uuid;
+pub use chunk_plane_uuid::*;
 pub mod entity_uuid;
 pub use entity_uuid::*;

@@ -5,9 +5,10 @@ use std::fs;
 use std::path::Path;
 
 fn main() {
-  generate_macro_mod();
+  generate_macro_mod("src/_macro");
   generate_list_mod("src/chunk/_type");
   generate_list_mod_with_alias("src/component/_type", "Component");
+  generate_macro_mod("src/entity_uuid/_macro");
   generate_list_mod_with_alias("src/entity_uuid/_trait", "Trait");
   generate_list_mod("src/entity_uuid/_type");
   generate_list_mod_with_alias("src/event/_type", "Event");
@@ -24,8 +25,9 @@ fn main() {
   // generate_list_mod_with_alias("src/system/_trait", "Trait");
 }
 
-fn generate_macro_mod() {
-  let dir = Path::new("src/_macro/_list");
+fn generate_macro_mod(base_dir: &str) {
+  let path = format!("{}/_list", base_dir);
+  let dir = Path::new(&path);
   let mut files = get_files_in_dir(dir);
   files.sort();
   let mut content = String::new();
