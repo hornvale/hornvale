@@ -10,7 +10,7 @@ use crate::room::RoomStatus;
 #[derive(Builder, Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[builder(derive(Debug))]
 pub struct Room {
-  /// The `Room`'s coordinates in the `RoomPlane`.
+  /// The `Room`'s coordinates within the `Chunk`.
   pub coordinates: RoomCoordinates,
   /// The `Room`'s seed string.
   pub seed_string: String,

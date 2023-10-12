@@ -2,6 +2,7 @@ use uuid::Uuid;
 
 use crate::passage::PassageDirection;
 use crate::passage::PassageKind;
+use crate::passage::PassageLookThrough;
 use crate::passage::PassageStatus;
 use crate::passage::PassageTarget;
 
@@ -22,6 +23,8 @@ pub struct Passage {
   pub kind: PassageKind,
   /// The `Passage`'s target (e.g. Room, Passage, Message)
   pub target: PassageTarget,
+  /// Whether this passage can be looked through.
+  pub look_through: PassageLookThrough,
   /// The `Passage`'s name.
   pub name: String,
   /// The `Passage`'s description.
