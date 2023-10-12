@@ -43,7 +43,7 @@ impl<'data> System<'data> for ChunkCreator {
         .has_a_chunk_plane
         .insert(chunk_entity, HasAChunkPlaneComponent(chunk_plane_entity))
         .unwrap();
-      let chunk = event.builder.clone().build().expect("Failed to build chunk.");
+      let chunk = event.chunk.clone();
       data.is_a_chunk.insert(chunk_entity, IsAChunkComponent(chunk)).unwrap();
       debug!("Created chunk.");
     }

@@ -44,13 +44,14 @@ impl<'data> System<'data> for ChunkPlaneCreator {
         .unwrap();
       data.cr_channel.single_write(ChunkRequestEvent {
         chunk_plane_uuid: chunk_plane.uuid.clone(),
-        builder: ChunkBuilder::default()
+        chunk: ChunkBuilder::default()
           .name("default".to_string())
           .description("The primary chunk.".to_string())
           .coordinates((0, 0).into())
           .seed_string(format!("{}::(0, 0)", chunk_plane.seed_string.clone()))
           .status(ChunkStatus::Unknown)
-          .clone(),
+          .build()
+          .expect("Failed to build chunk."),
       });
       debug!("Created chunk plane.");
     }

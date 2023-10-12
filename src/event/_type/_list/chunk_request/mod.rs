@@ -1,4 +1,4 @@
-use crate::chunk::ChunkBuilder;
+use crate::chunk::Chunk;
 
 /// The `ChunkRequest` type.
 ///
@@ -7,5 +7,5 @@ use crate::chunk::ChunkBuilder;
 #[builder(derive(Debug))]
 pub struct ChunkRequest {
   pub chunk_plane_uuid: String,
-  pub builder: ChunkBuilder,
+  pub chunk: Chunk,
 }
