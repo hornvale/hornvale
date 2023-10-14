@@ -13,6 +13,8 @@ pub mod chunk_uuid;
 pub use chunk_uuid::*;
 pub mod command_uuid;
 pub use command_uuid::*;
+pub mod effect_uuid;
+pub use effect_uuid::*;
 pub mod entity_uuid;
 pub use entity_uuid::*;
 pub mod player_uuid;

@@ -15,6 +15,8 @@ pub mod into_chunk_uuid;
 pub use into_chunk_uuid::IntoChunkUuid as IntoChunkUuidTrait;
 pub mod into_command_uuid;
 pub use into_command_uuid::IntoCommandUuid as IntoCommandUuidTrait;
+pub mod into_effect_uuid;
+pub use into_effect_uuid::IntoEffectUuid as IntoEffectUuidTrait;
 pub mod into_entity_uuid;
 pub use into_entity_uuid::IntoEntityUuid as IntoEntityUuidTrait;
 pub mod into_player_uuid;

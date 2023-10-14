@@ -1,7 +1,10 @@
 use anyhow::Error as AnyError;
 
+use crate::action::ActionBuilder;
+use crate::action::ActionType;
 use crate::command::Command;
 use crate::command::CommandData;
+use crate::event::ActionEvent;
 use crate::passage::PassageDirection;
 
 /// The `CommandType` enum.
@@ -23,7 +26,7 @@ pub enum CommandType {
 }
 
 impl CommandType {
-  pub fn execute(&self, _command: &Command, data: &mut CommandData) -> Result<(), AnyError> {
+  pub fn execute(&self, command: &Command, data: &mut CommandData) -> Result<(), AnyError> {
     debug!("Executing {:#?} command.", self);
     use CommandType::*;
     #[allow(unreachable_patterns)]
@@ -33,9 +36,11 @@ impl CommandType {
       },
       QuitGame => {
         debug!("Executing quit-game command.");
-        data.quit_flag_resource.0 = true;
-        //let action = Action::new(ActionType::QuitGame, command.backtrace.clone());
-        //action.attempt(data)?;
+        let action = ActionBuilder::default()
+          .action_type(ActionType::QuitGame)
+          .backtrace(command.backtrace.clone())
+          .build()?;
+        data.action_event_channel.single_write(ActionEvent { action });
       },
       LookAround => {
         debug!("Executing look command.");

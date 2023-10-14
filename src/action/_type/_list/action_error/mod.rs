@@ -1,6 +1,7 @@
 use anyhow::Error as AnyError;
 
 use crate::action::Action;
+use crate::effect::EffectBuilderError;
 use crate::entity_uuid::RoomUuid;
 use crate::passage::PassageDirection;
 use crate::room::Room;
@@ -31,4 +32,19 @@ pub enum ActionError {
   /// Any error occurred.
   #[error(transparent)]
   AnyError(#[from] AnyError),
+  /// An effect builder error occurred.
+  #[error(transparent)]
+  EffectBuilderError(#[from] EffectBuilderError),
+}
+
+impl From<AnyError> for Box<ActionError> {
+  fn from(error: AnyError) -> Self {
+    Box::new(ActionError::AnyError(error))
+  }
+}
+
+impl From<EffectBuilderError> for Box<ActionError> {
+  fn from(error: EffectBuilderError) -> Self {
+    Box::new(ActionError::EffectBuilderError(error))
+  }
 }

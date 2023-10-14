@@ -65,12 +65,16 @@ pub mod command;
 pub mod component;
 /// Dispatchers run systems.
 pub mod dispatcher;
+/// Effects are reified changes to the game world.
+pub mod effect;
 /// Entity UUIDs identify entities.
 pub mod entity_uuid;
 /// Events communicate between systems.
 pub mod event;
 /// Where the core game loop lives.
 pub mod game;
+/// Output items.
+pub mod output;
 /// Passages connect rooms.
 pub mod passage;
 /// The player character.

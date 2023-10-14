@@ -1,6 +1,8 @@
 use crate::action::Action;
 use crate::action::ActionData;
 use crate::action::ActionError;
+use crate::effect::EffectBuilder;
+use crate::effect::EffectType;
 use crate::entity_uuid::ActorUuid;
 use crate::entity_uuid::RoomUuid;
 use crate::passage::PassageDirection;
@@ -29,20 +31,26 @@ impl ActionType {
     Self::default()
   }
 
-  pub fn attempt(&self, _action: &Action, _data: &mut ActionData) -> Result<(), Box<ActionError>> {
+  pub fn attempt(&self, action: &Action, data: &mut ActionData) -> Result<(), Box<ActionError>> {
     debug!("Attempting {:#?} action.", self);
     use ActionType::*;
     #[allow(unreachable_patterns)]
     match self {
       NoOp => {
         debug!("Attempting no-op action.");
-        // let event = Event::new(EventType::NoOp, DEFAULT_PRIORITY, action.backtrace.clone(), vec![]);
-        // game_state.enqueue_event(event);
+        let effect = EffectBuilder::default()
+          .effect_type(EffectType::NoOp)
+          .backtrace(action.backtrace.clone())
+          .build()?;
+        effect.apply(data)?;
       },
       QuitGame => {
         debug!("Attempting quit-game action.");
-        // let event = Event::new(EventType::QuitsGame, DEFAULT_PRIORITY, action.backtrace.clone(), vec![]);
-        // game_state.enqueue_event(event);
+        let effect = EffectBuilder::default()
+          .effect_type(EffectType::SetQuitFlag(true))
+          .backtrace(action.backtrace.clone())
+          .build()?;
+        effect.apply(data)?;
       },
       LookAround(actor_id, room_id) => {
         debug!("Actor {} is attempting look-around action in {}.", actor_id, room_id);
