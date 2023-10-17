@@ -67,9 +67,7 @@ pub mod component;
 pub mod dispatcher;
 /// Effects are reified changes to the game world.
 pub mod effect;
-/// Entity UUIDs identify entities.
-pub mod entity_uuid;
-/// Events communicate between systems.
+/// Entity IDs are used to identify entities.
 pub mod event;
 /// Where the core game loop lives.
 pub mod game;

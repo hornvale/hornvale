@@ -32,12 +32,7 @@ impl<'data> System<'data> for ChunkCreator {
     debug!("Running ChunkCreator system.");
     for event in data.cp_channel.read(self.reader_id.as_mut().unwrap()) {
       debug!("Creating chunk.");
-      let chunk_plane_uuid = event.chunk_plane_uuid.clone();
-      let chunk_plane_entity = (&data.entities, &data.is_a_chunk_plane)
-        .join()
-        .find(|(_, is_a_chunk_plane)| is_a_chunk_plane.0.uuid == chunk_plane_uuid)
-        .map(|(entity, _)| entity)
-        .unwrap();
+      let chunk_plane_entity = event.chunk_plane_entity;
       let chunk_entity = data.entities.create();
       data
         .has_a_chunk_plane

@@ -1,16 +1,13 @@
+use anyhow::Error as AnyError;
+
 use crate::command::CommandData;
 use crate::command::CommandType;
-use crate::entity_uuid::CommandUuid;
-use anyhow::Error as AnyError;
 
 /// The `Command` type.
 #[derive(Builder, Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct Command {
   /// The `Command` type.
   pub command_type: CommandType,
-  /// The `Command`'s UUID.
-  #[builder(default = "CommandUuid::default()")]
-  pub uuid: CommandUuid,
   /// A backtrace.
   #[builder(default = "Vec::new()")]
   pub backtrace: Vec<String>,

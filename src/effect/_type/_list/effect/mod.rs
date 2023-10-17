@@ -2,16 +2,12 @@ use anyhow::Error as AnyError;
 
 use crate::effect::EffectData;
 use crate::effect::EffectType;
-use crate::entity_uuid::EffectUuid;
 
 /// The `Effect` type.
-#[derive(Builder, Clone, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Builder, Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct Effect {
   /// The `Effect` type.
   pub effect_type: EffectType,
-  /// The `Effect`'s UUID.
-  #[builder(default = "EffectUuid::default()")]
-  pub uuid: EffectUuid,
   /// A backtrace.
   pub backtrace: Vec<String>,
 }

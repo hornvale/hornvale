@@ -39,12 +39,13 @@ impl<'data> System<'data> for ChunkPlaneCreator {
     for event in data.cpr_channel.read(self.reader_id.as_mut().unwrap()) {
       debug!("Creating chunk plane.");
       let chunk_plane = event.chunk_plane.clone();
+      let chunk_plane_entity = data.entities.create();
       data
         .is_a_chunk_plane
-        .insert(data.entities.create(), IsAChunkPlaneComponent(chunk_plane.clone()))
+        .insert(chunk_plane_entity, IsAChunkPlaneComponent(chunk_plane.clone()))
         .unwrap();
       data.cr_channel.single_write(ChunkRequestEvent {
-        chunk_plane_uuid: chunk_plane.uuid.clone(),
+        chunk_plane_entity,
         chunk: ChunkBuilder::default()
           .name("default".to_string())
           .description("The primary chunk.".to_string())

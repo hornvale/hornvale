@@ -31,13 +31,20 @@ impl<'data> System<'data> for InsertPlayer {
         .join()
         .find(|(_, is_a_room)| is_a_room.0.is_startable)
         .map(|(entity, _)| entity)
-        .unwrap();
+        .expect("Failed to find starting room.");
+      debug!("Found starting room.");
       data
         .is_an_actor
         .insert(entity, IsAnActorComponent(Actor::default()))
-        .unwrap();
-      data.is_in_room.insert(entity, IsInRoomComponent(room_entity)).unwrap();
+        .expect("Failed to insert IsAnActorComponent.");
+      debug!("Inserted player as actor.");
+      data
+        .is_in_room
+        .insert(entity, IsInRoomComponent(room_entity))
+        .expect("Failed to insert IsInRoomComponent.");
+      debug!("Inserted player into starting room.");
       data.player_resource.entity = Some(entity);
+      debug!("Set player resource entity.");
     }
   }
 }

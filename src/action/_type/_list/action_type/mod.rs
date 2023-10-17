@@ -1,10 +1,10 @@
+use specs::prelude::*;
+
 use crate::action::Action;
 use crate::action::ActionData;
 use crate::action::ActionError;
 use crate::effect::EffectBuilder;
 use crate::effect::EffectType;
-use crate::entity_uuid::ActorUuid;
-use crate::entity_uuid::RoomUuid;
 use crate::passage::PassageDirection;
 
 /// The `ActionType` enum.
@@ -12,17 +12,17 @@ use crate::passage::PassageDirection;
 /// This should be an exhaustive collection of actions.
 ///
 /// Actions should be phrased in the imperative mood.
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub enum ActionType {
   /// No-Op -- absolutely nothing happens.
   #[default]
   NoOp,
   /// QuitGame -- the player quit.
   QuitGame,
-  /// Look -- an actor looked around.
-  LookAround(ActorUuid, RoomUuid),
-  /// Walk -- an actor walked in a passage direction.
-  Walk(ActorUuid, PassageDirection),
+  /// LookAround(Actor, Room) -- an actor looked around a room.
+  LookAround(Entity, Entity),
+  /// Walk(Actor, Direction) -- an actor walked in a passage direction.
+  Walk(Entity, PassageDirection),
 }
 
 impl ActionType {
@@ -52,23 +52,18 @@ impl ActionType {
           .build()?;
         effect.apply(data)?;
       },
-      LookAround(actor_id, room_id) => {
-        debug!("Actor {} is attempting look-around action in {}.", actor_id, room_id);
-        // let mut tags = Vec::new();
-        // tags.push(EventTag::HasPrincipalActor(actor_id.clone()));
-        // tags.push(EventTag::IsInRoom(room_id.clone()));
-        // if actor_id == &game_state.player_id.clone().into() {
-        //   tags.push(EventTag::HasPlayerAsPrincipalActor);
-        // }
-        // let event = Event::new(
-        //   EventType::ActorLooksAroundRoom(actor_id.clone(), room_id.clone()),
-        //   DEFAULT_PRIORITY,
-        //   action.backtrace.clone(),
-        //   tags,
-        // );
-        // game_state.enqueue_event(event);
+      LookAround(actor_entity, room_entity) => {
+        debug!(
+          "Actor {:#?} is attempting look-around action in {:#?}.",
+          actor_entity, room_entity
+        );
+        let effect = EffectBuilder::default()
+          .effect_type(EffectType::ShowRoomDescription(*room_entity))
+          .backtrace(action.backtrace.clone())
+          .build()?;
+        effect.apply(data)?;
       },
-      Walk(_actor_id, _direction) => {
+      Walk(_actor_entity, _direction) => {
         debug!("Attempting walk action.");
         // let current_room_id = game_state.current_room_id.clone().unwrap();
         // let current_room = if let Some(current_room) = game_state.rooms.get(&current_room_id) {

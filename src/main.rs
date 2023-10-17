@@ -7,7 +7,7 @@ use uuid::Uuid;
 fn main() -> Result<(), AnyError> {
   // Set up logging.
   // At least for development, I'll just control the log level in code.
-  pretty_env_logger_builder().filter_level(LevelFilter::Debug).init();
+  pretty_env_logger_builder().filter_level(LevelFilter::Warn).init();
   // Create a seed string. Eventually, this will be a command line argument
   // or something.
   let seed_string = Uuid::new_v4().to_string();

@@ -12,9 +12,6 @@ fn main() {
   generate_list_mod("src/chunk/_type");
   generate_list_mod_with_alias("src/component/_type", "Component");
   generate_list_mod("src/effect/_type");
-  generate_macro_mod("src/entity_uuid/_macro");
-  generate_list_mod_with_alias("src/entity_uuid/_trait", "Trait");
-  generate_list_mod("src/entity_uuid/_type");
   generate_list_mod_with_alias("src/event/_type", "Event");
   generate_list_mod("src/output/_type");
   generate_list_mod_with_alias("src/resource/_type", "Resource");

@@ -14,10 +14,12 @@ pub enum OutputType {
   /// No-Op -- nothing prints.
   #[default]
   NoOp,
-  /// Output a blank line.
   BlankLine,
-  /// Output an error.
   Error(String),
+  Message(String),
+  RoomName(String),
+  RoomDescription(String),
+  RoomExits(String),
 }
 
 impl OutputType {
@@ -37,6 +39,22 @@ impl OutputType {
       Error(message) => {
         debug!("Displaying error output.");
         Ok(format!("{}\n", message.red()))
+      },
+      Message(message) => {
+        debug!("Displaying message output.");
+        Ok(format!("{}\n", message))
+      },
+      RoomName(name) => {
+        debug!("Displaying room-name output.");
+        Ok(format!("{}\n", name.bold()))
+      },
+      RoomDescription(description) => {
+        debug!("Displaying room-description output.");
+        Ok(format!("{}\n", description.green()))
+      },
+      RoomExits(exits) => {
+        debug!("Displaying room-exits output.");
+        Ok(format!("{}\n", exits.yellow()))
       },
     }
   }

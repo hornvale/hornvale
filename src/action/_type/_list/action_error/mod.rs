@@ -1,8 +1,8 @@
 use anyhow::Error as AnyError;
+use specs::prelude::*;
 
 use crate::action::Action;
 use crate::effect::EffectBuilderError;
-use crate::entity_uuid::RoomUuid;
 use crate::passage::PassageDirection;
 use crate::room::Room;
 
@@ -14,16 +14,14 @@ pub enum ActionError {
   NotInARoom {
     /// The `Action`.
     action: Action,
-    /// The current room's `RoomUuid`.
-    current_room_id: RoomUuid,
   },
   /// You see no way to travel in that direction.
   #[error("You see no way to travel in that direction.")]
   NoPassageInThatDirection {
     /// The `Action`.
     action: Action,
-    /// The current room's `RoomUuid`.
-    current_room_id: RoomUuid,
+    /// The current room.
+    current_room_entity: Entity,
     /// The current room.
     current_room: Room,
     /// The `PassageDirection`.

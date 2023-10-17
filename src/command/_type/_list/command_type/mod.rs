@@ -29,10 +29,16 @@ impl CommandType {
   pub fn execute(&self, command: &Command, data: &mut CommandData) -> Result<(), AnyError> {
     debug!("Executing {:#?} command.", self);
     use CommandType::*;
+    let actor_entity = data.player_resource.entity.unwrap();
     #[allow(unreachable_patterns)]
     match self {
       NoOp => {
         debug!("Executing no-op command.");
+        let action = ActionBuilder::default()
+          .action_type(ActionType::NoOp)
+          .backtrace(command.backtrace.clone())
+          .build()?;
+        data.action_event_channel.single_write(ActionEvent { action });
       },
       QuitGame => {
         debug!("Executing quit-game command.");
@@ -44,22 +50,20 @@ impl CommandType {
       },
       LookAround => {
         debug!("Executing look command.");
-        // let player_id = game_state.get_player_id();
-        // let current_room_id = game_state.current_room_id.clone().unwrap();
-        // let action = Action::new(
-        //   ActionType::LookAround(player_id.clone().into(), current_room_id),
-        //   command.backtrace.clone(),
-        // );
-        // action.attempt(game_state)?;
+        let room_entity = data.is_in_room_component.get(actor_entity).unwrap().0;
+        let action = ActionBuilder::default()
+          .action_type(ActionType::LookAround(actor_entity, room_entity))
+          .backtrace(command.backtrace.clone())
+          .build()?;
+        data.action_event_channel.single_write(ActionEvent { action });
       },
-      Walk(_direction) => {
+      Walk(direction) => {
         debug!("Executing walk command.");
-        // let player_id = game_state.get_player_id();
-        // let action = Action::new(
-        //   ActionType::Walk(player_id.clone().into(), direction.clone()),
-        //   command.backtrace.clone(),
-        // );
-        // action.attempt(game_state)?;
+        let action = ActionBuilder::default()
+          .action_type(ActionType::Walk(actor_entity, *direction))
+          .backtrace(command.backtrace.clone())
+          .build()?;
+        data.action_event_channel.single_write(ActionEvent { action });
       },
     }
     Ok(())

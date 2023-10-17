@@ -1,4 +1,5 @@
 use anyhow::Error as AnyError;
+use colored::*;
 use rand_seeder::SipHasher;
 use specs::prelude::*;
 use specs::shrev::EventChannel;
@@ -8,7 +9,6 @@ use std::io::{stdin, stdout, Write};
 use crate::chunk::ChunkPlaneBuilder;
 use crate::dispatcher::get_initial_dispatcher;
 use crate::dispatcher::get_simulation_dispatcher;
-use crate::entity_uuid::ChunkUuid;
 use crate::event::ChunkPlaneRequestEvent;
 use crate::event::InputEvent;
 use crate::event::RoomRequestEvent;
@@ -87,7 +87,6 @@ impl Game {
           .is_startable(true)
           .build()
           .expect("Failed to build room."),
-        chunk_uuid: ChunkUuid::default(),
         room_factory: RoomFactory::default(),
       });
     initial_dispatcher.dispatch(&ecs);
@@ -97,7 +96,24 @@ impl Game {
     let mut simulation_dispatcher = get_simulation_dispatcher(&mut ecs);
 
     // Initialization.
-    println!("Welcome to Hornvale!");
+    println!(
+      "{}",
+      format!(
+        "Welcome to {}!",
+        format!(
+          "H{}{}{}{}{}{}{}",
+          "o".truecolor(255, 165, 0),
+          "r".yellow(),
+          "n".green(),
+          "v".blue(),
+          "a".truecolor(75, 0, 130),
+          "l".truecolor(127, 0, 255),
+          "e".white()
+        )
+        .red()
+      )
+      .bold()
+    );
     ecs.fetch_mut::<InputReadyFlagResource>().0 = true;
 
     // Game loop.

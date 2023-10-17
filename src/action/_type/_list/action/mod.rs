@@ -1,16 +1,12 @@
 use crate::action::ActionData;
 use crate::action::ActionError;
 use crate::action::ActionType;
-use crate::entity_uuid::ActionUuid;
 
 /// The `Action` type.
-#[derive(Builder, Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Builder, Clone, Debug, Default, PartialEq)]
 pub struct Action {
   /// The `Action` type.
   pub action_type: ActionType,
-  /// The `Action`'s UUID.
-  #[builder(default = "ActionUuid::default()")]
-  pub uuid: ActionUuid,
   /// A backtrace.
   #[builder(default = "Vec::new()")]
   pub backtrace: Vec<String>,
