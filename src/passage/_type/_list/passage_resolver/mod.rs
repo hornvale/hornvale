@@ -1,7 +1,7 @@
 use crate::passage::PassageTarget;
 
 /// The `PassageResolver` enum.
-#[derive(Clone, Debug, Default, Deserialize, Display, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Display, PartialEq, Serialize)]
 pub enum PassageResolver {
   /// This passage's resolver is unknown.
   #[default]

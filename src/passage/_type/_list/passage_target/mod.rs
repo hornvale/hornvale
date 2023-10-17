@@ -1,11 +1,11 @@
+use crate::marker::PersistedEntity;
 use crate::passage::PassageCondition;
 use crate::passage::PassageResolver;
 
 /// The `PassageTarget` enum.
-#[derive(Clone, Debug, Deserialize, Default, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum PassageTarget {
   /// None.
-  #[default]
   None,
   /// Stub, meaning the passage is not yet connected to a room.
   Stub,
@@ -23,12 +23,12 @@ pub enum PassageTarget {
   ImpassableWithMessage(String),
   /// Death: this passage is impassible and kills the player.
   DeathWithMessage(String),
-  /// A room, by UUID.
-  Room(String),
-  /// A room in another chunk, by UUID.
-  ChunkRoom(String, String),
-  /// A room in another chunk in another plane, by UUID.
-  ChunkPlaneRoom(String, String, String),
+  /// A room.
+  Room(PersistedEntity),
+  /// A room in another chunk.
+  ChunkRoom(PersistedEntity, PersistedEntity),
+  /// A room in another chunk in another plane.
+  ChunkPlaneRoom(PersistedEntity, PersistedEntity, PersistedEntity),
   /// A conditional passage.
   Conditional {
     /// The condition.

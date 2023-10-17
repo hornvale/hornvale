@@ -13,6 +13,7 @@ fn main() {
   generate_list_mod_with_alias("src/component/_type", "Component");
   generate_list_mod("src/effect/_type");
   generate_list_mod_with_alias("src/event/_type", "Event");
+  generate_list_mod("src/marker/_type");
   generate_list_mod("src/output/_type");
   generate_list_mod_with_alias("src/resource/_type", "Resource");
   generate_list_mod("src/passage/_type");

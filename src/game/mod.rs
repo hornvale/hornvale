@@ -2,6 +2,8 @@ use anyhow::Error as AnyError;
 use colored::*;
 use rand_seeder::SipHasher;
 use specs::prelude::*;
+use specs::saveload::SimpleMarker;
+use specs::saveload::SimpleMarkerAllocator;
 use specs::shrev::EventChannel;
 use std::collections::HashMap;
 use std::io::{stdin, stdout, Write};
@@ -12,6 +14,7 @@ use crate::dispatcher::get_simulation_dispatcher;
 use crate::event::ChunkPlaneRequestEvent;
 use crate::event::InputEvent;
 use crate::event::RoomRequestEvent;
+use crate::marker::PersistedEntity;
 use crate::resource::InputReadyFlagResource;
 use crate::resource::QuitFlagResource;
 use crate::resource::RandomResource;
@@ -57,6 +60,8 @@ impl Game {
   pub fn run(&mut self, seed_string: &str) -> Result<(), AnyError> {
     // Create the ECS.
     let mut ecs = World::new();
+    ecs.register::<SimpleMarker<PersistedEntity>>();
+    ecs.insert(SimpleMarkerAllocator::<PersistedEntity>::new());
 
     // Initializing the game.
     debug!("Initializing game.");

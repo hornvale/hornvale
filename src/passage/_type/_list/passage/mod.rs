@@ -5,7 +5,7 @@ use crate::passage::PassageStatus;
 use crate::passage::PassageTarget;
 
 /// The `Passage` struct.
-#[derive(Builder, Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
+#[derive(Builder, Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[builder(derive(Debug))]
 pub struct Passage {
   /// The `Passage`'s seed string.

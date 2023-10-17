@@ -71,6 +71,8 @@ pub mod effect;
 pub mod event;
 /// Where the core game loop lives.
 pub mod game;
+/// Markers for entities.
+pub mod marker;
 /// Output items.
 pub mod output;
 /// Passages connect rooms.

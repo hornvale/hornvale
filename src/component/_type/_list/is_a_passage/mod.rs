@@ -3,6 +3,8 @@ use specs::error::NoError;
 use specs::prelude::*;
 use specs::saveload::*;
 
-/// The `IsInRoom` component.
+use crate::passage::Passage;
+
+/// The `IsAPassageComponent` struct.
 #[derive(Clone, Component, ConvertSaveload, Debug)]
-pub struct IsInRoom(pub Entity);
+pub struct IsAPassage(pub Passage);
