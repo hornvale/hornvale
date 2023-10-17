@@ -11,6 +11,8 @@ pub mod room_factory_strategy;
 pub use room_factory_strategy::*;
 pub mod room_lighting;
 pub use room_lighting::*;
+pub mod room_passages_describer;
+pub use room_passages_describer::*;
 pub mod room_status;
 pub use room_status::*;
 pub mod room_temperature;

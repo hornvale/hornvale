@@ -1,5 +1,3 @@
-use uuid::Uuid;
-
 use crate::passage::PassageDirection;
 use crate::passage::PassageKind;
 use crate::passage::PassageLookThrough;
@@ -12,9 +10,6 @@ use crate::passage::PassageTarget;
 pub struct Passage {
   /// The `Passage`'s seed string.
   pub seed_string: String,
-  /// The UUID of the passage.
-  #[builder(default = "Uuid::new_v4().to_string()")]
-  pub uuid: String,
   /// The `Passage`'s status (to be implemented)
   pub status: PassageStatus,
   /// The `Passage`'s direction (e.g. North, South, East, West)

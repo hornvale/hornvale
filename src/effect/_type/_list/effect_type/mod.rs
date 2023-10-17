@@ -8,6 +8,7 @@ use crate::effect::EffectData;
 use crate::event::OutputEvent;
 use crate::output::Output;
 use crate::output::OutputType;
+use crate::room::RoomPassagesDescriber;
 
 /// The `EffectType` enum.
 ///
@@ -81,6 +82,11 @@ impl EffectType {
         data.output_event_channel.single_write(OutputEvent {
           output: Output {
             output_type: OutputType::RoomDescription(room.description.clone()),
+          },
+        });
+        data.output_event_channel.single_write(OutputEvent {
+          output: Output {
+            output_type: OutputType::RoomExits(RoomPassagesDescriber {}.describe(&room.passages)),
           },
         });
       },
