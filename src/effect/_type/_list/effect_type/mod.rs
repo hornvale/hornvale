@@ -90,6 +90,11 @@ impl EffectType {
           },
         });
         */
+        data.output_event_channel.single_write(OutputEvent {
+          output: Output {
+            output_type: OutputType::BlankLine,
+          },
+        });
       },
     }
     Ok(())
