@@ -5,22 +5,31 @@ use std::fs;
 use std::path::Path;
 
 fn main() {
-  generate_macro_mod();
-  generate_list_mod_with_alias("src/chunk/map_builder/strategies", "Strategy");
-  generate_list_mod_with_alias("src/entity_id/_trait", "Trait");
-  generate_list_mod("src/entity_id/_type");
-  generate_list_mod("src/event/subscriber/_type");
-  generate_list_mod("src/game_state/_impl");
-  generate_list_mod_with_alias("src/game_state/_trait", "Trait");
-  generate_list_mod("src/game_state/_type");
-  generate_list_mod("src/lookup_service/_impl");
-  generate_list_mod_with_alias("src/lookup_service/_trait", "Trait");
-  generate_list_mod_with_alias("src/system", "System");
-  generate_list_mod_with_alias("src/system/_trait", "Trait");
+  generate_macro_mod("src/_macro");
+  generate_list_mod("src/action/_type");
+  generate_list_mod("src/actor/_type");
+  generate_list_mod("src/command/_type");
+  generate_list_mod("src/chunk/_type");
+  generate_list_mod_with_alias("src/component/_type", "Component");
+  generate_list_mod("src/effect/_type");
+  generate_list_mod_with_alias("src/event/_type", "Event");
+  generate_list_mod("src/output/_type");
+  generate_list_mod_with_alias("src/resource/_type", "Resource");
+  generate_list_mod("src/passage/_type");
+  generate_list_mod("src/room/_type");
+  generate_list_mod_with_alias("src/system/_type", "System");
+  // generate_list_mod("src/game_state/_impl");
+  // generate_list_mod_with_alias("src/game_state/_trait", "Trait");
+  // generate_list_mod("src/game_state/_type");
+  // generate_list_mod("src/lookup_service/_impl");
+  // generate_list_mod_with_alias("src/lookup_service/_trait", "Trait");
+  // generate_list_mod_with_alias("src/system", "System");
+  // generate_list_mod_with_alias("src/system/_trait", "Trait");
 }
 
-fn generate_macro_mod() {
-  let dir = Path::new("src/_macro/_list");
+fn generate_macro_mod(base_dir: &str) {
+  let path = format!("{}/_list", base_dir);
+  let dir = Path::new(&path);
   let mut files = get_files_in_dir(dir);
   files.sort();
   let mut content = String::new();

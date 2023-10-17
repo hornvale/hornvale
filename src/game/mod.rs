@@ -1,24 +1,24 @@
 use anyhow::Error as AnyError;
-use log::Level as LogLevel;
+use colored::*;
+use rand_seeder::SipHasher;
+use specs::prelude::*;
+use specs::shrev::EventChannel;
+use std::collections::HashMap;
+use std::io::{stdin, stdout, Write};
 
-use crate::chunk_rule::ChunkRuleManager;
-use crate::event::attach_logger;
-use crate::event::EventType;
-use crate::game_rule::GameRuleManager;
-use crate::game_state::GameState;
-use crate::game_state::InputReadyFlagTrait;
-use crate::game_state::LoopTimerTrait;
-use crate::game_state::QuitFlagTrait;
-use crate::game_state::StartTrait;
-use crate::lookup_rule::LookupRuleManager;
-use crate::system::CommandSystem;
-use crate::system::EventSystem;
-use crate::system::InputSystem;
-use crate::system::LoopTimerSystem;
-use crate::system::OutputSystem;
-use crate::system::ParserSystem;
-use crate::system::SystemTrait;
-use crate::system::TickSystem;
+use crate::chunk::ChunkPlaneBuilder;
+use crate::dispatcher::get_initial_dispatcher;
+use crate::dispatcher::get_simulation_dispatcher;
+use crate::event::ChunkPlaneRequestEvent;
+use crate::event::InputEvent;
+use crate::event::RoomRequestEvent;
+use crate::resource::InputReadyFlagResource;
+use crate::resource::QuitFlagResource;
+use crate::resource::RandomResource;
+use crate::resource::SeedStringResource;
+use crate::room::RoomBuilder;
+use crate::room::RoomFactory;
+use crate::room::RoomStatus;
 
 /// The `Game` struct.
 ///
@@ -30,9 +30,7 @@ use crate::system::TickSystem;
 ///      display output, repeat.
 ///   3. Termination: print goodbye message, clean up game state, etc.
 ///
-/// The run loop is the heart of the game. It's where the player interacts with
-/// the game world. It's where the game world interacts with the player. It's
-/// where the magic happens.
+/// The run loop is the heart of the game.
 ///
 /// For more detail on the run loop, see the documentation for the `run` method
 /// and the `ARCHITECTURE.md` file in the root of the project.
@@ -45,81 +43,107 @@ impl Game {
     Self {}
   }
 
+  /// Read the input from the user.
+  pub fn read_input(&self) -> String {
+    debug!("Reading input.");
+    print!("> ");
+    stdout().flush().unwrap();
+    let mut input = String::new();
+    stdin().read_line(&mut input).unwrap();
+    input.trim().to_string()
+  }
+
   /// Runs the `Game`.
-  pub fn run(&mut self) -> Result<(), AnyError> {
+  pub fn run(&mut self, seed_string: &str) -> Result<(), AnyError> {
+    // Create the ECS.
+    let mut ecs = World::new();
+
+    // Initializing the game.
+    debug!("Initializing game.");
+    let mut initial_dispatcher = get_initial_dispatcher(&mut ecs);
+    ecs.fetch_mut::<SeedStringResource>().0 = seed_string.to_string();
+    debug!("Seed String: {}", ecs.fetch::<SeedStringResource>().0);
+    ecs.insert(RandomResource(SipHasher::from(seed_string).into_rng()));
+    ecs
+      .fetch_mut::<EventChannel<ChunkPlaneRequestEvent>>()
+      .single_write(ChunkPlaneRequestEvent {
+        chunk_plane: ChunkPlaneBuilder::default()
+          .name("default".to_string())
+          .seed_string(format!("{}::{}", seed_string, "primary_chunk_plane"))
+          .description("The primary chunk plane.".to_string())
+          .build()
+          .expect("Failed to build chunk plane."),
+      });
+    ecs
+      .fetch_mut::<EventChannel<RoomRequestEvent>>()
+      .single_write(RoomRequestEvent {
+        room: RoomBuilder::default()
+          .name("default".to_string())
+          .seed_string(format!("{}::{}", seed_string, "primary_room"))
+          .description("The primary room.".to_string())
+          .coordinates((0, 0, 0).into())
+          .status(RoomStatus::Unknown)
+          .passages(HashMap::new())
+          .is_startable(true)
+          .build()
+          .expect("Failed to build room."),
+        room_factory: RoomFactory::default(),
+      });
+    initial_dispatcher.dispatch(&ecs);
+
+    // Kicking off the game.
     debug!("Running game.");
+    let mut simulation_dispatcher = get_simulation_dispatcher(&mut ecs);
 
-    // Initialization
-    println!("Welcome to Hornvale!");
-
-    // System creation.
-    let mut game_state = GameState::new();
-    let mut command_system = CommandSystem::default();
-    let mut event_system = EventSystem::default();
-    let mut input_system = InputSystem::default();
-    let mut loop_timer_system = LoopTimerSystem::default();
-    let mut output_system = OutputSystem::default();
-    let mut parser_system = ParserSystem::default();
-    let mut tick_system = TickSystem::default();
-    let mut game_rule_manager = GameRuleManager::default();
-    game_rule_manager.insert_stock_rules();
-    game_rule_manager.inject_rule_subscribers(&mut event_system.event_publisher);
-    let mut chunk_rule_manager = ChunkRuleManager::default();
-    chunk_rule_manager.insert_stock_rules();
-    chunk_rule_manager.inject_rule_subscribers(&mut event_system.event_publisher);
-    let mut lookup_rule_manager = LookupRuleManager::default();
-    lookup_rule_manager.insert_stock_rules();
-    lookup_rule_manager.inject_rule_subscribers(&mut event_system.event_publisher);
-
-    // Give us time (1 tick) to start up before we start reading input.
-    game_state.set_input_ready_flag(false);
-
-    // Fire the StartedGame event.
-    game_state.start()?;
-
-    // BEGIN TEMPORARY
-
-    // Add a debug logger.
-    let _debug_logger_uuid = attach_logger(
-      EventType::StartsGame,
-      LogLevel::Debug,
-      &mut event_system.event_publisher,
+    // Initialization.
+    println!(
+      "{}",
+      format!(
+        "Welcome to {}!",
+        format!(
+          "H{}{}{}{}{}{}{}",
+          "o".truecolor(255, 165, 0),
+          "r".yellow(),
+          "n".green(),
+          "v".blue(),
+          "a".truecolor(75, 0, 130),
+          "l".truecolor(127, 0, 255),
+          "e".white()
+        )
+        .red()
+      )
+      .bold()
     );
+    ecs.fetch_mut::<InputReadyFlagResource>().0 = true;
 
-    // END TEMPORARY
+    // Game loop.
     loop {
-      // Run tick system, which increments the tick counter.
-      tick_system.run(&mut game_state);
       // Long-running diegetic actions will set the input_ready flag to false.
       // We don't want to read input until they resolve.
-      if game_state.get_input_ready_flag() {
-        // Read input from the user.
-        input_system.run(&mut game_state);
+      if ecs.fetch::<InputReadyFlagResource>().0 {
+        let input = self.read_input();
+        ecs.fetch_mut::<EventChannel<InputEvent>>().single_write(InputEvent {
+          input: input.to_owned(),
+        });
       }
-      // Reset the loop timer, which will be used to measure how long the last
-      // tick took to process (excluding input and output).
-      game_state.reset_loop_timer();
-      // Parse player input into a command or commands.
-      parser_system.run(&mut game_state);
-      // Execute the command or commands entered by the player. This normally
-      // enqueues one or more events.
-      command_system.run(&mut game_state);
-      // Process event queue, which will execute actions and apply effects
-      // and cancel other events and so forth and so on.
-      event_system.run(&mut game_state);
-      // Run the loop timer.
-      loop_timer_system.run(&mut game_state);
-      // Display accumulated output to the user.
-      output_system.run(&mut game_state);
-      // We've been told to quit.
-      if game_state.get_quit_flag() {
+
+      // Run the general simulation dispatcher.
+      simulation_dispatcher.dispatch(&ecs);
+
+      // Maintain after every tick.  This enables the use of the lazy systems,
+      // which should make it easier to have simple, concise systems.
+      ecs.maintain();
+
+      // Check for the quit flag.
+      if ecs.fetch::<QuitFlagResource>().0 {
         break;
       }
     }
 
-    // Termination
+    // Termination message.
     println!("Thanks for playing!");
 
+    // Exit, finally.
     Ok(())
   }
 }

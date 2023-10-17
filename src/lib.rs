@@ -7,11 +7,15 @@
 #[allow(unused_imports)]
 #[macro_use]
 extern crate all_asserts;
+#[allow(unused_imports)]
 #[macro_use]
 extern crate anyhow;
 #[allow(unused_imports)]
 #[macro_use]
 extern crate derivative;
+#[allow(unused_imports)]
+#[macro_use]
+extern crate derive_builder;
 #[allow(unused_imports)]
 #[macro_use]
 extern crate derive_more;
@@ -26,6 +30,13 @@ extern crate pretty_env_logger;
 #[macro_use]
 extern crate serde;
 extern crate serde_json;
+extern crate specs;
+#[allow(unused_imports)]
+#[macro_use]
+extern crate specs_derive;
+#[allow(unused_imports)]
+#[macro_use]
+extern crate strum;
 #[allow(unused_imports)]
 #[macro_use]
 extern crate thiserror;
@@ -41,35 +52,37 @@ pub mod _macro;
 pub use _macro::*;
 
 // Remaining modules.
+
+/// Actions represent attempted actions by any actor.
 pub mod action;
+/// Actors represent characters and monsters.
+pub mod actor;
+/// Chunks subdivide the game world and its contents.
 pub mod chunk;
-pub mod chunk_creator_service;
-pub mod chunk_file_service;
-pub mod chunk_loader_service;
-pub mod chunk_plane;
-pub mod chunk_rule;
-pub mod chunk_seed;
-pub mod chunk_world;
-pub mod chunk_world_creator_service;
-pub mod chunk_world_file_service;
-pub mod chunk_world_processor_service;
+/// Commands are reified player input.
 pub mod command;
+/// Components store data in the ECS.
+pub mod component;
+/// Dispatchers run systems.
+pub mod dispatcher;
+/// Effects are reified changes to the game world.
 pub mod effect;
-pub mod entity_id;
+/// Entity IDs are used to identify entities.
 pub mod event;
+/// Where the core game loop lives.
 pub mod game;
-pub mod game_file_service;
-pub mod game_rule;
-pub mod game_service;
-pub mod game_state;
-pub mod lookup_rule;
-pub mod lookup_service;
-pub mod parser;
+/// Output items.
+pub mod output;
+/// Passages connect rooms.
 pub mod passage;
+/// The player character.
+pub mod player;
+/// ECS resources shared by all systems.
+pub mod resource;
+/// Rooms, which are used to subdivide chunks into individual play areas.
 pub mod room;
-pub mod seed_string_service;
+/// Where the ECS lives.
 pub mod system;
-pub mod time;
 
 #[cfg(test)]
 pub mod test {
