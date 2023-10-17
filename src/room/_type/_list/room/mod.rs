@@ -1,7 +1,3 @@
-use std::collections::HashMap;
-
-use crate::passage::Passage;
-use crate::passage::PassageDirection;
 use crate::room::RoomCoordinates;
 use crate::room::RoomStatus;
 
@@ -21,6 +17,4 @@ pub struct Room {
   pub description: String,
   /// Whether this room is startable.
   pub is_startable: bool,
-  /// The `Room`'s passages.
-  pub passages: HashMap<PassageDirection, Passage>,
 }

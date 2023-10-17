@@ -2,10 +2,8 @@ use anyhow::Error as AnyError;
 use colored::*;
 use rand_seeder::SipHasher;
 use specs::prelude::*;
-use specs::saveload::SimpleMarker;
 use specs::saveload::SimpleMarkerAllocator;
 use specs::shrev::EventChannel;
-use std::collections::HashMap;
 use std::io::{stdin, stdout, Write};
 
 use crate::chunk::ChunkPlaneBuilder;
@@ -15,6 +13,7 @@ use crate::event::ChunkPlaneRequestEvent;
 use crate::event::InputEvent;
 use crate::event::RoomRequestEvent;
 use crate::marker::PersistedEntity;
+use crate::marker::PersistedEntityMarker;
 use crate::resource::InputReadyFlagResource;
 use crate::resource::QuitFlagResource;
 use crate::resource::RandomResource;
@@ -60,7 +59,7 @@ impl Game {
   pub fn run(&mut self, seed_string: &str) -> Result<(), AnyError> {
     // Create the ECS.
     let mut ecs = World::new();
-    ecs.register::<SimpleMarker<PersistedEntity>>();
+    ecs.register::<PersistedEntityMarker>();
     ecs.insert(SimpleMarkerAllocator::<PersistedEntity>::new());
 
     // Initializing the game.
@@ -88,7 +87,6 @@ impl Game {
           .description("The primary room.".to_string())
           .coordinates((0, 0, 0).into())
           .status(RoomStatus::Unknown)
-          .passages(HashMap::new())
           .is_startable(true)
           .build()
           .expect("Failed to build room."),
