@@ -10,6 +10,7 @@ use crate::event::OutputEvent;
 use crate::marker::PersistedEntity;
 use crate::marker::PersistedEntityMarker;
 use crate::resource::AdvanceFlagResource;
+use crate::resource::ChunkPlaneResource;
 use crate::resource::InputReadyFlagResource;
 use crate::resource::PlayerResource;
 use crate::resource::QuitFlagResource;
@@ -30,6 +31,7 @@ pub struct ActionData<'data> {
   pub is_in_chunk_plane_component: WriteStorage<'data, IsInChunkPlaneComponent>,
   pub is_in_room_component: WriteStorage<'data, IsInRoomComponent>,
   pub advance_flag_resource: Write<'data, AdvanceFlagResource>,
+  pub chunk_plane_resource: Write<'data, ChunkPlaneResource>,
   pub input_ready_flag_resource: Write<'data, InputReadyFlagResource>,
   pub player_resource: Write<'data, PlayerResource>,
   pub quit_flag_resource: Write<'data, QuitFlagResource>,

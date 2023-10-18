@@ -3,6 +3,8 @@
 // Remember not to edit it manually.
 pub mod advance_flag;
 pub use advance_flag::AdvanceFlag as AdvanceFlagResource;
+pub mod chunk_plane;
+pub use chunk_plane::ChunkPlane as ChunkPlaneResource;
 pub mod input_ready_flag;
 pub use input_ready_flag::InputReadyFlag as InputReadyFlagResource;
 pub mod output;

@@ -6,10 +6,15 @@ use specs::saveload::SimpleMarkerAllocator;
 use specs::shrev::EventChannel;
 use std::io::{stdin, stdout, Write};
 
+use crate::chunk::ChunkBuilder;
+use crate::chunk::ChunkFactory;
 use crate::chunk::ChunkPlaneBuilder;
+use crate::chunk::ChunkStatus;
+use crate::component::IsAChunkPlaneComponent;
 use crate::dispatcher::get_initial_dispatcher;
 use crate::dispatcher::get_simulation_dispatcher;
 use crate::event::ChunkPlaneRequestEvent;
+use crate::event::ChunkRequestEvent;
 use crate::event::InputEvent;
 use crate::event::RoomRequestEvent;
 use crate::marker::PersistedEntity;
@@ -77,6 +82,33 @@ impl Game {
           .description("The primary chunk plane.".to_string())
           .build()
           .expect("Failed to build chunk plane."),
+      });
+    initial_dispatcher.dispatch(&ecs);
+    let chunk_plane = &ecs
+      .read_storage::<IsAChunkPlaneComponent>()
+      .join()
+      .next()
+      .expect("Failed to get chunk plane.")
+      .0
+      .clone();
+    let chunk_plane_entity = (&ecs.entities(), &ecs.read_storage::<IsAChunkPlaneComponent>())
+      .join()
+      .next()
+      .expect("Failed to get chunk plane entity.")
+      .0;
+    ecs
+      .fetch_mut::<EventChannel<ChunkRequestEvent>>()
+      .single_write(ChunkRequestEvent {
+        chunk_plane_entity,
+        chunk: ChunkBuilder::default()
+          .name("default".to_string())
+          .description("The primary chunk.".to_string())
+          .coordinates((0, 0).into())
+          .seed_string(format!("{}::(0, 0)", chunk_plane.seed_string.clone()))
+          .status(ChunkStatus::Unknown)
+          .build()
+          .expect("Failed to build chunk."),
+        chunk_factory: ChunkFactory::default(),
       });
     ecs
       .fetch_mut::<EventChannel<RoomRequestEvent>>()

@@ -1,12 +1,10 @@
 use specs::prelude::*;
 use specs::shrev::EventChannel;
 
-use crate::chunk::ChunkBuilder;
-use crate::chunk::ChunkFactory;
-use crate::chunk::ChunkStatus;
 use crate::component::*;
 use crate::event::ChunkPlaneRequestEvent;
 use crate::event::ChunkRequestEvent;
+use crate::resource::ChunkPlaneResource;
 use crate::resource::SeedStringResource;
 
 /// The `ChunkPlaneCreator` system.
@@ -26,8 +24,9 @@ pub struct Data<'data> {
   pub entities: Entities<'data>,
   pub cpr_channel: Read<'data, EventChannel<ChunkPlaneRequestEvent>>,
   pub cr_channel: Write<'data, EventChannel<ChunkRequestEvent>>,
+  pub is_a_chunk_plane_component: WriteStorage<'data, IsAChunkPlaneComponent>,
   pub seed_string_resource: Read<'data, SeedStringResource>,
-  pub is_a_chunk_plane: WriteStorage<'data, IsAChunkPlaneComponent>,
+  pub chunk_plane_resource: Write<'data, ChunkPlaneResource>,
 }
 
 impl<'data> System<'data> for ChunkPlaneCreator {
@@ -41,21 +40,12 @@ impl<'data> System<'data> for ChunkPlaneCreator {
       let chunk_plane = event.chunk_plane.clone();
       let chunk_plane_entity = data.entities.create();
       data
-        .is_a_chunk_plane
+        .is_a_chunk_plane_component
         .insert(chunk_plane_entity, IsAChunkPlaneComponent(chunk_plane.clone()))
         .unwrap();
-      data.cr_channel.single_write(ChunkRequestEvent {
-        chunk_plane_entity,
-        chunk: ChunkBuilder::default()
-          .name("default".to_string())
-          .description("The primary chunk.".to_string())
-          .coordinates((0, 0).into())
-          .seed_string(format!("{}::(0, 0)", chunk_plane.seed_string.clone()))
-          .status(ChunkStatus::Unknown)
-          .build()
-          .expect("Failed to build chunk."),
-        chunk_factory: ChunkFactory::default(),
-      });
+      if data.chunk_plane_resource.entity.is_none() {
+        data.chunk_plane_resource.entity = Some(chunk_plane_entity);
+      }
       debug!("Created chunk plane.");
     }
   }
