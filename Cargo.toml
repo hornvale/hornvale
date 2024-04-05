@@ -27,8 +27,9 @@ doctest = false      # No doctests for this binary
 
 [workspace]
 exclude = []
-members = []
+members = ["internal/*"]
 
 [dependencies]
+"hornvale_astronomy" = { path = "internal/astronomy" }
 
 [dev-dependencies]

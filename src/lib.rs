@@ -43,6 +43,7 @@
 /// traits, types, and functions that will be exposed to the _Hornvale_ binary,
 /// examples, benches, and integration tests.
 pub mod prelude {
+  pub use hornvale_astronomy::prelude::*;
 
   /// Hello, world!
   pub fn hello() {
