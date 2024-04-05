@@ -1,0 +1,37 @@
+name: Code Coverage
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  code_coverage:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Post-Checkout Actions
+        uses: ./.github/actions/post-checkout
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@3068b7dc83db15fc2676a3ce4ae1ebb878685f59 # v2.8.15
+        with:
+          tool: cargo-llvm-cov@0.5.27
+
+      - name: Generate code coverage
+        run: |
+          cargo llvm-cov \
+            --all-features \
+            --workspace \
+            --lcov \
+            --output-path lcov.info
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
+          fail_ci_if_error: true

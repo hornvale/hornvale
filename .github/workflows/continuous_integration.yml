@@ -1,0 +1,35 @@
+name: Continuous Integration
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  continuous_integration:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Post-Checkout Actions
+        uses: ./.github/actions/post-checkout
+
+      - name: Lint
+        run: |
+          cargo fmt -- --check;
+          cargo clippy -- -D warnings;
+
+      - name: Test
+        run: |
+          cargo check;
+          cargo test --all;
+
+      - name: Benchmarks
+        run: |
+          cargo test --benches;
+
+      - name: Build release version
+        run: |
+          cargo build --release;

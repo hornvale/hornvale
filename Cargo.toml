@@ -1,0 +1,34 @@
+[package]
+name = "hornvale"
+version = "0.0.1"
+edition = "2021"
+categories = ["games"]
+description = "An experimental open-world text adventure game"
+exclude = [".github/", "assets/", "benches/", "crates/", "examples/", "tools/"]
+keywords = ["game", "text-adventure", "open-world", "rust", "bevy"]
+license = "Unlicense"
+readme = "README.md"
+homepage = "https://hornvale.github.io/book/"
+repository = "https://github.com/hornvale/hornvale/"
+documentation = "https://docs.rs/hornvale"
+rust-version = "1.77.0"
+
+[lib]
+name = "hornvale"
+path = "src/lib.rs"
+test = false        # No unit tests for this library
+doctest = false     # No doctests for this library
+
+[[bin]]
+name = "hornvale"
+path = "src/main.rs"
+test = false         # No unit tests for this binary
+doctest = false      # No doctests for this binary
+
+[workspace]
+exclude = []
+members = []
+
+[dependencies]
+
+[dev-dependencies]
