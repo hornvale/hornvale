@@ -129,6 +129,9 @@ pub const MAXIMUM_SATELLITE_SYSTEMS: usize = 12;
 /// Escape velocity from the Earth's surface.
 pub const ESCAPE_VELOCITY_EARTH: SpeedInKmPerSec = SpeedInKmPerSec(11.2);
 
+/// Escape velocity from Luna's surface.
+pub const ESCAPE_VELOCITY_LUNA: SpeedInKmPerSec = SpeedInKmPerSec(2.38);
+
 /// Gravitational acceleration on the Earth's surface.
 pub const GRAVITATIONAL_ACCELERATION_EARTH: AccelerationInMetersPerSec2 = AccelerationInMetersPerSec2(9.807);
 

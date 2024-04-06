@@ -4,6 +4,8 @@ pub mod constants;
 pub mod errors;
 /// Mathematical functions.
 pub mod math;
+/// A moon type.
+pub mod moon;
 /// A terrestrial planet type.
 pub mod terrestrial_planet;
 /// Types of interest for astronomy.

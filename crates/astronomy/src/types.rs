@@ -14,6 +14,8 @@ pub mod density_of_luna;
 pub mod density_of_sol;
 /// Escape velocity in Earth velocities.
 pub mod escape_velocity_of_earth;
+/// Escape velocity in Luna velocities.
+pub mod escape_velocity_of_luna;
 /// Gravity in Earth gravities.
 pub mod gravity_of_earth;
 /// Gravity in Jupiter gravities.
@@ -85,6 +87,7 @@ pub mod prelude {
   pub use super::density_of_luna::DensityOfLuna;
   pub use super::density_of_sol::DensityOfSol;
   pub use super::escape_velocity_of_earth::EscapeVelocityOfEarth;
+  pub use super::escape_velocity_of_luna::EscapeVelocityOfLuna;
   pub use super::gravity_of_earth::GravityOfEarth;
   pub use super::gravity_of_luna::GravityOfLuna;
   pub use super::kg_per_mol::KgPerMol;
