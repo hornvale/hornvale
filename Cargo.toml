@@ -27,10 +27,10 @@ doctest = false      # No doctests for this binary
 
 [workspace]
 exclude = []
-members = ["internal/*"]
+members = ["crates/*"]
 
 [dependencies]
-"hornvale_astronomy" = { path = "internal/astronomy" }
+"hornvale_astronomy" = { path = "crates/astronomy" }
 
 [workspace.dependencies]
 anyhow = { version = "1.0.81", features = ["std", "backtrace"] }
