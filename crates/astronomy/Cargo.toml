@@ -12,3 +12,6 @@ derive_more.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+hornvale_test_utilities.workspace = true
