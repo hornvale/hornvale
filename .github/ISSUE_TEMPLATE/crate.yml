@@ -1,0 +1,58 @@
+name: 'Crate'
+description: 'Create a new crate.'
+title: 'Crate: <title>'
+labels: []
+projects:
+  - 'hornvale/1'
+assignees:
+  - 'ndouglas'
+body:
+  - type: 'textarea'
+    id: 'user-story'
+    attributes:
+      label: 'User Story'
+      value: 'As a _____ I want _____ so I can ______.'
+  - type: 'textarea'
+    id: 'description'
+    attributes:
+      label: 'Description'
+      value: 'Briefly describe the purpose of the crate and its role within the project.'
+  - type: 'input'
+    id: 'name'
+    attributes:
+      label: 'Name'
+      description: 'Name of the crate.'
+      placeholder: 'something'
+  - type: dropdown
+    id: 'visibility'
+    attributes:
+      label: Visibility
+      description: Is this a public or private crate?
+      multiple: false
+      options:
+        - Public (located in `crates/`)
+        - Private (located in `internal/`)
+      default: 0
+    validations:
+      required: true
+  - type: 'textarea'
+    id: 'tasks'
+    attributes:
+      label: 'Tasks'
+      value: |
+        - [ ] Determine the crate's scope and functionality.
+        - [ ] Identify public interfaces and types.
+        - [ ] Draft initial documentation and README, including:
+          - [ ] Introduction and purpose of the crate.
+          - [ ] Key features and intended use cases.
+          - [ ] Outline examples demonstrating key features and use cases.
+        - [ ] Initialize the crate in the appropriate directory (`crates/` or `internal/`).
+  - type: 'textarea'
+    id: 'acceptance-criteria'
+    attributes:
+      label: 'Acceptance Criteria'
+      description: 'List the requirements that must be met for this crate to be considered complete.'
+      value: |
+        - [ ] The README is comprehensive, offering a clear introduction, overview of key features, and example usage.
+        - [ ] The crate has been initialized in the appropriate directory (`crates/` or `internal/`).
+        - [ ] The crate has been added to the workspace `Cargo.toml` file.
