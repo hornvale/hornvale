@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error as ThisError;
 
-/// TerrestrialPlanet errors.
+/// Habitability errors.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, ThisError, Hash, PartialEq, Serialize)]
-pub enum TerrestrialPlanetError {
+pub enum HabitabilityError {
   /// Pluto, also Minnesota.
   #[error("not habitable because it is too cold")]
   TooColdToSupportConventionalLife,

@@ -1,5 +1,7 @@
 /// Acceleration in meters per second squared.
 pub mod acceleration_in_meters_per_sec2;
+/// Axial tilt in degrees.
+pub mod axial_tilt;
 /// Density in grams per cubic centimeter.
 pub mod density_in_grams_per_cm3;
 /// Density in Earth densities.
@@ -18,6 +20,10 @@ pub mod gravity_of_earth;
 pub mod gravity_of_luna;
 /// Molar mass, or kg per mol.
 pub mod kg_per_mol;
+/// Latitude.
+pub mod latitude;
+/// Latitude direction.
+pub mod latitude_direction;
 /// Length in Astronomical Units.
 pub mod length_in_au;
 /// Length in kilometers.
@@ -26,6 +32,10 @@ pub mod length_in_km;
 pub mod length_in_lyr;
 /// Length in meters.
 pub mod length_in_meters;
+/// Longitude.
+pub mod longitude;
+/// Longitude direction.
+pub mod longitude_direction;
 /// Luminosity in Solar luminosities.
 pub mod luminosity_of_sol;
 /// Mass in kilograms.
@@ -68,6 +78,7 @@ pub mod time_in_gigayears;
 /// Prelude.
 pub mod prelude {
   pub use super::acceleration_in_meters_per_sec2::AccelerationInMetersPerSec2;
+  pub use super::axial_tilt::AxialTilt;
   pub use super::density_in_grams_per_cm3::DensityInGramsPerCm3;
   pub use super::density_of_earth::DensityOfEarth;
   pub use super::density_of_jupiter::DensityOfJupiter;
@@ -77,10 +88,14 @@ pub mod prelude {
   pub use super::gravity_of_earth::GravityOfEarth;
   pub use super::gravity_of_luna::GravityOfLuna;
   pub use super::kg_per_mol::KgPerMol;
+  pub use super::latitude::Latitude;
+  pub use super::latitude_direction::LatitudeDirection;
   pub use super::length_in_au::LengthInAu;
   pub use super::length_in_km::LengthInKm;
   pub use super::length_in_lyr::LengthInLyr;
   pub use super::length_in_meters::LengthInMeters;
+  pub use super::longitude::Longitude;
+  pub use super::longitude_direction::LongitudeDirection;
   pub use super::luminosity_of_sol::LuminosityOfSol;
   pub use super::mass_in_kg::MassInKg;
   pub use super::mass_of_earth::MassOfEarth;
