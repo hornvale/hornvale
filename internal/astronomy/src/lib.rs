@@ -1,19 +1,13 @@
-pub fn add(left: usize, right: usize) -> usize {
-  left + right
-}
+/// Constants of interest for astronomy.
+pub mod constants;
+/// Errors for the astronomy crate.
+pub mod error;
+/// Types of interest for astronomy.
+pub mod types;
 
 /// The prelude for the astronomy crate.
 pub mod prelude {
-  pub use crate::add;
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn it_works() {
-    let result = add(2, 2);
-    assert_eq!(result, 4);
-  }
+  pub use super::constants::prelude::*;
+  pub use super::error::AstronomyError;
+  pub use super::types::prelude::*;
 }
