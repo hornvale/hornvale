@@ -7,7 +7,6 @@ pub mod types;
 
 /// The prelude for the astronomy crate.
 pub mod prelude {
-  pub use super::constants::prelude::*;
   pub use super::error::AstronomyError;
   pub use super::types::prelude::*;
 }
