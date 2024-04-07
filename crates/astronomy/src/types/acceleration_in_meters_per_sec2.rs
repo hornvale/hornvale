@@ -12,3 +12,17 @@ impl AccelerationInMetersPerSec2 {
     self.0.abs()
   }
 }
+
+#[cfg(test)]
+mod test {
+
+  use super::*;
+  use hornvale_test_utilities::prelude::*;
+
+  #[test]
+  fn test_acceleration_in_meters_per_sec2() {
+    init();
+    let actual = AccelerationInMetersPerSec2(1.0);
+    assert_eq!(actual.0, 1.0);
+  }
+}

@@ -72,4 +72,18 @@ mod test {
     let actual: MassOfJupiter = MassOfSol(1.0).into();
     assert_approx_eq!(actual.0, JUPITER_MASS_PER_SOLAR_MASS.0, 0.01);
   }
+
+  #[test]
+  fn test_m_kg_to_m_jupiter() {
+    init();
+    let actual: MassOfJupiter = MassInKg(1.0).into();
+    assert_approx_eq!(actual.0, 1.0 / KG_PER_JUPITER_MASS.0, 0.01);
+  }
+
+  #[test]
+  fn test_abs() {
+    assert_approx_eq!(MassOfJupiter(-1.0).abs(), 1.0);
+    assert_approx_eq!(MassOfJupiter(0.0).abs(), 0.0);
+    assert_approx_eq!(MassOfJupiter(1.0).abs(), 1.0);
+  }
 }
