@@ -105,6 +105,14 @@ impl Star {
   }
 
   /// Get the frost line of the star.
+  ///
+  /// This uses the common formula for the frost line, which is 4.85 times the
+  /// square root of the luminosity of the star.
+  ///
+  /// Other formulas exist, giving figures like ~2.75 AU for the frost line of
+  /// our own solar system. This may be a more accurate figure during the early
+  /// solar system, when the Sun was less luminous and gas and dust were more
+  /// prevalent.
   pub fn get_frost_line(&self) -> Result<LengthInAu, AstronomyError> {
     self.check_mass()?;
     let luminosity = self.get_luminosity()?;
@@ -113,7 +121,7 @@ impl Star {
   }
 
   /// Get the spectral class of a main-sequence star in Kelvin based on its Msol.
-  pub fn star_mass_to_spectral_class(&self) -> Result<String, AstronomyError> {
+  pub fn get_spectral_class(&self) -> Result<String, AstronomyError> {
     self.check_mass()?;
     let temperature = self.get_temperature()?.0;
     let spectral_type = match temperature {
@@ -229,6 +237,12 @@ impl MaybeHabitable for Star {
   }
 }
 
+impl From<MassOfSol> for Star {
+  fn from(mass: MassOfSol) -> Self {
+    Star::builder().mass(mass).build().unwrap()
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -236,6 +250,7 @@ mod tests {
 
   #[test]
   fn test_star_builder() {
+    init();
     let star = Star::builder().build().unwrap();
     assert_eq!(star.mass, MassOfSol(1.0));
     assert_eq!(star.current_age, TimeInGigayears(4.6));
@@ -243,47 +258,142 @@ mod tests {
 
   #[test]
   fn test_star_check_mass() {
-    let star = Star::builder().mass(MassOfSol(0.008)).build().unwrap();
+    init();
+    let star = Star::from(MassOfSol(0.008));
     assert!(star.check_mass().is_err());
-    let star = Star::builder().mass(MassOfSol(0.5)).build().unwrap();
+    let star = Star::from(MassOfSol(0.5));
     assert!(star.check_mass().is_ok());
-    let star = Star::builder().mass(MassOfSol(100000000.0)).build().unwrap();
+    let star = Star::from(MassOfSol(100000000.0));
     assert!(star.check_mass().is_err());
   }
 
   #[test]
   fn test_star_get_temperature() {
-    let star = Star::builder().mass(MassOfSol(1.0)).build().unwrap();
-    assert_approx_eq!(star.get_temperature().unwrap(), TemperatureInKelvin(5776.0));
+    init();
+    // Jolly ol' Sol
+    let mut mass = MassOfSol(1.0);
+    let mut expected = SOL_TEMPERATURE_IN_KELVIN;
+    let mut actual = Star::from(mass).get_temperature().unwrap();
+    assert_approx_eq!(expected.0, actual.0);
+    // M1V (Kepler-186)
+    mass = MassOfSol(0.544);
+    expected = TemperatureInKelvin(4008.542794228607);
+    actual = Star::from(mass).get_temperature().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // K3V
+    mass = MassOfSol(0.78);
+    expected = TemperatureInKelvin(4976.040955507489);
+    actual = Star::from(mass).get_temperature().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // G7V
+    mass = MassOfSol(0.90);
+    expected = TemperatureInKelvin(5422.164512044873);
+    actual = Star::from(mass).get_temperature().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // F6V
+    mass = MassOfSol(1.25);
+    expected = TemperatureInKelvin(6775.1332927588965); // actually about 6,300
+    actual = Star::from(mass).get_temperature().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // A6V
+    mass = MassOfSol(1.70);
+    expected = TemperatureInKelvin(8441.082858093216); // actually about 7,900
+    actual = Star::from(mass).get_temperature().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // B5V
+    mass = MassOfSol(8.0);
+    expected = TemperatureInKelvin(21428.03197741863); // not even close (actually about 15,000)
+    actual = Star::from(mass).get_temperature().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // O8V
+    mass = MassOfSol(25.0);
+    expected = TemperatureInKelvin(41970.46671204058); // actually about 35,000
+    actual = Star::from(mass).get_temperature().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
   }
 
   #[test]
-  fn test_star_get_luminosity() {
-    let star = Star::builder().mass(MassOfSol(1.0)).build().unwrap();
-    assert_approx_eq!(star.get_luminosity().unwrap(), LuminosityOfSol(1.0));
+  fn test_get_luminosity() {
+    init();
+    // Jolly ol' Sol
+    let mut mass = MassOfSol(1.0);
+    let mut expected = LuminosityOfSol(1.0);
+    let mut actual = Star::from(mass).get_luminosity().unwrap();
+    assert_approx_eq!(expected.0, actual.0);
+    // M1V (Kepler-186)
+    mass = MassOfSol(0.544);
+    expected = LuminosityOfSol(0.08757811609600002); // (actually about 0.055)
+    actual = Star::from(mass).get_luminosity().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // K9V
+    mass = MassOfSol(0.50);
+    expected = LuminosityOfSol(0.063);
+    actual = Star::from(mass).get_luminosity().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // G7V
+    mass = MassOfSol(0.90);
+    expected = LuminosityOfSol(0.656);
+    actual = Star::from(mass).get_luminosity().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // F6V
+    mass = MassOfSol(1.20);
+    expected = LuminosityOfSol(2.073);
+    actual = Star::from(mass).get_luminosity().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // A6V
+    mass = MassOfSol(1.70);
+    expected = LuminosityOfSol(8.352);
+    actual = Star::from(mass).get_luminosity().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // B5V
+    mass = MassOfSol(8.0);
+    expected = LuminosityOfSol(2027.4);
+    actual = Star::from(mass).get_luminosity().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1f64);
+    // O8V
+    mass = MassOfSol(25.0);
+    expected = LuminosityOfSol(109375.0);
+    actual = Star::from(mass).get_luminosity().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1f64);
   }
 
   #[test]
   fn test_star_get_radius() {
-    let star = Star::builder().mass(MassOfSol(1.0)).build().unwrap();
-    assert_approx_eq!(star.get_radius().unwrap(), RadiusOfSol(1.0));
+    assert_approx_eq!(Star::default().get_radius().unwrap(), RadiusOfSol(1.0));
   }
 
   #[test]
   fn test_star_get_density() {
-    let star = Star::builder().mass(MassOfSol(1.0)).build().unwrap();
-    assert_approx_eq!(star.get_density().unwrap(), DensityOfSol(1.0));
+    assert_approx_eq!(Star::default().get_density().unwrap(), DensityOfSol(1.0));
   }
 
   #[test]
   fn test_star_get_life_expectancy() {
-    let star = Star::builder().mass(MassOfSol(1.0)).build().unwrap();
-    assert_approx_eq!(star.get_life_expectancy().unwrap(), TimeInGigayears(10.0));
+    assert_approx_eq!(Star::default().get_life_expectancy().unwrap(), TimeInGigayears(10.0));
   }
 
   #[test]
   fn test_star_get_habitable_zone() {
-    let star = Star::builder().mass(MassOfSol(1.0)).build().unwrap();
-    assert_approx_eq!(star.get_habitable_zone().unwrap().0 .0, 0.9534625892455924);
+    assert_approx_eq!(Star::default().get_habitable_zone().unwrap().0 .0, 0.9534625892455924);
+  }
+
+  #[test]
+  fn test_star_get_satellite_zone() {
+    assert_approx_eq!(Star::default().get_satellite_zone().unwrap().0 .0, 0.1);
+  }
+
+  #[test]
+  fn test_star_get_frost_line() {
+    assert_approx_eq!(Star::default().get_frost_line().unwrap(), LengthInAu(4.85));
+  }
+
+  #[test]
+  fn test_star_star_mass_to_spectral_class() {
+    assert_eq!(Star::default().get_spectral_class().unwrap(), "G3V"); // actually G2V
+  }
+
+  #[test]
+  fn test_star_get_absolute_rgb() {
+    assert_eq!(Star::default().get_absolute_rgb().unwrap(), (255, 252, 245));
   }
 }

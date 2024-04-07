@@ -1,6 +1,10 @@
 use super::length_in_au::LengthInAu;
 use super::length_in_km::LengthInKm;
 use super::length_in_lyr::LengthInLyr;
+use super::radius_of_earth::RadiusOfEarth;
+use super::radius_of_jupiter::RadiusOfJupiter;
+use super::radius_of_luna::RadiusOfLuna;
+use super::radius_of_sol::RadiusOfSol;
 use crate::constants::prelude::*;
 use derive_more::{Add, Display, Div, Mul, Sub};
 use serde::{Deserialize, Serialize};
@@ -32,6 +36,30 @@ impl From<LengthInKm> for LengthInMeters {
 impl From<LengthInLyr> for LengthInMeters {
   fn from(original: LengthInLyr) -> Self {
     Self(original.0 * KM_PER_LYR.0 * 1000.0)
+  }
+}
+
+impl From<RadiusOfEarth> for LengthInMeters {
+  fn from(original: RadiusOfEarth) -> Self {
+    Self(original.0 * KM_PER_EARTH_RADIUS.0 * 1000.0)
+  }
+}
+
+impl From<RadiusOfJupiter> for LengthInMeters {
+  fn from(original: RadiusOfJupiter) -> Self {
+    Self(original.0 * KM_PER_JUPITER_RADIUS.0 * 1000.0)
+  }
+}
+
+impl From<RadiusOfLuna> for LengthInMeters {
+  fn from(original: RadiusOfLuna) -> Self {
+    Self(original.0 * KM_PER_LUNA_RADIUS.0 * 1000.0)
+  }
+}
+
+impl From<RadiusOfSol> for LengthInMeters {
+  fn from(original: RadiusOfSol) -> Self {
+    Self(original.0 * KM_PER_SOL_RADIUS.0 * 1000.0)
   }
 }
 

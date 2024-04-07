@@ -89,11 +89,14 @@ pub const EARTH_HOURS_PER_DAY: TimeInEarthHours = TimeInEarthHours(24.0);
 /// Days per year.
 pub const EARTH_DAYS_PER_YEAR: TimeInEarthDays = TimeInEarthDays(365.25);
 
-/// LSol -> Ergs/sec
+/// LuminosityOfSol -> Ergs/sec
 pub const ERGS_PER_SEC_PER_LSOL: f64 = 3.846E33;
 
-/// LSol -> Joules/sec
+/// LuminosityOfSol -> Joules/sec
 pub const JOULES_PER_SEC_PER_LSOL: f64 = 3.846E26;
+
+/// LuminosityOfSol -> Watts
+pub const WATTS_PER_LSOL: f64 = 3.846E26;
 
 /// The radius of our stellar neighborhood.
 ///
@@ -313,6 +316,9 @@ pub const MAXIMUM_HABITABLE_STAR_MASS: MassOfSol = MassOfSol(1.25);
 ///
 /// Measured in Gyr, or billions of years.
 pub const MINIMUM_HABITABLE_STAR_AGE: TimeInGigayears = TimeInGigayears(4.0);
+
+/// The temperature of Sol, in Kelvin.
+pub const SOL_TEMPERATURE_IN_KELVIN: TemperatureInKelvin = TemperatureInKelvin(5776.0);
 
 /// The probability of generating an O-class star.
 pub const CLASS_O_WEIGHT: f64 = 0.00003;

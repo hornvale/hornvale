@@ -2,6 +2,8 @@ use super::length_in_au::LengthInAu;
 use super::length_in_lyr::LengthInLyr;
 use super::radius_of_earth::RadiusOfEarth;
 use super::radius_of_jupiter::RadiusOfJupiter;
+use super::radius_of_luna::RadiusOfLuna;
+use super::radius_of_sol::RadiusOfSol;
 use crate::constants::*;
 use derive_more::{Add, Display, Div, Mul, Sub};
 use serde::{Deserialize, Serialize};
@@ -42,6 +44,18 @@ impl From<RadiusOfJupiter> for LengthInKm {
   }
 }
 
+impl From<RadiusOfLuna> for LengthInKm {
+  fn from(original: RadiusOfLuna) -> Self {
+    Self(original.0 * KM_PER_LUNA_RADIUS.0)
+  }
+}
+
+impl From<RadiusOfSol> for LengthInKm {
+  fn from(original: RadiusOfSol) -> Self {
+    Self(original.0 * KM_PER_SOL_RADIUS.0)
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -77,6 +91,14 @@ mod tests {
     assert_approx_eq!(
       LengthInKm::from(RadiusOfJupiter(1.0)),
       LengthInKm(1.0 * KM_PER_JUPITER_RADIUS.0)
+    );
+  }
+
+  #[test]
+  fn from_radius_of_luna() {
+    assert_approx_eq!(
+      LengthInKm::from(RadiusOfLuna(1.0)),
+      LengthInKm(1.0 * KM_PER_LUNA_RADIUS.0)
     );
   }
 }
