@@ -2,9 +2,10 @@ use super::spectral_type_properties::SpectralTypeProperties;
 use crate::types::prelude::*;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
+use strum::EnumIter;
 
 /// The `SpectralType` enum, representing the spectral type of a star.
-#[derive(Clone, Copy, Debug, Deserialize, Display, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Display, Eq, EnumIter, Hash, PartialEq, Serialize)]
 pub enum SpectralType {
   ///
   /// MAIN SEQUENCE STARS
@@ -107,6 +108,7 @@ pub enum SpectralType {
   /// G1V
   G1V,
   /// G2V
+  #[default]
   G2V,
   /// G3V
   G3V,
@@ -210,7 +212,9 @@ impl SpectralType {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::star::Star;
   use hornvale_test_utilities::prelude::*;
+  use strum::IntoEnumIterator;
 
   #[test]
   fn test_spectral_type_properties() {
@@ -224,6 +228,7 @@ mod tests {
         radius: RadiusOfSol(15.0),
         luminosity: LuminosityOfSol(1_400_000.0),
         temperature: TemperatureInKelvin(44_900.0),
+        absolute_rgb: (215, 252, 255),
       }
     );
     assert_eq!(
@@ -233,6 +238,7 @@ mod tests {
         radius: RadiusOfSol(0.102),
         luminosity: LuminosityOfSol(3.0e-4),
         temperature: TemperatureInKelvin(2_380.0),
+        absolute_rgb: (255, 228, 110),
       }
     );
     assert_approx_eq!(SpectralType::O3V.get_mass(), MassOfSol(120.0));
@@ -240,5 +246,17 @@ mod tests {
     assert_approx_eq!(SpectralType::O3V.get_luminosity(), LuminosityOfSol(1_400_000.0));
     assert_approx_eq!(SpectralType::O3V.get_temperature(), TemperatureInKelvin(44_900.0));
     assert_approx_eq!(SpectralType::O3V.get_density(), DensityOfSol(0.03555555555555555));
+  }
+
+  #[test]
+  fn print_rgb_values() {
+    init();
+    for spectral_type in SpectralType::iter() {
+      let properties = spectral_type.get_properties();
+      let mass = properties.mass;
+      let rgb = Star::from(mass).get_absolute_rgb();
+      println!("{:?} -> {:?}", spectral_type, rgb);
+    }
+    assert!(true);
   }
 }
