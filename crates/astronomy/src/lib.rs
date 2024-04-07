@@ -22,6 +22,10 @@ pub mod planet_moon_relationship;
 pub mod planetary_system;
 /// A satellite system, which is a planet and its moon or moons.
 pub mod satellite_system;
+/// A spectral type for a star.
+pub mod spectral_type;
+/// Spectral type properties.
+pub mod spectral_type_properties;
 /// A single star.
 pub mod star;
 /// A star system.
@@ -50,6 +54,8 @@ pub mod prelude {
   pub use super::planet_moon_relationship::PlanetMoonRelationship;
   pub use super::planetary_system::PlanetarySystem;
   pub use super::satellite_system::SatelliteSystem;
+  pub use super::spectral_type::SpectralType;
+  pub use super::spectral_type_properties::SpectralTypeProperties;
   pub use super::star::Star;
   pub use super::star_system::StarSystem;
   pub use super::stellar_neighbor::StellarNeighbor;
