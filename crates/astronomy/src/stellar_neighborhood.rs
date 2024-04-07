@@ -131,4 +131,19 @@ mod tests {
       .unwrap();
     assert_eq!(stellar_neighborhood.get_stellar_mass(), Ok(MassOfSol(1.0)));
   }
+
+  #[test]
+  fn test_stellar_neighborhood_get_stellar_mass_with_star_systems() {
+    let neighbor = StellarNeighbor::builder()
+      .coordinates((1.0, 2.0, 3.0))
+      .star_system(StarSystem::PlanetarySystem(PlanetarySystem::default()))
+      .build()
+      .unwrap();
+    let stellar_neighborhood = StellarNeighborhood::builder()
+      .radius(LengthInLyr(1.0))
+      .neighbors(vec![neighbor.clone()])
+      .build()
+      .unwrap();
+    assert_eq!(stellar_neighborhood.get_stellar_mass(), Ok(MassOfSol(1.0)));
+  }
 }
