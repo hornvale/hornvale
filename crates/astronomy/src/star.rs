@@ -277,17 +277,17 @@ mod tests {
     assert_approx_eq!(expected.0, actual.0);
     // M1V (Kepler-186)
     mass = MassOfSol(0.544);
-    expected = TemperatureInKelvin(4008.542794228607);
+    expected = TemperatureInKelvin(4008.542794228607); // actually about 3,500
     actual = Star::from(mass).get_temperature().unwrap();
     assert_approx_eq!(expected.0, actual.0, 1e-3f64);
     // K3V
     mass = MassOfSol(0.78);
-    expected = TemperatureInKelvin(4976.040955507489);
+    expected = TemperatureInKelvin(4976.040955507489); // actually about 4,830
     actual = Star::from(mass).get_temperature().unwrap();
     assert_approx_eq!(expected.0, actual.0, 1e-3f64);
     // G7V
     mass = MassOfSol(0.90);
-    expected = TemperatureInKelvin(5422.164512044873);
+    expected = TemperatureInKelvin(5422.164512044873); // actually about 5,550
     actual = Star::from(mass).get_temperature().unwrap();
     assert_approx_eq!(expected.0, actual.0, 1e-3f64);
     // F6V
@@ -326,40 +326,80 @@ mod tests {
     actual = Star::from(mass).get_luminosity().unwrap();
     assert_approx_eq!(expected.0, actual.0, 1e-3f64);
     // K9V
-    mass = MassOfSol(0.50);
-    expected = LuminosityOfSol(0.063);
+    mass = MassOfSol(0.59);
+    expected = LuminosityOfSol(0.12117360999999997); // (actually about 0.079)
     actual = Star::from(mass).get_luminosity().unwrap();
     assert_approx_eq!(expected.0, actual.0, 1e-3f64);
     // G7V
-    mass = MassOfSol(0.90);
-    expected = LuminosityOfSol(0.656);
+    mass = MassOfSol(0.95);
+    expected = LuminosityOfSol(0.81450624); // (actually about 0.74)
     actual = Star::from(mass).get_luminosity().unwrap();
     assert_approx_eq!(expected.0, actual.0, 1e-3f64);
     // F6V
-    mass = MassOfSol(1.20);
-    expected = LuminosityOfSol(2.073);
+    mass = MassOfSol(1.25);
+    expected = LuminosityOfSol(2.4414); // (actually about 2.69)
     actual = Star::from(mass).get_luminosity().unwrap();
     assert_approx_eq!(expected.0, actual.0, 1e-3f64);
     // A6V
-    mass = MassOfSol(1.70);
-    expected = LuminosityOfSol(8.352);
+    mass = MassOfSol(1.83);
+    expected = LuminosityOfSol(11.215131210000001); // weirdly accurate
     actual = Star::from(mass).get_luminosity().unwrap();
     assert_approx_eq!(expected.0, actual.0, 1e-3f64);
     // B5V
-    mass = MassOfSol(8.0);
-    expected = LuminosityOfSol(2027.4);
+    mass = MassOfSol(4.7);
+    expected = LuminosityOfSol(315.1160605); // (actually about 589)
     actual = Star::from(mass).get_luminosity().unwrap();
     assert_approx_eq!(expected.0, actual.0, 1f64);
     // O8V
-    mass = MassOfSol(25.0);
-    expected = LuminosityOfSol(109375.0);
+    mass = MassOfSol(23.0);
+    expected = LuminosityOfSol(81691.23500180); // (actually about 170,000)
     actual = Star::from(mass).get_luminosity().unwrap();
     assert_approx_eq!(expected.0, actual.0, 1f64);
   }
 
   #[test]
   fn test_star_get_radius() {
-    assert_approx_eq!(Star::default().get_radius().unwrap(), RadiusOfSol(1.0));
+    init();
+    // Jolly ol' Sol
+    let mut mass = MassOfSol(1.0);
+    let mut expected = RadiusOfSol(1.0);
+    let mut actual = Star::from(mass).get_radius().unwrap();
+    assert_approx_eq!(expected.0, actual.0);
+    // M1V (Kepler-186)
+    mass = MassOfSol(0.544);
+    expected = RadiusOfSol(0.6144394896464934); // (actually about 0.501)
+    actual = Star::from(mass).get_radius().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // K9V
+    mass = MassOfSol(0.59);
+    expected = RadiusOfSol(0.6556644082892013); // (actually about 0.608)
+    actual = Star::from(mass).get_radius().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // G7V
+    mass = MassOfSol(0.95);
+    expected = RadiusOfSol(0.9597958863520393); // (actually about 0.927)
+    actual = Star::from(mass).get_radius().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // F6V
+    mass = MassOfSol(1.25);
+    expected = RadiusOfSol(1.1356348391893833); // (actually about 1.359)
+    actual = Star::from(mass).get_radius().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // A6V
+    mass = MassOfSol(1.83);
+    expected = RadiusOfSol(1.4112277936262692); // (actually about 1.775)
+    actual = Star::from(mass).get_radius().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1e-3f64);
+    // B5V
+    mass = MassOfSol(4.7);
+    expected = RadiusOfSol(2.4159935973561537); // (actually about 3.36)
+    actual = Star::from(mass).get_radius().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1f64);
+    // O8V
+    mass = MassOfSol(23.0);
+    expected = RadiusOfSol(5.972894812390997); // (actually about 8.50)
+    actual = Star::from(mass).get_radius().unwrap();
+    assert_approx_eq!(expected.0, actual.0, 1f64);
   }
 
   #[test]
