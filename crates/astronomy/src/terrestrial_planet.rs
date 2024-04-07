@@ -272,4 +272,26 @@ mod test {
     assert_eq!(planet.check_habitability(), Ok(()));
     Ok(())
   }
+
+  #[test]
+  #[should_panic]
+  fn test_check_habitability_too_low() {
+    init();
+    let planet = TerrestrialPlanetBuilder::default()
+      .mass(MassOfEarth(0.001))
+      .build()
+      .unwrap();
+    planet.check_habitability().unwrap();
+  }
+
+  #[test]
+  #[should_panic]
+  fn test_check_habitability_too_high() {
+    init();
+    let planet = TerrestrialPlanetBuilder::default()
+      .mass(MassOfEarth(100.0))
+      .build()
+      .unwrap();
+    planet.check_habitability().unwrap();
+  }
 }
