@@ -9,3 +9,34 @@ pub trait MaybeHabitable {
     self.check_habitability().is_ok()
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use hornvale_test_utilities::prelude::*;
+
+  #[test]
+  fn test_is_habitable() {
+    init();
+    struct Test {
+      input: Result<(), AstronomyError>,
+      expected: bool,
+    }
+
+    let tests = vec![
+      Test {
+        input: Ok(()),
+        expected: true,
+      },
+      Test {
+        input: Err(AstronomyError::UnknownError),
+        expected: false,
+      },
+    ];
+
+    for test in tests {
+      let result = test.input.is_ok();
+      assert_eq!(result, test.expected);
+    }
+  }
+}
