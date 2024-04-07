@@ -102,6 +102,12 @@ impl TerrestrialPlanet {
   }
 }
 
+impl Default for TerrestrialPlanet {
+  fn default() -> Self {
+    TerrestrialPlanetBuilder::default().build().unwrap()
+  }
+}
+
 #[cfg(test)]
 pub mod test {
 

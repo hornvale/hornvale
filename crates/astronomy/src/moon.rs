@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct Moon {
   /// The mass of this moon, in MLuna.
+  #[builder(default = "MassOfLuna(1.0)")]
   pub mass: MassOfLuna,
   /// The density of this moon, in DLuna.
   #[builder(default = "DensityOfLuna(1.0)")]
@@ -36,6 +37,12 @@ impl Moon {
   /// Get the escape velocity of the moon in VLuna.
   pub fn get_escape_velocity(&self) -> EscapeVelocityOfLuna {
     EscapeVelocityOfLuna((self.mass.0 / self.get_radius().0).sqrt())
+  }
+}
+
+impl Default for Moon {
+  fn default() -> Self {
+    MoonBuilder::default().build().unwrap()
   }
 }
 
