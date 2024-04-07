@@ -224,4 +224,52 @@ mod test {
     assert_eq!(planet.get_rotation_direction(), RotationDirection::Prograde);
     Ok(())
   }
+
+  #[test]
+  fn test_get_northern_polar_zone() -> Result<(), TerrestrialPlanetBuilderError> {
+    init();
+    let planet = TerrestrialPlanetBuilder::default()
+      .axial_tilt(AxialTilt(23.5))
+      .build()?;
+    assert_approx_eq!(planet.get_northern_polar_zone(), Latitude(66.5), 0.01);
+    Ok(())
+  }
+
+  #[test]
+  fn test_get_southern_polar_zone() -> Result<(), TerrestrialPlanetBuilderError> {
+    init();
+    let planet = TerrestrialPlanetBuilder::default()
+      .axial_tilt(AxialTilt(23.5))
+      .build()?;
+    assert_approx_eq!(planet.get_southern_polar_zone(), Latitude(-66.5), 0.01);
+    Ok(())
+  }
+
+  #[test]
+  fn test_get_northern_tropic_zone() -> Result<(), TerrestrialPlanetBuilderError> {
+    init();
+    let planet = TerrestrialPlanetBuilder::default()
+      .axial_tilt(AxialTilt(23.5))
+      .build()?;
+    assert_approx_eq!(planet.get_northern_tropic_zone(), Latitude(23.5), 0.01);
+    Ok(())
+  }
+
+  #[test]
+  fn test_get_southern_tropic_zone() -> Result<(), TerrestrialPlanetBuilderError> {
+    init();
+    let planet = TerrestrialPlanetBuilder::default()
+      .axial_tilt(AxialTilt(23.5))
+      .build()?;
+    assert_approx_eq!(planet.get_southern_tropic_zone(), Latitude(-23.5), 0.01);
+    Ok(())
+  }
+
+  #[test]
+  fn test_check_habitability() -> Result<(), TerrestrialPlanetBuilderError> {
+    init();
+    let planet = TerrestrialPlanetBuilder::default().mass(MassOfEarth(1.0)).build()?;
+    assert_eq!(planet.check_habitability(), Ok(()));
+    Ok(())
+  }
 }
