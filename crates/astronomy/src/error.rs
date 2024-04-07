@@ -1,57 +1,61 @@
-use super::close_binary_star::CloseBinaryStarError;
-use super::star::StarError;
 use serde::{Deserialize, Serialize};
 use thiserror::Error as ThisError;
 
-/// Habitability errors.
+/// Errors related to astronomy.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, ThisError, Hash, PartialEq, Serialize)]
-pub enum HabitabilityError {
-  /// The stars are not suitable or stable.
-  #[error("one or both of the stars are not suitable or stable: {0}")]
-  StarsNotSuitableOrStable(#[from] CloseBinaryStarError),
-  /// The star itself is not suitable or stable.
-  #[error("the star is not suitable or stable: {0}")]
-  StarNotSuitableOrStable(#[from] StarError),
+pub enum AstronomyError {
   /// Pluto, also Minnesota.
   #[error("not habitable because it is too cold")]
-  TooColdToSupportConventionalLife,
+  PlanetTooColdToSupportConventionalLife,
   /// Hell, or Las Vegas.
   #[error("not habitable because it is too hot")]
-  TooHotToSupportConventionalLife,
+  PlanetTooHotToSupportConventionalLife,
   /// Hard to fight when people keep floating off into space.
   #[error("not habitable because its gravity is too low")]
-  GravityTooLowToSupportConventionalLife,
+  PlanetGravityTooLowToSupportConventionalLife,
   /// Just sounds kinda lame.
   #[error("not habitable because its gravity is too high")]
-  GravityTooHighToSupportConventionalLife,
+  PlanetGravityTooHighToSupportConventionalLife,
   /// Oxygen unstable in this atmosphere.
   #[error("not habitable because it cannot retain oxygen")]
-  AtmosphereUnstableForOxygen,
+  PlanetAtmosphereUnstableForOxygen,
   /// Carbon Dioxide unstable in this atmosphere.
   #[error("not habitable because it cannot retain carbon dioxide")]
-  AtmosphereUnstableForCarbonDioxide,
+  PlanetAtmosphereUnstableForCarbonDioxide,
   /// Argon unstable in this atmosphere.
   #[error("not habitable because it cannot retain argon")]
-  AtmosphereUnstableForArgon,
+  PlanetAtmosphereUnstableForArgon,
   /// Nitrogen unstable in this atmosphere.
   #[error("not habitable because it cannot retain nitrogen")]
-  AtmosphereUnstableForNitrogen,
+  PlanetAtmosphereUnstableForNitrogen,
   /// The habitable zone is contained within the forbidden zone.
   #[error("the stars' habitable zone is contained within their forbidden zone")]
-  HabitableZoneContainedWithinForbiddenZone,
+  StarHabitableZoneContainedWithinForbiddenZone,
   /// The habitable zone isn't sufficiently far from the host stars.
   #[error("the stars' habitable zone is too close to the host stars")]
-  HabitableZoneContainedWithinDangerZone,
-  /// No habitable conditions found anywhere in StarSubsystem.
-  #[error("the stars do not have a habitable zone")]
-  NoHabitableZoneFound,
+  StarHabitableZoneContainedWithinDangerZone,
+  /// No habitable conditions found anywhere around the stars.
+  #[error("the star does not have a habitable zone")]
+  StarDoesNotHaveHabitableZone,
   /// Lower than MINIMUM_STAR_AGE_TO_SUPPORT_LIFE.
   #[error("the star is too young to support life")]
-  TooYoungToSupportLife,
+  StarTooYoungToSupportLife,
   /// Lower than MINIMUM_STAR_MASS_TO_SUPPORT_LIFE.
   #[error("the star's mass is too low to support life")]
-  MassTooLowToSupportLife,
+  StarMassTooLowToSupportLife,
   /// Higher than MAXIMUM_STAR_MASS_TO_SUPPORT_LIFE.
   #[error("the star's mass is too high to support life")]
-  MassTooHighToSupportLife,
+  StarMassTooHighToSupportLife,
+  /// Lower than MAIN_SEQUENCE_STAR_MASS_LOWER_BOUND.
+  #[error("its mass is too low to be a main-sequence star")]
+  StarMassTooLowForMainSequence,
+  /// Higher than MAIN_SEQUENCE_STAR_MASS_UPPER_BOUND.
+  #[error("its mass is too high to be a main-sequence star")]
+  StarMassTooHighForMainSequence,
+  /// Lower than MINIMUM_CLOSE_BINARY_STAR_SEPARATION.
+  #[error("the stars are too close together to be stable")]
+  BinaryStarsTooCloseForComfort,
+  /// An unknown error occurred.
+  #[error("an unknown error occurred")]
+  UnknownError,
 }

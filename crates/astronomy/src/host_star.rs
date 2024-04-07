@@ -1,5 +1,5 @@
 use crate::close_binary_star::CloseBinaryStar;
-use crate::errors::prelude::*;
+use crate::error::AstronomyError;
 use crate::star::Star;
 use crate::types::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -24,7 +24,7 @@ impl HostStar {
   /// Retrieve or calculate the age of the stars.
   ///
   /// Calculated in Gyr.
-  pub fn get_current_age(&self) -> Result<TimeInGigayears, HostStarError> {
+  pub fn get_current_age(&self) -> Result<TimeInGigayears, AstronomyError> {
     match &self {
       HostStar::Star(star) => Ok(star.current_age),
       HostStar::CloseBinaryStar(close_binary_star) => Ok(close_binary_star.get_current_age()?),
@@ -34,7 +34,7 @@ impl HostStar {
   /// Retrieve or calculate the total mass of the stars.
   ///
   /// Calculated in Msol.
-  pub fn get_mass(&self) -> Result<MassOfSol, HostStarError> {
+  pub fn get_mass(&self) -> Result<MassOfSol, AstronomyError> {
     match &self {
       HostStar::Star(star) => Ok(star.mass),
       HostStar::CloseBinaryStar(close_binary_star) => Ok(close_binary_star.get_mass()?),
@@ -50,7 +50,7 @@ impl HostStar {
   }
 
   /// Retrieve or calculate the frost line.
-  pub fn get_frost_line(&self) -> Result<LengthInAu, HostStarError> {
+  pub fn get_frost_line(&self) -> Result<LengthInAu, AstronomyError> {
     match &self {
       HostStar::Star(star) => Ok(star.get_frost_line()?),
       HostStar::CloseBinaryStar(close_binary_star) => Ok(close_binary_star.get_frost_line()?),
@@ -58,7 +58,7 @@ impl HostStar {
   }
 
   /// Retrieve or calculate the habitable zone.
-  pub fn get_habitable_zone(&self) -> Result<(LengthInAu, LengthInAu), HostStarError> {
+  pub fn get_habitable_zone(&self) -> Result<(LengthInAu, LengthInAu), AstronomyError> {
     match &self {
       HostStar::Star(star) => Ok(star.get_habitable_zone()?),
       HostStar::CloseBinaryStar(close_binary_star) => Ok(close_binary_star.get_habitable_zone()?),
@@ -66,7 +66,7 @@ impl HostStar {
   }
 
   /// Retrieve or calculate the satellite zone.
-  pub fn get_satellite_zone(&self) -> Result<(LengthInAu, LengthInAu), HostStarError> {
+  pub fn get_satellite_zone(&self) -> Result<(LengthInAu, LengthInAu), AstronomyError> {
     match &self {
       HostStar::Star(star) => Ok(star.get_satellite_zone()?),
       HostStar::CloseBinaryStar(close_binary_star) => Ok(close_binary_star.get_satellite_zone()?),
@@ -74,7 +74,7 @@ impl HostStar {
   }
 
   /// Retrieve or calculate the luminosity.
-  pub fn get_luminosity(&self) -> Result<LuminosityOfSol, HostStarError> {
+  pub fn get_luminosity(&self) -> Result<LuminosityOfSol, AstronomyError> {
     match &self {
       HostStar::Star(star) => Ok(star.get_luminosity()?),
       HostStar::CloseBinaryStar(close_binary_star) => Ok(close_binary_star.get_luminosity()?),
@@ -82,7 +82,7 @@ impl HostStar {
   }
 
   /// Indicate whether this star is capable of supporting conventional life.
-  pub fn check_habitable(&self) -> Result<(), HabitabilityError> {
+  pub fn check_habitable(&self) -> Result<(), AstronomyError> {
     match &self {
       HostStar::Star(star) => star.check_habitable()?,
       HostStar::CloseBinaryStar(close_binary_star) => close_binary_star.check_habitable()?,

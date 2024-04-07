@@ -1,4 +1,4 @@
-use crate::errors::prelude::*;
+use crate::error::AstronomyError;
 use crate::types::prelude::*;
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
@@ -26,17 +26,17 @@ pub struct Moon {
 
 impl Moon {
   /// Get the radius of the moon in Lunar radii.
-  pub fn get_radius(&self) -> Result<RadiusOfLuna, MoonError> {
+  pub fn get_radius(&self) -> Result<RadiusOfLuna, AstronomyError> {
     Ok(RadiusOfLuna((self.mass.0 / self.density.0).powf(1.0 / 3.0)))
   }
 
   /// Get the gravity of the moon in GLuna.
-  pub fn get_gravity(&self) -> Result<GravityOfLuna, MoonError> {
+  pub fn get_gravity(&self) -> Result<GravityOfLuna, AstronomyError> {
     Ok(GravityOfLuna(self.mass.0 / self.get_radius()?.0.powf(2.0)))
   }
 
   /// Get the escape velocity of the moon in VLuna.
-  pub fn get_escape_velocity(&self) -> Result<EscapeVelocityOfLuna, MoonError> {
+  pub fn get_escape_velocity(&self) -> Result<EscapeVelocityOfLuna, AstronomyError> {
     Ok(EscapeVelocityOfLuna((self.mass.0 / self.get_radius()?.0).sqrt()))
   }
 }

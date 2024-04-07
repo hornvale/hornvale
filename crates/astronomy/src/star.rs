@@ -1,5 +1,5 @@
 use crate::constants::prelude::*;
-use crate::errors::prelude::*;
+use crate::error::AstronomyError;
 use crate::types::prelude::*;
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
@@ -22,18 +22,18 @@ pub struct Star {
 
 impl Star {
   /// Check the mass of the star to see if it's within the main sequence.
-  pub fn check_mass(&self) -> Result<(), StarError> {
+  pub fn check_mass(&self) -> Result<(), AstronomyError> {
     if self.mass < MINIMUM_STAR_MASS {
-      return Err(StarError::MassTooLowForMainSequence);
+      return Err(AstronomyError::StarMassTooLowForMainSequence);
     }
     if self.mass > MAXIMUM_STAR_MASS {
-      return Err(StarError::MassTooHighForMainSequence);
+      return Err(AstronomyError::StarMassTooHighForMainSequence);
     }
     Ok(())
   }
 
   /// Get the temperature of the star.
-  pub fn get_temperature(&self) -> Result<TemperatureInKelvin, StarError> {
+  pub fn get_temperature(&self) -> Result<TemperatureInKelvin, AstronomyError> {
     self.check_mass()?;
     let luminosity = self.get_luminosity()?;
     let radius = self.get_radius()?;
@@ -42,7 +42,7 @@ impl Star {
   }
 
   /// Get the luminosity of the star.
-  pub fn get_luminosity(&self) -> Result<LuminosityOfSol, StarError> {
+  pub fn get_luminosity(&self) -> Result<LuminosityOfSol, AstronomyError> {
     self.check_mass()?;
     let result = match self.mass {
       mass if mass.0 < 0.43 => 0.23 * mass.0.powf(2.3),
@@ -55,7 +55,7 @@ impl Star {
   }
 
   /// Get the radius of the star.
-  pub fn get_radius(&self) -> Result<RadiusOfSol, StarError> {
+  pub fn get_radius(&self) -> Result<RadiusOfSol, AstronomyError> {
     self.check_mass()?;
     let result = match self.mass {
       mass if mass.0 < 1.0 => mass.0.powf(0.80),
@@ -66,7 +66,7 @@ impl Star {
   }
 
   /// Get the density of the star.
-  pub fn get_density(&self) -> Result<DensityOfSol, StarError> {
+  pub fn get_density(&self) -> Result<DensityOfSol, AstronomyError> {
     self.check_mass()?;
     let radius = self.get_radius()?;
     let result = self.mass.0 / radius.0.powf(3.0);
@@ -74,7 +74,7 @@ impl Star {
   }
 
   /// Get the life expectancy of the star.
-  pub fn get_life_expectancy(&self) -> Result<TimeInGigayears, StarError> {
+  pub fn get_life_expectancy(&self) -> Result<TimeInGigayears, AstronomyError> {
     self.check_mass()?;
     let luminosity = self.get_luminosity()?;
     let result = self.mass.0 / luminosity.0 * 10.0;
@@ -82,7 +82,7 @@ impl Star {
   }
 
   /// Get the habitable zone of the star.
-  pub fn get_habitable_zone(&self) -> Result<(LengthInAu, LengthInAu), StarError> {
+  pub fn get_habitable_zone(&self) -> Result<(LengthInAu, LengthInAu), AstronomyError> {
     self.check_mass()?;
     let luminosity = self.get_luminosity()?;
     let inner_bound = (luminosity.0 / 1.1).sqrt();
@@ -91,7 +91,7 @@ impl Star {
   }
 
   /// Get the satellite zone of the star.
-  pub fn get_satellite_zone(&self) -> Result<(LengthInAu, LengthInAu), StarError> {
+  pub fn get_satellite_zone(&self) -> Result<(LengthInAu, LengthInAu), AstronomyError> {
     self.check_mass()?;
     let inner_bound = 0.1 * self.mass.0;
     let outer_bound = 40.0 * self.mass.0;
@@ -99,7 +99,7 @@ impl Star {
   }
 
   /// Get the frost line of the star.
-  pub fn get_frost_line(&self) -> Result<LengthInAu, StarError> {
+  pub fn get_frost_line(&self) -> Result<LengthInAu, AstronomyError> {
     self.check_mass()?;
     let luminosity = self.get_luminosity()?;
     let result = 4.85 * luminosity.0.sqrt();
@@ -107,7 +107,7 @@ impl Star {
   }
 
   /// Get the spectral class of a main-sequence star in Kelvin based on its Msol.
-  pub fn star_mass_to_spectral_class(&self) -> Result<String, StarError> {
+  pub fn star_mass_to_spectral_class(&self) -> Result<String, AstronomyError> {
     self.check_mass()?;
     let temperature = self.get_temperature()?.0;
     let spectral_type = match temperature {
@@ -143,7 +143,7 @@ impl Star {
   /// from which we are observing the star.
   ///
   /// This came from StackOverflow: https://stackoverflow.com/q/21977786
-  pub fn get_absolute_rgb(&self) -> Result<(u8, u8, u8), StarError> {
+  pub fn get_absolute_rgb(&self) -> Result<(u8, u8, u8), AstronomyError> {
     self.check_mass()?;
     let temperature = self.get_temperature()?.0;
     let x = match temperature {
@@ -200,16 +200,16 @@ impl Star {
   }
 
   /// Indicate whether this star is capable of supporting conventional life.
-  pub fn check_habitable(&self) -> Result<(), HabitabilityError> {
+  pub fn check_habitable(&self) -> Result<(), AstronomyError> {
     self.check_mass()?;
     if self.mass < MINIMUM_HABITABLE_STAR_MASS {
-      return Err(HabitabilityError::MassTooLowToSupportLife);
+      return Err(AstronomyError::StarMassTooLowToSupportLife);
     }
     if self.mass > MAXIMUM_HABITABLE_STAR_MASS {
-      return Err(HabitabilityError::MassTooHighToSupportLife);
+      return Err(AstronomyError::StarMassTooHighToSupportLife);
     }
     if self.current_age < MINIMUM_HABITABLE_STAR_AGE {
-      return Err(HabitabilityError::TooYoungToSupportLife);
+      return Err(AstronomyError::StarTooYoungToSupportLife);
     }
     Ok(())
   }

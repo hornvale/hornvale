@@ -3,7 +3,7 @@ pub mod close_binary_star;
 /// Constants of interest for astronomy.
 pub mod constants;
 /// Errors for the astronomy crate.
-pub mod errors;
+pub mod error;
 /// A host star (single star or close binary star).
 pub mod host_star;
 /// Mathematical functions.
@@ -27,7 +27,7 @@ pub mod types;
 pub mod prelude {
   pub use super::close_binary_star::CloseBinaryStar;
   pub use super::constants::prelude::*;
-  pub use super::errors::prelude::*;
+  pub use super::error::AstronomyError;
   pub use super::host_star::HostStar;
   pub use super::math::prelude::*;
   pub use super::moon::Moon;

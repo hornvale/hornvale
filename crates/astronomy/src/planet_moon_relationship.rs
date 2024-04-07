@@ -1,7 +1,7 @@
 use super::moon::Moon;
 use super::planet::Planet;
 use crate::constants::prelude::*;
-use crate::errors::prelude::*;
+use crate::error::AstronomyError;
 use crate::types::prelude::*;
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
@@ -28,12 +28,12 @@ pub struct PlanetMoonRelationship {
 
 impl PlanetMoonRelationship {
   /// Get the periapsis of the moon's orbit.
-  pub fn get_periapsis(&self) -> Result<LengthInKm, PlanetMoonRelationshipError> {
+  pub fn get_periapsis(&self) -> Result<LengthInKm, AstronomyError> {
     Ok(LengthInKm((1.0 - self.orbital_eccentricity) * self.semi_major_axis.0))
   }
 
   /// Get the apoapsis of the moon's orbit.
-  pub fn get_apoapsis(&self) -> Result<LengthInKm, PlanetMoonRelationshipError> {
+  pub fn get_apoapsis(&self) -> Result<LengthInKm, AstronomyError> {
     Ok(LengthInKm((1.0 + self.orbital_eccentricity) * self.semi_major_axis.0))
   }
 
@@ -44,7 +44,7 @@ impl PlanetMoonRelationship {
   ///
   /// We then multiply this by the radius of the planet, and divide by the cube of the
   /// semi-major axis of the moon's orbit.
-  pub fn get_lunar_tide(&self) -> Result<LengthInMeters, PlanetMoonRelationshipError> {
+  pub fn get_lunar_tide(&self) -> Result<LengthInMeters, AstronomyError> {
     let corrected_lunar_mass = 2_230_000.0 * self.moon.mass.0 * LUNA_GRAVITATIONAL_PARAMETER_SHARE;
     let planet_radius = self.planet.get_radius();
     let numerator = corrected_lunar_mass * planet_radius.0;
@@ -58,7 +58,7 @@ impl PlanetMoonRelationship {
   /// `semi_major_axis` - semi-major axis of the moon's orbit, in KM.
   ///
   /// Returns a magnitude in meters.
-  pub fn get_planetary_tide(&self) -> Result<LengthInMeters, PlanetMoonRelationshipError> {
+  pub fn get_planetary_tide(&self) -> Result<LengthInMeters, AstronomyError> {
     let moon_mass = self.moon.mass;
     let moon_radius = self.moon.get_radius()?;
     let numerator = 2_230_000.0 * moon_mass.0 * moon_radius.0 * 0.027264;

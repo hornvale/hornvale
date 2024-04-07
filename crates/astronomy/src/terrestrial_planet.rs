@@ -1,5 +1,5 @@
 use crate::constants::prelude::*;
-use crate::errors::prelude::*;
+use crate::error::AstronomyError;
 use crate::types::prelude::*;
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
@@ -83,14 +83,14 @@ impl TerrestrialPlanet {
   }
 
   /// Indicate whether this planet is capable of supporting conventional life.
-  pub fn check_habitable(&self) -> Result<(), HabitabilityError> {
+  pub fn check_habitable(&self) -> Result<(), AstronomyError> {
     {
       let gravity = self.get_gravity();
       if gravity <= MINIMUM_HABITABLE_PLANET_GRAVITY {
-        return Err(HabitabilityError::GravityTooLowToSupportConventionalLife);
+        return Err(AstronomyError::PlanetGravityTooLowToSupportConventionalLife);
       }
       if gravity >= MAXIMUM_HABITABLE_PLANET_GRAVITY {
-        return Err(HabitabilityError::GravityTooHighToSupportConventionalLife);
+        return Err(AstronomyError::PlanetGravityTooHighToSupportConventionalLife);
       }
       Ok(())
     }
