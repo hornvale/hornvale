@@ -29,13 +29,13 @@ impl From<MassInKg> for MassOfLuna {
 }
 
 #[cfg(test)]
-pub mod test {
+mod test {
 
   use super::*;
   use hornvale_test_utilities::prelude::*;
 
   #[test]
-  pub fn test_m_earth_to_m_luna() {
+  fn test_m_earth_to_m_luna() {
     init();
     let actual: MassOfLuna = MassOfEarth(1.0).into();
     assert_approx_eq!(actual.0, LUNA_MASS_PER_EARTH_MASS.0, 0.01);

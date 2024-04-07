@@ -43,20 +43,20 @@ impl From<MassInKg> for MassOfJupiter {
 }
 
 #[cfg(test)]
-pub mod test {
+mod test {
 
   use super::*;
   use hornvale_test_utilities::prelude::*;
 
   #[test]
-  pub fn test_m_earth_to_m_jupiter() {
+  fn test_m_earth_to_m_jupiter() {
     init();
     let actual: MassOfJupiter = MassOfEarth(1.0).into();
     assert_approx_eq!(actual.0, 1.0 / EARTH_MASS_PER_JUPITER_MASS.0, 0.01);
   }
 
   #[test]
-  pub fn test_m_luna_to_m_jupiter() {
+  fn test_m_luna_to_m_jupiter() {
     init();
     let actual: MassOfJupiter = MassOfLuna(1.0).into();
     assert_approx_eq!(
@@ -67,7 +67,7 @@ pub mod test {
   }
 
   #[test]
-  pub fn test_m_sol_to_m_jupiter() {
+  fn test_m_sol_to_m_jupiter() {
     init();
     let actual: MassOfJupiter = MassOfSol(1.0).into();
     assert_approx_eq!(actual.0, JUPITER_MASS_PER_SOLAR_MASS.0, 0.01);

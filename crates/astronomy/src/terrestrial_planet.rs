@@ -104,13 +104,13 @@ impl MaybeHabitable for TerrestrialPlanet {
 }
 
 #[cfg(test)]
-pub mod test {
+mod test {
 
   use super::*;
   use hornvale_test_utilities::prelude::*;
 
   #[test]
-  pub fn test_from_mass() -> Result<(), TerrestrialPlanetBuilderError> {
+  fn test_from_mass() -> Result<(), TerrestrialPlanetBuilderError> {
     init();
     let planet = TerrestrialPlanetBuilder::default().mass(MassOfEarth(1.0)).build()?;
     assert_approx_eq!(planet.mass.0, 1.0);

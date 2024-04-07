@@ -36,29 +36,36 @@ impl From<MassOfSol> for MassOfEarth {
 }
 
 #[cfg(test)]
-pub mod test {
+mod test {
 
   use super::*;
   use hornvale_test_utilities::prelude::*;
 
   #[test]
-  pub fn test_m_jupiter_to_m_earth() {
+  fn test_m_jupiter_to_m_earth() {
     init();
     let actual: MassOfEarth = MassOfJupiter(1.0).into();
     assert_approx_eq!(actual.0, EARTH_MASS_PER_JUPITER_MASS.0, 0.01);
   }
 
   #[test]
-  pub fn test_m_luna_to_m_earth() {
+  fn test_m_luna_to_m_earth() {
     init();
     let actual: MassOfEarth = MassOfLuna(1.0).into();
     assert_approx_eq!(actual.0, 1.0 / LUNA_MASS_PER_EARTH_MASS.0, 0.01);
   }
 
   #[test]
-  pub fn test_m_kg_to_m_earth() {
+  fn test_m_kg_to_m_earth() {
     init();
     let actual: MassOfEarth = MassInKg(1.0).into();
     assert_approx_eq!(actual.0, 1.0 / KG_PER_EARTH_MASS.0, 0.01);
+  }
+
+  #[test]
+  fn test_m_sol_to_m_earth() {
+    init();
+    let actual: MassOfEarth = MassOfSol(1.0).into();
+    assert_approx_eq!(actual.0, EARTH_MASS_PER_SOLAR_MASS.0, 0.01);
   }
 }

@@ -36,20 +36,20 @@ impl From<MassOfEarth> for MassOfSol {
 }
 
 #[cfg(test)]
-pub mod test {
+mod test {
 
   use super::*;
   use hornvale_test_utilities::prelude::*;
 
   #[test]
-  pub fn test_m_earth_to_m_sol() {
+  fn test_m_earth_to_m_sol() {
     init();
     let actual: MassOfSol = MassOfEarth(1.0).into();
     assert_approx_eq!(actual.0, 1.0 / EARTH_MASS_PER_SOLAR_MASS.0, 0.01);
   }
 
   #[test]
-  pub fn test_m_kg_to_m_sol() {
+  fn test_m_kg_to_m_sol() {
     init();
     let actual: MassOfSol = MassInKg(1.0).into();
     assert_approx_eq!(actual.0, 1.0 / KG_PER_SOLAR_MASS.0, 0.01);

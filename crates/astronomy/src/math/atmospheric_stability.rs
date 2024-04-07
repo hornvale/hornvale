@@ -115,13 +115,13 @@ pub fn is_atmospherically_stable(
 }
 
 #[cfg(test)]
-pub mod test {
+mod test {
 
   use super::*;
   use hornvale_test_utilities::prelude::*;
 
   #[test]
-  pub fn test_get_oxygen_stability() {
+  fn test_get_oxygen_stability() {
     init();
     let equilibrium_temperature = TemperatureInKelvin(288.0);
     let escape_velocity = EscapeVelocityOfEarth(1.0);
@@ -131,7 +131,7 @@ pub mod test {
   }
 
   #[test]
-  pub fn test_get_carbon_dioxide_stability() {
+  fn test_get_carbon_dioxide_stability() {
     init();
     let equilibrium_temperature = TemperatureInKelvin(288.0);
     let escape_velocity = EscapeVelocityOfEarth(1.0);
@@ -141,7 +141,7 @@ pub mod test {
   }
 
   #[test]
-  pub fn test_get_argon_stability() {
+  fn test_get_argon_stability() {
     init();
     let equilibrium_temperature = TemperatureInKelvin(288.0);
     let escape_velocity = EscapeVelocityOfEarth(1.0);
@@ -151,7 +151,7 @@ pub mod test {
   }
 
   #[test]
-  pub fn test_get_nitrogen_stability() {
+  fn test_get_nitrogen_stability() {
     init();
     let equilibrium_temperature = TemperatureInKelvin(288.0);
     let escape_velocity = EscapeVelocityOfEarth(1.0);
@@ -161,7 +161,7 @@ pub mod test {
   }
 
   #[test]
-  pub fn test_is_atmospherically_stable() {
+  fn test_is_atmospherically_stable() {
     init();
     let equilibrium_temperature = TemperatureInKelvin(288.0);
     let escape_velocity = EscapeVelocityOfEarth(1.0);

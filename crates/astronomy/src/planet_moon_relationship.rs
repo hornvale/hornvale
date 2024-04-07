@@ -75,7 +75,7 @@ impl MaybeHabitable for PlanetMoonRelationship {
 }
 
 #[cfg(test)]
-pub mod tests {
+mod test {
   use super::*;
   use hornvale_test_utilities::prelude::*;
 
