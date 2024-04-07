@@ -51,3 +51,71 @@ impl StellarMassable for StarSystem {
     }
   }
 }
+
+impl Default for StarSystem {
+  fn default() -> Self {
+    StarSystem::PlanetarySystem(PlanetarySystem::default())
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::distant_binary_star::DistantBinaryStarBuilder;
+  use crate::planetary_system::PlanetarySystemBuilder;
+
+  #[test]
+  fn test_star_system_builder() {
+    let star_system = StarSystem::DistantBinaryStar(
+      DistantBinaryStarBuilder::default()
+        .primary(PlanetarySystemBuilder::default().build().unwrap())
+        .secondary(PlanetarySystemBuilder::default().build().unwrap())
+        .build()
+        .unwrap(),
+    );
+    assert_eq!(star_system.get_stellar_count().unwrap(), 2);
+    assert_eq!(star_system.get_stellar_mass().unwrap(), MassOfSol(2.0));
+  }
+
+  #[test]
+  fn test_star_system_check_distant_binary_star_habitability() {
+    let star_system = StarSystem::DistantBinaryStar(
+      DistantBinaryStarBuilder::default()
+        .primary(PlanetarySystemBuilder::default().build().unwrap())
+        .secondary(PlanetarySystemBuilder::default().build().unwrap())
+        .build()
+        .unwrap(),
+    );
+    assert!(star_system.check_habitability().is_ok());
+  }
+
+  #[test]
+  fn test_star_system_check_planetary_system_habitability() {
+    let star_system = StarSystem::PlanetarySystem(PlanetarySystemBuilder::default().build().unwrap());
+    assert!(star_system.check_habitability().is_ok());
+  }
+
+  #[test]
+  fn test_star_system_get_stellar_count() {
+    let star_system = StarSystem::DistantBinaryStar(
+      DistantBinaryStarBuilder::default()
+        .primary(PlanetarySystemBuilder::default().build().unwrap())
+        .secondary(PlanetarySystemBuilder::default().build().unwrap())
+        .build()
+        .unwrap(),
+    );
+    assert_eq!(star_system.get_stellar_count().unwrap(), 2);
+  }
+
+  #[test]
+  fn test_star_system_get_stellar_mass() {
+    let star_system = StarSystem::DistantBinaryStar(
+      DistantBinaryStarBuilder::default()
+        .primary(PlanetarySystemBuilder::default().build().unwrap())
+        .secondary(PlanetarySystemBuilder::default().build().unwrap())
+        .build()
+        .unwrap(),
+    );
+    assert_eq!(star_system.get_stellar_mass().unwrap(), MassOfSol(2.0));
+  }
+}

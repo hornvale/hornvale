@@ -8,7 +8,7 @@ use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
 /// A `SatelliteSystem` is a planet and its moon or moons.
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize, Builder)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct SatelliteSystem {
   /// The planet.
   #[builder(default = "Planet::default()")]
@@ -64,6 +64,12 @@ impl MaybeHabitable for SatelliteSystem {
   }
 }
 
+impl Default for SatelliteSystem {
+  fn default() -> Self {
+    SatelliteSystem::builder().build().unwrap()
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -87,6 +93,20 @@ mod tests {
         orbital_eccentricity: 0.05,
         orbital_inclination: 5.15,
       }
+    );
+    Ok(())
+  }
+
+  #[test]
+  fn test_check_habitability() -> AnyResult<()> {
+    init();
+    assert_eq!(
+      SatelliteSystemBuilder::default()
+        .planet(Planet::default())
+        .moons(vec![Moon::default()])
+        .build()?
+        .check_habitability(),
+      Ok(())
     );
     Ok(())
   }

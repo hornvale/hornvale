@@ -109,3 +109,72 @@ impl Default for HostStar {
     HostStar::Star(Box::default())
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::close_binary_star::CloseBinaryStarBuilder;
+  use crate::star::StarBuilder;
+
+  #[test]
+  fn test_host_star_new_star() {
+    let star = StarBuilder::default().build().unwrap();
+    let host_star = HostStar::new_star(star.clone());
+    assert_eq!(host_star, HostStar::Star(Box::new(star)));
+  }
+
+  #[test]
+  fn test_host_star_new_close_binary_star() {
+    let close_binary_star = CloseBinaryStarBuilder::default().build().unwrap();
+    let host_star = HostStar::new_close_binary_star(close_binary_star.clone());
+    assert_eq!(host_star, HostStar::CloseBinaryStar(Box::new(close_binary_star)));
+  }
+
+  #[test]
+  fn test_host_star_get_current_age() {
+    let star = StarBuilder::default().build().unwrap();
+    let host_star = HostStar::new_star(star.clone());
+    assert_eq!(host_star.get_current_age().unwrap(), star.current_age);
+  }
+
+  #[test]
+  fn test_host_star_get_frost_line() {
+    let star = StarBuilder::default().build().unwrap();
+    let host_star = HostStar::new_star(star.clone());
+    assert_eq!(host_star.get_frost_line().unwrap(), star.get_frost_line().unwrap());
+  }
+
+  #[test]
+  fn test_host_star_get_habitable_zone() {
+    let star = StarBuilder::default().build().unwrap();
+    let host_star = HostStar::new_star(star.clone());
+    assert_eq!(
+      host_star.get_habitable_zone().unwrap(),
+      star.get_habitable_zone().unwrap()
+    );
+  }
+
+  #[test]
+  fn test_host_star_get_satellite_zone() {
+    let star = StarBuilder::default().build().unwrap();
+    let host_star = HostStar::new_star(star.clone());
+    assert_eq!(
+      host_star.get_satellite_zone().unwrap(),
+      star.get_satellite_zone().unwrap()
+    );
+  }
+
+  #[test]
+  fn test_host_star_get_luminosity() {
+    let star = StarBuilder::default().build().unwrap();
+    let host_star = HostStar::new_star(star.clone());
+    assert_eq!(host_star.get_luminosity().unwrap(), star.get_luminosity().unwrap());
+  }
+
+  #[test]
+  fn test_host_star_check_habitability() {
+    let star = StarBuilder::default().build().unwrap();
+    let host_star = HostStar::new_star(star.clone());
+    assert!(host_star.check_habitability().is_ok());
+  }
+}

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 /// So a `PlanetarySystem` does not necessarily include planets.  This is
 /// confusing and I don't really like it, but I don't have a better name
 /// for it.  Yet.
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize, Builder)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct PlanetarySystem {
   /// The host star of the planetary system.
   #[builder(default = "HostStar::default()")]
@@ -30,7 +30,9 @@ impl PlanetarySystem {
 
 impl MaybeHabitable for PlanetarySystem {
   fn check_habitability(&self) -> Result<(), AstronomyError> {
+    self.host_star.check_habitability()?;
     for satellite_system in &self.satellite_systems {
+      println!("{:#?}", satellite_system);
       if satellite_system.is_habitable() {
         return Ok(());
       }
@@ -48,6 +50,12 @@ impl StellarCountable for PlanetarySystem {
 impl StellarMassable for PlanetarySystem {
   fn get_stellar_mass(&self) -> Result<MassOfSol, AstronomyError> {
     self.host_star.get_stellar_mass()
+  }
+}
+
+impl Default for PlanetarySystem {
+  fn default() -> Self {
+    PlanetarySystem::builder().build().unwrap()
   }
 }
 

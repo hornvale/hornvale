@@ -86,20 +86,13 @@ mod tests {
 
   #[test]
   fn test_stellar_neighborhood_check_habitability() {
-    let neighbor = StellarNeighbor::builder()
-      .coordinates((1.0, 2.0, 3.0))
-      .star_system(StarSystem::PlanetarySystem(PlanetarySystem::default()))
-      .build()
-      .unwrap();
+    let neighbor = StellarNeighbor::builder().coordinates((1.0, 2.0, 3.0)).build().unwrap();
     let stellar_neighborhood = StellarNeighborhood::builder()
       .radius(LengthInLyr(1.0))
       .neighbors(vec![neighbor.clone()])
       .build()
       .unwrap();
-    assert_eq!(
-      stellar_neighborhood.check_habitability(),
-      Err(AstronomyError::StellarNeighborhoodDoesNotHaveHabitableZone)
-    );
+    assert!(stellar_neighborhood.check_habitability().is_ok());
   }
 
   #[test]
