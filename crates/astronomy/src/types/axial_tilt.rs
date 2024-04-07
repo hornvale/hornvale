@@ -83,4 +83,11 @@ mod tests {
     assert_approx_eq!(AxialTilt(0.0).get_southern_tropic_zone().0, 0.0);
     assert_approx_eq!(AxialTilt(90.0).get_southern_tropic_zone().0, -90.0);
   }
+
+  #[test]
+  fn test_rotation_direction() {
+    assert_eq!(AxialTilt(23.5).rotation_direction(), RotationDirection::Prograde);
+    assert_eq!(AxialTilt(0.0).rotation_direction(), RotationDirection::Prograde);
+    assert_eq!(AxialTilt(-23.5).rotation_direction(), RotationDirection::Retrograde);
+  }
 }

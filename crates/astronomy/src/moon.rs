@@ -152,4 +152,13 @@ mod tests {
     );
     Ok(())
   }
+
+  #[test]
+  fn test_check_habitability() -> AnyResult<()> {
+    assert_eq!(
+      MoonBuilder::default().build()?.check_habitability(),
+      Err(AstronomyError::MoonsAreNotHabitable)
+    );
+    Ok(())
+  }
 }

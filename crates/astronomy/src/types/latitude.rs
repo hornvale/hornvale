@@ -101,4 +101,18 @@ mod tests {
     assert_eq!(Latitude(0.0).dms(), (0.0, 0.0, 0.0));
     assert_eq!(Latitude(1.0).dms(), (1.0, 0.0, 0.0));
   }
+
+  #[test]
+  fn from_degrees() {
+    assert_approx_eq!(Latitude::from_degrees(-1.0).0, -1.0);
+    assert_approx_eq!(Latitude::from_degrees(0.0).0, 0.0);
+    assert_approx_eq!(Latitude::from_degrees(1.0).0, 1.0);
+  }
+
+  #[test]
+  fn from_dms() {
+    assert_approx_eq!(Latitude::from_dms(-1.0, 0.0, 0.0).0, -1.0);
+    assert_approx_eq!(Latitude::from_dms(0.0, 0.0, 0.0).0, 0.0);
+    assert_approx_eq!(Latitude::from_dms(1.0, 0.0, 0.0).0, 1.0);
+  }
 }

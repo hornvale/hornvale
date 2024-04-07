@@ -159,4 +159,12 @@ pub mod test {
     assert_approx_eq!(nitrogen_stability, 0.619, 0.001);
     assert!(is_nitrogen_stable(equilibrium_temperature, escape_velocity));
   }
+
+  #[test]
+  pub fn test_is_atmospherically_stable() {
+    init();
+    let equilibrium_temperature = TemperatureInKelvin(288.0);
+    let escape_velocity = EscapeVelocityOfEarth(1.0);
+    assert!(is_atmospherically_stable(equilibrium_temperature, escape_velocity));
+  }
 }
