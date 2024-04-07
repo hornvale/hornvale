@@ -54,4 +54,18 @@ mod test {
     let actual: MassOfSol = MassInKg(1.0).into();
     assert_approx_eq!(actual.0, 1.0 / KG_PER_SOLAR_MASS.0, 0.01);
   }
+
+  #[test]
+  fn test_m_jupiter_to_m_sol() {
+    init();
+    let actual: MassOfSol = MassOfJupiter(1.0).into();
+    assert_approx_eq!(actual.0, 1.0 / JUPITER_MASS_PER_SOLAR_MASS.0, 0.01);
+  }
+
+  #[test]
+  fn test_m_sol_to_m_earth() {
+    init();
+    let actual: MassOfEarth = MassOfSol(1.0).into();
+    assert_approx_eq!(actual.0, EARTH_MASS_PER_SOLAR_MASS.0, 0.01);
+  }
 }
