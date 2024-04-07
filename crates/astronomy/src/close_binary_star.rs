@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 /// `CloseBinaryStar`, but can only be in an orbit around one member of a
 /// `DistantBinaryStar`.  As a result, we handle `DistantBinaryStar` objects
 /// with a different class.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Builder)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct CloseBinaryStar {
   /// The primary star is the one with greater mass.
   pub primary: Star,

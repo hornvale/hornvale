@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 /// about main-sequence stars.  Other types will use different structs; it's
 /// useful to view and treat these as the default sense of "star", given their
 /// centrality to our purpose.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Builder)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct Star {
   /// The mass of the star, in solar masses.
   #[builder(default = "MassOfSol(1.0)")]

@@ -1,3 +1,5 @@
+//! Astronomy is a crate for astronomical calculations and simulations.
+
 /// A close binary star.
 pub mod close_binary_star;
 /// Constants of interest for astronomy.

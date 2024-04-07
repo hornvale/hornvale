@@ -8,7 +8,7 @@ use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
 /// A `PlanetMoonRelationship` is a relationship between a planet and a moon.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Builder)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct PlanetMoonRelationship {
   /// The planet.
   #[builder(default = "Planet::default()")]

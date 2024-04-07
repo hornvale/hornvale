@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 /// A `Planet`.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub enum Planet {
+  /// A terrestrial planet.
   TerrestrialPlanet(TerrestrialPlanet),
 }
 

@@ -27,7 +27,7 @@ mod test {
   use hornvale_test_utilities::prelude::*;
 
   #[test]
-  pub fn test_random_point_in_sphere() {
+  fn test_random_point_in_sphere() {
     init();
     let mut rng = thread_rng();
     let (_x, _y, _z) = get_random_point_in_sphere(&mut rng);
