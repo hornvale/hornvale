@@ -1,5 +1,6 @@
 use crate::constants::prelude::*;
 use crate::error::AstronomyError;
+use crate::traits::prelude::*;
 use crate::types::prelude::*;
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
@@ -198,9 +199,17 @@ impl Star {
 
     Ok(result)
   }
+}
 
+impl Default for Star {
+  fn default() -> Self {
+    StarBuilder::default().build().unwrap()
+  }
+}
+
+impl MaybeHabitable for Star {
   /// Indicate whether this star is capable of supporting conventional life.
-  pub fn check_habitable(&self) -> Result<(), AstronomyError> {
+  fn check_habitability(&self) -> Result<(), AstronomyError> {
     self.check_mass()?;
     if self.mass < MINIMUM_HABITABLE_STAR_MASS {
       return Err(AstronomyError::StarMassTooLowToSupportLife);
@@ -212,16 +221,5 @@ impl Star {
       return Err(AstronomyError::StarTooYoungToSupportLife);
     }
     Ok(())
-  }
-
-  /// Indicate whether this star is capable of supporting conventional life.
-  pub fn is_habitable(&self) -> bool {
-    self.check_habitable().is_ok()
-  }
-}
-
-impl Default for Star {
-  fn default() -> Self {
-    StarBuilder::default().build().unwrap()
   }
 }

@@ -1,6 +1,7 @@
 use crate::close_binary_star::CloseBinaryStar;
 use crate::error::AstronomyError;
 use crate::star::Star;
+use crate::traits::prelude::*;
 use crate::types::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -80,18 +81,14 @@ impl HostStar {
       HostStar::CloseBinaryStar(close_binary_star) => Ok(close_binary_star.get_luminosity()?),
     }
   }
+}
 
-  /// Indicate whether this star is capable of supporting conventional life.
-  pub fn check_habitable(&self) -> Result<(), AstronomyError> {
+impl MaybeHabitable for HostStar {
+  fn check_habitability(&self) -> Result<(), AstronomyError> {
     match &self {
-      HostStar::Star(star) => star.check_habitable()?,
-      HostStar::CloseBinaryStar(close_binary_star) => close_binary_star.check_habitable()?,
+      HostStar::Star(star) => star.check_habitability()?,
+      HostStar::CloseBinaryStar(close_binary_star) => close_binary_star.check_habitability()?,
     }
     Ok(())
-  }
-
-  /// Indicate whether this star is capable of supporting conventional life.
-  pub fn is_habitable(&self) -> bool {
-    self.check_habitable().is_ok()
   }
 }

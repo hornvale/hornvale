@@ -1,5 +1,6 @@
 use crate::error::AstronomyError;
 use crate::star::Star;
+use crate::traits::prelude::*;
 use crate::types::prelude::*;
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
@@ -118,18 +119,20 @@ impl CloseBinaryStar {
   pub fn get_current_age(&self) -> Result<TimeInGigayears, AstronomyError> {
     Ok(self.primary.current_age)
   }
+}
 
+impl MaybeHabitable for CloseBinaryStar {
   /// Indicate whether this CloseBinaryStar is capable of supporting conventional life.
-  pub fn check_habitable(&self) -> Result<(), AstronomyError> {
+  fn check_habitability(&self) -> Result<(), AstronomyError> {
     if self.get_habitable_zone()?.1 <= self.get_forbidden_zone()?.1 {
       return Err(AstronomyError::StarHabitableZoneContainedWithinForbiddenZone);
     }
     if self.get_habitable_zone()?.1 <= self.get_danger_zone()? {
       return Err(AstronomyError::StarHabitableZoneContainedWithinDangerZone);
     }
-    self.primary.check_habitable()?;
+    self.primary.check_habitability()?;
     // Secondary stars can be very low mass or young but still habitable.
-    match self.secondary.check_habitable() {
+    match self.secondary.check_habitability() {
       Err(AstronomyError::StarMassTooLowToSupportLife) => {},
       Ok(_) => {},
       Err(error) => return Err(error),

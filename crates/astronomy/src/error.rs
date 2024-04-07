@@ -4,6 +4,9 @@ use thiserror::Error as ThisError;
 /// Errors related to astronomy.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, ThisError, Hash, PartialEq, Serialize)]
 pub enum AstronomyError {
+  /// At least at present, moons are not habitable.
+  #[error("not habitable because it is a moon")]
+  MoonsAreNotHabitable,
   /// Pluto, also Minnesota.
   #[error("not habitable because it is too cold")]
   PlanetTooColdToSupportConventionalLife,

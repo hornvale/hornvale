@@ -20,6 +20,8 @@ pub mod satellite_system;
 pub mod star;
 /// A terrestrial planet type.
 pub mod terrestrial_planet;
+/// Traits for astronomy.
+pub mod traits;
 /// Types of interest for astronomy.
 pub mod types;
 
@@ -36,5 +38,6 @@ pub mod prelude {
   pub use super::satellite_system::SatelliteSystem;
   pub use super::star::Star;
   pub use super::terrestrial_planet::TerrestrialPlanet;
+  pub use super::traits::prelude::*;
   pub use super::types::prelude::*;
 }

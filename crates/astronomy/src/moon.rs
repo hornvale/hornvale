@@ -1,4 +1,5 @@
 use crate::error::AstronomyError;
+use crate::traits::prelude::*;
 use crate::types::prelude::*;
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
@@ -38,6 +39,12 @@ impl Moon {
   /// Get the escape velocity of the moon in VLuna.
   pub fn get_escape_velocity(&self) -> Result<EscapeVelocityOfLuna, AstronomyError> {
     Ok(EscapeVelocityOfLuna((self.mass.0 / self.get_radius()?.0).sqrt()))
+  }
+}
+
+impl MaybeHabitable for Moon {
+  fn check_habitability(&self) -> Result<(), AstronomyError> {
+    Err(AstronomyError::MoonsAreNotHabitable)
   }
 }
 

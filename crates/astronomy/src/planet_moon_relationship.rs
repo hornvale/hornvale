@@ -2,6 +2,7 @@ use super::moon::Moon;
 use super::planet::Planet;
 use crate::constants::prelude::*;
 use crate::error::AstronomyError;
+use crate::traits::prelude::*;
 use crate::types::prelude::*;
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
@@ -64,6 +65,12 @@ impl PlanetMoonRelationship {
     let numerator = 2_230_000.0 * moon_mass.0 * moon_radius.0 * 0.027264;
     let denominator = (self.semi_major_axis.0 / KM_PER_EARTH_DIAMETER.0).powf(3.0);
     Ok(LengthInMeters(numerator / denominator))
+  }
+}
+
+impl MaybeHabitable for PlanetMoonRelationship {
+  fn check_habitability(&self) -> Result<(), AstronomyError> {
+    self.planet.check_habitability()
   }
 }
 

@@ -1,4 +1,6 @@
 use super::terrestrial_planet::TerrestrialPlanet;
+use crate::error::AstronomyError;
+use crate::traits::prelude::*;
 use crate::types::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -20,5 +22,13 @@ impl Planet {
 impl Default for Planet {
   fn default() -> Self {
     Planet::TerrestrialPlanet(TerrestrialPlanet::default())
+  }
+}
+
+impl MaybeHabitable for Planet {
+  fn check_habitability(&self) -> Result<(), AstronomyError> {
+    match self {
+      Planet::TerrestrialPlanet(terrestrial_planet) => terrestrial_planet.check_habitability(),
+    }
   }
 }

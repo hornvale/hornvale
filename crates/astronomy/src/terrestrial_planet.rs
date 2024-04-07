@@ -1,5 +1,6 @@
 use crate::constants::prelude::*;
 use crate::error::AstronomyError;
+use crate::traits::prelude::*;
 use crate::types::prelude::*;
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
@@ -81,30 +82,24 @@ impl TerrestrialPlanet {
   pub fn get_southern_tropic_zone(&self) -> Latitude {
     self.axial_tilt.get_southern_tropic_zone()
   }
-
-  /// Indicate whether this planet is capable of supporting conventional life.
-  pub fn check_habitable(&self) -> Result<(), AstronomyError> {
-    {
-      let gravity = self.get_gravity();
-      if gravity <= MINIMUM_HABITABLE_PLANET_GRAVITY {
-        return Err(AstronomyError::PlanetGravityTooLowToSupportConventionalLife);
-      }
-      if gravity >= MAXIMUM_HABITABLE_PLANET_GRAVITY {
-        return Err(AstronomyError::PlanetGravityTooHighToSupportConventionalLife);
-      }
-      Ok(())
-    }
-  }
-
-  /// Indicate whether this planet is capable of supporting conventional life.
-  pub fn is_habitable(&self) -> bool {
-    self.check_habitable().is_ok()
-  }
 }
 
 impl Default for TerrestrialPlanet {
   fn default() -> Self {
     TerrestrialPlanetBuilder::default().build().unwrap()
+  }
+}
+
+impl MaybeHabitable for TerrestrialPlanet {
+  fn check_habitability(&self) -> Result<(), AstronomyError> {
+    let gravity = self.get_gravity();
+    if gravity <= MINIMUM_HABITABLE_PLANET_GRAVITY {
+      return Err(AstronomyError::PlanetGravityTooLowToSupportConventionalLife);
+    }
+    if gravity >= MAXIMUM_HABITABLE_PLANET_GRAVITY {
+      return Err(AstronomyError::PlanetGravityTooHighToSupportConventionalLife);
+    }
+    Ok(())
   }
 }
 
