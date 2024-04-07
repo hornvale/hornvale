@@ -190,4 +190,38 @@ mod test {
     assert_approx_eq!(planet.get_density(), DensityOfEarth(0.9947683215465892), 0.01);
     Ok(())
   }
+
+  #[test]
+  fn test_get_radius() -> Result<(), TerrestrialPlanetBuilderError> {
+    init();
+    let planet = TerrestrialPlanetBuilder::default().mass(MassOfEarth(1.0)).build()?;
+    assert_approx_eq!(planet.get_radius(), RadiusOfEarth(1.0), 0.01);
+    Ok(())
+  }
+
+  #[test]
+  fn test_get_escape_velocity() -> Result<(), TerrestrialPlanetBuilderError> {
+    init();
+    let planet = TerrestrialPlanetBuilder::default().mass(MassOfEarth(1.0)).build()?;
+    assert_approx_eq!(planet.get_escape_velocity(), EscapeVelocityOfEarth(1.0), 0.01);
+    Ok(())
+  }
+
+  #[test]
+  fn test_get_gravity() -> Result<(), TerrestrialPlanetBuilderError> {
+    init();
+    let planet = TerrestrialPlanetBuilder::default().mass(MassOfEarth(1.0)).build()?;
+    assert_approx_eq!(planet.get_gravity(), GravityOfEarth(1.0), 0.01);
+    Ok(())
+  }
+
+  #[test]
+  fn test_get_rotation_direction() -> Result<(), TerrestrialPlanetBuilderError> {
+    init();
+    let planet = TerrestrialPlanetBuilder::default()
+      .axial_tilt(AxialTilt(23.5))
+      .build()?;
+    assert_eq!(planet.get_rotation_direction(), RotationDirection::Prograde);
+    Ok(())
+  }
 }
