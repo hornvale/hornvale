@@ -34,8 +34,14 @@ mod tests {
       },
     ];
 
+    impl MaybeHabitable for Test {
+      fn check_habitability(&self) -> Result<(), AstronomyError> {
+        self.input
+      }
+    }
+
     for test in tests {
-      let result = test.input.is_ok();
+      let result = test.check_habitability().is_ok();
       assert_eq!(result, test.expected);
     }
   }
