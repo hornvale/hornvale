@@ -1,6 +1,7 @@
 use super::moon::Moon;
 use super::planet::Planet;
 use crate::constants::prelude::*;
+use crate::errors::prelude::*;
 use crate::types::prelude::*;
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
@@ -27,13 +28,13 @@ pub struct PlanetMoonRelationship {
 
 impl PlanetMoonRelationship {
   /// Get the periapsis of the moon's orbit.
-  pub fn periapsis(&self) -> LengthInKm {
-    LengthInKm((1.0 - self.orbital_eccentricity) * self.semi_major_axis.0)
+  pub fn get_periapsis(&self) -> Result<LengthInKm, PlanetMoonRelationshipError> {
+    Ok(LengthInKm((1.0 - self.orbital_eccentricity) * self.semi_major_axis.0))
   }
 
   /// Get the apoapsis of the moon's orbit.
-  pub fn apoapsis(&self) -> LengthInKm {
-    LengthInKm((1.0 + self.orbital_eccentricity) * self.semi_major_axis.0)
+  pub fn get_apoapsis(&self) -> Result<LengthInKm, PlanetMoonRelationshipError> {
+    Ok(LengthInKm((1.0 + self.orbital_eccentricity) * self.semi_major_axis.0))
   }
 
   /// Calculate the magnitude of the lunar tide.
@@ -43,12 +44,12 @@ impl PlanetMoonRelationship {
   ///
   /// We then multiply this by the radius of the planet, and divide by the cube of the
   /// semi-major axis of the moon's orbit.
-  pub fn get_lunar_tide(&self) -> LengthInMeters {
+  pub fn get_lunar_tide(&self) -> Result<LengthInMeters, PlanetMoonRelationshipError> {
     let corrected_lunar_mass = 2_230_000.0 * self.moon.mass.0 * LUNA_GRAVITATIONAL_PARAMETER_SHARE;
     let planet_radius = self.planet.get_radius();
-    LengthInMeters(
-      (corrected_lunar_mass * planet_radius.0) / (self.semi_major_axis.0 / KM_PER_EARTH_DIAMETER.0).powf(3.0),
-    )
+    let numerator = corrected_lunar_mass * planet_radius.0;
+    let denominator = (self.semi_major_axis.0 / KM_PER_EARTH_DIAMETER.0).powf(3.0);
+    Ok(LengthInMeters(numerator / denominator))
   }
 
   /// Calculate the magnitude of the planetary tide.
@@ -57,12 +58,12 @@ impl PlanetMoonRelationship {
   /// `semi_major_axis` - semi-major axis of the moon's orbit, in KM.
   ///
   /// Returns a magnitude in meters.
-  pub fn get_planetary_tide(&self) -> LengthInMeters {
+  pub fn get_planetary_tide(&self) -> Result<LengthInMeters, PlanetMoonRelationshipError> {
     let moon_mass = self.moon.mass;
-    let moon_radius = self.moon.get_radius();
+    let moon_radius = self.moon.get_radius()?;
     let numerator = 2_230_000.0 * moon_mass.0 * moon_radius.0 * 0.027264;
     let denominator = (self.semi_major_axis.0 / KM_PER_EARTH_DIAMETER.0).powf(3.0);
-    LengthInMeters(numerator / denominator)
+    Ok(LengthInMeters(numerator / denominator))
   }
 }
 
@@ -74,24 +75,30 @@ pub mod tests {
   #[test]
   fn test_periapsis() {
     let relationship = PlanetMoonRelationshipBuilder::default().build().unwrap();
-    assert_approx_eq!(relationship.periapsis(), LengthInKm(364800.0));
+    assert_approx_eq!(relationship.get_periapsis().unwrap(), LengthInKm(364800.0));
   }
 
   #[test]
   fn test_apoapsis() {
     let relationship = PlanetMoonRelationshipBuilder::default().build().unwrap();
-    assert_approx_eq!(relationship.apoapsis(), LengthInKm(403200.0));
+    assert_approx_eq!(relationship.get_apoapsis().unwrap(), LengthInKm(403200.0));
   }
 
   #[test]
   fn test_get_lunar_tide() {
     let relationship = PlanetMoonRelationshipBuilder::default().build().unwrap();
-    assert_approx_eq!(relationship.get_lunar_tide(), LengthInMeters(0.998634134467536));
+    assert_approx_eq!(
+      relationship.get_lunar_tide().unwrap(),
+      LengthInMeters(0.998634134467536)
+    );
   }
 
   #[test]
   fn test_get_planetary_tide() {
     let relationship = PlanetMoonRelationshipBuilder::default().build().unwrap();
-    assert_approx_eq!(relationship.get_planetary_tide(), LengthInMeters(2.2213324719545158));
+    assert_approx_eq!(
+      relationship.get_planetary_tide().unwrap(),
+      LengthInMeters(2.2213324719545158)
+    );
   }
 }

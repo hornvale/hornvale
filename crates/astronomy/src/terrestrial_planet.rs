@@ -86,10 +86,10 @@ impl TerrestrialPlanet {
   pub fn check_habitable(&self) -> Result<(), HabitabilityError> {
     {
       let gravity = self.get_gravity();
-      if gravity <= MINIMUM_HABITABLE_GRAVITY {
+      if gravity <= MINIMUM_HABITABLE_PLANET_GRAVITY {
         return Err(HabitabilityError::GravityTooLowToSupportConventionalLife);
       }
-      if gravity >= MAXIMUM_HABITABLE_GRAVITY {
+      if gravity >= MAXIMUM_HABITABLE_PLANET_GRAVITY {
         return Err(HabitabilityError::GravityTooHighToSupportConventionalLife);
       }
       Ok(())

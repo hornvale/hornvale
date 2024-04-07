@@ -166,23 +166,23 @@ pub const MAXIMUM_HABITABLE_TERRESTRIAL_PLANET_MASS: MassOfEarth = MassOfEarth(1
 
 /// Minimum habitable rotational period, in TimeInEarthDays.
 /// Shorter than ~6 hours gets rotationally intense.
-pub const MINIMUM_HABITABLE_ROTATIONAL_PERIOD: TimeInEarthDays = TimeInEarthDays(0.25);
+pub const MINIMUM_HABITABLE_PLANET_ROTATIONAL_PERIOD: TimeInEarthDays = TimeInEarthDays(0.25);
 
 /// Maximum habitable rotational period, in TimeInEarthDays.
 /// Longer than ~48 hours gets rotationally weird.
-pub const MAXIMUM_HABITABLE_ROTATIONAL_PERIOD: TimeInEarthDays = TimeInEarthDays(2.0);
+pub const MAXIMUM_HABITABLE_PLANET_ROTATIONAL_PERIOD: TimeInEarthDays = TimeInEarthDays(2.0);
 
 /// Minimum orbitable eccentricity (unitless).
-pub const MINIMUM_ORBITAL_ECCENTRICITY: f64 = 0.0;
+pub const MINIMUM_PLANET_ORBITAL_ECCENTRICITY: f64 = 0.0;
 
 /// Maximum orbitable eccentricity (unitless).
-pub const MAXIMUM_ORBITAL_ECCENTRICITY: f64 = 0.10;
+pub const MAXIMUM_PLANET_ORBITAL_ECCENTRICITY: f64 = 0.10;
 
 /// Maximum habitable orbitable eccentricity (unitless).
-pub const MINIMUM_HABITABLE_ORBITAL_ECCENTRICITY: f64 = MINIMUM_ORBITAL_ECCENTRICITY;
+pub const MINIMUM_HABITABLE_PLANET_ORBITAL_ECCENTRICITY: f64 = MINIMUM_PLANET_ORBITAL_ECCENTRICITY;
 
 /// Maximum habitable orbitable eccentricity (unitless).
-pub const MAXIMUM_HABITABLE_ORBITAL_ECCENTRICITY: f64 = 0.02;
+pub const MAXIMUM_HABITABLE_PLANET_ORBITAL_ECCENTRICITY: f64 = 0.02;
 
 /// Minimum Bond albedo (unitless).
 pub const MINIMUM_BOND_ALBEDO: f64 = 0.01;
@@ -200,19 +200,137 @@ pub const MAXIMUM_HABITABLE_BOND_ALBEDO: f64 = 0.50;
 pub const STEFAN_BOLTZMANN_CONSTANT: f64 = 0.00005670374419;
 
 /// Too damned cold.
-pub const MINIMUM_HABITABLE_TEMPERATURE: TemperatureInKelvin = TemperatureInKelvin(273.0);
+pub const MINIMUM_HABITABLE_PLANET_TEMPERATURE: TemperatureInKelvin = TemperatureInKelvin(273.0);
 
 /// Too damned hot.
-pub const MAXIMUM_HABITABLE_TEMPERATURE: TemperatureInKelvin = TemperatureInKelvin(323.0);
+pub const MAXIMUM_HABITABLE_PLANET_TEMPERATURE: TemperatureInKelvin = TemperatureInKelvin(323.0);
 
 /// Too damned floaty.
-pub const MINIMUM_HABITABLE_GRAVITY: GravityOfEarth = GravityOfEarth(0.5);
+pub const MINIMUM_HABITABLE_PLANET_GRAVITY: GravityOfEarth = GravityOfEarth(0.5);
 
 /// Too damned hard to get out of bed.
-pub const MAXIMUM_HABITABLE_GRAVITY: GravityOfEarth = GravityOfEarth(1.5);
+pub const MAXIMUM_HABITABLE_PLANET_GRAVITY: GravityOfEarth = GravityOfEarth(1.5);
 
 /// The strength of the greenhouse effect.
 pub const GREENHOUSE_EFFECT: f64 = 0.5841;
+
+/// The minimum separation of binary stars, in AU.
+pub const MINIMUM_CLOSE_BINARY_STAR_SEPARATION: LengthInAu = LengthInAu(0.04);
+
+/// The minimum average separation of "close" binary stars, in AU.
+pub const MINIMUM_AVERAGE_CLOSE_BINARY_STAR_SEPARATION: LengthInAu = LengthInAu(0.1);
+
+/// The maximum average separation of "close" binary stars, in AU.
+pub const MAXIMUM_AVERAGE_CLOSE_BINARY_STAR_SEPARATION: LengthInAu = LengthInAu(6.0);
+
+/// The minimum orbital eccentricity of "close" binary stars (unitless).
+pub const MINIMUM_CLOSE_BINARY_STAR_ORBITAL_ECCENTRICITY: f64 = 0.1;
+
+/// The maximum orbital eccentricity of "close" binarsy stars (unitless).
+pub const MAXIMUM_CLOSE_BINARY_STAR_ORBITAL_ECCENTRICITY: f64 = 0.7;
+
+/// The minimum combined mass of a binary system.
+/// Set it to 4 * minimum main-sequence star mass.
+/// We don't want it to be too small.
+pub const MINIMUM_CLOSE_BINARY_STAR_COMBINED_MASS: MassOfSol = MassOfSol(4.0 * MINIMUM_STAR_MASS.0);
+
+/// The maximum combined mass of a binary system.
+/// Set it to maximum main-sequence star mass.
+/// We don't need binary supergiants.
+pub const MAXIMUM_CLOSE_BINARY_STAR_COMBINED_MASS: MassOfSol = MAXIMUM_STAR_MASS;
+
+/// The minimum individual mass of a binary system member.
+/// Set it to 1 * minimum main-sequence star mass.
+pub const MINIMUM_CLOSE_BINARY_STAR_INDIVIDUAL_MASS: MassOfSol = MINIMUM_STAR_MASS;
+
+/// The maximum individual mass of a binary system member.
+/// Set it to 1 * maximum main-sequence star mass.
+pub const MAXIMUM_CLOSE_BINARY_STAR_INDIVIDUAL_MASS: MassOfSol = MAXIMUM_STAR_MASS;
+
+/// Assume a star has to be at least this old to have interesting life.
+///
+/// I'm assuming that life could get started at least a little sooner than on
+/// Earth, but figuring it'd take about the same amount of time to get to the
+/// interesting parts.
+///
+/// Measured in Gyr, or billions of years.
+pub const MINIMUM_CLOSE_BINARY_STAR_HABITABLE_AGE: TimeInGigayears = TimeInGigayears(4.0);
+
+/// The minimum habitable average separation of "close" binary stars, in AU.
+pub const MINIMUM_CLOSE_BINARY_STAR_HABITABLE_AVERAGE_SEPARATION: LengthInAu = LengthInAu(0.1);
+
+/// The maximum habitable average separation of "close" habitable binary stars,
+/// in AU.
+/// I dropped this down from ~6AU because this just was not happening.
+pub const MAXIMUM_HABITABLE_CLOSE_BINARY_STAR_AVERAGE_SEPARATION: LengthInAu = LengthInAu(0.4);
+
+/// The minimum orbital eccentricity of "close" binary stars (unitless).
+pub const MINIMUM_HABITABLE_CLOSE_BINARY_STAR_ORBITAL_ECCENTRICITY: f64 = 0.2;
+
+/// The maximum orbital eccentricity of "close" binary stars (unitless).
+pub const MAXIMUM_HABITABLE_CLOSE_BINARY_STAR_ORBITAL_ECCENTRICITY: f64 = 0.6;
+
+/// Below this is probably too low to support conventional life.
+/// Measured in Msol, or solar mass equivalents.
+pub const MINIMUM_HABITABLE_CLOSE_BINARY_STAR_COMBINED_MASS: MassOfSol = MassOfSol(1.0);
+
+/// Above this is probably too high to support conventional life.
+/// Measured in Msol, or solar mass equivalents.
+pub const MAXIMUM_HABITABLE_CLOSE_BINARY_STAR_COMBINED_MASS: MassOfSol = MassOfSol(2.0);
+
+/// Below this is probably too low to support conventional life.
+/// Measured in Msol, or solar mass equivalents.
+pub const MINIMUM_HABITABLE_CLOSE_BINARY_STAR_INDIVIDUAL_MASS: MassOfSol = MassOfSol(0.1);
+
+/// Above this is probably too high to support conventional life.
+/// Measured in Msol, or solar mass equivalents.
+pub const MAXIMUM_HABITABLE_CLOSE_BINARY_STAR_INDIVIDUAL_MASS: MassOfSol = MassOfSol(1.25);
+
+/// Below this is too low for a main-sequence star, probably.
+/// Measured in Msol, or solar mass equivalents.
+pub const MINIMUM_STAR_MASS: MassOfSol = MassOfSol(0.075);
+
+/// Above this is too high for a main-sequence star, probably.
+/// Measured in Msol, or solar mass equivalents.
+pub const MAXIMUM_STAR_MASS: MassOfSol = MassOfSol(120.0);
+
+/// Below this is probably too low to support conventional life.
+/// Measured in Msol, or solar mass equivalents.
+pub const MINIMUM_HABITABLE_STAR_MASS: MassOfSol = MassOfSol(0.55);
+
+/// Above this is probably too high to support conventional life.
+/// Measured in Msol, or solar mass equivalents.
+pub const MAXIMUM_HABITABLE_STAR_MASS: MassOfSol = MassOfSol(1.25);
+
+/// Assume a star has to be at least this old to have interesting life.
+///
+/// I'm assuming that life could get started at least a little sooner than on
+/// Earth, but figuring it'd take about the same amount of time to get to the
+/// interesting parts.
+///
+/// Measured in Gyr, or billions of years.
+pub const MINIMUM_HABITABLE_STAR_AGE: TimeInGigayears = TimeInGigayears(4.0);
+
+/// The probability of generating an O-class star.
+pub const CLASS_O_WEIGHT: f64 = 0.00003;
+
+/// The probability of generating a B-class star.
+pub const CLASS_B_WEIGHT: f64 = 0.13;
+
+/// The probability of generating an A-class star.
+pub const CLASS_A_WEIGHT: f64 = 0.6;
+
+/// The probability of generating an F-class star.
+pub const CLASS_F_WEIGHT: f64 = 3.0;
+
+/// The probability of generating a G-class star.
+pub const CLASS_G_WEIGHT: f64 = 7.6;
+
+/// The probability of generating a K-class star.
+pub const CLASS_K_WEIGHT: f64 = 12.1;
+
+/// The probability of generating an M-class star.
+pub const CLASS_M_WEIGHT: f64 = 76.45;
 
 /// Prelude.
 pub mod prelude {

@@ -1,3 +1,4 @@
+use crate::errors::prelude::*;
 use crate::types::prelude::*;
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
@@ -25,18 +26,18 @@ pub struct Moon {
 
 impl Moon {
   /// Get the radius of the moon in Lunar radii.
-  pub fn get_radius(&self) -> RadiusOfLuna {
-    RadiusOfLuna((self.mass.0 / self.density.0).powf(1.0 / 3.0))
+  pub fn get_radius(&self) -> Result<RadiusOfLuna, MoonError> {
+    Ok(RadiusOfLuna((self.mass.0 / self.density.0).powf(1.0 / 3.0)))
   }
 
   /// Get the gravity of the moon in GLuna.
-  pub fn get_gravity(&self) -> GravityOfLuna {
-    GravityOfLuna(self.mass.0 / self.get_radius().0.powf(2.0))
+  pub fn get_gravity(&self) -> Result<GravityOfLuna, MoonError> {
+    Ok(GravityOfLuna(self.mass.0 / self.get_radius()?.0.powf(2.0)))
   }
 
   /// Get the escape velocity of the moon in VLuna.
-  pub fn get_escape_velocity(&self) -> EscapeVelocityOfLuna {
-    EscapeVelocityOfLuna((self.mass.0 / self.get_radius().0).sqrt())
+  pub fn get_escape_velocity(&self) -> Result<EscapeVelocityOfLuna, MoonError> {
+    Ok(EscapeVelocityOfLuna((self.mass.0 / self.get_radius()?.0).sqrt()))
   }
 }
 
@@ -55,16 +56,28 @@ mod tests {
   #[test]
   fn test_get_radius() -> AnyResult<()> {
     assert_approx_eq!(
-      MoonBuilder::default().mass(MassOfLuna(1.0)).build()?.get_radius(),
+      MoonBuilder::default()
+        .mass(MassOfLuna(1.0))
+        .build()?
+        .get_radius()
+        .unwrap(),
       RadiusOfLuna(1.0)
     );
     assert_approx_eq!(
-      MoonBuilder::default().mass(MassOfLuna(2.0)).build()?.get_radius(),
+      MoonBuilder::default()
+        .mass(MassOfLuna(2.0))
+        .build()?
+        .get_radius()
+        .unwrap(),
       RadiusOfLuna(1.26),
       1e-4
     );
     assert_approx_eq!(
-      MoonBuilder::default().mass(MassOfLuna(3.0)).build()?.get_radius(),
+      MoonBuilder::default()
+        .mass(MassOfLuna(3.0))
+        .build()?
+        .get_radius()
+        .unwrap(),
       RadiusOfLuna(1.44),
       1e-2
     );
@@ -74,16 +87,28 @@ mod tests {
   #[test]
   fn test_get_gravity() -> AnyResult<()> {
     assert_approx_eq!(
-      MoonBuilder::default().mass(MassOfLuna(1.0)).build()?.get_gravity(),
+      MoonBuilder::default()
+        .mass(MassOfLuna(1.0))
+        .build()?
+        .get_gravity()
+        .unwrap(),
       GravityOfLuna(1.0)
     );
     assert_approx_eq!(
-      MoonBuilder::default().mass(MassOfLuna(2.0)).build()?.get_gravity(),
+      MoonBuilder::default()
+        .mass(MassOfLuna(2.0))
+        .build()?
+        .get_gravity()
+        .unwrap(),
       GravityOfLuna(1.26),
       1e-4
     );
     assert_approx_eq!(
-      MoonBuilder::default().mass(MassOfLuna(3.0)).build()?.get_gravity(),
+      MoonBuilder::default()
+        .mass(MassOfLuna(3.0))
+        .build()?
+        .get_gravity()
+        .unwrap(),
       GravityOfLuna(1.44),
       1e-2
     );
@@ -96,14 +121,16 @@ mod tests {
       MoonBuilder::default()
         .mass(MassOfLuna(1.0))
         .build()?
-        .get_escape_velocity(),
+        .get_escape_velocity()
+        .unwrap(),
       EscapeVelocityOfLuna(1.0)
     );
     assert_approx_eq!(
       MoonBuilder::default()
         .mass(MassOfLuna(2.0))
         .build()?
-        .get_escape_velocity(),
+        .get_escape_velocity()
+        .unwrap(),
       EscapeVelocityOfLuna(1.26),
       1e-4
     );
@@ -111,7 +138,8 @@ mod tests {
       MoonBuilder::default()
         .mass(MassOfLuna(3.0))
         .build()?
-        .get_escape_velocity(),
+        .get_escape_velocity()
+        .unwrap(),
       EscapeVelocityOfLuna(1.44),
       1e-2
     );
