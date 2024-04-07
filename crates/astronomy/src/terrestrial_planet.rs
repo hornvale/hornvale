@@ -121,4 +121,73 @@ mod test {
     assert_approx_eq!(planet.get_radius(), RadiusOfEarth(1.0), 0.01);
     Ok(())
   }
+
+  #[test]
+  fn test_from_core_mass_fraction() -> Result<(), TerrestrialPlanetBuilderError> {
+    init();
+    let planet = TerrestrialPlanetBuilder::default().core_mass_fraction(0.5).build()?;
+    assert_approx_eq!(planet.mass.0, 1.0);
+    assert_approx_eq!(planet.core_mass_fraction, 0.5);
+    assert_approx_eq!(planet.get_density(), DensityOfEarth(1.112802416227886), 0.01);
+    assert_approx_eq!(
+      planet.get_escape_velocity(),
+      EscapeVelocityOfEarth(1.017973197118575),
+      0.01
+    );
+    assert_approx_eq!(planet.get_gravity(), GravityOfEarth(1.07385433165991), 0.01);
+    assert_approx_eq!(planet.get_radius(), RadiusOfEarth(0.9650000000000001), 0.01);
+    Ok(())
+  }
+
+  #[test]
+  fn test_from_axial_tilt() -> Result<(), TerrestrialPlanetBuilderError> {
+    init();
+    let planet = TerrestrialPlanetBuilder::default()
+      .axial_tilt(AxialTilt(45.0))
+      .build()?;
+    assert_approx_eq!(planet.mass.0, 1.0);
+    assert_approx_eq!(planet.core_mass_fraction, 0.325);
+    assert_approx_eq!(planet.axial_tilt.0, 45.0);
+    assert_approx_eq!(planet.get_density(), DensityOfEarth(0.9947683215465892), 0.01);
+    assert_approx_eq!(planet.get_escape_velocity(), EscapeVelocityOfEarth(1.0), 0.01);
+    assert_approx_eq!(planet.get_gravity(), GravityOfEarth(1.0), 0.01);
+    assert_approx_eq!(planet.get_radius(), RadiusOfEarth(1.0), 0.01);
+    Ok(())
+  }
+
+  #[test]
+  fn test_from_bond_albedo() -> Result<(), TerrestrialPlanetBuilderError> {
+    init();
+    let planet = TerrestrialPlanetBuilder::default().bond_albedo(0.5).build()?;
+    assert_approx_eq!(planet.mass.0, 1.0);
+    assert_approx_eq!(planet.core_mass_fraction, 0.325);
+    assert_approx_eq!(planet.bond_albedo, 0.5);
+    assert_approx_eq!(planet.get_density(), DensityOfEarth(0.9947683215465892), 0.01);
+    assert_approx_eq!(planet.get_escape_velocity(), EscapeVelocityOfEarth(1.0), 0.01);
+    assert_approx_eq!(planet.get_gravity(), GravityOfEarth(1.0), 0.01);
+    assert_approx_eq!(planet.get_radius(), RadiusOfEarth(1.0), 0.01);
+    Ok(())
+  }
+
+  #[test]
+  fn test_from_greenhouse_effect() -> Result<(), TerrestrialPlanetBuilderError> {
+    init();
+    let planet = TerrestrialPlanetBuilder::default().greenhouse_effect(0.5).build()?;
+    assert_approx_eq!(planet.mass.0, 1.0);
+    assert_approx_eq!(planet.core_mass_fraction, 0.325);
+    assert_approx_eq!(planet.greenhouse_effect, 0.5);
+    assert_approx_eq!(planet.get_density(), DensityOfEarth(0.9947683215465892), 0.01);
+    assert_approx_eq!(planet.get_escape_velocity(), EscapeVelocityOfEarth(1.0), 0.01);
+    assert_approx_eq!(planet.get_gravity(), GravityOfEarth(1.0), 0.01);
+    assert_approx_eq!(planet.get_radius(), RadiusOfEarth(1.0), 0.01);
+    Ok(())
+  }
+
+  #[test]
+  fn test_get_density() -> Result<(), TerrestrialPlanetBuilderError> {
+    init();
+    let planet = TerrestrialPlanetBuilder::default().mass(MassOfEarth(1.0)).build()?;
+    assert_approx_eq!(planet.get_density(), DensityOfEarth(0.9947683215465892), 0.01);
+    Ok(())
+  }
 }
