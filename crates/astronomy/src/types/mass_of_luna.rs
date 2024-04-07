@@ -54,4 +54,25 @@ mod test {
     let actual: MassOfEarth = MassOfLuna(1.0).into();
     assert_approx_eq!(actual.0, 1.0 / LUNA_MASS_PER_EARTH_MASS.0, 0.01);
   }
+
+  #[test]
+  fn test_m_luna_to_m_kg() {
+    init();
+    let actual: MassInKg = MassOfLuna(1.0).into();
+    assert_approx_eq!(actual.0, KG_PER_LUNAR_MASS.0, 0.01);
+  }
+
+  #[test]
+  fn test_m_luna_abs() {
+    init();
+    let actual: f64 = MassOfLuna(-1.0).abs();
+    assert_approx_eq!(actual, 1.0, 0.01);
+  }
+
+  #[test]
+  fn test_m_luna_default() {
+    init();
+    let actual: MassOfLuna = Default::default();
+    assert_approx_eq!(actual.0, 0.0, 0.01);
+  }
 }
