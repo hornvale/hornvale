@@ -105,4 +105,10 @@ mod test {
       LengthInMeters(2.2213324719545158)
     );
   }
+
+  #[test]
+  fn test_check_habitability() {
+    let relationship = PlanetMoonRelationshipBuilder::default().build().unwrap();
+    assert_eq!(relationship.check_habitability(), Ok(()));
+  }
 }

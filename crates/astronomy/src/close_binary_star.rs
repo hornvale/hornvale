@@ -16,12 +16,16 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct CloseBinaryStar {
   /// The primary star is the one with greater mass.
+  #[builder(default = "Star::default()")]
   pub primary: Star,
   /// The secondary star has less mass.
+  #[builder(default = "Star::default()")]
   pub secondary: Star,
   /// Average separation of the binary components, in AU.
+  #[builder(default = "LengthInAu(1.0)")]
   pub average_separation: LengthInAu,
   /// Orbital eccentricity of the components (unitless).
+  #[builder(default = "0.0")]
   pub orbital_eccentricity: f64,
 }
 
@@ -138,5 +142,241 @@ impl MaybeHabitable for CloseBinaryStar {
       Err(error) => return Err(error),
     }
     Ok(())
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::star::StarBuilder;
+  use hornvale_test_utilities::prelude::*;
+
+  #[test]
+  fn test_get_average_distances_from_barycenter() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .build()
+      .unwrap();
+    let result = binary.get_average_distances_from_barycenter().unwrap();
+    assert_approx_eq!(result.0, LengthInAu(0.3333333333333333));
+    assert_approx_eq!(result.1, LengthInAu(0.6666666666666666));
+  }
+
+  #[test]
+  fn test_get_minimum_distances_from_barycenter() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .orbital_eccentricity(0.1)
+      .build()
+      .unwrap();
+    let result = binary.get_minimum_distances_from_barycenter().unwrap();
+    assert_approx_eq!(result.0, LengthInAu(0.3));
+    assert_approx_eq!(result.1, LengthInAu(0.6));
+  }
+
+  #[test]
+  fn test_get_maximum_distances_from_barycenter() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .orbital_eccentricity(0.1)
+      .build()
+      .unwrap();
+    let result = binary.get_maximum_distances_from_barycenter().unwrap();
+    assert_approx_eq!(result.0, LengthInAu(0.36666666666666664));
+    assert_approx_eq!(result.1, LengthInAu(0.7333333333333333));
+  }
+
+  #[test]
+  fn test_get_minimum_separation() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .orbital_eccentricity(0.1)
+      .build()
+      .unwrap();
+    let result = binary.get_minimum_separation().unwrap();
+    assert_approx_eq!(result, LengthInAu(0.9));
+  }
+
+  #[test]
+  fn test_get_maximum_separation() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .orbital_eccentricity(0.1)
+      .build()
+      .unwrap();
+    let result = binary.get_maximum_separation().unwrap();
+    assert_approx_eq!(result, LengthInAu(1.1));
+  }
+
+  #[test]
+  fn test_get_habitable_zone() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .build()
+      .unwrap();
+    let result = binary.get_habitable_zone().unwrap();
+    assert_approx_eq!(result.0, LengthInAu(0.9828067413836206));
+    assert_approx_eq!(result.1, LengthInAu(1.4158802848871352));
+  }
+
+  #[test]
+  fn test_get_frost_line() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .build()
+      .unwrap();
+    let result = binary.get_frost_line().unwrap();
+    assert_approx_eq!(result, LengthInAu(4.999265571061413));
+  }
+
+  #[test]
+  fn test_get_forbidden_zone() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .build()
+      .unwrap();
+    let result = binary.get_forbidden_zone().unwrap();
+    assert_approx_eq!(result.0, LengthInAu(0.3333333333333333));
+    assert_approx_eq!(result.1, LengthInAu(3.0));
+  }
+
+  #[test]
+  fn test_get_danger_zone() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .build()
+      .unwrap();
+    let result = binary.get_danger_zone().unwrap();
+    assert_approx_eq!(result, LengthInAu(4.0));
+  }
+
+  #[test]
+  fn test_get_luminosity() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .build()
+      .unwrap();
+    let result = binary.get_luminosity().unwrap();
+    assert_approx_eq!(result, LuminosityOfSol(1.0625));
+  }
+
+  #[test]
+  fn test_get_mass() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .build()
+      .unwrap();
+    let result = binary.get_mass().unwrap();
+    assert_approx_eq!(result, MassOfSol(1.5));
+  }
+
+  #[test]
+  fn test_get_satellite_zone() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .build()
+      .unwrap();
+    let result = binary.get_satellite_zone().unwrap();
+    assert_approx_eq!(result.0, LengthInAu(0.15));
+    assert_approx_eq!(result.1, LengthInAu(60.0));
+  }
+
+  #[test]
+  fn test_get_current_age() {
+    let star1 = StarBuilder::default()
+      .mass(MassOfSol(1.0))
+      .current_age(TimeInGigayears(4.5))
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .mass(MassOfSol(0.5))
+      .current_age(TimeInGigayears(4.5))
+      .build()
+      .unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .build()
+      .unwrap();
+    let result = binary.get_current_age().unwrap();
+    assert_approx_eq!(result, TimeInGigayears(4.5));
+  }
+
+  #[test]
+  fn test_check_habitability() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(0.1))
+      .build()
+      .unwrap();
+    let result = binary.check_habitability();
+    assert!(result.is_ok());
+  }
+
+  #[test]
+  #[should_panic]
+  fn test_check_habitability_fail() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStarBuilder::default()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .build()
+      .unwrap();
+    let result = binary.check_habitability();
+    assert!(result.is_ok());
   }
 }
