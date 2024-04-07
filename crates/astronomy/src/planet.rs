@@ -5,7 +5,7 @@ use crate::types::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// A `Planet`.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub enum Planet {
   TerrestrialPlanet(TerrestrialPlanet),
 }

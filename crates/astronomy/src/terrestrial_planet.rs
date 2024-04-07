@@ -6,7 +6,7 @@ use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
 /// The `TerrestrialPlanet` type.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Builder)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct TerrestrialPlanet {
   /// Mass in MassOfEarth.
   #[builder(default = "MassOfEarth(1.0)")]

@@ -4,6 +4,9 @@ description = "Astronomy library for Hornvale"
 version = "0.0.0"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [dependencies]
 anyhow.workspace = true
 derivative.workspace = true

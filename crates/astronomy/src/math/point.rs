@@ -17,7 +17,6 @@ pub fn get_random_point_in_sphere<R: Rng + ?Sized>(rng: &mut R) -> (f64, f64, f6
   let x = r * sin_phi * cos_theta;
   let y = r * sin_phi * sin_theta;
   let z = r * cos_phi;
-
   (x, y, z)
 }
 

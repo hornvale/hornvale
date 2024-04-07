@@ -13,7 +13,9 @@ use serde::{Deserialize, Serialize};
 /// for it.  Yet.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct PlanetarySystem {
+  /// The host star of the planetary system.
   pub host_star: HostStar,
+  /// The satellite systems of the planetary system.
   pub satellite_systems: Vec<SatelliteSystem>,
 }
 

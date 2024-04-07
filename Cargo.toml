@@ -25,9 +25,20 @@ path = "src/main.rs"
 test = false         # No unit tests for this binary
 doctest = false      # No doctests for this binary
 
+[lints]
+workspace = true
+
 [workspace]
 exclude = []
 members = ["crates/*", "internal/test_utilities"]
+
+[workspace.lints.rustdoc]
+bare_urls = "deny"
+broken_intra_doc_links = "deny"
+invalid_codeblock_attributes = "deny"
+invalid_rust_codeblocks = "deny"
+missing_crate_level_docs = "deny"
+unescaped_backticks = "deny"
 
 [dependencies]
 "hornvale_astronomy" = { path = "crates/astronomy" }

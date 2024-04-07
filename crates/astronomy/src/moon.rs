@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// But for now, we're just staying with terrestrial planets, and we'll assume
 /// that moons are just celestial features.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Builder)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct Moon {
   /// The mass of this moon, in MLuna.
   #[builder(default = "MassOfLuna(1.0)")]

@@ -67,6 +67,9 @@ pub enum AstronomyError {
   /// No habitable conditions found in the planetary system.
   #[error("the planetary system does not have a habitable zone")]
   PlanetarySystemDoesNotHaveHabitableZone,
+  /// Requested moon index is out of bounds.
+  #[error("the requested moon index is out of bounds")]
+  MoonIndexOutOfBounds,
   /// An unknown error occurred.
   #[error("an unknown error occurred")]
   UnknownError,
