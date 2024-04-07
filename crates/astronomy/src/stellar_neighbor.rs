@@ -20,6 +20,11 @@ pub struct StellarNeighbor {
 }
 
 impl StellarNeighbor {
+  /// Create a new `StellarNeighbor` builder.
+  pub fn builder() -> StellarNeighborBuilder {
+    StellarNeighborBuilder::default()
+  }
+
   /// Get the distance from the origin.
   pub fn get_distance(&self) -> LengthInLyr {
     let (x, y, z) = self.coordinates;
