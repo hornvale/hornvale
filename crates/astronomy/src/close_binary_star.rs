@@ -30,6 +30,11 @@ pub struct CloseBinaryStar {
 }
 
 impl CloseBinaryStar {
+  /// Return a builder for this object.
+  pub fn builder() -> CloseBinaryStarBuilder {
+    CloseBinaryStarBuilder::default()
+  }
+
   /// Create from a pair of stars, average separation, and orbital eccentricity.
   pub fn from_stars(primary: Star, secondary: Star, average_separation: LengthInAu, orbital_eccentricity: f64) -> Self {
     CloseBinaryStar {
@@ -378,5 +383,20 @@ mod tests {
       .unwrap();
     let result = binary.check_habitability();
     assert!(result.is_ok());
+  }
+
+  #[test]
+  fn test_builder() {
+    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
+    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let binary = CloseBinaryStar::builder()
+      .primary(star1)
+      .secondary(star2)
+      .average_separation(LengthInAu(1.0))
+      .build()
+      .unwrap();
+    assert_eq!(binary.primary.mass, MassOfSol(1.0));
+    assert_eq!(binary.secondary.mass, MassOfSol(0.5));
+    assert_eq!(binary.average_separation, LengthInAu(1.0));
   }
 }

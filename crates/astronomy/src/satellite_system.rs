@@ -8,9 +8,10 @@ use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
 /// A `SatelliteSystem` is a planet and its moon or moons.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Builder)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize, Builder)]
 pub struct SatelliteSystem {
   /// The planet.
+  #[builder(default = "Planet::default()")]
   pub planet: Planet,
   /// Any moon or moons.
   #[builder(default = "vec![Moon::default()]")]
@@ -27,6 +28,11 @@ pub struct SatelliteSystem {
 }
 
 impl SatelliteSystem {
+  /// Create a new `SatelliteSystem` builder.
+  pub fn builder() -> SatelliteSystemBuilder {
+    SatelliteSystemBuilder::default()
+  }
+
   /// Get a relationship between the planet and a single moon.
   pub fn get_planet_moon_relationship(&self, index: usize) -> Result<PlanetMoonRelationship, AstronomyError> {
     let moon = *self.moons.get(index).ok_or(AstronomyError::MoonIndexOutOfBounds)?;

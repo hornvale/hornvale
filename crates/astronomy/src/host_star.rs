@@ -3,6 +3,7 @@ use crate::error::AstronomyError;
 use crate::star::Star;
 use crate::traits::prelude::*;
 use crate::types::prelude::*;
+use derivative::Derivative;
 use serde::{Deserialize, Serialize};
 
 /// A `HostStar` is either a `Star` or a `CloseBinaryStar`.
@@ -13,7 +14,7 @@ use serde::{Deserialize, Serialize};
 /// `CloseBinaryStar`, but can only be in an orbit around one member of a
 /// `DistantBinaryStar`.  As a result, we handle `DistantBinaryStar` objects
 /// with a distinct class.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Derivative, Deserialize, PartialEq, Serialize)]
 pub enum HostStar {
   /// A single star.
   Star(Box<Star>),
@@ -22,6 +23,16 @@ pub enum HostStar {
 }
 
 impl HostStar {
+  /// Create a new `HostStar` object from a `Star`.
+  pub fn new_star(star: Star) -> Self {
+    HostStar::Star(Box::new(star))
+  }
+
+  /// Create a new `HostStar` object from a `CloseBinaryStar`.
+  pub fn new_close_binary_star(close_binary_star: CloseBinaryStar) -> Self {
+    HostStar::CloseBinaryStar(Box::new(close_binary_star))
+  }
+
   /// Retrieve or calculate the age of the stars.
   ///
   /// Calculated in Gyr.
@@ -90,5 +101,11 @@ impl StellarMassable for HostStar {
       HostStar::Star(star) => Ok(star.mass),
       HostStar::CloseBinaryStar(close_binary_star) => Ok(close_binary_star.get_mass()?),
     }
+  }
+}
+
+impl Default for HostStar {
+  fn default() -> Self {
+    HostStar::Star(Box::default())
   }
 }

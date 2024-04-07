@@ -11,6 +11,12 @@ use serde::{Deserialize, Serialize};
 #[repr(transparent)]
 pub struct MassInKg(pub f64);
 
+impl From<f64> for MassInKg {
+  fn from(original: f64) -> Self {
+    Self(original)
+  }
+}
+
 impl From<MassOfSol> for MassInKg {
   fn from(original: MassOfSol) -> Self {
     Self(original.0 * KG_PER_SOLAR_MASS.0)
@@ -40,6 +46,13 @@ mod test {
 
   use super::*;
   use hornvale_test_utilities::prelude::*;
+
+  #[test]
+  fn test_m_kg_to_m_sol() {
+    init();
+    let actual: MassInKg = MassOfSol(1.0).into();
+    assert_approx_eq!(actual.0, KG_PER_SOLAR_MASS.0, 0.01);
+  }
 
   #[test]
   fn test_m_sol_to_m_kg() {

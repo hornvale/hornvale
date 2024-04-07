@@ -9,6 +9,7 @@ workspace = true
 
 [dependencies]
 anyhow.workspace = true
+derivative.workspace = true
 derive_builder.workspace = true
 derive_more.workspace = true
 rand.workspace = true

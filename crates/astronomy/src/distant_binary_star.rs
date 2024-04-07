@@ -24,6 +24,13 @@ pub struct DistantBinaryStar {
   pub secondary: PlanetarySystem,
 }
 
+impl DistantBinaryStar {
+  /// Create a new `DistantBinaryStar` builder.
+  pub fn builder() -> DistantBinaryStarBuilder {
+    DistantBinaryStarBuilder::default()
+  }
+}
+
 impl MaybeHabitable for DistantBinaryStar {
   fn check_habitability(&self) -> Result<(), AstronomyError> {
     let primary_habitable = self.primary.is_habitable();
@@ -45,5 +52,121 @@ impl StellarCountable for DistantBinaryStar {
 impl StellarMassable for DistantBinaryStar {
   fn get_stellar_mass(&self) -> Result<MassOfSol, AstronomyError> {
     Ok(self.primary.get_stellar_mass()? + self.secondary.get_stellar_mass()?)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::host_star::HostStar;
+
+  #[test]
+  fn test_distant_binary_star_builder() {
+    let primary = PlanetarySystem::builder()
+      .host_star(HostStar::default())
+      .build()
+      .unwrap();
+    let secondary = PlanetarySystem::builder()
+      .host_star(HostStar::default())
+      .build()
+      .unwrap();
+    let distant_binary_star = DistantBinaryStar::builder()
+      .primary(primary.clone())
+      .secondary(secondary.clone())
+      .build()
+      .unwrap();
+    assert_eq!(distant_binary_star.primary, primary);
+    assert_eq!(distant_binary_star.secondary, secondary);
+  }
+
+  #[test]
+  fn test_distant_binary_star() {
+    let primary = PlanetarySystem::builder()
+      .host_star(HostStar::default())
+      .build()
+      .unwrap();
+    let secondary = PlanetarySystem::builder()
+      .host_star(HostStar::default())
+      .build()
+      .unwrap();
+    let distant_binary_star = DistantBinaryStar::builder()
+      .primary(primary)
+      .secondary(secondary)
+      .build()
+      .unwrap();
+    assert_eq!(distant_binary_star.get_stellar_count().unwrap(), 2);
+    assert_eq!(distant_binary_star.get_stellar_mass().unwrap(), MassOfSol(2.0));
+  }
+
+  #[test]
+  fn test_check_habitability() {
+    let primary = PlanetarySystem::builder()
+      .host_star(HostStar::default())
+      .build()
+      .unwrap();
+    let secondary = PlanetarySystem::builder()
+      .host_star(HostStar::default())
+      .build()
+      .unwrap();
+    let distant_binary_star = DistantBinaryStar::builder()
+      .primary(primary)
+      .secondary(secondary)
+      .build()
+      .unwrap();
+    assert_eq!(distant_binary_star.check_habitability().is_ok(), true);
+  }
+
+  #[test]
+  fn test_check_habitability_with_habitable_planet() {
+    let primary = PlanetarySystem::builder()
+      .host_star(HostStar::default())
+      .build()
+      .unwrap();
+    let secondary = PlanetarySystem::builder()
+      .host_star(HostStar::default())
+      .build()
+      .unwrap();
+    let distant_binary_star = DistantBinaryStar::builder()
+      .primary(primary)
+      .secondary(secondary)
+      .build()
+      .unwrap();
+    assert_eq!(distant_binary_star.check_habitability().is_ok(), true);
+  }
+
+  #[test]
+  fn test_check_habitability_with_habitable_star() {
+    let primary = PlanetarySystem::builder()
+      .host_star(HostStar::default())
+      .build()
+      .unwrap();
+    let secondary = PlanetarySystem::builder()
+      .host_star(HostStar::default())
+      .build()
+      .unwrap();
+    let distant_binary_star = DistantBinaryStar::builder()
+      .primary(primary)
+      .secondary(secondary)
+      .build()
+      .unwrap();
+    assert_eq!(distant_binary_star.check_habitability().is_ok(), true);
+  }
+
+  #[test]
+  fn test_check_habitability_with_habitable_star_and_planet() {
+    let primary = PlanetarySystem::builder()
+      .host_star(HostStar::default())
+      .build()
+      .unwrap();
+    let secondary = PlanetarySystem::builder()
+      .host_star(HostStar::default())
+      .build()
+      .unwrap();
+    let distant_binary_star = DistantBinaryStar::builder()
+      .primary(primary)
+      .secondary(secondary)
+      .build()
+      .unwrap();
+    assert_eq!(distant_binary_star.check_habitability().is_ok(), true);
   }
 }

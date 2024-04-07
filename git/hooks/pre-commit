@@ -2,7 +2,7 @@
 
 set -e;
 
+cargo test --workspace;
 cargo fmt -- --check;
 cargo clippy -- -D warnings;
-cargo test --workspace;
 cargo test --benches;
