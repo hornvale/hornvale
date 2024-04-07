@@ -26,6 +26,11 @@ pub struct Moon {
 }
 
 impl Moon {
+  /// Create a new `Moon` builder.
+  pub fn builder() -> MoonBuilder {
+    MoonBuilder::default()
+  }
+
   /// Get the radius of the moon in Lunar radii.
   pub fn get_radius(&self) -> Result<RadiusOfLuna, AstronomyError> {
     Ok(RadiusOfLuna((self.mass.0 / self.density.0).powf(1.0 / 3.0)))
@@ -160,5 +165,10 @@ mod tests {
       Err(AstronomyError::MoonsAreNotHabitable)
     );
     Ok(())
+  }
+
+  #[test]
+  fn test_default() {
+    assert_eq!(Moon::default(), Moon::builder().build().unwrap());
   }
 }

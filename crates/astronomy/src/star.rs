@@ -22,6 +22,11 @@ pub struct Star {
 }
 
 impl Star {
+  /// Create a new `Star` builder.
+  pub fn builder() -> StarBuilder {
+    StarBuilder::default()
+  }
+
   /// Check the mass of the star to see if it's within the main sequence.
   pub fn check_mass(&self) -> Result<(), AstronomyError> {
     if self.mass < MINIMUM_STAR_MASS {
@@ -221,5 +226,64 @@ impl MaybeHabitable for Star {
       return Err(AstronomyError::StarTooYoungToSupportLife);
     }
     Ok(())
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use hornvale_test_utilities::prelude::*;
+
+  #[test]
+  fn test_star_builder() {
+    let star = Star::builder().build().unwrap();
+    assert_eq!(star.mass, MassOfSol(1.0));
+    assert_eq!(star.current_age, TimeInGigayears(4.6));
+  }
+
+  #[test]
+  fn test_star_check_mass() {
+    let star = Star::builder().mass(MassOfSol(0.008)).build().unwrap();
+    assert!(star.check_mass().is_err());
+    let star = Star::builder().mass(MassOfSol(0.5)).build().unwrap();
+    assert!(star.check_mass().is_ok());
+    let star = Star::builder().mass(MassOfSol(100000000.0)).build().unwrap();
+    assert!(star.check_mass().is_err());
+  }
+
+  #[test]
+  fn test_star_get_temperature() {
+    let star = Star::builder().mass(MassOfSol(1.0)).build().unwrap();
+    assert_approx_eq!(star.get_temperature().unwrap(), TemperatureInKelvin(5776.0));
+  }
+
+  #[test]
+  fn test_star_get_luminosity() {
+    let star = Star::builder().mass(MassOfSol(1.0)).build().unwrap();
+    assert_approx_eq!(star.get_luminosity().unwrap(), LuminosityOfSol(1.0));
+  }
+
+  #[test]
+  fn test_star_get_radius() {
+    let star = Star::builder().mass(MassOfSol(1.0)).build().unwrap();
+    assert_approx_eq!(star.get_radius().unwrap(), RadiusOfSol(1.0));
+  }
+
+  #[test]
+  fn test_star_get_density() {
+    let star = Star::builder().mass(MassOfSol(1.0)).build().unwrap();
+    assert_approx_eq!(star.get_density().unwrap(), DensityOfSol(1.0));
+  }
+
+  #[test]
+  fn test_star_get_life_expectancy() {
+    let star = Star::builder().mass(MassOfSol(1.0)).build().unwrap();
+    assert_approx_eq!(star.get_life_expectancy().unwrap(), TimeInGigayears(10.0));
+  }
+
+  #[test]
+  fn test_star_get_habitable_zone() {
+    let star = Star::builder().mass(MassOfSol(1.0)).build().unwrap();
+    assert_approx_eq!(star.get_habitable_zone().unwrap().0 .0, 0.9534625892455924);
   }
 }
