@@ -5,6 +5,9 @@ use crate::types::prelude::*;
 /// This probability might be slightly lower than actual.
 pub const BINARY_STAR_PROBABILITY: f64 = 0.25;
 
+/// The probability that we generate a distant binary star system.
+pub const DISTANT_BINARY_STAR_PROBABILITY: f64 = 0.25;
+
 /// Kilograms per solar mass.
 pub const KG_PER_SOLAR_MASS: MassInKg = MassInKg(1.989E30);
 

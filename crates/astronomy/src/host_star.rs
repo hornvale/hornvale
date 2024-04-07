@@ -32,24 +32,6 @@ impl HostStar {
     }
   }
 
-  /// Retrieve or calculate the total mass of the stars.
-  ///
-  /// Calculated in Msol.
-  pub fn get_mass(&self) -> Result<MassOfSol, AstronomyError> {
-    match &self {
-      HostStar::Star(star) => Ok(star.mass),
-      HostStar::CloseBinaryStar(close_binary_star) => Ok(close_binary_star.get_mass()?),
-    }
-  }
-
-  /// Retrieve or calculate the total number of stars in the system.
-  pub fn get_stellar_count(&self) -> u8 {
-    match &self {
-      HostStar::Star(_) => 1,
-      HostStar::CloseBinaryStar(_) => 2,
-    }
-  }
-
   /// Retrieve or calculate the frost line.
   pub fn get_frost_line(&self) -> Result<LengthInAu, AstronomyError> {
     match &self {
@@ -90,5 +72,23 @@ impl MaybeHabitable for HostStar {
       HostStar::CloseBinaryStar(close_binary_star) => close_binary_star.check_habitability()?,
     }
     Ok(())
+  }
+}
+
+impl StellarCountable for HostStar {
+  fn get_stellar_count(&self) -> Result<u8, AstronomyError> {
+    match &self {
+      HostStar::Star(_) => Ok(1),
+      HostStar::CloseBinaryStar(_) => Ok(2),
+    }
+  }
+}
+
+impl StellarMassable for HostStar {
+  fn get_stellar_mass(&self) -> Result<MassOfSol, AstronomyError> {
+    match &self {
+      HostStar::Star(star) => Ok(star.mass),
+      HostStar::CloseBinaryStar(close_binary_star) => Ok(close_binary_star.get_mass()?),
+    }
   }
 }

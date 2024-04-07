@@ -58,6 +58,15 @@ pub enum AstronomyError {
   /// Lower than MINIMUM_CLOSE_BINARY_STAR_SEPARATION.
   #[error("the stars are too close together to be stable")]
   BinaryStarsTooCloseForComfort,
+  /// No habitable conditions found anywhere around the stellar neighborhood.
+  #[error("the stellar neighborhood does not have a habitable zone")]
+  StellarNeighborhoodDoesNotHaveHabitableZone,
+  /// No habitable conditions found in either system of a distant binary star.
+  #[error("the distant binary star does not have a habitable zone")]
+  DistantBinaryStarDoesNotHaveHabitableZone,
+  /// No habitable conditions found in the planetary system.
+  #[error("the planetary system does not have a habitable zone")]
+  PlanetarySystemDoesNotHaveHabitableZone,
   /// An unknown error occurred.
   #[error("an unknown error occurred")]
   UnknownError,
