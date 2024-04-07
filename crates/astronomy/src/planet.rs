@@ -33,3 +33,27 @@ impl MaybeHabitable for Planet {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use hornvale_test_utilities::prelude::*;
+
+  #[test]
+  fn test_default() {
+    let planet = Planet::default();
+    assert_eq!(planet, Planet::TerrestrialPlanet(TerrestrialPlanet::default()));
+  }
+
+  #[test]
+  fn test_get_radius() {
+    let planet = Planet::default();
+    assert_approx_eq!(planet.get_radius(), RadiusOfEarth(1.0), 1e-2);
+  }
+
+  #[test]
+  fn test_check_habitability() {
+    let planet = Planet::default();
+    assert_eq!(planet.check_habitability(), Ok(()));
+  }
+}

@@ -94,10 +94,7 @@ mod test {
   #[test]
   fn test_get_lunar_tide() {
     let relationship = PlanetMoonRelationshipBuilder::default().build().unwrap();
-    assert_approx_eq!(
-      relationship.get_lunar_tide().unwrap(),
-      LengthInMeters(0.998634134467536)
-    );
+    assert_approx_eq!(relationship.get_lunar_tide().unwrap(), LengthInMeters(1.003), 1e-3);
   }
 
   #[test]

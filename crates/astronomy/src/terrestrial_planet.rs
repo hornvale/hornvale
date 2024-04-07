@@ -12,7 +12,7 @@ pub struct TerrestrialPlanet {
   #[builder(default = "MassOfEarth(1.0)")]
   pub mass: MassOfEarth,
   /// Core Mass Fraction (unitless).
-  #[builder(default = "0.35")]
+  #[builder(default = "0.325")]
   pub core_mass_fraction: f64,
   /// Axial tilt (0-180º).
   #[builder(default = "AxialTilt(23.5)")]
@@ -114,8 +114,8 @@ mod test {
     init();
     let planet = TerrestrialPlanetBuilder::default().mass(MassOfEarth(1.0)).build()?;
     assert_approx_eq!(planet.mass.0, 1.0);
-    assert_approx_eq!(planet.core_mass_fraction, 0.35);
-    assert_approx_eq!(planet.get_density(), DensityOfEarth(1.01), 0.01);
+    assert_approx_eq!(planet.core_mass_fraction, 0.325);
+    assert_approx_eq!(planet.get_density(), DensityOfEarth(0.9947683215465892), 0.01);
     assert_approx_eq!(planet.get_escape_velocity(), EscapeVelocityOfEarth(1.0), 0.01);
     assert_approx_eq!(planet.get_gravity(), GravityOfEarth(1.0), 0.01);
     assert_approx_eq!(planet.get_radius(), RadiusOfEarth(1.0), 0.01);
