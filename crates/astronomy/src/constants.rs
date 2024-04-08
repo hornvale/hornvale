@@ -341,6 +341,30 @@ pub const CLASS_K_WEIGHT: f64 = 12.1;
 /// The probability of generating an M-class star.
 pub const CLASS_M_WEIGHT: f64 = 76.45;
 
+/// The minimum axial tilt for a planet, in degrees.
+pub const MINIMUM_PLANET_AXIAL_TILT: f64 = -180.0;
+
+/// The maximum axial tilt for a planet, in degrees.
+pub const MAXIMUM_PLANET_AXIAL_TILT: f64 = 180.0;
+
+/// The minimum axial tilt for a habitable planet, in degrees.
+pub const MINIMUM_HABITABLE_PLANET_AXIAL_TILT: f64 = -30.0;
+
+/// The maximum axial tilt for a habitable planet, in degrees.
+pub const MAXIMUM_HABITABLE_PLANET_AXIAL_TILT: f64 = 30.0;
+
+/// The minimum exotic axial tilt for a planet, in degrees.
+pub const MINIMUM_EXOTIC_PLANET_AXIAL_TILT: f64 = 30.0;
+
+/// The maximum exotic axial tilt for a planet, in degrees.
+pub const MAXIMUM_EXOTIC_PLANET_AXIAL_TILT: f64 = 180.0;
+
+/// The minimum familiar axial tilt for a planet, in degrees.
+pub const MINIMUM_FAMILIAR_PLANET_AXIAL_TILT: f64 = 20.0;
+
+/// The maximum familiar axial tilt for a planet, in degrees.
+pub const MAXIMUM_FAMILIAR_PLANET_AXIAL_TILT: f64 = 25.0;
+
 /// Prelude.
 pub mod prelude {
   pub use super::*;

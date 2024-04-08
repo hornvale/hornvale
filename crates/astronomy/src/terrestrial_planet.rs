@@ -17,7 +17,7 @@ pub struct TerrestrialPlanet {
   #[builder(default = "0.325")]
   pub core_mass_fraction: f64,
   /// Axial tilt (0-180º).
-  #[builder(default = "AxialTilt(23.5)")]
+  #[builder(default = "AxialTilt(23.5)", setter(into))]
   pub axial_tilt: AxialTilt,
   /// Bond albedo (unitless).
   #[builder(default = "0.29")]
@@ -96,35 +96,38 @@ impl Randomizable for TerrestrialPlanetBuilder {
   /// Get a random `TerrestrialPlanetBuilder`.
   fn get_random<R: Rng + ?Sized>(rng: &mut R) -> Self {
     TerrestrialPlanetBuilder::default()
-      .axial_tilt(AxialTilt::get_random(rng))
+      .axial_tilt(rng.gen_range(MINIMUM_PLANET_AXIAL_TILT..MAXIMUM_PLANET_AXIAL_TILT))
       .clone()
   }
 
   /// Get a random habitable `TerrestrialPlanetBuilder`.
   fn get_random_habitable<R: Rng + ?Sized>(rng: &mut R) -> Self {
     TerrestrialPlanetBuilder::default()
-      .axial_tilt(AxialTilt::get_random_habitable(rng))
+      .axial_tilt(rng.gen_range(MINIMUM_HABITABLE_PLANET_AXIAL_TILT..MAXIMUM_HABITABLE_PLANET_AXIAL_TILT))
       .clone()
   }
 
   /// Get a random exotic `TerrestrialPlanetBuilder`.
   fn get_random_exotic<R: Rng + ?Sized>(rng: &mut R) -> Self {
     TerrestrialPlanetBuilder::default()
-      .axial_tilt(AxialTilt::get_random_exotic(rng))
+      .axial_tilt(rng.gen_range(MINIMUM_EXOTIC_PLANET_AXIAL_TILT..MAXIMUM_EXOTIC_PLANET_AXIAL_TILT))
       .clone()
   }
 
   /// Get a random exotic and habitable `TerrestrialPlanetBuilder`.
   fn get_random_exotic_habitable<R: Rng + ?Sized>(rng: &mut R) -> Self {
-    TerrestrialPlanetBuilder::default()
-      .axial_tilt(AxialTilt::get_random_exotic_habitable(rng))
-      .clone()
+    // We have two options here:
+    // - a negative axial tilt, which is a retrograde rotation
+    // - a positive axial tilt but outside the normal range
+    let mut axial_tilt = rng.gen_range(MINIMUM_HABITABLE_PLANET_AXIAL_TILT..MAXIMUM_EXOTIC_PLANET_AXIAL_TILT);
+    axial_tilt = if rng.gen_bool(0.5) { -axial_tilt } else { axial_tilt };
+    TerrestrialPlanetBuilder::default().axial_tilt(axial_tilt).clone()
   }
 
-  /// Get a random earthlike `TerrestrialPlanetBuilder`.
-  fn get_random_earthlike<R: Rng + ?Sized>(rng: &mut R) -> Self {
+  /// Get a random familiar (earthlike) `TerrestrialPlanetBuilder`.
+  fn get_random_familiar<R: Rng + ?Sized>(rng: &mut R) -> Self {
     TerrestrialPlanetBuilder::default()
-      .axial_tilt(AxialTilt::get_random_earthlike(rng))
+      .axial_tilt(rng.gen_range(MINIMUM_FAMILIAR_PLANET_AXIAL_TILT..MAXIMUM_FAMILIAR_PLANET_AXIAL_TILT))
       .clone()
   }
 }
@@ -369,9 +372,9 @@ mod test {
   }
 
   #[test]
-  fn test_get_random_earthlike() {
+  fn test_get_random_familiar() {
     init();
-    let planet = TerrestrialPlanetBuilder::get_random_earthlike(&mut thread_rng())
+    let planet = TerrestrialPlanetBuilder::get_random_familiar(&mut thread_rng())
       .build()
       .unwrap();
     println!("{:#?}", planet);
