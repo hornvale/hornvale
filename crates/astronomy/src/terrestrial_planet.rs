@@ -3,10 +3,12 @@ use crate::error::AstronomyError;
 use crate::traits::prelude::*;
 use crate::types::prelude::*;
 use derive_builder::Builder;
+use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// The `TerrestrialPlanet` type.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, Builder)]
+#[builder(derive(Debug))]
 pub struct TerrestrialPlanet {
   /// Mass in MassOfEarth.
   #[builder(default = "MassOfEarth(1.0)", setter(into))]
@@ -87,6 +89,43 @@ impl TerrestrialPlanet {
 impl Default for TerrestrialPlanet {
   fn default() -> Self {
     TerrestrialPlanetBuilder::default().build().unwrap()
+  }
+}
+
+impl Randomizable for TerrestrialPlanetBuilder {
+  /// Get a random `TerrestrialPlanetBuilder`.
+  fn get_random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    TerrestrialPlanetBuilder::default()
+      .axial_tilt(AxialTilt::get_random(rng))
+      .clone()
+  }
+
+  /// Get a random habitable `TerrestrialPlanetBuilder`.
+  fn get_random_habitable<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    TerrestrialPlanetBuilder::default()
+      .axial_tilt(AxialTilt::get_random_habitable(rng))
+      .clone()
+  }
+
+  /// Get a random exotic `TerrestrialPlanetBuilder`.
+  fn get_random_exotic<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    TerrestrialPlanetBuilder::default()
+      .axial_tilt(AxialTilt::get_random_exotic(rng))
+      .clone()
+  }
+
+  /// Get a random exotic and habitable `TerrestrialPlanetBuilder`.
+  fn get_random_exotic_habitable<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    TerrestrialPlanetBuilder::default()
+      .axial_tilt(AxialTilt::get_random_exotic_habitable(rng))
+      .clone()
+  }
+
+  /// Get a random earthlike `TerrestrialPlanetBuilder`.
+  fn get_random_earthlike<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    TerrestrialPlanetBuilder::default()
+      .axial_tilt(AxialTilt::get_random_earthlike(rng))
+      .clone()
   }
 }
 
@@ -293,5 +332,48 @@ mod test {
       .build()
       .unwrap();
     planet.check_habitability().unwrap();
+  }
+
+  #[test]
+  fn test_get_random() {
+    init();
+    let planet = TerrestrialPlanetBuilder::get_random(&mut thread_rng()).build().unwrap();
+    println!("{:#?}", planet);
+  }
+
+  #[test]
+  fn test_get_random_habitable() {
+    init();
+    let planet = TerrestrialPlanetBuilder::get_random_habitable(&mut thread_rng())
+      .build()
+      .unwrap();
+    println!("{:#?}", planet);
+  }
+
+  #[test]
+  fn test_get_random_exotic() {
+    init();
+    let planet = TerrestrialPlanetBuilder::get_random_exotic(&mut thread_rng())
+      .build()
+      .unwrap();
+    println!("{:#?}", planet);
+  }
+
+  #[test]
+  fn test_get_random_exotic_habitable() {
+    init();
+    let planet = TerrestrialPlanetBuilder::get_random_exotic_habitable(&mut thread_rng())
+      .build()
+      .unwrap();
+    println!("{:#?}", planet);
+  }
+
+  #[test]
+  fn test_get_random_earthlike() {
+    init();
+    let planet = TerrestrialPlanetBuilder::get_random_earthlike(&mut thread_rng())
+      .build()
+      .unwrap();
+    println!("{:#?}", planet);
   }
 }

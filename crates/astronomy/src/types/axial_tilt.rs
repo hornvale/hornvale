@@ -1,6 +1,8 @@
 use super::latitude::Latitude;
 use super::rotation_direction::RotationDirection;
+use crate::traits::prelude::*;
 use derive_more::{Add, Display, Div, Mul, Sub};
+use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// The `AxialTilt` newtype, representing an axial tilt.
@@ -41,6 +43,45 @@ impl AxialTilt {
     } else {
       RotationDirection::Retrograde
     }
+  }
+}
+
+impl Randomizable for AxialTilt {
+  /// Get a random `AxialTilt`.
+  fn get_random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    let value = rng.gen_range(-180.0..180.0);
+    AxialTilt(value)
+  }
+
+  /// Get a random habitable `AxialTilt`.
+  fn get_random_habitable<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    let value = rng.gen_range(0.0..30.0);
+    AxialTilt(value)
+  }
+
+  /// Get a random exotic `AxialTilt`.
+  fn get_random_exotic<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    // We have two options here:
+    // - a negative axial tilt, which is a retrograde rotation
+    // - a positive axial tilt but outside the normal range
+    let value = if rng.gen_bool(0.5) {
+      rng.gen_range(-180.0..0.0)
+    } else {
+      rng.gen_range(30.0..180.0)
+    };
+    AxialTilt(value)
+  }
+
+  /// Get a random exotic and habitable `AxialTilt`.
+  fn get_random_exotic_habitable<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    // Axial tilt is a fun one; we can have quite strange values here.
+    AxialTilt::get_random_exotic(rng)
+  }
+
+  /// Get a random earthlike `AxialTilt`.
+  fn get_random_earthlike<R: Rng + ?Sized>(rng: &mut R) -> Self {
+    let value = rng.gen_range(20.0..25.0);
+    AxialTilt(value)
   }
 }
 
