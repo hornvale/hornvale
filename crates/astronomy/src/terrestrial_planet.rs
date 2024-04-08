@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct TerrestrialPlanet {
   /// Mass in MassOfEarth.
-  #[builder(default = "MassOfEarth(1.0)")]
+  #[builder(default = "MassOfEarth(1.0)", setter(into))]
   pub mass: MassOfEarth,
   /// Core Mass Fraction (unitless).
   #[builder(default = "0.325")]

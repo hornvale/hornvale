@@ -19,8 +19,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct DistantBinaryStar {
   /// The primary planetary system is the one with greater mass.
+  #[builder(default = "PlanetarySystem::default()", setter(into))]
   pub primary: PlanetarySystem,
   /// The secondary planetary system has less mass.
+  #[builder(default = "PlanetarySystem::default()", setter(into))]
   pub secondary: PlanetarySystem,
 }
 

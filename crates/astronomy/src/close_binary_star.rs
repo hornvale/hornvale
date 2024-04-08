@@ -16,13 +16,13 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct CloseBinaryStar {
   /// The primary star is the one with greater mass.
-  #[builder(default = "Star::default()")]
+  #[builder(default = "Star::default()", setter(into))]
   pub primary: Star,
   /// The secondary star has less mass.
-  #[builder(default = "Star::default()")]
+  #[builder(default = "Star::default()", setter(into))]
   pub secondary: Star,
   /// Average separation of the binary components, in AU.
-  #[builder(default = "LengthInAu(1.0)")]
+  #[builder(default = "LengthInAu(1.0)", setter(into))]
   pub average_separation: LengthInAu,
   /// Orbital eccentricity of the components (unitless).
   #[builder(default = "0.0")]

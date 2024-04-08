@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct PlanetarySystem {
   /// The host star of the planetary system.
-  #[builder(default = "HostStar::default()")]
+  #[builder(default = "HostStar::default()", setter(into))]
   pub host_star: HostStar,
   /// The satellite systems of the planetary system.
   #[builder(default = "vec![SatelliteSystem::default()]")]

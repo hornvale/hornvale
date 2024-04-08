@@ -15,10 +15,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct Moon {
   /// The mass of this moon, in MLuna.
-  #[builder(default = "MassOfLuna(1.0)")]
+  #[builder(default = "MassOfLuna(1.0)", setter(into))]
   pub mass: MassOfLuna,
   /// The density of this moon, in DLuna.
-  #[builder(default = "DensityOfLuna(1.0)")]
+  #[builder(default = "DensityOfLuna(1.0)", setter(into))]
   pub density: DensityOfLuna,
   /// The Bond albedo of this moon (unitless).
   #[builder(default = "0.136")]

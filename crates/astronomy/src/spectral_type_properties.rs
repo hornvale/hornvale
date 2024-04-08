@@ -12,13 +12,13 @@ use std::sync::OnceLock;
 #[display(fmt = "{:#?}", self)]
 pub struct SpectralTypeProperties {
   /// The mass of the star.
-  #[builder(default = "MassOfSol(1.0)")]
+  #[builder(default = "MassOfSol(1.0)", setter(into))]
   pub mass: MassOfSol,
   /// The radius of the star.
-  #[builder(default = "RadiusOfSol(1.0)")]
+  #[builder(default = "RadiusOfSol(1.0)", setter(into))]
   pub radius: RadiusOfSol,
   /// The luminosity of the star.
-  #[builder(default = "LuminosityOfSol(1.0)")]
+  #[builder(default = "LuminosityOfSol(1.0)", setter(into))]
   pub luminosity: LuminosityOfSol,
   /// The temperature of the star.
   #[builder(default = "SOL_TEMPERATURE_IN_KELVIN")]
