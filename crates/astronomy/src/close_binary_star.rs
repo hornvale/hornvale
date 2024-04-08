@@ -47,9 +47,11 @@ impl CloseBinaryStar {
 
   /// Get the average distance from the barycenter of the components.
   pub fn get_average_distances_from_barycenter(&self) -> Result<(LengthInAu, LengthInAu), AstronomyError> {
-    let combined_mass = self.primary.mass + self.secondary.mass;
-    let d1 = LengthInAu(self.average_separation.0 * (self.secondary.mass.0 / combined_mass.0));
-    let d2 = LengthInAu(self.average_separation.0 * (self.primary.mass.0 / combined_mass.0));
+    let primary_mass = self.primary.get_mass()?;
+    let secondary_mass = self.secondary.get_mass()?;
+    let combined_mass = primary_mass + secondary_mass;
+    let d1 = LengthInAu(self.average_separation.0 * (secondary_mass.0 / combined_mass.0));
+    let d2 = LengthInAu(self.average_separation.0 * (primary_mass.0 / combined_mass.0));
     Ok((d1, d2))
   }
 
@@ -115,7 +117,7 @@ impl CloseBinaryStar {
 
   /// Calculate the combined mass of the stars.
   pub fn get_mass(&self) -> Result<MassOfSol, AstronomyError> {
-    Ok(self.primary.mass + self.secondary.mass)
+    Ok(self.primary.get_mass()? + self.secondary.get_mass()?)
   }
 
   /// Calculate the satellite zone of a close binary system in AU.
@@ -153,13 +155,20 @@ impl MaybeHabitable for CloseBinaryStar {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::prelude::*;
   use crate::star::StarBuilder;
   use hornvale_test_utilities::prelude::*;
 
   #[test]
   fn test_get_average_distances_from_barycenter() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(SpectralType::from(MassOfSol(1.0)))
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(SpectralType::from(MassOfSol(0.5)))
+      .build()
+      .unwrap();
     let binary = CloseBinaryStarBuilder::default()
       .primary(star1)
       .secondary(star2)
@@ -173,8 +182,14 @@ mod tests {
 
   #[test]
   fn test_get_minimum_distances_from_barycenter() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(MassOfSol(1.0).into())
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(MassOfSol(0.5).into())
+      .build()
+      .unwrap();
     let binary = CloseBinaryStarBuilder::default()
       .primary(star1)
       .secondary(star2)
@@ -189,8 +204,14 @@ mod tests {
 
   #[test]
   fn test_get_maximum_distances_from_barycenter() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(MassOfSol(1.0).into())
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(MassOfSol(0.5).into())
+      .build()
+      .unwrap();
     let binary = CloseBinaryStarBuilder::default()
       .primary(star1)
       .secondary(star2)
@@ -205,8 +226,14 @@ mod tests {
 
   #[test]
   fn test_get_minimum_separation() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(MassOfSol(1.0).into())
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(MassOfSol(0.5).into())
+      .build()
+      .unwrap();
     let binary = CloseBinaryStarBuilder::default()
       .primary(star1)
       .secondary(star2)
@@ -220,8 +247,14 @@ mod tests {
 
   #[test]
   fn test_get_maximum_separation() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(MassOfSol(1.0).into())
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(MassOfSol(0.5).into())
+      .build()
+      .unwrap();
     let binary = CloseBinaryStarBuilder::default()
       .primary(star1)
       .secondary(star2)
@@ -235,8 +268,14 @@ mod tests {
 
   #[test]
   fn test_get_habitable_zone() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(MassOfSol(1.0).into())
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(MassOfSol(0.5).into())
+      .build()
+      .unwrap();
     let binary = CloseBinaryStarBuilder::default()
       .primary(star1)
       .secondary(star2)
@@ -244,14 +283,20 @@ mod tests {
       .build()
       .unwrap();
     let result = binary.get_habitable_zone().unwrap();
-    assert_approx_eq!(result.0, LengthInAu(0.9828067413836206));
-    assert_approx_eq!(result.1, LengthInAu(1.4158802848871352));
+    assert_approx_eq!(result.0, LengthInAu(0.9728122307843565));
+    assert_approx_eq!(result.1, LengthInAu(1.4014816957050227));
   }
 
   #[test]
   fn test_get_frost_line() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(MassOfSol(1.0).into())
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(MassOfSol(0.5).into())
+      .build()
+      .unwrap();
     let binary = CloseBinaryStarBuilder::default()
       .primary(star1)
       .secondary(star2)
@@ -259,13 +304,19 @@ mod tests {
       .build()
       .unwrap();
     let result = binary.get_frost_line().unwrap();
-    assert_approx_eq!(result, LengthInAu(4.999265571061413));
+    assert_approx_eq!(result, LengthInAu(4.948426264985667));
   }
 
   #[test]
   fn test_get_forbidden_zone() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(MassOfSol(1.0).into())
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(MassOfSol(0.5).into())
+      .build()
+      .unwrap();
     let binary = CloseBinaryStarBuilder::default()
       .primary(star1)
       .secondary(star2)
@@ -273,14 +324,20 @@ mod tests {
       .build()
       .unwrap();
     let result = binary.get_forbidden_zone().unwrap();
-    assert_approx_eq!(result.0, LengthInAu(0.3333333333333333));
+    assert_approx_eq!(result.0, LengthInAu(0.333333333333333));
     assert_approx_eq!(result.1, LengthInAu(3.0));
   }
 
   #[test]
   fn test_get_danger_zone() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(MassOfSol(1.0).into())
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(MassOfSol(0.5).into())
+      .build()
+      .unwrap();
     let binary = CloseBinaryStarBuilder::default()
       .primary(star1)
       .secondary(star2)
@@ -293,8 +350,14 @@ mod tests {
 
   #[test]
   fn test_get_luminosity() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(MassOfSol(1.0).into())
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(MassOfSol(0.5).into())
+      .build()
+      .unwrap();
     let binary = CloseBinaryStarBuilder::default()
       .primary(star1)
       .secondary(star2)
@@ -302,13 +365,19 @@ mod tests {
       .build()
       .unwrap();
     let result = binary.get_luminosity().unwrap();
-    assert_approx_eq!(result, LuminosityOfSol(1.0625));
+    assert_approx_eq!(result, LuminosityOfSol(1.041));
   }
 
   #[test]
   fn test_get_mass() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(MassOfSol(1.0).into())
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(MassOfSol(0.5).into())
+      .build()
+      .unwrap();
     let binary = CloseBinaryStarBuilder::default()
       .primary(star1)
       .secondary(star2)
@@ -321,8 +390,14 @@ mod tests {
 
   #[test]
   fn test_get_satellite_zone() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(MassOfSol(1.0).into())
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(MassOfSol(0.5).into())
+      .build()
+      .unwrap();
     let binary = CloseBinaryStarBuilder::default()
       .primary(star1)
       .secondary(star2)
@@ -337,12 +412,12 @@ mod tests {
   #[test]
   fn test_get_current_age() {
     let star1 = StarBuilder::default()
-      .mass(MassOfSol(1.0))
+      .spectral_type(MassOfSol(1.0).into())
       .current_age(TimeInGigayears(4.5))
       .build()
       .unwrap();
     let star2 = StarBuilder::default()
-      .mass(MassOfSol(0.5))
+      .spectral_type(MassOfSol(0.5).into())
       .current_age(TimeInGigayears(4.5))
       .build()
       .unwrap();
@@ -358,8 +433,14 @@ mod tests {
 
   #[test]
   fn test_check_habitability() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(MassOfSol(1.0).into())
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(MassOfSol(0.5).into())
+      .build()
+      .unwrap();
     let binary = CloseBinaryStarBuilder::default()
       .primary(star1)
       .secondary(star2)
@@ -373,8 +454,14 @@ mod tests {
   #[test]
   #[should_panic]
   fn test_check_habitability_fail() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(MassOfSol(1.0).into())
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(MassOfSol(0.5).into())
+      .build()
+      .unwrap();
     let binary = CloseBinaryStarBuilder::default()
       .primary(star1)
       .secondary(star2)
@@ -387,16 +474,22 @@ mod tests {
 
   #[test]
   fn test_builder() {
-    let star1 = StarBuilder::default().mass(MassOfSol(1.0)).build().unwrap();
-    let star2 = StarBuilder::default().mass(MassOfSol(0.5)).build().unwrap();
+    let star1 = StarBuilder::default()
+      .spectral_type(MassOfSol(1.0).into())
+      .build()
+      .unwrap();
+    let star2 = StarBuilder::default()
+      .spectral_type(MassOfSol(0.5).into())
+      .build()
+      .unwrap();
     let binary = CloseBinaryStar::builder()
       .primary(star1)
       .secondary(star2)
       .average_separation(LengthInAu(1.0))
       .build()
       .unwrap();
-    assert_eq!(binary.primary.mass, MassOfSol(1.0));
-    assert_eq!(binary.secondary.mass, MassOfSol(0.5));
+    assert_eq!(binary.primary.get_mass().unwrap(), MassOfSol(1.0));
+    assert_eq!(binary.secondary.get_mass().unwrap(), MassOfSol(0.5));
     assert_eq!(binary.average_separation, LengthInAu(1.0));
   }
 }

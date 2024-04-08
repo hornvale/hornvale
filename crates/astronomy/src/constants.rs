@@ -238,20 +238,20 @@ pub const MAXIMUM_CLOSE_BINARY_STAR_ORBITAL_ECCENTRICITY: f64 = 0.7;
 /// The minimum combined mass of a binary system.
 /// Set it to 4 * minimum main-sequence star mass.
 /// We don't want it to be too small.
-pub const MINIMUM_CLOSE_BINARY_STAR_COMBINED_MASS: MassOfSol = MassOfSol(4.0 * MINIMUM_STAR_MASS.0);
+pub const MINIMUM_CLOSE_BINARY_STAR_COMBINED_MASS: MassOfSol = MassOfSol(4.0 * MINIMUM_MAIN_SEQUENCE_STAR_MASS.0);
 
 /// The maximum combined mass of a binary system.
 /// Set it to maximum main-sequence star mass.
 /// We don't need binary supergiants.
-pub const MAXIMUM_CLOSE_BINARY_STAR_COMBINED_MASS: MassOfSol = MAXIMUM_STAR_MASS;
+pub const MAXIMUM_CLOSE_BINARY_STAR_COMBINED_MASS: MassOfSol = MAXIMUM_MAIN_SEQUENCE_STAR_MASS;
 
 /// The minimum individual mass of a binary system member.
 /// Set it to 1 * minimum main-sequence star mass.
-pub const MINIMUM_CLOSE_BINARY_STAR_INDIVIDUAL_MASS: MassOfSol = MINIMUM_STAR_MASS;
+pub const MINIMUM_CLOSE_BINARY_STAR_INDIVIDUAL_MASS: MassOfSol = MINIMUM_MAIN_SEQUENCE_STAR_MASS;
 
 /// The maximum individual mass of a binary system member.
 /// Set it to 1 * maximum main-sequence star mass.
-pub const MAXIMUM_CLOSE_BINARY_STAR_INDIVIDUAL_MASS: MassOfSol = MAXIMUM_STAR_MASS;
+pub const MAXIMUM_CLOSE_BINARY_STAR_INDIVIDUAL_MASS: MassOfSol = MAXIMUM_MAIN_SEQUENCE_STAR_MASS;
 
 /// Assume a star has to be at least this old to have interesting life.
 ///
@@ -294,11 +294,11 @@ pub const MAXIMUM_HABITABLE_CLOSE_BINARY_STAR_INDIVIDUAL_MASS: MassOfSol = MassO
 
 /// Below this is too low for a main-sequence star, probably.
 /// Measured in Msol, or solar mass equivalents.
-pub const MINIMUM_STAR_MASS: MassOfSol = MassOfSol(0.075);
+pub const MINIMUM_MAIN_SEQUENCE_STAR_MASS: MassOfSol = MassOfSol(0.075);
 
 /// Above this is too high for a main-sequence star, probably.
 /// Measured in Msol, or solar mass equivalents.
-pub const MAXIMUM_STAR_MASS: MassOfSol = MassOfSol(120.0);
+pub const MAXIMUM_MAIN_SEQUENCE_STAR_MASS: MassOfSol = MassOfSol(120.0);
 
 /// Below this is probably too low to support conventional life.
 /// Measured in Msol, or solar mass equivalents.

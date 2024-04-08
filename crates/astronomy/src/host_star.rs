@@ -98,8 +98,8 @@ impl StellarCountable for HostStar {
 impl StellarMassable for HostStar {
   fn get_stellar_mass(&self) -> Result<MassOfSol, AstronomyError> {
     match &self {
-      HostStar::Star(star) => Ok(star.mass),
-      HostStar::CloseBinaryStar(close_binary_star) => Ok(close_binary_star.get_mass()?),
+      HostStar::Star(star) => star.get_mass(),
+      HostStar::CloseBinaryStar(close_binary_star) => close_binary_star.get_mass(),
     }
   }
 }

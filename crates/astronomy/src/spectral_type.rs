@@ -2,7 +2,7 @@ use super::spectral_type_properties::SpectralTypeProperties;
 use crate::types::prelude::*;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
-use strum::EnumIter;
+use strum::{EnumIter, IntoEnumIterator};
 
 /// The `SpectralType` enum, representing the spectral type of a star.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Display, Eq, EnumIter, Hash, PartialEq, Serialize)]
@@ -179,6 +179,23 @@ impl SpectralType {
     *SpectralTypeProperties::hash_map().get(self).unwrap()
   }
 
+  /// Construct a new `Star` object from the mass of the star.
+  pub fn from_mass(mass: MassOfSol) -> SpectralType {
+    let spectral_type_properties = SpectralTypeProperties::hash_map();
+    let mut spectral_type = SpectralType::O3V;
+    let mut min_diff = f64::MAX;
+    for current_spectral_type in SpectralType::iter() {
+      let current_properties = spectral_type_properties[&current_spectral_type];
+      let current_mass = current_properties.mass;
+      let diff = (mass.0 - current_mass.0).abs();
+      if diff < min_diff {
+        min_diff = diff;
+        spectral_type = current_spectral_type;
+      }
+    }
+    spectral_type
+  }
+
   /// Get the mass of the star.
   pub fn get_mass(&self) -> MassOfSol {
     self.get_properties().mass
@@ -207,6 +224,17 @@ impl SpectralType {
     let result = mass.0 / radius.0.powf(3.0);
     DensityOfSol(result)
   }
+
+  /// Get the absolute RGB color of the star.
+  pub fn get_absolute_rgb(&self) -> (u8, u8, u8) {
+    self.get_properties().absolute_rgb
+  }
+}
+
+impl From<MassOfSol> for SpectralType {
+  fn from(mass: MassOfSol) -> Self {
+    SpectralType::from_mass(mass)
+  }
 }
 
 #[cfg(test)]
@@ -229,6 +257,7 @@ mod tests {
         luminosity: LuminosityOfSol(1_400_000.0),
         temperature: TemperatureInKelvin(44_900.0),
         absolute_rgb: (215, 252, 255),
+        is_main_sequence: true,
       }
     );
     assert_eq!(
@@ -239,6 +268,7 @@ mod tests {
         luminosity: LuminosityOfSol(3.0e-4),
         temperature: TemperatureInKelvin(2_380.0),
         absolute_rgb: (255, 228, 110),
+        is_main_sequence: true,
       }
     );
     assert_approx_eq!(SpectralType::O3V.get_mass(), MassOfSol(120.0));
