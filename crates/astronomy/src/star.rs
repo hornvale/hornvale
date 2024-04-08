@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, Builder)]
 pub struct Star {
   /// The mass of the star, in solar masses.
-  #[builder(default = "SpectralType::default()")]
+  #[builder(default = "SpectralType::default()", setter(into))]
   pub spectral_type: SpectralType,
   /// The age of the star, in gigayears.
   #[builder(default = "TimeInGigayears(4.6)")]
