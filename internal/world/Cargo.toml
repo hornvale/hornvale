@@ -1,0 +1,10 @@
+[package]
+name = "hornvale_world"
+version = "0.0.0"
+edition = "2021"
+
+[lints]
+workspace = true
+
+[dependencies]
+hornvale_test_utilities.workspace = true

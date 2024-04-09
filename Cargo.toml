@@ -30,7 +30,7 @@ workspace = true
 
 [workspace]
 exclude = []
-members = ["crates/*", "internal/test_utilities"]
+members = ["crates/*", "internal/test_utilities", "internal/world"]
 
 [workspace.lints.rustdoc]
 bare_urls = "deny"
@@ -66,6 +66,7 @@ variant_size_differences = "deny"
 
 [dependencies]
 "hornvale_astronomy" = { path = "crates/astronomy" }
+"hornvale_world" = { path = "internal/world" }
 
 [workspace.dependencies]
 all_asserts = "2.3.1"
