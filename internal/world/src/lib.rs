@@ -23,18 +23,3 @@
 //! The initial vertex is always generated at (0, 0). It is given a seed value,
 //! a **Region Seed**, equal to that of the World Seed.
 //!
-//! We expand outward, adding new vertices, using a discretized version of
-//! Bridson's algorithm.
-//!
-//! We connect the vertices in a minimum spanning tree using Prim's algorithm,
-//! which seems to be well-suited to incremental growth.
-//!
-//! Then we add random cycles to ease navigation and enable player choice. This
-//! is done by adding a random number of edges to the graph.
-//!
-//! This algorithm can easily generate more regions than anyone could explore,
-//! but we can modify these algorithms to expand incrementally in the direction
-//! of exploration.
-
-/// Implementation of Bridson's algorithm.
-pub mod bridson;
