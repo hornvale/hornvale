@@ -36,18 +36,5 @@
 //! but we can modify these algorithms to expand incrementally in the direction
 //! of exploration.
 
-/// Add two numbers together
-pub fn add(left: usize, right: usize) -> usize {
-  left + right
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn it_works() {
-    let result = add(2, 2);
-    assert_eq!(result, 4);
-  }
-}
+/// Implementation of Bridson's algorithm.
+pub mod bridson;
