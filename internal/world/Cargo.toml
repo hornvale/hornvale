@@ -9,3 +9,4 @@ workspace = true
 [dependencies]
 hornvale_test_utilities.workspace = true
 rand.workspace = true
+serde.workspace = true

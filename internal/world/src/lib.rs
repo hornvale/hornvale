@@ -23,3 +23,6 @@
 //! The initial vertex is always generated at (0, 0). It is given a seed value,
 //! a **Region Seed**, equal to that of the World Seed.
 //!
+
+/// A 2-dimensional point in the world.
+pub mod point;
