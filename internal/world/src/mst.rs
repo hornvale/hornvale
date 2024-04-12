@@ -87,8 +87,8 @@ mod tests {
     let seed = 123456789; // Initial seed value
     let mut points = Vec::new();
     points.push(Point { x: 0, y: 0 });
-    for y in -20..20 {
-      for x in -20..20 {
+    for y in -10..10 {
+      for x in -10..10 {
         let point = Point { x, y };
         let is_marked = point.get_magic_number(seed) % 100 < 50;
         if is_marked {

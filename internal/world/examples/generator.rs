@@ -8,7 +8,7 @@ fn main() {
     let mut row = String::new();
     for x in -50..50 {
       let point = Point { x, y };
-      let is_marked = point.get_magic_number(seed) % 100 < 50;
+      let is_marked = point.get_magic_number(seed) % 100 < 10;
       if is_marked {
         row.push(' ');
       } else {
