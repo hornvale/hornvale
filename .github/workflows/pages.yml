@@ -46,6 +46,7 @@ jobs:
           wasm-bindgen \
             ./target/wasm32-unknown-unknown/release/hornvale.wasm \
             --out-dir ./html/ \
+            --no-modules \
             --no-typescript
 
       - name: Upload artifact

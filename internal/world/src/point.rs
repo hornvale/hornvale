@@ -28,15 +28,6 @@ impl Point {
     hash
   }
 
-  /// Determines whether this point is "marked," i.e. whether it is a region.
-  pub fn is_marked(&self, seed: u64) -> bool {
-    const LIMIT: u64 = 100;
-    const PERCENTAGE: u64 = 10;
-    let hash = self.get_magic_number(seed);
-    let pseudo_random = hash % LIMIT;
-    pseudo_random < PERCENTAGE
-  }
-
   /// Calculate the Euclidean distance this and another Point.
   pub fn get_euclidean_distance(&self, other: &Point) -> f64 {
     let x2 = self.x.wrapping_sub(other.x).pow(2) as f64;
@@ -112,68 +103,6 @@ mod tests {
       }
       .get_magic_number(seed),
       15972812006675875803
-    );
-  }
-
-  #[test]
-  fn test_is_marked() {
-    init();
-    let seed = 123456789;
-    assert_eq!(Point { x: 0, y: -1 }.is_marked(seed), false);
-    assert_eq!(Point { x: 0, y: 0 }.is_marked(seed), false);
-    assert_eq!(Point { x: 0, y: 1 }.is_marked(seed), false);
-    assert_eq!(Point { x: 1, y: 0 }.is_marked(seed), false);
-    assert_eq!(Point { x: 1, y: 1 }.is_marked(seed), false);
-    assert_eq!(Point { x: 1, y: 2 }.is_marked(seed), true);
-    assert_eq!(Point { x: i64::MAX, y: 1 }.is_marked(seed), false);
-    assert_eq!(Point { x: i64::MAX - 1, y: 1 }.is_marked(seed), false);
-    assert_eq!(
-      Point {
-        x: i64::MAX,
-        y: i64::MAX
-      }
-      .is_marked(seed),
-      false
-    );
-    assert_eq!(
-      Point {
-        x: i64::MAX - 1,
-        y: i64::MAX - 1
-      }
-      .is_marked(seed),
-      false
-    );
-    assert_eq!(
-      Point {
-        x: i64::MAX,
-        y: i64::MIN
-      }
-      .is_marked(seed),
-      false
-    );
-    assert_eq!(
-      Point {
-        x: i64::MAX - 1,
-        y: i64::MIN + 1
-      }
-      .is_marked(seed),
-      false
-    );
-    assert_eq!(
-      Point {
-        x: i64::MIN,
-        y: i64::MIN
-      }
-      .is_marked(seed),
-      false
-    );
-    assert_eq!(
-      Point {
-        x: i64::MIN + 1,
-        y: i64::MIN + 1
-      }
-      .is_marked(seed),
-      true
     );
   }
 

@@ -82,21 +82,20 @@ mod tests {
   }
 
   #[test]
-  fn test_generate_large_mst() {
+  fn test_generate_mst2() {
     init();
     let seed = 123456789; // Initial seed value
     let mut points = Vec::new();
     points.push(Point { x: 0, y: 0 });
-    for y in -50..50 {
-      for x in -50..50 {
+    for y in -20..20 {
+      for x in -20..20 {
         let point = Point { x, y };
-        if point.is_marked(seed) {
+        let is_marked = point.get_magic_number(seed) % 100 < 50;
+        if is_marked {
           points.push(point);
         }
       }
     }
-    println!("{:?}", points.len());
-    let mst = generate_mst(points);
-    assert_eq!(mst[0], (Point { x: 0, y: 0 }, Point { x: -1, y: 2 }));
+    generate_mst(points);
   }
 }

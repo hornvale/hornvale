@@ -4,13 +4,15 @@ use hornvale_world::point::Point;
 
 fn main() {
   let seed = 123456789; // Initial seed value
-  for y in 0..50 {
+  for y in -50..50 {
     let mut row = String::new();
-    for x in 0..50 {
-      if (Point { x, y }).is_marked(seed) {
-        row.push('#');
+    for x in -50..50 {
+      let point = Point { x, y };
+      let is_marked = point.get_magic_number(seed) % 100 < 50;
+      if is_marked {
+        row.push(' ');
       } else {
-        row.push('.');
+        row.push('#');
       }
     }
     println!("{}", row);
