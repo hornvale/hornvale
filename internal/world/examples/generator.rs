@@ -1,20 +1,12 @@
-//! Example of a simple world generator using a pseudo-random hash function.
+//! Test of the world.
 
-use hornvale_world::point::Point;
-
-fn main() {
-  let seed = 123456789; // Initial seed value
-  for y in -50..50 {
-    let mut row = String::new();
-    for x in -50..50 {
-      let point = Point { x, y };
-      let is_marked = point.get_magic_number(seed) % 100 < 10;
-      if is_marked {
-        row.push(' ');
-      } else {
-        row.push('#');
+/// Generate a world.
+pub fn main() {
+  for z in -5..5 {
+    for y in -5..5 {
+      for x in -5..5 {
+        println!("({}, {}, {})", x, y, z);
       }
     }
-    println!("{}", row);
   }
 }

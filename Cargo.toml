@@ -30,7 +30,7 @@ workspace = true
 
 [workspace]
 exclude = []
-members = ["crates/*", "internal/test_utilities", "internal/world"]
+members = ["crates/*", "internal/*"]
 
 [workspace.lints.rustdoc]
 bare_urls = "deny"

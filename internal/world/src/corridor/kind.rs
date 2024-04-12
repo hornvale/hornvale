@@ -1,0 +1,18 @@
+use crate::prelude::Point;
+use serde::{Deserialize, Serialize};
+
+/// A `CorridorKind` determines if and how a corridor is traversed.
+///
+/// In most cases, this will be a simple operation, but we observe them so that
+/// we can perform garbage collection, load and unload regions, and so on.
+///
+/// In other cases, this is more complicated; we can have special corridors that
+/// ascend to special regions, for example. These may require storing additional
+/// information.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+pub enum CorridorKind {
+  /// Normal and essentially transparent to the player.
+  Default(Point),
+  /// The player is ascending to a special region (z>0).
+  Ascend(Point),
+}

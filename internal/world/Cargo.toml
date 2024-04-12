@@ -7,7 +7,9 @@ edition = "2021"
 workspace = true
 
 [dependencies]
+derive_more.workspace = true
 getrandom.workspace = true
 hornvale_test_utilities.workspace = true
 rand.workspace = true
 serde.workspace = true
+strum.workspace = true
