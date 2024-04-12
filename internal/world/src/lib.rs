@@ -22,7 +22,17 @@
 //!
 //! The initial vertex is always generated at (0, 0). It is given a seed value,
 //! a **Region Seed**, equal to that of the World Seed.
-//!
 
+/// An edge connecting two points in the world.
+pub mod edge;
+/// A minimum spanning tree generator.
+pub mod mst;
 /// A 2-dimensional point in the world.
 pub mod point;
+
+/// The prelude.
+pub mod prelude {
+  pub use crate::edge::Edge;
+  pub use crate::mst::generate_mst;
+  pub use crate::point::Point;
+}

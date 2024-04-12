@@ -69,13 +69,15 @@ variant_size_differences = "deny"
 "hornvale_world" = { path = "internal/world" }
 
 [workspace.dependencies]
+rand = "0.8.5"
 all_asserts = "2.3.1"
 anyhow = { version = "1.0.81", features = ["std", "backtrace"] }
 assert_approx_eq = "1.1.0"
 derivative = "2.2.0"
 derive_builder = "0.20.0"
 derive_more = "0.99.17"
-"hornvale_test_utilities" = { path = "internal/test_utilities" }
+getrandom = { version = "0.2.14", features = ["js"] }
+hornvale_test_utilities = { path = "internal/test_utilities" }
 serde = { version = "1.0.197", features = ["alloc", "derive", "std"] }
 serde_json = "1.0.114"
 thiserror = "1.0.58"
@@ -84,5 +86,4 @@ log = "0.4.21"
 paste = "1.0.14"
 pretty_assertions = "1.4.0"
 pretty_env_logger = "0.5.0"
-rand = "0.8.5"
 strum = { version = "0.26.2", features = ["derive"] }

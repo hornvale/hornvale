@@ -10,6 +10,7 @@ runs:
       with:
         toolchain: stable
         components: clippy,rustfmt
+        targets: wasm32-unknown-unknown
 
     - name: Rust cache
       uses: Swatinem/rust-cache@v2
