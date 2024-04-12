@@ -13,7 +13,7 @@ runs:
         targets: wasm32-unknown-unknown
 
     - name: Rust cache
-      uses: Swatinem/rust-cache@v2
+      uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84 # v2.7.3
 
     - name: Install dependencies
       shell: bash

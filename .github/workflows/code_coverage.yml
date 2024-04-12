@@ -11,7 +11,7 @@ jobs:
     steps:
 
       - name: Checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Post-Checkout Actions
         uses: ./.github/actions/post-checkout
@@ -30,7 +30,7 @@ jobs:
             --output-path lcov.info
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@84508663e988701840491b86de86b666e8a86bed # v4.3.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
