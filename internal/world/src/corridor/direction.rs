@@ -1,4 +1,5 @@
 use super::kind::CorridorKind;
+use crate::prelude::PassageDirection;
 use crate::prelude::Region;
 use serde::{Deserialize, Serialize};
 use std::ops::Neg;
@@ -74,6 +75,22 @@ impl TryFrom<(Region, Region)> for CorridorDirection {
   fn try_from((from, to): (Region, Region)) -> Result<Self, Self::Error> {
     let region: Region = (to.x - from.x, to.y - from.y, to.z - from.z).into();
     CorridorDirection::try_from(region)
+  }
+}
+
+impl TryFrom<PassageDirection> for CorridorDirection {
+  type Error = ();
+
+  fn try_from(direction: PassageDirection) -> Result<Self, Self::Error> {
+    match direction {
+      PassageDirection::North => Ok(CorridorDirection::North),
+      PassageDirection::South => Ok(CorridorDirection::South),
+      PassageDirection::East => Ok(CorridorDirection::East),
+      PassageDirection::West => Ok(CorridorDirection::West),
+      PassageDirection::Up => Ok(CorridorDirection::Up),
+      PassageDirection::Down => Ok(CorridorDirection::Down),
+      _ => Err(()),
+    }
   }
 }
 

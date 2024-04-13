@@ -25,9 +25,11 @@ pub struct Region {
 
 impl Region {
   /// Get all corridors from the given region.
-  pub fn get_corridors(&self) -> Vec<CorridorKind> {
+  pub fn get_corridors(&self) -> Vec<(CorridorDirection, CorridorKind)> {
     CorridorDirection::iter()
-      .filter_map(|direction| direction.get_corridor(*self))
+      .map(|direction| (direction, direction.get_corridor(*self)))
+      .filter(|(_, corridor)| corridor.is_some())
+      .map(|(direction, corridor)| (direction, corridor.unwrap()))
       .collect()
   }
 }
@@ -72,12 +74,45 @@ mod tests {
     let region = Region { x: 0, y: 0, z: 0 };
     let corridors = region.get_corridors();
     assert_eq!(corridors.len(), 6);
-    assert_eq!(corridors[0], CorridorKind::Default(Region { x: 0, y: 1, z: 0 }));
-    assert_eq!(corridors[1], CorridorKind::Default(Region { x: 0, y: -1, z: 0 }));
-    assert_eq!(corridors[2], CorridorKind::Default(Region { x: 1, y: 0, z: 0 }));
-    assert_eq!(corridors[3], CorridorKind::Default(Region { x: -1, y: 0, z: 0 }));
-    assert_eq!(corridors[5], CorridorKind::Default(Region { x: 0, y: 0, z: -1 }));
-    assert_eq!(corridors[4], CorridorKind::Ascend(Region { x: 0, y: 0, z: 1 }));
+    assert_eq!(
+      corridors[0],
+      (
+        CorridorDirection::North,
+        CorridorKind::Default(Region { x: 0, y: 1, z: 0 })
+      )
+    );
+    assert_eq!(
+      corridors[1],
+      (
+        CorridorDirection::South,
+        CorridorKind::Default(Region { x: 0, y: -1, z: 0 })
+      )
+    );
+    assert_eq!(
+      corridors[2],
+      (
+        CorridorDirection::East,
+        CorridorKind::Default(Region { x: 1, y: 0, z: 0 })
+      )
+    );
+    assert_eq!(
+      corridors[3],
+      (
+        CorridorDirection::West,
+        CorridorKind::Default(Region { x: -1, y: 0, z: 0 })
+      )
+    );
+    assert_eq!(
+      corridors[5],
+      (
+        CorridorDirection::Down,
+        CorridorKind::Default(Region { x: 0, y: 0, z: -1 })
+      )
+    );
+    assert_eq!(
+      corridors[4],
+      (CorridorDirection::Up, CorridorKind::Ascend(Region { x: 0, y: 0, z: 1 }))
+    );
   }
 
   #[test]

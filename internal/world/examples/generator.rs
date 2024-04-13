@@ -1,10 +1,10 @@
 //! Test of the world.
+use hecs::World;
+use hornvale_world::prelude::*;
 
 /// Generate a world.
 pub fn main() {
-  for _z in -5..5 {
-    for _y in -5..5 {
-      for _x in -5..5 {}
-    }
-  }
+  let mut world = World::new();
+  let generator = CompassRoseRegionGenerator;
+  generator.generate(Region::default(), &mut world).unwrap();
 }

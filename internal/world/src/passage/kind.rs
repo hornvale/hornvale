@@ -1,4 +1,6 @@
 use super::condition::PassageCondition;
+use crate::prelude::CorridorDirection;
+use crate::prelude::Region;
 use crate::prelude::Room;
 use serde::{Deserialize, Serialize};
 
@@ -13,6 +15,9 @@ pub enum PassageKind {
   /// This is not actually a passage, but prints a message to the player.
   /// - String: The message to display.
   NoExit(String),
+  /// A passage that traverses a corridor.
+  /// - Region: The region of the corridor.
+  Corridor(Region),
   /// A specific condition must be met to traverse the passage.
   /// - Room: The destination room.
   /// - PassageCondition: The condition that must be met.
@@ -23,5 +28,11 @@ pub enum PassageKind {
 impl From<Room> for PassageKind {
   fn from(room: Room) -> Self {
     PassageKind::Default(room)
+  }
+}
+
+impl From<CorridorDirection> for PassageKind {
+  fn from(direction: CorridorDirection) -> Self {
+    PassageKind::Corridor(direction.to_region())
   }
 }

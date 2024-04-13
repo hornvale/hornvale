@@ -2,14 +2,23 @@
 //!
 //! `world` is tasked with creating and managing the game world of _Hornvale_.
 //!
-//! The world is an infinite, procedurally-generated 3D grid of regions, each
-//! of which is a 3D grid of rooms. These regions are loaded and unloaded as
-//! the player moves around the world.
+//! The world is an infinite, procedurally-generated 3D grid. Within this, each
+//! point in the grid is a region. Each region is connected to its neighbors by
+//! corridors.
 //!
-//! Passage between regions is handled by corridors; a region may have any of
-//! its six faces connected to any of the six faces of its neighboring regions.
-//! These corridors are generated deterministically based on the coordinates of
-//! the regions they connect.
+//! Associated with each region are rooms, which are points within the region.
+//! A room may have one or more passages that connect it to other rooms. This
+//! passage and the relationship between the rooms is not necessarily spatially
+//! coherent, i.e. a passage may connect two rooms that are not adjacent.
+//!
+//! Note that there is not an actual "passage" struct or "corridor" struct, and
+//! the "region" and "room" structs only contain their spatial coordinates; as
+//! this is an ECS architecture, it would be more appropriate to think of these
+//! as something like:
+//! - `Passage` = `(Region, Room, PassageDirection, PassageKind)`
+//! - `Corridor` = `(Region, CorridorDirection, CorridorKind)`
+//! - `Region` = everything tagged with a `Region` component
+//! - `Room` = everything tagged with a `Room` component
 
 /// Corridors connect regions.
 pub mod corridor;
@@ -24,7 +33,10 @@ pub mod room;
 
 /// The prelude.
 pub mod prelude {
-  pub use crate::corridor::{direction::CorridorDirection, finder::CorridorFinder, kind::CorridorKind};
+  pub use crate::corridor::{
+    direction::CorridorDirection, finder::CorridorFinder, kind::CorridorKind, origin::CorridorOrigin,
+    terminus::CorridorTerminus,
+  };
   pub use crate::error::WorldError;
   pub use crate::passage::{condition::PassageCondition, direction::PassageDirection, kind::PassageKind};
   pub use crate::region::{
