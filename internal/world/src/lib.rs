@@ -20,6 +20,8 @@
 //! - `Region` = everything tagged with a `Region` component
 //! - `Room` = everything tagged with a `Room` component
 
+/// Some basic components.
+pub mod component;
 /// Corridors connect regions.
 pub mod corridor;
 /// An error type.
@@ -33,6 +35,7 @@ pub mod room;
 
 /// The prelude.
 pub mod prelude {
+  pub use crate::component::{description::Description, name::Name};
   pub use crate::corridor::{
     direction::CorridorDirection, finder::CorridorFinder, kind::CorridorKind, origin::CorridorOrigin,
     terminus::CorridorTerminus,

@@ -1,6 +1,8 @@
 use crate::prelude::CorridorDirection;
 use crate::prelude::CorridorOrigin;
 use crate::prelude::CorridorTerminus;
+use crate::prelude::Description;
+use crate::prelude::Name;
 use crate::prelude::PassageDirection;
 use crate::prelude::PassageKind;
 use crate::prelude::Region;
@@ -21,9 +23,15 @@ pub struct CompassRoseRegionGenerator;
 impl RegionGenerator for CompassRoseRegionGenerator {
   fn generate(&self, region: Region, world: &mut World) -> Result<(), WorldError> {
     let center_room = Room::default();
+    let name = Name("The Center Room".to_string());
+    let description = Description("This is the center room.".to_string());
+    world.spawn((region, center_room, name, description));
     PassageDirection::iter().for_each(|direction| {
       let room = center_room.get(direction);
       let diff = room - center_room;
+      let name = Name(format!("The {} Room", direction));
+      let description = Description(format!("This is the {} room.", direction.to_string().to_lowercase()));
+      world.spawn((region, room, name, description));
       // Insert a passage from the center room to the room in the direction.
       world.spawn((region, center_room, direction, PassageKind::from(diff)));
       // Insert a passage from the room in the direction to the center room.
@@ -48,101 +56,6 @@ impl RegionGenerator for CompassRoseRegionGenerator {
         CorridorTerminus,
       ));
     });
-    // Create corridor origins within the region.
-    //
-    // We do this by finding a room (e.g. the south room, which should have a
-    // passage to the south that enters a corridor) and creating the corridor
-    // origin.
-    let south_room = world
-      .query::<&Room>()
-      .iter()
-      .find(|(_, &room)| room == center_room.get(PassageDirection::South))
-      .map(|(_, &room)| room)
-      .unwrap();
-    world.spawn((
-      region,
-      south_room,
-      PassageDirection::South,
-      PassageKind::Corridor(CorridorDirection::South.into()),
-      CorridorOrigin,
-    ));
-    let north_room = world
-      .query::<&Room>()
-      .iter()
-      .find(|(_, &room)| room == center_room.get(PassageDirection::North))
-      .map(|(_, &room)| room)
-      .unwrap();
-    world.spawn((
-      region,
-      north_room,
-      PassageDirection::North,
-      PassageKind::Corridor(CorridorDirection::North.into()),
-      CorridorOrigin,
-    ));
-    let east_room = world
-      .query::<&Room>()
-      .iter()
-      .find(|(_, &room)| room == center_room.get(PassageDirection::East))
-      .map(|(_, &room)| room)
-      .unwrap();
-    world.spawn((
-      region,
-      east_room,
-      PassageDirection::East,
-      PassageKind::Corridor(CorridorDirection::East.into()),
-      CorridorOrigin,
-    ));
-    let west_room = world
-      .query::<&Room>()
-      .iter()
-      .find(|(_, &room)| room == center_room.get(PassageDirection::West))
-      .map(|(_, &room)| room)
-      .unwrap();
-    world.spawn((
-      region,
-      west_room,
-      PassageDirection::West,
-      PassageKind::Corridor(CorridorDirection::West.into()),
-      CorridorOrigin,
-    ));
-    let up_room = world
-      .query::<&Room>()
-      .iter()
-      .find(|(_, &room)| room == center_room.get(PassageDirection::Up))
-      .map(|(_, &room)| room)
-      .unwrap();
-    world.spawn((
-      region,
-      up_room,
-      PassageDirection::Up,
-      PassageKind::Corridor(CorridorDirection::Up.into()),
-      CorridorOrigin,
-    ));
-    let down_room = world
-      .query::<&Room>()
-      .iter()
-      .find(|(_, &room)| room == center_room.get(PassageDirection::Down))
-      .map(|(_, &room)| room)
-      .unwrap();
-    world.spawn((
-      region,
-      down_room,
-      PassageDirection::Down,
-      PassageKind::Corridor(CorridorDirection::Down.into()),
-      CorridorOrigin,
-    ));
-
-    // Create corridor termini within the region.
-    //
-    // We do this by finding a room (e.g. the south room, which should have a
-    // passage from the south that enters from a corridor) and creating the
-    // corridor terminus.
-    world.spawn((region, south_room, CorridorDirection::South, CorridorTerminus));
-    world.spawn((region, north_room, CorridorDirection::North, CorridorTerminus));
-    world.spawn((region, east_room, CorridorDirection::East, CorridorTerminus));
-    world.spawn((region, west_room, CorridorDirection::West, CorridorTerminus));
-    world.spawn((region, up_room, CorridorDirection::Up, CorridorTerminus));
-    world.spawn((region, down_room, CorridorDirection::Down, CorridorTerminus));
     Ok(())
   }
 }
