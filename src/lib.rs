@@ -12,6 +12,7 @@
 /// examples, benches, and integration tests.
 pub mod prelude {
   pub use hornvale_astronomy::prelude as astronomy;
+  pub use hornvale_world::prelude as world;
 
   /// Hello, world!
   pub fn hello() {

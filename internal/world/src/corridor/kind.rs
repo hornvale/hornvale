@@ -1,7 +1,7 @@
 use crate::prelude::Region;
 use serde::{Deserialize, Serialize};
 
-/// A `CorridorKind` determines if and how a corridor is traversed.
+/// A `CorridorKind` determines if and how a corridor can be traversed.
 ///
 /// In most cases, this will be a simple operation, but we observe them so that
 /// we can perform garbage collection, load and unload regions, and so on.
@@ -15,4 +15,14 @@ pub enum CorridorKind {
   Default(Region),
   /// The player is ascending to a special region (z>0).
   Ascend(Region),
+}
+
+impl From<Region> for CorridorKind {
+  fn from(region: Region) -> Self {
+    if region.z > 0 {
+      CorridorKind::Ascend(region)
+    } else {
+      CorridorKind::Default(region)
+    }
+  }
 }

@@ -1,9 +1,12 @@
 use crate::prelude::CorridorDirection;
+use crate::prelude::CorridorKind;
 use derive_more::{Add, Neg, Sub};
 use serde::{Deserialize, Serialize};
-use std::i64;
 
 /// Regions are 3-dimensional grids of rooms.
+///
+/// They exist on a separate 3D grid from rooms and are used to manage the
+/// loading and unloading of regions as the player moves around the world.
 #[derive(Add, Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Neg, Ord, PartialEq, PartialOrd, Serialize, Sub)]
 pub struct Region {
   /// The x-coordinate of the region.
@@ -30,6 +33,15 @@ impl From<CorridorDirection> for Region {
 impl From<(i64, i64, i64)> for Region {
   fn from((x, y, z): (i64, i64, i64)) -> Self {
     Region { x, y, z }
+  }
+}
+
+impl From<CorridorKind> for Region {
+  fn from(kind: CorridorKind) -> Self {
+    match kind {
+      CorridorKind::Default(region) => region,
+      CorridorKind::Ascend(region) => region,
+    }
   }
 }
 

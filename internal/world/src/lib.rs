@@ -13,13 +13,20 @@
 
 /// Corridors connect regions.
 pub mod corridor;
+/// Passages connect rooms.
+pub mod passage;
 /// Regions are points in the 3D grid.
 pub mod region;
+/// Rooms are points in the 3D grid within a region.
+pub mod room;
 
 /// The prelude.
 pub mod prelude {
   pub use crate::corridor::direction::CorridorDirection;
   pub use crate::corridor::finder::CorridorFinder;
   pub use crate::corridor::kind::CorridorKind;
+  pub use crate::passage::condition::PassageCondition;
+  pub use crate::passage::kind::PassageKind;
   pub use crate::region::Region;
+  pub use crate::room::Room;
 }
