@@ -2,11 +2,12 @@ use super::condition::PassageCondition;
 use crate::prelude::Region;
 use crate::prelude::Room;
 use serde::{Deserialize, Serialize};
+use strum::Display;
 
 /// A `PassageKind` determines if and how a passage can be traversed.
 ///
 /// This allows us fine control over how the player can move between rooms.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[derive(Clone, Debug, Display, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
 pub enum PassageKind {
   /// Normal and essentially transparent to the player.
   /// - Room: The destination room.

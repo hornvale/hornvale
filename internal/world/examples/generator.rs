@@ -16,6 +16,7 @@ pub fn main() {
   }
   let player = world.spawn((Region::default(), Room::default(), Player));
   let mut input_source = io::stdin().lock();
+  let mut debug_mode = false;
   loop {
     // Find the room the player is in.
     let (region, room) = {
@@ -32,6 +33,32 @@ pub fn main() {
         .unwrap();
       println!("{}", room_name.0);
       println!("{}", room_description.0);
+      let exits = world
+        .query::<(&Region, &Room, &PassageDirection, &PassageKind)>()
+        .iter()
+        .filter(|(_, (&rgn, &rm, _, _))| rgn == region && rm == room)
+        .map(|(_, (_, _, &ref dir, &ref kind))| (dir.clone(), kind.clone()))
+        .collect::<Vec<_>>();
+      if !exits.is_empty() {
+        let exits = exits
+          .iter()
+          .map(|(dir, _)| dir.to_string().to_lowercase())
+          .collect::<Vec<_>>();
+        match exits.len() {
+          1 => println!("There is an exit to the {}.", exits[0]),
+          2 => println!("There are exits to the {} and {}.", exits[0], exits[1]),
+          _ => println!(
+            "There are exits to the {}, and {}.",
+            exits[..exits.len() - 1].join(", "),
+            exits[exits.len() - 1]
+          ),
+        }
+      }
+    }
+    if debug_mode {
+      println!("Region: {:?}", region);
+      println!("Room: {:?}", room);
+      println!("");
     }
     print!("> ");
     io::stdout().flush().unwrap();
@@ -48,6 +75,18 @@ pub fn main() {
       "nw" => PassageDirection::Northwest,
       "u" => PassageDirection::Up,
       "d" => PassageDirection::Down,
+      "?" => {
+        println!("Region: {:?}", region);
+        println!("Room: {:?}", room);
+        println!("");
+        continue;
+      },
+      "!" => {
+        debug_mode = !debug_mode;
+        println!("Debug mode: {}", debug_mode);
+        println!("");
+        continue;
+      },
       "q" => {
         println!("Goodbye!");
         break;

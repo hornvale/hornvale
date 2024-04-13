@@ -23,12 +23,12 @@ pub struct CompassRoseRegionGenerator;
 impl RegionGenerator for CompassRoseRegionGenerator {
   fn generate(&self, region: Region, world: &mut World) -> Result<(), WorldError> {
     let center_room = Room::default();
-    let name = Name(format!("The Center Room ({:?})", region));
+    let name = Name("The Center Room".to_string());
     let description = Description("This is the center room.".to_string());
     world.spawn((region, center_room, name, description));
     PassageDirection::iter().for_each(|direction| {
       let room = center_room.get(direction);
-      let name = Name(format!("The {} Room ({:?})", direction, region));
+      let name = Name(format!("The {} Room", direction));
       let description = Description(format!("This is the {} room.", direction.to_string().to_lowercase()));
       world.spawn((region, room, name, description));
 
