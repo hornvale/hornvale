@@ -29,6 +29,7 @@ pub mod prelude {
   pub use crate::passage::{condition::PassageCondition, kind::PassageKind};
   pub use crate::region::{
     generator::{manager::RegionGeneratorManager, registry::RegionGeneratorRegistry, RegionGenerator},
+    generators::{empty::EmptyRegionGenerator, fail::FailRegionGenerator, null::NullRegionGenerator},
     Region,
   };
   pub use crate::room::Room;

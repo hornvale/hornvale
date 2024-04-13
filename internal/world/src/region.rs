@@ -2,6 +2,7 @@ use crate::prelude::CorridorDirection;
 use crate::prelude::CorridorKind;
 use derive_more::{Add, Neg, Sub};
 use serde::{Deserialize, Serialize};
+use strum::IntoEnumIterator;
 
 /// Region generators are responsible for creating regions.
 pub mod generator;
@@ -20,6 +21,15 @@ pub struct Region {
   pub y: i64,
   /// The z-coordinate of the region.
   pub z: i64,
+}
+
+impl Region {
+  /// Get all corridors from the given region.
+  pub fn get_corridors(&self) -> Vec<CorridorKind> {
+    CorridorDirection::iter()
+      .filter_map(|direction| direction.get_corridor(*self))
+      .collect()
+  }
 }
 
 impl From<CorridorDirection> for Region {
@@ -55,6 +65,20 @@ mod tests {
   use super::*;
   use hornvale_test_utilities::prelude::*;
   use strum::IntoEnumIterator;
+
+  #[test]
+  fn test_get_corridors() {
+    init();
+    let region = Region { x: 0, y: 0, z: 0 };
+    let corridors = region.get_corridors();
+    assert_eq!(corridors.len(), 6);
+    assert_eq!(corridors[0], CorridorKind::Default(Region { x: 0, y: 1, z: 0 }));
+    assert_eq!(corridors[1], CorridorKind::Default(Region { x: 0, y: -1, z: 0 }));
+    assert_eq!(corridors[2], CorridorKind::Default(Region { x: 1, y: 0, z: 0 }));
+    assert_eq!(corridors[3], CorridorKind::Default(Region { x: -1, y: 0, z: 0 }));
+    assert_eq!(corridors[5], CorridorKind::Default(Region { x: 0, y: 0, z: -1 }));
+    assert_eq!(corridors[4], CorridorKind::Ascend(Region { x: 0, y: 0, z: 1 }));
+  }
 
   #[test]
   fn test_from_corridor_direction() {
