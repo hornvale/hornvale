@@ -19,6 +19,9 @@
 //! - `Corridor` = `(Region, CorridorDirection, CorridorKind)`
 //! - `Region` = everything tagged with a `Region` component
 //! - `Room` = everything tagged with a `Room` component
+//!
+//! In addition, this crate provides some basic components that can be used to
+//! describe regions, rooms, and other entities.
 
 /// Some basic components.
 pub mod component;
