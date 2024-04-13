@@ -3,6 +3,11 @@ use crate::prelude::CorridorKind;
 use derive_more::{Add, Neg, Sub};
 use serde::{Deserialize, Serialize};
 
+/// Region generators are responsible for creating regions.
+pub mod generator;
+/// The collection of region generators.
+pub mod generators;
+
 /// Regions are 3-dimensional grids of rooms.
 ///
 /// They exist on a separate 3D grid from rooms and are used to manage the

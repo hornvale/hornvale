@@ -13,6 +13,8 @@
 
 /// Corridors connect regions.
 pub mod corridor;
+/// An error type.
+pub mod error;
 /// Passages connect rooms.
 pub mod passage;
 /// Regions are points in the 3D grid.
@@ -22,11 +24,12 @@ pub mod room;
 
 /// The prelude.
 pub mod prelude {
-  pub use crate::corridor::direction::CorridorDirection;
-  pub use crate::corridor::finder::CorridorFinder;
-  pub use crate::corridor::kind::CorridorKind;
-  pub use crate::passage::condition::PassageCondition;
-  pub use crate::passage::kind::PassageKind;
-  pub use crate::region::Region;
+  pub use crate::corridor::{direction::CorridorDirection, finder::CorridorFinder, kind::CorridorKind};
+  pub use crate::error::WorldError;
+  pub use crate::passage::{condition::PassageCondition, kind::PassageKind};
+  pub use crate::region::{
+    generator::{manager::RegionGeneratorManager, registry::RegionGeneratorRegistry, RegionGenerator},
+    Region,
+  };
   pub use crate::room::Room;
 }
