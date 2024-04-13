@@ -23,36 +23,38 @@ pub struct CompassRoseRegionGenerator;
 impl RegionGenerator for CompassRoseRegionGenerator {
   fn generate(&self, region: Region, world: &mut World) -> Result<(), WorldError> {
     let center_room = Room::default();
-    let name = Name("The Center Room".to_string());
+    let name = Name(format!("The Center Room ({:?})", region));
     let description = Description("This is the center room.".to_string());
     world.spawn((region, center_room, name, description));
     PassageDirection::iter().for_each(|direction| {
       let room = center_room.get(direction);
-      let diff = room - center_room;
-      let name = Name(format!("The {} Room", direction));
+      let name = Name(format!("The {} Room ({:?})", direction, region));
       let description = Description(format!("This is the {} room.", direction.to_string().to_lowercase()));
       world.spawn((region, room, name, description));
+
       // Insert a passage from the center room to the room in the direction.
-      world.spawn((region, center_room, direction, PassageKind::from(diff)));
-      // Insert a passage from the room in the direction to the center room.
-      world.spawn((region, room, direction, PassageKind::from(-diff)));
+      world.spawn((region, center_room, direction, PassageKind::from(room)));
+      // Insert a passage from the room in the opposite direction to the center room.
+      world.spawn((region, room, -direction, PassageKind::from(center_room)));
+
       let corridor_direction = CorridorDirection::try_from(direction);
       if corridor_direction.is_err() {
         return;
       }
       // Insert a passage from the room into a corridor to the next region.
+      let next_region = region + corridor_direction.unwrap().into();
       world.spawn((
         region,
         room,
         direction,
-        PassageKind::from(CorridorDirection::try_from(direction).expect("Invalid corridor direction")),
+        PassageKind::Corridor(next_region),
         CorridorOrigin,
       ));
       // Insert a corridor terminus from the next region into the room.
       world.spawn((
         region,
         room,
-        CorridorDirection::try_from(-direction).expect("Invalid corridor direction"),
+        CorridorDirection::try_from(direction).expect("Invalid corridor direction"),
         CorridorTerminus,
       ));
     });

@@ -1,5 +1,4 @@
 use super::condition::PassageCondition;
-use crate::prelude::CorridorDirection;
 use crate::prelude::Region;
 use crate::prelude::Room;
 use serde::{Deserialize, Serialize};
@@ -28,11 +27,5 @@ pub enum PassageKind {
 impl From<Room> for PassageKind {
   fn from(room: Room) -> Self {
     PassageKind::Default(room)
-  }
-}
-
-impl From<CorridorDirection> for PassageKind {
-  fn from(direction: CorridorDirection) -> Self {
-    PassageKind::Corridor(direction.to_region())
   }
 }
