@@ -46,4 +46,19 @@ mod tests {
       }
     }
   }
+
+  #[test]
+  fn test_simple_get_corridor() {
+    init();
+    let corridor_finder = CorridorFinder::Simple;
+    for z in -1..=1 {
+      for y in -1..=1 {
+        for x in -1..=1 {
+          for direction in CorridorDirection::iter() {
+            assert!(corridor_finder.get_corridor(Region { x, y, z }, direction).is_some());
+          }
+        }
+      }
+    }
+  }
 }

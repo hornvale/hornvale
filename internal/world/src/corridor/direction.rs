@@ -76,3 +76,123 @@ impl TryFrom<(Region, Region)> for CorridorDirection {
     CorridorDirection::try_from(region)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use hornvale_test_utilities::prelude::*;
+
+  #[test]
+  fn test_to_region() {
+    init();
+    assert_eq!(CorridorDirection::North.to_region(), Region { x: 0, y: 1, z: 0 });
+    assert_eq!(CorridorDirection::South.to_region(), Region { x: 0, y: -1, z: 0 });
+    assert_eq!(CorridorDirection::East.to_region(), Region { x: 1, y: 0, z: 0 });
+    assert_eq!(CorridorDirection::West.to_region(), Region { x: -1, y: 0, z: 0 });
+    assert_eq!(CorridorDirection::Up.to_region(), Region { x: 0, y: 0, z: 1 });
+    assert_eq!(CorridorDirection::Down.to_region(), Region { x: 0, y: 0, z: -1 });
+  }
+
+  #[test]
+  fn test_opposite() {
+    init();
+    assert_eq!(CorridorDirection::North.opposite(), CorridorDirection::South);
+    assert_eq!(CorridorDirection::South.opposite(), CorridorDirection::North);
+    assert_eq!(CorridorDirection::East.opposite(), CorridorDirection::West);
+    assert_eq!(CorridorDirection::West.opposite(), CorridorDirection::East);
+    assert_eq!(CorridorDirection::Up.opposite(), CorridorDirection::Down);
+    assert_eq!(CorridorDirection::Down.opposite(), CorridorDirection::Up);
+  }
+
+  #[test]
+  fn test_get_corridor() {
+    init();
+    assert_eq!(
+      CorridorDirection::North.get_corridor(Region { x: 0, y: 0, z: 0 }),
+      Some(CorridorKind::Default(Region { x: 0, y: 1, z: 0 }))
+    );
+    assert_eq!(
+      CorridorDirection::South.get_corridor(Region { x: 0, y: 0, z: 0 }),
+      Some(CorridorKind::Default(Region { x: 0, y: -1, z: 0 }))
+    );
+    assert_eq!(
+      CorridorDirection::East.get_corridor(Region { x: 0, y: 0, z: 0 }),
+      Some(CorridorKind::Default(Region { x: 1, y: 0, z: 0 }))
+    );
+    assert_eq!(
+      CorridorDirection::West.get_corridor(Region { x: 0, y: 0, z: 0 }),
+      Some(CorridorKind::Default(Region { x: -1, y: 0, z: 0 }))
+    );
+    assert_eq!(
+      CorridorDirection::Up.get_corridor(Region { x: 0, y: 0, z: 0 }),
+      Some(CorridorKind::Ascend(Region { x: 0, y: 0, z: 1 }))
+    );
+    assert_eq!(
+      CorridorDirection::Down.get_corridor(Region { x: 0, y: 0, z: 0 }),
+      Some(CorridorKind::Default(Region { x: 0, y: 0, z: -1 }))
+    );
+  }
+
+  #[test]
+  fn test_try_from_region() {
+    init();
+    assert_eq!(
+      CorridorDirection::try_from(Region { x: 0, y: 1, z: 0 }),
+      Ok(CorridorDirection::North)
+    );
+    assert_eq!(
+      CorridorDirection::try_from(Region { x: 0, y: -1, z: 0 }),
+      Ok(CorridorDirection::South)
+    );
+    assert_eq!(
+      CorridorDirection::try_from(Region { x: 1, y: 0, z: 0 }),
+      Ok(CorridorDirection::East)
+    );
+    assert_eq!(
+      CorridorDirection::try_from(Region { x: -1, y: 0, z: 0 }),
+      Ok(CorridorDirection::West)
+    );
+    assert_eq!(
+      CorridorDirection::try_from(Region { x: 0, y: 0, z: 1 }),
+      Ok(CorridorDirection::Up)
+    );
+    assert_eq!(
+      CorridorDirection::try_from(Region { x: 0, y: 0, z: -1 }),
+      Ok(CorridorDirection::Down)
+    );
+    assert_eq!(CorridorDirection::try_from(Region { x: 1, y: 1, z: 1 }), Err(()));
+  }
+
+  #[test]
+  fn test_try_from_regions() {
+    init();
+    assert_eq!(
+      CorridorDirection::try_from((Region { x: 0, y: 0, z: 0 }, Region { x: 0, y: 1, z: 0 })),
+      Ok(CorridorDirection::North)
+    );
+    assert_eq!(
+      CorridorDirection::try_from((Region { x: 0, y: 0, z: 0 }, Region { x: 0, y: -1, z: 0 })),
+      Ok(CorridorDirection::South)
+    );
+    assert_eq!(
+      CorridorDirection::try_from((Region { x: 0, y: 0, z: 0 }, Region { x: 1, y: 0, z: 0 })),
+      Ok(CorridorDirection::East)
+    );
+    assert_eq!(
+      CorridorDirection::try_from((Region { x: 0, y: 0, z: 0 }, Region { x: -1, y: 0, z: 0 })),
+      Ok(CorridorDirection::West)
+    );
+    assert_eq!(
+      CorridorDirection::try_from((Region { x: 0, y: 0, z: 0 }, Region { x: 0, y: 0, z: 1 })),
+      Ok(CorridorDirection::Up)
+    );
+    assert_eq!(
+      CorridorDirection::try_from((Region { x: 0, y: 0, z: 0 }, Region { x: 0, y: 0, z: -1 })),
+      Ok(CorridorDirection::Down)
+    );
+    assert_eq!(
+      CorridorDirection::try_from((Region { x: 1, y: 1, z: 1 }, Region { x: 0, y: 0, z: 0 })),
+      Err(())
+    );
+  }
+}

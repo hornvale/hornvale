@@ -1,12 +1,10 @@
 use crate::prelude::CorridorDirection;
-use derive_more::{Add, Mul, Neg, Sub};
+use derive_more::{Add, Neg, Sub};
 use serde::{Deserialize, Serialize};
 use std::i64;
 
 /// Regions are 3-dimensional grids of rooms.
-#[derive(
-  Add, Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Mul, Neg, Ord, PartialEq, PartialOrd, Serialize, Sub,
-)]
+#[derive(Add, Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Neg, Ord, PartialEq, PartialOrd, Serialize, Sub)]
 pub struct Region {
   /// The x-coordinate of the region.
   pub x: i64,
@@ -64,5 +62,22 @@ mod tests {
     let direction = CorridorDirection::North;
     let new_region = region + direction.into();
     assert_eq!(new_region, Region { x: 1, y: 3, z: 3 });
+  }
+
+  #[test]
+  fn test_sub() {
+    init();
+    let region = Region { x: 1, y: 2, z: 3 };
+    let direction = CorridorDirection::North;
+    let new_region = region - direction.into();
+    assert_eq!(new_region, Region { x: 1, y: 1, z: 3 });
+  }
+
+  #[test]
+  fn test_neg() {
+    init();
+    let region = Region { x: 1, y: 2, z: 3 };
+    let new_region = -region;
+    assert_eq!(new_region, Region { x: -1, y: -2, z: -3 });
   }
 }
