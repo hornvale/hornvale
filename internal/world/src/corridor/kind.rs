@@ -1,4 +1,4 @@
-use crate::prelude::Point;
+use crate::prelude::Region;
 use serde::{Deserialize, Serialize};
 
 /// A `CorridorKind` determines if and how a corridor is traversed.
@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
 pub enum CorridorKind {
   /// Normal and essentially transparent to the player.
-  Default(Point),
+  Default(Region),
   /// The player is ascending to a special region (z>0).
-  Ascend(Point),
+  Ascend(Region),
 }

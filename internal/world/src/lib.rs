@@ -13,9 +13,7 @@
 
 /// Corridors connect regions.
 pub mod corridor;
-/// A 3-dimensional point in the world.
-pub mod point;
-/// Regions are 3-dimensional grids of rooms.
+/// Regions are points in the 3D grid.
 pub mod region;
 
 /// The prelude.
@@ -23,5 +21,5 @@ pub mod prelude {
   pub use crate::corridor::direction::CorridorDirection;
   pub use crate::corridor::finder::CorridorFinder;
   pub use crate::corridor::kind::CorridorKind;
-  pub use crate::point::Point;
+  pub use crate::region::Region;
 }

@@ -1,5 +1,5 @@
 use super::kind::CorridorKind;
-use crate::prelude::Point;
+use crate::prelude::Region;
 use serde::{Deserialize, Serialize};
 use std::ops::Neg;
 use strum::{Display, EnumIter};
@@ -22,23 +22,23 @@ pub enum CorridorDirection {
 }
 
 impl CorridorDirection {
-  /// Transform the given direction into a point.
-  pub fn to_point(&self) -> Point {
+  /// Transform the given direction into a region.
+  pub fn to_region(&self) -> Region {
     (*self).into()
   }
 
   /// Get the opposite direction of the given direction.
   pub fn opposite(&self) -> Self {
-    self.to_point().neg().try_into().expect("Invalid corridor direction")
+    self.to_region().neg().try_into().expect("Invalid corridor direction")
   }
 
-  /// Build a corridor in the given direction from the given point.
-  pub fn get_corridor(&self, point: Point) -> Option<CorridorKind> {
+  /// Build a corridor in the given direction from the given region.
+  pub fn get_corridor(&self, region: Region) -> Option<CorridorKind> {
     use CorridorDirection::*;
     use CorridorKind::*;
-    let destination = self.to_point() + point;
+    let destination = self.to_region() + region;
     match self {
-      Up if point.z >= 0 => Some(Ascend(destination)),
+      Up if region.z >= 0 => Some(Ascend(destination)),
       _ => Some(Default(destination)),
     }
   }
@@ -52,11 +52,11 @@ impl Neg for CorridorDirection {
   }
 }
 
-impl TryFrom<Point> for CorridorDirection {
+impl TryFrom<Region> for CorridorDirection {
   type Error = ();
 
-  fn try_from(point: Point) -> Result<Self, Self::Error> {
-    match (point.x, point.y, point.z) {
+  fn try_from(region: Region) -> Result<Self, Self::Error> {
+    match (region.x, region.y, region.z) {
       (0, y, 0) if y > 0 => Ok(CorridorDirection::North),
       (0, y, 0) if y < 0 => Ok(CorridorDirection::South),
       (x, 0, 0) if x > 0 => Ok(CorridorDirection::East),
@@ -68,11 +68,11 @@ impl TryFrom<Point> for CorridorDirection {
   }
 }
 
-impl TryFrom<(Point, Point)> for CorridorDirection {
+impl TryFrom<(Region, Region)> for CorridorDirection {
   type Error = ();
 
-  fn try_from((from, to): (Point, Point)) -> Result<Self, Self::Error> {
-    let point: Point = (to.x - from.x, to.y - from.y, to.z - from.z).into();
-    CorridorDirection::try_from(point)
+  fn try_from((from, to): (Region, Region)) -> Result<Self, Self::Error> {
+    let region: Region = (to.x - from.x, to.y - from.y, to.z - from.z).into();
+    CorridorDirection::try_from(region)
   }
 }

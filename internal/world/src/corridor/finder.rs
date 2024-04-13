@@ -1,6 +1,6 @@
 use super::direction::CorridorDirection;
 use super::kind::CorridorKind;
-use crate::prelude::Point;
+use crate::prelude::Region;
 
 /// A `CorridorFinder` is an algorithm to find corridors between regions.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -11,17 +11,17 @@ pub enum CorridorFinder {
 }
 
 impl CorridorFinder {
-  /// Get the corridor at the given point in the given direction.
-  pub fn get_corridor(&self, point: Point, direction: CorridorDirection) -> Option<CorridorKind> {
+  /// Get the corridor at the given region in the given direction.
+  pub fn get_corridor(&self, region: Region, direction: CorridorDirection) -> Option<CorridorKind> {
     match self {
-      CorridorFinder::Simple => direction.get_corridor(point),
+      CorridorFinder::Simple => direction.get_corridor(region),
     }
   }
 
-  /// Determine whether a corridor exists at the given point in the given direction.
-  pub fn has_corridor(&self, point: Point, direction: CorridorDirection) -> bool {
+  /// Determine whether a corridor exists at the given region in the given direction.
+  pub fn has_corridor(&self, region: Region, direction: CorridorDirection) -> bool {
     match self {
-      CorridorFinder::Simple => self.get_corridor(point, direction).is_some(),
+      CorridorFinder::Simple => self.get_corridor(region, direction).is_some(),
     }
   }
 }
@@ -40,7 +40,7 @@ mod tests {
       for y in -1..=1 {
         for x in -1..=1 {
           for direction in CorridorDirection::iter() {
-            assert!(corridor_finder.has_corridor(Point { x, y, z }, direction));
+            assert!(corridor_finder.has_corridor(Region { x, y, z }, direction));
           }
         }
       }
