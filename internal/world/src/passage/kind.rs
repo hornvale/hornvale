@@ -19,3 +19,9 @@ pub enum PassageKind {
   /// - String: The message to display if the condition is not met.
   Conditional(Room, PassageCondition, String),
 }
+
+impl From<Room> for PassageKind {
+  fn from(room: Room) -> Self {
+    PassageKind::Default(room)
+  }
+}

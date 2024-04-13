@@ -26,10 +26,13 @@ pub mod room;
 pub mod prelude {
   pub use crate::corridor::{direction::CorridorDirection, finder::CorridorFinder, kind::CorridorKind};
   pub use crate::error::WorldError;
-  pub use crate::passage::{condition::PassageCondition, kind::PassageKind};
+  pub use crate::passage::{condition::PassageCondition, direction::PassageDirection, kind::PassageKind};
   pub use crate::region::{
     generator::{manager::RegionGeneratorManager, registry::RegionGeneratorRegistry, RegionGenerator},
-    generators::{empty::EmptyRegionGenerator, fail::FailRegionGenerator, null::NullRegionGenerator},
+    generators::{
+      compass_rose::CompassRoseRegionGenerator, empty::EmptyRegionGenerator, fail::FailRegionGenerator,
+      null::NullRegionGenerator,
+    },
     Region,
   };
   pub use crate::room::Room;
