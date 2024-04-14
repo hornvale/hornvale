@@ -10,10 +10,17 @@
 /// almost always want to have these items available. It includes a number of
 /// traits, types, and functions that will be exposed to the _Hornvale_ binary,
 /// examples, benches, and integration tests.
+pub use hornvale_astronomy::prelude as astronomy;
+pub use hornvale_command::prelude as command;
+pub use hornvale_parser::prelude as parser;
+pub use hornvale_world::prelude as world;
+
+/// The prelude for the _Hornvale_ library.
 pub mod prelude {
-  pub use hornvale_astronomy::prelude as astronomy;
-  pub use hornvale_parser::prelude as parser;
-  pub use hornvale_world::prelude as world;
+  pub use super::astronomy::*;
+  pub use super::command::*;
+  pub use super::parser::*;
+  pub use super::world::*;
 
   /// Hello, world!
   pub fn hello() {

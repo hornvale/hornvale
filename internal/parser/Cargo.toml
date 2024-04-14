@@ -3,13 +3,15 @@ name = "hornvale_parser"
 version = "0.0.0"
 edition = "2021"
 
+[lints]
+workspace = true
+
 [dependencies]
 derivative.workspace = true
 hecs.workspace = true
 hornvale_command.workspace = true
-hornvale_test_utilities.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 
-[lints]
-workspace = true
+[dev-dependencies]
+hornvale_test_utilities.workspace = true

@@ -3,7 +3,8 @@ name = "hornvale_command"
 version = "0.0.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lints]
+workspace = true
 
 [dependencies]
 derive_more.workspace = true
@@ -13,6 +14,3 @@ thiserror.workspace = true
 
 [dev-dependencies]
 hornvale_test_utilities.workspace = true
-
-[lints]
-workspace = true
