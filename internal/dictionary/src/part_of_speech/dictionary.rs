@@ -26,9 +26,11 @@ impl PartOfSpeechDictionary {
   }
 
   /// Adds a word to the dictionary.
-  pub fn add_word(&mut self, word: String, part_of_speech: PartOfSpeech) {
-    let entry = self.map.entry(word).or_default();
-    entry.insert(part_of_speech);
+  pub fn add_word(&mut self, word: &str, part_of_speech: PartOfSpeech) {
+    let entry = self.map.entry(word.to_string()).or_default();
+    if !entry.contains(&part_of_speech) {
+      entry.insert(part_of_speech);
+    }
   }
 
   /// Retrieves the parts of speech for a word.
@@ -121,7 +123,7 @@ impl PartOfSpeechDictionary {
 
     for line in reader.lines() {
       let word = line?;
-      self.add_word(word, pos);
+      self.add_word(&word, pos);
     }
 
     Ok(())
@@ -137,9 +139,9 @@ macro_rules! read_into_dictionary {
       }
       if word.contains(' ') {
         $dictionary.multi_word_expressions.push(word.to_string());
-        $dictionary.add_word(word.to_string().replace(' ', "_"), $pos);
+        $dictionary.add_word(&word.to_string().replace(' ', "_"), $pos);
       } else {
-        $dictionary.add_word(word.to_string(), $pos);
+        $dictionary.add_word(word, $pos);
       }
     }
   };
@@ -210,7 +212,7 @@ mod tests {
   fn test_add_word() {
     init();
     let mut dictionary = PartOfSpeechDictionary::new();
-    dictionary.add_word("cat".to_string(), PartOfSpeech::Noun);
+    dictionary.add_word("cat", PartOfSpeech::Noun);
     assert_eq!(dictionary.len(), 1);
   }
 
@@ -218,7 +220,7 @@ mod tests {
   fn test_get_parts_of_speech() {
     init();
     let mut dictionary = PartOfSpeechDictionary::new();
-    dictionary.add_word("cat".to_string(), PartOfSpeech::Noun);
+    dictionary.add_word("cat", PartOfSpeech::Noun);
     let parts_of_speech = dictionary.get_parts_of_speech("cat");
     assert_eq!(parts_of_speech, Some(&HashSet::from([PartOfSpeech::Noun])));
   }
@@ -227,7 +229,7 @@ mod tests {
   fn test_contains_word() {
     init();
     let mut dictionary = PartOfSpeechDictionary::new();
-    dictionary.add_word("cat".to_string(), PartOfSpeech::Noun);
+    dictionary.add_word("cat", PartOfSpeech::Noun);
     assert!(dictionary.contains_word("cat"));
     assert!(!dictionary.contains_word("dog"));
   }
@@ -236,7 +238,7 @@ mod tests {
   fn test_remove_word() {
     init();
     let mut dictionary = PartOfSpeechDictionary::new();
-    dictionary.add_word("cat".to_string(), PartOfSpeech::Noun);
+    dictionary.add_word("cat", PartOfSpeech::Noun);
     dictionary.remove_word("cat");
     assert_eq!(dictionary.len(), 0);
   }
@@ -245,7 +247,7 @@ mod tests {
   fn test_clear() {
     init();
     let mut dictionary = PartOfSpeechDictionary::new();
-    dictionary.add_word("cat".to_string(), PartOfSpeech::Noun);
+    dictionary.add_word("cat", PartOfSpeech::Noun);
     dictionary.clear();
     assert_eq!(dictionary.len(), 0);
   }
@@ -254,7 +256,7 @@ mod tests {
   fn test_is_noun() {
     init();
     let mut dictionary = PartOfSpeechDictionary::new();
-    dictionary.add_word("cat".to_string(), PartOfSpeech::Noun);
+    dictionary.add_word("cat", PartOfSpeech::Noun);
     assert!(dictionary.is_noun("cat"));
     assert!(!dictionary.is_noun("dog"));
   }
@@ -263,7 +265,7 @@ mod tests {
   fn test_is_pronoun() {
     init();
     let mut dictionary = PartOfSpeechDictionary::new();
-    dictionary.add_word("I".to_string(), PartOfSpeech::Pronoun);
+    dictionary.add_word("I", PartOfSpeech::Pronoun);
     assert!(dictionary.is_pronoun("I"));
     assert!(!dictionary.is_pronoun("you"));
   }
@@ -272,7 +274,7 @@ mod tests {
   fn test_is_verb() {
     init();
     let mut dictionary = PartOfSpeechDictionary::new();
-    dictionary.add_word("run".to_string(), PartOfSpeech::Verb);
+    dictionary.add_word("run", PartOfSpeech::Verb);
     assert!(dictionary.is_verb("run"));
     assert!(!dictionary.is_verb("walk"));
   }
@@ -281,7 +283,7 @@ mod tests {
   fn test_is_adjective() {
     init();
     let mut dictionary = PartOfSpeechDictionary::new();
-    dictionary.add_word("big".to_string(), PartOfSpeech::Adjective);
+    dictionary.add_word("big", PartOfSpeech::Adjective);
     assert!(dictionary.is_adjective("big"));
     assert!(!dictionary.is_adjective("small"));
   }
@@ -290,7 +292,7 @@ mod tests {
   fn test_is_adverb() {
     init();
     let mut dictionary = PartOfSpeechDictionary::new();
-    dictionary.add_word("quickly".to_string(), PartOfSpeech::Adverb);
+    dictionary.add_word("quickly", PartOfSpeech::Adverb);
     assert!(dictionary.is_adverb("quickly"));
     assert!(!dictionary.is_adverb("slowly"));
   }
@@ -299,7 +301,7 @@ mod tests {
   fn test_is_preposition() {
     init();
     let mut dictionary = PartOfSpeechDictionary::new();
-    dictionary.add_word("in".to_string(), PartOfSpeech::Preposition);
+    dictionary.add_word("in", PartOfSpeech::Preposition);
     assert!(dictionary.is_preposition("in"));
     assert!(!dictionary.is_preposition("on"));
   }
@@ -308,7 +310,7 @@ mod tests {
   fn test_is_conjunction() {
     init();
     let mut dictionary = PartOfSpeechDictionary::new();
-    dictionary.add_word("and".to_string(), PartOfSpeech::Conjunction);
+    dictionary.add_word("and", PartOfSpeech::Conjunction);
     assert!(dictionary.is_conjunction("and"));
     assert!(!dictionary.is_conjunction("but"));
   }
@@ -317,7 +319,7 @@ mod tests {
   fn test_is_interjection() {
     init();
     let mut dictionary = PartOfSpeechDictionary::new();
-    dictionary.add_word("wow".to_string(), PartOfSpeech::Interjection);
+    dictionary.add_word("wow", PartOfSpeech::Interjection);
     assert!(dictionary.is_interjection("wow"));
     assert!(!dictionary.is_interjection("ouch"));
   }
@@ -326,7 +328,7 @@ mod tests {
   fn test_is_determiner() {
     init();
     let mut dictionary = PartOfSpeechDictionary::new();
-    dictionary.add_word("the".to_string(), PartOfSpeech::Determiner);
+    dictionary.add_word("the", PartOfSpeech::Determiner);
     assert!(dictionary.is_determiner("the"));
     assert!(!dictionary.is_determiner("a"));
   }
