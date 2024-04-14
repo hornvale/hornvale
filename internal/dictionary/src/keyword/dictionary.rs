@@ -150,4 +150,55 @@ mod tests {
     assert!(dictionary.contains_keyword("directions", "north"));
     assert!(!dictionary.contains_keyword("directions", "south"));
   }
+
+  #[test]
+  fn test_remove_word() {
+    init();
+    let mut dictionary = KeywordDictionary::new();
+    dictionary.add_keyword("directions", "north");
+    dictionary.remove_keyword("directions", "north");
+    assert_eq!(dictionary.len(), 1);
+    assert_eq!(dictionary.get_keywords("directions").unwrap().len(), 0);
+  }
+
+  #[test]
+  fn test_clear() {
+    init();
+    let mut dictionary = KeywordDictionary::new();
+    dictionary.add_keyword("directions", "north");
+    dictionary.clear();
+    assert_eq!(dictionary.len(), 0);
+  }
+
+  #[test]
+  fn test_is_empty() {
+    init();
+    let dictionary = KeywordDictionary::new();
+    assert!(dictionary.is_empty());
+  }
+
+  #[test]
+  fn test_is_not_empty() {
+    init();
+    let mut dictionary = KeywordDictionary::new();
+    dictionary.add_keyword("directions", "north");
+    assert!(!dictionary.is_empty());
+  }
+
+  #[test]
+  fn test_is_direction() {
+    init();
+    let mut dictionary = KeywordDictionary::new();
+    dictionary.add_keyword("directions", "north");
+    assert!(dictionary.fits("north", "directions"));
+    assert!(!dictionary.fits("south", "directions"));
+  }
+
+  #[test]
+  fn test_default_dictionary() {
+    init();
+    let dictionary = KeywordDictionary::default();
+    assert_eq!(dictionary.len(), 1);
+    assert_eq!(dictionary.get_keywords("direction").unwrap().len(), 19);
+  }
 }
