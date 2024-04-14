@@ -41,11 +41,6 @@ body:
       label: 'Tasks'
       value: |
         - [ ] Determine the crate's scope and functionality.
-        - [ ] Identify public interfaces and types.
-        - [ ] Draft initial documentation and README, including:
-          - [ ] Introduction and purpose of the crate.
-          - [ ] Key features and intended use cases.
-          - [ ] Outline examples demonstrating key features and use cases.
         - [ ] Initialize the crate in the appropriate directory (`crates/` or `internal/`).
         - [ ] Add a value for the "Crate" field in the project.
   - type: 'textarea'
@@ -54,7 +49,6 @@ body:
       label: 'Acceptance Criteria'
       description: 'List the requirements that must be met for this crate to be considered complete.'
       value: |
-        - [ ] The README is comprehensive, offering a clear introduction, overview of key features, and example usage.
         - [ ] The crate has been initialized in the appropriate directory (`crates/` or `internal/`).
         - [ ] The crate has been added to the workspace `Cargo.toml` file.
         - [ ] A value for the "Crate" field has been added to the project.

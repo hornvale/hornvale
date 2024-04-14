@@ -1,0 +1,30 @@
+use super::registry::ParserRegistry;
+use super::Parser;
+use crate::prelude::Command;
+use crate::prelude::ParserError;
+
+/// The `ParserManager` dispatches parsing requests to the parsers.
+#[derive(Debug, Default)]
+pub struct ParserManager {
+  /// The parser registry.
+  registry: ParserRegistry,
+}
+
+impl ParserManager {
+  /// Create a new `ParserManager`.
+  pub fn new() -> Self {
+    Self {
+      registry: ParserRegistry::new(),
+    }
+  }
+
+  /// Register a parser.
+  pub fn register(&mut self, parser: Box<dyn Parser>) {
+    self.registry.register(parser);
+  }
+
+  /// Parse the input.
+  pub fn parse(&self, input: &str) -> Result<Box<dyn Command>, ParserError> {
+    self.registry.parse(input)
+  }
+}

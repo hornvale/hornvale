@@ -1,0 +1,22 @@
+use crate::error::ParserError;
+use crate::prelude::Command;
+use std::fmt::{Debug, Formatter, Result as FmtResult};
+
+/// The `ParserManager` dispatches parsing requests to the parsers.
+pub mod manager;
+/// The `ParserRegistry` holds the parsers.
+pub mod registry;
+
+/// The `Parser` trait.
+pub trait Parser {
+  /// Get the name of the parser.
+  fn name(&self) -> &str;
+  /// Parse the input.
+  fn parse(&self, input: &str) -> Result<Box<dyn Command>, ParserError>;
+}
+
+impl Debug for dyn Parser {
+  fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+    write!(f, "{}", self.name())
+  }
+}
