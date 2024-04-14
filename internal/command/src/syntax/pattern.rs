@@ -8,6 +8,20 @@ pub struct SyntaxPattern {
   pub elements: Vec<SyntaxElement>,
 }
 
+impl SyntaxPattern {
+  /// Print usage information for the pattern.
+  pub fn usage(&self, command_name: &str) -> String {
+    let mut result = String::new();
+    for element in &self.elements {
+      match element {
+        SyntaxElement::Command => result.push_str(&format!("{} ", command_name)),
+        _ => result.push_str(&format!("{} ", element)),
+      }
+    }
+    result
+  }
+}
+
 impl Display for SyntaxPattern {
   fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
     let mut first = true;
