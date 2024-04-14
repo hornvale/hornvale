@@ -1,4 +1,4 @@
-use crate::prelude::{Command, CommandError};
+use crate::prelude::{Command, CommandError, SyntaxElement, SyntaxPattern};
 use hecs::World;
 
 /// A command that does nothing at all.
@@ -8,6 +8,14 @@ pub struct NoOpCommand;
 impl Command for NoOpCommand {
   fn name(&self) -> &str {
     "no-op"
+  }
+  fn syntax_patterns(&self) -> Vec<SyntaxPattern> {
+    vec![SyntaxPattern {
+      elements: vec![SyntaxElement::Command],
+    }]
+  }
+  fn description(&self) -> &str {
+    "A command that does nothing at all."
   }
   fn execute(&self, _world: &World) -> Result<(), CommandError> {
     Ok(())

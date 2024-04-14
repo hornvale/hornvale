@@ -17,7 +17,7 @@ fn main() {
   // Parse some input.
   let result = manager.parse("no-op");
   match result {
-    Ok(command) => println!("Parsed command: {:?}", command),
+    Ok(command) => println!("{}", command.usage()),
     Err(error) => eprintln!("Error: {:?}", error),
   }
 }

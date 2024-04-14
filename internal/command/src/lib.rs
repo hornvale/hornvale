@@ -12,10 +12,16 @@ pub mod command;
 pub mod commands;
 /// An error type.
 pub mod error;
+/// Things relating to objects, direct and indirect.
+pub mod object;
+/// Syntax for the commands.
+pub mod syntax;
 
 /// The prelude.
 pub mod prelude {
   pub use crate::command::Command;
   pub use crate::commands::{fail::FailCommand, no_op::NoOpCommand};
   pub use crate::error::CommandError;
+  pub use crate::object::qualifier::ObjectQualifier;
+  pub use crate::syntax::{element::SyntaxElement, pattern::SyntaxPattern};
 }
