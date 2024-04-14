@@ -23,6 +23,8 @@
 //! In addition, this crate provides some basic components that can be used to
 //! describe regions, rooms, and other entities.
 
+/// Some commands for the world.
+pub mod commands;
 /// Some basic components.
 pub mod component;
 /// Corridors connect regions.

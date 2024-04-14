@@ -12,7 +12,7 @@ pub trait Command {
   fn name(&self) -> &str;
   /// Get the aliases of the command.
   fn aliases(&self) -> Vec<&str> {
-    vec![self.name()]
+    vec![]
   }
   /// Execute the command.
   fn execute(&self, world: &World, context: &CommandContext) -> Result<(), CommandError>;
@@ -27,7 +27,11 @@ pub trait Command {
       .iter()
       .map(|pattern| pattern.usage(self.name()))
       .collect::<Vec<_>>();
-    format!("Usage:\n\t{}", pattern_lines.join("\n\t"))
+    let aliases = match self.aliases().len() {
+      len if len > 0 => format!(" (aliases: {})", self.aliases().join(", ")),
+      _ => "".to_string(),
+    };
+    format!("Usage:{}\n\t{}", aliases, pattern_lines.join("\n\t"))
   }
 }
 

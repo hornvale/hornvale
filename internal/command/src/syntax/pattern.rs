@@ -14,7 +14,7 @@ impl SyntaxPattern {
     let mut result = String::new();
     for element in &self.elements {
       match element {
-        SyntaxElement::Command => result.push_str(&format!("{} ", command_name)),
+        SyntaxElement::AnyVerb => result.push_str(&format!("{} ", command_name)),
         _ => result.push_str(&format!("{} ", element)),
       }
     }

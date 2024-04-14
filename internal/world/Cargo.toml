@@ -10,6 +10,7 @@ workspace = true
 derivative.workspace = true
 derive_more.workspace = true
 getrandom.workspace = true
+hornvale_command.workspace = true
 hecs.workspace = true
 rand.workspace = true
 serde.workspace = true
@@ -19,3 +20,4 @@ thiserror.workspace = true
 
 [dev-dependencies]
 hornvale_test_utilities.workspace = true
+hornvale_parser.workspace = true

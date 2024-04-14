@@ -15,7 +15,7 @@ impl Command for FailCommand {
   }
   fn syntax_patterns(&self) -> Vec<SyntaxPattern> {
     vec![SyntaxPattern {
-      elements: vec![SyntaxElement::Command],
+      elements: vec![SyntaxElement::AnyVerb],
     }]
   }
   fn execute(&self, _world: &World, _context: &CommandContext) -> Result<(), CommandError> {
