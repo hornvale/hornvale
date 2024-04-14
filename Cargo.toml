@@ -67,6 +67,7 @@ variant_size_differences = "deny"
 [dependencies]
 hornvale_astronomy.workspace = true
 hornvale_command.workspace = true
+hornvale_dictionary.workspace = true
 hornvale_parser.workspace = true
 hornvale_world.workspace = true
 
@@ -92,6 +93,7 @@ hecs = { version = "0.10.4", features = [
 ] }
 hornvale_astronomy = { path = "crates/astronomy" }
 hornvale_command = { path = "internal/command" }
+hornvale_dictionary = { path = "internal/dictionary" }
 hornvale_parser = { path = "internal/parser" }
 hornvale_test_utilities = { path = "internal/test_utilities" }
 hornvale_world = { path = "internal/world" }

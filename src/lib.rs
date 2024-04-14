@@ -12,6 +12,7 @@
 /// examples, benches, and integration tests.
 pub use hornvale_astronomy::prelude as astronomy;
 pub use hornvale_command::prelude as command;
+pub use hornvale_dictionary::prelude as dictionary;
 pub use hornvale_parser::prelude as parser;
 pub use hornvale_world::prelude as world;
 
@@ -19,6 +20,7 @@ pub use hornvale_world::prelude as world;
 pub mod prelude {
   pub use super::astronomy::*;
   pub use super::command::*;
+  pub use super::dictionary::*;
   pub use super::parser::*;
   pub use super::world::*;
 
