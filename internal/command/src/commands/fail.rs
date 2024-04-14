@@ -13,3 +13,26 @@ impl Command for FailCommand {
     Err(CommandError::UnknownError)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::prelude::CommandError;
+  use hornvale_test_utilities::prelude::*;
+
+  #[test]
+  fn test_name() {
+    init();
+    let command = FailCommand;
+    assert_eq!(command.name(), "fail");
+  }
+
+  #[test]
+  fn test_execute() {
+    init();
+    let command = FailCommand;
+    let world = World::new();
+    let result = command.execute(&world);
+    assert_eq!(result, Err(CommandError::UnknownError));
+  }
+}
