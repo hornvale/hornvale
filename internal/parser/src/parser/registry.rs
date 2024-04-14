@@ -1,6 +1,7 @@
 use super::Parser;
 use crate::error::ParserError;
 use derivative::Derivative;
+use hecs::World;
 use hornvale_command::prelude::*;
 
 /// The `ParserRegistry` holds the parsers.
@@ -22,10 +23,10 @@ impl ParserRegistry {
   }
 
   /// Parse the input.
-  pub fn parse(&self, input: &str) -> Result<Box<dyn Command>, ParserError> {
+  pub fn parse(&self, input: &str, world: &World) -> Result<(Box<dyn Command>, CommandContext), ParserError> {
     for parser in &self.parsers {
-      match parser.parse(input) {
-        Ok(command) => return Ok(command),
+      match parser.parse(input, world) {
+        Ok(result) => return Ok(result),
         Err(_) => continue,
       }
     }

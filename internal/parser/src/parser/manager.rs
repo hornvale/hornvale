@@ -1,6 +1,7 @@
 use super::registry::ParserRegistry;
 use super::Parser;
 use crate::prelude::ParserError;
+use hecs::World;
 use hornvale_command::prelude::*;
 
 /// The `ParserManager` dispatches parsing requests to the parsers.
@@ -24,7 +25,7 @@ impl ParserManager {
   }
 
   /// Parse the input.
-  pub fn parse(&self, input: &str) -> Result<Box<dyn Command>, ParserError> {
-    self.registry.parse(input)
+  pub fn parse(&self, input: &str, world: &World) -> Result<(Box<dyn Command>, CommandContext), ParserError> {
+    self.registry.parse(input, world)
   }
 }

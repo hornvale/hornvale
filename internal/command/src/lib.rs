@@ -19,7 +19,7 @@ pub mod syntax;
 
 /// The prelude.
 pub mod prelude {
-  pub use crate::command::Command;
+  pub use crate::command::{context::CommandContext, Command};
   pub use crate::commands::{fail::FailCommand, no_op::NoOpCommand};
   pub use crate::error::CommandError;
   pub use crate::object::qualifier::ObjectQualifier;

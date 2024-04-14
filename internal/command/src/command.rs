@@ -1,7 +1,10 @@
-use crate::prelude::CommandError;
 use crate::prelude::SyntaxPattern;
+use crate::prelude::{CommandContext, CommandError};
 use hecs::World;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
+
+/// The context of the command.
+pub mod context;
 
 /// A command that can be executed.
 pub trait Command {
@@ -12,7 +15,7 @@ pub trait Command {
     vec![self.name()]
   }
   /// Execute the command.
-  fn execute(&self, world: &World) -> Result<(), CommandError>;
+  fn execute(&self, world: &World, context: &CommandContext) -> Result<(), CommandError>;
   /// Get the syntax patterns of the command.
   fn syntax_patterns(&self) -> Vec<SyntaxPattern>;
   /// Get the description of the command for online help.

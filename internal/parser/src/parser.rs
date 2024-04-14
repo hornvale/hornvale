@@ -1,4 +1,5 @@
 use crate::error::ParserError;
+use hecs::World;
 use hornvale_command::prelude::*;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
@@ -12,7 +13,7 @@ pub trait Parser {
   /// Get the name of the parser.
   fn name(&self) -> &str;
   /// Parse the input.
-  fn parse(&self, input: &str) -> Result<Box<dyn Command>, ParserError>;
+  fn parse(&self, input: &str, world: &World) -> Result<(Box<dyn Command>, CommandContext), ParserError>;
 }
 
 impl Debug for dyn Parser {

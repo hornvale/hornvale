@@ -1,4 +1,4 @@
-use crate::prelude::{Command, CommandError};
+use crate::prelude::{Command, CommandContext, CommandError};
 use crate::prelude::{SyntaxElement, SyntaxPattern};
 use hecs::World;
 
@@ -18,7 +18,7 @@ impl Command for FailCommand {
       elements: vec![SyntaxElement::Command],
     }]
   }
-  fn execute(&self, _world: &World) -> Result<(), CommandError> {
+  fn execute(&self, _world: &World, _context: &CommandContext) -> Result<(), CommandError> {
     Err(CommandError::UnknownError)
   }
 }
@@ -41,7 +41,7 @@ mod tests {
     init();
     let command = FailCommand;
     let world = World::new();
-    let result = command.execute(&world);
+    let result = command.execute(&world, &Default::default());
     assert_eq!(result, Err(CommandError::UnknownError));
   }
 }

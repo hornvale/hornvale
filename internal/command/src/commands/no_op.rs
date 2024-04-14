@@ -1,4 +1,4 @@
-use crate::prelude::{Command, CommandError, SyntaxElement, SyntaxPattern};
+use crate::prelude::{Command, CommandContext, CommandError, SyntaxElement, SyntaxPattern};
 use hecs::World;
 
 /// A command that does nothing at all.
@@ -17,7 +17,7 @@ impl Command for NoOpCommand {
   fn description(&self) -> &str {
     "A command that does nothing at all."
   }
-  fn execute(&self, _world: &World) -> Result<(), CommandError> {
+  fn execute(&self, _world: &World, _context: &CommandContext) -> Result<(), CommandError> {
     Ok(())
   }
 }
@@ -39,7 +39,7 @@ mod tests {
     init();
     let command = NoOpCommand;
     let world = World::new();
-    let result = command.execute(&world);
+    let result = command.execute(&world, &Default::default());
     assert_eq!(result, Ok(()));
   }
 }

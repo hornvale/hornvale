@@ -2,9 +2,13 @@
 //!
 //! This playground demonstrates the parser module.
 
+use hecs::World;
 use hornvale_parser::prelude::*;
 
 fn main() {
+  // Create a new world.
+  let mut world = World::new();
+
   // Create a new parser manager.
   let mut manager = ParserManager::new();
 
@@ -15,9 +19,12 @@ fn main() {
   manager.register(Box::new(FailParser));
 
   // Parse some input.
-  let result = manager.parse("no-op");
+  let result = manager.parse("no-op", &mut world);
   match result {
-    Ok(command) => println!("{}", command.usage()),
+    Ok((command, context)) => {
+      println!("Command: {:?}", command);
+      println!("Context: {:?}", context);
+    },
     Err(error) => eprintln!("Error: {:?}", error),
   }
 }
