@@ -8,6 +8,8 @@ use strum::IntoEnumIterator;
 pub mod generator;
 /// The collection of region generators.
 pub mod generators;
+/// The entity is a region.
+pub mod is_a_region;
 
 /// Regions are 3-dimensional grids of rooms.
 ///

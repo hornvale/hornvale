@@ -27,6 +27,7 @@ pub fn main() {
     {
       let (room_name, room_description) = world
         .query::<(&Region, &Room, &Name, &Description)>()
+        .with::<&IsARoom>()
         .iter()
         .find(|(_, (&rgn, &rm, _, _))| rgn == region && rm == room)
         .map(|(_, (_, _, &ref name, &ref description))| (name.clone(), description.clone()))
@@ -91,7 +92,11 @@ pub fn main() {
         println!("Goodbye!");
         break;
       },
-      _ => continue,
+      _ => {
+        println!("I don't understand that command.");
+        println!("");
+        continue;
+      },
     };
     // Check if the player can move in the given direction.
     let passage = {

@@ -2,6 +2,9 @@ use crate::prelude::PassageDirection;
 use derive_more::{Add, Neg, Sub};
 use serde::{Deserialize, Serialize};
 
+/// The entity is a room.
+pub mod is_a_room;
+
 /// Rooms are the basic building blocks of the world.
 ///
 /// They exist within a 3D grid associated with a region and are used to manage

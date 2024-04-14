@@ -51,7 +51,8 @@ pub mod prelude {
       compass_rose::CompassRoseRegionGenerator, empty::EmptyRegionGenerator, fail::FailRegionGenerator,
       null::NullRegionGenerator,
     },
+    is_a_region::IsARegion,
     Region,
   };
-  pub use crate::room::Room;
+  pub use crate::room::{is_a_room::IsARoom, Room};
 }
