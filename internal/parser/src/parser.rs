@@ -1,5 +1,5 @@
 use crate::error::ParserError;
-use crate::prelude::Command;
+use hornvale_command::prelude::*;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 /// The `ParserManager` dispatches parsing requests to the parsers.

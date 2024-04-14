@@ -1,13 +1,12 @@
 [package]
-name = "hornvale_parser"
+name = "hornvale_command"
 version = "0.0.0"
 edition = "2021"
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [dependencies]
-derivative.workspace = true
 hecs.workspace = true
-hornvale_command.workspace = true
-hornvale_test_utilities.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 

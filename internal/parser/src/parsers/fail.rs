@@ -1,5 +1,5 @@
-use crate::prelude::Parser;
-use crate::prelude::{Command, ParserError};
+use crate::prelude::{Parser, ParserError};
+use hornvale_command::prelude::*;
 
 /// A parser that always fails.
 #[derive(Clone, Copy, Debug)]

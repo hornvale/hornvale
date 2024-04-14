@@ -1,9 +1,6 @@
+use crate::prelude::CommandError;
 use hecs::World;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
-
-/// A command error type.
-pub mod error;
-use error::CommandError;
 
 /// A command that can be executed.
 pub trait Command {

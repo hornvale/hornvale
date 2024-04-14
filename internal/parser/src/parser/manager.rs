@@ -1,7 +1,7 @@
 use super::registry::ParserRegistry;
 use super::Parser;
-use crate::prelude::Command;
 use crate::prelude::ParserError;
+use hornvale_command::prelude::*;
 
 /// The `ParserManager` dispatches parsing requests to the parsers.
 #[derive(Debug, Default)]

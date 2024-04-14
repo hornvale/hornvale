@@ -1,7 +1,7 @@
 use super::Parser;
-use crate::command::Command;
 use crate::error::ParserError;
 use derivative::Derivative;
+use hornvale_command::prelude::*;
 
 /// The `ParserRegistry` holds the parsers.
 #[derive(Debug, Default, Derivative)]

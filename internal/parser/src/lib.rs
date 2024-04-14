@@ -12,10 +12,6 @@
 //! a few commands, and then add more parsers as needed to increase the
 //! complexity of the commands that the game can understand.
 
-/// The `Command` trait.
-pub mod command;
-/// A collection of core commands.
-pub mod commands;
 /// An error type.
 pub mod error;
 /// The `Parser` trait, registry, etc.
@@ -25,8 +21,6 @@ pub mod parsers;
 
 /// The prelude.
 pub mod prelude {
-  pub use crate::command::{error::CommandError, Command};
-  pub use crate::commands::{fail::FailCommand, no_op::NoOpCommand};
   pub use crate::error::ParserError;
   pub use crate::parser::{manager::ParserManager, registry::ParserRegistry, Parser};
   pub use crate::parsers::{fail::FailParser, no_op::NoOpParser};

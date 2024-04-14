@@ -1,6 +1,5 @@
-use crate::prelude::NoOpCommand;
-use crate::prelude::Parser;
-use crate::prelude::{Command, ParserError};
+use crate::prelude::{Parser, ParserError};
+use hornvale_command::prelude::*;
 
 /// A parser that always returns the no-op command.
 #[derive(Clone, Copy, Debug)]
