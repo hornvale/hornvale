@@ -12,16 +12,25 @@
 //! a few commands, and then add more parsers as needed to increase the
 //! complexity of the commands that the game can understand.
 
+/// A direction in 4D space.
+pub mod direction;
 /// An error type.
 pub mod error;
 /// The `Parser` trait, registry, etc.
 pub mod parser;
 /// A collection of parsers.
 pub mod parsers;
+/// A scanner for breaking input into tokens.
+pub mod scanner;
+/// Tokens for the scanner.
+pub mod token;
 
 /// The prelude.
 pub mod prelude {
+  pub use crate::direction::Direction;
   pub use crate::error::ParserError;
   pub use crate::parser::{manager::ParserManager, registry::ParserRegistry, Parser};
   pub use crate::parsers::{fail::FailParser, no_op::NoOpParser};
+  pub use crate::scanner::Scanner;
+  pub use crate::token::{kind::TokenKind, Token};
 }

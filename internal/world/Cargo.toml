@@ -11,6 +11,7 @@ derivative.workspace = true
 derive_more.workspace = true
 getrandom.workspace = true
 hornvale_command.workspace = true
+hornvale_dictionary.workspace = true
 hecs.workspace = true
 rand.workspace = true
 serde.workspace = true
