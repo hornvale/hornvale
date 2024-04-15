@@ -5,4 +5,4 @@ set -e;
 cargo test --workspace;
 cargo fmt -- --check;
 cargo clippy -- -D warnings;
-cargo test --benches;
+cargo test --benches --workspace;

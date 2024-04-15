@@ -28,7 +28,7 @@ jobs:
 
       - name: Benchmarks
         run: |
-          cargo test --benches;
+          cargo test --benches --workspace;
 
       - name: Build release version
         run: |

@@ -33,6 +33,13 @@ impl Scanner {
     }
   }
 
+  /// Reset the scanner.
+  pub fn reset(&mut self) {
+    self.start = 0;
+    self.current = 0;
+    self.tokens.clear();
+  }
+
   /// Scan the input into tokens.
   pub fn scan_tokens(&mut self) -> Result<Vec<Token>, ParserError> {
     while !self.is_at_end() {

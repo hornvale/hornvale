@@ -6,7 +6,12 @@ edition = "2021"
 [lints]
 workspace = true
 
+[[bench]]
+name = "scanner"
+harness = false
+
 [dependencies]
+criterion.workspace = true
 derivative.workspace = true
 derive_more.workspace = true
 hecs.workspace = true
