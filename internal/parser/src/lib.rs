@@ -3,23 +3,26 @@
 //! The parser module reads the player's input and translates it into commands
 //! that the game can understand.
 //!
-//! This is accomplished via a Chain-of-Responsibility pattern, where different
-//! parsers will be asked to parse the input in turn. If a parser is able to
-//! parse the input, it will return a command; otherwise, it will pass the
-//! input to the next parser in the chain.
+//! Originally, I was going to use a chain-of-responsibility pattern, but I
+//! decided to use a more traditional parser instead. This will allow me to
+//! handle more complex commands and provide better error messages.
 //!
-//! This allows us to start with a very simple parser that can only understand
-//! a few commands, and then add more parsers as needed to increase the
-//! complexity of the commands that the game can understand.
+//! The parser evaluates the bindings in the world and uses them to match the
+//! player's input to a command. It then constructs the command and returns it
+//! to the caller.
+//!
+//! This binding process has some implications:
+//! - The parser must have access to the world.
+//! - We can't parse multiple commands at once, as the bindings may change, so
+//!   we split the input into individual commands at the input stage, prior to
+//!   parsing.
 
 /// A direction in 4D space.
 pub mod direction;
 /// An error type.
 pub mod error;
-/// The `Parser` trait, registry, etc.
+/// The parser, a simple top-down recursive descent parser.
 pub mod parser;
-/// A collection of parsers.
-pub mod parsers;
 /// A scanner for breaking input into tokens.
 pub mod scanner;
 /// Tokens for the scanner.
@@ -29,8 +32,7 @@ pub mod token;
 pub mod prelude {
   pub use crate::direction::Direction;
   pub use crate::error::ParserError;
-  pub use crate::parser::{manager::ParserManager, registry::ParserRegistry, Parser};
-  pub use crate::parsers::{fail::FailParser, no_op::NoOpParser};
+  pub use crate::parser::Parser;
   pub use crate::scanner::Scanner;
   pub use crate::token::{kind::TokenKind, Token};
 }

@@ -5,14 +5,20 @@ use hecs::{Entity, World};
 
 /// An object that manages the process of reading and storing input.
 #[derive(Debug)]
-pub struct Reader<T> where T: Source {
+pub struct Reader<T>
+where
+  T: Source,
+{
   /// The source for fetching input.
   pub source: T,
   /// The entity that stores the input queue.
   pub entity: Option<Entity>,
 }
 
-impl<T> Reader<T> where T: Source {
+impl<T> Reader<T>
+where
+  T: Source,
+{
   /// Create a new reader with the given source.
   pub fn new(source: T) -> Self {
     Self { source, entity: None }

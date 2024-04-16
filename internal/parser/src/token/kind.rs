@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
+use strum::Display;
 
 /// Different kinds of tokens for the scanner.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Display, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub enum TokenKind {
   //
   // Single-character tokens.
@@ -88,6 +89,8 @@ pub enum TokenKind {
   NumberLiteral,
   /// An ordinal, e.g. in `take 1st coin`.
   Ordinal,
+  /// Then, e.g. in `take sword then take shield`.
+  Then,
   /// Any other word.
   Word,
 
@@ -144,10 +147,11 @@ impl TryFrom<&str> for TokenKind {
   fn try_from(string: &str) -> Result<Self, Self::Error> {
     match string {
       "and" => Ok(Self::And),
-      "yes" | "y" => Ok(Self::Yes),
-      "no" | "n" => Ok(Self::No),
+      "yes" => Ok(Self::Yes),
+      "no" => Ok(Self::No),
       "a" | "an" => Ok(Self::A),
       "the" => Ok(Self::The),
+      "then" => Ok(Self::Then),
       _ => Err(()),
     }
   }

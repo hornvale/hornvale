@@ -17,6 +17,7 @@ derive_more.workspace = true
 hecs.workspace = true
 hornvale_command.workspace = true
 serde.workspace = true
+strum.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]

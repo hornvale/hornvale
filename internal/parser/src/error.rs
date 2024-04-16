@@ -1,15 +1,25 @@
+use crate::prelude::TokenKind;
 use serde::{Deserialize, Serialize};
 use thiserror::Error as ThisError;
 
 /// Errors related to parsing operations.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, ThisError, Hash, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, ThisError, Hash, PartialEq, Serialize)]
 pub enum ParserError {
+  /// No input was provided.
+  #[error("no input provided")]
+  NoInput,
+  /// No verb was provided.
+  #[error("no verb provided")]
+  NoVerb,
   /// Could not parse the input.
   #[error("could not parse the input")]
   CouldNotParseInput,
   /// An unexpected character was encountered.
   #[error("unexpected character: {0}")]
   UnexpectedCharacter(char),
+  /// An unexpected token was encountered.
+  #[error("unexpected token: expected {0}, found {1}; {2}")]
+  UnexpectedToken(TokenKind, TokenKind, String),
   /// Unterminated string literal.
   #[error("unterminated string literal")]
   UnterminatedStringLiteral,

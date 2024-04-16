@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 /// A wrapper around a double-ended queue for input.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Queue {
   queue: VecDeque<String>,
 }
