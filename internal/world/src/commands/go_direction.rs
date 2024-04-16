@@ -3,10 +3,10 @@ use hornvale_command::prelude::{Command, CommandContext, CommandError};
 
 /// Attempt to walk in a given direction.
 #[derive(Clone, Copy, Debug)]
-pub struct GoCommand;
+pub struct GoDirectionCommand;
 
-impl Command for GoCommand {
-  const NAME: &'static str = "go";
+impl Command for GoDirectionCommand {
+  const NAME: &'static str = "go-direction";
   const SYNONYMS: &'static [&'static str] = &["go", "move", "walk", "enter", "exit"];
   const BRIEF: &'static str = "Attempt to walk in a given direction.";
   const DESCRIPTION: &'static str = r#"

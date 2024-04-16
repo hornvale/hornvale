@@ -40,7 +40,7 @@ pub mod room;
 
 /// The prelude.
 pub mod prelude {
-  pub use crate::commands::{go::GoCommand, look_here::LookHereCommand};
+  pub use crate::commands::{go_direction::GoDirectionCommand, look_here::LookHereCommand};
   pub use crate::component::{description::Description, name::Name};
   pub use crate::corridor::{
     direction::CorridorDirection, finder::CorridorFinder, kind::CorridorKind, origin::CorridorOrigin,

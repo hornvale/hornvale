@@ -6,7 +6,7 @@ use hornvale_command::prelude::{Command, CommandContext, CommandError};
 pub struct LookHereCommand;
 
 impl Command for LookHereCommand {
-  const NAME: &'static str = "look";
+  const NAME: &'static str = "look-here";
   const SYNONYMS: &'static [&'static str] = &["look"];
   const BRIEF: &'static str = "Look at your surroundings.";
   const DESCRIPTION: &'static str = r#"
