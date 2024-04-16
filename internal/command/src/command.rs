@@ -10,10 +10,12 @@ pub mod function;
 pub trait Command {
   /// Get the name of the command.
   const NAME: &'static str;
-  /// Get the description of the command.
+  /// Get synonyms for the command.
+  const SYNONYMS: &'static [&'static str];
+  /// A brief description of the command.
+  const BRIEF: &'static str;
+  /// A longer description of the command.
   const DESCRIPTION: &'static str;
-  /// Get the aliases of the command.
-  const ALIASES: &'static [&'static str];
 
   /// Execute the command.
   fn execute(world: &mut World, context: &CommandContext) -> Result<(), CommandError>;

@@ -30,7 +30,7 @@ impl CommandRegistry {
   /// Register a command in the registry.
   pub fn register<C: Command>(&mut self) {
     self.commands.insert(C::NAME, C::execute);
-    for alias in C::ALIASES {
+    for alias in C::SYNONYMS {
       self.commands.insert(alias, C::execute);
     }
   }

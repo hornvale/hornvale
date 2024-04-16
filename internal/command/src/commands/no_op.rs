@@ -7,8 +7,9 @@ pub struct NoOpCommand;
 
 impl Command for NoOpCommand {
   const NAME: &'static str = "fail";
-  const DESCRIPTION: &'static str = "A command that always fails.";
-  const ALIASES: &'static [&'static str] = &[];
+  const SYNONYMS: &'static [&'static str] = &[];
+  const BRIEF: &'static str = "A command that always succeeds but does nothing.";
+  const DESCRIPTION: &'static str = "A command that always succeeds but does nothing; useful for testing.";
 
   /// Do nothing.
   fn execute(_world: &mut World, _context: &CommandContext) -> Result<(), CommandError> {
