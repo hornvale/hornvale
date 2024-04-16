@@ -1,5 +1,4 @@
 use crate::prelude::{Command, CommandContext, CommandError};
-use crate::prelude::{SyntaxElement, SyntaxPattern};
 use hecs::World;
 
 /// A command that always fails.
@@ -7,18 +6,12 @@ use hecs::World;
 pub struct FailCommand;
 
 impl Command for FailCommand {
-  fn name(&self) -> &str {
-    "fail"
-  }
-  fn description(&self) -> &str {
-    "A command that always fails."
-  }
-  fn syntax_patterns(&self) -> Vec<SyntaxPattern> {
-    vec![SyntaxPattern {
-      elements: vec![SyntaxElement::AnyVerb],
-    }]
-  }
-  fn execute(&self, _world: &World, _context: &CommandContext) -> Result<(), CommandError> {
+  const NAME: &'static str = "fail";
+  const DESCRIPTION: &'static str = "A command that always fails.";
+  const ALIASES: &'static [&'static str] = &[];
+
+  /// Fail.
+  fn execute(_world: &mut World, _context: &CommandContext) -> Result<(), CommandError> {
     Err(CommandError::UnknownError)
   }
 }
@@ -30,18 +23,10 @@ mod tests {
   use hornvale_test_utilities::prelude::*;
 
   #[test]
-  fn test_name() {
-    init();
-    let command = FailCommand;
-    assert_eq!(command.name(), "fail");
-  }
-
-  #[test]
   fn test_execute() {
     init();
-    let command = FailCommand;
-    let world = World::new();
-    let result = command.execute(&world, &Default::default());
+    let mut world = World::new();
+    let result = FailCommand::execute(&mut world, &Default::default());
     assert_eq!(result, Err(CommandError::UnknownError));
   }
 }

@@ -12,16 +12,13 @@ pub mod command;
 pub mod commands;
 /// An error type.
 pub mod error;
-/// Things relating to objects, direct and indirect.
-pub mod object;
-/// Syntax for the commands.
-pub mod syntax;
+/// A registry for commands.
+pub mod registry;
 
 /// The prelude.
 pub mod prelude {
-  pub use crate::command::{context::CommandContext, Command};
+  pub use crate::command::{context::CommandContext, function::CommandFunction, Command};
   pub use crate::commands::{fail::FailCommand, no_op::NoOpCommand};
   pub use crate::error::CommandError;
-  pub use crate::object::qualifier::ObjectQualifier;
-  pub use crate::syntax::{element::SyntaxElement, pattern::SyntaxPattern};
+  pub use crate::registry::CommandRegistry;
 }
