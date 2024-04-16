@@ -6,7 +6,7 @@ use hecs::World;
 pub struct NoOpCommand;
 
 impl Command for NoOpCommand {
-  const NAME: &'static str = "fail";
+  const NAME: &'static str = "no-op";
   const SYNONYMS: &'static [&'static str] = &[];
   const BRIEF: &'static str = "A command that always succeeds but does nothing.";
   const DESCRIPTION: &'static str = "A command that always succeeds but does nothing; useful for testing.";

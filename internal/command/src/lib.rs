@@ -12,6 +12,8 @@ pub mod command;
 pub mod commands;
 /// An error type.
 pub mod error;
+/// A flag to set when the game should quit.
+pub mod quit_flag;
 /// A registry for commands.
 pub mod registry;
 
@@ -20,5 +22,6 @@ pub mod prelude {
   pub use crate::command::{context::CommandContext, function::CommandFunction, Command};
   pub use crate::commands::{fail::FailCommand, no_op::NoOpCommand};
   pub use crate::error::CommandError;
+  pub use crate::quit_flag::QuitFlag;
   pub use crate::registry::CommandRegistry;
 }

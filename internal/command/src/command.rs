@@ -8,7 +8,7 @@ pub mod function;
 
 /// A command that can be executed.
 pub trait Command {
-  /// Get the name of the command.
+  /// Get the base name of the command. This should be unique.
   const NAME: &'static str;
   /// Get synonyms for the command.
   const SYNONYMS: &'static [&'static str];
