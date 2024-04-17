@@ -76,7 +76,8 @@ impl Classifier {
   /// Process the presumed noun.
   pub fn process_presumed_noun(&self, mut tokens: &mut [Token], index: usize) -> Result<(), ParserError> {
     if let Some(lnk) = tokens.get(index).map(|t| t.kind) {
-      if lnk.could_be_noun() {
+      // Don't override things that already work as nouns.
+      if lnk.could_be_noun() && !lnk.is_noun() {
         tokens.set_kind(index, TokenKind::Noun);
       }
     }
@@ -436,31 +437,234 @@ mod tests {
     init();
     test_string_classification("take all here", &[TokenKind::Verb, TokenKind::All, TokenKind::Here]);
   }
+
+  #[test]
+  fn test_classify_tokens25() {
+    init();
+    test_string_classification("north", &[TokenKind::Verb]);
+  }
+
+  #[test]
+  fn test_classify_tokens26() {
+    init();
+    test_string_classification("go north", &[TokenKind::Verb, TokenKind::North]);
+  }
+
+  #[test]
+  fn test_classify_tokens27() {
+    init();
+    test_string_classification("go to north", &[TokenKind::Verb, TokenKind::To, TokenKind::North]);
+  }
+
+  #[test]
+  fn test_classify_tokens28() {
+    init();
+    test_string_classification("look around", &[TokenKind::Verb, TokenKind::Around]);
+  }
+
+  #[test]
+  fn test_classify_tokens29() {
+    init();
+    test_string_classification("look north", &[TokenKind::Verb, TokenKind::North]);
+  }
+
+  #[test]
+  fn test_classify_tokens30() {
+    init();
+    test_string_classification("look at north", &[TokenKind::Verb, TokenKind::At, TokenKind::North]);
+  }
+
+  #[test]
+  fn test_classify_tokens31() {
+    init();
+    test_string_classification(
+      "look behind curtain",
+      &[TokenKind::Verb, TokenKind::Behind, TokenKind::Noun],
+    );
+  }
+
+  #[test]
+  fn test_classify_tokens32() {
+    init();
+    test_string_classification(
+      "look under stove",
+      &[TokenKind::Verb, TokenKind::Under, TokenKind::Noun],
+    );
+  }
+
+  #[test]
+  fn test_classify_tokens33() {
+    init();
+    test_string_classification("look in box", &[TokenKind::Verb, TokenKind::In, TokenKind::Noun]);
+  }
+
+  #[test]
+  fn test_classify_tokens34() {
+    init();
+    test_string_classification(
+      "turn lantern on",
+      &[
+        TokenKind::Verb,
+        TokenKind::Word, // Should be a noun.
+        TokenKind::On,
+      ],
+    );
+  }
+
+  #[test]
+  fn test_classify_tokens35() {
+    init();
+    test_string_classification(
+      "turn radio up",
+      &[
+        TokenKind::Verb,
+        TokenKind::Word, // Should be a noun.
+        TokenKind::Up,
+      ],
+    );
+  }
+
+  #[test]
+  fn test_classify_tokens36() {
+    init();
+    test_string_classification("turn on lantern", &[TokenKind::Verb, TokenKind::On, TokenKind::Noun]);
+  }
+
+  #[test]
+  fn test_classify_tokens37() {
+    init();
+    test_string_classification(
+      "turn up radio",
+      &[
+        TokenKind::Verb,
+        TokenKind::Up,
+        TokenKind::Word, // Should be a noun.
+      ],
+    );
+  }
+
+  #[test]
+  fn test_classify_tokens38() {
+    init();
+    test_string_classification("attack him", &[TokenKind::Verb, TokenKind::Him]);
+  }
+
+  #[test]
+  fn test_classify_tokens39() {
+    init();
+    test_string_classification(
+      "take hers",
+      &[
+        TokenKind::Verb,
+        TokenKind::Word, // Correct; this is too vague.
+      ],
+    );
+  }
+
+  #[test]
+  fn test_classify_tokens40() {
+    init();
+    test_string_classification(
+      "get mine",
+      &[
+        TokenKind::Verb,
+        TokenKind::Word, // Correct; this is too vague.
+      ],
+    );
+  }
+
+  #[test]
+  fn test_classify_tokens41() {
+    init();
+    test_string_classification(
+      "take this sword",
+      &[
+        TokenKind::Verb,
+        TokenKind::This,
+        TokenKind::Word, // Should be a noun.
+      ],
+    );
+  }
+
+  #[test]
+  fn test_classify_tokens42() {
+    init();
+    test_string_classification(
+      "take each sword",
+      &[
+        TokenKind::Verb,
+        TokenKind::Each,
+        TokenKind::Word, // Should be a noun.
+      ],
+    );
+  }
+
+  #[test]
+  fn test_classify_tokens43() {
+    init();
+    test_string_classification(
+      "take every sword",
+      &[
+        TokenKind::Verb,
+        TokenKind::Every,
+        TokenKind::Word, // Should be a noun.
+      ],
+    );
+  }
+
+  #[test]
+  fn test_classify_tokens44() {
+    init();
+    test_string_classification(
+      "kill troll",
+      &[
+        TokenKind::Verb,
+        TokenKind::Word, // Should be a noun.
+      ],
+    );
+  }
+
+  #[test]
+  fn test_classify_tokens45() {
+    init();
+    test_string_classification(
+      "kill troll with sword",
+      &[
+        TokenKind::Verb,
+        TokenKind::DirectObject,
+        TokenKind::With,
+        TokenKind::Noun,
+      ],
+    );
+  }
+
+  #[test]
+  fn test_classify_tokens46() {
+    init();
+    test_string_classification(
+      "give money to elf",
+      &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::To, TokenKind::Noun],
+    );
+  }
+
+  #[test]
+  fn test_classify_tokens47() {
+    init();
+    test_string_classification(
+      "take red cube and green cylinder",
+      &[
+        TokenKind::Verb,
+        TokenKind::Word, // Should be an adjective.
+        TokenKind::Word, // Should be a noun.
+        TokenKind::And,
+        TokenKind::Word, // Should be an adjective.
+        TokenKind::Word, // Should be a noun.
+      ],
+    );
+  }
 }
 
 // Test cases:
-// say to farmer's cow 'hello'
-// tell farmer "I know about you and the chicken."
-// tell farmer, "I know about you and the pumpkin."
-// take sword
-// take sword and shield
-// take sword, shield
-// take 5 coins
-// take 3rd coin
-// take all
-// take all here
-// north
-// go north
-// go to north
-// look around
-// look north
-// look at north
-// look behind curtain
-// look under stove
-// look in box
-// turn lantern on
-// turn radio up
-// turn on lantern
 // turn up radio
 // attack him
 // take hers
