@@ -171,6 +171,8 @@ impl Scanner {
     let value = self.get_lexeme();
     let value_type = match TokenKind::try_from(value.as_str()) {
       Ok(token_kind) => token_kind,
+      Err(_) if value.find('\'').is_some() => TokenKind::PossessiveDeterminer,
+      Err(_) if value.find('-').is_some() => TokenKind::Adjective,
       Err(_) => TokenKind::Word,
     };
     let result = self.make_token(value_type);
@@ -178,6 +180,9 @@ impl Scanner {
   }
 
   /// Is the character a word character?
+  ///
+  /// We allow compound adjectives and possessives, so we need to allow for
+  /// hyphens and apostrophes.
   pub fn is_word_char(&self, char: char) -> bool {
     self.is_alpha(char) || char == '-' || char == '\''
   }

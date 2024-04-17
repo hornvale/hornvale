@@ -218,6 +218,8 @@ pub enum TokenKind {
   Adjective,
   /// A noun.
   Noun,
+  /// A general possessive determiner ("someone's").
+  PossessiveDeterminer,
   /// The direct object.
   DirectObject,
   /// The indirect object.
@@ -367,7 +369,7 @@ impl TokenKind {
   pub fn is_possessive_determiner(&self) -> bool {
     matches!(
       self,
-      Self::My | Self::Your | Self::His | Self::Her | Self::Its | Self::Our | Self::Their
+      Self::My | Self::Your | Self::His | Self::Her | Self::Its | Self::Our | Self::Their | Self::PossessiveDeterminer
     )
   }
 
@@ -399,6 +401,32 @@ impl TokenKind {
     self.is_direction()
       || self.is_pronoun()
       || matches!(self, Self::All | Self::Noun | Self::DirectObject | Self::IndirectObject)
+  }
+
+  /// Could this token be a noun?
+  pub fn could_be_noun(&self) -> bool {
+    self.is_noun() || matches!(self, Self::Word)
+  }
+
+  /// Could this token be an adjective?
+  pub fn could_be_adjective(&self) -> bool {
+    self.is_adverb() || matches!(self, Self::Word)
+  }
+
+  /// Could this token be a verb?
+  pub fn could_be_verb(&self) -> bool {
+    self.is_verb() || matches!(self, Self::Word)
+  }
+
+  /// Does this token accept adjectives?
+  pub fn can_follow_adjective(&self) -> bool {
+    (self.is_noun() && !self.is_pronoun() && !self.is_direction() && !self.is_distributive_determiner())
+      || (self.is_possessive_determiner()
+        && !matches!(
+          self,
+          Self::My | Self::Your | Self::Our | Self::Their | Self::His | Self::Her | Self::Its
+        ))
+      || matches!(self, Self::Comma | Self::Adjective)
   }
 
   /// Is this token a yes/no token?
@@ -756,7 +784,8 @@ mod tests {
         | TokenKind::Her
         | TokenKind::Its
         | TokenKind::Our
-        | TokenKind::Their => {
+        | TokenKind::Their
+        | TokenKind::PossessiveDeterminer => {
           assert!(
             kind.is_possessive_determiner(),
             "{:?} is not a possessive determiner",
@@ -877,6 +906,115 @@ mod tests {
         },
         _ => {
           assert!(!kind.is_noun(), "{:?} is a noun", kind);
+        },
+      }
+    }
+  }
+
+  #[test]
+  fn test_could_be_noun() {
+    init();
+    for kind in TokenKind::iter() {
+      match kind {
+        TokenKind::North
+        | TokenKind::Northeast
+        | TokenKind::East
+        | TokenKind::Southeast
+        | TokenKind::South
+        | TokenKind::Southwest
+        | TokenKind::West
+        | TokenKind::Northwest
+        | TokenKind::Up
+        | TokenKind::Down
+        | TokenKind::In
+        | TokenKind::Out
+        | TokenKind::All
+        | TokenKind::Noun
+        | TokenKind::Him
+        | TokenKind::Me
+        | TokenKind::Her
+        | TokenKind::It
+        | TokenKind::Them
+        | TokenKind::You
+        | TokenKind::Word
+        | TokenKind::DirectObject
+        | TokenKind::IndirectObject => {
+          assert!(kind.could_be_noun(), "{:?} is not a noun", kind);
+        },
+        _ => {
+          assert!(!kind.could_be_noun(), "{:?} is a noun", kind);
+        },
+      }
+    }
+  }
+
+  #[test]
+  fn test_could_be_adjective() {
+    init();
+    for kind in TokenKind::iter() {
+      match kind {
+        TokenKind::Around
+        | TokenKind::Down
+        | TokenKind::Here
+        | TokenKind::In
+        | TokenKind::Off
+        | TokenKind::On
+        | TokenKind::Out
+        | TokenKind::Then
+        | TokenKind::Up
+        | TokenKind::Word => {
+          assert!(kind.could_be_adjective(), "{:?} is not an adjective", kind);
+        },
+        _ => {
+          assert!(!kind.could_be_adjective(), "{:?} is an adjective", kind);
+        },
+      }
+    }
+  }
+
+  #[test]
+  fn test_could_be_verb() {
+    init();
+    for kind in TokenKind::iter() {
+      match kind {
+        TokenKind::North
+        | TokenKind::Northeast
+        | TokenKind::East
+        | TokenKind::Southeast
+        | TokenKind::South
+        | TokenKind::Southwest
+        | TokenKind::West
+        | TokenKind::Northwest
+        | TokenKind::Up
+        | TokenKind::Down
+        | TokenKind::In
+        | TokenKind::Out
+        | TokenKind::Verb
+        | TokenKind::Word => {
+          assert!(kind.could_be_verb(), "{:?} is not a verb", kind);
+        },
+        _ => {
+          assert!(!kind.could_be_verb(), "{:?} is a verb", kind);
+        },
+      }
+    }
+  }
+
+  #[test]
+  fn test_can_follow_adjective() {
+    init();
+    for kind in TokenKind::iter() {
+      match kind {
+        TokenKind::Comma
+        | TokenKind::Adjective
+        | TokenKind::Noun
+        | TokenKind::DirectObject
+        | TokenKind::IndirectObject
+        | TokenKind::PossessiveDeterminer => {
+          assert!(kind.can_follow_adjective(), "{:?} cannot follow an adjective", kind);
+        },
+        _ => {
+          assert!(!kind.can_follow_adjective(), "{:?} can follow an adjective", kind);
         },
       }
     }

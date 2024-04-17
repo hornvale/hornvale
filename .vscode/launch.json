@@ -1,0 +1,346 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'hornvale_astronomy'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=hornvale_astronomy"
+        ],
+        "filter": {
+          "name": "hornvale_astronomy",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'hornvale_test_utilities'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=hornvale_test_utilities"
+        ],
+        "filter": {
+          "name": "hornvale_test_utilities",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'hornvale_command'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=hornvale_command"
+        ],
+        "filter": {
+          "name": "hornvale_command",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'hornvale_dictionary'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=hornvale_dictionary"
+        ],
+        "filter": {
+          "name": "hornvale_dictionary",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'hornvale_input'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=hornvale_input"
+        ],
+        "filter": {
+          "name": "hornvale_input",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'hornvale_parser'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=hornvale_parser"
+        ],
+        "filter": {
+          "name": "hornvale_parser",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug example 'playground'",
+      "cargo": {
+        "args": [
+          "build",
+          "--example=playground",
+          "--package=hornvale_parser"
+        ],
+        "filter": {
+          "name": "playground",
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in example 'playground'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--example=playground",
+          "--package=hornvale_parser"
+        ],
+        "filter": {
+          "name": "playground",
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug benchmark 'scanner'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bench=scanner",
+          "--package=hornvale_parser"
+        ],
+        "filter": {
+          "name": "scanner",
+          "kind": "bench"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'hornvale_world'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=hornvale_world"
+        ],
+        "filter": {
+          "name": "hornvale_world",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug example 'generator'",
+      "cargo": {
+        "args": [
+          "build",
+          "--example=generator",
+          "--package=hornvale_world"
+        ],
+        "filter": {
+          "name": "generator",
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in example 'generator'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--example=generator",
+          "--package=hornvale_world"
+        ],
+        "filter": {
+          "name": "generator",
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'hornvale'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=hornvale"
+        ],
+        "filter": {
+          "name": "hornvale",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'hornvale'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=hornvale",
+          "--package=hornvale"
+        ],
+        "filter": {
+          "name": "hornvale",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'hornvale'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=hornvale",
+          "--package=hornvale"
+        ],
+        "filter": {
+          "name": "hornvale",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug example 'hork'",
+      "cargo": {
+        "args": [
+          "build",
+          "--example=hork",
+          "--package=hornvale"
+        ],
+        "filter": {
+          "name": "hork",
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in example 'hork'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--example=hork",
+          "--package=hornvale"
+        ],
+        "filter": {
+          "name": "hork",
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'integration'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=integration",
+          "--package=hornvale"
+        ],
+        "filter": {
+          "name": "integration",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

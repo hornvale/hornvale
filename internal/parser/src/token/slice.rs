@@ -18,9 +18,21 @@ pub trait TokenSliceExt {
   /// Find the last token that matches the given kind, starting from the
   /// specified index and moving forward.
   fn rfind_from(&self, kind: TokenKind, index: usize) -> Option<usize>;
+  /// Find the first token matching the condition.
+  fn find_matching<F>(&self, condition: F) -> Option<usize>
+  where
+    F: Fn(&Token) -> bool;
+  /// Find the last token matching the condition.
+  fn rfind_matching<F>(&self, condition: F) -> Option<usize>
+  where
+    F: Fn(&Token) -> bool;
   /// Find the end of input token.
   fn find_eoi(&self) -> Option<usize> {
     self.rfind(TokenKind::EndOfInput)
+  }
+  /// Find the last token that is not the end of input.
+  fn rfind_not_eoi(&self) -> Option<usize> {
+    self.rfind_matching(|t| t.kind != TokenKind::EndOfInput)
   }
 }
 
@@ -49,6 +61,20 @@ impl<'a> TokenSliceExt for TokenSlice<'a> {
   fn rfind_from(&self, kind: TokenKind, index: usize) -> Option<usize> {
     self.iter().take(index + 1).rposition(|t| t.kind == kind)
   }
+  /// Find the first token matching the condition.
+  fn find_matching<F>(&self, condition: F) -> Option<usize>
+  where
+    F: Fn(&Token) -> bool,
+  {
+    self.iter().position(condition)
+  }
+  /// Find the last token matching the condition.
+  fn rfind_matching<F>(&self, condition: F) -> Option<usize>
+  where
+    F: Fn(&Token) -> bool,
+  {
+    self.iter().rposition(condition)
+  }
 }
 
 impl<'a> TokenSliceExt for TokenSliceMut<'a> {
@@ -69,6 +95,20 @@ impl<'a> TokenSliceExt for TokenSliceMut<'a> {
   /// specified index and moving backward.
   fn rfind_from(&self, kind: TokenKind, index: usize) -> Option<usize> {
     self.iter().take(index + 1).rposition(|t| t.kind == kind)
+  }
+  /// Find the first token matching the condition.
+  fn find_matching<F>(&self, condition: F) -> Option<usize>
+  where
+    F: Fn(&Token) -> bool,
+  {
+    self.iter().position(condition)
+  }
+  /// Find the last token matching the condition.
+  fn rfind_matching<F>(&self, condition: F) -> Option<usize>
+  where
+    F: Fn(&Token) -> bool,
+  {
+    self.iter().rposition(condition)
   }
 }
 
