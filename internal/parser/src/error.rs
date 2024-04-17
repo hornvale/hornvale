@@ -14,6 +14,9 @@ pub enum ParserError {
   /// Could not parse the input.
   #[error("could not parse the input")]
   CouldNotParseInput,
+  /// Could not _classify_ the input. This may not be a fatal error.
+  #[error("could not classify the input")]
+  CouldNotClassifyInput,
   /// No preposition found.
   #[error("no preposition found")]
   NoPreposition,
