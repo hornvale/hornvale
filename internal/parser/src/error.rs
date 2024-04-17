@@ -14,12 +14,18 @@ pub enum ParserError {
   /// Could not parse the input.
   #[error("could not parse the input")]
   CouldNotParseInput,
+  /// No preposition found.
+  #[error("no preposition found")]
+  NoPreposition,
   /// An unexpected character was encountered.
   #[error("unexpected character: {0}")]
   UnexpectedCharacter(char),
   /// An unexpected token was encountered.
   #[error("unexpected token: expected {0}, found {1}; {2}")]
   UnexpectedToken(TokenKind, TokenKind, String),
+  /// Index out of bounds.
+  #[error("index out of bounds")]
+  IndexOutOfBounds,
   /// Unterminated string literal.
   #[error("unterminated string literal")]
   UnterminatedStringLiteral,

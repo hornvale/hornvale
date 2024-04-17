@@ -121,3 +121,64 @@ impl<'world> Parser<'world> {
     self.tokens.get(self.current + 1).cloned()
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::prelude::*;
+  use hornvale_test_utilities::prelude::*;
+
+  #[test]
+  fn test_parse() {
+    init();
+    let mut world = World::new();
+    let mut scanner = Scanner::new("look at the table");
+    let tokens = scanner.scan_tokens().unwrap();
+    let mut parser = Parser::new(tokens, &mut world);
+    let (command, context) = parser.parse().unwrap();
+  }
+
+  #[test]
+  fn test_parse_no_input() {
+    init();
+    let mut world = World::new();
+    let tokens = vec![];
+    let mut parser = Parser::new(tokens, &mut world);
+    let result = parser.parse();
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn test_parse_no_verb() {
+    init();
+    let mut world = World::new();
+    let tokens = vec![Token {
+      kind: TokenKind::Word,
+      lexeme: "at".to_string(),
+    }];
+    let mut parser = Parser::new(tokens, &mut world);
+    let result = parser.parse();
+    assert!(result.is_err());
+    assert!(result.err().unwrap() == ParserError::NoVerb);
+  }
+
+  #[test]
+  fn test_parse_unexpected_token() {
+    init();
+    let mut world = World::new();
+    let tokens = vec![Token {
+      kind: TokenKind::Word,
+      lexeme: "at".to_string(),
+    }];
+    let mut parser = Parser::new(tokens, &mut world);
+    let result = parser.consume_token(TokenKind::Word, "Expected a word");
+    assert_eq!(
+      result,
+      Err(ParserError::UnexpectedToken(
+        TokenKind::Word,
+        TokenKind::Word,
+        "Expected a word".to_string()
+      ))
+    );
+  }
+}

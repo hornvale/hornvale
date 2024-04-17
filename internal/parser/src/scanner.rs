@@ -51,6 +51,10 @@ impl Scanner {
       kind: TokenKind::EndOfInput,
       lexeme: "".to_string(),
     });
+    // Filter out articles.
+    self
+      .tokens
+      .retain(|token| token.kind != TokenKind::A && token.kind != TokenKind::The);
     // Optimization: take the vector instead of cloning it.
     Ok(self.tokens.clone())
   }
@@ -166,7 +170,7 @@ impl Scanner {
     }
     let value = self.get_lexeme();
     let value_type = match TokenKind::try_from(value.as_str()) {
-      Ok(token_type) => token_type,
+      Ok(token_kind) => token_kind,
       Err(_) => TokenKind::Word,
     };
     let result = self.make_token(value_type);
@@ -236,6 +240,36 @@ mod tests {
   #[test]
   fn test_scan_tokens() {
     let input = "take sword and shield";
+    let mut scanner = Scanner::new(input);
+    let tokens = scanner.scan_tokens();
+    let expected = vec![
+      Token {
+        kind: TokenKind::Word,
+        lexeme: "take".to_string(),
+      },
+      Token {
+        kind: TokenKind::Word,
+        lexeme: "sword".to_string(),
+      },
+      Token {
+        kind: TokenKind::And,
+        lexeme: "and".to_string(),
+      },
+      Token {
+        kind: TokenKind::Word,
+        lexeme: "shield".to_string(),
+      },
+      Token {
+        kind: TokenKind::EndOfInput,
+        lexeme: "".to_string(),
+      },
+    ];
+    assert_eq!(tokens, Ok(expected));
+  }
+
+  #[test]
+  fn test_scan_tokens_filter_articles() {
+    let input = "take a sword and the shield";
     let mut scanner = Scanner::new(input);
     let tokens = scanner.scan_tokens();
     let expected = vec![

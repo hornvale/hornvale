@@ -95,6 +95,34 @@ pub enum TokenKind {
   Word,
 
   //
+  // Specialized words. These are used by the classifier after scanning.
+  //
+  /// A direction, e.g. in `go north`.
+  Direction,
+  /// A preposition, e.g. in `look behind the curtain`.
+  Preposition,
+  /// An adverb, e.g. in `turn lantern on`.
+  Adverb,
+  /// An adjective, e.g. in `take shiny sword`.
+  Adjective,
+  /// A pronoun, e.g. in `attack him`.
+  Pronoun,
+  /// Possessive pronoun, e.g. in `take hers` or `get mine`.
+  PossessivePronoun,
+  /// A demonstrative determiner, e.g. in `take this sword`.
+  DemonstrativeDeterminer,
+  /// A distributive determiner, e.g. in `take each sword`.
+  DistributiveDeterminer,
+  /// A generic possessive determiner, e.g. in `take the goblin's sword`.
+  PossessiveDeterminer,
+  /// A verb, e.g. in `quit`.
+  Verb,
+  /// A direct object, e.g. in `take sword`.
+  DirectObject,
+  /// An indirect object, e.g. in `give sword to goblin`.
+  IndirectObject,
+
+  //
   // Other tokens.
   //
   /// End of input.

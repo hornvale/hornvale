@@ -17,12 +17,30 @@
 //!   we split the input into individual commands at the input stage, prior to
 //!   parsing.
 
+/// An adjective in a sentence.
+pub mod adjective;
+/// An adverb in a sentence.
+pub mod adverb;
+/// A classifier that can be used to determine the type of a word.
+pub mod classifier;
+/// A demonstrative determiner.
+pub mod demonstrative_determiner;
 /// A direction in 4D space.
 pub mod direction;
+/// A distributive determiner.
+pub mod distributive_determiner;
 /// An error type.
 pub mod error;
 /// The parser, a simple top-down recursive descent parser.
 pub mod parser;
+/// A possessive determiner.
+pub mod possessive_determiner;
+/// A possessive pronoun.
+pub mod possessive_pronoun;
+/// A preposition in a sentence.
+pub mod preposition;
+/// A pronoun.
+pub mod pronoun;
 /// A scanner for breaking input into tokens.
 pub mod scanner;
 /// Tokens for the scanner.
@@ -30,9 +48,18 @@ pub mod token;
 
 /// The prelude.
 pub mod prelude {
+  pub use crate::adjective::Adjective;
+  pub use crate::adverb::Adverb;
+  pub use crate::classifier::Classifier;
+  pub use crate::demonstrative_determiner::DemonstrativeDeterminer;
   pub use crate::direction::Direction;
+  pub use crate::distributive_determiner::DistributiveDeterminer;
   pub use crate::error::ParserError;
   pub use crate::parser::Parser;
+  pub use crate::possessive_determiner::PossessiveDeterminer;
+  pub use crate::possessive_pronoun::PossessivePronoun;
+  pub use crate::preposition::Preposition;
+  pub use crate::pronoun::Pronoun;
   pub use crate::scanner::Scanner;
   pub use crate::token::{kind::TokenKind, Token};
 }
