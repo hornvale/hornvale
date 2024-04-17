@@ -1,6 +1,7 @@
 use crate::prelude::{ParserError, Token, TokenKind};
+use crate::token::slice::*;
 
-/// A classifier that can be used to determine the type of a word.
+/// A classifier that can be used to determine the type of some words.
 ///
 /// The parser can call this classifier to get hints about the type of a word
 /// based on its position in the sentence. This is useful for disambiguating
@@ -18,11 +19,8 @@ impl Classifier {
 
   /// Classify the tokens in a sentence and return "hints".
   pub fn classify_tokens(&self, tokens: &mut [Token]) -> Result<(), ParserError> {
-    if tokens.is_empty() {
+    if tokens.is_empty() || tokens.find_eoi() == Some(0) {
       return Err(ParserError::NoInput);
-    }
-    if tokens[0].kind != TokenKind::Word {
-      return Err(ParserError::NoVerb);
     }
     tokens[0] = Token {
       kind: TokenKind::Verb,
