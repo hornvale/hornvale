@@ -377,6 +377,7 @@ impl TokenKind {
         | Self::Against
         | Self::Along
         | Self::Among
+        | Self::As
         | Self::At
         | Self::Before
         | Self::Behind
@@ -389,6 +390,7 @@ impl TokenKind {
         | Self::From
         | Self::In
         | Self::Into
+        | Self::Of
         | Self::Off
         | Self::On
         | Self::Out
@@ -771,6 +773,7 @@ mod tests {
         | TokenKind::Against
         | TokenKind::Along
         | TokenKind::Among
+        | TokenKind::As
         | TokenKind::At
         | TokenKind::Before
         | TokenKind::Behind
@@ -783,6 +786,7 @@ mod tests {
         | TokenKind::From
         | TokenKind::In
         | TokenKind::Into
+        | TokenKind::Of
         | TokenKind::Off
         | TokenKind::On
         | TokenKind::Out

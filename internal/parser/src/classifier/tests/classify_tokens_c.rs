@@ -166,12 +166,7 @@ fn test_classify_tokens55() {
   init();
   test_string_classification(
     "read underside of kettle",
-    &[
-      TokenKind::Verb,
-      TokenKind::Word, // Should be a noun.
-      TokenKind::Of,
-      TokenKind::DirectObject,
-    ],
+    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::Of, TokenKind::Noun],
   );
 }
 
@@ -184,7 +179,7 @@ fn test_classify_tokens56() {
       TokenKind::Verb,
       TokenKind::DirectObject,
       TokenKind::On,
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Noun,
       TokenKind::Of,
       TokenKind::Noun,
     ],
@@ -200,7 +195,7 @@ fn test_classify_tokens57() {
       TokenKind::Verb,
       TokenKind::DirectObject,
       TokenKind::On,
-      TokenKind::Word,
+      TokenKind::Noun,
       TokenKind::Of,
       TokenKind::Noun,
       TokenKind::On,
@@ -219,8 +214,8 @@ fn test_classify_tokens58() {
       TokenKind::Adjective,
       TokenKind::DirectObject,
       TokenKind::On,
-      TokenKind::Word, // Should be an adjective.
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Adjective,
+      TokenKind::Noun,
       TokenKind::Of,
       TokenKind::Adjective,
       TokenKind::Noun,
@@ -236,12 +231,7 @@ fn test_classify_tokens59() {
   init();
   test_string_classification(
     "remember goblin as franklin",
-    &[
-      TokenKind::Verb,
-      TokenKind::Word, // Should be a noun.
-      TokenKind::As,
-      TokenKind::DirectObject, // Should be a word.
-    ],
+    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::As, TokenKind::Noun],
   );
 }
 
@@ -255,9 +245,9 @@ fn test_classify_tokens60() {
       TokenKind::Adjective,
       TokenKind::Comma,
       TokenKind::Adjective,
-      TokenKind::Word, // Should be a noun.
+      TokenKind::DirectObject,
       TokenKind::As,
-      TokenKind::DirectObject, // Should be a word.
+      TokenKind::Noun,
     ],
   );
 }
