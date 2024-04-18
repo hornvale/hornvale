@@ -18,10 +18,14 @@ pub struct Parser<'world> {
   pub world: &'world mut World,
   /// The current index.
   pub current: usize,
+  /// The verb, if any.
+  pub verb: Option<Token>,
+  /// The verb modifier, if any.
+  pub modifier: Option<Token>,
   /// The command function, if any.
   pub function: Option<CommandFunction>,
-  /// The command contexts.
-  pub contexts: Vec<CommandContext>,
+  /// The command context.
+  pub context: Option<CommandContext>,
 }
 
 impl<'world> Parser<'world> {
@@ -29,14 +33,18 @@ impl<'world> Parser<'world> {
   pub fn new(tokens: &[Token], world: &'world mut World) -> Self {
     let tokens = tokens.to_vec();
     let current = 0;
+    let verb = None;
+    let modifier = None;
     let function = None;
-    let contexts = Vec::new();
+    let context = None;
     Self {
       tokens,
       world,
       current,
+      verb,
+      modifier,
       function,
-      contexts,
+      context,
     }
   }
 
@@ -45,16 +53,17 @@ impl<'world> Parser<'world> {
   /// This is the main entry point for the parser.
   ///
   /// input → command | magic_word
-  pub fn parse(&mut self) -> Result<(&CommandFunction, Vec<CommandContext>), ParserError> {
+  pub fn parse(&mut self) -> Result<(&CommandFunction, CommandContext), ParserError> {
     self.assert_non_empty()?;
     if self.match_magic_word()? {
       self.consume_magic_word()?;
       self.bind_magic_word()?;
     } else {
       self.parse_command()?;
-      // self.bind_command()?;
+      self.bind_command()?;
     }
-    Ok((&self.function.as_ref().unwrap(), self.contexts.clone()))
+    self.bind_context()?;
+    Ok((&self.function.as_ref().unwrap(), self.context.take().unwrap()))
   }
 
   /// Parse a command from the input.
@@ -81,14 +90,13 @@ impl<'world> Parser<'world> {
 
   /// Consume the verb.
   pub fn consume_verb(&mut self) -> Result<(), ParserError> {
-    Ok(())
-    // if self.check_token(TokenKind::Verb) {
-    //   self.verb = self.peek().map(|t| t.lexeme.clone());
-    //   self.advance()?;
-    //   Ok(())
-    // } else {
-    //   Err(ParserError::NoVerb)
-    // }
+    if self.check_token(TokenKind::Verb) {
+      self.verb = self.peek();
+      self.advance()?;
+      Ok(())
+    } else {
+      Err(ParserError::NoVerb)
+    }
   }
 
   /// Consume the current token, throwing an error if it is not the expected kind.
@@ -114,6 +122,58 @@ impl<'world> Parser<'world> {
   /// Bind the magic word.
   pub fn bind_magic_word(&mut self) -> Result<(), ParserError> {
     // self.function = Some(CommandFunction::MagicWord);
+    Ok(())
+  }
+
+  /// Bind the command.
+  ///
+  /// This is where the parser retrieves the command registry from the World,
+  /// gets the form of the command, and binds the command function to the
+  /// parser.
+  pub fn bind_command(&mut self) -> Result<(), ParserError> {
+    let registry = self
+      .world
+      .query_mut::<&mut CommandRegistry>()
+      .into_iter()
+      .next()
+      .unwrap()
+      .1;
+    let name = self.verb.as_ref().unwrap().lexeme.as_str();
+    let form = self
+      .modifier
+      .as_ref()
+      .map(|t| t.kind.try_into().unwrap_or(CommandForm::Default))
+      .unwrap_or(CommandForm::Default);
+    let command = registry
+      .get(name, &form)
+      .ok_or(ParserError::UnknownCommand(name.to_string()))?;
+    self.function = Some(*command);
+    Ok(())
+  }
+
+  /// Bind the context.
+  #[allow(clippy::field_reassign_with_default)]
+  pub fn bind_context(&mut self) -> Result<(), ParserError> {
+    let mut context = CommandContext::default();
+    context.raw = self
+      .tokens
+      .iter()
+      .map(|t| t.lexeme.clone())
+      .collect::<Vec<_>>()
+      .join(" ")
+      .trim()
+      .to_string();
+    context.verb = if let Some(verb) = &self.verb {
+      verb.lexeme.clone()
+    } else {
+      String::new()
+    };
+    context.form = if let Some(modifier) = &self.modifier {
+      modifier.kind.try_into().unwrap_or(CommandForm::Default)
+    } else {
+      CommandForm::Default
+    };
+    self.context = Some(context);
     Ok(())
   }
 

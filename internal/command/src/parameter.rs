@@ -21,6 +21,7 @@ impl From<CommandArgument> for CommandParameter {
       CommandArgument::Entity(_) => CommandParameter::Entity,
       CommandArgument::StringLiteral(_) => CommandParameter::StringLiteral,
       CommandArgument::RawString(_) => CommandParameter::RawString,
+      CommandArgument::Entities(_) => CommandParameter::Entity,
     }
   }
 }

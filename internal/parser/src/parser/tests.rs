@@ -8,7 +8,7 @@ pub mod parser_a;
 pub fn test_string_parsing(
   string: &str,
   world: &mut World,
-  (expected_function, expected_contexts): (CommandFunction, Vec<CommandContext>),
+  (expected_function, expected_context): (CommandFunction, CommandContext),
 ) {
   init();
   let mut scanner = Scanner::new(string);
@@ -16,11 +16,11 @@ pub fn test_string_parsing(
   let classifier = Classifier::new();
   classifier.classify_tokens(&mut *tokens).unwrap();
   let mut parser = Parser::new(&mut *tokens, world);
-  let (actual_function, actual_contexts) = parser.parse().unwrap();
+  let (actual_function, actual_context) = parser.parse().unwrap();
   assert_eq!(*actual_function, expected_function);
   assert_eq!(
-    actual_contexts, expected_contexts,
+    actual_context, expected_context,
     "Expected: {:#?}\nActual: {:#?}",
-    expected_contexts, actual_contexts
+    expected_context, actual_context
   );
 }

@@ -1,4 +1,4 @@
-use crate::prelude::CommandArgument;
+use crate::prelude::{CommandArgument, CommandForm};
 use serde::{Deserialize, Serialize};
 
 /// The command context.
@@ -9,7 +9,7 @@ pub struct CommandContext {
   /// This is the string that the player typed in to invoke the command. We
   /// provide it here in case the command needs to be re-parsed or re-processed
   /// in some way, or if the command needs to be echoed back to the player.
-  pub command: String,
+  pub raw: String,
   /// The verb of the command.
   ///
   /// This is the first word of the command string, which is typically the verb
@@ -19,6 +19,11 @@ pub struct CommandContext {
   /// This may not always be the case, however; some commands have synonyms or
   /// aliases that are not verbs, etc.
   pub verb: String,
+  /// The form of the command.
+  ///
+  /// This is the modifier that can be applied to the verb. For example, in the
+  /// command "look behind the curtain", the form is "behind".
+  pub form: CommandForm,
   /// The direct object, if any.
   ///
   /// This is the object that the player is trying to interact with. For example,

@@ -23,6 +23,9 @@ pub enum ParserError {
   /// An unexpected character was encountered.
   #[error("unexpected character: {0}")]
   UnexpectedCharacter(char),
+  /// An unknown command was encountered.
+  #[error("unknown command: {0}")]
+  UnknownCommand(String),
   /// An unexpected token was encountered.
   #[error("unexpected token: expected {0}, found {1}; {2}")]
   UnexpectedToken(TokenKind, TokenKind, String),

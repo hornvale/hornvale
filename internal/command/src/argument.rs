@@ -13,4 +13,6 @@ pub enum CommandArgument {
   StringLiteral(String),
   /// A raw string.
   RawString(String),
+  /// Multiple arguments.
+  Entities(Vec<Entity>),
 }
