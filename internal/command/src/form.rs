@@ -61,6 +61,9 @@ pub enum CommandForm {
   /// A command that takes a phrase with "from".
   /// For example, "take from the chest".
   From,
+  /// A command that takes a phrase with "in".
+  /// For example, "hide in the shadows".
+  In,
   /// A command that takes a phrase with "into".
   /// For example, "step into the portal".
   Into,
@@ -73,6 +76,9 @@ pub enum CommandForm {
   /// A command that takes a phrase with "on".
   /// For example, "put the pie on the oven".
   On,
+  /// A command that takes a phrase with "out".
+  /// For example, "get out of the house".
+  Out,
   /// A command that takes a phrase with "over".
   /// For example, "climb over the wall".
   Over,

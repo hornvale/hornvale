@@ -14,8 +14,6 @@ fn test_string_classification(string: &str, expected: &[TokenKind]) {
   let mut tokens = scanner.scan_tokens().unwrap();
   let classifier = Classifier::new();
   classifier.classify_tokens(&mut tokens).unwrap();
-  // println!("Expected: {:#?}", expected);
-  // println!("Actual: {:#?}", tokens);
   for (i, kind) in expected.iter().enumerate() {
     assert_eq!(
       tokens[i].kind, *kind,
