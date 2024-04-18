@@ -1,11 +1,6 @@
 use crate::prelude::{CommandContext, CommandError};
 use hecs::World;
 
-/// The context of the command.
-pub mod context;
-/// The command execute() function type.
-pub mod function;
-
 /// A command that can be executed.
 pub trait Command {
   /// Get the base name of the command. This should be unique.

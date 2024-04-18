@@ -2,7 +2,7 @@ use hecs::Entity;
 use serde::{Deserialize, Serialize};
 
 /// The command context.
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct CommandContext {
   /// The original command string.
   ///
