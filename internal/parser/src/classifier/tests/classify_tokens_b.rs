@@ -95,11 +95,7 @@ fn test_classify_tokens34() {
   init();
   test_string_classification(
     "turn lantern on",
-    &[
-      TokenKind::Verb,
-      TokenKind::Word, // Should be a noun.
-      TokenKind::On,
-    ],
+    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::On],
   );
 }
 
@@ -108,11 +104,7 @@ fn test_classify_tokens35() {
   init();
   test_string_classification(
     "turn radio up",
-    &[
-      TokenKind::Verb,
-      TokenKind::Word, // Should be a noun.
-      TokenKind::Up,
-    ],
+    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::Up],
   );
 }
 

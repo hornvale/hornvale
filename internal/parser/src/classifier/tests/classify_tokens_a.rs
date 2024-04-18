@@ -242,7 +242,7 @@ fn test_classify_tokens19() {
     "take sword and shield",
     &[
       TokenKind::Verb,
-      TokenKind::Word, // Should be a direct object.
+      TokenKind::Noun,
       TokenKind::And,
       TokenKind::DirectObject,
     ],
@@ -256,7 +256,7 @@ fn test_classify_tokens20() {
     "take sword, shield",
     &[
       TokenKind::Verb,
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Noun,
       TokenKind::Comma,
       TokenKind::DirectObject,
     ],

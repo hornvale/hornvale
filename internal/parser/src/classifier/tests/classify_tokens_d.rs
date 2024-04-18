@@ -100,3 +100,51 @@ fn test_classify_tokens68() {
   init();
   test_string_classification("!test", &[TokenKind::BangWord]);
 }
+
+#[test]
+fn test_classify_tokens69() {
+  init();
+  test_string_classification(
+    "turn to page 569 in the book",
+    &[
+      TokenKind::Verb,
+      TokenKind::To,
+      TokenKind::Word,
+      TokenKind::NumberLiteral,
+      TokenKind::In,
+      TokenKind::Noun,
+    ],
+  );
+}
+
+#[test]
+fn test_classify_tokens70() {
+  init();
+  test_string_classification(
+    "examine the writing with the magnifying glass",
+    &[
+      TokenKind::Verb,
+      TokenKind::DirectObject,
+      TokenKind::With,
+      TokenKind::Adjective,
+      TokenKind::Noun,
+    ],
+  );
+}
+
+#[test]
+fn test_classify_tokens71() {
+  init();
+  test_string_classification(
+    "examine the writing with the magnifying glass and the flashlight",
+    &[
+      TokenKind::Verb,
+      TokenKind::DirectObject,
+      TokenKind::With,
+      TokenKind::Adjective,
+      TokenKind::Noun,
+      TokenKind::And,
+      TokenKind::Noun,
+    ],
+  );
+}

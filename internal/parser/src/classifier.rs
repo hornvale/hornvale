@@ -44,12 +44,17 @@ impl Classifier {
     }
     // Find the prepositions in the tokens and classify accordingly.
     let prepositions_found = self.find_prepositions(tokens)?;
-    // If none were found, we likely don't have an indirect object; so the
-    // last token that can be a noun should be the direct object.
     if !prepositions_found {
+      // If none were found, we likely don't have an indirect object; so the
+      // last token that can be a noun should be the direct object.
       if let Some(lni) = tokens.iter().rposition(|t| t.kind.could_be_noun()) {
         self.process_presumed_direct_object(tokens, lni)?;
       }
+    }
+    if tokens.len() == 4 {
+      // This might also be a sentence of the form <verb> <noun> <adverb> where
+      // the adverb is also a direction (e.g. "turn radio up", "turn lamp on").
+      self.find_directional_adverbs(tokens)?;
     }
     Ok(())
   }
@@ -71,7 +76,8 @@ impl Classifier {
     let lnei = tokens.iter().rposition(|t| t.kind != TokenKind::EndOfInput).unwrap();
     // If it's the same as the first preposition, then it's actually an adverb.
     if index == lnei {
-      // It's actually an adverb.
+      // It's actually an adverb, and the token before it is likely the direct object.
+      self.process_presumed_direct_object(tokens, index - 1)?;
       return Ok(());
     }
     // Otherwise, this token should usually be an indirect object, but there
@@ -152,12 +158,27 @@ impl Classifier {
         tokens[i].kind = TokenKind::Adjective;
         found = true;
       } else if (lnk.is_conjunction() || lnk == TokenKind::Comma) && !found {
+        // The word prior to this could be a noun.
+        self.process_presumed_noun(tokens, i - 1)?;
         break;
       } else if lnk.can_follow_adjective() {
         continue;
       } else {
         break;
       }
+    }
+    Ok(())
+  }
+
+  /// Find directional adverbs.
+  pub fn find_directional_adverbs(&self, tokens: &mut [Token]) -> Result<(), ParserError> {
+    if tokens.len() != 4 {
+      // This only works for sentences of the form <verb> <noun> <adverb> <eoi>.
+      return Ok(());
+    }
+    // This token should already have the information necessary to classify it.
+    if tokens[2].kind.is_direction() && tokens[2].kind.is_adverb() {
+      self.process_presumed_direct_object(tokens, 1)?;
     }
     Ok(())
   }
