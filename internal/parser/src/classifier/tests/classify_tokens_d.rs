@@ -28,8 +28,8 @@ fn test_classify_tokens63() {
     "give elf coin",
     &[
       TokenKind::Verb,
-      TokenKind::Word, // Should be a noun.
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Adjective, // Should be a noun.
+      TokenKind::DirectObject,
     ],
   );
 }
@@ -41,9 +41,9 @@ fn test_classify_tokens64() {
     "give elf poisoned coin",
     &[
       TokenKind::Verb,
-      TokenKind::Word, // Should be a noun.
-      TokenKind::Word, // Should be an adjective.
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Adjective, // Should be a noun.
+      TokenKind::Adjective,
+      TokenKind::DirectObject,
     ],
   );
 }

@@ -5,11 +5,7 @@ fn test_classify_tokens41() {
   init();
   test_string_classification(
     "take this sword",
-    &[
-      TokenKind::Verb,
-      TokenKind::This,
-      TokenKind::Word, // Should be a noun.
-    ],
+    &[TokenKind::Verb, TokenKind::This, TokenKind::DirectObject],
   );
 }
 
@@ -18,11 +14,7 @@ fn test_classify_tokens42() {
   init();
   test_string_classification(
     "take each sword",
-    &[
-      TokenKind::Verb,
-      TokenKind::Each,
-      TokenKind::Word, // Should be a noun.
-    ],
+    &[TokenKind::Verb, TokenKind::Each, TokenKind::DirectObject],
   );
 }
 
@@ -31,24 +23,14 @@ fn test_classify_tokens43() {
   init();
   test_string_classification(
     "take every sword",
-    &[
-      TokenKind::Verb,
-      TokenKind::Every,
-      TokenKind::Word, // Should be a noun.
-    ],
+    &[TokenKind::Verb, TokenKind::Every, TokenKind::DirectObject],
   );
 }
 
 #[test]
 fn test_classify_tokens44() {
   init();
-  test_string_classification(
-    "kill troll",
-    &[
-      TokenKind::Verb,
-      TokenKind::Word, // Should be a noun.
-    ],
-  );
+  test_string_classification("kill troll", &[TokenKind::Verb, TokenKind::DirectObject]);
 }
 
 #[test]
@@ -84,8 +66,8 @@ fn test_classify_tokens47() {
       TokenKind::Word, // Should be an adjective.
       TokenKind::Word, // Should be a noun.
       TokenKind::And,
-      TokenKind::Word, // Should be an adjective.
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Adjective,
+      TokenKind::DirectObject,
     ],
   );
 }
@@ -97,11 +79,11 @@ fn test_classify_tokens48() {
     "take red cube, green cylinder",
     &[
       TokenKind::Verb,
-      TokenKind::Word, // Should be an adjective.
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Adjective,
+      TokenKind::Adjective, // Should be a noun.
       TokenKind::Comma,
-      TokenKind::Word, // Should be an adjective.
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Adjective,
+      TokenKind::DirectObject,
     ],
   );
 }
@@ -120,8 +102,8 @@ fn test_classify_tokens49() {
       TokenKind::Word, // Should be a noun.
       TokenKind::Comma,
       TokenKind::And,
-      TokenKind::Word, // Should be an adjective.
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Adjective,
+      TokenKind::DirectObject,
     ],
   );
 }
@@ -167,13 +149,7 @@ fn test_classify_tokens52() {
 #[test]
 fn test_classify_tokens53() {
   init();
-  test_string_classification(
-    "read print",
-    &[
-      TokenKind::Verb,
-      TokenKind::Word, // Should be a noun.
-    ],
-  );
+  test_string_classification("read print", &[TokenKind::Verb, TokenKind::DirectObject]);
 }
 
 #[test]
@@ -194,7 +170,7 @@ fn test_classify_tokens55() {
       TokenKind::Verb,
       TokenKind::Word, // Should be a noun.
       TokenKind::Of,
-      TokenKind::Word, // Should be a noun.
+      TokenKind::DirectObject,
     ],
   );
 }
@@ -264,7 +240,7 @@ fn test_classify_tokens59() {
       TokenKind::Verb,
       TokenKind::Word, // Should be a noun.
       TokenKind::As,
-      TokenKind::Word, // Should be a noun.
+      TokenKind::DirectObject, // Should be a word.
     ],
   );
 }
@@ -281,7 +257,7 @@ fn test_classify_tokens60() {
       TokenKind::Adjective,
       TokenKind::Word, // Should be a noun.
       TokenKind::As,
-      TokenKind::Word, // Should be a noun.
+      TokenKind::DirectObject, // Should be a word.
     ],
   );
 }

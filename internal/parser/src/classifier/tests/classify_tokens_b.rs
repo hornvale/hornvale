@@ -5,11 +5,7 @@ fn test_classify_tokens21() {
   init();
   test_string_classification(
     "take 5 coins",
-    &[
-      TokenKind::Verb,
-      TokenKind::NumberLiteral,
-      TokenKind::Word, // Should be a noun.
-    ],
+    &[TokenKind::Verb, TokenKind::NumberLiteral, TokenKind::DirectObject],
   );
 }
 
@@ -18,11 +14,7 @@ fn test_classify_tokens22() {
   init();
   test_string_classification(
     "take 3rd coin",
-    &[
-      TokenKind::Verb,
-      TokenKind::Ordinal,
-      TokenKind::Word, // Should be a noun.
-    ],
+    &[TokenKind::Verb, TokenKind::Ordinal, TokenKind::DirectObject],
   );
 }
 
@@ -135,11 +127,7 @@ fn test_classify_tokens37() {
   init();
   test_string_classification(
     "turn up radio",
-    &[
-      TokenKind::Verb,
-      TokenKind::Up,
-      TokenKind::Word, // Should be a noun.
-    ],
+    &[TokenKind::Verb, TokenKind::Up, TokenKind::DirectObject],
   );
 }
 
@@ -152,23 +140,11 @@ fn test_classify_tokens38() {
 #[test]
 fn test_classify_tokens39() {
   init();
-  test_string_classification(
-    "take hers",
-    &[
-      TokenKind::Verb,
-      TokenKind::Word, // Correct; this is too vague.
-    ],
-  );
+  test_string_classification("take hers", &[TokenKind::Verb, TokenKind::DirectObject]);
 }
 
 #[test]
 fn test_classify_tokens40() {
   init();
-  test_string_classification(
-    "get mine",
-    &[
-      TokenKind::Verb,
-      TokenKind::Word, // Correct; this is too vague.
-    ],
-  );
+  test_string_classification("get mine", &[TokenKind::Verb, TokenKind::DirectObject]);
 }

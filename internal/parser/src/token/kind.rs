@@ -449,6 +449,11 @@ impl TokenKind {
     )
   }
 
+  /// Is this token an adjective?
+  pub fn is_adjective(&self) -> bool {
+    matches!(self, Self::Adjective)
+  }
+
   /// Is this token an article?
   pub fn is_article(&self) -> bool {
     matches!(self, Self::A | Self::The)

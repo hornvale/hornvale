@@ -27,18 +27,26 @@ impl Classifier {
     // The first token should always be a verb.
     tokens[0].kind = TokenKind::Verb;
     // Find the prepositions in the tokens and classify accordingly.
-    self.find_prepositions(tokens)?;
+    let prepositions_found = self.find_prepositions(tokens)?;
+    // If none were found, we likely don't have an indirect object; so the
+    // last token that can be a noun should be the direct object.
+    if !prepositions_found {
+      if let Some(lni) = tokens.iter().rposition(|t| t.kind.could_be_noun()) {
+        self.process_presumed_direct_object(tokens, lni)?;
+      }
+    }
     Ok(())
   }
 
   /// Find the prepositions in the tokens and classify accordingly.
-  pub fn find_prepositions(&self, tokens: &mut [Token]) -> Result<(), ParserError> {
+  pub fn find_prepositions(&self, tokens: &mut [Token]) -> Result<bool, ParserError> {
     // If this sentence contains anything that looks like a preposition, we'll
     // need to process it.
     if let Some(index) = tokens.iter().position(|t| t.kind.is_preposition()) {
       self.process_first_preposition(tokens, index)?;
+      return Ok(true);
     }
-    Ok(())
+    Ok(false)
   }
 
   /// Process the first preposition in the tokens.
@@ -69,7 +77,7 @@ impl Classifier {
     // This index had better always be a token.
     let lnk = tokens.get(index).map(|t| t.kind).unwrap();
     // Unless it's already something other than a noun, it should be a noun.
-    if lnk.could_be_noun() {
+    if lnk.could_be_noun() && !lnk.is_noun() {
       // If it's not a noun, make it one.
       tokens[index].kind = TokenKind::DirectObject;
       // The previous token is presumably an adjective, unless it's not.
@@ -113,12 +121,22 @@ impl Classifier {
 
   /// Process the presumed adjectives.
   pub fn process_presumed_adjectives(&self, tokens: &mut [Token], index: usize) -> Result<(), ParserError> {
+    // Keep track of whether we've found at least one adjective, to distinguish
+    // between:
+    // - "take sword, shield, and helmet"
+    // - "take blue, glowing helmet"
+    let mut found = false;
     // We start at the specified index and work our way back.
     for i in (0..=index).rev() {
       // This should always be a valid index.
       let lnk = tokens.get(i).map(|t| t.kind).unwrap();
-      if lnk.could_be_adjective() {
+      if lnk.is_adjective() {
+        found = true;
+      } else if lnk.could_be_adjective() {
         tokens[i].kind = TokenKind::Adjective;
+        found = true;
+      } else if (lnk.is_conjunction() || lnk == TokenKind::Comma) && !found {
+        break;
       } else if lnk.can_follow_adjective() {
         continue;
       } else {

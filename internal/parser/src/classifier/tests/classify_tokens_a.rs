@@ -93,7 +93,6 @@ fn test_classify_tokens08() {
 #[test]
 fn test_classify_tokens09() {
   init();
-  // Can't get much out of this pattern currently.
   test_string_classification(
     "say to nice farmer \"hello\"",
     &[
@@ -123,8 +122,6 @@ fn test_classify_tokens10() {
 }
 
 #[test]
-// We can't currently classify "nice" as an adjective in this context because
-// we don't attempt to process adjectives before a possessive determiner.
 fn test_classify_tokens11() {
   init();
   test_string_classification(
@@ -214,11 +211,7 @@ fn test_classify_tokens16() {
   init();
   test_string_classification(
     "tell farmer \"I know about you and the chicken.\"",
-    &[
-      TokenKind::Verb,
-      TokenKind::Word, // Should be a noun.
-      TokenKind::StringLiteral,
-    ],
+    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::StringLiteral],
   );
 }
 
@@ -229,7 +222,7 @@ fn test_classify_tokens17() {
     "tell farmer, \"I know about you and the pumpkin.\"",
     &[
       TokenKind::Verb,
-      TokenKind::Word, // Should be a noun.
+      TokenKind::DirectObject,
       TokenKind::Comma,
       TokenKind::StringLiteral,
     ],
@@ -239,13 +232,7 @@ fn test_classify_tokens17() {
 #[test]
 fn test_classify_tokens18() {
   init();
-  test_string_classification(
-    "take sword",
-    &[
-      TokenKind::Verb,
-      TokenKind::Word, // Should be a noun.
-    ],
-  );
+  test_string_classification("take sword", &[TokenKind::Verb, TokenKind::DirectObject]);
 }
 
 #[test]
@@ -255,9 +242,9 @@ fn test_classify_tokens19() {
     "take sword and shield",
     &[
       TokenKind::Verb,
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Word, // Should be a direct object.
       TokenKind::And,
-      TokenKind::Word, // Should be a noun.
+      TokenKind::DirectObject,
     ],
   );
 }
@@ -271,7 +258,7 @@ fn test_classify_tokens20() {
       TokenKind::Verb,
       TokenKind::Word, // Should be a noun.
       TokenKind::Comma,
-      TokenKind::Word, // Should be a noun.
+      TokenKind::DirectObject,
     ],
   );
 }
