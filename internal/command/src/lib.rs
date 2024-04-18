@@ -24,6 +24,8 @@ pub mod error;
 pub mod form;
 /// A function that can be executed as a command.
 pub mod function;
+/// Parameters for a command.
+pub mod parameter;
 /// A flag to set when the game should quit.
 pub mod quit_flag;
 /// A registry for commands.
@@ -40,6 +42,7 @@ pub mod prelude {
   pub use super::error::CommandError;
   pub use super::form::CommandForm;
   pub use super::function::CommandFunction;
+  pub use super::parameter::CommandParameter;
   pub use super::quit_flag::QuitFlag;
   pub use super::registry::CommandRegistry;
 }

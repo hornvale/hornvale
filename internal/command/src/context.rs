@@ -1,4 +1,4 @@
-use hecs::Entity;
+use crate::prelude::CommandArgument;
 use serde::{Deserialize, Serialize};
 
 /// The command context.
@@ -23,12 +23,12 @@ pub struct CommandContext {
   ///
   /// This is the object that the player is trying to interact with. For example,
   /// in the command "take sword", the direct object is "sword".
-  pub direct_object: Option<Entity>,
+  pub direct_object: Option<CommandArgument>,
   /// The indirect object, if any.
   ///
   /// This is the object that the player is trying to interact with, but which is
   /// not the primary object of the command. For example, in the command "give
   /// sword to guard", the direct object is "sword" and the indirect object is
   /// "guard".
-  pub indirect_object: Option<Entity>,
+  pub indirect_object: Option<CommandArgument>,
 }
