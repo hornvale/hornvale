@@ -148,3 +148,48 @@ fn test_classify_tokens71() {
     ],
   );
 }
+
+#[test]
+fn test_classify_tokens72() {
+  init();
+  test_string_classification(
+    "examine the writing with the magnifying glass, the flashlight, and the lantern",
+    &[
+      TokenKind::Verb,
+      TokenKind::DirectObject,
+      TokenKind::With,
+      TokenKind::Adjective,
+      TokenKind::Noun,
+      TokenKind::Comma,
+      TokenKind::Noun,
+      TokenKind::Comma,
+      TokenKind::And,
+      TokenKind::Noun,
+    ],
+  );
+}
+
+#[test]
+fn test_classify_tokens73() {
+  init();
+  test_string_classification(
+    "examine the writing with the magnifying glass, the red shiny flashlight, and the lantern, and the torch",
+    &[
+      TokenKind::Verb,
+      TokenKind::DirectObject,
+      TokenKind::With,
+      TokenKind::Adjective,
+      TokenKind::Noun,
+      TokenKind::Comma,
+      TokenKind::Adjective,
+      TokenKind::Adjective,
+      TokenKind::Noun,
+      TokenKind::Comma,
+      TokenKind::And,
+      TokenKind::Noun,
+      TokenKind::Comma,
+      TokenKind::And,
+      TokenKind::Noun,
+    ],
+  );
+}

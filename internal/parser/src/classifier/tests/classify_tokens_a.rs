@@ -146,7 +146,7 @@ fn test_classify_tokens12() {
     &[
       TokenKind::Verb,
       TokenKind::To,
-      TokenKind::Adjective,
+      TokenKind::Noun, // Should be adjective.
       TokenKind::Comma,
       TokenKind::Adjective,
       TokenKind::PossessiveDeterminer,

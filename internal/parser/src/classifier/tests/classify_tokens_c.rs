@@ -63,8 +63,8 @@ fn test_classify_tokens47() {
     "take red cube and green cylinder",
     &[
       TokenKind::Verb,
-      TokenKind::Word, // Should be an adjective.
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Adjective,
+      TokenKind::Noun,
       TokenKind::And,
       TokenKind::Adjective,
       TokenKind::DirectObject,
@@ -80,7 +80,7 @@ fn test_classify_tokens48() {
     &[
       TokenKind::Verb,
       TokenKind::Adjective,
-      TokenKind::Adjective, // Should be a noun.
+      TokenKind::Noun,
       TokenKind::Comma,
       TokenKind::Adjective,
       TokenKind::DirectObject,
@@ -95,11 +95,11 @@ fn test_classify_tokens49() {
     "take red cube, green cylinder, and yellow prism",
     &[
       TokenKind::Verb,
-      TokenKind::Word, // Should be an adjective.
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Adjective,
+      TokenKind::Noun,
       TokenKind::Comma,
-      TokenKind::Word, // Should be an adjective.
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Adjective,
+      TokenKind::Noun,
       TokenKind::Comma,
       TokenKind::And,
       TokenKind::Adjective,
