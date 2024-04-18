@@ -1,4 +1,4 @@
-use crate::prelude::{Command, CommandContext, CommandError};
+use crate::prelude::{Command, CommandArity, CommandContext, CommandError, CommandForm};
 use hecs::World;
 
 /// A command that does nothing at all.
@@ -10,6 +10,8 @@ impl Command for NoOpCommand {
   const SYNONYMS: &'static [&'static str] = &[];
   const BRIEF: &'static str = "A command that always succeeds but does nothing.";
   const DESCRIPTION: &'static str = "A command that always succeeds but does nothing; useful for testing.";
+  const FORM: CommandForm = CommandForm::Default;
+  const ARITY: CommandArity = CommandArity::Nullary;
 
   /// Do nothing.
   fn execute(_world: &mut World, _context: &CommandContext) -> Result<(), CommandError> {

@@ -1,4 +1,4 @@
-use crate::prelude::{CommandContext, CommandError};
+use crate::prelude::{CommandArity, CommandContext, CommandError, CommandForm};
 use hecs::World;
 
 /// A command that can be executed.
@@ -11,6 +11,10 @@ pub trait Command {
   const BRIEF: &'static str;
   /// A longer description of the command.
   const DESCRIPTION: &'static str;
+  /// Get the form of the command.
+  const FORM: CommandForm;
+  /// Get the arity of the command.
+  const ARITY: CommandArity;
 
   /// Execute the command.
   fn execute(world: &mut World, context: &CommandContext) -> Result<(), CommandError>;

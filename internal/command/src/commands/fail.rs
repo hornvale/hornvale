@@ -1,4 +1,4 @@
-use crate::prelude::{Command, CommandContext, CommandError};
+use crate::prelude::{Command, CommandArity, CommandContext, CommandError, CommandForm};
 use hecs::World;
 
 /// A command that always fails.
@@ -10,6 +10,8 @@ impl Command for FailCommand {
   const SYNONYMS: &'static [&'static str] = &[];
   const BRIEF: &'static str = "A command that always fails.";
   const DESCRIPTION: &'static str = "A command that always fails; useful for testing.";
+  const FORM: CommandForm = CommandForm::Default;
+  const ARITY: CommandArity = CommandArity::Nullary;
 
   /// Fail.
   fn execute(_world: &mut World, _context: &CommandContext) -> Result<(), CommandError> {
