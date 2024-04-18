@@ -94,3 +94,9 @@ fn test_classify_tokens67() {
     ],
   );
 }
+
+#[test]
+fn test_classify_tokens68() {
+  init();
+  test_string_classification("!test", &[TokenKind::BangWord]);
+}

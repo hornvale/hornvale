@@ -36,10 +36,12 @@ impl Classifier {
       return Err(ParserError::NoInput);
     }
     // The first token should always be a verb or a magic word.
-    if !tokens[0].kind.could_be_verb() && !tokens[0].kind.is_magic_word() {
-      return Err(ParserError::NoVerb);
+    if !tokens[0].kind.is_magic_word() {
+      if !tokens[0].kind.could_be_verb() {
+        return Err(ParserError::NoVerb);
+      }
+      tokens[0].kind = TokenKind::Verb;
     }
-    tokens[0].kind = TokenKind::Verb;
     // Find the prepositions in the tokens and classify accordingly.
     let prepositions_found = self.find_prepositions(tokens)?;
     // If none were found, we likely don't have an indirect object; so the
