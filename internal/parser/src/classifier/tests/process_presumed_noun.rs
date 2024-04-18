@@ -80,7 +80,6 @@ fn test_process_presumed_noun3() {
   ];
   let classifier = Classifier::new();
   classifier.process_presumed_noun(&mut tokens, 5).unwrap();
-  println!("{:#?}", tokens);
   assert_eq!(tokens[0].kind, TokenKind::At);
   assert_eq!(tokens[1].kind, TokenKind::Word);
   assert_eq!(tokens[2].kind, TokenKind::In);

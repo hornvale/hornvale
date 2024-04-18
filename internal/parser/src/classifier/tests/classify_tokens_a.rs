@@ -99,7 +99,7 @@ fn test_classify_tokens09() {
     &[
       TokenKind::Verb,
       TokenKind::To,
-      TokenKind::Word, // Should be an adjective.
+      TokenKind::Adjective,
       TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
@@ -132,7 +132,7 @@ fn test_classify_tokens11() {
     &[
       TokenKind::Verb,
       TokenKind::To,
-      TokenKind::Word, // Should be an adjective.
+      TokenKind::Adjective,
       TokenKind::Adjective,
       TokenKind::PossessiveDeterminer,
       TokenKind::Noun,
@@ -149,7 +149,7 @@ fn test_classify_tokens12() {
     &[
       TokenKind::Verb,
       TokenKind::To,
-      TokenKind::Word, // Should be an adjective.
+      TokenKind::Adjective,
       TokenKind::Comma,
       TokenKind::Adjective,
       TokenKind::PossessiveDeterminer,
@@ -168,7 +168,7 @@ fn test_classify_tokens13() {
       TokenKind::Verb,
       TokenKind::To,
       TokenKind::Adjective,
-      TokenKind::Word, // Should be an adjective.
+      TokenKind::Adjective,
       TokenKind::PossessiveDeterminer,
       TokenKind::Noun,
       TokenKind::StringLiteral,
@@ -186,7 +186,7 @@ fn test_classify_tokens14() {
       TokenKind::To,
       TokenKind::Adjective,
       TokenKind::Comma,
-      TokenKind::Word, // Should be an adjective.
+      TokenKind::Adjective,
       TokenKind::PossessiveDeterminer,
       TokenKind::Noun,
       TokenKind::StringLiteral,

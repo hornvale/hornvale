@@ -103,8 +103,8 @@ impl Classifier {
       if lnk.could_be_noun() && !lnk.is_noun() {
         tokens[index].kind = TokenKind::Noun;
       }
-      if lnk.can_follow_adjective() {
-        println!("Processing presumed adjectives before token {:#?}", lnk);
+      // We need to recheck the kind of this token.
+      if tokens[index].kind.can_follow_adjective() {
         self.process_presumed_adjectives(tokens, index - 1)?;
       }
     }

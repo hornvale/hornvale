@@ -246,10 +246,10 @@ fn test_classify_tokens58() {
       TokenKind::Word, // Should be an adjective.
       TokenKind::Word, // Should be a noun.
       TokenKind::Of,
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Adjective,
       TokenKind::Noun,
       TokenKind::On,
-      TokenKind::Word, // Should be an adjective.
+      TokenKind::Adjective,
       TokenKind::Noun,
     ],
   );
