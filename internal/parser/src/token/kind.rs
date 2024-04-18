@@ -498,6 +498,39 @@ impl TokenKind {
       || matches!(self, Self::Comma | Self::Adjective)
   }
 
+  /// Is this token a magic word?
+  pub fn is_magic_word(&self) -> bool {
+    matches!(
+      self,
+      Self::BangWord
+        | Self::QuestionWord
+        | Self::AtSignWord
+        | Self::HashWord
+        | Self::DollarWord
+        | Self::PercentWord
+        | Self::CaretWord
+        | Self::AmpersandWord
+        | Self::AsteriskWord
+        | Self::ForwardSlashWord
+        | Self::BackSlashWord
+        | Self::LeftParenthesisWord
+        | Self::RightParenthesisWord
+        | Self::LeftSquareBracketWord
+        | Self::RightSquareBracketWord
+        | Self::LeftCurlyBraceWord
+        | Self::RightCurlyBraceWord
+        | Self::LessThanWord
+        | Self::GreaterThanWord
+        | Self::EqualsWord
+        | Self::PlusWord
+        | Self::MinusWord
+        | Self::PipeWord
+        | Self::ColonWord
+        | Self::UnderscoreWord
+        | Self::TildeWord
+    )
+  }
+
   /// Is this token a yes/no token?
   pub fn is_yes_no(&self) -> bool {
     matches!(self, Self::Yes | Self::No)
