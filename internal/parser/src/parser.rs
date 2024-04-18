@@ -38,6 +38,7 @@ impl<'world> Parser<'world> {
   ///
   /// input → command
   pub fn parse(&mut self) -> Result<(&CommandFunction, CommandContext), ParserError> {
+    self.assert_non_empty()?;
     self.parse_command()
   }
 
@@ -45,10 +46,6 @@ impl<'world> Parser<'world> {
   ///
   /// command → verb-phrase (object-phrase)?
   pub fn parse_command(&mut self) -> Result<(&CommandFunction, CommandContext), ParserError> {
-    if self.check_token(TokenKind::EndOfInput) {
-      // No input provided.
-      return Err(ParserError::NoInput);
-    }
     self.consume_verb().map_err(|_| ParserError::NoVerb)?;
     unimplemented!()
   }
@@ -89,7 +86,7 @@ impl<'world> Parser<'world> {
   }
 
   /// Check kind of current token.
-  pub fn check_token(&mut self, kind: TokenKind) -> bool {
+  pub fn check_token(&self, kind: TokenKind) -> bool {
     self.peek().is_some() && self.peek().unwrap().kind == kind
   }
 
@@ -101,8 +98,19 @@ impl<'world> Parser<'world> {
     Ok(())
   }
 
+  /// Assert that there is input to parse.
+  pub fn assert_non_empty(&self) -> Result<(), ParserError> {
+    if self.tokens.is_empty() {
+      return Err(ParserError::NoInput);
+    }
+    if self.is_at_end() {
+      return Err(ParserError::NoInput);
+    }
+    Ok(())
+  }
+
   /// Check if at end of input.
-  pub fn is_at_end(&mut self) -> bool {
+  pub fn is_at_end(&self) -> bool {
     self.check_token(TokenKind::EndOfInput)
   }
 

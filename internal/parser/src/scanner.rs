@@ -71,32 +71,32 @@ impl Scanner {
       ',' => self.make_token(TokenKind::Comma),
       '.' => self.make_token(TokenKind::Period),
       ';' => self.make_token(TokenKind::Semicolon),
-      '!' => self.make_token(TokenKind::Bang),
-      '?' => self.make_token(TokenKind::Question),
-      '@' => self.make_token(TokenKind::At),
-      '#' => self.make_token(TokenKind::Hash),
-      '$' => self.make_token(TokenKind::Dollar),
-      '%' => self.make_token(TokenKind::Percent),
-      '^' => self.make_token(TokenKind::Caret),
-      '&' => self.make_token(TokenKind::Ampersand),
-      '*' => self.make_token(TokenKind::Asterisk),
-      '/' => self.make_token(TokenKind::ForwardSlash),
-      '\\' => self.make_token(TokenKind::BackSlash),
-      '(' => self.make_token(TokenKind::LeftParenthesis),
-      ')' => self.make_token(TokenKind::RightParenthesis),
-      '[' => self.make_token(TokenKind::LeftSquareBracket),
-      ']' => self.make_token(TokenKind::RightSquareBracket),
-      '{' => self.make_token(TokenKind::LeftCurlyBrace),
-      '}' => self.make_token(TokenKind::RightCurlyBrace),
-      '<' => self.make_token(TokenKind::LessThan),
-      '>' => self.make_token(TokenKind::GreaterThan),
-      '=' => self.make_token(TokenKind::Equals),
-      '+' => self.make_token(TokenKind::Plus),
-      '-' => self.make_token(TokenKind::Minus),
-      '|' => self.make_token(TokenKind::Pipe),
-      ':' => self.make_token(TokenKind::Colon),
-      '_' => self.make_token(TokenKind::Underscore),
-      '~' => self.make_token(TokenKind::Tilde),
+      '!' => self.match_special_word(TokenKind::BangWord, TokenKind::Bang)?,
+      '?' => self.match_special_word(TokenKind::QuestionWord, TokenKind::Question)?,
+      '@' => self.match_special_word(TokenKind::AtSignWord, TokenKind::AtSign)?,
+      '#' => self.match_special_word(TokenKind::HashWord, TokenKind::Hash)?,
+      '$' => self.match_special_word(TokenKind::DollarWord, TokenKind::Dollar)?,
+      '%' => self.match_special_word(TokenKind::PercentWord, TokenKind::Percent)?,
+      '^' => self.match_special_word(TokenKind::CaretWord, TokenKind::Caret)?,
+      '&' => self.match_special_word(TokenKind::AmpersandWord, TokenKind::Ampersand)?,
+      '*' => self.match_special_word(TokenKind::AsteriskWord, TokenKind::Asterisk)?,
+      '/' => self.match_special_word(TokenKind::ForwardSlashWord, TokenKind::ForwardSlash)?,
+      '\\' => self.match_special_word(TokenKind::BackSlashWord, TokenKind::BackSlash)?,
+      '(' => self.match_special_word(TokenKind::LeftParenthesisWord, TokenKind::LeftParenthesis)?,
+      ')' => self.match_special_word(TokenKind::RightParenthesisWord, TokenKind::RightParenthesis)?,
+      '[' => self.match_special_word(TokenKind::LeftSquareBracketWord, TokenKind::LeftSquareBracket)?,
+      ']' => self.match_special_word(TokenKind::RightSquareBracketWord, TokenKind::RightSquareBracket)?,
+      '{' => self.match_special_word(TokenKind::LeftCurlyBraceWord, TokenKind::LeftCurlyBrace)?,
+      '}' => self.match_special_word(TokenKind::RightCurlyBraceWord, TokenKind::RightCurlyBrace)?,
+      '<' => self.match_special_word(TokenKind::LessThanWord, TokenKind::LessThan)?,
+      '>' => self.match_special_word(TokenKind::GreaterThanWord, TokenKind::GreaterThan)?,
+      '=' => self.match_special_word(TokenKind::EqualsWord, TokenKind::Equals)?,
+      '+' => self.match_special_word(TokenKind::PlusWord, TokenKind::Plus)?,
+      '-' => self.match_special_word(TokenKind::MinusWord, TokenKind::Minus)?,
+      '|' => self.match_special_word(TokenKind::PipeWord, TokenKind::Pipe)?,
+      ':' => self.match_special_word(TokenKind::ColonWord, TokenKind::Colon)?,
+      '_' => self.match_special_word(TokenKind::UnderscoreWord, TokenKind::Underscore)?,
+      '~' => self.match_special_word(TokenKind::TildeWord, TokenKind::Tilde)?,
       '`' => self.make_token(TokenKind::Backtick),
       '"' | '\'' => self.match_string(character)?,
       char if char.is_ascii_digit() => self.match_number_or_ordinal()?,
@@ -105,6 +105,59 @@ impl Scanner {
     };
     Ok(result)
   }
+
+  // /// An exclamation point, e.g. in `!`.
+  // BangWord,
+  // /// A question mark, e.g. in `?`.
+  // QuestionWord,
+  // /// At sign, e.g. in `@`.
+  // AtSignWord,
+  // /// Hash sign, e.g. in `#`.
+  // HashWord,
+  // /// Dollar sign, e.g. in `$`.
+  // DollarWord,
+  // /// Percent sign, e.g. in `%`.
+  // PercentWord,
+  // /// Caret, e.g. in `^`.
+  // CaretWord,
+  // /// Ampersand, e.g. in `&`.
+  // AmpersandWord,
+  // /// Asterisk, e.g. in `*`.
+  // AsteriskWord,
+  // /// Forward slash, e.g. in `/`.
+  // ForwardSlashWord,
+  // /// Backward slash, e.g. in `\`.
+  // BackSlashWord,
+  // /// Left parenthesis, e.g. in `(`.
+  // LeftParenthesisWord,
+  // /// Right parenthesis, e.g. in `)`.
+  // RightParenthesisWord,
+  // /// Left square bracket, e.g. in `[`.
+  // LeftSquareBracketWord,
+  // /// Right square bracket, e.g. in `]`.
+  // RightSquareBracketWord,
+  // /// Left curly brace, e.g. in `{`.
+  // LeftCurlyBraceWord,
+  // /// Right curly brace, e.g. in `}`.
+  // RightCurlyBraceWord,
+  // /// Less than sign, e.g. in `<`.
+  // LessThanWord,
+  // /// Greater than sign, e.g. in `>`.
+  // GreaterThanWord,
+  // /// Equals sign, e.g. in `=`.
+  // EqualsWord,
+  // /// Plus sign, e.g. in `+`.
+  // PlusWord,
+  // /// Minus sign, e.g. in `-`.
+  // MinusWord,
+  // /// Pipe, e.g. in `|`.
+  // PipeWord,
+  // /// Colon, e.g. in `:`.
+  // ColonWord,
+  // /// Underscore, e.g. in `_`.
+  // UnderscoreWord,
+  // /// Tilde, e.g. in `~`.
+  // TildeWord,
 
   /// Advance one character through the source and return it.
   pub fn advance(&mut self) -> Result<char, ParserError> {
@@ -163,19 +216,31 @@ impl Scanner {
     Ok(result)
   }
 
+  /// Try to match and create a word beginning with a special character.
+  pub fn match_special_word(&mut self, kind: TokenKind, fallback: TokenKind) -> Result<Token, ParserError> {
+    if self.peek() == ' ' {
+      return Ok(self.make_token(fallback));
+    }
+    while self.is_alpha_numeric(self.peek()) {
+      self.advance()?;
+    }
+    let result = self.make_token(kind);
+    Ok(result)
+  }
+
   /// Try to match and create a token out of a word.
   pub fn match_word(&mut self) -> Result<Token, ParserError> {
     while self.is_word_char(self.peek()) {
       self.advance()?;
     }
     let value = self.get_lexeme();
-    let value_type = match TokenKind::try_from(value.as_str()) {
-      Ok(token_kind) => token_kind,
+    let kind = match TokenKind::try_from(value.as_str()) {
+      Ok(kind) => kind,
       Err(_) if value.find('\'').is_some() => TokenKind::PossessiveDeterminer,
       Err(_) if value.find('-').is_some() => TokenKind::Adjective,
       Err(_) => TokenKind::Word,
     };
-    let result = self.make_token(value_type);
+    let result = self.make_token(kind);
     Ok(result)
   }
 
@@ -263,6 +328,58 @@ mod tests {
       Token {
         kind: TokenKind::Word,
         lexeme: "shield".to_string(),
+      },
+      Token {
+        kind: TokenKind::EndOfInput,
+        lexeme: "".to_string(),
+      },
+    ];
+    assert_eq!(tokens, Ok(expected));
+  }
+
+  #[test]
+  fn test_scan_tokens_with_special_characters() {
+    let input = "take sword & shield";
+    let mut scanner = Scanner::new(input);
+    let tokens = scanner.scan_tokens();
+    let expected = vec![
+      Token {
+        kind: TokenKind::Word,
+        lexeme: "take".to_string(),
+      },
+      Token {
+        kind: TokenKind::Word,
+        lexeme: "sword".to_string(),
+      },
+      Token {
+        kind: TokenKind::Ampersand,
+        lexeme: "&".to_string(),
+      },
+      Token {
+        kind: TokenKind::Word,
+        lexeme: "shield".to_string(),
+      },
+      Token {
+        kind: TokenKind::EndOfInput,
+        lexeme: "".to_string(),
+      },
+    ];
+    assert_eq!(tokens, Ok(expected));
+  }
+
+  #[test]
+  fn test_scan_tokens_with_special_characters2() {
+    let input = "!take #sword";
+    let mut scanner = Scanner::new(input);
+    let tokens = scanner.scan_tokens();
+    let expected = vec![
+      Token {
+        kind: TokenKind::BangWord,
+        lexeme: "!take".to_string(),
+      },
+      Token {
+        kind: TokenKind::HashWord,
+        lexeme: "#sword".to_string(),
       },
       Token {
         kind: TokenKind::EndOfInput,

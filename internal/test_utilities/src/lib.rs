@@ -8,7 +8,7 @@ pub fn init() {
   // Enable logging for tests.
   let _ = builder().is_test(true).try_init();
   // Enable backtraces.
-  set_var("RUST_BACKTRACE", "full");
+  set_var("RUST_BACKTRACE", "1");
 }
 
 /// The prelude.

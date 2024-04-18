@@ -36,5 +36,5 @@ pub mod prelude {
   pub use crate::error::ParserError;
   pub use crate::parser::Parser;
   pub use crate::scanner::Scanner;
-  pub use crate::token::{kind::TokenKind, slice::*, Token};
+  pub use crate::token::{kind::TokenKind, Token};
 }

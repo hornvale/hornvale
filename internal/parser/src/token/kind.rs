@@ -105,6 +105,7 @@ pub enum TokenKind {
   Against,
   Along,
   Among,
+  As,
   At,
   Before,
   Behind,
@@ -116,6 +117,7 @@ pub enum TokenKind {
   For,
   From,
   Into,
+  Of,
   Off,
   On,
   Over,
@@ -205,6 +207,62 @@ pub enum TokenKind {
   Yes,
   /// e.g. in `no` or `n`.
   No,
+
+  //
+  // Words beginning with special characters.
+  //
+  /// An exclamation point, e.g. in `!`.
+  BangWord,
+  /// A question mark, e.g. in `?`.
+  QuestionWord,
+  /// At sign, e.g. in `@`.
+  AtSignWord,
+  /// Hash sign, e.g. in `#`.
+  HashWord,
+  /// Dollar sign, e.g. in `$`.
+  DollarWord,
+  /// Percent sign, e.g. in `%`.
+  PercentWord,
+  /// Caret, e.g. in `^`.
+  CaretWord,
+  /// Ampersand, e.g. in `&`.
+  AmpersandWord,
+  /// Asterisk, e.g. in `*`.
+  AsteriskWord,
+  /// Forward slash, e.g. in `/`.
+  ForwardSlashWord,
+  /// Backward slash, e.g. in `\`.
+  BackSlashWord,
+  /// Left parenthesis, e.g. in `(`.
+  LeftParenthesisWord,
+  /// Right parenthesis, e.g. in `)`.
+  RightParenthesisWord,
+  /// Left square bracket, e.g. in `[`.
+  LeftSquareBracketWord,
+  /// Right square bracket, e.g. in `]`.
+  RightSquareBracketWord,
+  /// Left curly brace, e.g. in `{`.
+  LeftCurlyBraceWord,
+  /// Right curly brace, e.g. in `}`.
+  RightCurlyBraceWord,
+  /// Less than sign, e.g. in `<`.
+  LessThanWord,
+  /// Greater than sign, e.g. in `>`.
+  GreaterThanWord,
+  /// Equals sign, e.g. in `=`.
+  EqualsWord,
+  /// Plus sign, e.g. in `+`.
+  PlusWord,
+  /// Minus sign, e.g. in `-`.
+  MinusWord,
+  /// Pipe, e.g. in `|`.
+  PipeWord,
+  /// Colon, e.g. in `:`.
+  ColonWord,
+  /// Underscore, e.g. in `_`.
+  UnderscoreWord,
+  /// Tilde, e.g. in `~`.
+  TildeWord,
 
   /// Any other word.
   Word,
@@ -367,10 +425,20 @@ impl TokenKind {
 
   /// Is this token a possessive determiner?
   pub fn is_possessive_determiner(&self) -> bool {
+    self.is_noun_possessive_determiner() || self.is_personal_possessive_determiner()
+  }
+
+  /// Is this token a definite (or pronominal) possessive determiner?
+  pub fn is_personal_possessive_determiner(&self) -> bool {
     matches!(
       self,
-      Self::My | Self::Your | Self::His | Self::Her | Self::Its | Self::Our | Self::Their | Self::PossessiveDeterminer
+      Self::My | Self::Your | Self::His | Self::Her | Self::Its | Self::Our | Self::Their
     )
+  }
+
+  /// Is this token a noun possessive determiner?
+  pub fn is_noun_possessive_determiner(&self) -> bool {
+    matches!(self, Self::PossessiveDeterminer)
   }
 
   /// Is this token a pronoun?
@@ -410,7 +478,7 @@ impl TokenKind {
 
   /// Could this token be an adjective?
   pub fn could_be_adjective(&self) -> bool {
-    self.is_adverb() || matches!(self, Self::Word)
+    matches!(self, Self::Word)
   }
 
   /// Could this token be a verb?
@@ -421,11 +489,7 @@ impl TokenKind {
   /// Does this token accept adjectives?
   pub fn can_follow_adjective(&self) -> bool {
     (self.is_noun() && !self.is_pronoun() && !self.is_direction() && !self.is_distributive_determiner())
-      || (self.is_possessive_determiner()
-        && !matches!(
-          self,
-          Self::My | Self::Your | Self::Our | Self::Their | Self::His | Self::Her | Self::Its
-        ))
+      || self.is_noun_possessive_determiner()
       || matches!(self, Self::Comma | Self::Adjective)
   }
 
@@ -510,6 +574,7 @@ impl TryFrom<&str> for TokenKind {
       "against" => Ok(Self::Against),
       "along" => Ok(Self::Along),
       "among" => Ok(Self::Among),
+      "as" => Ok(Self::As),
       "at" => Ok(Self::At),
       "before" => Ok(Self::Before),
       "behind" => Ok(Self::Behind),
@@ -522,6 +587,7 @@ impl TryFrom<&str> for TokenKind {
       "from" => Ok(Self::From),
       // "in" => Ok(Self::In), // (also direction)
       "into" => Ok(Self::Into),
+      "of" => Ok(Self::Of),
       "off" => Ok(Self::Off), // (also adverb)
       "on" => Ok(Self::On),   // (also adverb)
       // "out" => Ok(Self::Out), // (also direction)
@@ -953,16 +1019,7 @@ mod tests {
     init();
     for kind in TokenKind::iter() {
       match kind {
-        TokenKind::Around
-        | TokenKind::Down
-        | TokenKind::Here
-        | TokenKind::In
-        | TokenKind::Off
-        | TokenKind::On
-        | TokenKind::Out
-        | TokenKind::Then
-        | TokenKind::Up
-        | TokenKind::Word => {
+        TokenKind::Word => {
           assert!(kind.could_be_adjective(), "{:?} is not an adjective", kind);
         },
         _ => {
