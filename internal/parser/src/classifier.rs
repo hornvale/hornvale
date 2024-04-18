@@ -1,5 +1,8 @@
 use crate::prelude::{ParserError, Token, TokenKind};
 
+#[cfg(test)]
+pub mod tests;
+
 /// A classifier that can be used to determine the type of some words.
 ///
 /// The parser can call this classifier to get hints about the type of a word
@@ -73,7 +76,9 @@ impl Classifier {
 
   /// Process other prepositions.
   pub fn process_other_prepositions(&self, tokens: &mut [Token], index: usize) -> Result<(), ParserError> {
+    // Find the next preposition in the tokens.
     if let Some(rel_index) = tokens.iter().skip(index).position(|t| t.kind.is_preposition()) {
+      // The index of the next preposition, corrected for the slice.
       let index = index + rel_index;
       self.process_secondary_preposition(tokens, index)?;
       self.process_other_prepositions(tokens, index + 1)?;
@@ -106,25 +111,16 @@ impl Classifier {
   pub fn process_presumed_adjectives(&self, tokens: &mut [Token], index: usize) -> Result<(), ParserError> {
     // We start at the specified index and work our way back.
     for i in (0..=index).rev() {
-      eprintln!("Processing token at index {}", i);
       // This should always be a valid index.
       let lnk = tokens.get(i).map(|t| t.kind).unwrap();
-      eprintln!("{:#?}", lnk);
-      // If this token could be an adjective, make it one.
       if lnk.could_be_adjective() {
-        eprintln!("Setting token {:#?} to Adjective", lnk);
         tokens[i].kind = TokenKind::Adjective;
       } else if lnk.can_follow_adjective() {
-        eprintln!("Continuing loop after token {:#?}", lnk);
         continue;
       } else {
-        eprintln!("Breaking loop after token {:#?}", lnk);
         break;
       }
     }
     Ok(())
   }
 }
-
-#[cfg(test)]
-pub mod tests;
