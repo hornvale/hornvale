@@ -44,15 +44,19 @@ impl Classifier {
   /// Process the first preposition in the tokens.
   pub fn process_first_preposition(&self, tokens: &mut [Token], index: usize) -> Result<(), ParserError> {
     // Find the last non-EOI token.
-    // If it's the same as the first preposition, then it's actually an adverb.
-    // Otherwise, this token should be an indirect object.
     let lnei = tokens.iter().rposition(|t| t.kind != TokenKind::EndOfInput).unwrap();
+    // If it's the same as the first preposition, then it's actually an adverb.
     if index == lnei {
       // It's actually an adverb.
       return Ok(());
     }
-    // The last token should be an indirect object.
-    self.process_presumed_noun(tokens, lnei)?;
+    // Otherwise, this token should usually be an indirect object, but there
+    // are some exceptions; so we find the last word after the preposition that
+    // could be a noun and mark it.
+    let lni = tokens.iter().rposition(|t| t.kind.could_be_noun()).unwrap();
+    if lni > index {
+      self.process_presumed_noun(tokens, lni)?;
+    }
     // The token before the first preposition should be the direct object.
     self.process_presumed_direct_object(tokens, index - 1)?;
     // Now that we've processed this preposition, we can move on to the next.

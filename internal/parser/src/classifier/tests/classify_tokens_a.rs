@@ -84,7 +84,7 @@ fn test_classify_tokens08() {
     &[
       TokenKind::Verb,
       TokenKind::To,
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
   );
@@ -100,7 +100,7 @@ fn test_classify_tokens09() {
       TokenKind::Verb,
       TokenKind::To,
       TokenKind::Word, // Should be an adjective.
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
   );
@@ -116,7 +116,7 @@ fn test_classify_tokens10() {
       TokenKind::To,
       TokenKind::Adjective,
       TokenKind::PossessiveDeterminer,
-      TokenKind::Word, // Probably fix this... should be a noun.
+      TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
   );
@@ -135,7 +135,7 @@ fn test_classify_tokens11() {
       TokenKind::Word, // Should be an adjective.
       TokenKind::Adjective,
       TokenKind::PossessiveDeterminer,
-      TokenKind::Word, // Probably fix this... should be a noun.
+      TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
   );
@@ -153,7 +153,7 @@ fn test_classify_tokens12() {
       TokenKind::Comma,
       TokenKind::Adjective,
       TokenKind::PossessiveDeterminer,
-      TokenKind::Word, // Probably fix this... should be a noun.
+      TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
   );
@@ -170,7 +170,7 @@ fn test_classify_tokens13() {
       TokenKind::Adjective,
       TokenKind::Word, // Should be an adjective.
       TokenKind::PossessiveDeterminer,
-      TokenKind::Word, // Probably fix this... should be a noun.
+      TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
   );
@@ -188,7 +188,7 @@ fn test_classify_tokens14() {
       TokenKind::Comma,
       TokenKind::Word, // Should be an adjective.
       TokenKind::PossessiveDeterminer,
-      TokenKind::Word, // Probably fix this... should be a noun.
+      TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
   );
@@ -203,7 +203,7 @@ fn test_classify_tokens15() {
       TokenKind::Verb,
       TokenKind::To,
       TokenKind::PossessiveDeterminer,
-      TokenKind::Word, // Should be a noun.
+      TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
   );
