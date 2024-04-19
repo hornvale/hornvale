@@ -26,7 +26,7 @@ pub mod form;
 pub mod function;
 /// Parameters for a command.
 pub mod parameter;
-/// Query the world for information.
+/// Query the world for information or to perform actions.
 pub mod query;
 /// A flag to set when the game should quit.
 pub mod quit_flag;

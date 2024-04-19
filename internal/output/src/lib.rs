@@ -4,6 +4,8 @@
 
 /// An error type.
 pub mod error;
+/// Query the world for information or to perform actions.
+pub mod query;
 /// An output queue.
 pub mod queue;
 /// A sink is a destination for output.
@@ -16,6 +18,7 @@ pub mod writer;
 /// The prelude.
 pub mod prelude {
   pub use super::error::OutputError;
+  pub use super::query as output_query;
   pub use super::queue::{OutputQueue, StderrQueue, StdoutQueue};
   pub use super::sink::OutputSink;
   pub use super::sinks::{
