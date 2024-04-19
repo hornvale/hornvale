@@ -4,7 +4,8 @@ use crate::prelude::InputSource;
 /// An input source that reads from a list of strings.
 #[derive(Debug)]
 pub struct StringSource {
-  inputs: Vec<String>,
+  /// The list of strings from which input is read.
+  pub inputs: Vec<String>,
 }
 
 impl StringSource {

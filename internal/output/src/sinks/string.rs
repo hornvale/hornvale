@@ -3,7 +3,8 @@ use crate::prelude::{OutputError, OutputSink};
 /// An output sink that writes to a list of strings.
 #[derive(Debug, Default)]
 pub struct StringSink {
-  outputs: Vec<String>,
+  /// The list of strings to which output is written.
+  pub outputs: Vec<String>,
 }
 
 impl StringSink {

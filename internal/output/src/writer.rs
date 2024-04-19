@@ -108,6 +108,14 @@ mod tests {
   }
 
   #[test]
+  fn test_write_error() {
+    init();
+    let mut world = World::new();
+    let mut writer = OutputWriter::new(StringSink::new(), StringSink::new());
+    writer.write_error(&mut world).unwrap();
+  }
+
+  #[test]
   fn test_enqueue_out() {
     init();
     let mut world = World::new();
@@ -115,6 +123,9 @@ mod tests {
     writer
       .enqueue_out(&mut world, vec!["test".to_string(), "test2".to_string()])
       .unwrap();
+    writer.write_output(&mut world).unwrap();
+    assert_eq!(writer.out_sink.outputs, vec!["test".to_string(), "test2".to_string()]);
+    assert!(writer.err_sink.outputs.is_empty());
   }
 
   #[test]
@@ -125,6 +136,9 @@ mod tests {
     writer
       .enqueue_err(&mut world, vec!["test".to_string(), "test2".to_string()])
       .unwrap();
+    writer.write_error(&mut world).unwrap();
+    assert!(writer.out_sink.outputs.is_empty());
+    assert_eq!(writer.err_sink.outputs, vec!["test".to_string(), "test2".to_string()]);
   }
 
   #[test]
