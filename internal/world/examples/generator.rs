@@ -1,7 +1,6 @@
 //! Test of the world.
 use hecs::World;
 use hornvale_command::prelude::*;
-use hornvale_dictionary::prelude::*;
 use hornvale_input::prelude::*;
 use hornvale_parser::prelude::*;
 use hornvale_world::prelude::*;
@@ -27,66 +26,32 @@ pub fn main() {
   world.spawn((command_registry,));
   let player = world.spawn((Region::default(), Room::default(), Player));
   let mut input_source = StdinSource::default();
+  let mut look_here_command_context = CommandContext::default();
+  look_here_command_context.actor = Some(player);
+  LookHereCommand::execute(&mut world, &look_here_command_context).unwrap();
   loop {
-    // Find the room the player is in.
-    let (region, room) = {
-      let mut query = world.query_one::<(&Region, &Room)>(player).unwrap();
-      let (region, room) = query.get().unwrap();
-      (region.clone(), room.clone())
-    };
-    {
-      let (room_name, room_description) = world
-        .query::<(&Region, &Room, &Name, &Description)>()
-        .with::<&IsARoom>()
-        .iter()
-        .find(|(_, (&rgn, &rm, _, _))| rgn == region && rm == room)
-        .map(|(_, (_, _, &ref name, &ref description))| (name.clone(), description.clone()))
-        .unwrap();
-      println!("{}", room_name.0);
-      println!("{}", room_description.0);
-      let exits = world
-        .query::<(&Region, &Room, &PassageDirection, &PassageKind)>()
-        .iter()
-        .filter(|(_, (&rgn, &rm, _, _))| rgn == region && rm == room)
-        .map(|(_, (_, _, &ref dir, &ref kind))| (dir.clone(), kind.clone()))
-        .collect::<Vec<_>>();
-      if !exits.is_empty() {
-        let exits = exits
-          .iter()
-          .map(|(dir, _)| dir.to_string().to_lowercase())
-          .collect::<Vec<_>>();
-        match exits.len() {
-          1 => println!("There is an exit to the {}.", exits[0]),
-          2 => println!("There are exits to the {} and {}.", exits[0], exits[1]),
-          _ => println!(
-            "There are exits to the {}, and {}.",
-            exits[..exits.len() - 1].join(", "),
-            exits[exits.len() - 1]
-          ),
-        }
-      }
-    }
     print!("> ");
     io::stdout().flush().unwrap();
     let input = input_source.fetch_input().unwrap();
     let mut scanner = Scanner::new(&input);
     let mut tokens = scanner.scan_tokens().unwrap();
     let classifier = Classifier::new();
-    classifier.classify_tokens(&mut *tokens).unwrap();
+    if classifier.classify_tokens(&mut *tokens).is_err() {
+      match input.to_lowercase().as_str().trim().len() {
+        0 => println!("Eh?"),
+        _ => println!("I don't understand {:#?}.", input),
+      }
+      continue;
+    }
     let mut parser = Parser::new(&mut *tokens, player, &mut world);
     if let Ok((command_function, command_context)) = parser.parse() {
       command_function(&mut world, &command_context).unwrap();
     } else {
       println!("I don't understand {:#?}", input);
     }
-    // Check for QuitFlag.
-    {
-      let mut query = world.query::<&QuitFlag>();
-      let query_result = query.iter().find(|(_, _)| true).map(|(_, _)| ());
-      if query_result.is_some() {
-        println!("Goodbye!");
-        break;
-      }
+    if command_query::is_quit_flag_set(&world) {
+      println!("Goodbye!");
+      break;
     }
     println!();
   }

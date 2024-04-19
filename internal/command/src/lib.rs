@@ -26,6 +26,8 @@ pub mod form;
 pub mod function;
 /// Parameters for a command.
 pub mod parameter;
+/// Query the world for information.
+pub mod query;
 /// A flag to set when the game should quit.
 pub mod quit_flag;
 /// A registry for commands.
@@ -43,6 +45,7 @@ pub mod prelude {
   pub use super::form::CommandForm;
   pub use super::function::CommandFunction;
   pub use super::parameter::CommandParameter;
+  pub use super::query as command_query;
   pub use super::quit_flag::QuitFlag;
   pub use super::registry::CommandRegistry;
 }

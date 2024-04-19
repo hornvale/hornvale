@@ -24,23 +24,19 @@ impl Command for GoDirectionCommand {
       CommandArgument::Direction(direction) => direction,
       _ => return Err(CommandError::InvalidArgument("Expected a direction.".to_string())),
     };
-    // Find the room the player is in.
-    let (region, room) = {
-      let mut query = world.query_one::<(&Region, &Room)>(actor).unwrap();
-      let (region, room) = query.get().unwrap();
-      (*region, *room)
-    };
+    let actor_info = world_query::get_entity_region_and_room(world, actor);
+    if actor_info.is_none() {
+      return Err(CommandError::InvalidActor(
+        "The actor is not in a region or room.".to_string(),
+      ));
+    }
+    let (region, room) = actor_info.unwrap();
 
     // Check if the player can move in the given direction.
     let passage = {
-      let info = world
-        .query::<(&Region, &Room, &PassageDirection, &PassageKind)>()
-        .iter()
-        .find(|(_, (&rgn, &rm, &dir, _))| rgn == region && rm == room && dir == direction.into())
-        .map(|(_, (_, _, _, kind))| kind.clone());
-
-      if let Some(kind) = info {
-        kind.clone()
+      let passage = world_query::get_room_passage_in_direction(world, &region, &room, direction.into());
+      if let Some(passage) = passage {
+        passage
       } else {
         PassageKind::NoExit("You can't go that way.".to_string())
       }

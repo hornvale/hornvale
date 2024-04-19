@@ -31,6 +31,8 @@ pub mod corridor;
 pub mod error;
 /// Passages connect rooms.
 pub mod passage;
+/// Functions for querying the world.
+pub mod query;
 /// Regions are points in the 3D grid.
 pub mod region;
 /// Rooms are points in the 3D grid within a region.
@@ -38,16 +40,17 @@ pub mod room;
 
 /// The prelude.
 pub mod prelude {
-  pub use crate::commands::{
+  pub use super::commands::{
     go_direction::GoDirectionCommand, look_direction::LookDirectionCommand, look_here::LookHereCommand,
   };
-  pub use crate::corridor::{
+  pub use super::corridor::{
     direction::CorridorDirection, finder::CorridorFinder, kind::CorridorKind, origin::CorridorOrigin,
     terminus::CorridorTerminus,
   };
-  pub use crate::error::WorldError;
-  pub use crate::passage::{condition::PassageCondition, direction::PassageDirection, kind::PassageKind};
-  pub use crate::region::{
+  pub use super::error::WorldError;
+  pub use super::passage::{condition::PassageCondition, direction::PassageDirection, kind::PassageKind};
+  pub use super::query as world_query;
+  pub use super::region::{
     generator::{manager::RegionGeneratorManager, registry::RegionGeneratorRegistry, RegionGenerator},
     generators::{
       compass_rose::CompassRoseRegionGenerator, empty::EmptyRegionGenerator, fail::FailRegionGenerator,
@@ -56,5 +59,5 @@ pub mod prelude {
     is_a_region::IsARegion,
     Region,
   };
-  pub use crate::room::{is_a_room::IsARoom, Room};
+  pub use super::room::{is_a_room::IsARoom, Room};
 }
