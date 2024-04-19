@@ -94,3 +94,65 @@ fn test_parser04() {
     )),
   );
 }
+
+#[test]
+fn test_parser05() {
+  init();
+  let mut world = World::new();
+  let mut command_registry = CommandRegistry::new();
+  command_registry.register::<LookDirectionCommand>();
+  world.spawn((command_registry,));
+  test_string_parsing(
+    "look north",
+    &mut world,
+    Ok((
+      LookDirectionCommand::execute,
+      CommandContext {
+        raw: "look north".to_string(),
+        verb: "look".to_string(),
+        form: CommandForm::Direction,
+        direct_object: None,
+        indirect_object: None,
+      },
+    )),
+  );
+}
+
+#[test]
+/// This test verifies that we can have multiple commands with the same name.
+fn test_parser06() {
+  init();
+  let mut world = World::new();
+  let mut command_registry = CommandRegistry::new();
+  command_registry.register::<LookDirectionCommand>();
+  command_registry.register::<LookHereCommand>();
+  world.spawn((command_registry,));
+  test_string_parsing(
+    "look north",
+    &mut world,
+    Ok((
+      LookDirectionCommand::execute,
+      CommandContext {
+        raw: "look north".to_string(),
+        verb: "look".to_string(),
+        form: CommandForm::Direction,
+        direct_object: None,
+        indirect_object: None,
+      },
+    )),
+  );
+  test_string_parsing(
+    "look here",
+    &mut world,
+    Ok((
+      LookHereCommand::execute,
+      CommandContext {
+        raw: "look here".to_string(),
+        verb: "look".to_string(),
+        form: CommandForm::Here,
+        direct_object: None,
+        indirect_object: None,
+      },
+    )),
+  );
+}
