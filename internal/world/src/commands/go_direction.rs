@@ -18,6 +18,6 @@ impl Command for GoDirectionCommand {
   const ARITY: CommandArity = CommandArity::Unary(CommandParameter::Direction);
 
   fn execute(_world: &mut World, _context: &CommandContext) -> Result<(), CommandError> {
-    Err(CommandError::UnknownError)
+    unimplemented!()
   }
 }

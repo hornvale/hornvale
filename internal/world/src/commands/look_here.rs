@@ -17,6 +17,6 @@ impl Command for LookHereCommand {
   const ARITY: CommandArity = CommandArity::Nullary;
 
   fn execute(_world: &mut World, _context: &CommandContext) -> Result<(), CommandError> {
-    Err(CommandError::UnknownError)
+    unimplemented!()
   }
 }

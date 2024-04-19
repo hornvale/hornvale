@@ -1,16 +1,9 @@
-use crate::prelude::CorridorDirection;
-use crate::prelude::CorridorOrigin;
-use crate::prelude::CorridorTerminus;
-use crate::prelude::Description;
-use crate::prelude::IsARoom;
-use crate::prelude::Name;
-use crate::prelude::PassageDirection;
-use crate::prelude::PassageKind;
-use crate::prelude::Region;
-use crate::prelude::RegionGenerator;
-use crate::prelude::Room;
-use crate::prelude::WorldError;
+use crate::prelude::{
+  CorridorDirection, CorridorOrigin, CorridorTerminus, IsARoom, PassageDirection, PassageKind, Region, RegionGenerator,
+  Room, WorldError,
+};
 use hecs::World;
+use hornvale_dictionary::prelude::*;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 

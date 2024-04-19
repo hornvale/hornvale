@@ -5,13 +5,16 @@
 //! data.
 //!
 
-/// Keywords.
-pub mod keyword;
-/// Parts of speech.
-pub mod part_of_speech;
+/// An Adjectives component for listing adjectives relevant to a noun.
+pub mod adjectives;
+/// A Description component for storing the default description of an entity.
+pub mod description;
+/// A Name component for storing the canonical name of an entity.
+pub mod name;
 
 /// The prelude.
 pub mod prelude {
-  pub use crate::keyword::dictionary::KeywordDictionary;
-  pub use crate::part_of_speech::{dictionary::PartOfSpeechDictionary, PartOfSpeech};
+  pub use super::adjectives::Adjectives;
+  pub use super::description::Description;
+  pub use super::name::Name;
 }
