@@ -3,7 +3,6 @@ use crate::prelude::Classifier;
 use crate::prelude::Scanner;
 use hornvale_dictionary::prelude::*;
 use hornvale_test_utilities::prelude::*;
-use hornvale_world::prelude::*;
 
 pub mod parser_a;
 

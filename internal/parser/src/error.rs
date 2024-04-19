@@ -38,6 +38,9 @@ pub enum ParserError {
   /// Can't perform actions with two different directions.
   #[error("can't perform actions with two different directions")]
   TwoDifferentDirections,
+  /// Can't bind "here" if the actor is nowhere.
+  #[error("can't bind \"here\" if the actor is nowhere")]
+  ActorIsNowhere,
   /// Index out of bounds.
   #[error("index out of bounds")]
   IndexOutOfBounds,

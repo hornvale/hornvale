@@ -33,6 +33,12 @@ fn test_parser02() {
   command_registry.register::<LookHereCommand>();
   world.spawn((command_registry,));
   let player = setup_world(&mut world);
+  let room_entity = world
+    .query::<&Room>()
+    .into_iter()
+    .filter_map(|(e, &rm)| if rm == Room::default() { Some(e) } else { None })
+    .next()
+    .unwrap();
   test_string_parsing(
     "look here",
     player,
@@ -43,7 +49,7 @@ fn test_parser02() {
         raw: "look here".to_string(),
         verb: "look".to_string(),
         form: CommandForm::Here,
-        direct_object: None,
+        direct_object: Some(CommandArgument::Entity(room_entity)),
         indirect_object: None,
       },
     )),
@@ -136,6 +142,12 @@ fn test_parser06() {
   command_registry.register::<LookDirectionCommand>();
   command_registry.register::<LookHereCommand>();
   let player = setup_world(&mut world);
+  let room_entity = world
+    .query::<&Room>()
+    .into_iter()
+    .filter_map(|(e, &rm)| if rm == Room::default() { Some(e) } else { None })
+    .next()
+    .unwrap();
   world.spawn((command_registry,));
   test_string_parsing(
     "look north",
@@ -162,7 +174,7 @@ fn test_parser06() {
         raw: "look here".to_string(),
         verb: "look".to_string(),
         form: CommandForm::Here,
-        direct_object: None,
+        direct_object: Some(CommandArgument::Entity(room_entity)),
         indirect_object: None,
       },
     )),

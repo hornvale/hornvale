@@ -1,8 +1,9 @@
 use crate::error::ParserError;
 use crate::prelude::{Token, TokenKind};
 use derivative::Derivative;
-use hecs::{Entity, World};
+use hecs::{Entity, With, World};
 use hornvale_command::prelude::*;
+use hornvale_world::prelude::*;
 
 #[cfg(test)]
 pub mod tests;
@@ -84,6 +85,11 @@ impl<'world> Parser<'world> {
   pub fn parse_command(&mut self) -> Result<(), ParserError> {
     self.consume_verb().map_err(|_| ParserError::NoVerb)?;
     match self.peek() {
+      Some(token) if token.kind == TokenKind::Here => {
+        self.modifier = self.peek();
+        self.direct_object = self.peek();
+        self.advance()?;
+      },
       Some(token) if token.kind.is_adverb() => {
         self.modifier = self.peek();
         self.advance()?;
@@ -95,11 +101,6 @@ impl<'world> Parser<'world> {
       },
       Some(token) if token.kind.is_preposition() => {
         self.modifier = self.peek();
-        self.advance()?;
-      },
-      Some(token) if token.kind == TokenKind::Here => {
-        self.modifier = self.peek();
-        self.direct_object = self.peek();
         self.advance()?;
       },
       Some(token) if token.kind.is_noun() => {
@@ -240,7 +241,9 @@ impl<'world> Parser<'world> {
         direct_object if direct_object.kind == TokenKind::Here => {
           context.direct_object = Some(self.bind_here()?);
         },
-        _ => {},
+        _ => {
+          println!("Direct object: {:?}", direct_object);
+        },
       }
     }
     context.form = if let Some(modifier) = &self.modifier {
@@ -253,8 +256,27 @@ impl<'world> Parser<'world> {
   }
 
   /// Bind the Here token.
-  pub fn bind_here(&self) -> Result<CommandArgument, ParserError> {
-    unimplemented!();
+  pub fn bind_here(&mut self) -> Result<CommandArgument, ParserError> {
+    let actor_info = {
+      let query_result = self.world.query_one::<(&Region, &Room)>(self.actor);
+      let mut query = query_result.unwrap(); // `query` is now a longer-lived value
+      let (region, room) = query.get().unwrap();
+      (*region, *room)
+    };
+
+    let room_entity = {
+      self
+        .world
+        .query::<With<(&Region, &Room), &IsARoom>>()
+        .into_iter()
+        .find(|(_, (&reg, &rm))| {
+          let (region, room) = actor_info;
+          region == reg && room == rm
+        })
+        .unwrap()
+        .0
+    };
+    Ok(CommandArgument::Entity(room_entity))
   }
 
   /// Check kind of current token.
