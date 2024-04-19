@@ -1,4 +1,4 @@
-use crate::prelude::Direction;
+use crate::prelude::CommandDirection;
 use hecs::Entity;
 use serde::{Deserialize, Serialize};
 
@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash, Serialize)]
 pub enum CommandArgument {
   /// A direction.
-  Direction(Direction),
+  Direction(CommandDirection),
   /// An entity.
   Entity(Entity),
   /// A string literal.

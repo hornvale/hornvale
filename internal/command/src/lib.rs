@@ -38,7 +38,7 @@ pub mod prelude {
   pub use super::command::Command;
   pub use super::commands::{fail::FailCommand, no_op::NoOpCommand, quit::QuitCommand};
   pub use super::context::CommandContext;
-  pub use super::direction::Direction;
+  pub use super::direction::CommandDirection;
   pub use super::error::CommandError;
   pub use super::form::CommandForm;
   pub use super::function::CommandFunction;

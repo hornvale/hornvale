@@ -706,6 +706,39 @@ impl TryFrom<&str> for TokenKind {
   }
 }
 
+impl From<TokenKind> for CommandDirection {
+  fn from(kind: TokenKind) -> Self {
+    match kind {
+      TokenKind::North => CommandDirection::North,
+      TokenKind::Northeast => CommandDirection::Northeast,
+      TokenKind::East => CommandDirection::East,
+      TokenKind::Southeast => CommandDirection::Southeast,
+      TokenKind::South => CommandDirection::South,
+      TokenKind::Southwest => CommandDirection::Southwest,
+      TokenKind::West => CommandDirection::West,
+      TokenKind::Northwest => CommandDirection::Northwest,
+      TokenKind::Up => CommandDirection::Up,
+      TokenKind::Down => CommandDirection::Down,
+      TokenKind::In => CommandDirection::In,
+      TokenKind::Out => CommandDirection::Out,
+      _ => unreachable!(),
+    }
+  }
+}
+
+impl TryFrom<TokenKind> for CommandArgument {
+  type Error = ();
+
+  fn try_from(kind: TokenKind) -> Result<Self, Self::Error> {
+    match kind {
+      // Directions.
+      kind if kind.is_direction() => Ok(CommandArgument::Direction(kind.into())),
+
+      _ => Err(()),
+    }
+  }
+}
+
 impl TryFrom<TokenKind> for CommandForm {
   type Error = ();
 

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 /// A direction.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Hash, Serialize)]
-pub enum Direction {
+pub enum CommandDirection {
   /// North.
   North,
   /// Northeast.

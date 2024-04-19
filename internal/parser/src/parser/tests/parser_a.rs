@@ -1,5 +1,4 @@
 use super::*;
-use hornvale_world::prelude::*;
 
 #[test]
 fn test_parser01() {
@@ -8,8 +7,10 @@ fn test_parser01() {
   let mut command_registry = CommandRegistry::new();
   command_registry.register::<QuitCommand>();
   world.spawn((command_registry,));
+  let player = setup_world(&mut world);
   test_string_parsing(
     "quit",
+    player,
     &mut world,
     Ok((
       QuitCommand::execute,
@@ -31,8 +32,10 @@ fn test_parser02() {
   let mut command_registry = CommandRegistry::new();
   command_registry.register::<LookHereCommand>();
   world.spawn((command_registry,));
+  let player = setup_world(&mut world);
   test_string_parsing(
     "look here",
+    player,
     &mut world,
     Ok((
       LookHereCommand::execute,
@@ -54,8 +57,10 @@ fn test_parser03() {
   let mut command_registry = CommandRegistry::new();
   command_registry.register::<GoDirectionCommand>();
   world.spawn((command_registry,));
+  let player = setup_world(&mut world);
   test_string_parsing(
     "go north",
+    player,
     &mut world,
     Ok((
       GoDirectionCommand::execute,
@@ -63,7 +68,7 @@ fn test_parser03() {
         raw: "go north".to_string(),
         verb: "go".to_string(),
         form: CommandForm::Direction,
-        direct_object: None,
+        direct_object: Some(CommandArgument::Direction(CommandDirection::North)),
         indirect_object: None,
       },
     )),
@@ -78,9 +83,11 @@ fn test_parser04() {
   let mut world = World::new();
   let mut command_registry = CommandRegistry::new();
   command_registry.register::<GoDirectionCommand>();
+  let player = setup_world(&mut world);
   world.spawn((command_registry,));
   test_string_parsing(
     "go to north",
+    player,
     &mut world,
     Ok((
       GoDirectionCommand::execute,
@@ -101,9 +108,11 @@ fn test_parser05() {
   let mut world = World::new();
   let mut command_registry = CommandRegistry::new();
   command_registry.register::<LookDirectionCommand>();
+  let player = setup_world(&mut world);
   world.spawn((command_registry,));
   test_string_parsing(
     "look north",
+    player,
     &mut world,
     Ok((
       LookDirectionCommand::execute,
@@ -111,7 +120,7 @@ fn test_parser05() {
         raw: "look north".to_string(),
         verb: "look".to_string(),
         form: CommandForm::Direction,
-        direct_object: None,
+        direct_object: Some(CommandArgument::Direction(CommandDirection::North)),
         indirect_object: None,
       },
     )),
@@ -126,9 +135,11 @@ fn test_parser06() {
   let mut command_registry = CommandRegistry::new();
   command_registry.register::<LookDirectionCommand>();
   command_registry.register::<LookHereCommand>();
+  let player = setup_world(&mut world);
   world.spawn((command_registry,));
   test_string_parsing(
     "look north",
+    player,
     &mut world,
     Ok((
       LookDirectionCommand::execute,
@@ -136,13 +147,14 @@ fn test_parser06() {
         raw: "look north".to_string(),
         verb: "look".to_string(),
         form: CommandForm::Direction,
-        direct_object: None,
+        direct_object: Some(CommandArgument::Direction(CommandDirection::North)),
         indirect_object: None,
       },
     )),
   );
   test_string_parsing(
     "look here",
+    player,
     &mut world,
     Ok((
       LookHereCommand::execute,

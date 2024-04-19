@@ -1,12 +1,27 @@
 use super::*;
 use crate::prelude::Classifier;
 use crate::prelude::Scanner;
+use hornvale_dictionary::prelude::*;
 use hornvale_test_utilities::prelude::*;
+use hornvale_world::prelude::*;
 
 pub mod parser_a;
 
+/// A player.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Player;
+
+pub fn setup_world(world: &mut World) -> Entity {
+  let generator = CompassRoseRegionGenerator;
+  let region = Region::default();
+  generator.generate(region, world).unwrap();
+  let player = world.spawn((Player, region, Room::default(), Name("Player".to_string())));
+  player
+}
+
 pub fn test_string_parsing(
   string: &str,
+  actor: Entity,
   world: &mut World,
   expected: Result<(CommandFunction, CommandContext), ParserError>,
 ) {
@@ -15,7 +30,7 @@ pub fn test_string_parsing(
   let mut tokens = scanner.scan_tokens().unwrap();
   let classifier = Classifier::new();
   classifier.classify_tokens(&mut *tokens).unwrap();
-  let mut parser = Parser::new(&mut *tokens, world);
+  let mut parser = Parser::new(&mut *tokens, actor, world);
   let actual = parser.parse();
   match (expected, actual) {
     (Ok(expected), Ok(actual)) => {

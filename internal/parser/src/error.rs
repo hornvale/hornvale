@@ -32,6 +32,12 @@ pub enum ParserError {
   /// An unexpected token was encountered.
   #[error("unexpected token: expected {0}, found {1}; {2}")]
   UnexpectedToken(TokenKind, TokenKind, String),
+  /// Could not consume the direct object.
+  #[error("could not consume the direct object {0}")]
+  CouldNotConsumeDirectObject(String),
+  /// Can't perform actions with two different directions.
+  #[error("can't perform actions with two different directions")]
+  TwoDifferentDirections,
   /// Index out of bounds.
   #[error("index out of bounds")]
   IndexOutOfBounds,

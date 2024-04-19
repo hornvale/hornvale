@@ -1,7 +1,7 @@
 use crate::error::ParserError;
 use crate::prelude::{Token, TokenKind};
 use derivative::Derivative;
-use hecs::World;
+use hecs::{Entity, World};
 use hornvale_command::prelude::*;
 
 #[cfg(test)]
@@ -13,6 +13,8 @@ pub mod tests;
 pub struct Parser<'world> {
   /// A list of tokens to parse.
   pub tokens: Vec<Token>,
+  /// The actor attempting the command.
+  pub actor: Entity,
   /// The world to parse in.
   #[derivative(Debug = "ignore")]
   pub world: &'world mut World,
@@ -22,6 +24,10 @@ pub struct Parser<'world> {
   pub verb: Option<Token>,
   /// The verb modifier, if any.
   pub modifier: Option<Token>,
+  /// The direct object, if any.
+  pub direct_object: Option<Token>,
+  /// The indirect object, if any.
+  pub indirect_object: Option<Token>,
   /// The command function, if any.
   pub function: Option<CommandFunction>,
   /// The command context.
@@ -30,19 +36,24 @@ pub struct Parser<'world> {
 
 impl<'world> Parser<'world> {
   /// Create a new parser.
-  pub fn new(tokens: &[Token], world: &'world mut World) -> Self {
+  pub fn new(tokens: &[Token], actor: Entity, world: &'world mut World) -> Self {
     let tokens = tokens.to_vec();
     let current = 0;
     let verb = None;
     let modifier = None;
+    let direct_object = None;
+    let indirect_object = None;
     let function = None;
     let context = None;
     Self {
       tokens,
+      actor,
       world,
       current,
       verb,
       modifier,
+      direct_object,
+      indirect_object,
       function,
       context,
     }
@@ -56,13 +67,14 @@ impl<'world> Parser<'world> {
   pub fn parse(&mut self) -> Result<(&CommandFunction, CommandContext), ParserError> {
     self.assert_non_empty()?;
     if self.match_magic_word()? {
+      // None of this is implemented yet.
       self.consume_magic_word()?;
       self.bind_magic_word()?;
     } else {
       self.parse_command()?;
       self.bind_command()?;
+      self.bind_context()?;
     }
-    self.bind_context()?;
     Ok((&self.function.as_ref().unwrap(), self.context.take().unwrap()))
   }
 
@@ -78,10 +90,20 @@ impl<'world> Parser<'world> {
       },
       Some(token) if token.kind.is_direction() => {
         self.modifier = self.peek();
+        self.direct_object = self.peek();
         self.advance()?;
       },
       Some(token) if token.kind.is_preposition() => {
         self.modifier = self.peek();
+        self.advance()?;
+      },
+      Some(token) if token.kind == TokenKind::Here => {
+        self.modifier = self.peek();
+        self.direct_object = self.peek();
+        self.advance()?;
+      },
+      Some(token) if token.kind.is_noun() => {
+        self.consume_direct_object()?;
         self.advance()?;
       },
       _ => {},
@@ -111,6 +133,18 @@ impl<'world> Parser<'world> {
       Ok(())
     } else {
       Err(ParserError::NoVerb)
+    }
+  }
+
+  /// Consume the direct object.
+  pub fn consume_direct_object(&mut self) -> Result<(), ParserError> {
+    if self.check_token(TokenKind::DirectObject) {
+      self.direct_object = self.peek();
+      Ok(())
+    } else {
+      Err(ParserError::CouldNotConsumeDirectObject(
+        self.peek().map(|t| t.lexeme.clone()).unwrap_or_default(),
+      ))
     }
   }
 
@@ -184,7 +218,7 @@ impl<'world> Parser<'world> {
   /// Bind the context.
   #[allow(clippy::field_reassign_with_default)]
   pub fn bind_context(&mut self) -> Result<(), ParserError> {
-    let mut context = CommandContext::default();
+    let mut context = self.context.take().unwrap_or_default();
     context.raw = self
       .tokens
       .iter()
@@ -198,6 +232,17 @@ impl<'world> Parser<'world> {
     } else {
       String::new()
     };
+    if let Some(direct_object) = &self.direct_object {
+      match direct_object {
+        direct_object if direct_object.kind.is_direction() => {
+          context.direct_object = Some(direct_object.try_into().unwrap());
+        },
+        direct_object if direct_object.kind == TokenKind::Here => {
+          context.direct_object = Some(self.bind_here()?);
+        },
+        _ => {},
+      }
+    }
     context.form = if let Some(modifier) = &self.modifier {
       modifier.kind.try_into().unwrap_or(CommandForm::Default)
     } else {
@@ -205,6 +250,11 @@ impl<'world> Parser<'world> {
     };
     self.context = Some(context);
     Ok(())
+  }
+
+  /// Bind the Here token.
+  pub fn bind_here(&self) -> Result<CommandArgument, ParserError> {
+    unimplemented!();
   }
 
   /// Check kind of current token.
