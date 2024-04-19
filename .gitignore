@@ -16,3 +16,4 @@ Cargo.lock
 # Added by cargo
 .DS_Store
 .aider*
+docs/book
