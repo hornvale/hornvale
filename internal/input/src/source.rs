@@ -5,7 +5,7 @@ use std::fmt::{Debug, Formatter, Result as FmtResult};
 ///
 /// Input may come from a variety of sources, such as standard input, a file,
 /// or a network connection.
-pub trait Source {
+pub trait InputSource {
   /// Fetch the input from the source.
   ///
   /// This method fetches input from the source; it blocks until input is ready
@@ -16,7 +16,7 @@ pub trait Source {
   fn fetch_input(&mut self) -> Result<String, InputError>;
 }
 
-impl Debug for dyn Source {
+impl Debug for dyn InputSource {
   fn fmt(&self, f: &mut Formatter) -> FmtResult {
     write!(f, "Source")
   }

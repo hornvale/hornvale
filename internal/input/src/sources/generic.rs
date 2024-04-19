@@ -1,5 +1,5 @@
 use crate::prelude::InputError;
-use crate::prelude::Source;
+use crate::prelude::InputSource;
 use std::fs::File;
 use std::io::{BufRead, BufReader, StdinLock};
 
@@ -16,7 +16,7 @@ impl<R: BufRead> GenericSource<R> {
   }
 }
 
-impl<R: BufRead> Source for GenericSource<R> {
+impl<R: BufRead> InputSource for GenericSource<R> {
   fn fetch_input(&mut self) -> Result<String, InputError> {
     let mut input = String::new();
     self.reader.read_line(&mut input)?;

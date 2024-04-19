@@ -19,9 +19,9 @@ pub mod sources;
 /// The prelude.
 pub mod prelude {
   pub use crate::error::InputError;
-  pub use crate::queue::Queue;
-  pub use crate::reader::Reader;
-  pub use crate::source::Source;
+  pub use crate::queue::InputQueue;
+  pub use crate::reader::InputReader;
+  pub use crate::source::InputSource;
   pub use crate::sources::{
     generic::{FileSource, GenericSource, StdinSource},
     string::StringSource,

@@ -1,13 +1,13 @@
 use crate::prelude::InputError;
-use crate::prelude::Queue;
-use crate::prelude::Source;
+use crate::prelude::InputQueue;
+use crate::prelude::InputSource;
 use hecs::{Entity, World};
 
 /// An object that manages the process of reading and storing input.
 #[derive(Debug)]
-pub struct Reader<T>
+pub struct InputReader<T>
 where
-  T: Source,
+  T: InputSource,
 {
   /// The source for fetching input.
   pub source: T,
@@ -15,9 +15,9 @@ where
   pub entity: Option<Entity>,
 }
 
-impl<T> Reader<T>
+impl<T> InputReader<T>
 where
-  T: Source,
+  T: InputSource,
 {
   /// Create a new reader with the given source.
   pub fn new(source: T) -> Self {
@@ -65,9 +65,8 @@ where
 
   /// Enqueue inputs for parsing.
   pub fn enqueue_inputs(&mut self, world: &mut World, inputs: Vec<String>) -> Result<(), InputError> {
-    self.ensure_entity(world)?;
-    let entity = self.entity.unwrap();
-    let queue = world.query_one_mut::<&mut Queue>(entity).unwrap();
+    let entity = self.ensure_entity(world)?;
+    let queue = world.query_one_mut::<&mut InputQueue>(entity).unwrap();
     for input in inputs {
       queue.enqueue(input);
     }
@@ -75,12 +74,12 @@ where
   }
 
   /// Ensure that the input queue entity exists.
-  pub fn ensure_entity(&mut self, world: &mut World) -> Result<(), InputError> {
+  pub fn ensure_entity(&mut self, world: &mut World) -> Result<Entity, InputError> {
     if self.entity.is_none() {
-      let entity = world.spawn((Queue::new(),));
+      let entity = world.spawn((InputQueue::new(),));
       self.entity = Some(entity);
     }
-    Ok(())
+    Ok(self.entity.unwrap())
   }
 }
 
@@ -93,7 +92,7 @@ mod tests {
   #[test]
   fn test_split_input() {
     init();
-    let reader = Reader::new(StringSource::new(vec![]));
+    let reader = InputReader::new(StringSource::new(vec![]));
     let inputs = reader.split_input("test. test2; test3\n test4 then test5.test6 ;test7");
     assert_eq!(
       inputs.unwrap(),
@@ -105,11 +104,11 @@ mod tests {
   fn test_enqueue_inputs() {
     init();
     let mut world = World::new();
-    let mut reader = Reader::new(StringSource::new(vec![]));
+    let mut reader = InputReader::new(StringSource::new(vec![]));
     let inputs = vec!["test".to_string(), "test2".to_string()];
     reader.enqueue_inputs(&mut world, inputs).unwrap();
     let entity = reader.entity.unwrap();
-    let queue = world.query_one_mut::<&mut Queue>(entity).unwrap();
+    let queue = world.query_one_mut::<&mut InputQueue>(entity).unwrap();
     assert_eq!(queue.dequeue().unwrap(), "test".to_string());
     assert_eq!(queue.dequeue().unwrap(), "test2".to_string());
     assert_eq!(queue.dequeue(), None);
@@ -119,7 +118,7 @@ mod tests {
   fn test_ensure_entity() {
     init();
     let mut world = World::new();
-    let mut reader = Reader::new(StringSource::new(vec![]));
+    let mut reader = InputReader::new(StringSource::new(vec![]));
     reader.ensure_entity(&mut world).unwrap();
     assert!(reader.entity.is_some());
   }
@@ -128,14 +127,14 @@ mod tests {
   fn test_read_input() {
     init();
     let mut world = World::new();
-    let mut reader = Reader::new(StringSource::new(vec![
+    let mut reader = InputReader::new(StringSource::new(vec![
       "test".to_string(),
       "test2".to_string(),
       "test3;test4 then test5 .test6".to_string(),
     ]));
     reader.read_input(&mut world).unwrap();
     let entity = reader.entity.unwrap();
-    let queue = world.query_one_mut::<&mut Queue>(entity).unwrap();
+    let queue = world.query_one_mut::<&mut InputQueue>(entity).unwrap();
     assert_eq!(queue.dequeue().unwrap(), "test".to_string());
     assert_eq!(queue.dequeue(), None);
   }
@@ -144,7 +143,7 @@ mod tests {
   fn test_read_input_no_input() {
     init();
     let mut world = World::new();
-    let mut reader = Reader::new(StringSource::new(vec![]));
+    let mut reader = InputReader::new(StringSource::new(vec![]));
     reader.read_input(&mut world).unwrap();
     assert!(reader.entity.is_none());
   }
@@ -153,7 +152,7 @@ mod tests {
   fn test_read_input_all() {
     init();
     let mut world = World::new();
-    let mut reader = Reader::new(StringSource::new(vec![
+    let mut reader = InputReader::new(StringSource::new(vec![
       "test".to_string(),
       "test2".to_string(),
       "test3;test4 then test5 .test6".to_string(),
@@ -162,7 +161,7 @@ mod tests {
     reader.read_input(&mut world).unwrap();
     reader.read_input(&mut world).unwrap();
     let entity = reader.entity.unwrap();
-    let queue = world.query_one_mut::<&mut Queue>(entity).unwrap();
+    let queue = world.query_one_mut::<&mut InputQueue>(entity).unwrap();
     assert_eq!(queue.dequeue().unwrap(), "test".to_string());
     assert_eq!(queue.dequeue().unwrap(), "test2".to_string());
     assert_eq!(queue.dequeue().unwrap(), "test3".to_string());

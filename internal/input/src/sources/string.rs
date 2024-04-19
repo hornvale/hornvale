@@ -1,5 +1,5 @@
 use crate::prelude::InputError;
-use crate::prelude::Source;
+use crate::prelude::InputSource;
 
 /// An input source that reads from a list of strings.
 #[derive(Debug)]
@@ -15,7 +15,7 @@ impl StringSource {
   }
 }
 
-impl Source for StringSource {
+impl InputSource for StringSource {
   fn fetch_input(&mut self) -> Result<String, InputError> {
     let input = self.inputs.pop().ok_or(InputError::NoInput)?;
     Ok(input.trim().to_string())
