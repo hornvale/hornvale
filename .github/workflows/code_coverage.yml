@@ -17,7 +17,7 @@ jobs:
         uses: ./.github/actions/post-checkout
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@e4ef34df890c5af6027f55257634401a93b14dc7 # v2.8.15
+        uses: taiki-e/install-action@93eca7e3866e3af0ad7ae0a6f85da14894612ca8 # v2.33.1
         with:
           tool: cargo-llvm-cov@0.5.27
 
