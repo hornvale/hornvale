@@ -1,4 +1,5 @@
 use crate::prelude::{CommandArgument, CommandForm};
+use hecs::Entity;
 use serde::{Deserialize, Serialize};
 
 /// The command context.
@@ -19,6 +20,11 @@ pub struct CommandContext {
   /// This may not always be the case, however; some commands have synonyms or
   /// aliases that are not verbs, etc.
   pub verb: String,
+  /// The command's actor.
+  ///
+  /// This is the entity that is performing the command. It is typically the
+  /// player character, but it could be any entity in the game world.
+  pub actor: Option<Entity>,
   /// The form of the command.
   ///
   /// This is the modifier that can be applied to the verb. For example, in the

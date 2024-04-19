@@ -17,6 +17,7 @@ fn test_parser01() {
       CommandContext {
         raw: "quit".to_string(),
         verb: "quit".to_string(),
+        actor: Some(player),
         form: CommandForm::Default,
         direct_object: None,
         indirect_object: None,
@@ -48,6 +49,7 @@ fn test_parser02() {
       CommandContext {
         raw: "look here".to_string(),
         verb: "look".to_string(),
+        actor: Some(player),
         form: CommandForm::Here,
         direct_object: Some(CommandArgument::Entity(room_entity)),
         indirect_object: None,
@@ -73,6 +75,7 @@ fn test_parser03() {
       CommandContext {
         raw: "go north".to_string(),
         verb: "go".to_string(),
+        actor: Some(player),
         form: CommandForm::Direction,
         direct_object: Some(CommandArgument::Direction(CommandDirection::North)),
         indirect_object: None,
@@ -100,6 +103,7 @@ fn test_parser04() {
       CommandContext {
         raw: "go to north".to_string(),
         verb: "go".to_string(),
+        actor: Some(player),
         form: CommandForm::Direction,
         direct_object: None,
         indirect_object: None,
@@ -125,6 +129,7 @@ fn test_parser05() {
       CommandContext {
         raw: "look north".to_string(),
         verb: "look".to_string(),
+        actor: Some(player),
         form: CommandForm::Direction,
         direct_object: Some(CommandArgument::Direction(CommandDirection::North)),
         indirect_object: None,
@@ -158,6 +163,7 @@ fn test_parser06() {
       CommandContext {
         raw: "look north".to_string(),
         verb: "look".to_string(),
+        actor: Some(player),
         form: CommandForm::Direction,
         direct_object: Some(CommandArgument::Direction(CommandDirection::North)),
         indirect_object: None,
@@ -173,6 +179,7 @@ fn test_parser06() {
       CommandContext {
         raw: "look here".to_string(),
         verb: "look".to_string(),
+        actor: Some(player),
         form: CommandForm::Here,
         direct_object: Some(CommandArgument::Entity(room_entity)),
         indirect_object: None,

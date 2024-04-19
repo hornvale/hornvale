@@ -1,4 +1,5 @@
 use crate::prelude::Room;
+use hornvale_command::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::ops::Neg;
 use strum::{Display, EnumIter};
@@ -89,6 +90,26 @@ impl TryFrom<(Room, Room)> for PassageDirection {
   fn try_from((from, to): (Room, Room)) -> Result<Self, Self::Error> {
     let room: Room = (to.w - from.w, to.x - from.x, to.y - from.y, to.z - from.z).into();
     PassageDirection::try_from(room)
+  }
+}
+
+impl From<CommandDirection> for PassageDirection {
+  fn from(direction: CommandDirection) -> Self {
+    use CommandDirection::*;
+    match direction {
+      North => PassageDirection::North,
+      Northeast => PassageDirection::Northeast,
+      East => PassageDirection::East,
+      Southeast => PassageDirection::Southeast,
+      South => PassageDirection::South,
+      Southwest => PassageDirection::Southwest,
+      West => PassageDirection::West,
+      Northwest => PassageDirection::Northwest,
+      Up => PassageDirection::Up,
+      Down => PassageDirection::Down,
+      In => PassageDirection::In,
+      Out => PassageDirection::Out,
+    }
   }
 }
 

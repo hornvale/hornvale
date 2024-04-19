@@ -7,6 +7,9 @@ pub enum CommandError {
   /// Unknown command.
   #[error("unknown command: {0}")]
   UnknownCommand(String),
+  /// Invalid argument.
+  #[error("invalid argument: {0}")]
+  InvalidArgument(String),
   /// An unknown error occurred.
   #[error("an unknown error occurred")]
   UnknownError,

@@ -1,23 +1,32 @@
 //! Test of the world.
 use hecs::World;
+use hornvale_command::prelude::*;
 use hornvale_dictionary::prelude::*;
+use hornvale_input::prelude::*;
+use hornvale_parser::prelude::*;
 use hornvale_world::prelude::*;
-use std::io::{self, BufRead, Write};
+use std::io::{self, Write};
 
 /// A player.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Player;
 
 /// Generate a world.
+#[allow(unreachable_code)]
 pub fn main() {
   let mut world = World::new();
   {
     let generator = CompassRoseRegionGenerator;
     generator.generate(Region::default(), &mut world).unwrap();
   }
+  let mut command_registry = CommandRegistry::default();
+  command_registry.register::<LookDirectionCommand>();
+  command_registry.register::<LookHereCommand>();
+  command_registry.register::<GoDirectionCommand>();
+  command_registry.register::<QuitCommand>();
+  world.spawn((command_registry,));
   let player = world.spawn((Region::default(), Room::default(), Player));
-  let mut input_source = io::stdin().lock();
-  let mut debug_mode = false;
+  let mut input_source = StdinSource::default();
   loop {
     // Find the room the player is in.
     let (region, room) = {
@@ -57,99 +66,27 @@ pub fn main() {
         }
       }
     }
-    if debug_mode {
-      println!("Region: {:?}", region);
-      println!("Room: {:?}", room);
-      println!("");
-    }
     print!("> ");
     io::stdout().flush().unwrap();
-    let mut input = String::new();
-    input_source.read_line(&mut input).unwrap();
-    let direction = match input.trim() {
-      "n" => PassageDirection::North,
-      "ne" => PassageDirection::Northeast,
-      "e" => PassageDirection::East,
-      "se" => PassageDirection::Southeast,
-      "s" => PassageDirection::South,
-      "sw" => PassageDirection::Southwest,
-      "w" => PassageDirection::West,
-      "nw" => PassageDirection::Northwest,
-      "u" => PassageDirection::Up,
-      "d" => PassageDirection::Down,
-      "?" => {
-        println!("Region: {:?}", region);
-        println!("Room: {:?}", room);
-        println!("");
-        continue;
-      },
-      "!" => {
-        debug_mode = !debug_mode;
-        println!("Debug mode: {}", debug_mode);
-        println!("");
-        continue;
-      },
-      "q" => {
+    let input = input_source.fetch_input().unwrap();
+    let mut scanner = Scanner::new(&input);
+    let mut tokens = scanner.scan_tokens().unwrap();
+    let classifier = Classifier::new();
+    classifier.classify_tokens(&mut *tokens).unwrap();
+    let mut parser = Parser::new(&mut *tokens, player, &mut world);
+    if let Ok((command_function, command_context)) = parser.parse() {
+      command_function(&mut world, &command_context).unwrap();
+    } else {
+      println!("I don't understand {:#?}", input);
+    }
+    // Check for QuitFlag.
+    {
+      let mut query = world.query::<&QuitFlag>();
+      let query_result = query.iter().find(|(_, _)| true).map(|(_, _)| ());
+      if query_result.is_some() {
         println!("Goodbye!");
         break;
-      },
-      _ => {
-        println!("I don't understand that command.");
-        println!("");
-        continue;
-      },
-    };
-    // Check if the player can move in the given direction.
-    let passage = {
-      let info = world
-        .query::<(&Region, &Room, &PassageDirection, &PassageKind)>()
-        .iter()
-        .find(|(_, (&rgn, &rm, &dir, _))| rgn == region && rm == room && dir == direction)
-        .map(|(_, (_, _, _, &ref kind))| kind.clone());
-      if let Some(kind) = info {
-        kind.clone()
-      } else {
-        PassageKind::NoExit("You can't go that way.".to_string())
       }
-    };
-    match passage {
-      PassageKind::Corridor(next_region) => {
-        let next_room = {
-          let corridor_direction = CorridorDirection::try_from(-direction).unwrap();
-          let next_room_result = world
-            .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()
-            .iter()
-            .find(|(_, (&rgn, _, &dir, _))| rgn == next_region && dir == corridor_direction)
-            .map(|(_, (_, &rm, _, _))| rm.clone());
-          if let None = next_room_result {
-            let generator = CompassRoseRegionGenerator;
-            generator.generate(next_region, &mut world).unwrap();
-            let next_room_result = world
-              .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()
-              .iter()
-              .find(|(_, (&rgn, _, &dir, _))| rgn == next_region && dir == corridor_direction)
-              .map(|(_, (_, &rm, _, _))| rm.clone())
-              .unwrap();
-            next_room_result
-          } else {
-            next_room_result.unwrap()
-          }
-        };
-        world.insert(player, (next_region, next_room)).unwrap();
-      },
-      PassageKind::Default(next_room) => {
-        world.insert(player, (next_room,)).unwrap();
-      },
-      PassageKind::Conditional(next_room, condition, message) => {
-        if condition.is_met(&world) {
-          world.insert(player, (next_room,)).unwrap();
-        } else {
-          println!("{}", message);
-        }
-      },
-      PassageKind::NoExit(message) => {
-        println!("{}", message);
-      },
     }
     println!();
   }

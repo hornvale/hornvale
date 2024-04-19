@@ -27,6 +27,12 @@ impl<R: BufRead> Source for GenericSource<R> {
 /// A type alias for a GenericSource that reads from standard input.
 pub type StdinSource = GenericSource<StdinLock<'static>>;
 
+impl Default for StdinSource {
+  fn default() -> Self {
+    Self::new(std::io::stdin().lock())
+  }
+}
+
 /// A type alias for a GenericSource that reads lines from a file.
 pub type FileSource = GenericSource<BufReader<File>>;
 

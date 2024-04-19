@@ -251,6 +251,7 @@ impl<'world> Parser<'world> {
     } else {
       CommandForm::Default
     };
+    context.actor = Some(self.actor);
     self.context = Some(context);
     Ok(())
   }

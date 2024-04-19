@@ -1,6 +1,7 @@
 use super::kind::CorridorKind;
 use crate::prelude::PassageDirection;
 use crate::prelude::Region;
+use hornvale_command::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::ops::Neg;
 use strum::{Display, EnumIter};
@@ -30,7 +31,14 @@ impl CorridorDirection {
 
   /// Get the opposite direction of the given direction.
   pub fn opposite(&self) -> Self {
-    self.to_region().neg().try_into().expect("Invalid corridor direction")
+    match self {
+      CorridorDirection::North => CorridorDirection::South,
+      CorridorDirection::South => CorridorDirection::North,
+      CorridorDirection::East => CorridorDirection::West,
+      CorridorDirection::West => CorridorDirection::East,
+      CorridorDirection::Up => CorridorDirection::Down,
+      CorridorDirection::Down => CorridorDirection::Up,
+    }
   }
 
   /// Build a corridor in the given direction from the given region.
@@ -89,6 +97,22 @@ impl TryFrom<PassageDirection> for CorridorDirection {
       PassageDirection::West => Ok(CorridorDirection::West),
       PassageDirection::Up => Ok(CorridorDirection::Up),
       PassageDirection::Down => Ok(CorridorDirection::Down),
+      _ => Err(()),
+    }
+  }
+}
+
+impl TryFrom<CommandDirection> for CorridorDirection {
+  type Error = ();
+
+  fn try_from(direction: CommandDirection) -> Result<Self, Self::Error> {
+    match direction {
+      CommandDirection::North => Ok(CorridorDirection::North),
+      CommandDirection::South => Ok(CorridorDirection::South),
+      CommandDirection::East => Ok(CorridorDirection::East),
+      CommandDirection::West => Ok(CorridorDirection::West),
+      CommandDirection::Up => Ok(CorridorDirection::Up),
+      CommandDirection::Down => Ok(CorridorDirection::Down),
       _ => Err(()),
     }
   }
