@@ -16,10 +16,31 @@ pub trait Command {
   /// Get the form of the command. This informs the parser how to match input
   /// to the appropriate command.
   const FORM: CommandForm;
-  /// Get the arity of the command. This is how many arguments the command
-  /// takes.
+  /// Get the arity of the command: how many and what types of arguments the
+  /// command takes.
   const ARITY: CommandArity;
 
   /// Execute the command.
   fn execute(world: &mut World, context: &CommandContext) -> Result<(), CommandError>;
+}
+
+/// Macro to define a command variant with minimal repetition.
+#[macro_export]
+macro_rules! define_command_variant {
+  ($variant:ident, $original:ty, $form:expr) => {
+    pub struct $variant;
+
+    impl hornvale_command::prelude::Command for $variant {
+      const NAME: &'static str = <$original as Command>::NAME;
+      const SYNONYMS: &'static [&'static str] = <$original as Command>::SYNONYMS;
+      const BRIEF: &'static str = <$original as Command>::BRIEF;
+      const DESCRIPTION: &'static str = <$original as Command>::DESCRIPTION;
+      const FORM: CommandForm = $form;
+      const ARITY: CommandArity = <$original as Command>::ARITY;
+
+      fn execute(&mut World, &CommandContext) -> Result<(), CommandError> {
+        <$original as Command>::execute(world, context)
+      }
+    }
+  };
 }

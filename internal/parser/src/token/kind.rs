@@ -711,6 +711,9 @@ impl TryFrom<TokenKind> for CommandForm {
 
   fn try_from(kind: TokenKind) -> Result<Self, Self::Error> {
     match kind {
+      // Directions.
+      kind if kind.is_direction() => Ok(CommandForm::Direction),
+      // Adverbs and Prepositions.
       TokenKind::About => Ok(CommandForm::About),
       TokenKind::Above => Ok(CommandForm::Above),
       TokenKind::Across => Ok(CommandForm::Across),

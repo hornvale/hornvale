@@ -71,6 +71,21 @@ impl<'world> Parser<'world> {
   /// command → verb-phrase (object-phrase)?
   pub fn parse_command(&mut self) -> Result<(), ParserError> {
     self.consume_verb().map_err(|_| ParserError::NoVerb)?;
+    match self.peek() {
+      Some(token) if token.kind.is_adverb() => {
+        self.modifier = self.peek();
+        self.advance()?;
+      },
+      Some(token) if token.kind.is_direction() => {
+        self.modifier = self.peek();
+        self.advance()?;
+      },
+      Some(token) if token.kind.is_preposition() => {
+        self.modifier = self.peek();
+        self.advance()?;
+      },
+      _ => {},
+    }
     Ok(())
   }
 
@@ -116,7 +131,11 @@ impl<'world> Parser<'world> {
 
   /// Consume a magic word.
   pub fn consume_magic_word(&mut self) -> Result<(), ParserError> {
-    self.consume_token(self.peek().unwrap().kind, "Expected a magic word")
+    if self.match_magic_word()? {
+      self.consume_token(self.peek().unwrap().kind, "Expected a magic word")
+    } else {
+      Err(ParserError::NoInput)
+    }
   }
 
   /// Bind the magic word.
@@ -139,11 +158,22 @@ impl<'world> Parser<'world> {
       .unwrap()
       .1;
     let name = self.verb.as_ref().unwrap().lexeme.as_str();
+    if !registry.has_command(name) {
+      return Err(ParserError::UnknownCommand(name.to_string()));
+    }
     let form = self
       .modifier
       .as_ref()
       .map(|t| t.kind.try_into().unwrap_or(CommandForm::Default))
       .unwrap_or(CommandForm::Default);
+    if !registry.has_form(name, &form) {
+      let forms = registry.get_forms(name).unwrap();
+      return Err(ParserError::UnknownCommandForm(
+        name.to_string(),
+        form.to_string(),
+        forms.iter().map(|f| f.to_string()).collect(),
+      ));
+    }
     let command = registry
       .get(name, &form)
       .ok_or(ParserError::UnknownCommand(name.to_string()))?;

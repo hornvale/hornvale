@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
+use strum::Display;
 
 /// The "form" of a command; a modifier that can be applied to a verb.
 ///
 /// This is generally either an adverb or a preposition.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Display, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum CommandForm {
   /// The base form of a command.
   #[default]

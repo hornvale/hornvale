@@ -22,3 +22,4 @@ thiserror.workspace = true
 
 [dev-dependencies]
 hornvale_test_utilities.workspace = true
+hornvale_world.workspace = true
