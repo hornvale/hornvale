@@ -2,7 +2,7 @@ use crate::parser::rule::ParseFn;
 use crate::parser::rule::Rule;
 use crate::parser::Parser;
 use crate::parser::Precedence;
-use crate::token::r#type::Type as TokenType;
+use crate::token::kind::TokenKind;
 use derive_more::Display;
 use std::collections::HashMap;
 
@@ -11,7 +11,7 @@ use std::collections::HashMap;
 #[display(fmt = "rules: {:#?}", rules)]
 pub struct Rules<'source> {
   /// The individual rules.
-  pub rules: HashMap<TokenType, Rule<'source>>,
+  pub rules: HashMap<TokenKind, Rule<'source>>,
 }
 
 impl<'source> Rules<'source> {
@@ -24,7 +24,7 @@ impl<'source> Rules<'source> {
   /// Add a new rule.
   pub fn add_rule(
     &mut self,
-    token_type: TokenType,
+    token_type: TokenKind,
     prefix: Option<ParseFn<'source>>,
     infix: Option<ParseFn<'source>>,
     precedence: Precedence,
@@ -44,7 +44,7 @@ impl<'source> Default for Rules<'source> {
   /// No constraints, just let it all hang out.
   fn default() -> Self {
     let mut result = Rules::new();
-    use TokenType::*;
+    use TokenKind::*;
     result.add_rule(
       LeftParenthesis,
       Some(Parser::parse_grouping),

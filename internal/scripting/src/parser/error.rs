@@ -1,7 +1,7 @@
 use crate::compiler::error::Error as CompilerError;
 use crate::error::Error as ScriptingLanguageError;
 use crate::scanner::error::Error as ScannerError;
-use crate::token::r#type::Type as TokenType;
+use crate::token::kind::TokenKind;
 use std::num::ParseFloatError;
 use thiserror::Error;
 
@@ -13,7 +13,7 @@ pub enum Error {
   UnknownError,
   /// Unexpected token.
   #[error("unexpected token {0} ({1})")]
-  UnexpectedTokenError(TokenType, String),
+  UnexpectedTokenError(TokenKind, String),
   /// Multiple errors occurred.
   #[error("multiple errors occurred ({0:#?})")]
   MultipleErrors(Vec<String>),

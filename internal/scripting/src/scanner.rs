@@ -1,4 +1,4 @@
-use crate::token::r#type::Type as TokenType;
+use crate::token::kind::TokenKind;
 use crate::token::Token;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
@@ -44,7 +44,7 @@ impl<'source> Scanner<'source> {
   pub fn scan_token(&mut self) -> Result<Token<'source>, Error> {
     self.skip_whitespace();
     self.start = self.current;
-    use TokenType::*;
+    use TokenKind::*;
     if self.is_at_end() {
       return Ok(self.make_token(Eof));
     }
@@ -99,11 +99,11 @@ impl<'source> Scanner<'source> {
   }
 
   /// Create a token based on a token type.
-  pub fn make_token(&self, r#type: TokenType) -> Token<'source> {
+  pub fn make_token(&self, kind: TokenKind) -> Token<'source> {
     let lexeme = self.get_lexeme();
     let line_number = self.line_number;
     Token {
-      r#type,
+      kind,
       lexeme,
       line_number,
     }
@@ -138,7 +138,7 @@ impl<'source> Scanner<'source> {
       }
     }
     let _value = &self.source[self.start..self.current];
-    let result = self.make_token(TokenType::Number);
+    let result = self.make_token(TokenKind::Number);
     Ok(result)
   }
 
@@ -154,7 +154,7 @@ impl<'source> Scanner<'source> {
       self.get_error_token("Unterminated string.")
     } else {
       self.advance();
-      self.make_token(TokenType::String)
+      self.make_token(TokenKind::String)
     };
     Ok(result)
   }
@@ -165,9 +165,9 @@ impl<'source> Scanner<'source> {
       self.advance();
     }
     let value = &self.source[self.start..self.current];
-    let value_type = match TokenType::from_str(value) {
+    let value_type = match TokenKind::from_str(value) {
       Ok(token_type) => token_type,
-      Err(_) => TokenType::Identifier,
+      Err(_) => TokenKind::Identifier,
     };
     let result = self.make_token(value_type);
     Ok(result)
@@ -259,11 +259,11 @@ pub mod test {
   #[test]
   pub fn test_scanner() {
     init();
-    use TokenType::*;
+    use TokenKind::*;
     test_scanner_tokens!(
       "",
       [Ok(Token {
-        r#type: Eof,
+        kind: Eof,
         lexeme: "",
         line_number: 1,
       })]
@@ -285,11 +285,11 @@ pub mod test {
       ("<", LessThan),
       (">", GreaterThan),
     ];
-    for (string, r#type) in test_cases.iter() {
+    for (string, kind) in test_cases.iter() {
       test_scanner_tokens!(
         string,
         [Ok(Token {
-          r#type: *r#type,
+          kind: *kind,
           lexeme: string,
           line_number: 1,
         })]
@@ -301,11 +301,11 @@ pub mod test {
       (">=", GreaterThanOrEqual),
       ("<=", LessThanOrEqual),
     ];
-    for (string, r#type) in test_cases2.iter() {
+    for (string, kind) in test_cases2.iter() {
       test_scanner_tokens!(
         string,
         [Ok(Token {
-          r#type: *r#type,
+          kind: *kind,
           lexeme: string,
           line_number: 1,
         })]
@@ -315,12 +315,12 @@ pub mod test {
       "/a",
       [
         Ok(Token {
-          r#type: Slash,
+          kind: Slash,
           lexeme: "/",
           line_number: 1,
         }),
         Ok(Token {
-          r#type: Identifier,
+          kind: Identifier,
           lexeme: "a",
           line_number: 1,
         })
@@ -329,7 +329,7 @@ pub mod test {
     test_scanner_tokens!(
       "/* TEST */",
       [Ok(Token {
-        r#type: Eof,
+        kind: Eof,
         lexeme: "",
         line_number: 1,
       })]
@@ -337,7 +337,7 @@ pub mod test {
     test_scanner_tokens!(
       "1312.1231215123",
       [Ok(Token {
-        r#type: Number,
+        kind: Number,
         lexeme: "1312.1231215123",
         line_number: 1,
       })]
@@ -345,7 +345,7 @@ pub mod test {
     test_scanner_tokens!(
       "\"goat\"",
       [Ok(Token {
-        r#type: String,
+        kind: String,
         lexeme: "\"goat\"",
         line_number: 1,
       })]
@@ -353,7 +353,7 @@ pub mod test {
     test_scanner_tokens!(
       "// single-line comment",
       [Ok(Token {
-        r#type: Eof,
+        kind: Eof,
         lexeme: "",
         line_number: 1,
       })]
@@ -361,7 +361,7 @@ pub mod test {
     test_scanner_tokens!(
       "\n",
       [Ok(Token {
-        r#type: Eof,
+        kind: Eof,
         lexeme: "",
         line_number: 2,
       })]

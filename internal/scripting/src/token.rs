@@ -1,17 +1,17 @@
 /// An error type for tokens.
 pub mod error;
-/// The token type.
-pub mod r#type;
+/// The token kind.
+pub mod kind;
 use derive_more::Display;
-use r#type::Type;
+use kind::TokenKind;
 use thiserror::Error;
 
 /// The `Token` type.
 #[derive(Clone, Copy, Debug, Display, Eq, Error, Hash, PartialEq)]
-#[display(fmt = "type: {}, lexeme: {}", r#type, lexeme)]
+#[display(fmt = "kind: {}, lexeme: {}", kind, lexeme)]
 pub struct Token<'source> {
   /// The type of this token.
-  pub r#type: Type,
+  pub kind: TokenKind,
   /// The lexeme.
   pub lexeme: &'source str,
   /// The line number.
@@ -21,10 +21,10 @@ pub struct Token<'source> {
 impl<'source> Token<'source> {
   /// Constructor.
   pub fn synthesize(lexeme: &'source str) -> Self {
-    let r#type = Type::Error;
+    let kind = TokenKind::Error;
     let line_number = 0;
     Self {
-      r#type,
+      kind,
       lexeme,
       line_number,
     }
