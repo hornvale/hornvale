@@ -30,7 +30,7 @@ workspace = true
 
 [workspace]
 exclude = []
-members = ["crates/*", "internal/*", "test/*"]
+members = ["core", "crates/*", "internal/*", "test/*"]
 
 [workspace.lints.rustdoc]
 bare_urls = "deny"
@@ -67,12 +67,13 @@ variant_size_differences = "deny"
 [dependencies]
 hornvale_astronomy.workspace = true
 hornvale_command.workspace = true
-hornvale_dictionary.workspace = true
+hornvale_core.workspace = true
 hornvale_input.workspace = true
 hornvale_output.workspace = true
 hornvale_parser.workspace = true
 hornvale_scripting.workspace = true
 hornvale_world.workspace = true
+hornvale_world_commands.workspace = true
 
 [dev-dependencies]
 hornvale_test_utilities.workspace = true
@@ -97,13 +98,14 @@ hecs = { version = "0.10.4", features = [
 ] }
 hornvale_astronomy = { path = "crates/astronomy" }
 hornvale_command = { path = "internal/command" }
-hornvale_dictionary = { path = "internal/dictionary" }
+hornvale_core = { path = "core" }
 hornvale_input = { path = "internal/input" }
 hornvale_output = { path = "internal/output" }
 hornvale_parser = { path = "internal/parser" }
 hornvale_scripting = { path = "internal/scripting" }
 hornvale_test_utilities = { path = "test/test_utilities" }
 hornvale_world = { path = "internal/world" }
+hornvale_world_commands = { path = "internal/world_commands" }
 log = "0.4.21"
 paste = "1.0.14"
 pretty_assertions = "1.4.0"

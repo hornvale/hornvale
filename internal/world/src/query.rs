@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use hecs::{Entity, World};
-use hornvale_dictionary::prelude::*;
+use hornvale_core::prelude::*;
 
 /// Get the entity's region and room.
 pub fn get_entity_region_and_room(world: &World, entity: Entity) -> Option<(Region, Room)> {

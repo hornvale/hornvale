@@ -23,8 +23,6 @@
 //! In addition, this crate provides some basic components that can be used to
 //! describe regions, rooms, and other entities.
 
-/// Some commands for the world.
-pub mod commands;
 /// Corridors connect regions.
 pub mod corridor;
 /// An error type.
@@ -40,9 +38,6 @@ pub mod room;
 
 /// The prelude.
 pub mod prelude {
-  pub use super::commands::{
-    go_direction::GoDirectionCommand, look_direction::LookDirectionCommand, look_here::LookHereCommand,
-  };
   pub use super::corridor::{
     direction::CorridorDirection, finder::CorridorFinder, kind::CorridorKind, origin::CorridorOrigin,
     terminus::CorridorTerminus,

@@ -4,6 +4,7 @@ use hornvale_command::prelude::*;
 use hornvale_input::prelude::*;
 use hornvale_parser::prelude::*;
 use hornvale_world::prelude::*;
+use hornvale_world_commands::prelude::*;
 use std::io::{self, Write};
 
 /// A player.

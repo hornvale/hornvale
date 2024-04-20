@@ -3,7 +3,7 @@ use crate::prelude::{
   Room, WorldError,
 };
 use hecs::World;
-use hornvale_dictionary::prelude::*;
+use hornvale_core::prelude::*;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 

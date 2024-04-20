@@ -1,12 +1,15 @@
 use super::kind::CorridorKind;
 use crate::prelude::PassageDirection;
 use crate::prelude::Region;
-use hornvale_command::prelude::*;
+use hornvale_core::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::ops::Neg;
 use strum::{Display, EnumIter};
 
 /// A `CorridorDirection` is a direction in which a corridor can be built.
+///
+/// Note that it is not possible to build a corridor in the `Northeast`,
+/// `Southeast`, `Southwest`, `Northwest`, `In`, or `Out` directions.
 #[derive(Clone, Copy, Debug, Display, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
 pub enum CorridorDirection {
   /// The `North` direction (y+1).
@@ -102,17 +105,17 @@ impl TryFrom<PassageDirection> for CorridorDirection {
   }
 }
 
-impl TryFrom<CommandDirection> for CorridorDirection {
+impl TryFrom<Direction> for CorridorDirection {
   type Error = ();
 
-  fn try_from(direction: CommandDirection) -> Result<Self, Self::Error> {
+  fn try_from(direction: Direction) -> Result<Self, Self::Error> {
     match direction {
-      CommandDirection::North => Ok(CorridorDirection::North),
-      CommandDirection::South => Ok(CorridorDirection::South),
-      CommandDirection::East => Ok(CorridorDirection::East),
-      CommandDirection::West => Ok(CorridorDirection::West),
-      CommandDirection::Up => Ok(CorridorDirection::Up),
-      CommandDirection::Down => Ok(CorridorDirection::Down),
+      Direction::North => Ok(CorridorDirection::North),
+      Direction::South => Ok(CorridorDirection::South),
+      Direction::East => Ok(CorridorDirection::East),
+      Direction::West => Ok(CorridorDirection::West),
+      Direction::Up => Ok(CorridorDirection::Up),
+      Direction::Down => Ok(CorridorDirection::Down),
       _ => Err(()),
     }
   }

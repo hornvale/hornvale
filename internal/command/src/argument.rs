@@ -1,12 +1,12 @@
-use crate::prelude::CommandDirection;
 use hecs::Entity;
+use hornvale_core::prelude::Direction;
 use serde::{Deserialize, Serialize};
 
 /// An argument that a command might take.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash, Serialize)]
 pub enum CommandArgument {
   /// A direction.
-  Direction(CommandDirection),
+  Direction(Direction),
   /// An entity.
   Entity(Entity),
   /// A string literal.

@@ -3,37 +3,37 @@ use std::ops::Neg;
 
 /// A direction.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Hash, Serialize)]
-pub enum CommandDirection {
-  /// North.
+pub enum Direction {
+  /// North (y+1).
   North,
-  /// Northeast.
+  /// Northeast (x+1, y+1).
   Northeast,
-  /// East.
+  /// East (x+1).
   East,
-  /// Southeast.
+  /// Southeast (x+1, y-1).
   Southeast,
-  /// South.
+  /// South (y-1).
   South,
-  /// Southwest.
+  /// Southwest (x-1, y-1).
   Southwest,
-  /// West.
+  /// West (x-1).
   West,
-  /// Northwest.
+  /// Northwest (x-1, y+1).
   Northwest,
-  /// Up.
+  /// Up (z+1).
   Up,
-  /// Down.
+  /// Down (z-1).
   Down,
-  /// In.
+  /// In (w+1).
   In,
-  /// Out.
+  /// Out (w-1).
   Out,
 }
 
-impl CommandDirection {
+impl Direction {
   /// Get the opposite direction of the given direction.
   pub fn opposite(&self) -> Self {
-    use CommandDirection::*;
+    use Direction::*;
     match self {
       North => South,
       Northeast => Southwest,
@@ -51,7 +51,7 @@ impl CommandDirection {
   }
 }
 
-impl Neg for CommandDirection {
+impl Neg for Direction {
   type Output = Self;
 
   fn neg(self) -> Self::Output {

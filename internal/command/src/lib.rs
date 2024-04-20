@@ -16,8 +16,6 @@ pub mod command;
 pub mod commands;
 /// The context in which a command is executed.
 pub mod context;
-/// A direction.
-pub mod direction;
 /// An error type.
 pub mod error;
 /// A specifier that allows us to use the same verb for different commands.
@@ -40,7 +38,6 @@ pub mod prelude {
   pub use super::command::Command;
   pub use super::commands::{fail::FailCommand, no_op::NoOpCommand, quit::QuitCommand};
   pub use super::context::CommandContext;
-  pub use super::direction::CommandDirection;
   pub use super::error::CommandError;
   pub use super::form::CommandForm;
   pub use super::function::CommandFunction;

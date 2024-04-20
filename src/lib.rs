@@ -11,7 +11,7 @@
 /// traits, types, and functions that will be exposed to the _Hornvale_ binary,
 /// examples, benches, and integration tests.
 pub use hornvale_command::prelude as command;
-pub use hornvale_dictionary::prelude as dictionary;
+pub use hornvale_core::prelude as core;
 pub use hornvale_input::prelude as input;
 pub use hornvale_output::prelude as output;
 pub use hornvale_parser::prelude as parser;
@@ -22,7 +22,7 @@ pub use hornvale_world::prelude as world;
 pub mod prelude {
 
   pub use super::command::*;
-  pub use super::dictionary::*;
+  pub use super::core::*;
   pub use super::input::*;
   pub use super::output::*;
   pub use super::parser::*;

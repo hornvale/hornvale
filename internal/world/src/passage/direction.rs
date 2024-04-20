@@ -1,10 +1,12 @@
 use crate::prelude::Room;
-use hornvale_command::prelude::*;
+use hornvale_core::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::ops::Neg;
 use strum::{Display, EnumIter};
 
 /// A `PassageDirection` is a direction in which a passage can be built.
+///
+/// Note that this is a perfect match for the `Direction` enum in the `core` crate.
 #[derive(Clone, Copy, Debug, Display, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
 pub enum PassageDirection {
   /// The `North` direction (y+1).
@@ -64,7 +66,6 @@ impl Neg for PassageDirection {
 
 impl TryFrom<Room> for PassageDirection {
   type Error = ();
-
   fn try_from(room: Room) -> Result<Self, Self::Error> {
     match (room.w, room.x, room.y, room.z) {
       (0, 0, y, 0) if y > 0 => Ok(PassageDirection::North),
@@ -93,9 +94,9 @@ impl TryFrom<(Room, Room)> for PassageDirection {
   }
 }
 
-impl From<CommandDirection> for PassageDirection {
-  fn from(direction: CommandDirection) -> Self {
-    use CommandDirection::*;
+impl From<Direction> for PassageDirection {
+  fn from(direction: Direction) -> Self {
+    use Direction::*;
     match direction {
       North => PassageDirection::North,
       Northeast => PassageDirection::Northeast,

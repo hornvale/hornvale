@@ -1,4 +1,5 @@
 use hornvale_command::prelude::*;
+use hornvale_core::prelude::*;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter};
 
@@ -706,21 +707,21 @@ impl TryFrom<&str> for TokenKind {
   }
 }
 
-impl From<TokenKind> for CommandDirection {
+impl From<TokenKind> for Direction {
   fn from(kind: TokenKind) -> Self {
     match kind {
-      TokenKind::North => CommandDirection::North,
-      TokenKind::Northeast => CommandDirection::Northeast,
-      TokenKind::East => CommandDirection::East,
-      TokenKind::Southeast => CommandDirection::Southeast,
-      TokenKind::South => CommandDirection::South,
-      TokenKind::Southwest => CommandDirection::Southwest,
-      TokenKind::West => CommandDirection::West,
-      TokenKind::Northwest => CommandDirection::Northwest,
-      TokenKind::Up => CommandDirection::Up,
-      TokenKind::Down => CommandDirection::Down,
-      TokenKind::In => CommandDirection::In,
-      TokenKind::Out => CommandDirection::Out,
+      TokenKind::North => Direction::North,
+      TokenKind::Northeast => Direction::Northeast,
+      TokenKind::East => Direction::East,
+      TokenKind::Southeast => Direction::Southeast,
+      TokenKind::South => Direction::South,
+      TokenKind::Southwest => Direction::Southwest,
+      TokenKind::West => Direction::West,
+      TokenKind::Northwest => Direction::Northwest,
+      TokenKind::Up => Direction::Up,
+      TokenKind::Down => Direction::Down,
+      TokenKind::In => Direction::In,
+      TokenKind::Out => Direction::Out,
       _ => unreachable!(),
     }
   }

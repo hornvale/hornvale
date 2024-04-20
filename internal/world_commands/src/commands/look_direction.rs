@@ -1,15 +1,15 @@
-use crate::prelude::*;
 use hecs::World;
 use hornvale_command::prelude::*;
+use hornvale_world::prelude::*;
 
-/// Attempt to walk in a given direction.
+/// Attempt to look in a given direction.
 #[derive(Clone, Copy, Debug)]
-pub struct GoDirectionCommand;
+pub struct LookDirectionCommand;
 
-impl Command for GoDirectionCommand {
-  const NAME: &'static str = "go";
-  const SYNONYMS: &'static [&'static str] = &["go"];
-  const BRIEF: &'static str = "Attempt to walk in a given direction.";
+impl Command for LookDirectionCommand {
+  const NAME: &'static str = "look";
+  const SYNONYMS: &'static [&'static str] = &["look"];
+  const BRIEF: &'static str = "Attempt to look in a given direction.";
   const DESCRIPTION: &'static str = r#"
     The actor will attempt to move in the direction specified by the first argument; if they are unable to move in
     that direction, they will be informed why.
@@ -65,14 +65,23 @@ impl Command for GoDirectionCommand {
             next_room_result
           }
         };
-        world.insert(actor, (next_region, next_room)).unwrap();
+        let (room_name, room_description) =
+          world_query::get_room_name_and_description(world, &next_region, &next_room).unwrap();
+        println!("{}", room_name.0);
+        println!("{}", room_description.0);
       },
       PassageKind::Default(next_room) => {
-        world.insert(actor, (next_room,)).unwrap();
+        let (room_name, room_description) =
+          world_query::get_room_name_and_description(world, &region, &next_room).unwrap();
+        println!("{}", room_name.0);
+        println!("{}", room_description.0);
       },
       PassageKind::Conditional(next_room, condition, message) => {
         if condition.is_met(world) {
-          world.insert(actor, (next_room,)).unwrap();
+          let (room_name, room_description) =
+            world_query::get_room_name_and_description(world, &region, &next_room).unwrap();
+          println!("{}", room_name.0);
+          println!("{}", room_description.0);
         } else {
           println!("{}", message);
         }
@@ -81,6 +90,7 @@ impl Command for GoDirectionCommand {
         println!("{}", message);
       },
     }
+    println!("{}", world_query::describe_room_passages(world, actor));
     Ok(())
   }
 }
