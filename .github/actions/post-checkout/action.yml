@@ -34,3 +34,11 @@ runs:
         cargo --version --verbose;
         rustc --version;
         cargo clippy --version;
+
+    - name: Build (Debug)
+      shell: bash
+      run: cargo build  --workspace --bins --examples --tests --verbose;
+
+    - name: Build (Release)
+      shell: bash
+      run: cargo build --release --workspace --bins --examples --tests --verbose;
