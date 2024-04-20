@@ -1,0 +1,18 @@
+[package]
+name = "hornvale_scripting"
+version = "0.0.0"
+edition = "2021"
+
+[lints]
+workspace = true
+
+[dependencies]
+cpu-time.workspace = true
+derivative.workspace = true
+derive_more.workspace = true
+log.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+hornvale_test_utilities.workspace = true

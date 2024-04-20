@@ -71,6 +71,7 @@ hornvale_dictionary.workspace = true
 hornvale_input.workspace = true
 hornvale_output.workspace = true
 hornvale_parser.workspace = true
+hornvale_scripting.workspace = true
 hornvale_world.workspace = true
 
 [dev-dependencies]
@@ -81,6 +82,7 @@ rand = "0.8.5"
 all_asserts = "2.3.1"
 anyhow = { version = "1.0.81", features = ["std", "backtrace"] }
 assert_approx_eq = "1.1.0"
+cpu-time = "1.0.0"
 criterion = "0.5.1"
 derivative = "2.2.0"
 derive_builder = "0.20.0"
@@ -99,6 +101,7 @@ hornvale_dictionary = { path = "internal/dictionary" }
 hornvale_input = { path = "internal/input" }
 hornvale_output = { path = "internal/output" }
 hornvale_parser = { path = "internal/parser" }
+hornvale_scripting = { path = "internal/scripting" }
 hornvale_test_utilities = { path = "internal/test_utilities" }
 hornvale_world = { path = "internal/world" }
 log = "0.4.21"
