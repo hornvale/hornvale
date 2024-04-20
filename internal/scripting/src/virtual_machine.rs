@@ -501,14 +501,12 @@ impl VirtualMachine {
 
   /// Get current frame.
   pub fn get_current_frame(&self) -> &CallFrame {
-    let result = self.call_frames.last().unwrap();
-    result
+    self.call_frames.last().unwrap()
   }
 
   /// Get current frame mutable.
   pub fn get_current_frame_mut(&mut self) -> &mut CallFrame {
-    let result = self.call_frames.last_mut().unwrap();
-    result
+    self.call_frames.last_mut().unwrap()
   }
 
   /// Get current closure.
