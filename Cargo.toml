@@ -30,7 +30,7 @@ workspace = true
 
 [workspace]
 exclude = []
-members = ["crates/*", "internal/*"]
+members = ["crates/*", "internal/*", "test/*"]
 
 [workspace.lints.rustdoc]
 bare_urls = "deny"
@@ -102,7 +102,7 @@ hornvale_input = { path = "internal/input" }
 hornvale_output = { path = "internal/output" }
 hornvale_parser = { path = "internal/parser" }
 hornvale_scripting = { path = "internal/scripting" }
-hornvale_test_utilities = { path = "internal/test_utilities" }
+hornvale_test_utilities = { path = "test/test_utilities" }
 hornvale_world = { path = "internal/world" }
 log = "0.4.21"
 paste = "1.0.14"
