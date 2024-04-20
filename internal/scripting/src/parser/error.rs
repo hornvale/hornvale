@@ -1,4 +1,4 @@
-use crate::compiler::error::Error as CompilerError;
+use crate::compiler::error::CompilerError;
 use crate::error::Error as ScriptingLanguageError;
 use crate::scanner::error::Error as ScannerError;
 use crate::token::kind::TokenKind;

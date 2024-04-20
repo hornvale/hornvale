@@ -2,7 +2,7 @@ use thiserror::Error;
 
 /// Errors encountered during the parsing process.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
-pub enum Error {
+pub enum CompilerError {
   /// Unknown error.
   #[error("an unknown error occurred")]
   UnknownError,

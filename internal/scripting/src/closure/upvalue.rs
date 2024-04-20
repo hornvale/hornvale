@@ -26,8 +26,7 @@ impl Upvalue {
 
 impl Trace for Upvalue {
   fn format(&self, f: &mut Formatter, _garbage_collector: &GarbageCollector) -> FmtResult {
-    let result = write!(f, "upvalue");
-    result
+    write!(f, "upvalue")
   }
 
   fn get_size(&self) -> usize {
