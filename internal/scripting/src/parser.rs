@@ -90,7 +90,7 @@ impl<'source> Parser<'source> {
   pub fn compile(mut self) -> Result<Reference<Function>, Error> {
     self.advance()?;
     let mut first_error = None;
-    while !self.r#match(TokenKind::Eof)? {
+    while !self.match_token(TokenKind::Eof)? {
       if let (None, Err(error)) = (&first_error, self.parse_declaration()) {
         first_error = Some(error);
       }
@@ -137,11 +137,11 @@ impl<'source> Parser<'source> {
 
   /// Declaration.
   pub fn parse_declaration(&mut self) -> Result<(), Error> {
-    if self.r#match(TokenKind::Class)? {
+    if self.match_token(TokenKind::Class)? {
       self.parse_class_declaration()?;
-    } else if self.r#match(TokenKind::Function)? {
+    } else if self.match_token(TokenKind::Function)? {
       self.parse_function_declaration()?;
-    } else if self.r#match(TokenKind::Var)? {
+    } else if self.match_token(TokenKind::Var)? {
       self.parse_variable_declaration()?;
     } else {
       self.parse_statement()?;
@@ -163,7 +163,7 @@ impl<'source> Parser<'source> {
     let old_class_compiler = self.class_compiler.take();
     let new_class_compiler = ClassCompiler::new(old_class_compiler);
     self.class_compiler.replace(new_class_compiler);
-    if self.r#match(TokenKind::LessThan)? {
+    if self.match_token(TokenKind::LessThan)? {
       self.consume(TokenKind::Identifier, "Expect superclass name.")?;
       self.parse_variable(false)?;
       if class_name.lexeme == self.previous.unwrap().lexeme {
@@ -220,7 +220,7 @@ impl<'source> Parser<'source> {
   /// Variable declaration.
   pub fn parse_variable_declaration(&mut self) -> Result<(), Error> {
     let variable_index = self.parse_variable_identifier("Expect variable name.")?;
-    if self.r#match(TokenKind::Equal)? {
+    if self.match_token(TokenKind::Equal)? {
       self.parse_expression()?;
     } else {
       self.emit_instruction(Instruction::Nil)?;
@@ -232,17 +232,17 @@ impl<'source> Parser<'source> {
 
   /// Statement.
   pub fn parse_statement(&mut self) -> Result<(), Error> {
-    if self.r#match(TokenKind::Print)? {
+    if self.match_token(TokenKind::Print)? {
       self.parse_print_statement()?;
-    } else if self.r#match(TokenKind::If)? {
+    } else if self.match_token(TokenKind::If)? {
       self.parse_if_statement()?;
-    } else if self.r#match(TokenKind::Return)? {
+    } else if self.match_token(TokenKind::Return)? {
       self.parse_return_statement()?;
-    } else if self.r#match(TokenKind::While)? {
+    } else if self.match_token(TokenKind::While)? {
       self.parse_while_statement()?;
-    } else if self.r#match(TokenKind::For)? {
+    } else if self.match_token(TokenKind::For)? {
       self.parse_for_statement()?;
-    } else if self.r#match(TokenKind::LeftBrace)? {
+    } else if self.match_token(TokenKind::LeftBrace)? {
       self.begin_scope()?;
       self.parse_block()?;
       self.end_scope()?;
@@ -272,7 +272,7 @@ impl<'source> Parser<'source> {
         }
         let parameter = self.parse_variable_identifier("expected a parameter identifier")?;
         self.define_variable(parameter)?;
-        if !self.r#match(TokenKind::Comma)? {
+        if !self.match_token(TokenKind::Comma)? {
           break;
         }
       }
@@ -338,7 +338,7 @@ impl<'source> Parser<'source> {
     self.consume(TokenKind::Identifier, "Expect superclass method name.")?;
     let name = self.get_identifier_constant(self.previous.unwrap())?;
     self.did_name_variable(Token::synthesize("this"), false)?;
-    if self.r#match(TokenKind::LeftParenthesis)? {
+    if self.match_token(TokenKind::LeftParenthesis)? {
       let argument_count = self.parse_argument_list()?;
       self.did_name_variable(Token::synthesize("super"), false)?;
       self.emit_instruction(Instruction::SuperInvoke((name, argument_count)))?;
@@ -353,10 +353,10 @@ impl<'source> Parser<'source> {
   pub fn parse_dot(&mut self, can_assign: bool) -> Result<(), Error> {
     self.consume(TokenKind::Identifier, "Expect property name after '.'.")?;
     let name = self.get_identifier_constant(self.previous.unwrap())?;
-    if can_assign && self.r#match(TokenKind::Equal)? {
+    if can_assign && self.match_token(TokenKind::Equal)? {
       self.parse_expression()?;
       self.emit_instruction(Instruction::SetProperty(name))?;
-    } else if self.r#match(TokenKind::LeftParenthesis)? {
+    } else if self.match_token(TokenKind::LeftParenthesis)? {
       let argument_count = self.parse_argument_list()?;
       self.emit_instruction(Instruction::Invoke((name, argument_count)))?;
     } else {
@@ -401,9 +401,9 @@ impl<'source> Parser<'source> {
 
   /// If statement.
   pub fn parse_if_statement(&mut self) -> Result<(), Error> {
-    self.r#match(TokenKind::LeftParenthesis)?;
+    self.match_token(TokenKind::LeftParenthesis)?;
     self.parse_expression()?;
-    self.r#match(TokenKind::RightParenthesis)?;
+    self.match_token(TokenKind::RightParenthesis)?;
     let then_jump = self.compiler.function.chunk.instructions.instructions.len();
     self.emit_instruction(Instruction::JumpIfFalse(u16::MAX))?;
     self.emit_instruction(Instruction::Pop)?;
@@ -412,7 +412,7 @@ impl<'source> Parser<'source> {
     self.emit_instruction(Instruction::Jump(u16::MAX))?;
     self.patch_jump(then_jump as u16)?;
     self.emit_instruction(Instruction::Pop)?;
-    if self.r#match(TokenKind::Else)? {
+    if self.match_token(TokenKind::Else)? {
       self.parse_statement()?;
     }
     self.patch_jump(else_jump as u16)?;
@@ -424,7 +424,7 @@ impl<'source> Parser<'source> {
     if let FunctionType::Script = self.compiler.function_type {
       // Not going to block `return` in top-level code ATM.
       self.did_encounter_error("Can't return from top-level code.");
-    } else if self.r#match(TokenKind::Semicolon)? {
+    } else if self.match_token(TokenKind::Semicolon)? {
       self.emit_return()?;
     } else {
       if let FunctionType::Initializer = self.compiler.function_type {
@@ -458,9 +458,9 @@ impl<'source> Parser<'source> {
   /// While statement.
   pub fn parse_while_statement(&mut self) -> Result<(), Error> {
     let loop_start = self.compiler.function.chunk.instructions.instructions.len();
-    self.r#match(TokenKind::LeftParenthesis)?;
+    self.match_token(TokenKind::LeftParenthesis)?;
     self.parse_expression()?;
-    self.r#match(TokenKind::RightParenthesis)?;
+    self.match_token(TokenKind::RightParenthesis)?;
     let exit_jump = self.compiler.function.chunk.instructions.instructions.len();
     self.emit_instruction(Instruction::JumpIfFalse(u16::MAX))?;
     self.emit_instruction(Instruction::Pop)?;
@@ -503,7 +503,7 @@ impl<'source> Parser<'source> {
           return Err(Error::FunctionCallArgumentsExceededLimit);
         }
         count += 1;
-        if !self.r#match(TokenKind::Comma)? {
+        if !self.match_token(TokenKind::Comma)? {
           break;
         }
       }
@@ -518,9 +518,9 @@ impl<'source> Parser<'source> {
     self.begin_scope()?;
     self.consume(TokenKind::LeftParenthesis, "expected '(' after 'for'.")?;
     // Process initializer segment.
-    if self.r#match(TokenKind::Semicolon)? {
+    if self.match_token(TokenKind::Semicolon)? {
       // No initializer, no problem.
-    } else if self.r#match(TokenKind::Var)? {
+    } else if self.match_token(TokenKind::Var)? {
       self.parse_variable_declaration()?;
     } else {
       self.parse_expression_statement()?;
@@ -528,7 +528,7 @@ impl<'source> Parser<'source> {
     let mut loop_start = self.compiler.function.chunk.instructions.instructions.len();
     // Process condition segment.
     let mut exit_jump: Option<usize> = None;
-    if !self.r#match(TokenKind::Semicolon)? {
+    if !self.match_token(TokenKind::Semicolon)? {
       self.parse_expression()?;
       self.consume(TokenKind::Semicolon, "expected ';' after loop condition.")?;
       exit_jump = Some(self.compiler.function.chunk.instructions.instructions.len());
@@ -536,7 +536,7 @@ impl<'source> Parser<'source> {
       self.emit_instruction(Instruction::Pop)?;
     }
     // Process increment segment.
-    if !self.r#match(TokenKind::RightParenthesis)? {
+    if !self.match_token(TokenKind::RightParenthesis)? {
       let body_jump = self.compiler.function.chunk.instructions.instructions.len();
       self.emit_instruction(Instruction::Jump(0xFFFF))?;
       let increment_start = self.compiler.function.chunk.instructions.instructions.len();
@@ -795,7 +795,7 @@ impl<'source> Parser<'source> {
   }
 
   /// Match current token.
-  pub fn r#match(&mut self, token_type: TokenKind) -> Result<bool, Error> {
+  pub fn match_token(&mut self, token_type: TokenKind) -> Result<bool, Error> {
     if !self.check(token_type) {
       return Ok(false);
     }
@@ -854,7 +854,7 @@ impl<'source> Parser<'source> {
       get_op = Instruction::GetGlobal(index);
       set_op = Instruction::SetGlobal(index);
     }
-    if can_assign && self.r#match(TokenKind::Equal)? {
+    if can_assign && self.match_token(TokenKind::Equal)? {
       self.parse_expression()?;
       self.emit_instruction(set_op)?;
     } else {
@@ -880,7 +880,7 @@ impl<'source> Parser<'source> {
       let infix = previous_rule.infix.unwrap();
       infix(self, can_assign)?;
     }
-    if can_assign && self.r#match(TokenKind::Equal)? {
+    if can_assign && self.match_token(TokenKind::Equal)? {
       self.did_encounter_error("Invalid assignment target.");
       return Err(Error::InvalidAssignmentTarget);
     }
