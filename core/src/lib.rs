@@ -31,7 +31,7 @@ pub mod prelude {
   pub use super::command::{
     arity::CommandArity, direct_object::CommandDirectObject, function::CommandFunction,
     indirect_object::CommandIndirectObject, kind::CommandKind, modifier::CommandModifier, string::CommandString,
-    Command,
+    syntax::CommandSyntax, Command,
   };
   pub use super::commands::quit::QuitCommand;
   pub use super::components::{adjectives::Adjectives, description::Description, name::Name, quit_flag::QuitFlag};

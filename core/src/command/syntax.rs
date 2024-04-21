@@ -1,4 +1,6 @@
 use crate::prelude::*;
+use serde::{Deserialize, Serialize};
 
 /// A command syntax type.
-pub type CommandSyntax = (CommandArity, CommandModifier, CommandModifier);
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub struct CommandSyntax(pub CommandArity, pub CommandModifier, pub CommandModifier);
