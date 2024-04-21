@@ -7,6 +7,8 @@
 
 /// The Command trait.
 pub mod command;
+/// Some fundamental commands.
+pub mod commands;
 /// Common components.
 pub mod components;
 /// Corridors connect regions.
@@ -27,6 +29,7 @@ pub mod world;
 /// The prelude.
 pub mod prelude {
   pub use super::command::{form::CommandForm, function::CommandFunction, Command};
+  pub use super::commands::quit::QuitCommand;
   pub use super::components::{adjectives::Adjectives, description::Description, name::Name, quit_flag::QuitFlag};
   pub use super::corridor::{
     components::{is_corridor_origin::IsCorridorOrigin, is_corridor_terminus::IsCorridorTerminus},
