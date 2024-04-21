@@ -8,10 +8,3 @@ pub mod traits;
 /// A `PassageDirection` is a direction in which a passage can be built.
 #[derive(Clone, Copy, Debug, Display, Eq, Hash, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
 pub struct PassageDirection(pub Direction);
-
-impl PassageDirection {
-  /// Get the opposite direction of the given direction.
-  pub fn opposite(&self) -> Self {
-    self.0.opposite().into()
-  }
-}

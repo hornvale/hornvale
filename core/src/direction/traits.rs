@@ -1,3 +1,5 @@
+/// Descriptors.
+pub mod descriptors;
 /// From<PassageDirection>.
 pub mod from_passage_direction;
 /// From<Vector4D>.

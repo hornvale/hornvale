@@ -28,7 +28,11 @@ pub mod world;
 pub mod prelude {
   pub use super::command::{form::CommandForm, function::CommandFunction, Command};
   pub use super::component::{adjectives::Adjectives, description::Description, name::Name, quit_flag::QuitFlag};
-  pub use super::corridor::{direction::CorridorDirection, kind::CorridorKind};
+  pub use super::corridor::{
+    components::{is_corridor_origin::IsCorridorOrigin, is_corridor_terminus::IsCorridorTerminus},
+    direction::CorridorDirection,
+    kind::CorridorKind,
+  };
   pub use super::direction::Direction;
   pub use super::passage::{
     components::is_a_passage::IsAPassage, condition::PassageCondition, direction::PassageDirection, kind::PassageKind,
