@@ -8,7 +8,7 @@
 /// The Command trait.
 pub mod command;
 /// Common components.
-pub mod component;
+pub mod components;
 /// Corridors connect regions.
 pub mod corridor;
 /// A direction in 4D space.
@@ -27,7 +27,7 @@ pub mod world;
 /// The prelude.
 pub mod prelude {
   pub use super::command::{form::CommandForm, function::CommandFunction, Command};
-  pub use super::component::{adjectives::Adjectives, description::Description, name::Name, quit_flag::QuitFlag};
+  pub use super::components::{adjectives::Adjectives, description::Description, name::Name, quit_flag::QuitFlag};
   pub use super::corridor::{
     components::{is_corridor_origin::IsCorridorOrigin, is_corridor_terminus::IsCorridorTerminus},
     direction::CorridorDirection,
