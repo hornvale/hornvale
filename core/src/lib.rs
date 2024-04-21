@@ -30,6 +30,9 @@ pub mod prelude {
   pub use super::component::{adjectives::Adjectives, description::Description, name::Name, quit_flag::QuitFlag};
   pub use super::corridor::{direction::CorridorDirection, kind::CorridorKind};
   pub use super::direction::Direction;
+  pub use super::passage::{
+    components::is_a_passage::IsAPassage, condition::PassageCondition, direction::PassageDirection, kind::PassageKind,
+  };
   pub use super::region::{components::is_a_region::IsARegion, Region};
   pub use super::room::{components::is_a_room::IsARoom, Room};
   pub use super::vector4d::Vector4D;
