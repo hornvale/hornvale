@@ -12,6 +12,8 @@ pub mod get_room_passage_directions;
 pub mod get_room_passage_entities;
 /// Get the room's passage in a given direction.
 pub mod get_room_passage_entity_in_direction;
+/// Get the room passage descriptions.
+pub mod get_room_passages_descriptions;
 /// Get the room entity's region and room.
 pub mod get_room_region_and_room;
 /// A trait for checking if the quit flag is set.
