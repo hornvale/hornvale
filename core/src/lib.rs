@@ -9,18 +9,26 @@
 pub mod command;
 /// Common components.
 pub mod component;
+/// Corridors connect regions.
+pub mod corridor;
 /// A direction in 4D space.
 pub mod direction;
+/// Passages connect rooms.
+pub mod passage;
+/// The region component, which can be used to determine the region an entity is in.
+pub mod region;
+/// The room component, which can be used to determine the room an entity is in.
+pub mod room;
 /// Additions to the World type.
 pub mod world;
 
 /// The prelude.
 pub mod prelude {
   pub use crate::command::{form::CommandForm, function::CommandFunction, Command};
-  pub use crate::component::{
-    adjectives::Adjectives, description::Description, is_a_region::IsARegion, is_a_room::IsARoom, name::Name,
-    quit_flag::QuitFlag, region::Region, room::Room,
-  };
+  pub use crate::component::{adjectives::Adjectives, description::Description, name::Name, quit_flag::QuitFlag};
+  pub use crate::corridor::{direction::CorridorDirection, kind::CorridorKind};
   pub use crate::direction::Direction;
+  pub use crate::region::{components::is_a_region::IsARegion, Region};
+  pub use crate::room::{components::is_a_room::IsARoom, Room};
   pub use crate::world::traits::is_quit_flag_set::IsQuitFlagSet;
 }

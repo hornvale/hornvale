@@ -1,6 +1,8 @@
 use derive_more::{Add, Sub};
 use serde::{Deserialize, Serialize};
 
+/// Components.
+pub mod components;
 /// Trait implementations.
 pub mod traits;
 
