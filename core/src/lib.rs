@@ -19,16 +19,19 @@ pub mod passage;
 pub mod region;
 /// The room component, which can be used to determine the room an entity is in.
 pub mod room;
+/// A 4-D vector.
+pub mod vector4d;
 /// Additions to the World type.
 pub mod world;
 
 /// The prelude.
 pub mod prelude {
-  pub use crate::command::{form::CommandForm, function::CommandFunction, Command};
-  pub use crate::component::{adjectives::Adjectives, description::Description, name::Name, quit_flag::QuitFlag};
-  pub use crate::corridor::{direction::CorridorDirection, kind::CorridorKind};
-  pub use crate::direction::Direction;
-  pub use crate::region::{components::is_a_region::IsARegion, Region};
-  pub use crate::room::{components::is_a_room::IsARoom, Room};
-  pub use crate::world::traits::is_quit_flag_set::IsQuitFlagSet;
+  pub use super::command::{form::CommandForm, function::CommandFunction, Command};
+  pub use super::component::{adjectives::Adjectives, description::Description, name::Name, quit_flag::QuitFlag};
+  pub use super::corridor::{direction::CorridorDirection, kind::CorridorKind};
+  pub use super::direction::Direction;
+  pub use super::region::{components::is_a_region::IsARegion, Region};
+  pub use super::room::{components::is_a_room::IsARoom, Room};
+  pub use super::vector4d::Vector4D;
+  pub use super::world::traits::is_quit_flag_set::IsQuitFlagSet;
 }
