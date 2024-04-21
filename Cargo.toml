@@ -73,7 +73,6 @@ hornvale_output.workspace = true
 hornvale_parser.workspace = true
 hornvale_scripting.workspace = true
 hornvale_world.workspace = true
-hornvale_world_commands.workspace = true
 
 [dev-dependencies]
 hornvale_test_utilities.workspace = true
@@ -105,7 +104,6 @@ hornvale_parser = { path = "internal/parser" }
 hornvale_scripting = { path = "internal/scripting" }
 hornvale_test_utilities = { path = "test/test_utilities" }
 hornvale_world = { path = "internal/world" }
-hornvale_world_commands = { path = "internal/world_commands" }
 log = "0.4.21"
 paste = "1.0.14"
 pretty_assertions = "1.4.0"

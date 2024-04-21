@@ -21,6 +21,8 @@
 pub mod case;
 /// A classifier that can be used to determine the type of a word.
 pub mod classifier;
+/// Components used by the parsing system.
+pub mod component;
 /// An error type.
 pub mod error;
 /// The parser, a simple top-down recursive descent parser.
@@ -29,10 +31,16 @@ pub mod parser;
 pub mod scanner;
 /// Tokens for the scanner.
 pub mod token;
+/// World functions.
+pub mod world;
 
 /// The prelude.
 pub mod prelude {
   pub use crate::classifier::Classifier;
+  pub use crate::component::{
+    is_parser_product::IsParserProduct, magic_word_token::MagicWordToken, parser_product_kind::ParserProductKind,
+    question_token::QuestionToken, verb_token::VerbToken,
+  };
   pub use crate::error::ParserError;
   pub use crate::parser::Parser;
   pub use crate::scanner::Scanner;

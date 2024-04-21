@@ -24,4 +24,3 @@ thiserror.workspace = true
 
 [dev-dependencies]
 hornvale_test_utilities.workspace = true
-hornvale_world_commands.workspace = true
