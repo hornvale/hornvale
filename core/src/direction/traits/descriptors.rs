@@ -21,65 +21,57 @@ pub trait DirectionDescriptors {
 impl DirectionDescriptors for Direction {
   /// Is this direction a cardinal direction?
   fn is_cardinal(&self) -> bool {
-    use Direction::*;
-    match self {
-      North | East | South | West => true,
-      _ => false,
-    }
+    matches!(
+      self,
+      Direction::North | Direction::East | Direction::South | Direction::West
+    )
   }
 
   /// Is this direction a diagonal direction?
   fn is_diagonal(&self) -> bool {
-    use Direction::*;
-    match self {
-      Northeast | Southeast | Southwest | Northwest => true,
-      _ => false,
-    }
+    matches!(
+      self,
+      Direction::Northeast | Direction::Southeast | Direction::Southwest | Direction::Northwest
+    )
   }
 
   /// Is this direction a vertical direction?
   fn is_vertical(&self) -> bool {
-    use Direction::*;
-    match self {
-      Up | Down => true,
-      _ => false,
-    }
+    matches!(self, Direction::Up | Direction::Down)
   }
 
   /// Is this direction a horizontal direction?
   fn is_horizontal(&self) -> bool {
-    use Direction::*;
-    match self {
-      North | East | South | West | In | Out => true,
-      _ => false,
-    }
+    matches!(
+      self,
+      Direction::North | Direction::East | Direction::South | Direction::West | Direction::In | Direction::Out
+    )
   }
 
   /// Is this direction a positive direction?
   fn is_positive(&self) -> bool {
-    use Direction::*;
-    match self {
-      North | Northeast | East | Southeast | Up | In => true,
-      _ => false,
-    }
+    matches!(
+      self,
+      Direction::North | Direction::Northeast | Direction::East | Direction::Southeast | Direction::Up | Direction::In
+    )
   }
 
   /// Is this direction a negative direction?
   fn is_negative(&self) -> bool {
-    use Direction::*;
-    match self {
-      South | Southwest | West | Northwest | Down | Out => true,
-      _ => false,
-    }
+    matches!(
+      self,
+      Direction::South
+        | Direction::Southwest
+        | Direction::West
+        | Direction::Northwest
+        | Direction::Down
+        | Direction::Out
+    )
   }
 
   /// Is this direction an in-out direction?
   fn is_in_out(&self) -> bool {
-    use Direction::*;
-    match self {
-      In | Out => true,
-      _ => false,
-    }
+    matches!(self, Direction::In | Direction::Out)
   }
 }
 

@@ -11,7 +11,9 @@ impl Command for QuitCommand {
   const SYNONYMS: &'static [&'static str] = &[];
   const BRIEF: &'static str = "Quit the game.";
   const DESCRIPTION: &'static str = "Quits the game.";
-  const FORM: CommandForm = CommandForm::Default;
+  const ARITY: CommandArity = CommandArity::Nullary;
+  const DIRECT_OBJECT_MODIFIER: CommandModifier = CommandModifier::None;
+  const INDIRECT_OBJECT_MODIFIER: CommandModifier = CommandModifier::None;
 
   /// Do nothing.
   fn execute(world: &mut World, _context: &Entity) -> Result<(), AnyError> {

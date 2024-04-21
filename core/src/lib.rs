@@ -28,7 +28,11 @@ pub mod world;
 
 /// The prelude.
 pub mod prelude {
-  pub use super::command::{form::CommandForm, function::CommandFunction, Command};
+  pub use super::command::{
+    arity::CommandArity, direct_object::CommandDirectObject, function::CommandFunction,
+    indirect_object::CommandIndirectObject, kind::CommandKind, modifier::CommandModifier, string::CommandString,
+    Command,
+  };
   pub use super::commands::quit::QuitCommand;
   pub use super::components::{adjectives::Adjectives, description::Description, name::Name, quit_flag::QuitFlag};
   pub use super::corridor::{
