@@ -7,14 +7,8 @@ use arity::CommandArity;
 /// The forms that a command can take.
 pub mod modifier;
 use modifier::CommandModifier;
-/// The direct object.
-pub mod direct_object;
 /// A definition of a command function signature.
 pub mod function;
-/// The indirect object.
-pub mod indirect_object;
-/// The kind of the command.
-pub mod kind;
 /// A raw command string.
 pub mod string;
 /// Command syntax.

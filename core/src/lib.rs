@@ -29,8 +29,7 @@ pub mod world;
 /// The prelude.
 pub mod prelude {
   pub use super::command::{
-    arity::CommandArity, direct_object::CommandDirectObject, function::CommandFunction,
-    indirect_object::CommandIndirectObject, kind::CommandKind, modifier::CommandModifier, string::CommandString,
+    arity::CommandArity, function::CommandFunction, modifier::CommandModifier, string::CommandString,
     syntax::CommandSyntax, Command,
   };
   pub use super::commands::quit::QuitCommand;
