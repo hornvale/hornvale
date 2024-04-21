@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
+use anyhow::Error as AnyError;
 use thiserror::Error as ThisError;
 
 /// Errors related to world operations.
-#[derive(Clone, Debug, Deserialize, Eq, ThisError, Hash, PartialEq, Serialize)]
+#[derive(Debug, ThisError)]
 pub enum CommandError {
   /// Unknown command.
   #[error("unknown command: {0}")]
@@ -16,4 +16,7 @@ pub enum CommandError {
   /// An unknown error occurred.
   #[error("an unknown error occurred")]
   UnknownError,
+  /// Convert from any error.
+  #[error(transparent)]
+  Any(#[from] AnyError),
 }

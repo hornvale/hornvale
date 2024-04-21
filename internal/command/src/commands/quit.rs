@@ -1,5 +1,6 @@
-use crate::prelude::{Command, CommandArity, CommandContext, CommandError, CommandForm, QuitFlag};
-use hecs::World;
+use anyhow::Error as AnyError;
+use hecs::{Entity, World};
+use hornvale_core::prelude::*;
 
 /// A command that sets the quit flag on the world.
 #[derive(Clone, Copy, Debug)]
@@ -11,10 +12,9 @@ impl Command for QuitCommand {
   const BRIEF: &'static str = "Quit the game.";
   const DESCRIPTION: &'static str = "Quits the game.";
   const FORM: CommandForm = CommandForm::Default;
-  const ARITY: CommandArity = CommandArity::Nullary;
 
   /// Do nothing.
-  fn execute(world: &mut World, _context: &CommandContext) -> Result<(), CommandError> {
+  fn execute(world: &mut World, _context: &Entity) -> Result<(), AnyError> {
     world.spawn((QuitFlag,));
     Ok(())
   }
@@ -29,9 +29,10 @@ mod tests {
   fn test_execute() {
     init();
     let mut world = World::new();
-    let result = QuitCommand::execute(&mut world, &Default::default());
+    let entity = world.spawn(());
+    let result = QuitCommand::execute(&mut world, &entity);
     let quit_flag = world.query_mut::<&mut QuitFlag>().into_iter().next().unwrap().1;
     assert_eq!(*quit_flag, QuitFlag);
-    assert_eq!(result, Ok(()));
+    assert!(result.is_ok());
   }
 }

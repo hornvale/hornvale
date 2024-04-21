@@ -1,5 +1,6 @@
-use crate::prelude::{Command, CommandContext, CommandError, CommandForm, CommandFunction};
-use hecs::World;
+use crate::prelude::CommandError;
+use hecs::{Entity, World};
+use hornvale_core::prelude::*;
 use std::collections::HashMap;
 
 /// A registry for commands.
@@ -54,10 +55,10 @@ impl CommandRegistry {
     name: &str,
     form: &CommandForm,
     world: &mut World,
-    context: &CommandContext,
+    context: &Entity,
   ) -> Result<(), CommandError> {
     if let Some(&command) = self.get(name, form) {
-      command(world, context)
+      Ok(command(world, context)?)
     } else {
       Err(CommandError::UnknownCommand(name.to_string()))
     }
