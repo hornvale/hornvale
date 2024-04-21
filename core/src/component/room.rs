@@ -1,4 +1,8 @@
+use derive_more::{Add, Sub};
 use serde::{Deserialize, Serialize};
+
+/// Trait implementations.
+pub mod traits;
 
 /// Rooms are the basic building blocks of the world.
 ///
@@ -12,7 +16,7 @@ use serde::{Deserialize, Serialize};
 /// Because there may be multiple rooms at the same coordinates in different
 /// regions, we use the region to disambiguate them, and we must be careful to
 /// ensure that the region is always set when we query for entities.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Add, Clone, Copy, Debug, Default, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Sub)]
 pub struct Room {
   /// The w-coordinate of the room (outside <-> inside).
   pub w: i64,

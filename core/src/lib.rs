@@ -18,7 +18,8 @@ pub mod world;
 pub mod prelude {
   pub use crate::command::{form::CommandForm, function::CommandFunction, Command};
   pub use crate::component::{
-    adjectives::Adjectives, description::Description, name::Name, quit_flag::QuitFlag, region::Region, room::Room,
+    adjectives::Adjectives, description::Description, is_a_region::IsARegion, is_a_room::IsARoom, name::Name,
+    quit_flag::QuitFlag, region::Region, room::Room,
   };
   pub use crate::direction::Direction;
   pub use crate::world::traits::is_quit_flag_set::IsQuitFlagSet;
