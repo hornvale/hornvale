@@ -16,7 +16,11 @@ impl Command for NoOpCommand {
   const INDIRECT_OBJECT_MODIFIER: CommandModifier = CommandModifier::None;
 
   /// Do nothing.
-  fn execute(_world: &mut World, _context: &Entity) -> Result<(), AnyError> {
+  fn execute(
+    _world: &mut World,
+    _direct_object: Option<Entity>,
+    _indirect_object: Option<Entity>,
+  ) -> Result<(), AnyError> {
     Ok(())
   }
 }
@@ -30,8 +34,7 @@ mod tests {
   fn test_execute() {
     init();
     let mut world = World::new();
-    let entity = world.spawn(());
-    let result = NoOpCommand::execute(&mut world, &entity);
+    let result = NoOpCommand::execute(&mut world, None, None);
     assert!(result.is_ok());
   }
 }

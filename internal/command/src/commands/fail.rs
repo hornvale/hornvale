@@ -17,7 +17,11 @@ impl Command for FailCommand {
   const INDIRECT_OBJECT_MODIFIER: CommandModifier = CommandModifier::None;
 
   /// Fail.
-  fn execute(_world: &mut World, _context: &Entity) -> Result<(), AnyError> {
+  fn execute(
+    _world: &mut World,
+    _direct_object: Option<Entity>,
+    _indirect_object: Option<Entity>,
+  ) -> Result<(), AnyError> {
     Err(CommandError::UnknownError.into())
   }
 }
@@ -31,8 +35,7 @@ mod tests {
   fn test_execute() {
     init();
     let mut world = World::new();
-    let entity = world.spawn(());
-    let result = FailCommand::execute(&mut world, &entity);
+    let result = FailCommand::execute(&mut world, None, None);
     assert!(result.is_err());
   }
 }
