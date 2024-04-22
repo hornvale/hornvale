@@ -15,3 +15,13 @@ pub struct Token {
   /// The lexeme.
   pub lexeme: String,
 }
+
+impl TryFrom<&Token> for CommandArgument {
+  type Error = ();
+  fn try_from(token: &Token) -> Result<Self, ()> {
+    match token {
+      token if token.kind.is_direction() => token.kind.try_into(),
+      _ => Err(()),
+    }
+  }
+}

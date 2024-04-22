@@ -29,12 +29,8 @@ pub mod world;
 /// The prelude.
 pub mod prelude {
   pub use super::command::{
-    arity::CommandArity,
-    function::CommandFunction,
-    modifier::{adverb::Adverb, preposition::Preposition, CommandModifier},
-    string::CommandString,
-    syntax::CommandSyntax,
-    Command,
+    arity::CommandArity, function::CommandFunction, modifier::CommandModifier, string::CommandString,
+    syntax::CommandSyntax, Command,
   };
   pub use super::commands::quit::QuitCommand;
   pub use super::components::{adjectives::Adjectives, description::Description, name::Name, quit_flag::QuitFlag};

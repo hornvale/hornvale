@@ -21,6 +21,8 @@
 pub mod case;
 /// A classifier that can be used to determine the type of a word.
 pub mod classifier;
+/// Components used by the parsing system.
+pub mod component;
 /// An error type.
 pub mod error;
 /// The parser, a simple top-down recursive descent parser.
