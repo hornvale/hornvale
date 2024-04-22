@@ -270,14 +270,6 @@ pub enum TokenKind {
   /// Tilde, e.g. in `~`.
   TildeWord,
 
-  /// Interrogatives, or "question words".
-  Who,
-  How,
-  What,
-  Where,
-  When,
-  Why,
-
   /// Any other word.
   Word,
 
@@ -547,14 +539,6 @@ impl TokenKind {
     )
   }
 
-  /// Is this token an interrogative?
-  pub fn is_question_word(&self) -> bool {
-    matches!(
-      self,
-      Self::Who | Self::How | Self::What | Self::Where | Self::When | Self::Why
-    )
-  }
-
   /// Is this token a yes/no token?
   pub fn is_yes_no(&self) -> bool {
     matches!(self, Self::Yes | Self::No)
@@ -703,14 +687,6 @@ impl TryFrom<&str> for TokenKind {
       // "her" => Ok(Self::Her), // (also possessive determiner)
       "it" => Ok(Self::It),
       "them" => Ok(Self::Them),
-
-      // Interrogatives.
-      "who" => Ok(Self::Who),
-      "how" => Ok(Self::How),
-      "what" => Ok(Self::What),
-      "where" => Ok(Self::Where),
-      "when" => Ok(Self::When),
-      "why" => Ok(Self::Why),
 
       // Articles.
       "a" | "an" => Ok(Self::A),

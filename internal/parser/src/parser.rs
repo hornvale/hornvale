@@ -1,5 +1,5 @@
 use crate::error::ParserError;
-use crate::prelude::{IsParserProduct, MagicWordToken, ParserProductKind, QuestionToken, Token, TokenKind, VerbToken};
+use crate::prelude::{Token, TokenKind};
 use derivative::Derivative;
 use hecs::{Entity, With, World};
 use hornvale_command::prelude::*;
@@ -16,13 +16,23 @@ pub struct Parser<'world> {
   pub tokens: Vec<Token>,
   /// The actor attempting the command.
   pub actor: Entity,
-  /// The working entity.
-  pub entity: Entity,
   /// The world to parse in.
   #[derivative(Debug = "ignore")]
   pub world: &'world mut World,
   /// The current index.
   pub current: usize,
+  /// The verb, if any.
+  pub verb: Option<Token>,
+  /// The verb modifier, if any.
+  pub modifier: Option<Token>,
+  /// The direct object, if any.
+  pub direct_object: Option<Token>,
+  /// The indirect object, if any.
+  pub indirect_object: Option<Token>,
+  /// The command function, if any.
+  pub function: Option<CommandFunction>,
+  /// The command context.
+  pub context: Option<CommandContext>,
 }
 
 impl<'world> Parser<'world> {
@@ -30,13 +40,23 @@ impl<'world> Parser<'world> {
   pub fn new(tokens: &[Token], actor: Entity, world: &'world mut World) -> Self {
     let tokens = tokens.to_vec();
     let current = 0;
-    let entity = world.spawn((IsParserProduct,));
+    let verb = None;
+    let modifier = None;
+    let direct_object = None;
+    let indirect_object = None;
+    let function = None;
+    let context = None;
     Self {
       tokens,
       actor,
-      entity,
       world,
       current,
+      verb,
+      modifier,
+      direct_object,
+      indirect_object,
+      function,
+      context,
     }
   }
 
@@ -44,100 +64,60 @@ impl<'world> Parser<'world> {
   ///
   /// This is the main entry point for the parser.
   ///
-  /// input → verb_command | magic_command | question_command
-  pub fn parse(&mut self) -> Result<Entity, ParserError> {
+  /// input → command | magic_word
+  pub fn parse(&mut self) -> Result<(&CommandFunction, CommandContext), ParserError> {
     self.assert_non_empty()?;
-    if self.match_verb_command()? {
-      self.parse_verb_command()?;
-    } else if self.match_magic_command()? {
-      self.parse_magic_command()?;
-    } else if self.match_question()? {
-      self.parse_question()?;
+    if self.match_magic_word()? {
+      // None of this is implemented yet.
+      self.consume_magic_word()?;
+      self.bind_magic_word()?;
+    } else {
+      self.parse_command()?;
+      self.bind_command()?;
+      self.bind_context()?;
     }
-    Ok(self.entity)
-  }
-
-  /// Match a command.
-  pub fn match_verb_command(&mut self) -> Result<bool, ParserError> {
-    self.match_token_kind(TokenKind::Verb)
-  }
-
-  /// Match a magic command.
-  pub fn match_magic_command(&mut self) -> Result<bool, ParserError> {
-    self.match_token_condition(|kind| kind.is_magic_word())
-  }
-
-  /// Match a question.
-  pub fn match_question(&mut self) -> Result<bool, ParserError> {
-    self.match_token_condition(|kind| kind.is_question_word())
+    Ok((&self.function.as_ref().unwrap(), self.context.take().unwrap()))
   }
 
   /// Parse a command from the input.
   ///
-  /// verb-command → verb-phrase (object-phrase)?
-  pub fn parse_verb_command(&mut self) -> Result<(), ParserError> {
+  /// command → verb-phrase (object-phrase)?
+  pub fn parse_command(&mut self) -> Result<(), ParserError> {
     self.consume_verb().map_err(|_| ParserError::NoVerb)?;
-    if self.match_token_kind(TokenKind::Here)? {
-      self.consume_here()?;
-    } else {
-      // match self.peek() {
-      //   Some(token) if token.kind == TokenKind::Here => {
-      //     self.bind_here()?;
-      //     self.modifier = self.peek();
-      //     self.direct_object = self.peek();
-      //     self.advance()?;
-      //   },
-      //   Some(token) if token.kind.is_adverb() => {
-      //     self.modifier = self.peek();
-      //     self.advance()?;
-      //   },
-      //   Some(token) if token.kind.is_direction() => {
-      //     self.modifier = self.peek();
-      //     self.direct_object = self.peek();
-      //     self.advance()?;
-      //   },
-      //   Some(token) if token.kind.is_preposition() => {
-      //     self.modifier = self.peek();
-      //     self.advance()?;
-      //   },
-      //   Some(token) if token.kind.is_noun() => {
-      //     self.consume_direct_object()?;
-      //     self.advance()?;
-      //   },
-      //   _ => {},
-      // }
+    match self.peek() {
+      Some(token) if token.kind == TokenKind::Here => {
+        self.modifier = self.peek();
+        self.direct_object = self.peek();
+        self.advance()?;
+      },
+      Some(token) if token.kind.is_adverb() => {
+        self.modifier = self.peek();
+        self.advance()?;
+      },
+      Some(token) if token.kind.is_direction() => {
+        self.modifier = self.peek();
+        self.direct_object = self.peek();
+        self.advance()?;
+      },
+      Some(token) if token.kind.is_preposition() => {
+        self.modifier = self.peek();
+        self.advance()?;
+      },
+      Some(token) if token.kind.is_noun() => {
+        self.consume_direct_object()?;
+        self.advance()?;
+      },
+      _ => {},
     }
-    Ok(())
-  }
-
-  /// Parse a magic command from the input.
-  pub fn parse_magic_command(&mut self) -> Result<(), ParserError> {
-    self.consume_magic_word()?;
-    Ok(())
-  }
-
-  /// Parse a question command from the input.
-  pub fn parse_question(&mut self) -> Result<(), ParserError> {
-    self.consume_question_word()?;
     Ok(())
   }
 
   /// Match current token.
-  pub fn match_token_kind(&mut self, kind: TokenKind) -> Result<bool, ParserError> {
+  pub fn match_token(&mut self, kind: TokenKind) -> Result<bool, ParserError> {
     if !self.check_token(kind) {
       return Ok(false);
     }
-    Ok(true)
-  }
-
-  /// Try to match a token by passing a condition.
-  pub fn match_token_condition<F>(&mut self, condition: F) -> Result<bool, ParserError>
-  where
-    F: Fn(TokenKind) -> bool,
-  {
-    if !condition(self.peek().map(|t| t.kind).unwrap_or(TokenKind::EndOfInput)) {
-      return Ok(false);
-    }
+    self.advance()?;
     Ok(true)
   }
 
@@ -149,11 +129,7 @@ impl<'world> Parser<'world> {
   /// Consume the verb.
   pub fn consume_verb(&mut self) -> Result<(), ParserError> {
     if self.check_token(TokenKind::Verb) {
-      let verb = self.peek().unwrap().clone();
-      self
-        .world
-        .insert(self.entity, (ParserProductKind::VerbCommand, VerbToken(verb)))
-        .unwrap();
+      self.verb = self.peek();
       self.advance()?;
       Ok(())
     } else {
@@ -161,41 +137,10 @@ impl<'world> Parser<'world> {
     }
   }
 
-  /// Consume a magic word.
-  pub fn consume_magic_word(&mut self) -> Result<(), ParserError> {
-    if self.match_magic_word()? {
-      let token = self.peek().unwrap();
-      self.consume_token(token.kind, "Expected a magic word")?;
-      self
-        .world
-        .insert(self.entity, (ParserProductKind::MagicCommand, MagicWordToken(token)))
-        .unwrap();
-      Ok(())
-    } else {
-      Err(ParserError::NoInput)
-    }
-  }
-
-  /// Consume a question word.
-  pub fn consume_question_word(&mut self) -> Result<(), ParserError> {
-    if self.match_magic_word()? {
-      let token = self.peek().unwrap();
-      self.consume_token(token.kind, "Expected a question word")?;
-      self
-        .world
-        .insert(self.entity, (ParserProductKind::QuestionCommand, MagicWordToken(token)))
-        .unwrap();
-      Ok(())
-    } else {
-      Err(ParserError::NoInput)
-    }
-  }
-
   /// Consume the direct object.
   pub fn consume_direct_object(&mut self) -> Result<(), ParserError> {
     if self.check_token(TokenKind::DirectObject) {
-      let direct_object = self.peek().unwrap().clone();
-      self.advance()?;
+      self.direct_object = self.peek();
       Ok(())
     } else {
       Err(ParserError::CouldNotConsumeDirectObject(
@@ -216,6 +161,15 @@ impl<'world> Parser<'world> {
         current_kind,
         message.to_string(),
       ))
+    }
+  }
+
+  /// Consume a magic word.
+  pub fn consume_magic_word(&mut self) -> Result<(), ParserError> {
+    if self.match_magic_word()? {
+      self.consume_token(self.peek().unwrap().kind, "Expected a magic word")
+    } else {
+      Err(ParserError::NoInput)
     }
   }
 
@@ -302,9 +256,28 @@ impl<'world> Parser<'world> {
     Ok(())
   }
 
-  /// Consume a Here token.
-  pub fn consume_here(&mut self) -> Result<(), ParserError> {
-    Ok(())
+  /// Bind the Here token.
+  pub fn bind_here(&mut self) -> Result<CommandArgument, ParserError> {
+    let actor_info = {
+      let query_result = self.world.query_one::<(&Region, &Room)>(self.actor);
+      let mut query = query_result.unwrap(); // `query` is now a longer-lived value
+      let (region, room) = query.get().unwrap();
+      (*region, *room)
+    };
+
+    let room_entity = {
+      self
+        .world
+        .query::<With<(&Region, &Room), &IsARoom>>()
+        .into_iter()
+        .find(|(_, (&reg, &rm))| {
+          let (region, room) = actor_info;
+          region == reg && room == rm
+        })
+        .unwrap()
+        .0
+    };
+    Ok(CommandArgument::Entity(room_entity))
   }
 
   /// Check kind of current token.
