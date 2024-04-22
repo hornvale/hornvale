@@ -16,7 +16,7 @@ pub mod world;
 
 /// The prelude.
 pub mod prelude {
-  pub use crate::command::{form::CommandForm, function::CommandFunction, Command};
+  pub use crate::command::{form::CommandForm, Command};
   pub use crate::component::{
     adjectives::Adjectives, description::Description, name::Name, quit_flag::QuitFlag, region::Region, room::Room,
   };
