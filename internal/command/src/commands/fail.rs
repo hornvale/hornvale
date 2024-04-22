@@ -12,9 +12,7 @@ impl Command for FailCommand {
   const SYNONYMS: &'static [&'static str] = &[];
   const BRIEF: &'static str = "A command that always fails.";
   const DESCRIPTION: &'static str = "A command that always fails; useful for testing.";
-  const ARITY: CommandArity = CommandArity::Nullary;
-  const DIRECT_OBJECT_MODIFIER: CommandModifier = CommandModifier::None;
-  const INDIRECT_OBJECT_MODIFIER: CommandModifier = CommandModifier::None;
+  const FORM: CommandForm = CommandForm::Default;
 
   /// Fail.
   fn execute(_world: &mut World, _context: &Entity) -> Result<(), AnyError> {

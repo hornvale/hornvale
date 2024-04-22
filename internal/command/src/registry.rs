@@ -10,7 +10,7 @@ use std::collections::HashMap;
 #[derive(Debug, Default)]
 pub struct CommandRegistry {
   /// The commands in the registry.
-  pub commands: HashMap<&'static str, HashMap<CommandSyntax, CommandFunction>>,
+  pub commands: HashMap<&'static str, HashMap<CommandForm, CommandFunction>>,
 }
 
 impl CommandRegistry {
@@ -22,10 +22,10 @@ impl CommandRegistry {
   /// Register a command in the registry.
   pub fn register<C: Command>(&mut self) {
     let entry = self.commands.entry(C::NAME).or_default();
-    entry.insert(C::SYNTAX, C::execute);
+    entry.insert(C::FORM, C::execute);
     for &synonym in C::SYNONYMS {
       let entry = self.commands.entry(synonym).or_default();
-      entry.insert(C::SYNTAX, C::execute);
+      entry.insert(C::FORM, C::execute);
     }
   }
 
@@ -35,32 +35,29 @@ impl CommandRegistry {
   }
 
   /// Do we have this form of a command in the registry?
-  pub fn has_form(&self, name: &str, syntax: &CommandSyntax) -> bool {
-    self
-      .commands
-      .get(name)
-      .map_or(false, |entry| entry.contains_key(syntax))
+  pub fn has_form(&self, name: &str, form: &CommandForm) -> bool {
+    self.commands.get(name).map_or(false, |entry| entry.contains_key(form))
   }
 
   /// Get a command from the registry.
-  pub fn get(&self, name: &str, syntax: &CommandSyntax) -> Option<&CommandFunction> {
-    self.commands.get(name).and_then(|entry| entry.get(syntax))
+  pub fn get(&self, name: &str, form: &CommandForm) -> Option<&CommandFunction> {
+    self.commands.get(name).and_then(|entry| entry.get(form))
   }
 
-  /// Get the syntaxes of a command in the registry.
-  pub fn get_syntaxes(&self, name: &str) -> Option<Vec<CommandSyntax>> {
-    self.commands.get(name).map(|entry| entry.keys().cloned().collect())
+  /// Get the forms of a command in the registry.
+  pub fn get_forms(&self, name: &str) -> Option<Vec<&CommandForm>> {
+    self.commands.get(name).map(|entry| entry.keys().collect())
   }
 
   /// Execute a command from the registry.
   pub fn execute(
     &self,
     name: &str,
-    syntax: &CommandSyntax,
+    form: &CommandForm,
     world: &mut World,
     context: &Entity,
   ) -> Result<(), CommandError> {
-    if let Some(&command) = self.get(name, syntax) {
+    if let Some(&command) = self.get(name, form) {
       Ok(command(world, context)?)
     } else {
       Err(CommandError::UnknownCommand(name.to_string()))
