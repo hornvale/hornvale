@@ -1,6 +1,5 @@
-use anyhow::Error as AnyError;
-use hecs::{Entity, World};
-use hornvale_core::prelude::*;
+use crate::prelude::{Command, CommandArity, CommandContext, CommandError, CommandForm};
+use hecs::World;
 
 /// A command that does nothing at all.
 #[derive(Clone, Copy, Debug)]
@@ -12,9 +11,10 @@ impl Command for NoOpCommand {
   const BRIEF: &'static str = "A command that always succeeds but does nothing.";
   const DESCRIPTION: &'static str = "A command that always succeeds but does nothing; useful for testing.";
   const FORM: CommandForm = CommandForm::Default;
+  const ARITY: CommandArity = CommandArity::Nullary;
 
   /// Do nothing.
-  fn execute(_world: &mut World, _context: &Entity) -> Result<(), AnyError> {
+  fn execute(_world: &mut World, _context: &CommandContext) -> Result<(), CommandError> {
     Ok(())
   }
 }
@@ -28,8 +28,7 @@ mod tests {
   fn test_execute() {
     init();
     let mut world = World::new();
-    let entity = world.spawn(());
-    let result = NoOpCommand::execute(&mut world, &entity);
-    assert!(result.is_ok());
+    let result = NoOpCommand::execute(&mut world, &Default::default());
+    assert_eq!(result, Ok(()));
   }
 }
