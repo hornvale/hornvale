@@ -1,11 +1,10 @@
-use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
 /// Trait implementtions.
 pub mod traits;
 
 /// A direction.
-#[derive(Clone, Copy, Debug, Deserialize, Display, Eq, PartialEq, Hash, PartialOrd, Ord, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Hash, Serialize)]
 pub enum Direction {
   /// North (y+1).
   North,
