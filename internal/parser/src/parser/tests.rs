@@ -23,7 +23,7 @@ pub fn test_string_parsing(
   command_registry: &CommandRegistry,
   string: &str,
   actor: Entity,
-  expected: Result<(CommandFunction, CommandContext), ParserError>,
+  expected: Result<(CommandFunction, Option<Entity>, Option<Entity>), ParserError>,
 ) {
   init();
   let mut scanner = Scanner::new(string);

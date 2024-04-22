@@ -1,13 +1,12 @@
 use crate::error::ParserError;
-use crate::prelude::{IsParserProduct, MagicWordToken, ParserProductKind, QuestionToken, Token, TokenKind, VerbToken};
+use crate::prelude::{Token, TokenKind};
 use derivative::Derivative;
-use hecs::{Entity, With, World};
+use hecs::{Entity, World};
 use hornvale_command::prelude::*;
 use hornvale_core::prelude::*;
-use hornvale_world::prelude::*;
 
-#[cfg(test)]
-pub mod tests;
+// #[cfg(test)]
+// pub mod tests;
 
 /// The parser, a simple top-down recursive descent parser.
 #[derive(Derivative)]
@@ -26,7 +25,7 @@ pub struct Parser<'world> {
   /// The current index.
   pub current: usize,
   /// The verb token.
-  pub verb: Option<VerbToken>,
+  pub verb: Option<Token>,
   /// The command syntax.
   pub syntax: Option<CommandSyntax>,
 }
@@ -54,114 +53,101 @@ impl<'world> Parser<'world> {
     }
   }
 
-  /// Parse a command and its context from the input.
-  ///
-  /// This is the main entry point for the parser.
-  ///
-  /// input → command
-  pub fn parse(&mut self) -> Result<(), ParserError> {
-    self.assert_non_empty()?;
-    self.parse_command()?;
-    Ok(self.entity)
-  }
+  //  /// Parse a command and its context from the input.
+  //  ///
+  //  /// This is the main entry point for the parser.
+  //  ///
+  //  /// input → command
+  //  pub fn parse(&mut self) -> Result<(), ParserError> {
+  //    self.assert_non_empty()?;
+  //    self.parse_command()?;
+  //    Ok(())
+  //  }
+  //
+  //  /// Parse a command from the input.
+  //  ///
+  //  /// command → verb-phrase (direct-object-phrase)? (indirect-object-phrase)?
+  //  pub fn parse_command(&mut self) -> Result<(), ParserError> {
+  //    self.verb = self.parse_verb_phrase()?;
+  //    self.consume_verb().map_err(|_| ParserError::NoVerb)?;
+  //    self.syntax = Some(CommandSyntax::default());
+  //    let (direct_object, do_modifier) = self.parse_object_phrase()?;
+  //    self.parse_indirect_object_phrase()?;
+  //    Ok(())
+  //  }
+  //
+  //  /// Parse a verb phrase from the input.
+  //  ///
+  //  /// verb-phrase → verb
+  //  pub fn parse_verb_phrase(&mut self) -> Result<Token, ParserError> {
+  //    let verb = self.consume_token(TokenKind::Verb, "Expected a verb.")?;
+  //    Ok(verb)
+  //  }
+  //
+  //  /// Parse the direct object phrase, if any.
+  //  pub fn parse_direct_object_phrase(&mut self) -> Result<(), ParserError> {
+  //    self.parse_direct_object_modifier()?;
+  //    self.parse_direct_object()?;
+  //    Ok(())
+  //  }
+  //
+  //  /// Parse the indirect object phrase, if any.
+  //  pub fn parse_indirect_object_phrase(&mut self) -> Result<(), ParserError> {
+  //    self.parse_indirect_object_modifier()?;
+  //    self.parse_indirect_object()?;
+  //    Ok(())
+  //  }
+  //
+  //  /// Parse the direct object modifier.
+  //  pub fn parse_direct_object_modifier(&mut self) -> Result<(), ParserError> {
+  //    if self.match_modifier()? {
+  //      self.consume_direct_object_modifier()?;
+  //    }
+  //    Ok(())
+  //  }
+  //
+  //  /// Match the direct object modifier.
+  //  pub fn match_modifier(&mut self) -> Result<bool, ParserError> {
+  //    self.match_token_condition(|kind| kind.is_modifier())
+  //  }
+  //
+  //  /// Consume the direct object modifier.
+  //  pub fn consume_direct_object_modifier(&mut self) -> Result<Token, ParserError> {
+  //    self.consume_modifier()?;
+  //    Ok(self.previous().unwrap())
+  //  }
+  //
+  //  /// Consume the verb.
+  //  pub fn consume_verb(&mut self) -> Result<(), ParserError> {
+  //    if self.check_token(TokenKind::Verb) {
+  //      self.consume_token(TokenKind::Verb, "Expected a verb.")?;
+  //      self.verb = self.previous();
+  //      Ok(())
+  //    } else {
+  //      Err(ParserError::NoVerb)
+  //    }
+  //  }
 
-  /// Parse a command from the input.
-  ///
-  /// command → verb-phrase (direct-object-phrase)? (indirect-object-phrase)?
-  pub fn parse_command(&mut self) -> Result<(), ParserError> {
-    self.consume_verb().map_err(|_| ParserError::NoVerb)?;
-    self.syntax = Some(CommandSyntax::default());
-    self.parse_direct_object_phrase()?;
-    self.parse_indirect_object_phrase()?;
-    Ok(())
-  }
-
-  /// Match current token.
-  pub fn match_token_kind(&mut self, kind: TokenKind) -> Result<bool, ParserError> {
-    if !self.check_token(kind) {
-      return Ok(false);
-    }
-    Ok(true)
-  }
-
-  /// Try to match a token by passing a condition.
-  pub fn match_token_condition<F>(&mut self, condition: F) -> Result<bool, ParserError>
-  where
-    F: Fn(TokenKind) -> bool,
-  {
-    if !condition(self.peek().map(|t| t.kind).unwrap_or(TokenKind::EndOfInput)) {
-      return Ok(false);
-    }
-    Ok(true)
-  }
-
-  /// Parse the direct object phrase, if any.
-  pub fn parse_direct_object_phrase(&mut self) -> Result<(), ParserError> {
-    if self.match_modifier()? {
-      self.consume_direct_object_modifier()?;
-    } else if self.match_direct_object()? {
-      self.consume_direct_object()?;
-    }
-    Ok(())
-  }
-
-  /// Match the direct object modifier.
-  pub fn match_modifier(&mut self) -> Result<bool, ParserError> {
-    self.match_token_condition(|kind| kind.is_modifier())
-  }
-
-  /// Consume the direct object modifier.
-  pub fn consume_direct_object_modifier(&mut self) -> Result<(), ParserError> {
-    self.consume_modifier()?;
-    self.syntax.as_mut().unwrap().direct_object_modifier = self
-      .previous()
-      .map(|t| t.kind.try_into().unwrap_or(CommandModifier::None));
-    let modifier = self.peek().unwrap().clone();
-    self.consume_token(modifier.kind, "Expected a direct object modifier.")?;
-    self.consume_direct_object()?;
-    Ok(())
-  }
-
-  /// Parse the indirect object phrase, if any.
-
-  /// Consume the verb.
-  pub fn consume_verb(&mut self) -> Result<(), ParserError> {
-    if self.check_token(TokenKind::Verb) {
-      self.verb = self.peek().cloned();
-      self.advance()?;
-      Ok(())
-    } else {
-      Err(ParserError::NoVerb)
-    }
-  }
-
-  /// Consume the direct object.
-  pub fn consume_direct_object(&mut self) -> Result<(), ParserError> {
-    if self.check_token(TokenKind::DirectObject) {
-      let direct_object = self.peek().unwrap().clone();
-      self.advance()?;
-      Ok(())
-    } else {
-      Err(ParserError::CouldNotConsumeDirectObject(
-        self.peek().map(|t| t.lexeme.clone()).unwrap_or_default(),
-      ))
-    }
-  }
-
-  /// Consume the current token, throwing an error if it is not the expected kind.
-  pub fn consume_token(&mut self, expected: TokenKind, message: &str) -> Result<(), ParserError> {
-    let current_kind = self.peek().map(|t| t.kind).unwrap_or(TokenKind::EndOfInput);
-    if current_kind == expected {
-      self.advance()?;
-      Ok(())
-    } else {
-      Err(ParserError::UnexpectedToken(
-        expected,
-        current_kind,
-        message.to_string(),
-      ))
-    }
-  }
+  //  /// Consume a modifier.
+  //  pub fn consume_modifier(&mut self) -> Result<Token, ParserError> {
+  //    let modifier_kind = self.peek().map(|t| t.kind).unwrap_or(TokenKind::EndOfInput);
+  //    self.consume_token(modifier_kind, "Expected a modifier.")?;
+  //    self
+  //      .previous()
+  //      .map_or_else(|| Err(ParserError::UnknownError), |t| Ok(t))
+  //  }
+  //
+  //  /// Consume the direct object.
+  //  pub fn consume_direct_object(&mut self) -> Result<Entity, ParserError> {
+  //    if self.check_token(TokenKind::DirectObject) {
+  //      let direct_object = self.consume_token(TokenKind::DirectObject, "Expected a direct object.")?;
+  //      return Ok(direct_object);
+  //    }
+  //    Err(ParserError::CouldNotConsumeDirectObject(
+  //      self.peek().map(|t| t.lexeme.clone()).unwrap_or_default(),
+  //    ))
+  //  }
+  //
 
   //  /// Bind the magic word.
   //  pub fn bind_magic_word(&mut self) -> Result<(), ParserError> {
@@ -221,7 +207,7 @@ impl<'world> Parser<'world> {
   //        direct_object if direct_object.kind.is_direction() => {
   //          context.direct_object = Some(direct_object.try_into().unwrap());
   //        },
-  //        direct_object if direct_object.kind == TokenKind::Here => {
+  //        direct_object if direct_object.kind == TokenKind::Adverb(Adverb::Here) => {
   //          context.direct_object = Some(self.bind_here()?);
   //        },
   //        _ => {
@@ -239,16 +225,28 @@ impl<'world> Parser<'world> {
   //    Ok(())
   //  }
 
-  /// Consume a Here token.
-  pub fn consume_here(&mut self) -> Result<(), ParserError> {
-    let room = self.world.get_room_entity_containing_entity(self.actor)?;
-    self.world.insert(self.entity, (ParserProductKind::Here, room))?;
-    Ok(())
-  }
+  //  /// Consume a Here token.
+  //  pub fn consume_here(&mut self) -> Result<Entity, ParserError> {
+  //    let room = self
+  //      .world
+  //      .get_room_entity_containing_entity(self.actor)
+  //      .map_err(|_| ParserError::UnknownError)?;
+  //    Ok(room)
+  //  }
 
-  /// Check kind of current token.
-  pub fn check_token(&self, kind: TokenKind) -> bool {
-    self.peek().is_some() && self.peek().unwrap().kind == kind
+  /// Consume the current token, throwing an error if it is not the expected kind.
+  pub fn consume_token(&mut self, expected: TokenKind, message: &str) -> Result<(), ParserError> {
+    let current_kind = self.peek().map(|t| t.kind).unwrap_or_default();
+    if current_kind == expected {
+      self.advance()?;
+      Ok(())
+    } else {
+      Err(ParserError::UnexpectedToken(
+        expected,
+        current_kind,
+        message.to_string(),
+      ))
+    }
   }
 
   /// Advance to the next token.
@@ -259,34 +257,36 @@ impl<'world> Parser<'world> {
     Ok(())
   }
 
-  /// Assert that there is input to parse.
-  pub fn assert_non_empty(&self) -> Result<(), ParserError> {
-    if self.tokens.is_empty() {
-      return Err(ParserError::NoInput);
-    }
-    if self.is_at_end() {
-      return Err(ParserError::NoInput);
-    }
-    Ok(())
-  }
-
   /// Check if at end of input.
   pub fn is_at_end(&self) -> bool {
-    self.check_token(TokenKind::EndOfInput)
+    self.peek().is_none() || self.check_token_kind(TokenKind::EndOfInput)
   }
 
-  /// Peek at the current token.
-  pub fn peek(&self) -> Option<Token> {
-    self.tokens.get(self.current).cloned()
+  /// Check a token kind against a condition.
+  pub fn check_token_kind_condition<F>(&mut self, condition: F) -> bool
+  where
+    F: Fn(TokenKind) -> bool,
+  {
+    !self.is_at_end() && condition(self.peek().map(|t| t.kind).unwrap())
+  }
+
+  /// Check kind of current token.
+  pub fn check_token_kind(&self, kind: TokenKind) -> bool {
+    self.peek().map(|t| t.kind).unwrap_or_default() == kind
   }
 
   /// Get the previous token.
-  pub fn previous(&self) -> Option<Token> {
-    self.tokens.get(self.current - 1).cloned()
+  pub fn previous(&self) -> Option<&Token> {
+    self.tokens.get(self.current - 1)
+  }
+
+  /// Peek at the current token.
+  pub fn peek(&self) -> Option<&Token> {
+    self.tokens.get(self.current)
   }
 
   /// Peek at the next token.
-  pub fn peek_next(&self) -> Option<Token> {
-    self.tokens.get(self.current + 1).cloned()
+  pub fn peek_next(&self) -> Option<&Token> {
+    self.tokens.get(self.current + 1)
   }
 }

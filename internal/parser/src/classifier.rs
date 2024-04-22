@@ -1,4 +1,5 @@
 use crate::prelude::{ParserError, Token, TokenKind};
+use hornvale_core::prelude::*;
 
 #[cfg(test)]
 pub mod tests;
@@ -51,10 +52,12 @@ impl Classifier {
         self.process_presumed_direct_object(tokens, lni)?;
       }
     }
+    // If the last token could be either a preposition or an adverb, it's gotta
+    // be an adverb.
     if tokens.len() == 4 {
       // This might also be a sentence of the form <verb> <noun> <adverb> where
       // the adverb is also a direction (e.g. "turn radio up", "turn lamp on").
-      self.find_directional_adverbs(tokens)?;
+      self.find_third_and_final_position_adverbs(tokens)?;
     }
     Ok(())
   }
@@ -147,12 +150,13 @@ impl Classifier {
     for i in (0..=index).rev() {
       // This should always be a valid index.
       let lnk = tokens.get(i).map(|t| t.kind).unwrap();
+      println!("token: {:#?}", tokens[i]);
       if lnk.could_be_adjective() {
         tokens[i].kind = TokenKind::Adjective;
-      } else if lnk.is_conjunction() || lnk == TokenKind::Comma {
+      } else if lnk.is_conjunction() || lnk.is_comma() {
         // The word prior to this should be a noun, but we need to check for an
         // Oxford comma.
-        if i > 0 && tokens[i - 1].kind == TokenKind::Comma {
+        if i > 0 && tokens[i - 1].kind.is_comma() {
           self.process_presumed_noun(tokens, i - 2)?;
         } else {
           self.process_presumed_noun(tokens, i - 1)?;
@@ -167,14 +171,15 @@ impl Classifier {
     Ok(())
   }
 
-  /// Find directional adverbs.
-  pub fn find_directional_adverbs(&self, tokens: &mut [Token]) -> Result<(), ParserError> {
+  /// Find adverbs in the third and final position.
+  pub fn find_third_and_final_position_adverbs(&self, tokens: &mut [Token]) -> Result<(), ParserError> {
     if tokens.len() != 4 {
       // This only works for sentences of the form <verb> <noun> <adverb> <eoi>.
       return Ok(());
     }
     // This token should already have the information necessary to classify it.
-    if tokens[2].kind.is_direction() && tokens[2].kind.is_adverb() {
+    if tokens[2].kind.could_be_adverb() {
+      tokens[2].kind = TokenKind::Adverb(Adverb::try_from(tokens[2].lexeme.as_str()).unwrap());
       self.process_presumed_direct_object(tokens, 1)?;
     }
     Ok(())

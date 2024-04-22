@@ -26,7 +26,7 @@ fn test_classify_tokens04() {
     &[
       TokenKind::Verb,
       TokenKind::StringLiteral,
-      TokenKind::To,
+      TokenKind::Preposition(Preposition::To),
       TokenKind::Noun,
     ],
   );
@@ -40,7 +40,7 @@ fn test_classify_tokens05() {
     &[
       TokenKind::Verb,
       TokenKind::StringLiteral,
-      TokenKind::To,
+      TokenKind::Preposition(Preposition::To),
       TokenKind::Noun,
     ],
   );
@@ -54,8 +54,8 @@ fn test_classify_tokens06() {
     &[
       TokenKind::Verb,
       TokenKind::StringLiteral,
-      TokenKind::To,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::Preposition(Preposition::To),
+      TokenKind::Determiner(Determiner::NounPossessive),
       TokenKind::Noun,
     ],
   );
@@ -69,8 +69,8 @@ fn test_classify_tokens07() {
     &[
       TokenKind::Verb,
       TokenKind::StringLiteral,
-      TokenKind::To,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::Preposition(Preposition::To),
+      TokenKind::Determiner(Determiner::NounPossessive),
       TokenKind::Noun,
     ],
   );
@@ -83,7 +83,7 @@ fn test_classify_tokens08() {
     "say to farmer \"hello\"",
     &[
       TokenKind::Verb,
-      TokenKind::To,
+      TokenKind::Preposition(Preposition::To),
       TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
@@ -97,7 +97,7 @@ fn test_classify_tokens09() {
     "say to nice farmer \"hello\"",
     &[
       TokenKind::Verb,
-      TokenKind::To,
+      TokenKind::Preposition(Preposition::To),
       TokenKind::Adjective,
       TokenKind::Noun,
       TokenKind::StringLiteral,
@@ -112,9 +112,9 @@ fn test_classify_tokens10() {
     "say to lily-livered farmer's cow \"hello\"",
     &[
       TokenKind::Verb,
-      TokenKind::To,
+      TokenKind::Preposition(Preposition::To),
       TokenKind::Adjective,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::Determiner(Determiner::NounPossessive),
       TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
@@ -128,10 +128,10 @@ fn test_classify_tokens11() {
     "say to nice lily-livered farmer's cow \"hello\"",
     &[
       TokenKind::Verb,
-      TokenKind::To,
+      TokenKind::Preposition(Preposition::To),
       TokenKind::Adjective,
       TokenKind::Adjective,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::Determiner(Determiner::NounPossessive),
       TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
@@ -145,11 +145,11 @@ fn test_classify_tokens12() {
     "say to nice, lily-livered farmer's cow \"hello\"",
     &[
       TokenKind::Verb,
-      TokenKind::To,
+      TokenKind::Preposition(Preposition::To),
       TokenKind::Noun, // Should be adjective.
-      TokenKind::Comma,
+      TokenKind::Character(Character::Comma),
       TokenKind::Adjective,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::Determiner(Determiner::NounPossessive),
       TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
@@ -163,10 +163,10 @@ fn test_classify_tokens13() {
     "say to lily-livered nice farmer's cow \"hello\"",
     &[
       TokenKind::Verb,
-      TokenKind::To,
+      TokenKind::Preposition(Preposition::To),
       TokenKind::Adjective,
       TokenKind::Adjective,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::Determiner(Determiner::NounPossessive),
       TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
@@ -180,11 +180,11 @@ fn test_classify_tokens14() {
     "say to lily-livered, nice farmer's cow \"hello\"",
     &[
       TokenKind::Verb,
-      TokenKind::To,
+      TokenKind::Preposition(Preposition::To),
       TokenKind::Adjective,
-      TokenKind::Comma,
+      TokenKind::Character(Character::Comma),
       TokenKind::Adjective,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::Determiner(Determiner::NounPossessive),
       TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
@@ -198,8 +198,8 @@ fn test_classify_tokens15() {
     "say to farmer's cow 'hello'",
     &[
       TokenKind::Verb,
-      TokenKind::To,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::Preposition(Preposition::To),
+      TokenKind::Determiner(Determiner::NounPossessive),
       TokenKind::Noun,
       TokenKind::StringLiteral,
     ],
@@ -223,7 +223,7 @@ fn test_classify_tokens17() {
     &[
       TokenKind::Verb,
       TokenKind::DirectObject,
-      TokenKind::Comma,
+      TokenKind::Character(Character::Comma),
       TokenKind::StringLiteral,
     ],
   );
@@ -243,7 +243,7 @@ fn test_classify_tokens19() {
     &[
       TokenKind::Verb,
       TokenKind::Noun,
-      TokenKind::And,
+      TokenKind::Conjunction(Conjunction::And),
       TokenKind::DirectObject,
     ],
   );
@@ -257,7 +257,7 @@ fn test_classify_tokens20() {
     &[
       TokenKind::Verb,
       TokenKind::Noun,
-      TokenKind::Comma,
+      TokenKind::Character(Character::Comma),
       TokenKind::DirectObject,
     ],
   );

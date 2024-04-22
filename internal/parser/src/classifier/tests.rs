@@ -1,5 +1,6 @@
 use super::*;
-use crate::prelude::Scanner;
+use crate::prelude::*;
+use hornvale_core::prelude::*;
 use hornvale_test_utilities::prelude::*;
 
 pub mod classify_tokens_a;

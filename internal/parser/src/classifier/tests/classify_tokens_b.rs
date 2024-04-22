@@ -21,13 +21,20 @@ fn test_classify_tokens22() {
 #[test]
 fn test_classify_tokens23() {
   init();
-  test_string_classification("take all", &[TokenKind::Verb, TokenKind::All]);
+  test_string_classification("take all", &[TokenKind::Verb, TokenKind::Determiner(Determiner::All)]);
 }
 
 #[test]
 fn test_classify_tokens24() {
   init();
-  test_string_classification("take all here", &[TokenKind::Verb, TokenKind::All, TokenKind::Here]);
+  test_string_classification(
+    "take all here",
+    &[
+      TokenKind::Verb,
+      TokenKind::Determiner(Determiner::All),
+      TokenKind::Adverb(Adverb::Here),
+    ],
+  );
 }
 
 #[test]
@@ -39,31 +46,45 @@ fn test_classify_tokens25() {
 #[test]
 fn test_classify_tokens26() {
   init();
-  test_string_classification("go north", &[TokenKind::Verb, TokenKind::North]);
+  test_string_classification("go north", &[TokenKind::Verb, TokenKind::Direction(Direction::North)]);
 }
 
 #[test]
 fn test_classify_tokens27() {
   init();
-  test_string_classification("go to north", &[TokenKind::Verb, TokenKind::To, TokenKind::North]);
+  test_string_classification(
+    "go to north",
+    &[
+      TokenKind::Verb,
+      TokenKind::Preposition(Preposition::To),
+      TokenKind::Direction(Direction::North),
+    ],
+  );
 }
 
 #[test]
 fn test_classify_tokens28() {
   init();
-  test_string_classification("look around", &[TokenKind::Verb, TokenKind::Around]);
+  test_string_classification("look around", &[TokenKind::Verb, TokenKind::Adverb(Adverb::Around)]);
 }
 
 #[test]
 fn test_classify_tokens29() {
   init();
-  test_string_classification("look north", &[TokenKind::Verb, TokenKind::North]);
+  test_string_classification("look north", &[TokenKind::Verb, TokenKind::Direction(Direction::North)]);
 }
 
 #[test]
 fn test_classify_tokens30() {
   init();
-  test_string_classification("look at north", &[TokenKind::Verb, TokenKind::At, TokenKind::North]);
+  test_string_classification(
+    "look at north",
+    &[
+      TokenKind::Verb,
+      TokenKind::Preposition(Preposition::At),
+      TokenKind::Direction(Direction::North),
+    ],
+  );
 }
 
 #[test]
@@ -71,7 +92,11 @@ fn test_classify_tokens31() {
   init();
   test_string_classification(
     "look behind curtain",
-    &[TokenKind::Verb, TokenKind::Behind, TokenKind::Noun],
+    &[
+      TokenKind::Verb,
+      TokenKind::Preposition(Preposition::Behind),
+      TokenKind::Noun,
+    ],
   );
 }
 
@@ -80,14 +105,25 @@ fn test_classify_tokens32() {
   init();
   test_string_classification(
     "look under stove",
-    &[TokenKind::Verb, TokenKind::Under, TokenKind::Noun],
+    &[
+      TokenKind::Verb,
+      TokenKind::Preposition(Preposition::Under),
+      TokenKind::Noun,
+    ],
   );
 }
 
 #[test]
 fn test_classify_tokens33() {
   init();
-  test_string_classification("look in box", &[TokenKind::Verb, TokenKind::In, TokenKind::Noun]);
+  test_string_classification(
+    "look in box",
+    &[
+      TokenKind::Verb,
+      TokenKind::Preposition(Preposition::In),
+      TokenKind::Noun,
+    ],
+  );
 }
 
 #[test]
@@ -95,7 +131,11 @@ fn test_classify_tokens34() {
   init();
   test_string_classification(
     "turn lantern on",
-    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::On],
+    &[
+      TokenKind::Verb,
+      TokenKind::DirectObject,
+      TokenKind::Preposition(Preposition::On),
+    ],
   );
 }
 
@@ -104,14 +144,21 @@ fn test_classify_tokens35() {
   init();
   test_string_classification(
     "turn radio up",
-    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::Up],
+    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::Adverb(Adverb::Up)],
   );
 }
 
 #[test]
 fn test_classify_tokens36() {
   init();
-  test_string_classification("turn on lantern", &[TokenKind::Verb, TokenKind::On, TokenKind::Noun]);
+  test_string_classification(
+    "turn on lantern",
+    &[
+      TokenKind::Verb,
+      TokenKind::Preposition(Preposition::On),
+      TokenKind::Noun,
+    ],
+  );
 }
 
 #[test]
@@ -119,14 +166,14 @@ fn test_classify_tokens37() {
   init();
   test_string_classification(
     "turn up radio",
-    &[TokenKind::Verb, TokenKind::Up, TokenKind::DirectObject],
+    &[TokenKind::Verb, TokenKind::Adverb(Adverb::Up), TokenKind::DirectObject],
   );
 }
 
 #[test]
 fn test_classify_tokens38() {
   init();
-  test_string_classification("attack him", &[TokenKind::Verb, TokenKind::Him]);
+  test_string_classification("attack him", &[TokenKind::Verb, TokenKind::Pronoun(Pronoun::Him)]);
 }
 
 #[test]

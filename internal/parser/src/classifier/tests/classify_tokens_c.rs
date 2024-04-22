@@ -5,7 +5,11 @@ fn test_classify_tokens41() {
   init();
   test_string_classification(
     "take this sword",
-    &[TokenKind::Verb, TokenKind::This, TokenKind::DirectObject],
+    &[
+      TokenKind::Verb,
+      TokenKind::Determiner(Determiner::This),
+      TokenKind::DirectObject,
+    ],
   );
 }
 
@@ -14,7 +18,11 @@ fn test_classify_tokens42() {
   init();
   test_string_classification(
     "take each sword",
-    &[TokenKind::Verb, TokenKind::Each, TokenKind::DirectObject],
+    &[
+      TokenKind::Verb,
+      TokenKind::Determiner(Determiner::Each),
+      TokenKind::DirectObject,
+    ],
   );
 }
 
@@ -23,7 +31,11 @@ fn test_classify_tokens43() {
   init();
   test_string_classification(
     "take every sword",
-    &[TokenKind::Verb, TokenKind::Every, TokenKind::DirectObject],
+    &[
+      TokenKind::Verb,
+      TokenKind::Determiner(Determiner::Every),
+      TokenKind::DirectObject,
+    ],
   );
 }
 
@@ -41,7 +53,7 @@ fn test_classify_tokens45() {
     &[
       TokenKind::Verb,
       TokenKind::DirectObject,
-      TokenKind::With,
+      TokenKind::Preposition(Preposition::With),
       TokenKind::Noun,
     ],
   );
@@ -52,7 +64,12 @@ fn test_classify_tokens46() {
   init();
   test_string_classification(
     "give money to elf",
-    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::To, TokenKind::Noun],
+    &[
+      TokenKind::Verb,
+      TokenKind::DirectObject,
+      TokenKind::Preposition(Preposition::To),
+      TokenKind::Noun,
+    ],
   );
 }
 
@@ -65,7 +82,7 @@ fn test_classify_tokens47() {
       TokenKind::Verb,
       TokenKind::Adjective,
       TokenKind::Noun,
-      TokenKind::And,
+      TokenKind::Conjunction(Conjunction::And),
       TokenKind::Adjective,
       TokenKind::DirectObject,
     ],
@@ -81,7 +98,7 @@ fn test_classify_tokens48() {
       TokenKind::Verb,
       TokenKind::Adjective,
       TokenKind::Noun,
-      TokenKind::Comma,
+      TokenKind::Character(Character::Comma),
       TokenKind::Adjective,
       TokenKind::DirectObject,
     ],
@@ -97,11 +114,11 @@ fn test_classify_tokens49() {
       TokenKind::Verb,
       TokenKind::Adjective,
       TokenKind::Noun,
-      TokenKind::Comma,
+      TokenKind::Character(Character::Comma),
       TokenKind::Adjective,
       TokenKind::Noun,
-      TokenKind::Comma,
-      TokenKind::And,
+      TokenKind::Character(Character::Comma),
+      TokenKind::Conjunction(Conjunction::And),
       TokenKind::Adjective,
       TokenKind::DirectObject,
     ],
@@ -113,7 +130,12 @@ fn test_classify_tokens50() {
   init();
   test_string_classification(
     "look at red-eyed goblin",
-    &[TokenKind::Verb, TokenKind::At, TokenKind::Adjective, TokenKind::Noun],
+    &[
+      TokenKind::Verb,
+      TokenKind::Preposition(Preposition::At),
+      TokenKind::Adjective,
+      TokenKind::Noun,
+    ],
   );
 }
 
@@ -124,8 +146,8 @@ fn test_classify_tokens51() {
     "look at goblin's club",
     &[
       TokenKind::Verb,
-      TokenKind::At,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::Preposition(Preposition::At),
+      TokenKind::Determiner(Determiner::NounPossessive),
       TokenKind::Noun,
     ],
   );
@@ -138,9 +160,9 @@ fn test_classify_tokens52() {
     "look at red-eyed goblin's club",
     &[
       TokenKind::Verb,
-      TokenKind::At,
+      TokenKind::Preposition(Preposition::At),
       TokenKind::Adjective,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::Determiner(Determiner::NounPossessive),
       TokenKind::Noun,
     ],
   );
@@ -157,7 +179,12 @@ fn test_classify_tokens54() {
   init();
   test_string_classification(
     "read print on kettle",
-    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::On, TokenKind::Noun],
+    &[
+      TokenKind::Verb,
+      TokenKind::DirectObject,
+      TokenKind::Preposition(Preposition::On),
+      TokenKind::Noun,
+    ],
   );
 }
 
@@ -166,7 +193,12 @@ fn test_classify_tokens55() {
   init();
   test_string_classification(
     "read underside of kettle",
-    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::Of, TokenKind::Noun],
+    &[
+      TokenKind::Verb,
+      TokenKind::DirectObject,
+      TokenKind::Preposition(Preposition::Of),
+      TokenKind::Noun,
+    ],
   );
 }
 
@@ -178,9 +210,9 @@ fn test_classify_tokens56() {
     &[
       TokenKind::Verb,
       TokenKind::DirectObject,
-      TokenKind::On,
+      TokenKind::Preposition(Preposition::On),
       TokenKind::Noun,
-      TokenKind::Of,
+      TokenKind::Preposition(Preposition::Of),
       TokenKind::Noun,
     ],
   );
@@ -194,11 +226,11 @@ fn test_classify_tokens57() {
     &[
       TokenKind::Verb,
       TokenKind::DirectObject,
-      TokenKind::On,
+      TokenKind::Preposition(Preposition::On),
       TokenKind::Noun,
-      TokenKind::Of,
+      TokenKind::Preposition(Preposition::Of),
       TokenKind::Noun,
-      TokenKind::On,
+      TokenKind::Preposition(Preposition::On),
       TokenKind::Noun,
     ],
   );
@@ -213,13 +245,13 @@ fn test_classify_tokens58() {
       TokenKind::Verb,
       TokenKind::Adjective,
       TokenKind::DirectObject,
-      TokenKind::On,
+      TokenKind::Preposition(Preposition::On),
       TokenKind::Adjective,
       TokenKind::Noun,
-      TokenKind::Of,
+      TokenKind::Preposition(Preposition::Of),
       TokenKind::Adjective,
       TokenKind::Noun,
-      TokenKind::On,
+      TokenKind::Preposition(Preposition::On),
       TokenKind::Adjective,
       TokenKind::Noun,
     ],
@@ -231,7 +263,12 @@ fn test_classify_tokens59() {
   init();
   test_string_classification(
     "remember goblin as franklin",
-    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::As, TokenKind::Noun],
+    &[
+      TokenKind::Verb,
+      TokenKind::DirectObject,
+      TokenKind::Preposition(Preposition::As),
+      TokenKind::Noun,
+    ],
   );
 }
 
@@ -243,10 +280,10 @@ fn test_classify_tokens60() {
     &[
       TokenKind::Verb,
       TokenKind::Adjective,
-      TokenKind::Comma,
+      TokenKind::Character(Character::Comma),
       TokenKind::Adjective,
       TokenKind::DirectObject,
-      TokenKind::As,
+      TokenKind::Preposition(Preposition::As),
       TokenKind::Noun,
     ],
   );

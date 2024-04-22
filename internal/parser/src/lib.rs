@@ -17,8 +17,6 @@
 //!   we split the input into individual commands at the input stage, prior to
 //!   parsing.
 
-/// A case for the command classifier.
-pub mod case;
 /// A classifier that can be used to determine the type of a word.
 pub mod classifier;
 /// An error type.
@@ -35,12 +33,15 @@ pub mod world;
 /// The prelude.
 pub mod prelude {
   pub use crate::classifier::Classifier;
-  pub use crate::component::{
-    is_parser_product::IsParserProduct, magic_word_token::MagicWordToken, parser_product_kind::ParserProductKind,
-    question_token::QuestionToken, verb_token::VerbToken,
-  };
   pub use crate::error::ParserError;
   pub use crate::parser::Parser;
   pub use crate::scanner::Scanner;
-  pub use crate::token::{kind::TokenKind, Token};
+  pub use crate::token::{
+    kind::{
+      article::Article, boolean::Boolean, character::Character, conjunction::Conjunction, determiner::Determiner,
+      magic_word::MagicWord, pronoun::Pronoun, question_word::QuestionWord,
+      undetermined_modifier::UndeterminedModifier, yes_no::YesNo, TokenKind,
+    },
+    Token,
+  };
 }

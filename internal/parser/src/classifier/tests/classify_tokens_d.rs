@@ -3,7 +3,14 @@ use super::*;
 #[test]
 fn test_classify_tokens61() {
   init();
-  test_string_classification("steal from elf", &[TokenKind::Verb, TokenKind::From, TokenKind::Noun]);
+  test_string_classification(
+    "steal from elf",
+    &[
+      TokenKind::Verb,
+      TokenKind::Preposition(Preposition::From),
+      TokenKind::Noun,
+    ],
+  );
 }
 
 #[test]
@@ -14,8 +21,8 @@ fn test_classify_tokens62() {
     &[
       TokenKind::Verb,
       TokenKind::DirectObject,
-      TokenKind::From,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::Preposition(Preposition::From),
+      TokenKind::Determiner(Determiner::NounPossessive),
       TokenKind::Noun,
     ],
   );
@@ -57,7 +64,7 @@ fn test_classify_tokens65() {
       TokenKind::Verb,
       TokenKind::Adjective,
       TokenKind::DirectObject,
-      TokenKind::To,
+      TokenKind::Preposition(Preposition::To),
       TokenKind::Noun,
     ],
   );
@@ -72,8 +79,8 @@ fn test_classify_tokens66() {
       TokenKind::Verb,
       TokenKind::Adjective,
       TokenKind::DirectObject,
-      TokenKind::Into,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::Preposition(Preposition::Into),
+      TokenKind::Determiner(Determiner::NounPossessive),
       TokenKind::Noun,
     ],
   );
@@ -86,10 +93,10 @@ fn test_classify_tokens67() {
     "look at farmer's neighbor's wife's cat",
     &[
       TokenKind::Verb,
-      TokenKind::At,
-      TokenKind::PossessiveDeterminer,
-      TokenKind::PossessiveDeterminer,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::Preposition(Preposition::At),
+      TokenKind::Determiner(Determiner::NounPossessive),
+      TokenKind::Determiner(Determiner::NounPossessive),
+      TokenKind::Determiner(Determiner::NounPossessive),
       TokenKind::Noun,
     ],
   );
@@ -98,7 +105,7 @@ fn test_classify_tokens67() {
 #[test]
 fn test_classify_tokens68() {
   init();
-  test_string_classification("!test", &[TokenKind::BangWord]);
+  test_string_classification("!test", &[TokenKind::MagicWord(MagicWord::BangWord)]);
 }
 
 #[test]
@@ -108,10 +115,10 @@ fn test_classify_tokens69() {
     "turn to page 569 in the book",
     &[
       TokenKind::Verb,
-      TokenKind::To,
+      TokenKind::Preposition(Preposition::To),
       TokenKind::Word,
       TokenKind::NumberLiteral,
-      TokenKind::In,
+      TokenKind::Preposition(Preposition::In),
       TokenKind::Noun,
     ],
   );
@@ -125,7 +132,7 @@ fn test_classify_tokens70() {
     &[
       TokenKind::Verb,
       TokenKind::DirectObject,
-      TokenKind::With,
+      TokenKind::Preposition(Preposition::With),
       TokenKind::Adjective,
       TokenKind::Noun,
     ],
@@ -140,10 +147,10 @@ fn test_classify_tokens71() {
     &[
       TokenKind::Verb,
       TokenKind::DirectObject,
-      TokenKind::With,
+      TokenKind::Preposition(Preposition::With),
       TokenKind::Adjective,
       TokenKind::Noun,
-      TokenKind::And,
+      TokenKind::Conjunction(Conjunction::And),
       TokenKind::Noun,
     ],
   );
@@ -157,13 +164,13 @@ fn test_classify_tokens72() {
     &[
       TokenKind::Verb,
       TokenKind::DirectObject,
-      TokenKind::With,
+      TokenKind::Preposition(Preposition::With),
       TokenKind::Adjective,
       TokenKind::Noun,
-      TokenKind::Comma,
+      TokenKind::Character(Character::Comma),
       TokenKind::Noun,
-      TokenKind::Comma,
-      TokenKind::And,
+      TokenKind::Character(Character::Comma),
+      TokenKind::Conjunction(Conjunction::And),
       TokenKind::Noun,
     ],
   );
@@ -177,18 +184,18 @@ fn test_classify_tokens73() {
     &[
       TokenKind::Verb,
       TokenKind::DirectObject,
-      TokenKind::With,
+      TokenKind::Preposition(Preposition::With),
       TokenKind::Adjective,
       TokenKind::Noun,
-      TokenKind::Comma,
+      TokenKind::Character(Character::Comma),
       TokenKind::Adjective,
       TokenKind::Adjective,
       TokenKind::Noun,
-      TokenKind::Comma,
-      TokenKind::And,
+      TokenKind::Character(Character::Comma),
+      TokenKind::Conjunction(Conjunction::And),
       TokenKind::Noun,
-      TokenKind::Comma,
-      TokenKind::And,
+      TokenKind::Character(Character::Comma),
+      TokenKind::Conjunction(Conjunction::And),
       TokenKind::Noun,
     ],
   );

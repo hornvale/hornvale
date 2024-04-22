@@ -1,4 +1,8 @@
-use crate::prelude::{ParserError, Token, TokenKind};
+use crate::prelude::*;
+use crate::token::kind::character::Character;
+
+#[cfg(test)]
+pub mod tests;
 
 /// A simple scanner for breaking input into tokens.
 #[derive(Clone, Debug)]
@@ -52,9 +56,7 @@ impl Scanner {
       lexeme: "".to_string(),
     });
     // Filter out articles.
-    self
-      .tokens
-      .retain(|token| token.kind != TokenKind::A && token.kind != TokenKind::The);
+    self.tokens.retain(|token| !token.kind.is_article());
     // Optimization: take the vector instead of cloning it.
     Ok(self.tokens.clone())
   }
@@ -67,97 +69,46 @@ impl Scanner {
       return Ok(self.make_token(TokenKind::EndOfInput));
     }
     let character = self.advance()?;
+    use Character::*;
+    use MagicWord::*;
     let result = match character {
-      ',' => self.make_token(TokenKind::Comma),
-      '.' => self.make_token(TokenKind::Period),
-      ';' => self.make_token(TokenKind::Semicolon),
-      '!' => self.match_magic_word(TokenKind::BangWord, TokenKind::Bang)?,
-      '?' => self.match_magic_word(TokenKind::QuestionWord, TokenKind::Question)?,
-      '@' => self.match_magic_word(TokenKind::AtSignWord, TokenKind::AtSign)?,
-      '#' => self.match_magic_word(TokenKind::HashWord, TokenKind::Hash)?,
-      '$' => self.match_magic_word(TokenKind::DollarWord, TokenKind::Dollar)?,
-      '%' => self.match_magic_word(TokenKind::PercentWord, TokenKind::Percent)?,
-      '^' => self.match_magic_word(TokenKind::CaretWord, TokenKind::Caret)?,
-      '&' => self.match_magic_word(TokenKind::AmpersandWord, TokenKind::Ampersand)?,
-      '*' => self.match_magic_word(TokenKind::AsteriskWord, TokenKind::Asterisk)?,
-      '/' => self.match_magic_word(TokenKind::ForwardSlashWord, TokenKind::ForwardSlash)?,
-      '\\' => self.match_magic_word(TokenKind::BackSlashWord, TokenKind::BackSlash)?,
-      '(' => self.match_magic_word(TokenKind::LeftParenthesisWord, TokenKind::LeftParenthesis)?,
-      ')' => self.match_magic_word(TokenKind::RightParenthesisWord, TokenKind::RightParenthesis)?,
-      '[' => self.match_magic_word(TokenKind::LeftSquareBracketWord, TokenKind::LeftSquareBracket)?,
-      ']' => self.match_magic_word(TokenKind::RightSquareBracketWord, TokenKind::RightSquareBracket)?,
-      '{' => self.match_magic_word(TokenKind::LeftCurlyBraceWord, TokenKind::LeftCurlyBrace)?,
-      '}' => self.match_magic_word(TokenKind::RightCurlyBraceWord, TokenKind::RightCurlyBrace)?,
-      '<' => self.match_magic_word(TokenKind::LessThanWord, TokenKind::LessThan)?,
-      '>' => self.match_magic_word(TokenKind::GreaterThanWord, TokenKind::GreaterThan)?,
-      '=' => self.match_magic_word(TokenKind::EqualsWord, TokenKind::Equals)?,
-      '+' => self.match_magic_word(TokenKind::PlusWord, TokenKind::Plus)?,
-      '-' => self.match_magic_word(TokenKind::MinusWord, TokenKind::Minus)?,
-      '|' => self.match_magic_word(TokenKind::PipeWord, TokenKind::Pipe)?,
-      ':' => self.match_magic_word(TokenKind::ColonWord, TokenKind::Colon)?,
-      '_' => self.match_magic_word(TokenKind::UnderscoreWord, TokenKind::Underscore)?,
-      '~' => self.match_magic_word(TokenKind::TildeWord, TokenKind::Tilde)?,
-      '`' => self.make_token(TokenKind::Backtick),
+      ',' => self.make_character_token(Comma),
+      '.' => self.make_character_token(Period),
+      ';' => self.make_character_token(Semicolon),
+      '`' => self.make_character_token(Backtick),
+      '!' => self.match_magic_word(BangWord, Bang)?,
+      '?' => self.match_magic_word(QuestionWord, Question)?,
+      '@' => self.match_magic_word(AtSignWord, AtSign)?,
+      '#' => self.match_magic_word(HashWord, Hash)?,
+      '$' => self.match_magic_word(DollarWord, Dollar)?,
+      '%' => self.match_magic_word(PercentWord, Percent)?,
+      '^' => self.match_magic_word(CaretWord, Caret)?,
+      '&' => self.match_magic_word(AmpersandWord, Ampersand)?,
+      '*' => self.match_magic_word(AsteriskWord, Asterisk)?,
+      '/' => self.match_magic_word(ForwardSlashWord, ForwardSlash)?,
+      '\\' => self.match_magic_word(BackSlashWord, BackSlash)?,
+      '(' => self.match_magic_word(LeftParenthesisWord, LeftParenthesis)?,
+      ')' => self.match_magic_word(RightParenthesisWord, RightParenthesis)?,
+      '[' => self.match_magic_word(LeftSquareBracketWord, LeftSquareBracket)?,
+      ']' => self.match_magic_word(RightSquareBracketWord, RightSquareBracket)?,
+      '{' => self.match_magic_word(LeftCurlyBraceWord, LeftCurlyBrace)?,
+      '}' => self.match_magic_word(RightCurlyBraceWord, RightCurlyBrace)?,
+      '<' => self.match_magic_word(LessThanWord, LessThan)?,
+      '>' => self.match_magic_word(GreaterThanWord, GreaterThan)?,
+      '=' => self.match_magic_word(EqualsWord, Equals)?,
+      '+' => self.match_magic_word(PlusWord, Plus)?,
+      '-' => self.match_magic_word(MinusWord, Minus)?,
+      '|' => self.match_magic_word(PipeWord, Pipe)?,
+      ':' => self.match_magic_word(ColonWord, Colon)?,
+      '_' => self.match_magic_word(UnderscoreWord, Underscore)?,
+      '~' => self.match_magic_word(TildeWord, Tilde)?,
       '"' | '\'' => self.match_string(character)?,
       char if char.is_ascii_digit() => self.match_number_or_ordinal()?,
-      char if self.is_alpha(char) => self.match_word()?,
+      char if char.is_ascii_alphabetic() => self.match_word()?,
       _ => return Err(ParserError::UnexpectedCharacter(character)),
     };
     Ok(result)
   }
-
-  // /// An exclamation point, e.g. in `!`.
-  // BangWord,
-  // /// A question mark, e.g. in `?`.
-  // QuestionWord,
-  // /// At sign, e.g. in `@`.
-  // AtSignWord,
-  // /// Hash sign, e.g. in `#`.
-  // HashWord,
-  // /// Dollar sign, e.g. in `$`.
-  // DollarWord,
-  // /// Percent sign, e.g. in `%`.
-  // PercentWord,
-  // /// Caret, e.g. in `^`.
-  // CaretWord,
-  // /// Ampersand, e.g. in `&`.
-  // AmpersandWord,
-  // /// Asterisk, e.g. in `*`.
-  // AsteriskWord,
-  // /// Forward slash, e.g. in `/`.
-  // ForwardSlashWord,
-  // /// Backward slash, e.g. in `\`.
-  // BackSlashWord,
-  // /// Left parenthesis, e.g. in `(`.
-  // LeftParenthesisWord,
-  // /// Right parenthesis, e.g. in `)`.
-  // RightParenthesisWord,
-  // /// Left square bracket, e.g. in `[`.
-  // LeftSquareBracketWord,
-  // /// Right square bracket, e.g. in `]`.
-  // RightSquareBracketWord,
-  // /// Left curly brace, e.g. in `{`.
-  // LeftCurlyBraceWord,
-  // /// Right curly brace, e.g. in `}`.
-  // RightCurlyBraceWord,
-  // /// Less than sign, e.g. in `<`.
-  // LessThanWord,
-  // /// Greater than sign, e.g. in `>`.
-  // GreaterThanWord,
-  // /// Equals sign, e.g. in `=`.
-  // EqualsWord,
-  // /// Plus sign, e.g. in `+`.
-  // PlusWord,
-  // /// Minus sign, e.g. in `-`.
-  // MinusWord,
-  // /// Pipe, e.g. in `|`.
-  // PipeWord,
-  // /// Colon, e.g. in `:`.
-  // ColonWord,
-  // /// Underscore, e.g. in `_`.
-  // UnderscoreWord,
-  // /// Tilde, e.g. in `~`.
-  // TildeWord,
 
   /// Advance one character through the source and return it.
   pub fn advance(&mut self) -> Result<char, ParserError> {
@@ -168,6 +119,15 @@ impl Scanner {
       .chars()
       .nth(position)
       .ok_or(ParserError::CharacterOutOfBounds)
+  }
+
+  /// Create a token based on a single-character token type.
+  pub fn make_character_token(&self, kind: Character) -> Token {
+    let lexeme = self.get_lexeme();
+    Token {
+      kind: TokenKind::Character(kind),
+      lexeme,
+    }
   }
 
   /// Create a token based on a token type.
@@ -185,9 +145,9 @@ impl Scanner {
     }
     // We can encounter either a letter or whitespace after a number, so we
     // need to check for both.
-    if self.is_alpha(self.peek()) {
+    if self.peek().is_ascii_alphabetic() {
       // If it's a letter, assume it's an ordinal, and just keep going.
-      while self.is_alpha(self.peek()) {
+      while self.peek().is_ascii_alphabetic() {
         self.advance()?;
       }
       let result = self.make_token(TokenKind::Ordinal);
@@ -217,14 +177,14 @@ impl Scanner {
   }
 
   /// Try to match and create a word beginning with a special character.
-  pub fn match_magic_word(&mut self, kind: TokenKind, fallback: TokenKind) -> Result<Token, ParserError> {
+  pub fn match_magic_word(&mut self, kind: MagicWord, fallback: Character) -> Result<Token, ParserError> {
     if self.peek() == ' ' {
-      return Ok(self.make_token(fallback));
+      return Ok(self.make_token(TokenKind::Character(fallback)));
     }
-    while self.is_alpha_numeric(self.peek()) {
+    while self.peek().is_ascii_alphanumeric() {
       self.advance()?;
     }
-    let result = self.make_token(kind);
+    let result = self.make_token(TokenKind::MagicWord(kind));
     Ok(result)
   }
 
@@ -236,7 +196,7 @@ impl Scanner {
     let value = self.get_lexeme();
     let kind = match TokenKind::try_from(value.as_str()) {
       Ok(kind) => kind,
-      Err(_) if value.find('\'').is_some() => TokenKind::PossessiveDeterminer,
+      Err(_) if value.find('\'').is_some() => TokenKind::Determiner(Determiner::NounPossessive),
       Err(_) if value.find('-').is_some() => TokenKind::Adjective,
       Err(_) => TokenKind::Word,
     };
@@ -249,17 +209,7 @@ impl Scanner {
   /// We allow compound adjectives and possessives, so we need to allow for
   /// hyphens and apostrophes.
   pub fn is_word_char(&self, char: char) -> bool {
-    self.is_alpha(char) || char == '-' || char == '\''
-  }
-
-  /// Is the character a word character?
-  pub fn is_alpha_numeric(&self, char: char) -> bool {
-    char.is_ascii_digit() || self.is_alpha(char)
-  }
-
-  /// Is the character a letter?
-  pub fn is_alpha(&self, char: char) -> bool {
-    char.is_ascii_lowercase() || char.is_ascii_uppercase()
+    char.is_alphabetic() || char == '-' || char == '\''
   }
 
   /// Get the lexeme from the start and current position.
@@ -270,6 +220,14 @@ impl Scanner {
   /// Are we at the end of the input?
   pub fn is_at_end(&self) -> bool {
     self.current >= self.input.len()
+  }
+
+  /// Skip all the whitespace!
+  pub fn skip_whitespace(&mut self) -> Result<(), ParserError> {
+    while self.peek().is_ascii_whitespace() {
+      self.advance()?;
+    }
+    Ok(())
   }
 
   /// Peek at the current character, but don't advance.
@@ -288,204 +246,5 @@ impl Scanner {
       true => '\0',
       false => self.input.chars().nth(self.current + offset).unwrap(),
     }
-  }
-
-  /// Skip all the whitespace!
-  pub fn skip_whitespace(&mut self) -> Result<(), ParserError> {
-    loop {
-      match self.peek() {
-        '\n' | ' ' | '\r' | '\t' => {
-          self.advance()?;
-        },
-        _ => break Ok(()),
-      }
-    }
-  }
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn test_scan_tokens() {
-    let input = "take sword and shield";
-    let mut scanner = Scanner::new(input);
-    let tokens = scanner.scan_tokens();
-    let expected = vec![
-      Token {
-        kind: TokenKind::Word,
-        lexeme: "take".to_string(),
-      },
-      Token {
-        kind: TokenKind::Word,
-        lexeme: "sword".to_string(),
-      },
-      Token {
-        kind: TokenKind::And,
-        lexeme: "and".to_string(),
-      },
-      Token {
-        kind: TokenKind::Word,
-        lexeme: "shield".to_string(),
-      },
-      Token {
-        kind: TokenKind::EndOfInput,
-        lexeme: "".to_string(),
-      },
-    ];
-    assert_eq!(tokens, Ok(expected));
-  }
-
-  #[test]
-  fn test_scan_tokens_with_special_characters() {
-    let input = "take sword & shield";
-    let mut scanner = Scanner::new(input);
-    let tokens = scanner.scan_tokens();
-    let expected = vec![
-      Token {
-        kind: TokenKind::Word,
-        lexeme: "take".to_string(),
-      },
-      Token {
-        kind: TokenKind::Word,
-        lexeme: "sword".to_string(),
-      },
-      Token {
-        kind: TokenKind::Ampersand,
-        lexeme: "&".to_string(),
-      },
-      Token {
-        kind: TokenKind::Word,
-        lexeme: "shield".to_string(),
-      },
-      Token {
-        kind: TokenKind::EndOfInput,
-        lexeme: "".to_string(),
-      },
-    ];
-    assert_eq!(tokens, Ok(expected));
-  }
-
-  #[test]
-  fn test_scan_tokens_with_special_characters2() {
-    let input = "!take #sword";
-    let mut scanner = Scanner::new(input);
-    let tokens = scanner.scan_tokens();
-    let expected = vec![
-      Token {
-        kind: TokenKind::BangWord,
-        lexeme: "!take".to_string(),
-      },
-      Token {
-        kind: TokenKind::HashWord,
-        lexeme: "#sword".to_string(),
-      },
-      Token {
-        kind: TokenKind::EndOfInput,
-        lexeme: "".to_string(),
-      },
-    ];
-    assert_eq!(tokens, Ok(expected));
-  }
-
-  #[test]
-  fn test_scan_tokens_filter_articles() {
-    let input = "take a sword and the shield";
-    let mut scanner = Scanner::new(input);
-    let tokens = scanner.scan_tokens();
-    let expected = vec![
-      Token {
-        kind: TokenKind::Word,
-        lexeme: "take".to_string(),
-      },
-      Token {
-        kind: TokenKind::Word,
-        lexeme: "sword".to_string(),
-      },
-      Token {
-        kind: TokenKind::And,
-        lexeme: "and".to_string(),
-      },
-      Token {
-        kind: TokenKind::Word,
-        lexeme: "shield".to_string(),
-      },
-      Token {
-        kind: TokenKind::EndOfInput,
-        lexeme: "".to_string(),
-      },
-    ];
-    assert_eq!(tokens, Ok(expected));
-  }
-
-  #[test]
-  fn test_scan_token() {
-    let input = "take sword";
-    let mut scanner = Scanner::new(input);
-    let token = scanner.scan_token().unwrap();
-    let expected = Token {
-      kind: TokenKind::Word,
-      lexeme: "take".to_string(),
-    };
-    assert_eq!(token, expected);
-  }
-
-  #[test]
-  fn test_advance() {
-    let input = "take sword";
-    let mut scanner = Scanner::new(input);
-    let character = scanner.advance();
-    assert_eq!(character, Ok('t'));
-  }
-
-  #[test]
-  fn test_is_at_end() {
-    let input = "take sword";
-    let scanner = Scanner::new(input);
-    assert_eq!(scanner.is_at_end(), false);
-  }
-
-  #[test]
-  fn test_peek() {
-    let input = "take sword";
-    let scanner = Scanner::new(input);
-    assert_eq!(scanner.peek(), 't');
-  }
-
-  #[test]
-  fn test_peek_next() {
-    let input = "take sword";
-    let scanner = Scanner::new(input);
-    assert_eq!(scanner.peek_next(), 'a');
-  }
-
-  #[test]
-  fn test_peek_at_offset() {
-    let input = "take sword";
-    let scanner = Scanner::new(input);
-    assert_eq!(scanner.peek_at_offset(1), 'a');
-  }
-
-  #[test]
-  fn test_skip_whitespace() {
-    let input = "  take sword";
-    let mut scanner = Scanner::new(input);
-    scanner.skip_whitespace().unwrap();
-    assert_eq!(scanner.peek(), 't');
-  }
-
-  #[test]
-  fn test_make_token() {
-    let input = "take sword";
-    let mut scanner = Scanner::new(input);
-    scanner.start = 0;
-    scanner.current = 4;
-    let token = scanner.make_token(TokenKind::Word);
-    let expected = Token {
-      kind: TokenKind::Word,
-      lexeme: "take".to_string(),
-    };
-    assert_eq!(token, expected);
   }
 }
