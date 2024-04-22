@@ -6,7 +6,6 @@ impl Neg for Region {
 
   fn neg(self) -> Self::Output {
     Region {
-      w: -self.w,
       x: -self.x,
       y: -self.y,
       z: -self.z,
@@ -22,15 +21,7 @@ mod tests {
   #[test]
   fn test_neg() {
     init();
-    let region = Region { w: 0, x: 1, y: 2, z: 3 };
-    assert_eq!(
-      -region,
-      Region {
-        w: 0,
-        x: -1,
-        y: -2,
-        z: -3
-      }
-    );
+    let region = Region { x: 1, y: 2, z: 3 };
+    assert_eq!(-region, Region { x: -1, y: -2, z: -3 });
   }
 }
