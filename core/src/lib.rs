@@ -36,12 +36,5 @@ pub mod prelude {
   pub use super::region::{components::is_a_region::IsARegion, Region};
   pub use super::room::{components::is_a_room::IsARoom, Room};
   pub use super::vector4d::Vector4D;
-  pub use super::world::traits::{
-    get_region_and_room_containing_entity::GetRegionAndRoomContainingEntity, get_room_entity::GetRoomEntity,
-    get_room_entity_containing_entity::GetRoomEntityContainingEntity,
-    get_room_name_and_description::GetRoomNameAndDescription, get_room_passage_directions::GetRoomPassageDirections,
-    get_room_passage_entities::GetRoomPassageEntities,
-    get_room_passage_entity_in_direction::GetRoomPassageEntityInDirection,
-    get_room_region_and_room::GetRoomRegionAndRoom, is_quit_flag_set::IsQuitFlagSet,
-  };
+  pub use super::world::traits::is_quit_flag_set::IsQuitFlagSet;
 }
