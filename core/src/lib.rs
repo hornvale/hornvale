@@ -33,7 +33,7 @@ pub mod prelude {
     direction::CorridorDirection,
     kind::CorridorKind,
   };
-  pub use super::direction::{traits::descriptors::DirectionDescriptors, Direction};
+  pub use super::direction::Direction;
   pub use super::passage::{
     components::is_a_passage::IsAPassage, condition::PassageCondition, direction::PassageDirection, kind::PassageKind,
   };
