@@ -1,3 +1,5 @@
+use crate::prelude::CommandError;
+use hecs::{Entity, World};
 use hornvale_core::prelude::*;
 use std::collections::HashMap;
 
@@ -48,5 +50,20 @@ impl CommandRegistry {
   /// Get the syntaxes of a command in the registry.
   pub fn get_syntaxes(&self, name: &str) -> Option<Vec<CommandSyntax>> {
     self.commands.get(name).map(|entry| entry.keys().cloned().collect())
+  }
+
+  /// Execute a command from the registry.
+  pub fn execute(
+    &self,
+    name: &str,
+    syntax: &CommandSyntax,
+    world: &mut World,
+    context: &Entity,
+  ) -> Result<(), CommandError> {
+    if let Some(&command) = self.get(name, syntax) {
+      Ok(command(world, context)?)
+    } else {
+      Err(CommandError::UnknownCommand(name.to_string()))
+    }
   }
 }
