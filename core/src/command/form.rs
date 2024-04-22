@@ -15,70 +15,103 @@ pub enum CommandForm {
   /// A command that takes a direction.
   Direction,
   // Adverbial/prepositional forms.
-  /// e.g. "talk about the weather".
+  /// A command that takes a phrase with "about".
+  /// For example, "talk about the weather".
   About,
-  /// e.g. "look above the door".
+  /// A command that takes a phrase with "above".
+  /// For example, "look above the door".
   Above,
-  /// e.g. "walk across the bridge".
+  /// A command that takes a phrase with "across".
+  /// For example, "walk across the bridge".
   Across,
-  /// e.g. "lean against the wall".
+  /// A command that takes a phrase with "against".
+  /// For example, "lean against the wall".
   Against,
-  /// e.g. "walk along the path".
+  /// A command that takes a phrase with "along".
+  /// For example, "walk along the path".
   Along,
-  /// e.g. "search among the trees".
+  /// A command that takes a phrase with "among".
+  /// For example, "search among the trees".
   Among,
-  /// e.g. "remember goblin as dave".
+  /// A command that takes a phrase with "as".
+  /// For example, "remember goblin as dave".
   As,
-  /// e.g. "look at the painting".
+  /// A command that takes a phrase with "at".
+  /// For example, "look at the painting".
   At,
-  /// e.g. "stand before the king".
+  /// A command that takes a phrase with "before".
+  /// For example, "stand before the king".
   Before,
-  /// e.g. "hide behind the curtain".
+  /// A command that takes a phrase with "behind".
+  /// For example, "hide behind the curtain".
   Behind,
-  /// e.g. "descend below the surface".
+  /// A command that takes a phrase with "below".
+  /// For example, "descend below the surface".
   Below,
-  /// e.g. "stand beside the statue".
+  /// A command that takes a phrase with "beside".
+  /// For example, "stand beside the statue".
   Beside,
-  /// e.g. "choose between the two".
+  /// A command that takes a phrase with "between".
+  /// For example, "choose between the two".
   Between,
-  /// e.g. "venture beyond the wall".
+  /// A command that takes a phrase with "beyond".
+  /// For example, "venture beyond the wall".
   Beyond,
-  /// e.g. "pass by the guard".
+  /// A command that takes a phrase with "by".
+  /// For example, "pass by the guard".
   By,
-  /// e.g. "search for the treasure".
+  /// A command that takes a phrase with "for".
+  /// For example, "search for the treasure".
   For,
-  /// e.g. "take from the chest".
+  /// A command that takes a phrase with "from".
+  /// For example, "take from the chest".
   From,
-  /// e.g. "hide in the shadows".
+  /// A command that takes a phrase with "in".
+  /// For example, "hide in the shadows".
   In,
-  /// e.g. "step into the portal".
+  /// A command that takes a phrase with "into".
+  /// For example, "step into the portal".
   Into,
-  /// e.g. "speak of the devil".
+  /// A command that takes a phrase with "of".
+  /// For example, "speak of the devil".
   Of,
-  /// e.g. "get off the horse".
+  /// A command that takes a phrase with "off".
+  /// For example, "get off the horse".
   Off,
-  /// e.g. "put the pie on the oven".
+  /// A command that takes a phrase with "on".
+  /// For example, "put the pie on the oven".
   On,
-  /// e.g. "get out of the house".
+  /// A command that takes a phrase with "out".
+  /// For example, "get out of the house".
   Out,
-  /// e.g. "climb over the wall".
+  /// A command that takes a phrase with "over".
+  /// For example, "climb over the wall".
   Over,
-  /// e.g. "go to the castle".
+  /// A command that takes a phrase with "to".
+  /// For example, "go to the castle".
   To,
-  /// e.g. "walk toward the light".
+  /// A command that takes a phrase with "toward".
+  /// For example, "walk toward the light".
   Toward,
-  /// e.g. "hide under the bed".
+  /// A command that takes a phrase with "under".
+  /// For example, "hide under the bed".
   Under,
-  /// e.g. "stand upon the hill".
+  /// A command that takes a phrase with "upon".
+  /// For example, "stand upon the hill".
   Upon,
-  /// e.g. "fight with the sword".
+  /// A command that takes a phrase with "with".
+  /// For example, "fight with the sword".
   With,
-  /// e.g. "go without the sword".
+  /// A command that takes a phrase with "without".
+  /// For example, "go without the sword".
   Without,
-  /// e.g. "look around".
+  /// A command that takes a phrase with "around".
+  /// For example, "look around".
   Around,
-  /// e.g. "look here".
+  /// A command that takes a phrase with "here".
+  /// For example, "look here".
   Here,
-  /// e.g. "take sword then take shield".
+  /// A command that takes a phrase with "then".
+  /// For example, "take sword then take shield".
   Then,
 }
