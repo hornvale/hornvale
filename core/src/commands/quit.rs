@@ -35,7 +35,6 @@ mod tests {
   fn test_execute() {
     init();
     let mut world = World::new();
-    let entity = world.spawn(());
     let result = QuitCommand::execute(&mut world, None, None);
     let quit_flag = world.query_mut::<&mut QuitFlag>().into_iter().next().unwrap().1;
     assert_eq!(*quit_flag, QuitFlag);
