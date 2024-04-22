@@ -1,12 +1,11 @@
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
-use strum::EnumIter;
 
 /// Trait implementtions.
 pub mod traits;
 
 /// A direction.
-#[derive(Clone, Copy, Debug, Deserialize, Display, EnumIter, Eq, PartialEq, Hash, PartialOrd, Ord, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Display, Eq, PartialEq, Hash, PartialOrd, Ord, Serialize)]
 pub enum Direction {
   /// North (y+1).
   North,
@@ -32,4 +31,25 @@ pub enum Direction {
   In,
   /// Out (w-1).
   Out,
+}
+
+impl Direction {
+  /// Get the opposite direction of the given direction.
+  pub fn opposite(&self) -> Self {
+    use Direction::*;
+    match self {
+      North => South,
+      Northeast => Southwest,
+      East => West,
+      Southeast => Northwest,
+      South => North,
+      Southwest => Northeast,
+      West => East,
+      Northwest => Southeast,
+      Up => Down,
+      Down => Up,
+      In => Out,
+      Out => In,
+    }
+  }
 }
