@@ -1,14 +1,19 @@
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
-/// A modifier that can be applied to a verb.
+/// Traits and trait implementations.
+pub mod traits;
+
+/// The "form" of a command; a modifier that can be applied to a verb.
 ///
 /// This is generally either an adverb or a preposition.
 #[derive(Clone, Copy, Debug, Default, Display, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub enum CommandModifier {
+pub enum CommandForm {
   /// The base form of a command, without any modifier.
   #[default]
-  None,
+  Default,
+  /// A command that takes a direction.
+  Direction,
   // Adverbial/prepositional forms.
   /// e.g. "talk about the weather".
   About,
@@ -22,8 +27,6 @@ pub enum CommandModifier {
   Along,
   /// e.g. "search among the trees".
   Among,
-  /// e.g. "look around".
-  Around,
   /// e.g. "remember goblin as dave".
   As,
   /// e.g. "look at the painting".
@@ -42,14 +45,10 @@ pub enum CommandModifier {
   Beyond,
   /// e.g. "pass by the guard".
   By,
-  /// e.g. "look down".
-  Down,
   /// e.g. "search for the treasure".
   For,
   /// e.g. "take from the chest".
   From,
-  /// e.g. "look here".
-  Here,
   /// e.g. "hide in the shadows".
   In,
   /// e.g. "step into the portal".
@@ -58,26 +57,28 @@ pub enum CommandModifier {
   Of,
   /// e.g. "get off the horse".
   Off,
-  /// e.g. "put the pie on the oven" or "turn radio on".
+  /// e.g. "put the pie on the oven".
   On,
   /// e.g. "get out of the house".
   Out,
   /// e.g. "climb over the wall".
   Over,
-  /// e.g. "take sword then take shield".
-  Then,
   /// e.g. "go to the castle".
   To,
   /// e.g. "walk toward the light".
   Toward,
   /// e.g. "hide under the bed".
   Under,
-  /// e.g. "look up".
-  Up,
   /// e.g. "stand upon the hill".
   Upon,
   /// e.g. "fight with the sword".
   With,
   /// e.g. "go without the sword".
   Without,
+  /// e.g. "look around".
+  Around,
+  /// e.g. "look here".
+  Here,
+  /// e.g. "take sword then take shield".
+  Then,
 }

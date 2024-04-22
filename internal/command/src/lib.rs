@@ -15,7 +15,7 @@ pub mod registry;
 
 /// The prelude.
 pub mod prelude {
-  pub use super::commands::{fail::FailCommand, no_op::NoOpCommand};
+  pub use super::commands::{fail::FailCommand, no_op::NoOpCommand, quit::QuitCommand};
   pub use super::error::CommandError;
   pub use super::registry::CommandRegistry;
 }

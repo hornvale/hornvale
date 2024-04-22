@@ -1,31 +1,13 @@
 use anyhow::Error as AnyError;
 use hecs::{Entity, World};
 
-/// The arity, or number of arguments, that a command can take.
-pub mod arity;
-use arity::CommandArity;
 /// The forms that a command can take.
-pub mod modifier;
-use modifier::CommandModifier;
-/// The direct object.
-pub mod direct_object;
+pub mod form;
+use form::CommandForm;
 /// A definition of a command function signature.
 pub mod function;
-/// The indirect object.
-pub mod indirect_object;
-/// The kind of the command.
-pub mod kind;
-/// A raw command string.
-pub mod string;
-/// Command syntax.
-pub mod syntax;
-use syntax::CommandSyntax;
 
 /// A command that can be executed.
-///
-/// A command's syntax is a tuple of the following:
-/// - the verb, or NAME, of the command.
-/// - the form,
 pub trait Command {
   /// Get the base name of the command. This is the name that the player will
   /// use to invoke the command.
@@ -37,20 +19,30 @@ pub trait Command {
   const BRIEF: &'static str;
   /// A longer description of the command. This is used in the help text.
   const DESCRIPTION: &'static str;
-  /// Get the arity of the command. This informs the parser how many arguments
-  /// the command can take.
-  const ARITY: CommandArity;
-  /// Get the modifier of the direct object.
-  const DIRECT_OBJECT_MODIFIER: CommandModifier;
-  /// Get the modifier of the indirect object.
-  const INDIRECT_OBJECT_MODIFIER: CommandModifier;
-  /// The syntax of the command.
-  const SYNTAX: CommandSyntax = (
-    Self::ARITY,
-    Self::DIRECT_OBJECT_MODIFIER,
-    Self::INDIRECT_OBJECT_MODIFIER,
-  );
+  /// Get the form of the command. This informs the parser how to match input
+  /// to the appropriate command.
+  const FORM: CommandForm;
 
   /// Execute the command.
   fn execute(world: &mut World, context: &Entity) -> Result<(), AnyError>;
+}
+
+/// Macro to define a command variant with minimal repetition.
+#[macro_export]
+macro_rules! define_command_variant {
+  ($variant:ident, $original:ty, $form:expr) => {
+    pub struct $variant;
+
+    impl hornvale_core::prelude::Command for $variant {
+      const NAME: &'static str = <$original as Command>::NAME;
+      const SYNONYMS: &'static [&'static str] = <$original as Command>::SYNONYMS;
+      const BRIEF: &'static str = <$original as Command>::BRIEF;
+      const DESCRIPTION: &'static str = <$original as Command>::DESCRIPTION;
+      const FORM: CommandForm = $form;
+
+      fn execute(world: &mut World, context: &Entity) -> Result<(), AnyError> {
+        <$original as Command>::execute(world, context)
+      }
+    }
+  };
 }
