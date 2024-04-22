@@ -45,7 +45,7 @@ pub trait Command {
   /// Get the modifier of the indirect object.
   const INDIRECT_OBJECT_MODIFIER: CommandModifier;
   /// The syntax of the command.
-  const SYNTAX: CommandSyntax = CommandSyntax(
+  const SYNTAX: CommandSyntax = (
     Self::ARITY,
     Self::DIRECT_OBJECT_MODIFIER,
     Self::INDIRECT_OBJECT_MODIFIER,
