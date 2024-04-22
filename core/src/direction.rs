@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
-
-/// Trait implementtions.
-pub mod traits;
+use std::ops::Neg;
 
 /// A direction.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Hash, Serialize)]
@@ -50,5 +48,13 @@ impl Direction {
       In => Out,
       Out => In,
     }
+  }
+}
+
+impl Neg for Direction {
+  type Output = Self;
+
+  fn neg(self) -> Self::Output {
+    self.opposite()
   }
 }
