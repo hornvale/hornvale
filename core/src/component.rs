@@ -4,9 +4,3 @@ pub mod adjectives;
 pub mod description;
 /// A Name component for storing the canonical name of an entity.
 pub mod name;
-/// The quit flag, which can be used to determine if the game should quit.
-pub mod quit_flag;
-/// The region component, which can be used to determine the region an entity is in.
-pub mod region;
-/// The room component, which can be used to determine the room an entity is in.
-pub mod room;
