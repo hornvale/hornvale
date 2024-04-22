@@ -25,36 +25,19 @@
 
 /// Commands that can be executed within the world.
 pub mod commands;
-/// Corridors connect regions.
-pub mod corridor;
 /// An error type.
 pub mod error;
-/// Passages connect rooms.
-pub mod passage;
-/// Functions for querying the world.
-pub mod query;
 /// Regions are points in the 3D grid.
 pub mod region;
-/// Rooms are points in the 3D grid within a region.
-pub mod room;
 
 /// The prelude.
 pub mod prelude {
-  pub use super::corridor::{
-    direction::CorridorDirection, finder::CorridorFinder, kind::CorridorKind, origin::CorridorOrigin,
-    terminus::CorridorTerminus,
-  };
   pub use super::error::WorldError;
-  pub use super::passage::{condition::PassageCondition, direction::PassageDirection, kind::PassageKind};
-  pub use super::query as world_query;
   pub use super::region::{
     generator::{manager::RegionGeneratorManager, registry::RegionGeneratorRegistry, RegionGenerator},
     generators::{
       compass_rose::CompassRoseRegionGenerator, empty::EmptyRegionGenerator, fail::FailRegionGenerator,
       null::NullRegionGenerator,
     },
-    is_a_region::IsARegion,
-    Region,
   };
-  pub use super::room::{is_a_room::IsARoom, Room};
 }

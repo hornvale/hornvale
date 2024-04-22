@@ -1,6 +1,6 @@
-use crate::prelude::*;
-use hecs::World;
-use hornvale_command::prelude::*;
+use anyhow::Error as AnyError;
+use hecs::{Entity, World};
+use hornvale_core::prelude::*;
 
 /// Attempt to walk in a given direction.
 #[derive(Clone, Copy, Debug)]
@@ -14,10 +14,16 @@ impl Command for GoDirectionCommand {
     The actor will attempt to move in the direction specified by the first argument; if they are unable to move in
     that direction, they will be informed why.
   "#;
-  const FORM: CommandForm = CommandForm::Direction;
-  const ARITY: CommandArity = CommandArity::Unary(CommandParameter::Direction);
+  const ARITY: CommandArity = CommandArity::Unary;
+  const DIRECT_OBJECT_MODIFIER: CommandModifier = CommandModifier::None;
+  const INDIRECT_OBJECT_MODIFIER: CommandModifier = CommandModifier::None;
 
-  fn execute(world: &mut World, context: &CommandContext) -> Result<(), CommandError> {
+  fn execute(
+    _world: &mut World,
+    _direct_object: Option<Entity>,
+    _indirect_object: Option<Entity>,
+  ) -> Result<(), AnyError> {
+    /*
     let actor = context.actor.unwrap();
     let argument = context.direct_object.clone().unwrap();
     let direction = match argument {
@@ -81,6 +87,7 @@ impl Command for GoDirectionCommand {
         println!("{}", message);
       },
     }
+    */
     Ok(())
   }
 }

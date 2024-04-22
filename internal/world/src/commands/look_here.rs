@@ -1,6 +1,6 @@
-use crate::prelude::*;
-use hecs::World;
-use hornvale_command::prelude::*;
+use anyhow::Error as AnyError;
+use hecs::{Entity, World};
+use hornvale_core::prelude::*;
 
 /// Look at here.
 #[derive(Clone, Copy, Debug)]
@@ -14,10 +14,16 @@ impl Command for LookHereCommand {
     Look at your surroundings. This command will provide a description of the
     player's current location, including any items or characters that are present.
   "#;
-  const FORM: CommandForm = CommandForm::Here;
-  const ARITY: CommandArity = CommandArity::Nullary;
+  const ARITY: CommandArity = CommandArity::Unary;
+  const DIRECT_OBJECT_MODIFIER: CommandModifier = CommandModifier::Adverb(Adverb::Here);
+  const INDIRECT_OBJECT_MODIFIER: CommandModifier = CommandModifier::None;
 
-  fn execute(world: &mut World, context: &CommandContext) -> Result<(), CommandError> {
+  fn execute(
+    _world: &mut World,
+    _direct_object: Option<Entity>,
+    _indirect_object: Option<Entity>,
+  ) -> Result<(), AnyError> {
+    /*
     let actor = context.actor.unwrap();
     let actor_info = world_query::get_entity_region_and_room(world, actor);
     if actor_info.is_none() {
@@ -30,6 +36,7 @@ impl Command for LookHereCommand {
     println!("{}", room_name.0);
     println!("{}", room_description.0);
     println!("{}", world_query::describe_room_passages(world, actor));
+    */
     Ok(())
   }
 }

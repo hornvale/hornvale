@@ -1,7 +1,4 @@
-use crate::prelude::{
-  CorridorDirection, CorridorOrigin, CorridorTerminus, IsARoom, PassageDirection, PassageKind, Region, RegionGenerator,
-  Room, WorldError,
-};
+use crate::prelude::{RegionGenerator, WorldError};
 use hecs::World;
 use hornvale_core::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -33,14 +30,14 @@ macro_rules! spawn_corridor {
       $region,
       $room,
       $direction,
-      PassageKind::Corridor($next_region),
-      CorridorOrigin,
+      PassageKind::Corridor(CorridorKind::Default($next_region)),
+      IsCorridorOrigin,
     ));
     $world.spawn((
       $region,
       $room,
       CorridorDirection::try_from($direction).expect("Invalid corridor direction"),
-      CorridorTerminus,
+      IsCorridorTerminus,
     ));
   };
 }
@@ -51,16 +48,16 @@ impl RegionGenerator for CompassRoseRegionGenerator {
     let name = Name("The Center Room".to_string());
     let description = Description("This is the center room.".to_string());
     spawn_room!(world, region, center_room, name, description);
-    PassageDirection::iter().for_each(|direction| {
-      let room = center_room.get(direction);
+    Direction::iter().for_each(|direction| {
+      let room = center_room + Vector4D::from(direction);
       let name = Name(format!("The {} Room", direction));
       let description = Description(format!("This is the {} room.", direction.to_string().to_lowercase()));
       spawn_room!(world, region, room, name, description);
       spawn_passage!(world, region, center_room, room, direction);
-      let corridor_direction = CorridorDirection::try_from(direction);
-      if corridor_direction.is_ok() {
-        // Insert a passage from the room into a corridor to the next region.
-        let next_region = region + corridor_direction.unwrap().into();
+      if direction.is_cardinal() || direction.is_vertical() {
+        let corridor_direction = CorridorDirection::from(direction);
+        // Insert a passage from the center room into a corridor to the next region.
+        let next_region: Region = region + Vector4D::from(corridor_direction);
         spawn_corridor!(world, region, room, direction, next_region);
       }
     });

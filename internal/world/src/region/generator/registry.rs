@@ -1,7 +1,7 @@
 use super::RegionGenerator;
-use crate::prelude::Region;
 use crate::prelude::WorldError;
 use hecs::World;
+use hornvale_core::prelude::*;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 

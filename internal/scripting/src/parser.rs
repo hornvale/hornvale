@@ -272,7 +272,7 @@ impl<'source> Parser<'source> {
         }
         let parameter = self.parse_variable_identifier("expected a parameter identifier")?;
         self.define_variable(parameter)?;
-        if !self.match_token(TokenKind::Comma)? {
+        if !self.match_token(TokenKind::Character(Character::Comma))? {
           break;
         }
       }
@@ -503,7 +503,7 @@ impl<'source> Parser<'source> {
           return Err(Error::FunctionCallArgumentsExceededLimit);
         }
         count += 1;
-        if !self.match_token(TokenKind::Comma)? {
+        if !self.match_token(TokenKind::Character(Character::Comma))? {
           break;
         }
       }

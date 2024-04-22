@@ -1,7 +1,7 @@
-use crate::prelude::Region;
 use crate::prelude::RegionGenerator;
 use crate::prelude::WorldError;
 use hecs::World;
+use hornvale_core::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// The Null Region Generator generates absolutely nothing.

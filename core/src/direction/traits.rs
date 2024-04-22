@@ -6,3 +6,5 @@ pub mod from_passage_direction;
 pub mod from_vector4d;
 /// Negation.
 pub mod neg;
+/// TryFrom<&str>.
+pub mod try_from_str;

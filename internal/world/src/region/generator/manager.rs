@@ -1,8 +1,8 @@
 use super::registry::RegionGeneratorRegistry;
 use super::RegionGenerator;
-use crate::prelude::Region;
 use crate::prelude::WorldError;
 use hecs::World;
+use hornvale_core::prelude::*;
 
 /// The Region Generator Manager manages the generation of regions.
 #[derive(Default, Debug)]
