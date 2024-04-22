@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
-/// Traits and trait implementations.
-pub mod traits;
-
 /// The "form" of a command; a modifier that can be applied to a verb.
 ///
 /// This is generally either an adverb or a preposition.
