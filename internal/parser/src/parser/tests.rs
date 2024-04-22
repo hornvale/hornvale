@@ -3,7 +3,6 @@ use crate::prelude::Classifier;
 use crate::prelude::Scanner;
 use hornvale_core::prelude::*;
 use hornvale_test_utilities::prelude::*;
-use hornvale_world_commands::prelude::*;
 
 pub mod parser_a;
 
@@ -20,9 +19,10 @@ pub fn setup_world(world: &mut World) -> Entity {
 }
 
 pub fn test_string_parsing(
+  world: &mut World,
+  command_registry: &CommandRegistry,
   string: &str,
   actor: Entity,
-  world: &mut World,
   expected: Result<(CommandFunction, CommandContext), ParserError>,
 ) {
   init();
@@ -30,7 +30,7 @@ pub fn test_string_parsing(
   let mut tokens = scanner.scan_tokens().unwrap();
   let classifier = Classifier::new();
   classifier.classify_tokens(&mut *tokens).unwrap();
-  let mut parser = Parser::new(&mut *tokens, actor, world);
+  let mut parser = Parser::new(world, command_registry, &mut *tokens, actor);
   let actual = parser.parse();
   match (expected, actual) {
     (Ok(expected), Ok(actual)) => {

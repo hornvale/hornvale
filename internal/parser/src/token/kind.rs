@@ -1,4 +1,3 @@
-use hornvale_command::prelude::*;
 use hornvale_core::prelude::*;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter};
@@ -465,6 +464,11 @@ impl TokenKind {
     )
   }
 
+  /// Is this token a command modifier?
+  pub fn is_modifier(&self) -> bool {
+    self.is_preposition() || self.is_adverb() || self.is_demonstrative_determiner()
+  }
+
   /// Is this token an adjective?
   pub fn is_adjective(&self) -> bool {
     matches!(self, Self::Adjective)
@@ -751,59 +755,43 @@ impl From<TokenKind> for Direction {
   }
 }
 
-impl TryFrom<TokenKind> for CommandArgument {
+impl TryFrom<TokenKind> for CommandModifier {
   type Error = ();
 
   fn try_from(kind: TokenKind) -> Result<Self, Self::Error> {
     match kind {
-      // Directions.
-      kind if kind.is_direction() => Ok(CommandArgument::Direction(kind.into())),
-
-      _ => Err(()),
-    }
-  }
-}
-
-impl TryFrom<TokenKind> for CommandForm {
-  type Error = ();
-
-  fn try_from(kind: TokenKind) -> Result<Self, Self::Error> {
-    match kind {
-      // Directions.
-      kind if kind.is_direction() => Ok(CommandForm::Direction),
-      // Adverbs and Prepositions.
-      TokenKind::About => Ok(CommandForm::About),
-      TokenKind::Above => Ok(CommandForm::Above),
-      TokenKind::Across => Ok(CommandForm::Across),
-      TokenKind::Against => Ok(CommandForm::Against),
-      TokenKind::Along => Ok(CommandForm::Along),
-      TokenKind::Among => Ok(CommandForm::Among),
-      TokenKind::Around => Ok(CommandForm::Around),
-      TokenKind::As => Ok(CommandForm::As),
-      TokenKind::At => Ok(CommandForm::At),
-      TokenKind::Before => Ok(CommandForm::Before),
-      TokenKind::Behind => Ok(CommandForm::Behind),
-      TokenKind::Below => Ok(CommandForm::Below),
-      TokenKind::Beside => Ok(CommandForm::Beside),
-      TokenKind::Between => Ok(CommandForm::Between),
-      TokenKind::Beyond => Ok(CommandForm::Beyond),
-      TokenKind::By => Ok(CommandForm::By),
-      TokenKind::For => Ok(CommandForm::For),
-      TokenKind::From => Ok(CommandForm::From),
-      TokenKind::Here => Ok(CommandForm::Here),
-      TokenKind::In => Ok(CommandForm::In),
-      TokenKind::Into => Ok(CommandForm::Into),
-      TokenKind::Of => Ok(CommandForm::Of),
-      TokenKind::Off => Ok(CommandForm::Off),
-      TokenKind::On => Ok(CommandForm::On),
-      TokenKind::Out => Ok(CommandForm::Out),
-      TokenKind::Over => Ok(CommandForm::Over),
-      TokenKind::To => Ok(CommandForm::To),
-      TokenKind::Toward => Ok(CommandForm::Toward),
-      TokenKind::Under => Ok(CommandForm::Under),
-      TokenKind::Upon => Ok(CommandForm::Upon),
-      TokenKind::With => Ok(CommandForm::With),
-      TokenKind::Without => Ok(CommandForm::Without),
+      TokenKind::About => Ok(CommandModifier::About),
+      TokenKind::Above => Ok(CommandModifier::Above),
+      TokenKind::Across => Ok(CommandModifier::Across),
+      TokenKind::Against => Ok(CommandModifier::Against),
+      TokenKind::Along => Ok(CommandModifier::Along),
+      TokenKind::Among => Ok(CommandModifier::Among),
+      TokenKind::Around => Ok(CommandModifier::Around),
+      TokenKind::As => Ok(CommandModifier::As),
+      TokenKind::At => Ok(CommandModifier::At),
+      TokenKind::Before => Ok(CommandModifier::Before),
+      TokenKind::Behind => Ok(CommandModifier::Behind),
+      TokenKind::Below => Ok(CommandModifier::Below),
+      TokenKind::Beside => Ok(CommandModifier::Beside),
+      TokenKind::Between => Ok(CommandModifier::Between),
+      TokenKind::Beyond => Ok(CommandModifier::Beyond),
+      TokenKind::By => Ok(CommandModifier::By),
+      TokenKind::For => Ok(CommandModifier::For),
+      TokenKind::From => Ok(CommandModifier::From),
+      TokenKind::Here => Ok(CommandModifier::Here),
+      TokenKind::In => Ok(CommandModifier::In),
+      TokenKind::Into => Ok(CommandModifier::Into),
+      TokenKind::Of => Ok(CommandModifier::Of),
+      TokenKind::Off => Ok(CommandModifier::Off),
+      TokenKind::On => Ok(CommandModifier::On),
+      TokenKind::Out => Ok(CommandModifier::Out),
+      TokenKind::Over => Ok(CommandModifier::Over),
+      TokenKind::To => Ok(CommandModifier::To),
+      TokenKind::Toward => Ok(CommandModifier::Toward),
+      TokenKind::Under => Ok(CommandModifier::Under),
+      TokenKind::Upon => Ok(CommandModifier::Upon),
+      TokenKind::With => Ok(CommandModifier::With),
+      TokenKind::Without => Ok(CommandModifier::Without),
       _ => Err(()),
     }
   }

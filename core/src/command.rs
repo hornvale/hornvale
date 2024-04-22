@@ -46,5 +46,6 @@ pub trait Command {
   );
 
   /// Execute the command.
-  fn execute(world: &mut World, context: &Entity) -> Result<(), AnyError>;
+  fn execute(world: &mut World, direct_object: Option<Entity>, indirect_object: Option<Entity>)
+    -> Result<(), AnyError>;
 }

@@ -16,7 +16,11 @@ impl Command for QuitCommand {
   const INDIRECT_OBJECT_MODIFIER: CommandModifier = CommandModifier::None;
 
   /// Do nothing.
-  fn execute(world: &mut World, _context: &Entity) -> Result<(), AnyError> {
+  fn execute(
+    world: &mut World,
+    _direct_object: Option<Entity>,
+    _indirect_object: Option<Entity>,
+  ) -> Result<(), AnyError> {
     world.spawn((QuitFlag,));
     Ok(())
   }
@@ -32,7 +36,7 @@ mod tests {
     init();
     let mut world = World::new();
     let entity = world.spawn(());
-    let result = QuitCommand::execute(&mut world, &entity);
+    let result = QuitCommand::execute(&mut world, None, None);
     let quit_flag = world.query_mut::<&mut QuitFlag>().into_iter().next().unwrap().1;
     assert_eq!(*quit_flag, QuitFlag);
     assert!(result.is_ok());
