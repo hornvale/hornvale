@@ -71,7 +71,11 @@ fn test_classify_tokens31() {
   init();
   test_string_classification(
     "look behind curtain",
-    &[TokenKind::Verb, TokenKind::Behind, TokenKind::Noun],
+    &[
+      TokenKind::Verb,
+      TokenKind::Behind,
+      TokenKind::Noun, // Should be indirect object.
+    ],
   );
 }
 
@@ -80,14 +84,25 @@ fn test_classify_tokens32() {
   init();
   test_string_classification(
     "look under stove",
-    &[TokenKind::Verb, TokenKind::Under, TokenKind::Noun],
+    &[
+      TokenKind::Verb,
+      TokenKind::Under,
+      TokenKind::Noun, // Should be indirect object.
+    ],
   );
 }
 
 #[test]
 fn test_classify_tokens33() {
   init();
-  test_string_classification("look in box", &[TokenKind::Verb, TokenKind::In, TokenKind::Noun]);
+  test_string_classification(
+    "look in box",
+    &[
+      TokenKind::Verb,
+      TokenKind::In,
+      TokenKind::Noun, // Should be indirect object.
+    ],
+  );
 }
 
 #[test]
@@ -111,7 +126,14 @@ fn test_classify_tokens35() {
 #[test]
 fn test_classify_tokens36() {
   init();
-  test_string_classification("turn on lantern", &[TokenKind::Verb, TokenKind::On, TokenKind::Noun]);
+  test_string_classification(
+    "turn on lantern",
+    &[
+      TokenKind::Verb,
+      TokenKind::On,
+      TokenKind::Noun, // Should be indirect object.
+    ],
+  );
 }
 
 #[test]

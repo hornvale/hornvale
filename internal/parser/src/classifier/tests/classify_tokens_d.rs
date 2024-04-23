@@ -16,7 +16,7 @@ fn test_classify_tokens62() {
       TokenKind::DirectObject,
       TokenKind::From,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
     ],
   );
 }
@@ -58,7 +58,7 @@ fn test_classify_tokens65() {
       TokenKind::Adjective,
       TokenKind::DirectObject,
       TokenKind::To,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
     ],
   );
 }
@@ -74,7 +74,7 @@ fn test_classify_tokens66() {
       TokenKind::DirectObject,
       TokenKind::Into,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
     ],
   );
 }
@@ -90,7 +90,7 @@ fn test_classify_tokens67() {
       TokenKind::NounPossessiveDeterminer,
       TokenKind::NounPossessiveDeterminer,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
     ],
   );
 }
@@ -109,7 +109,7 @@ fn test_classify_tokens69() {
     &[
       TokenKind::Verb,
       TokenKind::To,
-      TokenKind::Word,
+      TokenKind::Word, // Should be indirect object.
       TokenKind::NumberLiteral,
       TokenKind::In,
       TokenKind::Noun,
@@ -127,7 +127,7 @@ fn test_classify_tokens70() {
       TokenKind::DirectObject,
       TokenKind::With,
       TokenKind::Adjective,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
     ],
   );
 }
@@ -142,7 +142,7 @@ fn test_classify_tokens71() {
       TokenKind::DirectObject,
       TokenKind::With,
       TokenKind::Adjective,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
       TokenKind::And,
       TokenKind::Noun,
     ],
@@ -159,7 +159,7 @@ fn test_classify_tokens72() {
       TokenKind::DirectObject,
       TokenKind::With,
       TokenKind::Adjective,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
       TokenKind::Comma,
       TokenKind::Noun,
       TokenKind::Comma,
@@ -179,17 +179,17 @@ fn test_classify_tokens73() {
       TokenKind::DirectObject,
       TokenKind::With,
       TokenKind::Adjective,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
       TokenKind::Comma,
       TokenKind::Adjective,
       TokenKind::Adjective,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
       TokenKind::Comma,
       TokenKind::And,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
       TokenKind::Comma,
       TokenKind::And,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
     ],
   );
 }

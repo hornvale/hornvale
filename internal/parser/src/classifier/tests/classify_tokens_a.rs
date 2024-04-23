@@ -27,7 +27,7 @@ fn test_classify_tokens04() {
       TokenKind::Verb,
       TokenKind::StringLiteral,
       TokenKind::To,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
     ],
   );
 }
@@ -41,7 +41,7 @@ fn test_classify_tokens05() {
       TokenKind::Verb,
       TokenKind::StringLiteral,
       TokenKind::To,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
     ],
   );
 }
@@ -56,7 +56,7 @@ fn test_classify_tokens06() {
       TokenKind::StringLiteral,
       TokenKind::To,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
     ],
   );
 }
@@ -71,7 +71,7 @@ fn test_classify_tokens07() {
       TokenKind::StringLiteral,
       TokenKind::To,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
     ],
   );
 }
@@ -84,7 +84,7 @@ fn test_classify_tokens08() {
     &[
       TokenKind::Verb,
       TokenKind::To,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
       TokenKind::StringLiteral,
     ],
   );
@@ -99,7 +99,7 @@ fn test_classify_tokens09() {
       TokenKind::Verb,
       TokenKind::To,
       TokenKind::Adjective,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
       TokenKind::StringLiteral,
     ],
   );
@@ -115,7 +115,7 @@ fn test_classify_tokens10() {
       TokenKind::To,
       TokenKind::Adjective,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
       TokenKind::StringLiteral,
     ],
   );
@@ -132,7 +132,7 @@ fn test_classify_tokens11() {
       TokenKind::Adjective,
       TokenKind::Adjective,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
       TokenKind::StringLiteral,
     ],
   );
@@ -150,7 +150,7 @@ fn test_classify_tokens12() {
       TokenKind::Comma,
       TokenKind::Adjective,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be direct object.
       TokenKind::StringLiteral,
     ],
   );
@@ -167,7 +167,7 @@ fn test_classify_tokens13() {
       TokenKind::Adjective,
       TokenKind::Adjective,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
       TokenKind::StringLiteral,
     ],
   );
@@ -185,7 +185,7 @@ fn test_classify_tokens14() {
       TokenKind::Comma,
       TokenKind::Adjective,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be direct object.
       TokenKind::StringLiteral,
     ],
   );
@@ -200,7 +200,7 @@ fn test_classify_tokens15() {
       TokenKind::Verb,
       TokenKind::To,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be direct object.
       TokenKind::StringLiteral,
     ],
   );
@@ -256,7 +256,7 @@ fn test_classify_tokens20() {
     "take sword, shield",
     &[
       TokenKind::Verb,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be direct object.
       TokenKind::Comma,
       TokenKind::DirectObject,
     ],

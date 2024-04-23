@@ -42,7 +42,7 @@ fn test_classify_tokens45() {
       TokenKind::Verb,
       TokenKind::DirectObject,
       TokenKind::With,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
     ],
   );
 }
@@ -52,7 +52,12 @@ fn test_classify_tokens46() {
   init();
   test_string_classification(
     "give money to elf",
-    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::To, TokenKind::Noun],
+    &[
+      TokenKind::Verb,
+      TokenKind::DirectObject,
+      TokenKind::To,
+      TokenKind::Noun, // Should be indirect object.
+    ],
   );
 }
 
@@ -64,7 +69,7 @@ fn test_classify_tokens47() {
     &[
       TokenKind::Verb,
       TokenKind::Adjective,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be direct object.
       TokenKind::And,
       TokenKind::Adjective,
       TokenKind::DirectObject,
@@ -80,7 +85,7 @@ fn test_classify_tokens48() {
     &[
       TokenKind::Verb,
       TokenKind::Adjective,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be direct object.
       TokenKind::Comma,
       TokenKind::Adjective,
       TokenKind::DirectObject,
@@ -96,10 +101,10 @@ fn test_classify_tokens49() {
     &[
       TokenKind::Verb,
       TokenKind::Adjective,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be direct object.
       TokenKind::Comma,
       TokenKind::Adjective,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be direct object.
       TokenKind::Comma,
       TokenKind::And,
       TokenKind::Adjective,
@@ -113,7 +118,12 @@ fn test_classify_tokens50() {
   init();
   test_string_classification(
     "look at red-eyed goblin",
-    &[TokenKind::Verb, TokenKind::At, TokenKind::Adjective, TokenKind::Noun],
+    &[
+      TokenKind::Verb,
+      TokenKind::At,
+      TokenKind::Adjective,
+      TokenKind::Noun, // Should be indirect object.
+    ],
   );
 }
 
@@ -126,7 +136,7 @@ fn test_classify_tokens51() {
       TokenKind::Verb,
       TokenKind::At,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
     ],
   );
 }
@@ -141,7 +151,7 @@ fn test_classify_tokens52() {
       TokenKind::At,
       TokenKind::Adjective,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
     ],
   );
 }
@@ -157,7 +167,12 @@ fn test_classify_tokens54() {
   init();
   test_string_classification(
     "read print on kettle",
-    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::On, TokenKind::Noun],
+    &[
+      TokenKind::Verb,
+      TokenKind::DirectObject,
+      TokenKind::On,
+      TokenKind::Noun, // Should be indirect object.
+    ],
   );
 }
 
@@ -166,7 +181,12 @@ fn test_classify_tokens55() {
   init();
   test_string_classification(
     "read underside of kettle",
-    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::Of, TokenKind::Noun],
+    &[
+      TokenKind::Verb,
+      TokenKind::DirectObject,
+      TokenKind::Of,
+      TokenKind::Noun, // Should be indirect object.
+    ],
   );
 }
 
@@ -179,7 +199,7 @@ fn test_classify_tokens56() {
       TokenKind::Verb,
       TokenKind::DirectObject,
       TokenKind::On,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
       TokenKind::Of,
       TokenKind::Noun,
     ],
@@ -195,7 +215,7 @@ fn test_classify_tokens57() {
       TokenKind::Verb,
       TokenKind::DirectObject,
       TokenKind::On,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
       TokenKind::Of,
       TokenKind::Noun,
       TokenKind::On,
@@ -215,7 +235,7 @@ fn test_classify_tokens58() {
       TokenKind::DirectObject,
       TokenKind::On,
       TokenKind::Adjective,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
       TokenKind::Of,
       TokenKind::Adjective,
       TokenKind::Noun,
@@ -231,7 +251,12 @@ fn test_classify_tokens59() {
   init();
   test_string_classification(
     "remember goblin as franklin",
-    &[TokenKind::Verb, TokenKind::DirectObject, TokenKind::As, TokenKind::Noun],
+    &[
+      TokenKind::Verb,
+      TokenKind::DirectObject,
+      TokenKind::As,
+      TokenKind::Noun, // Should be indirect object.
+    ],
   );
 }
 
@@ -247,7 +272,7 @@ fn test_classify_tokens60() {
       TokenKind::Adjective,
       TokenKind::DirectObject,
       TokenKind::As,
-      TokenKind::Noun,
+      TokenKind::Noun, // Should be indirect object.
     ],
   );
 }
