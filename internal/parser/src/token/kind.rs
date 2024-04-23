@@ -198,12 +198,19 @@ pub enum TokenKind {
   Some,
 
   // Possessive determiners.
+  /// `my`.
   My,
+  /// `your`.
   Your,
+  /// `his`.
   His,
+  /// `her` (can also act as a pronoun).
   Her,
+  /// `its`.
   Its,
+  /// `our`.
   Our,
+  /// `their`.
   Their,
 
   // Pronouns.
@@ -213,7 +220,7 @@ pub enum TokenKind {
   You,
   /// `he`.
   Him,
-  /// `her`.
+  // `her`.
   // Her (also possessive determiner)
   /// `it`.
   It,
