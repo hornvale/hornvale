@@ -125,7 +125,7 @@ fn test_classify_tokens51() {
     &[
       TokenKind::Verb,
       TokenKind::At,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::NounPossessiveDeterminer,
       TokenKind::Noun,
     ],
   );
@@ -140,7 +140,7 @@ fn test_classify_tokens52() {
       TokenKind::Verb,
       TokenKind::At,
       TokenKind::Adjective,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::NounPossessiveDeterminer,
       TokenKind::Noun,
     ],
   );

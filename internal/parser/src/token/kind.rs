@@ -89,69 +89,93 @@ pub enum TokenKind {
   //
   // Word tokens.
   //
-  /// Directions, which might also be prepositions, adjectives, etc.
+  // Compass directions.
+  /// "North", e.g. in `go north`.
   North,
+  /// "Northeast", e.g. in `go northeast`.
   Northeast,
+  /// "East", e.g. in `go east`.
   East,
+  /// "Southeast", e.g. in `go southeast`.
   Southeast,
+  /// "South", e.g. in `go south`.
   South,
+  /// "Southwest", e.g. in `go southwest`.
   Southwest,
+  /// "West", e.g. in `go west`.
   West,
+  /// "Northwest", e.g. in `go northwest`.
   Northwest,
-  Up,
-  Down,
-  In,
-  Out,
 
-  /// Prepositions.
+  // Prepositions.
+  /// "About", e.g. in `ask man about the goat`.
   About,
+  /// "Above", e.g. in `look above the shelf`.
   Above,
+  /// "Across", e.g. in `go across the bridge`.
   Across,
+  /// "Against", e.g. in `lean against the wall`.
   Against,
+  /// "Along", e.g. in `walk along the path`.
   Along,
+  /// "Among", e.g. in `look among the trees`.
   Among,
-  As,
-  At,
-  Before,
-  Behind,
-  Below,
-  Beside,
-  Between,
-  Beyond,
-  By,
-  For,
-  From,
-  Into,
-  Of,
-  Off,
-  On,
-  Over,
-  To,
-  Toward,
-  Under,
-  Upon,
-  With,
-  Without,
-
-  // Adverbs, most of which are elided.
   /// "Around", e.g. in `look around`.
   Around,
-  // "Down", e.g. in `turn radio down`.
-  // Down,
+  /// "As", e.g. in `take it as a gift`.
+  As,
+  /// "At", e.g. in `look at the sky`.
+  At,
+  /// "Before", e.g. in `go before the king`.
+  Before,
+  /// "Behind", e.g. in `hide behind the tree`.
+  Behind,
+  /// "Below", e.g. in `look below the table`.
+  Below,
+  /// "Beside", e.g. in `stand beside the knight`.
+  Beside,
+  /// "Between", e.g. in `walk between the trees`.
+  Between,
+  /// "Beyond", e.g. in `go beyond the mountains`.
+  Beyond,
+  /// "By", e.g. in `stand by the door`.
+  By,
+  /// "Down", e.g. in `climb down the ladder`.
+  Down,
+  /// "For", e.g. in `fight for the king`.
+  For,
+  /// "From", e.g. in `take it from the chest`.
+  From,
   /// "Here", e.g. in `look here`.
   Here,
-  // "In", e.g. in `push in`.
-  // In,
-  // "Off", e.g. in `turn radio off`.
-  // Off,
-  // "On", e.g. in `turn radio on`.
-  // On,
-  // "Out", e.g. in `pull out`.
-  // Out,
-  /// Then, e.g. in `take sword then take shield`.
-  Then,
-  // "Up", e.g. in `turn radio up`.
-  // Up,
+  /// "In", e.g. in `put the pie in the oven`.
+  In,
+  /// "Into", e.g. in `go into the forest`.
+  Into,
+  /// "Of", e.g. in `take the sword of the king`.
+  Of,
+  /// "Off", e.g. in `take the hat off`.
+  Off,
+  /// "On", e.g. in `put the book on the table`.
+  On,
+  /// "Out", e.g. in `go out of the cave`.
+  Out,
+  /// "Over", e.g. in `jump over the fence`.
+  Over,
+  /// "To", e.g. in `go to the castle`.
+  To,
+  /// "Toward", e.g. in `walk toward the light`.
+  Toward,
+  /// "Under", e.g. in `hide under the bed`.
+  Under,
+  /// "Up", e.g. in `climb up the mountain`.
+  Up,
+  /// "Upon", e.g. in `stand upon the hill`.
+  Upon,
+  /// "With", e.g. in `fight with the sword`.
+  With,
+  /// "Without", e.g. in `go without the sword`.
+  Without,
 
   // Demonstrative determiners.
   /// "This", e.g. in `take this`.
@@ -283,7 +307,7 @@ pub enum TokenKind {
   /// A noun.
   Noun,
   /// A general possessive determiner ("someone's").
-  PossessiveDeterminer,
+  NounPossessiveDeterminer,
   /// The direct object.
   DirectObject,
   /// The indirect object.
@@ -414,7 +438,7 @@ impl TokenKind {
   pub fn is_adverb(&self) -> bool {
     matches!(
       self,
-      Self::Around | Self::Down | Self::Here | Self::In | Self::Off | Self::On | Self::Out | Self::Then | Self::Up
+      Self::Around | Self::Down | Self::Here | Self::In | Self::Off | Self::On | Self::Out | Self::Up
     )
   }
 
@@ -446,7 +470,7 @@ impl TokenKind {
 
   /// Is this token a noun possessive determiner?
   pub fn is_noun_possessive_determiner(&self) -> bool {
-    matches!(self, Self::PossessiveDeterminer)
+    matches!(self, Self::NounPossessiveDeterminer)
   }
 
   /// Is this token a pronoun?
@@ -653,7 +677,6 @@ impl TryFrom<&str> for TokenKind {
       // "off" => Ok(Self::Off), // (also preposition)
       // "on" => Ok(Self::On), // (also preposition)
       // "out" => Ok(Self::Out), // (also direction)
-      "then" => Ok(Self::Then),
       // "up" => Ok(Self::Up), // (also direction)
 
       // Demonstrative determiners.

@@ -113,7 +113,6 @@ fn test_is_adverb() {
       | TokenKind::Off
       | TokenKind::On
       | TokenKind::Out
-      | TokenKind::Then
       | TokenKind::Up => {
         assert!(kind.is_adverb(), "{:?} is not an adverb", kind);
       },
@@ -188,7 +187,7 @@ fn test_is_possessive_determiner() {
       | TokenKind::Its
       | TokenKind::Our
       | TokenKind::Their
-      | TokenKind::PossessiveDeterminer => {
+      | TokenKind::NounPossessiveDeterminer => {
         assert!(
           kind.is_possessive_determiner(),
           "{:?} is not a possessive determiner",
@@ -404,7 +403,7 @@ fn test_can_follow_adjective() {
       | TokenKind::Noun
       | TokenKind::DirectObject
       | TokenKind::IndirectObject
-      | TokenKind::PossessiveDeterminer => {
+      | TokenKind::NounPossessiveDeterminer => {
         assert!(kind.can_follow_adjective(), "{:?} cannot follow an adjective", kind);
       },
       _ => {

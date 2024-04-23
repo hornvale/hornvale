@@ -15,7 +15,7 @@ fn test_classify_tokens62() {
       TokenKind::Verb,
       TokenKind::DirectObject,
       TokenKind::From,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::NounPossessiveDeterminer,
       TokenKind::Noun,
     ],
   );
@@ -73,7 +73,7 @@ fn test_classify_tokens66() {
       TokenKind::Adjective,
       TokenKind::DirectObject,
       TokenKind::Into,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::NounPossessiveDeterminer,
       TokenKind::Noun,
     ],
   );
@@ -87,9 +87,9 @@ fn test_classify_tokens67() {
     &[
       TokenKind::Verb,
       TokenKind::At,
-      TokenKind::PossessiveDeterminer,
-      TokenKind::PossessiveDeterminer,
-      TokenKind::PossessiveDeterminer,
+      TokenKind::NounPossessiveDeterminer,
+      TokenKind::NounPossessiveDeterminer,
+      TokenKind::NounPossessiveDeterminer,
       TokenKind::Noun,
     ],
   );

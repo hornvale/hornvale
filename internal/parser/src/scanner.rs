@@ -236,7 +236,7 @@ impl Scanner {
     let value = self.get_lexeme();
     let kind = match TokenKind::try_from(value.as_str()) {
       Ok(kind) => kind,
-      Err(_) if value.find('\'').is_some() => TokenKind::PossessiveDeterminer,
+      Err(_) if value.find('\'').is_some() => TokenKind::NounPossessiveDeterminer,
       Err(_) if value.find('-').is_some() => TokenKind::Adjective,
       Err(_) => TokenKind::Word,
     };
