@@ -193,3 +193,18 @@ fn test_classify_tokens73() {
     ],
   );
 }
+
+#[test]
+fn test_classify_tokens74() {
+  init();
+  test_string_classification(
+    "give her stick to her",
+    &[
+      TokenKind::Verb,
+      TokenKind::Her,
+      TokenKind::DirectObject,
+      TokenKind::To,
+      TokenKind::Her,
+    ],
+  );
+}
