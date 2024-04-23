@@ -22,8 +22,6 @@
 
 /// A classifier that can be used to determine the type of a word.
 pub mod classifier;
-/// The `Command` trait and related concepts.
-pub mod command;
 /// A collection of core commands.
 pub mod commands;
 /// General components of use.
@@ -43,9 +41,6 @@ pub mod world;
 
 /// The prelude.
 pub mod prelude {
-  pub use super::command::{
-    arity::CommandArity, function::CommandFunction, modifier::CommandModifier, syntax::CommandSyntax, Command,
-  };
   pub use super::commands::{fail::FailCommand, no_op::NoOpCommand, quit::QuitCommand};
   pub use super::components::quit_flag::QuitFlag;
   pub use super::error::CommandError;

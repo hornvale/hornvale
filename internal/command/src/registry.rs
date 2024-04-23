@@ -1,4 +1,4 @@
-use crate::prelude::{Command, CommandFunction, CommandSyntax};
+use hornvale_core::prelude::*;
 use std::collections::HashMap;
 
 /// A registry for commands.

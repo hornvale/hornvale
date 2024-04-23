@@ -1,6 +1,7 @@
-use crate::prelude::{Command, CommandArity, CommandError, CommandModifier};
+use crate::prelude::*;
 use anyhow::Error as AnyError;
 use hecs::{Entity, World};
+use hornvale_core::prelude::*;
 
 /// A command that always fails.
 #[derive(Clone, Copy, Debug)]

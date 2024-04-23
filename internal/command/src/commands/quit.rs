@@ -1,6 +1,7 @@
-use crate::prelude::{Command, CommandArity, CommandModifier, QuitFlag};
+use crate::prelude::*;
 use anyhow::Error as AnyError;
 use hecs::{Entity, World};
+use hornvale_core::prelude::*;
 
 /// A command that sets the quit flag on the world.
 #[derive(Clone, Copy, Debug)]

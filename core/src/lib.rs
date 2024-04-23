@@ -26,6 +26,8 @@
 //! In addition, this crate provides some basic components that can be used to
 //! describe regions, rooms, and other entities.
 
+/// The `Command` trait and related concepts.
+pub mod command;
 /// Common components.
 pub mod components;
 /// Corridors connect regions.
@@ -45,6 +47,9 @@ pub mod room;
 
 /// The prelude.
 pub mod prelude {
+  pub use super::command::{
+    arity::CommandArity, function::CommandFunction, modifier::CommandModifier, syntax::CommandSyntax, Command,
+  };
   pub use super::corridor::{
     direction::CorridorDirection, finder::CorridorFinder, kind::CorridorKind, origin::CorridorOrigin,
     terminus::CorridorTerminus,
