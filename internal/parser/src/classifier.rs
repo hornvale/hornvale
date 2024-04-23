@@ -11,30 +11,17 @@ pub mod tests;
 /// pronoun, noun, verb, etc, depending on context), parsing performantly, and
 /// for providing better error messages.
 #[derive(Clone, Copy, Debug, Default)]
-pub struct Classifier {
-  /// Have we found the verb?
-  pub found_verb: bool,
-  /// Have we found the direct object?
-  pub found_direct_object: bool,
-  /// Have we found the indirect object?
-  pub found_indirect_object: bool,
-}
+pub struct Classifier;
 
 impl Classifier {
   /// Create a new classifier.
   pub fn new() -> Self {
-    Self {
-      found_verb: false,
-      found_direct_object: false,
-      found_indirect_object: false,
-    }
+    Self
   }
 
   /// Classify the tokens in a sentence and return "hints".
   pub fn classify_tokens(&self, tokens: &mut [Token]) -> Result<(), ParserError> {
-    if tokens.is_empty() || tokens.iter().position(|t| t.kind == TokenKind::EndOfInput) == Some(0) {
-      return Err(ParserError::NoInput);
-    }
+    self.assert_non_empty(tokens)?;
     // The first token should always be a verb or a magic word.
     if !tokens[0].kind.is_magic_word() {
       if !tokens[0].kind.could_be_verb() {
@@ -178,5 +165,18 @@ impl Classifier {
       self.process_presumed_direct_object(tokens, 1)?;
     }
     Ok(())
+  }
+
+  /// Assert that the slice of tokens is non-empty and ends with an EndOfInput
+  /// token.
+  pub fn assert_non_empty(&self, tokens: &[Token]) -> Result<(), ParserError> {
+    match tokens.len() {
+      0 => Err(ParserError::NoInput),
+      1 if tokens[0].kind == TokenKind::EndOfInput => Err(ParserError::NoVerb),
+      1 if tokens[0].kind != TokenKind::EndOfInput => Err(ParserError::InvalidTokenSequence(
+        "did not end with end-of-input token".to_string(),
+      )),
+      _ => Ok(()),
+    }
   }
 }

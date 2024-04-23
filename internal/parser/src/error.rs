@@ -44,6 +44,9 @@ pub enum ParserError {
   /// Index out of bounds.
   #[error("index out of bounds")]
   IndexOutOfBounds,
+  /// Invalid token sequence.
+  #[error("invalid token sequence: {0}")]
+  InvalidTokenSequence(String),
   /// Unterminated string literal.
   #[error("unterminated string literal")]
   UnterminatedStringLiteral,
