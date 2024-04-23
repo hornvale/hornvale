@@ -28,7 +28,7 @@ pub enum ParserError {
   UnknownCommand(String),
   /// An unknown form of a command was encountered.
   #[error("unknown form: {0} of command: {1} (known forms: {2:?})")]
-  UnknownCommandForm(String, String, Vec<String>),
+  UnknownCommandModifier(String, String, Vec<String>),
   /// An unexpected token was encountered.
   #[error("unexpected token: expected {0}, found {1}; {2}")]
   UnexpectedToken(TokenKind, TokenKind, String),

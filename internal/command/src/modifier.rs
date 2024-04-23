@@ -5,7 +5,7 @@ use strum::Display;
 ///
 /// This is generally either an adverb or a preposition.
 #[derive(Clone, Copy, Debug, Default, Display, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub enum CommandForm {
+pub enum CommandModifier {
   /// The base form of a command.
   #[default]
   Default,

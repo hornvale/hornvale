@@ -1,4 +1,4 @@
-use crate::prelude::{CommandArity, CommandContext, CommandError, CommandForm};
+use crate::prelude::{CommandArity, CommandContext, CommandError, CommandModifier};
 use hecs::World;
 
 /// A command that can be executed.
@@ -15,7 +15,7 @@ pub trait Command {
   const DESCRIPTION: &'static str;
   /// Get the form of the command. This informs the parser how to match input
   /// to the appropriate command.
-  const FORM: CommandForm;
+  const FORM: CommandModifier;
   /// Get the arity of the command: how many and what types of arguments the
   /// command takes.
   const ARITY: CommandArity;
@@ -35,7 +35,7 @@ macro_rules! define_command_variant {
       const SYNONYMS: &'static [&'static str] = <$original as Command>::SYNONYMS;
       const BRIEF: &'static str = <$original as Command>::BRIEF;
       const DESCRIPTION: &'static str = <$original as Command>::DESCRIPTION;
-      const FORM: CommandForm = $form;
+      const FORM: CommandModifier = $form;
       const ARITY: CommandArity = <$original as Command>::ARITY;
 
       fn execute(&mut World, &CommandContext) -> Result<(), CommandError> {

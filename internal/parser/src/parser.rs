@@ -199,11 +199,11 @@ impl<'world> Parser<'world> {
     let form = self
       .modifier
       .as_ref()
-      .map(|t| t.kind.try_into().unwrap_or(CommandForm::Default))
-      .unwrap_or(CommandForm::Default);
+      .map(|t| t.kind.try_into().unwrap_or(CommandModifier::Default))
+      .unwrap_or(CommandModifier::Default);
     if !registry.has_form(name, &form) {
       let forms = registry.get_forms(name).unwrap();
-      return Err(ParserError::UnknownCommandForm(
+      return Err(ParserError::UnknownCommandModifier(
         name.to_string(),
         form.to_string(),
         forms.iter().map(|f| f.to_string()).collect(),
@@ -247,9 +247,9 @@ impl<'world> Parser<'world> {
       }
     }
     context.form = if let Some(modifier) = &self.modifier {
-      modifier.kind.try_into().unwrap_or(CommandForm::Default)
+      modifier.kind.try_into().unwrap_or(CommandModifier::Default)
     } else {
-      CommandForm::Default
+      CommandModifier::Default
     };
     context.actor = Some(self.actor);
     self.context = Some(context);

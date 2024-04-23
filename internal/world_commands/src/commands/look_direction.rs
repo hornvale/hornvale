@@ -14,7 +14,7 @@ impl Command for LookDirectionCommand {
     The actor will attempt to move in the direction specified by the first argument; if they are unable to move in
     that direction, they will be informed why.
   "#;
-  const FORM: CommandForm = CommandForm::Direction;
+  const FORM: CommandModifier = CommandModifier::Direction;
   const ARITY: CommandArity = CommandArity::Unary(CommandParameter::Direction);
 
   fn execute(world: &mut World, context: &CommandContext) -> Result<(), CommandError> {

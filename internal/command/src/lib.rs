@@ -18,10 +18,10 @@ pub mod commands;
 pub mod context;
 /// An error type.
 pub mod error;
-/// A specifier that allows us to use the same verb for different commands.
-pub mod form;
 /// A function that can be executed as a command.
 pub mod function;
+/// A specifier that allows us to use the same verb for different commands.
+pub mod modifier;
 /// Parameters for a command.
 pub mod parameter;
 /// Query the world for information or to perform actions.
@@ -39,8 +39,8 @@ pub mod prelude {
   pub use super::commands::{fail::FailCommand, no_op::NoOpCommand, quit::QuitCommand};
   pub use super::context::CommandContext;
   pub use super::error::CommandError;
-  pub use super::form::CommandForm;
   pub use super::function::CommandFunction;
+  pub use super::modifier::CommandModifier;
   pub use super::parameter::CommandParameter;
   pub use super::query as command_query;
   pub use super::quit_flag::QuitFlag;

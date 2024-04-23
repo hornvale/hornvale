@@ -1,4 +1,4 @@
-use crate::prelude::{Command, CommandContext, CommandError, CommandForm, CommandFunction};
+use crate::prelude::{Command, CommandContext, CommandError, CommandFunction, CommandModifier};
 use hecs::World;
 use std::collections::HashMap;
 
@@ -9,7 +9,7 @@ use std::collections::HashMap;
 #[derive(Debug, Default)]
 pub struct CommandRegistry {
   /// The commands in the registry.
-  pub commands: HashMap<&'static str, HashMap<CommandForm, CommandFunction>>,
+  pub commands: HashMap<&'static str, HashMap<CommandModifier, CommandFunction>>,
 }
 
 impl CommandRegistry {
@@ -34,17 +34,17 @@ impl CommandRegistry {
   }
 
   /// Do we have this form of a command in the registry?
-  pub fn has_form(&self, name: &str, form: &CommandForm) -> bool {
+  pub fn has_form(&self, name: &str, form: &CommandModifier) -> bool {
     self.commands.get(name).map_or(false, |entry| entry.contains_key(form))
   }
 
   /// Get a command from the registry.
-  pub fn get(&self, name: &str, form: &CommandForm) -> Option<&CommandFunction> {
+  pub fn get(&self, name: &str, form: &CommandModifier) -> Option<&CommandFunction> {
     self.commands.get(name).and_then(|entry| entry.get(form))
   }
 
   /// Get the forms of a command in the registry.
-  pub fn get_forms(&self, name: &str) -> Option<Vec<&CommandForm>> {
+  pub fn get_forms(&self, name: &str) -> Option<Vec<&CommandModifier>> {
     self.commands.get(name).map(|entry| entry.keys().collect())
   }
 
@@ -52,7 +52,7 @@ impl CommandRegistry {
   pub fn execute(
     &self,
     name: &str,
-    form: &CommandForm,
+    form: &CommandModifier,
     world: &mut World,
     context: &CommandContext,
   ) -> Result<(), CommandError> {

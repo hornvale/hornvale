@@ -14,7 +14,7 @@ impl Command for LookHereCommand {
     Look at your surroundings. This command will provide a description of the
     player's current location, including any items or characters that are present.
   "#;
-  const FORM: CommandForm = CommandForm::Here;
+  const FORM: CommandModifier = CommandModifier::Here;
   const ARITY: CommandArity = CommandArity::Nullary;
 
   fn execute(world: &mut World, context: &CommandContext) -> Result<(), CommandError> {

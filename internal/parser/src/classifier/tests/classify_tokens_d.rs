@@ -208,3 +208,18 @@ fn test_classify_tokens74() {
     ],
   );
 }
+
+#[test]
+fn test_classify_tokens75() {
+  init();
+  test_string_classification(
+    "turn on car with key",
+    &[
+      TokenKind::Verb,
+      TokenKind::On,
+      TokenKind::Noun, // Should be direct object.
+      TokenKind::With,
+      TokenKind::Noun, // Should be indirect object.
+    ],
+  );
+}

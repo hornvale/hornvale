@@ -1,4 +1,4 @@
-use crate::prelude::{CommandArgument, CommandForm};
+use crate::prelude::{CommandArgument, CommandModifier};
 use hecs::Entity;
 use serde::{Deserialize, Serialize};
 
@@ -29,7 +29,7 @@ pub struct CommandContext {
   ///
   /// This is the modifier that can be applied to the verb. For example, in the
   /// command "look behind the curtain", the form is "behind".
-  pub form: CommandForm,
+  pub form: CommandModifier,
   /// The direct object, if any.
   ///
   /// This is the object that the player is trying to interact with. For example,

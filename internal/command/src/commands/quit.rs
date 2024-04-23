@@ -1,4 +1,4 @@
-use crate::prelude::{Command, CommandArity, CommandContext, CommandError, CommandForm, QuitFlag};
+use crate::prelude::{Command, CommandArity, CommandContext, CommandError, CommandModifier, QuitFlag};
 use hecs::World;
 
 /// A command that sets the quit flag on the world.
@@ -10,7 +10,7 @@ impl Command for QuitCommand {
   const SYNONYMS: &'static [&'static str] = &[];
   const BRIEF: &'static str = "Quit the game.";
   const DESCRIPTION: &'static str = "Quits the game.";
-  const FORM: CommandForm = CommandForm::Default;
+  const FORM: CommandModifier = CommandModifier::Default;
   const ARITY: CommandArity = CommandArity::Nullary;
 
   /// Do nothing.
