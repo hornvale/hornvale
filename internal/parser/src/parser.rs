@@ -5,9 +5,6 @@ use hecs::{Entity, With, World};
 use hornvale_command::prelude::*;
 use hornvale_world::prelude::*;
 
-#[cfg(test)]
-pub mod tests;
-
 /// Arguments that will be passed to a command.
 pub type CommandArgs = (Entity, Option<Entity>, Option<Entity>);
 

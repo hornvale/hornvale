@@ -108,7 +108,7 @@ pub enum TokenKind {
   /// "Northwest", e.g. in `go northwest`.
   Northwest,
 
-  // Prepositions.
+  // Command modifiers.
   /// "About", e.g. in `ask man about the goat`.
   About,
   /// "Above", e.g. in `look above the shelf`.
