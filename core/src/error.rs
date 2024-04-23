@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
+use anyhow::Error as AnyError;
 use thiserror::Error as ThisError;
 
 /// Errors related to world operations.
-#[derive(Clone, Debug, Deserialize, Eq, ThisError, Hash, PartialEq, Serialize)]
+#[derive(Debug, ThisError)]
 pub enum WorldError {
   /// The region generator does not exist.
   #[error("the region generator \"{0}\" does not exist")]
@@ -10,4 +10,7 @@ pub enum WorldError {
   /// An unknown error occurred.
   #[error("an unknown error occurred")]
   UnknownError,
+  /// Any error.
+  #[error(transparent)]
+  Any(#[from] AnyError),
 }
