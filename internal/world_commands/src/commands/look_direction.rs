@@ -1,6 +1,5 @@
 use anyhow::Error as AnyError;
 use hecs::{Entity, World};
-use hornvale_command::prelude::*;
 use hornvale_core::prelude::*;
 
 /// Attempt to look in a given direction.
@@ -26,16 +25,16 @@ impl Command for LookDirectionCommand {
     _indirect_object: Option<Entity>,
   ) -> Result<(), AnyError> {
     if direct_object.is_none() {
-      return Err(CommandError::InvalidArgument("Expected a direction.".to_string()).into());
+      anyhow::bail!("Expected a direction.");
     }
     let direction_query = world.query_one_mut::<&PassageDirection>(direct_object.unwrap());
     if direction_query.is_err() {
-      return Err(CommandError::InvalidArgument("Expected a direction.".to_string()).into());
+      anyhow::bail!("Expected a direction.");
     }
     let direction = *direction_query.unwrap();
     let actor_info = world_query::get_entity_region_and_room(world, actor);
     if actor_info.is_none() {
-      return Err(CommandError::InvalidActor("The actor is not in a region or room.".to_string()).into());
+      anyhow::bail!("The actor is not in a region or room.");
     }
     let (region, room) = actor_info.unwrap();
 

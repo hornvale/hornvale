@@ -9,7 +9,6 @@ workspace = true
 [dependencies]
 anyhow.workspace = true
 hecs.workspace = true
-hornvale_command.workspace = true
 hornvale_core.workspace = true
 
 [dev-dependencies]
