@@ -1,4 +1,5 @@
-use crate::prelude::{Command, CommandArity, CommandError, CommandModifier};
+use crate::prelude::{Command, CommandArity, CommandModifier};
+use anyhow::Error as AnyError;
 use hecs::{Entity, World};
 
 /// A command that does nothing at all.
@@ -20,7 +21,7 @@ impl Command for NoOpCommand {
     _actor: Entity,
     _direct_object: Option<Entity>,
     _indirect_object: Option<Entity>,
-  ) -> Result<(), CommandError> {
+  ) -> Result<(), AnyError> {
     Ok(())
   }
 }

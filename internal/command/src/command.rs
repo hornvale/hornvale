@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use anyhow::Error as AnyError;
 use hecs::{Entity, World};
 
 /// The "arity" of a command; how many arguments it takes.
@@ -42,7 +43,7 @@ pub trait Command {
     actor: Entity,
     direct_object: Option<Entity>,
     indirect_object: Option<Entity>,
-  ) -> Result<(), CommandError>;
+  ) -> Result<(), AnyError>;
 }
 
 /// Macro to define a command variant with minimal repetition.
@@ -65,7 +66,7 @@ macro_rules! define_command_variant {
         actor: Entity,
         direct_object: Option<Entity>,
         indirect_object: Option<Entity>,
-      ) -> Result<(), CommandError> {
+      ) -> Result<(), AnyError> {
         <$original as Command>::execute(world, actor, direct_object, indirect_object)
       }
     }

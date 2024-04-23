@@ -1,4 +1,5 @@
 use crate::prelude::{Command, CommandArity, CommandError, CommandModifier};
+use anyhow::Error as AnyError;
 use hecs::{Entity, World};
 
 /// A command that always fails.
@@ -19,15 +20,14 @@ impl Command for FailCommand {
     _actor: Entity,
     _direct_object: Option<Entity>,
     _indirect_object: Option<Entity>,
-  ) -> Result<(), CommandError> {
-    Err(CommandError::UnknownError)
+  ) -> Result<(), AnyError> {
+    Err(CommandError::UnknownError.into())
   }
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::prelude::CommandError;
   use hornvale_test_utilities::prelude::*;
 
   #[test]
@@ -36,9 +36,6 @@ mod tests {
     let mut world = World::new();
     let entity = world.spawn(());
     let result = FailCommand::execute(&mut world, entity, None, None);
-    assert_eq!(
-      std::mem::discriminant(&result.unwrap_err()),
-      std::mem::discriminant(&CommandError::UnknownError)
-    );
+    assert!(result.is_err());
   }
 }

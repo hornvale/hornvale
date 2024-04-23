@@ -1,3 +1,4 @@
+use anyhow::Error as AnyError;
 use hecs::{Entity, World};
 use hornvale_command::prelude::*;
 use hornvale_core::prelude::*;
@@ -23,12 +24,10 @@ impl Command for LookHereCommand {
     actor: Entity,
     _direct_object: Option<Entity>,
     _indirect_object: Option<Entity>,
-  ) -> Result<(), CommandError> {
+  ) -> Result<(), AnyError> {
     let actor_info = world_query::get_entity_region_and_room(world, actor);
     if actor_info.is_none() {
-      return Err(CommandError::InvalidActor(
-        "The actor is not in a region or room.".to_string(),
-      ));
+      return Err(CommandError::InvalidActor("The actor is not in a region or room.".to_string()).into());
     }
     let (region, room) = actor_info.unwrap();
     let (room_name, room_description) = world_query::get_room_name_and_description(world, &region, &room).unwrap();

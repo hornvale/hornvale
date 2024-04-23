@@ -1,4 +1,5 @@
-use crate::prelude::{Command, CommandArity, CommandError, CommandModifier, QuitFlag};
+use crate::prelude::{Command, CommandArity, CommandModifier, QuitFlag};
+use anyhow::Error as AnyError;
 use hecs::{Entity, World};
 
 /// A command that sets the quit flag on the world.
@@ -20,7 +21,7 @@ impl Command for QuitCommand {
     _actor: Entity,
     _direct_object: Option<Entity>,
     _indirect_object: Option<Entity>,
-  ) -> Result<(), CommandError> {
+  ) -> Result<(), AnyError> {
     world.spawn((QuitFlag,));
     Ok(())
   }
