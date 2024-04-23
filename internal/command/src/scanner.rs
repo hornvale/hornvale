@@ -1,4 +1,4 @@
-use crate::prelude::{ParserError, Token, TokenKind};
+use crate::prelude::{CommandError, Token, TokenKind};
 
 /// A simple scanner for breaking input into tokens.
 #[derive(Clone, Debug)]
@@ -41,7 +41,7 @@ impl Scanner {
   }
 
   /// Scan the input into tokens.
-  pub fn scan_tokens(&mut self) -> Result<Vec<Token>, ParserError> {
+  pub fn scan_tokens(&mut self) -> Result<Vec<Token>, CommandError> {
     while !self.is_at_end() {
       self.start = self.current;
       let token = self.scan_token()?;
@@ -60,7 +60,7 @@ impl Scanner {
   }
 
   /// Scan the next token.
-  pub fn scan_token(&mut self) -> Result<Token, ParserError> {
+  pub fn scan_token(&mut self) -> Result<Token, CommandError> {
     self.skip_whitespace()?;
     self.start = self.current;
     if self.is_at_end() {
@@ -101,7 +101,7 @@ impl Scanner {
       '"' | '\'' => self.match_string(character)?,
       char if char.is_ascii_digit() => self.match_number_or_ordinal()?,
       char if self.is_alpha(char) => self.match_word()?,
-      _ => return Err(ParserError::UnexpectedCharacter(character)),
+      _ => return Err(CommandError::UnexpectedCharacter(character)),
     };
     Ok(result)
   }
@@ -160,14 +160,14 @@ impl Scanner {
   // TildeWord,
 
   /// Advance one character through the source and return it.
-  pub fn advance(&mut self) -> Result<char, ParserError> {
+  pub fn advance(&mut self) -> Result<char, CommandError> {
     let position = self.current;
     self.current += 1;
     self
       .input
       .chars()
       .nth(position)
-      .ok_or(ParserError::CharacterOutOfBounds)
+      .ok_or(CommandError::CharacterOutOfBounds)
   }
 
   /// Create a token based on a token type.
@@ -177,7 +177,7 @@ impl Scanner {
   }
 
   /// Try to match and create a token out of a number or ordinal.
-  pub fn match_number_or_ordinal(&mut self) -> Result<Token, ParserError> {
+  pub fn match_number_or_ordinal(&mut self) -> Result<Token, CommandError> {
     // Keep going as long as we have digits; this will handle both numbers and
     // ordinals.
     while self.peek().is_ascii_digit() {
@@ -200,14 +200,14 @@ impl Scanner {
   }
 
   /// Try to match and create a token out of a string.
-  pub fn match_string(&mut self, start_char: char) -> Result<Token, ParserError> {
+  pub fn match_string(&mut self, start_char: char) -> Result<Token, CommandError> {
     // We can begin a string with either a single or double quote.
     // We'll use the start_char to determine which one we're looking for.
     while self.peek() != start_char && !self.is_at_end() {
       self.advance()?;
     }
     let result = if self.is_at_end() {
-      return Err(ParserError::UnterminatedStringLiteral);
+      return Err(CommandError::UnterminatedStringLiteral);
     } else {
       // Consume the closing quote.
       self.advance()?;
@@ -217,7 +217,7 @@ impl Scanner {
   }
 
   /// Try to match and create a word beginning with a special character.
-  pub fn match_magic_word(&mut self, kind: TokenKind, fallback: TokenKind) -> Result<Token, ParserError> {
+  pub fn match_magic_word(&mut self, kind: TokenKind, fallback: TokenKind) -> Result<Token, CommandError> {
     if self.peek() == ' ' {
       return Ok(self.make_token(fallback));
     }
@@ -229,7 +229,7 @@ impl Scanner {
   }
 
   /// Try to match and create a token out of a word.
-  pub fn match_word(&mut self) -> Result<Token, ParserError> {
+  pub fn match_word(&mut self) -> Result<Token, CommandError> {
     while self.is_word_char(self.peek()) {
       self.advance()?;
     }
@@ -291,7 +291,7 @@ impl Scanner {
   }
 
   /// Skip all the whitespace!
-  pub fn skip_whitespace(&mut self) -> Result<(), ParserError> {
+  pub fn skip_whitespace(&mut self) -> Result<(), CommandError> {
     loop {
       match self.peek() {
         '\n' | ' ' | '\r' | '\t' => {

@@ -14,7 +14,6 @@ pub use hornvale_command::prelude as command;
 pub use hornvale_core::prelude as core;
 pub use hornvale_input::prelude as input;
 pub use hornvale_output::prelude as output;
-pub use hornvale_parser::prelude as parser;
 pub use hornvale_scripting::prelude as scripting;
 pub use hornvale_world::prelude as world;
 
@@ -25,7 +24,6 @@ pub mod prelude {
   pub use super::core::*;
   pub use super::input::*;
   pub use super::output::*;
-  pub use super::parser::*;
   pub use super::scripting::*;
   pub use super::world::*;
 

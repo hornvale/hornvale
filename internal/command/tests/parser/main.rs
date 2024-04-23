@@ -1,7 +1,6 @@
 use hecs::{Entity, With, World};
 use hornvale_command::prelude::*;
 use hornvale_core::prelude::*;
-use hornvale_parser::prelude::*;
 use hornvale_test_utilities::prelude::*;
 use hornvale_world::prelude::*;
 use hornvale_world_commands::prelude::*;
@@ -24,7 +23,7 @@ pub fn test_string_parsing(
   string: &str,
   actor: Entity,
   world: &mut World,
-  expected: Result<(CommandFunction, (Entity, Option<Entity>, Option<Entity>)), ParserError>,
+  expected: Result<(CommandFunction, (Entity, Option<Entity>, Option<Entity>)), CommandError>,
 ) {
   init();
   let mut scanner = Scanner::new(string);

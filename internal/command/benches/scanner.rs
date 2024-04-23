@@ -2,7 +2,7 @@
 #![allow(missing_docs)]
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use hornvale_parser::prelude::*;
+use hornvale_command::prelude::*;
 
 fn scanner(criterion: &mut Criterion) {
   let mut group = criterion.benchmark_group("Scanner");

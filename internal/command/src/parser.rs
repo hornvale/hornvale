@@ -1,8 +1,7 @@
-use crate::error::ParserError;
-use crate::prelude::{Token, TokenKind};
+use crate::error::CommandError;
+use crate::prelude::*;
 use derivative::Derivative;
 use hecs::{Entity, With, World};
-use hornvale_command::prelude::*;
 use hornvale_world::prelude::*;
 
 /// Arguments that will be passed to a command.
@@ -69,7 +68,7 @@ impl<'world> Parser<'world> {
   /// This is the main entry point for the parser.
   ///
   /// input → command
-  pub fn parse(&mut self) -> Result<(&CommandFunction, CommandArgs), ParserError> {
+  pub fn parse(&mut self) -> Result<(&CommandFunction, CommandArgs), CommandError> {
     self.assert_non_empty()?;
     self.parse_command()?;
     self.bind_command()?;
@@ -82,8 +81,8 @@ impl<'world> Parser<'world> {
   /// Parse a command from the input.
   ///
   /// command → verb-phrase (object-phrase)?
-  pub fn parse_command(&mut self) -> Result<(), ParserError> {
-    self.consume_verb().map_err(|_| ParserError::NoVerb)?;
+  pub fn parse_command(&mut self) -> Result<(), CommandError> {
+    self.consume_verb().map_err(|_| CommandError::NoVerb)?;
     println! {"Verb: {:?}", self.verb_token};
     match self.peek() {
       Some(token) if token.kind == TokenKind::Here => {
@@ -103,7 +102,7 @@ impl<'world> Parser<'world> {
   }
 
   /// Match current token.
-  pub fn match_token(&mut self, kind: TokenKind) -> Result<bool, ParserError> {
+  pub fn match_token(&mut self, kind: TokenKind) -> Result<bool, CommandError> {
     if !self.check_token(kind) {
       return Ok(false);
     }
@@ -112,41 +111,41 @@ impl<'world> Parser<'world> {
   }
 
   /// Match a magic word.
-  pub fn match_magic_word(&mut self) -> Result<bool, ParserError> {
-    self.peek().map(|t| t.kind.is_magic_word()).ok_or(ParserError::NoInput)
+  pub fn match_magic_word(&mut self) -> Result<bool, CommandError> {
+    self.peek().map(|t| t.kind.is_magic_word()).ok_or(CommandError::NoInput)
   }
 
   /// Consume the verb.
-  pub fn consume_verb(&mut self) -> Result<(), ParserError> {
+  pub fn consume_verb(&mut self) -> Result<(), CommandError> {
     if self.check_token(TokenKind::Verb) {
       self.verb_token = self.peek().map(|t| t.lexeme.clone());
       self.advance()?;
       Ok(())
     } else {
-      Err(ParserError::NoVerb)
+      Err(CommandError::NoVerb)
     }
   }
 
   //  /// Consume the direct object.
-  //  pub fn consume_direct_object(&mut self) -> Result<(), ParserError> {
+  //  pub fn consume_direct_object(&mut self) -> Result<(), CommandError> {
   //    if self.check_token(TokenKind::DirectObject) {
   //      self.direct_object = self.peek();
   //      Ok(())
   //    } else {
-  //      Err(ParserError::CouldNotConsumeDirectObject(
+  //      Err(CommandError::CouldNotConsumeDirectObject(
   //        self.peek().map(|t| t.lexeme.clone()).unwrap_or_default(),
   //      ))
   //    }
   //  }
 
   /// Consume the current token, throwing an error if it is not the expected kind.
-  pub fn consume_token(&mut self, expected: TokenKind, message: &str) -> Result<(), ParserError> {
+  pub fn consume_token(&mut self, expected: TokenKind, message: &str) -> Result<(), CommandError> {
     let current_kind = self.peek().map(|t| t.kind).unwrap_or(TokenKind::EndOfInput);
     if current_kind == expected {
       self.advance()?;
       Ok(())
     } else {
-      Err(ParserError::UnexpectedToken(
+      Err(CommandError::UnexpectedToken(
         expected,
         current_kind,
         message.to_string(),
@@ -155,16 +154,16 @@ impl<'world> Parser<'world> {
   }
 
   /// Consume a magic word.
-  pub fn consume_magic_word(&mut self) -> Result<(), ParserError> {
+  pub fn consume_magic_word(&mut self) -> Result<(), CommandError> {
     if self.match_magic_word()? {
       self.consume_token(self.peek().unwrap().kind, "Expected a magic word")
     } else {
-      Err(ParserError::NoInput)
+      Err(CommandError::NoInput)
     }
   }
 
   /// Bind the magic word.
-  pub fn bind_magic_word(&mut self) -> Result<(), ParserError> {
+  pub fn bind_magic_word(&mut self) -> Result<(), CommandError> {
     // self.function = Some(CommandFunction::MagicWord);
     Ok(())
   }
@@ -174,7 +173,7 @@ impl<'world> Parser<'world> {
   /// This is where the parser retrieves the command registry from the World,
   /// gets the form of the command, and binds the command function to the
   /// parser.
-  pub fn bind_command(&mut self) -> Result<(), ParserError> {
+  pub fn bind_command(&mut self) -> Result<(), CommandError> {
     let registry = self
       .world
       .query_mut::<&mut CommandRegistry>()
@@ -184,7 +183,7 @@ impl<'world> Parser<'world> {
       .1;
     let name = self.verb_token.as_ref().unwrap();
     if !registry.has_command(name) {
-      return Err(ParserError::UnknownCommand(name.to_string()));
+      return Err(CommandError::UnknownCommand(name.to_string()));
     }
     let syntax = CommandSyntax {
       arity: self.arity.unwrap_or(CommandArity::Nullary),
@@ -193,7 +192,7 @@ impl<'world> Parser<'world> {
     };
     if !registry.has_syntax(name, &syntax) {
       let forms = registry.get_syntaxes(name).unwrap();
-      return Err(ParserError::UnknownCommandModifier(
+      return Err(CommandError::UnknownCommandModifier(
         name.to_string(),
         syntax.to_string(),
         forms.iter().map(|f| f.to_string()).collect(),
@@ -201,13 +200,13 @@ impl<'world> Parser<'world> {
     }
     let command = registry
       .get(name, &syntax)
-      .ok_or(ParserError::UnknownCommand(name.to_string()))?;
+      .ok_or(CommandError::UnknownCommand(name.to_string()))?;
     self.function = Some(*command);
     Ok(())
   }
 
   /// Bind the Here token.
-  pub fn bind_here(&mut self) -> Result<Entity, ParserError> {
+  pub fn bind_here(&mut self) -> Result<Entity, CommandError> {
     let actor_info = {
       let query_result = self.world.query_one::<(&Region, &Room)>(self.actor);
       let mut query = query_result.unwrap(); // `query` is now a longer-lived value
@@ -231,7 +230,7 @@ impl<'world> Parser<'world> {
   }
 
   /// Bind a specified direction.
-  pub fn bind_direction(&mut self, _token: Token) -> Result<Option<Entity>, ParserError> {
+  pub fn bind_direction(&mut self, _token: Token) -> Result<Option<Entity>, CommandError> {
     self.arity = match self.arity {
       Some(CommandArity::Nullary) => Some(CommandArity::Unary),
       Some(CommandArity::Unary) => Some(CommandArity::Binary),
@@ -294,7 +293,7 @@ impl<'world> Parser<'world> {
           .0;
         Ok(Some(entity))
       },
-      _ => Err(ParserError::UnknownError),
+      _ => Err(CommandError::UnknownError),
     }
   }
 
@@ -304,7 +303,7 @@ impl<'world> Parser<'world> {
   }
 
   /// Advance to the next token.
-  pub fn advance(&mut self) -> Result<(), ParserError> {
+  pub fn advance(&mut self) -> Result<(), CommandError> {
     if !self.is_at_end() {
       self.current += 1;
     }
@@ -312,12 +311,12 @@ impl<'world> Parser<'world> {
   }
 
   /// Assert that there is input to parse.
-  pub fn assert_non_empty(&self) -> Result<(), ParserError> {
+  pub fn assert_non_empty(&self) -> Result<(), CommandError> {
     if self.tokens.is_empty() {
-      return Err(ParserError::NoInput);
+      return Err(CommandError::NoInput);
     }
     if self.is_at_end() {
-      return Err(ParserError::NoInput);
+      return Err(CommandError::NoInput);
     }
     Ok(())
   }

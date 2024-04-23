@@ -22,5 +22,4 @@ thiserror.workspace = true
 hornvale_command.workspace = true
 hornvale_input.workspace = true
 hornvale_test_utilities.workspace = true
-hornvale_parser.workspace = true
 hornvale_world_commands.workspace = true

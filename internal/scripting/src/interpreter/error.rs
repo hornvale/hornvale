@@ -1,4 +1,4 @@
-use crate::parser::error::Error as ParserError;
+use crate::parser::error::Error as CommandError;
 use crate::scanner::error::Error as ScannerError;
 use thiserror::Error;
 
@@ -7,7 +7,7 @@ use thiserror::Error;
 pub enum Error {
   /// Parser error.
   #[error("an error occurred in the parser ({0})")]
-  ParserError(#[from] ParserError),
+  CommandError(#[from] CommandError),
   /// Scanner error.
   #[error("an error occurred in the scanner ({0})")]
   ScannerError(#[from] ScannerError),

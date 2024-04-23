@@ -70,7 +70,6 @@ hornvale_command.workspace = true
 hornvale_core.workspace = true
 hornvale_input.workspace = true
 hornvale_output.workspace = true
-hornvale_parser.workspace = true
 hornvale_scripting.workspace = true
 hornvale_world.workspace = true
 hornvale_world_commands.workspace = true
@@ -101,7 +100,6 @@ hornvale_command = { path = "internal/command" }
 hornvale_core = { path = "core" }
 hornvale_input = { path = "internal/input" }
 hornvale_output = { path = "internal/output" }
-hornvale_parser = { path = "internal/parser" }
 hornvale_scripting = { path = "internal/scripting" }
 hornvale_test_utilities = { path = "test/test_utilities" }
 hornvale_world = { path = "internal/world" }

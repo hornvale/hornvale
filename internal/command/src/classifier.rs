@@ -1,4 +1,4 @@
-use crate::prelude::{ParserError, Token, TokenKind};
+use crate::prelude::*;
 
 #[cfg(test)]
 pub mod tests;
@@ -20,12 +20,12 @@ impl Classifier {
   }
 
   /// Classify the tokens in a sentence and return "hints".
-  pub fn classify_tokens(&self, tokens: &mut [Token]) -> Result<(), ParserError> {
+  pub fn classify_tokens(&self, tokens: &mut [Token]) -> Result<(), CommandError> {
     self.assert_non_empty(tokens)?;
     // The first token should always be a verb or a magic word.
     if !tokens[0].kind.is_magic_word() {
       if !tokens[0].kind.could_be_verb() {
-        return Err(ParserError::NoVerb);
+        return Err(CommandError::NoVerb);
       }
       tokens[0].kind = TokenKind::Verb;
     }
@@ -47,7 +47,7 @@ impl Classifier {
   }
 
   /// Find the prepositions in the tokens and classify accordingly.
-  pub fn find_prepositions(&self, tokens: &mut [Token]) -> Result<bool, ParserError> {
+  pub fn find_prepositions(&self, tokens: &mut [Token]) -> Result<bool, CommandError> {
     // If this sentence contains anything that looks like a preposition, we'll
     // need to process it.
     if let Some(index) = tokens.iter().position(|t| t.kind.is_preposition()) {
@@ -58,7 +58,7 @@ impl Classifier {
   }
 
   /// Process the first preposition in the tokens.
-  pub fn process_first_preposition(&self, tokens: &mut [Token], index: usize) -> Result<(), ParserError> {
+  pub fn process_first_preposition(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
     // Find the last non-EOI token.
     let lnei = tokens.iter().rposition(|t| t.kind != TokenKind::EndOfInput).unwrap();
     // If it's the same as the first preposition, then it's actually an adverb.
@@ -82,7 +82,7 @@ impl Classifier {
   }
 
   /// Process the presumed direct object.
-  pub fn process_presumed_direct_object(&self, tokens: &mut [Token], index: usize) -> Result<(), ParserError> {
+  pub fn process_presumed_direct_object(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
     // This index had better always be a token.
     let lnk = tokens.get(index).map(|t| t.kind).unwrap();
     // Unless it's already something other than a noun, it should be a noun.
@@ -96,7 +96,7 @@ impl Classifier {
   }
 
   /// Process other prepositions.
-  pub fn process_other_prepositions(&self, tokens: &mut [Token], index: usize) -> Result<(), ParserError> {
+  pub fn process_other_prepositions(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
     // Find the next preposition in the tokens.
     if let Some(rel_index) = tokens.iter().skip(index).position(|t| t.kind.is_preposition()) {
       // The index of the next preposition, corrected for the slice.
@@ -108,13 +108,13 @@ impl Classifier {
   }
 
   /// Process secondary preposition.
-  pub fn process_secondary_preposition(&self, tokens: &mut [Token], index: usize) -> Result<(), ParserError> {
+  pub fn process_secondary_preposition(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
     self.process_presumed_noun(tokens, index - 1)?;
     Ok(())
   }
 
   /// Process the presumed noun.
-  pub fn process_presumed_noun(&self, tokens: &mut [Token], index: usize) -> Result<(), ParserError> {
+  pub fn process_presumed_noun(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
     if let Some(lnk) = tokens.get(index).map(|t| t.kind) {
       // Don't override things that already work as nouns.
       if lnk.could_be_noun() && !lnk.is_noun() {
@@ -129,7 +129,7 @@ impl Classifier {
   }
 
   /// Process the presumed adjectives.
-  pub fn process_presumed_adjectives(&self, tokens: &mut [Token], index: usize) -> Result<(), ParserError> {
+  pub fn process_presumed_adjectives(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
     // We start at the specified index and work our way back.
     for i in (0..=index).rev() {
       // This should always be a valid index.
@@ -155,7 +155,7 @@ impl Classifier {
   }
 
   /// Find directional adverbs.
-  pub fn find_directional_adverbs(&self, tokens: &mut [Token]) -> Result<(), ParserError> {
+  pub fn find_directional_adverbs(&self, tokens: &mut [Token]) -> Result<(), CommandError> {
     if tokens.len() != 4 {
       // This only works for sentences of the form <verb> <noun> <adverb> <eoi>.
       return Ok(());
@@ -169,11 +169,11 @@ impl Classifier {
 
   /// Assert that the slice of tokens is non-empty and ends with an EndOfInput
   /// token.
-  pub fn assert_non_empty(&self, tokens: &[Token]) -> Result<(), ParserError> {
+  pub fn assert_non_empty(&self, tokens: &[Token]) -> Result<(), CommandError> {
     match tokens.len() {
-      0 => Err(ParserError::NoInput),
-      1 if tokens[0].kind == TokenKind::EndOfInput => Err(ParserError::NoVerb),
-      1 if tokens[0].kind != TokenKind::EndOfInput => Err(ParserError::InvalidTokenSequence(
+      0 => Err(CommandError::NoInput),
+      1 if tokens[0].kind == TokenKind::EndOfInput => Err(CommandError::NoVerb),
+      1 if tokens[0].kind != TokenKind::EndOfInput => Err(CommandError::InvalidTokenSequence(
         "did not end with end-of-input token".to_string(),
       )),
       _ => Ok(()),
