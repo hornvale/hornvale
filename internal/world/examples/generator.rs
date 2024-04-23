@@ -27,9 +27,7 @@ pub fn main() {
   world.spawn((command_registry,));
   let player = world.spawn((Region::default(), Room::default(), Player));
   let mut input_source = StdinSource::default();
-  let mut look_here_command_context = CommandContext::default();
-  look_here_command_context.actor = Some(player);
-  LookHereCommand::execute(&mut world, &look_here_command_context).unwrap();
+  LookHereCommand::execute(&mut world, player, None, None).unwrap();
   loop {
     print!("> ");
     io::stdout().flush().unwrap();
@@ -45,12 +43,12 @@ pub fn main() {
       continue;
     }
     let mut parser = Parser::new(&mut *tokens, player, &mut world);
-    if let Ok((command_function, command_context)) = parser.parse() {
-      command_function(&mut world, &command_context).unwrap();
+    if let Ok((command_function, (actor, direct_object, indirect_object))) = parser.parse() {
+      command_function(&mut world, actor, direct_object, indirect_object).unwrap();
     } else {
       println!("I don't understand {:#?}", input);
     }
-    if command_query::is_quit_flag_set(&world) {
+    if world.is_quit_flag_set() {
       println!("Goodbye!");
       break;
     }

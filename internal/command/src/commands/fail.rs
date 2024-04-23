@@ -1,5 +1,5 @@
-use crate::prelude::{Command, CommandArity, CommandContext, CommandError, CommandModifier};
-use hecs::World;
+use crate::prelude::{Command, CommandArity, CommandError, CommandModifier};
+use hecs::{Entity, World};
 
 /// A command that always fails.
 #[derive(Clone, Copy, Debug)]
@@ -10,11 +10,16 @@ impl Command for FailCommand {
   const SYNONYMS: &'static [&'static str] = &[];
   const BRIEF: &'static str = "A command that always fails.";
   const DESCRIPTION: &'static str = "A command that always fails; useful for testing.";
-  const FORM: CommandModifier = CommandModifier::Default;
   const ARITY: CommandArity = CommandArity::Nullary;
+  const DIRECT_OBJECT_MODIFIER: Option<CommandModifier> = None;
+  const INDIRECT_OBJECT_MODIFIER: Option<CommandModifier> = None;
 
-  /// Fail.
-  fn execute(_world: &mut World, _context: &CommandContext) -> Result<(), CommandError> {
+  fn execute(
+    _world: &mut World,
+    _actor: Entity,
+    _direct_object: Option<Entity>,
+    _indirect_object: Option<Entity>,
+  ) -> Result<(), CommandError> {
     Err(CommandError::UnknownError)
   }
 }
@@ -29,7 +34,8 @@ mod tests {
   fn test_execute() {
     init();
     let mut world = World::new();
-    let result = FailCommand::execute(&mut world, &Default::default());
+    let entity = world.spawn(());
+    let result = FailCommand::execute(&mut world, entity, None, None);
     assert_eq!(result, Err(CommandError::UnknownError));
   }
 }

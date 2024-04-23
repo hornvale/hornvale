@@ -1,4 +1,4 @@
-use hecs::World;
+use hecs::{Entity, World};
 use hornvale_command::prelude::*;
 use hornvale_world::prelude::*;
 
@@ -14,11 +14,16 @@ impl Command for LookHereCommand {
     Look at your surroundings. This command will provide a description of the
     player's current location, including any items or characters that are present.
   "#;
-  const FORM: CommandModifier = CommandModifier::Here;
   const ARITY: CommandArity = CommandArity::Nullary;
+  const DIRECT_OBJECT_MODIFIER: Option<CommandModifier> = Some(CommandModifier::Here);
+  const INDIRECT_OBJECT_MODIFIER: Option<CommandModifier> = None;
 
-  fn execute(world: &mut World, context: &CommandContext) -> Result<(), CommandError> {
-    let actor = context.actor.unwrap();
+  fn execute(
+    world: &mut World,
+    actor: Entity,
+    _direct_object: Option<Entity>,
+    _indirect_object: Option<Entity>,
+  ) -> Result<(), CommandError> {
     let actor_info = world_query::get_entity_region_and_room(world, actor);
     if actor_info.is_none() {
       return Err(CommandError::InvalidActor(

@@ -1,4 +1,4 @@
-use hecs::World;
+use hecs::{Entity, World};
 use hornvale_command::prelude::*;
 use hornvale_world::prelude::*;
 
@@ -14,16 +14,24 @@ impl Command for GoDirectionCommand {
     The actor will attempt to move in the direction specified by the first argument; if they are unable to move in
     that direction, they will be informed why.
   "#;
-  const FORM: CommandModifier = CommandModifier::Direction;
-  const ARITY: CommandArity = CommandArity::Unary(CommandParameter::Direction);
+  const ARITY: CommandArity = CommandArity::Unary;
+  const DIRECT_OBJECT_MODIFIER: Option<CommandModifier> = None;
+  const INDIRECT_OBJECT_MODIFIER: Option<CommandModifier> = None;
 
-  fn execute(world: &mut World, context: &CommandContext) -> Result<(), CommandError> {
-    let actor = context.actor.unwrap();
-    let argument = context.direct_object.clone().unwrap();
-    let direction = match argument {
-      CommandArgument::Direction(direction) => direction,
-      _ => return Err(CommandError::InvalidArgument("Expected a direction.".to_string())),
-    };
+  fn execute(
+    world: &mut World,
+    actor: Entity,
+    direct_object: Option<Entity>,
+    _indirect_object: Option<Entity>,
+  ) -> Result<(), CommandError> {
+    if direct_object.is_none() {
+      return Err(CommandError::InvalidArgument("Expected a direction.".to_string()));
+    }
+    let direction_query = world.query_one_mut::<&PassageDirection>(direct_object.unwrap());
+    if direction_query.is_err() {
+      return Err(CommandError::InvalidArgument("Expected a direction.".to_string()));
+    }
+    let direction = *direction_query.unwrap();
     let actor_info = world_query::get_entity_region_and_room(world, actor);
     if actor_info.is_none() {
       return Err(CommandError::InvalidActor(
@@ -34,7 +42,7 @@ impl Command for GoDirectionCommand {
 
     // Check if the player can move in the given direction.
     let passage = {
-      let passage = world_query::get_room_passage_in_direction(world, &region, &room, direction.into());
+      let passage = world_query::get_room_passage_in_direction(world, &region, &room, direction);
       if let Some(passage) = passage {
         passage
       } else {

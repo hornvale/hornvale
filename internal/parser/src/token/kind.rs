@@ -757,27 +757,11 @@ impl From<TokenKind> for Direction {
   }
 }
 
-impl TryFrom<TokenKind> for CommandArgument {
-  type Error = ();
-
-  fn try_from(kind: TokenKind) -> Result<Self, Self::Error> {
-    match kind {
-      // Directions.
-      kind if kind.is_direction() => Ok(CommandArgument::Direction(kind.into())),
-
-      _ => Err(()),
-    }
-  }
-}
-
 impl TryFrom<TokenKind> for CommandModifier {
   type Error = ();
 
   fn try_from(kind: TokenKind) -> Result<Self, Self::Error> {
     match kind {
-      // Directions.
-      kind if kind.is_direction() => Ok(CommandModifier::Direction),
-      // Adverbs and Prepositions.
       TokenKind::About => Ok(CommandModifier::About),
       TokenKind::Above => Ok(CommandModifier::Above),
       TokenKind::Across => Ok(CommandModifier::Across),

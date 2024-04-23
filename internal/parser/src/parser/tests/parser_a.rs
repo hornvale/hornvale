@@ -14,14 +14,7 @@ fn test_parser01() {
     &mut world,
     Ok((
       QuitCommand::execute,
-      CommandContext {
-        raw: "quit".to_string(),
-        verb: "quit".to_string(),
-        actor: Some(player),
-        form: CommandModifier::Default,
-        direct_object: None,
-        indirect_object: None,
-      },
+      (player, None, None), // (actor, direct_object, indirect_object
     )),
   );
 }
@@ -34,7 +27,7 @@ fn test_parser02() {
   command_registry.register::<LookHereCommand>();
   world.spawn((command_registry,));
   let player = setup_world(&mut world);
-  let room_entity = world
+  let _room_entity = world
     .query::<&Room>()
     .into_iter()
     .filter_map(|(e, &rm)| if rm == Room::default() { Some(e) } else { None })
@@ -44,17 +37,7 @@ fn test_parser02() {
     "look here",
     player,
     &mut world,
-    Ok((
-      LookHereCommand::execute,
-      CommandContext {
-        raw: "look here".to_string(),
-        verb: "look".to_string(),
-        actor: Some(player),
-        form: CommandModifier::Here,
-        direct_object: Some(CommandArgument::Entity(room_entity)),
-        indirect_object: None,
-      },
-    )),
+    Ok((LookHereCommand::execute, (player, None, None))),
   );
 }
 
@@ -66,21 +49,18 @@ fn test_parser03() {
   command_registry.register::<GoDirectionCommand>();
   world.spawn((command_registry,));
   let player = setup_world(&mut world);
+  let n_room = Room { w: 0, x: 0, y: 1, z: 0 };
+  let n_room_entity = world
+    .query::<With<&Room, &IsARoom>>()
+    .into_iter()
+    .filter_map(|(e, &rm)| if rm == n_room { Some(e) } else { None })
+    .next()
+    .unwrap();
   test_string_parsing(
     "go north",
     player,
     &mut world,
-    Ok((
-      GoDirectionCommand::execute,
-      CommandContext {
-        raw: "go north".to_string(),
-        verb: "go".to_string(),
-        actor: Some(player),
-        form: CommandModifier::Direction,
-        direct_object: Some(CommandArgument::Direction(Direction::North)),
-        indirect_object: None,
-      },
-    )),
+    Ok((GoDirectionCommand::execute, (player, Some(n_room_entity), None))),
   );
 }
 
@@ -98,17 +78,7 @@ fn test_parser04() {
     "go to north",
     player,
     &mut world,
-    Ok((
-      GoDirectionCommand::execute,
-      CommandContext {
-        raw: "go to north".to_string(),
-        verb: "go".to_string(),
-        actor: Some(player),
-        form: CommandModifier::Direction,
-        direct_object: None,
-        indirect_object: None,
-      },
-    )),
+    Ok((GoDirectionCommand::execute, (player, None, None))),
   );
 }
 
@@ -120,21 +90,18 @@ fn test_parser05() {
   command_registry.register::<LookDirectionCommand>();
   let player = setup_world(&mut world);
   world.spawn((command_registry,));
+  let n_room = Room { w: 0, x: 0, y: 1, z: 0 };
+  let n_room_entity = world
+    .query::<With<&Room, &IsARoom>>()
+    .into_iter()
+    .filter_map(|(e, &rm)| if rm == n_room { Some(e) } else { None })
+    .next()
+    .unwrap();
   test_string_parsing(
     "look north",
     player,
     &mut world,
-    Ok((
-      LookDirectionCommand::execute,
-      CommandContext {
-        raw: "look north".to_string(),
-        verb: "look".to_string(),
-        actor: Some(player),
-        form: CommandModifier::Direction,
-        direct_object: Some(CommandArgument::Direction(Direction::North)),
-        indirect_object: None,
-      },
-    )),
+    Ok((LookDirectionCommand::execute, (player, Some(n_room_entity), None))),
   );
 }
 
@@ -147,10 +114,17 @@ fn test_parser06() {
   command_registry.register::<LookDirectionCommand>();
   command_registry.register::<LookHereCommand>();
   let player = setup_world(&mut world);
-  let room_entity = world
+  let _room_entity = world
     .query::<&Room>()
     .into_iter()
     .filter_map(|(e, &rm)| if rm == Room::default() { Some(e) } else { None })
+    .next()
+    .unwrap();
+  let n_room = Room { w: 0, x: 0, y: 1, z: 0 };
+  let n_room_entity = world
+    .query::<With<&Room, &IsARoom>>()
+    .into_iter()
+    .filter_map(|(e, &rm)| if rm == n_room { Some(e) } else { None })
     .next()
     .unwrap();
   world.spawn((command_registry,));
@@ -158,32 +132,12 @@ fn test_parser06() {
     "look north",
     player,
     &mut world,
-    Ok((
-      LookDirectionCommand::execute,
-      CommandContext {
-        raw: "look north".to_string(),
-        verb: "look".to_string(),
-        actor: Some(player),
-        form: CommandModifier::Direction,
-        direct_object: Some(CommandArgument::Direction(Direction::North)),
-        indirect_object: None,
-      },
-    )),
+    Ok((LookDirectionCommand::execute, (player, Some(n_room_entity), None))),
   );
   test_string_parsing(
     "look here",
     player,
     &mut world,
-    Ok((
-      LookHereCommand::execute,
-      CommandContext {
-        raw: "look here".to_string(),
-        verb: "look".to_string(),
-        actor: Some(player),
-        form: CommandModifier::Here,
-        direct_object: Some(CommandArgument::Entity(room_entity)),
-        indirect_object: None,
-      },
-    )),
+    Ok((LookHereCommand::execute, (player, None, None))),
   );
 }

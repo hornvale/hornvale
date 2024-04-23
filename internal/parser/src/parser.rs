@@ -8,6 +8,9 @@ use hornvale_world::prelude::*;
 #[cfg(test)]
 pub mod tests;
 
+/// Arguments that will be passed to a command.
+pub type CommandArgs = (Entity, Option<Entity>, Option<Entity>);
+
 /// The parser, a simple top-down recursive descent parser.
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -21,18 +24,20 @@ pub struct Parser<'world> {
   pub world: &'world mut World,
   /// The current index.
   pub current: usize,
-  /// The verb, if any.
-  pub verb: Option<Token>,
-  /// The verb modifier, if any.
-  pub modifier: Option<Token>,
+  /// The verb token.
+  pub verb_token: Option<String>,
+  /// The arity of the command (AFAICT).
+  pub arity: Option<CommandArity>,
+  /// The direct object modifier, if any.
+  pub direct_object_modifier: Option<CommandModifier>,
+  /// The indirect object modifier, if any.
+  pub indirect_object_modifier: Option<CommandModifier>,
   /// The direct object, if any.
-  pub direct_object: Option<Token>,
+  pub direct_object: Option<Entity>,
   /// The indirect object, if any.
-  pub indirect_object: Option<Token>,
+  pub indirect_object: Option<Entity>,
   /// The command function, if any.
   pub function: Option<CommandFunction>,
-  /// The command context.
-  pub context: Option<CommandContext>,
 }
 
 impl<'world> Parser<'world> {
@@ -40,23 +45,25 @@ impl<'world> Parser<'world> {
   pub fn new(tokens: &[Token], actor: Entity, world: &'world mut World) -> Self {
     let tokens = tokens.to_vec();
     let current = 0;
-    let verb = None;
-    let modifier = None;
+    let verb_token = None;
+    let arity = None;
+    let direct_object_modifier = None;
+    let indirect_object_modifier = None;
     let direct_object = None;
     let indirect_object = None;
     let function = None;
-    let context = None;
     Self {
       tokens,
       actor,
       world,
       current,
-      verb,
-      modifier,
+      verb_token,
+      arity,
+      direct_object_modifier,
+      indirect_object_modifier,
       direct_object,
       indirect_object,
       function,
-      context,
     }
   }
 
@@ -64,19 +71,15 @@ impl<'world> Parser<'world> {
   ///
   /// This is the main entry point for the parser.
   ///
-  /// input → command | magic_word
-  pub fn parse(&mut self) -> Result<(&CommandFunction, CommandContext), ParserError> {
+  /// input → command
+  pub fn parse(&mut self) -> Result<(&CommandFunction, CommandArgs), ParserError> {
     self.assert_non_empty()?;
-    if self.match_magic_word()? {
-      // None of this is implemented yet.
-      self.consume_magic_word()?;
-      self.bind_magic_word()?;
-    } else {
-      self.parse_command()?;
-      self.bind_command()?;
-      self.bind_context()?;
-    }
-    Ok((&self.function.as_ref().unwrap(), self.context.take().unwrap()))
+    self.parse_command()?;
+    self.bind_command()?;
+    Ok((
+      &self.function.as_ref().unwrap(),
+      (self.actor, self.direct_object, self.indirect_object),
+    ))
   }
 
   /// Parse a command from the input.
@@ -84,27 +87,17 @@ impl<'world> Parser<'world> {
   /// command → verb-phrase (object-phrase)?
   pub fn parse_command(&mut self) -> Result<(), ParserError> {
     self.consume_verb().map_err(|_| ParserError::NoVerb)?;
+    println! {"Verb: {:?}", self.verb_token};
     match self.peek() {
       Some(token) if token.kind == TokenKind::Here => {
-        self.modifier = self.peek();
-        self.direct_object = self.peek();
-        self.advance()?;
-      },
-      Some(token) if token.kind.is_adverb() => {
-        self.modifier = self.peek();
+        println!("Here!");
+        self.direct_object_modifier = Some(CommandModifier::Here);
+        // self.direct_object = Some(self.bind_here()?);
         self.advance()?;
       },
       Some(token) if token.kind.is_direction() => {
-        self.modifier = self.peek();
-        self.direct_object = self.peek();
-        self.advance()?;
-      },
-      Some(token) if token.kind.is_preposition() => {
-        self.modifier = self.peek();
-        self.advance()?;
-      },
-      Some(token) if token.kind.is_noun() => {
-        self.consume_direct_object()?;
+        println!("Direction!");
+        self.direct_object = self.bind_direction(self.peek().unwrap())?;
         self.advance()?;
       },
       _ => {},
@@ -129,7 +122,7 @@ impl<'world> Parser<'world> {
   /// Consume the verb.
   pub fn consume_verb(&mut self) -> Result<(), ParserError> {
     if self.check_token(TokenKind::Verb) {
-      self.verb = self.peek();
+      self.verb_token = self.peek().map(|t| t.lexeme.clone());
       self.advance()?;
       Ok(())
     } else {
@@ -137,17 +130,17 @@ impl<'world> Parser<'world> {
     }
   }
 
-  /// Consume the direct object.
-  pub fn consume_direct_object(&mut self) -> Result<(), ParserError> {
-    if self.check_token(TokenKind::DirectObject) {
-      self.direct_object = self.peek();
-      Ok(())
-    } else {
-      Err(ParserError::CouldNotConsumeDirectObject(
-        self.peek().map(|t| t.lexeme.clone()).unwrap_or_default(),
-      ))
-    }
-  }
+  //  /// Consume the direct object.
+  //  pub fn consume_direct_object(&mut self) -> Result<(), ParserError> {
+  //    if self.check_token(TokenKind::DirectObject) {
+  //      self.direct_object = self.peek();
+  //      Ok(())
+  //    } else {
+  //      Err(ParserError::CouldNotConsumeDirectObject(
+  //        self.peek().map(|t| t.lexeme.clone()).unwrap_or_default(),
+  //      ))
+  //    }
+  //  }
 
   /// Consume the current token, throwing an error if it is not the expected kind.
   pub fn consume_token(&mut self, expected: TokenKind, message: &str) -> Result<(), ParserError> {
@@ -192,72 +185,32 @@ impl<'world> Parser<'world> {
       .next()
       .unwrap()
       .1;
-    let name = self.verb.as_ref().unwrap().lexeme.as_str();
+    let name = self.verb_token.as_ref().unwrap();
     if !registry.has_command(name) {
       return Err(ParserError::UnknownCommand(name.to_string()));
     }
-    let form = self
-      .modifier
-      .as_ref()
-      .map(|t| t.kind.try_into().unwrap_or(CommandModifier::Default))
-      .unwrap_or(CommandModifier::Default);
-    if !registry.has_form(name, &form) {
-      let forms = registry.get_forms(name).unwrap();
+    let syntax = CommandSyntax {
+      arity: self.arity.unwrap_or(CommandArity::Nullary),
+      direct_object_modifier: self.direct_object_modifier,
+      indirect_object_modifier: self.indirect_object_modifier,
+    };
+    if !registry.has_syntax(name, &syntax) {
+      let forms = registry.get_syntaxes(name).unwrap();
       return Err(ParserError::UnknownCommandModifier(
         name.to_string(),
-        form.to_string(),
+        syntax.to_string(),
         forms.iter().map(|f| f.to_string()).collect(),
       ));
     }
     let command = registry
-      .get(name, &form)
+      .get(name, &syntax)
       .ok_or(ParserError::UnknownCommand(name.to_string()))?;
     self.function = Some(*command);
     Ok(())
   }
 
-  /// Bind the context.
-  #[allow(clippy::field_reassign_with_default)]
-  pub fn bind_context(&mut self) -> Result<(), ParserError> {
-    let mut context = self.context.take().unwrap_or_default();
-    context.raw = self
-      .tokens
-      .iter()
-      .map(|t| t.lexeme.clone())
-      .collect::<Vec<_>>()
-      .join(" ")
-      .trim()
-      .to_string();
-    context.verb = if let Some(verb) = &self.verb {
-      verb.lexeme.clone()
-    } else {
-      String::new()
-    };
-    if let Some(direct_object) = &self.direct_object {
-      match direct_object {
-        direct_object if direct_object.kind.is_direction() => {
-          context.direct_object = Some(direct_object.try_into().unwrap());
-        },
-        direct_object if direct_object.kind == TokenKind::Here => {
-          context.direct_object = Some(self.bind_here()?);
-        },
-        _ => {
-          println!("Direct object: {:?}", direct_object);
-        },
-      }
-    }
-    context.form = if let Some(modifier) = &self.modifier {
-      modifier.kind.try_into().unwrap_or(CommandModifier::Default)
-    } else {
-      CommandModifier::Default
-    };
-    context.actor = Some(self.actor);
-    self.context = Some(context);
-    Ok(())
-  }
-
   /// Bind the Here token.
-  pub fn bind_here(&mut self) -> Result<CommandArgument, ParserError> {
+  pub fn bind_here(&mut self) -> Result<Entity, ParserError> {
     let actor_info = {
       let query_result = self.world.query_one::<(&Region, &Room)>(self.actor);
       let mut query = query_result.unwrap(); // `query` is now a longer-lived value
@@ -277,7 +230,75 @@ impl<'world> Parser<'world> {
         .unwrap()
         .0
     };
-    Ok(CommandArgument::Entity(room_entity))
+    Ok(room_entity)
+  }
+
+  /// Bind a specified direction.
+  pub fn bind_direction(&mut self, _token: Token) -> Result<Option<Entity>, ParserError> {
+    self.arity = match self.arity {
+      Some(CommandArity::Nullary) => Some(CommandArity::Unary),
+      Some(CommandArity::Unary) => Some(CommandArity::Binary),
+      Some(CommandArity::Binary) => Some(CommandArity::Binary),
+      None => Some(CommandArity::Unary),
+    };
+    let direction = PassageDirection::North;
+    let actor_info = {
+      let query_result = self.world.query_one::<(&Region, &Room)>(self.actor);
+      let mut query = query_result.unwrap();
+      let (region, room) = query.get().unwrap();
+      (*region, *room)
+    };
+    let passage = {
+      let (region, room) = actor_info;
+      let passage = world_query::get_room_passage_in_direction(self.world, &region, &room, direction);
+      if let Some(passage) = passage {
+        passage
+      } else {
+        PassageKind::NoExit("You can't go that way.".to_string())
+      }
+    };
+    match passage {
+      PassageKind::Corridor(next_region) => {
+        let next_room = {
+          let corridor_direction = CorridorDirection::try_from(-direction).unwrap();
+          let next_room_result = self
+            .world
+            .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()
+            .iter()
+            .find(|(_, (&rgn, _, &dir, _))| rgn == next_region && dir == corridor_direction)
+            .map(|(entity, _)| entity);
+          if let Some(next_room_result) = next_room_result {
+            next_room_result
+          } else {
+            let generator = CompassRoseRegionGenerator;
+            generator.generate(next_region, self.world).unwrap();
+            let next_room_result = self
+              .world
+              .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()
+              .iter()
+              .find(|(_, (&rgn, _, &dir, _))| rgn == next_region && dir == corridor_direction)
+              .map(|(entity, _)| entity)
+              .unwrap();
+            next_room_result
+          }
+        };
+        Ok(Some(next_room))
+      },
+      PassageKind::Default(next_room) => {
+        let entity = self
+          .world
+          .query::<With<(&Region, &Room), &IsARoom>>()
+          .into_iter()
+          .find(|(_, (&reg, &rm))| {
+            let (region, _) = actor_info;
+            region == reg && next_room == rm
+          })
+          .unwrap()
+          .0;
+        Ok(Some(entity))
+      },
+      _ => Err(ParserError::UnknownError),
+    }
   }
 
   /// Check kind of current token.

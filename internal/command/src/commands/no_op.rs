@@ -1,5 +1,5 @@
-use crate::prelude::{Command, CommandArity, CommandContext, CommandError, CommandModifier};
-use hecs::World;
+use crate::prelude::{Command, CommandArity, CommandError, CommandModifier};
+use hecs::{Entity, World};
 
 /// A command that does nothing at all.
 #[derive(Clone, Copy, Debug)]
@@ -10,11 +10,17 @@ impl Command for NoOpCommand {
   const SYNONYMS: &'static [&'static str] = &[];
   const BRIEF: &'static str = "A command that always succeeds but does nothing.";
   const DESCRIPTION: &'static str = "A command that always succeeds but does nothing; useful for testing.";
-  const FORM: CommandModifier = CommandModifier::Default;
   const ARITY: CommandArity = CommandArity::Nullary;
+  const DIRECT_OBJECT_MODIFIER: Option<CommandModifier> = None;
+  const INDIRECT_OBJECT_MODIFIER: Option<CommandModifier> = None;
 
   /// Do nothing.
-  fn execute(_world: &mut World, _context: &CommandContext) -> Result<(), CommandError> {
+  fn execute(
+    _world: &mut World,
+    _actor: Entity,
+    _direct_object: Option<Entity>,
+    _indirect_object: Option<Entity>,
+  ) -> Result<(), CommandError> {
     Ok(())
   }
 }
@@ -28,7 +34,8 @@ mod tests {
   fn test_execute() {
     init();
     let mut world = World::new();
-    let result = NoOpCommand::execute(&mut world, &Default::default());
+    let entity = world.spawn(());
+    let result = NoOpCommand::execute(&mut world, entity, None, None);
     assert_eq!(result, Ok(()));
   }
 }
