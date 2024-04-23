@@ -1,6 +1,6 @@
 use hecs::{Entity, World};
 use hornvale_command::prelude::*;
-use hornvale_world::prelude::*;
+use hornvale_core::prelude::*;
 
 /// Look at here.
 #[derive(Clone, Copy, Debug)]

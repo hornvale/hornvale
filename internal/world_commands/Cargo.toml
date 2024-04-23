@@ -9,7 +9,7 @@ workspace = true
 [dependencies]
 hecs.workspace = true
 hornvale_command.workspace = true
-hornvale_world.workspace = true
+hornvale_core.workspace = true
 
 [dev-dependencies]
 hornvale_test_utilities.workspace = true

@@ -15,7 +15,6 @@ pub use hornvale_core::prelude as core;
 pub use hornvale_input::prelude as input;
 pub use hornvale_output::prelude as output;
 pub use hornvale_scripting::prelude as scripting;
-pub use hornvale_world::prelude as world;
 
 /// The prelude for the _Hornvale_ library.
 pub mod prelude {
@@ -25,7 +24,6 @@ pub mod prelude {
   pub use super::input::*;
   pub use super::output::*;
   pub use super::scripting::*;
-  pub use super::world::*;
 
   /// Hello, world!
   pub fn hello() {

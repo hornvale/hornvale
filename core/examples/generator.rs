@@ -1,8 +1,8 @@
 //! Test of the world.
 use hecs::World;
 use hornvale_command::prelude::*;
+use hornvale_core::prelude::*;
 use hornvale_input::prelude::*;
-use hornvale_world::prelude::*;
 use hornvale_world_commands::prelude::*;
 use std::io::{self, Write};
 

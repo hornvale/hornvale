@@ -1,6 +1,6 @@
 use hecs::{Entity, World};
 use hornvale_command::prelude::*;
-use hornvale_world::prelude::*;
+use hornvale_core::prelude::*;
 
 /// Attempt to look in a given direction.
 #[derive(Clone, Copy, Debug)]

@@ -1,9 +1,5 @@
-use crate::prelude::{
-  CorridorDirection, CorridorOrigin, CorridorTerminus, IsARoom, PassageDirection, PassageKind, Region, RegionGenerator,
-  Room, WorldError,
-};
+use crate::prelude::*;
 use hecs::World;
-use hornvale_core::prelude::*;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 

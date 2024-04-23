@@ -1,7 +1,5 @@
 use super::kind::CorridorKind;
-use crate::prelude::PassageDirection;
-use crate::prelude::Region;
-use hornvale_core::prelude::*;
+use crate::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::ops::Neg;
 use strum::{Display, EnumIter};

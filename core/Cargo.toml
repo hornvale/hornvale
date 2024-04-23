@@ -7,7 +7,18 @@ edition = "2021"
 workspace = true
 
 [dependencies]
+derivative.workspace = true
+derive_more.workspace = true
+getrandom.workspace = true
+hecs.workspace = true
+rand.workspace = true
 serde.workspace = true
+strum.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 hornvale_test_utilities.workspace = true
+hornvale_command.workspace = true
+hornvale_input.workspace = true
+hornvale_world_commands.workspace = true

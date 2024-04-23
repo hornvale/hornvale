@@ -2,7 +2,7 @@ use crate::error::CommandError;
 use crate::prelude::*;
 use derivative::Derivative;
 use hecs::{Entity, With, World};
-use hornvale_world::prelude::*;
+use hornvale_core::prelude::*;
 
 /// Arguments that will be passed to a command.
 pub type CommandArgs = (Entity, Option<Entity>, Option<Entity>);
