@@ -36,6 +36,9 @@ mod tests {
     let mut world = World::new();
     let entity = world.spawn(());
     let result = FailCommand::execute(&mut world, entity, None, None);
-    assert_eq!(result, Err(CommandError::UnknownError));
+    assert_eq!(
+      std::mem::discriminant(&result.unwrap_err()),
+      std::mem::discriminant(&CommandError::UnknownError)
+    );
   }
 }

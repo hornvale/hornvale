@@ -39,6 +39,6 @@ mod tests {
     let result = QuitCommand::execute(&mut world, actor, None, None);
     let quit_flag = world.query_mut::<&mut QuitFlag>().into_iter().next().unwrap().1;
     assert_eq!(*quit_flag, QuitFlag);
-    assert_eq!(result, Ok(()));
+    assert!(result.is_ok());
   }
 }

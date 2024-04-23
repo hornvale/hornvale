@@ -334,7 +334,7 @@ mod tests {
         lexeme: "".to_string(),
       },
     ];
-    assert_eq!(tokens, Ok(expected));
+    assert_eq!(tokens.unwrap(), expected);
   }
 
   #[test]
@@ -364,7 +364,7 @@ mod tests {
         lexeme: "".to_string(),
       },
     ];
-    assert_eq!(tokens, Ok(expected));
+    assert_eq!(tokens.unwrap(), expected);
   }
 
   #[test]
@@ -386,7 +386,7 @@ mod tests {
         lexeme: "".to_string(),
       },
     ];
-    assert_eq!(tokens, Ok(expected));
+    assert_eq!(tokens.unwrap(), expected);
   }
 
   #[test]
@@ -416,7 +416,7 @@ mod tests {
         lexeme: "".to_string(),
       },
     ];
-    assert_eq!(tokens, Ok(expected));
+    assert_eq!(tokens.unwrap(), expected);
   }
 
   #[test]
@@ -436,7 +436,7 @@ mod tests {
     let input = "take sword";
     let mut scanner = Scanner::new(input);
     let character = scanner.advance();
-    assert_eq!(character, Ok('t'));
+    assert_eq!(character.unwrap(), 't');
   }
 
   #[test]

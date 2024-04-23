@@ -36,6 +36,6 @@ mod tests {
     let mut world = World::new();
     let entity = world.spawn(());
     let result = NoOpCommand::execute(&mut world, entity, None, None);
-    assert_eq!(result, Ok(()));
+    assert!(result.is_ok());
   }
 }

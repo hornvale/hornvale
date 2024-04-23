@@ -1,9 +1,9 @@
 use crate::prelude::*;
-use serde::{Deserialize, Serialize};
+use anyhow::Error as AnyError;
 use thiserror::Error as ThisError;
 
 /// Errors related to world operations.
-#[derive(Clone, Debug, Deserialize, Eq, ThisError, Hash, PartialEq, Serialize)]
+#[derive(Debug, ThisError)]
 pub enum CommandError {
   /// An unknown command was encountered.
   #[error("unknown command: {0}")]
@@ -62,4 +62,7 @@ pub enum CommandError {
   /// Requested a character out of bounds.
   #[error("requested a character out of bounds")]
   CharacterOutOfBounds,
+  /// Any error.
+  #[error(transparent)]
+  Any(#[from] AnyError),
 }

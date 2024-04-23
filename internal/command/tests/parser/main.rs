@@ -43,7 +43,10 @@ pub fn test_string_parsing(
       );
     },
     (Err(expected_error), Err(actual_error)) => {
-      assert_eq!(expected_error, actual_error);
+      assert_eq!(
+        std::mem::discriminant(&expected_error),
+        std::mem::discriminant(&actual_error)
+      );
     },
     (expected, actual) => {
       panic!("Expected: {:#?}\nActual: {:#?}", expected, actual);
