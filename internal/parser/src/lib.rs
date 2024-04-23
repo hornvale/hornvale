@@ -17,8 +17,6 @@
 //!   we split the input into individual commands at the input stage, prior to
 //!   parsing.
 
-/// A case for the command classifier.
-pub mod case;
 /// A classifier that can be used to determine the type of a word.
 pub mod classifier;
 /// An error type.
