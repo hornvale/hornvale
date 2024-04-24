@@ -27,7 +27,7 @@ impl Classifier {
       if !tokens[0].kind.could_be_verb() {
         return Err(CommandError::NoVerb);
       }
-      tokens[0].kind = TokenKind::Verb;
+      tokens[0].kind = TokenKind::Word(WordToken::Verb);
     }
     // Find the prepositions in the tokens and classify accordingly.
     let prepositions_found = self.find_prepositions(tokens)?;
@@ -88,7 +88,7 @@ impl Classifier {
     // Unless it's already something other than a noun, it should be a noun.
     if lnk.could_be_noun() && !lnk.is_noun() {
       // If it's not a noun, make it one.
-      tokens[index].kind = TokenKind::DirectObject;
+      tokens[index].kind = TokenKind::Word(WordToken::Noun);
       // The previous token is presumably an adjective, unless it's not.
       self.process_presumed_adjectives(tokens, index - 1)?;
     }
@@ -118,7 +118,7 @@ impl Classifier {
     if let Some(lnk) = tokens.get(index).map(|t| t.kind) {
       // Don't override things that already work as nouns.
       if lnk.could_be_noun() && !lnk.is_noun() {
-        tokens[index].kind = TokenKind::Noun;
+        tokens[index].kind = TokenKind::Word(WordToken::Noun);
       }
       // We need to recheck the kind of this token.
       if tokens[index].kind.can_follow_adjective() {
@@ -135,7 +135,7 @@ impl Classifier {
       // This should always be a valid index.
       let lnk = tokens.get(i).map(|t| t.kind).unwrap();
       if lnk.could_be_adjective() {
-        tokens[i].kind = TokenKind::Adjective;
+        tokens[i].kind = TokenKind::Word(WordToken::Adjective);
       } else if lnk.is_conjunction() || lnk == TokenKind::Comma {
         // The word prior to this should be a noun, but we need to check for an
         // Oxford comma.

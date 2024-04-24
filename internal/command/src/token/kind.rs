@@ -313,20 +313,6 @@ pub enum TokenKind {
   /// Any other word.
   Word(WordToken),
 
-  // Kinds assigned _only_ during the classification process.
-  //
-  // These are open groups, as opposed to the closed groups above.
-  /// A verb.
-  Verb,
-  /// An adjective.
-  Adjective,
-  /// A noun.
-  Noun,
-  /// The direct object.
-  DirectObject,
-  /// The indirect object.
-  IndirectObject,
-
   //
   // Any other tokens.
   //
@@ -503,7 +489,7 @@ impl TokenKind {
 
   /// Is this token an adjective?
   pub fn is_adjective(&self) -> bool {
-    matches!(self, Self::Adjective)
+    matches!(self, Self::Word(WordToken::Adjective))
   }
 
   /// Is this token an article?
@@ -518,14 +504,12 @@ impl TokenKind {
 
   /// Is this token a verb?
   pub fn is_verb(&self) -> bool {
-    self.is_direction() || matches!(self, Self::Verb)
+    matches!(self, Self::Word(WordToken::Verb))
   }
 
   /// Is this token a noun?
   pub fn is_noun(&self) -> bool {
-    self.is_direction()
-      || self.is_pronoun()
-      || matches!(self, Self::All | Self::Noun | Self::DirectObject | Self::IndirectObject)
+    self.is_direction() || self.is_pronoun() || matches!(self, Self::All | Self::Word(WordToken::Noun))
   }
 
   /// Could this token be a noun?
@@ -558,7 +542,7 @@ impl TokenKind {
   pub fn can_follow_adjective(&self) -> bool {
     (self.is_noun() && !self.is_pronoun() && !self.is_direction() && !self.is_distributive_determiner())
       || self.is_noun_possessive_determiner()
-      || matches!(self, Self::Comma | Self::Adjective)
+      || matches!(self, Self::Comma | Self::Word(WordToken::Adjective))
   }
 
   /// Is this token a magic word?

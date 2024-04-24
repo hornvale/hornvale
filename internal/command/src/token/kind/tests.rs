@@ -260,19 +260,7 @@ fn test_is_verb() {
   init();
   for kind in TokenKind::iter() {
     match kind {
-      TokenKind::North
-      | TokenKind::Northeast
-      | TokenKind::East
-      | TokenKind::Southeast
-      | TokenKind::South
-      | TokenKind::Southwest
-      | TokenKind::West
-      | TokenKind::Northwest
-      | TokenKind::Up
-      | TokenKind::Down
-      | TokenKind::In
-      | TokenKind::Out
-      | TokenKind::Verb => {
+      TokenKind::Word(WordToken::Verb) => {
         assert!(kind.is_verb(), "{:?} is not a verb", kind);
       },
       _ => {
@@ -300,15 +288,13 @@ fn test_is_noun() {
       | TokenKind::In
       | TokenKind::Out
       | TokenKind::All
-      | TokenKind::Noun
+      | TokenKind::Word(WordToken::Noun)
       | TokenKind::Him
       | TokenKind::Me
       | TokenKind::Her(HerToken::Pronoun)
       | TokenKind::It
       | TokenKind::Them
-      | TokenKind::You
-      | TokenKind::DirectObject
-      | TokenKind::IndirectObject => {
+      | TokenKind::You => {
         assert!(kind.is_noun(), "{:?} is not a noun", kind);
       },
       _ => {
@@ -336,16 +322,13 @@ fn test_could_be_noun() {
       | TokenKind::In
       | TokenKind::Out
       | TokenKind::All
-      | TokenKind::Noun
       | TokenKind::Him
       | TokenKind::Me
       | TokenKind::Her(HerToken::Pronoun)
       | TokenKind::It
       | TokenKind::Them
       | TokenKind::You
-      | TokenKind::Word(WordToken::Unclassified | WordToken::Noun | WordToken::Ambiguous)
-      | TokenKind::DirectObject
-      | TokenKind::IndirectObject => {
+      | TokenKind::Word(WordToken::Unclassified | WordToken::Noun | WordToken::Ambiguous) => {
         assert!(kind.could_be_noun(), "{:?} is not a noun", kind);
       },
       _ => {
@@ -375,20 +358,7 @@ fn test_could_be_verb() {
   init();
   for kind in TokenKind::iter() {
     match kind {
-      TokenKind::North
-      | TokenKind::Northeast
-      | TokenKind::East
-      | TokenKind::Southeast
-      | TokenKind::South
-      | TokenKind::Southwest
-      | TokenKind::West
-      | TokenKind::Northwest
-      | TokenKind::Up
-      | TokenKind::Down
-      | TokenKind::In
-      | TokenKind::Out
-      | TokenKind::Verb
-      | TokenKind::Word(WordToken::Unclassified | WordToken::Verb | WordToken::Ambiguous) => {
+      TokenKind::Word(WordToken::Unclassified | WordToken::Verb | WordToken::Ambiguous) => {
         assert!(kind.could_be_verb(), "{:?} is not a verb", kind);
       },
       _ => {
@@ -403,12 +373,7 @@ fn test_can_follow_adjective() {
   init();
   for kind in TokenKind::iter() {
     match kind {
-      TokenKind::Comma
-      | TokenKind::Adjective
-      | TokenKind::Noun
-      | TokenKind::DirectObject
-      | TokenKind::IndirectObject
-      | TokenKind::NounPossessiveDeterminer => {
+      TokenKind::Comma | TokenKind::NounPossessiveDeterminer => {
         assert!(kind.can_follow_adjective(), "{:?} cannot follow an adjective", kind);
       },
       _ => {

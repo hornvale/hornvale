@@ -17,7 +17,7 @@ fn test_process_presumed_noun1() {
   let classifier = Classifier::new();
   classifier.process_presumed_noun(&mut tokens, 1).unwrap();
   assert_eq!(tokens[0].kind, TokenKind::At);
-  assert_eq!(tokens[1].kind, TokenKind::Noun);
+  assert_eq!(tokens[1].kind, TokenKind::Word(WordToken::Noun));
 }
 
 #[test]
@@ -46,7 +46,7 @@ fn test_process_presumed_noun2() {
   assert_eq!(tokens[0].kind, TokenKind::At);
   assert_eq!(tokens[1].kind, TokenKind::Word(WordToken::default()));
   assert_eq!(tokens[2].kind, TokenKind::In);
-  assert_eq!(tokens[3].kind, TokenKind::Noun);
+  assert_eq!(tokens[3].kind, TokenKind::Word(WordToken::Noun));
 }
 
 #[test]
@@ -85,5 +85,5 @@ fn test_process_presumed_noun3() {
   assert_eq!(tokens[2].kind, TokenKind::In);
   assert_eq!(tokens[3].kind, TokenKind::Word(WordToken::default()));
   assert_eq!(tokens[4].kind, TokenKind::On);
-  assert_eq!(tokens[5].kind, TokenKind::Noun);
+  assert_eq!(tokens[5].kind, TokenKind::Word(WordToken::Noun));
 }

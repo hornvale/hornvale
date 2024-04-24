@@ -3,7 +3,14 @@ use super::*;
 #[test]
 fn test_classify_tokens61() {
   init();
-  test_string_classification("steal from elf", &[TokenKind::Verb, TokenKind::From, TokenKind::Noun]);
+  test_string_classification(
+    "steal from elf",
+    &[
+      TokenKind::Word(WordToken::Verb),
+      TokenKind::From,
+      TokenKind::Word(WordToken::Noun),
+    ],
+  );
 }
 
 #[test]
@@ -12,11 +19,11 @@ fn test_classify_tokens62() {
   test_string_classification(
     "steal gold from elf's moneybag",
     &[
-      TokenKind::Verb,
-      TokenKind::DirectObject,
+      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(WordToken::Noun),
       TokenKind::From,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun, // Should be indirect object.
+      TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );
 }
@@ -27,9 +34,9 @@ fn test_classify_tokens63() {
   test_string_classification(
     "give elf coin",
     &[
-      TokenKind::Verb,
-      TokenKind::Adjective, // Should be a noun.
-      TokenKind::DirectObject,
+      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(WordToken::Adjective), // Should be a noun.
+      TokenKind::Word(WordToken::Noun),
     ],
   );
 }
@@ -40,10 +47,10 @@ fn test_classify_tokens64() {
   test_string_classification(
     "give elf poisoned coin",
     &[
-      TokenKind::Verb,
-      TokenKind::Adjective, // Should be a noun.
-      TokenKind::Adjective,
-      TokenKind::DirectObject,
+      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(WordToken::Adjective), // Should be a noun.
+      TokenKind::Word(WordToken::Adjective),
+      TokenKind::Word(WordToken::Noun),
     ],
   );
 }
@@ -54,11 +61,11 @@ fn test_classify_tokens65() {
   test_string_classification(
     "give poisoned coin to elf",
     &[
-      TokenKind::Verb,
-      TokenKind::Adjective,
-      TokenKind::DirectObject,
+      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(WordToken::Adjective),
+      TokenKind::Word(WordToken::Noun),
       TokenKind::To,
-      TokenKind::Noun, // Should be indirect object.
+      TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );
 }
@@ -69,12 +76,12 @@ fn test_classify_tokens66() {
   test_string_classification(
     "sneak poisoned coin into elf's moneybag",
     &[
-      TokenKind::Verb,
-      TokenKind::Adjective,
-      TokenKind::DirectObject,
+      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(WordToken::Adjective),
+      TokenKind::Word(WordToken::Noun),
       TokenKind::Into,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun, // Should be indirect object.
+      TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );
 }
@@ -85,12 +92,12 @@ fn test_classify_tokens67() {
   test_string_classification(
     "look at farmer's neighbor's wife's cat",
     &[
-      TokenKind::Verb,
+      TokenKind::Word(WordToken::Verb),
       TokenKind::At,
       TokenKind::NounPossessiveDeterminer,
       TokenKind::NounPossessiveDeterminer,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Noun, // Should be indirect object.
+      TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );
 }
@@ -107,12 +114,12 @@ fn test_classify_tokens69() {
   test_string_classification(
     "turn to page 569 in the book",
     &[
-      TokenKind::Verb,
+      TokenKind::Word(WordToken::Verb),
       TokenKind::To,
       TokenKind::Word(WordToken::Unclassified), // Should be Word(Noun).
       TokenKind::NumberLiteral,
       TokenKind::In,
-      TokenKind::Noun,
+      TokenKind::Word(WordToken::Noun),
     ],
   );
 }
@@ -123,11 +130,11 @@ fn test_classify_tokens70() {
   test_string_classification(
     "examine the writing with the magnifying glass",
     &[
-      TokenKind::Verb,
-      TokenKind::DirectObject,
+      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(WordToken::Noun),
       TokenKind::With,
-      TokenKind::Adjective,
-      TokenKind::Noun, // Should be indirect object.
+      TokenKind::Word(WordToken::Adjective),
+      TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );
 }
@@ -138,13 +145,13 @@ fn test_classify_tokens71() {
   test_string_classification(
     "examine the writing with the magnifying glass and the flashlight",
     &[
-      TokenKind::Verb,
-      TokenKind::DirectObject,
+      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(WordToken::Noun),
       TokenKind::With,
-      TokenKind::Adjective,
-      TokenKind::Noun, // Should be indirect object.
+      TokenKind::Word(WordToken::Adjective),
+      TokenKind::Word(WordToken::Noun), // Should be indirect object.
       TokenKind::And,
-      TokenKind::Noun,
+      TokenKind::Word(WordToken::Noun),
     ],
   );
 }
@@ -155,16 +162,16 @@ fn test_classify_tokens72() {
   test_string_classification(
     "examine the writing with the magnifying glass, the flashlight, and the lantern",
     &[
-      TokenKind::Verb,
-      TokenKind::DirectObject,
+      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(WordToken::Noun),
       TokenKind::With,
-      TokenKind::Adjective,
-      TokenKind::Noun, // Should be indirect object.
+      TokenKind::Word(WordToken::Adjective),
+      TokenKind::Word(WordToken::Noun), // Should be indirect object.
       TokenKind::Comma,
-      TokenKind::Noun,
+      TokenKind::Word(WordToken::Noun),
       TokenKind::Comma,
       TokenKind::And,
-      TokenKind::Noun,
+      TokenKind::Word(WordToken::Noun),
     ],
   );
 }
@@ -175,21 +182,21 @@ fn test_classify_tokens73() {
   test_string_classification(
     "examine the writing with the magnifying glass, the red shiny flashlight, and the lantern, and the torch",
     &[
-      TokenKind::Verb,
-      TokenKind::DirectObject,
+      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(WordToken::Noun),
       TokenKind::With,
-      TokenKind::Adjective,
-      TokenKind::Noun, // Should be indirect object.
+      TokenKind::Word(WordToken::Adjective),
+      TokenKind::Word(WordToken::Noun), // Should be indirect object.
       TokenKind::Comma,
-      TokenKind::Adjective,
-      TokenKind::Adjective,
-      TokenKind::Noun, // Should be indirect object.
-      TokenKind::Comma,
-      TokenKind::And,
-      TokenKind::Noun, // Should be indirect object.
+      TokenKind::Word(WordToken::Adjective),
+      TokenKind::Word(WordToken::Adjective),
+      TokenKind::Word(WordToken::Noun), // Should be indirect object.
       TokenKind::Comma,
       TokenKind::And,
-      TokenKind::Noun, // Should be indirect object.
+      TokenKind::Word(WordToken::Noun), // Should be indirect object.
+      TokenKind::Comma,
+      TokenKind::And,
+      TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );
 }
@@ -200,9 +207,9 @@ fn test_classify_tokens74() {
   test_string_classification(
     "give her stick to her",
     &[
-      TokenKind::Verb,
+      TokenKind::Word(WordToken::Verb),
       TokenKind::Her(HerToken::Unclassified), // Should be possessive determiner.
-      TokenKind::DirectObject,
+      TokenKind::Word(WordToken::Noun),
       TokenKind::To,
       TokenKind::Her(HerToken::Unclassified), // Should be unclassified.
     ],
@@ -215,11 +222,11 @@ fn test_classify_tokens75() {
   test_string_classification(
     "turn on car with key",
     &[
-      TokenKind::Verb,
+      TokenKind::Word(WordToken::Verb),
       TokenKind::On,
-      TokenKind::Noun, // Should be direct object.
+      TokenKind::Word(WordToken::Noun), // Should be direct object.
       TokenKind::With,
-      TokenKind::Noun, // Should be indirect object.
+      TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );
 }
