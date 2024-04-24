@@ -73,8 +73,8 @@ impl Default for SatelliteSystem {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::test_utilities::prelude::*;
   use anyhow::Result as AnyResult;
-  use hornvale_test_utilities::prelude::*;
 
   #[test]
   fn test_get_planet_moon_relationship() -> AnyResult<()> {

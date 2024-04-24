@@ -45,7 +45,7 @@ impl From<RadiusOfSol> for RadiusOfJupiter {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use hornvale_test_utilities::prelude::*;
+  use crate::test_utilities::prelude::*;
 
   #[test]
   fn from_length_in_km() {

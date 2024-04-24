@@ -30,7 +30,7 @@ workspace = true
 
 [workspace]
 exclude = []
-members = ["core", "crates/*", "internal/*", "test/*"]
+members = []
 
 [workspace.lints.rustdoc]
 bare_urls = "deny"
@@ -65,17 +65,27 @@ unused_qualifications = "deny"
 variant_size_differences = "deny"
 
 [dependencies]
-hornvale_astronomy.workspace = true
-hornvale_command.workspace = true
-hornvale_core.workspace = true
-hornvale_input.workspace = true
-hornvale_output.workspace = true
-hornvale_scripting.workspace = true
-hornvale_world.workspace = true
-hornvale_world_commands.workspace = true
+all_asserts.workspace = true
+anyhow.workspace = true
+assert_approx_eq.workspace = true
+cpu-time.workspace = true
+derivative.workspace = true
+derive_more.workspace = true
+getrandom.workspace = true
+hecs.workspace = true
+log.workspace = true
+pretty_assertions.workspace = true
+pretty_env_logger.workspace = true
+rand.workspace = true
+regex.workspace = true
+serde.workspace = true
+strum.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
-hornvale_test_utilities.workspace = true
+criterion.workspace = true
+rstest.workspace = true
 
 [workspace.dependencies]
 rand = "0.8.5"
@@ -95,15 +105,6 @@ hecs = { version = "0.10.4", features = [
   "macros",
   "serde",
 ] }
-hornvale_astronomy = { path = "crates/astronomy" }
-hornvale_command = { path = "internal/command" }
-hornvale_core = { path = "core" }
-hornvale_input = { path = "internal/input" }
-hornvale_output = { path = "internal/output" }
-hornvale_scripting = { path = "internal/scripting" }
-hornvale_test_utilities = { path = "test/test_utilities" }
-hornvale_world = { path = "internal/world" }
-hornvale_world_commands = { path = "internal/world_commands" }
 log = "0.4.21"
 paste = "1.0.14"
 pretty_assertions = "1.4.0"

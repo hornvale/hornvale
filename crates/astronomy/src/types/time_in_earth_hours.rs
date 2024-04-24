@@ -31,7 +31,7 @@ impl From<TimeInEarthYears> for TimeInEarthHours {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use hornvale_test_utilities::prelude::*;
+  use crate::test_utilities::prelude::*;
 
   #[test]
   fn from_time_in_earth_days() {

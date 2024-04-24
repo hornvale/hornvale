@@ -66,7 +66,7 @@ impl From<RadiusOfSol> for LengthInMeters {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use hornvale_test_utilities::prelude::*;
+  use crate::test_utilities::prelude::*;
 
   #[test]
   fn test_abs() {

@@ -45,7 +45,7 @@ impl From<DensityOfSol> for DensityInGramsPerCm3 {
 #[cfg(test)]
 mod test {
   use super::*;
-  use hornvale_test_utilities::prelude::*;
+  use crate::test_utilities::prelude::*;
 
   #[test]
   fn from_density_of_jupiter() {

@@ -45,7 +45,7 @@ impl From<DensityOfLuna> for DensityOfSol {
 #[cfg(test)]
 mod test {
   use super::*;
-  use hornvale_test_utilities::prelude::*;
+  use crate::test_utilities::prelude::*;
 
   #[test]
   fn from_density_in_grams_per_cm3() {

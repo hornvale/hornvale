@@ -118,7 +118,7 @@ pub fn is_atmospherically_stable(
 mod test {
 
   use super::*;
-  use hornvale_test_utilities::prelude::*;
+  use crate::test_utilities::prelude::*;
 
   #[test]
   fn test_get_oxygen_stability() {

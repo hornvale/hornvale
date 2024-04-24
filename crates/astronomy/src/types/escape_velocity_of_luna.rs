@@ -31,7 +31,7 @@ impl From<SpeedInKmPerSec> for EscapeVelocityOfLuna {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use hornvale_test_utilities::prelude::*;
+  use crate::test_utilities::prelude::*;
 
   #[test]
   fn test_v_luna_to_v_earth() {

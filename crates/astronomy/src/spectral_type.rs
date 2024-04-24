@@ -241,7 +241,7 @@ impl From<MassOfSol> for SpectralType {
 mod tests {
   use super::*;
   use crate::star::Star;
-  use hornvale_test_utilities::prelude::*;
+  use crate::test_utilities::prelude::*;
   use strum::IntoEnumIterator;
 
   #[test]

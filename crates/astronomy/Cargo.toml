@@ -20,4 +20,4 @@ strum.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-hornvale_test_utilities.workspace = true
+crate::test_utilities.workspace = true

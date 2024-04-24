@@ -45,7 +45,7 @@ impl From<MassOfLuna> for MassInKg {
 mod test {
 
   use super::*;
-  use hornvale_test_utilities::prelude::*;
+  use crate::test_utilities::prelude::*;
 
   #[test]
   fn test_m_kg_to_m_sol() {

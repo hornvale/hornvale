@@ -24,7 +24,7 @@ pub fn get_random_point_in_sphere<R: Rng + ?Sized>(rng: &mut R) -> (f64, f64, f6
 mod test {
 
   use super::*;
-  use hornvale_test_utilities::prelude::*;
+  use crate::test_utilities::prelude::*;
 
   #[test]
   fn test_random_point_in_sphere() {

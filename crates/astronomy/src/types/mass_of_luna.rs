@@ -32,7 +32,7 @@ impl From<MassInKg> for MassOfLuna {
 mod test {
 
   use super::*;
-  use hornvale_test_utilities::prelude::*;
+  use crate::test_utilities::prelude::*;
 
   #[test]
   fn test_m_earth_to_m_luna() {

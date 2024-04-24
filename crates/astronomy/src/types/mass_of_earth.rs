@@ -39,7 +39,7 @@ impl From<MassOfSol> for MassOfEarth {
 mod test {
 
   use super::*;
-  use hornvale_test_utilities::prelude::*;
+  use crate::test_utilities::prelude::*;
 
   #[test]
   fn test_m_jupiter_to_m_earth() {

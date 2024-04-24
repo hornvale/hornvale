@@ -157,7 +157,7 @@ mod tests {
   use super::*;
   use crate::prelude::*;
   use crate::star::StarBuilder;
-  use hornvale_test_utilities::prelude::*;
+  use crate::test_utilities::prelude::*;
 
   #[test]
   fn test_get_average_distances_from_barycenter() {
