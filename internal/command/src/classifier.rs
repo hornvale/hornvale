@@ -136,10 +136,10 @@ impl Classifier {
       let lnk = tokens.get(i).map(|t| t.kind).unwrap();
       if lnk.could_be_adjective() {
         tokens[i].kind = TokenKind::Word(WordToken::Adjective);
-      } else if lnk.is_conjunction() || lnk == TokenKind::Comma {
+      } else if lnk.is_conjunction() || lnk == TokenKind::Character(CharacterToken::Comma) {
         // The word prior to this should be a noun, but we need to check for an
         // Oxford comma.
-        if i > 0 && tokens[i - 1].kind == TokenKind::Comma {
+        if i > 0 && tokens[i - 1].kind == TokenKind::Character(CharacterToken::Comma) {
           self.process_presumed_noun(tokens, i - 2)?;
         } else {
           self.process_presumed_noun(tokens, i - 1)?;

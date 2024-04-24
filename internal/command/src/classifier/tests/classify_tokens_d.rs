@@ -105,7 +105,7 @@ fn test_classify_tokens67() {
 #[test]
 fn test_classify_tokens68() {
   init();
-  test_string_classification("!test", &[TokenKind::BangWord]);
+  test_string_classification("!test", &[TokenKind::MagicWord(MagicWordToken::BangWord)]);
 }
 
 #[test]
@@ -167,9 +167,9 @@ fn test_classify_tokens72() {
       TokenKind::With,
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
-      TokenKind::Comma,
+      TokenKind::Character(CharacterToken::Comma),
       TokenKind::Word(WordToken::Noun),
-      TokenKind::Comma,
+      TokenKind::Character(CharacterToken::Comma),
       TokenKind::And,
       TokenKind::Word(WordToken::Noun),
     ],
@@ -187,14 +187,14 @@ fn test_classify_tokens73() {
       TokenKind::With,
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
-      TokenKind::Comma,
+      TokenKind::Character(CharacterToken::Comma),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
-      TokenKind::Comma,
+      TokenKind::Character(CharacterToken::Comma),
       TokenKind::And,
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
-      TokenKind::Comma,
+      TokenKind::Character(CharacterToken::Comma),
       TokenKind::And,
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],

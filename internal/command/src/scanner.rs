@@ -68,36 +68,15 @@ impl Scanner {
     }
     let character = self.advance()?;
     let result = match character {
-      ',' => self.make_token(TokenKind::Comma),
-      '.' => self.make_token(TokenKind::Period),
-      ';' => self.make_token(TokenKind::Semicolon),
-      '!' => self.match_magic_word(TokenKind::BangWord, TokenKind::Bang)?,
-      '?' => self.match_magic_word(TokenKind::QuestionWord, TokenKind::Question)?,
-      '@' => self.match_magic_word(TokenKind::AtSignWord, TokenKind::AtSign)?,
-      '#' => self.match_magic_word(TokenKind::HashWord, TokenKind::Hash)?,
-      '$' => self.match_magic_word(TokenKind::DollarWord, TokenKind::Dollar)?,
-      '%' => self.match_magic_word(TokenKind::PercentWord, TokenKind::Percent)?,
-      '^' => self.match_magic_word(TokenKind::CaretWord, TokenKind::Caret)?,
-      '&' => self.match_magic_word(TokenKind::AmpersandWord, TokenKind::Ampersand)?,
-      '*' => self.match_magic_word(TokenKind::AsteriskWord, TokenKind::Asterisk)?,
-      '/' => self.match_magic_word(TokenKind::ForwardSlashWord, TokenKind::ForwardSlash)?,
-      '\\' => self.match_magic_word(TokenKind::BackSlashWord, TokenKind::BackSlash)?,
-      '(' => self.match_magic_word(TokenKind::LeftParenthesisWord, TokenKind::LeftParenthesis)?,
-      ')' => self.match_magic_word(TokenKind::RightParenthesisWord, TokenKind::RightParenthesis)?,
-      '[' => self.match_magic_word(TokenKind::LeftSquareBracketWord, TokenKind::LeftSquareBracket)?,
-      ']' => self.match_magic_word(TokenKind::RightSquareBracketWord, TokenKind::RightSquareBracket)?,
-      '{' => self.match_magic_word(TokenKind::LeftCurlyBraceWord, TokenKind::LeftCurlyBrace)?,
-      '}' => self.match_magic_word(TokenKind::RightCurlyBraceWord, TokenKind::RightCurlyBrace)?,
-      '<' => self.match_magic_word(TokenKind::LessThanWord, TokenKind::LessThan)?,
-      '>' => self.match_magic_word(TokenKind::GreaterThanWord, TokenKind::GreaterThan)?,
-      '=' => self.match_magic_word(TokenKind::EqualsWord, TokenKind::Equals)?,
-      '+' => self.match_magic_word(TokenKind::PlusWord, TokenKind::Plus)?,
-      '-' => self.match_magic_word(TokenKind::MinusWord, TokenKind::Minus)?,
-      '|' => self.match_magic_word(TokenKind::PipeWord, TokenKind::Pipe)?,
-      ':' => self.match_magic_word(TokenKind::ColonWord, TokenKind::Colon)?,
-      '_' => self.match_magic_word(TokenKind::UnderscoreWord, TokenKind::Underscore)?,
-      '~' => self.match_magic_word(TokenKind::TildeWord, TokenKind::Tilde)?,
-      '`' => self.make_token(TokenKind::Backtick),
+      character if CharacterToken::try_from(character).is_ok() => {
+        let character_kind = CharacterToken::try_from(character).unwrap();
+        let kind = TokenKind::try_from(character).unwrap();
+        if character_kind.can_begin_magic_word() {
+          let word_kind = character_kind.to_magic_word().unwrap();
+          return self.match_magic_word(TokenKind::MagicWord(word_kind), kind);
+        }
+        self.make_token(kind)
+      },
       '"' | '\'' => self.match_string(character)?,
       char if char.is_ascii_digit() => self.match_number_or_ordinal()?,
       char if self.is_alpha(char) => self.match_word()?,
@@ -352,7 +331,7 @@ mod tests {
         lexeme: "sword".to_string(),
       },
       Token {
-        kind: TokenKind::Ampersand,
+        kind: TokenKind::Character(CharacterToken::Ampersand),
         lexeme: "&".to_string(),
       },
       Token {
@@ -374,11 +353,11 @@ mod tests {
     let tokens = scanner.scan_tokens();
     let expected = vec![
       Token {
-        kind: TokenKind::BangWord,
+        kind: TokenKind::MagicWord(MagicWordToken::BangWord),
         lexeme: "!take".to_string(),
       },
       Token {
-        kind: TokenKind::HashWord,
+        kind: TokenKind::MagicWord(MagicWordToken::HashWord),
         lexeme: "#sword".to_string(),
       },
       Token {

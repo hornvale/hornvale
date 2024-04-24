@@ -67,7 +67,7 @@ fn test_process_presumed_adjectives3() {
       lexeme: "cube".to_string(),
     },
     Token {
-      kind: TokenKind::Comma,
+      kind: TokenKind::Character(CharacterToken::Comma),
       lexeme: ",".to_string(),
     },
     Token {
@@ -83,7 +83,7 @@ fn test_process_presumed_adjectives3() {
   classifier.process_presumed_adjectives(&mut tokens, 4).unwrap();
   assert_eq!(tokens[0].kind, TokenKind::Word(WordToken::Adjective));
   assert_eq!(tokens[1].kind, TokenKind::Word(WordToken::Noun));
-  assert_eq!(tokens[2].kind, TokenKind::Comma);
+  assert_eq!(tokens[2].kind, TokenKind::Character(CharacterToken::Comma));
   assert_eq!(tokens[3].kind, TokenKind::Word(WordToken::Adjective));
   assert_eq!(tokens[4].kind, TokenKind::Word(WordToken::Noun));
 }
@@ -101,7 +101,7 @@ fn test_process_presumed_adjectives4() {
       lexeme: "cube".to_string(),
     },
     Token {
-      kind: TokenKind::Comma,
+      kind: TokenKind::Character(CharacterToken::Comma),
       lexeme: ",".to_string(),
     },
     Token {
@@ -129,7 +129,7 @@ fn test_process_presumed_adjectives4() {
   classifier.process_presumed_adjectives(&mut tokens, 7).unwrap();
   assert_eq!(tokens[0].kind, TokenKind::Word(WordToken::Adjective));
   assert_eq!(tokens[1].kind, TokenKind::Word(WordToken::Noun));
-  assert_eq!(tokens[2].kind, TokenKind::Comma);
+  assert_eq!(tokens[2].kind, TokenKind::Character(CharacterToken::Comma));
   assert_eq!(tokens[3].kind, TokenKind::Word(WordToken::Adjective));
   assert_eq!(tokens[4].kind, TokenKind::Word(WordToken::Noun));
   assert_eq!(tokens[5].kind, TokenKind::And);

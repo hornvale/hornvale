@@ -153,7 +153,7 @@ fn test_classify_tokens12() {
       TokenKind::Word(WordToken::Verb),
       TokenKind::To,
       TokenKind::Word(WordToken::Noun), // Should be adjective.
-      TokenKind::Comma,
+      TokenKind::Character(CharacterToken::Comma),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::NounPossessiveDeterminer,
       TokenKind::Word(WordToken::Noun), // Should be direct object.
@@ -188,7 +188,7 @@ fn test_classify_tokens14() {
       TokenKind::Word(WordToken::Verb),
       TokenKind::To,
       TokenKind::Word(WordToken::Adjective),
-      TokenKind::Comma,
+      TokenKind::Character(CharacterToken::Comma),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::NounPossessiveDeterminer,
       TokenKind::Word(WordToken::Noun), // Should be direct object.
@@ -233,7 +233,7 @@ fn test_classify_tokens17() {
     &[
       TokenKind::Word(WordToken::Verb),
       TokenKind::Word(WordToken::Noun),
-      TokenKind::Comma,
+      TokenKind::Character(CharacterToken::Comma),
       TokenKind::StringLiteral,
     ],
   );
@@ -270,7 +270,7 @@ fn test_classify_tokens20() {
     &[
       TokenKind::Word(WordToken::Verb),
       TokenKind::Word(WordToken::Noun), // Should be direct object.
-      TokenKind::Comma,
+      TokenKind::Character(CharacterToken::Comma),
       TokenKind::Word(WordToken::Noun),
     ],
   );

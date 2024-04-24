@@ -101,7 +101,7 @@ fn test_classify_tokens48() {
       TokenKind::Word(WordToken::Verb),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun), // Should be direct object.
-      TokenKind::Comma,
+      TokenKind::Character(CharacterToken::Comma),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun),
     ],
@@ -117,10 +117,10 @@ fn test_classify_tokens49() {
       TokenKind::Word(WordToken::Verb),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun), // Should be direct object.
-      TokenKind::Comma,
+      TokenKind::Character(CharacterToken::Comma),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun), // Should be direct object.
-      TokenKind::Comma,
+      TokenKind::Character(CharacterToken::Comma),
       TokenKind::And,
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun),
@@ -286,7 +286,7 @@ fn test_classify_tokens60() {
     &[
       TokenKind::Word(WordToken::Verb),
       TokenKind::Word(WordToken::Adjective),
-      TokenKind::Comma,
+      TokenKind::Character(CharacterToken::Comma),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun),
       TokenKind::As,

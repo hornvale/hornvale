@@ -5,9 +5,9 @@ use strum::IntoEnumIterator;
 #[test]
 fn test_is_punctuation() {
   init();
-  assert!(TokenKind::Comma.is_punctuation());
+  assert!(TokenKind::Character(CharacterToken::Comma).is_punctuation());
   for kind in TokenKind::iter() {
-    if kind != TokenKind::Comma {
+    if kind != TokenKind::Character(CharacterToken::Comma) {
       assert!(!kind.is_punctuation());
     }
   }
@@ -18,7 +18,7 @@ fn test_is_special_character() {
   init();
   for kind in TokenKind::iter() {
     match kind {
-      TokenKind::Comma | TokenKind::SingleQuote => {
+      TokenKind::Character(CharacterToken::Comma) | TokenKind::Character(CharacterToken::SingleQuote) => {
         assert!(!kind.is_special_character(), "{:?} is special", kind);
       },
       kind if !kind.is_single_character() => {
@@ -373,7 +373,7 @@ fn test_can_follow_adjective() {
   init();
   for kind in TokenKind::iter() {
     match kind {
-      TokenKind::Comma | TokenKind::NounPossessiveDeterminer => {
+      TokenKind::Character(CharacterToken::Comma) | TokenKind::NounPossessiveDeterminer => {
         assert!(kind.can_follow_adjective(), "{:?} cannot follow an adjective", kind);
       },
       _ => {

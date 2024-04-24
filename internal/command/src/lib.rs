@@ -50,7 +50,10 @@ pub mod prelude {
   pub use crate::parser::Parser;
   pub use crate::scanner::Scanner;
   pub use crate::token::{
-    kind::{her_token::HerToken, word_token::WordToken, TokenKind},
+    kind::{
+      character_token::CharacterToken, her_token::HerToken, magic_word_token::MagicWordToken, word_token::WordToken,
+      TokenKind,
+    },
     Token,
   };
 }

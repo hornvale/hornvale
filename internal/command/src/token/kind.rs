@@ -4,9 +4,15 @@ use strum::{Display, EnumIter};
 #[cfg(test)]
 mod tests;
 
+/// An enumeration of the possibilities for single-character tokens.
+pub mod character_token;
+use character_token::CharacterToken;
 /// An enumeration of the possibilities for `Her`.
 pub mod her_token;
 use her_token::HerToken;
+/// An enumeration of the possibilities for any given `MagicWord` token.
+pub mod magic_word_token;
+use magic_word_token::MagicWordToken;
 /// Trait implementations.
 pub mod traits;
 /// An enumeration of the possibilities for any given `Word` token.
@@ -17,75 +23,8 @@ use word_token::WordToken;
 #[derive(Clone, Copy, Debug, Display, EnumIter, Eq, Hash, PartialEq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub enum TokenKind {
-  //
-  // Single-character tokens.
-  //
-  /// A single quote, e.g. in `say 'hello'` or `take the thief's treasure`.
-  SingleQuote,
-  /// A comma, e.g. in `take sword, shield`.
-  Comma,
-  /// A period, e.g. in `east. attack troll with sword. west`.
-  Period,
-  /// A semicolon, e.g. in `east; attack troll with sword; west`.
-  Semicolon,
-  /// An exclamation point, e.g. in `!`.
-  Bang,
-  /// A question mark, e.g. in `?`.
-  Question,
-  /// At sign, e.g. in `@`.
-  AtSign,
-  /// Hash sign, e.g. in `#`.
-  Hash,
-  /// Dollar sign, e.g. in `$`.
-  Dollar,
-  /// Percent sign, e.g. in `%`.
-  Percent,
-  /// Caret, e.g. in `^`.
-  Caret,
-  /// Ampersand, e.g. in `&`.
-  Ampersand,
-  /// Asterisk, e.g. in `*`.
-  Asterisk,
-  /// Forward slash, e.g. in `/`.
-  ForwardSlash,
-  /// Backward slash, e.g. in `\`.
-  BackSlash,
-  /// Left parenthesis, e.g. in `(`.
-  LeftParenthesis,
-  /// Right parenthesis, e.g. in `)`.
-  RightParenthesis,
-  /// Left square bracket, e.g. in `[`.
-  LeftSquareBracket,
-  /// Right square bracket, e.g. in `]`.
-  RightSquareBracket,
-  /// Left curly brace, e.g. in `{`.
-  LeftCurlyBrace,
-  /// Right curly brace, e.g. in `}`.
-  RightCurlyBrace,
-  /// Less than sign, e.g. in `<`.
-  LessThan,
-  /// Greater than sign, e.g. in `>`.
-  GreaterThan,
-  /// Equals sign, e.g. in `=`.
-  Equals,
-  /// Plus sign, e.g. in `+`.
-  Plus,
-  /// Minus sign, e.g. in `-`.
-  Minus,
-  /// Pipe, e.g. in `|`.
-  Pipe,
-  /// Colon, e.g. in `:`.
-  Colon,
-  /// Underscore, e.g. in `_`.
-  Underscore,
-  /// Tilde, e.g. in `~`.
-  Tilde,
-  /// Backtick, e.g. in `\``.
-  Backtick,
-
-  //
-  // Multi-character tokens.
-  //
+  /// Single-character tokens.
+  Character(CharacterToken),
   /// A string literal, e.g. in `say "hello"`.
   StringLiteral,
   /// A number literal, e.g. in `take 5 coins`. We use `u32` for simplicity.
@@ -94,6 +33,8 @@ pub enum TokenKind {
   Ordinal,
   /// A general possessive determiner ("someone's").
   NounPossessiveDeterminer,
+  /// Words beginning with special characters.
+  MagicWord(MagicWordToken),
 
   //
   // Word tokens.
@@ -254,62 +195,6 @@ pub enum TokenKind {
   /// e.g. in `no` or `n`.
   No,
 
-  //
-  // Words beginning with special characters.
-  //
-  /// An exclamation point, e.g. in `!`.
-  BangWord,
-  /// A question mark, e.g. in `?`.
-  QuestionWord,
-  /// At sign, e.g. in `@`.
-  AtSignWord,
-  /// Hash sign, e.g. in `#`.
-  HashWord,
-  /// Dollar sign, e.g. in `$`.
-  DollarWord,
-  /// Percent sign, e.g. in `%`.
-  PercentWord,
-  /// Caret, e.g. in `^`.
-  CaretWord,
-  /// Ampersand, e.g. in `&`.
-  AmpersandWord,
-  /// Asterisk, e.g. in `*`.
-  AsteriskWord,
-  /// Forward slash, e.g. in `/`.
-  ForwardSlashWord,
-  /// Backward slash, e.g. in `\`.
-  BackSlashWord,
-  /// Left parenthesis, e.g. in `(`.
-  LeftParenthesisWord,
-  /// Right parenthesis, e.g. in `)`.
-  RightParenthesisWord,
-  /// Left square bracket, e.g. in `[`.
-  LeftSquareBracketWord,
-  /// Right square bracket, e.g. in `]`.
-  RightSquareBracketWord,
-  /// Left curly brace, e.g. in `{`.
-  LeftCurlyBraceWord,
-  /// Right curly brace, e.g. in `}`.
-  RightCurlyBraceWord,
-  /// Less than sign, e.g. in `<`.
-  LessThanWord,
-  /// Greater than sign, e.g. in `>`.
-  GreaterThanWord,
-  /// Equals sign, e.g. in `=`.
-  EqualsWord,
-  /// Plus sign, e.g. in `+`.
-  PlusWord,
-  /// Minus sign, e.g. in `-`.
-  MinusWord,
-  /// Pipe, e.g. in `|`.
-  PipeWord,
-  /// Colon, e.g. in `:`.
-  ColonWord,
-  /// Underscore, e.g. in `_`.
-  UnderscoreWord,
-  /// Tilde, e.g. in `~`.
-  TildeWord,
-
   /// Any other word.
   Word(WordToken),
 
@@ -323,47 +208,14 @@ pub enum TokenKind {
 impl TokenKind {
   /// Is this token a single-character token?
   pub fn is_single_character(&self) -> bool {
-    matches!(
-      self,
-      Self::SingleQuote
-        | Self::Comma
-        | Self::Period
-        | Self::Semicolon
-        | Self::Bang
-        | Self::Question
-        | Self::AtSign
-        | Self::Hash
-        | Self::Dollar
-        | Self::Percent
-        | Self::Caret
-        | Self::Ampersand
-        | Self::Asterisk
-        | Self::ForwardSlash
-        | Self::BackSlash
-        | Self::LeftParenthesis
-        | Self::RightParenthesis
-        | Self::LeftSquareBracket
-        | Self::RightSquareBracket
-        | Self::LeftCurlyBrace
-        | Self::RightCurlyBrace
-        | Self::LessThan
-        | Self::GreaterThan
-        | Self::Equals
-        | Self::Plus
-        | Self::Minus
-        | Self::Pipe
-        | Self::Colon
-        | Self::Underscore
-        | Self::Tilde
-        | Self::Backtick
-    )
+    matches!(self, Self::Character(_))
   }
 
   /// Is this token punctuation (that we will use in the parser)?
   ///
   /// Currently, the only valid punctuation character is the comma.
   pub fn is_punctuation(&self) -> bool {
-    matches!(self, Self::Comma)
+    matches!(self, Self::Character(CharacterToken::Comma))
   }
 
   /// Is this token a special character?
@@ -375,7 +227,11 @@ impl TokenKind {
   /// - `Comma`
   /// - `SingleQuote`
   pub fn is_special_character(&self) -> bool {
-    self.is_single_character() && !matches!(self, Self::Comma | Self::SingleQuote)
+    self.is_single_character()
+      && !matches!(
+        self,
+        Self::Character(CharacterToken::Comma | CharacterToken::SingleQuote)
+      )
   }
 
   /// Is this token a direction?
@@ -542,40 +398,15 @@ impl TokenKind {
   pub fn can_follow_adjective(&self) -> bool {
     (self.is_noun() && !self.is_pronoun() && !self.is_direction() && !self.is_distributive_determiner())
       || self.is_noun_possessive_determiner()
-      || matches!(self, Self::Comma | Self::Word(WordToken::Adjective))
+      || matches!(
+        self,
+        Self::Character(CharacterToken::Comma) | Self::Word(WordToken::Adjective)
+      )
   }
 
   /// Is this token a magic word?
   pub fn is_magic_word(&self) -> bool {
-    matches!(
-      self,
-      Self::BangWord
-        | Self::QuestionWord
-        | Self::AtSignWord
-        | Self::HashWord
-        | Self::DollarWord
-        | Self::PercentWord
-        | Self::CaretWord
-        | Self::AmpersandWord
-        | Self::AsteriskWord
-        | Self::ForwardSlashWord
-        | Self::BackSlashWord
-        | Self::LeftParenthesisWord
-        | Self::RightParenthesisWord
-        | Self::LeftSquareBracketWord
-        | Self::RightSquareBracketWord
-        | Self::LeftCurlyBraceWord
-        | Self::RightCurlyBraceWord
-        | Self::LessThanWord
-        | Self::GreaterThanWord
-        | Self::EqualsWord
-        | Self::PlusWord
-        | Self::MinusWord
-        | Self::PipeWord
-        | Self::ColonWord
-        | Self::UnderscoreWord
-        | Self::TildeWord
-    )
+    matches!(self, Self::MagicWord(_))
   }
 
   /// Is this token a yes/no token?
