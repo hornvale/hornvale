@@ -38,16 +38,6 @@ pub enum TokenKind {
   /// Directions (north, south, up, down, in, out, etc).
   Direction(Direction),
 
-  // Some tokens that can be directions or modifiers.
-  /// e.g. `go down` or `look down the road`.
-  Down,
-  /// e.g. `go in` or `look in the box`.
-  In,
-  /// e.g. `go out` or `look out the window`.
-  Out,
-  /// e.g. `go up` or `look up at the sky`.
-  Up,
-
   // Demonstrative determiners.
   /// "This", e.g. in `take this`.
   This,
@@ -75,8 +65,8 @@ pub enum TokenKind {
   Your,
   /// `his`.
   His,
-  /// `her` (can also act as a pronoun).
-  Her(Her),
+  // `her` (can also act as a pronoun).
+  // Her(Her),
   /// `its`.
   Its,
   /// `our`.
@@ -116,7 +106,21 @@ pub enum TokenKind {
   /// e.g. in `no` or `n`.
   No,
 
-  /// Any other word.
+  // The following tokens can be multiple things, so we need go through a
+  // process of classification to determine what they are.
+  //
+  // The following can be directions or modifiers.
+  /// e.g. `go down` or `look down the road`.
+  Down,
+  /// e.g. `go in` or `look in the box`.
+  In,
+  /// e.g. `go out` or `look out the window`.
+  Out,
+  /// e.g. `go up` or `look up at the sky`.
+  Up,
+  /// Her (can be a pronoun or a possessive determiner).
+  Her(Her),
+  /// Any other word (generally an adjective or noun).
   Word(Word),
 
   //

@@ -22,13 +22,8 @@ impl Classifier {
   /// Classify the tokens in a sentence and return "hints".
   pub fn classify_tokens(&self, tokens: &mut [Token]) -> Result<(), CommandError> {
     self.assert_non_empty(tokens)?;
-    // The first token should always be a verb or a magic word.
-    if !tokens[0].kind.is_magic_word() {
-      if !tokens[0].kind.could_be_verb() {
-        return Err(CommandError::NoVerb);
-      }
-      tokens[0].kind = TokenKind::Word(Word::Verb);
-    }
+    // The first token should always be a verb.
+    self.set_first_token_to_verb(tokens)?;
     // Find the prepositions in the tokens and classify accordingly.
     let prepositions_found = self.find_prepositions(tokens)?;
     if !prepositions_found {
@@ -178,5 +173,19 @@ impl Classifier {
       )),
       _ => Ok(()),
     }
+  }
+
+  /// Set the first token to a verb.
+  pub fn set_first_token_to_verb(&self, tokens: &mut [Token]) -> Result<(), CommandError> {
+    if !tokens[0].kind.could_be_verb() {
+      return Err(CommandError::NoVerb);
+    }
+    tokens[0].kind = TokenKind::Word(Word::Verb);
+    Ok(())
+  }
+
+  /// Peek at a specified index.
+  pub fn peek(&self, tokens: &[Token], index: usize) -> Option<TokenKind> {
+    tokens.get(index).map(|t| t.kind)
   }
 }

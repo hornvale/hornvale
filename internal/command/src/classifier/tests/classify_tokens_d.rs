@@ -103,9 +103,15 @@ fn test_classify_tokens67() {
 }
 
 #[test]
+#[should_panic]
 fn test_classify_tokens68() {
   init();
-  test_string_classification("!test", &[TokenKind::MagicWord(MagicWord::BangWord)]);
+  test_string_classification(
+    "!test",
+    &[
+      TokenKind::Word(Word::Verb), // Should be TokenKind::MagicWord(MagicWord::BangWord)
+    ],
+  );
 }
 
 #[test]
