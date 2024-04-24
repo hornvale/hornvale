@@ -32,12 +32,7 @@ macro_rules! spawn_corridor {
       PassageKind::Corridor($next_region),
       CorridorOrigin,
     ));
-    $world.spawn((
-      $region,
-      $room,
-      CorridorDirection::try_from($direction).expect("Invalid corridor direction"),
-      CorridorTerminus,
-    ));
+    $world.spawn(($region, $room, CorridorDirection($direction), CorridorTerminus));
   };
 }
 
@@ -47,16 +42,16 @@ impl RegionGenerator for CompassRoseRegionGenerator {
     let name = Name("The Center Room".to_string());
     let description = Description("This is the center room.".to_string());
     spawn_room!(world, region, center_room, name, description);
-    PassageDirection::iter().for_each(|direction| {
-      let room = center_room.get(direction);
+    Direction::iter().for_each(|direction| {
+      let room = center_room + PassageDirection(direction);
       let name = Name(format!("The {} Room", direction));
       let description = Description(format!("This is the {} room.", direction.to_string().to_lowercase()));
       spawn_room!(world, region, room, name, description);
       spawn_passage!(world, region, center_room, room, direction);
-      let corridor_direction = CorridorDirection::try_from(direction);
-      if corridor_direction.is_ok() {
+      if direction.is_cardinal() || direction.is_vertical() {
+        let corridor_direction = CorridorDirection(direction);
         // Insert a passage from the room into a corridor to the next region.
-        let next_region = region + corridor_direction.unwrap().into();
+        let next_region = region + corridor_direction;
         spawn_corridor!(world, region, room, direction, next_region);
       }
     });

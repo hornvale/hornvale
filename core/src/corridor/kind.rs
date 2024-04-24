@@ -2,6 +2,9 @@ use crate::prelude::Region;
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
+/// Trait implementations.
+pub mod traits;
+
 /// A `CorridorKind` determines if and how a corridor can be traversed.
 ///
 /// In most cases, this will be a simple operation, but we observe them so that
@@ -16,14 +19,4 @@ pub enum CorridorKind {
   Default(Region),
   /// The player is ascending to a special region (z>0).
   Ascend(Region),
-}
-
-impl From<Region> for CorridorKind {
-  fn from(region: Region) -> Self {
-    if region.z > 0 {
-      CorridorKind::Ascend(region)
-    } else {
-      CorridorKind::Default(region)
-    }
-  }
 }

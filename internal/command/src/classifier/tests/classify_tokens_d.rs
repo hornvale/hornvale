@@ -7,7 +7,7 @@ fn test_classify_tokens61() {
     "steal from elf",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::From,
+      TokenKind::CommandModifier(CommandModifier::From),
       TokenKind::Word(WordToken::Noun),
     ],
   );
@@ -21,7 +21,7 @@ fn test_classify_tokens62() {
     &[
       TokenKind::Word(WordToken::Verb),
       TokenKind::Word(WordToken::Noun),
-      TokenKind::From,
+      TokenKind::CommandModifier(CommandModifier::From),
       TokenKind::NounPossessiveDeterminer,
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
@@ -64,7 +64,7 @@ fn test_classify_tokens65() {
       TokenKind::Word(WordToken::Verb),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun),
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );
@@ -79,7 +79,7 @@ fn test_classify_tokens66() {
       TokenKind::Word(WordToken::Verb),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun),
-      TokenKind::Into,
+      TokenKind::CommandModifier(CommandModifier::Into),
       TokenKind::NounPossessiveDeterminer,
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
@@ -93,7 +93,7 @@ fn test_classify_tokens67() {
     "look at farmer's neighbor's wife's cat",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::At,
+      TokenKind::CommandModifier(CommandModifier::At),
       TokenKind::NounPossessiveDeterminer,
       TokenKind::NounPossessiveDeterminer,
       TokenKind::NounPossessiveDeterminer,
@@ -115,10 +115,10 @@ fn test_classify_tokens69() {
     "turn to page 569 in the book",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::Word(WordToken::Unclassified), // Should be Word(Noun).
       TokenKind::NumberLiteral,
-      TokenKind::In,
+      TokenKind::In, // Should be a CommandModifier::In.
       TokenKind::Word(WordToken::Noun),
     ],
   );
@@ -132,7 +132,7 @@ fn test_classify_tokens70() {
     &[
       TokenKind::Word(WordToken::Verb),
       TokenKind::Word(WordToken::Noun),
-      TokenKind::With,
+      TokenKind::CommandModifier(CommandModifier::With),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
@@ -147,7 +147,7 @@ fn test_classify_tokens71() {
     &[
       TokenKind::Word(WordToken::Verb),
       TokenKind::Word(WordToken::Noun),
-      TokenKind::With,
+      TokenKind::CommandModifier(CommandModifier::With),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
       TokenKind::And,
@@ -164,7 +164,7 @@ fn test_classify_tokens72() {
     &[
       TokenKind::Word(WordToken::Verb),
       TokenKind::Word(WordToken::Noun),
-      TokenKind::With,
+      TokenKind::CommandModifier(CommandModifier::With),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
       TokenKind::Character(CharacterToken::Comma),
@@ -184,7 +184,7 @@ fn test_classify_tokens73() {
     &[
       TokenKind::Word(WordToken::Verb),
       TokenKind::Word(WordToken::Noun),
-      TokenKind::With,
+      TokenKind::CommandModifier(CommandModifier::With),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
       TokenKind::Character(CharacterToken::Comma),
@@ -210,7 +210,7 @@ fn test_classify_tokens74() {
       TokenKind::Word(WordToken::Verb),
       TokenKind::Her(HerToken::Unclassified), // Should be possessive determiner.
       TokenKind::Word(WordToken::Noun),
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::Her(HerToken::Unclassified), // Should be unclassified.
     ],
   );
@@ -223,9 +223,9 @@ fn test_classify_tokens75() {
     "turn on car with key",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::On,
+      TokenKind::CommandModifier(CommandModifier::On),
       TokenKind::Word(WordToken::Noun), // Should be direct object.
-      TokenKind::With,
+      TokenKind::CommandModifier(CommandModifier::With),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );

@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
-use std::ops::Neg;
 use strum::{Display, EnumIter};
 
+/// Trait implementations.
+pub mod traits;
+
 /// A direction.
-#[derive(Clone, Copy, Debug, Deserialize, Display, EnumIter, Eq, PartialEq, Hash, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Display, EnumIter, Eq, PartialOrd, Ord, PartialEq, Hash, Serialize)]
 pub enum Direction {
   /// North (y+1).
   North,
@@ -35,27 +37,5 @@ impl Direction {
   /// Get the opposite direction of the given direction.
   pub fn opposite(&self) -> Self {
     -(*self)
-  }
-}
-
-impl Neg for Direction {
-  type Output = Self;
-
-  fn neg(self) -> Self::Output {
-    use Direction::*;
-    match self {
-      North => South,
-      Northeast => Southwest,
-      East => West,
-      Southeast => Northwest,
-      South => North,
-      Southwest => Northeast,
-      West => East,
-      Northwest => Southeast,
-      Up => Down,
-      Down => Up,
-      In => Out,
-      Out => In,
-    }
   }
 }

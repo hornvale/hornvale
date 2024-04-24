@@ -12,11 +12,7 @@ use serde::{Deserialize, Serialize};
 pub struct EmptyRegionGenerator;
 
 impl RegionGenerator for EmptyRegionGenerator {
-  fn generate(&self, region: Region, world: &mut World) -> Result<(), WorldError> {
-    let corridors = region.get_corridors();
-    corridors.iter().for_each(|&corridor| {
-      world.spawn((region, corridor));
-    });
+  fn generate(&self, _region: Region, _world: &mut World) -> Result<(), WorldError> {
     Ok(())
   }
 }

@@ -37,20 +37,30 @@ fn test_classify_tokens24() {
   init();
   test_string_classification(
     "take all here",
-    &[TokenKind::Word(WordToken::Verb), TokenKind::All, TokenKind::Here],
+    &[
+      TokenKind::Word(WordToken::Verb),
+      TokenKind::All,
+      TokenKind::CommandModifier(CommandModifier::Here),
+    ],
   );
 }
 
 #[test]
 fn test_classify_tokens25() {
   init();
-  test_string_classification("look north", &[TokenKind::Word(WordToken::Verb), TokenKind::North]);
+  test_string_classification(
+    "look north",
+    &[TokenKind::Word(WordToken::Verb), TokenKind::Direction(Direction::North)],
+  );
 }
 
 #[test]
 fn test_classify_tokens26() {
   init();
-  test_string_classification("go north", &[TokenKind::Word(WordToken::Verb), TokenKind::North]);
+  test_string_classification(
+    "go north",
+    &[TokenKind::Word(WordToken::Verb), TokenKind::Direction(Direction::North)],
+  );
 }
 
 #[test]
@@ -58,20 +68,33 @@ fn test_classify_tokens27() {
   init();
   test_string_classification(
     "go to north",
-    &[TokenKind::Word(WordToken::Verb), TokenKind::To, TokenKind::North],
+    &[
+      TokenKind::Word(WordToken::Verb),
+      TokenKind::CommandModifier(CommandModifier::To),
+      TokenKind::Direction(Direction::North),
+    ],
   );
 }
 
 #[test]
 fn test_classify_tokens28() {
   init();
-  test_string_classification("look around", &[TokenKind::Word(WordToken::Verb), TokenKind::Around]);
+  test_string_classification(
+    "look around",
+    &[
+      TokenKind::Word(WordToken::Verb),
+      TokenKind::CommandModifier(CommandModifier::Around),
+    ],
+  );
 }
 
 #[test]
 fn test_classify_tokens29() {
   init();
-  test_string_classification("look north", &[TokenKind::Word(WordToken::Verb), TokenKind::North]);
+  test_string_classification(
+    "look north",
+    &[TokenKind::Word(WordToken::Verb), TokenKind::Direction(Direction::North)],
+  );
 }
 
 #[test]
@@ -79,7 +102,11 @@ fn test_classify_tokens30() {
   init();
   test_string_classification(
     "look at north",
-    &[TokenKind::Word(WordToken::Verb), TokenKind::At, TokenKind::North],
+    &[
+      TokenKind::Word(WordToken::Verb),
+      TokenKind::CommandModifier(CommandModifier::At),
+      TokenKind::Direction(Direction::North),
+    ],
   );
 }
 
@@ -90,7 +117,7 @@ fn test_classify_tokens31() {
     "look behind curtain",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::Behind,
+      TokenKind::CommandModifier(CommandModifier::Behind),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );
@@ -103,7 +130,7 @@ fn test_classify_tokens32() {
     "look under stove",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::Under,
+      TokenKind::CommandModifier(CommandModifier::Under),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );
@@ -116,7 +143,7 @@ fn test_classify_tokens33() {
     "look in box",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::In,
+      TokenKind::In,                    // Should be a CommandModifier::In.
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );
@@ -130,7 +157,7 @@ fn test_classify_tokens34() {
     &[
       TokenKind::Word(WordToken::Verb),
       TokenKind::Word(WordToken::Noun),
-      TokenKind::On,
+      TokenKind::CommandModifier(CommandModifier::On),
     ],
   );
 }
@@ -155,7 +182,7 @@ fn test_classify_tokens36() {
     "turn on lantern",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::On,
+      TokenKind::CommandModifier(CommandModifier::On),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );

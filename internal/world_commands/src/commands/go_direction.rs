@@ -51,7 +51,7 @@ impl Command for GoDirectionCommand {
     match passage {
       PassageKind::Corridor(next_region) => {
         let next_room = {
-          let corridor_direction = CorridorDirection::try_from(-direction).unwrap();
+          let corridor_direction = CorridorDirection(-direction.0);
           let next_room_result = world
             .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()
             .iter()

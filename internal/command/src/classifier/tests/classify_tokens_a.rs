@@ -32,7 +32,7 @@ fn test_classify_tokens04() {
     &[
       TokenKind::Word(WordToken::Verb),
       TokenKind::StringLiteral,
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );
@@ -46,7 +46,7 @@ fn test_classify_tokens05() {
     &[
       TokenKind::Word(WordToken::Verb),
       TokenKind::StringLiteral,
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
   );
@@ -60,7 +60,7 @@ fn test_classify_tokens06() {
     &[
       TokenKind::Word(WordToken::Verb),
       TokenKind::StringLiteral,
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::NounPossessiveDeterminer,
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
@@ -75,7 +75,7 @@ fn test_classify_tokens07() {
     &[
       TokenKind::Word(WordToken::Verb),
       TokenKind::StringLiteral,
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::NounPossessiveDeterminer,
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
     ],
@@ -89,7 +89,7 @@ fn test_classify_tokens08() {
     "say to farmer \"hello\"",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
       TokenKind::StringLiteral,
     ],
@@ -103,7 +103,7 @@ fn test_classify_tokens09() {
     "say to nice farmer \"hello\"",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
       TokenKind::StringLiteral,
@@ -118,7 +118,7 @@ fn test_classify_tokens10() {
     "say to lily-livered farmer's cow \"hello\"",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::NounPossessiveDeterminer,
       TokenKind::Word(WordToken::Noun), // Should be indirect object.
@@ -134,7 +134,7 @@ fn test_classify_tokens11() {
     "say to nice lily-livered farmer's cow \"hello\"",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::NounPossessiveDeterminer,
@@ -151,7 +151,7 @@ fn test_classify_tokens12() {
     "say to nice, lily-livered farmer's cow \"hello\"",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::Word(WordToken::Noun), // Should be adjective.
       TokenKind::Character(CharacterToken::Comma),
       TokenKind::Word(WordToken::Adjective),
@@ -169,7 +169,7 @@ fn test_classify_tokens13() {
     "say to lily-livered nice farmer's cow \"hello\"",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::NounPossessiveDeterminer,
@@ -186,7 +186,7 @@ fn test_classify_tokens14() {
     "say to lily-livered, nice farmer's cow \"hello\"",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::Word(WordToken::Adjective),
       TokenKind::Character(CharacterToken::Comma),
       TokenKind::Word(WordToken::Adjective),
@@ -204,7 +204,7 @@ fn test_classify_tokens15() {
     "say to farmer's cow 'hello'",
     &[
       TokenKind::Word(WordToken::Verb),
-      TokenKind::To,
+      TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::NounPossessiveDeterminer,
       TokenKind::Word(WordToken::Noun), // Should be direct object.
       TokenKind::StringLiteral,

@@ -1,6 +1,6 @@
 use super::direction::CorridorDirection;
 use super::kind::CorridorKind;
-use crate::prelude::Region;
+use crate::prelude::*;
 
 /// A `CorridorFinder` is an algorithm to find corridors between regions.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -14,7 +14,7 @@ impl CorridorFinder {
   /// Get the corridor at the given region in the given direction.
   pub fn get_corridor(&self, region: Region, direction: CorridorDirection) -> Option<CorridorKind> {
     match self {
-      CorridorFinder::Simple => direction.get_corridor(region),
+      CorridorFinder::Simple => Some((Vector4D::from(direction) + Vector4D::from(region)).into()),
     }
   }
 
@@ -39,8 +39,10 @@ mod tests {
     for z in -1..=1 {
       for y in -1..=1 {
         for x in -1..=1 {
-          for direction in CorridorDirection::iter() {
-            assert!(corridor_finder.has_corridor(Region { x, y, z }, direction));
+          for w in -1..=1 {
+            for direction in Direction::iter().map(CorridorDirection::from) {
+              assert!(corridor_finder.has_corridor(Region { w, x, y, z }, direction));
+            }
           }
         }
       }
@@ -54,8 +56,10 @@ mod tests {
     for z in -1..=1 {
       for y in -1..=1 {
         for x in -1..=1 {
-          for direction in CorridorDirection::iter() {
-            assert!(corridor_finder.get_corridor(Region { x, y, z }, direction).is_some());
+          for w in -1..=1 {
+            for direction in Direction::iter().map(CorridorDirection::from) {
+              assert!(corridor_finder.get_corridor(Region { w, x, y, z }, direction).is_some());
+            }
           }
         }
       }

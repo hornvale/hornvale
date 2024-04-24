@@ -85,7 +85,7 @@ impl<'world> Parser<'world> {
     self.consume_verb().map_err(|_| CommandError::NoVerb)?;
     println! {"Verb: {:?}", self.verb_token};
     match self.peek() {
-      Some(token) if token.kind == TokenKind::Here => {
+      Some(token) if token.kind == TokenKind::CommandModifier(CommandModifier::Here) => {
         println!("Here!");
         self.direct_object_modifier = Some(CommandModifier::Here);
         // self.direct_object = Some(self.bind_here()?);
@@ -237,7 +237,7 @@ impl<'world> Parser<'world> {
       Some(CommandArity::Binary) => Some(CommandArity::Binary),
       None => Some(CommandArity::Unary),
     };
-    let direction = PassageDirection::North;
+    let direction = PassageDirection(Direction::North);
     let actor_info = {
       let query_result = self.world.query_one::<(&Region, &Room)>(self.actor);
       let mut query = query_result.unwrap();
@@ -256,7 +256,7 @@ impl<'world> Parser<'world> {
     match passage {
       PassageKind::Corridor(next_region) => {
         let next_room = {
-          let corridor_direction = CorridorDirection::try_from(-direction).unwrap();
+          let corridor_direction = CorridorDirection::from(-direction);
           let next_room_result = self
             .world
             .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()

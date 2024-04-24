@@ -44,16 +44,20 @@ pub mod query;
 pub mod region;
 /// Rooms are points in the 3D grid within a region.
 pub mod room;
+/// A 4D integer vector.
+pub mod vector4d;
 
 /// The prelude.
 pub mod prelude {
   pub use super::command::{
     arity::CommandArity, function::CommandFunction, modifier::CommandModifier, syntax::CommandSyntax, Command,
   };
+  pub use super::components::{adjectives::Adjectives, description::Description, name::Name};
   pub use super::corridor::{
     direction::CorridorDirection, finder::CorridorFinder, kind::CorridorKind, origin::CorridorOrigin,
     terminus::CorridorTerminus,
   };
+  pub use super::direction::{traits::descriptors::DirectionDescriptors, Direction};
   pub use super::error::WorldError;
   pub use super::passage::{condition::PassageCondition, direction::PassageDirection, kind::PassageKind};
   pub use super::query as world_query;
@@ -67,6 +71,5 @@ pub mod prelude {
     Region,
   };
   pub use super::room::{is_a_room::IsARoom, Room};
-  pub use crate::components::{adjectives::Adjectives, description::Description, name::Name};
-  pub use crate::direction::Direction;
+  pub use super::vector4d::Vector4D;
 }

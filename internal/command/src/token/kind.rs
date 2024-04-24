@@ -1,8 +1,6 @@
+use hornvale_core::prelude::*;
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumIter};
-
-#[cfg(test)]
-mod tests;
+use strum::Display;
 
 /// An enumeration of the possibilities for single-character tokens.
 pub mod character_token;
@@ -20,7 +18,7 @@ pub mod word_token;
 use word_token::WordToken;
 
 /// Different kinds of tokens for the scanner.
-#[derive(Clone, Copy, Debug, Display, EnumIter, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Display, Eq, Hash, PartialEq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub enum TokenKind {
   /// Single-character tokens.
@@ -35,97 +33,20 @@ pub enum TokenKind {
   NounPossessiveDeterminer,
   /// Words beginning with special characters.
   MagicWord(MagicWordToken),
+  /// Command modifiers (adverbs, prepositions, etc).
+  CommandModifier(CommandModifier),
+  /// Directions (north, south, up, down, in, out, etc).
+  Direction(Direction),
 
-  //
-  // Word tokens.
-  //
-  // Compass directions.
-  /// "North", e.g. in `go north`.
-  North,
-  /// "Northeast", e.g. in `go northeast`.
-  Northeast,
-  /// "East", e.g. in `go east`.
-  East,
-  /// "Southeast", e.g. in `go southeast`.
-  Southeast,
-  /// "South", e.g. in `go south`.
-  South,
-  /// "Southwest", e.g. in `go southwest`.
-  Southwest,
-  /// "West", e.g. in `go west`.
-  West,
-  /// "Northwest", e.g. in `go northwest`.
-  Northwest,
-
-  // Command modifiers.
-  /// "About", e.g. in `ask man about the goat`.
-  About,
-  /// "Above", e.g. in `look above the shelf`.
-  Above,
-  /// "Across", e.g. in `go across the bridge`.
-  Across,
-  /// "Against", e.g. in `lean against the wall`.
-  Against,
-  /// "Along", e.g. in `walk along the path`.
-  Along,
-  /// "Among", e.g. in `look among the trees`.
-  Among,
-  /// "Around", e.g. in `look around`.
-  Around,
-  /// "As", e.g. in `take it as a gift`.
-  As,
-  /// "At", e.g. in `look at the sky`.
-  At,
-  /// "Before", e.g. in `go before the king`.
-  Before,
-  /// "Behind", e.g. in `hide behind the tree`.
-  Behind,
-  /// "Below", e.g. in `look below the table`.
-  Below,
-  /// "Beside", e.g. in `stand beside the knight`.
-  Beside,
-  /// "Between", e.g. in `walk between the trees`.
-  Between,
-  /// "Beyond", e.g. in `go beyond the mountains`.
-  Beyond,
-  /// "By", e.g. in `stand by the door`.
-  By,
-  /// "Down", e.g. in `climb down the ladder`.
+  // Some tokens that can be directions or modifiers.
+  /// e.g. `go down` or `look down the road`.
   Down,
-  /// "For", e.g. in `fight for the king`.
-  For,
-  /// "From", e.g. in `take it from the chest`.
-  From,
-  /// "Here", e.g. in `look here`.
-  Here,
-  /// "In", e.g. in `put the pie in the oven`.
+  /// e.g. `go in` or `look in the box`.
   In,
-  /// "Into", e.g. in `go into the forest`.
-  Into,
-  /// "Of", e.g. in `take the sword of the king`.
-  Of,
-  /// "Off", e.g. in `take the hat off`.
-  Off,
-  /// "On", e.g. in `put the book on the table`.
-  On,
-  /// "Out", e.g. in `go out of the cave`.
+  /// e.g. `go out` or `look out the window`.
   Out,
-  /// "Over", e.g. in `jump over the fence`.
-  Over,
-  /// "To", e.g. in `go to the castle`.
-  To,
-  /// "Toward", e.g. in `walk toward the light`.
-  Toward,
-  /// "Under", e.g. in `hide under the bed`.
-  Under,
-  /// "Up", e.g. in `climb up the mountain`.
+  /// e.g. `go up` or `look up at the sky`.
   Up,
-  /// "Upon", e.g. in `stand upon the hill`.
-  Upon,
-  /// "With", e.g. in `fight with the sword`.
-  With,
-  /// "Without", e.g. in `go without the sword`.
-  Without,
 
   // Demonstrative determiners.
   /// "This", e.g. in `take this`.
@@ -236,66 +157,12 @@ impl TokenKind {
 
   /// Is this token a direction?
   pub fn is_direction(&self) -> bool {
-    matches!(
-      self,
-      Self::North
-        | Self::Northeast
-        | Self::East
-        | Self::Southeast
-        | Self::South
-        | Self::Southwest
-        | Self::West
-        | Self::Northwest
-        | Self::Up
-        | Self::Down
-        | Self::In
-        | Self::Out
-    )
+    matches!(self, Self::Direction(_))
   }
 
-  /// Is this token a preposition?
-  pub fn is_preposition(&self) -> bool {
-    matches!(
-      self,
-      Self::About
-        | Self::Above
-        | Self::Across
-        | Self::Against
-        | Self::Along
-        | Self::Among
-        | Self::As
-        | Self::At
-        | Self::Before
-        | Self::Behind
-        | Self::Below
-        | Self::Beside
-        | Self::Between
-        | Self::Beyond
-        | Self::By
-        | Self::For
-        | Self::From
-        | Self::In
-        | Self::Into
-        | Self::Of
-        | Self::Off
-        | Self::On
-        | Self::Out
-        | Self::Over
-        | Self::To
-        | Self::Toward
-        | Self::Under
-        | Self::Upon
-        | Self::With
-        | Self::Without
-    )
-  }
-
-  /// Is this token an adverb?
-  pub fn is_adverb(&self) -> bool {
-    matches!(
-      self,
-      Self::Around | Self::Down | Self::Here | Self::In | Self::Off | Self::On | Self::Out | Self::Up
-    )
+  /// Is this token a command modifier?
+  pub fn is_command_modifier(&self) -> bool {
+    matches!(self, Self::CommandModifier(_))
   }
 
   /// Is this token a demonstrative determiner?

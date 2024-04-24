@@ -50,7 +50,7 @@ impl Classifier {
   pub fn find_prepositions(&self, tokens: &mut [Token]) -> Result<bool, CommandError> {
     // If this sentence contains anything that looks like a preposition, we'll
     // need to process it.
-    if let Some(index) = tokens.iter().position(|t| t.kind.is_preposition()) {
+    if let Some(index) = tokens.iter().position(|t| t.kind.is_command_modifier()) {
       self.process_first_preposition(tokens, index)?;
       return Ok(true);
     }
@@ -98,7 +98,7 @@ impl Classifier {
   /// Process other prepositions.
   pub fn process_other_prepositions(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
     // Find the next preposition in the tokens.
-    if let Some(rel_index) = tokens.iter().skip(index).position(|t| t.kind.is_preposition()) {
+    if let Some(rel_index) = tokens.iter().skip(index).position(|t| t.kind.is_command_modifier()) {
       // The index of the next preposition, corrected for the slice.
       let index = index + rel_index;
       self.process_secondary_preposition(tokens, index)?;
@@ -161,7 +161,7 @@ impl Classifier {
       return Ok(());
     }
     // This token should already have the information necessary to classify it.
-    if tokens[2].kind.is_direction() && tokens[2].kind.is_adverb() {
+    if tokens[2].kind.is_direction() && tokens[2].kind.is_command_modifier() {
       self.process_presumed_direct_object(tokens, 1)?;
     }
     Ok(())

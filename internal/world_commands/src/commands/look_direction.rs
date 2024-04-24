@@ -51,7 +51,7 @@ impl Command for LookDirectionCommand {
     match passage {
       PassageKind::Corridor(next_region) => {
         let next_room = {
-          let corridor_direction = CorridorDirection::try_from(-direction).unwrap();
+          let corridor_direction = CorridorDirection::from(-direction);
           let next_room_result = world
             .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()
             .iter()
