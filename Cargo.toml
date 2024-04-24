@@ -65,7 +65,6 @@ unused_qualifications = "deny"
 variant_size_differences = "deny"
 
 [dependencies]
-anyhow.workspace = true
 hornvale_astronomy.workspace = true
 hornvale_command.workspace = true
 hornvale_core.workspace = true
