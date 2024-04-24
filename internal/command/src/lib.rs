@@ -24,8 +24,6 @@
 pub mod classifier;
 /// A collection of core commands.
 pub mod commands;
-/// General components of use.
-pub mod components;
 /// An error type.
 pub mod error;
 /// The parser, a simple top-down recursive descent parser.
@@ -36,16 +34,12 @@ pub mod registry;
 pub mod scanner;
 /// Tokens for the scanner.
 pub mod token;
-/// Additions to the world to ease operations.
-pub mod world;
 
 /// The prelude.
 pub mod prelude {
   pub use super::commands::{fail::FailCommand, no_op::NoOpCommand, quit::QuitCommand};
-  pub use super::components::quit_flag::QuitFlag;
   pub use super::error::CommandError;
   pub use super::registry::CommandRegistry;
-  pub use super::world::traits::{is_quit_flag_set::IsQuitFlagSet, set_quit_flag::SetQuitFlag};
   pub use crate::classifier::Classifier;
   pub use crate::parser::Parser;
   pub use crate::scanner::Scanner;

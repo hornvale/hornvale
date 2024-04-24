@@ -46,20 +46,24 @@ pub mod region;
 pub mod room;
 /// A 4D integer vector.
 pub mod vector4d;
+/// Additions to the world.
+pub mod world;
 
 /// The prelude.
 pub mod prelude {
   pub use super::command::{
     arity::CommandArity, function::CommandFunction, modifier::CommandModifier, syntax::CommandSyntax, Command,
   };
-  pub use super::components::{adjectives::Adjectives, description::Description, name::Name};
+  pub use super::components::{adjectives::Adjectives, description::Description, name::Name, quit_flag::QuitFlag};
   pub use super::corridor::{
     direction::CorridorDirection, finder::CorridorFinder, kind::CorridorKind, origin::CorridorOrigin,
     terminus::CorridorTerminus,
   };
   pub use super::direction::{traits::descriptors::DirectionDescriptors, Direction};
   pub use super::error::WorldError;
-  pub use super::passage::{condition::PassageCondition, direction::PassageDirection, kind::PassageKind};
+  pub use super::passage::{
+    condition::PassageCondition, direction::PassageDirection, is_a_passage::IsAPassage, kind::PassageKind,
+  };
   pub use super::query as world_query;
   pub use super::region::{
     generator::{manager::RegionGeneratorManager, registry::RegionGeneratorRegistry, RegionGenerator},
@@ -72,4 +76,13 @@ pub mod prelude {
   };
   pub use super::room::{is_a_room::IsARoom, Room};
   pub use super::vector4d::Vector4D;
+  pub use super::world::traits::{
+    get_region_and_room_containing_entity::GetRegionAndRoomContainingEntity, get_room_entity::GetRoomEntity,
+    get_room_entity_containing_entity::GetRoomEntityContainingEntity,
+    get_room_entity_region_and_room::GetRoomEntityRegionAndRoom,
+    get_room_name_and_description::GetRoomNameAndDescription, get_room_passage_directions::GetRoomPassageDirections,
+    get_room_passage_entities::GetRoomPassageEntities,
+    get_room_passage_entity_in_direction::GetRoomPassageEntityInDirection, is_quit_flag_set::IsQuitFlagSet,
+    set_quit_flag::SetQuitFlag,
+  };
 }

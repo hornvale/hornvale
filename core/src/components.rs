@@ -4,3 +4,5 @@ pub mod adjectives;
 pub mod description;
 /// A Name component for storing the canonical name of an entity.
 pub mod name;
+/// The quit flag.
+pub mod quit_flag;

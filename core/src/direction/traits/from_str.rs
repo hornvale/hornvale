@@ -5,14 +5,14 @@ impl TryFrom<&str> for Direction {
 
   fn try_from(string: &str) -> Result<Self, Self::Error> {
     match string {
-      "north" => Ok(Self::North),
-      "northeast" => Ok(Self::Northeast),
-      "east" => Ok(Self::East),
-      "southeast" => Ok(Self::Southeast),
-      "south" => Ok(Self::South),
-      "southwest" => Ok(Self::Southwest),
-      "west" => Ok(Self::West),
-      "northwest" => Ok(Self::Northwest),
+      "north" | "n" => Ok(Self::North),
+      "northeast" | "ne" => Ok(Self::Northeast),
+      "east" | "e" => Ok(Self::East),
+      "southeast" | "se" => Ok(Self::Southeast),
+      "south" | "s" => Ok(Self::South),
+      "southwest" | "sw" => Ok(Self::Southwest),
+      "west" | "w" => Ok(Self::West),
+      "northwest" | "nw" => Ok(Self::Northwest),
       "up" => Ok(Self::Up),
       "down" => Ok(Self::Down),
       "in" => Ok(Self::In),

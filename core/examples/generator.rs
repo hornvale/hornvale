@@ -42,10 +42,11 @@ pub fn main() {
       continue;
     }
     let mut parser = Parser::new(&mut *tokens, player, &mut world);
-    if let Ok((command_function, (actor, direct_object, indirect_object))) = parser.parse() {
-      command_function(&mut world, actor, direct_object, indirect_object).unwrap();
-    } else {
-      println!("I don't understand {:#?}", input);
+    match parser.parse() {
+      Ok((command_function, (actor, direct_object, indirect_object))) => {
+        command_function(&mut world, actor, direct_object, indirect_object).unwrap();
+      },
+      Err(error) => println!("I don't understand {:#?}: {:#?}", input, error),
     }
     if world.is_quit_flag_set() {
       println!("Goodbye!");

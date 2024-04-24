@@ -96,7 +96,9 @@ impl<'world> Parser<'world> {
         self.direct_object = self.bind_direction(self.peek().unwrap())?;
         self.advance()?;
       },
-      _ => {},
+      _ => {
+        println!("WAT: {:?}", self.peek());
+      },
     }
     Ok(())
   }
@@ -292,6 +294,10 @@ impl<'world> Parser<'world> {
           .unwrap()
           .0;
         Ok(Some(entity))
+      },
+      PassageKind::NoExit(message) => {
+        println!("{}", message);
+        Err(CommandError::UnknownError)
       },
       _ => Err(CommandError::UnknownError),
     }
