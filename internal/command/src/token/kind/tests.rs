@@ -343,7 +343,7 @@ fn test_could_be_noun() {
       | TokenKind::It
       | TokenKind::Them
       | TokenKind::You
-      | TokenKind::Word
+      | TokenKind::Word(WordToken::Unclassified | WordToken::Noun | WordToken::Ambiguous)
       | TokenKind::DirectObject
       | TokenKind::IndirectObject => {
         assert!(kind.could_be_noun(), "{:?} is not a noun", kind);
@@ -360,7 +360,7 @@ fn test_could_be_adjective() {
   init();
   for kind in TokenKind::iter() {
     match kind {
-      TokenKind::Word => {
+      TokenKind::Word(WordToken::Unclassified | WordToken::Adjective | WordToken::Ambiguous) => {
         assert!(kind.could_be_adjective(), "{:?} is not an adjective", kind);
       },
       _ => {
@@ -388,7 +388,7 @@ fn test_could_be_verb() {
       | TokenKind::In
       | TokenKind::Out
       | TokenKind::Verb
-      | TokenKind::Word => {
+      | TokenKind::Word(WordToken::Unclassified | WordToken::Verb | WordToken::Ambiguous) => {
         assert!(kind.could_be_verb(), "{:?} is not a verb", kind);
       },
       _ => {

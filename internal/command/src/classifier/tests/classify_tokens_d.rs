@@ -109,7 +109,7 @@ fn test_classify_tokens69() {
     &[
       TokenKind::Verb,
       TokenKind::To,
-      TokenKind::Word, // Should be indirect object.
+      TokenKind::Word(WordToken::Unclassified), // Should be Word(Noun).
       TokenKind::NumberLiteral,
       TokenKind::In,
       TokenKind::Noun,

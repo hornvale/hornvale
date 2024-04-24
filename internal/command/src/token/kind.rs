@@ -9,6 +9,9 @@ pub mod her_token;
 use her_token::HerToken;
 /// Trait implementations.
 pub mod traits;
+/// An enumeration of the possibilities for any given `Word` token.
+pub mod word_token;
+use word_token::WordToken;
 
 /// Different kinds of tokens for the scanner.
 #[derive(Clone, Copy, Debug, Display, EnumIter, Eq, Hash, PartialEq, Serialize, Deserialize)]
@@ -89,6 +92,8 @@ pub enum TokenKind {
   NumberLiteral,
   /// An ordinal, e.g. in `take 1st coin`.
   Ordinal,
+  /// A general possessive determiner ("someone's").
+  NounPossessiveDeterminer,
 
   //
   // Word tokens.
@@ -306,7 +311,7 @@ pub enum TokenKind {
   TildeWord,
 
   /// Any other word.
-  Word,
+  Word(WordToken),
 
   // Kinds assigned _only_ during the classification process.
   //
@@ -317,8 +322,6 @@ pub enum TokenKind {
   Adjective,
   /// A noun.
   Noun,
-  /// A general possessive determiner ("someone's").
-  NounPossessiveDeterminer,
   /// The direct object.
   DirectObject,
   /// The indirect object.
@@ -527,17 +530,28 @@ impl TokenKind {
 
   /// Could this token be a noun?
   pub fn could_be_noun(&self) -> bool {
-    self.is_noun() || matches!(self, Self::Word)
+    self.is_noun()
+      || matches!(
+        self,
+        Self::Word(WordToken::Unclassified | WordToken::Noun | WordToken::Ambiguous)
+      )
   }
 
   /// Could this token be an adjective?
   pub fn could_be_adjective(&self) -> bool {
-    matches!(self, Self::Word)
+    matches!(
+      self,
+      Self::Word(WordToken::Unclassified | WordToken::Adjective | WordToken::Ambiguous)
+    )
   }
 
   /// Could this token be a verb?
   pub fn could_be_verb(&self) -> bool {
-    self.is_verb() || matches!(self, Self::Word)
+    self.is_verb()
+      || matches!(
+        self,
+        Self::Word(WordToken::Unclassified | WordToken::Verb | WordToken::Ambiguous)
+      )
   }
 
   /// Does this token accept adjectives?

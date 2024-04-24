@@ -6,7 +6,7 @@ fn test_process_presumed_adjectives1() {
   init();
   let mut tokens = vec![
     Token {
-      kind: TokenKind::Word,
+      kind: TokenKind::Word(WordToken::default()),
       lexeme: "red".to_string(),
     },
     Token {
@@ -25,7 +25,7 @@ fn test_process_presumed_adjectives2() {
   init();
   let mut tokens = vec![
     Token {
-      kind: TokenKind::Word,
+      kind: TokenKind::Word(WordToken::default()),
       lexeme: "red".to_string(),
     },
     Token {
@@ -37,7 +37,7 @@ fn test_process_presumed_adjectives2() {
       lexeme: "and".to_string(),
     },
     Token {
-      kind: TokenKind::Word,
+      kind: TokenKind::Word(WordToken::default()),
       lexeme: "green".to_string(),
     },
     Token {
@@ -59,7 +59,7 @@ fn test_process_presumed_adjectives3() {
   init();
   let mut tokens = vec![
     Token {
-      kind: TokenKind::Word,
+      kind: TokenKind::Word(WordToken::default()),
       lexeme: "red".to_string(),
     },
     Token {
@@ -71,7 +71,7 @@ fn test_process_presumed_adjectives3() {
       lexeme: ",".to_string(),
     },
     Token {
-      kind: TokenKind::Word,
+      kind: TokenKind::Word(WordToken::default()),
       lexeme: "green".to_string(),
     },
     Token {
@@ -93,7 +93,7 @@ fn test_process_presumed_adjectives4() {
   init();
   let mut tokens = vec![
     Token {
-      kind: TokenKind::Word,
+      kind: TokenKind::Word(WordToken::default()),
       lexeme: "red".to_string(),
     },
     Token {
@@ -105,7 +105,7 @@ fn test_process_presumed_adjectives4() {
       lexeme: ",".to_string(),
     },
     Token {
-      kind: TokenKind::Word,
+      kind: TokenKind::Word(WordToken::default()),
       lexeme: "green".to_string(),
     },
     Token {
@@ -117,7 +117,7 @@ fn test_process_presumed_adjectives4() {
       lexeme: "and".to_string(),
     },
     Token {
-      kind: TokenKind::Word,
+      kind: TokenKind::Word(WordToken::default()),
       lexeme: "yellow".to_string(),
     },
     Token {
