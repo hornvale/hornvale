@@ -183,7 +183,7 @@ fn test_is_possessive_determiner() {
       TokenKind::My
       | TokenKind::Your
       | TokenKind::His
-      | TokenKind::Her
+      | TokenKind::Her(HerToken::PossessiveDeterminer)
       | TokenKind::Its
       | TokenKind::Our
       | TokenKind::Their
@@ -210,7 +210,12 @@ fn test_is_pronoun() {
   init();
   for kind in TokenKind::iter() {
     match kind {
-      TokenKind::Me | TokenKind::You | TokenKind::Him | TokenKind::Her | TokenKind::It | TokenKind::Them => {
+      TokenKind::Me
+      | TokenKind::You
+      | TokenKind::Him
+      | TokenKind::Her(HerToken::Pronoun)
+      | TokenKind::It
+      | TokenKind::Them => {
         assert!(kind.is_pronoun(), "{:?} is not a pronoun", kind);
       },
       _ => {
@@ -298,7 +303,7 @@ fn test_is_noun() {
       | TokenKind::Noun
       | TokenKind::Him
       | TokenKind::Me
-      | TokenKind::Her
+      | TokenKind::Her(HerToken::Pronoun)
       | TokenKind::It
       | TokenKind::Them
       | TokenKind::You
@@ -334,7 +339,7 @@ fn test_could_be_noun() {
       | TokenKind::Noun
       | TokenKind::Him
       | TokenKind::Me
-      | TokenKind::Her
+      | TokenKind::Her(HerToken::Pronoun)
       | TokenKind::It
       | TokenKind::Them
       | TokenKind::You

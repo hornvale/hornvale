@@ -49,5 +49,8 @@ pub mod prelude {
   pub use crate::classifier::Classifier;
   pub use crate::parser::Parser;
   pub use crate::scanner::Scanner;
-  pub use crate::token::{kind::TokenKind, Token};
+  pub use crate::token::{
+    kind::{her_token::HerToken, TokenKind},
+    Token,
+  };
 }

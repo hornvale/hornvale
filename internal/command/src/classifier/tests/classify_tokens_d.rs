@@ -201,10 +201,10 @@ fn test_classify_tokens74() {
     "give her stick to her",
     &[
       TokenKind::Verb,
-      TokenKind::Her,
+      TokenKind::Her(HerToken::Unclassified), // Should be possessive determiner.
       TokenKind::DirectObject,
       TokenKind::To,
-      TokenKind::Her,
+      TokenKind::Her(HerToken::Unclassified), // Should be unclassified.
     ],
   );
 }

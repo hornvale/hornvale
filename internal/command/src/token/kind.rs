@@ -4,6 +4,9 @@ use strum::{Display, EnumIter};
 #[cfg(test)]
 mod tests;
 
+/// An enumeration of the possibilities for `Her`.
+pub mod her_token;
+use her_token::HerToken;
 /// Trait implementations.
 pub mod traits;
 
@@ -206,7 +209,7 @@ pub enum TokenKind {
   /// `his`.
   His,
   /// `her` (can also act as a pronoun).
-  Her,
+  Her(HerToken),
   /// `its`.
   Its,
   /// `our`.
@@ -472,7 +475,13 @@ impl TokenKind {
   pub fn is_personal_possessive_determiner(&self) -> bool {
     matches!(
       self,
-      Self::My | Self::Your | Self::His | Self::Her | Self::Its | Self::Our | Self::Their
+      Self::My
+        | Self::Your
+        | Self::His
+        | Self::Her(HerToken::PossessiveDeterminer)
+        | Self::Its
+        | Self::Our
+        | Self::Their
     )
   }
 
@@ -485,7 +494,7 @@ impl TokenKind {
   pub fn is_pronoun(&self) -> bool {
     matches!(
       self,
-      Self::Me | Self::You | Self::Him | Self::Her | Self::It | Self::Them
+      Self::Me | Self::You | Self::Him | Self::Her(HerToken::Pronoun) | Self::It | Self::Them
     )
   }
 
