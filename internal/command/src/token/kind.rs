@@ -3,26 +3,26 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 
 /// An enumeration of the possibilities for single-character tokens.
-pub mod character_token;
-use character_token::CharacterToken;
+pub mod character;
+use character::Character;
 /// An enumeration of the possibilities for `Her`.
-pub mod her_token;
-use her_token::HerToken;
+pub mod her;
+use her::Her;
 /// An enumeration of the possibilities for any given `MagicWord` token.
-pub mod magic_word_token;
-use magic_word_token::MagicWordToken;
+pub mod magic_word;
+use magic_word::MagicWord;
 /// Trait implementations.
 pub mod traits;
 /// An enumeration of the possibilities for any given `Word` token.
-pub mod word_token;
-use word_token::WordToken;
+pub mod word;
+use word::Word;
 
 /// Different kinds of tokens for the scanner.
 #[derive(Clone, Copy, Debug, Display, Eq, Hash, PartialEq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub enum TokenKind {
   /// Single-character tokens.
-  Character(CharacterToken),
+  Character(Character),
   /// A string literal, e.g. in `say "hello"`.
   StringLiteral,
   /// A number literal, e.g. in `take 5 coins`. We use `u32` for simplicity.
@@ -32,7 +32,7 @@ pub enum TokenKind {
   /// A general possessive determiner ("someone's").
   NounPossessiveDeterminer,
   /// Words beginning with special characters.
-  MagicWord(MagicWordToken),
+  MagicWord(MagicWord),
   /// Command modifiers (adverbs, prepositions, etc).
   CommandModifier(CommandModifier),
   /// Directions (north, south, up, down, in, out, etc).
@@ -76,7 +76,7 @@ pub enum TokenKind {
   /// `his`.
   His,
   /// `her` (can also act as a pronoun).
-  Her(HerToken),
+  Her(Her),
   /// `its`.
   Its,
   /// `our`.
@@ -117,7 +117,7 @@ pub enum TokenKind {
   No,
 
   /// Any other word.
-  Word(WordToken),
+  Word(Word),
 
   //
   // Any other tokens.
@@ -136,7 +136,7 @@ impl TokenKind {
   ///
   /// Currently, the only valid punctuation character is the comma.
   pub fn is_punctuation(&self) -> bool {
-    matches!(self, Self::Character(CharacterToken::Comma))
+    matches!(self, Self::Character(Character::Comma))
   }
 
   /// Is this token a special character?
@@ -148,11 +148,7 @@ impl TokenKind {
   /// - `Comma`
   /// - `SingleQuote`
   pub fn is_special_character(&self) -> bool {
-    self.is_single_character()
-      && !matches!(
-        self,
-        Self::Character(CharacterToken::Comma | CharacterToken::SingleQuote)
-      )
+    self.is_single_character() && !matches!(self, Self::Character(Character::Comma | Character::SingleQuote))
   }
 
   /// Is this token a direction?
@@ -187,13 +183,7 @@ impl TokenKind {
   pub fn is_personal_possessive_determiner(&self) -> bool {
     matches!(
       self,
-      Self::My
-        | Self::Your
-        | Self::His
-        | Self::Her(HerToken::PossessiveDeterminer)
-        | Self::Its
-        | Self::Our
-        | Self::Their
+      Self::My | Self::Your | Self::His | Self::Her(Her::PossessiveDeterminer) | Self::Its | Self::Our | Self::Their
     )
   }
 
@@ -206,13 +196,13 @@ impl TokenKind {
   pub fn is_pronoun(&self) -> bool {
     matches!(
       self,
-      Self::Me | Self::You | Self::Him | Self::Her(HerToken::Pronoun) | Self::It | Self::Them
+      Self::Me | Self::You | Self::Him | Self::Her(Her::Pronoun) | Self::It | Self::Them
     )
   }
 
   /// Is this token an adjective?
   pub fn is_adjective(&self) -> bool {
-    matches!(self, Self::Word(WordToken::Adjective))
+    matches!(self, Self::Word(Word::Adjective))
   }
 
   /// Is this token an article?
@@ -227,48 +217,34 @@ impl TokenKind {
 
   /// Is this token a verb?
   pub fn is_verb(&self) -> bool {
-    matches!(self, Self::Word(WordToken::Verb))
+    matches!(self, Self::Word(Word::Verb))
   }
 
   /// Is this token a noun?
   pub fn is_noun(&self) -> bool {
-    self.is_direction() || self.is_pronoun() || matches!(self, Self::All | Self::Word(WordToken::Noun))
+    self.is_direction() || self.is_pronoun() || matches!(self, Self::All | Self::Word(Word::Noun))
   }
 
   /// Could this token be a noun?
   pub fn could_be_noun(&self) -> bool {
-    self.is_noun()
-      || matches!(
-        self,
-        Self::Word(WordToken::Unclassified | WordToken::Noun | WordToken::Ambiguous)
-      )
+    self.is_noun() || matches!(self, Self::Word(Word::Unclassified | Word::Noun | Word::Ambiguous))
   }
 
   /// Could this token be an adjective?
   pub fn could_be_adjective(&self) -> bool {
-    matches!(
-      self,
-      Self::Word(WordToken::Unclassified | WordToken::Adjective | WordToken::Ambiguous)
-    )
+    matches!(self, Self::Word(Word::Unclassified | Word::Adjective | Word::Ambiguous))
   }
 
   /// Could this token be a verb?
   pub fn could_be_verb(&self) -> bool {
-    self.is_verb()
-      || matches!(
-        self,
-        Self::Word(WordToken::Unclassified | WordToken::Verb | WordToken::Ambiguous)
-      )
+    self.is_verb() || matches!(self, Self::Word(Word::Unclassified | Word::Verb | Word::Ambiguous))
   }
 
   /// Does this token accept adjectives?
   pub fn can_follow_adjective(&self) -> bool {
     (self.is_noun() && !self.is_pronoun() && !self.is_direction() && !self.is_distributive_determiner())
       || self.is_noun_possessive_determiner()
-      || matches!(
-        self,
-        Self::Character(CharacterToken::Comma) | Self::Word(WordToken::Adjective)
-      )
+      || matches!(self, Self::Character(Character::Comma) | Self::Word(Word::Adjective))
   }
 
   /// Is this token a magic word?

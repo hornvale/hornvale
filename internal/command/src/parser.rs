@@ -117,7 +117,7 @@ impl<'world> Parser<'world> {
 
   /// Consume the verb.
   pub fn consume_verb(&mut self) -> Result<(), CommandError> {
-    if self.check_token(TokenKind::Word(WordToken::Verb)) {
+    if self.check_token(TokenKind::Word(Word::Verb)) {
       self.verb_token = self.peek().map(|t| t.lexeme.clone());
       self.advance()?;
       Ok(())
@@ -128,7 +128,7 @@ impl<'world> Parser<'world> {
 
   //  /// Consume the direct object.
   //  pub fn consume_direct_object(&mut self) -> Result<(), CommandError> {
-  //    if self.check_token(TokenKind::Word(WordToken::Noun)) {
+  //    if self.check_token(TokenKind::Word(Word::Noun)) {
   //      self.direct_object = self.peek();
   //      Ok(())
   //    } else {

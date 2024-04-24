@@ -4,7 +4,7 @@ use strum::{Display, EnumIter};
 
 /// Different kinds of single-character tokens.
 #[derive(Clone, Copy, Debug, Deserialize, Display, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub enum CharacterToken {
+pub enum Character {
   /// A single quote, e.g. in `say 'hello'` or `take the thief's treasure`.
   SingleQuote,
   /// A comma, e.g. in `take sword, shield`.
@@ -69,7 +69,7 @@ pub enum CharacterToken {
   Backtick,
 }
 
-impl CharacterToken {
+impl Character {
   /// Can this token begin a magic word?
   pub fn can_begin_magic_word(self) -> bool {
     !matches!(
@@ -79,40 +79,40 @@ impl CharacterToken {
   }
 
   /// What is the corresponding magic word for this token?
-  pub fn to_magic_word(self) -> Option<MagicWordToken> {
+  pub fn to_magic_word(self) -> Option<MagicWord> {
     match self {
-      Self::Bang => Some(MagicWordToken::BangWord),
-      Self::Question => Some(MagicWordToken::QuestionWord),
-      Self::AtSign => Some(MagicWordToken::AtSignWord),
-      Self::Hash => Some(MagicWordToken::HashWord),
-      Self::Dollar => Some(MagicWordToken::DollarWord),
-      Self::Percent => Some(MagicWordToken::PercentWord),
-      Self::Caret => Some(MagicWordToken::CaretWord),
-      Self::Ampersand => Some(MagicWordToken::AmpersandWord),
-      Self::Asterisk => Some(MagicWordToken::AsteriskWord),
-      Self::ForwardSlash => Some(MagicWordToken::ForwardSlashWord),
-      Self::BackSlash => Some(MagicWordToken::BackSlashWord),
-      Self::LeftParenthesis => Some(MagicWordToken::LeftParenthesisWord),
-      Self::RightParenthesis => Some(MagicWordToken::RightParenthesisWord),
-      Self::LeftSquareBracket => Some(MagicWordToken::LeftSquareBracketWord),
-      Self::RightSquareBracket => Some(MagicWordToken::RightSquareBracketWord),
-      Self::LeftCurlyBrace => Some(MagicWordToken::LeftCurlyBraceWord),
-      Self::RightCurlyBrace => Some(MagicWordToken::RightCurlyBraceWord),
-      Self::LessThan => Some(MagicWordToken::LessThanWord),
-      Self::GreaterThan => Some(MagicWordToken::GreaterThanWord),
-      Self::Equals => Some(MagicWordToken::EqualsWord),
-      Self::Plus => Some(MagicWordToken::PlusWord),
-      Self::Minus => Some(MagicWordToken::MinusWord),
-      Self::Pipe => Some(MagicWordToken::PipeWord),
-      Self::Colon => Some(MagicWordToken::ColonWord),
-      Self::Underscore => Some(MagicWordToken::UnderscoreWord),
-      Self::Tilde => Some(MagicWordToken::TildeWord),
+      Self::Bang => Some(MagicWord::BangWord),
+      Self::Question => Some(MagicWord::QuestionWord),
+      Self::AtSign => Some(MagicWord::AtSignWord),
+      Self::Hash => Some(MagicWord::HashWord),
+      Self::Dollar => Some(MagicWord::DollarWord),
+      Self::Percent => Some(MagicWord::PercentWord),
+      Self::Caret => Some(MagicWord::CaretWord),
+      Self::Ampersand => Some(MagicWord::AmpersandWord),
+      Self::Asterisk => Some(MagicWord::AsteriskWord),
+      Self::ForwardSlash => Some(MagicWord::ForwardSlashWord),
+      Self::BackSlash => Some(MagicWord::BackSlashWord),
+      Self::LeftParenthesis => Some(MagicWord::LeftParenthesisWord),
+      Self::RightParenthesis => Some(MagicWord::RightParenthesisWord),
+      Self::LeftSquareBracket => Some(MagicWord::LeftSquareBracketWord),
+      Self::RightSquareBracket => Some(MagicWord::RightSquareBracketWord),
+      Self::LeftCurlyBrace => Some(MagicWord::LeftCurlyBraceWord),
+      Self::RightCurlyBrace => Some(MagicWord::RightCurlyBraceWord),
+      Self::LessThan => Some(MagicWord::LessThanWord),
+      Self::GreaterThan => Some(MagicWord::GreaterThanWord),
+      Self::Equals => Some(MagicWord::EqualsWord),
+      Self::Plus => Some(MagicWord::PlusWord),
+      Self::Minus => Some(MagicWord::MinusWord),
+      Self::Pipe => Some(MagicWord::PipeWord),
+      Self::Colon => Some(MagicWord::ColonWord),
+      Self::Underscore => Some(MagicWord::UnderscoreWord),
+      Self::Tilde => Some(MagicWord::TildeWord),
       _ => None,
     }
   }
 }
 
-impl TryFrom<char> for CharacterToken {
+impl TryFrom<char> for Character {
   type Error = ();
 
   fn try_from(character: char) -> Result<Self, Self::Error> {

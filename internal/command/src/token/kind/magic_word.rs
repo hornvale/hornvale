@@ -5,7 +5,7 @@ use strum::{Display, EnumIter};
 #[derive(
   Clone, Copy, Debug, Default, Deserialize, Display, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize,
 )]
-pub enum MagicWordToken {
+pub enum MagicWord {
   /// An exclamation point, e.g. in `!`.
   #[default]
   BangWord,

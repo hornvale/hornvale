@@ -3,16 +3,13 @@ use super::*;
 #[test]
 fn test_classify_tokens01() {
   init();
-  test_string_classification("quit", &[TokenKind::Word(WordToken::Verb)]);
+  test_string_classification("quit", &[TokenKind::Word(Word::Verb)]);
 }
 
 #[test]
 fn test_classify_tokens02() {
   init();
-  test_string_classification(
-    "say 'hello'",
-    &[TokenKind::Word(WordToken::Verb), TokenKind::StringLiteral],
-  );
+  test_string_classification("say 'hello'", &[TokenKind::Word(Word::Verb), TokenKind::StringLiteral]);
 }
 
 #[test]
@@ -20,7 +17,7 @@ fn test_classify_tokens03() {
   init();
   test_string_classification(
     "say \"hello\"",
-    &[TokenKind::Word(WordToken::Verb), TokenKind::StringLiteral],
+    &[TokenKind::Word(Word::Verb), TokenKind::StringLiteral],
   );
 }
 
@@ -30,10 +27,10 @@ fn test_classify_tokens04() {
   test_string_classification(
     "say 'hello' to farmer",
     &[
-      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(Word::Verb),
       TokenKind::StringLiteral,
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Word(WordToken::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun), // Should be indirect object.
     ],
   );
 }
@@ -44,10 +41,10 @@ fn test_classify_tokens05() {
   test_string_classification(
     "say \"hello\" to farmer",
     &[
-      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(Word::Verb),
       TokenKind::StringLiteral,
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Word(WordToken::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun), // Should be indirect object.
     ],
   );
 }
@@ -58,11 +55,11 @@ fn test_classify_tokens06() {
   test_string_classification(
     "say 'hello' to farmer's cow",
     &[
-      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(Word::Verb),
       TokenKind::StringLiteral,
       TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(WordToken::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun), // Should be indirect object.
     ],
   );
 }
@@ -73,11 +70,11 @@ fn test_classify_tokens07() {
   test_string_classification(
     "say \"hello\" to farmer's cow",
     &[
-      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(Word::Verb),
       TokenKind::StringLiteral,
       TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(WordToken::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun), // Should be indirect object.
     ],
   );
 }
@@ -88,9 +85,9 @@ fn test_classify_tokens08() {
   test_string_classification(
     "say to farmer \"hello\"",
     &[
-      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Word(WordToken::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun), // Should be indirect object.
       TokenKind::StringLiteral,
     ],
   );
@@ -102,10 +99,10 @@ fn test_classify_tokens09() {
   test_string_classification(
     "say to nice farmer \"hello\"",
     &[
-      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Word(WordToken::Adjective),
-      TokenKind::Word(WordToken::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Adjective),
+      TokenKind::Word(Word::Noun), // Should be indirect object.
       TokenKind::StringLiteral,
     ],
   );
@@ -117,11 +114,11 @@ fn test_classify_tokens10() {
   test_string_classification(
     "say to lily-livered farmer's cow \"hello\"",
     &[
-      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Word(WordToken::Adjective),
+      TokenKind::Word(Word::Adjective),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(WordToken::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun), // Should be indirect object.
       TokenKind::StringLiteral,
     ],
   );
@@ -133,12 +130,12 @@ fn test_classify_tokens11() {
   test_string_classification(
     "say to nice lily-livered farmer's cow \"hello\"",
     &[
-      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Word(WordToken::Adjective),
-      TokenKind::Word(WordToken::Adjective),
+      TokenKind::Word(Word::Adjective),
+      TokenKind::Word(Word::Adjective),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(WordToken::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun), // Should be indirect object.
       TokenKind::StringLiteral,
     ],
   );
@@ -150,13 +147,13 @@ fn test_classify_tokens12() {
   test_string_classification(
     "say to nice, lily-livered farmer's cow \"hello\"",
     &[
-      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Word(WordToken::Noun), // Should be adjective.
-      TokenKind::Character(CharacterToken::Comma),
-      TokenKind::Word(WordToken::Adjective),
+      TokenKind::Word(Word::Noun), // Should be adjective.
+      TokenKind::Character(Character::Comma),
+      TokenKind::Word(Word::Adjective),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(WordToken::Noun), // Should be direct object.
+      TokenKind::Word(Word::Noun), // Should be direct object.
       TokenKind::StringLiteral,
     ],
   );
@@ -168,12 +165,12 @@ fn test_classify_tokens13() {
   test_string_classification(
     "say to lily-livered nice farmer's cow \"hello\"",
     &[
-      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Word(WordToken::Adjective),
-      TokenKind::Word(WordToken::Adjective),
+      TokenKind::Word(Word::Adjective),
+      TokenKind::Word(Word::Adjective),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(WordToken::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun), // Should be indirect object.
       TokenKind::StringLiteral,
     ],
   );
@@ -185,13 +182,13 @@ fn test_classify_tokens14() {
   test_string_classification(
     "say to lily-livered, nice farmer's cow \"hello\"",
     &[
-      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Word(WordToken::Adjective),
-      TokenKind::Character(CharacterToken::Comma),
-      TokenKind::Word(WordToken::Adjective),
+      TokenKind::Word(Word::Adjective),
+      TokenKind::Character(Character::Comma),
+      TokenKind::Word(Word::Adjective),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(WordToken::Noun), // Should be direct object.
+      TokenKind::Word(Word::Noun), // Should be direct object.
       TokenKind::StringLiteral,
     ],
   );
@@ -203,10 +200,10 @@ fn test_classify_tokens15() {
   test_string_classification(
     "say to farmer's cow 'hello'",
     &[
-      TokenKind::Word(WordToken::Verb),
+      TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(WordToken::Noun), // Should be direct object.
+      TokenKind::Word(Word::Noun), // Should be direct object.
       TokenKind::StringLiteral,
     ],
   );
@@ -218,8 +215,8 @@ fn test_classify_tokens16() {
   test_string_classification(
     "tell farmer \"I know about you and the chicken.\"",
     &[
-      TokenKind::Word(WordToken::Verb),
-      TokenKind::Word(WordToken::Noun),
+      TokenKind::Word(Word::Verb),
+      TokenKind::Word(Word::Noun),
       TokenKind::StringLiteral,
     ],
   );
@@ -231,9 +228,9 @@ fn test_classify_tokens17() {
   test_string_classification(
     "tell farmer, \"I know about you and the pumpkin.\"",
     &[
-      TokenKind::Word(WordToken::Verb),
-      TokenKind::Word(WordToken::Noun),
-      TokenKind::Character(CharacterToken::Comma),
+      TokenKind::Word(Word::Verb),
+      TokenKind::Word(Word::Noun),
+      TokenKind::Character(Character::Comma),
       TokenKind::StringLiteral,
     ],
   );
@@ -244,7 +241,7 @@ fn test_classify_tokens18() {
   init();
   test_string_classification(
     "take sword",
-    &[TokenKind::Word(WordToken::Verb), TokenKind::Word(WordToken::Noun)],
+    &[TokenKind::Word(Word::Verb), TokenKind::Word(Word::Noun)],
   );
 }
 
@@ -254,10 +251,10 @@ fn test_classify_tokens19() {
   test_string_classification(
     "take sword and shield",
     &[
-      TokenKind::Word(WordToken::Verb),
-      TokenKind::Word(WordToken::Noun),
+      TokenKind::Word(Word::Verb),
+      TokenKind::Word(Word::Noun),
       TokenKind::And,
-      TokenKind::Word(WordToken::Noun),
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
@@ -268,10 +265,10 @@ fn test_classify_tokens20() {
   test_string_classification(
     "take sword, shield",
     &[
-      TokenKind::Word(WordToken::Verb),
-      TokenKind::Word(WordToken::Noun), // Should be direct object.
-      TokenKind::Character(CharacterToken::Comma),
-      TokenKind::Word(WordToken::Noun),
+      TokenKind::Word(Word::Verb),
+      TokenKind::Word(Word::Noun), // Should be direct object.
+      TokenKind::Character(Character::Comma),
+      TokenKind::Word(Word::Noun),
     ],
   );
 }

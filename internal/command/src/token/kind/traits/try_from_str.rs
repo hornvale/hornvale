@@ -39,7 +39,7 @@ impl TryFrom<&str> for TokenKind {
       "my" => Ok(Self::My),
       "your" => Ok(Self::Your),
       "his" => Ok(Self::His),
-      "her" => Ok(Self::Her(HerToken::default())), // (also pronoun)
+      "her" => Ok(Self::Her(Her::default())), // (also pronoun)
       "its" => Ok(Self::Its),
       "our" => Ok(Self::Our),
       "their" => Ok(Self::Their),

@@ -68,8 +68,8 @@ impl Scanner {
     }
     let character = self.advance()?;
     let result = match character {
-      character if CharacterToken::try_from(character).is_ok() => {
-        let character_kind = CharacterToken::try_from(character).unwrap();
+      character if Character::try_from(character).is_ok() => {
+        let character_kind = Character::try_from(character).unwrap();
         let kind = TokenKind::try_from(character).unwrap();
         if character_kind.can_begin_magic_word() {
           let word_kind = character_kind.to_magic_word().unwrap();
@@ -216,8 +216,8 @@ impl Scanner {
     let kind = match TokenKind::try_from(value.as_str()) {
       Ok(kind) => kind,
       Err(_) if value.find('\'').is_some() => TokenKind::NounPossessiveDeterminer,
-      Err(_) if value.find('-').is_some() => TokenKind::Word(WordToken::Adjective),
-      Err(_) => TokenKind::Word(WordToken::default()),
+      Err(_) if value.find('-').is_some() => TokenKind::Word(Word::Adjective),
+      Err(_) => TokenKind::Word(Word::default()),
     };
     let result = self.make_token(kind);
     Ok(result)
@@ -293,11 +293,11 @@ mod tests {
     let tokens = scanner.scan_tokens();
     let expected = vec![
       Token {
-        kind: TokenKind::Word(WordToken::default()),
+        kind: TokenKind::Word(Word::default()),
         lexeme: "take".to_string(),
       },
       Token {
-        kind: TokenKind::Word(WordToken::default()),
+        kind: TokenKind::Word(Word::default()),
         lexeme: "sword".to_string(),
       },
       Token {
@@ -305,7 +305,7 @@ mod tests {
         lexeme: "and".to_string(),
       },
       Token {
-        kind: TokenKind::Word(WordToken::default()),
+        kind: TokenKind::Word(Word::default()),
         lexeme: "shield".to_string(),
       },
       Token {
@@ -323,19 +323,19 @@ mod tests {
     let tokens = scanner.scan_tokens();
     let expected = vec![
       Token {
-        kind: TokenKind::Word(WordToken::default()),
+        kind: TokenKind::Word(Word::default()),
         lexeme: "take".to_string(),
       },
       Token {
-        kind: TokenKind::Word(WordToken::default()),
+        kind: TokenKind::Word(Word::default()),
         lexeme: "sword".to_string(),
       },
       Token {
-        kind: TokenKind::Character(CharacterToken::Ampersand),
+        kind: TokenKind::Character(Character::Ampersand),
         lexeme: "&".to_string(),
       },
       Token {
-        kind: TokenKind::Word(WordToken::default()),
+        kind: TokenKind::Word(Word::default()),
         lexeme: "shield".to_string(),
       },
       Token {
@@ -353,11 +353,11 @@ mod tests {
     let tokens = scanner.scan_tokens();
     let expected = vec![
       Token {
-        kind: TokenKind::MagicWord(MagicWordToken::BangWord),
+        kind: TokenKind::MagicWord(MagicWord::BangWord),
         lexeme: "!take".to_string(),
       },
       Token {
-        kind: TokenKind::MagicWord(MagicWordToken::HashWord),
+        kind: TokenKind::MagicWord(MagicWord::HashWord),
         lexeme: "#sword".to_string(),
       },
       Token {
@@ -375,11 +375,11 @@ mod tests {
     let tokens = scanner.scan_tokens();
     let expected = vec![
       Token {
-        kind: TokenKind::Word(WordToken::default()),
+        kind: TokenKind::Word(Word::default()),
         lexeme: "take".to_string(),
       },
       Token {
-        kind: TokenKind::Word(WordToken::default()),
+        kind: TokenKind::Word(Word::default()),
         lexeme: "sword".to_string(),
       },
       Token {
@@ -387,7 +387,7 @@ mod tests {
         lexeme: "and".to_string(),
       },
       Token {
-        kind: TokenKind::Word(WordToken::default()),
+        kind: TokenKind::Word(Word::default()),
         lexeme: "shield".to_string(),
       },
       Token {
@@ -404,7 +404,7 @@ mod tests {
     let mut scanner = Scanner::new(input);
     let token = scanner.scan_token().unwrap();
     let expected = Token {
-      kind: TokenKind::Word(WordToken::default()),
+      kind: TokenKind::Word(Word::default()),
       lexeme: "take".to_string(),
     };
     assert_eq!(token, expected);
@@ -460,9 +460,9 @@ mod tests {
     let mut scanner = Scanner::new(input);
     scanner.start = 0;
     scanner.current = 4;
-    let token = scanner.make_token(TokenKind::Word(WordToken::default()));
+    let token = scanner.make_token(TokenKind::Word(Word::default()));
     let expected = Token {
-      kind: TokenKind::Word(WordToken::default()),
+      kind: TokenKind::Word(Word::default()),
       lexeme: "take".to_string(),
     };
     assert_eq!(token, expected);
