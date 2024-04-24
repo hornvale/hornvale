@@ -23,12 +23,13 @@ fn test_classify_tokens62() {
       TokenKind::Word(Word::Noun),
       TokenKind::CommandModifier(CommandModifier::From),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
 
 #[test]
+// This is an acceptable failure.
 fn test_classify_tokens63() {
   init();
   test_string_classification(
@@ -42,6 +43,7 @@ fn test_classify_tokens63() {
 }
 
 #[test]
+// This is an acceptable failure.
 fn test_classify_tokens64() {
   init();
   test_string_classification(
@@ -65,7 +67,7 @@ fn test_classify_tokens65() {
       TokenKind::Word(Word::Adjective),
       TokenKind::Word(Word::Noun),
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
@@ -81,7 +83,7 @@ fn test_classify_tokens66() {
       TokenKind::Word(Word::Noun),
       TokenKind::CommandModifier(CommandModifier::Into),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
@@ -97,7 +99,7 @@ fn test_classify_tokens67() {
       TokenKind::NounPossessiveDeterminer,
       TokenKind::NounPossessiveDeterminer,
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
@@ -122,9 +124,9 @@ fn test_classify_tokens69() {
     &[
       TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Word(Word::Unclassified), // Should be Word(Noun).
+      TokenKind::Word(Word::Noun),
       TokenKind::NumberLiteral,
-      TokenKind::In, // Should be a CommandModifier::In.
+      TokenKind::CommandModifier(CommandModifier::In),
       TokenKind::Word(Word::Noun),
     ],
   );
@@ -140,7 +142,7 @@ fn test_classify_tokens70() {
       TokenKind::Word(Word::Noun),
       TokenKind::CommandModifier(CommandModifier::With),
       TokenKind::Word(Word::Adjective),
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
@@ -155,7 +157,7 @@ fn test_classify_tokens71() {
       TokenKind::Word(Word::Noun),
       TokenKind::CommandModifier(CommandModifier::With),
       TokenKind::Word(Word::Adjective),
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
       TokenKind::And,
       TokenKind::Word(Word::Noun),
     ],
@@ -172,7 +174,7 @@ fn test_classify_tokens72() {
       TokenKind::Word(Word::Noun),
       TokenKind::CommandModifier(CommandModifier::With),
       TokenKind::Word(Word::Adjective),
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
       TokenKind::Character(Character::Comma),
       TokenKind::Word(Word::Noun),
       TokenKind::Character(Character::Comma),
@@ -192,17 +194,17 @@ fn test_classify_tokens73() {
       TokenKind::Word(Word::Noun),
       TokenKind::CommandModifier(CommandModifier::With),
       TokenKind::Word(Word::Adjective),
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
       TokenKind::Character(Character::Comma),
       TokenKind::Word(Word::Adjective),
       TokenKind::Word(Word::Adjective),
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
       TokenKind::Character(Character::Comma),
       TokenKind::And,
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
       TokenKind::Character(Character::Comma),
       TokenKind::And,
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
@@ -214,10 +216,10 @@ fn test_classify_tokens74() {
     "give her stick to her",
     &[
       TokenKind::Word(Word::Verb),
-      TokenKind::Her(Her::Unclassified), // Should be possessive determiner.
+      TokenKind::Her(Her::PossessiveDeterminer),
       TokenKind::Word(Word::Noun),
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Her(Her::Unclassified), // Should be unclassified.
+      TokenKind::Her(Her::Pronoun),
     ],
   );
 }
@@ -230,9 +232,9 @@ fn test_classify_tokens75() {
     &[
       TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::On),
-      TokenKind::Word(Word::Noun), // Should be direct object.
+      TokenKind::Word(Word::Noun),
       TokenKind::CommandModifier(CommandModifier::With),
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
     ],
   );
 }

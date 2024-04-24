@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use hornvale_core::prelude::*;
 
 #[cfg(test)]
 pub mod tests;
@@ -21,143 +22,88 @@ impl Classifier {
 
   /// Classify the tokens in a sentence and return "hints".
   pub fn classify_tokens(&self, tokens: &mut [Token]) -> Result<(), CommandError> {
+    // We should always have at least one token.
     self.assert_non_empty(tokens)?;
     // The first token should always be a verb.
     self.set_first_token_to_verb(tokens)?;
-    // Find the prepositions in the tokens and classify accordingly.
-    let prepositions_found = self.find_prepositions(tokens)?;
-    if !prepositions_found {
-      // If none were found, we likely don't have an indirect object; so the
-      // last token that can be a noun should be the direct object.
-      if let Some(lni) = tokens.iter().rposition(|t| t.kind.could_be_noun()) {
-        self.process_presumed_direct_object(tokens, lni)?;
+    // Loop through the tokens and classify any unclassified tokens.
+    let mut limit: i8 = 3;
+    let mut unclassified_count = self.get_unclassified_count(tokens);
+    while limit > 0 && unclassified_count > 0 {
+      self.classify_tokens_inner(tokens)?;
+      unclassified_count = self.get_unclassified_count(tokens);
+      log::error!("Unclassified tokens: {}", unclassified_count);
+      limit -= 1;
+    }
+    println!("Exiting with {} unclassified tokens.", unclassified_count);
+    // Assume success.
+    Ok(())
+  }
+
+  /// Classify the tokens in the input slice.
+  pub fn classify_tokens_inner(&self, tokens: &mut [Token]) -> Result<(), CommandError> {
+    let mut index = 0;
+    while let Some(i) = self.get_next_unclassified_index(tokens, index) {
+      let kind = self.peek(tokens, i).unwrap();
+      match kind {
+        TokenKind::Word(_) => self.classify_word(tokens, i)?,
+        TokenKind::Her(_) => self.classify_her(tokens, i)?,
+        TokenKind::Up | TokenKind::Down | TokenKind::In | TokenKind::Out => self.classify_direction_word(tokens, i)?,
+        _ => unreachable!(),
       }
+      index += 1;
     }
-    if tokens.len() == 4 {
-      // This might also be a sentence of the form <verb> <noun> <adverb> where
-      // the adverb is also a direction (e.g. "turn radio up", "turn lamp on").
-      self.find_directional_adverbs(tokens)?;
-    }
+    // Assume success.
     Ok(())
   }
 
-  /// Find the prepositions in the tokens and classify accordingly.
-  pub fn find_prepositions(&self, tokens: &mut [Token]) -> Result<bool, CommandError> {
-    // If this sentence contains anything that looks like a preposition, we'll
-    // need to process it.
-    if let Some(index) = tokens.iter().position(|t| t.kind.is_command_modifier()) {
-      self.process_first_preposition(tokens, index)?;
-      return Ok(true);
-    }
-    Ok(false)
-  }
-
-  /// Process the first preposition in the tokens.
-  pub fn process_first_preposition(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
-    // Find the last non-EOI token.
-    let lnei = tokens.iter().rposition(|t| t.kind != TokenKind::EndOfInput).unwrap();
-    // If it's the same as the first preposition, then it's actually an adverb.
-    if index == lnei {
-      // It's actually an adverb, and the token before it is likely the direct object.
-      self.process_presumed_direct_object(tokens, index - 1)?;
-      return Ok(());
-    }
-    // Otherwise, this token should usually be an indirect object, but there
-    // are some exceptions; so we find the last word after the preposition that
-    // could be a noun and mark it.
-    let lni = tokens.iter().rposition(|t| t.kind.could_be_noun()).unwrap();
-    if lni > index {
-      self.process_presumed_noun(tokens, lni)?;
-    }
-    // The token before the first preposition should be the direct object.
-    self.process_presumed_direct_object(tokens, index - 1)?;
-    // Now that we've processed this preposition, we can move on to the next.
-    self.process_other_prepositions(tokens, index + 1)?;
-    Ok(())
-  }
-
-  /// Process the presumed direct object.
-  pub fn process_presumed_direct_object(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
-    // This index had better always be a token.
-    let lnk = tokens.get(index).map(|t| t.kind).unwrap();
-    // Unless it's already something other than a noun, it should be a noun.
-    if lnk.could_be_noun() && !lnk.is_noun() {
-      // If it's not a noun, make it one.
+  /// Classify a generic word.
+  pub fn classify_word(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
+    // If it's the last token, it's a noun.
+    if self.is_last_word_token(tokens, index) {
       tokens[index].kind = TokenKind::Word(Word::Noun);
-      // The previous token is presumably an adjective, unless it's not.
-      self.process_presumed_adjectives(tokens, index - 1)?;
-    }
-    Ok(())
-  }
-
-  /// Process other prepositions.
-  pub fn process_other_prepositions(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
-    // Find the next preposition in the tokens.
-    if let Some(rel_index) = tokens.iter().skip(index).position(|t| t.kind.is_command_modifier()) {
-      // The index of the next preposition, corrected for the slice.
-      let index = index + rel_index;
-      self.process_secondary_preposition(tokens, index)?;
-      self.process_other_prepositions(tokens, index + 1)?;
-    }
-    Ok(())
-  }
-
-  /// Process secondary preposition.
-  pub fn process_secondary_preposition(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
-    self.process_presumed_noun(tokens, index - 1)?;
-    Ok(())
-  }
-
-  /// Process the presumed noun.
-  pub fn process_presumed_noun(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
-    if let Some(lnk) = tokens.get(index).map(|t| t.kind) {
-      // Don't override things that already work as nouns.
-      if lnk.could_be_noun() && !lnk.is_noun() {
-        tokens[index].kind = TokenKind::Word(Word::Noun);
-      }
-      // We need to recheck the kind of this token.
-      if tokens[index].kind.can_follow_adjective() {
-        self.process_presumed_adjectives(tokens, index - 1)?;
-      }
-    }
-    Ok(())
-  }
-
-  /// Process the presumed adjectives.
-  pub fn process_presumed_adjectives(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
-    // We start at the specified index and work our way back.
-    for i in (0..=index).rev() {
-      // This should always be a valid index.
-      let lnk = tokens.get(i).map(|t| t.kind).unwrap();
-      if lnk.could_be_adjective() {
-        tokens[i].kind = TokenKind::Word(Word::Adjective);
-      } else if lnk.is_conjunction() || lnk == TokenKind::Character(Character::Comma) {
-        // The word prior to this should be a noun, but we need to check for an
-        // Oxford comma.
-        if i > 0 && tokens[i - 1].kind == TokenKind::Character(Character::Comma) {
-          self.process_presumed_noun(tokens, i - 2)?;
-        } else {
-          self.process_presumed_noun(tokens, i - 1)?;
-        }
-        break;
-      } else if lnk.can_follow_adjective() {
-        continue;
-      } else {
-        break;
-      }
-    }
-    Ok(())
-  }
-
-  /// Find directional adverbs.
-  pub fn find_directional_adverbs(&self, tokens: &mut [Token]) -> Result<(), CommandError> {
-    if tokens.len() != 4 {
-      // This only works for sentences of the form <verb> <noun> <adverb> <eoi>.
       return Ok(());
     }
-    // This token should already have the information necessary to classify it.
-    if tokens[2].kind.is_direction() && tokens[2].kind.is_command_modifier() {
-      self.process_presumed_direct_object(tokens, 1)?;
+    match self.peek(tokens, index + 1) {
+      Some(TokenKind::And | TokenKind::Character(Character::Comma) | TokenKind::NumberLiteral) => {
+        tokens[index].kind = TokenKind::Word(Word::Noun);
+        Ok(())
+      },
+      Some(TokenKind::CommandModifier(_)) => {
+        tokens[index].kind = TokenKind::Word(Word::Noun);
+        Ok(())
+      },
+      Some(TokenKind::Word(Word::Noun) | TokenKind::NounPossessiveDeterminer | TokenKind::Word(Word::Adjective)) => {
+        tokens[index].kind = TokenKind::Word(Word::Adjective);
+        Ok(())
+      },
+      _ => Ok(()),
+    }
+  }
+
+  /// Classify a "her" token.
+  pub fn classify_her(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
+    match self.is_last_token(tokens, index) {
+      true => tokens[index].kind = TokenKind::Her(Her::Pronoun),
+      false => tokens[index].kind = TokenKind::Her(Her::PossessiveDeterminer),
+    }
+    Ok(())
+  }
+
+  /// Classify a direction word.
+  pub fn classify_direction_word(&self, tokens: &mut [Token], index: usize) -> Result<(), CommandError> {
+    match self.is_last_token(tokens, index) {
+      true => {
+        let previous_word = tokens[index - 1].kind;
+        if previous_word.is_noun() {
+          tokens[index].kind = TokenKind::CommandModifier(CommandModifier::try_from(&*tokens[index].lexeme).unwrap());
+        } else {
+          tokens[index].kind = TokenKind::Direction(Direction::try_from(&*tokens[index].lexeme).unwrap());
+        }
+      },
+      false => {
+        tokens[index].kind = TokenKind::CommandModifier(CommandModifier::try_from(&*tokens[index].lexeme).unwrap())
+      },
     }
     Ok(())
   }
@@ -175,6 +121,19 @@ impl Classifier {
     }
   }
 
+  /// Get the index of the next unclassified token in the slice.
+  pub fn get_next_unclassified_index(&self, tokens: &[Token], start: usize) -> Option<usize> {
+    tokens[start..]
+      .iter()
+      .position(|t| t.kind.is_unclassified())
+      .map(|i| start + i)
+  }
+
+  /// Count the unclassified tokens in the slice.
+  pub fn get_unclassified_count(&self, tokens: &[Token]) -> usize {
+    tokens.iter().filter(|t| t.kind.is_unclassified()).count()
+  }
+
   /// Set the first token to a verb.
   pub fn set_first_token_to_verb(&self, tokens: &mut [Token]) -> Result<(), CommandError> {
     if !tokens[0].kind.could_be_verb() {
@@ -182,6 +141,32 @@ impl Classifier {
     }
     tokens[0].kind = TokenKind::Word(Word::Verb);
     Ok(())
+  }
+
+  /// Is this the last word token in the slice?
+  pub fn is_last_word_token(&self, tokens: &[Token], index: usize) -> bool {
+    index == self.get_last_word_token_index(tokens)
+  }
+
+  /// Is this the last token in the slice?
+  pub fn is_last_token(&self, tokens: &[Token], index: usize) -> bool {
+    index == self.get_last_token_index(tokens)
+  }
+
+  /// Get the max index of word tokens in the slice.
+  pub fn get_last_word_token_index(&self, tokens: &[Token]) -> usize {
+    tokens
+      .iter()
+      .rposition(|t| matches!(t.kind, TokenKind::Word(_)))
+      .unwrap()
+  }
+
+  /// Get the max index of actual meaningful tokens (read: not EndOfInput) in the slice.
+  pub fn get_last_token_index(&self, tokens: &[Token]) -> usize {
+    tokens
+      .iter()
+      .rposition(|t| !matches!(t.kind, TokenKind::EndOfInput))
+      .unwrap()
   }
 
   /// Peek at a specified index.

@@ -30,7 +30,7 @@ fn test_classify_tokens04() {
       TokenKind::Word(Word::Verb),
       TokenKind::StringLiteral,
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
@@ -44,7 +44,7 @@ fn test_classify_tokens05() {
       TokenKind::Word(Word::Verb),
       TokenKind::StringLiteral,
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
@@ -59,7 +59,7 @@ fn test_classify_tokens06() {
       TokenKind::StringLiteral,
       TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
@@ -74,7 +74,7 @@ fn test_classify_tokens07() {
       TokenKind::StringLiteral,
       TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
@@ -87,7 +87,7 @@ fn test_classify_tokens08() {
     &[
       TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::To),
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
       TokenKind::StringLiteral,
     ],
   );
@@ -102,7 +102,7 @@ fn test_classify_tokens09() {
       TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::Word(Word::Adjective),
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
       TokenKind::StringLiteral,
     ],
   );
@@ -118,7 +118,7 @@ fn test_classify_tokens10() {
       TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::Word(Word::Adjective),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
       TokenKind::StringLiteral,
     ],
   );
@@ -135,13 +135,14 @@ fn test_classify_tokens11() {
       TokenKind::Word(Word::Adjective),
       TokenKind::Word(Word::Adjective),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
       TokenKind::StringLiteral,
     ],
   );
 }
 
 #[test]
+// This is an acceptable failure; the classifier is not perfect.
 fn test_classify_tokens12() {
   init();
   test_string_classification(
@@ -153,7 +154,7 @@ fn test_classify_tokens12() {
       TokenKind::Character(Character::Comma),
       TokenKind::Word(Word::Adjective),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(Word::Noun), // Should be direct object.
+      TokenKind::Word(Word::Noun),
       TokenKind::StringLiteral,
     ],
   );
@@ -170,7 +171,7 @@ fn test_classify_tokens13() {
       TokenKind::Word(Word::Adjective),
       TokenKind::Word(Word::Adjective),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
       TokenKind::StringLiteral,
     ],
   );
@@ -188,7 +189,7 @@ fn test_classify_tokens14() {
       TokenKind::Character(Character::Comma),
       TokenKind::Word(Word::Adjective),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(Word::Noun), // Should be direct object.
+      TokenKind::Word(Word::Noun),
       TokenKind::StringLiteral,
     ],
   );
@@ -203,7 +204,7 @@ fn test_classify_tokens15() {
       TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::To),
       TokenKind::NounPossessiveDeterminer,
-      TokenKind::Word(Word::Noun), // Should be direct object.
+      TokenKind::Word(Word::Noun),
       TokenKind::StringLiteral,
     ],
   );
@@ -266,7 +267,7 @@ fn test_classify_tokens20() {
     "take sword, shield",
     &[
       TokenKind::Word(Word::Verb),
-      TokenKind::Word(Word::Noun), // Should be direct object.
+      TokenKind::Word(Word::Noun),
       TokenKind::Character(Character::Comma),
       TokenKind::Word(Word::Noun),
     ],

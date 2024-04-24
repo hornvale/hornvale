@@ -1,14 +1,11 @@
 use super::*;
 use crate::prelude::Scanner;
-use hornvale_core::prelude::*;
 use hornvale_test_utilities::prelude::*;
 
 pub mod classify_tokens_a;
 pub mod classify_tokens_b;
 pub mod classify_tokens_c;
 pub mod classify_tokens_d;
-pub mod process_presumed_adjectives;
-pub mod process_presumed_noun;
 
 fn test_string_classification(string: &str, expected: &[TokenKind]) {
   let mut scanner = Scanner::new(string);

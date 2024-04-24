@@ -118,7 +118,7 @@ fn test_classify_tokens31() {
     &[
       TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::Behind),
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
@@ -131,7 +131,7 @@ fn test_classify_tokens32() {
     &[
       TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::Under),
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
@@ -143,8 +143,8 @@ fn test_classify_tokens33() {
     "look in box",
     &[
       TokenKind::Word(Word::Verb),
-      TokenKind::In,               // Should be a CommandModifier::In.
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::CommandModifier(CommandModifier::In),
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
@@ -167,7 +167,11 @@ fn test_classify_tokens35() {
   init();
   test_string_classification(
     "turn radio up",
-    &[TokenKind::Word(Word::Verb), TokenKind::Word(Word::Noun), TokenKind::Up],
+    &[
+      TokenKind::Word(Word::Verb),
+      TokenKind::Word(Word::Noun),
+      TokenKind::CommandModifier(CommandModifier::Up),
+    ],
   );
 }
 
@@ -179,7 +183,7 @@ fn test_classify_tokens36() {
     &[
       TokenKind::Word(Word::Verb),
       TokenKind::CommandModifier(CommandModifier::On),
-      TokenKind::Word(Word::Noun), // Should be indirect object.
+      TokenKind::Word(Word::Noun),
     ],
   );
 }
@@ -189,7 +193,11 @@ fn test_classify_tokens37() {
   init();
   test_string_classification(
     "turn up radio",
-    &[TokenKind::Word(Word::Verb), TokenKind::Up, TokenKind::Word(Word::Noun)],
+    &[
+      TokenKind::Word(Word::Verb),
+      TokenKind::CommandModifier(CommandModifier::Up),
+      TokenKind::Word(Word::Noun),
+    ],
   );
 }
 

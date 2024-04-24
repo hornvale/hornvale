@@ -261,6 +261,14 @@ impl TokenKind {
     matches!(self, Self::Yes | Self::No)
   }
 
+  /// Is this token unclassified?
+  pub fn is_unclassified(&self) -> bool {
+    matches!(
+      self,
+      Self::Word(Word::Unclassified) | Self::Her(Her::Unclassified) | Self::Up | Self::Down | Self::In | Self::Out
+    )
+  }
+
   /// Get the boolean value of this token.
   pub fn as_bool(&self) -> Option<bool> {
     match self {

@@ -39,6 +39,8 @@ pub enum CommandModifier {
   Beyond,
   /// e.g. "pass by the guard".
   By,
+  /// e.g. "climb down the ladder".
+  Down,
   /// e.g. "search for the treasure".
   For,
   /// e.g. "take from the chest".
@@ -63,6 +65,8 @@ pub enum CommandModifier {
   Toward,
   /// e.g. "hide under the bed".
   Under,
+  /// e.g. "look up at the sky".
+  Up,
   /// e.g. "stand upon the hill".
   Upon,
   /// e.g. "fight with the sword".
