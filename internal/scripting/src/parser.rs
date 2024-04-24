@@ -11,7 +11,7 @@ use crate::token::kind::TokenKind;
 use crate::token::Token;
 use crate::value::Value;
 use derive_more::Display;
-use std::mem::replace;
+use std::mem;
 
 /// An error type for the parser.
 pub mod error;
@@ -766,7 +766,7 @@ impl<'source> Parser<'source> {
   pub fn push_compiler(&mut self, function_type: FunctionType) -> Result<(), Error> {
     let function_name = self.intern_token(&self.previous.unwrap())?;
     let new_compiler = Box::new(Compiler::new(function_name, function_type));
-    let old_compiler = replace(&mut self.compiler, new_compiler);
+    let old_compiler = mem::replace(&mut self.compiler, new_compiler);
     self.compiler.enclosing = Some(old_compiler);
     Ok(())
   }
@@ -776,7 +776,7 @@ impl<'source> Parser<'source> {
     self.emit_return()?;
     let result = match self.compiler.enclosing.take() {
       Some(enclosing) => {
-        let compiler = replace(&mut self.compiler, enclosing);
+        let compiler = mem::replace(&mut self.compiler, enclosing);
         compiler.function
       },
       None => {
