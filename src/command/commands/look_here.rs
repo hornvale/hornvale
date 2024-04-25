@@ -25,15 +25,15 @@ impl Command for LookHereCommand {
     _direct_object: Option<Entity>,
     _indirect_object: Option<Entity>,
   ) -> Result<(), AnyError> {
-    let actor_info = world_query::get_entity_region_and_room(world, actor);
-    if actor_info.is_none() {
+    let actor_info = world.get_region_and_room_containing_entity(actor);
+    if actor_info.is_err() {
       anyhow::bail!("The actor is not in a region or room.");
     }
     let (region, room) = actor_info.unwrap();
-    let (room_name, room_description) = world_query::get_room_name_and_description(world, &region, &room).unwrap();
+    let (room_name, room_description) = world.get_room_name_and_description(&region, &room).unwrap();
     println!("{}", room_name.0);
     println!("{}", room_description.0);
-    println!("{}", world_query::describe_room_passages(world, actor));
+    println!("{}", world.describe_room_passages(actor)?);
     Ok(())
   }
 }

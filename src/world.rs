@@ -36,8 +36,6 @@ pub mod direction;
 pub mod error;
 /// Passages connect rooms.
 pub mod passage;
-/// Functions for querying the world.
-pub mod query;
 /// Regions are points in the 3D grid.
 pub mod region;
 /// Rooms are points in the 3D grid within a region.
@@ -60,7 +58,6 @@ pub mod prelude {
   pub use super::passage::{
     condition::PassageCondition, direction::PassageDirection, is_a_passage::IsAPassage, kind::PassageKind,
   };
-  pub use super::query as world_query;
   pub use super::region::{
     generator::{manager::RegionGeneratorManager, registry::RegionGeneratorRegistry, RegionGenerator},
     generators::{
@@ -73,12 +70,14 @@ pub mod prelude {
   pub use super::room::{is_a_room::IsARoom, Room};
   pub use super::vector4d::Vector4D;
   pub use super::world::traits::{
+    describe_room_passages::DescribeRoomPassages,
     get_region_and_room_containing_entity::GetRegionAndRoomContainingEntity, get_room_entity::GetRoomEntity,
     get_room_entity_containing_entity::GetRoomEntityContainingEntity,
     get_room_entity_region_and_room::GetRoomEntityRegionAndRoom,
     get_room_name_and_description::GetRoomNameAndDescription, get_room_passage_directions::GetRoomPassageDirections,
     get_room_passage_entities::GetRoomPassageEntities,
-    get_room_passage_entity_in_direction::GetRoomPassageEntityInDirection, is_quit_flag_set::IsQuitFlagSet,
+    get_room_passage_entity_in_direction::GetRoomPassageEntityInDirection,
+    get_room_passage_kind_in_direction::GetRoomPassageKindInDirection, is_quit_flag_set::IsQuitFlagSet,
     set_quit_flag::SetQuitFlag, spawn_corridor::SpawnCorridor, spawn_passage::SpawnPassage, spawn_room::SpawnRoom,
   };
 }

@@ -31,16 +31,16 @@ impl Command for GoDirectionCommand {
       anyhow::bail!("Expected a direction.");
     }
     let direction = *direction_query.unwrap();
-    let actor_info = world_query::get_entity_region_and_room(world, actor);
-    if actor_info.is_none() {
+    let actor_info = world.get_region_and_room_containing_entity(actor);
+    if actor_info.is_err() {
       anyhow::bail!("The actor is not in a region or room.");
     }
     let (region, room) = actor_info.unwrap();
 
     // Check if the player can move in the given direction.
     let passage = {
-      let passage = world_query::get_room_passage_in_direction(world, &region, &room, direction);
-      if let Some(passage) = passage {
+      let passage = world.get_room_passage_kind_in_direction(&region, &room, &direction);
+      if let Ok(passage) = passage {
         passage
       } else {
         PassageKind::NoExit("You can't go that way.".to_string())
