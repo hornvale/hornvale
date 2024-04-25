@@ -27,15 +27,7 @@ impl Classifier {
     // The first token should always be a verb.
     self.set_first_token_to_verb(tokens)?;
     // Loop through the tokens and classify any unclassified tokens.
-    let mut limit: i8 = 3;
-    let mut unclassified_count = self.get_unclassified_count(tokens);
-    while limit > 0 && unclassified_count > 0 {
-      self.classify_tokens_inner(tokens)?;
-      unclassified_count = self.get_unclassified_count(tokens);
-      log::error!("Unclassified tokens: {}", unclassified_count);
-      limit -= 1;
-    }
-    println!("Exiting with {} unclassified tokens.", unclassified_count);
+    self.classify_tokens_inner(tokens)?;
     // Assume success.
     Ok(())
   }
@@ -62,23 +54,26 @@ impl Classifier {
     // If it's the last token, it's a noun.
     if self.is_last_word_token(tokens, index) {
       tokens[index].kind = TokenKind::Word(Word::Noun);
-      return Ok(());
+    } else {
+      match self.peek(tokens, index + 1) {
+        Some(TokenKind::And | TokenKind::Character(Character::Comma) | TokenKind::NumberLiteral) => {
+          tokens[index].kind = TokenKind::Word(Word::Noun);
+        },
+        Some(TokenKind::CommandModifier(_)) => {
+          tokens[index].kind = TokenKind::Word(Word::Noun);
+        },
+        Some(TokenKind::Word(Word::Noun) | TokenKind::NounPossessiveDeterminer | TokenKind::Word(Word::Adjective)) => {
+          tokens[index].kind = TokenKind::Word(Word::Adjective);
+        },
+        _ => {},
+      }
     }
-    match self.peek(tokens, index + 1) {
-      Some(TokenKind::And | TokenKind::Character(Character::Comma) | TokenKind::NumberLiteral) => {
-        tokens[index].kind = TokenKind::Word(Word::Noun);
-        Ok(())
-      },
-      Some(TokenKind::CommandModifier(_)) => {
-        tokens[index].kind = TokenKind::Word(Word::Noun);
-        Ok(())
-      },
-      Some(TokenKind::Word(Word::Noun) | TokenKind::NounPossessiveDeterminer | TokenKind::Word(Word::Adjective)) => {
-        tokens[index].kind = TokenKind::Word(Word::Adjective);
-        Ok(())
-      },
-      _ => Ok(()),
+    // If the previous token was unclassified, we might've just given it a hint.
+    if index > 0 && tokens[index - 1].kind.is_unclassified() {
+      log::error!("Reclassifying previous token: {}", tokens[index - 1].lexeme);
+      self.classify_word(tokens, index - 1)?;
     }
+    Ok(())
   }
 
   /// Classify a "her" token.

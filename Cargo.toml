@@ -16,8 +16,6 @@ rust-version = "1.77.0"
 [lib]
 name = "hornvale"
 path = "src/lib.rs"
-test = false        # No unit tests for this library
-doctest = false     # No doctests for this library
 
 [[bin]]
 name = "hornvale"
