@@ -27,3 +27,29 @@ impl RegionGeneratorManager {
     self.registry.generate(name, region, world)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::test_utilities::prelude::*;
+  use crate::world::prelude::*;
+
+  #[test]
+  fn test_register() {
+    init();
+    let mut manager = RegionGeneratorManager::new();
+    let generator = Box::new(CompassRoseRegionGenerator);
+    manager.register("compass_rose", generator);
+    assert_eq!(manager.registry.generators.len(), 1);
+  }
+
+  #[test]
+  fn test_generate() {
+    init();
+    let mut world = World::new();
+    let mut manager = RegionGeneratorManager::new();
+    let generator = Box::new(CompassRoseRegionGenerator);
+    manager.register("compass_rose", generator);
+    assert!(manager.generate("compass_rose", Region::default(), &mut world).is_ok());
+  }
+}

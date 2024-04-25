@@ -30,3 +30,16 @@ impl From<Room> for PassageKind {
     PassageKind::Default(room)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::test_utilities::prelude::*;
+
+  #[test]
+  fn test_from_room() {
+    init();
+    let room = Room::default();
+    assert_eq!(PassageKind::from(room), PassageKind::Default(room));
+  }
+}

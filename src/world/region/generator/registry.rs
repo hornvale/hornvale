@@ -9,7 +9,7 @@ use std::fmt::{Debug, Formatter, Result as FmtResult};
 #[derive(Default)]
 pub struct RegionGeneratorRegistry {
   /// The collection of region generators.
-  generators: HashMap<String, Box<dyn RegionGenerator>>,
+  pub generators: HashMap<String, Box<dyn RegionGenerator>>,
 }
 
 impl RegionGeneratorRegistry {

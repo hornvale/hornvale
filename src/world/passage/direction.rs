@@ -17,3 +17,18 @@ impl PassageDirection {
     Self(-self.0)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::test_utilities::prelude::*;
+
+  #[test]
+  fn test_opposite() {
+    init();
+    assert_eq!(
+      PassageDirection(Direction::Up).opposite(),
+      PassageDirection(Direction::Down)
+    );
+  }
+}
