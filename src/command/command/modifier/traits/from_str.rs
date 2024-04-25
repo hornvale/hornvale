@@ -1,4 +1,4 @@
-use crate::core::prelude::*;
+use crate::command::prelude::*;
 
 impl TryFrom<&str> for CommandModifier {
   type Error = ();

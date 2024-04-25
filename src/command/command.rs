@@ -1,4 +1,4 @@
-use crate::core::prelude::*;
+use crate::command::prelude::*;
 use anyhow::Error as AnyError;
 use hecs::{Entity, World};
 

@@ -1,4 +1,4 @@
-use crate::core::prelude::*;
+use crate::command::prelude::*;
 use std::collections::HashMap;
 
 /// A registry for commands.

@@ -22,6 +22,9 @@
 
 /// A classifier that can be used to determine the type of a word.
 pub mod classifier;
+/// The command trait and related concepts.
+#[allow(clippy::module_inception)]
+pub mod command;
 /// A collection of core commands.
 pub mod commands;
 /// An error type.
@@ -38,6 +41,9 @@ pub mod token;
 /// The prelude.
 pub mod prelude {
   pub use super::classifier::Classifier;
+  pub use super::command::{
+    arity::CommandArity, function::CommandFunction, modifier::CommandModifier, syntax::CommandSyntax, Command,
+  };
   pub use super::commands::{
     fail::FailCommand, go_direction::GoDirectionCommand, look_direction::LookDirectionCommand,
     look_here::LookHereCommand, no_op::NoOpCommand, quit::QuitCommand,
