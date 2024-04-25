@@ -21,3 +21,35 @@ impl TryFrom<&str> for Direction {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::test_utilities::prelude::*;
+
+  #[test]
+  fn test_try_from() {
+    init();
+    assert_eq!(Direction::try_from("north"), Ok(Direction::North));
+    assert_eq!(Direction::try_from("n"), Ok(Direction::North));
+    assert_eq!(Direction::try_from("northeast"), Ok(Direction::Northeast));
+    assert_eq!(Direction::try_from("ne"), Ok(Direction::Northeast));
+    assert_eq!(Direction::try_from("east"), Ok(Direction::East));
+    assert_eq!(Direction::try_from("e"), Ok(Direction::East));
+    assert_eq!(Direction::try_from("southeast"), Ok(Direction::Southeast));
+    assert_eq!(Direction::try_from("se"), Ok(Direction::Southeast));
+    assert_eq!(Direction::try_from("south"), Ok(Direction::South));
+    assert_eq!(Direction::try_from("s"), Ok(Direction::South));
+    assert_eq!(Direction::try_from("southwest"), Ok(Direction::Southwest));
+    assert_eq!(Direction::try_from("sw"), Ok(Direction::Southwest));
+    assert_eq!(Direction::try_from("west"), Ok(Direction::West));
+    assert_eq!(Direction::try_from("w"), Ok(Direction::West));
+    assert_eq!(Direction::try_from("northwest"), Ok(Direction::Northwest));
+    assert_eq!(Direction::try_from("nw"), Ok(Direction::Northwest));
+    assert_eq!(Direction::try_from("up"), Ok(Direction::Up));
+    assert_eq!(Direction::try_from("down"), Ok(Direction::Down));
+    assert_eq!(Direction::try_from("in"), Ok(Direction::In));
+    assert_eq!(Direction::try_from("out"), Ok(Direction::Out));
+    assert_eq!(Direction::try_from("invalid"), Err(()));
+  }
+}

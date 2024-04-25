@@ -18,3 +18,18 @@ impl CorridorDirection {
     Self(-self.0)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::test_utilities::prelude::*;
+
+  #[test]
+  fn test_opposite() {
+    init();
+    assert_eq!(
+      CorridorDirection(Direction::North).opposite(),
+      CorridorDirection(Direction::South)
+    );
+  }
+}

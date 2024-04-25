@@ -8,3 +8,18 @@ impl Neg for CorridorDirection {
     Self(-self.0)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::test_utilities::prelude::*;
+
+  #[test]
+  fn test_neg() {
+    init();
+    assert_eq!(
+      -CorridorDirection(Direction::North),
+      CorridorDirection(Direction::South)
+    );
+  }
+}

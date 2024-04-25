@@ -4,4 +4,5 @@ use serde::{Deserialize, Serialize};
 ///
 /// e.g. "rusty", "shiny", "old"
 #[derive(Clone, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[repr(transparent)]
 pub struct Adjectives(pub Vec<String>);

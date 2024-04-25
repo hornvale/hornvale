@@ -56,3 +56,39 @@ impl TryFrom<Vector4D> for Direction {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::test_utilities::prelude::*;
+
+  #[test]
+  fn test_try_from() {
+    init();
+    assert_eq!(Direction::try_from(Vector4D::from((0, 0, 1, 0))), Ok(Direction::North));
+    assert_eq!(
+      Direction::try_from(Vector4D::from((0, 1, 1, 0))),
+      Ok(Direction::Northeast)
+    );
+    assert_eq!(Direction::try_from(Vector4D::from((0, 1, 0, 0))), Ok(Direction::East));
+    assert_eq!(
+      Direction::try_from(Vector4D::from((0, 1, -1, 0))),
+      Ok(Direction::Southeast)
+    );
+    assert_eq!(Direction::try_from(Vector4D::from((0, 0, -1, 0))), Ok(Direction::South));
+    assert_eq!(
+      Direction::try_from(Vector4D::from((0, -1, -1, 0))),
+      Ok(Direction::Southwest)
+    );
+    assert_eq!(Direction::try_from(Vector4D::from((0, -1, 0, 0))), Ok(Direction::West));
+    assert_eq!(
+      Direction::try_from(Vector4D::from((0, -1, 1, 0))),
+      Ok(Direction::Northwest)
+    );
+    assert_eq!(Direction::try_from(Vector4D::from((0, 0, 0, 1))), Ok(Direction::Up));
+    assert_eq!(Direction::try_from(Vector4D::from((0, 0, 0, -1))), Ok(Direction::Down));
+    assert_eq!(Direction::try_from(Vector4D::from((1, 0, 0, 0))), Ok(Direction::In));
+    assert_eq!(Direction::try_from(Vector4D::from((-1, 0, 0, 0))), Ok(Direction::Out));
+    assert_eq!(Direction::try_from(Vector4D::from((0, 0, 0, 0))), Err(()));
+  }
+}
