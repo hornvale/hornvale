@@ -6,8 +6,6 @@
 
 /// Commands and command parsing.
 pub mod command;
-/// Core crap.
-pub mod core;
 /// Input.
 pub mod input;
 /// Output.
@@ -16,6 +14,8 @@ pub mod output;
 pub mod scripting;
 /// Test utilities.
 pub mod test_utilities;
+/// World model.
+pub mod world;
 
 /// The prelude for the _Hornvale_ library.
 pub mod prelude {

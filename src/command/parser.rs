@@ -1,6 +1,6 @@
 use crate::command::error::CommandError;
 use crate::command::prelude::*;
-use crate::core::prelude::*;
+use crate::world::prelude::*;
 use derivative::Derivative;
 use hecs::{Entity, With, World};
 

@@ -1,5 +1,5 @@
 use crate::command::prelude::*;
-use crate::core::prelude::*;
+use crate::world::prelude::*;
 
 #[cfg(test)]
 pub mod tests;

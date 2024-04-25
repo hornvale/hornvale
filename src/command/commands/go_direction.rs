@@ -1,6 +1,6 @@
 use crate::command::prelude::*;
-use crate::core::prelude::*;
-use anyhow::Error as AnyError;
+use crate::world::prelude::*;
+use anyhow::{ensure, Error as AnyError};
 use hecs::{Entity, World};
 
 /// Attempt to walk in a given direction.
@@ -25,9 +25,7 @@ impl Command for GoDirectionCommand {
     direct_object: Option<Entity>,
     _indirect_object: Option<Entity>,
   ) -> Result<(), AnyError> {
-    if direct_object.is_none() {
-      anyhow::bail!("Expected a direction.");
-    }
+    ensure!(direct_object.is_some(), "Expected a direction.");
     let direction_query = world.query_one_mut::<&PassageDirection>(direct_object.unwrap());
     if direction_query.is_err() {
       anyhow::bail!("Expected a direction.");

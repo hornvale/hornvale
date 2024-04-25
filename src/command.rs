@@ -37,6 +37,7 @@ pub mod commands;
 /// An error type.
 pub mod error;
 /// Some macros.
+#[macro_use]
 pub mod macros;
 /// The parser, a simple top-down recursive descent parser.
 pub mod parser;

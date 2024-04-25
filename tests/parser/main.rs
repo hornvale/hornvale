@@ -1,8 +1,8 @@
 use hecs::{Entity, With, World};
 use hornvale::command::prelude::*;
-use hornvale::core::prelude::*;
 #[cfg(test)]
 use hornvale::test_utilities::prelude::*;
+use hornvale::world::prelude::*;
 
 pub mod parser_a;
 
