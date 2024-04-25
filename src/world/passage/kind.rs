@@ -1,5 +1,5 @@
 use super::condition::PassageCondition;
-use crate::world::prelude::Region;
+use crate::world::prelude::CorridorKind;
 use crate::world::prelude::Room;
 use serde::{Deserialize, Serialize};
 use strum::Display;
@@ -16,8 +16,8 @@ pub enum PassageKind {
   /// - String: The message to display.
   NoExit(String),
   /// A passage that traverses a corridor.
-  /// - Region: The region of the corridor.
-  Corridor(Region),
+  /// - CorridorKind: The kind of corridor and its destination.
+  Corridor(CorridorKind),
   /// A specific condition must be met to traverse the passage.
   /// - Room: The destination room.
   /// - PassageCondition: The condition that must be met.

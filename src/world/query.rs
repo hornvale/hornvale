@@ -1,5 +1,5 @@
 use crate::world::prelude::*;
-use hecs::{Entity, World};
+use hecs::{Entity, With, World};
 
 /// Get the entity's region and room.
 pub fn get_entity_region_and_room(world: &World, entity: Entity) -> Option<(Region, Room)> {
@@ -29,7 +29,7 @@ pub fn get_room_passage_in_direction(
   direction: PassageDirection,
 ) -> Option<PassageKind> {
   world
-    .query::<(&Region, &Room, &PassageDirection, &PassageKind)>()
+    .query::<With<(&Region, &Room, &PassageDirection, &PassageKind), &IsAPassage>>()
     .iter()
     .find(|(_, (&rgn, &rm, &dir, _))| rgn == *region && rm == *room && dir == direction)
     .map(|(_, (_, _, _, kind))| kind.clone())
@@ -38,7 +38,7 @@ pub fn get_room_passage_in_direction(
 /// Get a room's passages.
 pub fn get_room_passages(world: &World, region: &Region, room: &Room) -> Vec<(PassageDirection, PassageKind)> {
   world
-    .query::<(&Region, &Room, &PassageDirection, &PassageKind)>()
+    .query::<With<(&Region, &Room, &PassageDirection, &PassageKind), &IsAPassage>>()
     .iter()
     .filter(|(_, (&rgn, &rm, _, _))| rgn == *region && rm == *room)
     .map(|(_, (_, _, dir, kind))| (*dir, kind.clone()))
@@ -49,6 +49,7 @@ pub fn get_room_passages(world: &World, region: &Region, room: &Room) -> Vec<(Pa
 pub fn describe_room_passages(world: &World, entity: Entity) -> String {
   let (region, room) = get_entity_region_and_room(world, entity).unwrap();
   let passages = get_room_passages(world, &region, &room);
+  println!("{:#?}", passages);
   if !passages.is_empty() {
     let passages = passages
       .iter()

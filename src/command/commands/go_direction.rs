@@ -48,26 +48,50 @@ impl Command for GoDirectionCommand {
     };
 
     match passage {
-      PassageKind::Corridor(next_region) => {
-        let next_room = {
+      PassageKind::Corridor(corridor_kind) => {
+        let (next_region, next_room) = {
           let corridor_direction = CorridorDirection(-direction.0);
-          let next_room_result = world
-            .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()
-            .iter()
-            .find(|(_, (&rgn, _, &dir, _))| rgn == next_region && dir == corridor_direction)
-            .map(|(_, (_, &rm, _, _))| rm);
-          if let Some(next_room_result) = next_room_result {
-            next_room_result
-          } else {
-            let generator = CompassRoseRegionGenerator;
-            generator.generate(next_region, world).unwrap();
-            let next_room_result = world
-              .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()
-              .iter()
-              .find(|(_, (&rgn, _, &dir, _))| rgn == next_region && dir == corridor_direction)
-              .map(|(_, (_, &rm, _, _))| rm)
-              .unwrap();
-            next_room_result
+          match corridor_kind {
+            CorridorKind::Default(next_region) => {
+              let next_room_result = world
+                .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()
+                .iter()
+                .find(|(_, (&rgn, _, &dir, _))| rgn == next_region && dir == corridor_direction)
+                .map(|(_, (_, &rm, _, _))| rm);
+              if let Some(next_room_result) = next_room_result {
+                (next_region, next_room_result)
+              } else {
+                let generator = CompassRoseRegionGenerator;
+                generator.generate(next_region, world).unwrap();
+                let next_room_result = world
+                  .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()
+                  .iter()
+                  .find(|(_, (&rgn, _, &dir, _))| rgn == next_region && dir == corridor_direction)
+                  .map(|(_, (_, &rm, _, _))| rm)
+                  .unwrap();
+                (next_region, next_room_result)
+              }
+            },
+            CorridorKind::Ascend(next_region) => {
+              let next_room_result = world
+                .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()
+                .iter()
+                .find(|(_, (&rgn, _, &dir, _))| rgn == next_region && dir == corridor_direction)
+                .map(|(_, (_, &rm, _, _))| rm);
+              if let Some(next_room_result) = next_room_result {
+                (next_region, next_room_result)
+              } else {
+                let generator = CompassRoseRegionGenerator;
+                generator.generate(next_region, world).unwrap();
+                let next_room_result = world
+                  .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()
+                  .iter()
+                  .find(|(_, (&rgn, _, &dir, _))| rgn == next_region && dir == corridor_direction)
+                  .map(|(_, (_, &rm, _, _))| rm)
+                  .unwrap();
+                (next_region, next_room_result)
+              }
+            },
           }
         };
         world.insert(actor, (next_region, next_room)).unwrap();

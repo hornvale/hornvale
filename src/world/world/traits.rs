@@ -18,3 +18,9 @@ pub mod get_room_passage_entity_in_direction;
 pub mod is_quit_flag_set;
 /// A trait for setting the quit flag.
 pub mod set_quit_flag;
+/// SpawnCorridor
+pub mod spawn_corridor;
+/// SpawnPassage
+pub mod spawn_passage;
+/// SpawnRoom
+pub mod spawn_room;

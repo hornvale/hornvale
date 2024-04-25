@@ -79,6 +79,6 @@ pub mod prelude {
     get_room_name_and_description::GetRoomNameAndDescription, get_room_passage_directions::GetRoomPassageDirections,
     get_room_passage_entities::GetRoomPassageEntities,
     get_room_passage_entity_in_direction::GetRoomPassageEntityInDirection, is_quit_flag_set::IsQuitFlagSet,
-    set_quit_flag::SetQuitFlag,
+    set_quit_flag::SetQuitFlag, spawn_corridor::SpawnCorridor, spawn_passage::SpawnPassage, spawn_room::SpawnRoom,
   };
 }

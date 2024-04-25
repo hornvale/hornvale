@@ -47,6 +47,8 @@ pub mod registry;
 pub mod scanner;
 /// Tokens for the scanner.
 pub mod token;
+/// Additions for the ECS world.
+pub mod world;
 
 /// The prelude.
 pub mod prelude {

@@ -2,7 +2,7 @@ use crate::command::error::CommandError;
 use crate::command::prelude::*;
 use crate::world::prelude::*;
 use derivative::Derivative;
-use hecs::{Entity, With, World};
+use hecs::{Entity, World};
 
 /// Arguments that will be passed to a command.
 pub type CommandArgs = (Entity, Option<Entity>, Option<Entity>);
@@ -92,7 +92,6 @@ impl<'world> Parser<'world> {
         self.advance()?;
       },
       Some(token) if token.kind.is_direction() => {
-        println!("Direction!");
         self.direct_object = self.bind_direction(self.peek().unwrap())?;
         self.advance()?;
       },
@@ -127,18 +126,6 @@ impl<'world> Parser<'world> {
       Err(CommandError::NoVerb)
     }
   }
-
-  //  /// Consume the direct object.
-  //  pub fn consume_direct_object(&mut self) -> Result<(), CommandError> {
-  //    if self.check_token(TokenKind::Word(Word::Noun)) {
-  //      self.direct_object = self.peek();
-  //      Ok(())
-  //    } else {
-  //      Err(CommandError::CouldNotConsumeDirectObject(
-  //        self.peek().map(|t| t.lexeme.clone()).unwrap_or_default(),
-  //      ))
-  //    }
-  //  }
 
   /// Consume the current token, throwing an error if it is not the expected kind.
   pub fn consume_token(&mut self, expected: TokenKind, message: &str) -> Result<(), CommandError> {
@@ -209,98 +196,28 @@ impl<'world> Parser<'world> {
 
   /// Bind the Here token.
   pub fn bind_here(&mut self) -> Result<Entity, CommandError> {
-    let actor_info = {
-      let query_result = self.world.query_one::<(&Region, &Room)>(self.actor);
-      let mut query = query_result.unwrap(); // `query` is now a longer-lived value
-      let (region, room) = query.get().unwrap();
-      (*region, *room)
-    };
-
-    let room_entity = {
-      self
-        .world
-        .query::<With<(&Region, &Room), &IsARoom>>()
-        .into_iter()
-        .find(|(_, (&reg, &rm))| {
-          let (region, room) = actor_info;
-          region == reg && room == rm
-        })
-        .unwrap()
-        .0
-    };
+    let room_entity = self.world.get_room_entity_containing_entity(self.actor)?;
     Ok(room_entity)
   }
 
   /// Bind a specified direction.
-  pub fn bind_direction(&mut self, _token: Token) -> Result<Option<Entity>, CommandError> {
+  pub fn bind_direction(&mut self, token: Token) -> Result<Option<Entity>, CommandError> {
     self.arity = match self.arity {
       Some(CommandArity::Nullary) => Some(CommandArity::Unary),
       Some(CommandArity::Unary) => Some(CommandArity::Binary),
       Some(CommandArity::Binary) => Some(CommandArity::Binary),
       None => Some(CommandArity::Unary),
     };
-    let direction = PassageDirection(Direction::North);
-    let actor_info = {
-      let query_result = self.world.query_one::<(&Region, &Room)>(self.actor);
-      let mut query = query_result.unwrap();
-      let (region, room) = query.get().unwrap();
-      (*region, *room)
+    let direction = match token.kind {
+      TokenKind::Direction(direction) => direction,
+      _ => return Err(CommandError::UnknownError),
     };
-    let passage = {
-      let (region, room) = actor_info;
-      let passage = world_query::get_room_passage_in_direction(self.world, &region, &room, direction);
-      if let Some(passage) = passage {
-        passage
-      } else {
-        PassageKind::NoExit("You can't go that way.".to_string())
-      }
-    };
-    match passage {
-      PassageKind::Corridor(next_region) => {
-        let next_room = {
-          let corridor_direction = CorridorDirection::from(-direction);
-          let next_room_result = self
-            .world
-            .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()
-            .iter()
-            .find(|(_, (&rgn, _, &dir, _))| rgn == next_region && dir == corridor_direction)
-            .map(|(entity, _)| entity);
-          if let Some(next_room_result) = next_room_result {
-            next_room_result
-          } else {
-            let generator = CompassRoseRegionGenerator;
-            generator.generate(next_region, self.world).unwrap();
-            let next_room_result = self
-              .world
-              .query::<(&Region, &Room, &CorridorDirection, &CorridorTerminus)>()
-              .iter()
-              .find(|(_, (&rgn, _, &dir, _))| rgn == next_region && dir == corridor_direction)
-              .map(|(entity, _)| entity)
-              .unwrap();
-            next_room_result
-          }
-        };
-        Ok(Some(next_room))
-      },
-      PassageKind::Default(next_room) => {
-        let entity = self
-          .world
-          .query::<With<(&Region, &Room), &IsARoom>>()
-          .into_iter()
-          .find(|(_, (&reg, &rm))| {
-            let (region, _) = actor_info;
-            region == reg && next_room == rm
-          })
-          .unwrap()
-          .0;
-        Ok(Some(entity))
-      },
-      PassageKind::NoExit(message) => {
-        println!("{}", message);
-        Err(CommandError::UnknownError)
-      },
-      _ => Err(CommandError::UnknownError),
-    }
+    let direction = PassageDirection(direction);
+    let (region, room) = self.world.get_region_and_room_containing_entity(self.actor)?;
+    let passage = self
+      .world
+      .get_room_passage_entity_in_direction(&region, &room, &direction)?;
+    Ok(Some(passage))
   }
 
   /// Check kind of current token.

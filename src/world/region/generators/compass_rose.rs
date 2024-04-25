@@ -10,49 +10,31 @@ use strum::IntoEnumIterator;
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct CompassRoseRegionGenerator;
 
-macro_rules! spawn_room {
-  ($world:expr, $region:expr, $room:expr, $name:expr, $description:expr) => {
-    $world.spawn(($region, $room, $name, $description, IsARoom));
-  };
-}
-
-macro_rules! spawn_passage {
-  ($world:expr, $region:expr, $from_room:expr, $to_room:expr, $direction:expr) => {
-    $world.spawn(($region, $from_room, $direction, PassageKind::from($to_room)));
-    $world.spawn(($region, $to_room, -$direction, PassageKind::from($from_room)));
-  };
-}
-
-macro_rules! spawn_corridor {
-  ($world:expr, $region:expr, $room:expr, $direction:expr, $next_region:expr) => {
-    $world.spawn((
-      $region,
-      $room,
-      $direction,
-      PassageKind::Corridor($next_region),
-      CorridorOrigin,
-    ));
-    $world.spawn(($region, $room, CorridorDirection($direction), CorridorTerminus));
-  };
-}
-
 impl RegionGenerator for CompassRoseRegionGenerator {
   fn generate(&self, region: Region, world: &mut World) -> Result<(), WorldError> {
     let center_room = Room::default();
-    let name = Name("The Center Room".to_string());
-    let description = Description("This is the center room.".to_string());
-    spawn_room!(world, region, center_room, name, description);
+    world.spawn_room(region, center_room, "The Center Room", "This is the center room.")?;
     Direction::iter().for_each(|direction| {
-      let room = center_room + PassageDirection(direction);
-      let name = Name(format!("The {} Room", direction));
-      let description = Description(format!("This is the {} room.", direction.to_string().to_lowercase()));
-      spawn_room!(world, region, room, name, description);
-      spawn_passage!(world, region, center_room, room, direction);
+      let passage_direction = PassageDirection(direction);
+      let room = center_room + passage_direction;
+      world
+        .spawn_room(
+          region,
+          room,
+          &format!("The {} Room", direction),
+          &format!("This is the {} room.", direction.to_string().to_lowercase()),
+        )
+        .unwrap();
+      world
+        .spawn_passage(region, center_room, room, PassageDirection(direction))
+        .unwrap();
       if direction.is_cardinal() || direction.is_vertical() {
         let corridor_direction = CorridorDirection(direction);
         // Insert a passage from the room into a corridor to the next region.
         let next_region = region + corridor_direction;
-        spawn_corridor!(world, region, room, direction, next_region);
+        world
+          .spawn_corridor(region, next_region, room, PassageDirection(direction))
+          .unwrap();
       }
     });
     Ok(())
