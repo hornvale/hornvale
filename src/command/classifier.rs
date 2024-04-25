@@ -65,7 +65,9 @@ impl Classifier {
         Some(TokenKind::Word(Word::Noun) | TokenKind::NounPossessiveDeterminer | TokenKind::Word(Word::Adjective)) => {
           tokens[index].kind = TokenKind::Word(Word::Adjective);
         },
-        _ => {},
+        _ => {
+          return Ok(());
+        },
       }
     }
     // If the previous token was unclassified, we might've just given it a hint.

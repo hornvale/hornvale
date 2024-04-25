@@ -3,16 +3,23 @@
 //! The command module provides a way to define and execute commands in the
 //! game.
 //!
-//! The command parser reads the player's input and translates it into commands
-//! that the game can understand.
+//! This is based around a traditional top-down recursive-descent parser, with
+//! some additional features to make up for its limitations when it comes to
+//! natural language processing.
 //!
-//! Originally, I was going to use a chain-of-responsibility pattern, but I
-//! decided to use a more traditional parser instead. This will allow me to
-//! handle more complex commands and provide better error messages.
-//!
-//! The parser evaluates the tokens within the context of the world, uses them
-//! to match the player's input to a command, and binds them to entities within
-//! the world.
+//! Command parsing works as follows:
+//! - The input is scanned and tokenized by the Scanner. This will detect the
+//!   prepositions, adverbs, magic words, and other closed groups, but will
+//!   be unable to classify the open groups (nouns, verbs, etc).
+//! - The Classifier is used to classify the open groups. This will determine
+//!   the part of speech of the words based on their position in the sentence
+//!   relative to classified tokens.
+//! - The Parser is used to parse the tokens into a command. This will match
+//!   the tokens to a command, bind them to entities in the world, and return
+//!   some tuple of the command and the entities.
+//! - The command is executed. This will do a final check to ensure that the
+//!   command and its inputs are valid, and then execute the command; this will
+//!   create an Action, which represents the actual attempt to alter the world.
 //!
 //! This binding process has some implications:
 //! - The parser must have access to the world.
@@ -29,6 +36,8 @@ pub mod command;
 pub mod commands;
 /// An error type.
 pub mod error;
+/// Some macros.
+pub mod macros;
 /// The parser, a simple top-down recursive descent parser.
 pub mod parser;
 /// A registry for commands.
