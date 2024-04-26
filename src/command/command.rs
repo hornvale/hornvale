@@ -1,6 +1,7 @@
 use crate::command::prelude::*;
+use crate::database::prelude::*;
 use anyhow::Error as AnyError;
-use hecs::{Entity, World};
+use hecs::Entity;
 
 /// The "arity" of a command; how many arguments it takes.
 pub mod arity;
@@ -39,7 +40,7 @@ pub trait Command {
 
   /// Execute the command.
   fn execute(
-    world: &mut World,
+    database: &mut Database,
     actor: Entity,
     direct_object: Option<Entity>,
     indirect_object: Option<Entity>,

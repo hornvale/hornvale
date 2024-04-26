@@ -1,8 +1,9 @@
 use crate::command::error::CommandError;
 use crate::command::prelude::*;
+use crate::database::prelude::*;
 use crate::world::prelude::*;
 use derivative::Derivative;
-use hecs::{Entity, World};
+use hecs::Entity;
 
 /// Arguments that will be passed to a command.
 pub type CommandArgs = (Entity, Option<Entity>, Option<Entity>);
@@ -10,14 +11,14 @@ pub type CommandArgs = (Entity, Option<Entity>, Option<Entity>);
 /// The parser, a simple top-down recursive descent parser.
 #[derive(Derivative)]
 #[derivative(Debug)]
-pub struct Parser<'world> {
+pub struct Parser<'database> {
   /// A list of tokens to parse.
   pub tokens: Vec<Token>,
   /// The actor attempting the command.
   pub actor: Entity,
   /// The world to parse in.
   #[derivative(Debug = "ignore")]
-  pub world: &'world mut World,
+  pub database: &'database mut Database,
   /// The current index.
   pub current: usize,
   /// The verb token.
@@ -36,9 +37,9 @@ pub struct Parser<'world> {
   pub function: Option<CommandFunction>,
 }
 
-impl<'world> Parser<'world> {
+impl<'database> Parser<'database> {
   /// Create a new parser.
-  pub fn new(tokens: &[Token], actor: Entity, world: &'world mut World) -> Self {
+  pub fn new(tokens: &[Token], actor: Entity, database: &'database mut Database) -> Self {
     let tokens = tokens.to_vec();
     let current = 0;
     let verb_token = None;
@@ -51,7 +52,7 @@ impl<'world> Parser<'world> {
     Self {
       tokens,
       actor,
-      world,
+      database,
       current,
       verb_token,
       arity,
@@ -164,6 +165,7 @@ impl<'world> Parser<'world> {
   /// parser.
   pub fn bind_command(&mut self) -> Result<(), CommandError> {
     let registry = self
+      .database
       .world
       .query_mut::<&mut CommandRegistry>()
       .into_iter()
@@ -196,7 +198,7 @@ impl<'world> Parser<'world> {
 
   /// Bind the Here token.
   pub fn bind_here(&mut self) -> Result<Entity, CommandError> {
-    let room_entity = self.world.get_room_entity_containing_entity(self.actor)?;
+    let room_entity = self.database.world.get_room_entity_containing_entity(self.actor)?;
     Ok(room_entity)
   }
 
@@ -213,8 +215,9 @@ impl<'world> Parser<'world> {
       _ => return Err(CommandError::UnknownError),
     };
     let direction = PassageDirection(direction);
-    let (region, room) = self.world.get_region_and_room_containing_entity(self.actor)?;
+    let (region, room) = self.database.world.get_region_and_room_containing_entity(self.actor)?;
     let passage = self
+      .database
       .world
       .get_room_passage_entity_in_direction(&region, &room, &direction)?;
     Ok(Some(passage))

@@ -23,23 +23,24 @@ impl GetRoomNameAndDescription for World {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::database::Database;
   use crate::test_utilities::prelude::*;
 
   #[test]
   fn test_get_room_name_and_description() {
     init();
-    let mut world = World::new();
+    let mut database = Database::default();
     let region = Region { w: 0, x: 1, y: 2, z: 3 };
     let room = Room { w: 0, x: 4, y: 2, z: 1 };
-    world.spawn((Region { w: 0, x: 1, y: 2, z: 3 }, IsARegion));
-    world.spawn((
+    database.world.spawn((Region { w: 0, x: 1, y: 2, z: 3 }, IsARegion));
+    database.world.spawn((
       region,
       room,
       Name("Room".to_string()),
       Description("A room.".to_string()),
       IsARoom,
     ));
-    let (name, description) = world.get_room_name_and_description(&region, &room).unwrap();
+    let (name, description) = database.world.get_room_name_and_description(&region, &room).unwrap();
     assert_eq!(name, Name("Room".to_string()));
     assert_eq!(description, Description("A room.".to_string()));
   }

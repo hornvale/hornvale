@@ -1,5 +1,6 @@
+use crate::database::prelude::*;
 use anyhow::Error as AnyError;
-use hecs::{Entity, World};
+use hecs::Entity;
 
 /// A command execute() function type.
-pub type CommandFunction = fn(&mut World, Entity, Option<Entity>, Option<Entity>) -> Result<(), AnyError>;
+pub type CommandFunction = fn(&mut Database, Entity, Option<Entity>, Option<Entity>) -> Result<(), AnyError>;

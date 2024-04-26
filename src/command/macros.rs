@@ -14,12 +14,12 @@ macro_rules! define_command_variant {
       const INDIRECT_OBJECT_MODIFIER: Option<CommandModifier> = $iom;
 
       fn execute(
-        world: &mut World,
+        database: &mut $crate::database::prelude::Database,
         actor: Entity,
         direct_object: Option<Entity>,
         indirect_object: Option<Entity>,
       ) -> Result<(), AnyError> {
-        <$original as Command>::execute(world, actor, direct_object, indirect_object)
+        <$original as Command>::execute(database, actor, direct_object, indirect_object)
       }
     }
   };

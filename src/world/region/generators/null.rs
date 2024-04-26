@@ -1,7 +1,7 @@
+use crate::database::prelude::*;
 use crate::world::prelude::Region;
 use crate::world::prelude::RegionGenerator;
 use crate::world::prelude::WorldError;
-use hecs::World;
 use serde::{Deserialize, Serialize};
 
 /// The Null Region Generator generates absolutely nothing.
@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 pub struct NullRegionGenerator;
 
 impl RegionGenerator for NullRegionGenerator {
-  fn generate(&self, _region: Region, _world: &mut World) -> Result<(), WorldError> {
+  fn generate(&self, _region: Region, _database: &mut Database) -> Result<(), WorldError> {
     Ok(())
   }
 }
@@ -25,8 +25,8 @@ mod tests {
   #[test]
   fn test_generate() {
     init();
-    let mut world = World::new();
+    let mut database = Database::default();
     let generator = NullRegionGenerator;
-    assert!(generator.generate(Region::default(), &mut world).is_ok());
+    assert!(generator.generate(Region::default(), &mut database).is_ok());
   }
 }

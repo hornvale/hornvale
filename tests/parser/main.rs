@@ -1,5 +1,6 @@
-use hecs::{Entity, With, World};
+use hecs::{Entity, With};
 use hornvale::command::prelude::*;
+use hornvale::database::prelude::*;
 #[cfg(test)]
 use hornvale::test_utilities::prelude::*;
 use hornvale::world::prelude::*;
@@ -10,18 +11,20 @@ pub mod parser_a;
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Player;
 
-pub fn setup_world(world: &mut World) -> Entity {
+pub fn setup_world(database: &mut Database) -> Entity {
   let generator = CompassRoseRegionGenerator;
   let region = Region::default();
-  generator.generate(region, world).unwrap();
-  let player = world.spawn((Player, region, Room::default(), Name("Player".to_string())));
+  generator.generate(region, database).unwrap();
+  let player = database
+    .world
+    .spawn((Player, region, Room::default(), Name("Player".to_string())));
   player
 }
 
 pub fn test_string_parsing(
   string: &str,
   actor: Entity,
-  world: &mut World,
+  database: &mut Database,
   expected: Result<(CommandFunction, (Entity, Option<Entity>, Option<Entity>)), CommandError>,
 ) {
   init();
@@ -29,7 +32,7 @@ pub fn test_string_parsing(
   let mut tokens = scanner.scan_tokens().unwrap();
   let classifier = Classifier::new();
   classifier.classify_tokens(&mut *tokens).unwrap();
-  let mut parser = Parser::new(&mut *tokens, actor, world);
+  let mut parser = Parser::new(&mut *tokens, actor, database);
   let actual = parser.parse();
   match (expected, actual) {
     (Ok(expected), Ok(actual)) => {

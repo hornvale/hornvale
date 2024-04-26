@@ -1,7 +1,8 @@
 use crate::command::prelude::*;
+use crate::database::prelude::*;
 use crate::world::prelude::*;
 use anyhow::Error as AnyError;
-use hecs::{Entity, World};
+use hecs::Entity;
 
 /// Look at here.
 #[derive(Clone, Copy, Debug)]
@@ -20,20 +21,20 @@ impl Command for LookHereCommand {
   const INDIRECT_OBJECT_MODIFIER: Option<CommandModifier> = None;
 
   fn execute(
-    world: &mut World,
+    database: &mut Database,
     actor: Entity,
     _direct_object: Option<Entity>,
     _indirect_object: Option<Entity>,
   ) -> Result<(), AnyError> {
-    let actor_info = world.get_region_and_room_containing_entity(actor);
+    let actor_info = database.world.get_region_and_room_containing_entity(actor);
     if actor_info.is_err() {
       anyhow::bail!("The actor is not in a region or room.");
     }
     let (region, room) = actor_info.unwrap();
-    let (room_name, room_description) = world.get_room_name_and_description(&region, &room).unwrap();
+    let (room_name, room_description) = database.world.get_room_name_and_description(&region, &room).unwrap();
     println!("{}", room_name.0);
     println!("{}", room_description.0);
-    println!("{}", world.describe_room_passages(actor)?);
+    println!("{}", database.world.describe_room_passages(actor)?);
     Ok(())
   }
 }

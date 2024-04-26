@@ -1,6 +1,6 @@
+use crate::database::prelude::*;
 use crate::world::prelude::Region;
 use crate::world::prelude::WorldError;
-use hecs::World;
 
 /// The Region Generator Manager manages the generation of regions.
 pub mod manager;
@@ -10,5 +10,5 @@ pub mod registry;
 /// The Region Generator trait defines the interface for region generators.
 pub trait RegionGenerator {
   /// Generate a region within the world.
-  fn generate(&self, region: Region, world: &mut World) -> Result<(), WorldError>;
+  fn generate(&self, region: Region, database: &mut Database) -> Result<(), WorldError>;
 }

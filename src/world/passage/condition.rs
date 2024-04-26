@@ -1,4 +1,4 @@
-use hecs::World;
+use crate::database::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// A condition that must be met to traverse a passage.
@@ -12,7 +12,7 @@ pub enum PassageCondition {
 
 impl PassageCondition {
   /// Check if the condition is met.
-  pub fn is_met(&self, _world: &World) -> bool {
+  pub fn is_met(&self, _database: &Database) -> bool {
     use PassageCondition::*;
     match self {
       Always => true,
@@ -29,8 +29,8 @@ mod tests {
   #[test]
   fn test_is_met() {
     init();
-    let world = World::new();
-    assert!(PassageCondition::Always.is_met(&world));
-    assert!(!PassageCondition::Never.is_met(&world));
+    let database = Database::new();
+    assert!(PassageCondition::Always.is_met(&database));
+    assert!(!PassageCondition::Never.is_met(&database));
   }
 }

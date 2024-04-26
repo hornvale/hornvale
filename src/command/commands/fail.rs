@@ -1,6 +1,7 @@
 use crate::command::prelude::*;
+use crate::database::prelude::*;
 use anyhow::Error as AnyError;
-use hecs::{Entity, World};
+use hecs::Entity;
 
 /// A command that always fails.
 #[derive(Clone, Copy, Debug)]
@@ -16,7 +17,7 @@ impl Command for FailCommand {
   const INDIRECT_OBJECT_MODIFIER: Option<CommandModifier> = None;
 
   fn execute(
-    _world: &mut World,
+    _database: &mut Database,
     _actor: Entity,
     _direct_object: Option<Entity>,
     _indirect_object: Option<Entity>,
@@ -33,9 +34,9 @@ mod tests {
   #[test]
   fn test_execute() {
     init();
-    let mut world = World::new();
-    let entity = world.spawn(());
-    let result = FailCommand::execute(&mut world, entity, None, None);
+    let mut database = Database::default();
+    let entity = database.world.spawn(());
+    let result = FailCommand::execute(&mut database, entity, None, None);
     assert!(result.is_err());
   }
 }

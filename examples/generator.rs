@@ -1,6 +1,6 @@
 //! Test of the world.
-use hecs::World;
 use hornvale::command::prelude::*;
+use hornvale::database::prelude::*;
 use hornvale::input::prelude::*;
 use hornvale::world::prelude::*;
 use std::io::{self, Write};
@@ -12,20 +12,20 @@ pub struct Player;
 /// Generate a world.
 #[allow(unreachable_code)]
 pub fn main() {
-  let mut world = World::new();
+  let mut database = Database::default();
   {
     let generator = CompassRoseRegionGenerator;
-    generator.generate(Region::default(), &mut world).unwrap();
+    generator.generate(Region::default(), &mut database).unwrap();
   }
   let mut command_registry = CommandRegistry::default();
   command_registry.register::<LookDirectionCommand>();
   command_registry.register::<LookHereCommand>();
   command_registry.register::<GoDirectionCommand>();
   command_registry.register::<QuitCommand>();
-  world.spawn((command_registry,));
-  let player = world.spawn((Region::default(), Room::default(), Player));
+  database.world.spawn((command_registry,));
+  let player = database.world.spawn((Region::default(), Room::default(), Player));
   let mut input_source = StdinSource::default();
-  LookHereCommand::execute(&mut world, player, None, None).unwrap();
+  LookHereCommand::execute(&mut database, player, None, None).unwrap();
   loop {
     print!("> ");
     io::stdout().flush().unwrap();
@@ -40,18 +40,18 @@ pub fn main() {
       }
       continue;
     }
-    let mut parser = Parser::new(&mut *tokens, player, &mut world);
+    let mut parser = Parser::new(&mut *tokens, player, &mut database);
     match parser.parse() {
       Ok((command_function, (actor, direct_object, indirect_object))) => {
-        command_function(&mut world, actor, direct_object, indirect_object).unwrap();
+        command_function(&mut database, actor, direct_object, indirect_object).unwrap();
       },
       Err(error) => println!("I don't understand {:#?}: {:#?}", input, error),
     }
-    if world.is_quit_flag_set() {
+    if database.world.is_quit_flag_set() {
       println!("Goodbye!");
       break;
     }
     println!();
   }
-  world.clear();
+  database.world.clear();
 }

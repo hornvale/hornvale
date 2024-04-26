@@ -17,14 +17,15 @@ impl SetQuitFlag for World {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::database::Database;
   use crate::test_utilities::prelude::*;
 
   #[test]
   fn test_set_quit_flag() {
     init();
-    let mut world = World::new();
-    assert!(!world.is_quit_flag_set());
-    world.set_quit_flag();
-    assert!(world.is_quit_flag_set());
+    let mut database = Database::default();
+    assert!(!database.world.is_quit_flag_set());
+    database.world.set_quit_flag();
+    assert!(database.world.is_quit_flag_set());
   }
 }

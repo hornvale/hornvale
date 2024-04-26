@@ -20,18 +20,18 @@ impl GetRoomEntityContainingEntity for World {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::database::Database;
   use crate::test_utilities::prelude::*;
-
   #[test]
   fn test_get_room_entity_containing_entity() {
     init();
-    let mut world = World::new();
+    let mut database = Database::default();
     let region = Region { w: 0, x: 1, y: 2, z: 3 };
     let room = Room { w: 0, x: 4, y: 2, z: 1 };
-    world.spawn((Region { w: 0, x: 1, y: 2, z: 3 }, IsARegion));
-    let room_entity = world.spawn((region, Room { w: 0, x: 4, y: 2, z: 1 }, IsARoom));
-    let entity = world.spawn((region, room));
-    let room_entity_containing_entity = world.get_room_entity_containing_entity(entity).unwrap();
+    database.world.spawn((Region { w: 0, x: 1, y: 2, z: 3 }, IsARegion));
+    let room_entity = database.world.spawn((region, Room { w: 0, x: 4, y: 2, z: 1 }, IsARoom));
+    let entity = database.world.spawn((region, room));
+    let room_entity_containing_entity = database.world.get_room_entity_containing_entity(entity).unwrap();
     assert_eq!(room_entity_containing_entity, room_entity);
   }
 }

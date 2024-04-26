@@ -1,8 +1,8 @@
 use super::registry::RegionGeneratorRegistry;
 use super::RegionGenerator;
+use crate::database::prelude::*;
 use crate::world::prelude::Region;
 use crate::world::prelude::WorldError;
-use hecs::World;
 
 /// The Region Generator Manager manages the generation of regions.
 #[derive(Default, Debug)]
@@ -23,8 +23,8 @@ impl RegionGeneratorManager {
   }
 
   /// Generate a region within the world.
-  pub fn generate(&self, name: &str, region: Region, world: &mut World) -> Result<(), WorldError> {
-    self.registry.generate(name, region, world)
+  pub fn generate(&self, name: &str, region: Region, database: &mut Database) -> Result<(), WorldError> {
+    self.registry.generate(name, region, database)
   }
 }
 
@@ -46,10 +46,12 @@ mod tests {
   #[test]
   fn test_generate() {
     init();
-    let mut world = World::new();
+    let mut database = Database::default();
     let mut manager = RegionGeneratorManager::new();
     let generator = Box::new(CompassRoseRegionGenerator);
     manager.register("compass_rose", generator);
-    assert!(manager.generate("compass_rose", Region::default(), &mut world).is_ok());
+    assert!(manager
+      .generate("compass_rose", Region::default(), &mut database)
+      .is_ok());
   }
 }

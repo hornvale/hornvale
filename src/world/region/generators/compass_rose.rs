@@ -1,5 +1,5 @@
+use crate::database::prelude::*;
 use crate::world::prelude::*;
-use hecs::World;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 
@@ -11,13 +11,16 @@ use strum::IntoEnumIterator;
 pub struct CompassRoseRegionGenerator;
 
 impl RegionGenerator for CompassRoseRegionGenerator {
-  fn generate(&self, region: Region, world: &mut World) -> Result<(), WorldError> {
+  fn generate(&self, region: Region, database: &mut Database) -> Result<(), WorldError> {
     let center_room = Room::default();
-    world.spawn_room(region, center_room, "The Center Room", "This is the center room.")?;
+    database
+      .world
+      .spawn_room(region, center_room, "The Center Room", "This is the center room.")?;
     Direction::iter().for_each(|direction| {
       let passage_direction = PassageDirection(direction);
       let room = center_room + passage_direction;
-      world
+      database
+        .world
         .spawn_room(
           region,
           room,
@@ -25,14 +28,16 @@ impl RegionGenerator for CompassRoseRegionGenerator {
           &format!("This is the {} room.", direction.to_string().to_lowercase()),
         )
         .unwrap();
-      world
+      database
+        .world
         .spawn_passage(region, center_room, room, PassageDirection(direction))
         .unwrap();
       if direction.is_cardinal() || direction.is_vertical() {
         let corridor_direction = CorridorDirection(direction);
         // Insert a passage from the room into a corridor to the next region.
         let next_region = region + corridor_direction;
-        world
+        database
+          .world
           .spawn_corridor(region, next_region, room, PassageDirection(direction))
           .unwrap();
       }
@@ -49,12 +54,13 @@ mod tests {
   #[test]
   fn test_generate() {
     init();
-    let mut world = World::new();
+    let mut database = Database::default();
     let generator = CompassRoseRegionGenerator;
-    assert!(generator.generate(Region::default(), &mut world).is_ok());
+    assert!(generator.generate(Region::default(), &mut database).is_ok());
     // List passages from the center room.
     let center_room = Room::default();
-    let passages = world
+    let passages = database
+      .world
       .query::<(&Room, &PassageDirection, &PassageKind)>()
       .iter()
       .filter_map(|(_, (&room, &direction, &ref kind))| {

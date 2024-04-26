@@ -1,7 +1,8 @@
 use crate::command::prelude::*;
+use crate::database::prelude::*;
 use crate::world::prelude::*;
 use anyhow::Error as AnyError;
-use hecs::{Entity, World};
+use hecs::Entity;
 
 /// A command that sets the quit flag on the world.
 #[derive(Clone, Copy, Debug)]
@@ -18,12 +19,12 @@ impl Command for QuitCommand {
 
   /// Do nothing.
   fn execute(
-    world: &mut World,
+    database: &mut Database,
     _actor: Entity,
     _direct_object: Option<Entity>,
     _indirect_object: Option<Entity>,
   ) -> Result<(), AnyError> {
-    world.spawn((QuitFlag,));
+    database.world.spawn((QuitFlag,));
     Ok(())
   }
 }
@@ -36,10 +37,16 @@ mod tests {
   #[test]
   fn test_execute() {
     init();
-    let mut world = World::new();
-    let actor = world.spawn(());
-    let result = QuitCommand::execute(&mut world, actor, None, None);
-    let quit_flag = world.query_mut::<&mut QuitFlag>().into_iter().next().unwrap().1;
+    let mut database = Database::new();
+    let actor = database.world.spawn(());
+    let result = QuitCommand::execute(&mut database, actor, None, None);
+    let quit_flag = database
+      .world
+      .query_mut::<&mut QuitFlag>()
+      .into_iter()
+      .next()
+      .unwrap()
+      .1;
     assert_eq!(*quit_flag, QuitFlag);
     assert!(result.is_ok());
   }

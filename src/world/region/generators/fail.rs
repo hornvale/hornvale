@@ -1,7 +1,7 @@
+use crate::database::prelude::*;
 use crate::world::prelude::Region;
 use crate::world::prelude::RegionGenerator;
 use crate::world::prelude::WorldError;
-use hecs::World;
 use serde::{Deserialize, Serialize};
 
 /// The Fail Region Generator fails to generate a region.
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 pub struct FailRegionGenerator;
 
 impl RegionGenerator for FailRegionGenerator {
-  fn generate(&self, _region: Region, _world: &mut World) -> Result<(), WorldError> {
+  fn generate(&self, _region: Region, _database: &mut Database) -> Result<(), WorldError> {
     Err(WorldError::UnknownError)
   }
 }
@@ -24,8 +24,8 @@ mod tests {
   #[test]
   fn test_generate() {
     init();
-    let mut world = World::new();
+    let mut database = Database::default();
     let generator = FailRegionGenerator;
-    assert!(generator.generate(Region::default(), &mut world).is_err());
+    assert!(generator.generate(Region::default(), &mut database).is_err());
   }
 }

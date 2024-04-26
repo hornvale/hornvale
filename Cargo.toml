@@ -72,6 +72,7 @@ anyhow.workspace = true
 assert_approx_eq.workspace = true
 cpu-time.workspace = true
 derivative.workspace = true
+derive_builder.workspace = true
 derive_more.workspace = true
 getrandom.workspace = true
 hecs.workspace = true

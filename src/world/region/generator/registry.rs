@@ -1,7 +1,7 @@
 use super::RegionGenerator;
+use crate::database::prelude::*;
 use crate::world::prelude::Region;
 use crate::world::prelude::WorldError;
-use hecs::World;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
@@ -24,9 +24,9 @@ impl RegionGeneratorRegistry {
   }
 
   /// Generate a region within the world.
-  pub fn generate(&self, name: &str, region: Region, world: &mut World) -> Result<(), WorldError> {
+  pub fn generate(&self, name: &str, region: Region, database: &mut Database) -> Result<(), WorldError> {
     if let Some(generator) = self.generators.get(name) {
-      generator.generate(region, world)
+      generator.generate(region, database)
     } else {
       Err(WorldError::UnknownRegionGenerator(name.to_string()))
     }

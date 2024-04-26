@@ -1,7 +1,8 @@
+use crate::database::prelude::*;
 use crate::input::prelude::InputError;
 use crate::input::prelude::InputQueue;
 use crate::input::prelude::InputSource;
-use hecs::{Entity, World};
+use hecs::Entity;
 
 /// An object that manages the process of reading and storing input.
 #[derive(Debug)]
@@ -25,10 +26,10 @@ where
   }
 
   /// Read input from the source and enqueue it.
-  pub fn read_input(&mut self, world: &mut World) -> Result<(), InputError> {
+  pub fn read_input(&mut self, database: &mut Database) -> Result<(), InputError> {
     if let Ok(input) = self.source.fetch_input() {
       let inputs = self.split_input(&input)?;
-      self.enqueue_inputs(world, inputs)?;
+      self.enqueue_inputs(database, inputs)?;
     }
     Ok(())
   }
@@ -64,9 +65,9 @@ where
   }
 
   /// Enqueue inputs for parsing.
-  pub fn enqueue_inputs(&mut self, world: &mut World, inputs: Vec<String>) -> Result<(), InputError> {
-    let entity = self.ensure_entity(world)?;
-    let queue = world.query_one_mut::<&mut InputQueue>(entity).unwrap();
+  pub fn enqueue_inputs(&mut self, database: &mut Database, inputs: Vec<String>) -> Result<(), InputError> {
+    let entity = self.ensure_entity(database)?;
+    let queue = database.world.query_one_mut::<&mut InputQueue>(entity).unwrap();
     for input in inputs {
       queue.enqueue(input);
     }
@@ -74,9 +75,9 @@ where
   }
 
   /// Ensure that the input queue entity exists.
-  pub fn ensure_entity(&mut self, world: &mut World) -> Result<Entity, InputError> {
+  pub fn ensure_entity(&mut self, database: &mut Database) -> Result<Entity, InputError> {
     if self.entity.is_none() {
-      let entity = world.spawn((InputQueue::new(),));
+      let entity = database.world.spawn((InputQueue::new(),));
       self.entity = Some(entity);
     }
     Ok(self.entity.unwrap())
@@ -103,12 +104,12 @@ mod tests {
   #[test]
   fn test_enqueue_inputs() {
     init();
-    let mut world = World::new();
+    let mut database = Database::default();
     let mut reader = InputReader::new(StringSource::new(vec![]));
     let inputs = vec!["test".to_string(), "test2".to_string()];
-    reader.enqueue_inputs(&mut world, inputs).unwrap();
+    reader.enqueue_inputs(&mut database, inputs).unwrap();
     let entity = reader.entity.unwrap();
-    let queue = world.query_one_mut::<&mut InputQueue>(entity).unwrap();
+    let queue = database.world.query_one_mut::<&mut InputQueue>(entity).unwrap();
     assert_eq!(queue.dequeue().unwrap(), "test".to_string());
     assert_eq!(queue.dequeue().unwrap(), "test2".to_string());
     assert_eq!(queue.dequeue(), None);
@@ -117,24 +118,24 @@ mod tests {
   #[test]
   fn test_ensure_entity() {
     init();
-    let mut world = World::new();
+    let mut database = Database::default();
     let mut reader = InputReader::new(StringSource::new(vec![]));
-    reader.ensure_entity(&mut world).unwrap();
+    reader.ensure_entity(&mut database).unwrap();
     assert!(reader.entity.is_some());
   }
 
   #[test]
   fn test_read_input() {
     init();
-    let mut world = World::new();
+    let mut database = Database::default();
     let mut reader = InputReader::new(StringSource::new(vec![
       "test".to_string(),
       "test2".to_string(),
       "test3;test4 then test5 .test6".to_string(),
     ]));
-    reader.read_input(&mut world).unwrap();
+    reader.read_input(&mut database).unwrap();
     let entity = reader.entity.unwrap();
-    let queue = world.query_one_mut::<&mut InputQueue>(entity).unwrap();
+    let queue = database.world.query_one_mut::<&mut InputQueue>(entity).unwrap();
     assert_eq!(queue.dequeue().unwrap(), "test".to_string());
     assert_eq!(queue.dequeue(), None);
   }
@@ -142,26 +143,26 @@ mod tests {
   #[test]
   fn test_read_input_no_input() {
     init();
-    let mut world = World::new();
+    let mut database = Database::default();
     let mut reader = InputReader::new(StringSource::new(vec![]));
-    reader.read_input(&mut world).unwrap();
+    reader.read_input(&mut database).unwrap();
     assert!(reader.entity.is_none());
   }
 
   #[test]
   fn test_read_input_all() {
     init();
-    let mut world = World::new();
+    let mut database = Database::default();
     let mut reader = InputReader::new(StringSource::new(vec![
       "test".to_string(),
       "test2".to_string(),
       "test3;test4 then test5 .test6".to_string(),
     ]));
-    reader.read_input(&mut world).unwrap();
-    reader.read_input(&mut world).unwrap();
-    reader.read_input(&mut world).unwrap();
+    reader.read_input(&mut database).unwrap();
+    reader.read_input(&mut database).unwrap();
+    reader.read_input(&mut database).unwrap();
     let entity = reader.entity.unwrap();
-    let queue = world.query_one_mut::<&mut InputQueue>(entity).unwrap();
+    let queue = database.world.query_one_mut::<&mut InputQueue>(entity).unwrap();
     assert_eq!(queue.dequeue().unwrap(), "test".to_string());
     assert_eq!(queue.dequeue().unwrap(), "test2".to_string());
     assert_eq!(queue.dequeue().unwrap(), "test3".to_string());

@@ -1,6 +1,7 @@
 use crate::command::prelude::*;
+use crate::database::prelude::*;
 use anyhow::Error as AnyError;
-use hecs::{Entity, World};
+use hecs::Entity;
 
 /// A command that does nothing at all.
 #[derive(Clone, Copy, Debug)]
@@ -17,7 +18,7 @@ impl Command for NoOpCommand {
 
   /// Do nothing.
   fn execute(
-    _world: &mut World,
+    _database: &mut Database,
     _actor: Entity,
     _direct_object: Option<Entity>,
     _indirect_object: Option<Entity>,
@@ -34,9 +35,9 @@ mod tests {
   #[test]
   fn test_execute() {
     init();
-    let mut world = World::new();
-    let entity = world.spawn(());
-    let result = NoOpCommand::execute(&mut world, entity, None, None);
+    let mut database = Database::default();
+    let entity = database.world.spawn(());
+    let result = NoOpCommand::execute(&mut database, entity, None, None);
     assert!(result.is_ok());
   }
 }

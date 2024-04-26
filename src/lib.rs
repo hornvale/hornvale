@@ -4,8 +4,12 @@
 //! and intensely opinionated. Nevertheless, I'm making it public in case
 //! someone finds it useful or interesting.
 
+/// General actions.
+pub mod action;
 /// Commands and command parsing.
 pub mod command;
+/// The database.
+pub mod database;
 /// Input.
 pub mod input;
 /// Output.
