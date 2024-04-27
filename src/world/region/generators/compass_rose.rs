@@ -1,5 +1,6 @@
 use crate::database::prelude::*;
 use crate::world::prelude::*;
+use crate::world::region::Region;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 

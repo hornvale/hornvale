@@ -37,7 +37,7 @@ mod tests {
   #[test]
   fn test_execute() {
     init();
-    let mut database = Database::new();
+    let mut database = Database::default();
     let actor = database.world.spawn(());
     let result = QuitCommand::execute(&mut database, actor, None, None);
     let quit_flag = database

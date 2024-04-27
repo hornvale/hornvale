@@ -4,6 +4,7 @@ use hornvale::database::prelude::*;
 #[cfg(test)]
 use hornvale::test_utilities::prelude::*;
 use hornvale::world::prelude::*;
+use hornvale::world::region::Region;
 
 pub mod parser_a;
 

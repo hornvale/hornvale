@@ -8,10 +8,11 @@
 
 use derivative::Derivative;
 use hecs::World; // Temporary.
+use std::collections::HashMap;
 
 /// Region entities.
-pub mod region_entity;
-use region_entity::RegionEntity;
+pub mod region;
+use region::{entity::RegionEntity, identifier::RegionIdentifier, Region};
 /// Traits and trait implementations.
 pub mod traits;
 
@@ -22,18 +23,24 @@ pub struct Database {
   /// The world.
   #[derivative(Debug = "ignore")]
   pub world: World,
-  /// Region IDs.
-  pub region_entities: Vec<RegionEntity>,
-}
-
-impl Database {
-  /// Create a new database.
-  pub fn new() -> Self {
-    Self::default()
-  }
+  /// Next region ID.
+  pub next_region_id: u32,
+  /// RegionEntity -> RegionIdentifier map.
+  pub region_identifiers: HashMap<RegionEntity, RegionIdentifier>,
+  /// RegionIdentifier -> RegionEntity map.
+  pub region_entities: HashMap<RegionIdentifier, RegionEntity>,
+  /// RegionEntity -> Region map.
+  pub regions: HashMap<RegionEntity, Region>,
 }
 
 /// The prelude.
 pub mod prelude {
-  pub use super::Database;
+  pub use super::region::{
+    entity::RegionEntity, identifier::RegionIdentifier, name::RegionName, point::RegionPoint, spawner::RegionSpawner,
+    Region, RegionBuilder,
+  };
+  pub use super::{
+    traits::{build::Build, database_type::DatabaseType, insert::Insert},
+    Database,
+  };
 }

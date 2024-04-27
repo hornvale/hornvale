@@ -10,6 +10,8 @@ pub mod action;
 pub mod command;
 /// The database.
 pub mod database;
+/// A simple ECS implementation.
+pub mod ecs;
 /// Input.
 pub mod input;
 /// Output.

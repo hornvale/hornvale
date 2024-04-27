@@ -1,6 +1,7 @@
 use crate::command::prelude::*;
 use crate::database::prelude::*;
 use crate::world::prelude::*;
+use crate::world::region::Region;
 use anyhow::{ensure, Error as AnyError};
 use hecs::Entity;
 

@@ -3,6 +3,7 @@ use hornvale::command::prelude::*;
 use hornvale::database::prelude::*;
 use hornvale::input::prelude::*;
 use hornvale::world::prelude::*;
+use hornvale::world::region::Region;
 use std::io::{self, Write};
 
 /// A player.

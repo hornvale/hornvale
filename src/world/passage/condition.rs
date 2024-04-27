@@ -29,7 +29,7 @@ mod tests {
   #[test]
   fn test_is_met() {
     init();
-    let database = Database::new();
+    let database = Database::default();
     assert!(PassageCondition::Always.is_met(&database));
     assert!(!PassageCondition::Never.is_met(&database));
   }
