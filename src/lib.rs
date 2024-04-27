@@ -10,6 +10,8 @@ pub mod action;
 pub mod command;
 /// The database.
 pub mod database;
+/// The Entity-Component-System (ECS) implementation.
+pub mod ecs;
 /// Input.
 pub mod input;
 /// Output.
@@ -18,6 +20,8 @@ pub mod output;
 pub mod scripting;
 /// Test utilities.
 pub mod test_utilities;
+/// Type map.
+pub mod type_map;
 /// World model.
 pub mod world;
 
@@ -25,6 +29,7 @@ pub mod world;
 pub mod prelude {
 
   pub use super::test_utilities::*;
+  pub use super::type_map::TypeMap;
 
   /// Hello, world!
   pub fn hello() {

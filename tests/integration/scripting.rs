@@ -90,7 +90,7 @@ fn parse_comments(path: &PathBuf) -> Expected {
 
 #[rstest]
 fn run_file_test(
-  #[files("tests/scripting/integration/**/*.lox")]
+  #[files("tests/integration/scripting/integration/**/*.lox")]
   #[exclude("limit|unexpected_character")]
   path: PathBuf,
 ) {
