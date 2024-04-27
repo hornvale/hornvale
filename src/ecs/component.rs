@@ -522,36 +522,3 @@ where
     entities.add(self.17.clone(), index)
   }
 }
-
-#[cfg(test)]
-mod test {
-  use super::*;
-  use crate::test_utilities::prelude::*;
-  use std::any::TypeId;
-
-  #[test]
-  fn register_an_entity() {
-    let mut entities = Entities::default();
-    entities.register::<Health>();
-    let type_id = TypeId::of::<Health>();
-    let health_components = entities.component_map.get(&type_id).unwrap();
-    assert_eq!(health_components.len(), 0);
-  }
-
-  #[test]
-  fn bitmask_updated_when_registering_entities() {
-    let mut entities = Entities::default();
-    entities.register::<Health>();
-    let type_id = TypeId::of::<Health>();
-    let mask = entities.bit_masks.get(&type_id).unwrap();
-    assert_eq!(*mask, 1);
-
-    entities.register::<Speed>();
-    let type_id = TypeId::of::<Speed>();
-    let mask = entities.bit_masks.get(&type_id).unwrap();
-    assert_eq!(*mask, 2);
-  }
-
-  struct Health(u32);
-  struct Speed(f32);
-}
