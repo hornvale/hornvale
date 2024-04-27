@@ -91,6 +91,7 @@ tempfile.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+cgmath = "0.18.0"
 criterion.workspace = true
 rstest.workspace = true
 
