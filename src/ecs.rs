@@ -1,4 +1,15 @@
 //! # Entity-Component-System (ECS)
+//!
+//! This module contains the Entity-Component-System (ECS) implementation for
+//! the _Hornvale_ project.
+//!
+//! This implementation owes a lot to Brooks Patton's series of videos [1] and
+//! to Catherine West's delightful RustConf talk [2] and accompanying blog post
+//! [3].
+//!
+//! [1]: https://www.youtube.com/playlist?list=PLrmY5pVcnuE_SQSzGPWUJrf9Yo-YNeBYs
+//! [2]: https://www.youtube.com/watch?v=aKLntZcp27M
+//! [3]: https://kyren.github.io/2018/09/14/rustconf-talk.html
 
 use anyhow::Error as AnyError;
 use std::any::Any;
