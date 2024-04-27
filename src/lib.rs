@@ -1,8 +1,8 @@
-//! A library for roguelikes, MUDs, and other text adventures.
+//! # Hornvale
 //!
-//! I don't really anticipate anyone using this library, as it's very specific
-//! and intensely opinionated. Nevertheless, I'm making it public in case
-//! someone finds it useful or interesting.
+//! This is the main library for the _Hornvale_ project. It contains the core
+//! functionality for the game, including the Entity-Component-System (ECS)
+//! implementation, the database, the world model, and the input/output system.
 
 /// General actions.
 pub mod action;

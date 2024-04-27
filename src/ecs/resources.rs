@@ -8,7 +8,8 @@ pub struct Resources(pub TypeMap);
 
 impl Resources {
   /// Insert a resource into the ECS.
-  pub fn insert(&mut self, data: impl Any) {
+  pub fn insert<T: Any>(&mut self, data: T) {
+    assert!(!self.0.has::<T>());
     self.0.insert(data);
   }
 
