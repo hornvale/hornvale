@@ -14,10 +14,7 @@ impl Benchmark {
 
     ecs.register_component::<A>();
     ecs.register_component::<B>();
-    let entities = ecs.create_entities(10000_usize, A(0.0));
-    for entity in &entities {
-      ecs.add_component(A(0.0), (*entity).try_into().unwrap()).unwrap();
-    }
+    let entities = ecs.create_entities(10000_usize, (A(0.0),));
     assert_eq!(entities.len(), 10000);
 
     Self(ecs, entities)
@@ -25,11 +22,11 @@ impl Benchmark {
 
   pub fn run(&mut self) {
     for entity in &self.1 {
-      self.0.add_component(B(0.0), (*entity).try_into().unwrap()).unwrap();
+      self.0.add_component(B(0.0), *entity as usize).unwrap();
     }
 
     for entity in &self.1 {
-      self.0.remove_component::<B>((*entity).try_into().unwrap()).unwrap();
+      self.0.remove_component::<B>(*entity as usize).unwrap();
     }
   }
 }

@@ -3,12 +3,12 @@ use hornvale::ecs::ECS;
 use std::cell::RefMut;
 
 macro_rules! create_entities {
-  ($world:ident; $( $variants:ident ),*) => {
+  ($ecs:ident; $( $variants:ident ),*) => {
     $(
         #[derive(Clone, Copy)]
         struct $variants(f32);
-        $world.register_component::<$variants>();
-        $world.create_entities(20, $variants(0.0));
+        $ecs.register_component::<$variants>();
+        $ecs.create_entities(20, ($variants(0.0),));
     )*
   };
 }
@@ -21,9 +21,8 @@ pub struct Benchmark(ECS);
 impl Benchmark {
   pub fn new() -> Self {
     let mut ecs = ECS::default();
-
+    ecs.register_component::<Data>();
     create_entities!(ecs; A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
-
     Self(ecs)
   }
 

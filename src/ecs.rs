@@ -16,6 +16,7 @@ use std::any::Any;
 
 /// Components.
 pub mod component;
+use component::AddComponentTuple;
 /// A component map.
 pub mod component_map;
 /// Entities and components.
@@ -77,8 +78,8 @@ impl ECS {
   }
 
   /// Create a batch of entities.
-  pub fn create_entities<T: Any + Clone>(&mut self, count: usize, data: T) -> Vec<u32> {
-    self.entities.create_batch(count, data)
+  pub fn create_entities<T: AddComponentTuple + Clone>(&mut self, count: usize, components: T) -> Vec<u32> {
+    self.entities.create_batch(count, components)
   }
 
   /// Delete an entity.

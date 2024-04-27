@@ -18,5 +18,5 @@ fn frag_iter(c: &mut Criterion) {
   c.bench_function("frag_iter", |b| b.iter(|| ecs::frag_iter::Benchmark::new().run()));
 }
 
-criterion_group!(benchmarks, add_remove);
+criterion_group!(benchmarks, add_remove, frag_iter);
 criterion_main!(benchmarks);

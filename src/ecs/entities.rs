@@ -1,4 +1,4 @@
-use super::{component_map::ComponentMap, query::Query};
+use super::{component::AddComponentTuple, component_map::ComponentMap, query::Query};
 use anyhow::Error as AnyError;
 use std::any::{Any, TypeId};
 use std::cell::RefCell;
@@ -24,7 +24,7 @@ impl Entities {
     assert!(!self.component_map.contains_key(&TypeId::of::<T>()));
     assert!(self.bit_masks.len() < 32, "The maximum number of components is 32.");
     let type_id = TypeId::of::<T>();
-    self.component_map.insert(type_id, Vec::new());
+    self.component_map.entry(type_id).or_default();
     self.bit_masks.insert(type_id, 1 << self.bit_masks.len());
   }
 
@@ -35,8 +35,8 @@ impl Entities {
     } else {
       self
         .component_map
-        .iter_mut()
-        .for_each(|(_key, components)| components.push(None));
+        .values_mut()
+        .for_each(|components| components.push(None));
       self.map.push(0);
       self.inserting_into_index = self.map.len() - 1;
     }
@@ -44,12 +44,9 @@ impl Entities {
   }
 
   /// Create a batch of entities.
-  pub fn create_batch<T: Any + Clone>(&mut self, count: usize, data: T) -> Vec<u32> {
+  pub fn create_batch<T: AddComponentTuple + Clone>(&mut self, count: usize, components: T) -> Vec<u32> {
     for _ in 0..count {
-      self
-        .create()
-        .with(data.clone())
-        .expect("Failed to add component to entity.");
+      self.create().with_components(components.clone()).unwrap();
     }
     self.map.clone()
   }
@@ -68,6 +65,11 @@ impl Entities {
       },
       None => anyhow::bail!("The component is not registered."),
     }
+  }
+
+  /// With components.
+  pub fn with_components<T: AddComponentTuple>(&mut self, components: T) -> Result<(), AnyError> {
+    components.add_to_entity(self, self.inserting_into_index)
   }
 
   /// Get a bit mask for a component type.
@@ -105,6 +107,9 @@ impl Entities {
       .ok_or_else(|| anyhow::anyhow!("The component is not registered."))?;
     self.map[index] |= *mask;
     let components = self.component_map.get_mut(&type_id).unwrap();
+    if index >= components.len() {
+      components.resize_with(index + 1, || None);
+    }
     components[index] = Some(Rc::new(RefCell::new(data)));
     Ok(())
   }
