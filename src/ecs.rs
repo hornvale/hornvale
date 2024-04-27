@@ -76,6 +76,11 @@ impl ECS {
     self.entities.create()
   }
 
+  /// Create a batch of entities.
+  pub fn create_entities<T: Any + Clone>(&mut self, count: usize, data: T) -> Vec<u32> {
+    self.entities.create_batch(count, data)
+  }
+
   /// Delete an entity.
   pub fn delete_entity(&mut self, index: usize) -> Result<(), AnyError> {
     self.entities.delete(index)

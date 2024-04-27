@@ -23,8 +23,12 @@ path = "src/main.rs"
 test = false         # No unit tests for this binary
 doctest = false      # No doctests for this binary
 
+# [[bench]]
+# name = "scanner"
+# harness = false
+
 [[bench]]
-name = "scanner"
+name = "ecs"
 harness = false
 
 [lints]

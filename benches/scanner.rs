@@ -62,5 +62,5 @@ fn scanner(criterion: &mut Criterion) {
   group.finish();
 }
 
-criterion_group!(benches, scanner);
-criterion_main!(benches);
+criterion_group!(benchmarks, scanner);
+criterion_main!(benchmarks);

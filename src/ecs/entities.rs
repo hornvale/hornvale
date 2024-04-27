@@ -37,11 +37,21 @@ impl Entities {
         .component_map
         .iter_mut()
         .for_each(|(_key, components)| components.push(None));
-
       self.map.push(0);
       self.inserting_into_index = self.map.len() - 1;
     }
     self
+  }
+
+  /// Create a batch of entities.
+  pub fn create_batch<T: Any + Clone>(&mut self, count: usize, data: T) -> Vec<u32> {
+    for _ in 0..count {
+      self
+        .create()
+        .with(data.clone())
+        .expect("Failed to add component to entity.");
+    }
+    self.map.clone()
   }
 
   /// Add a component to an entity.
