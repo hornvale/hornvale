@@ -1,4 +1,5 @@
-use crate::ecs::prelude::*;
+use super::allocator_entry::AllocatorEntry;
+use super::generational_index::GenerationalIndex;
 
 /// An allocator for generational indices.
 ///
@@ -19,8 +20,8 @@ impl GenerationalIndexAllocator {
     if let Some(index) = self.free.pop() {
       // If we have a free index, mark it as live and increment the generation.
       let entry = &mut self.entries[index];
-      assert!(!entry.is_live);
-      entry.is_live = true;
+      assert!(!entry.is_alive);
+      entry.is_alive = true;
       entry.generation = entry.generation.wrapping_add(1);
       GenerationalIndex::new(entry.generation, index)
     } else {
@@ -40,7 +41,7 @@ impl GenerationalIndexAllocator {
       .get(index.index)
       .map_or(false, |entry| entry.generation == index.generation)
     {
-      self.entries[index.index].is_live = false;
+      self.entries[index.index].is_alive = false;
       self.free.push(index.index);
       true
     } else {
@@ -53,6 +54,6 @@ impl GenerationalIndexAllocator {
     self
       .entries
       .get(index.index)
-      .map_or(false, |entry| entry.is_live && entry.generation == index.generation)
+      .map_or(false, |entry| entry.is_alive && entry.generation == index.generation)
   }
 }

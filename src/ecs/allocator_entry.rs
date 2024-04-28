@@ -1,3 +1,5 @@
+use super::generational_index::Generation;
+
 /// An allocator entry for a generational index.
 ///
 /// This is taken more-or-less verbatim from Catherine West's delightful talk
@@ -6,15 +8,15 @@
 #[derive(Clone, Copy, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct AllocatorEntry {
   /// Whether this entry is still alive.
-  pub is_live: bool,
+  pub is_alive: bool,
   /// The generation of the entity.
-  pub generation: u64,
+  pub generation: Generation,
 }
 
 impl Default for AllocatorEntry {
   fn default() -> Self {
     Self {
-      is_live: true,
+      is_alive: true,
       generation: 0,
     }
   }

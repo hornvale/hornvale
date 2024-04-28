@@ -1,4 +1,4 @@
-use crate::ecs::prelude::*;
+use super::{array_entry::ArrayEntry, generational_index::GenerationalIndex};
 
 /// An associative array from GenerationalIndex to some Value T.
 ///

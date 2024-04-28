@@ -1,3 +1,5 @@
+use super::generational_index::Generation;
+
 /// An entry in an array with a generation number.
 ///
 /// This is used to store an entry in a vector with a generation number to
@@ -11,5 +13,5 @@ pub struct ArrayEntry<T> {
   /// The value of the entry.
   pub value: T,
   /// The generation of the entry.
-  pub generation: u64,
+  pub generation: Generation,
 }

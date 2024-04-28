@@ -14,6 +14,10 @@
 use anyhow::Error as AnyError;
 use std::any::Any;
 
+/// Allocator entry.
+pub mod allocator_entry;
+/// Array entry.
+pub mod array_entry;
 /// Components.
 pub mod component;
 use component::AddComponentTuple;
@@ -22,6 +26,12 @@ pub mod component_map;
 /// Entities and components.
 pub mod entities;
 use entities::Entities;
+/// Generational index.
+pub mod generational_index;
+/// Generational index allocator.
+pub mod generational_index_allocator;
+/// Generational index array.
+pub mod generational_index_array;
 /// Queries.
 pub mod query;
 pub use query::Query;
