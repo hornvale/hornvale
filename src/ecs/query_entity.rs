@@ -1,12 +1,11 @@
-use super::entities::Entities;
+use super::{component::Component, entities::Entities};
 use anyhow::Error as AnyError;
 use std::{
   any::{Any, TypeId},
-  cell::{Ref, RefCell, RefMut},
-  rc::Rc,
+  cell::{Ref, RefMut},
 };
 
-type ExtractedComponents<'a> = &'a Vec<Option<Rc<RefCell<dyn Any>>>>;
+type ExtractedComponents<'a> = &'a Vec<Option<Component>>;
 
 /// An entity in a query.
 #[derive(Debug)]
