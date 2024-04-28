@@ -12,10 +12,14 @@ pub mod command;
 pub mod database;
 /// The Entity-Component-System (ECS) implementation.
 pub mod ecs;
+/// Geometry.
+pub mod geometry;
 /// Input.
 pub mod input;
 /// Output.
 pub mod output;
+/// Region.
+pub mod region;
 /// Scripting.
 pub mod scripting;
 /// Test utilities.
