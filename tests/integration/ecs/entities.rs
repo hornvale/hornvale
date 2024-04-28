@@ -1,5 +1,6 @@
 use anyhow::Error as AnyError;
-use hornvale::ecs::ECS;
+use hornvale::ecs::generational_index::GenerationalIndex;
+use hornvale::ecs::*;
 use std::{any::Any, cell::RefCell, rc::Rc};
 
 #[test]
@@ -79,7 +80,10 @@ fn deleted_component_from_entity() -> Result<(), AnyError> {
     .with(TestComponent1(20.0, 21.0))?
     .with(TestComponent2(20.0))?;
 
-  ecs.remove_component::<TestComponent1>(0)?;
+  ecs.remove_component::<TestComponent1>(GenerationalIndex {
+    index: 0,
+    generation: 0,
+  })?;
 
   let query = ecs.query().with::<TestComponent1>()?.with::<TestComponent2>()?.run();
 
@@ -96,7 +100,13 @@ fn add_component_to_entity() -> Result<(), AnyError> {
   ecs.register_component::<TestComponent2>();
   ecs.create_entity().with(TestComponent1(10.0, 15.0))?;
 
-  ecs.add_component(TestComponent2(20.0), 0)?;
+  ecs.add_component(
+    TestComponent2(20.0),
+    GenerationalIndex {
+      index: 0,
+      generation: 0,
+    },
+  )?;
 
   let query = ecs.query().with::<TestComponent1>()?.with::<TestComponent2>()?.run();
   assert_eq!(query.0.len(), 1);
@@ -116,7 +126,10 @@ fn deleting_an_entity() -> Result<(), AnyError> {
   ecs.create_entity().with(TestComponent1(10.0, 15.0))?;
   ecs.create_entity().with(TestComponent1(20.0, 25.0))?;
 
-  ecs.delete_entity(0)?;
+  ecs.delete_entity(GenerationalIndex {
+    index: 0,
+    generation: 0,
+  })?;
 
   let query = ecs.query().with::<TestComponent1>()?.run();
 
@@ -132,8 +145,8 @@ fn deleting_an_entity() -> Result<(), AnyError> {
   let query = ecs.query().with::<TestComponent1>()?.run();
   let borrowed_location = query.1[0][0].borrow();
   let location = borrowed_location.downcast_ref::<TestComponent1>().unwrap();
-  assert_eq!(location.0, 30.0);
-  assert_eq!(location.1, 35.0);
+  assert_eq!(location.0, 20.0);
+  assert_eq!(location.1, 25.0);
 
   Ok(())
 }

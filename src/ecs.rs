@@ -28,6 +28,7 @@ pub mod entities;
 use entities::Entities;
 /// Generational index.
 pub mod generational_index;
+use generational_index::GenerationalIndex;
 /// Generational index allocator.
 pub mod generational_index_allocator;
 /// Generational index array.
@@ -93,17 +94,17 @@ impl ECS {
   }
 
   /// Delete an entity.
-  pub fn delete_entity(&mut self, index: usize) -> Result<(), AnyError> {
+  pub fn delete_entity(&mut self, index: GenerationalIndex) -> Result<(), AnyError> {
     self.entities.delete(index)
   }
 
   /// Add a component to an entity.
-  pub fn add_component<T: Any>(&mut self, data: T, index: usize) -> Result<(), AnyError> {
+  pub fn add_component<T: Any>(&mut self, data: T, index: GenerationalIndex) -> Result<(), AnyError> {
     self.entities.add(data, index)
   }
 
   /// Remove a component from an entity.
-  pub fn remove_component<T: Any>(&mut self, index: usize) -> Result<(), AnyError> {
+  pub fn remove_component<T: Any>(&mut self, index: GenerationalIndex) -> Result<(), AnyError> {
     self.entities.remove::<T>(index)
   }
 

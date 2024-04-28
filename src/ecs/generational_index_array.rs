@@ -1,11 +1,12 @@
-use super::{array_entry::ArrayEntry, generational_index::GenerationalIndex};
+use super::{array_entry::ArrayEntry, component::Component, generational_index::GenerationalIndex};
 
 /// An associative array from GenerationalIndex to some Value T.
 ///
 /// This is taken more-or-less verbatim from Catherine West's delightful talk
 /// at RustConf 2018 and her article here:
 /// @see https://kyren.github.io/2018/09/14/rustconf-talk.html
-#[derive(Debug, Default)]
+#[derive(Clone, Debug)]
+#[repr(transparent)]
 pub struct GenerationalIndexArray<T>(Vec<Option<ArrayEntry<T>>>);
 
 impl<T> GenerationalIndexArray<T> {
@@ -40,5 +41,21 @@ impl<T> GenerationalIndexArray<T> {
         .filter(|entry| entry.generation == index.generation)
         .map(|entry| &mut entry.value)
     })
+  }
+
+  /// Get the length of the array.
+  pub fn len(&self) -> usize {
+    self.0.len()
+  }
+
+  /// Pass through is_empty().
+  pub fn is_empty(&self) -> bool {
+    self.0.is_empty()
+  }
+}
+
+impl Default for GenerationalIndexArray<Component> {
+  fn default() -> Self {
+    Self(Vec::new())
   }
 }

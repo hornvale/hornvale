@@ -31,31 +31,34 @@ criterion_group!(benchmarks, add_remove, frag_iter, simple_insert, simple_iter);
 criterion_main!(benchmarks);
 
 /*
-     Running benches/ecs.rs (target/release/deps/ecs-b65c8151b7d65087)
-Gnuplot not found, using plotters backend
-add_remove              time:   [17.853 ms 17.932 ms 18.064 ms]
-                        change: [+0.7796% +1.6434% +2.6386%] (p = 0.00 < 0.05)
-                        Change within noise threshold.
-Found 3 outliers among 100 measurements (3.00%)
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 7.4s, enable flat sampling, or reduce sample count to 50.
+add_remove              time:   [1.4707 ms 1.4772 ms 1.4859 ms]
+                        change: [-91.757% -91.666% -91.600%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 8 outliers among 100 measurements (8.00%)
+  1 (1.00%) low mild
   1 (1.00%) high mild
-  2 (2.00%) high severe
+  6 (6.00%) high severe
 
-frag_iter               time:   [129.81 µs 130.32 µs 131.02 µs]
-                        change: [+1.4587% +1.9353% +2.4886%] (p = 0.00 < 0.05)
-                        Performance has regressed.
-Found 5 outliers among 100 measurements (5.00%)
-  3 (3.00%) high mild
-  2 (2.00%) high severe
+frag_iter               time:   [57.968 µs 58.396 µs 58.961 µs]
+                        change: [-45.269% -44.880% -44.450%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 12 outliers among 100 measurements (12.00%)
+  5 (5.00%) high mild
+  7 (7.00%) high severe
 
-simple_insert           time:   [20.079 ms 20.268 ms 20.517 ms]
-                        change: [+2.0625% +3.0752% +4.2357%] (p = 0.00 < 0.05)
-                        Performance has regressed.
-Found 11 outliers among 100 measurements (11.00%)
-  6 (6.00%) high mild
-  5 (5.00%) high severe
-
-simple_iter             time:   [20.657 ms 20.695 ms 20.736 ms]
+simple_insert           time:   [3.6362 ms 3.6521 ms 3.6697 ms]
+                        change: [-82.177% -81.874% -81.657%] (p = 0.00 < 0.05)
+                        Performance has improved.
 Found 6 outliers among 100 measurements (6.00%)
-  4 (4.00%) high mild
-  2 (2.00%) high severe
+  2 (2.00%) high mild
+  4 (4.00%) high severe
+
+simple_iter             time:   [4.5176 ms 4.5367 ms 4.5607 ms]
+                        change: [-78.243% -78.115% -77.993%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 8 outliers among 100 measurements (8.00%)
+  1 (1.00%) low mild
+  3 (3.00%) high mild
+  4 (4.00%) high severe
 */

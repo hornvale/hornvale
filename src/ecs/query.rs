@@ -1,3 +1,4 @@
+use super::generational_index::GenerationalIndex;
 use crate::ecs::prelude::*;
 use crate::ecs::query_entity::QueryEntity;
 use anyhow::Error as AnyError;
@@ -46,7 +47,7 @@ impl<'entities> Query<'entities> {
 
   /// Run the query.
   pub fn run(&self) -> (QueryIndices, QueryComponents) {
-    let indexes: Vec<usize> = self
+    let indices: Vec<usize> = self
       .entities
       .map
       .iter()
@@ -63,12 +64,20 @@ impl<'entities> Query<'entities> {
     for type_id in &self.type_ids {
       let entity_components = self.entities.component_map.get(type_id).unwrap();
       let mut components_to_keep = vec![];
-      for index in &indexes {
-        components_to_keep.push(entity_components[*index].as_ref().unwrap().clone());
+      for index in &indices {
+        components_to_keep.push(
+          entity_components
+            .get(GenerationalIndex {
+              index: *index,
+              generation: 0,
+            })
+            .unwrap()
+            .clone(),
+        );
       }
       result.push(components_to_keep);
     }
-    (indexes, result)
+    (indices, result)
   }
 
   /// Run the query for entities.
@@ -80,7 +89,10 @@ impl<'entities> Query<'entities> {
       .enumerate()
       .filter_map(|(index, entity_map)| {
         if entity_map & self.bit_mask == self.bit_mask {
-          Some(QueryEntity::new(index, self.entities))
+          Some(QueryEntity::new(
+            GenerationalIndex { index, generation: 0 },
+            self.entities,
+          ))
         } else {
           None
         }
@@ -180,7 +192,10 @@ mod test {
     entities.register::<u32>();
     entities.create().with(10_u32)?;
     entities.create().with(20_u32)?;
-    entities.delete(1)?;
+    entities.delete(GenerationalIndex {
+      index: 1,
+      generation: 0,
+    })?;
     let (query_indexes, query_results) = Query::new(&entities).with::<u32>()?.run();
     assert_eq!(query_indexes.len(), query_results.len());
     assert_eq!(query_results[0].len(), 1);
@@ -206,7 +221,13 @@ mod test {
     assert_eq!(entities.len(), 1);
 
     for entity in entities {
-      assert_eq!(entity.id, 0);
+      assert_eq!(
+        entity.index,
+        GenerationalIndex {
+          index: 0,
+          generation: 0,
+        }
+      );
       let health: Ref<u32> = entity.get::<u32>()?;
       assert_eq!(*health, 100);
     }
@@ -228,7 +249,13 @@ mod test {
     assert_eq!(entities.len(), 1);
 
     for entity in entities {
-      assert_eq!(entity.id, 0);
+      assert_eq!(
+        entity.index,
+        GenerationalIndex {
+          index: 0,
+          generation: 0,
+        }
+      );
       let mut health: RefMut<u32> = entity.get_mut::<u32>()?;
       assert_eq!(*health, 100);
       *health += 1;

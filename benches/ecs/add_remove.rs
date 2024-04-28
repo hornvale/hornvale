@@ -1,3 +1,4 @@
+use hornvale::ecs::generational_index::GenerationalIndex;
 use hornvale::ecs::ECS;
 
 #[derive(Clone, Copy)]
@@ -22,11 +23,19 @@ impl Benchmark {
 
   pub fn run(&mut self) {
     for entity in &self.1 {
-      self.0.add_component(B(0.0), *entity as usize).unwrap();
+      let generational_index = GenerationalIndex {
+        index: *entity as usize,
+        generation: 0,
+      };
+      self.0.add_component(B(0.0), generational_index).unwrap();
     }
 
     for entity in &self.1 {
-      self.0.remove_component::<B>(*entity as usize).unwrap();
+      let generational_index = GenerationalIndex {
+        index: *entity as usize,
+        generation: 0,
+      };
+      self.0.remove_component::<B>(generational_index).unwrap();
     }
   }
 }

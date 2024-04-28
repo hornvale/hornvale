@@ -1,4 +1,4 @@
-use super::entities::Entities;
+use super::{entities::Entities, generational_index::GenerationalIndex};
 use anyhow::Error as AnyError;
 use std::{any::Any, cell::RefCell, rc::Rc};
 
@@ -8,14 +8,14 @@ pub type Component = Rc<RefCell<dyn Any>>;
 /// Add components to an entity.
 pub trait AddComponentTuple {
   /// Add the components to the entity.
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError>;
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError>;
 }
 
 impl<T1> AddComponentTuple for (T1,)
 where
   T1: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)
   }
 }
@@ -25,7 +25,7 @@ where
   T1: Any + 'static + Clone,
   T2: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)
   }
@@ -37,7 +37,7 @@ where
   T2: Any + 'static + Clone,
   T3: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)
@@ -51,7 +51,7 @@ where
   T3: Any + 'static + Clone,
   T4: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
@@ -67,7 +67,7 @@ where
   T4: Any + 'static + Clone,
   T5: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
@@ -85,7 +85,7 @@ where
   T5: Any + 'static + Clone,
   T6: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
@@ -105,7 +105,7 @@ where
   T6: Any + 'static + Clone,
   T7: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
@@ -127,7 +127,7 @@ where
   T7: Any + 'static + Clone,
   T8: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
@@ -151,7 +151,7 @@ where
   T8: Any + 'static + Clone,
   T9: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
@@ -177,7 +177,7 @@ where
   T9: Any + 'static + Clone,
   T10: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
@@ -205,7 +205,7 @@ where
   T10: Any + 'static + Clone,
   T11: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
@@ -236,7 +236,7 @@ where
   T11: Any + 'static + Clone,
   T12: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
@@ -269,7 +269,7 @@ where
   T12: Any + 'static + Clone,
   T13: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
@@ -304,7 +304,7 @@ where
   T13: Any + 'static + Clone,
   T14: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
@@ -341,7 +341,7 @@ where
   T14: Any + 'static + Clone,
   T15: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
@@ -380,7 +380,7 @@ where
   T15: Any + 'static + Clone,
   T16: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
@@ -439,7 +439,7 @@ where
   T16: Any + 'static + Clone,
   T17: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
@@ -501,7 +501,7 @@ where
   T17: Any + 'static + Clone,
   T18: Any + 'static + Clone,
 {
-  fn add_to_entity(&self, entities: &mut Entities, index: usize) -> Result<(), AnyError> {
+  fn add_to_entity(&self, entities: &mut Entities, index: GenerationalIndex) -> Result<(), AnyError> {
     entities.add(self.0.clone(), index)?;
     entities.add(self.1.clone(), index)?;
     entities.add(self.2.clone(), index)?;
