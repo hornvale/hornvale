@@ -189,7 +189,7 @@ mod test {
       generation: 0,
     };
     let first_health = &entities.component_map.get(&TypeId::of::<Health>()).unwrap().get(index);
-    let wrapped_health = first_health.as_ref().unwrap();
+    let _wrapped_health = first_health.as_ref().unwrap();
     // let borrowed_health = wrapped_health.borrow();
     // let health = borrowed_health.downcast_ref::<Health>().unwrap();
     // assert_eq!(health.0, 100);
@@ -248,8 +248,8 @@ mod test {
     let speed_type_id = TypeId::of::<Speed>();
     let wrapped_speeds = entities.component_map.get(&speed_type_id).unwrap();
     let wrapped_speed = wrapped_speeds.get(index);
-    let speed = wrapped_speed.as_ref().unwrap();
-    let borrowed_speed = wrapped_speed.borrow();
+    let _speed = wrapped_speed.as_ref().unwrap();
+    let _borrowed_speed = wrapped_speed.borrow();
     //let speed = borrowed_speed.downcast_ref::<Speed>().unwrap();
     //assert_eq!(speed.0, 50);
     Ok(())
@@ -280,8 +280,8 @@ mod test {
     })?;
     entities.create().with(Health(25))?;
     assert_eq!(entities.map[0], 0);
-    let type_id = TypeId::of::<Health>();
-    let index = GenerationalIndex {
+    let _type_id = TypeId::of::<Health>();
+    let _index = GenerationalIndex {
       index: 0,
       generation: 0,
     };
@@ -383,6 +383,8 @@ mod test {
     Ok(())
   }
 
-  struct Health(pub(crate) u32);
-  struct Speed(pub(crate) u32);
+  #[allow(dead_code)]
+  struct Health(u32);
+  #[allow(dead_code)]
+  struct Speed(u32);
 }
