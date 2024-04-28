@@ -40,6 +40,33 @@ pub struct Region {
   pub point: RegionPoint,
 }
 
+impl Region {
+  /// Create a new region.
+  pub fn new(
+    identifier: RegionIdentifier,
+    name: RegionName,
+    description: RegionDescription,
+    point: RegionPoint,
+  ) -> Self {
+    Self {
+      identifier,
+      name,
+      description,
+      point,
+    }
+  }
+
+  /// Serialize the region to a JSON string.
+  pub fn to_json(&self) -> String {
+    serde_json::to_string(self).unwrap()
+  }
+
+  /// Deserialize a region from a JSON string.
+  pub fn from_json(json: &str) -> Self {
+    serde_json::from_str(json).unwrap()
+  }
+}
+
 /// The prelude.
 pub mod prelude {
   pub use super::description::RegionDescription;
@@ -47,4 +74,47 @@ pub mod prelude {
   pub use super::map::RegionMap;
   pub use super::name::RegionName;
   pub use super::point::RegionPoint;
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::geometry::prelude::*;
+  use crate::test_utilities::prelude::*;
+
+  #[test]
+  fn test_new() {
+    init();
+    let region = Region::new(
+      RegionIdentifier::new(),
+      RegionName("test".to_string()),
+      RegionDescription("test".to_string()),
+      RegionPoint(Point4D::from((0, 0, 0, 0))),
+    );
+    assert_eq!(region.name.to_string(), "test");
+    assert_eq!(region.description.to_string(), "test");
+  }
+
+  #[test]
+  fn test_to_json() {
+    init();
+    let region = Region::new(
+      RegionIdentifier("00000000-0000-0000-0000-000000000000".to_string()),
+      RegionName("test".to_string()),
+      RegionDescription("test description".to_string()),
+      RegionPoint(Point4D::from((0, 0, 0, 0))),
+    );
+    let json = region.to_json();
+    assert_eq_pretty!(json, "{\"identifier\":\"00000000-0000-0000-0000-000000000000\",\"name\":\"test\",\"description\":\"test description\",\"point\":{\"w\":0,\"x\":0,\"y\":0,\"z\":0}}");
+  }
+
+  #[test]
+  fn test_from_json() {
+    init();
+    let json = "{\"identifier\":\"00000000-0000-0000-0000-000000000000\",\"name\":\"test\",\"description\":\"test\",\"point\":{\"w\":0,\"x\":0,\"y\":0,\"z\":0}}";
+    let region = Region::from_json(json);
+    assert_eq!(region.name.to_string(), "test");
+    assert_eq!(region.description.to_string(), "test");
+    assert_eq!(region.to_json(), json);
+  }
 }

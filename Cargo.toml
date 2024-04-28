@@ -81,6 +81,7 @@ derive_more.workspace = true
 getrandom.workspace = true
 hecs.workspace = true
 log.workspace = true
+platform-dirs.workspace = true
 pretty_assertions.workspace = true
 pretty_env_logger.workspace = true
 rand.workspace = true
@@ -117,6 +118,7 @@ hecs = { version = "0.10.4", features = [
 ] }
 log = "0.4.21"
 paste = "1.0.14"
+platform-dirs = "0.3.0"
 pretty_assertions = "1.4.0"
 pretty_env_logger = "0.5.0"
 regex = "1.10.4"
