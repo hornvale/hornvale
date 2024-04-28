@@ -13,10 +13,12 @@ pub trait FileExt {
 }
 
 impl FileExt for Database {
+  /// Get the contents of a file.
   fn get_file_contents(&self, path: &Path) -> Result<String, AnyError> {
     Ok(fs::read_to_string(path)?)
   }
 
+  /// Write the contents of a file.
   fn write_file_contents(&self, path: &Path, contents: &str) -> Result<(), AnyError> {
     fs::write(path, contents)?;
     Ok(())
