@@ -9,12 +9,6 @@
 use derivative::Derivative;
 use hecs::World; // Temporary.
 
-/// Region entities.
-pub mod region_entity;
-use region_entity::RegionEntity;
-/// Traits and trait implementations.
-pub mod traits;
-
 /// The database.
 #[derive(Default, Derivative)]
 #[derivative(Debug)]
@@ -22,8 +16,6 @@ pub struct Database {
   /// The world.
   #[derivative(Debug = "ignore")]
   pub world: World,
-  /// Region IDs.
-  pub region_entities: Vec<RegionEntity>,
 }
 
 impl Database {
