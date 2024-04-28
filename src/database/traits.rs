@@ -1,4 +1,6 @@
 /// Default
 pub mod default;
-/// Traits and trait implementations related to directory functionality.
-pub mod directory;
+/// File operations.
+pub mod file;
+/// Traits and trait implementations related to data directory functionality.
+pub mod region_map;

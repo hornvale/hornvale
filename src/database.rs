@@ -9,7 +9,10 @@
 use crate::region::prelude::*;
 use derivative::Derivative;
 use hecs::World; // Temporary.
-use std::{fs, path::PathBuf};
+use std::{
+  fs,
+  path::{Path, PathBuf},
+};
 
 /// Traits and trait implementations.
 pub mod traits;
@@ -40,7 +43,7 @@ impl Database {
   }
 
   /// Operate at a specific path.
-  pub fn at_path(path: PathBuf) -> Self {
+  pub fn at_path(path: &Path) -> Self {
     let cache_dir = path.join("cache");
     let data_dir = path.join("data");
     let config_dir = path.join("config");
@@ -92,5 +95,7 @@ impl Database {
 
 /// The prelude.
 pub mod prelude {
+  pub use super::traits::file::FileExt;
+  pub use super::traits::region_map::RegionMapExt;
   pub use super::Database;
 }

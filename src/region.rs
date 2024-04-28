@@ -74,6 +74,7 @@ pub mod prelude {
   pub use super::map::RegionMap;
   pub use super::name::RegionName;
   pub use super::point::RegionPoint;
+  pub use super::Region;
 }
 
 #[cfg(test)]

@@ -10,6 +10,6 @@ impl Default for Database {
   /// - `~/.local/share/hornvale/state`
   fn default() -> Self {
     let app_dirs = AppDirs::new(Some("hornvale"), true).unwrap();
-    Self::at_path(app_dirs.data_dir)
+    Self::at_path(&app_dirs.data_dir)
   }
 }
