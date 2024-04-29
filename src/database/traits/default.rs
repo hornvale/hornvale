@@ -1,4 +1,4 @@
-use crate::database::prelude::*;
+use crate::database::prelude_internal::*;
 use platform_dirs::AppDirs;
 
 impl Default for Database {

@@ -11,9 +11,17 @@
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 
+/// The adjacency map.
+pub mod adjacency_map;
 /// A description for a region.
 pub mod description;
 use description::RegionDescription;
+/// A generator for regions.
+pub mod generator;
+/// The region generator registry.
+pub mod generator_registry;
+/// Implemented generators.
+pub mod generators;
 /// A unique identifier for a region.
 pub mod identifier;
 use identifier::RegionIdentifier;
@@ -69,12 +77,19 @@ impl Region {
 
 /// The prelude.
 pub mod prelude {
+  pub use super::adjacency_map::RegionAdjacencyMap;
   pub use super::description::RegionDescription;
+  pub use super::generator::RegionGenerator;
   pub use super::identifier::RegionIdentifier;
   pub use super::map::RegionMap;
   pub use super::name::RegionName;
   pub use super::point::RegionPoint;
   pub use super::Region;
+}
+
+/// The internal prelude.
+pub mod prelude_internal {
+  pub use super::prelude::*;
 }
 
 #[cfg(test)]

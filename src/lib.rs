@@ -18,6 +18,8 @@ pub mod geometry;
 pub mod input;
 /// Output.
 pub mod output;
+/// Profile, or "save" data.
+pub mod profile;
 /// Region.
 pub mod region;
 /// Scripting.

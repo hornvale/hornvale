@@ -5,15 +5,29 @@
 //!
 //! This combines elements of Entity-Component-System architectures, relational
 //! databases, and graph databases with various data structures and algorithms.
+//!
+//! The database contains and maintains a number of different structures:
+//!
+//! - The profile, which is a save file for the game. This informs the game how
+//!   to load the player character and the game state.
+//! - The region map, which is a map of region identifiers to region entities.
+//!   This is used to retrieve basic information about regions.
+//! - The region adjacency map, which is a map of region identifiers to a set
+//!   of adjacent region identifiers. This is used to determine which regions
+//!   are adjacent to a given region.
 
+use crate::profile::prelude::*;
 use crate::region::prelude::*;
 use derivative::Derivative;
 use hecs::World; // Temporary.
+use std::collections::HashMap;
 use std::{
   fs,
   path::{Path, PathBuf},
 };
 
+/// Filename formatter.
+pub mod filename_formatter;
 /// Traits and trait implementations.
 pub mod traits;
 
@@ -29,8 +43,12 @@ pub struct Database {
   config_dir: PathBuf,
   /// The path to the state dir.
   state_dir: PathBuf,
+  /// The profile.
+  profile: Option<Profile>,
   /// The region map.
   region_map: Option<RegionMap>,
+  /// The region adjacency maps.
+  region_adjacency_maps: Option<HashMap<RegionIdentifier, RegionAdjacencyMap>>,
   /// The world (temporary).
   #[derivative(Debug = "ignore")]
   pub world: World,
@@ -52,15 +70,21 @@ impl Database {
     fs::create_dir_all(&data_dir).unwrap();
     fs::create_dir_all(&config_dir).unwrap();
     fs::create_dir_all(&state_dir).unwrap();
-    let world = World::new();
+    let profile = None;
     let region_map = None;
+    let region_adjacency_maps = None;
+
+    let world = World::new();
     Self {
       cache_dir,
       data_dir,
       config_dir,
       state_dir,
-      world,
+      profile,
       region_map,
+      region_adjacency_maps,
+      // The world (temporary).
+      world,
     }
   }
 
@@ -95,7 +119,15 @@ impl Database {
 
 /// The prelude.
 pub mod prelude {
-  pub use super::traits::file::FileExt;
-  pub use super::traits::region_map::RegionMapExt;
+  pub use super::filename_formatter::FilenameFormatter;
   pub use super::Database;
+}
+
+/// The internal prelude.
+pub mod prelude_internal {
+  pub use super::prelude::*;
+  // pub use super::traits::file::FileExt;
+  // pub use super::traits::region::RegionExt;
+  // pub use super::traits::region_adjacency_map::RegionAdjacencyMapExt;
+  // pub use super::traits::region_map::RegionMapExt;
 }
