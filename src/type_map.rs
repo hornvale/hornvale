@@ -56,6 +56,11 @@ impl Debug for TypeMap {
   }
 }
 
+/// The prelude.
+pub mod prelude {
+  pub use super::TypeMap;
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

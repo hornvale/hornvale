@@ -16,6 +16,12 @@ struct Velocity(Vector3<f32>);
 #[derive(Clone, Copy, Debug)]
 pub struct Benchmark;
 
+impl Default for Benchmark {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl Benchmark {
   pub fn new() -> Self {
     Self

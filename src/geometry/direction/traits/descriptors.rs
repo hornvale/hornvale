@@ -1,4 +1,4 @@
-use crate::world::prelude::*;
+use crate::geometry::prelude_internal::*;
 
 /// Various descriptors for Direction.
 pub trait DirectionDescriptors {

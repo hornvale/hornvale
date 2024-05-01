@@ -33,14 +33,14 @@ pub fn main() {
     let mut scanner = Scanner::new(&input);
     let mut tokens = scanner.scan_tokens().unwrap();
     let classifier = Classifier::new();
-    if classifier.classify_tokens(&mut *tokens).is_err() {
+    if classifier.classify_tokens(&mut tokens).is_err() {
       match input.to_lowercase().as_str().trim().len() {
         0 => println!("Eh?"),
         _ => println!("I don't understand {:#?}.", input),
       }
       continue;
     }
-    let mut parser = Parser::new(&mut *tokens, player, &mut database);
+    let mut parser = Parser::new(&mut tokens, player, &mut database);
     match parser.parse() {
       Ok((command_function, (actor, direct_object, indirect_object))) => {
         command_function(&mut database, actor, direct_object, indirect_object).unwrap();

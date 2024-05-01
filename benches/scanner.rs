@@ -40,7 +40,7 @@ fn scanner(criterion: &mut Criterion) {
   ];
   for i in input_data.iter() {
     let input_name = if i.0.len() > 80 {
-      format!("{}... ({})", i.0[0..80].to_string(), i.0.len())
+      format!("{}... ({})", &i.0[0..80], i.0.len())
     } else {
       format!("{} ({})", i.0, i.0.len())
     };

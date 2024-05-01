@@ -18,6 +18,12 @@ struct Data(f32);
 #[derive(Debug)]
 pub struct Benchmark(ECS);
 
+impl Default for Benchmark {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl Benchmark {
   pub fn new() -> Self {
     let mut ecs = ECS::default();

@@ -9,6 +9,12 @@ struct B(f32);
 #[derive(Debug)]
 pub struct Benchmark(ECS, Vec<u32>);
 
+impl Default for Benchmark {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl Benchmark {
   pub fn new() -> Self {
     let mut ecs = ECS::default();

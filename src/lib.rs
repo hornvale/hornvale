@@ -24,6 +24,8 @@ pub mod profile;
 pub mod region;
 /// Scripting.
 pub mod scripting;
+/// Session and session state.
+pub mod session;
 /// Test utilities.
 pub mod test_utilities;
 /// Type map.
@@ -34,8 +36,9 @@ pub mod world;
 /// The prelude for the _Hornvale_ library.
 pub mod prelude {
 
-  pub use super::test_utilities::*;
-  pub use super::type_map::TypeMap;
+  pub use super::session::prelude::*;
+  pub use super::test_utilities::prelude::*;
+  pub use super::type_map::prelude::*;
 
   /// Hello, world!
   pub fn hello() {

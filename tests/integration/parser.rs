@@ -15,10 +15,10 @@ pub fn setup_world(database: &mut Database) -> Entity {
   let generator = CompassRoseRegionGenerator;
   let region = Region::default();
   generator.generate(region, database).unwrap();
-  let player = database
+
+  database
     .world
-    .spawn((Player, region, Room::default(), Name("Player".to_string())));
-  player
+    .spawn((Player, region, Room::default(), Name("Player".to_string())))
 }
 
 pub fn test_string_parsing(
@@ -31,8 +31,8 @@ pub fn test_string_parsing(
   let mut scanner = Scanner::new(string);
   let mut tokens = scanner.scan_tokens().unwrap();
   let classifier = Classifier::new();
-  classifier.classify_tokens(&mut *tokens).unwrap();
-  let mut parser = Parser::new(&mut *tokens, actor, database);
+  classifier.classify_tokens(&mut tokens).unwrap();
+  let mut parser = Parser::new(&mut tokens, actor, database);
   let actual = parser.parse();
   match (expected, actual) {
     (Ok(expected), Ok(actual)) => {

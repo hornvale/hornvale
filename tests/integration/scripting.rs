@@ -143,7 +143,7 @@ fn run_file_test(
         "Compile errors should have error code 65"
       );
     }
-    assert_eq!(expected.compile_err.get(0), err.get(0), "Compile error should match");
+    assert_eq!(expected.compile_err.first(), err.first(), "Compile error should match");
   }
 
   assert_eq!(expected.out, out, "Output should match");
