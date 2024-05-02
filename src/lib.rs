@@ -1,47 +1,27 @@
 //! # Hornvale
 //!
-//! This is the main library for the _Hornvale_ project. It contains the core
-//! functionality for the game, including the Entity-Component-System (ECS)
-//! implementation, the database, the world model, and the input/output system.
+//! This is the main library for the _Hornvale_ project.
 
-/// General actions.
-pub mod action;
-/// Commands and command parsing.
-pub mod command;
-/// The database.
-pub mod database;
-/// The Entity-Component-System (ECS) implementation.
-pub mod ecs;
-/// Geometry.
-pub mod geometry;
-/// Input.
-pub mod input;
-/// Output.
-pub mod output;
-/// Profile, or "save" data.
-pub mod profile;
-/// Region.
-pub mod region;
-/// Scripting.
-pub mod scripting;
-/// Session and session state.
-pub mod session;
-/// Test utilities.
-pub mod test_utilities;
-/// Type map.
-pub mod type_map;
-/// World model.
-pub mod world;
+/// A dumb bouncing text plugin.
+pub mod bouncer;
+/// The _Hornvale_ camera, so I don't lose it.
+pub mod camera;
+/// The player.
+pub mod player;
 
 /// The prelude for the _Hornvale_ library.
 pub mod prelude {
+  pub use super::bouncer::*;
+  pub use super::camera::*;
+  pub use super::player::*;
 
-  pub use super::session::prelude::*;
-  pub use super::test_utilities::prelude::*;
-  pub use super::type_map::prelude::*;
-
-  /// Hello, world!
-  pub fn hello() {
-    println!("Hello, world!");
+  /// Say hello.
+  pub fn hello_world() {
+    //println!("Hello, world!");
   }
+}
+
+/// The internal prelude for the _Hornvale_ library.
+pub mod internal_prelude {
+  pub use super::prelude::*;
 }
