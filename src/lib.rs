@@ -4,24 +4,25 @@
 
 /// A dumb bouncing text plugin.
 pub mod bouncer;
-/// The _Hornvale_ camera, so I don't lose it.
-pub mod camera;
+/// Development utilities re: framerate.
+pub mod framerate;
 /// The player.
 pub mod player;
+/// Tiles used to build the tilemap view.
+pub mod tile;
+/// The tilemap view of the game.
+pub mod tilemap;
 
 /// The prelude for the _Hornvale_ library.
 pub mod prelude {
   pub use super::bouncer::*;
-  pub use super::camera::*;
+  pub use super::framerate::*;
   pub use super::player::*;
-
-  /// Say hello.
-  pub fn hello_world() {
-    //println!("Hello, world!");
-  }
+  pub use super::tile::*;
+  pub use super::tilemap::prelude::*;
 }
 
 /// The internal prelude for the _Hornvale_ library.
-pub mod internal_prelude {
+pub mod prelude_internal {
   pub use super::prelude::*;
 }
