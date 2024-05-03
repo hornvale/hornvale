@@ -12,32 +12,27 @@ impl RogueViewCamera {
 
   /// Control the player.
   pub fn on_update(
-    time: Res<Time>,
+    _time: Res<Time>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<(&mut Transform, &mut OrthographicProjection), With<RogueViewCamera>>,
   ) {
     for (mut transform, _) in query.iter_mut() {
       let mut direction = Vec3::ZERO;
       if keyboard_input.pressed(KeyCode::KeyA) {
-        log::info!("Moving left");
         direction -= Vec3::new(1.0, 0.0, 0.0);
-      }
-      if keyboard_input.pressed(KeyCode::KeyD) {
-        log::info!("Moving right");
+      } else if keyboard_input.pressed(KeyCode::KeyD) {
         direction += Vec3::new(1.0, 0.0, 0.0);
       }
       if keyboard_input.pressed(KeyCode::KeyW) {
-        log::info!("Moving up");
         direction += Vec3::new(0.0, 1.0, 0.0);
-      }
-      if keyboard_input.pressed(KeyCode::KeyS) {
-        log::info!("Moving down");
+      } else if keyboard_input.pressed(KeyCode::KeyS) {
         direction -= Vec3::new(0.0, 1.0, 0.0);
       }
-      let z = transform.translation.z;
-      transform.translation += time.delta_seconds() * direction * 500.;
+
       // Important! We need to restore the Z values when moving the camera around.
       // Bevy has a specific camera setup and this can mess with how our layers are shown.
+      let z = transform.translation.z;
+      transform.translation += direction;
       transform.translation.z = z;
     }
   }

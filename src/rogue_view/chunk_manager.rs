@@ -78,11 +78,14 @@ impl ChunkManager {
     asset_server: Res<AssetServer>,
     camera_query: Query<&Transform, With<RogueViewCamera>>,
     mut chunk_manager: ResMut<ChunkManager>,
+    dimensions: Res<RogueViewDimensions>,
   ) {
+    let x_chunk_limit = ((dimensions.0.x / 2.0) / (CHUNK_SIZE.x as f32 * TILE_SIZE.x)) as i32;
+    let y_chunk_limit = ((dimensions.0.y / 2.0) / (CHUNK_SIZE.y as f32 * TILE_SIZE.y)) as i32;
     for transform in camera_query.iter() {
       let camera_chunk_pos = Self::camera_pos_to_chunk_pos(&transform.translation.xy());
-      for y in (camera_chunk_pos.y - 2)..(camera_chunk_pos.y + 2) {
-        for x in (camera_chunk_pos.x - 2)..(camera_chunk_pos.x + 2) {
+      for y in (camera_chunk_pos.y - y_chunk_limit)..(camera_chunk_pos.y + y_chunk_limit) {
+        for x in (camera_chunk_pos.x - x_chunk_limit)..(camera_chunk_pos.x + x_chunk_limit) {
           if !chunk_manager.spawned_chunks.contains(&IVec2::new(x, y)) {
             chunk_manager.spawned_chunks.insert(IVec2::new(x, y));
             Self::spawn_chunk(&mut commands, &asset_server, IVec2::new(x, y));
@@ -98,12 +101,16 @@ impl ChunkManager {
     camera_query: Query<&Transform, With<RogueViewCamera>>,
     chunks_query: Query<(Entity, &Transform)>,
     mut chunk_manager: ResMut<ChunkManager>,
+    dimensions: Res<RogueViewDimensions>,
   ) {
+    let x_distance_limit = (dimensions.0.x / 2.0) as i32;
+    let y_distance_limit = (dimensions.0.y / 2.0) as i32;
     for camera_transform in camera_query.iter() {
       for (entity, chunk_transform) in chunks_query.iter() {
         let chunk_pos = chunk_transform.translation.xy();
-        let distance = camera_transform.translation.xy().distance(chunk_pos);
-        if distance > 320.0 {
+        let x_distance = (chunk_pos.x - camera_transform.translation.x).abs();
+        let y_distance = (chunk_pos.y - camera_transform.translation.y).abs();
+        if x_distance > x_distance_limit as f32 || y_distance > y_distance_limit as f32 {
           let x = (chunk_pos.x / (CHUNK_SIZE.x as f32 * TILE_SIZE.x)).floor() as i32;
           let y = (chunk_pos.y / (CHUNK_SIZE.y as f32 * TILE_SIZE.y)).floor() as i32;
           chunk_manager.spawned_chunks.remove(&IVec2::new(x, y));

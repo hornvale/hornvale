@@ -33,7 +33,7 @@ impl PlayerPlugin {
 
   /// Control the player.
   pub fn control_player(
-    time: Res<Time>,
+    _time: Res<Time>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<(&mut Transform, &mut Sprite), With<Player>>,
   ) {
@@ -41,23 +41,22 @@ impl PlayerPlugin {
     let mut direction = Vec3::ZERO;
     if keyboard_input.pressed(KeyCode::KeyA) {
       direction.x = -1.0;
-    }
-    if keyboard_input.pressed(KeyCode::KeyD) {
+    } else if keyboard_input.pressed(KeyCode::KeyD) {
       direction.x = 1.0;
     }
     if keyboard_input.pressed(KeyCode::KeyW) {
       direction.y = 1.0;
-    }
-    if keyboard_input.pressed(KeyCode::KeyS) {
+    } else if keyboard_input.pressed(KeyCode::KeyS) {
       direction.y = -1.0;
     }
     // Flip the sprite if we are heading right or if we're heading up or
     // down and already flipped.
     player_sprite.flip_x = direction.x > 0.0 || (direction.x == 0.0 && player_sprite.flip_x);
-    let z = transform.translation.z;
-    transform.translation += time.delta_seconds() * direction * 500.;
+
     // Important! We need to restore the Z values when moving the camera around.
     // Bevy has a specific camera setup and this can mess with how our layers are shown.
+    let z = transform.translation.z;
+    transform.translation += direction;
     transform.translation.z = z;
   }
 }
