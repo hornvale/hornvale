@@ -7,5 +7,6 @@ _Hornvale_ is an experimental open-world text adventure.
 - **💓 Status**: Pre-alpha, but under active development.
 - **📘 Book**: Development blog/rants [here](https://hornvale.github.io/hornvale/).
 - **🎮 Playable?**: Not yet.
+- **🙇 Credits**: See [CREDITS.md](Credits).
 
 [![code coverage icicle graph](https://codecov.io/gh/hornvale/hornvale/graphs/icicle.svg?token=lv4mkiaDHD)](https://codecov.io/gh/hornvale/hornvale)

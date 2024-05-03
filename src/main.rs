@@ -8,27 +8,31 @@ use hornvale::prelude::*;
 fn main() {
   App::new()
     .add_plugins((
-      DefaultPlugins.set(WindowPlugin {
-        primary_window: Some(Window {
-          title: "Hornvale".into(),
-          name: Some("Hornvale".into()),
-          resolution: (800., 600.).into(),
-          present_mode: PresentMode::AutoVsync,
-          prevent_default_event_handling: false,
-          window_theme: Some(WindowTheme::Dark),
-          enabled_buttons: EnabledButtons {
-            maximize: false,
-            ..Default::default()
-          },
-          visible: false,
+      DefaultPlugins
+        .set(WindowPlugin {
+          primary_window: Some(Window {
+            title: "Hornvale".into(),
+            name: Some("Hornvale".into()),
+            resolution: (800., 600.).into(),
+            present_mode: PresentMode::AutoVsync,
+            prevent_default_event_handling: false,
+            window_theme: Some(WindowTheme::Dark),
+            enabled_buttons: EnabledButtons {
+              maximize: false,
+              ..Default::default()
+            },
+            visible: false,
+            ..default()
+          }),
           ..default()
-        }),
-        ..default()
-      }),
-      BouncerPlugin,
-      TilemapPlugin,
+        })
+        .set(ImagePlugin::default_nearest()),
+      // BouncerPlugin,
+      RogueViewPlugin,
       PlayerPlugin,
       FrameratePlugin,
+      SpriteSheetsPlugin,
+      TileMapPlugin,
     ))
     .add_systems(Update, (make_visible, toggle_vsync))
     .run();

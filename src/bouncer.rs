@@ -92,3 +92,13 @@ fn on_resize_system(mut window_dimensions: ResMut<WindowDimensions>, mut resize_
     window_dimensions.0 = Vec2::new(e.width, e.height);
   }
 }
+
+/// The prelude.
+pub mod prelude {
+  pub use super::BouncerPlugin;
+}
+
+/// The internal prelude.
+pub mod prelude_internal {
+  pub use super::prelude::*;
+}

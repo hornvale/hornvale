@@ -10,6 +10,17 @@ impl Plugin for FrameratePlugin {
     {
       _app.add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin);
       _app.add_plugins(bevy::diagnostic::LogDiagnosticsPlugin::default());
+      _app.add_systems(Update, bevy::window::close_on_esc);
     }
   }
+}
+
+/// The prelude.
+pub mod prelude {
+  pub use super::*;
+}
+
+/// The internal prelude.
+pub mod prelude_internal {
+  pub use super::prelude::*;
 }
