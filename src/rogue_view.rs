@@ -10,6 +10,8 @@
 
 /// The rogue view camera.
 pub mod camera;
+/// A chunk manager that spawns and despawns chunks of the tilemap as needed.
+pub mod chunk_manager;
 /// The dimensions of the rogue view.
 pub mod dimensions;
 /// The Bevy plugin for the rogue view.
@@ -24,6 +26,7 @@ pub mod prelude {
 #[allow(unused_imports)]
 pub mod prelude_internal {
   pub use super::camera::*;
+  pub use super::chunk_manager::*;
   pub use super::dimensions::*;
   pub use super::prelude::*;
 }

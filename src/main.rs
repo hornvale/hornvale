@@ -27,12 +27,11 @@ fn main() {
           ..default()
         })
         .set(ImagePlugin::default_nearest()),
-      // BouncerPlugin,
+      BouncerPlugin,
       RogueViewPlugin,
       PlayerPlugin,
       FrameratePlugin,
       SpriteSheetsPlugin,
-      TileMapPlugin,
     ))
     .add_systems(Update, (make_visible, toggle_vsync))
     .run();

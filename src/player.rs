@@ -3,7 +3,6 @@
 //! The player.
 
 use crate::sprite_sheets::prelude::*;
-use bevy::input::{keyboard::KeyboardInput, ButtonState};
 use bevy::prelude::*;
 
 /// A player.
@@ -16,12 +15,12 @@ pub struct Player;
 
 impl PlayerPlugin {
   /// The startup system.
-  pub fn setup(mut commands: Commands, sprite_atlas: Res<HexanyRt16x16>, asset_server: Res<AssetServer>) {
+  pub fn setup(mut commands: Commands, sprite_atlas_layout: Res<HexanyRt16x16>, asset_server: Res<AssetServer>) {
     let sprite: Handle<Image> = asset_server.load("hexany_roguelike_tiles_16x16.png");
     commands.spawn((
       SpriteSheetBundle {
         atlas: TextureAtlas {
-          layout: sprite_atlas.0.clone(),
+          layout: sprite_atlas_layout.0.clone(),
           index: 161,
         },
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 10.0)),
@@ -33,28 +32,33 @@ impl PlayerPlugin {
   }
 
   /// Control the player.
-  fn control_player(
-    mut keyboard_input_events: EventReader<KeyboardInput>,
-    mut query: Query<&mut Transform, With<Player>>,
+  pub fn control_player(
+    time: Res<Time>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut query: Query<(&mut Transform, &mut Sprite), With<Player>>,
   ) {
-    let mut player_transform = query.single_mut();
-    let mut direction = (0.0, 0.0);
-    for event in keyboard_input_events.read() {
-      if event.state == ButtonState::Pressed {
-        match event.key_code {
-          KeyCode::ArrowUp => direction.1 = 1.0,
-          KeyCode::ArrowDown => direction.1 = -1.0,
-          KeyCode::ArrowLeft => direction.0 = -1.0,
-          KeyCode::ArrowRight => direction.0 = 1.0,
-          _ => {},
-        }
-      }
-      let new_position = (
-        player_transform.translation.x + direction.0 * 16.0,
-        player_transform.translation.y + direction.1 * 16.0,
-      );
-      player_transform.translation = Vec3::new(new_position.0, new_position.1, 10.0);
+    let (mut transform, mut player_sprite) = query.single_mut();
+    let mut direction = Vec3::ZERO;
+    if keyboard_input.pressed(KeyCode::KeyA) {
+      direction.x = -1.0;
     }
+    if keyboard_input.pressed(KeyCode::KeyD) {
+      direction.x = 1.0;
+    }
+    if keyboard_input.pressed(KeyCode::KeyW) {
+      direction.y = 1.0;
+    }
+    if keyboard_input.pressed(KeyCode::KeyS) {
+      direction.y = -1.0;
+    }
+    // Flip the sprite if we are heading right or if we're heading up or
+    // down and already flipped.
+    player_sprite.flip_x = direction.x > 0.0 || (direction.x == 0.0 && player_sprite.flip_x);
+    let z = transform.translation.z;
+    transform.translation += time.delta_seconds() * direction * 500.;
+    // Important! We need to restore the Z values when moving the camera around.
+    // Bevy has a specific camera setup and this can mess with how our layers are shown.
+    transform.translation.z = z;
   }
 }
 

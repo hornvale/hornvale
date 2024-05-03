@@ -14,8 +14,6 @@ pub mod rogue_view;
 pub mod sprite_sheets;
 /// Tiles used to build the tilemap view.
 pub mod tile;
-/// Tile map plugin.
-pub mod tile_map;
 
 /// The prelude for the _Hornvale_ library.
 pub mod prelude {
@@ -25,7 +23,6 @@ pub mod prelude {
   pub use super::rogue_view::prelude::*;
   pub use super::sprite_sheets::prelude::*;
   pub use super::tile::prelude::*;
-  pub use super::tile_map::prelude::*;
 }
 
 /// The internal prelude for the _Hornvale_ library.
