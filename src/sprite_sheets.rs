@@ -4,6 +4,9 @@
 
 use bevy::prelude::*;
 
+/// Consolidated Tiles (16x16)
+pub mod consolidated_tiles_16x16;
+use consolidated_tiles_16x16::ConsolidatedTiles16x16;
 /// Hexany Monster Menagerie (32x32)
 pub mod hexany_mm_32x32;
 use hexany_mm_32x32::HexanyMm32x32;
@@ -21,6 +24,7 @@ pub struct SpriteSheetsPlugin;
 impl Plugin for SpriteSheetsPlugin {
   fn build(&self, app: &mut App) {
     app
+      .init_resource::<ConsolidatedTiles16x16>()
       .init_resource::<HexanyMm32x32>()
       .init_resource::<HexanyRt16x16>()
       .init_resource::<Kenney1bit16x16>();
@@ -29,6 +33,7 @@ impl Plugin for SpriteSheetsPlugin {
 
 /// The prelude.
 pub mod prelude {
+  pub use super::consolidated_tiles_16x16::*;
   pub use super::hexany_mm_32x32::*;
   pub use super::hexany_rt_16x16::*;
   pub use super::kenney_1bit_16x16::*;

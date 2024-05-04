@@ -16,7 +16,7 @@ pub struct Player;
 impl PlayerPlugin {
   /// The startup system.
   pub fn setup(mut commands: Commands, sprite_atlas_layout: Res<HexanyRt16x16>, asset_server: Res<AssetServer>) {
-    let sprite: Handle<Image> = asset_server.load("hexany_roguelike_tiles_16x16.png");
+    let texture: Handle<Image> = asset_server.load("hexany_roguelike_tiles_16x16.png");
     commands.spawn((
       SpriteSheetBundle {
         atlas: TextureAtlas {
@@ -24,59 +24,31 @@ impl PlayerPlugin {
           index: 161,
         },
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 10.0)),
-        texture: sprite,
+        texture,
+        sprite: Sprite {
+          color: Color::rgb(0.6, 0.2, 0.8),
+          ..Default::default()
+        },
         ..default()
       },
       Player,
     ));
   }
-
-  /// Control the player.
-  pub fn control_player(
-    _time: Res<Time>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&mut Transform, &mut Sprite), With<Player>>,
-  ) {
-    let (mut transform, mut player_sprite) = query.single_mut();
-    let mut direction = Vec3::ZERO;
-    if keyboard_input.pressed(KeyCode::KeyA) {
-      direction.x = -1.0;
-    } else if keyboard_input.pressed(KeyCode::KeyD) {
-      direction.x = 1.0;
-    }
-    if keyboard_input.pressed(KeyCode::KeyW) {
-      direction.y = 1.0;
-    } else if keyboard_input.pressed(KeyCode::KeyS) {
-      direction.y = -1.0;
-    }
-    // Flip the sprite if we are heading right or if we're heading up or
-    // down and already flipped.
-    player_sprite.flip_x = direction.x > 0.0 || (direction.x == 0.0 && player_sprite.flip_x);
-
-    // Important! We need to restore the Z values when moving the camera around.
-    // Bevy has a specific camera setup and this can mess with how our layers are shown.
-    let z = transform.translation.z;
-    transform.translation += direction;
-    transform.translation.z = z;
-  }
 }
 
 impl Plugin for PlayerPlugin {
   fn build(&self, app: &mut App) {
-    app
-      .add_systems(Startup, Self::setup)
-      .add_systems(Update, Self::control_player);
+    app.add_systems(Startup, Self::setup);
   }
 }
 
 /// The prelude.
 pub mod prelude {
+  pub use super::Player;
   pub use super::PlayerPlugin;
 }
 
 /// The internal prelude.
 pub mod prelude_internal {
   pub use super::prelude::*;
-
-  pub use super::Player;
 }

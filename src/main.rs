@@ -27,32 +27,22 @@ fn main() {
           ..default()
         })
         .set(ImagePlugin::default_nearest()),
-      BouncerPlugin,
       RogueViewPlugin,
+      CommandEventPlugin,
+      ActionEventPlugin,
+      EffectEventPlugin,
+      InputPlugin,
       PlayerPlugin,
       FrameratePlugin,
       SpriteSheetsPlugin,
+      TileKindPlugin,
     ))
-    .add_systems(Update, (make_visible, toggle_vsync))
+    .add_systems(Update, make_visible)
     .run();
 }
 
 fn make_visible(mut window: Query<&mut Window>, frames: Res<FrameCount>) {
   if frames.0 == 3 {
     window.single_mut().visible = true;
-  }
-}
-
-/// This system toggles the vsync mode when pressing the button V.
-/// You'll see fps increase displayed in the console.
-fn toggle_vsync(input: Res<ButtonInput<KeyCode>>, mut windows: Query<&mut Window>) {
-  if input.just_pressed(KeyCode::KeyV) {
-    let mut window = windows.single_mut();
-    window.present_mode = if matches!(window.present_mode, PresentMode::AutoVsync) {
-      PresentMode::AutoNoVsync
-    } else {
-      PresentMode::AutoVsync
-    };
-    info!("PRESENT_MODE: {:?}", window.present_mode);
   }
 }

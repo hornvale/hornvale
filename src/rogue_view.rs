@@ -16,17 +16,20 @@ pub mod chunk_manager;
 pub mod dimensions;
 /// The Bevy plugin for the rogue view.
 pub mod plugin;
+/// The render distance of the rogue view.
+pub mod render_distance;
 
 /// The prelude.
 pub mod prelude {
-  pub use super::plugin::*;
+  pub use super::camera::RogueViewCamera;
+  pub use super::chunk_manager::RogueViewChunkManager;
+  pub use super::dimensions::RogueViewDimensions;
+  pub use super::plugin::RogueViewPlugin;
+  pub use super::render_distance::RogueViewRenderDistance;
 }
 
 /// The internal prelude.
 #[allow(unused_imports)]
 pub mod prelude_internal {
-  pub use super::camera::*;
-  pub use super::chunk_manager::*;
-  pub use super::dimensions::*;
   pub use super::prelude::*;
 }
