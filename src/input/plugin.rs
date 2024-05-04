@@ -1,6 +1,6 @@
 use crate::command_event::prelude::*;
 use crate::player::prelude::*;
-use bevy::input::common_conditions::input_just_pressed;
+use bevy::input::common_conditions::input_pressed;
 use bevy::prelude::*;
 
 /// The input-handling plugin.
@@ -46,10 +46,10 @@ impl Plugin for InputPlugin {
     app.add_systems(Startup, Self::on_startup).add_systems(
       Update,
       Self::on_update.run_if(
-        input_just_pressed(KeyCode::KeyA)
-          .or_else(input_just_pressed(KeyCode::KeyD))
-          .or_else(input_just_pressed(KeyCode::KeyW))
-          .or_else(input_just_pressed(KeyCode::KeyS)),
+        input_pressed(KeyCode::KeyA)
+          .or_else(input_pressed(KeyCode::KeyD))
+          .or_else(input_pressed(KeyCode::KeyW))
+          .or_else(input_pressed(KeyCode::KeyS)),
       ),
     );
   }
