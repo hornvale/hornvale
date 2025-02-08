@@ -5,10 +5,14 @@ pub struct CameraPlugin;
 #[derive(Component)]
 struct Reticle;
 
-const RETICLE_SPEED: f32 = 100.;
+/// The speed at which the reticle is moved by the player's input.
+/// This has a proportional effect on the movement of the reticle.
+const RETICLE_SPEED: f32 = 200.;
 
-/// How quickly should the camera snap to the desired location.
-const CAMERA_DECAY_RATE: f32 = 2.;
+/// How quickly the camera should snap to the desired location.
+/// This is expressed as a float relative to the delta time.
+/// A higher number means a faster snap.
+const CAMERA_DECAY_RATE: f32 = 1.5;
 
 fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>) {
   // World where we move the camera
@@ -28,7 +32,7 @@ fn setup_scene(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut mat
 
 fn setup_instructions(mut commands: Commands) {
   commands.spawn((
-    Text::new("Move the reticle with WASD.\nThe camera will smoothly track the reticle."),
+    Text::new("WASD: Move"),
     Node {
       position_type: PositionType::Absolute,
       bottom: Val::Px(12.0),
