@@ -27,6 +27,14 @@
 //! (get-component ?e :HP)
 //! (has-component ?e :HP)
 //!
+//! ;; Graph traversal queries (return lists of entities)
+//! (descendants entity :RelationType max-depth)  ; forward transitive closure
+//! (ancestors entity :RelationType max-depth)    ; reverse transitive closure
+//!
+//! ;; List functions
+//! (length list)  (first list)  (rest list)  (nth list index)
+//! (empty? list)  (cons item list)
+//!
 //! ;; Stdlib calls
 //! (abs x)  (sqrt x)  (max a b)
 //! ```
@@ -283,6 +291,10 @@ impl Compiler {
                 "get-component" => return self.compile_get_component(args, dst, span),
                 "has-component" => return self.compile_has_component(args, dst, span),
                 "get" => return self.compile_get_component(args, dst, span), // Alias
+
+                // Query operations
+                "descendants" => return self.compile_descendants(args, dst, span),
+                "ancestors" => return self.compile_ancestors(args, dst, span),
 
                 _ => {}
             }
@@ -607,6 +619,90 @@ impl Compiler {
 
         self.free_register(component_reg);
         self.free_register(entity_reg);
+        Ok(())
+    }
+
+    /// Compile `descendants` query.
+    ///
+    /// Syntax: `(descendants entity :RelationType max-depth)`
+    /// Returns a list of all entities reachable via the relation.
+    fn compile_descendants(
+        &mut self,
+        args: &[SExpr],
+        dst: Reg,
+        span: Span,
+    ) -> Result<(), CompileError> {
+        if args.len() != 3 {
+            return Err(CompileError::ArityMismatch {
+                expected: 3,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let start_reg = self.alloc_register()?;
+        let relation_reg = self.alloc_register()?;
+        let depth_reg = self.alloc_register()?;
+
+        self.compile_expr(&args[0], start_reg)?;
+        self.compile_expr(&args[1], relation_reg)?;
+        self.compile_expr(&args[2], depth_reg)?;
+
+        self.chunk.emit(
+            OpCode::Descendants {
+                dst,
+                start: start_reg,
+                relation: relation_reg,
+                max_depth: depth_reg,
+            },
+            self.current_line,
+        );
+
+        self.free_register(depth_reg);
+        self.free_register(relation_reg);
+        self.free_register(start_reg);
+        Ok(())
+    }
+
+    /// Compile `ancestors` query.
+    ///
+    /// Syntax: `(ancestors entity :RelationType max-depth)`
+    /// Returns a list of all entities that relate to this one (reverse traversal).
+    fn compile_ancestors(
+        &mut self,
+        args: &[SExpr],
+        dst: Reg,
+        span: Span,
+    ) -> Result<(), CompileError> {
+        if args.len() != 3 {
+            return Err(CompileError::ArityMismatch {
+                expected: 3,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let start_reg = self.alloc_register()?;
+        let relation_reg = self.alloc_register()?;
+        let depth_reg = self.alloc_register()?;
+
+        self.compile_expr(&args[0], start_reg)?;
+        self.compile_expr(&args[1], relation_reg)?;
+        self.compile_expr(&args[2], depth_reg)?;
+
+        self.chunk.emit(
+            OpCode::Ancestors {
+                dst,
+                start: start_reg,
+                relation: relation_reg,
+                max_depth: depth_reg,
+            },
+            self.current_line,
+        );
+
+        self.free_register(depth_reg);
+        self.free_register(relation_reg);
+        self.free_register(start_reg);
         Ok(())
     }
 
@@ -942,5 +1038,103 @@ mod tests {
     fn test_short_circuit_or() {
         // (or true (/ 1 0)) should not divide by zero
         assert_eq!(eval("(or true (/ 1 0))"), Value::Bool(true));
+    }
+
+    #[test]
+    fn test_descendants_query() {
+        use crate::core::{Cardinality, RelationSchema};
+
+        let mut world = World::new();
+        world.register_relation(RelationSchema::new(
+            "Contains",
+            Cardinality::One,
+            Cardinality::Many,
+        ));
+
+        // Build: room -> chest -> key
+        let room = world.create_entity();
+        let chest = world.create_entity();
+        let key = world.create_entity();
+
+        world.add_relation("Contains", room, chest);
+        world.add_relation("Contains", chest, key);
+
+        let expr = parse("(descendants room :Contains 10)").unwrap();
+        let bindings = [(Symbol::new("room"), Value::EntityRef(room))];
+        let chunk = Compiler::compile_with_bindings(&expr, &bindings).unwrap();
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        // Should return a list containing chest and key
+        let items = result.as_list().expect("expected list");
+        assert_eq!(items.len(), 2);
+        assert!(items.contains(&Value::EntityRef(chest)));
+        assert!(items.contains(&Value::EntityRef(key)));
+    }
+
+    #[test]
+    fn test_ancestors_query() {
+        use crate::core::{Cardinality, RelationSchema};
+
+        let mut world = World::new();
+        world.register_relation(RelationSchema::new(
+            "Contains",
+            Cardinality::One,
+            Cardinality::Many,
+        ));
+
+        // Build: room -> chest -> key
+        let room = world.create_entity();
+        let chest = world.create_entity();
+        let key = world.create_entity();
+
+        world.add_relation("Contains", room, chest);
+        world.add_relation("Contains", chest, key);
+
+        let expr = parse("(ancestors key :Contains 10)").unwrap();
+        let bindings = [(Symbol::new("key"), Value::EntityRef(key))];
+        let chunk = Compiler::compile_with_bindings(&expr, &bindings).unwrap();
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        // Should return a list containing chest and room (in BFS order)
+        let items = result.as_list().expect("expected list");
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0], Value::EntityRef(chest)); // depth 1
+        assert_eq!(items[1], Value::EntityRef(room)); // depth 2
+    }
+
+    #[test]
+    fn test_descendants_with_list_functions() {
+        use crate::core::{Cardinality, RelationSchema};
+
+        let mut world = World::new();
+        world.register_relation(RelationSchema::new(
+            "Contains",
+            Cardinality::One,
+            Cardinality::Many,
+        ));
+
+        // Build: room -> item1, item2
+        let room = world.create_entity();
+        let item1 = world.create_entity();
+        let item2 = world.create_entity();
+
+        world.add_relation("Contains", room, item1);
+        world.add_relation("Contains", room, item2);
+
+        let expr = parse("(length (descendants room :Contains 10))").unwrap();
+        let bindings = [(Symbol::new("room"), Value::EntityRef(room))];
+        let chunk = Compiler::compile_with_bindings(&expr, &bindings).unwrap();
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::Int(2));
     }
 }

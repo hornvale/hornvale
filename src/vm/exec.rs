@@ -339,12 +339,50 @@ impl<'a> VM<'a> {
                 let from_id = self.as_entity(self.get_reg(from))?;
 
                 let results = self.world.query_relation_forward(rel_id, from_id);
-                // For now, return the first result or nil
-                // TODO: Support returning lists once Value has a List variant
-                let result = results
-                    .first()
-                    .map(|e| Value::EntityRef(*e))
-                    .unwrap_or_else(|| NIL.clone());
+                // Return as a list of entity refs
+                let result = Value::list(results.into_iter().map(Value::EntityRef).collect());
+                self.set_reg(dst, result);
+            }
+
+            OpCode::Descendants {
+                dst,
+                start,
+                relation,
+                max_depth,
+            } => {
+                let start_id = self.as_entity(self.get_reg(start))?;
+                let rel_id = self.as_relation_type(self.get_reg(relation))?;
+                let depth = self.as_int(self.get_reg(max_depth))? as usize;
+
+                let traversal = self.world.descendants_all(start_id, rel_id, depth);
+                let result = Value::list(
+                    traversal
+                        .entities
+                        .into_iter()
+                        .map(Value::EntityRef)
+                        .collect(),
+                );
+                self.set_reg(dst, result);
+            }
+
+            OpCode::Ancestors {
+                dst,
+                start,
+                relation,
+                max_depth,
+            } => {
+                let start_id = self.as_entity(self.get_reg(start))?;
+                let rel_id = self.as_relation_type(self.get_reg(relation))?;
+                let depth = self.as_int(self.get_reg(max_depth))? as usize;
+
+                let traversal = self.world.ancestors(start_id, rel_id, depth);
+                let result = Value::list(
+                    traversal
+                        .entities
+                        .into_iter()
+                        .map(Value::EntityRef)
+                        .collect(),
+                );
                 self.set_reg(dst, result);
             }
 

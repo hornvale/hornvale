@@ -41,3 +41,7 @@ harness = false
 [[bench]]
 name = "derivation"
 harness = false
+
+[[bench]]
+name = "query"
+harness = false

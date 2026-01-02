@@ -203,15 +203,23 @@ Performance and scalability are the chief risks to this project. Before adding c
 
 ### Stage 2: Query Primitives
 **Goal**: Expose graph traversal operations needed for gameplay.
-**Status**: Not Started
+**Status**: Complete ✓
 
-- [ ] `descendants(entity, relation, depth_limit, stop_predicate)` — Transitive closure
-- [ ] `ancestors(entity, relation, depth_limit)` — Reverse traversal
-- [ ] `reachable(start, relations[], constraints)` — Multi-relation BFS/DFS
-- [ ] Benchmark traversals at various depths/fan-outs
-- [ ] Expose to DSL via new built-in functions
+- [x] `descendants(entity, relation, depth_limit, stop_predicate)` — Transitive closure
+- [x] `ancestors(entity, relation, depth_limit)` — Reverse traversal
+- [x] `reachable(start, relations[], constraints)` — Multi-relation BFS
+- [x] Benchmark traversals at various depths/fan-outs
+- [x] Expose to DSL via new built-in functions
 
-**Success Criteria**: Can query "all entities contained in this room, recursively, stopping at closed containers."
+**Implementation Summary**:
+- Added `Value::List` variant with Arc<Vec<Value>> for cheap cloning
+- New opcodes: `Descendants`, `Ancestors` in VM bytecode
+- DSL forms: `(descendants entity :Rel depth)`, `(ancestors entity :Rel depth)`
+- List stdlib functions: `length`, `first`, `rest`, `nth`, `empty?`, `cons`
+- Benchmarks: tree traversal, chain traversal, cycle handling, multi-relation
+- 363 tests passing
+
+**Success Criteria**: Can query "all entities contained in this room, recursively, stopping at closed containers." ✓
 
 ### Stage 3: REPL-DSL Bridge
 **Goal**: REPL commands defined as data, not hardcoded Rust.

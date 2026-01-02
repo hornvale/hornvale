@@ -116,6 +116,24 @@ pub enum OpCode {
     /// Query forward relation: R[dst] = world.query_relation_forward(R[rel], R[from])
     QueryRelation { dst: Reg, rel: Reg, from: Reg },
 
+    /// Query descendants: R[dst] = world.descendants_all(R[start], R[relation], R[max_depth])
+    /// Returns a list of entity refs
+    Descendants {
+        dst: Reg,
+        start: Reg,
+        relation: Reg,
+        max_depth: Reg,
+    },
+
+    /// Query ancestors: R[dst] = world.ancestors(R[start], R[relation], R[max_depth])
+    /// Returns a list of entity refs
+    Ancestors {
+        dst: Reg,
+        start: Reg,
+        relation: Reg,
+        max_depth: Reg,
+    },
+
     // === Random Number Generation ===
     /// Generate a random float in [0, 1): R[dst] = rng.next_f64()
     Random { dst: Reg },
@@ -161,6 +179,8 @@ impl OpCode {
             OpCode::GetComponent { .. } => "GET_COMPONENT",
             OpCode::HasComponent { .. } => "HAS_COMPONENT",
             OpCode::QueryRelation { .. } => "QUERY_RELATION",
+            OpCode::Descendants { .. } => "DESCENDANTS",
+            OpCode::Ancestors { .. } => "ANCESTORS",
             OpCode::Random { .. } => "RANDOM",
             OpCode::RandomRange { .. } => "RANDOM_RANGE",
             OpCode::Return { .. } => "RETURN",
@@ -212,6 +232,22 @@ impl std::fmt::Display for OpCode {
             } => write!(f, "HAS_COMPONENT r{dst} r{entity} r{component}"),
             OpCode::QueryRelation { dst, rel, from } => {
                 write!(f, "QUERY_RELATION r{dst} r{rel} r{from}")
+            }
+            OpCode::Descendants {
+                dst,
+                start,
+                relation,
+                max_depth,
+            } => {
+                write!(f, "DESCENDANTS r{dst} r{start} r{relation} r{max_depth}")
+            }
+            OpCode::Ancestors {
+                dst,
+                start,
+                relation,
+                max_depth,
+            } => {
+                write!(f, "ANCESTORS r{dst} r{start} r{relation} r{max_depth}")
             }
             OpCode::Random { dst } => write!(f, "RANDOM r{dst}"),
             OpCode::RandomRange { dst, min, max } => {

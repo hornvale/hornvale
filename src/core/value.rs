@@ -11,8 +11,7 @@ use crate::symbol::Symbol;
 
 /// A runtime value in the world VM.
 ///
-/// Values are immutable and cheap to clone (using Arc for strings).
-/// For Phase 1, we support basic types only; collections come later.
+/// Values are immutable and cheap to clone (using Arc for strings and lists).
 #[derive(Debug, Clone)]
 pub enum Value {
     /// 64-bit signed integer
@@ -27,12 +26,24 @@ pub enum Value {
     Symbol(Symbol),
     /// Reference to an entity
     EntityRef(EntityId),
+    /// List of values (immutable, reference-counted for cheap cloning)
+    List(Arc<Vec<Value>>),
 }
 
 impl Value {
     /// Create a string value.
     pub fn string(s: impl Into<Arc<str>>) -> Self {
         Value::String(s.into())
+    }
+
+    /// Create a list value.
+    pub fn list(items: Vec<Value>) -> Self {
+        Value::List(Arc::new(items))
+    }
+
+    /// Create an empty list value.
+    pub fn empty_list() -> Self {
+        Value::List(Arc::new(Vec::new()))
     }
 
     /// Try to get this value as a string reference.
@@ -67,6 +78,14 @@ impl Value {
         }
     }
 
+    /// Try to get this value as a list reference.
+    pub fn as_list(&self) -> Option<&[Value]> {
+        match self {
+            Value::List(items) => Some(items),
+            _ => None,
+        }
+    }
+
     /// Get a human-readable type name.
     pub fn type_name(&self) -> &'static str {
         match self {
@@ -76,6 +95,7 @@ impl Value {
             Value::String(_) => "String",
             Value::Symbol(_) => "Symbol",
             Value::EntityRef(_) => "EntityRef",
+            Value::List(_) => "List",
         }
     }
 }
@@ -89,6 +109,16 @@ impl std::fmt::Display for Value {
             Value::String(s) => write!(f, "\"{s}\""),
             Value::Symbol(s) => write!(f, ":{s}"),
             Value::EntityRef(id) => write!(f, "@{id}"),
+            Value::List(items) => {
+                write!(f, "[")?;
+                for (i, item) in items.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " ")?;
+                    }
+                    write!(f, "{item}")?;
+                }
+                write!(f, "]")
+            }
         }
     }
 }
@@ -110,6 +140,7 @@ impl PartialEq for Value {
             (Value::String(a), Value::String(b)) => a == b,
             (Value::Symbol(a), Value::Symbol(b)) => a == b,
             (Value::EntityRef(a), Value::EntityRef(b)) => a == b,
+            (Value::List(a), Value::List(b)) => a == b,
             _ => false,
         }
     }
@@ -135,6 +166,7 @@ impl Ord for Value {
                 Value::String(_) => 3,
                 Value::Symbol(_) => 4,
                 Value::EntityRef(_) => 5,
+                Value::List(_) => 6,
             }
         }
 
@@ -159,6 +191,7 @@ impl Ord for Value {
             (Value::String(a), Value::String(b)) => a.cmp(b),
             (Value::Symbol(a), Value::Symbol(b)) => a.cmp(b),
             (Value::EntityRef(a), Value::EntityRef(b)) => a.cmp(b),
+            (Value::List(a), Value::List(b)) => a.cmp(b),
             _ => unreachable!("type_order should have handled mismatched types"),
         }
     }
@@ -174,6 +207,7 @@ impl std::hash::Hash for Value {
             Value::String(s) => s.hash(state),
             Value::Symbol(s) => s.hash(state),
             Value::EntityRef(id) => id.hash(state),
+            Value::List(items) => items.hash(state),
         }
     }
 }
@@ -227,6 +261,12 @@ impl From<EntityId> for Value {
     }
 }
 
+impl From<Vec<Value>> for Value {
+    fn from(items: Vec<Value>) -> Self {
+        Value::List(Arc::new(items))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -273,5 +313,45 @@ mod tests {
         let v = Value::Int(42);
         assert_eq!(v.as_int(), Some(42));
         assert_eq!(v.as_str(), None);
+    }
+
+    #[test]
+    fn test_list_display() {
+        let list = Value::list(vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
+        assert_eq!(list.to_string(), "[1 2 3]");
+
+        let empty = Value::empty_list();
+        assert_eq!(empty.to_string(), "[]");
+    }
+
+    #[test]
+    fn test_list_equality() {
+        let list1 = Value::list(vec![Value::Int(1), Value::Int(2)]);
+        let list2 = Value::list(vec![Value::Int(1), Value::Int(2)]);
+        let list3 = Value::list(vec![Value::Int(1), Value::Int(3)]);
+
+        assert_eq!(list1, list2);
+        assert_ne!(list1, list3);
+    }
+
+    #[test]
+    fn test_list_accessor() {
+        let list = Value::list(vec![Value::Int(1), Value::Int(2)]);
+        assert!(list.as_list().is_some());
+        assert_eq!(list.as_list().unwrap().len(), 2);
+
+        let int_val = Value::Int(42);
+        assert!(int_val.as_list().is_none());
+    }
+
+    #[test]
+    fn test_list_ordering() {
+        // Lists sort after EntityRef
+        assert!(Value::EntityRef(EntityId::from_raw(0)) < Value::empty_list());
+
+        // Lists compare element-wise
+        let list1 = Value::list(vec![Value::Int(1)]);
+        let list2 = Value::list(vec![Value::Int(2)]);
+        assert!(list1 < list2);
     }
 }

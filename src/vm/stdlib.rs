@@ -78,6 +78,14 @@ impl StdLib {
         lib.register("float", "float(x) -> float", stdlib_float);
         lib.register("string", "string(x) -> string", stdlib_string);
 
+        // List functions
+        lib.register("length", "length(list) -> int", stdlib_length);
+        lib.register("first", "first(list) -> value", stdlib_first);
+        lib.register("rest", "rest(list) -> list", stdlib_rest);
+        lib.register("nth", "nth(list, index) -> value", stdlib_nth);
+        lib.register("empty?", "empty?(list) -> bool", stdlib_empty);
+        lib.register("cons", "cons(value, list) -> list", stdlib_cons);
+
         lib
     }
 
@@ -279,6 +287,72 @@ fn stdlib_string(args: &[Value]) -> Result<Value, StdLibError> {
     }
 }
 
+// === List functions ===
+
+fn stdlib_length(args: &[Value]) -> Result<Value, StdLibError> {
+    check_arity(args, 1)?;
+    match &args[0] {
+        Value::List(items) => Ok(Value::Int(items.len() as i64)),
+        Value::String(s) => Ok(Value::Int(s.len() as i64)),
+        other => Err(StdLibError::TypeError {
+            expected: "list or string",
+            got: other.type_name(),
+        }),
+    }
+}
+
+fn stdlib_first(args: &[Value]) -> Result<Value, StdLibError> {
+    check_arity(args, 1)?;
+    let items = as_list(&args[0])?;
+    items
+        .first()
+        .cloned()
+        .ok_or_else(|| StdLibError::ValueError("empty list".to_string()))
+}
+
+fn stdlib_rest(args: &[Value]) -> Result<Value, StdLibError> {
+    check_arity(args, 1)?;
+    let items = as_list(&args[0])?;
+    if items.is_empty() {
+        Ok(Value::empty_list())
+    } else {
+        Ok(Value::list(items[1..].to_vec()))
+    }
+}
+
+fn stdlib_nth(args: &[Value]) -> Result<Value, StdLibError> {
+    check_arity(args, 2)?;
+    let items = as_list(&args[0])?;
+    let index = as_int(&args[1])? as usize;
+    items.get(index).cloned().ok_or_else(|| {
+        StdLibError::ValueError(format!(
+            "index {index} out of bounds (length {})",
+            items.len()
+        ))
+    })
+}
+
+fn stdlib_empty(args: &[Value]) -> Result<Value, StdLibError> {
+    check_arity(args, 1)?;
+    match &args[0] {
+        Value::List(items) => Ok(Value::Bool(items.is_empty())),
+        Value::String(s) => Ok(Value::Bool(s.is_empty())),
+        other => Err(StdLibError::TypeError {
+            expected: "list or string",
+            got: other.type_name(),
+        }),
+    }
+}
+
+fn stdlib_cons(args: &[Value]) -> Result<Value, StdLibError> {
+    check_arity(args, 2)?;
+    let item = args[0].clone();
+    let items = as_list(&args[1])?;
+    let mut new_items = vec![item];
+    new_items.extend(items.iter().cloned());
+    Ok(Value::list(new_items))
+}
+
 // === Helpers ===
 
 fn check_arity(args: &[Value], expected: usize) -> Result<(), StdLibError> {
@@ -308,6 +382,26 @@ fn as_string(value: &Value) -> Result<&str, StdLibError> {
         Value::String(s) => Ok(s),
         other => Err(StdLibError::TypeError {
             expected: "string",
+            got: other.type_name(),
+        }),
+    }
+}
+
+fn as_list(value: &Value) -> Result<&[Value], StdLibError> {
+    match value {
+        Value::List(items) => Ok(items),
+        other => Err(StdLibError::TypeError {
+            expected: "list",
+            got: other.type_name(),
+        }),
+    }
+}
+
+fn as_int(value: &Value) -> Result<i64, StdLibError> {
+    match value {
+        Value::Int(n) => Ok(*n),
+        other => Err(StdLibError::TypeError {
+            expected: "int",
             got: other.type_name(),
         }),
     }
@@ -437,5 +531,66 @@ mod tests {
     fn test_type_error() {
         let result = stdlib_abs(&[Value::string("not a number")]);
         assert!(matches!(result, Err(StdLibError::TypeError { .. })));
+    }
+
+    #[test]
+    fn test_list_length() {
+        let list = Value::list(vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
+        assert_eq!(stdlib_length(&[list]).unwrap(), Value::Int(3));
+        assert_eq!(
+            stdlib_length(&[Value::empty_list()]).unwrap(),
+            Value::Int(0)
+        );
+    }
+
+    #[test]
+    fn test_list_first() {
+        let list = Value::list(vec![Value::Int(1), Value::Int(2)]);
+        assert_eq!(stdlib_first(&[list]).unwrap(), Value::Int(1));
+        assert!(stdlib_first(&[Value::empty_list()]).is_err());
+    }
+
+    #[test]
+    fn test_list_rest() {
+        let list = Value::list(vec![Value::Int(1), Value::Int(2), Value::Int(3)]);
+        let rest = stdlib_rest(&[list]).unwrap();
+        assert_eq!(rest, Value::list(vec![Value::Int(2), Value::Int(3)]));
+
+        let single = Value::list(vec![Value::Int(1)]);
+        assert_eq!(stdlib_rest(&[single]).unwrap(), Value::empty_list());
+    }
+
+    #[test]
+    fn test_list_nth() {
+        let list = Value::list(vec![Value::Int(10), Value::Int(20), Value::Int(30)]);
+        assert_eq!(
+            stdlib_nth(&[list.clone(), Value::Int(0)]).unwrap(),
+            Value::Int(10)
+        );
+        assert_eq!(
+            stdlib_nth(&[list.clone(), Value::Int(2)]).unwrap(),
+            Value::Int(30)
+        );
+        assert!(stdlib_nth(&[list, Value::Int(5)]).is_err());
+    }
+
+    #[test]
+    fn test_list_empty() {
+        assert_eq!(
+            stdlib_empty(&[Value::empty_list()]).unwrap(),
+            Value::Bool(true)
+        );
+        let list = Value::list(vec![Value::Int(1)]);
+        assert_eq!(stdlib_empty(&[list]).unwrap(), Value::Bool(false));
+    }
+
+    #[test]
+    fn test_list_cons() {
+        let list = Value::list(vec![Value::Int(2), Value::Int(3)]);
+        let result = stdlib_cons(&[Value::Int(1), list]).unwrap();
+        assert_eq!(
+            result,
+            Value::list(vec![Value::Int(1), Value::Int(2), Value::Int(3)])
+        );
     }
 }
