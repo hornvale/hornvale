@@ -56,13 +56,28 @@
 
 ## Phase 3: Derivation
 **Goal**: Properties can be computed from other properties.
-**Status**: Not Started
+**Status**: Complete
 
-### Planned Deliverables
-- [ ] Derived components (computed on access)
-- [ ] Composition modes (add, multiply, override)
-- [ ] Caching + invalidation
-- [ ] GenerationContext
+### Deliverables
+- [x] Derived components (computed on access)
+- [x] Composition modes (Add, Multiply, Max, Min, Override, OverrideIfHigher, OverrideIfLower)
+- [x] Caching + invalidation (dependency tracking, lazy invalidation)
+- [x] GenerationContext (derivation path tracking)
+
+### Files Created
+- `src/derive.rs` — Module root
+- `src/derive/compose.rs` — ComposeMode enum, compose_values(), Contribution
+- `src/derive/rule.rs` — DerivationRule, DerivedProperty, ValueFn
+- `src/derive/engine.rs` — DerivationEngine with caching, cycle detection
+- `src/derive/cache.rs` — DerivedCache, CacheEntry, Dependency
+- `src/derive/context.rs` — GenerationContext, GenerationStep
+
+### Files Modified
+- `src/core/world.rs` — Added get_component_derived(), set_component_notify(), add_relation_notify(), remove_relation_notify()
+- `src/lib.rs` — Export derive module
+
+### Tests
+124 unit tests covering all modules.
 
 ---
 

@@ -7,6 +7,7 @@ use crate::core::{
     ComponentStorage, ComponentTypeId, EntityAllocator, EntityId, RelationRegistry, RelationSchema,
     RelationTypeId, Value,
 };
+use crate::derive::DerivationEngine;
 
 /// The world state.
 ///
@@ -183,6 +184,88 @@ impl World {
         let count = self.entity_count();
         (0..count).map(EntityId::from_raw)
     }
+
+    // --- Derivation integration methods ---
+
+    /// Get a component value, checking derived components first.
+    ///
+    /// If the component is marked as derived in the engine, this will
+    /// compute and return the derived value. Otherwise, it returns the
+    /// stored component value.
+    ///
+    /// Returns `Ok(None)` if the component doesn't exist.
+    /// Returns `Err` if a circular dependency is detected.
+    pub fn get_component_derived(
+        &self,
+        entity: EntityId,
+        component: impl Into<ComponentTypeId>,
+        engine: &DerivationEngine,
+    ) -> Result<Option<Value>, crate::derive::DerivationError> {
+        let component = component.into();
+
+        // Check if this is a derived component
+        if engine.is_derived(component) {
+            // Derive the value
+            engine.derive(self, entity, component)
+        } else {
+            // Return stored value (cloned to match derive signature)
+            Ok(self.components.get(entity, component).cloned())
+        }
+    }
+
+    /// Set a component value and notify the derivation engine.
+    ///
+    /// This sets the component and invalidates any cached derived values
+    /// that depend on this component.
+    pub fn set_component_notify(
+        &mut self,
+        entity: EntityId,
+        component: impl Into<ComponentTypeId>,
+        value: impl Into<Value>,
+        engine: &DerivationEngine,
+    ) {
+        let component = component.into();
+        self.components.set(entity, component, value.into());
+        engine.notify_component_changed(entity, component);
+    }
+
+    /// Add a relation and notify the derivation engine.
+    ///
+    /// This adds the relation and invalidates any cached derived values
+    /// that depend on this relation.
+    pub fn add_relation_notify(
+        &mut self,
+        relation: impl Into<RelationTypeId>,
+        from: EntityId,
+        to: EntityId,
+        engine: &DerivationEngine,
+    ) -> bool {
+        let relation = relation.into();
+        let result = self.relations.insert(relation, from, to);
+        if result {
+            engine.notify_relation_changed(from, relation);
+        }
+        result
+    }
+
+    /// Remove a relation and notify the derivation engine.
+    ///
+    /// This removes the relation and invalidates any cached derived values
+    /// that depend on this relation.
+    pub fn remove_relation_notify(
+        &mut self,
+        relation: impl Into<RelationTypeId>,
+        from: EntityId,
+        to: EntityId,
+        engine: &DerivationEngine,
+    ) -> bool {
+        let relation = relation.into();
+        let result = self.relations.remove(relation, from, to);
+        if result {
+            engine.notify_relation_changed(from, relation);
+        }
+        result
+    }
 }
 
 impl Default for World {
@@ -253,5 +336,93 @@ mod tests {
 
         let all: Vec<_> = world.all_entities().collect();
         assert_eq!(all.len(), 3);
+    }
+
+    #[test]
+    fn test_get_component_derived_stored() {
+        use crate::derive::DerivationEngine;
+
+        let mut world = World::new();
+        let entity = world.create_entity();
+        world.set_component(entity, "Name", "test");
+
+        let engine = DerivationEngine::new();
+
+        // "Name" is not derived, so should return stored value
+        let result = world
+            .get_component_derived(entity, "Name", &engine)
+            .unwrap();
+        assert_eq!(result, Some(Value::string("test")));
+    }
+
+    #[test]
+    fn test_get_component_derived_computed() {
+        use crate::derive::{DerivationEngine, DerivationRule, DerivedProperty};
+        use crate::rules::Pattern;
+        use std::sync::Arc;
+
+        let mut world = World::new();
+        let entity = world.create_entity();
+        world.set_component(entity, "BaseHP", 100_i64);
+
+        let mut engine = DerivationEngine::new();
+        engine.add_rule(DerivationRule::new(
+            "effective-hp",
+            Pattern::has_component("?e", "BaseHP"),
+            DerivedProperty::new("EffectiveHP"),
+            Arc::new(|w, e| {
+                let hp = w
+                    .get_component(e, "BaseHP")
+                    .and_then(|v| v.as_int())
+                    .unwrap_or(0);
+                Value::Int(hp * 2)
+            }),
+        ));
+
+        // "EffectiveHP" is derived
+        let result = world
+            .get_component_derived(entity, "EffectiveHP", &engine)
+            .unwrap();
+        assert_eq!(result, Some(Value::Int(200)));
+    }
+
+    #[test]
+    fn test_set_component_notify() {
+        use crate::derive::{Dependency, DerivationEngine, DerivationRule, DerivedProperty};
+        use crate::rules::Pattern;
+        use std::sync::Arc;
+
+        let mut world = World::new();
+        let entity = world.create_entity();
+        world.set_component(entity, "HP", 100_i64);
+
+        let mut engine = DerivationEngine::new();
+        engine.add_rule(DerivationRule::new(
+            "derived-hp",
+            Pattern::has_component("?e", "HP"),
+            DerivedProperty::new("DerivedHP"),
+            Arc::new(|w, e| {
+                let hp = w
+                    .get_component(e, "HP")
+                    .and_then(|v| v.as_int())
+                    .unwrap_or(0);
+                Value::Int(hp * 2)
+            }),
+        ));
+
+        // Derive with dependencies
+        let deps = vec![Dependency::component(entity, "HP")];
+        engine
+            .derive_with_dependencies(&world, entity, "DerivedHP", deps)
+            .unwrap();
+
+        // Cache should have one entry
+        assert_eq!(engine.cache_stats(), (1, 1));
+
+        // Update HP with notification
+        world.set_component_notify(entity, "HP", 150_i64, &engine);
+
+        // Cache should be invalidated
+        assert_eq!(engine.cache_stats(), (1, 0));
     }
 }

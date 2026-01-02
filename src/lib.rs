@@ -12,6 +12,7 @@
 //! - Interactive REPL for inspection
 
 pub mod core;
+pub mod derive;
 pub mod io;
 pub mod repl;
 pub mod rules;
@@ -22,5 +23,6 @@ pub mod systems;
 pub use core::{
     Cardinality, ComponentTypeId, EntityId, RelationSchema, RelationTypeId, Value, World,
 };
+pub use derive::{ComposeMode, DerivationEngine, DerivationError, DerivationRule, DerivedProperty};
 pub use io::{StdIO, WorldIO};
 pub use symbol::Symbol;
