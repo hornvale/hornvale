@@ -1,0 +1,77 @@
+# Hornvale Implementation Plan
+
+## Phase 1: "Goat in a Room"
+**Goal**: The simplest possible world that does something.
+**Status**: Complete
+
+### Deliverables
+- [x] EntityId, Value (basic types)
+- [x] Symbol interning
+- [x] World struct with component storage
+- [x] Basic queries (get component, iterate entities)
+- [x] Tick loop (time passes)
+- [x] Hardcoded "goat baas" rule in Rust (every 10 ticks)
+- [x] WorldIO trait for I/O abstraction
+- [x] Minimal REPL: `tick`, `inspect`, `list`, `help`, `quit`
+
+### Files Created
+- `src/symbol.rs` — Symbol interning with global intern table
+- `src/core/entity.rs` — EntityId, EntityAllocator
+- `src/core/value.rs` — Value enum (Int, Float, Bool, String, Symbol, EntityRef)
+- `src/core/component.rs` — ComponentStorage using im::OrdMap
+- `src/core/world.rs` — World struct
+- `src/core.rs` — Module re-exports
+- `src/io.rs` — WorldIO trait, StdIO, TestIO
+- `src/systems.rs` — Hardcoded goat-baa system
+- `src/repl.rs` — REPL commands
+
+### Tests
+35 unit tests covering all modules.
+
+---
+
+## Phase 2: Relations + Rules
+**Goal**: Entities can relate to each other. Rules are data, not Rust code.
+**Status**: Not Started
+
+### Planned Deliverables
+- [ ] Relation tables (cardinality-aware per ARCHITECTURE.md)
+- [ ] Rule struct (pattern + effect)
+- [ ] Pattern matching (entity has component)
+- [ ] Rule evaluation loop
+- [ ] Load rules from simple format
+
+---
+
+## Phase 3: Derivation
+**Goal**: Properties can be computed from other properties.
+**Status**: Not Started
+
+### Planned Deliverables
+- [ ] Derived components (computed on access)
+- [ ] Composition modes (add, multiply, override)
+- [ ] Caching + invalidation
+- [ ] GenerationContext
+
+---
+
+## Phase 4: Language
+**Goal**: Author worlds in DSL, not Rust.
+**Status**: Not Started
+
+### Planned Deliverables
+- [ ] S-expr lexer/parser
+- [ ] Entity/rule/template syntax
+- [ ] Expression evaluation (bytecode compiler + register VM)
+- [ ] Enhanced REPL
+
+---
+
+## Phase 5: Seeded Generation
+**Goal**: Same seed → same world.
+**Status**: Not Started
+
+### Planned Deliverables
+- [ ] Seeded RNG integrated with derivation
+- [ ] Template instantiation with variation
+- [ ] Lazy generation
