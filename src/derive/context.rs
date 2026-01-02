@@ -2,10 +2,14 @@
 //!
 //! The GenerationContext tracks how derived values were computed,
 //! enabling debugging ("why is this value X?") and reproducibility.
+//!
+//! When a seed is present, the context can create deterministic RNGs
+//! for procedural generation.
 
 use im::OrdMap;
 
 use crate::core::{EntityId, Value};
+use crate::rng::SeededRng;
 use crate::symbol::Symbol;
 
 /// A step in the derivation chain.
@@ -163,6 +167,93 @@ impl GenerationContext {
         self.path.clear();
         self.parameters.clear();
     }
+
+    /// Create a SeededRng from this context's seed.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the context has no seed.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use hornvale::derive::GenerationContext;
+    ///
+    /// let ctx = GenerationContext::with_seed(12345);
+    /// let mut rng = ctx.rng();
+    /// let value = rng.next_u64();
+    /// ```
+    pub fn rng(&self) -> SeededRng {
+        SeededRng::new(self.seed.expect("GenerationContext::rng() requires a seed"))
+    }
+
+    /// Create a SeededRng if the context has a seed, or None otherwise.
+    pub fn try_rng(&self) -> Option<SeededRng> {
+        self.seed.map(SeededRng::new)
+    }
+
+    /// Create a child context with a derived seed.
+    ///
+    /// The child context inherits parameters but starts with an empty path.
+    /// If this context has a seed, the child gets a deterministically derived seed.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use hornvale::derive::GenerationContext;
+    ///
+    /// let mut parent = GenerationContext::with_seed(12345);
+    /// parent.set_parameter("biome", "forest");
+    ///
+    /// let child = parent.fork();
+    /// assert!(child.seed.is_some());
+    /// assert_ne!(child.seed, parent.seed); // Different seed
+    /// ```
+    pub fn fork(&mut self) -> Self {
+        let child_seed = self.seed.map(|s| {
+            let mut rng = SeededRng::new(s);
+            // Advance parent's conceptual state by consuming one value
+            // to derive the child seed
+            rng.next_u64()
+        });
+
+        GenerationContext {
+            seed: child_seed,
+            path: Vec::new(),
+            parameters: self.parameters.clone(),
+        }
+    }
+
+    /// Create a child context with a seed derived from a key.
+    ///
+    /// Useful for generating deterministic sub-contexts based on an identifier
+    /// (like an entity ID or location hash).
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use hornvale::derive::GenerationContext;
+    ///
+    /// let ctx = GenerationContext::with_seed(12345);
+    /// let room_ctx = ctx.fork_with_key(42); // Room ID 42
+    /// ```
+    pub fn fork_with_key(&self, key: u64) -> Self {
+        let child_seed = self.seed.map(|s| {
+            // Mix key with seed deterministically
+            s.wrapping_mul(0x9e3779b97f4a7c15) ^ key
+        });
+
+        GenerationContext {
+            seed: child_seed,
+            path: Vec::new(),
+            parameters: self.parameters.clone(),
+        }
+    }
+
+    /// Check if this context has a seed for RNG operations.
+    pub fn has_seed(&self) -> bool {
+        self.seed.is_some()
+    }
 }
 
 #[cfg(test)]
@@ -291,5 +382,106 @@ mod tests {
 
         let last = ctx.last_step().unwrap();
         assert_eq!(last.rule_name.as_str(), "rule-2");
+    }
+
+    #[test]
+    fn test_rng_from_context() {
+        let ctx = GenerationContext::with_seed(12345);
+        let mut rng1 = ctx.rng();
+        let mut rng2 = ctx.rng();
+
+        // Same seed produces same sequence
+        assert_eq!(rng1.next_u64(), rng2.next_u64());
+    }
+
+    #[test]
+    fn test_try_rng() {
+        let ctx_with_seed = GenerationContext::with_seed(42);
+        let ctx_without_seed = GenerationContext::new();
+
+        assert!(ctx_with_seed.try_rng().is_some());
+        assert!(ctx_without_seed.try_rng().is_none());
+    }
+
+    #[test]
+    #[should_panic(expected = "requires a seed")]
+    fn test_rng_without_seed_panics() {
+        let ctx = GenerationContext::new();
+        ctx.rng();
+    }
+
+    #[test]
+    fn test_has_seed() {
+        let ctx_with = GenerationContext::with_seed(42);
+        let ctx_without = GenerationContext::new();
+
+        assert!(ctx_with.has_seed());
+        assert!(!ctx_without.has_seed());
+    }
+
+    #[test]
+    fn test_fork_context() {
+        let mut parent = GenerationContext::with_seed(12345);
+        parent.set_parameter("biome", "forest");
+
+        let child = parent.fork();
+
+        // Child has a different seed
+        assert!(child.seed.is_some());
+        assert_ne!(child.seed, parent.seed);
+
+        // Child inherits parameters
+        assert_eq!(child.get_parameter("biome"), Some(&Value::string("forest")));
+
+        // Child has empty path
+        assert!(child.is_empty());
+    }
+
+    #[test]
+    fn test_fork_determinism() {
+        let mut parent1 = GenerationContext::with_seed(12345);
+        let mut parent2 = GenerationContext::with_seed(12345);
+
+        let child1 = parent1.fork();
+        let child2 = parent2.fork();
+
+        // Same parent seed produces same child seed
+        assert_eq!(child1.seed, child2.seed);
+    }
+
+    #[test]
+    fn test_fork_without_seed() {
+        let mut parent = GenerationContext::new();
+        parent.set_parameter("test", "value");
+
+        let child = parent.fork();
+
+        assert!(child.seed.is_none());
+        assert_eq!(child.get_parameter("test"), Some(&Value::string("value")));
+    }
+
+    #[test]
+    fn test_fork_with_key() {
+        let ctx = GenerationContext::with_seed(12345);
+
+        let child_a = ctx.fork_with_key(100);
+        let child_b = ctx.fork_with_key(200);
+
+        // Different keys produce different seeds
+        assert!(child_a.seed.is_some());
+        assert!(child_b.seed.is_some());
+        assert_ne!(child_a.seed, child_b.seed);
+    }
+
+    #[test]
+    fn test_fork_with_key_determinism() {
+        let ctx1 = GenerationContext::with_seed(12345);
+        let ctx2 = GenerationContext::with_seed(12345);
+
+        let child1 = ctx1.fork_with_key(42);
+        let child2 = ctx2.fork_with_key(42);
+
+        // Same parent seed + same key = same child seed
+        assert_eq!(child1.seed, child2.seed);
     }
 }

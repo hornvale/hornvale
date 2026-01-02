@@ -116,6 +116,13 @@ pub enum OpCode {
     /// Query forward relation: R[dst] = world.query_relation_forward(R[rel], R[from])
     QueryRelation { dst: Reg, rel: Reg, from: Reg },
 
+    // === Random Number Generation ===
+    /// Generate a random float in [0, 1): R[dst] = rng.next_f64()
+    Random { dst: Reg },
+
+    /// Generate a random integer in [R[min], R[max]]: R[dst] = rng.range(R[min], R[max])
+    RandomRange { dst: Reg, min: Reg, max: Reg },
+
     // === Return ===
     /// Return a value: return R[src]
     Return { src: Reg },
@@ -154,6 +161,8 @@ impl OpCode {
             OpCode::GetComponent { .. } => "GET_COMPONENT",
             OpCode::HasComponent { .. } => "HAS_COMPONENT",
             OpCode::QueryRelation { .. } => "QUERY_RELATION",
+            OpCode::Random { .. } => "RANDOM",
+            OpCode::RandomRange { .. } => "RANDOM_RANGE",
             OpCode::Return { .. } => "RETURN",
             OpCode::ReturnNil => "RETURN_NIL",
         }
@@ -203,6 +212,10 @@ impl std::fmt::Display for OpCode {
             } => write!(f, "HAS_COMPONENT r{dst} r{entity} r{component}"),
             OpCode::QueryRelation { dst, rel, from } => {
                 write!(f, "QUERY_RELATION r{dst} r{rel} r{from}")
+            }
+            OpCode::Random { dst } => write!(f, "RANDOM r{dst}"),
+            OpCode::RandomRange { dst, min, max } => {
+                write!(f, "RANDOM_RANGE r{dst} r{min} r{max}")
             }
             OpCode::Return { src } => write!(f, "RETURN r{src}"),
             OpCode::ReturnNil => write!(f, "RETURN_NIL"),

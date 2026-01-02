@@ -4,6 +4,7 @@ use super::bytecode::OpCode;
 use super::chunk::Chunk;
 use super::stdlib::{StdLib, StdLibError};
 use crate::core::{ComponentTypeId, EntityId, RelationTypeId, Value, World};
+use crate::rng::SeededRng;
 
 /// VM execution error.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
@@ -32,6 +33,9 @@ pub enum VMError {
     #[error("no entity context set")]
     NoEntityContext,
 
+    #[error("no RNG available (VM needs a seed for random operations)")]
+    NoRng,
+
     #[error("instruction pointer out of bounds")]
     IPOutOfBounds,
 }
@@ -53,6 +57,8 @@ pub struct VM<'a> {
     stdlib: &'a StdLib,
     /// Entity context (for pattern matching / derivation).
     entity: Option<EntityId>,
+    /// Random number generator (for seeded generation).
+    rng: Option<SeededRng>,
 }
 
 impl<'a> VM<'a> {
@@ -65,12 +71,25 @@ impl<'a> VM<'a> {
             world,
             stdlib,
             entity: None,
+            rng: None,
         }
     }
 
     /// Set the entity context for world access.
     pub fn with_entity(mut self, entity: EntityId) -> Self {
         self.entity = Some(entity);
+        self
+    }
+
+    /// Set the RNG for random operations.
+    pub fn with_rng(mut self, rng: SeededRng) -> Self {
+        self.rng = Some(rng);
+        self
+    }
+
+    /// Set the RNG from a seed.
+    pub fn with_seed(mut self, seed: u64) -> Self {
+        self.rng = Some(SeededRng::new(seed));
         self
     }
 
@@ -329,6 +348,22 @@ impl<'a> VM<'a> {
                 self.set_reg(dst, result);
             }
 
+            // === Random Number Generation ===
+            OpCode::Random { dst } => {
+                let rng = self.rng.as_mut().ok_or(VMError::NoRng)?;
+                let result = Value::Float(rng.next_f64());
+                self.set_reg(dst, result);
+            }
+
+            OpCode::RandomRange { dst, min, max } => {
+                // Get values first before borrowing rng mutably
+                let min_val = self.as_int(self.get_reg(min))?;
+                let max_val = self.as_int(self.get_reg(max))?;
+                let rng = self.rng.as_mut().ok_or(VMError::NoRng)?;
+                let result = Value::Int(rng.range(min_val, max_val));
+                self.set_reg(dst, result);
+            }
+
             // === Return ===
             OpCode::Return { src } => {
                 return Ok(ControlFlow::Return(self.get_reg(src).clone()));
@@ -427,6 +462,16 @@ impl<'a> VM<'a> {
             Value::Symbol(s) => Ok(RelationTypeId(*s)),
             other => Err(VMError::TypeError {
                 expected: "symbol (relation type)",
+                got: other.type_name(),
+            }),
+        }
+    }
+
+    fn as_int(&self, value: &Value) -> Result<i64, VMError> {
+        match value {
+            Value::Int(n) => Ok(*n),
+            other => Err(VMError::TypeError {
+                expected: "int",
                 got: other.type_name(),
             }),
         }
@@ -716,5 +761,81 @@ mod tests {
         let stdlib = StdLib::with_builtins();
         let mut vm = VM::new(&chunk, &world, &stdlib);
         assert_eq!(vm.run().unwrap(), Value::Bool(true));
+    }
+
+    #[test]
+    fn test_random() {
+        let mut chunk = Chunk::new();
+        chunk.emit(OpCode::Random { dst: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 0 }, 1);
+
+        let world = World::new();
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib).with_seed(12345);
+        let result = vm.run().unwrap();
+
+        // Should be a float in [0, 1)
+        match result {
+            Value::Float(f) => assert!((0.0..1.0).contains(&f)),
+            _ => panic!("Expected float, got {result:?}"),
+        }
+    }
+
+    #[test]
+    fn test_random_determinism() {
+        let mut chunk = Chunk::new();
+        chunk.emit(OpCode::Random { dst: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 0 }, 1);
+
+        let world = World::new();
+        let stdlib = StdLib::with_builtins();
+
+        // Same seed should produce same result
+        let mut vm1 = VM::new(&chunk, &world, &stdlib).with_seed(42);
+        let mut vm2 = VM::new(&chunk, &world, &stdlib).with_seed(42);
+
+        assert_eq!(vm1.run().unwrap(), vm2.run().unwrap());
+    }
+
+    #[test]
+    fn test_random_range() {
+        let mut chunk = Chunk::new();
+        let c_min = chunk.add_constant(Value::Int(1));
+        let c_max = chunk.add_constant(Value::Int(10));
+        chunk.emit(OpCode::LoadConst { dst: 0, idx: c_min }, 1);
+        chunk.emit(OpCode::LoadConst { dst: 1, idx: c_max }, 1);
+        chunk.emit(
+            OpCode::RandomRange {
+                dst: 2,
+                min: 0,
+                max: 1,
+            },
+            1,
+        );
+        chunk.emit(OpCode::Return { src: 2 }, 1);
+
+        let world = World::new();
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib).with_seed(12345);
+        let result = vm.run().unwrap();
+
+        // Should be an int in [1, 10]
+        match result {
+            Value::Int(n) => assert!((1..=10).contains(&n)),
+            _ => panic!("Expected int, got {result:?}"),
+        }
+    }
+
+    #[test]
+    fn test_random_no_rng_error() {
+        let mut chunk = Chunk::new();
+        chunk.emit(OpCode::Random { dst: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 0 }, 1);
+
+        let world = World::new();
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib); // No seed!
+
+        assert!(matches!(vm.run(), Err(VMError::NoRng)));
     }
 }
