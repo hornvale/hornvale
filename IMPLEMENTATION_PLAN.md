@@ -83,13 +83,46 @@
 
 ## Phase 4: Language
 **Goal**: Author worlds in DSL, not Rust.
-**Status**: Not Started
+**Status**: Complete
 
-### Planned Deliverables
-- [ ] S-expr lexer/parser
-- [ ] Entity/rule/template syntax
-- [ ] Expression evaluation (bytecode compiler + register VM)
-- [ ] Enhanced REPL
+### Stage 1: Lexer and S-Expression Parser
+**Status**: Complete
+
+- [x] `src/lang.rs` — Module root
+- [x] `src/lang/error.rs` — LexError, ParseError, Span
+- [x] `src/lang/token.rs` — TokenKind, Token
+- [x] `src/lang/lexer.rs` — Tokenizer (parens, numbers, strings, symbols, keywords)
+- [x] `src/lang/ast.rs` — SExpr, Atom
+- [x] `src/lang/parser.rs` — Parser, parse(), parse_all(), is_complete()
+
+### Stage 2: Bytecode VM Core
+**Status**: Complete
+
+- [x] `src/vm.rs` — Module root
+- [x] `src/vm/bytecode.rs` — OpCode enum (28 instructions)
+- [x] `src/vm/chunk.rs` — Bytecode container with constant pool
+- [x] `src/vm/exec.rs` — VM execution engine (256 registers)
+- [x] `src/vm/stdlib.rs` — Standard library (15 functions)
+
+### Stage 3: Expression Compiler
+**Status**: Complete
+
+- [x] `src/compiler.rs` — AST → bytecode (literals, arithmetic, comparison, logic, if, let, stdlib calls, world access)
+
+### Stage 4: DSL Syntax & Integration (Minimal)
+**Status**: Complete
+
+- [x] `src/lang/loader.rs` — WorldLoader
+- [x] Entity/relation/rule definitions
+
+### Stage 5: Enhanced REPL
+**Status**: Complete
+
+- [x] load, eval, define, parse commands
+- [x] Multi-line input (detects incomplete expressions)
+
+### Tests
+268 unit tests (63 for Stage 1, 39 for Stage 2, 33 for Stage 3, 4 for Stage 4, 5 for Stage 5)
 
 ---
 

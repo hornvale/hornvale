@@ -1,4 +1,4 @@
-//! Simple REPL for Phase 2.
+//! Enhanced REPL for Phase 4.
 //!
 //! Commands:
 //! - tick [N]       : Advance simulation by 1 or N ticks
@@ -7,13 +7,21 @@
 //! - rules          : List all rules
 //! - rule <name>    : Show details of a specific rule
 //! - relations      : List all relation types
+//! - load <file>    : Load definitions from file
+//! - eval <expr>    : Evaluate an expression
+//! - define <def>   : Add a definition inline
+//! - parse <expr>   : Show parsed AST
 //! - help           : Show available commands
 //! - quit / exit    : Exit the REPL
 
+use crate::compiler::Compiler;
 use crate::core::{EntityId, World};
 use crate::io::WorldIO;
+use crate::lang::{self, WorldLoader, is_complete};
 use crate::rules::RuleSet;
 use crate::systems::tick_world_n;
+use crate::vm::{StdLib, VM};
+use std::path::Path;
 
 /// Result of executing a REPL command.
 pub enum ReplResult {
@@ -25,11 +33,15 @@ pub enum ReplResult {
 
 /// Run the REPL loop.
 pub fn run_repl(world: &mut World, rules: &mut RuleSet, io: &mut dyn WorldIO) {
-    io.println("Hornvale Phase 2 - \"Goat in a Room\"");
+    io.println("Hornvale Phase 4 - Language");
     io.println("Type 'help' for available commands.\n");
 
+    let mut loader = WorldLoader::new();
+    let mut buffer = String::new();
+
     loop {
-        let input = match io.prompt("> ") {
+        let prompt = if buffer.is_empty() { "> " } else { "... " };
+        let input = match io.prompt(prompt) {
             Some(line) => line,
             None => {
                 io.println("\nGoodbye!");
@@ -37,18 +49,32 @@ pub fn run_repl(world: &mut World, rules: &mut RuleSet, io: &mut dyn WorldIO) {
             }
         };
 
-        let input = input.trim();
-        if input.is_empty() {
+        // Accumulate input for multi-line expressions
+        if !buffer.is_empty() {
+            buffer.push('\n');
+        }
+        buffer.push_str(&input);
+
+        // Check if expression is complete (balanced parens)
+        if !is_complete(&buffer) {
             continue;
         }
 
-        match execute_command(world, rules, io, input) {
+        let input = buffer.trim();
+        if input.is_empty() {
+            buffer.clear();
+            continue;
+        }
+
+        match execute_command(world, rules, &mut loader, io, input) {
             ReplResult::Continue => {}
             ReplResult::Exit => {
                 io.println("Goodbye!");
                 break;
             }
         }
+
+        buffer.clear();
     }
 }
 
@@ -56,11 +82,13 @@ pub fn run_repl(world: &mut World, rules: &mut RuleSet, io: &mut dyn WorldIO) {
 pub fn execute_command(
     world: &mut World,
     rules: &mut RuleSet,
+    loader: &mut WorldLoader,
     io: &mut dyn WorldIO,
     input: &str,
 ) -> ReplResult {
     let parts: Vec<&str> = input.split_whitespace().collect();
     let command = parts.first().copied().unwrap_or("");
+    let rest = input.strip_prefix(command).unwrap_or("").trim();
     let args = &parts[1..];
 
     match command {
@@ -70,6 +98,10 @@ pub fn execute_command(
         "rules" => cmd_rules(rules, io),
         "rule" | "r" => cmd_rule(rules, io, args),
         "relations" | "rels" => cmd_relations(world, io),
+        "load" => cmd_load(world, rules, loader, io, args),
+        "eval" | "e" => cmd_eval(world, io, rest),
+        "define" | "def" => cmd_define(world, rules, loader, io, rest),
+        "parse" | "p" => cmd_parse(io, rest),
         "help" | "h" | "?" => cmd_help(io),
         "quit" | "exit" | "q" => return ReplResult::Exit,
         "" => {}
@@ -217,6 +249,106 @@ fn cmd_relations(world: &World, io: &mut dyn WorldIO) {
     }
 }
 
+/// Load definitions from a file.
+fn cmd_load(
+    world: &mut World,
+    rules: &mut RuleSet,
+    loader: &mut WorldLoader,
+    io: &mut dyn WorldIO,
+    args: &[&str],
+) {
+    let path = match args.first() {
+        Some(s) => *s,
+        None => {
+            io.println("Usage: load <file>");
+            return;
+        }
+    };
+
+    match loader.load_file(world, rules, Path::new(path)) {
+        Ok(()) => io.println(&format!("Loaded: {path}")),
+        Err(e) => io.println(&format!("Error loading file: {e}")),
+    }
+}
+
+/// Evaluate an expression.
+fn cmd_eval(world: &World, io: &mut dyn WorldIO, expr: &str) {
+    if expr.is_empty() {
+        io.println("Usage: eval <expression>");
+        return;
+    }
+
+    // Parse the expression
+    let parsed = match lang::parse(expr) {
+        Ok(p) => p,
+        Err(e) => {
+            io.println(&format!("Parse error: {e}"));
+            return;
+        }
+    };
+
+    // Compile to bytecode
+    let chunk = match Compiler::compile(&parsed) {
+        Ok(c) => c,
+        Err(e) => {
+            io.println(&format!("Compile error: {e}"));
+            return;
+        }
+    };
+
+    // Execute
+    let stdlib = StdLib::with_builtins();
+    let mut vm = VM::new(&chunk, world, &stdlib);
+
+    match vm.run() {
+        Ok(value) => io.println(&format!("{value}")),
+        Err(e) => io.println(&format!("Runtime error: {e}")),
+    }
+}
+
+/// Add a definition inline.
+fn cmd_define(
+    world: &mut World,
+    rules: &mut RuleSet,
+    loader: &mut WorldLoader,
+    io: &mut dyn WorldIO,
+    def: &str,
+) {
+    if def.is_empty() {
+        io.println("Usage: define <definition>");
+        io.println("  define (entity foo (Name \"Foo\"))");
+        io.println("  define (relation Contains :from :one :to :many)");
+        io.println("  define (rule my-rule :pattern (entity ?e) :effect (emit-message \"Hi\"))");
+        return;
+    }
+
+    match loader.load_str(world, rules, def) {
+        Ok(()) => io.println("Defined."),
+        Err(e) => io.println(&format!("Error: {e}")),
+    }
+}
+
+/// Show parsed AST for debugging.
+fn cmd_parse(io: &mut dyn WorldIO, expr: &str) {
+    if expr.is_empty() {
+        io.println("Usage: parse <expression>");
+        return;
+    }
+
+    match lang::parse_all(expr) {
+        Ok(exprs) => {
+            for (i, parsed) in exprs.iter().enumerate() {
+                if exprs.len() > 1 {
+                    io.println(&format!("[{i}] {parsed:#?}"));
+                } else {
+                    io.println(&format!("{parsed:#?}"));
+                }
+            }
+        }
+        Err(e) => io.println(&format!("Parse error: {e}")),
+    }
+}
+
 /// Show help information.
 fn cmd_help(io: &mut dyn WorldIO) {
     io.println("Available commands:");
@@ -226,8 +358,14 @@ fn cmd_help(io: &mut dyn WorldIO) {
     io.println("  rules         - List all rules");
     io.println("  rule <name>   - Show details of a rule (alias: r)");
     io.println("  relations     - List relation types (alias: rels)");
+    io.println("  load <file>   - Load definitions from file");
+    io.println("  eval <expr>   - Evaluate an expression (alias: e)");
+    io.println("  define <def>  - Add a definition inline (alias: def)");
+    io.println("  parse <expr>  - Show parsed AST (alias: p)");
     io.println("  help          - Show this help (alias: h, ?)");
     io.println("  quit          - Exit the REPL (alias: exit, q)");
+    io.println("");
+    io.println("Multi-line input: Incomplete expressions continue on next line.");
 }
 
 #[cfg(test)]
@@ -295,15 +433,20 @@ mod tests {
         assert!(io.output.contains("inspect"));
         assert!(io.output.contains("list"));
         assert!(io.output.contains("quit"));
+        assert!(io.output.contains("load"));
+        assert!(io.output.contains("eval"));
+        assert!(io.output.contains("define"));
+        assert!(io.output.contains("parse"));
     }
 
     #[test]
     fn test_unknown_command() {
         let mut world = setup_test_world();
         let mut rules = empty_rules();
+        let mut loader = WorldLoader::new();
         let mut io = TestIO::new(vec![]);
 
-        execute_command(&mut world, &mut rules, &mut io, "foobar");
+        execute_command(&mut world, &mut rules, &mut loader, &mut io, "foobar");
 
         assert!(io.output.contains("Unknown command"));
     }
@@ -312,9 +455,10 @@ mod tests {
     fn test_quit_command() {
         let mut world = setup_test_world();
         let mut rules = empty_rules();
+        let mut loader = WorldLoader::new();
         let mut io = TestIO::new(vec![]);
 
-        let result = execute_command(&mut world, &mut rules, &mut io, "quit");
+        let result = execute_command(&mut world, &mut rules, &mut loader, &mut io, "quit");
         assert!(matches!(result, ReplResult::Exit));
     }
 
@@ -373,5 +517,74 @@ mod tests {
         assert!(io.output.contains("Relation types (1)"));
         assert!(io.output.contains("Location"));
         assert!(io.output.contains("Many-to-One"));
+    }
+
+    #[test]
+    fn test_cmd_eval() {
+        let world = setup_test_world();
+        let mut io = TestIO::new(vec![]);
+
+        cmd_eval(&world, &mut io, "(+ 1 2)");
+
+        assert!(io.output.contains("3"));
+    }
+
+    #[test]
+    fn test_cmd_eval_parse_error() {
+        let world = setup_test_world();
+        let mut io = TestIO::new(vec![]);
+
+        cmd_eval(&world, &mut io, "(+ 1");
+
+        assert!(io.output.contains("Parse error"));
+    }
+
+    #[test]
+    fn test_cmd_define_entity() {
+        let mut world = World::new();
+        let mut rules = empty_rules();
+        let mut loader = WorldLoader::new();
+        let mut io = TestIO::new(vec![]);
+
+        cmd_define(
+            &mut world,
+            &mut rules,
+            &mut loader,
+            &mut io,
+            "(entity foo (Name \"Foo\"))",
+        );
+
+        assert!(io.output.contains("Defined"));
+        assert_eq!(world.entity_count(), 1);
+
+        // Verify the entity was created
+        let foo = loader.get_entity("foo").unwrap();
+        assert_eq!(
+            world.get_component(foo, "Name"),
+            Some(&crate::Value::string("Foo"))
+        );
+    }
+
+    #[test]
+    fn test_cmd_parse() {
+        let mut io = TestIO::new(vec![]);
+
+        cmd_parse(&mut io, "(+ 1 2)");
+
+        assert!(io.output.contains("List"));
+    }
+
+    #[test]
+    fn test_is_complete() {
+        assert!(is_complete("(+ 1 2)"));
+        assert!(is_complete("foo"));
+        assert!(!is_complete("(+ 1"));
+        assert!(!is_complete("(+ (- 1 2)"));
+        assert!(is_complete("(+ (- 1 2))"));
+        // Strings don't affect balance
+        assert!(is_complete("\"hello\""));
+        assert!(!is_complete("\"hello"));
+        // Escaped quote inside string
+        assert!(is_complete("\"he\\\"llo\""));
     }
 }

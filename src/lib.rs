@@ -11,13 +11,16 @@
 //! - Hardcoded rules (goat says "Baa!" every 10 ticks)
 //! - Interactive REPL for inspection
 
+pub mod compiler;
 pub mod core;
 pub mod derive;
 pub mod io;
+pub mod lang;
 pub mod repl;
 pub mod rules;
 pub mod symbol;
 pub mod systems;
+pub mod vm;
 
 // Re-export commonly used types at the crate root
 pub use core::{
