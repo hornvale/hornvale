@@ -1,54 +1,28 @@
-//! Hardcoded systems for Phase 1.
+//! Systems and tick loop for the simulation.
 //!
-//! These will be replaced by data-driven rules in Phase 2.
-//! For now, they demonstrate the tick loop concept.
+//! Phase 2: Rules are now data-driven via RuleSet.
 
 use crate::core::World;
 use crate::io::WorldIO;
-
-/// The tick interval at which the goat baas.
-const GOAT_BAA_INTERVAL: u64 = 10;
+use crate::rules::RuleSet;
 
 /// Run all systems for a single tick.
 ///
-/// This is the main simulation step. Systems read world state,
-/// perform their logic, and may produce output.
-pub fn tick_world(world: &mut World, io: &mut dyn WorldIO) {
+/// This is the main simulation step:
+/// 1. Advance the tick counter
+/// 2. Evaluate all rules against the current world state
+pub fn tick_world(world: &mut World, rules: &mut RuleSet, io: &mut dyn WorldIO) {
     // Advance the tick counter first
     world.advance_tick();
 
-    // Run the goat-baa system
-    goat_baa_system(world, io);
+    // Evaluate all rules
+    rules.evaluate(world, io, world.tick());
 }
 
 /// Run multiple ticks at once.
-pub fn tick_world_n(world: &mut World, io: &mut dyn WorldIO, count: u64) {
+pub fn tick_world_n(world: &mut World, rules: &mut RuleSet, io: &mut dyn WorldIO, count: u64) {
     for _ in 0..count {
-        tick_world(world, io);
-    }
-}
-
-/// Hardcoded system: goats say "Baa!" periodically.
-///
-/// Finds all entities with Name = "goat" and prints a message
-/// every GOAT_BAA_INTERVAL ticks.
-fn goat_baa_system(world: &World, io: &mut dyn WorldIO) {
-    let current_tick = world.tick();
-
-    // Only trigger on the interval
-    if current_tick % GOAT_BAA_INTERVAL != 0 {
-        return;
-    }
-
-    // Find all goats
-    for (entity, name_value) in world.entities_with("Name") {
-        if let Some(name) = name_value.as_str() {
-            if name == "goat" {
-                io.println(&format!(
-                    "[Tick {current_tick}] The goat (entity {entity}) says: Baa!"
-                ));
-            }
-        }
+        tick_world(world, rules, io);
     }
 }
 
@@ -56,6 +30,10 @@ fn goat_baa_system(world: &World, io: &mut dyn WorldIO) {
 mod tests {
     use super::*;
     use crate::io::TestIO;
+    use crate::rules::{Effect, Pattern, Rule, Trigger};
+
+    /// The tick interval at which the goat baas (for tests).
+    const GOAT_BAA_INTERVAL: u64 = 10;
 
     fn setup_world_with_goat() -> World {
         let mut world = World::new();
@@ -71,19 +49,29 @@ mod tests {
         world
     }
 
+    fn goat_baa_rules() -> RuleSet {
+        RuleSet::from_rules(vec![Rule::new(
+            "goat-baas",
+            Pattern::component_value("?e", "Name", "goat"),
+            Trigger::every(GOAT_BAA_INTERVAL),
+            Effect::emit_message("The goat says: Baa!"),
+        )])
+    }
+
     #[test]
     fn test_goat_baas_at_interval() {
         let mut world = setup_world_with_goat();
+        let mut rules = goat_baa_rules();
         let mut io = TestIO::new(vec![]);
 
         // Tick up to just before the interval - no baa
         for _ in 0..(GOAT_BAA_INTERVAL - 1) {
-            tick_world(&mut world, &mut io);
+            tick_world(&mut world, &mut rules, &mut io);
         }
         assert!(!io.output.contains("Baa!"));
 
         // One more tick should trigger the baa
-        tick_world(&mut world, &mut io);
+        tick_world(&mut world, &mut rules, &mut io);
         assert!(io.output.contains("Baa!"));
         assert!(io.output.contains(&format!("Tick {GOAT_BAA_INTERVAL}")));
     }
@@ -91,10 +79,11 @@ mod tests {
     #[test]
     fn test_goat_baas_repeatedly() {
         let mut world = setup_world_with_goat();
+        let mut rules = goat_baa_rules();
         let mut io = TestIO::new(vec![]);
 
         // Run for multiple intervals
-        tick_world_n(&mut world, &mut io, GOAT_BAA_INTERVAL * 3);
+        tick_world_n(&mut world, &mut rules, &mut io, GOAT_BAA_INTERVAL * 3);
 
         // Should have 3 baas
         let baa_count = io.output.matches("Baa!").count();
@@ -107,8 +96,9 @@ mod tests {
         let entity = world.create_entity();
         world.set_component(entity, "Name", "sheep"); // Not a goat!
 
+        let mut rules = goat_baa_rules();
         let mut io = TestIO::new(vec![]);
-        tick_world_n(&mut world, &mut io, GOAT_BAA_INTERVAL * 2);
+        tick_world_n(&mut world, &mut rules, &mut io, GOAT_BAA_INTERVAL * 2);
 
         assert!(!io.output.contains("Baa!"));
     }

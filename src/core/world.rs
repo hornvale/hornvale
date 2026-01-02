@@ -1,20 +1,25 @@
 //! World state container.
 //!
 //! The World is the top-level container for all game state: entities,
-//! components, and the current simulation tick.
+//! components, relations, and the current simulation tick.
 
-use crate::core::{ComponentStorage, ComponentTypeId, EntityAllocator, EntityId, Value};
+use crate::core::{
+    ComponentStorage, ComponentTypeId, EntityAllocator, EntityId, RelationRegistry, RelationSchema,
+    RelationTypeId, Value,
+};
 
 /// The world state.
 ///
 /// For Phase 1, this is a simple single-layer implementation.
-/// Later phases will add base/overlay split and relations.
+/// Later phases will add base/overlay split.
 #[derive(Debug, Clone)]
 pub struct World {
     /// Entity ID allocator
     entities: EntityAllocator,
     /// Component storage
     components: ComponentStorage,
+    /// Relation storage
+    relations: RelationRegistry,
     /// Current simulation tick
     tick: u64,
 }
@@ -25,6 +30,7 @@ impl World {
         Self {
             entities: EntityAllocator::new(),
             components: ComponentStorage::new(),
+            relations: RelationRegistry::new(),
             tick: 0,
         }
     }
@@ -92,6 +98,80 @@ impl World {
     /// Advance the simulation by multiple ticks.
     pub fn advance_ticks(&mut self, count: u64) {
         self.tick += count;
+    }
+
+    // --- Relation methods ---
+
+    /// Register a relation type with the world.
+    pub fn register_relation(&mut self, schema: RelationSchema) {
+        self.relations.register(schema);
+    }
+
+    /// Add a relation between two entities.
+    ///
+    /// Returns false if the relation type doesn't exist.
+    pub fn add_relation(
+        &mut self,
+        relation: impl Into<RelationTypeId>,
+        from: EntityId,
+        to: EntityId,
+    ) -> bool {
+        self.relations.insert(relation.into(), from, to)
+    }
+
+    /// Remove a relation between two entities.
+    ///
+    /// Returns false if the relation type doesn't exist.
+    pub fn remove_relation(
+        &mut self,
+        relation: impl Into<RelationTypeId>,
+        from: EntityId,
+        to: EntityId,
+    ) -> bool {
+        self.relations.remove(relation.into(), from, to)
+    }
+
+    /// Query forward: given 'from', what 'to' entities are related?
+    pub fn query_relation_forward(
+        &self,
+        relation: impl Into<RelationTypeId>,
+        from: EntityId,
+    ) -> Vec<EntityId> {
+        self.relations.query_forward(relation.into(), from)
+    }
+
+    /// Query reverse: given 'to', what 'from' entities are related?
+    pub fn query_relation_reverse(
+        &self,
+        relation: impl Into<RelationTypeId>,
+        to: EntityId,
+    ) -> Vec<EntityId> {
+        self.relations.query_reverse(relation.into(), to)
+    }
+
+    /// Check if a specific relation exists.
+    pub fn has_relation(
+        &self,
+        relation: impl Into<RelationTypeId>,
+        from: EntityId,
+        to: EntityId,
+    ) -> bool {
+        self.relations.contains(relation.into(), from, to)
+    }
+
+    /// Check if an entity has any forward relations of a given type.
+    pub fn has_any_relation(&self, relation: impl Into<RelationTypeId>, from: EntityId) -> bool {
+        self.relations.has_forward(relation.into(), from)
+    }
+
+    /// Get all registered relation types.
+    pub fn relation_types(&self) -> impl Iterator<Item = RelationTypeId> + '_ {
+        self.relations.relation_types()
+    }
+
+    /// Get the schema for a relation type.
+    pub fn relation_schema(&self, relation: impl Into<RelationTypeId>) -> Option<&RelationSchema> {
+        self.relations.schema(relation.into())
     }
 
     /// Iterate over all entity IDs that have been created.

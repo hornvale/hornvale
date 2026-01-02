@@ -32,14 +32,25 @@
 
 ## Phase 2: Relations + Rules
 **Goal**: Entities can relate to each other. Rules are data, not Rust code.
-**Status**: Not Started
+**Status**: Complete
 
-### Planned Deliverables
-- [ ] Relation tables (cardinality-aware per ARCHITECTURE.md)
-- [ ] Rule struct (pattern + effect)
-- [ ] Pattern matching (entity has component)
-- [ ] Rule evaluation loop
-- [ ] Load rules from simple format
+### Deliverables
+- [x] Relation tables (cardinality-aware per ARCHITECTURE.md)
+- [x] Rule struct (pattern + effect)
+- [x] Pattern matching (entity has component, InRelation)
+- [x] Rule evaluation loop
+- [x] Rules defined in Rust (DSL parsing is Phase 4)
+
+### Files Created
+- `src/core/relation.rs` — RelationTypeId, RelationSchema, RelationTable, RelationRegistry
+- `src/rules.rs` — Module root
+- `src/rules/pattern.rs` — Pattern enum, Var, matching logic
+- `src/rules/rule.rs` — Rule struct, Trigger enum
+- `src/rules/effect.rs` — Effect enum, execution logic
+- `src/rules/engine.rs` — RuleSet, rule evaluation
+
+### Tests
+66 unit tests covering all modules.
 
 ---
 

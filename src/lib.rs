@@ -14,10 +14,13 @@
 pub mod core;
 pub mod io;
 pub mod repl;
+pub mod rules;
 pub mod symbol;
 pub mod systems;
 
 // Re-export commonly used types at the crate root
-pub use core::{ComponentTypeId, EntityId, Value, World};
+pub use core::{
+    Cardinality, ComponentTypeId, EntityId, RelationSchema, RelationTypeId, Value, World,
+};
 pub use io::{StdIO, WorldIO};
 pub use symbol::Symbol;
