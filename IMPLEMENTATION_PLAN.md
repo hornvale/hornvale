@@ -130,7 +130,37 @@
 **Goal**: Same seed → same world.
 **Status**: Not Started
 
-### Planned Deliverables
-- [ ] Seeded RNG integrated with derivation
-- [ ] Template instantiation with variation
-- [ ] Lazy generation
+### Stage 1: Seeded RNG
+**Goal**: Deterministic random number generation from seeds.
+**Status**: In Progress
+
+- [x] `src/rng.rs` — SeededRng struct wrapping xoshiro256** PRNG
+- [x] Core methods: `next_u64()`, `next_f64()`, `range()`, `range_f64()`, `choice()`, `shuffle()`, `chance()`
+- [x] `fork()` and `fork_with_key()` methods for creating child RNGs with derived seeds
+- [x] State serialization: `state()` and `from_state()` for save/load
+- [ ] Integration with GenerationContext (seed field already exists)
+- [ ] VM stdlib functions: `random`, `random-range`, `random-choice`
+
+### Stage 2: Templates
+**Goal**: Define archetypes that can be instantiated with variation.
+**Status**: Not Started
+
+- [ ] `src/template.rs` — Template struct (name, fields, defaults, variations)
+- [ ] DSL syntax: `(template name :fields {...} :defaults {...} :variations {...})`
+- [ ] Template registry in World
+- [ ] `instantiate()` — Create entity from template + seed
+- [ ] Field variation: ranges `(range 10 20)`, choices `(choice :a :b :c)`
+- [ ] VM opcode or stdlib: `instantiate-template`
+
+### Stage 3: Lazy Generation
+**Goal**: Generate content on-demand, deterministically.
+**Status**: Not Started
+
+- [ ] `GenerationStub` — Placeholder for not-yet-generated content
+- [ ] Generation triggers (on first access)
+- [ ] `World::get_or_generate()` — Lazy component access
+- [ ] Deterministic: same stub + same world state = same result
+- [ ] DSL syntax for generators: `(generator name :inputs (...) :produces (...))`
+
+### Tests
+Target: ~40 tests across all stages (RNG determinism, template instantiation, lazy generation)

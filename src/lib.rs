@@ -17,6 +17,7 @@ pub mod derive;
 pub mod io;
 pub mod lang;
 pub mod repl;
+pub mod rng;
 pub mod rules;
 pub mod symbol;
 pub mod systems;
@@ -28,4 +29,5 @@ pub use core::{
 };
 pub use derive::{ComposeMode, DerivationEngine, DerivationError, DerivationRule, DerivedProperty};
 pub use io::{StdIO, WorldIO};
+pub use rng::SeededRng;
 pub use symbol::Symbol;
