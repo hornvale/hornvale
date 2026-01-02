@@ -1,4 +1,23 @@
-//! Hornvale: An experimental zero-player roguelike game
+//! Hornvale: A world programming environment.
 //!
-//! A self-contained and self-maintaining procedural universe inspired by
-//! classic text adventures like Zork, MUDs, and roguelikes.
+//! Hornvale is a minimal system for defining entities, rules, and derivations
+//! that can express anything from a goat in a room to a procedurally generated galaxy.
+//!
+//! ## Phase 1: "Goat in a Room"
+//!
+//! The simplest possible world that does something:
+//! - Entities with components
+//! - A tick-based simulation loop
+//! - Hardcoded rules (goat says "Baa!" every 10 ticks)
+//! - Interactive REPL for inspection
+
+pub mod core;
+pub mod io;
+pub mod repl;
+pub mod symbol;
+pub mod systems;
+
+// Re-export commonly used types at the crate root
+pub use core::{ComponentTypeId, EntityId, Value, World};
+pub use io::{StdIO, WorldIO};
+pub use symbol::Symbol;

@@ -2,6 +2,7 @@
 name = "hornvale"
 version = "0.0.1"
 edition = "2024"
+rust-version = "1.85"
 authors = ["Nathan Douglas"]
 description = "An experimental self-contained and self-maintaining universe."
 license = "Unlicense"
@@ -15,3 +16,5 @@ name = "hornvale"
 path = "src/lib.rs"
 
 [dependencies]
+im = "15"           # Persistent collections (OrdMap, OrdSet)
+thiserror = "2"     # Error types
