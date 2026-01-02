@@ -18,3 +18,26 @@ path = "src/lib.rs"
 [dependencies]
 im = "15"           # Persistent collections (OrdMap, OrdSet)
 thiserror = "2"     # Error types
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "entity"
+harness = false
+
+[[bench]]
+name = "component"
+harness = false
+
+[[bench]]
+name = "relation"
+harness = false
+
+[[bench]]
+name = "world"
+harness = false
+
+[[bench]]
+name = "derivation"
+harness = false
