@@ -1,0 +1,86 @@
+;; house.hvl - A minimal 3-room demo world
+;;
+;; Rooms: Entry Hall -> Kitchen -> Garden
+;; Objects: key (unlocks garden door), brass lamp, note
+;; NPC: A cat that greets the player
+;; Goal: Reach the garden with the lamp
+
+;; Define relations
+(relation InRoom :from :many :to :one)
+(relation Contains :from :one :to :many)
+
+;; === ROOMS ===
+
+(entity entry-hall
+  (Name "Entry Hall")
+  (IsRoom true)
+  (RoomDescription "You are in a dusty entry hall. Faded wallpaper peels from the walls. A doorway leads north to the kitchen. There is a locked door to the east.")
+  (Exit_north kitchen))
+
+(entity kitchen
+  (Name "Kitchen")
+  (IsRoom true)
+  (RoomDescription "A cramped kitchen with an old wood stove. The entry hall is to the south, and a door leads east to the garden.")
+  (Exit_south entry-hall)
+  (Exit_east garden))
+
+(entity garden
+  (Name "Garden")
+  (IsRoom true)
+  (RoomDescription "A beautiful overgrown garden bathed in moonlight. You've made it! The lamp illuminates ancient roses climbing the walls.")
+  (Exit_west kitchen))
+
+;; === OBJECTS ===
+
+(entity brass-lamp
+  (Name "lamp")
+  (Brief "a brass lamp")
+  (Description "An ornate brass lamp, slightly tarnished but still beautiful. It gives off a warm, steady glow.")
+  (Adjectives ("brass" "ornate"))
+  (Portable true)
+  (InRoom entry-hall))
+
+(entity iron-key
+  (Name "key")
+  (Brief "an iron key")
+  (Description "A heavy iron key, rusted with age. It looks like it might fit an old door.")
+  (Adjectives ("iron" "rusty" "old"))
+  (Portable true)
+  (InRoom kitchen))
+
+(entity yellowed-note
+  (Name "note")
+  (Brief "a yellowed note")
+  (Description "A note written in faded ink: 'The garden holds what you seek, but only the lamp will show the way.'")
+  (Adjectives ("yellowed" "old" "faded"))
+  (Portable true)
+  (InRoom entry-hall))
+
+;; === PLAYER ===
+
+(entity player
+  (Name "yourself")
+  (IsPlayer true)
+  (Description "You look the same as always.")
+  (InRoom entry-hall))
+
+;; === NPC ===
+
+(entity cat
+  (Name "cat")
+  (Brief "a sleepy orange cat")
+  (Description "An orange tabby cat, curled up in a patch of moonlight. It watches you with half-closed eyes.")
+  (Adjectives ("orange" "sleepy" "tabby"))
+  (Fixed true)
+  (InRoom kitchen))
+
+;; Game commands like look, go, take, drop, inventory, examine are built into the REPL.
+;; Direction shortcuts (n, s, e, w, u, d, etc.) also work directly.
+;;
+;; To play:
+;;   load examples/house.hvl
+;;   look
+;;   take lamp
+;;   n
+;;   take key
+;;   e

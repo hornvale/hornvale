@@ -4,6 +4,7 @@ use crate::Value;
 use crate::core::{Cardinality, EntityId, RelationSchema, World};
 use crate::generator::{GenerationStub, GeneratorRegistry, StubStorage};
 use crate::lang::{Atom, ParseError, SExpr, parse_all};
+use crate::repl::command::{ReplCommandRegistry, parse_repl_command};
 use crate::rules::{Effect, Pattern, Rule, RuleSet, Trigger};
 use crate::symbol::Symbol;
 use crate::template::{FieldSpec, Template, TemplateRegistry};
@@ -38,6 +39,8 @@ pub struct WorldLoader {
     generators: GeneratorRegistry,
     /// Stub storage for lazy generation.
     stubs: StubStorage,
+    /// DSL-defined REPL commands.
+    repl_commands: ReplCommandRegistry,
 }
 
 impl WorldLoader {
@@ -48,6 +51,7 @@ impl WorldLoader {
             templates: TemplateRegistry::new(),
             generators: GeneratorRegistry::new(),
             stubs: StubStorage::new(),
+            repl_commands: ReplCommandRegistry::new(),
         }
     }
 
@@ -79,6 +83,16 @@ impl WorldLoader {
     /// Get the stub storage mutably.
     pub fn stubs_mut(&mut self) -> &mut StubStorage {
         &mut self.stubs
+    }
+
+    /// Get the REPL command registry.
+    pub fn repl_commands(&self) -> &ReplCommandRegistry {
+        &self.repl_commands
+    }
+
+    /// Get the REPL command registry mutably.
+    pub fn repl_commands_mut(&mut self) -> &mut ReplCommandRegistry {
+        &mut self.repl_commands
     }
 
     /// Load definitions from source string.
@@ -120,6 +134,8 @@ impl WorldLoader {
                 self.load_template(expr)?;
             } else if expr.is_call("generator") {
                 self.load_generator(expr)?;
+            } else if expr.is_call("repl-command") {
+                self.load_repl_command(expr)?;
             }
         }
 
@@ -135,6 +151,13 @@ impl WorldLoader {
             }
         }
 
+        Ok(())
+    }
+
+    /// Load a REPL command definition.
+    fn load_repl_command(&mut self, expr: &SExpr) -> Result<(), LoadError> {
+        let cmd = parse_repl_command(expr).map_err(LoadError::InvalidDefinition)?;
+        self.repl_commands.register(cmd);
         Ok(())
     }
 
@@ -240,8 +263,15 @@ impl WorldLoader {
     fn resolve_relations(&mut self, world: &mut World) -> Result<(), LoadError> {
         for (from, rel_name, target_name) in std::mem::take(&mut self.pending_relations) {
             if let Some(&target) = self.entity_names.get(&target_name) {
-                // It's a relation to another entity
-                world.add_relation(rel_name.as_str().as_str(), from, target);
+                // Target is an entity - check if this is a registered relation
+                let rel_name_str = rel_name.as_str();
+                if world.relation_schema(&*rel_name_str).is_some() {
+                    // It's a registered relation - add as relation
+                    world.add_relation(&*rel_name_str, from, target);
+                } else {
+                    // Not a registered relation - store as component with entity reference
+                    world.set_component(from, &*rel_name_str, Value::EntityRef(target));
+                }
             } else {
                 // Not an entity - treat as a symbol component value
                 world.set_component(from, rel_name.as_str().as_str(), Value::Symbol(target_name));
@@ -730,6 +760,7 @@ impl WorldLoader {
     }
 
     /// Convert an expression to a Value.
+    #[allow(clippy::only_used_in_recursion)]
     fn expr_to_value(&self, expr: &SExpr) -> Result<Value, LoadError> {
         match expr {
             SExpr::Atom(atom, _) => match atom {
@@ -740,9 +771,12 @@ impl WorldLoader {
                 Atom::Symbol(s) => Ok(Value::Symbol(*s)),
                 Atom::Keyword(k) => Ok(Value::Symbol(*k)),
             },
-            SExpr::List(_, _) => Err(LoadError::InvalidDefinition(
-                "list values not supported yet".to_string(),
-            )),
+            SExpr::List(items, _) => {
+                // Convert list to Value::List
+                let values: Result<Vec<Value>, LoadError> =
+                    items.iter().map(|item| self.expr_to_value(item)).collect();
+                Ok(Value::list(values?))
+            }
         }
     }
 

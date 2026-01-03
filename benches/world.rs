@@ -257,6 +257,165 @@ fn bench_multi_component_query(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark snapshot/clone at various sizes to verify O(1) behavior.
+fn bench_snapshot(c: &mut Criterion) {
+    let mut group = c.benchmark_group("world_snapshot");
+
+    for count in [100, 1_000, 10_000, 100_000] {
+        // Pre-create world with entities
+        let mut world = World::new();
+        world.register_relation(RelationSchema::new(
+            "Location",
+            Cardinality::Many,
+            Cardinality::One,
+        ));
+        let room = world.create_entity();
+        world.set_component(room, "Name", "Room");
+
+        for i in 0..count {
+            let entity = world.create_entity();
+            world.set_component(entity, "Name", Value::string(format!("Entity{i}")));
+            world.set_component(entity, "HP", Value::Int(100));
+            world.add_relation("Location", entity, room);
+        }
+
+        group.bench_with_input(BenchmarkId::new("snapshot", count), &count, |b, _| {
+            b.iter(|| {
+                let snap = world.snapshot();
+                black_box(snap.entity_count())
+            });
+        });
+    }
+
+    group.finish();
+}
+
+/// Benchmark transaction begin/rollback cycles.
+fn bench_transactions(c: &mut Criterion) {
+    let mut group = c.benchmark_group("world_transactions");
+
+    for count in [100, 1_000, 10_000] {
+        // Pre-create world with entities
+        let mut world = World::new();
+        let hp = ComponentTypeId::new("HP");
+        let mut entities = Vec::with_capacity(count);
+        for i in 0..count {
+            let entity = world.create_entity();
+            world.set_component(entity, hp, Value::Int(i as i64));
+            entities.push(entity);
+        }
+
+        group.bench_with_input(
+            BenchmarkId::new("begin_rollback_cycle", count),
+            &count,
+            |b, _| {
+                b.iter(|| {
+                    world.begin_transaction();
+                    // Make some modifications
+                    for &entity in entities.iter().take(10) {
+                        world.set_component(entity, hp, Value::Int(999));
+                    }
+                    world.rollback_transaction().unwrap();
+                    black_box(world.entity_count())
+                });
+            },
+        );
+
+        group.bench_with_input(
+            BenchmarkId::new("begin_commit_cycle", count),
+            &count,
+            |b, _| {
+                b.iter(|| {
+                    world.begin_transaction();
+                    // Make some modifications
+                    for &entity in entities.iter().take(10) {
+                        world.set_component(entity, hp, Value::Int(999));
+                    }
+                    world.commit_transaction().unwrap();
+                    black_box(world.entity_count())
+                });
+            },
+        );
+    }
+
+    group.finish();
+}
+
+/// Benchmark nested transactions to depth 10.
+fn bench_nested_transactions(c: &mut Criterion) {
+    let mut group = c.benchmark_group("world_nested_transactions");
+
+    for count in [100, 1_000, 10_000] {
+        let mut world = World::new();
+        let hp = ComponentTypeId::new("HP");
+        let mut entities = Vec::with_capacity(count);
+        for i in 0..count {
+            let entity = world.create_entity();
+            world.set_component(entity, hp, Value::Int(i as i64));
+            entities.push(entity);
+        }
+
+        let first_entity = entities[0];
+
+        group.bench_with_input(
+            BenchmarkId::new("nested_10_deep_rollback", count),
+            &count,
+            |b, _| {
+                b.iter(|| {
+                    // Nest 10 transactions
+                    for i in 0..10 {
+                        world.begin_transaction();
+                        world.set_component(first_entity, hp, Value::Int(i));
+                    }
+                    // Rollback all
+                    for _ in 0..10 {
+                        world.rollback_transaction().unwrap();
+                    }
+                    black_box(world.transaction_depth())
+                });
+            },
+        );
+    }
+
+    group.finish();
+}
+
+/// Benchmark freeze/reset_overlay cycle.
+fn bench_freeze_reset(c: &mut Criterion) {
+    let mut group = c.benchmark_group("world_freeze_reset");
+
+    for count in [100, 1_000, 10_000] {
+        let mut world = World::new();
+        let hp = ComponentTypeId::new("HP");
+        let mut entities = Vec::with_capacity(count);
+        for i in 0..count {
+            let entity = world.create_entity();
+            world.set_component(entity, hp, Value::Int(i as i64));
+            entities.push(entity);
+        }
+
+        world.freeze().unwrap();
+
+        group.bench_with_input(
+            BenchmarkId::new("modify_and_reset", count),
+            &count,
+            |b, _| {
+                b.iter(|| {
+                    // Modify some components
+                    for &entity in entities.iter().take(10) {
+                        world.set_component(entity, hp, Value::Int(999));
+                    }
+                    // Reset to base
+                    world.reset_overlay().unwrap();
+                    black_box(world.entity_count())
+                });
+            },
+        );
+    }
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_world_clone,
@@ -265,5 +424,9 @@ criterion_group!(
     bench_mixed_operations,
     bench_incremental_modifications,
     bench_multi_component_query,
+    bench_snapshot,
+    bench_transactions,
+    bench_nested_transactions,
+    bench_freeze_reset,
 );
 criterion_main!(benches);

@@ -15,6 +15,7 @@ pub mod compiler;
 pub mod core;
 pub mod derive;
 pub mod generator;
+pub mod input;
 pub mod io;
 pub mod lang;
 pub mod repl;
@@ -23,6 +24,7 @@ pub mod rules;
 pub mod symbol;
 pub mod systems;
 pub mod template;
+pub mod verbs;
 pub mod vm;
 
 // Re-export commonly used types at the crate root
@@ -34,7 +36,12 @@ pub use generator::{
     GenerationResult, GenerationStub, Generator, GeneratorRegistry, StubStorage, get_or_generate,
     has_or_stub,
 };
+pub use input::{
+    Command, EntityCandidate, Input, ObjectRef, ResolutionResult, ResolvedCommand, Resolver,
+    ScopeProvider, Token, parse_input,
+};
 pub use io::{StdIO, WorldIO};
 pub use rng::SeededRng;
 pub use symbol::Symbol;
 pub use template::{FieldSpec, Template, TemplateRegistry};
+pub use verbs::{VerbResult, execute_command};

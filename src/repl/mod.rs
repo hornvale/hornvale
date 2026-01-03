@@ -13,15 +13,26 @@
 //! - parse <expr>   : Show parsed AST
 //! - help           : Show available commands
 //! - quit / exit    : Exit the REPL
+//!
+//! DSL-defined commands can be added via:
+//! ```lisp
+//! (repl-command "name" :doc "description" :expands-to (expression))
+//! ```
+
+pub mod command;
 
 use crate::compiler::Compiler;
 use crate::core::{EntityId, World};
+use crate::input::{self, Resolver};
 use crate::io::WorldIO;
 use crate::lang::{self, WorldLoader, is_complete};
 use crate::rules::RuleSet;
 use crate::systems::tick_world_n;
+use crate::verbs;
 use crate::vm::{StdLib, VM};
 use std::path::Path;
+
+pub use command::{ReplCommand, ReplCommandRegistry};
 
 /// Result of executing a REPL command.
 pub enum ReplResult {
@@ -91,21 +102,61 @@ pub fn execute_command(
     let rest = input.strip_prefix(command).unwrap_or("").trim();
     let args = &parts[1..];
 
+    // Check for DSL-defined commands first
+    if let Some(dsl_cmd) = loader.repl_commands().get(command) {
+        match dsl_cmd.expand(args) {
+            Ok(expanded) => {
+                cmd_eval(world, io, &expanded);
+            }
+            Err(e) => {
+                io.println(&format!("Error: {e}"));
+            }
+        }
+        return ReplResult::Continue;
+    }
+
     match command {
         "tick" | "t" => cmd_tick(world, rules, io, args),
-        "inspect" | "i" => cmd_inspect(world, io, args),
-        "list" | "ls" | "l" => cmd_list(world, io),
+        "inspect" => cmd_inspect(world, io, args),
+        "list" | "ls" => cmd_list(world, io),
         "rules" => cmd_rules(rules, io),
         "rule" | "r" => cmd_rule(rules, io, args),
         "relations" | "rels" => cmd_relations(world, io),
         "load" => cmd_load(world, rules, loader, io, args),
-        "eval" | "e" => cmd_eval(world, io, rest),
+        "eval" => cmd_eval(world, io, rest),
         "define" | "def" => cmd_define(world, rules, loader, io, rest),
         "parse" | "p" => cmd_parse(io, rest),
-        "help" | "h" | "?" => cmd_help(io),
+        "help" | "h" | "?" => cmd_help(world, loader, io),
         "quit" | "exit" | "q" => return ReplResult::Exit,
         "" => {}
+
+        // Game commands - route to verb handlers
+        "look" | "l" => cmd_game(world, io, input),
+        "go" => cmd_game(world, io, input),
+        "take" | "get" => cmd_game(world, io, input),
+        "drop" => cmd_game(world, io, input),
+        "inventory" | "inv" | "i" => cmd_game(world, io, input),
+        "examine" | "x" => cmd_game(world, io, input),
+
+        // Direction shortcuts
+        "north" | "n" | "south" | "s" | "east" | "e" | "west" | "w" => cmd_game(world, io, input),
+        "up" | "u" | "down" | "d" => cmd_game(world, io, input),
+        "northeast" | "ne" | "northwest" | "nw" => cmd_game(world, io, input),
+        "southeast" | "se" | "southwest" | "sw" => cmd_game(world, io, input),
+
         _ => {
+            // Try as game command
+            if let Some(player) = find_player(world) {
+                let input_event = input::Input::new(input, world.tick()).with_source(player);
+                if let Some(cmd) = input::parse_input(&input_event) {
+                    let resolver = Resolver::new();
+                    let resolved = resolver.resolve_command(world, player, &cmd);
+                    let result = verbs::execute_command(world, player, &resolved);
+                    io.println(result.output.as_ref());
+                    return ReplResult::Continue;
+                }
+            }
+
             io.println(&format!(
                 "Unknown command: '{command}'. Type 'help' for commands."
             ));
@@ -113,6 +164,43 @@ pub fn execute_command(
     }
 
     ReplResult::Continue
+}
+
+/// Find the player entity in the world.
+fn find_player(world: &World) -> Option<EntityId> {
+    for entity in world.all_entities() {
+        if let Some(val) = world.get_component(entity, "IsPlayer") {
+            if val.as_bool() == Some(true) {
+                return Some(entity);
+            }
+        }
+    }
+    None
+}
+
+/// Execute a game command (look, go, take, etc.).
+fn cmd_game(world: &mut World, io: &mut dyn WorldIO, input: &str) {
+    let player = match find_player(world) {
+        Some(p) => p,
+        None => {
+            io.println("No player entity found. Define an entity with (IsPlayer true).");
+            return;
+        }
+    };
+
+    let input_event = input::Input::new(input, world.tick()).with_source(player);
+    let cmd = match input::parse_input(&input_event) {
+        Some(c) => c,
+        None => {
+            io.println("I don't understand that.");
+            return;
+        }
+    };
+
+    let resolver = Resolver::new();
+    let resolved = resolver.resolve_command(world, player, &cmd);
+    let result = verbs::execute_command(world, player, &resolved);
+    io.println(result.output.as_ref());
 }
 
 /// Advance simulation by N ticks (default 1).
@@ -350,20 +438,41 @@ fn cmd_parse(io: &mut dyn WorldIO, expr: &str) {
 }
 
 /// Show help information.
-fn cmd_help(io: &mut dyn WorldIO) {
-    io.println("Available commands:");
+fn cmd_help(_world: &World, loader: &WorldLoader, io: &mut dyn WorldIO) {
+    io.println("Built-in commands:");
     io.println("  tick [N]      - Advance simulation by 1 or N ticks (alias: t)");
-    io.println("  inspect <id>  - Show all components for entity (alias: i)");
-    io.println("  list          - List all entities (alias: ls, l)");
+    io.println("  inspect <id>  - Show all components for entity");
+    io.println("  list          - List all entities (alias: ls)");
     io.println("  rules         - List all rules");
     io.println("  rule <name>   - Show details of a rule (alias: r)");
     io.println("  relations     - List relation types (alias: rels)");
     io.println("  load <file>   - Load definitions from file");
-    io.println("  eval <expr>   - Evaluate an expression (alias: e)");
+    io.println("  eval <expr>   - Evaluate an expression");
     io.println("  define <def>  - Add a definition inline (alias: def)");
     io.println("  parse <expr>  - Show parsed AST (alias: p)");
     io.println("  help          - Show this help (alias: h, ?)");
     io.println("  quit          - Exit the REPL (alias: exit, q)");
+
+    io.println("");
+    io.println("Game commands (requires player entity):");
+    io.println("  look          - Describe current location (alias: l)");
+    io.println("  go <dir>      - Move in a direction");
+    io.println("  take <obj>    - Pick up an object (alias: get)");
+    io.println("  drop <obj>    - Drop an object");
+    io.println("  inventory     - List carried items (alias: i, inv)");
+    io.println("  examine <obj> - Examine an object (alias: x)");
+    io.println("  n/s/e/w/u/d   - Direction shortcuts");
+
+    // Show DSL-defined commands
+    let dsl_cmds: Vec<_> = loader.repl_commands().commands().collect();
+    if !dsl_cmds.is_empty() {
+        io.println("");
+        io.println("DSL-defined commands:");
+        for cmd in dsl_cmds {
+            io.println(&format!("  {}", cmd.help()));
+        }
+    }
+
     io.println("");
     io.println("Multi-line input: Incomplete expressions continue on next line.");
 }
@@ -426,8 +535,10 @@ mod tests {
 
     #[test]
     fn test_cmd_help() {
+        let world = setup_test_world();
+        let loader = WorldLoader::new();
         let mut io = TestIO::new(vec![]);
-        cmd_help(&mut io);
+        cmd_help(&world, &loader, &mut io);
 
         assert!(io.output.contains("tick"));
         assert!(io.output.contains("inspect"));
@@ -586,5 +697,157 @@ mod tests {
         assert!(!is_complete("\"hello"));
         // Escaped quote inside string
         assert!(is_complete("\"he\\\"llo\""));
+    }
+
+    #[test]
+    fn test_dsl_command() {
+        let mut world = World::new();
+        let mut rules = empty_rules();
+        let mut loader = WorldLoader::new();
+        let mut io = TestIO::new(vec![]);
+
+        // Define a DSL command (expansion as string literal)
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"(repl-command "add" :args (a b) :expands-to "(+ $a $b)")"#,
+            )
+            .unwrap();
+
+        // Execute the DSL command
+        execute_command(&mut world, &mut rules, &mut loader, &mut io, "add 3 4");
+
+        assert!(io.output.contains("7"));
+    }
+
+    #[test]
+    fn test_dsl_command_with_alias() {
+        let mut world = World::new();
+        let mut rules = empty_rules();
+        let mut loader = WorldLoader::new();
+        let mut io = TestIO::new(vec![]);
+
+        // Define a DSL command with alias (expansion as string literal)
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"(repl-command "double"
+                     :aliases ("d")
+                     :args (x)
+                     :expands-to "(* $x 2)")"#,
+            )
+            .unwrap();
+
+        // Execute via alias
+        execute_command(&mut world, &mut rules, &mut loader, &mut io, "d 5");
+
+        assert!(io.output.contains("10"));
+    }
+
+    #[test]
+    fn test_dsl_command_in_help() {
+        let mut world = World::new();
+        let mut rules = empty_rules();
+        let mut loader = WorldLoader::new();
+        let mut io = TestIO::new(vec![]);
+
+        // Define a DSL command
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"(repl-command "greet" :doc "Say hello" :expands-to "Hello!")"#,
+            )
+            .unwrap();
+
+        cmd_help(&world, &loader, &mut io);
+
+        assert!(io.output.contains("DSL-defined commands"));
+        assert!(io.output.contains("greet"));
+        assert!(io.output.contains("Say hello"));
+    }
+
+    #[test]
+    fn test_game_look_command() {
+        use crate::core::{Cardinality, RelationSchema};
+
+        let mut world = World::new();
+        let mut rules = empty_rules();
+        let mut loader = WorldLoader::new();
+        let mut io = TestIO::new(vec![]);
+
+        // Register relations
+        world.register_relation(RelationSchema::new(
+            "InRoom",
+            Cardinality::Many,
+            Cardinality::One,
+        ));
+        world.register_relation(RelationSchema::new(
+            "Contains",
+            Cardinality::One,
+            Cardinality::Many,
+        ));
+
+        // Create room
+        let room = world.create_entity();
+        world.set_component(room, "Name", "Test Room");
+        world.set_component(room, "IsRoom", true);
+        world.set_component(room, "RoomDescription", "A test room for verbs.");
+
+        // Create player
+        let player = world.create_entity();
+        world.set_component(player, "Name", "player");
+        world.set_component(player, "IsPlayer", true);
+        world.add_relation("InRoom", player, room);
+
+        // Execute look command
+        execute_command(&mut world, &mut rules, &mut loader, &mut io, "look");
+
+        assert!(io.output.contains("Test Room"));
+        assert!(io.output.contains("test room for verbs"));
+    }
+
+    #[test]
+    fn test_game_take_command() {
+        use crate::core::{Cardinality, RelationSchema};
+
+        let mut world = World::new();
+        let mut rules = empty_rules();
+        let mut loader = WorldLoader::new();
+        let mut io = TestIO::new(vec![]);
+
+        // Register relations
+        world.register_relation(RelationSchema::new(
+            "InRoom",
+            Cardinality::Many,
+            Cardinality::One,
+        ));
+        world.register_relation(RelationSchema::new(
+            "Contains",
+            Cardinality::One,
+            Cardinality::Many,
+        ));
+
+        // Create room
+        let room = world.create_entity();
+        world.set_component(room, "IsRoom", true);
+
+        // Create player
+        let player = world.create_entity();
+        world.set_component(player, "IsPlayer", true);
+        world.add_relation("InRoom", player, room);
+
+        // Create object
+        let lamp = world.create_entity();
+        world.set_component(lamp, "Name", "lamp");
+        world.set_component(lamp, "Portable", true);
+        world.add_relation("InRoom", lamp, room);
+
+        // Take the lamp
+        execute_command(&mut world, &mut rules, &mut loader, &mut io, "take lamp");
+
+        assert!(io.output.contains("Taken"));
     }
 }
