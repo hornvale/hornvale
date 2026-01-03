@@ -390,6 +390,115 @@ pub fn execute_command(
     }
 }
 
+/// Execute an action based on a syntax table match.
+///
+/// This function dispatches to verb handlers based on the action name
+/// from a `SyntaxMatch`, using the captured slots for arguments.
+pub fn execute_action(
+    world: &mut World,
+    actor: EntityId,
+    action_match: &crate::SyntaxMatch,
+) -> VerbResult {
+    let action_name = action_match.action.name();
+
+    match action_name.as_str() {
+        "look" | "look-around" => handle_look(world, actor),
+
+        "inventory" => handle_inventory(world, actor),
+
+        "examine" => {
+            // Get noun slot - need to resolve entity from name
+            if let Some(noun) = action_match.slots.get("noun") {
+                if let Some(target) = resolve_entity_by_name(world, actor, noun) {
+                    handle_examine(world, target)
+                } else {
+                    VerbResult::fail(format!("I don't see '{noun}' here."))
+                }
+            } else {
+                VerbResult::fail("Examine what?")
+            }
+        }
+
+        "take" | "get" => {
+            if let Some(noun) = action_match.slots.get("noun") {
+                if let Some(target) = resolve_entity_by_name(world, actor, noun) {
+                    handle_take(world, actor, target)
+                } else {
+                    VerbResult::fail(format!("I don't see '{noun}' here."))
+                }
+            } else {
+                VerbResult::fail("Take what?")
+            }
+        }
+
+        "drop" => {
+            if let Some(noun) = action_match.slots.get("noun") {
+                if let Some(target) = resolve_entity_by_name(world, actor, noun) {
+                    handle_drop(world, actor, target)
+                } else {
+                    VerbResult::fail(format!("You're not carrying '{noun}'."))
+                }
+            } else {
+                VerbResult::fail("Drop what?")
+            }
+        }
+
+        "go" => {
+            if let Some(dir) = action_match.slots.get("direction") {
+                handle_go(world, actor, Symbol::new(dir))
+            } else {
+                VerbResult::fail("Go where?")
+            }
+        }
+
+        _ => VerbResult::fail(format!("I don't know how to '{action_name}'.")),
+    }
+}
+
+/// Resolve an entity by name from the actor's perspective.
+///
+/// Looks for entities in the same room or carried by the actor.
+fn resolve_entity_by_name(world: &World, actor: EntityId, name: &str) -> Option<EntityId> {
+    let name_lower = name.to_lowercase();
+
+    // Get actor's location
+    let location = world
+        .query_relation_forward(relations::in_room(), actor)
+        .into_iter()
+        .next();
+
+    // Search entities in the same room
+    if let Some(room) = location {
+        for entity in world.all_entities() {
+            // Check if in same room
+            let in_same_room = world
+                .query_relation_forward(relations::in_room(), entity)
+                .contains(&room);
+
+            if in_same_room {
+                if let Some(Value::String(entity_name)) =
+                    world.get_component(entity, components::name())
+                {
+                    if entity_name.to_lowercase() == name_lower {
+                        return Some(entity);
+                    }
+                }
+            }
+        }
+    }
+
+    // Search carried entities
+    for carried in world.query_relation_forward(relations::contains(), actor) {
+        if let Some(Value::String(entity_name)) = world.get_component(carried, components::name()) {
+            if entity_name.to_lowercase() == name_lower {
+                return Some(carried);
+            }
+        }
+    }
+
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

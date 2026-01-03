@@ -7,6 +7,7 @@ use crate::lang::{Atom, ParseError, SExpr, parse_all};
 use crate::repl::command::{ReplCommandRegistry, parse_repl_command};
 use crate::rules::{Effect, Pattern, Rule, RuleSet, Trigger};
 use crate::symbol::Symbol;
+use crate::syntax::{Action, SyntaxElement, SyntaxPattern, SyntaxTable};
 use crate::template::{FieldSpec, Template, TemplateRegistry};
 use im::OrdMap;
 use std::path::Path;
@@ -41,6 +42,8 @@ pub struct WorldLoader {
     stubs: StubStorage,
     /// DSL-defined REPL commands.
     repl_commands: ReplCommandRegistry,
+    /// Syntax table for command parsing.
+    syntax_table: SyntaxTable,
 }
 
 impl WorldLoader {
@@ -52,6 +55,7 @@ impl WorldLoader {
             generators: GeneratorRegistry::new(),
             stubs: StubStorage::new(),
             repl_commands: ReplCommandRegistry::new(),
+            syntax_table: SyntaxTable::new(),
         }
     }
 
@@ -95,6 +99,16 @@ impl WorldLoader {
         &mut self.repl_commands
     }
 
+    /// Get the syntax table.
+    pub fn syntax_table(&self) -> &SyntaxTable {
+        &self.syntax_table
+    }
+
+    /// Get the syntax table mutably.
+    pub fn syntax_table_mut(&mut self) -> &mut SyntaxTable {
+        &mut self.syntax_table
+    }
+
     /// Load definitions from source string.
     pub fn load_str(
         &mut self,
@@ -136,6 +150,8 @@ impl WorldLoader {
                 self.load_generator(expr)?;
             } else if expr.is_call("repl-command") {
                 self.load_repl_command(expr)?;
+            } else if expr.is_call("syntax") {
+                self.load_syntax(expr)?;
             }
         }
 
@@ -159,6 +175,147 @@ impl WorldLoader {
         let cmd = parse_repl_command(expr).map_err(LoadError::InvalidDefinition)?;
         self.repl_commands.register(cmd);
         Ok(())
+    }
+
+    /// Load a syntax definition.
+    ///
+    /// Format: `(syntax "word" "word" noun :to action-name)`
+    ///
+    /// Elements:
+    /// - Strings are literal words
+    /// - `noun` or `noun:name` is a noun slot
+    /// - `direction` or `direction:name` is a direction slot
+    /// - `any:name` is an any-token slot
+    /// - `:to` separates pattern from action
+    fn load_syntax(&mut self, expr: &SExpr) -> Result<(), LoadError> {
+        let items = expr.as_list().unwrap();
+        if items.len() < 3 {
+            return Err(LoadError::InvalidDefinition(
+                "syntax requires pattern and action".to_string(),
+            ));
+        }
+
+        // Find the :to keyword that separates pattern from action
+        let mut to_idx = None;
+        for (i, item) in items.iter().enumerate().skip(1) {
+            if item.is_keyword("to") {
+                to_idx = Some(i);
+                break;
+            }
+        }
+
+        let to_idx = to_idx.ok_or_else(|| {
+            LoadError::InvalidDefinition("syntax requires :to before action name".to_string())
+        })?;
+
+        if to_idx + 1 >= items.len() {
+            return Err(LoadError::InvalidDefinition(
+                "syntax requires action name after :to".to_string(),
+            ));
+        }
+
+        // Parse action name
+        let action_name = items[to_idx + 1].as_symbol().ok_or_else(|| {
+            LoadError::InvalidDefinition("action name must be a symbol".to_string())
+        })?;
+
+        // Parse pattern elements (between "syntax" and :to)
+        // Handle named slots where symbol is followed by a keyword (e.g., noun :item)
+        let mut elements = Vec::new();
+        let pattern_items = &items[1..to_idx];
+        let mut i = 0;
+        while i < pattern_items.len() {
+            let item = &pattern_items[i];
+
+            // Check if this is a slot type symbol followed by a keyword (named slot)
+            if let SExpr::Atom(Atom::Symbol(sym), _) = item {
+                let sym_str = sym.as_str();
+                // Check if next item is a keyword (the slot name)
+                if i + 1 < pattern_items.len() {
+                    if let SExpr::Atom(Atom::Keyword(name_sym), _) = &pattern_items[i + 1] {
+                        let name = name_sym.as_str();
+                        let element = match sym_str.as_str() {
+                            "noun" => SyntaxElement::noun_named(&name),
+                            "direction" => SyntaxElement::direction_named(&name),
+                            "any" => SyntaxElement::any(&name),
+                            _ => {
+                                // Not a slot type, treat the keyword separately
+                                elements.push(Self::parse_syntax_element(item)?);
+                                i += 1;
+                                continue;
+                            }
+                        };
+                        elements.push(element);
+                        i += 2; // Skip both symbol and keyword
+                        continue;
+                    }
+                }
+            }
+
+            // Regular element parsing
+            let element = Self::parse_syntax_element(item)?;
+            elements.push(element);
+            i += 1;
+        }
+
+        if elements.is_empty() {
+            return Err(LoadError::InvalidDefinition(
+                "syntax pattern cannot be empty".to_string(),
+            ));
+        }
+
+        let pattern = SyntaxPattern::new(elements);
+        let action = Action::new(action_name);
+        self.syntax_table.add(pattern, action);
+
+        Ok(())
+    }
+
+    /// Parse a single syntax pattern element.
+    fn parse_syntax_element(expr: &SExpr) -> Result<SyntaxElement, LoadError> {
+        match expr {
+            // String literal → Word element
+            SExpr::Atom(Atom::String(s), _) => Ok(SyntaxElement::word(s.as_str())),
+
+            // Symbol → special slot type
+            SExpr::Atom(Atom::Symbol(sym), _) => {
+                let s = sym.as_str();
+                // Check for named slots (noun:name, direction:name, any:name)
+                if let Some((kind, name)) = s.split_once(':') {
+                    match kind {
+                        "noun" => Ok(SyntaxElement::noun_named(name)),
+                        "direction" => Ok(SyntaxElement::direction_named(name)),
+                        "any" => Ok(SyntaxElement::any(name)),
+                        _ => Err(LoadError::InvalidDefinition(format!(
+                            "unknown slot type: {kind}"
+                        ))),
+                    }
+                } else {
+                    // Unnamed slots
+                    match s.as_str() {
+                        "noun" => Ok(SyntaxElement::noun()),
+                        "direction" => Ok(SyntaxElement::direction()),
+                        _ => {
+                            // Treat as a literal word (for convenience)
+                            Ok(SyntaxElement::word(&s))
+                        }
+                    }
+                }
+            }
+
+            // List → optional sequence
+            SExpr::List(items, _) => {
+                let mut opt_elements = Vec::new();
+                for item in items {
+                    opt_elements.push(Self::parse_syntax_element(item)?);
+                }
+                Ok(SyntaxElement::optional(opt_elements))
+            }
+
+            _ => Err(LoadError::InvalidDefinition(
+                "invalid syntax element".to_string(),
+            )),
+        }
     }
 
     /// Load an entity definition.
@@ -1111,5 +1268,160 @@ mod tests {
         );
 
         assert!(matches!(result, Err(LoadError::UnknownEntity(_))));
+    }
+
+    #[test]
+    fn test_load_syntax_basic() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (syntax "look" :to look-around)
+                (syntax "l" :to look-around)
+                "#,
+            )
+            .unwrap();
+
+        // Test that both patterns match
+        let result = loader.syntax_table().best_match(&["look"]);
+        assert!(result.is_some());
+        let m = result.unwrap();
+        assert_eq!(m.action.name(), "look-around");
+
+        let result2 = loader.syntax_table().best_match(&["l"]);
+        assert!(result2.is_some());
+        assert_eq!(result2.unwrap().action.name(), "look-around");
+    }
+
+    #[test]
+    fn test_load_syntax_with_noun() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (syntax "examine" noun :to examine)
+                (syntax "x" noun :to examine)
+                "#,
+            )
+            .unwrap();
+
+        let result = loader.syntax_table().best_match(&["examine", "sword"]);
+        assert!(result.is_some());
+        let m = result.unwrap();
+        assert_eq!(m.action.name(), "examine");
+        assert_eq!(m.slots.get("noun"), Some(&"sword".to_string()));
+    }
+
+    #[test]
+    fn test_load_syntax_with_direction() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (syntax "go" direction :to go)
+                (syntax direction :to go)
+                "#,
+            )
+            .unwrap();
+
+        let result = loader.syntax_table().best_match(&["go", "north"]);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().action.name(), "go");
+
+        // Bare direction should also work
+        let result2 = loader.syntax_table().best_match(&["north"]);
+        assert!(result2.is_some());
+        assert_eq!(result2.unwrap().action.name(), "go");
+    }
+
+    #[test]
+    fn test_load_syntax_with_to_keyword() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        // Test :to keyword
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (syntax "take" noun :to take)
+                "#,
+            )
+            .unwrap();
+
+        let result = loader.syntax_table().best_match(&["take", "key"]);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().action.name(), "take");
+    }
+
+    #[test]
+    fn test_load_syntax_complex_pattern() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        // Use two noun slots with default names
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (syntax "put" noun "in" noun :to put-in)
+                "#,
+            )
+            .unwrap();
+
+        let result = loader
+            .syntax_table()
+            .best_match(&["put", "sword", "in", "chest"]);
+        assert!(result.is_some());
+        let m = result.unwrap();
+        assert_eq!(m.action.name(), "put-in");
+        // With unnamed slots, the second noun slot overwrites the first in the HashMap
+        assert_eq!(m.slots.get("noun"), Some(&"chest".to_string()));
+    }
+
+    #[test]
+    fn test_load_syntax_named_slots() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        // Test named slots using colon notation in a quoted string
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (syntax "give" noun:item "to" noun:recipient :to give)
+                "#,
+            )
+            .unwrap();
+
+        let result = loader
+            .syntax_table()
+            .best_match(&["give", "key", "to", "guard"]);
+        assert!(result.is_some());
+        let m = result.unwrap();
+        assert_eq!(m.action.name(), "give");
+        assert_eq!(m.slots.get("item"), Some(&"key".to_string()));
+        assert_eq!(m.slots.get("recipient"), Some(&"guard".to_string()));
     }
 }

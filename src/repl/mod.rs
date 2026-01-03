@@ -145,7 +145,17 @@ pub fn execute_command(
         "southeast" | "se" | "southwest" | "sw" => cmd_game(world, io, input),
 
         _ => {
-            // Try as game command
+            // Try syntax table matching first
+            if let Some(player) = find_player(world) {
+                let tokens: Vec<&str> = input.split_whitespace().collect();
+                if let Some(action_match) = loader.syntax_table().best_match(&tokens) {
+                    let result = verbs::execute_action(world, player, &action_match);
+                    io.println(result.output.as_ref());
+                    return ReplResult::Continue;
+                }
+            }
+
+            // Fall back to traditional game command parsing
             if let Some(player) = find_player(world) {
                 let input_event = input::Input::new(input, world.tick()).with_source(player);
                 if let Some(cmd) = input::parse_input(&input_event) {
@@ -849,5 +859,74 @@ mod tests {
         execute_command(&mut world, &mut rules, &mut loader, &mut io, "take lamp");
 
         assert!(io.output.contains("Taken"));
+    }
+
+    #[test]
+    fn test_syntax_table_integration() {
+        use crate::core::{Cardinality, RelationSchema};
+
+        let mut world = World::new();
+        let mut rules = empty_rules();
+        let mut loader = WorldLoader::new();
+        let mut io = TestIO::new(vec![]);
+
+        // Register relations
+        world.register_relation(RelationSchema::new(
+            "InRoom",
+            Cardinality::Many,
+            Cardinality::One,
+        ));
+        world.register_relation(RelationSchema::new(
+            "Contains",
+            Cardinality::One,
+            Cardinality::Many,
+        ));
+
+        // Create room
+        let room = world.create_entity();
+        world.set_component(room, "Name", "Test Room");
+        world.set_component(room, "IsRoom", true);
+        world.set_component(room, "RoomDescription", "A test room with stuff.");
+
+        // Create player
+        let player = world.create_entity();
+        world.set_component(player, "Name", "player");
+        world.set_component(player, "IsPlayer", true);
+        world.add_relation("InRoom", player, room);
+
+        // Create object
+        let gem = world.create_entity();
+        world.set_component(gem, "Name", "gem");
+        world.set_component(gem, "Portable", true);
+        world.add_relation("InRoom", gem, room);
+
+        // Load syntax definitions via DSL
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                ; Define some custom syntax patterns
+                (syntax "l" :to look)
+                (syntax "peep" :to look)
+                (syntax "grab" noun :to take)
+                "#,
+            )
+            .unwrap();
+
+        // Test custom "peep" command works via syntax table
+        execute_command(&mut world, &mut rules, &mut loader, &mut io, "peep");
+        assert!(
+            io.output.contains("Test Room"),
+            "Custom 'peep' should trigger look"
+        );
+
+        // Test "grab" as synonym for take
+        io.output.clear();
+        execute_command(&mut world, &mut rules, &mut loader, &mut io, "grab gem");
+        assert!(
+            io.output.contains("Taken"),
+            "Custom 'grab gem' should take the gem"
+        );
     }
 }

@@ -461,7 +461,296 @@ Total project: 444 tests passing
 
 ---
 
-## Phase 9: Sensory Propagation
+## Phase 9: Command Architecture
+**Goal**: Data-driven verb system with grammar DSL, syntax tables, and object hooks.
+**Status**: In Progress
+
+**Rationale**: The current verb implementation conflates syntax and semantics, hardcodes verb handlers in Rust, and lacks object-specific responses. A proper IF engine needs:
+- Multiple syntaxes routing to the same action ("look at X" = "examine X")
+- Grammar patterns defined in DSL, not Rust
+- Objects that respond to being acted upon (Before/On/After hooks)
+- Preconditions as data (reachable, visible, portable)
+
+This is more foundational than sensory propagation — it's the soul of an IF engine.
+
+### Stage 1: Syntax Tables
+**Goal**: Decouple surface syntax from underlying actions.
+**Status**: Complete
+
+- [x] `Action` type — the semantic operation (examine, take, throw-into)
+- [x] `SyntaxElement` enum — Word, Noun, Direction, Any, Optional
+- [x] `SyntaxPattern` type — pattern matching words/slots to actions
+- [x] `SyntaxTable` registry of all syntax patterns (priority-based matching)
+- [x] Multiple syntaxes per action (look at X, examine X, x X → examine)
+- [x] Named slot support (noun:object, direction:dir)
+- [x] DSL form: `(syntax "look" "at" noun :to examine)`
+- [x] Integration with REPL command pipeline (`execute_action`)
+- [x] Entity resolution by name from action slots
+
+**Files Created/Modified**:
+- `src/syntax.rs` — Action, SyntaxElement, SyntaxPattern, SyntaxTable, PatternBuilder
+- `src/lang/loader.rs` — Added `load_syntax()`, syntax_table field
+- `src/verbs.rs` — Added `execute_action()`, `resolve_entity_by_name()`
+- `src/repl/mod.rs` — Integrated syntax table matching
+
+**Tests**: 22 tests for syntax module, 6 tests for loader syntax parsing, 1 integration test
+
+**Example**:
+```lisp
+(syntax "look" :to look-around)
+(syntax "look" "at" noun :to examine)
+(syntax "look" "in" noun :to search)
+(syntax "look" "under" noun :to look-under)
+(syntax "look" direction :to look-direction)
+(syntax "l" :to look-around)
+(syntax "examine" noun :to examine)
+(syntax "x" noun :to examine)
+```
+
+**Success Criteria**: "look at lamp" and "examine lamp" and "x lamp" all route to examine action.
+
+### Stage 2: Grammar DSL
+**Goal**: Define command patterns in .hvl files with semantic constraints.
+**Status**: Not Started
+
+- [ ] Grammar pattern syntax with slots
+- [ ] Semantic type annotations on slots (`:portable`, `:container`, `:living`)
+- [ ] Optional elements in patterns `["with" weapon]`
+- [ ] Compile patterns to efficient matcher (trie or PEG)
+- [ ] Disambiguation via semantic constraints
+- [ ] DSL form: `(grammar action-name ...patterns...)`
+
+**Example**:
+```lisp
+(grammar take
+  "take" object:portable
+  "get" object:portable
+  "pick" "up" object:portable
+  "take" object:portable "from" container:container)
+
+(grammar attack
+  "attack" target:living
+  "attack" target:living "with" weapon:weapon
+  "kill" target:living
+  "hit" target:living)
+
+(grammar put
+  "put" object:held "in" container:container
+  "put" object:held "on" surface:supporter
+  "drop" object:held "in" container:container)
+```
+
+**Success Criteria**: Can define new verbs entirely in DSL without Rust changes.
+
+### Stage 3: Object Hooks
+**Goal**: Objects respond to being acted upon via Before/On/After handlers.
+**Status**: Not Started
+
+- [ ] `Before:<action>` component — runs before action, can veto/modify
+- [ ] `On:<action>` component — primary handler, can replace default
+- [ ] `After:<action>` component — runs after action completes
+- [ ] `:handled` return value to suppress default behavior
+- [ ] `:veto` return value to cancel action entirely
+- [ ] Hook invocation order: actor → direct-object → indirect-object → room
+- [ ] DSL syntax for defining hooks inline on entities
+
+**Example**:
+```lisp
+(entity holy-book
+  (Name "book")
+  (On:burn
+    (say "As the flames touch the sacred text, lightning strikes you down!")
+    (kill actor)
+    :handled))
+
+(entity candles
+  (Name "candles")
+  (On:count
+    (say "Let's see, how many objects in a pair? Don't tell me...")
+    :handled))
+
+(entity river
+  (Name "river")
+  (On:throw
+    (cond
+      [(eq? direct-object actor)
+       (say "You dive in. The current is too strong...")
+       (drown actor)]
+      [(lit? direct-object)
+       (say "It floats for a moment, then sinks.")
+       (destroy direct-object)]
+      [else
+       (say "It splashes into the water and is gone.")
+       (destroy direct-object)])))
+```
+
+**Success Criteria**: Objects have custom responses to verbs; "burn book" triggers deity intervention.
+
+### Stage 4: Precondition System
+**Goal**: Actions have declarative preconditions checked before execution.
+**Status**: Not Started
+
+- [ ] `Precondition` type — predicate on world state
+- [ ] Built-in preconditions: `reachable?`, `visible?`, `held?`, `portable?`, `not-held?`
+- [ ] Custom preconditions via DSL expressions
+- [ ] Automatic failure messages based on violated precondition
+- [ ] Actions declare required preconditions
+- [ ] DSL form: `(action name :preconditions [...] :handler ...)`
+
+**Example**:
+```lisp
+(action take
+  :preconditions
+    [(reachable? actor direct-object)
+     (visible? actor direct-object)
+     (portable? direct-object)
+     (not (held-by? direct-object actor))]
+  :handler take-handler)
+
+(action unlock
+  :preconditions
+    [(reachable? actor direct-object)
+     (locked? direct-object)
+     (has-key-for? actor direct-object)]
+  :handler unlock-handler)
+```
+
+**Failure messages**:
+- `(not (reachable? ...))` → "You can't reach the lamp."
+- `(not (portable? ...))` → "The lamp is fixed in place."
+- `(not (has-key-for? ...))` → "You don't have the right key."
+
+**Success Criteria**: Action preconditions are data; failure messages auto-generated.
+
+### Stage 5: Description System
+**Goal**: Contextual descriptions based on object state.
+**Status**: Not Started
+
+- [ ] Multiple description components: `Description`, `InitialDescription`, `GroundDescription`
+- [ ] `FirstSeen` component to track player discovery
+- [ ] Derivation rules to select appropriate description
+- [ ] `Describe` function that picks correct description for context
+- [ ] Support for dynamic descriptions via derivation
+
+**Example**:
+```lisp
+(entity brass-lamp
+  (Description "An ornate brass lamp, slightly tarnished.")
+  (InitialDescription "A brass lamp sits on the mantle, gleaming softly.")
+  (GroundDescription "There's a brass lamp here."))
+
+;; Derivation rules select the right one
+(rule initial-description
+  :when (and (first-seen? ?obj) (has? ?obj InitialDescription))
+  :derive (CurrentDescription ?obj)
+  :from (InitialDescription ?obj))
+
+(rule ground-description
+  :when (and (on-ground? ?obj) (has? ?obj GroundDescription))
+  :derive (CurrentDescription ?obj)
+  :from (GroundDescription ?obj))
+```
+
+**Success Criteria**: Lamp has different descriptions based on context.
+
+### Stage 6: Configurable Directions
+**Goal**: Direction set defined in DSL, not hardcoded.
+**Status**: Not Started
+
+- [ ] `(directions ...)` DSL form to define direction set
+- [ ] Direction properties: abbreviation, opposite, display name
+- [ ] Contextual directions: "home", "out", "back"
+- [ ] Computed directions: "toward X" (pathfinding)
+- [ ] Component naming convention: `Exit:north` (with pattern matching)
+
+**Example**:
+```lisp
+(directions
+  (north :abbrev "n" :opposite south :display "to the north")
+  (south :abbrev "s" :opposite north :display "to the south")
+  (east :abbrev "e" :opposite west :display "to the east")
+  (west :abbrev "w" :opposite east :display "to the west")
+  (up :abbrev "u" :opposite down :display "above")
+  (down :abbrev "d" :opposite up :display "below")
+  (in :abbrev nil :opposite out :display "inside")
+  (out :abbrev nil :opposite in :display "outside")
+  ;; Game-specific
+  (upstream :opposite downstream)
+  (home :contextual true))  ;; resolved via player state
+```
+
+**Success Criteria**: Can add custom directions without Rust changes.
+
+### Architecture Summary
+
+Command processing pipeline after Phase 9:
+
+```
+Player Input: "throw book into river"
+       ↓
+┌─────────────────────────────────┐
+│  1. TOKENIZE                    │
+│  ["throw", "book", "into", "river"]
+└─────────────────────────────────┘
+       ↓
+┌─────────────────────────────────┐
+│  2. GRAMMAR MATCH               │
+│  Pattern: "throw" obj "into" obj│
+│  Action: throw-into             │
+│  Slots: {direct: "book",        │
+│          indirect: "river"}     │
+└─────────────────────────────────┘
+       ↓
+┌─────────────────────────────────┐
+│  3. RESOLVE REFERENCES          │
+│  "book" → holy-book (in scope)  │
+│  "river" → river (in scope)     │
+│  Ambiguity? → ask player        │
+└─────────────────────────────────┘
+       ↓
+┌─────────────────────────────────┐
+│  4. CHECK PRECONDITIONS         │
+│  - Is book reachable? ✓         │
+│  - Is river a valid target? ✓   │
+└─────────────────────────────────┘
+       ↓
+┌─────────────────────────────────┐
+│  5. BEFORE HOOKS                │
+│  - Check book's Before:throw    │
+│  - Check river's Before:receive │
+│  - Check room's Before:throw    │
+│  (any can veto or modify)       │
+└─────────────────────────────────┘
+       ↓
+┌─────────────────────────────────┐
+│  6. OBJECT ACTION (river)       │
+│  - river.On:throw runs          │
+│  - Returns :handled             │
+│  (default action skipped)       │
+└─────────────────────────────────┘
+       ↓
+┌─────────────────────────────────┐
+│  7. AFTER HOOKS                 │
+│  - Check book's After:throw     │
+│  - Check river's After:receive  │
+│  - Check room's After:throw     │
+└─────────────────────────────────┘
+       ↓
+Output: "The book splashes into the water and is gone."
+```
+
+### Tests
+Target: ~80 tests across all stages
+- Stage 1: ~15 tests (syntax matching, routing)
+- Stage 2: ~20 tests (grammar parsing, pattern compilation)
+- Stage 3: ~20 tests (hook invocation, veto/handled)
+- Stage 4: ~10 tests (precondition checking)
+- Stage 5: ~10 tests (description selection)
+- Stage 6: ~5 tests (direction configuration)
+
+---
+
+## Phase 10: Sensory Propagation
 **Goal**: Stimuli propagate through the room graph.
 **Status**: Not Started (Future)
 
@@ -480,7 +769,7 @@ Total project: 444 tests passing
 
 ---
 
-## Phase 10: Advanced Content
+## Phase 11: Advanced Content
 **Goal**: Build upward as desired.
 **Status**: Not Started (Future)
 
