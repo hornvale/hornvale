@@ -5,6 +5,9 @@
 ;; NPC: A cat that greets the player
 ;; Goal: Reach the garden with the lamp
 
+;; Load the standard library for verbs and grammar
+(load "libs/std/_lib.hvl")
+
 ;; Define relations
 (relation InRoom :from :many :to :one)
 (relation Contains :from :one :to :many)
@@ -74,8 +77,8 @@
   (Fixed true)
   (InRoom kitchen))
 
-;; Game commands like look, go, take, drop, inventory, examine are built into the REPL.
-;; Direction shortcuts (n, s, e, w, u, d, etc.) also work directly.
+;; Game commands (look, go, take, drop, inventory, examine) are provided by libs/std/_lib.hvl
+;; Direction shortcuts (n, s, e, w, u, d, etc.) also work.
 ;;
 ;; To play:
 ;;   load examples/house.hvl

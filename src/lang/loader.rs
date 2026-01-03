@@ -318,7 +318,9 @@ impl WorldLoader {
     ///
     /// Format: `(load "path.hvl")`
     ///
-    /// Paths are resolved relative to the file containing the load directive.
+    /// Path resolution:
+    /// - Paths starting with `./` or `../` are relative to the file containing the load directive
+    /// - Other paths are relative to the current working directory (project root)
     fn load_include(
         &mut self,
         world: &mut World,
@@ -337,11 +339,19 @@ impl WorldLoader {
             LoadError::InvalidDefinition("load path must be a string".to_string())
         })?;
 
-        // Resolve relative path against base path (directory of current file)
-        let resolved_path = if let Some(base) = base_path {
-            let base_dir = base.parent().unwrap_or(Path::new("."));
-            base_dir.join(path_str)
+        // Resolve path based on prefix:
+        // - "./foo" or "../foo" → relative to current file's directory
+        // - "foo" or "libs/foo" → relative to CWD (project root)
+        let resolved_path = if path_str.starts_with("./") || path_str.starts_with("../") {
+            // Explicitly relative path - resolve against base path
+            if let Some(base) = base_path {
+                let base_dir = base.parent().unwrap_or(Path::new("."));
+                base_dir.join(path_str)
+            } else {
+                PathBuf::from(path_str)
+            }
         } else {
+            // Non-relative path - resolve against CWD
             PathBuf::from(path_str)
         };
 
@@ -2533,12 +2543,12 @@ mod tests {
         let lib_path = dir.path().join("lib.hvl");
         std::fs::write(&lib_path, r#"(entity lib-entity (Name "From Library"))"#).unwrap();
 
-        // Create main file that loads library
+        // Create main file that loads library (explicit relative path)
         let main_path = dir.path().join("main.hvl");
         std::fs::write(
             &main_path,
             r#"
-            (load "lib.hvl")
+            (load "./lib.hvl")
             (entity main-entity (Name "From Main"))
             "#,
         )
@@ -2572,17 +2582,21 @@ mod tests {
         let deep_path = subdir.join("deep.hvl");
         std::fs::write(&deep_path, r#"(entity deep (Name "Deep"))"#).unwrap();
 
-        // Create middle file
+        // Create middle file (explicit relative path)
         let mid_path = dir.path().join("mid.hvl");
         std::fs::write(
             &mid_path,
-            r#"(load "sub/deep.hvl") (entity mid (Name "Mid"))"#,
+            r#"(load "./sub/deep.hvl") (entity mid (Name "Mid"))"#,
         )
         .unwrap();
 
-        // Create main file
+        // Create main file (explicit relative path)
         let main_path = dir.path().join("main.hvl");
-        std::fs::write(&main_path, r#"(load "mid.hvl") (entity top (Name "Top"))"#).unwrap();
+        std::fs::write(
+            &main_path,
+            r#"(load "./mid.hvl") (entity top (Name "Top"))"#,
+        )
+        .unwrap();
 
         loader
             .load_file(&mut world, &mut rules, &main_path)
@@ -2605,13 +2619,13 @@ mod tests {
 
         let dir = tempdir().unwrap();
 
-        // Create file A that loads file B
+        // Create file A that loads file B (explicit relative path)
         let path_a = dir.path().join("a.hvl");
-        std::fs::write(&path_a, r#"(load "b.hvl")"#).unwrap();
+        std::fs::write(&path_a, r#"(load "./b.hvl")"#).unwrap();
 
-        // Create file B that loads file A (circular)
+        // Create file B that loads file A (circular, explicit relative path)
         let path_b = dir.path().join("b.hvl");
-        std::fs::write(&path_b, r#"(load "a.hvl")"#).unwrap();
+        std::fs::write(&path_b, r#"(load "./a.hvl")"#).unwrap();
 
         let result = loader.load_file(&mut world, &mut rules, &path_a);
         assert!(matches!(result, Err(LoadError::CircularDependency(_))));
@@ -2627,9 +2641,9 @@ mod tests {
 
         let dir = tempdir().unwrap();
 
-        // Create file that loads itself
+        // Create file that loads itself (explicit relative path)
         let path = dir.path().join("self.hvl");
-        std::fs::write(&path, r#"(load "self.hvl")"#).unwrap();
+        std::fs::write(&path, r#"(load "./self.hvl")"#).unwrap();
 
         let result = loader.load_file(&mut world, &mut rules, &path);
         // Self-reference should be detected as circular
@@ -2651,19 +2665,19 @@ mod tests {
         let common_path = dir.path().join("common.hvl");
         std::fs::write(&common_path, r#"(entity common (Name "Common"))"#).unwrap();
 
-        // File a
+        // File a (explicit relative paths)
         let a_path = dir.path().join("a.hvl");
-        std::fs::write(&a_path, r#"(load "common.hvl") (entity a (Name "A"))"#).unwrap();
+        std::fs::write(&a_path, r#"(load "./common.hvl") (entity a (Name "A"))"#).unwrap();
 
-        // File b
+        // File b (explicit relative paths)
         let b_path = dir.path().join("b.hvl");
-        std::fs::write(&b_path, r#"(load "common.hvl") (entity b (Name "B"))"#).unwrap();
+        std::fs::write(&b_path, r#"(load "./common.hvl") (entity b (Name "B"))"#).unwrap();
 
-        // Main file
+        // Main file (explicit relative paths)
         let main_path = dir.path().join("main.hvl");
         std::fs::write(
             &main_path,
-            r#"(load "a.hvl") (load "b.hvl") (entity main (Name "Main"))"#,
+            r#"(load "./a.hvl") (load "./b.hvl") (entity main (Name "Main"))"#,
         )
         .unwrap();
 
