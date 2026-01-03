@@ -1,0 +1,341 @@
+; Hornvale Standard Library
+;
+; This file provides the standard verbs, preconditions, and helper functions
+; for interactive fiction. Load this file to enable standard commands like
+; look, go, take, drop, examine, and inventory.
+;
+; Games should load this file and can override or extend any definition:
+;
+;   (load "libs/std/_lib.hvl")
+;   (override action take
+;     :handler (do (give! (direct-object) (holder (direct-object)) (actor))
+;                  (say "You snatch up " (the (direct-object)) ".")
+;                  :success))
+
+; ============================================================================
+; Helper Functions
+; ============================================================================
+
+; Move an entity to a new location (room).
+; Uses InRoom relation. Functional cardinality auto-removes old location.
+(defun move! (entity destination)
+  (relate! :InRoom entity destination))
+
+; Transfer an object from one holder to another.
+; Uses Contains relation. Functional cardinality auto-removes from old holder.
+(defun give! (obj from to)
+  (relate! :Contains to obj))
+
+; Get an entity's name, or "something" if no name.
+(defun entity-name (entity)
+  (if (has? entity :Name)
+      (? entity :Name)
+      "something"))
+
+; Format entity with "the" prefix (wrapper for readability).
+(defun the-name (entity)
+  (the entity))
+
+; Format entity with "a/an" prefix (wrapper for readability).
+(defun a-name (entity)
+  (a entity))
+
+; ============================================================================
+; Description System
+; ============================================================================
+
+; Describe an entity based on context.
+;
+; Contexts:
+;   :room    - describing as part of room contents
+;   :examine - detailed examination
+;   :brief   - one-line summary
+;
+; Fallback chain:
+;   1. If context is :examine, use Description
+;   2. If context is :room and not Tampered, use InitialDescription
+;   3. If context is :room and Tampered, use GroundDescription
+;   4. Fall back to Brief or Name
+(defun describe (entity context)
+  (if (= context :examine)
+      ; Examine: use Description or fallback
+      (if (has? entity :Description)
+          (? entity :Description)
+          (string-concat (string-concat "You see nothing special about " (the entity)) "."))
+      ; Room context: check tampered state
+      (if (= context :room)
+          (if (has? entity :Tampered)
+              ; Tampered: use GroundDescription or Brief
+              (if (has? entity :GroundDescription)
+                  (? entity :GroundDescription)
+                  (if (has? entity :Brief)
+                      (? entity :Brief)
+                      (a entity)))
+              ; Not tampered: use InitialDescription or Brief
+              (if (has? entity :InitialDescription)
+                  (? entity :InitialDescription)
+                  (if (has? entity :Brief)
+                      (? entity :Brief)
+                      (a entity))))
+          ; Default: Brief or Name
+          (if (has? entity :Brief)
+              (? entity :Brief)
+              (a entity)))))
+
+; ============================================================================
+; Type Predicates (for grammar matching)
+; ============================================================================
+
+; An entity that can be picked up
+(type portable (has? entity :Portable))
+
+; An entity that is a container
+(type container (has? entity :Container))
+
+; An entity that is currently held by the actor
+(type held (held-by? entity actor))
+
+; ============================================================================
+; Standard Preconditions
+; ============================================================================
+; Note: Built-in preconditions (reachable?, visible?, held?, held-by?,
+; portable?, not-held?) are implemented in Rust and available automatically.
+
+; ============================================================================
+; Action Definitions with DSL Handlers
+; ============================================================================
+
+; Look around - describe current room and contents
+(action look-around
+  :handler
+    (do
+      (let ((room (room)))
+        (if room
+            (do
+              ; Room name (bold)
+              (say "**" (? room :Name) "**")
+              (say "")
+              ; Room description
+              (if (has? room :RoomDescription)
+                  (do (say (? room :RoomDescription)) (say ""))
+                  (if (has? room :Description)
+                      (do (say (? room :Description)) (say ""))))
+              ; List visible entities
+              (let ((entities (contents room)))
+                (if (not (empty? entities))
+                    (do
+                      (say "You can see:")
+                      ; TODO: iterate over entities and describe each
+                      )))
+              :success)
+            (do (say "You are nowhere.") :failure)))))
+
+; Examine - describe an object in detail
+(action examine
+  :preconditions
+    ((visible? actor direct-object))
+  :handler
+    (do
+      (say (describe (direct-object) :examine))
+      :success))
+
+; Take - pick up a portable object
+(action take
+  :preconditions
+    ((reachable? actor direct-object)
+     (visible? actor direct-object)
+     (portable? direct-object)
+     (not-held? direct-object))
+  :handler
+    (do
+      (give! (direct-object) (holder (direct-object)) (actor))
+      (tamper! (direct-object))
+      (say "Taken.")
+      :success))
+
+; Drop - release a held object
+(action drop
+  :preconditions
+    ((held? direct-object))
+  :handler
+    (do
+      (let ((dest (room)))
+        (if dest
+            (do
+              (move! (direct-object) dest)
+              (say "Dropped.")
+              :success)
+            (do
+              (say "You are nowhere.")
+              :failure)))))
+
+; Inventory - list carried objects
+(action inventory
+  :handler
+    (do
+      (let ((items (contents (actor))))
+        (if (empty? items)
+            (say "You are carrying nothing.")
+            (do
+              (say "You are carrying:")
+              ; TODO: iterate over items and describe each
+              )))
+      :success))
+
+; Go action with direction argument
+(action go
+  :handler
+    (do
+      ; Direction is passed via action context - for now just fail
+      ; The direction-specific actions handle movement
+      (say "Go where?")
+      :failure))
+
+; Helper function for directional movement
+; Checks for Exit_<direction> component on current room
+(defun try-go (direction)
+  (let ((current-room (room)))
+    (if current-room
+        (let ((dest (exit-target current-room direction)))
+          (if dest
+              (do
+                (move! (actor) dest)
+                ; Return success - caller can handle the look
+                :success)
+              (do
+                (say (string-concat (string-concat "You can't go " (string direction)) "."))
+                :failure)))
+        (do
+          (say "You are nowhere.")
+          :failure))))
+
+; Direction-specific go actions
+(action go-north
+  :handler (try-go "north"))
+
+(action go-south
+  :handler (try-go "south"))
+
+(action go-east
+  :handler (try-go "east"))
+
+(action go-west
+  :handler (try-go "west"))
+
+(action go-up
+  :handler (try-go "up"))
+
+(action go-down
+  :handler (try-go "down"))
+
+(action go-northeast
+  :handler (try-go "northeast"))
+
+(action go-northwest
+  :handler (try-go "northwest"))
+
+(action go-southeast
+  :handler (try-go "southeast"))
+
+(action go-southwest
+  :handler (try-go "southwest"))
+
+; ============================================================================
+; Movement Commands (Grammar)
+; ============================================================================
+
+(command go
+  :aliases ("walk" "move")
+  :forms
+    (((dir:direction) -> (go dir))))
+
+; Direction shortcuts
+(command north
+  :aliases ("n")
+  :forms
+    ((() -> go-north)))
+
+(command south
+  :aliases ("s")
+  :forms
+    ((() -> go-south)))
+
+(command east
+  :aliases ("e")
+  :forms
+    ((() -> go-east)))
+
+(command west
+  :aliases ("w")
+  :forms
+    ((() -> go-west)))
+
+(command up
+  :aliases ("u")
+  :forms
+    ((() -> go-up)))
+
+(command down
+  :aliases ("d")
+  :forms
+    ((() -> go-down)))
+
+(command northeast
+  :aliases ("ne")
+  :forms
+    ((() -> go-northeast)))
+
+(command northwest
+  :aliases ("nw")
+  :forms
+    ((() -> go-northwest)))
+
+(command southeast
+  :aliases ("se")
+  :forms
+    ((() -> go-southeast)))
+
+(command southwest
+  :aliases ("sw")
+  :forms
+    ((() -> go-southwest)))
+
+; ============================================================================
+; Looking and Examining Commands
+; ============================================================================
+
+(command look
+  :aliases ("l")
+  :forms
+    ((() -> look-around)
+     ((dir:direction) -> (look-direction dir))
+     (("at" obj:noun) -> (examine obj))
+     (("in" obj:noun) -> (search obj))))
+
+(command examine
+  :aliases ("x" "ex")
+  :forms
+    (((obj:noun) -> (examine obj))))
+
+; ============================================================================
+; Object Manipulation Commands
+; ============================================================================
+
+(command take
+  :aliases ("get" "grab" "pick")
+  :forms
+    (((obj:noun) -> (take obj))
+     (("up" obj:noun) -> (take obj))
+     ((obj:noun "up") -> (take obj))))
+
+(command drop
+  :aliases ("put")
+  :forms
+    (((obj:held) -> (drop obj))
+     (("down" obj:held) -> (drop obj))
+     ((obj:held "down") -> (drop obj))))
+
+(command inventory
+  :aliases ("i" "inv")
+  :forms
+    ((() -> inventory)))
