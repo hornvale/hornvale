@@ -168,6 +168,9 @@ pub enum OpCode {
     /// Mark an entity for destruction: pending_deletions.push(R[entity])
     Destroy { entity: Reg },
 
+    /// Mark an entity as tampered (sets Tampered=true): pending_set_components.push((R[entity], "Tampered", true))
+    Tamper { entity: Reg },
+
     // === World Mutations (buffered for later application) ===
     /// Set a component value: pending_set_components.push((R[entity], R[component], R[value]))
     SetComponent {
@@ -262,6 +265,7 @@ impl OpCode {
             OpCode::GetContextRoom { .. } => "GET_CONTEXT_ROOM",
             OpCode::Say { .. } => "SAY",
             OpCode::Destroy { .. } => "DESTROY",
+            OpCode::Tamper { .. } => "TAMPER",
             OpCode::SetComponent { .. } => "SET_COMPONENT",
             OpCode::Relate { .. } => "RELATE",
             OpCode::Unrelate { .. } => "UNRELATE",
@@ -353,6 +357,7 @@ impl std::fmt::Display for OpCode {
             OpCode::GetContextRoom { dst } => write!(f, "GET_CONTEXT_ROOM r{dst}"),
             OpCode::Say { message } => write!(f, "SAY r{message}"),
             OpCode::Destroy { entity } => write!(f, "DESTROY r{entity}"),
+            OpCode::Tamper { entity } => write!(f, "TAMPER r{entity}"),
             OpCode::SetComponent {
                 entity,
                 component,

@@ -71,7 +71,7 @@
 //! ```
 
 use crate::Value;
-use crate::lang::{Atom, SExpr, Span};
+use crate::lang::{Atom, FunctionRegistry, SExpr, Span};
 use crate::symbol::Symbol;
 use crate::vm::{Chunk, ConstIdx, OpCode, Reg};
 
@@ -107,7 +107,7 @@ struct Local {
 }
 
 /// Compiles AST to bytecode.
-pub struct Compiler {
+pub struct Compiler<'a> {
     chunk: Chunk,
     /// Local variable bindings.
     locals: Vec<Local>,
@@ -117,9 +117,11 @@ pub struct Compiler {
     next_register: Reg,
     /// Current source line (for debug info).
     current_line: u32,
+    /// User-defined functions for inline expansion.
+    functions: Option<&'a FunctionRegistry>,
 }
 
-impl Compiler {
+impl<'a> Compiler<'a> {
     /// Create a new compiler.
     pub fn new() -> Self {
         Self {
@@ -128,12 +130,39 @@ impl Compiler {
             scope_depth: 0,
             next_register: 0,
             current_line: 1,
+            functions: None,
+        }
+    }
+
+    /// Create a compiler with user-defined functions for inline expansion.
+    pub fn with_functions(functions: &'a FunctionRegistry) -> Self {
+        Self {
+            chunk: Chunk::new(),
+            locals: Vec::new(),
+            scope_depth: 0,
+            next_register: 0,
+            current_line: 1,
+            functions: Some(functions),
         }
     }
 
     /// Compile an expression and return the chunk.
     pub fn compile(expr: &SExpr) -> Result<Chunk, CompileError> {
         let mut compiler = Compiler::new();
+        let dst = compiler.alloc_register()?;
+        compiler.compile_expr(expr, dst)?;
+        compiler
+            .chunk
+            .emit(OpCode::Return { src: dst }, compiler.current_line);
+        Ok(compiler.chunk)
+    }
+
+    /// Compile an expression with user-defined functions.
+    pub fn compile_with_functions(
+        expr: &SExpr,
+        functions: &FunctionRegistry,
+    ) -> Result<Chunk, CompileError> {
+        let mut compiler = Compiler::with_functions(functions);
         let dst = compiler.alloc_register()?;
         compiler.compile_expr(expr, dst)?;
         compiler
@@ -386,6 +415,7 @@ impl Compiler {
                 "set!" => return self.compile_set_component(args, dst, span),
                 "relate!" => return self.compile_relate(args, dst, span),
                 "unrelate!" => return self.compile_unrelate(args, dst, span),
+                "tamper!" => return self.compile_tamper(args, dst, span),
 
                 // World queries
                 "holder" => return self.compile_holder(args, dst, span),
@@ -891,6 +921,31 @@ impl Compiler {
         Ok(())
     }
 
+    /// Compile `tamper!` (mark entity as tampered).
+    fn compile_tamper(&mut self, args: &[SExpr], dst: Reg, span: Span) -> Result<(), CompileError> {
+        if args.len() != 1 {
+            return Err(CompileError::ArityMismatch {
+                expected: 1,
+                got: args.len(),
+                span,
+            });
+        }
+
+        // Compile the entity argument
+        let entity_reg = self.alloc_register()?;
+        self.compile_expr(&args[0], entity_reg)?;
+
+        // Emit the Tamper opcode
+        self.chunk
+            .emit(OpCode::Tamper { entity: entity_reg }, self.current_line);
+
+        // tamper! returns nil
+        self.chunk.emit(OpCode::LoadNil { dst }, self.current_line);
+
+        self.free_register(entity_reg);
+        Ok(())
+    }
+
     // === World Mutation Compilation ===
 
     /// Compile `set!` (entity, component, value)
@@ -1318,7 +1373,7 @@ impl Compiler {
         func: &SExpr,
         args: &[SExpr],
         dst: Reg,
-        _span: Span,
+        span: Span,
     ) -> Result<(), CompileError> {
         // Get function name
         let func_name = func
@@ -1328,6 +1383,17 @@ impl Compiler {
                 span: func.span(),
             })?;
 
+        // Check if it's a user-defined function
+        if let Some(functions) = self.functions {
+            if let Some(func_def) = functions.get(func_name) {
+                // Clone what we need to avoid borrow issues
+                let params = func_def.params.clone();
+                let body = func_def.body.clone();
+                return self.compile_user_function_call(&params, &body, args, dst, span);
+            }
+        }
+
+        // Standard library function call
         let func_idx = self.add_constant(Value::Symbol(func_name))?;
 
         // Compile arguments into consecutive registers
@@ -1351,6 +1417,46 @@ impl Compiler {
         for _ in args {
             self.next_register -= 1;
         }
+
+        Ok(())
+    }
+
+    /// Compile a user-defined function call via inline expansion.
+    ///
+    /// This compiles the function body with the arguments bound as locals,
+    /// effectively inlining the function at each call site.
+    fn compile_user_function_call(
+        &mut self,
+        params: &[Symbol],
+        body: &SExpr,
+        args: &[SExpr],
+        dst: Reg,
+        span: Span,
+    ) -> Result<(), CompileError> {
+        // Check arity
+        if args.len() != params.len() {
+            return Err(CompileError::ArityMismatch {
+                expected: params.len(),
+                got: args.len(),
+                span,
+            });
+        }
+
+        // Begin a new scope for the function body
+        self.begin_scope();
+
+        // Compile each argument and bind it to the corresponding parameter
+        for (param, arg) in params.iter().zip(args.iter()) {
+            let reg = self.alloc_register()?;
+            self.compile_expr(arg, reg)?;
+            self.declare_local(*param, reg);
+        }
+
+        // Compile the function body
+        self.compile_expr(body, dst)?;
+
+        // End the scope (frees parameter registers)
+        self.end_scope();
 
         Ok(())
     }
@@ -1418,7 +1524,7 @@ impl Compiler {
     }
 }
 
-impl Default for Compiler {
+impl Default for Compiler<'_> {
     fn default() -> Self {
         Self::new()
     }
@@ -1428,7 +1534,7 @@ impl Default for Compiler {
 mod tests {
     use super::*;
     use crate::core::World;
-    use crate::lang::parse;
+    use crate::lang::{FunctionDef, parse};
     use crate::vm::{StdLib, VM};
 
     fn eval(source: &str) -> Value {
@@ -1742,5 +1848,137 @@ mod tests {
         let result = vm.run().unwrap();
 
         assert_eq!(result, Value::Int(2));
+    }
+
+    // === User-defined function tests ===
+
+    fn eval_with_functions(source: &str, functions: &FunctionRegistry) -> Value {
+        let expr = parse(source).unwrap();
+        let chunk = Compiler::compile_with_functions(&expr, functions).unwrap();
+        let world = World::new();
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        vm.run().unwrap()
+    }
+
+    fn make_func(name: &str, params: &[&str], body: &str) -> FunctionDef {
+        FunctionDef::new(
+            Symbol::new(name),
+            params.iter().map(|p| Symbol::new(p)).collect(),
+            parse(body).unwrap(),
+        )
+    }
+
+    #[test]
+    fn test_defun_simple() {
+        let mut functions = FunctionRegistry::new();
+        functions.define(make_func("double", &["x"], "(* x 2)"));
+
+        assert_eq!(
+            eval_with_functions("(double 5)", &functions),
+            Value::Int(10)
+        );
+    }
+
+    #[test]
+    fn test_defun_multiple_params() {
+        let mut functions = FunctionRegistry::new();
+        functions.define(make_func("add3", &["a", "b", "c"], "(+ a (+ b c))"));
+
+        assert_eq!(
+            eval_with_functions("(add3 1 2 3)", &functions),
+            Value::Int(6)
+        );
+    }
+
+    #[test]
+    fn test_defun_with_do_body() {
+        let mut functions = FunctionRegistry::new();
+        functions.define(make_func("get-ten", &[], "(do 1 2 10)"));
+
+        assert_eq!(eval_with_functions("(get-ten)", &functions), Value::Int(10));
+    }
+
+    #[test]
+    fn test_defun_with_let() {
+        let mut functions = FunctionRegistry::new();
+        functions.define(make_func(
+            "square-sum",
+            &["a", "b"],
+            "(let ((sum (+ a b))) (* sum sum))",
+        ));
+
+        assert_eq!(
+            eval_with_functions("(square-sum 2 3)", &functions),
+            Value::Int(25)
+        );
+    }
+
+    #[test]
+    fn test_defun_with_conditionals() {
+        let mut functions = FunctionRegistry::new();
+        functions.define(make_func(
+            "abs-diff",
+            &["a", "b"],
+            "(if (> a b) (- a b) (- b a))",
+        ));
+
+        assert_eq!(
+            eval_with_functions("(abs-diff 10 3)", &functions),
+            Value::Int(7)
+        );
+        assert_eq!(
+            eval_with_functions("(abs-diff 3 10)", &functions),
+            Value::Int(7)
+        );
+    }
+
+    #[test]
+    fn test_defun_calling_stdlib() {
+        let mut functions = FunctionRegistry::new();
+        functions.define(make_func("abs-double", &["x"], "(* (abs x) 2)"));
+
+        assert_eq!(
+            eval_with_functions("(abs-double -5)", &functions),
+            Value::Int(10)
+        );
+    }
+
+    #[test]
+    fn test_defun_nested_calls() {
+        let mut functions = FunctionRegistry::new();
+        functions.define(make_func("double", &["x"], "(* x 2)"));
+        functions.define(make_func("quadruple", &["x"], "(double (double x))"));
+
+        assert_eq!(
+            eval_with_functions("(quadruple 3)", &functions),
+            Value::Int(12)
+        );
+    }
+
+    #[test]
+    fn test_defun_arity_mismatch() {
+        let mut functions = FunctionRegistry::new();
+        functions.define(make_func("add", &["a", "b"], "(+ a b)"));
+
+        // Call with wrong number of args
+        let expr = parse("(add 1)").unwrap();
+        let result = Compiler::compile_with_functions(&expr, &functions);
+        assert!(matches!(result, Err(CompileError::ArityMismatch { .. })));
+
+        let expr = parse("(add 1 2 3)").unwrap();
+        let result = Compiler::compile_with_functions(&expr, &functions);
+        assert!(matches!(result, Err(CompileError::ArityMismatch { .. })));
+    }
+
+    #[test]
+    fn test_defun_no_params() {
+        let mut functions = FunctionRegistry::new();
+        functions.define(make_func("get-answer", &[], "42"));
+
+        assert_eq!(
+            eval_with_functions("(get-answer)", &functions),
+            Value::Int(42)
+        );
     }
 }

@@ -29,6 +29,7 @@
 
 mod ast;
 mod error;
+mod function;
 mod lexer;
 mod loader;
 mod parser;
@@ -36,6 +37,7 @@ mod token;
 
 pub use ast::{Atom, SExpr};
 pub use error::{LexError, ParseError, Span};
+pub use function::{FunctionDef, FunctionRegistry};
 pub use lexer::Lexer;
 pub use loader::{LoadError, WorldLoader};
 pub use parser::{Parser, is_complete, parse, parse_all};

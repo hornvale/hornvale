@@ -588,6 +588,16 @@ impl<'a> VM<'a> {
                 self.pending_deletions.push(entity_id);
             }
 
+            OpCode::Tamper { entity } => {
+                let entity_id = self.as_entity(self.get_reg(entity))?;
+                // Set Tampered=true on the entity
+                self.pending_set_components.push(PendingSetComponent {
+                    entity: entity_id,
+                    component: ComponentTypeId::new("Tampered"),
+                    value: Value::Bool(true),
+                });
+            }
+
             // === World Mutations ===
             OpCode::SetComponent {
                 entity,
@@ -2002,5 +2012,50 @@ mod tests {
         let result = vm.run().unwrap();
 
         assert_eq!(result, Value::string("you"));
+    }
+
+    #[test]
+    fn test_tamper_sets_component() {
+        let mut world = World::new();
+        let item = world.create_entity();
+        world.set_component(item, "Name", Value::string("lamp"));
+
+        // Initially, should not have Tampered component
+        assert!(world.get_component(item, "Tampered").is_none());
+
+        let mut chunk = Chunk::new();
+        let item_idx = chunk.add_constant(Value::EntityRef(item));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: item_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::Tamper { entity: 0 }, 1);
+        chunk.emit(OpCode::LoadNil { dst: 1 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        vm.run().unwrap();
+
+        // Get pending mutations and apply
+        let pending = vm.take_pending_set_components();
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].entity, item);
+        assert_eq!(pending[0].component, ComponentTypeId::new("Tampered"));
+        assert_eq!(pending[0].value, Value::Bool(true));
+
+        // Apply the mutation
+        for p in pending {
+            world.set_component(p.entity, p.component, p.value);
+        }
+
+        // Now should have Tampered=true
+        assert_eq!(
+            world.get_component(item, "Tampered"),
+            Some(&Value::Bool(true))
+        );
     }
 }

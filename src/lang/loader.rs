@@ -5,6 +5,7 @@ use crate::action::{Action as ActionDef, ActionRegistry};
 use crate::core::{Cardinality, EntityId, RelationSchema, World};
 use crate::generator::{GenerationStub, GeneratorRegistry, StubStorage};
 use crate::grammar::{Command as GrammarCommand, CommandRegistry, Form, FormAction, FormElement};
+use crate::lang::function::{FunctionDef, FunctionRegistry};
 use crate::lang::{Atom, ParseError, SExpr, parse_all};
 use crate::precondition::{Precondition, PreconditionArg, PreconditionCall, PreconditionRegistry};
 use crate::repl::command::{ReplCommandRegistry, parse_repl_command};
@@ -60,6 +61,8 @@ pub struct WorldLoader {
     loaded_files: OrdSet<PathBuf>,
     /// Stack of files currently being loaded (for circular dependency detection).
     loading_stack: Vec<PathBuf>,
+    /// User-defined functions.
+    function_registry: FunctionRegistry,
 }
 
 impl WorldLoader {
@@ -77,6 +80,7 @@ impl WorldLoader {
             action_registry: ActionRegistry::new(),
             loaded_files: OrdSet::new(),
             loading_stack: Vec::new(),
+            function_registry: FunctionRegistry::new(),
         }
     }
 
@@ -158,6 +162,16 @@ impl WorldLoader {
     /// Get the action registry mutably.
     pub fn action_registry_mut(&mut self) -> &mut ActionRegistry {
         &mut self.action_registry
+    }
+
+    /// Get the function registry.
+    pub fn function_registry(&self) -> &FunctionRegistry {
+        &self.function_registry
+    }
+
+    /// Get the function registry mutably.
+    pub fn function_registry_mut(&mut self) -> &mut FunctionRegistry {
+        &mut self.function_registry
     }
 
     /// Check if a file has been loaded.
@@ -292,6 +306,8 @@ impl WorldLoader {
                 self.load_precondition(expr)?;
             } else if expr.is_call("action") {
                 self.load_action(expr)?;
+            } else if expr.is_call("defun") {
+                self.load_defun(expr)?;
             }
         }
 
@@ -809,6 +825,66 @@ impl WorldLoader {
                 "precondition argument must be a symbol".to_string(),
             ))
         }
+    }
+
+    /// Load a function definition.
+    ///
+    /// Format: `(defun name (params...) body...)`
+    ///
+    /// Example:
+    /// ```lisp
+    /// (defun greet (name)
+    ///   (str "Hello, " name "!"))
+    ///
+    /// (defun describe-in-room (obj)
+    ///   (if (has? obj :Tampered)
+    ///     (or (get obj :GroundDescription) (get obj :Brief) (get obj :Name))
+    ///     (or (get obj :InitialDescription) (get obj :Brief) (get obj :Name))))
+    /// ```
+    fn load_defun(&mut self, expr: &SExpr) -> Result<(), LoadError> {
+        let items = expr
+            .as_list()
+            .ok_or_else(|| LoadError::InvalidDefinition("defun must be a list".to_string()))?;
+
+        if items.len() < 4 {
+            return Err(LoadError::InvalidDefinition(
+                "defun requires name, params, and body".to_string(),
+            ));
+        }
+
+        // Parse function name
+        let name = items[1].as_symbol().ok_or_else(|| {
+            LoadError::InvalidDefinition("defun name must be a symbol".to_string())
+        })?;
+
+        // Parse parameter list
+        let params_list = items[2].as_list().ok_or_else(|| {
+            LoadError::InvalidDefinition("defun params must be a list".to_string())
+        })?;
+
+        let mut params = Vec::new();
+        for param in params_list {
+            let param_name = param.as_symbol().ok_or_else(|| {
+                LoadError::InvalidDefinition("defun parameter must be a symbol".to_string())
+            })?;
+            params.push(param_name);
+        }
+
+        // Parse body - if multiple expressions, wrap in (do ...)
+        let body = if items.len() == 4 {
+            items[3].clone()
+        } else {
+            // Multiple body expressions - wrap in (do ...)
+            let body_exprs: Vec<SExpr> = items[3..].to_vec();
+            let mut do_list = vec![SExpr::Atom(Atom::Symbol(Symbol::new("do")), expr.span())];
+            do_list.extend(body_exprs);
+            SExpr::List(do_list, expr.span())
+        };
+
+        let func = FunctionDef::new(name, params, body);
+        self.function_registry.define(func);
+
+        Ok(())
     }
 
     /// Load a syntax definition.
@@ -2720,5 +2796,144 @@ mod tests {
         let mut loader2 = WorldLoader::new();
         let result2 = loader2.load_file(&mut world, &mut rules, file2.path());
         assert!(matches!(result2, Err(LoadError::InvalidDefinition(_))));
+    }
+
+    // ============ User-Defined Function Tests ============
+
+    #[test]
+    fn test_load_defun_basic() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(&mut world, &mut rules, r#"(defun double (x) (* x 2))"#)
+            .unwrap();
+
+        assert!(loader.function_registry().contains(Symbol::new("double")));
+        let func = loader
+            .function_registry()
+            .get(Symbol::new("double"))
+            .unwrap();
+        assert_eq!(func.arity(), 1);
+    }
+
+    #[test]
+    fn test_load_defun_multiple_params() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"(defun add3 (a b c) (+ a (+ b c)))"#,
+            )
+            .unwrap();
+
+        let func = loader.function_registry().get(Symbol::new("add3")).unwrap();
+        assert_eq!(func.arity(), 3);
+    }
+
+    #[test]
+    fn test_load_defun_no_params() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(&mut world, &mut rules, r#"(defun get-answer () 42)"#)
+            .unwrap();
+
+        let func = loader
+            .function_registry()
+            .get(Symbol::new("get-answer"))
+            .unwrap();
+        assert_eq!(func.arity(), 0);
+    }
+
+    #[test]
+    fn test_load_defun_multi_body() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        // Multiple body expressions should be wrapped in (do ...)
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"(defun side-effect-then-return (x)
+                    (say "computing")
+                    (* x 2))"#,
+            )
+            .unwrap();
+
+        let func = loader
+            .function_registry()
+            .get(Symbol::new("side-effect-then-return"))
+            .unwrap();
+        assert_eq!(func.arity(), 1);
+        // Body should be a (do ...) form
+        assert!(func.body.is_call("do"));
+    }
+
+    #[test]
+    fn test_load_defun_missing_name() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        let result = loader.load_str(&mut world, &mut rules, r#"(defun)"#);
+        assert!(matches!(result, Err(LoadError::InvalidDefinition(_))));
+    }
+
+    #[test]
+    fn test_load_defun_missing_params() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        let result = loader.load_str(&mut world, &mut rules, r#"(defun foo)"#);
+        assert!(matches!(result, Err(LoadError::InvalidDefinition(_))));
+    }
+
+    #[test]
+    fn test_load_defun_missing_body() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        let result = loader.load_str(&mut world, &mut rules, r#"(defun foo ())"#);
+        assert!(matches!(result, Err(LoadError::InvalidDefinition(_))));
+    }
+
+    #[test]
+    fn test_load_defun_multiple_functions() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (defun double (x) (* x 2))
+                (defun triple (x) (* x 3))
+                (defun quadruple (x) (double (double x)))
+                "#,
+            )
+            .unwrap();
+
+        assert_eq!(loader.function_registry().len(), 3);
+        assert!(loader.function_registry().contains(Symbol::new("double")));
+        assert!(loader.function_registry().contains(Symbol::new("triple")));
+        assert!(
+            loader
+                .function_registry()
+                .contains(Symbol::new("quadruple"))
+        );
     }
 }

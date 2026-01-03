@@ -719,7 +719,7 @@ This stage adds CLOS-style method dispatch to actions:
 
 ### Stage 5: DSL-First Verbs & Description System
 **Goal**: Move verb logic from Rust to DSL. Add contextual descriptions.
-**Status**: In Progress (5A, 5B, 5C complete)
+**Status**: In Progress (5A, 5B, 5C, 5D complete)
 
 This is a significant architectural change: all game verbs move to DSL, with Rust providing efficient primitives. This also includes the description system for contextual object descriptions.
 
@@ -769,6 +769,7 @@ This is a significant architectural change: all game verbs move to DSL, with Rus
 **Rust Primitives** (minimal, mechanical):
 - [x] `(the entity)` opcode — definite article + name, respecting flags
 - [x] `(a entity)` opcode — indefinite article + name, respecting flags
+- [x] `(tamper! entity)` opcode — set Tampered=true on entity
 - [x] Name flag components: `ProperNoun`, `VowelSound`, `NoArticle`, `PluralNoun`
 - [x] Description flag components: `InitialDescription`, `GroundDescription`, `Tampered`
 
@@ -788,14 +789,15 @@ This is a significant architectural change: all game verbs move to DSL, with Rus
 - `NoArticle`: Omit articles entirely (e.g., "you" not "the you")
 
 **Files Modified**:
-- `src/vm/bytecode.rs` — Added `The`, `A` opcodes
+- `src/vm/bytecode.rs` — Added `The`, `A`, `Tamper` opcodes
 - `src/vm/exec.rs` — Implemented opcodes with `format_the()`, `format_a()` helpers
-- `src/compiler.rs` — Added `compile_the()`, `compile_a()` functions
+- `src/compiler.rs` — Added `compile_the()`, `compile_a()`, `compile_tamper()` functions
 - `src/verbs.rs` — Added component type helpers for name flags and descriptions
 
-**Tests**: 9 new tests (4 for `the`, 5 for `a`)
+**Tests**: 10 new tests (4 for `the`, 5 for `a`, 1 for `tamper!`)
 - `test_the_basic`, `test_the_proper_noun`, `test_the_no_article`, `test_the_no_name`
 - `test_a_basic`, `test_a_vowel_heuristic`, `test_a_vowel_flag_override`, `test_a_proper_noun`, `test_a_no_article`
+- `test_tamper_sets_component`
 
 Total project: 615 tests passing
 
@@ -832,11 +834,41 @@ Total project: 615 tests passing
 
 Total project: 593 tests passing
 
-#### Stage 5D: Standard Library
+#### Stage 5D: User-Defined Functions (defun)
+**Goal**: Support user-defined functions in DSL for building standard library.
+**Status**: Complete ✓
+
+**Implementation Summary**:
+- [x] `FunctionDef` struct — stores function name, parameter list, and body AST
+- [x] `FunctionRegistry` — stores user-defined functions with OrdMap
+- [x] `(defun name (params...) body...)` DSL form in loader
+- [x] Inline expansion at compile time (no runtime call frames needed)
+- [x] Multiple body expressions wrapped in `(do ...)`
+- [x] Arity checking at compile time
+
+**Files Created/Modified**:
+- `src/lang/function.rs` — `FunctionDef`, `FunctionRegistry` (new)
+- `src/lang.rs` — Added module and exports
+- `src/lang/loader.rs` — Added `function_registry` field, `load_defun()` method
+- `src/compiler.rs` — Added `with_functions()`, `compile_with_functions()`, `compile_user_function_call()`
+
+**Design Notes**:
+- Inline expansion: function calls are expanded at compile time, not runtime
+- No recursion support (would cause infinite expansion)
+- Functions must be defined before use (no forward references)
+- Standard library (`libs/std/_lib.hvl`) convention planned for Stage 5E
+
+**Tests**: 17 new tests
+- 9 compiler tests: simple, multiple params, do body, let, conditionals, stdlib calls, nested calls, arity mismatch, no params
+- 8 loader tests: basic, multiple params, no params, multi body, missing name/params/body, multiple functions
+
+Total project: 635 tests passing
+
+#### Stage 5E: Standard Library (formerly 5D)
 **Goal**: Standard verbs defined in DSL.
 **Status**: Not Started
 
-- [ ] Create `examples/stdlib.hvl` (or `std/stdlib.hvl`)
+- [ ] Create `libs/std/_lib.hvl` (entry point for standard library)
 - [ ] Standard preconditions:
   - `reachable?`, `visible?`, `held?`, `held-by?`, `portable?`, `not-held?`
   - `container?`, `open?`, `locked?`, `not-recursive-containment`
@@ -856,7 +888,7 @@ Total project: 593 tests passing
 
 **Tests**: ~15 integration tests
 
-#### Stage 5E: DSL Action Handlers
+#### Stage 5F: DSL Action Handlers (formerly 5E)
 **Goal**: Actions execute DSL code, not Rust functions.
 **Status**: Not Started
 
@@ -1017,16 +1049,17 @@ Target: ~200 tests across all stages
 - Stage 3: 33 tests (hook invocation, veto/handled, context opcodes, effects) ✓
 - Stage 4: 31 tests (precondition types, action registry, built-ins, failure messages, DSL parsing) ✓
 - Stage 4.5: ~10 tests (action specificity, :when guards) — deferred
-- Stage 5: ~75 tests (primitives, descriptions, loading, stdlib, DSL handlers)
+- Stage 5: ~95 tests (primitives, descriptions, loading, defun, stdlib, DSL handlers)
   - 5A: 13 tests (core primitives) ✓
-  - 5B: 9 tests (article generation) ✓
+  - 5B: 10 tests (article generation, tamper!) ✓
   - 5C: 9 tests (file loading) ✓
-  - 5D: ~15 tests (stdlib integration)
-  - 5E: ~15 tests (DSL action handlers)
+  - 5D: 17 tests (defun user-defined functions) ✓
+  - 5E: ~15 tests (stdlib integration)
+  - 5F: ~15 tests (DSL action handlers)
 - Stage 6: ~5 tests (direction configuration)
 
-Current: 172 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33, Stage 4: 31, Stage 5A: 13, Stage 5B: 9, Stage 5C: 9)
-Total project: 615 tests passing
+Current: 190 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33, Stage 4: 31, Stage 5A: 13, Stage 5B: 10, Stage 5C: 9, Stage 5D: 17)
+Total project: 635 tests passing
 
 ---
 
