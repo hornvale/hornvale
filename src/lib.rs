@@ -56,8 +56,7 @@ pub use io::{StdIO, WorldIO};
 pub use rng::SeededRng;
 pub use symbol::Symbol;
 pub use template::{FieldSpec, Template, TemplateRegistry};
-#[allow(deprecated)]
-pub use verbs::{VerbResult, execute_command, execute_grammar_action_full};
+pub use verbs::{VerbResult, execute_grammar_action_full};
 
 // Action and precondition system
 pub use action::{

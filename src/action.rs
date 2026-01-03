@@ -282,96 +282,6 @@ impl HandlerRegistry {
         }
     }
 
-    /// Create a registry with built-in handlers.
-    pub fn with_builtins() -> Self {
-        let mut registry = Self::new();
-        registry.register_builtins();
-        registry
-    }
-
-    /// Register the built-in handlers.
-    ///
-    /// These are deprecated Rust handlers kept for backward compatibility.
-    /// DSL handlers should be used instead.
-    #[allow(deprecated)]
-    fn register_builtins(&mut self) {
-        use crate::verbs::{
-            handle_drop, handle_examine, handle_inventory, handle_look, handle_take,
-        };
-
-        // Look
-        self.register(
-            "look",
-            Arc::new(|world, actor, _, _| handle_look(world, actor)),
-        );
-        self.register(
-            "look-around",
-            Arc::new(|world, actor, _, _| handle_look(world, actor)),
-        );
-
-        // Inventory
-        self.register(
-            "inventory",
-            Arc::new(|world, actor, _, _| handle_inventory(world, actor)),
-        );
-
-        // Examine
-        self.register(
-            "examine",
-            Arc::new(|world, _, direct, _| {
-                if let Some(target) = direct {
-                    handle_examine(world, target)
-                } else {
-                    VerbResult::fail("Examine what?")
-                }
-            }),
-        );
-
-        // Take
-        self.register(
-            "take",
-            Arc::new(|world, actor, direct, _| {
-                if let Some(target) = direct {
-                    handle_take(world, actor, target)
-                } else {
-                    VerbResult::fail("Take what?")
-                }
-            }),
-        );
-        self.register(
-            "take-handler",
-            Arc::new(|world, actor, direct, _| {
-                if let Some(target) = direct {
-                    handle_take(world, actor, target)
-                } else {
-                    VerbResult::fail("Take what?")
-                }
-            }),
-        );
-
-        // Drop
-        self.register(
-            "drop",
-            Arc::new(|world, actor, direct, _| {
-                if let Some(target) = direct {
-                    handle_drop(world, actor, target)
-                } else {
-                    VerbResult::fail("Drop what?")
-                }
-            }),
-        );
-
-        // Go
-        self.register(
-            "go",
-            Arc::new(|_world, _actor, _, _| {
-                // Go requires direction, which isn't an entity
-                // This handler is a fallback; direction-based go is handled specially
-                VerbResult::fail("Go where?")
-            }),
-        );
-    }
-
     /// Register a handler.
     pub fn register(&mut self, name: impl AsRef<str>, handler: HandlerFn) {
         self.handlers.insert(Symbol::new(name.as_ref()), handler);
@@ -687,17 +597,6 @@ mod tests {
             .unwrap();
         assert!(result.success);
         assert!(result.output.contains("Test executed!"));
-    }
-
-    #[test]
-    fn test_builtin_handlers() {
-        let registry = HandlerRegistry::with_builtins();
-
-        assert!(registry.contains(Symbol::new("look")));
-        assert!(registry.contains(Symbol::new("inventory")));
-        assert!(registry.contains(Symbol::new("examine")));
-        assert!(registry.contains(Symbol::new("take")));
-        assert!(registry.contains(Symbol::new("drop")));
     }
 
     #[test]

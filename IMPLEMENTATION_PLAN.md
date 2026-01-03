@@ -918,25 +918,23 @@ Total project: 635 tests passing
 - [x] `(extend action name :before ...)` for adding preconditions
 
 **Cleanup Work** (completed):
-- [x] Deprecate Rust verb handlers in `src/verbs.rs` with `#[deprecated]` attributes
+- [x] ~~Deprecate~~ **Removed** Rust verb handlers from `src/verbs.rs` entirely
 - [x] Update REPL to use DSL-defined actions exclusively via `execute_grammar_action_full`
 - [x] Remove fallback to `verbs::execute_command` (old command parsing system)
+- [x] Remove `execute_command` re-export from `lib.rs`
+- [x] Remove `HandlerRegistry::with_builtins()` and `register_builtins()`
+- [x] Update tests to use DSL action handlers
 
 **Files Modified**:
-- `src/action.rs` — Added `ActionHandler` enum, `ActionResult`, `execute_dsl_handler()`, `DslHandlerResult`
+- `src/action.rs` — Added `ActionHandler` enum, `ActionResult`, `execute_dsl_handler()`, `DslHandlerResult`; removed builtin handlers
 - `src/lang/loader.rs` — Parse DSL handlers, `(override ...)`, `(extend ...)` forms
-- `src/verbs.rs` — Integrated DSL handler execution into `execute_grammar_action_full`; deprecated Rust handlers
+- `src/verbs.rs` — Removed Rust handlers; now only provides `execute_grammar_action_full` and component/relation helpers
 - `src/repl.rs` — Updated to use `execute_grammar_action_full` with action/precondition registries
 - `src/hooks.rs` — Added `PendingMutations` struct
-- `src/lib.rs` — Export new types
+- `src/lib.rs` — Export new types; removed deprecated `execute_command`
 
-**Tests**: 19 new tests for DSL handlers
-- 7 ActionResult parsing tests
-- 4 DSL handler execution tests
-- 3 loader tests for DSL handlers
-- 5 loader tests for override/extend
-
-Total project: 634 tests passing
+**Tests**: 627 tests passing
+- All verb handlers now exercised via DSL actions in tests
 
 #### Example: Full DSL Verb Definition
 

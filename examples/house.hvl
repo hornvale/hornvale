@@ -76,14 +76,3 @@
   (Adjectives ("orange" "sleepy" "tabby"))
   (Fixed true)
   (InRoom kitchen))
-
-;; Game commands (look, go, take, drop, inventory, examine) are provided by libs/std/_lib.hvl
-;; Direction shortcuts (n, s, e, w, u, d, etc.) also work.
-;;
-;; To play:
-;;   load examples/house.hvl
-;;   look
-;;   take lamp
-;;   n
-;;   take key
-;;   e
