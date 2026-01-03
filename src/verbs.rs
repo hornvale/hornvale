@@ -437,12 +437,15 @@ pub fn execute_grammar_action(
 /// This function dispatches to verb handlers based on the action name
 /// from a `GrammarMatch`, using pre-resolved entity slots.
 ///
-/// Execution order:
+/// Execution order (within a transaction):
 /// 1. Check preconditions (can fail with message)
-/// 2. Before hooks (can veto)
-/// 3. On hooks (can handle)
+/// 2. Before hooks (can veto) - mutations applied immediately
+/// 3. On hooks (can handle) - mutations applied immediately
 /// 4. Default handler (if not handled)
-/// 5. After hooks
+/// 5. After hooks - mutations applied immediately
+/// 6. Commit transaction on success, rollback on veto/failure
+///
+/// Each phase sees mutations from previous phases (read-your-writes).
 pub fn execute_grammar_action_full(
     world: &mut World,
     actor: EntityId,
@@ -474,7 +477,8 @@ pub fn execute_grammar_action_full(
         action_context = action_context.with_room(r);
     }
 
-    // Check preconditions (if registries are provided)
+    // Check preconditions (if registries are provided) BEFORE starting transaction
+    // Preconditions are pure checks, they don't mutate
     if let (Some(action_reg), Some(precond_reg)) = (action_registry, precondition_registry) {
         if let Some(action_def) = action_reg.get(action_name) {
             let check_result =
@@ -486,35 +490,53 @@ pub fn execute_grammar_action_full(
         }
     }
 
+    // Begin transaction for the action execution
+    world.begin_transaction();
+
     let mut output_parts: Vec<String> = Vec::new();
-    let mut pending_deletions: Vec<EntityId> = Vec::new();
 
     // Run Before hooks
-    if let Ok(before_result) = run_before_hooks(world, &action_str, &action_context, stdlib) {
-        output_parts.extend(before_result.output);
-        pending_deletions.extend(before_result.deletions);
+    match run_before_hooks(world, &action_str, &action_context, stdlib) {
+        Ok(before_result) => {
+            output_parts.extend(before_result.output);
 
-        if before_result.vetoed {
-            // Apply deletions even on veto
-            for entity in pending_deletions {
-                world.delete_entity(entity);
+            // Apply mutations so subsequent phases see them
+            before_result.mutations.apply_to(world);
+
+            if before_result.vetoed {
+                // Rollback all changes on veto
+                let _ = world.rollback_transaction();
+                let msg = if output_parts.is_empty() {
+                    "You can't do that.".to_string()
+                } else {
+                    output_parts.join("\n")
+                };
+                return VerbResult::fail(msg);
             }
-            let msg = if output_parts.is_empty() {
-                "You can't do that.".to_string()
-            } else {
-                output_parts.join("\n")
-            };
-            return VerbResult::fail(msg);
+        }
+        Err(e) => {
+            // Hook execution error - rollback and report
+            let _ = world.rollback_transaction();
+            return VerbResult::fail(format!("Hook error: {e}"));
         }
     }
 
     // Run On hooks
-    let mut handled = false;
-    if let Ok(on_result) = run_on_hooks(world, &action_str, &action_context, stdlib) {
-        output_parts.extend(on_result.output);
-        pending_deletions.extend(on_result.deletions);
-        handled = on_result.handled;
-    }
+    let handled = match run_on_hooks(world, &action_str, &action_context, stdlib) {
+        Ok(on_result) => {
+            output_parts.extend(on_result.output);
+
+            // Apply mutations so subsequent phases see them
+            on_result.mutations.apply_to(world);
+
+            on_result.handled
+        }
+        Err(e) => {
+            // Hook execution error - rollback and report
+            let _ = world.rollback_transaction();
+            return VerbResult::fail(format!("Hook error: {e}"));
+        }
+    };
 
     // Run default handler if not handled by On hook
     if !handled {
@@ -525,15 +547,22 @@ pub fn execute_grammar_action_full(
     }
 
     // Run After hooks
-    if let Ok(after_result) = run_after_hooks(world, &action_str, &action_context, stdlib) {
-        output_parts.extend(after_result.output);
-        pending_deletions.extend(after_result.deletions);
+    match run_after_hooks(world, &action_str, &action_context, stdlib) {
+        Ok(after_result) => {
+            output_parts.extend(after_result.output);
+
+            // Apply mutations
+            after_result.mutations.apply_to(world);
+        }
+        Err(e) => {
+            // After hook error - rollback and report
+            let _ = world.rollback_transaction();
+            return VerbResult::fail(format!("Hook error: {e}"));
+        }
     }
 
-    // Apply pending deletions
-    for entity in pending_deletions {
-        world.delete_entity(entity);
-    }
+    // Commit transaction on success
+    let _ = world.commit_transaction();
 
     // Combine output
     let final_output = output_parts.join("\n");

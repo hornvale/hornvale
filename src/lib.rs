@@ -45,8 +45,8 @@ pub use grammar::{
     IntentTrie, SlotType, SlotValue, TypePredicate, TypeRegistry,
 };
 pub use hooks::{
-    HookError, HookPipelineResult, HookResult, execute_hook, run_after_hooks, run_before_hooks,
-    run_hooks_for_action, run_on_hooks,
+    HookError, HookPipelineResult, HookResult, PendingMutations, execute_hook, run_after_hooks,
+    run_before_hooks, run_hooks_for_action, run_on_hooks,
 };
 pub use input::{
     Command, EntityCandidate, Input, ObjectRef, ResolutionResult, ResolvedCommand, Resolver,

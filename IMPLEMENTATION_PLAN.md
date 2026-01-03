@@ -700,7 +700,7 @@ This stage adds CLOS-style method dispatch to actions:
 
 ### Stage 5: DSL-First Verbs & Description System
 **Goal**: Move verb logic from Rust to DSL. Add contextual descriptions.
-**Status**: In Progress (5A, 5B, 5C, 5D complete)
+**Status**: In Progress (5A, 5B, 5C, 5D complete; 5F transaction infrastructure complete)
 
 This is a significant architectural change: all game verbs move to DSL, with Rust providing efficient primitives. This also includes the description system for contextual object descriptions.
 
@@ -871,7 +871,7 @@ Total project: 635 tests passing
 
 #### Stage 5F: DSL Action Handlers (formerly 5E)
 **Goal**: Actions execute DSL code, not Rust functions.
-**Status**: Not Started
+**Status**: In Progress (transaction infrastructure complete)
 
 **Prerequisite Design**: The action execution contract is documented in `.claude/ARCHITECTURE.md` under "Action Execution Contract". Key points:
 - **Action-as-Transaction**: Entire action attempt runs in a single transaction
@@ -879,20 +879,32 @@ Total project: 635 tests passing
 - **Rollback semantics**: Veto/failure → rollback all changes
 - **Nested transactions**: Triggered actions get nested transactions
 
+**Transaction Infrastructure** (Complete):
+- [x] `PendingMutations` struct — collects all VM pending changes (set_components, relate, unrelate, deletions)
+- [x] `PendingMutations::apply_to(world)` — applies all collected mutations
+- [x] Implement action-as-transaction model in `execute_grammar_action_full`
+- [x] Begin transaction at action start (after precondition checks)
+- [x] Apply mutations after each hook phase (Before, On, After) for read-your-writes
+- [x] Rollback on veto or hook error
+- [x] Commit on success
+
+**Remaining Work**:
 - [ ] Modify `Action` struct: handler is AST/bytecode, not Rust fn reference
 - [ ] Handler compilation and execution through VM
-- [ ] Implement action-as-transaction model in `execute_grammar_action_full`
-- [ ] Accumulate pending writes across all VM phases
 - [ ] Explicit return values: `:success`, `(:failure "msg")`
 - [ ] `(override action name ...)` for replacing existing actions
 - [ ] `(extend action name :before ...)` for adding preconditions
 - [ ] Remove/deprecate Rust verb handlers in `src/verbs.rs`
 - [ ] Update REPL to use DSL-defined actions
 
-**Files**:
+**Files Modified** (transaction infrastructure):
+- `src/hooks.rs` — Added `PendingMutations` struct, updated hook execution to collect all mutations
+- `src/verbs.rs` — Rewrote `execute_grammar_action_full` with transaction handling
+- `src/lib.rs` — Export `PendingMutations`
+
+**Files** (remaining work):
 - `src/action.rs` — Modify Action struct, handler execution
 - `src/lang/loader.rs` — Parse override/extend forms
-- `src/verbs.rs` — Add transaction handling to `execute_grammar_action_full`
 - `src/repl/mod.rs` — Use DSL actions
 
 **Tests**: ~15 tests for DSL handlers

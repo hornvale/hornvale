@@ -20,7 +20,7 @@
 use crate::compiler::{CompileError, Compiler};
 use crate::core::{EntityId, Value, World};
 use crate::symbol::Symbol;
-use crate::vm::{ActionContext, StdLib, VM, VMError};
+use crate::vm::{ActionContext, PendingRelation, PendingSetComponent, StdLib, VM, VMError};
 
 /// Result of executing a hook.
 #[derive(Debug, Clone)]
@@ -66,6 +66,67 @@ pub enum HookError {
     InvalidHookValue(String),
 }
 
+/// All pending mutations from hook execution.
+#[derive(Debug, Clone, Default)]
+pub struct PendingMutations {
+    /// Component mutations (set! calls).
+    pub set_components: Vec<PendingSetComponent>,
+    /// Relation additions (relate! calls).
+    pub relate: Vec<PendingRelation>,
+    /// Relation removals (unrelate! calls).
+    pub unrelate: Vec<PendingRelation>,
+    /// Entity deletions (destroy calls).
+    pub deletions: Vec<EntityId>,
+}
+
+impl PendingMutations {
+    /// Create empty pending mutations.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Check if there are any pending mutations.
+    pub fn is_empty(&self) -> bool {
+        self.set_components.is_empty()
+            && self.relate.is_empty()
+            && self.unrelate.is_empty()
+            && self.deletions.is_empty()
+    }
+
+    /// Extend with mutations from another PendingMutations.
+    pub fn extend(&mut self, other: PendingMutations) {
+        self.set_components.extend(other.set_components);
+        self.relate.extend(other.relate);
+        self.unrelate.extend(other.unrelate);
+        self.deletions.extend(other.deletions);
+    }
+
+    /// Apply all pending mutations to the world.
+    ///
+    /// This should be called within a transaction so changes can be rolled back.
+    pub fn apply_to(&self, world: &mut World) {
+        // Apply component mutations
+        for m in &self.set_components {
+            world.set_component(m.entity, m.component, m.value.clone());
+        }
+
+        // Apply relation additions
+        for r in &self.relate {
+            world.add_relation(r.relation, r.from, r.to);
+        }
+
+        // Apply relation removals
+        for r in &self.unrelate {
+            world.remove_relation(r.relation, r.from, r.to);
+        }
+
+        // Apply deletions last
+        for entity in &self.deletions {
+            world.delete_entity(*entity);
+        }
+    }
+}
+
 /// Result of running all hooks for an action.
 #[derive(Debug, Clone)]
 pub struct HookPipelineResult {
@@ -75,8 +136,8 @@ pub struct HookPipelineResult {
     pub handled: bool,
     /// Combined output from all hooks.
     pub output: Vec<String>,
-    /// Entities marked for deletion.
-    pub deletions: Vec<EntityId>,
+    /// All pending mutations from hooks.
+    pub mutations: PendingMutations,
 }
 
 impl HookPipelineResult {
@@ -86,13 +147,18 @@ impl HookPipelineResult {
             vetoed: false,
             handled: false,
             output: Vec::new(),
-            deletions: Vec::new(),
+            mutations: PendingMutations::new(),
         }
     }
 
     /// Get combined output as a single string.
     pub fn combined_output(&self) -> String {
         self.output.join("\n")
+    }
+
+    /// Get deletions (for backwards compatibility).
+    pub fn deletions(&self) -> &[EntityId] {
+        &self.mutations.deletions
     }
 }
 
@@ -109,12 +175,14 @@ impl Default for HookPipelineResult {
 /// - `:handled` symbol → HookResult::Handled
 /// - `:veto` symbol → HookResult::Veto
 /// - Anything else → HookResult::Continue
+///
+/// Returns the hook result, output messages, and all pending mutations.
 pub fn execute_hook(
     world: &World,
     hook_expr: &Value,
     context: &ActionContext,
     stdlib: &StdLib,
-) -> Result<(HookResult, Vec<String>, Vec<EntityId>), HookError> {
+) -> Result<(HookResult, Vec<String>, PendingMutations), HookError> {
     // Hook body is stored as a list of expressions.
     // We need to wrap it in a (do ...) form to execute them sequentially.
     let wrapped_hook = match hook_expr {
@@ -138,9 +206,14 @@ pub fn execute_hook(
 
     let result = vm.run()?;
 
-    // Collect outputs and deletions
+    // Collect outputs and all pending mutations
     let output = vm.take_output();
-    let deletions = vm.take_pending_deletions();
+    let mutations = PendingMutations {
+        set_components: vm.take_pending_set_components(),
+        relate: vm.take_pending_relate(),
+        unrelate: vm.take_pending_unrelate(),
+        deletions: vm.take_pending_deletions(),
+    };
 
     // Determine hook result based on return value
     let hook_result = match &result {
@@ -149,7 +222,7 @@ pub fn execute_hook(
         _ => HookResult::Continue,
     };
 
-    Ok((hook_result, output, deletions))
+    Ok((hook_result, output, mutations))
 }
 
 /// Convert a Value::List back to an S-expression for compilation.
@@ -220,9 +293,9 @@ pub fn run_hooks_for_action(
     // Run Before hooks
     for entity in &entities {
         if let Some(hook) = world.get_hook(*entity, "Before", action) {
-            let (hook_result, output, deletions) = execute_hook(world, hook, context, stdlib)?;
+            let (hook_result, output, mutations) = execute_hook(world, hook, context, stdlib)?;
             result.output.extend(output);
-            result.deletions.extend(deletions);
+            result.mutations.extend(mutations);
 
             if hook_result.is_veto() {
                 result.vetoed = true;
@@ -234,9 +307,9 @@ pub fn run_hooks_for_action(
     // Run On hooks
     for entity in &entities {
         if let Some(hook) = world.get_hook(*entity, "On", action) {
-            let (hook_result, output, deletions) = execute_hook(world, hook, context, stdlib)?;
+            let (hook_result, output, mutations) = execute_hook(world, hook, context, stdlib)?;
             result.output.extend(output);
-            result.deletions.extend(deletions);
+            result.mutations.extend(mutations);
 
             if hook_result.is_handled() {
                 result.handled = true;
@@ -248,9 +321,9 @@ pub fn run_hooks_for_action(
     // Run After hooks (only if not vetoed)
     for entity in &entities {
         if let Some(hook) = world.get_hook(*entity, "After", action) {
-            let (hook_result, output, deletions) = execute_hook(world, hook, context, stdlib)?;
+            let (hook_result, output, mutations) = execute_hook(world, hook, context, stdlib)?;
             result.output.extend(output);
-            result.deletions.extend(deletions);
+            result.mutations.extend(mutations);
 
             // After hooks can't veto or handle, but we still collect their output
             let _ = hook_result;
@@ -281,9 +354,9 @@ pub fn run_before_hooks(
 
     for entity in &entities {
         if let Some(hook) = world.get_hook(*entity, "Before", action) {
-            let (hook_result, output, deletions) = execute_hook(world, hook, context, stdlib)?;
+            let (hook_result, output, mutations) = execute_hook(world, hook, context, stdlib)?;
             result.output.extend(output);
-            result.deletions.extend(deletions);
+            result.mutations.extend(mutations);
 
             if hook_result.is_veto() {
                 result.vetoed = true;
@@ -316,9 +389,9 @@ pub fn run_on_hooks(
 
     for entity in &entities {
         if let Some(hook) = world.get_hook(*entity, "On", action) {
-            let (hook_result, output, deletions) = execute_hook(world, hook, context, stdlib)?;
+            let (hook_result, output, mutations) = execute_hook(world, hook, context, stdlib)?;
             result.output.extend(output);
-            result.deletions.extend(deletions);
+            result.mutations.extend(mutations);
 
             if hook_result.is_handled() {
                 result.handled = true;
@@ -351,9 +424,9 @@ pub fn run_after_hooks(
 
     for entity in &entities {
         if let Some(hook) = world.get_hook(*entity, "After", action) {
-            let (_, output, deletions) = execute_hook(world, hook, context, stdlib)?;
+            let (_, output, mutations) = execute_hook(world, hook, context, stdlib)?;
             result.output.extend(output);
-            result.deletions.extend(deletions);
+            result.mutations.extend(mutations);
         }
     }
 
@@ -411,7 +484,7 @@ mod tests {
         assert!(!result.vetoed);
         assert!(!result.handled);
         assert!(result.output.is_empty());
-        assert!(result.deletions.is_empty());
+        assert!(result.deletions().is_empty());
     }
 
     // ===== Value to SExpr Tests =====
@@ -1096,6 +1169,6 @@ mod tests {
 
         let result = run_hooks_for_action(&world, "burn", &context, &stdlib).unwrap();
         assert!(result.handled);
-        assert_eq!(result.deletions, vec![obj]);
+        assert_eq!(result.deletions(), &vec![obj]);
     }
 }
