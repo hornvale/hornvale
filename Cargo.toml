@@ -21,6 +21,7 @@ thiserror = "2"     # Error types
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
+tempfile = "3"      # Temporary files for testing
 
 [[bench]]
 name = "entity"

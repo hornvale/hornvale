@@ -12,8 +12,8 @@ use crate::rules::{Effect, Pattern, Rule, RuleSet, Trigger};
 use crate::symbol::Symbol;
 use crate::syntax::{Action as SyntaxAction, SyntaxElement, SyntaxPattern, SyntaxTable};
 use crate::template::{FieldSpec, Template, TemplateRegistry};
-use im::OrdMap;
-use std::path::Path;
+use im::{OrdMap, OrdSet};
+use std::path::{Path, PathBuf};
 
 /// Error loading definitions.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
@@ -29,6 +29,9 @@ pub enum LoadError {
 
     #[error("io error: {0}")]
     Io(String),
+
+    #[error("circular dependency: {0}")]
+    CircularDependency(String),
 }
 
 /// Loads DSL definitions into a World.
@@ -53,6 +56,10 @@ pub struct WorldLoader {
     precondition_registry: PreconditionRegistry,
     /// Action registry for semantic action definitions.
     action_registry: ActionRegistry,
+    /// Files that have been loaded (canonical paths to prevent double-loading).
+    loaded_files: OrdSet<PathBuf>,
+    /// Stack of files currently being loaded (for circular dependency detection).
+    loading_stack: Vec<PathBuf>,
 }
 
 impl WorldLoader {
@@ -68,6 +75,8 @@ impl WorldLoader {
             command_registry: CommandRegistry::new(),
             precondition_registry: PreconditionRegistry::with_builtins(),
             action_registry: ActionRegistry::new(),
+            loaded_files: OrdSet::new(),
+            loading_stack: Vec::new(),
         }
     }
 
@@ -151,6 +160,20 @@ impl WorldLoader {
         &mut self.action_registry
     }
 
+    /// Check if a file has been loaded.
+    pub fn is_file_loaded(&self, path: &Path) -> bool {
+        if let Ok(canonical) = path.canonicalize() {
+            self.loaded_files.contains(&canonical)
+        } else {
+            false
+        }
+    }
+
+    /// Get the number of loaded files.
+    pub fn loaded_file_count(&self) -> usize {
+        self.loaded_files.len()
+    }
+
     /// Load definitions from source string.
     pub fn load_str(
         &mut self,
@@ -163,14 +186,68 @@ impl WorldLoader {
     }
 
     /// Load definitions from a file.
+    ///
+    /// Handles:
+    /// - Circular dependency detection
+    /// - Double-loading prevention (same file loaded twice is a no-op)
+    /// - Relative path resolution for nested `(load ...)` calls
     pub fn load_file(
         &mut self,
         world: &mut World,
         rules: &mut RuleSet,
         path: &Path,
     ) -> Result<(), LoadError> {
-        let source = std::fs::read_to_string(path).map_err(|e| LoadError::Io(e.to_string()))?;
-        self.load_str(world, rules, &source)
+        // Canonicalize the path for consistent comparison
+        let canonical = path.canonicalize().map_err(|e| {
+            LoadError::Io(format!("cannot resolve path '{}': {}", path.display(), e))
+        })?;
+
+        // Check if already loaded (no-op)
+        if self.loaded_files.contains(&canonical) {
+            return Ok(());
+        }
+
+        // Check for circular dependency
+        if self.loading_stack.contains(&canonical) {
+            let cycle: Vec<String> = self
+                .loading_stack
+                .iter()
+                .map(|p| p.display().to_string())
+                .chain(std::iter::once(canonical.display().to_string()))
+                .collect();
+            return Err(LoadError::CircularDependency(cycle.join(" -> ")));
+        }
+
+        // Push onto loading stack
+        self.loading_stack.push(canonical.clone());
+
+        // Load the file
+        let source = std::fs::read_to_string(&canonical)
+            .map_err(|e| LoadError::Io(format!("cannot read '{}': {}", canonical.display(), e)))?;
+
+        let result = self.load_str_with_base(world, rules, &source, Some(&canonical));
+
+        // Pop from loading stack
+        self.loading_stack.pop();
+
+        // Mark as loaded on success
+        if result.is_ok() {
+            self.loaded_files.insert(canonical);
+        }
+
+        result
+    }
+
+    /// Load definitions from source string with an optional base path for relative imports.
+    fn load_str_with_base(
+        &mut self,
+        world: &mut World,
+        rules: &mut RuleSet,
+        source: &str,
+        base_path: Option<&Path>,
+    ) -> Result<(), LoadError> {
+        let exprs = parse_all(source)?;
+        self.load_exprs_with_base(world, rules, &exprs, base_path)
     }
 
     /// Load parsed expressions.
@@ -180,9 +257,22 @@ impl WorldLoader {
         rules: &mut RuleSet,
         exprs: &[SExpr],
     ) -> Result<(), LoadError> {
+        self.load_exprs_with_base(world, rules, exprs, None)
+    }
+
+    /// Load parsed expressions with an optional base path for relative imports.
+    fn load_exprs_with_base(
+        &mut self,
+        world: &mut World,
+        rules: &mut RuleSet,
+        exprs: &[SExpr],
+        base_path: Option<&Path>,
+    ) -> Result<(), LoadError> {
         // First pass: create entities, register relations, load templates, and register generators
         for expr in exprs {
-            if expr.is_call("entity") {
+            if expr.is_call("load") {
+                self.load_include(world, rules, expr, base_path)?;
+            } else if expr.is_call("entity") {
                 self.load_entity(world, expr)?;
             } else if expr.is_call("relation") {
                 self.load_relation(world, expr)?;
@@ -218,6 +308,40 @@ impl WorldLoader {
         }
 
         Ok(())
+    }
+
+    /// Load an include directive.
+    ///
+    /// Format: `(load "path.hvl")`
+    ///
+    /// Paths are resolved relative to the file containing the load directive.
+    fn load_include(
+        &mut self,
+        world: &mut World,
+        rules: &mut RuleSet,
+        expr: &SExpr,
+        base_path: Option<&Path>,
+    ) -> Result<(), LoadError> {
+        let items = expr.as_list().unwrap();
+        if items.len() != 2 {
+            return Err(LoadError::InvalidDefinition(
+                "load requires exactly one path argument".to_string(),
+            ));
+        }
+
+        let path_str = items[1].as_string().ok_or_else(|| {
+            LoadError::InvalidDefinition("load path must be a string".to_string())
+        })?;
+
+        // Resolve relative path against base path (directory of current file)
+        let resolved_path = if let Some(base) = base_path {
+            let base_dir = base.parent().unwrap_or(Path::new("."));
+            base_dir.join(path_str)
+        } else {
+            PathBuf::from(path_str)
+        };
+
+        self.load_file(world, rules, &resolved_path)
     }
 
     /// Load a REPL command definition.
@@ -2344,5 +2468,257 @@ mod tests {
                 || loader.precondition_registry().names().count() == 0
         );
         // Note: Built-ins are handled specially, not registered in the registry
+    }
+
+    // ============ File Loading Tests ============
+
+    #[test]
+    fn test_load_file_basic() {
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        // Create a temporary file
+        let mut file = NamedTempFile::new().unwrap();
+        writeln!(file, r#"(entity test-entity (Name "Test"))"#).unwrap();
+
+        loader
+            .load_file(&mut world, &mut rules, file.path())
+            .unwrap();
+
+        let entity = loader.get_entity("test-entity").unwrap();
+        assert_eq!(
+            world.get_component(entity, "Name"),
+            Some(&Value::string("Test"))
+        );
+        assert!(loader.is_file_loaded(file.path()));
+        assert_eq!(loader.loaded_file_count(), 1);
+    }
+
+    #[test]
+    fn test_load_file_double_load_is_noop() {
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        // Create a temporary file
+        let mut file = NamedTempFile::new().unwrap();
+        writeln!(file, r#"(entity counter (Count 1))"#).unwrap();
+
+        // Load twice
+        loader
+            .load_file(&mut world, &mut rules, file.path())
+            .unwrap();
+        loader
+            .load_file(&mut world, &mut rules, file.path())
+            .unwrap();
+
+        // Should still only have loaded once
+        assert_eq!(loader.loaded_file_count(), 1);
+        // Should only have one entity
+        assert_eq!(world.entity_count(), 1);
+    }
+
+    #[test]
+    fn test_load_include_directive() {
+        use tempfile::tempdir;
+
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        // Create temp directory
+        let dir = tempdir().unwrap();
+
+        // Create library file
+        let lib_path = dir.path().join("lib.hvl");
+        std::fs::write(&lib_path, r#"(entity lib-entity (Name "From Library"))"#).unwrap();
+
+        // Create main file that loads library
+        let main_path = dir.path().join("main.hvl");
+        std::fs::write(
+            &main_path,
+            r#"
+            (load "lib.hvl")
+            (entity main-entity (Name "From Main"))
+            "#,
+        )
+        .unwrap();
+
+        loader
+            .load_file(&mut world, &mut rules, &main_path)
+            .unwrap();
+
+        // Both entities should exist
+        assert!(loader.get_entity("lib-entity").is_some());
+        assert!(loader.get_entity("main-entity").is_some());
+        // Both files should be marked as loaded
+        assert_eq!(loader.loaded_file_count(), 2);
+    }
+
+    #[test]
+    fn test_load_nested_includes() {
+        use tempfile::tempdir;
+
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        // Create temp directory structure
+        let dir = tempdir().unwrap();
+        let subdir = dir.path().join("sub");
+        std::fs::create_dir(&subdir).unwrap();
+
+        // Create deeply nested file
+        let deep_path = subdir.join("deep.hvl");
+        std::fs::write(&deep_path, r#"(entity deep (Name "Deep"))"#).unwrap();
+
+        // Create middle file
+        let mid_path = dir.path().join("mid.hvl");
+        std::fs::write(
+            &mid_path,
+            r#"(load "sub/deep.hvl") (entity mid (Name "Mid"))"#,
+        )
+        .unwrap();
+
+        // Create main file
+        let main_path = dir.path().join("main.hvl");
+        std::fs::write(&main_path, r#"(load "mid.hvl") (entity top (Name "Top"))"#).unwrap();
+
+        loader
+            .load_file(&mut world, &mut rules, &main_path)
+            .unwrap();
+
+        // All three entities should exist
+        assert!(loader.get_entity("deep").is_some());
+        assert!(loader.get_entity("mid").is_some());
+        assert!(loader.get_entity("top").is_some());
+        assert_eq!(loader.loaded_file_count(), 3);
+    }
+
+    #[test]
+    fn test_load_circular_dependency_error() {
+        use tempfile::tempdir;
+
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        let dir = tempdir().unwrap();
+
+        // Create file A that loads file B
+        let path_a = dir.path().join("a.hvl");
+        std::fs::write(&path_a, r#"(load "b.hvl")"#).unwrap();
+
+        // Create file B that loads file A (circular)
+        let path_b = dir.path().join("b.hvl");
+        std::fs::write(&path_b, r#"(load "a.hvl")"#).unwrap();
+
+        let result = loader.load_file(&mut world, &mut rules, &path_a);
+        assert!(matches!(result, Err(LoadError::CircularDependency(_))));
+    }
+
+    #[test]
+    fn test_load_self_reference_error() {
+        use tempfile::tempdir;
+
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        let dir = tempdir().unwrap();
+
+        // Create file that loads itself
+        let path = dir.path().join("self.hvl");
+        std::fs::write(&path, r#"(load "self.hvl")"#).unwrap();
+
+        let result = loader.load_file(&mut world, &mut rules, &path);
+        // Self-reference should be detected as circular
+        assert!(matches!(result, Err(LoadError::CircularDependency(_))));
+    }
+
+    #[test]
+    fn test_load_diamond_dependency() {
+        use tempfile::tempdir;
+
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        // Diamond: main -> a, main -> b, a -> common, b -> common
+        let dir = tempdir().unwrap();
+
+        // Common file loaded by both a and b
+        let common_path = dir.path().join("common.hvl");
+        std::fs::write(&common_path, r#"(entity common (Name "Common"))"#).unwrap();
+
+        // File a
+        let a_path = dir.path().join("a.hvl");
+        std::fs::write(&a_path, r#"(load "common.hvl") (entity a (Name "A"))"#).unwrap();
+
+        // File b
+        let b_path = dir.path().join("b.hvl");
+        std::fs::write(&b_path, r#"(load "common.hvl") (entity b (Name "B"))"#).unwrap();
+
+        // Main file
+        let main_path = dir.path().join("main.hvl");
+        std::fs::write(
+            &main_path,
+            r#"(load "a.hvl") (load "b.hvl") (entity main (Name "Main"))"#,
+        )
+        .unwrap();
+
+        // Should succeed - common.hvl is loaded once, not twice
+        loader
+            .load_file(&mut world, &mut rules, &main_path)
+            .unwrap();
+
+        assert!(loader.get_entity("common").is_some());
+        assert!(loader.get_entity("a").is_some());
+        assert!(loader.get_entity("b").is_some());
+        assert!(loader.get_entity("main").is_some());
+        // common.hvl, a.hvl, b.hvl, main.hvl = 4 files
+        assert_eq!(loader.loaded_file_count(), 4);
+        // Only one entity named "common" should exist
+        assert_eq!(world.entity_count(), 4);
+    }
+
+    #[test]
+    fn test_load_invalid_path_error() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        let result = loader.load_file(&mut world, &mut rules, Path::new("/nonexistent/path.hvl"));
+        assert!(matches!(result, Err(LoadError::Io(_))));
+    }
+
+    #[test]
+    fn test_load_invalid_load_syntax() {
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        // Missing argument
+        let mut file = NamedTempFile::new().unwrap();
+        writeln!(file, r#"(load)"#).unwrap();
+        let result = loader.load_file(&mut world, &mut rules, file.path());
+        assert!(matches!(result, Err(LoadError::InvalidDefinition(_))));
+
+        // Non-string argument
+        let mut file2 = NamedTempFile::new().unwrap();
+        writeln!(file2, r#"(load foo)"#).unwrap();
+        let mut loader2 = WorldLoader::new();
+        let result2 = loader2.load_file(&mut world, &mut rules, file2.path());
+        assert!(matches!(result2, Err(LoadError::InvalidDefinition(_))));
     }
 }

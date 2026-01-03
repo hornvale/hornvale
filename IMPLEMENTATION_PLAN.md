@@ -688,7 +688,7 @@ This is more foundational than sensory propagation — it's the soul of an IF en
 
 **Success Criteria**: Action preconditions are data; failure messages auto-generated.
 
-### Stage 4.5: Action Specificity (Future)
+### Stage 4.5: Action Specificity (Future) (NOT DONE)
 **Goal**: Actions can have `:when` guards for context-specific behavior.
 **Status**: Not Started (deferred)
 
@@ -717,36 +717,191 @@ This stage adds CLOS-style method dispatch to actions:
   :handler take-crown-handler)
 ```
 
-### Stage 5: Description System
-**Goal**: Contextual descriptions based on object state.
+### Stage 5: DSL-First Verbs & Description System
+**Goal**: Move verb logic from Rust to DSL. Add contextual descriptions.
+**Status**: In Progress (5C complete)
+
+This is a significant architectural change: all game verbs move to DSL, with Rust providing efficient primitives. This also includes the description system for contextual object descriptions.
+
+#### Stage 5A: Core Primitives
+**Goal**: Rust primitives for world mutation and queries.
 **Status**: Not Started
 
-- [ ] Multiple description components: `Description`, `InitialDescription`, `GroundDescription`
-- [ ] `FirstSeen` component to track player discovery
-- [ ] Derivation rules to select appropriate description
-- [ ] `Describe` function that picks correct description for context
-- [ ] Support for dynamic descriptions via derivation
+**World Mutation** (infallible, `fn!` convention):
+- [ ] `move!` opcode — relocate entity to new location
+- [ ] `give!` opcode — transfer item from holder to recipient
+- [ ] `set!` opcode — set component value on entity
+- [ ] `relate!` opcode — add relation between entities
+- [ ] `unrelate!` opcode — remove relation between entities
+- [ ] Update `destroy!` to use `!` convention (already exists as `destroy`)
 
-**Example**:
+**World Queries** (pure functions):
+- [ ] `room` — get actor's current location (via InRoom relation)
+- [ ] `holder` — get entity's holder (who Contains it)
+- [ ] `contents` — list entities contained by container
+- [ ] `exits` — list available exit directions from room
+- [ ] `exit-target` — get destination for exit direction (or nil)
+- [ ] `in-scope?` — check if entity is reachable by actor
+- [ ] `descendant?` — check transitive containment (for common sense rules)
+
+**Files**:
+- `src/vm/bytecode.rs` — Add opcodes
+- `src/vm/exec.rs` — Implement opcodes
+- `src/compiler.rs` — Compile DSL forms
+- `src/vm/stdlib.rs` — Add stdlib functions
+
+**Tests**: ~20 tests for primitives
+
+#### Stage 5B: Description System
+**Goal**: Contextual descriptions with FirstSeen tracking.
+**Status**: Not Started
+
+**Components**:
+- [ ] `InitialDescription` — shown first time object is examined
+- [ ] `GroundDescription` — shown in room listings
+- [ ] `FirstSeen` — boolean, set after first examination
+
+**Functions**:
+- [ ] `describe` — context-aware description selection
+  - `:examine` context: InitialDescription (if exists AND not FirstSeen) → Description → Brief → Name
+  - `:room` context: GroundDescription → Brief → Name
+  - Side effect: sets `FirstSeen=true` when InitialDescription used
+- [ ] `the` — "the brass lamp" (definite article + name)
+- [ ] `a` — "a brass lamp" (indefinite article + brief or name)
+
+**Files**:
+- `src/description.rs` — Description selection logic (new)
+- `src/vm/bytecode.rs` — Add `Describe`, `The`, `A` opcodes
+- `src/vm/exec.rs` — Implement opcodes
+- `src/compiler.rs` — Compile forms
+- `src/lib.rs` — Export description module
+
+**Tests**: ~15 tests for description selection
+
+#### Stage 5C: File Loading
+**Goal**: `(load "path.hvl")` for including definitions.
+**Status**: Complete ✓
+
+- [x] `(load "path.hvl")` form in DSL
+- [x] Relative path resolution (relative to loading file)
+- [x] Circular dependency detection (error at load time)
+- [x] Track loaded files to prevent double-loading
+
+**Implementation Summary**:
+- Added `loaded_files: OrdSet<PathBuf>` to track loaded files (canonical paths)
+- Added `loading_stack: Vec<PathBuf>` for circular dependency detection
+- `load_file()` canonicalizes paths, checks for cycles, prevents double-loading
+- `load_include()` handles `(load "path")` DSL form with relative path resolution
+- `is_file_loaded()` and `loaded_file_count()` helper methods for testing
+- Added `LoadError::CircularDependency` error variant
+
+**Files Modified**:
+- `src/lang/loader.rs` — Added file loading with tracking and cycle detection
+
+**Tests**: 9 new tests
+- `test_load_file_basic` — Basic file loading
+- `test_load_file_double_load_is_noop` — Same file loaded twice is no-op
+- `test_load_include_directive` — `(load "file")` form works
+- `test_load_nested_includes` — Nested includes resolve correctly
+- `test_load_circular_dependency_error` — Circular deps detected
+- `test_load_self_reference_error` — Self-reference detected as cycle
+- `test_load_diamond_dependency` — Diamond dependencies work (shared file loaded once)
+- `test_load_invalid_path_error` — Nonexistent file gives IO error
+- `test_load_invalid_load_syntax` — Bad syntax gives helpful errors
+
+Total project: 593 tests passing
+
+#### Stage 5D: Standard Library
+**Goal**: Standard verbs defined in DSL.
+**Status**: Not Started
+
+- [ ] Create `examples/stdlib.hvl` (or `std/stdlib.hvl`)
+- [ ] Standard preconditions:
+  - `reachable?`, `visible?`, `held?`, `held-by?`, `portable?`, `not-held?`
+  - `container?`, `open?`, `locked?`, `not-recursive-containment`
+- [ ] Standard actions with DSL handlers:
+  - `look-around` — describe current room and contents
+  - `examine` — describe object (uses `describe` with `:examine`)
+  - `go` — move through exit
+  - `take` — pick up portable object
+  - `drop` — release held object
+  - `inventory` — list carried objects
+  - `open` / `close` — manipulate openable objects
+- [ ] Common sense rules as preconditions
+
+**Files**:
+- `examples/stdlib.hvl` — Standard library (new)
+- `examples/std-verbs.hvl` — Update or merge into stdlib
+
+**Tests**: ~15 integration tests
+
+#### Stage 5E: DSL Action Handlers
+**Goal**: Actions execute DSL code, not Rust functions.
+**Status**: Not Started
+
+- [ ] Modify `Action` struct: handler is AST/bytecode, not Rust fn reference
+- [ ] Handler compilation and execution through VM
+- [ ] Explicit return values: `:success`, `(:failure "msg")`
+- [ ] `(override action name ...)` for replacing existing actions
+- [ ] `(extend action name :before ...)` for adding preconditions
+- [ ] Remove/deprecate Rust verb handlers in `src/verbs.rs`
+- [ ] Update REPL to use DSL-defined actions
+
+**Files**:
+- `src/action.rs` — Modify Action struct, handler execution
+- `src/lang/loader.rs` — Parse override/extend forms
+- `src/verbs.rs` — Deprecate Rust handlers, keep as fallbacks during transition
+- `src/repl/mod.rs` — Use DSL actions
+
+**Tests**: ~15 tests for DSL handlers
+
+#### Example: Full DSL Verb Definition
+
 ```lisp
-(entity brass-lamp
-  (Description "An ornate brass lamp, slightly tarnished.")
-  (InitialDescription "A brass lamp sits on the mantle, gleaming softly.")
-  (GroundDescription "There's a brass lamp here."))
+;; stdlib.hvl
 
-;; Derivation rules select the right one
-(rule initial-description
-  :when (and (first-seen? ?obj) (has? ?obj InitialDescription))
-  :derive (CurrentDescription ?obj)
-  :from (InitialDescription ?obj))
+;; Preconditions
+(precondition reachable?
+  :params (actor target)
+  :check (in-scope? target actor)
+  :failure "You can't reach ~(the target).")
 
-(rule ground-description
-  :when (and (on-ground? ?obj) (has? ?obj GroundDescription))
-  :derive (CurrentDescription ?obj)
-  :from (GroundDescription ?obj))
+(precondition portable?
+  :params (obj)
+  :check (has? obj :Portable)
+  :failure "~(The obj) is fixed in place.")
+
+(precondition not-held?
+  :params (obj)
+  :check (not (held-by? obj actor))
+  :failure "You're already holding ~(the obj).")
+
+;; Action
+(action take
+  :preconditions
+    ((reachable? actor direct-object)
+     (portable? direct-object)
+     (not-held? direct-object))
+  :handler
+    (do
+      (give! direct-object (holder direct-object) actor)
+      (say "Taken.")
+      :success))
+
+(action examine
+  :preconditions
+    ((reachable? actor direct-object))
+  :handler
+    (do
+      (say (describe direct-object :examine))
+      :success))
 ```
 
-**Success Criteria**: Lamp has different descriptions based on context.
+**Success Criteria**:
+- All standard verbs defined in DSL, not Rust
+- `(load "stdlib.hvl")` works
+- Description system shows InitialDescription once, then Description
+- Games can override standard verbs without Rust changes
 
 ### Stage 6: Configurable Directions
 **Goal**: Direction set defined in DSL, not hardcoded.
@@ -835,17 +990,22 @@ Output: "The book splashes into the water and is gone."
 ```
 
 ### Tests
-Target: ~100 tests across all stages
+Target: ~200 tests across all stages
 - Stage 1: 29 tests (syntax matching, routing) ✓
 - Stage 2: 48 tests (grammar trie, matcher, predicate, registry) ✓
 - Stage 3: 33 tests (hook invocation, veto/handled, context opcodes, effects) ✓
 - Stage 4: 31 tests (precondition types, action registry, built-ins, failure messages, DSL parsing) ✓
 - Stage 4.5: ~10 tests (action specificity, :when guards) — deferred
-- Stage 5: ~10 tests (description selection)
+- Stage 5: ~75 tests (primitives, descriptions, loading, stdlib, DSL handlers)
+  - 5A: ~20 tests (core primitives)
+  - 5B: ~15 tests (description system)
+  - 5C: 9 tests (file loading) ✓
+  - 5D: ~15 tests (stdlib integration)
+  - 5E: ~15 tests (DSL action handlers)
 - Stage 6: ~5 tests (direction configuration)
 
-Current: 141 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33, Stage 4: 31)
-Total project: 584 tests passing
+Current: 150 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33, Stage 4: 31, Stage 5C: 9)
+Total project: 593 tests passing
 
 ---
 
