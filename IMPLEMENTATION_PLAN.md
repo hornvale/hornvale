@@ -700,7 +700,7 @@ This stage adds CLOS-style method dispatch to actions:
 
 ### Stage 5: DSL-First Verbs & Description System
 **Goal**: Move verb logic from Rust to DSL. Add contextual descriptions.
-**Status**: In Progress (5A, 5B, 5C, 5D complete; 5F transaction infrastructure complete)
+**Status**: In Progress (5A, 5B, 5C, 5D, 5F complete; 5E remaining)
 
 This is a significant architectural change: all game verbs move to DSL, with Rust providing efficient primitives. This also includes the description system for contextual object descriptions.
 
@@ -871,7 +871,7 @@ Total project: 635 tests passing
 
 #### Stage 5F: DSL Action Handlers (formerly 5E)
 **Goal**: Actions execute DSL code, not Rust functions.
-**Status**: In Progress (transaction infrastructure complete)
+**Status**: Complete ✓
 
 **Prerequisite Design**: The action execution contract is documented in `.claude/ARCHITECTURE.md` under "Action Execution Contract". Key points:
 - **Action-as-Transaction**: Entire action attempt runs in a single transaction
@@ -888,26 +888,36 @@ Total project: 635 tests passing
 - [x] Rollback on veto or hook error
 - [x] Commit on success
 
-**Remaining Work**:
-- [ ] Modify `Action` struct: handler is AST/bytecode, not Rust fn reference
-- [ ] Handler compilation and execution through VM
-- [ ] Explicit return values: `:success`, `(:failure "msg")`
-- [ ] `(override action name ...)` for replacing existing actions
-- [ ] `(extend action name :before ...)` for adding preconditions
-- [ ] Remove/deprecate Rust verb handlers in `src/verbs.rs`
-- [ ] Update REPL to use DSL-defined actions
+**DSL Handler Infrastructure** (Complete):
+- [x] `ActionHandler` enum — `Builtin(Symbol)` or `Dsl(SExpr)` for handler storage
+- [x] `ActionResult` enum — `Success` or `Failure(Option<String>)` for explicit return values
+- [x] `execute_dsl_handler()` — compile and execute DSL handler through VM
+- [x] Explicit return values: `:success`, `:failure`, `(:failure "msg")`
+- [x] `Action` struct modified: handler is `ActionHandler` enum
+- [x] Handler compilation and execution through VM
+- [x] DSL handler integration in `execute_grammar_action_full`
+- [x] Loader parses DSL handlers in `(action ... :handler (do ...))` form
+- [x] `(override action name ...)` for replacing existing actions
+- [x] `(extend action name :before ...)` for adding preconditions
 
-**Files Modified** (transaction infrastructure):
-- `src/hooks.rs` — Added `PendingMutations` struct, updated hook execution to collect all mutations
-- `src/verbs.rs` — Rewrote `execute_grammar_action_full` with transaction handling
-- `src/lib.rs` — Export `PendingMutations`
+**Remaining Work** (deferred to Stage 5E for cleanup):
+- [ ] Remove/deprecate Rust verb handlers in `src/verbs.rs` (once stdlib is complete)
+- [ ] Update REPL to use DSL-defined actions exclusively
 
-**Files** (remaining work):
-- `src/action.rs` — Modify Action struct, handler execution
-- `src/lang/loader.rs` — Parse override/extend forms
-- `src/repl/mod.rs` — Use DSL actions
+**Files Modified**:
+- `src/action.rs` — Added `ActionHandler` enum, `ActionResult`, `execute_dsl_handler()`, `DslHandlerResult`
+- `src/lang/loader.rs` — Parse DSL handlers, `(override ...)`, `(extend ...)` forms
+- `src/verbs.rs` — Integrated DSL handler execution into `execute_grammar_action_full`
+- `src/hooks.rs` — Added `PendingMutations` struct
+- `src/lib.rs` — Export new types
 
-**Tests**: ~15 tests for DSL handlers
+**Tests**: 19 new tests for DSL handlers
+- 7 ActionResult parsing tests
+- 4 DSL handler execution tests
+- 3 loader tests for DSL handlers
+- 5 loader tests for override/extend
+
+Total project: 634 tests passing
 
 #### Example: Full DSL Verb Definition
 
@@ -1056,11 +1066,11 @@ Target: ~200 tests across all stages
   - 5C: 9 tests (file loading) ✓
   - 5D: 17 tests (defun user-defined functions) ✓
   - 5E: ~15 tests (stdlib integration)
-  - 5F: ~15 tests (DSL action handlers)
+  - 5F: 19 tests (DSL action handlers) ✓
 - Stage 6: ~5 tests (direction configuration)
 
-Current: 190 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33, Stage 4: 31, Stage 5A: 13, Stage 5B: 10, Stage 5C: 9, Stage 5D: 17)
-Total project: 617 tests passing (reduced from 635 due to syntax table removal)
+Current: 209 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33, Stage 4: 31, Stage 5A: 13, Stage 5B: 10, Stage 5C: 9, Stage 5D: 17, Stage 5F: 19)
+Total project: 634 tests passing
 
 ---
 

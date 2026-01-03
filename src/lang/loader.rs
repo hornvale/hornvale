@@ -290,6 +290,10 @@ impl WorldLoader {
                 self.load_precondition(expr)?;
             } else if expr.is_call("action") {
                 self.load_action(expr)?;
+            } else if expr.is_call("override") {
+                self.load_override(expr)?;
+            } else if expr.is_call("extend") {
+                self.load_extend(expr)?;
             } else if expr.is_call("defun") {
                 self.load_defun(expr)?;
             }
@@ -730,10 +734,16 @@ impl WorldLoader {
                 preconditions = self.parse_precondition_list(&items[i + 1])?;
                 i += 2;
             } else if items[i].is_keyword("handler") && i + 1 < items.len() {
-                let handler = items[i + 1].as_symbol().ok_or_else(|| {
-                    LoadError::InvalidDefinition("handler must be a symbol".to_string())
-                })?;
-                action.set_handler(handler);
+                let handler_expr = &items[i + 1];
+
+                // Handler can be either a symbol (builtin) or an expression (DSL)
+                if let Some(handler_name) = handler_expr.as_symbol() {
+                    // Builtin handler referenced by name
+                    action.set_handler(handler_name);
+                } else {
+                    // DSL handler body (expression or list)
+                    action.set_dsl_handler(handler_expr.clone());
+                }
                 i += 2;
             } else {
                 i += 1;
@@ -742,6 +752,165 @@ impl WorldLoader {
 
         action.set_preconditions(preconditions);
         self.action_registry.register(action);
+
+        Ok(())
+    }
+
+    /// Load an override definition.
+    ///
+    /// Format:
+    /// ```lisp
+    /// (override action name
+    ///   :preconditions ((precondition-call ...) ...)  ; optional
+    ///   :handler handler-or-body)                     ; optional
+    /// ```
+    ///
+    /// Example:
+    /// ```lisp
+    /// (override action take
+    ///   :handler
+    ///     (do
+    ///       (relate! :Contains (actor) (direct-object))
+    ///       (say "You pick up " (the direct-object) ".")
+    ///       :success))
+    /// ```
+    fn load_override(&mut self, expr: &SExpr) -> Result<(), LoadError> {
+        let items = expr.as_list().unwrap();
+        if items.len() < 3 {
+            return Err(LoadError::InvalidDefinition(
+                "override requires a type and name".to_string(),
+            ));
+        }
+
+        // Check that it's overriding an action
+        let target_type = items[1].as_symbol().ok_or_else(|| {
+            LoadError::InvalidDefinition("override type must be a symbol".to_string())
+        })?;
+
+        if target_type.as_str().as_str() != "action" {
+            return Err(LoadError::InvalidDefinition(format!(
+                "override currently only supports 'action', got '{}'",
+                target_type.as_str()
+            )));
+        }
+
+        let name = items[2].as_symbol().ok_or_else(|| {
+            LoadError::InvalidDefinition("action name must be a symbol".to_string())
+        })?;
+
+        // Check if action exists
+        if !self.action_registry.contains(name) {
+            return Err(LoadError::InvalidDefinition(format!(
+                "cannot override unknown action '{}'",
+                name.as_str()
+            )));
+        }
+
+        // Parse optional overrides
+        let mut i = 3;
+        let mut new_preconditions: Option<Vec<PreconditionCall>> = None;
+        let mut new_handler: Option<Result<SExpr, Symbol>> = None;
+
+        while i < items.len() {
+            if items[i].is_keyword("preconditions") && i + 1 < items.len() {
+                new_preconditions = Some(self.parse_precondition_list(&items[i + 1])?);
+                i += 2;
+            } else if items[i].is_keyword("handler") && i + 1 < items.len() {
+                let handler_expr = &items[i + 1];
+                if let Some(handler_name) = handler_expr.as_symbol() {
+                    new_handler = Some(Err(handler_name));
+                } else {
+                    new_handler = Some(Ok(handler_expr.clone()));
+                }
+                i += 2;
+            } else {
+                i += 1;
+            }
+        }
+
+        // Apply overrides
+        if let Some(action) = self.action_registry.get_mut(name) {
+            if let Some(preconditions) = new_preconditions {
+                action.set_preconditions(preconditions);
+            }
+            if let Some(handler) = new_handler {
+                match handler {
+                    Ok(body) => action.set_dsl_handler(body),
+                    Err(name) => action.set_handler(name),
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Load an extend definition.
+    ///
+    /// Format:
+    /// ```lisp
+    /// (extend action name
+    ///   :before ((precondition-call ...) ...))   ; add preconditions before existing ones
+    /// ```
+    ///
+    /// Example:
+    /// ```lisp
+    /// (extend action take
+    ///   :before ((not-cursed? direct-object)))
+    /// ```
+    fn load_extend(&mut self, expr: &SExpr) -> Result<(), LoadError> {
+        let items = expr.as_list().unwrap();
+        if items.len() < 3 {
+            return Err(LoadError::InvalidDefinition(
+                "extend requires a type and name".to_string(),
+            ));
+        }
+
+        // Check that it's extending an action
+        let target_type = items[1].as_symbol().ok_or_else(|| {
+            LoadError::InvalidDefinition("extend type must be a symbol".to_string())
+        })?;
+
+        if target_type.as_str().as_str() != "action" {
+            return Err(LoadError::InvalidDefinition(format!(
+                "extend currently only supports 'action', got '{}'",
+                target_type.as_str()
+            )));
+        }
+
+        let name = items[2].as_symbol().ok_or_else(|| {
+            LoadError::InvalidDefinition("action name must be a symbol".to_string())
+        })?;
+
+        // Check if action exists
+        if !self.action_registry.contains(name) {
+            return Err(LoadError::InvalidDefinition(format!(
+                "cannot extend unknown action '{}'",
+                name.as_str()
+            )));
+        }
+
+        // Parse extensions
+        let mut i = 3;
+        let mut before_preconditions: Vec<PreconditionCall> = Vec::new();
+
+        while i < items.len() {
+            if items[i].is_keyword("before") && i + 1 < items.len() {
+                before_preconditions = self.parse_precondition_list(&items[i + 1])?;
+                i += 2;
+            } else {
+                i += 1;
+            }
+        }
+
+        // Apply extensions
+        if let Some(action) = self.action_registry.get_mut(name) {
+            // Prepend new preconditions to existing ones
+            if !before_preconditions.is_empty() {
+                let existing = action.preconditions().to_vec();
+                before_preconditions.extend(existing);
+                action.set_preconditions(before_preconditions);
+            }
+        }
 
         Ok(())
     }
@@ -2134,7 +2303,8 @@ mod tests {
         assert!(loader.action_registry().contains(Symbol::new("take")));
         let action = loader.action_registry().get(Symbol::new("take")).unwrap();
         assert_eq!(action.preconditions().len(), 2);
-        assert_eq!(action.handler(), Symbol::new("take-handler"));
+        assert_eq!(action.handler_name(), Symbol::new("take-handler"));
+        assert!(!action.has_dsl_handler());
     }
 
     #[test]
@@ -2181,7 +2351,65 @@ mod tests {
             .get(Symbol::new("examine"))
             .unwrap();
         // Default handler name matches action name
-        assert_eq!(action.handler(), Symbol::new("examine"));
+        assert_eq!(action.handler_name(), Symbol::new("examine"));
+        assert!(!action.has_dsl_handler());
+    }
+
+    #[test]
+    fn test_load_action_dsl_handler() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (action greet
+                  :handler
+                    (do
+                      (say "Hello!")
+                      :success))
+                "#,
+            )
+            .unwrap();
+
+        let action = loader.action_registry().get(Symbol::new("greet")).unwrap();
+        assert!(action.has_dsl_handler());
+        assert!(action.handler().is_dsl());
+        // Handler name defaults to action name for DSL handlers
+        assert_eq!(action.handler_name(), Symbol::new("greet"));
+    }
+
+    #[test]
+    fn test_load_action_dsl_handler_with_preconditions() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (action custom-take
+                  :preconditions ((portable? direct-object))
+                  :handler
+                    (do
+                      (relate! :Contains (actor) (direct-object))
+                      (say "Taken.")
+                      :success))
+                "#,
+            )
+            .unwrap();
+
+        let action = loader
+            .action_registry()
+            .get(Symbol::new("custom-take"))
+            .unwrap();
+        assert!(action.has_dsl_handler());
+        assert_eq!(action.preconditions().len(), 1);
     }
 
     #[test]
@@ -2624,5 +2852,132 @@ mod tests {
                 .function_registry()
                 .contains(Symbol::new("quadruple"))
         );
+    }
+
+    // ============================================================================
+    // Override and Extend tests
+    // ============================================================================
+
+    #[test]
+    fn test_override_action_handler() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (action greet
+                  :handler greet-builtin)
+
+                (override action greet
+                  :handler
+                    (do (say "Hello!") :success))
+                "#,
+            )
+            .unwrap();
+
+        let action = loader.action_registry().get(Symbol::new("greet")).unwrap();
+        assert!(action.has_dsl_handler());
+    }
+
+    #[test]
+    fn test_override_action_preconditions() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (action take
+                  :preconditions ((portable? direct-object))
+                  :handler take-builtin)
+
+                (override action take
+                  :preconditions ((portable? direct-object) (not-held? direct-object)))
+                "#,
+            )
+            .unwrap();
+
+        let action = loader.action_registry().get(Symbol::new("take")).unwrap();
+        assert_eq!(action.preconditions().len(), 2);
+        // Handler should remain unchanged
+        assert!(!action.has_dsl_handler());
+        assert_eq!(action.handler_name(), Symbol::new("take-builtin"));
+    }
+
+    #[test]
+    fn test_override_action_unknown_fails() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        let result = loader.load_str(
+            &mut world,
+            &mut rules,
+            r#"
+            (override action nonexistent
+              :handler some-handler)
+            "#,
+        );
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("unknown action"));
+    }
+
+    #[test]
+    fn test_extend_action_before() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (action take
+                  :preconditions ((portable? direct-object))
+                  :handler take-builtin)
+
+                (extend action take
+                  :before ((not-cursed? direct-object)))
+                "#,
+            )
+            .unwrap();
+
+        let action = loader.action_registry().get(Symbol::new("take")).unwrap();
+        // Should have 2 preconditions: not-cursed? (prepended) + portable? (original)
+        assert_eq!(action.preconditions().len(), 2);
+        // First precondition should be the new one
+        assert_eq!(action.preconditions()[0].name, Symbol::new("not-cursed?"));
+        // Second precondition should be the original
+        assert_eq!(action.preconditions()[1].name, Symbol::new("portable?"));
+    }
+
+    #[test]
+    fn test_extend_action_unknown_fails() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        let result = loader.load_str(
+            &mut world,
+            &mut rules,
+            r#"
+            (extend action nonexistent
+              :before ((some-check? direct-object)))
+            "#,
+        );
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("unknown action"));
     }
 }

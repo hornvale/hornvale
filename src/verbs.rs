@@ -540,9 +540,48 @@ pub fn execute_grammar_action_full(
 
     // Run default handler if not handled by On hook
     if !handled {
-        let default_result = execute_default_handler(world, actor, grammar_match);
-        if !default_result.output.is_empty() {
-            output_parts.push(default_result.output.to_string());
+        // Check if action has a DSL handler
+        let action_def = action_registry.and_then(|reg| reg.get(action_name));
+
+        if let Some(action) = action_def {
+            if action.has_dsl_handler() {
+                // Execute DSL handler
+                if let Some(body) = action.handler().dsl_body() {
+                    match crate::action::execute_dsl_handler(body, world, &action_context, stdlib) {
+                        Ok(dsl_result) => {
+                            output_parts.extend(dsl_result.output);
+                            dsl_result.mutations.apply_to(world);
+
+                            // Check for failure
+                            if dsl_result.result.is_failure() {
+                                let _ = world.rollback_transaction();
+                                let msg = dsl_result
+                                    .result
+                                    .failure_message()
+                                    .map(String::from)
+                                    .unwrap_or_else(|| output_parts.join("\n"));
+                                return VerbResult::fail(msg);
+                            }
+                        }
+                        Err(e) => {
+                            let _ = world.rollback_transaction();
+                            return VerbResult::fail(format!("Handler error: {e}"));
+                        }
+                    }
+                }
+            } else {
+                // Builtin handler
+                let default_result = execute_default_handler(world, actor, grammar_match);
+                if !default_result.output.is_empty() {
+                    output_parts.push(default_result.output.to_string());
+                }
+            }
+        } else {
+            // No action definition, use default handler
+            let default_result = execute_default_handler(world, actor, grammar_match);
+            if !default_result.output.is_empty() {
+                output_parts.push(default_result.output.to_string());
+            }
         }
     }
 
