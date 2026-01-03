@@ -475,37 +475,18 @@ This is more foundational than sensory propagation — it's the soul of an IF en
 
 ### Stage 1: Syntax Tables
 **Goal**: Decouple surface syntax from underlying actions.
-**Status**: Complete
+**Status**: REMOVED — Superseded by Stage 2 grammar system
 
-- [x] `Action` type — the semantic operation (examine, take, throw-into)
-- [x] `SyntaxElement` enum — Word, Noun, Direction, Any, Optional
-- [x] `SyntaxPattern` type — pattern matching words/slots to actions
-- [x] `SyntaxTable` registry of all syntax patterns (priority-based matching)
-- [x] Multiple syntaxes per action (look at X, examine X, x X → examine)
-- [x] Named slot support (noun:object, direction:dir)
-- [x] DSL form: `(syntax "look" "at" noun :to examine)`
-- [x] Integration with REPL command pipeline (`execute_action`)
-- [x] Entity resolution by name from action slots
+The SyntaxTable system was originally implemented but later **removed entirely** in favor of the more powerful grammar/command system (Stage 2). The grammar system provides:
+- Type predicates for noun validation (not just string matching)
+- Trie-based matching for efficient lookup
+- Better integration with entity resolution
 
-**Files Created/Modified**:
-- `src/syntax.rs` — Action, SyntaxElement, SyntaxPattern, SyntaxTable, PatternBuilder
-- `src/lang/loader.rs` — Added `load_syntax()`, syntax_table field
-- `src/verbs.rs` — Added `execute_action()`, `resolve_entity_by_name()`
-- `src/repl/mod.rs` — Integrated syntax table matching
+**Files Removed**:
+- `src/syntax.rs` — Deleted entirely
+- Syntax-related code removed from `loader.rs`, `verbs.rs`, `repl.rs`
 
-**Tests**: 22 tests for syntax module, 6 tests for loader syntax parsing, 1 integration test
-
-**Example**:
-```lisp
-(syntax "look" :to look-around)
-(syntax "look" "at" noun :to examine)
-(syntax "look" "in" noun :to search)
-(syntax "look" "under" noun :to look-under)
-(syntax "look" direction :to look-direction)
-(syntax "l" :to look-around)
-(syntax "examine" noun :to examine)
-(syntax "x" noun :to examine)
-```
+**Migration**: Use the `(command ...)` DSL form instead of `(syntax ...)`.
 
 **Success Criteria**: "look at lamp" and "examine lamp" and "x lamp" all route to examine action.
 
@@ -892,8 +873,16 @@ Total project: 635 tests passing
 **Goal**: Actions execute DSL code, not Rust functions.
 **Status**: Not Started
 
+**Prerequisite Design**: The action execution contract is documented in `.claude/ARCHITECTURE.md` under "Action Execution Contract". Key points:
+- **Action-as-Transaction**: Entire action attempt runs in a single transaction
+- **Read-your-writes**: Each phase sees pending writes from earlier phases
+- **Rollback semantics**: Veto/failure → rollback all changes
+- **Nested transactions**: Triggered actions get nested transactions
+
 - [ ] Modify `Action` struct: handler is AST/bytecode, not Rust fn reference
 - [ ] Handler compilation and execution through VM
+- [ ] Implement action-as-transaction model in `execute_grammar_action_full`
+- [ ] Accumulate pending writes across all VM phases
 - [ ] Explicit return values: `:success`, `(:failure "msg")`
 - [ ] `(override action name ...)` for replacing existing actions
 - [ ] `(extend action name :before ...)` for adding preconditions
@@ -903,7 +892,7 @@ Total project: 635 tests passing
 **Files**:
 - `src/action.rs` — Modify Action struct, handler execution
 - `src/lang/loader.rs` — Parse override/extend forms
-- `src/verbs.rs` — Deprecate Rust handlers, keep as fallbacks during transition
+- `src/verbs.rs` — Add transaction handling to `execute_grammar_action_full`
 - `src/repl/mod.rs` — Use DSL actions
 
 **Tests**: ~15 tests for DSL handlers
@@ -1059,42 +1048,45 @@ Target: ~200 tests across all stages
 - Stage 6: ~5 tests (direction configuration)
 
 Current: 190 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33, Stage 4: 31, Stage 5A: 13, Stage 5B: 10, Stage 5C: 9, Stage 5D: 17)
-Total project: 635 tests passing
+Total project: 617 tests passing (reduced from 635 due to syntax table removal)
 
 ---
 
 ## Phase 10: Value System Cleanup
 **Goal**: Distinguish `Nil` from `Bool(false)` and clean up value semantics.
-**Status**: Not Started
+**Status**: Complete
 
-**Rationale**: Currently, `Value::Bool(false)` serves double duty as both boolean false and "no value" (nil). This conflation is a classic Lisp-ism that causes confusion in a modern strongly-typed context. Separating these concepts enables cleaner semantics and better error messages.
+**Rationale**: Previously, `Value::Bool(false)` served double duty as both boolean false and "no value" (nil). This conflation caused confusion. Separating these concepts enables cleaner semantics and better error messages.
 
 ### Deliverables
-- [ ] Add `Value::Nil` variant to represent "no value" / "nothing" / "unset"
-- [ ] Update VM to use `Value::Nil` instead of `Bool(false)` for nil constant
-- [ ] Update hook context opcodes to return `Nil` for missing optional values
-- [ ] Define truthiness: `Nil` and `Bool(false)` are falsy, everything else truthy
-- [ ] Update conditionals (`if`, `and`, `or`) to handle `Nil` correctly
-- [ ] Add `nil?` predicate function to check for nil
-- [ ] Update DSL parser to recognize `nil` keyword
-- [ ] Audit and fix all places using `Bool(false)` as "nothing"
-- [ ] Update tests to distinguish nil from false cases
+- [x] Add `Value::Nil` variant to represent "no value" / "nothing" / "unset"
+- [x] Update VM to use `Value::Nil` instead of `Bool(false)` for nil constant
+- [x] Update hook context opcodes to return `Nil` for missing optional values
+- [x] Define truthiness: `Nil` and `Bool(false)` are falsy, everything else truthy
+- [x] `Value::is_truthy()` method for consistent truthiness checks
+- [x] `Value::is_nil()` predicate method
+- [x] Update DSL parser to recognize `nil` keyword (`Atom::Nil`)
+- [x] Audit and fix all places using `Bool(false)` as "nothing"
+- [x] Update tests to distinguish nil from false cases
 
-### Files to Modify
-- `src/core/value.rs` — Add `Nil` variant, update Display/Debug
-- `src/vm/exec.rs` — Update NIL constant, truthiness checks
-- `src/vm/bytecode.rs` — Consider `LoadNil` opcode (or use constant)
-- `src/compiler.rs` — Handle `nil` literal
-- `src/lang/lexer.rs` — Recognize `nil` as keyword/atom
-- `src/hooks.rs` — Update hook context returns
+### Files Modified
+- `src/core/value.rs` — Added `Nil` variant, `is_nil()`, `is_truthy()`, updated Display/Eq/Ord/Hash
+- `src/vm/exec.rs` — Updated NIL constant to `Value::Nil`, use `Value::is_truthy()`
+- `src/compiler.rs` — Handle `Atom::Nil` → `Value::Nil`
+- `src/lang/ast.rs` — Added `Atom::Nil` variant
+- `src/lang/parser.rs` — Recognize `nil` symbol as `Atom::Nil`
+- `src/lang/loader.rs` — Handle `Atom::Nil` in `expr_to_value`
+- `src/hooks.rs` — Updated `value_to_sexpr` for `Value::Nil`
+- `src/template.rs` — Empty choice returns `Value::Nil`
 
 ### Semantic Rules
 ```
 Truthiness:
-  - Nil       → false
-  - Bool(false) → false
-  - Bool(true)  → true
-  - Everything else → true (Int, Float, String, Symbol, List, EntityRef)
+  - Nil         → falsy
+  - Bool(false) → falsy
+  - Bool(true)  → truthy
+  - Int(0)      → truthy (NOT falsy like in C!)
+  - Everything else → truthy
 
 Equality:
   - Nil == Nil  → true
@@ -1102,31 +1094,10 @@ Equality:
   - Nil == anything_else → false
 ```
 
-### Example Impact
-```lisp
-;; Before (confusing):
-(if (direct-object)     ; returns false when missing - is that "no object" or "object is false"?
-    (say "Got it")
-    (say "Nothing there"))
-
-;; After (clear):
-(if (nil? (direct-object))  ; explicit nil check
-    (say "Nothing there")
-    (say "Got it"))
-
-;; Or simply:
-(if (direct-object)     ; now Nil is falsy, Bool(false) would be a different thing
-    (say "Got it")
-    (say "Nothing there"))
-```
-
-### Tests
-Target: ~15 tests
-- Value::Nil creation and equality
-- Truthiness for all value types
-- nil? predicate
-- Hook context returns Nil for missing values
-- Conditional handling of Nil vs Bool(false)
+### Tests Added
+- `test_nil` — Nil equality, display, type_name, is_nil
+- `test_is_truthy` — Verifies truthiness for all value types
+- `test_value_ordering` — Updated to include Nil (sorts first)
 
 ---
 
