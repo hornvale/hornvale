@@ -148,18 +148,18 @@ pub enum OpCode {
     /// Return nil: return nil
     ReturnNil,
 
-    // === Hook Context ===
-    /// Get the actor from hook context: R[dst] = hook_context.actor
-    GetHookActor { dst: Reg },
+    // === Action Context ===
+    /// Get the actor from action context: R[dst] = action_context.actor
+    GetContextActor { dst: Reg },
 
-    /// Get the direct object from hook context: R[dst] = hook_context.direct_object (or nil)
-    GetHookDirectObject { dst: Reg },
+    /// Get the direct object from action context: R[dst] = action_context.direct_object (or nil)
+    GetContextDirectObject { dst: Reg },
 
-    /// Get the indirect object from hook context: R[dst] = hook_context.indirect_object (or nil)
-    GetHookIndirectObject { dst: Reg },
+    /// Get the indirect object from action context: R[dst] = action_context.indirect_object (or nil)
+    GetContextIndirectObject { dst: Reg },
 
-    /// Get the room from hook context: R[dst] = hook_context.room (or nil)
-    GetHookRoom { dst: Reg },
+    /// Get the room from action context: R[dst] = action_context.room (or nil)
+    GetContextRoom { dst: Reg },
 
     // === Effects ===
     /// Output a message: append R[message] to output buffer
@@ -205,10 +205,10 @@ impl OpCode {
             OpCode::RandomRange { .. } => "RANDOM_RANGE",
             OpCode::Return { .. } => "RETURN",
             OpCode::ReturnNil => "RETURN_NIL",
-            OpCode::GetHookActor { .. } => "GET_HOOK_ACTOR",
-            OpCode::GetHookDirectObject { .. } => "GET_HOOK_DIRECT_OBJECT",
-            OpCode::GetHookIndirectObject { .. } => "GET_HOOK_INDIRECT_OBJECT",
-            OpCode::GetHookRoom { .. } => "GET_HOOK_ROOM",
+            OpCode::GetContextActor { .. } => "GET_CONTEXT_ACTOR",
+            OpCode::GetContextDirectObject { .. } => "GET_CONTEXT_DIRECT_OBJECT",
+            OpCode::GetContextIndirectObject { .. } => "GET_CONTEXT_INDIRECT_OBJECT",
+            OpCode::GetContextRoom { .. } => "GET_CONTEXT_ROOM",
             OpCode::Say { .. } => "SAY",
             OpCode::Destroy { .. } => "DESTROY",
         }
@@ -281,10 +281,12 @@ impl std::fmt::Display for OpCode {
             }
             OpCode::Return { src } => write!(f, "RETURN r{src}"),
             OpCode::ReturnNil => write!(f, "RETURN_NIL"),
-            OpCode::GetHookActor { dst } => write!(f, "GET_HOOK_ACTOR r{dst}"),
-            OpCode::GetHookDirectObject { dst } => write!(f, "GET_HOOK_DIRECT_OBJECT r{dst}"),
-            OpCode::GetHookIndirectObject { dst } => write!(f, "GET_HOOK_INDIRECT_OBJECT r{dst}"),
-            OpCode::GetHookRoom { dst } => write!(f, "GET_HOOK_ROOM r{dst}"),
+            OpCode::GetContextActor { dst } => write!(f, "GET_CONTEXT_ACTOR r{dst}"),
+            OpCode::GetContextDirectObject { dst } => write!(f, "GET_CONTEXT_DIRECT_OBJECT r{dst}"),
+            OpCode::GetContextIndirectObject { dst } => {
+                write!(f, "GET_CONTEXT_INDIRECT_OBJECT r{dst}")
+            }
+            OpCode::GetContextRoom { dst } => write!(f, "GET_CONTEXT_ROOM r{dst}"),
             OpCode::Say { message } => write!(f, "SAY r{message}"),
             OpCode::Destroy { entity } => write!(f, "DESTROY r{entity}"),
         }

@@ -24,7 +24,7 @@ use crate::core::{EntityId, World};
 use crate::precondition::{PreconditionCall, PreconditionRegistry, PreconditionResult};
 use crate::symbol::Symbol;
 use crate::verbs::VerbResult;
-use crate::vm::{HookContext, StdLib};
+use crate::vm::{ActionContext, StdLib};
 use im::OrdMap;
 use std::sync::Arc;
 
@@ -328,7 +328,7 @@ impl ActionCheckResult {
 pub fn check_action_preconditions(
     action: &Action,
     world: &World,
-    context: &HookContext,
+    context: &ActionContext,
     preconditions: &PreconditionRegistry,
     stdlib: &StdLib,
 ) -> ActionCheckResult {
@@ -487,7 +487,7 @@ mod tests {
             vec![PreconditionArg::DirectObject],
         ));
 
-        let context = HookContext::new(player).with_direct_object(lamp);
+        let context = ActionContext::new(player).with_direct_object(lamp);
 
         let result = check_action_preconditions(&action, &world, &context, &preconditions, &stdlib);
         assert!(result.passed());
@@ -511,7 +511,7 @@ mod tests {
             vec![PreconditionArg::DirectObject],
         ));
 
-        let context = HookContext::new(player).with_direct_object(statue);
+        let context = ActionContext::new(player).with_direct_object(statue);
 
         let result = check_action_preconditions(&action, &world, &context, &preconditions, &stdlib);
         assert!(result.failed());
@@ -525,7 +525,7 @@ mod tests {
         let stdlib = StdLib::with_builtins();
 
         let action = Action::new(Symbol::new("look"));
-        let context = HookContext::new(player);
+        let context = ActionContext::new(player);
 
         let result = check_action_preconditions(&action, &world, &context, &preconditions, &stdlib);
         assert!(result.passed());

@@ -22,7 +22,7 @@ use crate::compiler::{CompileError, Compiler};
 use crate::core::{EntityId, Value, World};
 use crate::lang::SExpr;
 use crate::symbol::Symbol;
-use crate::vm::{HookContext, StdLib, VM, VMError};
+use crate::vm::{ActionContext, StdLib, VM, VMError};
 use im::OrdMap;
 use std::sync::Arc;
 
@@ -213,7 +213,7 @@ impl PreconditionRegistry {
         &self,
         world: &World,
         call: &PreconditionCall,
-        context: &HookContext,
+        context: &ActionContext,
         stdlib: &StdLib,
     ) -> Result<PreconditionResult, PreconditionError> {
         // First try built-in preconditions
@@ -237,7 +237,7 @@ impl PreconditionRegistry {
 
         // Compile and execute the check expression
         let chunk = Compiler::compile(precondition.check())?;
-        let mut vm = VM::new(&chunk, world, stdlib).with_hook_context(context.clone());
+        let mut vm = VM::new(&chunk, world, stdlib).with_action_context(context.clone());
 
         // TODO: bind parameters to their values before execution
         // For now, we rely on the check expression using (actor), (direct-object), etc.
@@ -263,7 +263,7 @@ impl PreconditionRegistry {
         &self,
         world: &World,
         call: &PreconditionCall,
-        context: &HookContext,
+        context: &ActionContext,
     ) -> Result<Option<PreconditionResult>, PreconditionError> {
         let name = call.name.as_str();
 
@@ -397,7 +397,7 @@ impl PreconditionRegistry {
         &self,
         _world: &World,
         arg: Option<&PreconditionArg>,
-        context: &HookContext,
+        context: &ActionContext,
     ) -> Result<Option<EntityId>, PreconditionError> {
         match arg {
             None => Ok(None),
@@ -424,7 +424,7 @@ impl PreconditionRegistry {
         world: &World,
         precondition: &Precondition,
         call: &PreconditionCall,
-        context: &HookContext,
+        context: &ActionContext,
     ) -> String {
         let template = precondition.failure_template();
 
@@ -671,7 +671,7 @@ mod tests {
         let registry = PreconditionRegistry::with_builtins();
         let stdlib = StdLib::with_builtins();
 
-        let context = HookContext::new(player).with_direct_object(lamp);
+        let context = ActionContext::new(player).with_direct_object(lamp);
 
         let call = PreconditionCall::new(
             Symbol::new("reachable?"),
@@ -698,7 +698,7 @@ mod tests {
         );
         world.add_relation("InRoom", lamp, room2);
 
-        let context = HookContext::new(player).with_direct_object(lamp);
+        let context = ActionContext::new(player).with_direct_object(lamp);
 
         let call = PreconditionCall::new(
             Symbol::new("reachable?"),
@@ -719,7 +719,7 @@ mod tests {
         // Pick up lamp
         world.add_relation("Contains", player, lamp);
 
-        let context = HookContext::new(player).with_direct_object(lamp);
+        let context = ActionContext::new(player).with_direct_object(lamp);
 
         let call = PreconditionCall::new(Symbol::new("held?"), vec![PreconditionArg::DirectObject]);
 
@@ -734,7 +734,7 @@ mod tests {
         let stdlib = StdLib::with_builtins();
 
         // Lamp is not held
-        let context = HookContext::new(player).with_direct_object(lamp);
+        let context = ActionContext::new(player).with_direct_object(lamp);
 
         let call = PreconditionCall::new(
             Symbol::new("not-held?"),
@@ -751,7 +751,7 @@ mod tests {
         let registry = PreconditionRegistry::with_builtins();
         let stdlib = StdLib::with_builtins();
 
-        let context = HookContext::new(player).with_direct_object(lamp);
+        let context = ActionContext::new(player).with_direct_object(lamp);
 
         let call = PreconditionCall::new(
             Symbol::new("portable?"),
@@ -774,7 +774,7 @@ mod tests {
         world.set_component(statue, "Fixed", Value::Bool(true));
         world.add_relation("InRoom", statue, room);
 
-        let context = HookContext::new(player).with_direct_object(statue);
+        let context = ActionContext::new(player).with_direct_object(statue);
 
         let call = PreconditionCall::new(
             Symbol::new("portable?"),

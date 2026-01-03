@@ -431,32 +431,32 @@ pub fn execute_grammar_action_full(
 ) -> VerbResult {
     use crate::action::check_action_preconditions;
     use crate::hooks::{run_after_hooks, run_before_hooks, run_on_hooks};
-    use crate::vm::HookContext;
+    use crate::vm::ActionContext;
 
     let action_name = grammar_match.action.action_name();
     let action_str = action_name.as_str();
 
-    // Build hook context
+    // Build action context
     let direct_object = grammar_match.get_entity("obj");
     let indirect_object = grammar_match.get_entity("indirect");
     let room = get_room(world, actor);
 
-    let mut hook_context = HookContext::new(actor);
+    let mut action_context = ActionContext::new(actor);
     if let Some(obj) = direct_object {
-        hook_context = hook_context.with_direct_object(obj);
+        action_context = action_context.with_direct_object(obj);
     }
     if let Some(obj) = indirect_object {
-        hook_context = hook_context.with_indirect_object(obj);
+        action_context = action_context.with_indirect_object(obj);
     }
     if let Some(r) = room {
-        hook_context = hook_context.with_room(r);
+        action_context = action_context.with_room(r);
     }
 
     // Check preconditions (if registries are provided)
     if let (Some(action_reg), Some(precond_reg)) = (action_registry, precondition_registry) {
         if let Some(action_def) = action_reg.get(action_name) {
             let check_result =
-                check_action_preconditions(action_def, world, &hook_context, precond_reg, stdlib);
+                check_action_preconditions(action_def, world, &action_context, precond_reg, stdlib);
 
             if check_result.failed() {
                 return VerbResult::fail(check_result.message().unwrap_or("You can't do that."));
@@ -468,7 +468,7 @@ pub fn execute_grammar_action_full(
     let mut pending_deletions: Vec<EntityId> = Vec::new();
 
     // Run Before hooks
-    if let Ok(before_result) = run_before_hooks(world, &action_str, &hook_context, stdlib) {
+    if let Ok(before_result) = run_before_hooks(world, &action_str, &action_context, stdlib) {
         output_parts.extend(before_result.output);
         pending_deletions.extend(before_result.deletions);
 
@@ -488,7 +488,7 @@ pub fn execute_grammar_action_full(
 
     // Run On hooks
     let mut handled = false;
-    if let Ok(on_result) = run_on_hooks(world, &action_str, &hook_context, stdlib) {
+    if let Ok(on_result) = run_on_hooks(world, &action_str, &action_context, stdlib) {
         output_parts.extend(on_result.output);
         pending_deletions.extend(on_result.deletions);
         handled = on_result.handled;
@@ -503,7 +503,7 @@ pub fn execute_grammar_action_full(
     }
 
     // Run After hooks
-    if let Ok(after_result) = run_after_hooks(world, &action_str, &hook_context, stdlib) {
+    if let Ok(after_result) = run_after_hooks(world, &action_str, &action_context, stdlib) {
         output_parts.extend(after_result.output);
         pending_deletions.extend(after_result.deletions);
     }

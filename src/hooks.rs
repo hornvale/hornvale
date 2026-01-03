@@ -20,7 +20,7 @@
 use crate::compiler::{CompileError, Compiler};
 use crate::core::{EntityId, Value, World};
 use crate::symbol::Symbol;
-use crate::vm::{HookContext, StdLib, VM, VMError};
+use crate::vm::{ActionContext, StdLib, VM, VMError};
 
 /// Result of executing a hook.
 #[derive(Debug, Clone)]
@@ -112,7 +112,7 @@ impl Default for HookPipelineResult {
 pub fn execute_hook(
     world: &World,
     hook_expr: &Value,
-    context: &HookContext,
+    context: &ActionContext,
     stdlib: &StdLib,
 ) -> Result<(HookResult, Vec<String>, Vec<EntityId>), HookError> {
     // Hook body is stored as a list of expressions.
@@ -134,7 +134,7 @@ pub fn execute_hook(
     let chunk = Compiler::compile(&sexpr)?;
 
     // Execute with hook context
-    let mut vm = VM::new(&chunk, world, stdlib).with_hook_context(context.clone());
+    let mut vm = VM::new(&chunk, world, stdlib).with_action_context(context.clone());
 
     let result = vm.run()?;
 
@@ -200,7 +200,7 @@ fn value_to_sexpr(value: &Value) -> Result<crate::lang::SExpr, HookError> {
 pub fn run_hooks_for_action(
     world: &World,
     action: &str,
-    context: &HookContext,
+    context: &ActionContext,
     stdlib: &StdLib,
 ) -> Result<HookPipelineResult, HookError> {
     let mut result = HookPipelineResult::new();
@@ -263,7 +263,7 @@ pub fn run_hooks_for_action(
 pub fn run_before_hooks(
     world: &World,
     action: &str,
-    context: &HookContext,
+    context: &ActionContext,
     stdlib: &StdLib,
 ) -> Result<HookPipelineResult, HookError> {
     let mut result = HookPipelineResult::new();
@@ -298,7 +298,7 @@ pub fn run_before_hooks(
 pub fn run_on_hooks(
     world: &World,
     action: &str,
-    context: &HookContext,
+    context: &ActionContext,
     stdlib: &StdLib,
 ) -> Result<HookPipelineResult, HookError> {
     let mut result = HookPipelineResult::new();
@@ -333,7 +333,7 @@ pub fn run_on_hooks(
 pub fn run_after_hooks(
     world: &World,
     action: &str,
-    context: &HookContext,
+    context: &ActionContext,
     stdlib: &StdLib,
 ) -> Result<HookPipelineResult, HookError> {
     let mut result = HookPipelineResult::new();
@@ -472,21 +472,21 @@ mod tests {
     #[test]
     fn test_hook_context_actor_opcode() {
         let mut chunk = Chunk::new();
-        chunk.emit(OpCode::GetHookActor { dst: 0 }, 1);
+        chunk.emit(OpCode::GetContextActor { dst: 0 }, 1);
         chunk.emit(OpCode::Return { src: 0 }, 1);
 
         let mut world = World::new();
         let actor = world.create_entity();
         let stdlib = StdLib::with_builtins();
 
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: None,
             indirect_object: None,
             room: None,
         };
 
-        let mut vm = VM::new(&chunk, &world, &stdlib).with_hook_context(context);
+        let mut vm = VM::new(&chunk, &world, &stdlib).with_action_context(context);
         let result = vm.run().unwrap();
         assert_eq!(result, Value::EntityRef(actor));
     }
@@ -494,7 +494,7 @@ mod tests {
     #[test]
     fn test_hook_context_direct_object_opcode() {
         let mut chunk = Chunk::new();
-        chunk.emit(OpCode::GetHookDirectObject { dst: 0 }, 1);
+        chunk.emit(OpCode::GetContextDirectObject { dst: 0 }, 1);
         chunk.emit(OpCode::Return { src: 0 }, 1);
 
         let mut world = World::new();
@@ -502,14 +502,14 @@ mod tests {
         let obj = world.create_entity();
         let stdlib = StdLib::with_builtins();
 
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: Some(obj),
             indirect_object: None,
             room: None,
         };
 
-        let mut vm = VM::new(&chunk, &world, &stdlib).with_hook_context(context);
+        let mut vm = VM::new(&chunk, &world, &stdlib).with_action_context(context);
         let result = vm.run().unwrap();
         assert_eq!(result, Value::EntityRef(obj));
     }
@@ -517,21 +517,21 @@ mod tests {
     #[test]
     fn test_hook_context_direct_object_none() {
         let mut chunk = Chunk::new();
-        chunk.emit(OpCode::GetHookDirectObject { dst: 0 }, 1);
+        chunk.emit(OpCode::GetContextDirectObject { dst: 0 }, 1);
         chunk.emit(OpCode::Return { src: 0 }, 1);
 
         let mut world = World::new();
         let actor = world.create_entity();
         let stdlib = StdLib::with_builtins();
 
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: None,
             indirect_object: None,
             room: None,
         };
 
-        let mut vm = VM::new(&chunk, &world, &stdlib).with_hook_context(context);
+        let mut vm = VM::new(&chunk, &world, &stdlib).with_action_context(context);
         let result = vm.run().unwrap();
         // NIL is represented as Bool(false) in the VM
         assert_eq!(result, Value::Bool(false));
@@ -540,7 +540,7 @@ mod tests {
     #[test]
     fn test_hook_context_room_opcode() {
         let mut chunk = Chunk::new();
-        chunk.emit(OpCode::GetHookRoom { dst: 0 }, 1);
+        chunk.emit(OpCode::GetContextRoom { dst: 0 }, 1);
         chunk.emit(OpCode::Return { src: 0 }, 1);
 
         let mut world = World::new();
@@ -548,14 +548,14 @@ mod tests {
         let room = world.create_entity();
         let stdlib = StdLib::with_builtins();
 
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: None,
             indirect_object: None,
             room: Some(room),
         };
 
-        let mut vm = VM::new(&chunk, &world, &stdlib).with_hook_context(context);
+        let mut vm = VM::new(&chunk, &world, &stdlib).with_action_context(context);
         let result = vm.run().unwrap();
         assert_eq!(result, Value::EntityRef(room));
     }
@@ -656,12 +656,12 @@ mod tests {
 
     // ===== Compiled Hook Context Accessor Tests =====
 
-    fn eval_with_hook_context(source: &str, context: HookContext) -> (Value, Vec<String>) {
+    fn eval_with_action_context(source: &str, context: ActionContext) -> (Value, Vec<String>) {
         let expr = parse(source).unwrap();
         let chunk = Compiler::compile(&expr).unwrap();
         let world = World::new();
         let stdlib = StdLib::with_builtins();
-        let mut vm = VM::new(&chunk, &world, &stdlib).with_hook_context(context);
+        let mut vm = VM::new(&chunk, &world, &stdlib).with_action_context(context);
         let result = vm.run().unwrap();
         let output = vm.take_output();
         (result, output)
@@ -671,14 +671,14 @@ mod tests {
     fn test_compiled_actor_accessor() {
         let mut world = World::new();
         let actor = world.create_entity();
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: None,
             indirect_object: None,
             room: None,
         };
 
-        let (result, _) = eval_with_hook_context("(actor)", context);
+        let (result, _) = eval_with_action_context("(actor)", context);
         assert_eq!(result, Value::EntityRef(actor));
     }
 
@@ -687,14 +687,14 @@ mod tests {
         let mut world = World::new();
         let actor = world.create_entity();
         let obj = world.create_entity();
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: Some(obj),
             indirect_object: None,
             room: None,
         };
 
-        let (result, _) = eval_with_hook_context("(direct-object)", context);
+        let (result, _) = eval_with_action_context("(direct-object)", context);
         assert_eq!(result, Value::EntityRef(obj));
     }
 
@@ -702,14 +702,14 @@ mod tests {
     fn test_compiled_say_effect() {
         let mut world = World::new();
         let actor = world.create_entity();
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: None,
             indirect_object: None,
             room: None,
         };
 
-        let (_, output) = eval_with_hook_context("(say \"Test message\")", context);
+        let (_, output) = eval_with_action_context("(say \"Test message\")", context);
         assert_eq!(output, vec!["Test message".to_string()]);
     }
 
@@ -813,7 +813,7 @@ mod tests {
 
         // Hook that returns an integer (not :handled or :veto)
         let hook_expr = Value::list(vec![Value::Int(42)]);
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: None,
             indirect_object: None,
@@ -832,7 +832,7 @@ mod tests {
 
         // Hook that returns :handled symbol
         let hook_expr = Value::list(vec![Value::Symbol(Symbol::new("handled"))]);
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: None,
             indirect_object: None,
@@ -851,7 +851,7 @@ mod tests {
 
         // Hook that returns :veto symbol
         let hook_expr = Value::list(vec![Value::Symbol(Symbol::new("veto"))]);
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: None,
             indirect_object: None,
@@ -877,7 +877,7 @@ mod tests {
             ]),
             Value::Symbol(Symbol::new("handled")),
         ]);
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: None,
             indirect_object: None,
@@ -922,7 +922,7 @@ mod tests {
             ])]),
         );
 
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: Some(obj),
             indirect_object: None,
@@ -965,7 +965,7 @@ mod tests {
             ])]),
         );
 
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: Some(obj),
             indirect_object: None,
@@ -1008,7 +1008,7 @@ mod tests {
             ])]),
         );
 
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: Some(obj),
             indirect_object: None,
@@ -1050,7 +1050,7 @@ mod tests {
             ])]),
         );
 
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: Some(obj),
             indirect_object: None,
@@ -1087,7 +1087,7 @@ mod tests {
             ]),
         );
 
-        let context = HookContext {
+        let context = ActionContext {
             actor,
             direct_object: Some(obj),
             indirect_object: None,

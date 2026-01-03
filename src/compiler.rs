@@ -297,7 +297,7 @@ impl Compiler {
                 "descendants" => return self.compile_descendants(args, dst, span),
                 "ancestors" => return self.compile_ancestors(args, dst, span),
 
-                // Hook context accessors (no arguments)
+                // Action context accessors (no arguments)
                 "actor" => {
                     if !args.is_empty() {
                         return Err(CompileError::ArityMismatch {
@@ -307,7 +307,7 @@ impl Compiler {
                         });
                     }
                     self.chunk
-                        .emit(OpCode::GetHookActor { dst }, self.current_line);
+                        .emit(OpCode::GetContextActor { dst }, self.current_line);
                     return Ok(());
                 }
                 "direct-object" => {
@@ -319,7 +319,7 @@ impl Compiler {
                         });
                     }
                     self.chunk
-                        .emit(OpCode::GetHookDirectObject { dst }, self.current_line);
+                        .emit(OpCode::GetContextDirectObject { dst }, self.current_line);
                     return Ok(());
                 }
                 "indirect-object" => {
@@ -331,7 +331,7 @@ impl Compiler {
                         });
                     }
                     self.chunk
-                        .emit(OpCode::GetHookIndirectObject { dst }, self.current_line);
+                        .emit(OpCode::GetContextIndirectObject { dst }, self.current_line);
                     return Ok(());
                 }
                 "room" => {
@@ -343,7 +343,7 @@ impl Compiler {
                         });
                     }
                     self.chunk
-                        .emit(OpCode::GetHookRoom { dst }, self.current_line);
+                        .emit(OpCode::GetContextRoom { dst }, self.current_line);
                     return Ok(());
                 }
 

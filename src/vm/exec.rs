@@ -6,7 +6,7 @@ use super::stdlib::{StdLib, StdLibError};
 use crate::core::{ComponentTypeId, EntityId, RelationTypeId, Value, World};
 use crate::rng::SeededRng;
 
-/// Context for hook execution.
+/// Context for action execution.
 ///
 /// Provides access to the entities involved in an action:
 /// - `actor`: The entity performing the action (always present)
@@ -14,7 +14,7 @@ use crate::rng::SeededRng;
 /// - `indirect_object`: Secondary target (e.g., "table" in "put lamp on table")
 /// - `room`: The room where the action is taking place
 #[derive(Debug, Clone)]
-pub struct HookContext {
+pub struct ActionContext {
     /// The entity performing the action.
     pub actor: EntityId,
     /// The direct object of the action (if any).
@@ -25,8 +25,8 @@ pub struct HookContext {
     pub room: Option<EntityId>,
 }
 
-impl HookContext {
-    /// Create a new hook context with just an actor.
+impl ActionContext {
+    /// Create a new action context with just an actor.
     pub fn new(actor: EntityId) -> Self {
         Self {
             actor,
@@ -85,8 +85,8 @@ pub enum VMError {
     #[error("no RNG available (VM needs a seed for random operations)")]
     NoRng,
 
-    #[error("no hook context available (operation requires hook execution context)")]
-    NoHookContext,
+    #[error("no action context available (operation requires action execution context)")]
+    NoActionContext,
 
     #[error("instruction pointer out of bounds")]
     IPOutOfBounds,
@@ -111,8 +111,8 @@ pub struct VM<'a> {
     entity: Option<EntityId>,
     /// Random number generator (for seeded generation).
     rng: Option<SeededRng>,
-    /// Hook execution context (actor, objects, room).
-    hook_context: Option<HookContext>,
+    /// Action execution context (actor, objects, room).
+    action_context: Option<ActionContext>,
     /// Output buffer for `say` effects.
     output_buffer: Vec<String>,
     /// Entities marked for destruction by `destroy` effects.
@@ -130,7 +130,7 @@ impl<'a> VM<'a> {
             stdlib,
             entity: None,
             rng: None,
-            hook_context: None,
+            action_context: None,
             output_buffer: Vec::new(),
             pending_deletions: Vec::new(),
         }
@@ -154,9 +154,9 @@ impl<'a> VM<'a> {
         self
     }
 
-    /// Set the hook context for hook execution.
-    pub fn with_hook_context(mut self, ctx: HookContext) -> Self {
-        self.hook_context = Some(ctx);
+    /// Set the action context for action execution.
+    pub fn with_action_context(mut self, ctx: ActionContext) -> Self {
+        self.action_context = Some(ctx);
         self
     }
 
@@ -488,14 +488,20 @@ impl<'a> VM<'a> {
                 return Ok(ControlFlow::Return(NIL.clone()));
             }
 
-            // === Hook Context ===
-            OpCode::GetHookActor { dst } => {
-                let ctx = self.hook_context.as_ref().ok_or(VMError::NoHookContext)?;
+            // === Action Context ===
+            OpCode::GetContextActor { dst } => {
+                let ctx = self
+                    .action_context
+                    .as_ref()
+                    .ok_or(VMError::NoActionContext)?;
                 self.set_reg(dst, Value::EntityRef(ctx.actor));
             }
 
-            OpCode::GetHookDirectObject { dst } => {
-                let ctx = self.hook_context.as_ref().ok_or(VMError::NoHookContext)?;
+            OpCode::GetContextDirectObject { dst } => {
+                let ctx = self
+                    .action_context
+                    .as_ref()
+                    .ok_or(VMError::NoActionContext)?;
                 let result = ctx
                     .direct_object
                     .map(Value::EntityRef)
@@ -503,8 +509,11 @@ impl<'a> VM<'a> {
                 self.set_reg(dst, result);
             }
 
-            OpCode::GetHookIndirectObject { dst } => {
-                let ctx = self.hook_context.as_ref().ok_or(VMError::NoHookContext)?;
+            OpCode::GetContextIndirectObject { dst } => {
+                let ctx = self
+                    .action_context
+                    .as_ref()
+                    .ok_or(VMError::NoActionContext)?;
                 let result = ctx
                     .indirect_object
                     .map(Value::EntityRef)
@@ -512,8 +521,11 @@ impl<'a> VM<'a> {
                 self.set_reg(dst, result);
             }
 
-            OpCode::GetHookRoom { dst } => {
-                let ctx = self.hook_context.as_ref().ok_or(VMError::NoHookContext)?;
+            OpCode::GetContextRoom { dst } => {
+                let ctx = self
+                    .action_context
+                    .as_ref()
+                    .ok_or(VMError::NoActionContext)?;
                 let result = ctx
                     .room
                     .map(Value::EntityRef)

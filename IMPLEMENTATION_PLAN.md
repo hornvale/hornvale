@@ -952,13 +952,13 @@ Each layer is optional. The kernel doesn't require any of them.
 
 ## Appendix: Risk Registry
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| Performance cliff at scale | Medium | High | Phase 6 benchmarks, early profiling |
-| Query explosion (deep traversals) | Medium | Medium | Depth limits, materialized views |
-| Cache invalidation storms | Low | High | Stratified derivation, epoch-based invalidation |
-| DSL expressiveness gaps | Medium | Medium | Rust stdlib escape hatch, iterate on syntax |
-| Scope creep (cosmos before house) | High | High | Strict phase ordering, playable demo first |
+| Risk                              | Likelihood | Impact | Mitigation                                      |
+| --------------------------------- | ---------- | ------ | ----------------------------------------------- |
+| Performance cliff at scale        | Medium     | High   | Phase 6 benchmarks, early profiling             |
+| Query explosion (deep traversals) | Medium     | Medium | Depth limits, materialized views                |
+| Cache invalidation storms         | Low        | High   | Stratified derivation, epoch-based invalidation |
+| DSL expressiveness gaps           | Medium     | Medium | Rust stdlib escape hatch, iterate on syntax     |
+| Scope creep (cosmos before house) | High       | High   | Strict phase ordering, playable demo first      |
 
 ---
 
