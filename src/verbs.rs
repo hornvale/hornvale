@@ -140,14 +140,6 @@ fn entity_brief(world: &World, entity: EntityId) -> Arc<str> {
         .unwrap_or_else(|| Arc::from("something"))
 }
 
-/// Get the room an entity is in.
-fn get_room(world: &World, entity: EntityId) -> Option<EntityId> {
-    world
-        .query_relation_forward(relations::in_room(), entity)
-        .first()
-        .copied()
-}
-
 /// Get all entities in a room.
 fn entities_in_room(world: &World, room: EntityId) -> Vec<EntityId> {
     world.query_relation_reverse(relations::in_room(), room)
@@ -166,26 +158,13 @@ fn is_room(world: &World, entity: EntityId) -> bool {
         .unwrap_or(false)
 }
 
-/// Check if entity is portable.
-fn is_portable(world: &World, entity: EntityId) -> bool {
-    // Portable if Portable=true OR not Fixed
-    if let Some(portable) = world.get_component(entity, components::portable()) {
-        return portable.as_bool().unwrap_or(false);
-    }
-    // Not fixed = portable by default
-    !world
-        .get_component(entity, components::fixed())
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false)
-}
-
 // ============================================================================
 // Verb handlers
 // ============================================================================
 
 /// Handle the "look" verb - describe current location.
 pub fn handle_look(world: &World, actor: EntityId) -> VerbResult {
-    let room = match get_room(world, actor) {
+    let room = match world.get_entity_room(actor) {
         Some(r) => r,
         None => return VerbResult::fail("You are nowhere."),
     };
@@ -270,13 +249,13 @@ pub fn handle_take(world: &mut World, actor: EntityId, target: EntityId) -> Verb
     }
 
     // Check if portable
-    if !is_portable(world, target) {
+    if !world.is_portable(target) {
         return VerbResult::fail(format!("The {name} is fixed in place."));
     }
 
     // Check if in same room
-    let actor_room = get_room(world, actor);
-    let target_room = get_room(world, target);
+    let actor_room = world.get_entity_room(actor);
+    let target_room = world.get_entity_room(target);
     if actor_room != target_room || actor_room.is_none() {
         return VerbResult::fail(format!("You can't reach the {name}."));
     }
@@ -301,7 +280,7 @@ pub fn handle_drop(world: &mut World, actor: EntityId, target: EntityId) -> Verb
     }
 
     // Get current room
-    let room = match get_room(world, actor) {
+    let room = match world.get_entity_room(actor) {
         Some(r) => r,
         None => return VerbResult::fail("You are nowhere."),
     };
@@ -315,7 +294,7 @@ pub fn handle_drop(world: &mut World, actor: EntityId, target: EntityId) -> Verb
 
 /// Handle the "go" verb - move through an exit.
 pub fn handle_go(world: &mut World, actor: EntityId, direction: Symbol) -> VerbResult {
-    let current_room = match get_room(world, actor) {
+    let current_room = match world.get_entity_room(actor) {
         Some(r) => r,
         None => return VerbResult::fail("You are nowhere."),
     };
@@ -439,7 +418,7 @@ pub fn execute_grammar_action_full(
     // Build action context
     let direct_object = grammar_match.get_entity("obj");
     let indirect_object = grammar_match.get_entity("indirect");
-    let room = get_room(world, actor);
+    let room = world.get_entity_room(actor);
 
     let mut action_context = ActionContext::new(actor);
     if let Some(obj) = direct_object {
@@ -871,7 +850,7 @@ mod tests {
         assert!(result.output.contains("Garden"));
 
         // Verify player is in new room
-        let new_room = get_room(&world, player).unwrap();
+        let new_room = world.get_entity_room(player).unwrap();
         assert_eq!(new_room, room2);
     }
 

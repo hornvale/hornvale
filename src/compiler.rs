@@ -27,9 +27,36 @@
 //! (get-component ?e :HP)
 //! (has-component ?e :HP)
 //!
+//! ;; World mutations (buffered, applied after execution)
+//! (set! entity :Component value)    ; set component value
+//! (relate! :Relation from to)       ; add relation
+//! (unrelate! :Relation from to)     ; remove relation
+//! (destroy entity)                  ; mark entity for destruction
+//!
+//! ;; World queries
+//! (holder entity)                   ; get entity's container (via Contains)
+//! (contents container)              ; list contained entities
+//! (location entity)                 ; get entity's room (via InRoom)
+//! (exits room)                      ; list exit directions from room
+//! (exit-target room direction)      ; get exit destination
+//!
+//! ;; Predicates
+//! (in-scope? actor target)          ; is target reachable by actor?
+//! (held-by? item holder)            ; is item held by holder?
+//! (portable? entity)                ; is entity portable?
+//!
 //! ;; Graph traversal queries (return lists of entities)
 //! (descendants entity :RelationType max-depth)  ; forward transitive closure
 //! (ancestors entity :RelationType max-depth)    ; reverse transitive closure
+//!
+//! ;; Action context accessors
+//! (actor)                           ; current action's actor
+//! (direct-object)                   ; current action's direct object
+//! (indirect-object)                 ; current action's indirect object
+//! (room)                            ; current action's room context
+//!
+//! ;; Effects
+//! (say message)                     ; output message
 //!
 //! ;; List functions
 //! (length list)  (first list)  (rest list)  (nth list index)
@@ -350,6 +377,23 @@ impl Compiler {
                 // Effect operations
                 "say" => return self.compile_say(args, dst, span),
                 "destroy" => return self.compile_destroy(args, dst, span),
+
+                // World mutations
+                "set!" => return self.compile_set_component(args, dst, span),
+                "relate!" => return self.compile_relate(args, dst, span),
+                "unrelate!" => return self.compile_unrelate(args, dst, span),
+
+                // World queries
+                "holder" => return self.compile_holder(args, dst, span),
+                "contents" => return self.compile_contents(args, dst, span),
+                "exits" => return self.compile_exits(args, dst, span),
+                "exit-target" => return self.compile_exit_target(args, dst, span),
+                "location" => return self.compile_location(args, dst, span),
+
+                // Predicates
+                "in-scope?" => return self.compile_in_scope(args, dst, span),
+                "held-by?" => return self.compile_held_by(args, dst, span),
+                "portable?" => return self.compile_portable(args, dst, span),
 
                 _ => {}
             }
@@ -834,6 +878,375 @@ impl Compiler {
 
         // destroy returns nil
         self.chunk.emit(OpCode::LoadNil { dst }, self.current_line);
+
+        self.free_register(entity_reg);
+        Ok(())
+    }
+
+    // === World Mutation Compilation ===
+
+    /// Compile `set!` (entity, component, value)
+    fn compile_set_component(
+        &mut self,
+        args: &[SExpr],
+        dst: Reg,
+        span: Span,
+    ) -> Result<(), CompileError> {
+        if args.len() != 3 {
+            return Err(CompileError::ArityMismatch {
+                expected: 3,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let entity_reg = self.alloc_register()?;
+        let comp_reg = self.alloc_register()?;
+        let value_reg = self.alloc_register()?;
+
+        self.compile_expr(&args[0], entity_reg)?;
+        self.compile_expr(&args[1], comp_reg)?;
+        self.compile_expr(&args[2], value_reg)?;
+
+        self.chunk.emit(
+            OpCode::SetComponent {
+                entity: entity_reg,
+                component: comp_reg,
+                value: value_reg,
+            },
+            self.current_line,
+        );
+
+        // set! returns nil
+        self.chunk.emit(OpCode::LoadNil { dst }, self.current_line);
+
+        self.free_register(value_reg);
+        self.free_register(comp_reg);
+        self.free_register(entity_reg);
+        Ok(())
+    }
+
+    /// Compile `relate!` (relation, from, to)
+    fn compile_relate(&mut self, args: &[SExpr], dst: Reg, span: Span) -> Result<(), CompileError> {
+        if args.len() != 3 {
+            return Err(CompileError::ArityMismatch {
+                expected: 3,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let rel_reg = self.alloc_register()?;
+        let from_reg = self.alloc_register()?;
+        let to_reg = self.alloc_register()?;
+
+        self.compile_expr(&args[0], rel_reg)?;
+        self.compile_expr(&args[1], from_reg)?;
+        self.compile_expr(&args[2], to_reg)?;
+
+        self.chunk.emit(
+            OpCode::Relate {
+                relation: rel_reg,
+                from: from_reg,
+                to: to_reg,
+            },
+            self.current_line,
+        );
+
+        // relate! returns nil
+        self.chunk.emit(OpCode::LoadNil { dst }, self.current_line);
+
+        self.free_register(to_reg);
+        self.free_register(from_reg);
+        self.free_register(rel_reg);
+        Ok(())
+    }
+
+    /// Compile `unrelate!` (relation, from, to)
+    fn compile_unrelate(
+        &mut self,
+        args: &[SExpr],
+        dst: Reg,
+        span: Span,
+    ) -> Result<(), CompileError> {
+        if args.len() != 3 {
+            return Err(CompileError::ArityMismatch {
+                expected: 3,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let rel_reg = self.alloc_register()?;
+        let from_reg = self.alloc_register()?;
+        let to_reg = self.alloc_register()?;
+
+        self.compile_expr(&args[0], rel_reg)?;
+        self.compile_expr(&args[1], from_reg)?;
+        self.compile_expr(&args[2], to_reg)?;
+
+        self.chunk.emit(
+            OpCode::Unrelate {
+                relation: rel_reg,
+                from: from_reg,
+                to: to_reg,
+            },
+            self.current_line,
+        );
+
+        // unrelate! returns nil
+        self.chunk.emit(OpCode::LoadNil { dst }, self.current_line);
+
+        self.free_register(to_reg);
+        self.free_register(from_reg);
+        self.free_register(rel_reg);
+        Ok(())
+    }
+
+    // === World Query Compilation ===
+
+    /// Compile `holder` (entity) -> holder entity or nil
+    fn compile_holder(&mut self, args: &[SExpr], dst: Reg, span: Span) -> Result<(), CompileError> {
+        if args.len() != 1 {
+            return Err(CompileError::ArityMismatch {
+                expected: 1,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let entity_reg = self.alloc_register()?;
+        self.compile_expr(&args[0], entity_reg)?;
+
+        self.chunk.emit(
+            OpCode::GetHolder {
+                dst,
+                entity: entity_reg,
+            },
+            self.current_line,
+        );
+
+        self.free_register(entity_reg);
+        Ok(())
+    }
+
+    /// Compile `contents` (container) -> list of contained entities
+    fn compile_contents(
+        &mut self,
+        args: &[SExpr],
+        dst: Reg,
+        span: Span,
+    ) -> Result<(), CompileError> {
+        if args.len() != 1 {
+            return Err(CompileError::ArityMismatch {
+                expected: 1,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let container_reg = self.alloc_register()?;
+        self.compile_expr(&args[0], container_reg)?;
+
+        self.chunk.emit(
+            OpCode::GetContents {
+                dst,
+                container: container_reg,
+            },
+            self.current_line,
+        );
+
+        self.free_register(container_reg);
+        Ok(())
+    }
+
+    /// Compile `exits` (room) -> list of direction symbols
+    fn compile_exits(&mut self, args: &[SExpr], dst: Reg, span: Span) -> Result<(), CompileError> {
+        if args.len() != 1 {
+            return Err(CompileError::ArityMismatch {
+                expected: 1,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let room_reg = self.alloc_register()?;
+        self.compile_expr(&args[0], room_reg)?;
+
+        self.chunk.emit(
+            OpCode::GetExits {
+                dst,
+                room: room_reg,
+            },
+            self.current_line,
+        );
+
+        self.free_register(room_reg);
+        Ok(())
+    }
+
+    /// Compile `exit-target` (room, direction) -> target room or nil
+    fn compile_exit_target(
+        &mut self,
+        args: &[SExpr],
+        dst: Reg,
+        span: Span,
+    ) -> Result<(), CompileError> {
+        if args.len() != 2 {
+            return Err(CompileError::ArityMismatch {
+                expected: 2,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let room_reg = self.alloc_register()?;
+        let dir_reg = self.alloc_register()?;
+
+        self.compile_expr(&args[0], room_reg)?;
+        self.compile_expr(&args[1], dir_reg)?;
+
+        self.chunk.emit(
+            OpCode::GetExitTarget {
+                dst,
+                room: room_reg,
+                direction: dir_reg,
+            },
+            self.current_line,
+        );
+
+        self.free_register(dir_reg);
+        self.free_register(room_reg);
+        Ok(())
+    }
+
+    /// Compile `location` (entity) -> entity's room or nil
+    fn compile_location(
+        &mut self,
+        args: &[SExpr],
+        dst: Reg,
+        span: Span,
+    ) -> Result<(), CompileError> {
+        if args.len() != 1 {
+            return Err(CompileError::ArityMismatch {
+                expected: 1,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let entity_reg = self.alloc_register()?;
+        self.compile_expr(&args[0], entity_reg)?;
+
+        self.chunk.emit(
+            OpCode::GetRoom {
+                dst,
+                entity: entity_reg,
+            },
+            self.current_line,
+        );
+
+        self.free_register(entity_reg);
+        Ok(())
+    }
+
+    // === Predicate Compilation ===
+
+    /// Compile `in-scope?` (actor, target) -> bool
+    fn compile_in_scope(
+        &mut self,
+        args: &[SExpr],
+        dst: Reg,
+        span: Span,
+    ) -> Result<(), CompileError> {
+        if args.len() != 2 {
+            return Err(CompileError::ArityMismatch {
+                expected: 2,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let actor_reg = self.alloc_register()?;
+        let target_reg = self.alloc_register()?;
+
+        self.compile_expr(&args[0], actor_reg)?;
+        self.compile_expr(&args[1], target_reg)?;
+
+        self.chunk.emit(
+            OpCode::InScope {
+                dst,
+                actor: actor_reg,
+                target: target_reg,
+            },
+            self.current_line,
+        );
+
+        self.free_register(target_reg);
+        self.free_register(actor_reg);
+        Ok(())
+    }
+
+    /// Compile `held-by?` (item, holder) -> bool
+    fn compile_held_by(
+        &mut self,
+        args: &[SExpr],
+        dst: Reg,
+        span: Span,
+    ) -> Result<(), CompileError> {
+        if args.len() != 2 {
+            return Err(CompileError::ArityMismatch {
+                expected: 2,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let item_reg = self.alloc_register()?;
+        let holder_reg = self.alloc_register()?;
+
+        self.compile_expr(&args[0], item_reg)?;
+        self.compile_expr(&args[1], holder_reg)?;
+
+        self.chunk.emit(
+            OpCode::IsHeldBy {
+                dst,
+                item: item_reg,
+                holder: holder_reg,
+            },
+            self.current_line,
+        );
+
+        self.free_register(holder_reg);
+        self.free_register(item_reg);
+        Ok(())
+    }
+
+    /// Compile `portable?` (entity) -> bool
+    fn compile_portable(
+        &mut self,
+        args: &[SExpr],
+        dst: Reg,
+        span: Span,
+    ) -> Result<(), CompileError> {
+        if args.len() != 1 {
+            return Err(CompileError::ArityMismatch {
+                expected: 1,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let entity_reg = self.alloc_register()?;
+        self.compile_expr(&args[0], entity_reg)?;
+
+        self.chunk.emit(
+            OpCode::IsPortable {
+                dst,
+                entity: entity_reg,
+            },
+            self.current_line,
+        );
 
         self.free_register(entity_reg);
         Ok(())

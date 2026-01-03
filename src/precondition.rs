@@ -272,7 +272,7 @@ impl PreconditionRegistry {
                 // reachable?(actor, target) - target is in scope
                 let target = self.resolve_arg(world, call.args.get(1), context)?;
                 if let Some(target) = target {
-                    let passed = is_in_scope(world, context.actor, target);
+                    let passed = world.is_in_scope(context.actor, target);
                     if passed {
                         Ok(Some(PreconditionResult::Passed))
                     } else {
@@ -292,7 +292,7 @@ impl PreconditionRegistry {
                 // visible?(actor, target) - same as reachable for now
                 let target = self.resolve_arg(world, call.args.get(1), context)?;
                 if let Some(target) = target {
-                    let passed = is_in_scope(world, context.actor, target);
+                    let passed = world.is_in_scope(context.actor, target);
                     if passed {
                         Ok(Some(PreconditionResult::Passed))
                     } else {
@@ -312,7 +312,7 @@ impl PreconditionRegistry {
                 // held?(obj) - obj is held by the current actor
                 let target = self.resolve_arg(world, call.args.first(), context)?;
                 if let Some(target) = target {
-                    let passed = is_held_by(world, target, context.actor);
+                    let passed = world.is_held_by(target, context.actor);
                     if passed {
                         Ok(Some(PreconditionResult::Passed))
                     } else {
@@ -333,7 +333,7 @@ impl PreconditionRegistry {
                 let target = self.resolve_arg(world, call.args.first(), context)?;
                 let holder = self.resolve_arg(world, call.args.get(1), context)?;
                 if let (Some(target), Some(holder)) = (target, holder) {
-                    let passed = is_held_by(world, target, holder);
+                    let passed = world.is_held_by(target, holder);
                     if passed {
                         Ok(Some(PreconditionResult::Passed))
                     } else {
@@ -354,7 +354,7 @@ impl PreconditionRegistry {
                 // portable?(obj) - obj has Portable component or lacks Fixed
                 let target = self.resolve_arg(world, call.args.first(), context)?;
                 if let Some(target) = target {
-                    let passed = is_portable(world, target);
+                    let passed = world.is_portable(target);
                     if passed {
                         Ok(Some(PreconditionResult::Passed))
                     } else {
@@ -374,7 +374,7 @@ impl PreconditionRegistry {
                 // not-held?(obj) - obj is NOT held by the current actor
                 let target = self.resolve_arg(world, call.args.first(), context)?;
                 if let Some(target) = target {
-                    let passed = !is_held_by(world, target, context.actor);
+                    let passed = !world.is_held_by(target, context.actor);
                     if passed {
                         Ok(Some(PreconditionResult::Passed))
                     } else {
@@ -488,81 +488,6 @@ fn capitalize_first(s: &str) -> String {
     }
 }
 
-/// Get the room an entity is in.
-fn get_room(world: &World, entity: EntityId) -> Option<EntityId> {
-    world
-        .query_relation_forward("InRoom", entity)
-        .first()
-        .copied()
-}
-
-/// Check if an entity is in scope for the actor.
-///
-/// An entity is in scope if:
-/// - It's in the same room as the actor
-/// - It's carried by the actor
-/// - It's in an open container that's in scope
-fn is_in_scope(world: &World, actor: EntityId, target: EntityId) -> bool {
-    // Same entity is always in scope
-    if actor == target {
-        return true;
-    }
-
-    // Check if carried by actor
-    if is_held_by(world, target, actor) {
-        return true;
-    }
-
-    // Check if in same room
-    let actor_room = get_room(world, actor);
-    let target_room = get_room(world, target);
-
-    if let (Some(ar), Some(tr)) = (actor_room, target_room) {
-        if ar == tr {
-            return true;
-        }
-    }
-
-    // Check if target is in a container that's in scope
-    // (simplified: just check if contained by something in the same room)
-    let containers = world.query_relation_reverse("Contains", target);
-    for container in containers {
-        if is_in_scope(world, actor, container) {
-            // TODO: check if container is open
-            return true;
-        }
-    }
-
-    false
-}
-
-/// Check if an entity is held by another entity.
-fn is_held_by(world: &World, target: EntityId, holder: EntityId) -> bool {
-    world
-        .query_relation_forward("Contains", holder)
-        .contains(&target)
-}
-
-/// Check if an entity is portable.
-fn is_portable(world: &World, entity: EntityId) -> bool {
-    // Portable if has Portable=true
-    if let Some(portable) = world.get_component(entity, "Portable") {
-        if let Some(b) = portable.as_bool() {
-            return b;
-        }
-    }
-
-    // Not fixed = portable by default
-    if let Some(fixed) = world.get_component(entity, "Fixed") {
-        if let Some(b) = fixed.as_bool() {
-            return !b;
-        }
-    }
-
-    // Default: not fixed, so portable
-    true
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -605,7 +530,7 @@ mod tests {
     #[test]
     fn test_is_in_scope_same_room() {
         let (world, player, _, lamp) = setup_world();
-        assert!(is_in_scope(&world, player, lamp));
+        assert!(world.is_in_scope(player, lamp));
     }
 
     #[test]
@@ -620,7 +545,7 @@ mod tests {
         );
         world.add_relation("Contains", player, lamp);
 
-        assert!(is_in_scope(&world, player, lamp));
+        assert!(world.is_in_scope(player, lamp));
     }
 
     #[test]
@@ -637,7 +562,7 @@ mod tests {
         );
         world.add_relation("InRoom", lamp, room2);
 
-        assert!(!is_in_scope(&world, player, lamp));
+        assert!(!world.is_in_scope(player, lamp));
     }
 
     #[test]
@@ -645,11 +570,11 @@ mod tests {
         let (mut world, player, _, lamp) = setup_world();
 
         // Not held initially
-        assert!(!is_held_by(&world, lamp, player));
+        assert!(!world.is_held_by(lamp, player));
 
         // Pick up
         world.add_relation("Contains", player, lamp);
-        assert!(is_held_by(&world, lamp, player));
+        assert!(world.is_held_by(lamp, player));
     }
 
     #[test]
@@ -657,12 +582,12 @@ mod tests {
         let (mut world, _, _, lamp) = setup_world();
 
         // Lamp is portable
-        assert!(is_portable(&world, lamp));
+        assert!(world.is_portable(lamp));
 
         // Create fixed object
         let statue = world.create_entity();
         world.set_component(statue, "Fixed", Value::Bool(true));
-        assert!(!is_portable(&world, statue));
+        assert!(!world.is_portable(statue));
     }
 
     #[test]

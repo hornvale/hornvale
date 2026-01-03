@@ -719,38 +719,48 @@ This stage adds CLOS-style method dispatch to actions:
 
 ### Stage 5: DSL-First Verbs & Description System
 **Goal**: Move verb logic from Rust to DSL. Add contextual descriptions.
-**Status**: In Progress (5C complete)
+**Status**: In Progress (5C, 5A complete)
 
 This is a significant architectural change: all game verbs move to DSL, with Rust providing efficient primitives. This also includes the description system for contextual object descriptions.
 
 #### Stage 5A: Core Primitives
 **Goal**: Rust primitives for world mutation and queries.
-**Status**: Not Started
+**Status**: Complete ✓
 
 **World Mutation** (infallible, `fn!` convention):
-- [ ] `move!` opcode — relocate entity to new location
-- [ ] `give!` opcode — transfer item from holder to recipient
-- [ ] `set!` opcode — set component value on entity
-- [ ] `relate!` opcode — add relation between entities
-- [ ] `unrelate!` opcode — remove relation between entities
-- [ ] Update `destroy!` to use `!` convention (already exists as `destroy`)
+- [x] `set!` opcode — set component value on entity
+- [x] `relate!` opcode — add relation between entities (cardinality auto-enforced)
+- [x] `unrelate!` opcode — remove relation between entities
+- [x] `destroy` already exists (buffers for later deletion)
+- Note: `move!` and `give!` are DSL functions built on `relate!` (cardinality handles atomicity)
 
 **World Queries** (pure functions):
-- [ ] `room` — get actor's current location (via InRoom relation)
-- [ ] `holder` — get entity's holder (who Contains it)
-- [ ] `contents` — list entities contained by container
-- [ ] `exits` — list available exit directions from room
-- [ ] `exit-target` — get destination for exit direction (or nil)
-- [ ] `in-scope?` — check if entity is reachable by actor
-- [ ] `descendant?` — check transitive containment (for common sense rules)
+- [x] `location` — get entity's room (via InRoom relation)
+- [x] `holder` — get entity's holder (who Contains it)
+- [x] `contents` — list entities contained by container
+- [x] `exits` — list available exit directions from room
+- [x] `exit-target` — get destination for exit direction (or nil)
+- [x] `(room)` — get action context room (0 args, existing)
 
-**Files**:
-- `src/vm/bytecode.rs` — Add opcodes
-- `src/vm/exec.rs` — Implement opcodes
-- `src/compiler.rs` — Compile DSL forms
-- `src/vm/stdlib.rs` — Add stdlib functions
+**Predicates**:
+- [x] `in-scope?` — check if entity is reachable by actor
+- [x] `held-by?` — check if item is held by holder
+- [x] `portable?` — check if entity is portable (Portable=true or !Fixed)
+- Note: `descendant?` can use existing `descendants` opcode
 
-**Tests**: ~20 tests for primitives
+**Implementation Summary**:
+- Added opcodes: `SetComponent`, `Relate`, `Unrelate`, `GetHolder`, `GetContents`,
+  `GetExits`, `GetExitTarget`, `GetRoom`, `InScope`, `IsHeldBy`, `IsPortable`
+- Mutations are buffered: `pending_set_components`, `pending_relate`, `pending_unrelate`
+- VM helper methods: `is_in_scope()`, `is_held_by()`, `is_portable()`, `get_entity_room()`
+- Compiler support for all new DSL forms
+
+**Files Modified**:
+- `src/vm/bytecode.rs` — Added 11 new opcodes
+- `src/vm/exec.rs` — Implemented opcodes + predicate helpers
+- `src/compiler.rs` — Added compile functions for DSL forms
+
+**Tests**: 13 new tests (606 total, up from 593)
 
 #### Stage 5B: Description System
 **Goal**: Contextual descriptions with FirstSeen tracking.
@@ -997,15 +1007,15 @@ Target: ~200 tests across all stages
 - Stage 4: 31 tests (precondition types, action registry, built-ins, failure messages, DSL parsing) ✓
 - Stage 4.5: ~10 tests (action specificity, :when guards) — deferred
 - Stage 5: ~75 tests (primitives, descriptions, loading, stdlib, DSL handlers)
-  - 5A: ~20 tests (core primitives)
+  - 5A: 13 tests (core primitives) ✓
   - 5B: ~15 tests (description system)
   - 5C: 9 tests (file loading) ✓
   - 5D: ~15 tests (stdlib integration)
   - 5E: ~15 tests (DSL action handlers)
 - Stage 6: ~5 tests (direction configuration)
 
-Current: 150 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33, Stage 4: 31, Stage 5C: 9)
-Total project: 593 tests passing
+Current: 163 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33, Stage 4: 31, Stage 5C: 9, Stage 5A: 13)
+Total project: 606 tests passing
 
 ---
 

@@ -512,6 +512,92 @@ impl World {
         self.relations.schema(relation.into())
     }
 
+    // --- High-level world queries ---
+
+    /// Get the room an entity is in (via InRoom relation).
+    pub fn get_entity_room(&self, entity: EntityId) -> Option<EntityId> {
+        self.query_relation_forward("InRoom", entity)
+            .first()
+            .copied()
+    }
+
+    /// Get the holder of an entity (via Contains relation, reverse lookup).
+    pub fn get_entity_holder(&self, entity: EntityId) -> Option<EntityId> {
+        self.query_relation_reverse("Contains", entity)
+            .first()
+            .copied()
+    }
+
+    /// Check if an entity is held by another entity (via Contains relation).
+    pub fn is_held_by(&self, item: EntityId, holder: EntityId) -> bool {
+        self.query_relation_forward("Contains", holder)
+            .contains(&item)
+    }
+
+    /// Check if an entity is portable.
+    ///
+    /// An entity is portable if:
+    /// - It has `Portable=true`, OR
+    /// - It does NOT have `Fixed=true` (default is portable)
+    pub fn is_portable(&self, entity: EntityId) -> bool {
+        // Portable if has Portable=true
+        if let Some(portable) = self.get_component(entity, "Portable") {
+            if let Some(b) = portable.as_bool() {
+                return b;
+            }
+        }
+
+        // Not fixed = portable by default
+        if let Some(fixed) = self.get_component(entity, "Fixed") {
+            if let Some(b) = fixed.as_bool() {
+                return !b;
+            }
+        }
+
+        // Default: not fixed, so portable
+        true
+    }
+
+    /// Check if an entity is in scope for an actor.
+    ///
+    /// An entity is in scope if:
+    /// - It's the same entity as the actor
+    /// - It's carried by the actor (via Contains)
+    /// - It's in the same room as the actor (via InRoom)
+    /// - It's inside a container that's in scope (recursive)
+    pub fn is_in_scope(&self, actor: EntityId, target: EntityId) -> bool {
+        // Same entity is always in scope
+        if actor == target {
+            return true;
+        }
+
+        // Check if carried by actor
+        if self.is_held_by(target, actor) {
+            return true;
+        }
+
+        // Check if in same room
+        let actor_room = self.get_entity_room(actor);
+        let target_room = self.get_entity_room(target);
+
+        if let (Some(ar), Some(tr)) = (actor_room, target_room) {
+            if ar == tr {
+                return true;
+            }
+        }
+
+        // Check if target is in a container that's in scope
+        let containers = self.query_relation_reverse("Contains", target);
+        for container in containers {
+            if self.is_in_scope(actor, container) {
+                // TODO: check if container is open
+                return true;
+            }
+        }
+
+        false
+    }
+
     /// Iterate over all entity IDs that have been created.
     ///
     /// Note: This iterates from 0 to entity_count, which includes

@@ -95,6 +95,22 @@ pub enum VMError {
 /// Nil value (represented as Bool(false) for simplicity).
 const NIL: Value = Value::Bool(false);
 
+/// A pending component mutation.
+#[derive(Debug, Clone)]
+pub struct PendingSetComponent {
+    pub entity: EntityId,
+    pub component: ComponentTypeId,
+    pub value: Value,
+}
+
+/// A pending relation mutation.
+#[derive(Debug, Clone)]
+pub struct PendingRelation {
+    pub relation: RelationTypeId,
+    pub from: EntityId,
+    pub to: EntityId,
+}
+
 /// Virtual machine for executing bytecode.
 pub struct VM<'a> {
     /// The bytecode chunk being executed.
@@ -117,6 +133,12 @@ pub struct VM<'a> {
     output_buffer: Vec<String>,
     /// Entities marked for destruction by `destroy` effects.
     pending_deletions: Vec<EntityId>,
+    /// Pending component mutations.
+    pending_set_components: Vec<PendingSetComponent>,
+    /// Pending relation additions.
+    pending_relate: Vec<PendingRelation>,
+    /// Pending relation removals.
+    pending_unrelate: Vec<PendingRelation>,
 }
 
 impl<'a> VM<'a> {
@@ -133,6 +155,9 @@ impl<'a> VM<'a> {
             action_context: None,
             output_buffer: Vec::new(),
             pending_deletions: Vec::new(),
+            pending_set_components: Vec::new(),
+            pending_relate: Vec::new(),
+            pending_unrelate: Vec::new(),
         }
     }
 
@@ -168,6 +193,21 @@ impl<'a> VM<'a> {
     /// Take the pending deletions, leaving the list empty.
     pub fn take_pending_deletions(&mut self) -> Vec<EntityId> {
         std::mem::take(&mut self.pending_deletions)
+    }
+
+    /// Take the pending component mutations, leaving the list empty.
+    pub fn take_pending_set_components(&mut self) -> Vec<PendingSetComponent> {
+        std::mem::take(&mut self.pending_set_components)
+    }
+
+    /// Take the pending relation additions, leaving the list empty.
+    pub fn take_pending_relate(&mut self) -> Vec<PendingRelation> {
+        std::mem::take(&mut self.pending_relate)
+    }
+
+    /// Take the pending relation removals, leaving the list empty.
+    pub fn take_pending_unrelate(&mut self) -> Vec<PendingRelation> {
+        std::mem::take(&mut self.pending_unrelate)
     }
 
     /// Execute the chunk and return the result.
@@ -546,6 +586,142 @@ impl<'a> VM<'a> {
             OpCode::Destroy { entity } => {
                 let entity_id = self.as_entity(self.get_reg(entity))?;
                 self.pending_deletions.push(entity_id);
+            }
+
+            // === World Mutations ===
+            OpCode::SetComponent {
+                entity,
+                component,
+                value,
+            } => {
+                let entity_id = self.as_entity(self.get_reg(entity))?;
+                let component_id = self.as_component_type(self.get_reg(component))?;
+                let val = self.get_reg(value).clone();
+                self.pending_set_components.push(PendingSetComponent {
+                    entity: entity_id,
+                    component: component_id,
+                    value: val,
+                });
+            }
+
+            OpCode::Relate { relation, from, to } => {
+                let rel_id = self.as_relation_type(self.get_reg(relation))?;
+                let from_id = self.as_entity(self.get_reg(from))?;
+                let to_id = self.as_entity(self.get_reg(to))?;
+                self.pending_relate.push(PendingRelation {
+                    relation: rel_id,
+                    from: from_id,
+                    to: to_id,
+                });
+            }
+
+            OpCode::Unrelate { relation, from, to } => {
+                let rel_id = self.as_relation_type(self.get_reg(relation))?;
+                let from_id = self.as_entity(self.get_reg(from))?;
+                let to_id = self.as_entity(self.get_reg(to))?;
+                self.pending_unrelate.push(PendingRelation {
+                    relation: rel_id,
+                    from: from_id,
+                    to: to_id,
+                });
+            }
+
+            // === World Queries (containment) ===
+            OpCode::GetHolder { dst, entity } => {
+                let entity_id = self.as_entity(self.get_reg(entity))?;
+                // Query reverse Contains relation to find holder
+                let rel_id = RelationTypeId::new("Contains");
+                let holders = self.world.query_relation_reverse(rel_id, entity_id);
+                let result = holders
+                    .first()
+                    .map(|id| Value::EntityRef(*id))
+                    .unwrap_or_else(|| NIL.clone());
+                self.set_reg(dst, result);
+            }
+
+            OpCode::GetContents { dst, container } => {
+                let container_id = self.as_entity(self.get_reg(container))?;
+                let rel_id = RelationTypeId::new("Contains");
+                let contents = self.world.query_relation_forward(rel_id, container_id);
+                let result = Value::list(contents.into_iter().map(Value::EntityRef).collect());
+                self.set_reg(dst, result);
+            }
+
+            OpCode::GetExits { dst, room } => {
+                let room_id = self.as_entity(self.get_reg(room))?;
+                // Exits are reified entities: Room --Exit--> ExitEntity
+                // Each exit entity has a Direction component
+                let exit_rel = RelationTypeId::new("Exit");
+                let exit_entities = self.world.query_relation_forward(exit_rel, room_id);
+
+                let mut directions = Vec::new();
+                for exit_entity in exit_entities {
+                    if let Some(dir) = self.world.get_component(exit_entity, "Direction") {
+                        directions.push(dir.clone());
+                    }
+                }
+                self.set_reg(dst, Value::list(directions));
+            }
+
+            OpCode::GetExitTarget {
+                dst,
+                room,
+                direction,
+            } => {
+                let room_id = self.as_entity(self.get_reg(room))?;
+                let dir_value = self.get_reg(direction).clone();
+
+                // Find the exit entity with matching Direction
+                let exit_rel = RelationTypeId::new("Exit");
+                let dest_rel = RelationTypeId::new("Destination");
+                let exit_entities = self.world.query_relation_forward(exit_rel, room_id);
+
+                let mut result = NIL.clone();
+                for exit_entity in exit_entities {
+                    if let Some(exit_dir) = self.world.get_component(exit_entity, "Direction") {
+                        if *exit_dir == dir_value {
+                            // Found matching exit, get destination
+                            let targets = self.world.query_relation_forward(dest_rel, exit_entity);
+                            if let Some(&target) = targets.first() {
+                                result = Value::EntityRef(target);
+                            }
+                            break;
+                        }
+                    }
+                }
+                self.set_reg(dst, result);
+            }
+
+            // === Predicates ===
+            OpCode::GetRoom { dst, entity } => {
+                let entity_id = self.as_entity(self.get_reg(entity))?;
+                let rel_id = RelationTypeId::new("InRoom");
+                let rooms = self.world.query_relation_forward(rel_id, entity_id);
+                let result = rooms
+                    .first()
+                    .map(|id| Value::EntityRef(*id))
+                    .unwrap_or_else(|| NIL.clone());
+                self.set_reg(dst, result);
+            }
+
+            OpCode::InScope { dst, actor, target } => {
+                let actor_id = self.as_entity(self.get_reg(actor))?;
+                let target_id = self.as_entity(self.get_reg(target))?;
+                let result = self.world.is_in_scope(actor_id, target_id);
+                self.set_reg(dst, Value::Bool(result));
+            }
+
+            OpCode::IsHeldBy { dst, item, holder } => {
+                let item_id = self.as_entity(self.get_reg(item))?;
+                let holder_id = self.as_entity(self.get_reg(holder))?;
+                let result = self.world.is_held_by(item_id, holder_id);
+                self.set_reg(dst, Value::Bool(result));
+            }
+
+            OpCode::IsPortable { dst, entity } => {
+                let entity_id = self.as_entity(self.get_reg(entity))?;
+                let result = self.world.is_portable(entity_id);
+                self.set_reg(dst, Value::Bool(result));
             }
         }
 
@@ -1012,5 +1188,515 @@ mod tests {
         let mut vm = VM::new(&chunk, &world, &stdlib); // No seed!
 
         assert!(matches!(vm.run(), Err(VMError::NoRng)));
+    }
+
+    // ============ Stage 5A: World Mutation Tests ============
+
+    fn setup_world_with_relations() -> World {
+        use crate::core::{Cardinality, RelationSchema};
+
+        let mut world = World::new();
+
+        // Register standard relations
+        world.register_relation(RelationSchema::new(
+            "InRoom",
+            Cardinality::Many,
+            Cardinality::One,
+        ));
+        world.register_relation(RelationSchema::new(
+            "Contains",
+            Cardinality::One,
+            Cardinality::Many,
+        ));
+
+        world
+    }
+
+    #[test]
+    fn test_set_component_pending() {
+        let mut world = setup_world_with_relations();
+        let entity = world.create_entity();
+
+        let mut chunk = Chunk::new();
+        let entity_idx = chunk.add_constant(Value::EntityRef(entity));
+        let comp_idx = chunk.add_constant(Value::Symbol(Symbol::new("HP")));
+        let value_idx = chunk.add_constant(Value::Int(100));
+
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: entity_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 1,
+                idx: comp_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 2,
+                idx: value_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::SetComponent {
+                entity: 0,
+                component: 1,
+                value: 2,
+            },
+            1,
+        );
+        chunk.emit(OpCode::ReturnNil, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        vm.run().unwrap();
+
+        // Check pending mutations
+        let pending = vm.take_pending_set_components();
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].entity, entity);
+        assert_eq!(pending[0].value, Value::Int(100));
+    }
+
+    #[test]
+    fn test_relate_pending() {
+        let mut world = setup_world_with_relations();
+        let room = world.create_entity();
+        let player = world.create_entity();
+
+        let mut chunk = Chunk::new();
+        let rel_idx = chunk.add_constant(Value::Symbol(Symbol::new("InRoom")));
+        let from_idx = chunk.add_constant(Value::EntityRef(player));
+        let to_idx = chunk.add_constant(Value::EntityRef(room));
+
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: rel_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 1,
+                idx: from_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 2,
+                idx: to_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::Relate {
+                relation: 0,
+                from: 1,
+                to: 2,
+            },
+            1,
+        );
+        chunk.emit(OpCode::ReturnNil, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        vm.run().unwrap();
+
+        let pending = vm.take_pending_relate();
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].from, player);
+        assert_eq!(pending[0].to, room);
+    }
+
+    // ============ Stage 5A: World Query Tests ============
+
+    #[test]
+    fn test_get_holder() {
+        let mut world = setup_world_with_relations();
+        let player = world.create_entity();
+        let lamp = world.create_entity();
+        world.add_relation("Contains", player, lamp);
+
+        let mut chunk = Chunk::new();
+        let lamp_idx = chunk.add_constant(Value::EntityRef(lamp));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: lamp_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::GetHolder { dst: 1, entity: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::EntityRef(player));
+    }
+
+    #[test]
+    fn test_get_holder_nil_when_not_held() {
+        let mut world = setup_world_with_relations();
+        let lamp = world.create_entity();
+
+        let mut chunk = Chunk::new();
+        let lamp_idx = chunk.add_constant(Value::EntityRef(lamp));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: lamp_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::GetHolder { dst: 1, entity: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        // NIL is represented as Bool(false)
+        assert_eq!(result, Value::Bool(false));
+    }
+
+    #[test]
+    fn test_get_contents() {
+        let mut world = setup_world_with_relations();
+        let player = world.create_entity();
+        let lamp = world.create_entity();
+        let key = world.create_entity();
+        world.add_relation("Contains", player, lamp);
+        world.add_relation("Contains", player, key);
+
+        let mut chunk = Chunk::new();
+        let player_idx = chunk.add_constant(Value::EntityRef(player));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: player_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::GetContents {
+                dst: 1,
+                container: 0,
+            },
+            1,
+        );
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        match result {
+            Value::List(items) => {
+                assert_eq!(items.len(), 2);
+                assert!(items.contains(&Value::EntityRef(lamp)));
+                assert!(items.contains(&Value::EntityRef(key)));
+            }
+            _ => panic!("Expected list, got {result:?}"),
+        }
+    }
+
+    #[test]
+    fn test_get_room() {
+        let mut world = setup_world_with_relations();
+        let room = world.create_entity();
+        let player = world.create_entity();
+        world.add_relation("InRoom", player, room);
+
+        let mut chunk = Chunk::new();
+        let player_idx = chunk.add_constant(Value::EntityRef(player));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: player_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::GetRoom { dst: 1, entity: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::EntityRef(room));
+    }
+
+    // ============ Stage 5A: Predicate Tests ============
+
+    #[test]
+    fn test_is_held_by_true() {
+        let mut world = setup_world_with_relations();
+        let player = world.create_entity();
+        let lamp = world.create_entity();
+        world.add_relation("Contains", player, lamp);
+
+        let mut chunk = Chunk::new();
+        let lamp_idx = chunk.add_constant(Value::EntityRef(lamp));
+        let player_idx = chunk.add_constant(Value::EntityRef(player));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: lamp_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 1,
+                idx: player_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::IsHeldBy {
+                dst: 2,
+                item: 0,
+                holder: 1,
+            },
+            1,
+        );
+        chunk.emit(OpCode::Return { src: 2 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::Bool(true));
+    }
+
+    #[test]
+    fn test_is_held_by_false() {
+        let mut world = setup_world_with_relations();
+        let player = world.create_entity();
+        let lamp = world.create_entity();
+        // Not held - no Contains relation
+
+        let mut chunk = Chunk::new();
+        let lamp_idx = chunk.add_constant(Value::EntityRef(lamp));
+        let player_idx = chunk.add_constant(Value::EntityRef(player));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: lamp_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 1,
+                idx: player_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::IsHeldBy {
+                dst: 2,
+                item: 0,
+                holder: 1,
+            },
+            1,
+        );
+        chunk.emit(OpCode::Return { src: 2 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::Bool(false));
+    }
+
+    #[test]
+    fn test_is_portable_true() {
+        let mut world = setup_world_with_relations();
+        let lamp = world.create_entity();
+        world.set_component(lamp, "Portable", Value::Bool(true));
+
+        let mut chunk = Chunk::new();
+        let lamp_idx = chunk.add_constant(Value::EntityRef(lamp));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: lamp_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::IsPortable { dst: 1, entity: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::Bool(true));
+    }
+
+    #[test]
+    fn test_is_portable_false_when_fixed() {
+        let mut world = setup_world_with_relations();
+        let statue = world.create_entity();
+        world.set_component(statue, "Fixed", Value::Bool(true));
+
+        let mut chunk = Chunk::new();
+        let statue_idx = chunk.add_constant(Value::EntityRef(statue));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: statue_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::IsPortable { dst: 1, entity: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::Bool(false));
+    }
+
+    #[test]
+    fn test_in_scope_same_room() {
+        let mut world = setup_world_with_relations();
+        let room = world.create_entity();
+        let player = world.create_entity();
+        let lamp = world.create_entity();
+        world.add_relation("InRoom", player, room);
+        world.add_relation("InRoom", lamp, room);
+
+        let mut chunk = Chunk::new();
+        let player_idx = chunk.add_constant(Value::EntityRef(player));
+        let lamp_idx = chunk.add_constant(Value::EntityRef(lamp));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: player_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 1,
+                idx: lamp_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::InScope {
+                dst: 2,
+                actor: 0,
+                target: 1,
+            },
+            1,
+        );
+        chunk.emit(OpCode::Return { src: 2 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::Bool(true));
+    }
+
+    #[test]
+    fn test_in_scope_carried() {
+        let mut world = setup_world_with_relations();
+        let room = world.create_entity();
+        let player = world.create_entity();
+        let lamp = world.create_entity();
+        world.add_relation("InRoom", player, room);
+        world.add_relation("Contains", player, lamp);
+
+        let mut chunk = Chunk::new();
+        let player_idx = chunk.add_constant(Value::EntityRef(player));
+        let lamp_idx = chunk.add_constant(Value::EntityRef(lamp));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: player_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 1,
+                idx: lamp_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::InScope {
+                dst: 2,
+                actor: 0,
+                target: 1,
+            },
+            1,
+        );
+        chunk.emit(OpCode::Return { src: 2 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::Bool(true));
+    }
+
+    #[test]
+    fn test_in_scope_different_room() {
+        let mut world = setup_world_with_relations();
+        let room1 = world.create_entity();
+        let room2 = world.create_entity();
+        let player = world.create_entity();
+        let lamp = world.create_entity();
+        world.add_relation("InRoom", player, room1);
+        world.add_relation("InRoom", lamp, room2);
+
+        let mut chunk = Chunk::new();
+        let player_idx = chunk.add_constant(Value::EntityRef(player));
+        let lamp_idx = chunk.add_constant(Value::EntityRef(lamp));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: player_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 1,
+                idx: lamp_idx,
+            },
+            1,
+        );
+        chunk.emit(
+            OpCode::InScope {
+                dst: 2,
+                actor: 0,
+                target: 1,
+            },
+            1,
+        );
+        chunk.emit(OpCode::Return { src: 2 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::Bool(false));
     }
 }

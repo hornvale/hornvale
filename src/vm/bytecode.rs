@@ -167,6 +167,48 @@ pub enum OpCode {
 
     /// Mark an entity for destruction: pending_deletions.push(R[entity])
     Destroy { entity: Reg },
+
+    // === World Mutations (buffered for later application) ===
+    /// Set a component value: pending_set_components.push((R[entity], R[component], R[value]))
+    SetComponent {
+        entity: Reg,
+        component: Reg,
+        value: Reg,
+    },
+
+    /// Add a relation: pending_relate.push((R[relation], R[from], R[to]))
+    Relate { relation: Reg, from: Reg, to: Reg },
+
+    /// Remove a relation: pending_unrelate.push((R[relation], R[from], R[to]))
+    Unrelate { relation: Reg, from: Reg, to: Reg },
+
+    // === World Queries (room/containment) ===
+    /// Get entity's holder (via Contains relation, reverse lookup)
+    /// R[dst] = first entity that Contains R[entity], or nil
+    GetHolder { dst: Reg, entity: Reg },
+
+    /// Get contents of a container: R[dst] = list of entities contained by R[container]
+    GetContents { dst: Reg, container: Reg },
+
+    /// Get available exits from a room: R[dst] = list of direction symbols
+    GetExits { dst: Reg, room: Reg },
+
+    /// Get exit destination: R[dst] = target room for R[direction] from R[room], or nil
+    GetExitTarget { dst: Reg, room: Reg, direction: Reg },
+
+    // === Predicates ===
+    /// Get entity's room (via InRoom relation): R[dst] = room containing R[entity], or nil
+    GetRoom { dst: Reg, entity: Reg },
+
+    /// Check if target is in scope for actor: R[dst] = is_in_scope(R[actor], R[target])
+    /// In scope means: same entity, carried by actor, in same room, or in accessible container
+    InScope { dst: Reg, actor: Reg, target: Reg },
+
+    /// Check if item is held by holder: R[dst] = holder Contains item
+    IsHeldBy { dst: Reg, item: Reg, holder: Reg },
+
+    /// Check if entity is portable: R[dst] = has Portable=true or lacks Fixed=true
+    IsPortable { dst: Reg, entity: Reg },
 }
 
 impl OpCode {
@@ -211,6 +253,17 @@ impl OpCode {
             OpCode::GetContextRoom { .. } => "GET_CONTEXT_ROOM",
             OpCode::Say { .. } => "SAY",
             OpCode::Destroy { .. } => "DESTROY",
+            OpCode::SetComponent { .. } => "SET_COMPONENT",
+            OpCode::Relate { .. } => "RELATE",
+            OpCode::Unrelate { .. } => "UNRELATE",
+            OpCode::GetHolder { .. } => "GET_HOLDER",
+            OpCode::GetContents { .. } => "GET_CONTENTS",
+            OpCode::GetExits { .. } => "GET_EXITS",
+            OpCode::GetExitTarget { .. } => "GET_EXIT_TARGET",
+            OpCode::GetRoom { .. } => "GET_ROOM",
+            OpCode::InScope { .. } => "IN_SCOPE",
+            OpCode::IsHeldBy { .. } => "IS_HELD_BY",
+            OpCode::IsPortable { .. } => "IS_PORTABLE",
         }
     }
 }
@@ -289,6 +342,35 @@ impl std::fmt::Display for OpCode {
             OpCode::GetContextRoom { dst } => write!(f, "GET_CONTEXT_ROOM r{dst}"),
             OpCode::Say { message } => write!(f, "SAY r{message}"),
             OpCode::Destroy { entity } => write!(f, "DESTROY r{entity}"),
+            OpCode::SetComponent {
+                entity,
+                component,
+                value,
+            } => write!(f, "SET_COMPONENT r{entity} r{component} r{value}"),
+            OpCode::Relate { relation, from, to } => {
+                write!(f, "RELATE r{relation} r{from} r{to}")
+            }
+            OpCode::Unrelate { relation, from, to } => {
+                write!(f, "UNRELATE r{relation} r{from} r{to}")
+            }
+            OpCode::GetHolder { dst, entity } => write!(f, "GET_HOLDER r{dst} r{entity}"),
+            OpCode::GetContents { dst, container } => {
+                write!(f, "GET_CONTENTS r{dst} r{container}")
+            }
+            OpCode::GetExits { dst, room } => write!(f, "GET_EXITS r{dst} r{room}"),
+            OpCode::GetExitTarget {
+                dst,
+                room,
+                direction,
+            } => write!(f, "GET_EXIT_TARGET r{dst} r{room} r{direction}"),
+            OpCode::GetRoom { dst, entity } => write!(f, "GET_ROOM r{dst} r{entity}"),
+            OpCode::InScope { dst, actor, target } => {
+                write!(f, "IN_SCOPE r{dst} r{actor} r{target}")
+            }
+            OpCode::IsHeldBy { dst, item, holder } => {
+                write!(f, "IS_HELD_BY r{dst} r{item} r{holder}")
+            }
+            OpCode::IsPortable { dst, entity } => write!(f, "IS_PORTABLE r{dst} r{entity}"),
         }
     }
 }
