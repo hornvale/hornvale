@@ -290,6 +290,10 @@ impl HandlerRegistry {
     }
 
     /// Register the built-in handlers.
+    ///
+    /// These are deprecated Rust handlers kept for backward compatibility.
+    /// DSL handlers should be used instead.
+    #[allow(deprecated)]
     fn register_builtins(&mut self) {
         use crate::verbs::{
             handle_drop, handle_examine, handle_inventory, handle_look, handle_take,

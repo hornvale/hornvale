@@ -23,7 +23,6 @@ pub mod command;
 
 use crate::compiler::Compiler;
 use crate::core::{EntityId, World};
-use crate::input::{self, Resolver};
 use crate::io::WorldIO;
 use crate::lang::{self, WorldLoader, is_complete};
 use crate::rules::RuleSet;
@@ -130,32 +129,27 @@ pub fn execute_command(
         "quit" | "exit" | "q" => return ReplResult::Exit,
         "" => {}
 
-        // All other commands (including game commands) go through grammar/syntax matching
+        // All other commands (including game commands) go through grammar matching
         _ => {
             // Create stdlib for hook execution
             let stdlib = StdLib::with_builtins();
 
-            // Try grammar-based command matching first (new system)
+            // Try grammar-based command matching with full DSL action support
             if let Some(player) = find_player(world) {
                 let tokens: Vec<&str> = input.split_whitespace().collect();
                 if let Some(grammar_match) = loader
                     .command_registry()
                     .match_input(world, player, &tokens)
                 {
-                    let result =
-                        verbs::execute_grammar_action(world, player, &grammar_match, &stdlib);
-                    io.println(result.output.as_ref());
-                    return ReplResult::Continue;
-                }
-            }
-
-            // Fall back to traditional game command parsing
-            if let Some(player) = find_player(world) {
-                let input_event = input::Input::new(input, world.tick()).with_source(player);
-                if let Some(cmd) = input::parse_input(&input_event) {
-                    let resolver = Resolver::new();
-                    let resolved = resolver.resolve_command(world, player, &cmd);
-                    let result = verbs::execute_command(world, player, &resolved);
+                    // Use execute_grammar_action_full to enable DSL handlers
+                    let result = verbs::execute_grammar_action_full(
+                        world,
+                        player,
+                        &grammar_match,
+                        &stdlib,
+                        Some(loader.action_registry()),
+                        Some(loader.precondition_registry()),
+                    );
                     io.println(result.output.as_ref());
                     return ReplResult::Continue;
                 }
@@ -769,6 +763,15 @@ mod tests {
             Cardinality::Many,
         ));
 
+        // Load grammar command for "look"
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"(command look :aliases ("l") :forms ((() -> look-around)))"#,
+            )
+            .unwrap();
+
         // Create room
         let room = world.create_entity();
         world.set_component(room, "Name", "Test Room");
@@ -808,6 +811,15 @@ mod tests {
             Cardinality::One,
             Cardinality::Many,
         ));
+
+        // Load grammar command for "take"
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"(command take :aliases ("get") :forms (((obj:noun) -> (take obj))))"#,
+            )
+            .unwrap();
 
         // Create room
         let room = world.create_entity();

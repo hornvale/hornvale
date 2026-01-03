@@ -202,10 +202,16 @@ fn is_room(world: &World, entity: EntityId) -> bool {
 }
 
 // ============================================================================
-// Verb handlers
+// Verb handlers (DEPRECATED - use DSL handlers in libs/std/_lib.hvl)
 // ============================================================================
+// These Rust handlers are kept for backward compatibility but should not be
+// used directly. Load the standard library instead:
+//   (load "libs/std/_lib.hvl")
 
 /// Handle the "look" verb - describe current location.
+///
+/// **Deprecated**: Use DSL handler in `libs/std/_lib.hvl` instead.
+#[deprecated(since = "0.1.0", note = "Use DSL handler in libs/std/_lib.hvl instead")]
 pub fn handle_look(world: &World, actor: EntityId) -> VerbResult {
     let room = match world.get_entity_room(actor) {
         Some(r) => r,
@@ -252,6 +258,9 @@ pub fn handle_look(world: &World, actor: EntityId) -> VerbResult {
 }
 
 /// Handle the "inventory" verb - list carried items.
+///
+/// **Deprecated**: Use DSL handler in `libs/std/_lib.hvl` instead.
+#[deprecated(since = "0.1.0", note = "Use DSL handler in libs/std/_lib.hvl instead")]
 pub fn handle_inventory(world: &World, actor: EntityId) -> VerbResult {
     let items = carried_by(world, actor);
 
@@ -269,6 +278,9 @@ pub fn handle_inventory(world: &World, actor: EntityId) -> VerbResult {
 }
 
 /// Handle the "examine" verb - describe an object in detail.
+///
+/// **Deprecated**: Use DSL handler in `libs/std/_lib.hvl` instead.
+#[deprecated(since = "0.1.0", note = "Use DSL handler in libs/std/_lib.hvl instead")]
 pub fn handle_examine(world: &World, target: EntityId) -> VerbResult {
     // Get detailed description, or fall back to brief/name
     if let Some(desc) = world.get_component(target, components::description()) {
@@ -282,6 +294,9 @@ pub fn handle_examine(world: &World, target: EntityId) -> VerbResult {
 }
 
 /// Handle the "take" verb - pick up an object.
+///
+/// **Deprecated**: Use DSL handler in `libs/std/_lib.hvl` instead.
+#[deprecated(since = "0.1.0", note = "Use DSL handler in libs/std/_lib.hvl instead")]
 pub fn handle_take(world: &mut World, actor: EntityId, target: EntityId) -> VerbResult {
     let name = entity_name(world, target);
 
@@ -313,6 +328,9 @@ pub fn handle_take(world: &mut World, actor: EntityId, target: EntityId) -> Verb
 }
 
 /// Handle the "drop" verb - drop an object.
+///
+/// **Deprecated**: Use DSL handler in `libs/std/_lib.hvl` instead.
+#[deprecated(since = "0.1.0", note = "Use DSL handler in libs/std/_lib.hvl instead")]
 pub fn handle_drop(world: &mut World, actor: EntityId, target: EntityId) -> VerbResult {
     let name = entity_name(world, target);
 
@@ -336,6 +354,10 @@ pub fn handle_drop(world: &mut World, actor: EntityId, target: EntityId) -> Verb
 }
 
 /// Handle the "go" verb - move through an exit.
+///
+/// **Deprecated**: Use DSL handler in `libs/std/_lib.hvl` instead.
+#[deprecated(since = "0.1.0", note = "Use DSL handler in libs/std/_lib.hvl instead")]
+#[allow(deprecated)]
 pub fn handle_go(world: &mut World, actor: EntityId, direction: Symbol) -> VerbResult {
     let current_room = match world.get_entity_room(actor) {
         Some(r) => r,
@@ -364,6 +386,14 @@ pub fn handle_go(world: &mut World, actor: EntityId, direction: Symbol) -> VerbR
 }
 
 /// Execute a resolved command.
+///
+/// **Deprecated**: Use `execute_grammar_action_full` with DSL handlers instead.
+/// This function uses the old command parsing system and Rust handlers.
+#[deprecated(
+    since = "0.1.0",
+    note = "Use execute_grammar_action_full with DSL handlers instead"
+)]
+#[allow(deprecated)]
 pub fn execute_command(
     world: &mut World,
     actor: EntityId,
@@ -609,6 +639,10 @@ pub fn execute_grammar_action_full(
 }
 
 /// Execute the default handler for an action (without hooks).
+///
+/// This is a fallback that uses the deprecated Rust handlers when
+/// no DSL handler is available.
+#[allow(deprecated)]
 fn execute_default_handler(
     world: &mut World,
     actor: EntityId,
@@ -685,6 +719,7 @@ fn execute_default_handler(
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use super::*;
     use crate::core::{Cardinality, RelationSchema};
