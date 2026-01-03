@@ -559,15 +559,38 @@ This is more foundational than sensory propagation — it's the soul of an IF en
 
 ### Stage 3: Object Hooks
 **Goal**: Objects respond to being acted upon via Before/On/After handlers.
-**Status**: Not Started
+**Status**: Complete ✓
 
-- [ ] `Before:<action>` component — runs before action, can veto/modify
-- [ ] `On:<action>` component — primary handler, can replace default
-- [ ] `After:<action>` component — runs after action completes
-- [ ] `:handled` return value to suppress default behavior
-- [ ] `:veto` return value to cancel action entirely
-- [ ] Hook invocation order: actor → direct-object → indirect-object → room
-- [ ] DSL syntax for defining hooks inline on entities
+- [x] `Before:<action>` component — runs before action, can veto/modify
+- [x] `On:<action>` component — primary handler, can replace default
+- [x] `After:<action>` component — runs after action completes
+- [x] `:handled` return value to suppress default behavior
+- [x] `:veto` return value to cancel action entirely
+- [x] Hook invocation order: actor → direct-object → indirect-object → room
+- [x] DSL syntax for defining hooks inline on entities
+
+**Implementation Summary**:
+- Created `src/hooks.rs` with HookResult, HookError, HookPipelineResult
+- Hook context opcodes: GetHookActor, GetHookDirectObject, GetHookIndirectObject, GetHookRoom
+- Effect functions: `(say ...)` outputs text, `(destroy ...)` marks entity for deletion
+- Hook bodies stored as `Value::List`, automatically wrapped in `(do ...)` during execution
+- Added `do`/`begin`/`progn` form to compiler for sequencing expressions
+- World helpers: `get_hook()`, `has_hook()`, `get_hooks_for_action()`, `hooks_for_phase()`, `delete_entity()`
+- Integrated into verb execution pipeline with proper Before/On/After ordering
+- DSL loader parses hook components and detects duplicates
+- 33 new tests for hooks module
+
+**Files Created/Modified**:
+- `src/hooks.rs` — Hook execution engine (new)
+- `src/vm/bytecode.rs` — Added hook context and effect opcodes
+- `src/vm/exec.rs` — Added HookContext struct, output buffer, pending deletions
+- `src/compiler.rs` — Added context accessors, effect functions, do/begin/progn form
+- `src/core/component.rs` — Added `components_matching()` iterator
+- `src/core/world.rs` — Added hook helpers and `delete_entity()`
+- `src/verbs.rs` — Integrated hook pipeline into `execute_grammar_action()`
+- `src/lang/loader.rs` — Parse hook DSL syntax
+- `src/repl/mod.rs` — Pass stdlib to verb execution
+- `src/lib.rs` — Export hooks module
 
 **Example**:
 ```lisp
@@ -575,7 +598,7 @@ This is more foundational than sensory propagation — it's the soul of an IF en
   (Name "book")
   (On:burn
     (say "As the flames touch the sacred text, lightning strikes you down!")
-    (kill actor)
+    (destroy (actor))
     :handled))
 
 (entity candles
@@ -584,22 +607,14 @@ This is more foundational than sensory propagation — it's the soul of an IF en
     (say "Let's see, how many objects in a pair? Don't tell me...")
     :handled))
 
-(entity river
-  (Name "river")
-  (On:throw
-    (cond
-      [(eq? direct-object actor)
-       (say "You dive in. The current is too strong...")
-       (drown actor)]
-      [(lit? direct-object)
-       (say "It floats for a moment, then sinks.")
-       (destroy direct-object)]
-      [else
-       (say "It splashes into the water and is gone.")
-       (destroy direct-object)])))
+(entity torch
+  (Name "torch")
+  (On:burn
+    (say "The torch flares brightly!")
+    :handled))
 ```
 
-**Success Criteria**: Objects have custom responses to verbs; "burn book" triggers deity intervention.
+**Success Criteria**: Objects have custom responses to verbs; "burn book" triggers deity intervention. ✓
 
 ### Stage 4: Precondition System
 **Goal**: Actions have declarative preconditions checked before execution.
@@ -758,17 +773,84 @@ Output: "The book splashes into the water and is gone."
 Target: ~80 tests across all stages
 - Stage 1: 29 tests (syntax matching, routing) ✓
 - Stage 2: 48 tests (grammar trie, matcher, predicate, registry) ✓
-- Stage 3: ~20 tests (hook invocation, veto/handled)
+- Stage 3: 33 tests (hook invocation, veto/handled, context opcodes, effects) ✓
 - Stage 4: ~10 tests (precondition checking)
 - Stage 5: ~10 tests (description selection)
 - Stage 6: ~5 tests (direction configuration)
 
-Current: 77 tests (Stage 1: 29, Stage 2: 48)
-Total project: 520 tests passing
+Current: 110 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33)
+Total project: 553 tests passing
 
 ---
 
-## Phase 10: Sensory Propagation
+## Phase 10: Value System Cleanup
+**Goal**: Distinguish `Nil` from `Bool(false)` and clean up value semantics.
+**Status**: Not Started
+
+**Rationale**: Currently, `Value::Bool(false)` serves double duty as both boolean false and "no value" (nil). This conflation is a classic Lisp-ism that causes confusion in a modern strongly-typed context. Separating these concepts enables cleaner semantics and better error messages.
+
+### Deliverables
+- [ ] Add `Value::Nil` variant to represent "no value" / "nothing" / "unset"
+- [ ] Update VM to use `Value::Nil` instead of `Bool(false)` for nil constant
+- [ ] Update hook context opcodes to return `Nil` for missing optional values
+- [ ] Define truthiness: `Nil` and `Bool(false)` are falsy, everything else truthy
+- [ ] Update conditionals (`if`, `and`, `or`) to handle `Nil` correctly
+- [ ] Add `nil?` predicate function to check for nil
+- [ ] Update DSL parser to recognize `nil` keyword
+- [ ] Audit and fix all places using `Bool(false)` as "nothing"
+- [ ] Update tests to distinguish nil from false cases
+
+### Files to Modify
+- `src/core/value.rs` — Add `Nil` variant, update Display/Debug
+- `src/vm/exec.rs` — Update NIL constant, truthiness checks
+- `src/vm/bytecode.rs` — Consider `LoadNil` opcode (or use constant)
+- `src/compiler.rs` — Handle `nil` literal
+- `src/lang/lexer.rs` — Recognize `nil` as keyword/atom
+- `src/hooks.rs` — Update hook context returns
+
+### Semantic Rules
+```
+Truthiness:
+  - Nil       → false
+  - Bool(false) → false
+  - Bool(true)  → true
+  - Everything else → true (Int, Float, String, Symbol, List, EntityRef)
+
+Equality:
+  - Nil == Nil  → true
+  - Nil == Bool(false) → false  (they are distinct!)
+  - Nil == anything_else → false
+```
+
+### Example Impact
+```lisp
+;; Before (confusing):
+(if (direct-object)     ; returns false when missing - is that "no object" or "object is false"?
+    (say "Got it")
+    (say "Nothing there"))
+
+;; After (clear):
+(if (nil? (direct-object))  ; explicit nil check
+    (say "Nothing there")
+    (say "Got it"))
+
+;; Or simply:
+(if (direct-object)     ; now Nil is falsy, Bool(false) would be a different thing
+    (say "Got it")
+    (say "Nothing there"))
+```
+
+### Tests
+Target: ~15 tests
+- Value::Nil creation and equality
+- Truthiness for all value types
+- nil? predicate
+- Hook context returns Nil for missing values
+- Conditional handling of Nil vs Bool(false)
+
+---
+
+## Phase 11: Sensory Propagation
 **Goal**: Stimuli propagate through the room graph.
 **Status**: Not Started (Future)
 
@@ -787,7 +869,7 @@ Total project: 520 tests passing
 
 ---
 
-## Phase 11: Advanced Content
+## Phase 12: Advanced Content
 **Goal**: Build upward as desired.
 **Status**: Not Started (Future)
 

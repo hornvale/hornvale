@@ -286,6 +286,7 @@ impl Compiler {
                 // Control flow
                 "if" => return self.compile_if(args, dst, span),
                 "let" => return self.compile_let(args, dst, span),
+                "do" | "begin" | "progn" => return self.compile_do(args, dst, span),
 
                 // World access
                 "get-component" => return self.compile_get_component(args, dst, span),
@@ -295,6 +296,60 @@ impl Compiler {
                 // Query operations
                 "descendants" => return self.compile_descendants(args, dst, span),
                 "ancestors" => return self.compile_ancestors(args, dst, span),
+
+                // Hook context accessors (no arguments)
+                "actor" => {
+                    if !args.is_empty() {
+                        return Err(CompileError::ArityMismatch {
+                            expected: 0,
+                            got: args.len(),
+                            span,
+                        });
+                    }
+                    self.chunk
+                        .emit(OpCode::GetHookActor { dst }, self.current_line);
+                    return Ok(());
+                }
+                "direct-object" => {
+                    if !args.is_empty() {
+                        return Err(CompileError::ArityMismatch {
+                            expected: 0,
+                            got: args.len(),
+                            span,
+                        });
+                    }
+                    self.chunk
+                        .emit(OpCode::GetHookDirectObject { dst }, self.current_line);
+                    return Ok(());
+                }
+                "indirect-object" => {
+                    if !args.is_empty() {
+                        return Err(CompileError::ArityMismatch {
+                            expected: 0,
+                            got: args.len(),
+                            span,
+                        });
+                    }
+                    self.chunk
+                        .emit(OpCode::GetHookIndirectObject { dst }, self.current_line);
+                    return Ok(());
+                }
+                "room" => {
+                    if !args.is_empty() {
+                        return Err(CompileError::ArityMismatch {
+                            expected: 0,
+                            got: args.len(),
+                            span,
+                        });
+                    }
+                    self.chunk
+                        .emit(OpCode::GetHookRoom { dst }, self.current_line);
+                    return Ok(());
+                }
+
+                // Effect operations
+                "say" => return self.compile_say(args, dst, span),
+                "destroy" => return self.compile_destroy(args, dst, span),
 
                 _ => {}
             }
@@ -552,6 +607,29 @@ impl Compiler {
         Ok(())
     }
 
+    /// Compile `do`/`begin`/`progn` - evaluate expressions in sequence, return last.
+    fn compile_do(&mut self, args: &[SExpr], dst: Reg, _span: Span) -> Result<(), CompileError> {
+        if args.is_empty() {
+            // Empty do returns nil (false)
+            self.chunk
+                .emit(OpCode::LoadBool { dst, value: false }, self.current_line);
+            return Ok(());
+        }
+
+        // Compile all expressions, only the last one uses dst
+        for (i, expr) in args.iter().enumerate() {
+            if i == args.len() - 1 {
+                self.compile_expr(expr, dst)?;
+            } else {
+                let temp = self.alloc_register()?;
+                self.compile_expr(expr, temp)?;
+                self.free_register(temp);
+            }
+        }
+
+        Ok(())
+    }
+
     /// Compile `get-component` / `get`.
     fn compile_get_component(
         &mut self,
@@ -703,6 +781,61 @@ impl Compiler {
         self.free_register(depth_reg);
         self.free_register(relation_reg);
         self.free_register(start_reg);
+        Ok(())
+    }
+
+    /// Compile a `say` effect (output a message).
+    fn compile_say(&mut self, args: &[SExpr], dst: Reg, span: Span) -> Result<(), CompileError> {
+        if args.len() != 1 {
+            return Err(CompileError::ArityMismatch {
+                expected: 1,
+                got: args.len(),
+                span,
+            });
+        }
+
+        // Compile the message argument
+        let msg_reg = self.alloc_register()?;
+        self.compile_expr(&args[0], msg_reg)?;
+
+        // Emit the Say opcode
+        self.chunk
+            .emit(OpCode::Say { message: msg_reg }, self.current_line);
+
+        // say returns nil
+        self.chunk.emit(OpCode::LoadNil { dst }, self.current_line);
+
+        self.free_register(msg_reg);
+        Ok(())
+    }
+
+    /// Compile a `destroy` effect (mark entity for deletion).
+    fn compile_destroy(
+        &mut self,
+        args: &[SExpr],
+        dst: Reg,
+        span: Span,
+    ) -> Result<(), CompileError> {
+        if args.len() != 1 {
+            return Err(CompileError::ArityMismatch {
+                expected: 1,
+                got: args.len(),
+                span,
+            });
+        }
+
+        // Compile the entity argument
+        let entity_reg = self.alloc_register()?;
+        self.compile_expr(&args[0], entity_reg)?;
+
+        // Emit the Destroy opcode
+        self.chunk
+            .emit(OpCode::Destroy { entity: entity_reg }, self.current_line);
+
+        // destroy returns nil
+        self.chunk.emit(OpCode::LoadNil { dst }, self.current_line);
+
+        self.free_register(entity_reg);
         Ok(())
     }
 

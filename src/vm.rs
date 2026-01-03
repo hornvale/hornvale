@@ -36,5 +36,5 @@ mod stdlib;
 
 pub use bytecode::{ConstIdx, OpCode, Reg};
 pub use chunk::Chunk;
-pub use exec::{VM, VMError};
+pub use exec::{HookContext, VM, VMError};
 pub use stdlib::{StdFn, StdLib, StdLibError};

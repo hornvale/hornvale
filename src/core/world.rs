@@ -711,6 +711,89 @@ impl World {
 
         count
     }
+
+    // === Hook helpers ===
+
+    /// Get a hook component for an entity.
+    ///
+    /// Hook components are named `{phase}:{action}`, e.g., "On:burn", "Before:take".
+    ///
+    /// # Arguments
+    /// * `entity` - The entity to check
+    /// * `phase` - The hook phase ("Before", "On", or "After")
+    /// * `action` - The action name (e.g., "burn", "take")
+    ///
+    /// # Returns
+    /// The hook expression value if the entity has a hook for this phase/action.
+    pub fn get_hook(&self, entity: EntityId, phase: &str, action: &str) -> Option<&Value> {
+        let component_name = format!("{phase}:{action}");
+        self.get_component(entity, ComponentTypeId::new(&component_name))
+    }
+
+    /// Get all hook components for an entity matching a specific action.
+    ///
+    /// Returns (before, on, after) hooks for the action.
+    pub fn get_hooks_for_action(
+        &self,
+        entity: EntityId,
+        action: &str,
+    ) -> (Option<&Value>, Option<&Value>, Option<&Value>) {
+        (
+            self.get_hook(entity, "Before", action),
+            self.get_hook(entity, "On", action),
+            self.get_hook(entity, "After", action),
+        )
+    }
+
+    /// Check if an entity has any hook for a given action.
+    pub fn has_hook(&self, entity: EntityId, phase: &str, action: &str) -> bool {
+        self.get_hook(entity, phase, action).is_some()
+    }
+
+    /// Find all hook components on an entity for a given phase.
+    ///
+    /// Returns an iterator of (action_name, hook_value) pairs.
+    pub fn hooks_for_phase<'a>(
+        &'a self,
+        entity: EntityId,
+        phase: &'a str,
+    ) -> impl Iterator<Item = (String, &'a Value)> {
+        let prefix = format!("{phase}:");
+        let prefix_for_strip = prefix.clone();
+        self.components
+            .components_matching(entity, move |name| name.starts_with(&prefix))
+            .map(move |(comp_id, value)| {
+                let name = comp_id.name();
+                let action = name
+                    .strip_prefix(&prefix_for_strip)
+                    .unwrap_or(&name)
+                    .to_string();
+                (action, value)
+            })
+    }
+
+    /// Delete an entity and all its components and relations.
+    pub fn delete_entity(&mut self, entity: EntityId) {
+        // Remove all components
+        self.components.remove_entity(entity);
+
+        // Remove from all relations (both directions)
+        for rel_type in self.relation_types().collect::<Vec<_>>() {
+            // Remove relations where this entity is the "from"
+            let targets: Vec<_> = self.query_relation_forward(rel_type, entity);
+            for target in targets {
+                self.remove_relation(rel_type, entity, target);
+            }
+            // Remove relations where this entity is the "to"
+            let sources: Vec<_> = self.query_relation_reverse(rel_type, entity);
+            for source in sources {
+                self.remove_relation(rel_type, source, entity);
+            }
+        }
+
+        // Note: EntityAllocator doesn't currently support deletion,
+        // but the entity is now orphaned (no components or relations).
+    }
 }
 
 impl Default for World {

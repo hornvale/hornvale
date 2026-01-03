@@ -394,7 +394,96 @@ pub fn execute_command(
 ///
 /// This function dispatches to verb handlers based on the action name
 /// from a `GrammarMatch`, using pre-resolved entity slots.
+///
+/// Hooks are executed in order:
+/// 1. Before hooks (can veto)
+/// 2. On hooks (can handle)
+/// 3. Default handler (if not handled)
+/// 4. After hooks
 pub fn execute_grammar_action(
+    world: &mut World,
+    actor: EntityId,
+    grammar_match: &crate::GrammarMatch,
+    stdlib: &crate::vm::StdLib,
+) -> VerbResult {
+    use crate::hooks::{run_after_hooks, run_before_hooks, run_on_hooks};
+    use crate::vm::HookContext;
+
+    let action_name = grammar_match.action.action_name();
+    let action_str = action_name.as_str();
+
+    // Build hook context
+    let direct_object = grammar_match.get_entity("obj");
+    let indirect_object = grammar_match.get_entity("indirect");
+    let room = get_room(world, actor);
+
+    let mut hook_context = HookContext::new(actor);
+    if let Some(obj) = direct_object {
+        hook_context = hook_context.with_direct_object(obj);
+    }
+    if let Some(obj) = indirect_object {
+        hook_context = hook_context.with_indirect_object(obj);
+    }
+    if let Some(r) = room {
+        hook_context = hook_context.with_room(r);
+    }
+
+    let mut output_parts: Vec<String> = Vec::new();
+    let mut pending_deletions: Vec<EntityId> = Vec::new();
+
+    // Run Before hooks
+    if let Ok(before_result) = run_before_hooks(world, &action_str, &hook_context, stdlib) {
+        output_parts.extend(before_result.output);
+        pending_deletions.extend(before_result.deletions);
+
+        if before_result.vetoed {
+            // Apply deletions even on veto
+            for entity in pending_deletions {
+                world.delete_entity(entity);
+            }
+            let msg = if output_parts.is_empty() {
+                "You can't do that.".to_string()
+            } else {
+                output_parts.join("\n")
+            };
+            return VerbResult::fail(msg);
+        }
+    }
+
+    // Run On hooks
+    let mut handled = false;
+    if let Ok(on_result) = run_on_hooks(world, &action_str, &hook_context, stdlib) {
+        output_parts.extend(on_result.output);
+        pending_deletions.extend(on_result.deletions);
+        handled = on_result.handled;
+    }
+
+    // Run default handler if not handled by On hook
+    if !handled {
+        let default_result = execute_default_handler(world, actor, grammar_match);
+        if !default_result.output.is_empty() {
+            output_parts.push(default_result.output.to_string());
+        }
+    }
+
+    // Run After hooks
+    if let Ok(after_result) = run_after_hooks(world, &action_str, &hook_context, stdlib) {
+        output_parts.extend(after_result.output);
+        pending_deletions.extend(after_result.deletions);
+    }
+
+    // Apply pending deletions
+    for entity in pending_deletions {
+        world.delete_entity(entity);
+    }
+
+    // Combine output
+    let final_output = output_parts.join("\n");
+    VerbResult::success(final_output)
+}
+
+/// Execute the default handler for an action (without hooks).
+fn execute_default_handler(
     world: &mut World,
     actor: EntityId,
     grammar_match: &crate::GrammarMatch,

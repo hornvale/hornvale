@@ -122,6 +122,34 @@ impl ComponentStorage {
     pub fn component_types(&self) -> impl Iterator<Item = ComponentTypeId> + '_ {
         self.tables.keys().copied()
     }
+
+    /// Find all components for an entity whose names match a predicate.
+    ///
+    /// This is useful for finding hook components like `On:burn`, `Before:take`, etc.
+    ///
+    /// # Example
+    /// ```ignore
+    /// // Find all "On:*" hooks for an entity
+    /// let on_hooks: Vec<_> = storage
+    ///     .components_matching(entity, |name| name.starts_with("On:"))
+    ///     .collect();
+    /// ```
+    pub fn components_matching<'a, F>(
+        &'a self,
+        entity: EntityId,
+        predicate: F,
+    ) -> impl Iterator<Item = (ComponentTypeId, &'a Value)>
+    where
+        F: Fn(&str) -> bool + 'a,
+    {
+        self.tables.iter().filter_map(move |(comp_id, table)| {
+            if predicate(&comp_id.name()) {
+                table.get(&entity).map(|value| (*comp_id, value))
+            } else {
+                None
+            }
+        })
+    }
 }
 
 #[cfg(test)]

@@ -613,15 +613,18 @@ impl WorldLoader {
         let entity = world.create_entity();
         self.entity_names.insert(name, entity);
 
+        // Track hook components to detect duplicates
+        let mut seen_hooks: std::collections::HashSet<String> = std::collections::HashSet::new();
+
         // Process components and relations
         for item in &items[2..] {
             let comp = item.as_list().ok_or_else(|| {
                 LoadError::InvalidDefinition("entity component must be a list".to_string())
             })?;
 
-            if comp.len() != 2 {
+            if comp.is_empty() {
                 return Err(LoadError::InvalidDefinition(
-                    "component must have name and value".to_string(),
+                    "component cannot be empty".to_string(),
                 ));
             }
 
@@ -629,19 +632,53 @@ impl WorldLoader {
                 LoadError::InvalidDefinition("component name must be a symbol".to_string())
             })?;
 
-            // Check if this is a relation (value is a symbol that could be an entity name)
-            if let Some(target_name) = comp[1].as_symbol() {
-                // Could be a relation - defer resolution
-                self.pending_relations
-                    .push((entity, comp_name, target_name));
+            let comp_name_str = comp_name.as_str();
+
+            // Check if this is a hook component (Before:*, On:*, After:*)
+            if Self::is_hook_component(&comp_name_str) {
+                // Check for duplicate hooks
+                if seen_hooks.contains(&comp_name_str) {
+                    return Err(LoadError::InvalidDefinition(format!(
+                        "duplicate hook '{}' on entity '{}'",
+                        comp_name_str,
+                        name.as_str()
+                    )));
+                }
+                seen_hooks.insert(comp_name_str.clone());
+
+                // Hook component: rest of list is the hook body
+                // Convert body expressions to Value::List
+                let body_values: Result<Vec<Value>, _> =
+                    comp[1..].iter().map(|e| self.expr_to_value(e)).collect();
+                let hook_body = Value::list(body_values?);
+
+                world.set_component(entity, &*comp_name_str, hook_body);
+            } else if comp.len() != 2 {
+                return Err(LoadError::InvalidDefinition(
+                    "component must have name and value".to_string(),
+                ));
             } else {
-                // Regular component
-                let value = self.expr_to_value(&comp[1])?;
-                world.set_component(entity, comp_name.as_str().as_str(), value);
+                // Regular component (name value)
+
+                // Check if this is a relation (value is a symbol that could be an entity name)
+                if let Some(target_name) = comp[1].as_symbol() {
+                    // Could be a relation - defer resolution
+                    self.pending_relations
+                        .push((entity, comp_name, target_name));
+                } else {
+                    // Regular component
+                    let value = self.expr_to_value(&comp[1])?;
+                    world.set_component(entity, comp_name.as_str().as_str(), value);
+                }
             }
         }
 
         Ok(())
+    }
+
+    /// Check if a component name is a hook component.
+    fn is_hook_component(name: &str) -> bool {
+        name.starts_with("Before:") || name.starts_with("On:") || name.starts_with("After:")
     }
 
     /// Load a relation schema.

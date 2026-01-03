@@ -147,6 +147,26 @@ pub enum OpCode {
 
     /// Return nil: return nil
     ReturnNil,
+
+    // === Hook Context ===
+    /// Get the actor from hook context: R[dst] = hook_context.actor
+    GetHookActor { dst: Reg },
+
+    /// Get the direct object from hook context: R[dst] = hook_context.direct_object (or nil)
+    GetHookDirectObject { dst: Reg },
+
+    /// Get the indirect object from hook context: R[dst] = hook_context.indirect_object (or nil)
+    GetHookIndirectObject { dst: Reg },
+
+    /// Get the room from hook context: R[dst] = hook_context.room (or nil)
+    GetHookRoom { dst: Reg },
+
+    // === Effects ===
+    /// Output a message: append R[message] to output buffer
+    Say { message: Reg },
+
+    /// Mark an entity for destruction: pending_deletions.push(R[entity])
+    Destroy { entity: Reg },
 }
 
 impl OpCode {
@@ -185,6 +205,12 @@ impl OpCode {
             OpCode::RandomRange { .. } => "RANDOM_RANGE",
             OpCode::Return { .. } => "RETURN",
             OpCode::ReturnNil => "RETURN_NIL",
+            OpCode::GetHookActor { .. } => "GET_HOOK_ACTOR",
+            OpCode::GetHookDirectObject { .. } => "GET_HOOK_DIRECT_OBJECT",
+            OpCode::GetHookIndirectObject { .. } => "GET_HOOK_INDIRECT_OBJECT",
+            OpCode::GetHookRoom { .. } => "GET_HOOK_ROOM",
+            OpCode::Say { .. } => "SAY",
+            OpCode::Destroy { .. } => "DESTROY",
         }
     }
 }
@@ -255,6 +281,12 @@ impl std::fmt::Display for OpCode {
             }
             OpCode::Return { src } => write!(f, "RETURN r{src}"),
             OpCode::ReturnNil => write!(f, "RETURN_NIL"),
+            OpCode::GetHookActor { dst } => write!(f, "GET_HOOK_ACTOR r{dst}"),
+            OpCode::GetHookDirectObject { dst } => write!(f, "GET_HOOK_DIRECT_OBJECT r{dst}"),
+            OpCode::GetHookIndirectObject { dst } => write!(f, "GET_HOOK_INDIRECT_OBJECT r{dst}"),
+            OpCode::GetHookRoom { dst } => write!(f, "GET_HOOK_ROOM r{dst}"),
+            OpCode::Say { message } => write!(f, "SAY r{message}"),
+            OpCode::Destroy { entity } => write!(f, "DESTROY r{entity}"),
         }
     }
 }

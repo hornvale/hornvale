@@ -6,6 +6,55 @@ use super::stdlib::{StdLib, StdLibError};
 use crate::core::{ComponentTypeId, EntityId, RelationTypeId, Value, World};
 use crate::rng::SeededRng;
 
+/// Context for hook execution.
+///
+/// Provides access to the entities involved in an action:
+/// - `actor`: The entity performing the action (always present)
+/// - `direct_object`: The primary target of the action (e.g., "lamp" in "take lamp")
+/// - `indirect_object`: Secondary target (e.g., "table" in "put lamp on table")
+/// - `room`: The room where the action is taking place
+#[derive(Debug, Clone)]
+pub struct HookContext {
+    /// The entity performing the action.
+    pub actor: EntityId,
+    /// The direct object of the action (if any).
+    pub direct_object: Option<EntityId>,
+    /// The indirect object of the action (if any).
+    pub indirect_object: Option<EntityId>,
+    /// The room where the action takes place (if known).
+    pub room: Option<EntityId>,
+}
+
+impl HookContext {
+    /// Create a new hook context with just an actor.
+    pub fn new(actor: EntityId) -> Self {
+        Self {
+            actor,
+            direct_object: None,
+            indirect_object: None,
+            room: None,
+        }
+    }
+
+    /// Set the direct object.
+    pub fn with_direct_object(mut self, obj: EntityId) -> Self {
+        self.direct_object = Some(obj);
+        self
+    }
+
+    /// Set the indirect object.
+    pub fn with_indirect_object(mut self, obj: EntityId) -> Self {
+        self.indirect_object = Some(obj);
+        self
+    }
+
+    /// Set the room.
+    pub fn with_room(mut self, room: EntityId) -> Self {
+        self.room = Some(room);
+        self
+    }
+}
+
 /// VM execution error.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum VMError {
@@ -36,6 +85,9 @@ pub enum VMError {
     #[error("no RNG available (VM needs a seed for random operations)")]
     NoRng,
 
+    #[error("no hook context available (operation requires hook execution context)")]
+    NoHookContext,
+
     #[error("instruction pointer out of bounds")]
     IPOutOfBounds,
 }
@@ -59,6 +111,12 @@ pub struct VM<'a> {
     entity: Option<EntityId>,
     /// Random number generator (for seeded generation).
     rng: Option<SeededRng>,
+    /// Hook execution context (actor, objects, room).
+    hook_context: Option<HookContext>,
+    /// Output buffer for `say` effects.
+    output_buffer: Vec<String>,
+    /// Entities marked for destruction by `destroy` effects.
+    pending_deletions: Vec<EntityId>,
 }
 
 impl<'a> VM<'a> {
@@ -72,6 +130,9 @@ impl<'a> VM<'a> {
             stdlib,
             entity: None,
             rng: None,
+            hook_context: None,
+            output_buffer: Vec::new(),
+            pending_deletions: Vec::new(),
         }
     }
 
@@ -91,6 +152,22 @@ impl<'a> VM<'a> {
     pub fn with_seed(mut self, seed: u64) -> Self {
         self.rng = Some(SeededRng::new(seed));
         self
+    }
+
+    /// Set the hook context for hook execution.
+    pub fn with_hook_context(mut self, ctx: HookContext) -> Self {
+        self.hook_context = Some(ctx);
+        self
+    }
+
+    /// Take the output buffer, leaving it empty.
+    pub fn take_output(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.output_buffer)
+    }
+
+    /// Take the pending deletions, leaving the list empty.
+    pub fn take_pending_deletions(&mut self) -> Vec<EntityId> {
+        std::mem::take(&mut self.pending_deletions)
     }
 
     /// Execute the chunk and return the result.
@@ -409,6 +486,54 @@ impl<'a> VM<'a> {
 
             OpCode::ReturnNil => {
                 return Ok(ControlFlow::Return(NIL.clone()));
+            }
+
+            // === Hook Context ===
+            OpCode::GetHookActor { dst } => {
+                let ctx = self.hook_context.as_ref().ok_or(VMError::NoHookContext)?;
+                self.set_reg(dst, Value::EntityRef(ctx.actor));
+            }
+
+            OpCode::GetHookDirectObject { dst } => {
+                let ctx = self.hook_context.as_ref().ok_or(VMError::NoHookContext)?;
+                let result = ctx
+                    .direct_object
+                    .map(Value::EntityRef)
+                    .unwrap_or_else(|| NIL.clone());
+                self.set_reg(dst, result);
+            }
+
+            OpCode::GetHookIndirectObject { dst } => {
+                let ctx = self.hook_context.as_ref().ok_or(VMError::NoHookContext)?;
+                let result = ctx
+                    .indirect_object
+                    .map(Value::EntityRef)
+                    .unwrap_or_else(|| NIL.clone());
+                self.set_reg(dst, result);
+            }
+
+            OpCode::GetHookRoom { dst } => {
+                let ctx = self.hook_context.as_ref().ok_or(VMError::NoHookContext)?;
+                let result = ctx
+                    .room
+                    .map(Value::EntityRef)
+                    .unwrap_or_else(|| NIL.clone());
+                self.set_reg(dst, result);
+            }
+
+            // === Effects ===
+            OpCode::Say { message } => {
+                let msg = self.get_reg(message);
+                let text = match msg {
+                    Value::String(s) => s.to_string(),
+                    other => other.to_string(),
+                };
+                self.output_buffer.push(text);
+            }
+
+            OpCode::Destroy { entity } => {
+                let entity_id = self.as_entity(self.get_reg(entity))?;
+                self.pending_deletions.push(entity_id);
             }
         }
 

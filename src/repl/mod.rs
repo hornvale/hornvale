@@ -132,6 +132,9 @@ pub fn execute_command(
 
         // All other commands (including game commands) go through grammar/syntax matching
         _ => {
+            // Create stdlib for hook execution
+            let stdlib = StdLib::with_builtins();
+
             // Try grammar-based command matching first (new system)
             if let Some(player) = find_player(world) {
                 let tokens: Vec<&str> = input.split_whitespace().collect();
@@ -139,7 +142,8 @@ pub fn execute_command(
                     .command_registry()
                     .match_input(world, player, &tokens)
                 {
-                    let result = verbs::execute_grammar_action(world, player, &grammar_match);
+                    let result =
+                        verbs::execute_grammar_action(world, player, &grammar_match, &stdlib);
                     io.println(result.output.as_ref());
                     return ReplResult::Continue;
                 }
