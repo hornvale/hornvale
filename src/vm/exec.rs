@@ -723,6 +723,18 @@ impl<'a> VM<'a> {
                 let result = self.world.is_portable(entity_id);
                 self.set_reg(dst, Value::Bool(result));
             }
+
+            OpCode::The { dst, entity } => {
+                let entity_id = self.as_entity(self.get_reg(entity))?;
+                let result = self.format_the(entity_id);
+                self.set_reg(dst, Value::string(result));
+            }
+
+            OpCode::A { dst, entity } => {
+                let entity_id = self.as_entity(self.get_reg(entity))?;
+                let result = self.format_a(entity_id);
+                self.set_reg(dst, Value::string(result));
+            }
         }
 
         Ok(ControlFlow::Continue)
@@ -825,6 +837,64 @@ impl<'a> VM<'a> {
                 expected: "int",
                 got: other.type_name(),
             }),
+        }
+    }
+
+    // === Article generation helpers ===
+
+    /// Get the name of an entity, or "something" if no Name component.
+    fn get_entity_name(&self, entity: EntityId) -> String {
+        self.world
+            .get_component(entity, "Name")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "something".to_string())
+    }
+
+    /// Check if entity has a boolean component set to true.
+    fn has_flag(&self, entity: EntityId, component: &str) -> bool {
+        self.world
+            .get_component(entity, component)
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+    }
+
+    /// Format entity with definite article: "the lamp", "Bob" (proper noun)
+    fn format_the(&self, entity: EntityId) -> String {
+        let name = self.get_entity_name(entity);
+
+        // Proper nouns and no-article entities get no article
+        if self.has_flag(entity, "ProperNoun") || self.has_flag(entity, "NoArticle") {
+            return name;
+        }
+
+        format!("the {name}")
+    }
+
+    /// Format entity with indefinite article: "a lamp", "an apple", "Bob" (proper noun)
+    fn format_a(&self, entity: EntityId) -> String {
+        let name = self.get_entity_name(entity);
+
+        // Proper nouns and no-article entities get no article
+        if self.has_flag(entity, "ProperNoun") || self.has_flag(entity, "NoArticle") {
+            return name;
+        }
+
+        // Check VowelSound flag first (explicit override)
+        let use_an = if self.has_flag(entity, "VowelSound") {
+            true
+        } else {
+            // Fall back to heuristic: check if name starts with a vowel
+            name.chars()
+                .next()
+                .map(|c| matches!(c.to_ascii_lowercase(), 'a' | 'e' | 'i' | 'o' | 'u'))
+                .unwrap_or(false)
+        };
+
+        if use_an {
+            format!("an {name}")
+        } else {
+            format!("a {name}")
         }
     }
 }
@@ -1698,5 +1768,239 @@ mod tests {
         let result = vm.run().unwrap();
 
         assert_eq!(result, Value::Bool(false));
+    }
+
+    // === Article Generation Tests ===
+
+    #[test]
+    fn test_the_basic() {
+        let mut world = World::new();
+        let lamp = world.create_entity();
+        world.set_component(lamp, "Name", Value::string("brass lamp"));
+
+        let mut chunk = Chunk::new();
+        let lamp_idx = chunk.add_constant(Value::EntityRef(lamp));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: lamp_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::The { dst: 1, entity: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::string("the brass lamp"));
+    }
+
+    #[test]
+    fn test_the_proper_noun() {
+        let mut world = World::new();
+        let bob = world.create_entity();
+        world.set_component(bob, "Name", Value::string("Bob"));
+        world.set_component(bob, "ProperNoun", Value::Bool(true));
+
+        let mut chunk = Chunk::new();
+        let bob_idx = chunk.add_constant(Value::EntityRef(bob));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: bob_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::The { dst: 1, entity: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::string("Bob"));
+    }
+
+    #[test]
+    fn test_the_no_article() {
+        let mut world = World::new();
+        let you = world.create_entity();
+        world.set_component(you, "Name", Value::string("you"));
+        world.set_component(you, "NoArticle", Value::Bool(true));
+
+        let mut chunk = Chunk::new();
+        let you_idx = chunk.add_constant(Value::EntityRef(you));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: you_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::The { dst: 1, entity: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::string("you"));
+    }
+
+    #[test]
+    fn test_the_no_name() {
+        let mut world = World::new();
+        let entity = world.create_entity();
+        // No Name component
+
+        let mut chunk = Chunk::new();
+        let entity_idx = chunk.add_constant(Value::EntityRef(entity));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: entity_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::The { dst: 1, entity: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::string("the something"));
+    }
+
+    #[test]
+    fn test_a_basic() {
+        let mut world = World::new();
+        let lamp = world.create_entity();
+        world.set_component(lamp, "Name", Value::string("lamp"));
+
+        let mut chunk = Chunk::new();
+        let lamp_idx = chunk.add_constant(Value::EntityRef(lamp));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: lamp_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::A { dst: 1, entity: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::string("a lamp"));
+    }
+
+    #[test]
+    fn test_a_vowel_heuristic() {
+        let mut world = World::new();
+        let apple = world.create_entity();
+        world.set_component(apple, "Name", Value::string("apple"));
+        // No VowelSound flag - should use heuristic
+
+        let mut chunk = Chunk::new();
+        let apple_idx = chunk.add_constant(Value::EntityRef(apple));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: apple_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::A { dst: 1, entity: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::string("an apple"));
+    }
+
+    #[test]
+    fn test_a_vowel_flag_override() {
+        let mut world = World::new();
+        // "hour" starts with consonant but has vowel sound
+        let hour = world.create_entity();
+        world.set_component(hour, "Name", Value::string("hour"));
+        world.set_component(hour, "VowelSound", Value::Bool(true));
+
+        let mut chunk = Chunk::new();
+        let hour_idx = chunk.add_constant(Value::EntityRef(hour));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: hour_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::A { dst: 1, entity: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::string("an hour"));
+    }
+
+    #[test]
+    fn test_a_proper_noun() {
+        let mut world = World::new();
+        let bob = world.create_entity();
+        world.set_component(bob, "Name", Value::string("Bob"));
+        world.set_component(bob, "ProperNoun", Value::Bool(true));
+
+        let mut chunk = Chunk::new();
+        let bob_idx = chunk.add_constant(Value::EntityRef(bob));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: bob_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::A { dst: 1, entity: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::string("Bob"));
+    }
+
+    #[test]
+    fn test_a_no_article() {
+        let mut world = World::new();
+        let you = world.create_entity();
+        world.set_component(you, "Name", Value::string("you"));
+        world.set_component(you, "NoArticle", Value::Bool(true));
+
+        let mut chunk = Chunk::new();
+        let you_idx = chunk.add_constant(Value::EntityRef(you));
+        chunk.emit(
+            OpCode::LoadConst {
+                dst: 0,
+                idx: you_idx,
+            },
+            1,
+        );
+        chunk.emit(OpCode::A { dst: 1, entity: 0 }, 1);
+        chunk.emit(OpCode::Return { src: 1 }, 1);
+
+        let stdlib = StdLib::with_builtins();
+        let mut vm = VM::new(&chunk, &world, &stdlib);
+        let result = vm.run().unwrap();
+
+        assert_eq!(result, Value::string("you"));
     }
 }

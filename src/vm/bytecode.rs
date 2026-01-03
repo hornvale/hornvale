@@ -209,6 +209,15 @@ pub enum OpCode {
 
     /// Check if entity is portable: R[dst] = has Portable=true or lacks Fixed=true
     IsPortable { dst: Reg, entity: Reg },
+
+    // === Description/Article Generation ===
+    /// Generate definite article + name: R[dst] = "the " + name(R[entity])
+    /// Respects ProperNoun (no article), NoArticle components
+    The { dst: Reg, entity: Reg },
+
+    /// Generate indefinite article + name: R[dst] = "a/an " + name(R[entity])
+    /// Respects ProperNoun (no article), NoArticle, VowelSound components
+    A { dst: Reg, entity: Reg },
 }
 
 impl OpCode {
@@ -264,6 +273,8 @@ impl OpCode {
             OpCode::InScope { .. } => "IN_SCOPE",
             OpCode::IsHeldBy { .. } => "IS_HELD_BY",
             OpCode::IsPortable { .. } => "IS_PORTABLE",
+            OpCode::The { .. } => "THE",
+            OpCode::A { .. } => "A",
         }
     }
 }
@@ -371,6 +382,8 @@ impl std::fmt::Display for OpCode {
                 write!(f, "IS_HELD_BY r{dst} r{item} r{holder}")
             }
             OpCode::IsPortable { dst, entity } => write!(f, "IS_PORTABLE r{dst} r{entity}"),
+            OpCode::The { dst, entity } => write!(f, "THE r{dst} r{entity}"),
+            OpCode::A { dst, entity } => write!(f, "A r{dst} r{entity}"),
         }
     }
 }

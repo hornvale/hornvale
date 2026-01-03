@@ -45,6 +45,10 @@
 //! (held-by? item holder)            ; is item held by holder?
 //! (portable? entity)                ; is entity portable?
 //!
+//! ;; Article generation
+//! (the entity)                      ; "the lamp" or "Bob" for proper nouns
+//! (a entity)                        ; "a lamp" or "an apple" for vowel sounds
+//!
 //! ;; Graph traversal queries (return lists of entities)
 //! (descendants entity :RelationType max-depth)  ; forward transitive closure
 //! (ancestors entity :RelationType max-depth)    ; reverse transitive closure
@@ -394,6 +398,10 @@ impl Compiler {
                 "in-scope?" => return self.compile_in_scope(args, dst, span),
                 "held-by?" => return self.compile_held_by(args, dst, span),
                 "portable?" => return self.compile_portable(args, dst, span),
+
+                // Article generation
+                "the" => return self.compile_the(args, dst, span),
+                "a" => return self.compile_a(args, dst, span),
 
                 _ => {}
             }
@@ -1242,6 +1250,58 @@ impl Compiler {
 
         self.chunk.emit(
             OpCode::IsPortable {
+                dst,
+                entity: entity_reg,
+            },
+            self.current_line,
+        );
+
+        self.free_register(entity_reg);
+        Ok(())
+    }
+
+    // === Article Generation ===
+
+    /// Compile `the` (entity) -> "the lamp" or "Bob" for proper nouns
+    fn compile_the(&mut self, args: &[SExpr], dst: Reg, span: Span) -> Result<(), CompileError> {
+        if args.len() != 1 {
+            return Err(CompileError::ArityMismatch {
+                expected: 1,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let entity_reg = self.alloc_register()?;
+        self.compile_expr(&args[0], entity_reg)?;
+
+        self.chunk.emit(
+            OpCode::The {
+                dst,
+                entity: entity_reg,
+            },
+            self.current_line,
+        );
+
+        self.free_register(entity_reg);
+        Ok(())
+    }
+
+    /// Compile `a` (entity) -> "a lamp" or "an apple" or "Bob" for proper nouns
+    fn compile_a(&mut self, args: &[SExpr], dst: Reg, span: Span) -> Result<(), CompileError> {
+        if args.len() != 1 {
+            return Err(CompileError::ArityMismatch {
+                expected: 1,
+                got: args.len(),
+                span,
+            });
+        }
+
+        let entity_reg = self.alloc_register()?;
+        self.compile_expr(&args[0], entity_reg)?;
+
+        self.chunk.emit(
+            OpCode::A {
                 dst,
                 entity: entity_reg,
             },

@@ -66,6 +66,49 @@ pub mod components {
     pub fn is_player() -> ComponentTypeId {
         ComponentTypeId::new("IsPlayer")
     }
+
+    // --- Article-related components ---
+
+    /// Whether name is a proper noun (no article, capitalize).
+    /// e.g., "Bob" not "the Bob"
+    pub fn proper_noun() -> ComponentTypeId {
+        ComponentTypeId::new("ProperNoun")
+    }
+
+    /// Whether name starts with a vowel sound (use "an" not "a").
+    /// e.g., "an apple" not "a apple"
+    pub fn vowel_sound() -> ComponentTypeId {
+        ComponentTypeId::new("VowelSound")
+    }
+
+    /// Whether to omit articles entirely.
+    /// e.g., "you" not "a you" or "the you"
+    pub fn no_article() -> ComponentTypeId {
+        ComponentTypeId::new("NoArticle")
+    }
+
+    /// Whether name is plural.
+    /// e.g., "pants" (affects verb agreement)
+    pub fn plural_noun() -> ComponentTypeId {
+        ComponentTypeId::new("PluralNoun")
+    }
+
+    /// Description shown before object is tampered with.
+    /// e.g., "A brass lantern is on the trophy case."
+    pub fn initial_description() -> ComponentTypeId {
+        ComponentTypeId::new("InitialDescription")
+    }
+
+    /// Description shown in room listings after tampering.
+    /// e.g., "There is a brass lantern here."
+    pub fn ground_description() -> ComponentTypeId {
+        ComponentTypeId::new("GroundDescription")
+    }
+
+    /// Whether object has been tampered with (moved, taken, etc.).
+    pub fn tampered() -> ComponentTypeId {
+        ComponentTypeId::new("Tampered")
+    }
 }
 
 /// Well-known relation types.

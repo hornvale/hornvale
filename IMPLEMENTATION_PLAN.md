@@ -719,7 +719,7 @@ This stage adds CLOS-style method dispatch to actions:
 
 ### Stage 5: DSL-First Verbs & Description System
 **Goal**: Move verb logic from Rust to DSL. Add contextual descriptions.
-**Status**: In Progress (5C, 5A complete)
+**Status**: In Progress (5A, 5B, 5C complete)
 
 This is a significant architectural change: all game verbs move to DSL, with Rust providing efficient primitives. This also includes the description system for contextual object descriptions.
 
@@ -763,30 +763,41 @@ This is a significant architectural change: all game verbs move to DSL, with Rus
 **Tests**: 13 new tests (606 total, up from 593)
 
 #### Stage 5B: Description System
-**Goal**: Contextual descriptions with FirstSeen tracking.
-**Status**: Not Started
+**Goal**: Article generation with name flags. Description selection is DSL-defined.
+**Status**: Complete ✓
 
-**Components**:
-- [ ] `InitialDescription` — shown first time object is examined
-- [ ] `GroundDescription` — shown in room listings
-- [ ] `FirstSeen` — boolean, set after first examination
+**Rust Primitives** (minimal, mechanical):
+- [x] `(the entity)` opcode — definite article + name, respecting flags
+- [x] `(a entity)` opcode — indefinite article + name, respecting flags
+- [x] Name flag components: `ProperNoun`, `VowelSound`, `NoArticle`, `PluralNoun`
+- [x] Description flag components: `InitialDescription`, `GroundDescription`, `Tampered`
 
-**Functions**:
-- [ ] `describe` — context-aware description selection
-  - `:examine` context: InitialDescription (if exists AND not FirstSeen) → Description → Brief → Name
-  - `:room` context: GroundDescription → Brief → Name
-  - Side effect: sets `FirstSeen=true` when InitialDescription used
-- [ ] `the` — "the brass lamp" (definite article + name)
-- [ ] `a` — "a brass lamp" (indefinite article + brief or name)
+**DSL-Defined** (semantic, customizable — deferred to Stage 5D):
+- `(describe entity context)` — composes fallback chain based on context
+- `(tampered? entity)` → `(has? entity :Tampered)`
+- Description selection rules (InitialDescription vs GroundDescription)
+- Room visit tracking via HasVisited relation
 
-**Files**:
-- `src/description.rs` — Description selection logic (new)
-- `src/vm/bytecode.rs` — Add `Describe`, `The`, `A` opcodes
-- `src/vm/exec.rs` — Implement opcodes
-- `src/compiler.rs` — Compile forms
-- `src/lib.rs` — Export description module
+**Design Notes**:
+- `InitialDescription`: Shown until object is "tampered with" (picked up, moved, etc.)
+- `GroundDescription`: Shown in room listings after tampering
+- `Tampered` flag: Set when object is interfered with (global, not per-observer)
+- Room visits: Per-observer via relation (e.g., `HasVisited(player, room)`)
+- `ProperNoun`: No article, capitalize (e.g., "Bob" not "the Bob")
+- `VowelSound`: Use "an" instead of "a" (e.g., "an hour")
+- `NoArticle`: Omit articles entirely (e.g., "you" not "the you")
 
-**Tests**: ~15 tests for description selection
+**Files Modified**:
+- `src/vm/bytecode.rs` — Added `The`, `A` opcodes
+- `src/vm/exec.rs` — Implemented opcodes with `format_the()`, `format_a()` helpers
+- `src/compiler.rs` — Added `compile_the()`, `compile_a()` functions
+- `src/verbs.rs` — Added component type helpers for name flags and descriptions
+
+**Tests**: 9 new tests (4 for `the`, 5 for `a`)
+- `test_the_basic`, `test_the_proper_noun`, `test_the_no_article`, `test_the_no_name`
+- `test_a_basic`, `test_a_vowel_heuristic`, `test_a_vowel_flag_override`, `test_a_proper_noun`, `test_a_no_article`
+
+Total project: 615 tests passing
 
 #### Stage 5C: File Loading
 **Goal**: `(load "path.hvl")` for including definitions.
@@ -1008,14 +1019,14 @@ Target: ~200 tests across all stages
 - Stage 4.5: ~10 tests (action specificity, :when guards) — deferred
 - Stage 5: ~75 tests (primitives, descriptions, loading, stdlib, DSL handlers)
   - 5A: 13 tests (core primitives) ✓
-  - 5B: ~15 tests (description system)
+  - 5B: 9 tests (article generation) ✓
   - 5C: 9 tests (file loading) ✓
   - 5D: ~15 tests (stdlib integration)
   - 5E: ~15 tests (DSL action handlers)
 - Stage 6: ~5 tests (direction configuration)
 
-Current: 163 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33, Stage 4: 31, Stage 5C: 9, Stage 5A: 13)
-Total project: 606 tests passing
+Current: 172 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33, Stage 4: 31, Stage 5A: 13, Stage 5B: 9, Stage 5C: 9)
+Total project: 615 tests passing
 
 ---
 
