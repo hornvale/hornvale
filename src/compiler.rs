@@ -221,6 +221,11 @@ impl<'a> Compiler<'a> {
     /// Compile an atom.
     fn compile_atom(&mut self, atom: &Atom, _span: Span, dst: Reg) -> Result<(), CompileError> {
         match atom {
+            Atom::Nil => {
+                let idx = self.add_constant(Value::Nil)?;
+                self.chunk
+                    .emit(OpCode::LoadConst { dst, idx }, self.current_line);
+            }
             Atom::Int(n) => {
                 let idx = self.add_constant(Value::Int(*n))?;
                 self.chunk

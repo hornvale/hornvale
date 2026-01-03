@@ -26,7 +26,6 @@ pub mod repl;
 pub mod rng;
 pub mod rules;
 pub mod symbol;
-pub mod syntax;
 pub mod systems;
 pub mod template;
 pub mod verbs;
@@ -56,9 +55,8 @@ pub use input::{
 pub use io::{StdIO, WorldIO};
 pub use rng::SeededRng;
 pub use symbol::Symbol;
-pub use syntax::{Action, PatternBuilder, SyntaxElement, SyntaxMatch, SyntaxPattern, SyntaxTable};
 pub use template::{FieldSpec, Template, TemplateRegistry};
-pub use verbs::{VerbResult, execute_action, execute_command, execute_grammar_action_full};
+pub use verbs::{VerbResult, execute_command, execute_grammar_action_full};
 
 // Action and precondition system
 pub use action::{

@@ -14,6 +14,8 @@ use crate::symbol::Symbol;
 /// Values are immutable and cheap to clone (using Arc for strings and lists).
 #[derive(Debug, Clone)]
 pub enum Value {
+    /// The absence of a value (distinct from Bool(false))
+    Nil,
     /// 64-bit signed integer
     Int(i64),
     /// 64-bit floating point (NaN is treated as equal to itself for consistency)
@@ -31,6 +33,17 @@ pub enum Value {
 }
 
 impl Value {
+    /// Check if this value is nil.
+    pub fn is_nil(&self) -> bool {
+        matches!(self, Value::Nil)
+    }
+
+    /// Check if this value is truthy.
+    /// Nil and Bool(false) are falsy, everything else is truthy.
+    pub fn is_truthy(&self) -> bool {
+        !matches!(self, Value::Nil | Value::Bool(false))
+    }
+
     /// Create a string value.
     pub fn string(s: impl Into<Arc<str>>) -> Self {
         Value::String(s.into())
@@ -89,6 +102,7 @@ impl Value {
     /// Get a human-readable type name.
     pub fn type_name(&self) -> &'static str {
         match self {
+            Value::Nil => "Nil",
             Value::Int(_) => "Int",
             Value::Float(_) => "Float",
             Value::Bool(_) => "Bool",
@@ -103,6 +117,7 @@ impl Value {
 impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Value::Nil => write!(f, "nil"),
             Value::Int(n) => write!(f, "{n}"),
             Value::Float(n) => write!(f, "{n}"),
             Value::Bool(b) => write!(f, "{b}"),
@@ -127,6 +142,7 @@ impl std::fmt::Display for Value {
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
+            (Value::Nil, Value::Nil) => true,
             (Value::Int(a), Value::Int(b)) => a == b,
             (Value::Float(a), Value::Float(b)) => {
                 // Treat NaN as equal to NaN for consistency
@@ -158,15 +174,17 @@ impl PartialOrd for Value {
 impl Ord for Value {
     fn cmp(&self, other: &Self) -> Ordering {
         // Order by type first, then by value
+        // Nil sorts first (smallest)
         fn type_order(v: &Value) -> u8 {
             match v {
-                Value::Bool(_) => 0,
-                Value::Int(_) => 1,
-                Value::Float(_) => 2,
-                Value::String(_) => 3,
-                Value::Symbol(_) => 4,
-                Value::EntityRef(_) => 5,
-                Value::List(_) => 6,
+                Value::Nil => 0,
+                Value::Bool(_) => 1,
+                Value::Int(_) => 2,
+                Value::Float(_) => 3,
+                Value::String(_) => 4,
+                Value::Symbol(_) => 5,
+                Value::EntityRef(_) => 6,
+                Value::List(_) => 7,
             }
         }
 
@@ -177,6 +195,7 @@ impl Ord for Value {
 
         // Same type, compare values
         match (self, other) {
+            (Value::Nil, Value::Nil) => Ordering::Equal,
             (Value::Bool(a), Value::Bool(b)) => a.cmp(b),
             (Value::Int(a), Value::Int(b)) => a.cmp(b),
             (Value::Float(a), Value::Float(b)) => {
@@ -201,6 +220,7 @@ impl std::hash::Hash for Value {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         std::mem::discriminant(self).hash(state);
         match self {
+            Value::Nil => {} // discriminant is enough
             Value::Int(n) => n.hash(state),
             Value::Float(f) => f.to_bits().hash(state),
             Value::Bool(b) => b.hash(state),
@@ -294,7 +314,8 @@ mod tests {
 
     #[test]
     fn test_value_ordering() {
-        // Different types: Bool < Int < Float < String < Symbol < EntityRef
+        // Different types: Nil < Bool < Int < Float < String < Symbol < EntityRef < List
+        assert!(Value::Nil < Value::Bool(false));
         assert!(Value::Bool(true) < Value::Int(0));
         assert!(Value::Int(100) < Value::Float(0.0));
         assert!(Value::Float(100.0) < Value::string("a"));
@@ -302,6 +323,39 @@ mod tests {
         // Same type
         assert!(Value::Int(1) < Value::Int(2));
         assert!(Value::string("a") < Value::string("b"));
+    }
+
+    #[test]
+    fn test_nil() {
+        // Nil is equal to itself
+        assert_eq!(Value::Nil, Value::Nil);
+
+        // Nil is distinct from Bool(false)
+        assert_ne!(Value::Nil, Value::Bool(false));
+
+        // Nil display
+        assert_eq!(Value::Nil.to_string(), "nil");
+
+        // Nil type name
+        assert_eq!(Value::Nil.type_name(), "Nil");
+
+        // is_nil
+        assert!(Value::Nil.is_nil());
+        assert!(!Value::Bool(false).is_nil());
+    }
+
+    #[test]
+    fn test_is_truthy() {
+        // Nil and Bool(false) are falsy
+        assert!(!Value::Nil.is_truthy());
+        assert!(!Value::Bool(false).is_truthy());
+
+        // Everything else is truthy
+        assert!(Value::Bool(true).is_truthy());
+        assert!(Value::Int(0).is_truthy()); // Int(0) is truthy!
+        assert!(Value::Int(42).is_truthy());
+        assert!(Value::string("").is_truthy()); // Empty string is truthy
+        assert!(Value::empty_list().is_truthy()); // Empty list is truthy
     }
 
     #[test]

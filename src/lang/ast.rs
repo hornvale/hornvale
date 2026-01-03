@@ -7,6 +7,8 @@ use std::fmt;
 /// An atomic value in an S-expression.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Atom {
+    /// Nil literal (absence of value).
+    Nil,
     /// Integer literal.
     Int(i64),
     /// Floating-point literal.
@@ -25,6 +27,7 @@ impl Atom {
     /// Get the type name of this atom.
     pub fn type_name(&self) -> &'static str {
         match self {
+            Atom::Nil => "nil",
             Atom::Int(_) => "int",
             Atom::Float(_) => "float",
             Atom::Bool(_) => "bool",
@@ -38,6 +41,7 @@ impl Atom {
 impl fmt::Display for Atom {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Atom::Nil => write!(f, "nil"),
             Atom::Int(n) => write!(f, "{n}"),
             Atom::Float(n) => write!(f, "{n}"),
             Atom::Bool(b) => write!(f, "{b}"),

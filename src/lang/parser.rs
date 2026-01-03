@@ -56,10 +56,11 @@ impl Parser {
             TokenKind::Float(n) => Atom::Float(*n),
             TokenKind::String(s) => Atom::String(s.clone()),
             TokenKind::Symbol(s) => {
-                // Check for boolean literals
+                // Check for boolean/nil literals
                 match s.as_str() {
                     "true" => Atom::Bool(true),
                     "false" => Atom::Bool(false),
+                    "nil" => Atom::Nil,
                     _ => Atom::Symbol(Symbol::new(s)),
                 }
             }

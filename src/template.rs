@@ -82,7 +82,7 @@ impl FieldSpec {
             FieldSpec::FloatRange { min, max } => Value::Float(rng.range_f64(*min, *max)),
             FieldSpec::Choice(values) => {
                 if values.is_empty() {
-                    Value::Bool(false) // nil
+                    Value::Nil
                 } else {
                     rng.choice(values).clone()
                 }
@@ -447,7 +447,7 @@ mod tests {
         let spec = FieldSpec::choice(std::iter::empty::<Value>());
         let mut rng = SeededRng::new(12345);
 
-        // Empty choice returns nil (false)
-        assert_eq!(spec.generate(&mut rng), Value::Bool(false));
+        // Empty choice returns nil
+        assert_eq!(spec.generate(&mut rng), Value::Nil);
     }
 }

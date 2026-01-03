@@ -162,10 +162,11 @@ fn value_to_sexpr(value: &Value) -> Result<crate::lang::SExpr, HookError> {
     let span = Span::new(0, 0, 0, 0); // Dummy span for generated code
 
     match value {
+        Value::Nil => Ok(SExpr::Atom(Atom::Nil, span)),
         Value::List(items) => {
             if items.is_empty() {
                 // Empty list - return nil
-                Ok(SExpr::Atom(Atom::Symbol(Symbol::new("nil")), span))
+                Ok(SExpr::Atom(Atom::Nil, span))
             } else {
                 // Convert each item recursively
                 let exprs: Result<Vec<_>, _> = items.iter().map(value_to_sexpr).collect();
@@ -439,10 +440,10 @@ mod tests {
     fn test_value_to_sexpr_empty_list() {
         let value = Value::list(vec![]);
         let sexpr = value_to_sexpr(&value).unwrap();
-        // Empty list becomes nil symbol
+        // Empty list becomes nil
         assert!(matches!(
             sexpr,
-            crate::lang::SExpr::Atom(crate::lang::Atom::Symbol(_), _)
+            crate::lang::SExpr::Atom(crate::lang::Atom::Nil, _)
         ));
     }
 
@@ -533,8 +534,7 @@ mod tests {
 
         let mut vm = VM::new(&chunk, &world, &stdlib).with_action_context(context);
         let result = vm.run().unwrap();
-        // NIL is represented as Bool(false) in the VM
-        assert_eq!(result, Value::Bool(false));
+        assert_eq!(result, Value::Nil);
     }
 
     #[test]

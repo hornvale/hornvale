@@ -92,8 +92,8 @@ pub enum VMError {
     IPOutOfBounds,
 }
 
-/// Nil value (represented as Bool(false) for simplicity).
-const NIL: Value = Value::Bool(false);
+/// Nil value (absence of a value, distinct from Bool(false)).
+const NIL: Value = Value::Nil;
 
 /// A pending component mutation.
 #[derive(Debug, Clone)]
@@ -761,7 +761,7 @@ impl<'a> VM<'a> {
     }
 
     fn is_truthy(&self, value: &Value) -> bool {
-        !matches!(value, Value::Bool(false) | Value::Int(0))
+        value.is_truthy()
     }
 
     fn binary_arith<I, F>(&self, a: u8, b: u8, int_op: I, float_op: F) -> Result<Value, VMError>
@@ -1445,8 +1445,7 @@ mod tests {
         let mut vm = VM::new(&chunk, &world, &stdlib);
         let result = vm.run().unwrap();
 
-        // NIL is represented as Bool(false)
-        assert_eq!(result, Value::Bool(false));
+        assert_eq!(result, Value::Nil);
     }
 
     #[test]
