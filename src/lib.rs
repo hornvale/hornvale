@@ -11,6 +11,7 @@
 //! - Hardcoded rules (goat says "Baa!" every 10 ticks)
 //! - Interactive REPL for inspection
 
+pub mod action;
 pub mod compiler;
 pub mod core;
 pub mod derive;
@@ -20,6 +21,7 @@ pub mod hooks;
 pub mod input;
 pub mod io;
 pub mod lang;
+pub mod precondition;
 pub mod repl;
 pub mod rng;
 pub mod rules;
@@ -56,4 +58,14 @@ pub use rng::SeededRng;
 pub use symbol::Symbol;
 pub use syntax::{Action, PatternBuilder, SyntaxElement, SyntaxMatch, SyntaxPattern, SyntaxTable};
 pub use template::{FieldSpec, Template, TemplateRegistry};
-pub use verbs::{VerbResult, execute_action, execute_command};
+pub use verbs::{VerbResult, execute_action, execute_command, execute_grammar_action_full};
+
+// Action and precondition system
+pub use action::{
+    Action as ActionDef, ActionCheckResult, ActionRegistry, HandlerRegistry,
+    check_action_preconditions,
+};
+pub use precondition::{
+    Precondition, PreconditionArg, PreconditionCall, PreconditionError, PreconditionRegistry,
+    PreconditionResult,
+};

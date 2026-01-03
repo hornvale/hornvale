@@ -618,39 +618,104 @@ This is more foundational than sensory propagation — it's the soul of an IF en
 
 ### Stage 4: Precondition System
 **Goal**: Actions have declarative preconditions checked before execution.
-**Status**: Not Started
+**Status**: Complete ✓
 
-- [ ] `Precondition` type — predicate on world state
-- [ ] Built-in preconditions: `reachable?`, `visible?`, `held?`, `portable?`, `not-held?`
-- [ ] Custom preconditions via DSL expressions
-- [ ] Automatic failure messages based on violated precondition
-- [ ] Actions declare required preconditions
-- [ ] DSL form: `(action name :preconditions [...] :handler ...)`
+**Design Notes**:
+- **Commands** are requests/inputs (grammar/syntax layer)
+- **Actions** are attempts to do something in the world (semantic layer)
+- Not all commands trigger actions (e.g., "help", "save", "quit" are meta-commands)
+- Not all actions come from commands (e.g., NPC actions, triggered effects)
+
+**Deliverables**:
+- [x] `Precondition` type — named predicate with check expression and failure message template
+- [x] `(precondition name :params (...) :check expr :failure "template")` DSL form
+- [x] Built-in preconditions with simple semantics:
+  - `reachable?` — entity is in scope (same room, carried, or in open container in scope)
+  - `visible?` — same as reachable for now (lighting deferred to Phase 11)
+  - `held?` — `(held? obj)` → obj is held by current actor (implicit)
+  - `held-by?` — `(held-by? obj holder)` → obj is held by specified holder (explicit)
+  - `portable?` — entity has `Portable` component (or lacks `Fixed`)
+  - `not-held?` — inverse of `held?`
+- [x] `Action` type — named action with preconditions list and handler reference
+- [x] `(action name :preconditions (...) :handler handler-name)` DSL form
+- [x] `ActionRegistry` for storing action definitions
+- [x] Precondition checking integrated into verb execution pipeline (after resolution, before hooks)
+- [x] Automatic failure messages with entity name interpolation
+- [x] Handler registry for referencing Rust handlers by symbol
+
+**Files Created/Modified**:
+- `src/precondition.rs` — Precondition type, PreconditionRegistry, built-in definitions (new)
+- `src/action.rs` — Action type, ActionRegistry, HandlerRegistry, handler dispatch (new)
+- `src/lang/loader.rs` — Parse `(precondition ...)` and `(action ...)` forms
+- `src/verbs.rs` — Added `execute_grammar_action_full()` with precondition checking
+- `src/lib.rs` — Export new modules and types
+- `examples/std-verbs.hvl` — Added precondition and action definitions
 
 **Example**:
 ```lisp
+;; Define preconditions with failure messages
+(precondition reachable?
+  :params (actor target)
+  :check (in-scope? target actor)
+  :failure "You can't reach ~(name target).")
+
+(precondition portable?
+  :params (obj)
+  :check (has? obj :Portable)
+  :failure "~(Name obj) is fixed in place.")
+
+(precondition not-held?
+  :params (obj)
+  :check (not (held? obj))
+  :failure "You're already holding ~(name obj).")
+
+;; Define actions with preconditions (note: uses () not [])
 (action take
   :preconditions
-    [(reachable? actor direct-object)
+    ((reachable? actor direct-object)
      (visible? actor direct-object)
      (portable? direct-object)
-     (not (held-by? direct-object actor))]
+     (not-held? direct-object))
   :handler take-handler)
 
 (action unlock
   :preconditions
-    [(reachable? actor direct-object)
+    ((reachable? actor direct-object)
      (locked? direct-object)
-     (has-key-for? actor direct-object)]
+     (has-key-for? actor direct-object))
   :handler unlock-handler)
 ```
 
-**Failure messages**:
-- `(not (reachable? ...))` → "You can't reach the lamp."
-- `(not (portable? ...))` → "The lamp is fixed in place."
-- `(not (has-key-for? ...))` → "You don't have the right key."
-
 **Success Criteria**: Action preconditions are data; failure messages auto-generated.
+
+### Stage 4.5: Action Specificity (Future)
+**Goal**: Actions can have `:when` guards for context-specific behavior.
+**Status**: Not Started (deferred)
+
+This stage adds CLOS-style method dispatch to actions:
+- `:when` guards for action specificity (most specific match wins)
+- `:failure-override` for context-specific messages
+- Dispatch ordering based on guard specificity
+
+**Example** (future):
+```lisp
+;; Base action
+(action take
+  :preconditions [...]
+  :handler take-handler)
+
+;; More specific: taking from a container
+(action take
+  :when (container? indirect-object)
+  :preconditions [(open? indirect-object) ...]
+  :handler take-from-handler)
+
+;; Most specific: taking the crown from the dragon's hoard
+(action take
+  :when (and (= direct-object crown) (= indirect-object dragon-hoard))
+  :failure-override [(not (distracted? dragon)) "The dragon watches you too closely."]
+  :handler take-crown-handler)
+```
 
 ### Stage 5: Description System
 **Goal**: Contextual descriptions based on object state.
@@ -770,16 +835,17 @@ Output: "The book splashes into the water and is gone."
 ```
 
 ### Tests
-Target: ~80 tests across all stages
+Target: ~100 tests across all stages
 - Stage 1: 29 tests (syntax matching, routing) ✓
 - Stage 2: 48 tests (grammar trie, matcher, predicate, registry) ✓
 - Stage 3: 33 tests (hook invocation, veto/handled, context opcodes, effects) ✓
-- Stage 4: ~10 tests (precondition checking)
+- Stage 4: 31 tests (precondition types, action registry, built-ins, failure messages, DSL parsing) ✓
+- Stage 4.5: ~10 tests (action specificity, :when guards) — deferred
 - Stage 5: ~10 tests (description selection)
 - Stage 6: ~5 tests (direction configuration)
 
-Current: 110 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33)
-Total project: 553 tests passing
+Current: 141 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33, Stage 4: 31)
+Total project: 584 tests passing
 
 ---
 

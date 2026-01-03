@@ -406,6 +406,30 @@ pub fn execute_grammar_action(
     grammar_match: &crate::GrammarMatch,
     stdlib: &crate::vm::StdLib,
 ) -> VerbResult {
+    // Call the full version with no action/precondition registries
+    execute_grammar_action_full(world, actor, grammar_match, stdlib, None, None)
+}
+
+/// Execute an action based on a grammar match with full precondition support.
+///
+/// This function dispatches to verb handlers based on the action name
+/// from a `GrammarMatch`, using pre-resolved entity slots.
+///
+/// Execution order:
+/// 1. Check preconditions (can fail with message)
+/// 2. Before hooks (can veto)
+/// 3. On hooks (can handle)
+/// 4. Default handler (if not handled)
+/// 5. After hooks
+pub fn execute_grammar_action_full(
+    world: &mut World,
+    actor: EntityId,
+    grammar_match: &crate::GrammarMatch,
+    stdlib: &crate::vm::StdLib,
+    action_registry: Option<&crate::action::ActionRegistry>,
+    precondition_registry: Option<&crate::precondition::PreconditionRegistry>,
+) -> VerbResult {
+    use crate::action::check_action_preconditions;
     use crate::hooks::{run_after_hooks, run_before_hooks, run_on_hooks};
     use crate::vm::HookContext;
 
@@ -426,6 +450,18 @@ pub fn execute_grammar_action(
     }
     if let Some(r) = room {
         hook_context = hook_context.with_room(r);
+    }
+
+    // Check preconditions (if registries are provided)
+    if let (Some(action_reg), Some(precond_reg)) = (action_registry, precondition_registry) {
+        if let Some(action_def) = action_reg.get(action_name) {
+            let check_result =
+                check_action_preconditions(action_def, world, &hook_context, precond_reg, stdlib);
+
+            if check_result.failed() {
+                return VerbResult::fail(check_result.message().unwrap_or("You can't do that."));
+            }
+        }
     }
 
     let mut output_parts: Vec<String> = Vec::new();

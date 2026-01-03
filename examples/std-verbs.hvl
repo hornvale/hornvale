@@ -18,6 +18,53 @@
 (type held (held-by? entity actor))
 
 ; ============================================================================
+; Action Preconditions
+; ============================================================================
+; Note: Built-in preconditions (reachable?, visible?, held?, held-by?, portable?, not-held?)
+; are available automatically. Custom preconditions can be defined here.
+
+; Custom precondition example (uncomment to use):
+; (precondition unlocked?
+;   :params (obj)
+;   :check (not (has? obj :Locked))
+;   :failure "The ~(name obj) is locked.")
+
+; ============================================================================
+; Action Definitions
+; ============================================================================
+; Actions define the semantic behavior of verbs, including preconditions
+; that must be satisfied before the action can be executed.
+
+; Take action - pick up an object
+(action take
+  :preconditions
+    ((reachable? actor direct-object)
+     (visible? actor direct-object)
+     (portable? direct-object)
+     (not-held? direct-object))
+  :handler take-handler)
+
+; Drop action - put down a held object
+(action drop
+  :preconditions
+    ((held? direct-object))
+  :handler drop)
+
+; Examine action - look at an object in detail
+(action examine
+  :preconditions
+    ((visible? actor direct-object))
+  :handler examine)
+
+; Look action - no preconditions (always succeeds)
+(action look-around
+  :handler look-around)
+
+; Inventory action - no preconditions
+(action inventory
+  :handler inventory)
+
+; ============================================================================
 ; Movement commands
 ; ============================================================================
 
