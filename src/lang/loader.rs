@@ -3,6 +3,7 @@
 use crate::Value;
 use crate::core::{Cardinality, EntityId, RelationSchema, World};
 use crate::generator::{GenerationStub, GeneratorRegistry, StubStorage};
+use crate::grammar::{Command as GrammarCommand, CommandRegistry, Form, FormAction, FormElement};
 use crate::lang::{Atom, ParseError, SExpr, parse_all};
 use crate::repl::command::{ReplCommandRegistry, parse_repl_command};
 use crate::rules::{Effect, Pattern, Rule, RuleSet, Trigger};
@@ -42,8 +43,10 @@ pub struct WorldLoader {
     stubs: StubStorage,
     /// DSL-defined REPL commands.
     repl_commands: ReplCommandRegistry,
-    /// Syntax table for command parsing.
+    /// Syntax table for command parsing (deprecated, use command_registry).
     syntax_table: SyntaxTable,
+    /// Command registry for grammar-based command parsing.
+    command_registry: CommandRegistry,
 }
 
 impl WorldLoader {
@@ -56,6 +59,7 @@ impl WorldLoader {
             stubs: StubStorage::new(),
             repl_commands: ReplCommandRegistry::new(),
             syntax_table: SyntaxTable::new(),
+            command_registry: CommandRegistry::new(),
         }
     }
 
@@ -99,14 +103,24 @@ impl WorldLoader {
         &mut self.repl_commands
     }
 
-    /// Get the syntax table.
+    /// Get the syntax table (deprecated, use command_registry).
     pub fn syntax_table(&self) -> &SyntaxTable {
         &self.syntax_table
     }
 
-    /// Get the syntax table mutably.
+    /// Get the syntax table mutably (deprecated, use command_registry).
     pub fn syntax_table_mut(&mut self) -> &mut SyntaxTable {
         &mut self.syntax_table
+    }
+
+    /// Get the command registry.
+    pub fn command_registry(&self) -> &CommandRegistry {
+        &self.command_registry
+    }
+
+    /// Get the command registry mutably.
+    pub fn command_registry_mut(&mut self) -> &mut CommandRegistry {
+        &mut self.command_registry
     }
 
     /// Load definitions from source string.
@@ -152,6 +166,10 @@ impl WorldLoader {
                 self.load_repl_command(expr)?;
             } else if expr.is_call("syntax") {
                 self.load_syntax(expr)?;
+            } else if expr.is_call("type") {
+                self.load_type(expr)?;
+            } else if expr.is_call("command") {
+                self.load_command(expr)?;
             }
         }
 
@@ -175,6 +193,267 @@ impl WorldLoader {
         let cmd = parse_repl_command(expr).map_err(LoadError::InvalidDefinition)?;
         self.repl_commands.register(cmd);
         Ok(())
+    }
+
+    /// Load a type predicate definition.
+    ///
+    /// Format: `(type name predicate-expr)`
+    ///
+    /// Example:
+    /// ```lisp
+    /// (type portable (has? entity :Portable))
+    /// (type container (has? entity :Container))
+    /// (type held (held-by? entity actor))
+    /// ```
+    fn load_type(&mut self, expr: &SExpr) -> Result<(), LoadError> {
+        let items = expr.as_list().unwrap();
+        if items.len() != 3 {
+            return Err(LoadError::InvalidDefinition(
+                "type requires name and predicate expression".to_string(),
+            ));
+        }
+
+        let name = items[1].as_symbol().ok_or_else(|| {
+            LoadError::InvalidDefinition("type name must be a symbol".to_string())
+        })?;
+
+        // The predicate expression is stored as-is
+        let predicate = items[2].clone();
+        self.command_registry.register_type(name, predicate);
+
+        Ok(())
+    }
+
+    /// Load a command definition.
+    ///
+    /// Format:
+    /// ```lisp
+    /// (command name
+    ///   :aliases ("alias1" "alias2" ("multi" "word"))
+    ///   :forms
+    ///     (()                        -> action-name)
+    ///     (("word" slot:type)        -> (action-name slot)))
+    /// ```
+    ///
+    /// Example:
+    /// ```lisp
+    /// (command look
+    ///   :aliases ("l" "examine" "x")
+    ///   :forms
+    ///     (()                        -> look-around)
+    ///     (("at" obj:noun)           -> (examine obj))
+    ///     ((dir:direction)           -> (look-direction dir)))
+    /// ```
+    fn load_command(&mut self, expr: &SExpr) -> Result<(), LoadError> {
+        let items = expr.as_list().unwrap();
+        if items.len() < 2 {
+            return Err(LoadError::InvalidDefinition(
+                "command requires a name".to_string(),
+            ));
+        }
+
+        let name = items[1].as_symbol().ok_or_else(|| {
+            LoadError::InvalidDefinition("command name must be a symbol".to_string())
+        })?;
+
+        let mut command = GrammarCommand::new(name);
+        let mut aliases: Vec<Vec<String>> = Vec::new();
+
+        // Parse keyword arguments
+        let mut i = 2;
+        while i < items.len() {
+            if items[i].is_keyword("aliases") && i + 1 < items.len() {
+                aliases = self.parse_aliases(&items[i + 1])?;
+                i += 2;
+            } else if items[i].is_keyword("forms") && i + 1 < items.len() {
+                self.parse_forms(&mut command, &items[i + 1])?;
+                i += 2;
+            } else {
+                i += 1;
+            }
+        }
+
+        self.command_registry.register_command(command, aliases);
+        Ok(())
+    }
+
+    /// Parse alias list.
+    ///
+    /// Aliases can be:
+    /// - Single strings: "l"
+    /// - Multi-word lists: ("pick" "up")
+    fn parse_aliases(&self, expr: &SExpr) -> Result<Vec<Vec<String>>, LoadError> {
+        let items = expr
+            .as_list()
+            .ok_or_else(|| LoadError::InvalidDefinition("aliases must be a list".to_string()))?;
+
+        let mut aliases = Vec::new();
+        for item in items {
+            if let Some(s) = item.as_string() {
+                // Single word alias
+                aliases.push(vec![s.to_string()]);
+            } else if let Some(list) = item.as_list() {
+                // Multi-word alias
+                let mut words = Vec::new();
+                for word in list {
+                    let w = word.as_string().ok_or_else(|| {
+                        LoadError::InvalidDefinition("alias words must be strings".to_string())
+                    })?;
+                    words.push(w.to_string());
+                }
+                aliases.push(words);
+            } else {
+                return Err(LoadError::InvalidDefinition(
+                    "alias must be a string or list of strings".to_string(),
+                ));
+            }
+        }
+
+        Ok(aliases)
+    }
+
+    /// Parse form definitions.
+    ///
+    /// Format: `((pattern...) -> action)`
+    fn parse_forms(&self, command: &mut GrammarCommand, expr: &SExpr) -> Result<(), LoadError> {
+        let items = expr
+            .as_list()
+            .ok_or_else(|| LoadError::InvalidDefinition("forms must be a list".to_string()))?;
+
+        for item in items {
+            let form = self.parse_form(item)?;
+            command.add_form(form);
+        }
+
+        Ok(())
+    }
+
+    /// Parse a single form definition.
+    ///
+    /// Format: `((pattern...) -> action)` where pattern tuple can be empty
+    ///
+    /// Examples:
+    /// - `(() -> look-around)` - empty pattern
+    /// - `(("at" obj:noun) -> (examine obj))` - pattern with elements
+    fn parse_form(&self, expr: &SExpr) -> Result<Form, LoadError> {
+        let items = expr
+            .as_list()
+            .ok_or_else(|| LoadError::InvalidDefinition("form must be a list".to_string()))?;
+
+        // Expected format: (pattern-tuple -> action)
+        // items[0] = pattern tuple (a list, possibly empty)
+        // items[1] = ->
+        // items[2] = action
+        if items.len() != 3 {
+            return Err(LoadError::InvalidDefinition(
+                "form must be (pattern -> action)".to_string(),
+            ));
+        }
+
+        if !items[1].is_symbol("->") {
+            return Err(LoadError::InvalidDefinition(
+                "form requires -> between pattern and action".to_string(),
+            ));
+        }
+
+        // Parse pattern elements from the pattern tuple
+        let pattern_items = items[0]
+            .as_list()
+            .ok_or_else(|| LoadError::InvalidDefinition("pattern must be a list".to_string()))?;
+
+        let mut elements = Vec::new();
+        for item in pattern_items {
+            let element = self.parse_form_element(item)?;
+            elements.push(element);
+        }
+
+        // Parse action
+        let action = self.parse_form_action(&items[2])?;
+
+        Ok(Form::new(elements, action))
+    }
+
+    /// Parse a form pattern element.
+    ///
+    /// - Strings are literal words: "at", "in"
+    /// - Symbols without `:` are literal words: at, in
+    /// - Symbols with `:` are typed slots: obj:noun, dir:direction
+    ///
+    /// Examples:
+    /// - `"at"` or `at` -> Word("at")
+    /// - `obj:noun` -> Slot { name: obj, type: Noun }
+    /// - `dir:direction` -> Slot { name: dir, type: Direction }
+    /// - `c:container` -> Slot { name: c, type: Custom(container) }
+    fn parse_form_element(&self, expr: &SExpr) -> Result<FormElement, LoadError> {
+        match expr {
+            // String literal -> word element
+            SExpr::Atom(Atom::String(s), _) => Ok(FormElement::word(s.as_str())),
+
+            // Symbol -> check for slot syntax (name:type) or plain word
+            SExpr::Atom(Atom::Symbol(sym), _) => {
+                let s = sym.as_str();
+                if let Some((name, type_str)) = s.split_once(':') {
+                    // Typed slot: name:type
+                    let slot_type = match type_str {
+                        "noun" => crate::grammar::SlotType::Noun,
+                        "direction" => crate::grammar::SlotType::Direction,
+                        _ => crate::grammar::SlotType::Custom(Symbol::new(type_str)),
+                    };
+                    Ok(FormElement::Slot {
+                        name: Symbol::new(name),
+                        slot_type,
+                    })
+                } else {
+                    // Plain symbol -> word element
+                    Ok(FormElement::word(&s))
+                }
+            }
+
+            _ => Err(LoadError::InvalidDefinition(
+                "form element must be a string or symbol".to_string(),
+            )),
+        }
+    }
+
+    /// Parse a form action.
+    ///
+    /// - Symbol: simple action with no slots -> `look-around`
+    /// - List: action with slots -> `(examine obj)` or `(take-from obj c)`
+    fn parse_form_action(&self, expr: &SExpr) -> Result<FormAction, LoadError> {
+        match expr {
+            // Simple action: just the action name
+            SExpr::Atom(Atom::Symbol(name), _) => Ok(FormAction::simple(*name)),
+
+            // Action with slots: (action-name slot1 slot2 ...)
+            SExpr::List(items, _) => {
+                if items.is_empty() {
+                    return Err(LoadError::InvalidDefinition(
+                        "action list cannot be empty".to_string(),
+                    ));
+                }
+
+                let action_name = items[0].as_symbol().ok_or_else(|| {
+                    LoadError::InvalidDefinition("action name must be a symbol".to_string())
+                })?;
+
+                let slots: Result<Vec<Symbol>, _> = items[1..]
+                    .iter()
+                    .map(|item| {
+                        item.as_symbol().ok_or_else(|| {
+                            LoadError::InvalidDefinition(
+                                "slot reference must be a symbol".to_string(),
+                            )
+                        })
+                    })
+                    .collect();
+
+                Ok(FormAction::with_slots(action_name, slots?))
+            }
+
+            _ => Err(LoadError::InvalidDefinition(
+                "action must be a symbol or list".to_string(),
+            )),
+        }
     }
 
     /// Load a syntax definition.
@@ -1423,5 +1702,205 @@ mod tests {
         assert_eq!(m.action.name(), "give");
         assert_eq!(m.slots.get("item"), Some(&"key".to_string()));
         assert_eq!(m.slots.get("recipient"), Some(&"guard".to_string()));
+    }
+
+    #[test]
+    fn test_load_type_predicate() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (type portable (has? entity :Portable))
+                (type container (has? entity :Container))
+                "#,
+            )
+            .unwrap();
+
+        assert!(
+            loader
+                .command_registry()
+                .types()
+                .contains(Symbol::new("portable"))
+        );
+        assert!(
+            loader
+                .command_registry()
+                .types()
+                .contains(Symbol::new("container"))
+        );
+    }
+
+    #[test]
+    fn test_load_command_basic() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (command look
+                  :aliases ("l" "examine")
+                  :forms
+                    ((() -> look-around)
+                     (("at" obj:noun) -> (examine obj))))
+                "#,
+            )
+            .unwrap();
+
+        assert!(loader.command_registry().has_command(Symbol::new("look")));
+    }
+
+    #[test]
+    fn test_load_command_with_multi_word_alias() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (command take
+                  :aliases ("get" "grab" ("pick" "up"))
+                  :forms
+                    (((obj:noun) -> (take obj))))
+                "#,
+            )
+            .unwrap();
+
+        assert!(loader.command_registry().has_command(Symbol::new("take")));
+    }
+
+    #[test]
+    fn test_load_command_with_direction() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (command go
+                  :forms
+                    (((dir:direction) -> (go dir))))
+                "#,
+            )
+            .unwrap();
+
+        assert!(loader.command_registry().has_command(Symbol::new("go")));
+    }
+
+    #[test]
+    fn test_load_command_with_custom_type() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (type portable (has? entity :Portable))
+                (command take
+                  :forms
+                    (((obj:portable) -> (take obj))))
+                "#,
+            )
+            .unwrap();
+
+        assert!(loader.command_registry().has_command(Symbol::new("take")));
+        assert!(
+            loader
+                .command_registry()
+                .types()
+                .contains(Symbol::new("portable"))
+        );
+    }
+
+    #[test]
+    fn test_command_registry_match() {
+        use crate::core::{Cardinality, ComponentTypeId, RelationSchema, RelationTypeId};
+
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        // Register relations needed for entity resolution
+        world.register_relation(RelationSchema::new(
+            "InRoom",
+            Cardinality::Many,
+            Cardinality::One,
+        ));
+        world.register_relation(RelationSchema::new(
+            "Contains",
+            Cardinality::One,
+            Cardinality::Many,
+        ));
+
+        // Create entities
+        let room = world.create_entity();
+        world.set_component(room, ComponentTypeId::new("IsRoom"), Value::Bool(true));
+
+        let player = world.create_entity();
+        world.add_relation(RelationTypeId::new("InRoom"), player, room);
+
+        let lamp = world.create_entity();
+        world.set_component(
+            lamp,
+            ComponentTypeId::new("Name"),
+            Value::String("lamp".into()),
+        );
+        world.add_relation(RelationTypeId::new("InRoom"), lamp, room);
+
+        // Load command definitions
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (command look
+                  :aliases ("l")
+                  :forms
+                    ((() -> look-around)
+                     (("at" obj:noun) -> (examine obj))))
+                "#,
+            )
+            .unwrap();
+
+        // Test matching
+        let registry = loader.command_registry();
+
+        // "look" should match the empty form
+        let result = registry.match_input(&world, player, &["look"]);
+        assert!(result.is_some());
+        let m = result.unwrap();
+        assert_eq!(m.action.action_name(), Symbol::new("look-around"));
+
+        // "l" alias should also work
+        let result = registry.match_input(&world, player, &["l"]);
+        assert!(result.is_some());
+        assert_eq!(
+            result.unwrap().action.action_name(),
+            Symbol::new("look-around")
+        );
+
+        // "look at lamp" should match the second form
+        let result = registry.match_input(&world, player, &["look", "at", "lamp"]);
+        assert!(result.is_some());
+        let m = result.unwrap();
+        assert_eq!(m.action.action_name(), Symbol::new("examine"));
+        assert_eq!(m.get_entity("obj"), Some(lamp));
     }
 }

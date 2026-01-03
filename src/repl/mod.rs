@@ -130,22 +130,22 @@ pub fn execute_command(
         "quit" | "exit" | "q" => return ReplResult::Exit,
         "" => {}
 
-        // Game commands - route to verb handlers
-        "look" | "l" => cmd_game(world, io, input),
-        "go" => cmd_game(world, io, input),
-        "take" | "get" => cmd_game(world, io, input),
-        "drop" => cmd_game(world, io, input),
-        "inventory" | "inv" | "i" => cmd_game(world, io, input),
-        "examine" | "x" => cmd_game(world, io, input),
-
-        // Direction shortcuts
-        "north" | "n" | "south" | "s" | "east" | "e" | "west" | "w" => cmd_game(world, io, input),
-        "up" | "u" | "down" | "d" => cmd_game(world, io, input),
-        "northeast" | "ne" | "northwest" | "nw" => cmd_game(world, io, input),
-        "southeast" | "se" | "southwest" | "sw" => cmd_game(world, io, input),
-
+        // All other commands (including game commands) go through grammar/syntax matching
         _ => {
-            // Try syntax table matching first
+            // Try grammar-based command matching first (new system)
+            if let Some(player) = find_player(world) {
+                let tokens: Vec<&str> = input.split_whitespace().collect();
+                if let Some(grammar_match) = loader
+                    .command_registry()
+                    .match_input(world, player, &tokens)
+                {
+                    let result = verbs::execute_grammar_action(world, player, &grammar_match);
+                    io.println(result.output.as_ref());
+                    return ReplResult::Continue;
+                }
+            }
+
+            // Try syntax table matching (deprecated, for backward compatibility)
             if let Some(player) = find_player(world) {
                 let tokens: Vec<&str> = input.split_whitespace().collect();
                 if let Some(action_match) = loader.syntax_table().best_match(&tokens) {
@@ -186,31 +186,6 @@ fn find_player(world: &World) -> Option<EntityId> {
         }
     }
     None
-}
-
-/// Execute a game command (look, go, take, etc.).
-fn cmd_game(world: &mut World, io: &mut dyn WorldIO, input: &str) {
-    let player = match find_player(world) {
-        Some(p) => p,
-        None => {
-            io.println("No player entity found. Define an entity with (IsPlayer true).");
-            return;
-        }
-    };
-
-    let input_event = input::Input::new(input, world.tick()).with_source(player);
-    let cmd = match input::parse_input(&input_event) {
-        Some(c) => c,
-        None => {
-            io.println("I don't understand that.");
-            return;
-        }
-    };
-
-    let resolver = Resolver::new();
-    let resolved = resolver.resolve_command(world, player, &cmd);
-    let result = verbs::execute_command(world, player, &resolved);
-    io.println(result.output.as_ref());
 }
 
 /// Advance simulation by N ticks (default 1).
@@ -449,7 +424,7 @@ fn cmd_parse(io: &mut dyn WorldIO, expr: &str) {
 
 /// Show help information.
 fn cmd_help(_world: &World, loader: &WorldLoader, io: &mut dyn WorldIO) {
-    io.println("Built-in commands:");
+    io.println("REPL commands:");
     io.println("  tick [N]      - Advance simulation by 1 or N ticks (alias: t)");
     io.println("  inspect <id>  - Show all components for entity");
     io.println("  list          - List all entities (alias: ls)");
@@ -463,17 +438,17 @@ fn cmd_help(_world: &World, loader: &WorldLoader, io: &mut dyn WorldIO) {
     io.println("  help          - Show this help (alias: h, ?)");
     io.println("  quit          - Exit the REPL (alias: exit, q)");
 
-    io.println("");
-    io.println("Game commands (requires player entity):");
-    io.println("  look          - Describe current location (alias: l)");
-    io.println("  go <dir>      - Move in a direction");
-    io.println("  take <obj>    - Pick up an object (alias: get)");
-    io.println("  drop <obj>    - Drop an object");
-    io.println("  inventory     - List carried items (alias: i, inv)");
-    io.println("  examine <obj> - Examine an object (alias: x)");
-    io.println("  n/s/e/w/u/d   - Direction shortcuts");
+    // Show grammar-defined game commands
+    let cmd_names = loader.command_registry().command_names();
+    if !cmd_names.is_empty() {
+        io.println("");
+        io.println("Game commands (from grammar):");
+        for name in cmd_names {
+            io.println(&format!("  {}", name.as_str()));
+        }
+    }
 
-    // Show DSL-defined commands
+    // Show DSL-defined REPL commands
     let dsl_cmds: Vec<_> = loader.repl_commands().commands().collect();
     if !dsl_cmds.is_empty() {
         io.println("");
@@ -927,6 +902,96 @@ mod tests {
         assert!(
             io.output.contains("Taken"),
             "Custom 'grab gem' should take the gem"
+        );
+    }
+
+    #[test]
+    fn test_grammar_command_integration() {
+        use crate::core::{Cardinality, RelationSchema};
+
+        let mut world = World::new();
+        let mut rules = empty_rules();
+        let mut loader = WorldLoader::new();
+        let mut io = TestIO::new(vec![]);
+
+        // Register relations
+        world.register_relation(RelationSchema::new(
+            "InRoom",
+            Cardinality::Many,
+            Cardinality::One,
+        ));
+        world.register_relation(RelationSchema::new(
+            "Contains",
+            Cardinality::One,
+            Cardinality::Many,
+        ));
+
+        // Create room
+        let room = world.create_entity();
+        world.set_component(room, "Name", "Test Room");
+        world.set_component(room, "IsRoom", true);
+        world.set_component(room, "RoomDescription", "A test room.");
+
+        // Create player
+        let player = world.create_entity();
+        world.set_component(player, "Name", "player");
+        world.set_component(player, "IsPlayer", true);
+        world.add_relation("InRoom", player, room);
+
+        // Create object
+        let lamp = world.create_entity();
+        world.set_component(lamp, "Name", "lamp");
+        world.set_component(lamp, "Portable", true);
+        world.add_relation("InRoom", lamp, room);
+
+        // Load grammar command definitions via DSL
+        // Note: Use aliases that aren't hardcoded in the REPL (peep, survey, snag)
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (command survey
+                  :aliases ("peep")
+                  :forms
+                    ((() -> look-around)
+                     (("at" obj:noun) -> (examine obj))))
+
+                (command snag
+                  :forms
+                    (((obj:noun) -> (take obj))))
+                "#,
+            )
+            .unwrap();
+
+        // Test "peep" alias works via grammar system
+        execute_command(&mut world, &mut rules, &mut loader, &mut io, "peep");
+        assert!(
+            io.output.contains("Test Room"),
+            "Grammar 'peep' alias should trigger look"
+        );
+
+        // Test "snag lamp" via grammar system
+        io.output.clear();
+        execute_command(&mut world, &mut rules, &mut loader, &mut io, "snag lamp");
+        assert!(
+            io.output.contains("Taken"),
+            "Grammar 'snag lamp' should take the lamp"
+        );
+
+        // Test "survey at lamp" via grammar system (examine)
+        io.output.clear();
+        execute_command(
+            &mut world,
+            &mut rules,
+            &mut loader,
+            &mut io,
+            "survey at lamp",
+        );
+        assert!(
+            io.output.contains("nothing special"),
+            "Grammar 'survey at lamp' should examine the lamp, got: {}",
+            io.output
         );
     }
 }

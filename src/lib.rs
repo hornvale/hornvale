@@ -15,6 +15,7 @@ pub mod compiler;
 pub mod core;
 pub mod derive;
 pub mod generator;
+pub mod grammar;
 pub mod input;
 pub mod io;
 pub mod lang;
@@ -36,6 +37,10 @@ pub use derive::{ComposeMode, DerivationEngine, DerivationError, DerivationRule,
 pub use generator::{
     GenerationResult, GenerationStub, Generator, GeneratorRegistry, StubStorage, get_or_generate,
     has_or_stub,
+};
+pub use grammar::{
+    Command as GrammarCommand, CommandRegistry, Form, FormAction, FormElement, GrammarMatch,
+    IntentTrie, SlotType, SlotValue, TypePredicate, TypeRegistry,
 };
 pub use input::{
     Command, EntityCandidate, Input, ObjectRef, ResolutionResult, ResolvedCommand, Resolver,

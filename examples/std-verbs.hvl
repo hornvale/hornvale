@@ -1,0 +1,136 @@
+; Standard verbs for interactive fiction.
+;
+; This file defines the grammar for common IF commands using the new
+; grammar DSL. Load this file to enable standard commands like look,
+; go, take, drop, examine, and inventory.
+
+; ============================================================================
+; Type predicates
+; ============================================================================
+
+; An entity that can be picked up
+(type portable (has? entity :Portable))
+
+; An entity that is a container
+(type container (has? entity :Container))
+
+; An entity that is currently held by the actor
+(type held (held-by? entity actor))
+
+; ============================================================================
+; Movement commands
+; ============================================================================
+
+(command go
+  :aliases ("walk" "move")
+  :forms
+    (((dir:direction) -> (go dir))))
+
+; Direction shortcuts - each maps to a go-<direction> action
+; The verb handler recognizes these and extracts the direction from the action name
+(command north
+  :aliases ("n")
+  :forms
+    ((() -> go-north)))
+
+(command south
+  :aliases ("s")
+  :forms
+    ((() -> go-south)))
+
+(command east
+  :aliases ("e")
+  :forms
+    ((() -> go-east)))
+
+(command west
+  :aliases ("w")
+  :forms
+    ((() -> go-west)))
+
+(command up
+  :aliases ("u")
+  :forms
+    ((() -> go-up)))
+
+(command down
+  :aliases ("d")
+  :forms
+    ((() -> go-down)))
+
+(command northeast
+  :aliases ("ne")
+  :forms
+    ((() -> go-northeast)))
+
+(command northwest
+  :aliases ("nw")
+  :forms
+    ((() -> go-northwest)))
+
+(command southeast
+  :aliases ("se")
+  :forms
+    ((() -> go-southeast)))
+
+(command southwest
+  :aliases ("sw")
+  :forms
+    ((() -> go-southwest)))
+
+; ============================================================================
+; Looking and examining
+; ============================================================================
+
+(command look
+  :aliases ("l")
+  :forms
+    ((() -> look-around)
+     ((dir:direction) -> (look-direction dir))
+     (("at" obj:noun) -> (examine obj))
+     (("in" obj:noun) -> (search obj))))
+
+(command examine
+  :aliases ("x" "ex")
+  :forms
+    (((obj:noun) -> (examine obj))))
+
+; ============================================================================
+; Object manipulation
+; ============================================================================
+
+(command take
+  :aliases ("get" "grab" "pick")
+  :forms
+    (((obj:noun) -> (take obj))
+     (("up" obj:noun) -> (take obj))
+     ((obj:noun "up") -> (take obj))))
+
+(command drop
+  :aliases ("put")
+  :forms
+    (((obj:held) -> (drop obj))
+     (("down" obj:held) -> (drop obj))
+     ((obj:held "down") -> (drop obj))))
+
+(command inventory
+  :aliases ("i" "inv")
+  :forms
+    ((() -> inventory)))
+
+; ============================================================================
+; Future commands (placeholders for expansion)
+; ============================================================================
+
+; (command open
+;   :forms
+;     (((obj:noun) -> (open obj))))
+
+; (command close
+;   :forms
+;     (((obj:noun) -> (close obj))))
+
+; (command put
+;   :forms
+;     (((obj:held) "in" (container:container)) -> (put-in obj container))
+;     (((obj:held) "on" (surface:noun)) -> (put-on obj surface))))

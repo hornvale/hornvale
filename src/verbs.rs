@@ -390,7 +390,86 @@ pub fn execute_command(
     }
 }
 
-/// Execute an action based on a syntax table match.
+/// Execute an action based on a grammar match.
+///
+/// This function dispatches to verb handlers based on the action name
+/// from a `GrammarMatch`, using pre-resolved entity slots.
+pub fn execute_grammar_action(
+    world: &mut World,
+    actor: EntityId,
+    grammar_match: &crate::GrammarMatch,
+) -> VerbResult {
+    let action_name = grammar_match.action.action_name();
+    let action_str = action_name.as_str();
+
+    match action_str.as_str() {
+        "look" | "look-around" => handle_look(world, actor),
+
+        "inventory" => handle_inventory(world, actor),
+
+        "examine" => {
+            // Get entity directly from slot (already resolved)
+            if let Some(target) = grammar_match.get_entity("obj") {
+                handle_examine(world, target)
+            } else {
+                VerbResult::fail("Examine what?")
+            }
+        }
+
+        "search" => {
+            // Look inside a container
+            if let Some(target) = grammar_match.get_entity("obj") {
+                // For now, just examine - can be enhanced to show contents
+                handle_examine(world, target)
+            } else {
+                VerbResult::fail("Search what?")
+            }
+        }
+
+        "take" | "get" => {
+            if let Some(target) = grammar_match.get_entity("obj") {
+                handle_take(world, actor, target)
+            } else {
+                VerbResult::fail("Take what?")
+            }
+        }
+
+        "drop" => {
+            if let Some(target) = grammar_match.get_entity("obj") {
+                handle_drop(world, actor, target)
+            } else {
+                VerbResult::fail("Drop what?")
+            }
+        }
+
+        "go" => {
+            if let Some(dir) = grammar_match.get_direction("dir") {
+                handle_go(world, actor, dir)
+            } else {
+                VerbResult::fail("Go where?")
+            }
+        }
+
+        "look-direction" => {
+            if let Some(dir) = grammar_match.get_direction("dir") {
+                // For now, just report the direction - can be enhanced later
+                VerbResult::success(format!("You look {}.", dir.as_str()))
+            } else {
+                VerbResult::fail("Look which way?")
+            }
+        }
+
+        // Direction shortcuts: go-north, go-south, etc.
+        _ if action_str.starts_with("go-") => {
+            let direction = &action_str[3..]; // Strip "go-" prefix
+            handle_go(world, actor, Symbol::new(direction))
+        }
+
+        _ => VerbResult::fail(format!("I don't know how to '{action_str}'.")),
+    }
+}
+
+/// Execute an action based on a syntax table match (deprecated, use execute_grammar_action).
 ///
 /// This function dispatches to verb handlers based on the action name
 /// from a `SyntaxMatch`, using the captured slots for arguments.

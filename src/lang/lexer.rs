@@ -337,8 +337,11 @@ fn is_symbol_start(c: char) -> bool {
 }
 
 /// Check if a character can be part of a symbol.
+///
+/// Note: `:` is allowed in the middle of symbols (e.g., `obj:noun`)
+/// but NOT at the start (that's a keyword like `:keyword`).
 fn is_symbol_char(c: char) -> bool {
-    is_symbol_start(c) || c.is_ascii_digit() || c == '.'
+    is_symbol_start(c) || c.is_ascii_digit() || c == '.' || c == ':'
 }
 
 #[cfg(test)]
@@ -437,6 +440,40 @@ mod tests {
                 TokenKind::Symbol("bar-baz".into()),
                 TokenKind::Symbol("foo?".into()),
                 TokenKind::Symbol("set!".into()),
+                TokenKind::Eof
+            ]
+        );
+    }
+
+    #[test]
+    fn test_symbols_with_colons() {
+        // Colon in the middle of a symbol is part of the symbol
+        assert_eq!(
+            lex_kinds("obj:noun dir:direction foo:bar:baz"),
+            vec![
+                TokenKind::Symbol("obj:noun".into()),
+                TokenKind::Symbol("dir:direction".into()),
+                TokenKind::Symbol("foo:bar:baz".into()),
+                TokenKind::Eof
+            ]
+        );
+
+        // Colon at the start is a keyword
+        assert_eq!(
+            lex_kinds(":keyword :foo"),
+            vec![
+                TokenKind::Keyword("keyword".into()),
+                TokenKind::Keyword("foo".into()),
+                TokenKind::Eof
+            ]
+        );
+
+        // Mixed: keyword followed by symbol with colon
+        assert_eq!(
+            lex_kinds(":type obj:noun"),
+            vec![
+                TokenKind::Keyword("type".into()),
+                TokenKind::Symbol("obj:noun".into()),
                 TokenKind::Eof
             ]
         );
