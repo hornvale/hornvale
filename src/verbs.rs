@@ -129,9 +129,16 @@ pub mod relations {
         RelationTypeId::new("Contains")
     }
 
-    /// Exit relation: (room, direction) -> destination room.
+    /// Exit relation: room -> exit entity.
+    /// Exits are composite entities with a Direction component.
+    /// Use the Destination relation to get the target room.
     pub fn exit() -> RelationTypeId {
         RelationTypeId::new("Exit")
+    }
+
+    /// Destination relation: exit entity -> target room.
+    pub fn destination() -> RelationTypeId {
+        RelationTypeId::new("Destination")
     }
 }
 
@@ -389,5 +396,6 @@ mod tests {
         assert_eq!(relations::in_room().0.as_str(), "InRoom");
         assert_eq!(relations::contains().0.as_str(), "Contains");
         assert_eq!(relations::exit().0.as_str(), "Exit");
+        assert_eq!(relations::destination().0.as_str(), "Destination");
     }
 }
