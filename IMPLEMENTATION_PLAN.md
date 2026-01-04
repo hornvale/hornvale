@@ -998,7 +998,7 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
 
 ### Stage 8: Unified Query API
 **Goal**: DSL and Rust share one query interface
-**Status**: Not Started
+**Status**: Complete
 
 **Changes**:
 1. Query forms in DSL:
@@ -1020,14 +1020,30 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
    ```
 
 **Success Criteria**:
-- [ ] `query-entities` returns matching entities
-- [ ] Graph traversals work from DSL
-- [ ] Rule queries work from DSL
+- [x] `query-entities` returns matching entities
+- [x] Graph traversals work from DSL (via existing VM opcodes Descendants/Ancestors)
+- [x] Rule queries work from DSL (via RuleQuery enum)
 
 **Tests**:
-- Query creatures with HP > 0
-- Query descendants of room
-- Query rules for derivation
+- [x] Query all entities
+- [x] Query entities with component
+- [x] Query entities with component value
+- [x] Query descendants of entity
+- [x] Query ancestors of entity
+- [x] Query builder fluent API
+- [x] World convenience methods
+
+**Implementation Notes**:
+- Created `src/query.rs` with unified query API
+- `EntityQuery` enum: All, WithComponent, WithComponentValue, WithPredicate
+- `TraversalQuery` struct with direction (Forward/Backward)
+- `RuleQuery` enum: All, Periodic, HooksForAction, BeforeHooks, OnHooks, AfterHooks, Derive
+- `query_entities()`, `query_traversal()`, `query_rules()` functions
+- `QueryBuilder` for fluent API: `QueryBuilder::with_component("Creature").execute(&world)`
+- World convenience methods: `entities_with_component()`, `entities_with_component_value()`
+- Leverages existing graph traversal methods on World (descendants_all, ancestors)
+- Leverages existing RuleSet query methods (before_hooks, on_hooks, etc.)
+- Re-exports added to lib.rs for easy access
 
 ---
 
@@ -1568,5 +1584,7 @@ The following phases were completed prior to this unification effort (see git hi
 4. ~~Stage 4: Type Predicates~~ ✓
 5. ~~Stage 5: Hooks as Rules~~ ✓
 6. ~~Stage 6: Derivations with Caching~~ ✓
-7. Next: Stage 7 (Unified Rule Registry with Mandatory Indexing)
-8. Iterate based on learnings
+7. ~~Stage 7: Unified Rule Registry (Mandatory Indexing)~~ ✓
+8. ~~Stage 8: Unified Query API~~ ✓
+9. Next: Stage 9 (Preconditions as Rules)
+10. Iterate based on learnings

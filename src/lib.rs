@@ -24,6 +24,7 @@ pub mod input;
 pub mod io;
 pub mod lang;
 pub mod precondition;
+pub mod query;
 pub mod repl;
 pub mod rng;
 pub mod rules;
@@ -77,4 +78,10 @@ pub use execution::{
     TraceSpan, begin_trace_span, create_action_attempt, create_command_entity, create_input,
     create_parse_result, create_result, enable_tracing, end_trace_span, query_execution_chain,
     register_execution_relations,
+};
+
+// Query API
+pub use query::{
+    EntityQuery, QueryBuilder, RuleQuery, TraversalDirection, TraversalQuery, query_entities,
+    query_rules, query_traversal,
 };
