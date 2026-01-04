@@ -400,14 +400,30 @@ pub struct DslHandlerResult {
 /// - Any other value - treated as success (for backward compatibility)
 ///
 /// Output is collected from `(say ...)` calls during execution.
+/// Execute a DSL handler with optional user-defined functions.
 pub fn execute_dsl_handler(
     body: &SExpr,
     world: &World,
     context: &ActionContext,
     stdlib: &StdLib,
 ) -> Result<DslHandlerResult, HandlerError> {
-    // Compile the handler body
-    let chunk = Compiler::compile(body)?;
+    execute_dsl_handler_with_functions(body, world, context, stdlib, None)
+}
+
+/// Execute a DSL handler with user-defined functions from the loader.
+pub fn execute_dsl_handler_with_functions(
+    body: &SExpr,
+    world: &World,
+    context: &ActionContext,
+    stdlib: &StdLib,
+    functions: Option<&crate::lang::FunctionRegistry>,
+) -> Result<DslHandlerResult, HandlerError> {
+    // Compile the handler body (with user functions if provided)
+    let chunk = if let Some(funcs) = functions {
+        Compiler::compile_with_functions(body, funcs)?
+    } else {
+        Compiler::compile(body)?
+    };
 
     // Execute with action context
     let mut vm = VM::new(&chunk, world, stdlib).with_action_context(context.clone());

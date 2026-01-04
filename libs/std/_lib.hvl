@@ -113,20 +113,22 @@
         (if room
             (do
               ; Room name (bold)
-              (say "**" (? room :Name) "**")
+              (say (string-concat "**" (string-concat (? room :Name) "**")))
               (say "")
               ; Room description
               (if (has? room :RoomDescription)
                   (do (say (? room :RoomDescription)) (say ""))
                   (if (has? room :Description)
-                      (do (say (? room :Description)) (say ""))))
+                      (do (say (? room :Description)) (say ""))
+                      nil))
               ; List visible entities
               (let ((entities (contents room)))
                 (if (not (empty? entities))
                     (do
                       (say "You can see:")
                       ; TODO: iterate over entities and describe each
-                      )))
+                      nil)
+                    nil))
               :success)
             (do (say "You are nowhere.") :failure)))))
 
@@ -192,7 +194,7 @@
       :failure))
 
 ; Helper function for directional movement
-; Checks for Exit_<direction> component on current room
+; Uses exit-target to find destination via Exit/Destination relations
 (defun try-go (direction)
   (let ((current-room (room)))
     (if current-room
@@ -200,10 +202,9 @@
           (if dest
               (do
                 (move! (actor) dest)
-                ; Return success - caller can handle the look
                 :success)
               (do
-                (say (string-concat (string-concat "You can't go " (string direction)) "."))
+                (say (string-concat (string-concat "You can't go " direction) "."))
                 :failure)))
         (do
           (say "You are nowhere.")

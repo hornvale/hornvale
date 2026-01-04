@@ -11,6 +11,33 @@
 ;; Define relations
 (relation InRoom :from :many :to :one)
 (relation Contains :from :one :to :many)
+(relation Exit :from :many :to :many)
+(relation Destination :from :many :to :one)
+
+;; === EXITS (composite entities) ===
+;; Exits have Direction component and Destination relation.
+;; Rooms reference exits via Exit relation.
+;; Note: Relations are deferred, so we can reference rooms not yet defined.
+
+;; Entry Hall -> Kitchen
+(entity exit-entry-north
+  (Direction "north")
+  (Destination kitchen))
+
+;; Kitchen -> Entry Hall
+(entity exit-kitchen-south
+  (Direction "south")
+  (Destination entry-hall))
+
+;; Kitchen -> Garden
+(entity exit-kitchen-east
+  (Direction "east")
+  (Destination garden))
+
+;; Garden -> Kitchen
+(entity exit-garden-west
+  (Direction "west")
+  (Destination kitchen))
 
 ;; === ROOMS ===
 
@@ -18,20 +45,20 @@
   (Name "Entry Hall")
   (IsRoom true)
   (RoomDescription "You are in a dusty entry hall. Faded wallpaper peels from the walls. A doorway leads north to the kitchen. There is a locked door to the east.")
-  (Exit_north kitchen))
+  (Exit exit-entry-north))
 
 (entity kitchen
   (Name "Kitchen")
   (IsRoom true)
   (RoomDescription "A cramped kitchen with an old wood stove. The entry hall is to the south, and a door leads east to the garden.")
-  (Exit_south entry-hall)
-  (Exit_east garden))
+  (Exit exit-kitchen-south)
+  (Exit exit-kitchen-east))
 
 (entity garden
   (Name "Garden")
   (IsRoom true)
   (RoomDescription "A beautiful overgrown garden bathed in moonlight. You've made it! The lamp illuminates ancient roses climbing the walls.")
-  (Exit_west kitchen))
+  (Exit exit-garden-west))
 
 ;; === OBJECTS ===
 

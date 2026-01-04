@@ -178,8 +178,8 @@ pub fn execute_grammar_action(
     grammar_match: &crate::GrammarMatch,
     stdlib: &crate::vm::StdLib,
 ) -> VerbResult {
-    // Call the full version with no action/precondition registries
-    execute_grammar_action_full(world, actor, grammar_match, stdlib, None, None)
+    // Call the full version with no registries
+    execute_grammar_action_full(world, actor, grammar_match, stdlib, None, None, None)
 }
 
 /// Execute an action based on a grammar match with full precondition support.
@@ -203,6 +203,7 @@ pub fn execute_grammar_action_full(
     stdlib: &crate::vm::StdLib,
     action_registry: Option<&crate::action::ActionRegistry>,
     precondition_registry: Option<&crate::precondition::PreconditionRegistry>,
+    function_registry: Option<&crate::lang::FunctionRegistry>,
 ) -> VerbResult {
     use crate::action::check_action_preconditions;
     use crate::hooks::{run_after_hooks, run_before_hooks, run_on_hooks};
@@ -294,9 +295,15 @@ pub fn execute_grammar_action_full(
 
         if let Some(action) = action_def {
             if action.has_dsl_handler() {
-                // Execute DSL handler
+                // Execute DSL handler with user-defined functions
                 if let Some(body) = action.handler().dsl_body() {
-                    match crate::action::execute_dsl_handler(body, world, &action_context, stdlib) {
+                    match crate::action::execute_dsl_handler_with_functions(
+                        body,
+                        world,
+                        &action_context,
+                        stdlib,
+                        function_registry,
+                    ) {
                         Ok(dsl_result) => {
                             output_parts.extend(dsl_result.output);
                             dsl_result.mutations.apply_to(world);

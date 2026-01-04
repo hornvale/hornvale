@@ -149,6 +149,7 @@ pub fn execute_command(
                         &stdlib,
                         Some(loader.action_registry()),
                         Some(loader.precondition_registry()),
+                        Some(loader.function_registry()),
                     );
                     io.println(result.output.as_ref());
                     return ReplResult::Continue;

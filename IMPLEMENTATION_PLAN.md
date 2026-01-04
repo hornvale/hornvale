@@ -325,8 +325,8 @@ This phase proves the kernel can support interactive fiction as authored content
 **Implementation Summary**:
 - Created `src/verbs.rs` with verb handlers
 - Components: Name, Brief, Description, RoomDescription, IsRoom, Portable, Fixed, IsPlayer
-- Relations: InRoom, Contains (for inventory)
-- Exit system via `Exit_<direction>` components on rooms
+- Relations: InRoom, Contains (for inventory), Exit (room→exit entity), Destination (exit→target room)
+- Exit system via composite entities: exit entities have Direction component, rooms reference exits via Exit relation
 - Direction shortcuts (n/s/e/w/etc.) map to go verb
 - 10 new tests
 - 412 tests passing
@@ -934,7 +934,9 @@ Total project: 635 tests passing
 - `src/lib.rs` — Export new types; removed deprecated `execute_command`
 
 **Tests**: 627 tests passing
-- All verb handlers now exercised via DSL actions in tests
+- All verb handlers now defined in DSL (`libs/std/_lib.hvl`)
+- Rust handlers completely removed (~530 lines deleted from `src/verbs.rs`)
+- Composite exit entities with Exit/Destination relations (not Exit_<direction> components)
 
 #### Example: Full DSL Verb Definition
 
@@ -1087,7 +1089,7 @@ Target: ~200 tests across all stages
 - Stage 6: ~5 tests (direction configuration)
 
 Current: 209 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33, Stage 4: 31, Stage 5A: 13, Stage 5B: 10, Stage 5C: 9, Stage 5D: 17, Stage 5F: 19)
-Total project: 634 tests passing
+Total project: 627 tests passing
 
 ---
 

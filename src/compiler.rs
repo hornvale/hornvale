@@ -356,7 +356,8 @@ impl<'a> Compiler<'a> {
                 // World access
                 "get-component" => return self.compile_get_component(args, dst, span),
                 "has-component" => return self.compile_has_component(args, dst, span),
-                "get" => return self.compile_get_component(args, dst, span), // Alias
+                "get" | "?" => return self.compile_get_component(args, dst, span), // Aliases
+                "has?" => return self.compile_has_component(args, dst, span),      // Alias
 
                 // Query operations
                 "descendants" => return self.compile_descendants(args, dst, span),
