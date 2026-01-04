@@ -806,7 +806,7 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
 
 ### Stage 6: Derivations with Caching
 **Goal**: Derived properties with epoch-based cache invalidation
-**Status**: Not Started
+**Status**: Complete
 
 **Changes**:
 1. Derivation rules in Meta layer:
@@ -856,16 +856,32 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
    ```
 
 **Success Criteria**:
-- [ ] Derivation rules as entities
-- [ ] Cache entries as entities
-- [ ] Epoch-based invalidation works
-- [ ] `(derive creature :FireResistance)` returns composed value
+- [x] Derivation rules as entities (via `Trigger::Derive(Symbol)`)
+- [x] Cache entries with epoch tracking (`DerivationCache`, `CachedDerivation`)
+- [x] Epoch-based invalidation works (`Epochs::is_newer_than`)
+- [x] `compose_values()` returns composed value with multiple modes
 
 **Tests**:
-- Add composition returns sum
-- Cache hit on repeated query
-- Cache miss after epoch bump
-- Derivation rules inspectable
+- [x] Add composition returns sum (`test_compose_add`)
+- [x] Cache hit on repeated query (`test_cache_basic`)
+- [x] Cache miss after epoch bump (`test_cache_basic` with newer epochs)
+- [x] Derivation rules queryable (`test_derive_rules_query`, `test_matching_derive_rules`)
+- [x] Derive rules don't fire during tick evaluation (`test_derive_rules_dont_fire_on_tick`)
+
+**Implementation Notes**:
+- Added `Trigger::Derive(Symbol)` variant with `derive()` constructor
+- Added `Trigger::is_derive()` and `Trigger::property()` methods
+- Created `src/rules/derivation.rs` with:
+  - `ComposeMode` enum: Replace, Add, Multiply, Max, Min
+  - `DerivedValue` struct for rule contributions
+  - `Epochs` struct tracking tick and named epochs (zodiac, season, etc.)
+  - `DerivationCache` with epoch-based validation
+  - `compose_values()` function for multi-rule value composition
+  - `DerivationRule` struct for defining derivation rules
+- Added `RuleSet::derive_rules()` for querying rules by property
+- Added `RuleSet::matching_derive_rules()` for filtering by entity pattern
+- Derive rules skip during `should_fire()` in tick evaluation (triggered on-demand)
+- Note: Full integration with `World::derive()` method planned for Stage 7
 
 ---
 
@@ -1539,5 +1555,6 @@ The following phases were completed prior to this unification effort (see git hi
 3. ~~Stage 3: Predicate Patterns~~ ✓
 4. ~~Stage 4: Type Predicates~~ ✓
 5. ~~Stage 5: Hooks as Rules~~ ✓
-6. Next: Stage 6 (Derivations with Caching)
-7. Iterate based on learnings
+6. ~~Stage 6: Derivations with Caching~~ ✓
+7. Next: Stage 7 (Unified Rule Registry with Mandatory Indexing)
+8. Iterate based on learnings

@@ -34,6 +34,10 @@ pub enum Trigger {
 
     /// Fire after an action completes.
     After(Symbol),
+
+    /// Fire when deriving a property value.
+    /// Multiple derivation rules can contribute to a property's final value.
+    Derive(Symbol),
 }
 
 impl Trigger {
@@ -57,6 +61,11 @@ impl Trigger {
         Trigger::After(action.into())
     }
 
+    /// Create a Derive trigger for computing derived properties.
+    pub fn derive(property: impl Into<Symbol>) -> Self {
+        Trigger::Derive(property.into())
+    }
+
     /// Get the interval for periodic triggers, if applicable.
     pub fn interval(&self) -> Option<u64> {
         match self {
@@ -71,6 +80,19 @@ impl Trigger {
             Trigger::Before(action) | Trigger::On(action) | Trigger::After(action) => Some(*action),
             _ => None,
         }
+    }
+
+    /// Get the property name for Derive triggers, if applicable.
+    pub fn property(&self) -> Option<Symbol> {
+        match self {
+            Trigger::Derive(property) => Some(*property),
+            _ => None,
+        }
+    }
+
+    /// Check if this is a Derive trigger.
+    pub fn is_derive(&self) -> bool {
+        matches!(self, Trigger::Derive(_))
     }
 
     /// Check if this is a Before trigger.
@@ -143,6 +165,7 @@ impl Rule {
             Trigger::Before(action) => format!("before:{}", action.as_str()),
             Trigger::On(action) => format!("on:{}", action.as_str()),
             Trigger::After(action) => format!("after:{}", action.as_str()),
+            Trigger::Derive(property) => format!("derive:{}", property.as_str()),
         };
         format!(
             "Rule: {}\n  Pattern: {}\n  Trigger: {}\n  Effect: {}",
@@ -240,5 +263,32 @@ mod tests {
         assert!(desc.contains("holy-book-burn"));
         assert!(desc.contains("on:burn"));
         assert!(desc.contains("Lightning"));
+    }
+
+    #[test]
+    fn test_derive_trigger() {
+        let derive = Trigger::derive("FireResistance");
+        assert!(derive.is_derive());
+        assert!(!derive.is_hook());
+        assert!(!derive.is_before());
+        assert!(!derive.is_on());
+        assert!(!derive.is_after());
+        assert_eq!(derive.property(), Some(Symbol::new("FireResistance")));
+        assert_eq!(derive.action(), None);
+        assert_eq!(derive.interval(), None);
+    }
+
+    #[test]
+    fn test_derive_rule_describe() {
+        let rule = Rule::new(
+            "fire-resist-base",
+            Pattern::has_component("?e", "Ancestry"),
+            Trigger::derive("FireResistance"),
+            Effect::no_op(), // Derivation rules typically just provide values, not effects
+        );
+
+        let desc = rule.describe();
+        assert!(desc.contains("fire-resist-base"));
+        assert!(desc.contains("derive:FireResistance"));
     }
 }

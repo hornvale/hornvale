@@ -9,6 +9,7 @@
 //! - **PredicatePattern**: VM-compiled boolean filters
 //! - **Effect**: VM-executed actions (mutations, output)
 //! - **Rule**: Combines trigger, pattern, and effect
+//! - **Derivation**: Computed properties with caching
 //!
 //! ## Pattern vs PredicatePattern
 //!
@@ -21,13 +22,24 @@
 //! - "Does this creature have enough HP?"
 //!
 //! Combined: Rust enumeration + VM filter for best performance.
+//!
+//! ## Derivations
+//!
+//! Use `Trigger::derive()` for computed properties:
+//! - Multiple rules can contribute to a property's final value
+//! - Values are composed using modes: Add, Multiply, Max, Min, Replace
+//! - Results are cached and invalidated based on epochs
 
+pub mod derivation;
 mod effect;
 mod engine;
 mod pattern;
 pub mod predicate;
 mod rule;
 
+pub use derivation::{
+    ComposeMode, DerivationCache, DerivationRule, DerivedValue, Epochs, compose_values,
+};
 pub use effect::{Effect, EffectError, EffectResult};
 pub use engine::RuleSet;
 pub use pattern::{Pattern, Var};

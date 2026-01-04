@@ -104,6 +104,32 @@ impl RuleSet {
             .filter(move |r| r.trigger.is_hook() && r.trigger.action() == Some(action_sym))
     }
 
+    // =========================================================================
+    // Derivation Rule Queries
+    // =========================================================================
+
+    /// Get all derivation rules for a property.
+    pub fn derive_rules(&self, property: &str) -> impl Iterator<Item = &Rule> {
+        let property_sym = Symbol::new(property);
+        self.rules
+            .iter()
+            .filter(move |r| matches!(&r.trigger, Trigger::Derive(p) if *p == property_sym))
+    }
+
+    /// Get derivation rules that match a specific entity for a property.
+    pub fn matching_derive_rules<'a>(
+        &'a self,
+        world: &'a World,
+        entity: EntityId,
+        property: &str,
+    ) -> impl Iterator<Item = &'a Rule> + 'a {
+        let property_sym = Symbol::new(property);
+        self.rules.iter().filter(move |r| {
+            matches!(&r.trigger, Trigger::Derive(p) if *p == property_sym)
+                && r.pattern.matches(world, entity)
+        })
+    }
+
     /// Get hook rules that match a specific entity for an action phase.
     ///
     /// This filters hook rules to only those whose pattern matches the entity.
@@ -212,6 +238,8 @@ impl RuleSet {
             }
             // Hook triggers are fired by the action system, not tick evaluation
             Trigger::Before(_) | Trigger::On(_) | Trigger::After(_) => false,
+            // Derive triggers are fired on-demand when property values are requested
+            Trigger::Derive(_) => false,
         }
     }
 
@@ -608,5 +636,115 @@ mod tests {
         let other_entity = world.create_entity();
         assert!(before_take[0].pattern.matches(&world, holy_book));
         assert!(!before_take[0].pattern.matches(&world, other_entity));
+    }
+
+    // =========================================================================
+    // Derivation Rule Query Tests
+    // =========================================================================
+
+    #[test]
+    fn test_derive_rules_query() {
+        let rules = RuleSet::from_rules(vec![
+            Rule::new(
+                "fire-resist-base",
+                Pattern::has_component("?e", "Ancestry"),
+                Trigger::derive("FireResistance"),
+                Effect::no_op(),
+            ),
+            Rule::new(
+                "fire-resist-biome",
+                Pattern::has_component("?e", "InRoom"),
+                Trigger::derive("FireResistance"),
+                Effect::no_op(),
+            ),
+            Rule::new(
+                "cold-resist-base",
+                Pattern::entity("?e"),
+                Trigger::derive("ColdResistance"),
+                Effect::no_op(),
+            ),
+            // Non-derive rule should not be returned
+            Rule::new(
+                "goat-baas",
+                Pattern::entity("?e"),
+                Trigger::every(10),
+                Effect::emit_message("Baa!"),
+            ),
+        ]);
+
+        let fire_rules: Vec<_> = rules.derive_rules("FireResistance").collect();
+        assert_eq!(fire_rules.len(), 2);
+
+        let cold_rules: Vec<_> = rules.derive_rules("ColdResistance").collect();
+        assert_eq!(cold_rules.len(), 1);
+
+        let poison_rules: Vec<_> = rules.derive_rules("PoisonResistance").collect();
+        assert_eq!(poison_rules.len(), 0);
+    }
+
+    #[test]
+    fn test_matching_derive_rules() {
+        let mut world = World::new();
+
+        // Create a creature with Ancestry component
+        let goblin = world.create_entity();
+        world.set_component(goblin, "Ancestry", "goblin");
+        world.set_component(goblin, "InRoom", true);
+
+        // Create a creature without Ancestry
+        let slime = world.create_entity();
+        world.set_component(slime, "InRoom", true);
+
+        let rules = RuleSet::from_rules(vec![
+            Rule::new(
+                "fire-resist-ancestry",
+                Pattern::has_component("?e", "Ancestry"),
+                Trigger::derive("FireResistance"),
+                Effect::no_op(),
+            ),
+            Rule::new(
+                "fire-resist-biome",
+                Pattern::has_component("?e", "InRoom"),
+                Trigger::derive("FireResistance"),
+                Effect::no_op(),
+            ),
+        ]);
+
+        // Goblin matches both rules
+        let goblin_rules: Vec<_> = rules
+            .matching_derive_rules(&world, goblin, "FireResistance")
+            .collect();
+        assert_eq!(goblin_rules.len(), 2);
+
+        // Slime only matches biome rule
+        let slime_rules: Vec<_> = rules
+            .matching_derive_rules(&world, slime, "FireResistance")
+            .collect();
+        assert_eq!(slime_rules.len(), 1);
+        assert_eq!(slime_rules[0].name.as_str(), "fire-resist-biome");
+    }
+
+    #[test]
+    fn test_derive_rules_dont_fire_on_tick() {
+        let mut world = World::new();
+        let entity = world.create_entity();
+        world.set_component(entity, "Ancestry", "goblin");
+
+        let mut rules = RuleSet::from_rules(vec![Rule::new(
+            "fire-resist",
+            Pattern::entity("?e"),
+            Trigger::derive("FireResistance"),
+            Effect::emit_message("Deriving fire resistance..."),
+        )]);
+
+        let mut io = TestIO::new(vec![]);
+
+        // Evaluate for many ticks - derive rules should never fire
+        for tick in 1..=100 {
+            rules.evaluate(&world, &mut io, tick);
+        }
+
+        // Derive rules should NOT have fired
+        assert!(!io.output.contains("Deriving"));
     }
 }
