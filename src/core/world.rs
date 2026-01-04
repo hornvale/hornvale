@@ -25,9 +25,12 @@ use crate::core::{
     ComponentStorage, ComponentTypeId, EntityAllocator, EntityId, RelationRegistry, RelationSchema,
     RelationTypeId, Value,
 };
+use crate::core::{EpochSnapshot, Layer, LayerError, Phase};
 use crate::derive::DerivationEngine;
 use crate::direction::DirectionRegistry;
 use crate::input::{self, Command, Input};
+use crate::symbol::Symbol;
+use im::OrdMap;
 
 /// A frozen snapshot of world state.
 ///
@@ -44,6 +47,20 @@ pub struct WorldSnapshot {
     pub tick: u64,
 }
 
+/// A queued change to a Meta-layer entity.
+///
+/// When a Meta entity is modified during a tick, the change is queued
+/// and applied at the end of the tick (during `end_tick()`).
+#[derive(Debug, Clone)]
+pub struct QueuedMetaChange {
+    /// The entity to modify
+    pub entity: EntityId,
+    /// The component to set
+    pub component: ComponentTypeId,
+    /// The new value
+    pub value: Value,
+}
+
 /// The world state.
 ///
 /// Supports base/overlay layering for cheap snapshots and rollback.
@@ -52,6 +69,14 @@ pub struct WorldSnapshot {
 ///
 /// Also supports nested transactions for speculative modifications.
 /// Each transaction creates a savepoint that can be rolled back.
+///
+/// ## Layer Architecture
+///
+/// Entities are stratified into layers with different mutation rules:
+/// - Schema: Frozen after boot
+/// - Meta: Frozen during tick
+/// - World: Mutable during tick
+/// - Execution: Ephemeral, cleared at end of tick
 #[derive(Debug, Clone)]
 pub struct World {
     /// Entity ID allocator
@@ -66,10 +91,22 @@ pub struct World {
     base: Option<WorldSnapshot>,
     /// Transaction savepoint stack (for nested transactions)
     transaction_stack: Vec<WorldSnapshot>,
+
+    // --- Layer infrastructure (Stage 0) ---
+    /// Layer assignment for each entity (immutable after creation)
+    entity_layers: OrdMap<EntityId, Layer>,
+    /// Current simulation phase
+    phase: Phase,
+    /// Epoch counters for cache invalidation
+    epochs: OrdMap<Symbol, u64>,
+    /// Queued meta changes (applied at end of tick)
+    queued_meta_changes: Vec<QueuedMetaChange>,
 }
 
 impl World {
     /// Create a new empty world.
+    ///
+    /// The world starts in Boot phase, allowing Schema entities to be created.
     pub fn new() -> Self {
         Self {
             entities: EntityAllocator::new(),
@@ -78,6 +115,10 @@ impl World {
             tick: 0,
             base: None,
             transaction_stack: Vec::new(),
+            entity_layers: OrdMap::new(),
+            phase: Phase::Boot,
+            epochs: OrdMap::new(),
+            queued_meta_changes: Vec::new(),
         }
     }
 
@@ -375,8 +416,35 @@ impl World {
     }
 
     /// Create a new entity and return its ID.
+    ///
+    /// The entity is assigned to the World layer by default.
+    /// Use `create_entity_with_layer` to specify a different layer.
     pub fn create_entity(&mut self) -> EntityId {
-        self.entities.create()
+        self.create_entity_with_layer(Layer::World)
+    }
+
+    /// Create a new entity with a specific layer.
+    ///
+    /// The layer is immutable after creation.
+    pub fn create_entity_with_layer(&mut self, layer: Layer) -> EntityId {
+        let id = self.entities.create();
+        self.entity_layers.insert(id, layer);
+        id
+    }
+
+    /// Get the layer of an entity.
+    ///
+    /// Returns `Layer::World` for entities created before layer support was added.
+    pub fn get_layer(&self, entity: EntityId) -> Layer {
+        self.entity_layers
+            .get(&entity)
+            .copied()
+            .unwrap_or(Layer::World)
+    }
+
+    /// Check if an entity exists.
+    pub fn entity_exists(&self, entity: EntityId) -> bool {
+        entity.raw() < self.entities.count()
     }
 
     /// Get the number of entities that have been created.
@@ -384,7 +452,141 @@ impl World {
         self.entities.count()
     }
 
-    /// Set a component value for an entity.
+    // --- Phase management ---
+
+    /// Get the current simulation phase.
+    pub fn phase(&self) -> Phase {
+        self.phase
+    }
+
+    /// End the boot phase and transition to idle.
+    ///
+    /// After this, Schema entities can no longer be modified.
+    pub fn end_boot(&mut self) {
+        if self.phase == Phase::Boot {
+            self.phase = Phase::Idle;
+        }
+    }
+
+    /// Begin a new tick.
+    ///
+    /// Transitions from Idle to Tick phase. Meta entities are now frozen.
+    pub fn begin_tick(&mut self) {
+        if self.phase == Phase::Idle {
+            self.phase = Phase::Tick;
+            self.tick += 1;
+        }
+    }
+
+    /// End the current tick.
+    ///
+    /// Applies queued meta changes, cleans up execution entities,
+    /// and transitions from Tick to Idle phase.
+    pub fn end_tick(&mut self) {
+        if self.phase == Phase::Tick {
+            // Apply queued meta changes
+            self.apply_queued_meta_changes();
+
+            // Clean up execution entities (delete unless archived)
+            self.cleanup_execution_entities();
+
+            self.phase = Phase::Idle;
+        }
+    }
+
+    /// Apply all queued meta changes.
+    fn apply_queued_meta_changes(&mut self) {
+        let changes = std::mem::take(&mut self.queued_meta_changes);
+        for change in changes {
+            self.components
+                .set(change.entity, change.component, change.value);
+        }
+    }
+
+    /// Clean up execution layer entities.
+    ///
+    /// Deletes all execution entities that don't have an "Archive" component.
+    fn cleanup_execution_entities(&mut self) {
+        let execution_entities: Vec<EntityId> = self
+            .entity_layers
+            .iter()
+            .filter(|&(_, layer)| *layer == Layer::Execution)
+            .map(|(&id, _)| id)
+            .collect();
+
+        for entity in execution_entities {
+            // Keep if archived
+            if self.has_component(entity, "Archive") {
+                continue;
+            }
+            // Delete the entity
+            self.delete_entity(entity);
+            self.entity_layers.remove(&entity);
+        }
+    }
+
+    /// Queue a meta change to be applied at end of tick.
+    ///
+    /// Use this when you need to modify a Meta entity during a tick.
+    pub fn queue_meta_change(
+        &mut self,
+        entity: EntityId,
+        component: impl Into<ComponentTypeId>,
+        value: impl Into<Value>,
+    ) {
+        self.queued_meta_changes.push(QueuedMetaChange {
+            entity,
+            component: component.into(),
+            value: value.into(),
+        });
+    }
+
+    // --- Epoch management ---
+
+    /// Get the current value of an epoch counter.
+    pub fn get_epoch(&self, epoch_type: Symbol) -> u64 {
+        self.epochs.get(&epoch_type).copied().unwrap_or(0)
+    }
+
+    /// Bump an epoch counter, invalidating caches that depend on it.
+    pub fn bump_epoch(&mut self, epoch_type: Symbol) {
+        let current = self.get_epoch(epoch_type);
+        self.epochs.insert(epoch_type, current + 1);
+    }
+
+    /// Get a snapshot of all current epoch counters.
+    pub fn current_epochs(&self) -> EpochSnapshot {
+        EpochSnapshot::from_pairs(self.epochs.iter().map(|(&k, &v)| (k, v)))
+    }
+
+    // --- Layer-checked mutations ---
+
+    /// Set a component value, checking layer rules.
+    ///
+    /// Returns an error if the entity's layer doesn't allow mutation in the current phase.
+    pub fn set_component_checked(
+        &mut self,
+        entity: EntityId,
+        component: impl Into<ComponentTypeId>,
+        value: impl Into<Value>,
+    ) -> Result<(), LayerError> {
+        let layer = self.get_layer(entity);
+        self.validate_mutation(layer)?;
+        self.components.set(entity, component.into(), value.into());
+        Ok(())
+    }
+
+    /// Validate that a mutation is allowed for the given layer.
+    fn validate_mutation(&self, layer: Layer) -> Result<(), LayerError> {
+        match (layer, self.phase) {
+            (Layer::Schema, Phase::Boot) => Ok(()),
+            (Layer::Schema, _) => Err(LayerError::SchemaFrozen),
+            (Layer::Meta, Phase::Tick) => Err(LayerError::MetaFrozenDuringTick),
+            _ => Ok(()),
+        }
+    }
+
+    /// Set a component value for an entity (unchecked, for backward compatibility).
     pub fn set_component(
         &mut self,
         entity: EntityId,
@@ -1786,5 +1988,245 @@ mod tests {
             world.get_base_component(entity, "HP"),
             Some(&Value::Int(100))
         );
+    }
+
+    // === Hard Invariant Tests (Stage 0) ===
+
+    // Invariant A: Meta snapshot determinism
+    #[test]
+    fn test_meta_changes_not_visible_during_tick() {
+        let mut world = World::new();
+        world.end_boot(); // Transition to Idle
+
+        // Create a meta entity
+        let rule = world.create_entity_with_layer(Layer::Meta);
+        world.set_component(rule, "RuleName", "test-rule");
+        world.set_component(rule, "Effect", "old-effect");
+
+        // Start tick - meta is now frozen
+        world.begin_tick();
+
+        // Queue a meta change (should not be visible this tick)
+        world.queue_meta_change(rule, "Effect", "new-effect");
+
+        // Current tick still sees old value
+        assert_eq!(
+            world.get_component(rule, "Effect"),
+            Some(&Value::string("old-effect"))
+        );
+
+        // End tick - queued changes applied
+        world.end_tick();
+
+        // Next tick sees new value
+        world.begin_tick();
+        assert_eq!(
+            world.get_component(rule, "Effect"),
+            Some(&Value::string("new-effect"))
+        );
+    }
+
+    // Invariant B: Execution entities don't leak
+    #[test]
+    fn test_execution_entities_cleaned_after_tick() {
+        let mut world = World::new();
+        world.end_boot();
+        world.begin_tick();
+
+        // Create execution entities (simulating command processing)
+        let input = world.create_entity_with_layer(Layer::Execution);
+        world.set_component(input, "InputText", "take lamp");
+
+        let command = world.create_entity_with_layer(Layer::Execution);
+        world.set_component(command, "Verb", "take");
+
+        // Entities exist during tick
+        assert!(world.entity_exists(input));
+        assert!(world.entity_exists(command));
+
+        // End tick - execution entities cleaned up
+        world.end_tick();
+
+        // Entities should have been cleaned up (no Archive component)
+        // Note: entity_exists still returns true because we don't reuse IDs,
+        // but the layer entry should be gone
+        assert!(world.get_component(input, "InputText").is_none());
+        assert!(world.get_component(command, "Verb").is_none());
+    }
+
+    #[test]
+    fn test_archived_execution_entities_retained() {
+        let mut world = World::new();
+        world.end_boot();
+        world.begin_tick();
+
+        let input = world.create_entity_with_layer(Layer::Execution);
+        world.set_component(input, "InputText", "take lamp");
+        world.set_component(input, "Archive", true); // Mark for retention
+
+        world.end_tick();
+
+        // Archived entity retained
+        assert_eq!(
+            world.get_component(input, "InputText"),
+            Some(&Value::string("take lamp"))
+        );
+    }
+
+    // Invariant C: Layer immutability
+    #[test]
+    fn test_layer_is_immutable() {
+        let mut world = World::new();
+
+        let entity = world.create_entity_with_layer(Layer::World);
+        assert_eq!(world.get_layer(entity), Layer::World);
+
+        // There is no set_layer method - layer is immutable
+        // We can only verify that the layer stays the same
+        let meta_entity = world.create_entity_with_layer(Layer::Meta);
+        assert_eq!(world.get_layer(meta_entity), Layer::Meta);
+
+        // Creating more entities doesn't change existing layers
+        let _another = world.create_entity();
+        assert_eq!(world.get_layer(entity), Layer::World);
+        assert_eq!(world.get_layer(meta_entity), Layer::Meta);
+    }
+
+    // Invariant D: Schema frozen after boot
+    #[test]
+    fn test_schema_frozen_after_boot() {
+        let mut world = World::new();
+        assert_eq!(world.phase(), Phase::Boot);
+
+        // Create schema entity during boot
+        let schema = world.create_entity_with_layer(Layer::Schema);
+        world.set_component(schema, "ComponentName", "HP");
+
+        // End boot phase
+        world.end_boot();
+        assert_eq!(world.phase(), Phase::Idle);
+
+        // Attempt to modify schema - should error
+        let result = world.set_component_checked(schema, "ComponentName", "Health");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), LayerError::SchemaFrozen));
+    }
+
+    #[test]
+    fn test_meta_frozen_during_tick() {
+        let mut world = World::new();
+        world.end_boot();
+
+        // Create meta entity during idle
+        let rule = world.create_entity_with_layer(Layer::Meta);
+        world.set_component(rule, "RuleName", "test-rule");
+
+        world.begin_tick();
+        assert_eq!(world.phase(), Phase::Tick);
+
+        // Attempt to modify meta during tick - should error
+        let result = world.set_component_checked(rule, "RuleName", "changed");
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            LayerError::MetaFrozenDuringTick
+        ));
+
+        // Value unchanged
+        assert_eq!(
+            world.get_component(rule, "RuleName"),
+            Some(&Value::string("test-rule"))
+        );
+    }
+
+    #[test]
+    fn test_world_layer_mutable_during_tick() {
+        let mut world = World::new();
+        world.end_boot();
+
+        let creature = world.create_entity_with_layer(Layer::World);
+        world.set_component(creature, "HP", 100_i64);
+
+        world.begin_tick();
+
+        // World layer should be mutable during tick
+        let result = world.set_component_checked(creature, "HP", 50_i64);
+        assert!(result.is_ok());
+        assert_eq!(world.get_component(creature, "HP"), Some(&Value::Int(50)));
+    }
+
+    #[test]
+    fn test_epoch_tracking() {
+        let mut world = World::new();
+
+        // Initial epoch should be 0
+        let tick_epoch = crate::symbol::Symbol::new("tick");
+        assert_eq!(world.get_epoch(tick_epoch), 0);
+
+        // Bump epoch
+        world.bump_epoch(tick_epoch);
+        assert_eq!(world.get_epoch(tick_epoch), 1);
+
+        // Bump again
+        world.bump_epoch(tick_epoch);
+        assert_eq!(world.get_epoch(tick_epoch), 2);
+
+        // Different epoch type
+        let zodiac = crate::symbol::Symbol::new("zodiac");
+        assert_eq!(world.get_epoch(zodiac), 0);
+        world.bump_epoch(zodiac);
+        assert_eq!(world.get_epoch(zodiac), 1);
+        assert_eq!(world.get_epoch(tick_epoch), 2); // tick unchanged
+    }
+
+    #[test]
+    fn test_current_epochs_snapshot() {
+        let mut world = World::new();
+
+        let tick = crate::symbol::Symbol::new("tick");
+        let zodiac = crate::symbol::Symbol::new("zodiac");
+
+        world.bump_epoch(tick);
+        world.bump_epoch(tick);
+        world.bump_epoch(zodiac);
+
+        let snapshot = world.current_epochs();
+
+        assert_eq!(snapshot.get(tick), Some(2));
+        assert_eq!(snapshot.get(zodiac), Some(1));
+    }
+
+    #[test]
+    fn test_phase_transitions() {
+        let mut world = World::new();
+
+        // Starts in Boot
+        assert_eq!(world.phase(), Phase::Boot);
+
+        // end_boot -> Idle
+        world.end_boot();
+        assert_eq!(world.phase(), Phase::Idle);
+
+        // begin_tick -> Tick
+        world.begin_tick();
+        assert_eq!(world.phase(), Phase::Tick);
+
+        // end_tick -> Idle
+        world.end_tick();
+        assert_eq!(world.phase(), Phase::Idle);
+
+        // Can do multiple ticks
+        world.begin_tick();
+        assert_eq!(world.phase(), Phase::Tick);
+        world.end_tick();
+        assert_eq!(world.phase(), Phase::Idle);
+    }
+
+    #[test]
+    fn test_default_layer_is_world() {
+        let mut world = World::new();
+
+        let entity = world.create_entity();
+        assert_eq!(world.get_layer(entity), Layer::World);
     }
 }

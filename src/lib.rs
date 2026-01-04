@@ -16,6 +16,7 @@ pub mod compiler;
 pub mod core;
 pub mod derive;
 pub mod direction;
+pub mod execution;
 pub mod generator;
 pub mod grammar;
 pub mod hooks;
@@ -34,7 +35,8 @@ pub mod vm;
 
 // Re-export commonly used types at the crate root
 pub use core::{
-    Cardinality, ComponentTypeId, EntityId, RelationSchema, RelationTypeId, Value, World,
+    Cardinality, ComponentTypeId, EntityId, EpochSnapshot, Layer, LayerError, Phase,
+    RelationSchema, RelationTypeId, Value, World,
 };
 pub use derive::{ComposeMode, DerivationEngine, DerivationError, DerivationRule, DerivedProperty};
 pub use generator::{
@@ -68,4 +70,11 @@ pub use direction::{DirectionDef, DirectionRegistry};
 pub use precondition::{
     Precondition, PreconditionArg, PreconditionCall, PreconditionError, PreconditionRegistry,
     PreconditionResult,
+};
+
+// Execution layer
+pub use execution::{
+    TraceSpan, begin_trace_span, create_action_attempt, create_command_entity, create_input,
+    create_parse_result, create_result, enable_tracing, end_trace_span, query_execution_chain,
+    register_execution_relations,
 };
