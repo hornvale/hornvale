@@ -1,6 +1,16 @@
 //! Rule definitions for data-driven game logic.
 //!
 //! A Rule combines a pattern (when to fire) with an effect (what to do).
+//!
+//! ## Hook Triggers
+//!
+//! Hooks are represented as rules with Before/On/After triggers:
+//! - `Before(action)`: Runs before action, can veto
+//! - `On(action)`: Runs during action, can handle (skip default)
+//! - `After(action)`: Runs after action completes
+//!
+//! Hook rules typically have a pattern that matches a specific entity
+//! (the entity the hook is "attached" to).
 
 use crate::rules::pattern::Pattern;
 use crate::symbol::Symbol;
@@ -8,14 +18,22 @@ use crate::symbol::Symbol;
 use super::effect::Effect;
 
 /// When a rule should be evaluated.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Trigger {
     /// Fire every N ticks.
     Periodic {
         /// Number of ticks between firings.
         interval: u64,
     },
-    // Future: OnChange, OnEvent, etc.
+
+    /// Fire before an action (can veto).
+    Before(Symbol),
+
+    /// Fire during an action (can handle/skip default).
+    On(Symbol),
+
+    /// Fire after an action completes.
+    After(Symbol),
 }
 
 impl Trigger {
@@ -24,10 +42,67 @@ impl Trigger {
         Trigger::Periodic { interval }
     }
 
+    /// Create a Before hook trigger.
+    pub fn before(action: impl Into<Symbol>) -> Self {
+        Trigger::Before(action.into())
+    }
+
+    /// Create an On hook trigger.
+    pub fn on(action: impl Into<Symbol>) -> Self {
+        Trigger::On(action.into())
+    }
+
+    /// Create an After hook trigger.
+    pub fn after(action: impl Into<Symbol>) -> Self {
+        Trigger::After(action.into())
+    }
+
     /// Get the interval for periodic triggers, if applicable.
     pub fn interval(&self) -> Option<u64> {
         match self {
             Trigger::Periodic { interval } => Some(*interval),
+            _ => None,
+        }
+    }
+
+    /// Get the action name for hook triggers, if applicable.
+    pub fn action(&self) -> Option<Symbol> {
+        match self {
+            Trigger::Before(action) | Trigger::On(action) | Trigger::After(action) => Some(*action),
+            _ => None,
+        }
+    }
+
+    /// Check if this is a Before trigger.
+    pub fn is_before(&self) -> bool {
+        matches!(self, Trigger::Before(_))
+    }
+
+    /// Check if this is an On trigger.
+    pub fn is_on(&self) -> bool {
+        matches!(self, Trigger::On(_))
+    }
+
+    /// Check if this is an After trigger.
+    pub fn is_after(&self) -> bool {
+        matches!(self, Trigger::After(_))
+    }
+
+    /// Check if this is a hook trigger (Before, On, or After).
+    pub fn is_hook(&self) -> bool {
+        matches!(
+            self,
+            Trigger::Before(_) | Trigger::On(_) | Trigger::After(_)
+        )
+    }
+
+    /// Get the phase name for hook triggers.
+    pub fn phase_name(&self) -> Option<&'static str> {
+        match self {
+            Trigger::Before(_) => Some("Before"),
+            Trigger::On(_) => Some("On"),
+            Trigger::After(_) => Some("After"),
+            _ => None,
         }
     }
 }
@@ -65,6 +140,9 @@ impl Rule {
     pub fn describe(&self) -> String {
         let trigger_desc = match &self.trigger {
             Trigger::Periodic { interval } => format!("every {interval} ticks"),
+            Trigger::Before(action) => format!("before:{}", action.as_str()),
+            Trigger::On(action) => format!("on:{}", action.as_str()),
+            Trigger::After(action) => format!("after:{}", action.as_str()),
         };
         format!(
             "Rule: {}\n  Pattern: {}\n  Trigger: {}\n  Effect: {}",
@@ -110,5 +188,57 @@ mod tests {
         assert!(desc.contains("every 10 ticks"));
         assert!(desc.contains("goat"));
         assert!(desc.contains("Baa!"));
+    }
+
+    #[test]
+    fn test_hook_triggers() {
+        let before = Trigger::before("take");
+        assert!(before.is_before());
+        assert!(before.is_hook());
+        assert!(!before.is_on());
+        assert!(!before.is_after());
+        assert_eq!(before.action(), Some(Symbol::new("take")));
+        assert_eq!(before.phase_name(), Some("Before"));
+        assert_eq!(before.interval(), None);
+
+        let on = Trigger::on("burn");
+        assert!(on.is_on());
+        assert!(on.is_hook());
+        assert!(!on.is_before());
+        assert_eq!(on.action(), Some(Symbol::new("burn")));
+        assert_eq!(on.phase_name(), Some("On"));
+
+        let after = Trigger::after("open");
+        assert!(after.is_after());
+        assert!(after.is_hook());
+        assert_eq!(after.action(), Some(Symbol::new("open")));
+        assert_eq!(after.phase_name(), Some("After"));
+    }
+
+    #[test]
+    fn test_periodic_trigger_not_hook() {
+        let periodic = Trigger::every(10);
+        assert!(!periodic.is_hook());
+        assert!(!periodic.is_before());
+        assert!(!periodic.is_on());
+        assert!(!periodic.is_after());
+        assert_eq!(periodic.action(), None);
+        assert_eq!(periodic.phase_name(), None);
+        assert_eq!(periodic.interval(), Some(10));
+    }
+
+    #[test]
+    fn test_hook_rule_describe() {
+        let rule = Rule::new(
+            "holy-book-burn",
+            Pattern::entity("?e"),
+            Trigger::on("burn"),
+            Effect::emit_message("Lightning strikes!"),
+        );
+
+        let desc = rule.describe();
+        assert!(desc.contains("holy-book-burn"));
+        assert!(desc.contains("on:burn"));
+        assert!(desc.contains("Lightning"));
     }
 }

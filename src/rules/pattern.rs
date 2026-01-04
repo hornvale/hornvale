@@ -53,6 +53,10 @@ pub enum Pattern {
     /// `(entity ?e)` - always true
     Entity(Var),
 
+    /// Matches a specific entity by ID.
+    /// Used for hook rules that are attached to a specific entity.
+    EntityEquals(Var, EntityId),
+
     /// Matches entities that have a specific component.
     /// `(has ?e Name)` - true if entity has a Name component
     HasComponent(Var, ComponentTypeId),
@@ -81,6 +85,11 @@ impl Pattern {
     /// Create an Entity pattern.
     pub fn entity(var: impl Into<Var>) -> Self {
         Pattern::Entity(var.into())
+    }
+
+    /// Create an EntityEquals pattern that matches a specific entity.
+    pub fn entity_equals(var: impl Into<Var>, entity_id: EntityId) -> Self {
+        Pattern::EntityEquals(var.into(), entity_id)
     }
 
     /// Create a HasComponent pattern.
@@ -134,6 +143,11 @@ impl Pattern {
                 true
             }
 
+            Pattern::EntityEquals(_, expected_entity) => {
+                // Only the specific entity matches
+                entity == *expected_entity
+            }
+
             Pattern::HasComponent(_, component) => {
                 // Check if entity has the component
                 world.has_component(entity, *component)
@@ -172,6 +186,9 @@ impl Pattern {
     pub fn describe(&self) -> String {
         match self {
             Pattern::Entity(var) => format!("(entity {var})"),
+            Pattern::EntityEquals(var, entity_id) => {
+                format!("(entity= {var} #{})", entity_id.raw())
+            }
             Pattern::HasComponent(var, comp) => format!("(has {var} {comp})"),
             Pattern::ComponentValue(var, comp, val) => {
                 format!("(= (get {var} {comp}) {val})")

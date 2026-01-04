@@ -751,7 +751,7 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
 
 ### Stage 5: Hooks as Rules
 **Goal**: Before/On/After hooks become rules in Meta layer
-**Status**: Not Started
+**Status**: Complete
 
 **Changes**:
 1. Hook triggers as rule trigger types:
@@ -780,16 +780,27 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
 3. Hook ordering via priority + entity order
 
 **Success Criteria**:
-- [ ] Hooks stored as rule entities
-- [ ] Inline syntax still works (desugars)
-- [ ] Hook ordering preserved
-- [ ] Rules queryable: `(rules-for-trigger (on :burn))`
+- [x] Hooks stored as rule entities (via `import_hooks_from_world`)
+- [x] Inline syntax still works (desugars via `import_hooks_from_world`)
+- [x] Hook ordering preserved (rules maintain order)
+- [x] Rules queryable: `before_hooks()`, `on_hooks()`, `after_hooks()`, `hooks_for_action()`
 
 **Tests**:
-- Before hook vetoes action
-- On hook handles action
-- Multiple hooks fire in order
-- Inline hook desugars correctly
+- [x] Before hook vetoes action (existing hooks tests still pass)
+- [x] On hook handles action
+- [x] Multiple hooks fire in order
+- [x] Inline hook desugars correctly (test_import_hooks_from_world)
+
+**Implementation Notes**:
+- Extended `Trigger` enum with `Before(Symbol)`, `On(Symbol)`, `After(Symbol)` variants
+- Added `Trigger::before()`, `Trigger::on()`, `Trigger::after()` constructors
+- Added `Trigger::is_hook()`, `Trigger::action()`, `Trigger::phase_name()` methods
+- Added `Pattern::EntityEquals(Var, EntityId)` variant for matching specific entities
+- Added `RuleSet::before_hooks()`, `on_hooks()`, `after_hooks()`, `hooks_for_action()` queries
+- Added `RuleSet::matching_hooks()` for filtering hooks by entity pattern
+- Added `RuleSet::import_hooks_from_world()` to convert inline hooks to rules
+- Hook triggers don't fire during tick evaluation (only via action system)
+- Existing `hooks.rs` module preserved for backwards compatibility
 
 ---
 
@@ -1527,5 +1538,6 @@ The following phases were completed prior to this unification effort (see git hi
 2. ~~Begin Foundation Sprint (Stages 0 + 1 + 2 together)~~ ✓
 3. ~~Stage 3: Predicate Patterns~~ ✓
 4. ~~Stage 4: Type Predicates~~ ✓
-5. Next: Stage 5 (Hooks as Rules) or Stage 6 (Derivations with Caching)
-6. Iterate based on learnings
+5. ~~Stage 5: Hooks as Rules~~ ✓
+6. Next: Stage 6 (Derivations with Caching)
+7. Iterate based on learnings

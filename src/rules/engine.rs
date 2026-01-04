@@ -1,10 +1,16 @@
 //! Rule evaluation engine.
 //!
 //! The engine manages a set of rules and evaluates them against the world state.
+//!
+//! ## Hook Rules
+//!
+//! Hook rules use Before/On/After triggers and are executed by the action system,
+//! not during tick evaluation. Use `before_hooks`, `on_hooks`, and `after_hooks`
+//! to query hook rules for a specific action.
 
 use im::OrdMap;
 
-use crate::core::World;
+use crate::core::{EntityId, World};
 use crate::io::WorldIO;
 use crate::symbol::Symbol;
 
@@ -62,6 +68,121 @@ impl RuleSet {
         self.rules.iter().find(|r| r.name == name_sym)
     }
 
+    // =========================================================================
+    // Hook Rule Queries
+    // =========================================================================
+
+    /// Get all Before hook rules for an action.
+    pub fn before_hooks(&self, action: &str) -> impl Iterator<Item = &Rule> {
+        let action_sym = Symbol::new(action);
+        self.rules
+            .iter()
+            .filter(move |r| matches!(&r.trigger, Trigger::Before(a) if *a == action_sym))
+    }
+
+    /// Get all On hook rules for an action.
+    pub fn on_hooks(&self, action: &str) -> impl Iterator<Item = &Rule> {
+        let action_sym = Symbol::new(action);
+        self.rules
+            .iter()
+            .filter(move |r| matches!(&r.trigger, Trigger::On(a) if *a == action_sym))
+    }
+
+    /// Get all After hook rules for an action.
+    pub fn after_hooks(&self, action: &str) -> impl Iterator<Item = &Rule> {
+        let action_sym = Symbol::new(action);
+        self.rules
+            .iter()
+            .filter(move |r| matches!(&r.trigger, Trigger::After(a) if *a == action_sym))
+    }
+
+    /// Get all hook rules (Before, On, After) for an action.
+    pub fn hooks_for_action(&self, action: &str) -> impl Iterator<Item = &Rule> {
+        let action_sym = Symbol::new(action);
+        self.rules
+            .iter()
+            .filter(move |r| r.trigger.is_hook() && r.trigger.action() == Some(action_sym))
+    }
+
+    /// Get hook rules that match a specific entity for an action phase.
+    ///
+    /// This filters hook rules to only those whose pattern matches the entity.
+    pub fn matching_hooks<'a>(
+        &'a self,
+        world: &'a World,
+        entity: EntityId,
+        phase: &'static str,
+        action: &str,
+    ) -> impl Iterator<Item = &'a Rule> + 'a {
+        let action_sym = Symbol::new(action);
+        self.rules.iter().filter(move |r| {
+            // Check trigger matches phase and action
+            let trigger_matches = match phase {
+                "Before" => matches!(&r.trigger, Trigger::Before(a) if *a == action_sym),
+                "On" => matches!(&r.trigger, Trigger::On(a) if *a == action_sym),
+                "After" => matches!(&r.trigger, Trigger::After(a) if *a == action_sym),
+                _ => false,
+            };
+
+            // Check pattern matches entity
+            trigger_matches && r.pattern.matches(world, entity)
+        })
+    }
+
+    // =========================================================================
+    // Inline Hook Conversion
+    // =========================================================================
+
+    /// Import hooks from entity components into rules.
+    ///
+    /// This scans all entities for hook components (e.g., "Before:take", "On:burn")
+    /// and creates corresponding Rule objects. The pattern for each rule matches
+    /// the specific entity the hook was defined on.
+    ///
+    /// This bridges the legacy inline hook syntax with the new rule-based system.
+    pub fn import_hooks_from_world(&mut self, world: &World) {
+        use super::effect::Effect;
+        use super::pattern::Pattern;
+        use crate::core::Value;
+
+        for entity in world.all_entities() {
+            // Check all components for hook patterns
+            for (comp_name, value) in world.components_of(entity) {
+                let comp_str = comp_name.0.as_str();
+
+                // Parse hook component names like "Before:take", "On:burn", "After:open"
+                let (phase, action) = match parse_hook_component_name_owned(&comp_str) {
+                    Some(result) => result,
+                    None => continue,
+                };
+
+                // Create a rule from this hook
+                let trigger = match phase.as_str() {
+                    "Before" => Trigger::before(action.as_str()),
+                    "On" => Trigger::on(action.as_str()),
+                    "After" => Trigger::after(action.as_str()),
+                    _ => continue,
+                };
+
+                // Pattern matches this specific entity
+                let pattern = Pattern::entity_equals("?target", entity);
+
+                // Effect is the hook body (VM script)
+                let effect = if let Value::List(_) = value {
+                    Effect::script(value.clone())
+                } else {
+                    continue;
+                };
+
+                // Generate a unique rule name
+                let rule_name =
+                    format!("hook-{}-{}:{}", entity.raw(), phase.to_lowercase(), action);
+
+                self.add_rule(Rule::new(rule_name, pattern, trigger, effect));
+            }
+        }
+    }
+
     /// Evaluate all rules against the current world state.
     ///
     /// For periodic rules, checks if enough ticks have elapsed since last firing.
@@ -76,6 +197,9 @@ impl RuleSet {
     }
 
     /// Check if a rule should fire at the current tick.
+    ///
+    /// Note: Hook triggers (Before/On/After) are fired by the action system,
+    /// not during tick evaluation. This method returns false for them.
     fn should_fire(&self, rule: &Rule, current_tick: u64) -> bool {
         match &rule.trigger {
             Trigger::Periodic { interval } => {
@@ -86,6 +210,8 @@ impl RuleSet {
                 }
                 current_tick % interval == 0
             }
+            // Hook triggers are fired by the action system, not tick evaluation
+            Trigger::Before(_) | Trigger::On(_) | Trigger::After(_) => false,
         }
     }
 
@@ -104,6 +230,21 @@ impl Default for RuleSet {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Parse a hook component name like "Before:take" into (phase, action).
+///
+/// Returns `Some(("Before", "take"))` for "Before:take", or `None` if not a hook.
+/// Returns owned Strings to avoid lifetime issues with Symbol::as_str().
+fn parse_hook_component_name_owned(name: &str) -> Option<(String, String)> {
+    // Check for standard hook prefixes
+    for prefix in ["Before:", "On:", "After:"] {
+        if let Some(action) = name.strip_prefix(prefix) {
+            let phase = &prefix[..prefix.len() - 1]; // Remove trailing ":"
+            return Some((phase.to_string(), action.to_string()));
+        }
+    }
+    None
 }
 
 #[cfg(test)]
@@ -249,5 +390,223 @@ mod tests {
 
         let not_found = rules.get_rule("nonexistent");
         assert!(not_found.is_none());
+    }
+
+    // =========================================================================
+    // Hook Rule Query Tests
+    // =========================================================================
+
+    fn setup_hook_rules() -> RuleSet {
+        RuleSet::from_rules(vec![
+            // Before:take hook on holy-book
+            Rule::new(
+                "holy-book-before-take",
+                Pattern::entity("?e"),
+                Trigger::before("take"),
+                Effect::emit_message("A voice booms: Do not touch!"),
+            ),
+            // On:burn hook on holy-book
+            Rule::new(
+                "holy-book-on-burn",
+                Pattern::entity("?e"),
+                Trigger::on("burn"),
+                Effect::emit_message("Lightning strikes!"),
+            ),
+            // After:open hook on chest
+            Rule::new(
+                "chest-after-open",
+                Pattern::entity("?e"),
+                Trigger::after("open"),
+                Effect::emit_message("The chest creaks."),
+            ),
+            // Another On:burn hook
+            Rule::new(
+                "paper-on-burn",
+                Pattern::entity("?e"),
+                Trigger::on("burn"),
+                Effect::emit_message("The paper burns away."),
+            ),
+            // Periodic rule (not a hook)
+            goat_baa_rule(),
+        ])
+    }
+
+    #[test]
+    fn test_before_hooks_query() {
+        let rules = setup_hook_rules();
+
+        let before_take: Vec<_> = rules.before_hooks("take").collect();
+        assert_eq!(before_take.len(), 1);
+        assert_eq!(before_take[0].name.as_str(), "holy-book-before-take");
+
+        let before_burn: Vec<_> = rules.before_hooks("burn").collect();
+        assert_eq!(before_burn.len(), 0);
+    }
+
+    #[test]
+    fn test_on_hooks_query() {
+        let rules = setup_hook_rules();
+
+        let on_burn: Vec<_> = rules.on_hooks("burn").collect();
+        assert_eq!(on_burn.len(), 2);
+
+        let on_take: Vec<_> = rules.on_hooks("take").collect();
+        assert_eq!(on_take.len(), 0);
+    }
+
+    #[test]
+    fn test_after_hooks_query() {
+        let rules = setup_hook_rules();
+
+        let after_open: Vec<_> = rules.after_hooks("open").collect();
+        assert_eq!(after_open.len(), 1);
+        assert_eq!(after_open[0].name.as_str(), "chest-after-open");
+    }
+
+    #[test]
+    fn test_hooks_for_action() {
+        let rules = setup_hook_rules();
+
+        let burn_hooks: Vec<_> = rules.hooks_for_action("burn").collect();
+        assert_eq!(burn_hooks.len(), 2);
+
+        let take_hooks: Vec<_> = rules.hooks_for_action("take").collect();
+        assert_eq!(take_hooks.len(), 1);
+
+        let open_hooks: Vec<_> = rules.hooks_for_action("open").collect();
+        assert_eq!(open_hooks.len(), 1);
+    }
+
+    #[test]
+    fn test_matching_hooks() {
+        let mut world = World::new();
+        let holy_book = world.create_entity();
+        world.set_component(holy_book, "Name", "holy book");
+        world.set_component(holy_book, "HolyBook", true);
+
+        let paper = world.create_entity();
+        world.set_component(paper, "Name", "paper");
+
+        // Create rules that match specific entities
+        let rules = RuleSet::from_rules(vec![
+            Rule::new(
+                "holy-book-on-burn",
+                Pattern::has_component("?e", "HolyBook"),
+                Trigger::on("burn"),
+                Effect::emit_message("Lightning strikes!"),
+            ),
+            Rule::new(
+                "paper-on-burn",
+                Pattern::entity("?e"), // Matches any entity
+                Trigger::on("burn"),
+                Effect::emit_message("It burns."),
+            ),
+        ]);
+
+        // Holy book matches both rules (one specific, one general)
+        let holy_book_hooks: Vec<_> = rules
+            .matching_hooks(&world, holy_book, "On", "burn")
+            .collect();
+        assert_eq!(holy_book_hooks.len(), 2);
+
+        // Paper only matches the general rule
+        let paper_hooks: Vec<_> = rules.matching_hooks(&world, paper, "On", "burn").collect();
+        assert_eq!(paper_hooks.len(), 1);
+        assert_eq!(paper_hooks[0].name.as_str(), "paper-on-burn");
+    }
+
+    #[test]
+    fn test_hook_rules_dont_fire_on_tick() {
+        let rules = setup_hook_rules();
+        let mut rules = rules;
+        let world = World::new();
+        let mut io = TestIO::new(vec![]);
+
+        // Evaluate for many ticks - hook rules should never fire
+        for tick in 1..=100 {
+            rules.evaluate(&world, &mut io, tick);
+        }
+
+        // Only periodic rules should have fired (goat-baas at tick 10, 20, ...)
+        // Hook rules should NOT fire
+        assert!(!io.output.contains("Lightning"));
+        assert!(!io.output.contains("voice booms"));
+        assert!(!io.output.contains("creaks"));
+    }
+
+    // =========================================================================
+    // Import Hooks Tests
+    // =========================================================================
+
+    #[test]
+    fn test_parse_hook_component_name() {
+        assert_eq!(
+            parse_hook_component_name_owned("Before:take"),
+            Some(("Before".to_string(), "take".to_string()))
+        );
+        assert_eq!(
+            parse_hook_component_name_owned("On:burn"),
+            Some(("On".to_string(), "burn".to_string()))
+        );
+        assert_eq!(
+            parse_hook_component_name_owned("After:open"),
+            Some(("After".to_string(), "open".to_string()))
+        );
+        assert_eq!(parse_hook_component_name_owned("Name"), None);
+        assert_eq!(parse_hook_component_name_owned("Portable"), None);
+    }
+
+    #[test]
+    fn test_import_hooks_from_world() {
+        use crate::core::Value;
+        use crate::symbol::Symbol;
+
+        let mut world = World::new();
+
+        // Create an entity with hooks
+        let holy_book = world.create_entity();
+        world.set_component(holy_book, "Name", "holy book");
+
+        // Add Before:take hook
+        world.set_component(
+            holy_book,
+            "Before:take",
+            Value::list(vec![
+                Value::Symbol(Symbol::new("say")),
+                Value::string("A voice booms: Do not touch!"),
+            ]),
+        );
+
+        // Add On:burn hook
+        world.set_component(
+            holy_book,
+            "On:burn",
+            Value::list(vec![
+                Value::Symbol(Symbol::new("say")),
+                Value::string("Lightning strikes!"),
+            ]),
+        );
+
+        // Import hooks into rules
+        let mut rules = RuleSet::new();
+        rules.import_hooks_from_world(&world);
+
+        // Should have 2 rules imported
+        assert_eq!(rules.len(), 2);
+
+        // Check Before hooks for "take"
+        let before_take: Vec<_> = rules.before_hooks("take").collect();
+        assert_eq!(before_take.len(), 1);
+        assert!(before_take[0].name.as_str().contains("before:take"));
+
+        // Check On hooks for "burn"
+        let on_burn: Vec<_> = rules.on_hooks("burn").collect();
+        assert_eq!(on_burn.len(), 1);
+        assert!(on_burn[0].name.as_str().contains("on:burn"));
+
+        // The rule's pattern should match only the holy_book entity
+        let other_entity = world.create_entity();
+        assert!(before_take[0].pattern.matches(&world, holy_book));
+        assert!(!before_take[0].pattern.matches(&world, other_entity));
     }
 }
