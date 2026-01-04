@@ -77,12 +77,12 @@ But without discipline, "everything is an entity" becomes chaos. The solution: *
 
 ### Layer Mutation Rules
 
-| Layer | During Tick | Between Ticks | By What |
-|-------|-------------|---------------|---------|
-| Schema | Frozen | Frozen | Boot only |
-| Meta | Frozen | Mutable | REPL, mod loading |
-| World | Mutable (transactional) | Mutable | Rules, actions |
-| Execution | Created/destroyed | Cleared | Pipeline |
+| Layer     | During Tick             | Between Ticks | By What           |
+| --------- | ----------------------- | ------------- | ----------------- |
+| Schema    | Frozen                  | Frozen        | Boot only         |
+| Meta      | Frozen                  | Mutable       | REPL, mod loading |
+| World     | Mutable (transactional) | Mutable       | Rules, actions    |
+| Execution | Created/destroyed       | Cleared       | Pipeline          |
 
 ### Why This Matters
 
@@ -161,14 +161,14 @@ When the player types "take the brass lamp", the system creates a chain of entit
 
 ### The Six Phases
 
-| Phase | Input | Output | Rules That Fire |
-|-------|-------|--------|-----------------|
-| **Ingress** | Raw text | `Input` entity | None (pure creation) |
-| **Parse** | `Input` | `ParseResult` | Grammar rules |
-| **Resolve** | `ParseResult` | `Command` | Resolution rules |
-| **Validate** | `Command` | `ActionAttempt` | Precondition rules |
-| **Execute** | `ActionAttempt` | `Result` + mutations | Before/On/After rules |
-| **Egress** | All execution entities | Output text | Cleanup rules |
+| Phase        | Input                  | Output               | Rules That Fire       |
+| ------------ | ---------------------- | -------------------- | --------------------- |
+| **Ingress**  | Raw text               | `Input` entity       | None (pure creation)  |
+| **Parse**    | `Input`                | `ParseResult`        | Grammar rules         |
+| **Resolve**  | `ParseResult`          | `Command`            | Resolution rules      |
+| **Validate** | `Command`              | `ActionAttempt`      | Precondition rules    |
+| **Execute**  | `ActionAttempt`        | `Result` + mutations | Before/On/After rules |
+| **Egress**   | All execution entities | Output text          | Cleanup rules         |
 
 ### Benefits of Entity Pipeline
 
@@ -1236,21 +1236,21 @@ Deliverables:
 
 ### Technical Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| Layer enforcement overhead | Low | Medium | Compile-time checks where possible |
-| Entity churn in Execution layer | Medium | Medium | Pool/reuse execution entities |
-| Cache invalidation bugs | Medium | High | Property-based tests comparing cached vs fresh |
-| Meta-layer mutation complexity | Medium | Medium | Clear "queue for next tick" semantics |
-| Performance regression | Medium | High | Benchmark each stage |
+| Risk                            | Likelihood | Impact | Mitigation                                     |
+| ------------------------------- | ---------- | ------ | ---------------------------------------------- |
+| Layer enforcement overhead      | Low        | Medium | Compile-time checks where possible             |
+| Entity churn in Execution layer | Medium     | Medium | Pool/reuse execution entities                  |
+| Cache invalidation bugs         | Medium     | High   | Property-based tests comparing cached vs fresh |
+| Meta-layer mutation complexity  | Medium     | Medium | Clear "queue for next tick" semantics          |
+| Performance regression          | Medium     | High   | Benchmark each stage                           |
 
 ### Process Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| Scope creep into "infinite cathedral" | High | High | Strict stage boundaries, YAGNI checks |
-| Lost in abstraction | Medium | High | Concrete tests for each stage |
-| Over-engineering layers | Medium | Medium | Start simple, add validation incrementally |
+| Risk                                  | Likelihood | Impact | Mitigation                                 |
+| ------------------------------------- | ---------- | ------ | ------------------------------------------ |
+| Scope creep into "infinite cathedral" | High       | High   | Strict stage boundaries, YAGNI checks      |
+| Lost in abstraction                   | Medium     | High   | Concrete tests for each stage              |
+| Over-engineering layers               | Medium     | Medium | Start simple, add validation incrementally |
 
 ---
 
