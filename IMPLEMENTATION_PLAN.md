@@ -1173,6 +1173,169 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
 
 ---
 
+## Part 5b: Legacy Code Cleanup
+
+Now that all unification stages are complete, we need to remove legacy systems that have been superseded by the unified architecture. The following modules contain functionality that is duplicated or obsoleted by the new systems.
+
+### Cleanup Stage 1: Consolidate Hooks System
+**Goal**: Remove `src/hooks.rs`, migrate all hook functionality to rules
+**Status**: Not Started
+
+**Current State**:
+- `src/hooks.rs` (~1175 lines): Standalone hook execution engine
+  - Stores hooks as entity components (`On:burn`, `Before:take`, etc.)
+  - `execute_hook()` compiles and runs hook expressions via VM
+  - `run_hooks_for_action()` orchestrates Before/On/After pipeline
+  - `PendingMutations` struct for collecting mutations
+
+- `src/rules/rule.rs`: Unified rule system with `Trigger::Before/On/After`
+  - `RuleSet::import_hooks_from_world()` converts inline hooks to rules
+  - Rules use `Effect::Script` for VM execution
+  - Indexed by action via `RuleIndex`
+
+**Overlap**: Both systems handle Before/On/After hooks. The rule-based system is the unified approach, but hooks.rs is still used by the action system.
+
+**Migration Tasks**:
+1. Update `src/verbs.rs` to use `RuleSet` hooks instead of `hooks.rs` functions
+2. Move `PendingMutations` to `src/vm/` or `src/core/` (still needed)
+3. Move `HookResult` and `HookPipelineResult` to a shared location
+4. Update all callers of `run_hooks_for_action`, `run_before_hooks`, etc.
+5. Remove `src/hooks.rs` and update `lib.rs` exports
+
+**Success Criteria**:
+- [ ] All hook execution uses `RuleSet` queries
+- [ ] `hooks.rs` module deleted
+- [ ] All tests pass
+- [ ] No functionality regression
+
+---
+
+### Cleanup Stage 2: Unify Preconditions
+**Goal**: Consolidate `src/precondition.rs` with `src/rules/precondition_rule.rs`
+**Status**: Not Started
+
+**Current State**:
+- `src/precondition.rs` (~746 lines): Standalone precondition registry
+  - `PreconditionRegistry` with built-in preconditions (reachable?, held?, portable?, etc.)
+  - `Precondition` struct with name, params, check expression, failure template
+  - `PreconditionCall` and `PreconditionArg` types for invocation
+  - Hard-coded built-in implementations in `check_builtin()`
+
+- `src/rules/precondition_rule.rs`: Rule-based preconditions
+  - `PreconditionRule` wrapping `Rule` with precondition metadata
+  - `Trigger::Precondition(Symbol)` variant
+  - Template interpolation with `~(the param)` syntax
+  - Indexed in `RuleIndex::by_precondition`
+
+**Overlap**: Both systems define and check preconditions. The rule-based approach is more declarative and unified.
+
+**Migration Tasks**:
+1. Register built-in preconditions as `PreconditionRule` instances
+2. Update `ActionRegistry` to use `RuleSet::precondition_rules()`
+3. Move `PreconditionResult`, `PreconditionError` to shared location
+4. Update `check_action_preconditions()` to use rule-based preconditions
+5. Remove `PreconditionRegistry` and `src/precondition.rs`
+
+**Success Criteria**:
+- [ ] All preconditions defined as rules
+- [ ] Built-in preconditions work via rule system
+- [ ] `precondition.rs` module deleted
+- [ ] All tests pass
+
+---
+
+### Cleanup Stage 3: Consolidate Derivation Systems
+**Goal**: Remove `src/derive/` module, use `src/rules/derivation.rs`
+**Status**: Not Started
+
+**Current State**:
+- `src/derive/` (~5 files, ~1500+ lines):
+  - `engine.rs`: `DerivationEngine` with rule registry and caching
+  - `rule.rs`: `DerivationRule` with pattern, property, value function
+  - `cache.rs`: `DerivedCache` with dependency-based invalidation
+  - `compose.rs`: `ComposeMode` and value composition
+  - `context.rs`: Derivation context utilities
+
+- `src/rules/derivation.rs`:
+  - `Trigger::Derive(Symbol)` variant
+  - `ComposeMode`, `DerivationRule`, `Epochs`, `DerivationCache`
+  - Integrated with `RuleSet` and `RuleIndex`
+
+**Overlap**: Both systems handle derived properties. The rules-based derivation is integrated with the unified rule system.
+
+**Migration Tasks**:
+1. Ensure `rules/derivation.rs` has feature parity with `derive/engine.rs`
+2. Port any missing cache invalidation logic
+3. Update `World` methods that use `DerivationEngine`
+4. Update all imports from `derive::` to `rules::derivation::`
+5. Remove `src/derive/` directory
+
+**Success Criteria**:
+- [ ] All derivation uses `rules::derivation`
+- [ ] Cache invalidation works via epochs
+- [ ] `src/derive/` directory deleted
+- [ ] All tests pass
+
+---
+
+### Cleanup Stage 4: Remove Legacy Effect Variant
+**Goal**: Remove `Effect::EmitMessage` in favor of `Effect::Script`
+**Status**: Not Started
+
+**Current State**:
+- `Effect::EmitMessage(String)` - Simple string output
+- `Effect::Script(SExpr)` - VM-executed script (can do `(say ...)`)
+- `Effect::NoOp` - Pattern-only rules
+
+**Overlap**: `EmitMessage` is a subset of `Script` functionality.
+
+**Migration Tasks**:
+1. Find all uses of `Effect::EmitMessage`
+2. Convert to `Effect::Script` with `(say "...")` expression
+3. Remove `EmitMessage` variant from `Effect` enum
+4. Update effect execution logic
+
+**Success Criteria**:
+- [ ] No `Effect::EmitMessage` in codebase
+- [ ] All message output uses `Effect::Script`
+- [ ] All tests pass
+
+---
+
+### Cleanup Stage 5: Evaluate Optional Modules
+**Goal**: Assess whether these modules are still needed
+**Status**: Not Started
+
+**Modules to Evaluate**:
+1. `src/systems.rs` - Contains tick-based systems (goat says "Baa!")
+   - May be replaceable with periodic rules
+
+2. `src/template.rs` - Entity templates for spawning
+   - May need to integrate with generator system
+
+3. `src/direction.rs` - Compass direction definitions
+   - Likely still needed for navigation
+
+4. `src/grammar/predicate.rs` - Grammar type predicates
+   - Check if fully replaced by `rules/predicate.rs`
+
+**Assessment Criteria**:
+- Is the functionality used in the codebase?
+- Can it be replaced by the unified rule system?
+- Does it provide unique value not covered elsewhere?
+
+---
+
+### Cleanup Priority Order
+
+1. **Stage 1 (Hooks)** - High impact, clear replacement path
+2. **Stage 4 (Effect::EmitMessage)** - Quick win, simple change
+3. **Stage 2 (Preconditions)** - Medium complexity, good cleanup
+4. **Stage 3 (Derivations)** - Higher complexity, needs careful testing
+5. **Stage 5 (Evaluation)** - Research phase, inform future work
+
+---
+
 ## Part 6: Architecture After Unification
 
 ### Module Structure
