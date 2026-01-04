@@ -613,6 +613,287 @@ pub fn disable_tracing(world: &mut World) {
 }
 
 // =============================================================================
+// Trace Query and Inspection
+// =============================================================================
+
+/// Get all child spans of a parent span.
+pub fn get_child_spans(world: &World, parent: TraceSpan) -> Vec<TraceSpan> {
+    world
+        .query_relation_reverse(relations::trace_parent(), parent.entity)
+        .into_iter()
+        .map(|entity| TraceSpan { entity })
+        .collect()
+}
+
+/// Get the parent span of a span, if any.
+pub fn get_parent_span(world: &World, span: TraceSpan) -> Option<TraceSpan> {
+    world
+        .query_relation_forward(relations::trace_parent(), span.entity)
+        .first()
+        .map(|&entity| TraceSpan { entity })
+}
+
+/// Get all trace spans for a specific execution entity (e.g., action attempt).
+///
+/// Returns spans that were created during processing of this execution.
+pub fn get_trace_spans_for_execution(world: &World, execution: EntityId) -> Vec<TraceSpan> {
+    // Trace spans are linked to execution entities via DerivedFrom or we look for
+    // spans created during the same tick with matching context
+    // For now, we return all spans that read/wrote this entity
+    let mut spans = Vec::new();
+
+    // Find spans that read this entity
+    for (span_entity, _) in world.entities_with(components::trace_type()) {
+        let reads = world.query_relation_forward(relations::trace_reads(), span_entity);
+        let writes = world.query_relation_forward(relations::trace_writes(), span_entity);
+
+        if reads.contains(&execution) || writes.contains(&execution) {
+            spans.push(TraceSpan {
+                entity: span_entity,
+            });
+        }
+    }
+
+    spans
+}
+
+/// Get all root trace spans (spans with no parent).
+pub fn get_root_spans(world: &World) -> Vec<TraceSpan> {
+    world
+        .entities_with(components::trace_type())
+        .filter_map(|(entity, _)| {
+            let parents = world.query_relation_forward(relations::trace_parent(), entity);
+            if parents.is_empty() {
+                Some(TraceSpan { entity })
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Get the most recent trace spans (by start tick).
+pub fn get_recent_spans(world: &World, limit: usize) -> Vec<TraceSpan> {
+    let mut spans: Vec<(TraceSpan, i64)> = world
+        .entities_with(components::trace_type())
+        .filter_map(|(entity, _)| {
+            world
+                .get_component(entity, components::trace_start_tick())
+                .and_then(|v| v.as_int())
+                .map(|tick| (TraceSpan { entity }, tick))
+        })
+        .collect();
+
+    // Sort by tick descending (most recent first)
+    spans.sort_by(|a, b| b.1.cmp(&a.1));
+
+    spans
+        .into_iter()
+        .take(limit)
+        .map(|(span, _)| span)
+        .collect()
+}
+
+/// Get information about a trace span.
+#[derive(Debug, Clone)]
+pub struct TraceSpanInfo {
+    /// The span entity.
+    pub entity: EntityId,
+    /// Type of span (rule-evaluation, effect, etc.).
+    pub span_type: String,
+    /// Name of the traced operation.
+    pub name: String,
+    /// Start tick.
+    pub start_tick: i64,
+    /// End tick (if completed).
+    pub end_tick: Option<i64>,
+    /// Status (running, completed, failed, etc.).
+    pub status: String,
+    /// Result value (if any).
+    pub result: Option<Value>,
+    /// Entities read during this span.
+    pub reads: Vec<EntityId>,
+    /// Entities written during this span.
+    pub writes: Vec<EntityId>,
+    /// Child span count.
+    pub child_count: usize,
+}
+
+/// Get detailed information about a trace span.
+pub fn get_span_info(world: &World, span: TraceSpan) -> TraceSpanInfo {
+    let entity = span.entity;
+
+    let span_type = world
+        .get_component(entity, components::trace_type())
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+
+    let name = world
+        .get_component(entity, components::trace_name())
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "unnamed".to_string());
+
+    let start_tick = world
+        .get_component(entity, components::trace_start_tick())
+        .and_then(|v| v.as_int())
+        .unwrap_or(0);
+
+    let end_tick = world
+        .get_component(entity, components::trace_end_tick())
+        .and_then(|v| v.as_int());
+
+    let status = world
+        .get_component(entity, components::status())
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+
+    let result = world
+        .get_component(entity, components::trace_result())
+        .cloned();
+
+    let reads = world.query_relation_forward(relations::trace_reads(), entity);
+    let writes = world.query_relation_forward(relations::trace_writes(), entity);
+    let child_count = world
+        .query_relation_reverse(relations::trace_parent(), entity)
+        .len();
+
+    TraceSpanInfo {
+        entity,
+        span_type,
+        name,
+        start_tick,
+        end_tick,
+        status,
+        result,
+        reads,
+        writes,
+        child_count,
+    }
+}
+
+/// Format a trace span tree as a string for debugging.
+pub fn format_span_tree(world: &World, span: TraceSpan, indent: usize) -> String {
+    let info = get_span_info(world, span);
+    let prefix = "  ".repeat(indent);
+
+    let duration = info
+        .end_tick
+        .map(|end| format!(" ({}ms)", end - info.start_tick))
+        .unwrap_or_default();
+
+    let result_str = info
+        .result
+        .as_ref()
+        .map(|v| format!(" -> {v:?}"))
+        .unwrap_or_default();
+
+    let mut output = format!(
+        "{}{}: {} [{}]{}{}\n",
+        prefix, info.span_type, info.name, info.status, duration, result_str
+    );
+
+    // Add read/write info if present
+    if !info.reads.is_empty() {
+        output.push_str(&format!("{}  reads: {:?}\n", prefix, info.reads));
+    }
+    if !info.writes.is_empty() {
+        output.push_str(&format!("{}  writes: {:?}\n", prefix, info.writes));
+    }
+
+    // Recurse into children
+    for child in get_child_spans(world, span) {
+        output.push_str(&format_span_tree(world, child, indent + 1));
+    }
+
+    output
+}
+
+/// Explain why an action attempt failed.
+///
+/// Returns a description of the failure based on trace data.
+pub fn explain_failure(world: &World, attempt: EntityId) -> Option<String> {
+    // Check if this is an action attempt with a failure
+    let status_val = world.get_component(attempt, components::status())?;
+    let status_sym = status_val.as_symbol()?;
+    let status_str = status_sym.as_str();
+
+    if status_str.as_str() != "failed" {
+        return None;
+    }
+
+    // Get the failure reason
+    let reason = world
+        .get_component(attempt, components::failure_reason())
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    // Get trace spans that relate to this attempt
+    let spans = get_trace_spans_for_execution(world, attempt);
+
+    let mut explanation = String::new();
+    explanation.push_str("Action failed");
+
+    if let Some(reason) = reason {
+        explanation.push_str(&format!(": {reason}\n"));
+    } else {
+        explanation.push_str(".\n");
+    }
+
+    // Add trace information
+    for span in spans {
+        let info = get_span_info(world, span);
+        if info.status == "failed" || info.status == "veto" {
+            explanation.push_str(&format!(
+                "  - {} '{}' returned {}\n",
+                info.span_type, info.name, info.status
+            ));
+        }
+    }
+
+    Some(explanation)
+}
+
+/// Record pattern bindings in a trace span.
+pub fn trace_bindings(world: &mut World, span: Option<TraceSpan>, bindings: &[(Symbol, EntityId)]) {
+    if let Some(span) = span {
+        // Store bindings as a list of pairs
+        let binding_list: Vec<Value> = bindings
+            .iter()
+            .map(|(name, entity)| {
+                Value::list(vec![Value::Symbol(*name), Value::EntityRef(*entity)])
+            })
+            .collect();
+
+        world.set_component(
+            span.entity,
+            ComponentTypeId::new("PatternBindings"),
+            Value::list(binding_list),
+        );
+    }
+}
+
+/// Get pattern bindings from a trace span.
+pub fn get_span_bindings(world: &World, span: TraceSpan) -> Vec<(Symbol, EntityId)> {
+    world
+        .get_component(span.entity, ComponentTypeId::new("PatternBindings"))
+        .and_then(|v| v.as_list())
+        .map(|list| {
+            list.iter()
+                .filter_map(|pair| {
+                    let items = pair.as_list()?;
+                    let name = items.first()?.as_symbol()?;
+                    let entity = items.get(1)?.as_entity_ref()?;
+                    Some((*name, entity))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+// =============================================================================
 // Tests
 // =============================================================================
 
@@ -888,5 +1169,138 @@ mod tests {
             world.get_component(result, components::output()),
             Some(&Value::string("Taken."))
         );
+    }
+
+    // =========================================================================
+    // Trace Query Tests
+    // =========================================================================
+
+    #[test]
+    fn test_get_child_spans() {
+        let mut world = setup_world();
+        enable_tracing(&mut world);
+
+        world.begin_tick();
+
+        let parent = begin_trace_span(&mut world, "phase", "execute", None).unwrap();
+        let child1 = begin_trace_span(&mut world, "rule", "rule-1", Some(parent)).unwrap();
+        let child2 = begin_trace_span(&mut world, "rule", "rule-2", Some(parent)).unwrap();
+
+        let children = get_child_spans(&world, parent);
+        assert_eq!(children.len(), 2);
+        assert!(children.iter().any(|c| c.entity == child1.entity));
+        assert!(children.iter().any(|c| c.entity == child2.entity));
+    }
+
+    #[test]
+    fn test_get_parent_span() {
+        let mut world = setup_world();
+        enable_tracing(&mut world);
+
+        world.begin_tick();
+
+        let parent = begin_trace_span(&mut world, "phase", "execute", None).unwrap();
+        let child = begin_trace_span(&mut world, "rule", "rule-1", Some(parent)).unwrap();
+
+        let found_parent = get_parent_span(&world, child);
+        assert!(found_parent.is_some());
+        assert_eq!(found_parent.unwrap().entity, parent.entity);
+
+        // Root span has no parent
+        let root_parent = get_parent_span(&world, parent);
+        assert!(root_parent.is_none());
+    }
+
+    #[test]
+    fn test_get_root_spans() {
+        let mut world = setup_world();
+        enable_tracing(&mut world);
+
+        world.begin_tick();
+
+        let root1 = begin_trace_span(&mut world, "phase", "execute", None).unwrap();
+        let root2 = begin_trace_span(&mut world, "phase", "validate", None).unwrap();
+        let _child = begin_trace_span(&mut world, "rule", "rule-1", Some(root1));
+
+        let roots = get_root_spans(&world);
+        assert_eq!(roots.len(), 2);
+        assert!(roots.iter().any(|r| r.entity == root1.entity));
+        assert!(roots.iter().any(|r| r.entity == root2.entity));
+    }
+
+    #[test]
+    fn test_get_span_info() {
+        let mut world = setup_world();
+        enable_tracing(&mut world);
+
+        let item = world.create_entity();
+
+        world.begin_tick();
+
+        let span = begin_trace_span(&mut world, "effect", "take-effect", None).unwrap();
+        trace_read(&mut world, Some(span), item);
+        end_trace_span(&mut world, Some(span), "completed", Value::Bool(true));
+
+        let info = get_span_info(&world, span);
+        assert_eq!(info.span_type, "effect");
+        assert_eq!(info.name, "take-effect");
+        assert_eq!(info.status, "completed");
+        assert_eq!(info.result, Some(Value::Bool(true)));
+        assert_eq!(info.reads.len(), 1);
+        assert_eq!(info.reads[0], item);
+    }
+
+    #[test]
+    fn test_trace_bindings() {
+        let mut world = setup_world();
+        enable_tracing(&mut world);
+
+        let door = world.create_entity();
+        let player = world.create_entity();
+
+        world.begin_tick();
+
+        let span = begin_trace_span(&mut world, "rule", "locked-door-rule", None).unwrap();
+        trace_bindings(
+            &mut world,
+            Some(span),
+            &[(Symbol::new("door"), door), (Symbol::new("actor"), player)],
+        );
+
+        let bindings = get_span_bindings(&world, span);
+        assert_eq!(bindings.len(), 2);
+        assert!(bindings.contains(&(Symbol::new("door"), door)));
+        assert!(bindings.contains(&(Symbol::new("actor"), player)));
+    }
+
+    #[test]
+    fn test_format_span_tree() {
+        let mut world = setup_world();
+        enable_tracing(&mut world);
+
+        world.begin_tick();
+
+        let parent = begin_trace_span(&mut world, "phase", "execute", None).unwrap();
+        let child = begin_trace_span(&mut world, "rule", "burn-handler", Some(parent)).unwrap();
+        end_trace_span(&mut world, Some(child), "completed", Value::Bool(true));
+        end_trace_span(&mut world, Some(parent), "completed", Value::Nil);
+
+        let tree = format_span_tree(&world, parent, 0);
+        assert!(tree.contains("phase: execute"));
+        assert!(tree.contains("rule: burn-handler"));
+    }
+
+    #[test]
+    fn test_get_recent_spans() {
+        let mut world = setup_world();
+        enable_tracing(&mut world);
+
+        world.begin_tick();
+        let _span1 = begin_trace_span(&mut world, "rule", "rule-1", None);
+        let _span2 = begin_trace_span(&mut world, "rule", "rule-2", None);
+        let _span3 = begin_trace_span(&mut world, "rule", "rule-3", None);
+
+        let recent = get_recent_spans(&world, 2);
+        assert_eq!(recent.len(), 2);
     }
 }

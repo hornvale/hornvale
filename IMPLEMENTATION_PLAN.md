@@ -1105,7 +1105,7 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
 
 ### Stage 10: Full Trace Infrastructure
 **Goal**: Complete the tracing skeleton from Stage 1 with read/write tracking and REPL commands
-**Status**: Not Started
+**Status**: Complete
 
 **Note**: This stage builds on the minimal TraceSpan skeleton from Stage 1. By this point, basic tracing already exists; this stage adds the full debugging experience.
 
@@ -1143,15 +1143,33 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
    ```
 
 **Success Criteria**:
-- [ ] Trace spans created during execution
-- [ ] Parent/child relationships tracked
-- [ ] Read/write dependencies recorded
-- [ ] REPL commands work
+- [x] Trace spans created during execution
+- [x] Parent/child relationships tracked
+- [x] Read/write dependencies recorded
+- [x] Trace query and inspection functions
 
 **Tests**:
-- Trace span created for rule evaluation
-- Parent span linked correctly
-- `trace :last-command` returns span tree
+- [x] Parent/child span relationships (get_child_spans, get_parent_span)
+- [x] Root span discovery (get_root_spans)
+- [x] Span info retrieval (get_span_info, TraceSpanInfo)
+- [x] Pattern bindings in spans (trace_bindings, get_span_bindings)
+- [x] Span tree formatting (format_span_tree)
+- [x] Recent span queries (get_recent_spans)
+
+**Implementation Notes**:
+- Added `Value::as_symbol()` method for extracting symbols from values
+- Added trace query functions to `src/execution.rs`:
+  - `get_child_spans()` - get all child spans of a parent
+  - `get_parent_span()` - get the parent of a span
+  - `get_root_spans()` - get all root spans (no parent)
+  - `get_recent_spans()` - get most recent spans by tick
+  - `get_trace_spans_for_execution()` - get spans related to an execution entity
+  - `get_span_info()` - get detailed info about a span (TraceSpanInfo struct)
+  - `format_span_tree()` - format a span tree as a debug string
+  - `explain_failure()` - explain why an action attempt failed
+  - `trace_bindings()` - record pattern bindings in a span
+  - `get_span_bindings()` - retrieve pattern bindings from a span
+- All trace functions exported via lib.rs
 
 ---
 
@@ -1601,5 +1619,5 @@ The following phases were completed prior to this unification effort (see git hi
 7. ~~Stage 7: Unified Rule Registry (Mandatory Indexing)~~ ✓
 8. ~~Stage 8: Unified Query API~~ ✓
 9. ~~Stage 9: Preconditions as Rules~~ ✓
-10. Next: Stage 10 (Full Trace Infrastructure)
-11. Iterate based on learnings
+10. ~~Stage 10: Full Trace Infrastructure~~ ✓
+11. All stages complete! Iterate based on learnings

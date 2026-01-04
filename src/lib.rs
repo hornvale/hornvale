@@ -75,9 +75,12 @@ pub use precondition::{
 
 // Execution layer
 pub use execution::{
-    TraceSpan, begin_trace_span, create_action_attempt, create_command_entity, create_input,
-    create_parse_result, create_result, enable_tracing, end_trace_span, query_execution_chain,
-    register_execution_relations,
+    TraceSpan, TraceSpanInfo, begin_trace_span, create_action_attempt, create_command_entity,
+    create_input, create_parse_result, create_result, disable_tracing, enable_tracing,
+    end_trace_span, explain_failure, format_span_tree, get_child_spans, get_parent_span,
+    get_recent_spans, get_root_spans, get_span_bindings, get_span_info,
+    get_trace_spans_for_execution, query_execution_chain, register_execution_relations,
+    trace_bindings, trace_read, trace_write,
 };
 
 // Query API

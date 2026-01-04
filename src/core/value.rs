@@ -99,6 +99,14 @@ impl Value {
         }
     }
 
+    /// Try to get this value as a symbol reference.
+    pub fn as_symbol(&self) -> Option<&Symbol> {
+        match self {
+            Value::Symbol(s) => Some(s),
+            _ => None,
+        }
+    }
+
     /// Get a human-readable type name.
     pub fn type_name(&self) -> &'static str {
         match self {
