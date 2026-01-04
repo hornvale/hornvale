@@ -226,6 +226,29 @@ impl RuleSet {
     }
 
     // =========================================================================
+    // Precondition Rule Queries (Indexed O(1) Lookups)
+    // =========================================================================
+
+    /// Get all precondition rules by name.
+    ///
+    /// Uses the rule index for O(1) lookup.
+    pub fn precondition_rules(&mut self, name: &str) -> Vec<&Rule> {
+        self.ensure_indexed();
+        let name_sym = Symbol::new(name);
+        self.index
+            .precondition(name_sym)
+            .iter()
+            .map(|&i| &self.rules[i])
+            .collect()
+    }
+
+    /// Get all unique precondition names.
+    pub fn precondition_names(&mut self) -> Vec<Symbol> {
+        self.ensure_indexed();
+        self.index.precondition_names().collect()
+    }
+
+    // =========================================================================
     // Inline Hook Conversion
     // =========================================================================
 

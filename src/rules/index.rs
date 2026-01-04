@@ -11,6 +11,7 @@
 //! - `by_on`: On hooks by action name
 //! - `by_after`: After hooks by action name
 //! - `by_derive`: Derivation rules by property name
+//! - `by_precondition`: Precondition rules by precondition name
 //!
 //! ## Priority Ordering
 //!
@@ -39,6 +40,8 @@ pub struct RuleIndex {
     by_after: OrdMap<Symbol, Vec<usize>>,
     /// Indexes for Derive rules by property name.
     by_derive: OrdMap<Symbol, Vec<usize>>,
+    /// Indexes for Precondition rules by precondition name.
+    by_precondition: OrdMap<Symbol, Vec<usize>>,
     /// Whether the index needs rebuilding.
     dirty: bool,
 }
@@ -83,6 +86,7 @@ impl RuleIndex {
         self.by_on = OrdMap::new();
         self.by_after = OrdMap::new();
         self.by_derive = OrdMap::new();
+        self.by_precondition = OrdMap::new();
     }
 
     /// Insert a rule into the appropriate bucket.
@@ -103,6 +107,9 @@ impl RuleIndex {
             Trigger::Derive(property) => {
                 self.by_derive.entry(*property).or_default().push(idx);
             }
+            Trigger::Precondition(name) => {
+                self.by_precondition.entry(*name).or_default().push(idx);
+            }
         }
     }
 
@@ -118,6 +125,7 @@ impl RuleIndex {
         self.by_on = self.sort_buckets(&self.by_on, rules);
         self.by_after = self.sort_buckets(&self.by_after, rules);
         self.by_derive = self.sort_buckets(&self.by_derive, rules);
+        self.by_precondition = self.sort_buckets(&self.by_precondition, rules);
     }
 
     /// Sort all buckets in an OrdMap by rule priority.
@@ -170,6 +178,14 @@ impl RuleIndex {
             .unwrap_or(&[])
     }
 
+    /// Get indexes for precondition rules by name.
+    pub fn precondition(&self, name: Symbol) -> &[usize] {
+        self.by_precondition
+            .get(&name)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
+    }
+
     /// Get all hook indexes (Before, On, After) for an action.
     pub fn all_hooks(&self, action: Symbol) -> impl Iterator<Item = usize> + '_ {
         self.before(action)
@@ -187,6 +203,7 @@ impl RuleIndex {
             .chain(self.by_on.values())
             .chain(self.by_after.values())
             .chain(self.by_derive.values())
+            .chain(self.by_precondition.values())
             .map(|v| v.len())
             .sum();
         self.by_periodic.len() + hook_count
@@ -199,6 +216,7 @@ impl RuleIndex {
             && self.by_on.is_empty()
             && self.by_after.is_empty()
             && self.by_derive.is_empty()
+            && self.by_precondition.is_empty()
     }
 
     /// Get all unique action names that have hooks.
@@ -215,6 +233,11 @@ impl RuleIndex {
     /// Get all unique property names that have derivation rules.
     pub fn derive_properties(&self) -> impl Iterator<Item = Symbol> + '_ {
         self.by_derive.keys().copied()
+    }
+
+    /// Get all unique precondition names.
+    pub fn precondition_names(&self) -> impl Iterator<Item = Symbol> + '_ {
+        self.by_precondition.keys().copied()
     }
 }
 
@@ -491,5 +514,77 @@ mod tests {
         assert_eq!(burn_indexes[0], 1); // high-priority (100)
         assert_eq!(burn_indexes[1], 2); // medium-priority (50)
         assert_eq!(burn_indexes[2], 0); // low-priority (10)
+    }
+
+    fn make_precondition_rule(name: &str, precondition_name: &str) -> Rule {
+        Rule::new(
+            name,
+            Pattern::entity("?e"),
+            Trigger::precondition(precondition_name),
+            Effect::no_op(),
+        )
+    }
+
+    #[test]
+    fn test_precondition_lookup() {
+        let rules = vec![
+            make_precondition_rule("reachable-1", "reachable?"),
+            make_precondition_rule("reachable-2", "reachable?"),
+            make_precondition_rule("portable-1", "portable?"),
+        ];
+
+        let mut index = RuleIndex::new();
+        index.rebuild(&rules);
+
+        let reachable_sym = Symbol::new("reachable?");
+        let portable_sym = Symbol::new("portable?");
+        let held_sym = Symbol::new("held?");
+
+        assert_eq!(index.precondition(reachable_sym).len(), 2);
+        assert_eq!(index.precondition(portable_sym).len(), 1);
+        assert_eq!(index.precondition(held_sym).len(), 0);
+    }
+
+    #[test]
+    fn test_precondition_names() {
+        let rules = vec![
+            make_precondition_rule("reachable-1", "reachable?"),
+            make_precondition_rule("portable-1", "portable?"),
+            make_precondition_rule("held-1", "held?"),
+        ];
+
+        let mut index = RuleIndex::new();
+        index.rebuild(&rules);
+
+        let names: Vec<_> = index.precondition_names().collect();
+        assert_eq!(names.len(), 3);
+        assert!(names.contains(&Symbol::new("reachable?")));
+        assert!(names.contains(&Symbol::new("portable?")));
+        assert!(names.contains(&Symbol::new("held?")));
+    }
+
+    #[test]
+    fn test_precondition_in_len() {
+        let rules = vec![
+            make_periodic_rule("tick", 10),
+            make_precondition_rule("reachable", "reachable?"),
+            make_precondition_rule("portable", "portable?"),
+        ];
+
+        let mut index = RuleIndex::new();
+        index.rebuild(&rules);
+
+        // len() should include precondition rules
+        assert_eq!(index.len(), 3);
+    }
+
+    #[test]
+    fn test_precondition_not_empty() {
+        let rules = vec![make_precondition_rule("reachable", "reachable?")];
+
+        let mut index = RuleIndex::new();
+        index.rebuild(&rules);
+
+        assert!(!index.is_empty());
     }
 }

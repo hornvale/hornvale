@@ -38,6 +38,10 @@ pub enum Trigger {
     /// Fire when deriving a property value.
     /// Multiple derivation rules can contribute to a property's final value.
     Derive(Symbol),
+
+    /// A precondition check (e.g., "reachable?", "portable?").
+    /// Precondition rules define validation logic for actions.
+    Precondition(Symbol),
 }
 
 impl Trigger {
@@ -66,6 +70,11 @@ impl Trigger {
         Trigger::Derive(property.into())
     }
 
+    /// Create a Precondition trigger.
+    pub fn precondition(name: impl Into<Symbol>) -> Self {
+        Trigger::Precondition(name.into())
+    }
+
     /// Get the interval for periodic triggers, if applicable.
     pub fn interval(&self) -> Option<u64> {
         match self {
@@ -88,6 +97,19 @@ impl Trigger {
             Trigger::Derive(property) => Some(*property),
             _ => None,
         }
+    }
+
+    /// Get the precondition name for Precondition triggers, if applicable.
+    pub fn precondition_name(&self) -> Option<Symbol> {
+        match self {
+            Trigger::Precondition(name) => Some(*name),
+            _ => None,
+        }
+    }
+
+    /// Check if this is a Precondition trigger.
+    pub fn is_precondition(&self) -> bool {
+        matches!(self, Trigger::Precondition(_))
     }
 
     /// Check if this is a Derive trigger.
@@ -186,6 +208,7 @@ impl Rule {
             Trigger::On(action) => format!("on:{}", action.as_str()),
             Trigger::After(action) => format!("after:{}", action.as_str()),
             Trigger::Derive(property) => format!("derive:{}", property.as_str()),
+            Trigger::Precondition(name) => format!("precondition:{}", name.as_str()),
         };
         format!(
             "Rule: {}\n  Pattern: {}\n  Trigger: {}\n  Effect: {}",

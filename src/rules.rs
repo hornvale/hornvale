@@ -35,6 +35,7 @@ mod effect;
 mod engine;
 mod index;
 mod pattern;
+mod precondition_rule;
 pub mod predicate;
 mod rule;
 
@@ -45,5 +46,6 @@ pub use effect::{Effect, EffectError, EffectResult};
 pub use engine::RuleSet;
 pub use index::RuleIndex;
 pub use pattern::{Pattern, Var};
+pub use precondition_rule::{PreconditionRule, PreconditionRuleResult};
 pub use predicate::{PatternFilter, PredicateError, PredicatePattern};
 pub use rule::{Rule, Trigger};

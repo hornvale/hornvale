@@ -64,6 +64,8 @@ pub enum RuleQuery {
     AfterHooks(Symbol),
     /// Derivation rules for a specific property.
     Derive(Symbol),
+    /// Precondition rules by name.
+    Precondition(Symbol),
 }
 
 /// Execute an entity query against the world.
@@ -118,6 +120,7 @@ pub fn query_rules<'a>(rules: &'a mut RuleSet, query: &RuleQuery) -> Vec<&'a cra
         RuleQuery::OnHooks(action) => rules.on_hooks(&action.as_str()),
         RuleQuery::AfterHooks(action) => rules.after_hooks(&action.as_str()),
         RuleQuery::Derive(property) => rules.derive_rules(&property.as_str()),
+        RuleQuery::Precondition(name) => rules.precondition_rules(&name.as_str()),
     }
 }
 

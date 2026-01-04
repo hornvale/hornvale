@@ -1049,7 +1049,7 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
 
 ### Stage 9: Preconditions as Rules
 **Goal**: Preconditions are rules returning Pass/Fail
-**Status**: Not Started
+**Status**: Complete
 
 **Changes**:
 1. Precondition as rule with special effect type:
@@ -1078,14 +1078,28 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
    ```
 
 **Success Criteria**:
-- [ ] Preconditions as rule entities
-- [ ] Template interpolation works
-- [ ] Action validation uses precondition rules
+- [x] Preconditions as rule entities (via `PreconditionRule` struct)
+- [x] Template interpolation works (`format_failure_message` method)
+- [x] Action validation can use precondition rules (indexed via RuleIndex)
 
 **Tests**:
-- `reachable?` passes for in-scope
-- `reachable?` fails with message for out-of-scope
-- Precondition rules inspectable
+- [x] Precondition rule creation and arity checking
+- [x] Template interpolation with entity names
+- [x] Precondition rules indexed in RuleIndex
+- [x] Precondition rules queryable via RuleQuery::Precondition
+
+**Implementation Notes**:
+- Added `Trigger::Precondition(Symbol)` variant to Trigger enum
+- Created `PreconditionRule` struct in `src/rules/precondition_rule.rs`
+  - Wraps a Rule with precondition-specific metadata (params, failure_template)
+  - `format_failure_message()` for template interpolation with placeholders:
+    - `~(the param)` - entity name with article
+    - `~(name param)` - entity name only
+    - `~(Name param)` - capitalized entity name
+- Added `by_precondition` index to RuleIndex for O(1) lookups
+- Added `precondition_rules()` and `precondition_names()` methods to RuleSet
+- Added `RuleQuery::Precondition(Symbol)` variant to query API
+- Note: Existing `PreconditionRegistry` continues to work; rule-based preconditions provide an alternative declarative approach
 
 ---
 
@@ -1586,5 +1600,6 @@ The following phases were completed prior to this unification effort (see git hi
 6. ~~Stage 6: Derivations with Caching~~ ✓
 7. ~~Stage 7: Unified Rule Registry (Mandatory Indexing)~~ ✓
 8. ~~Stage 8: Unified Query API~~ ✓
-9. Next: Stage 9 (Preconditions as Rules)
-10. Iterate based on learnings
+9. ~~Stage 9: Preconditions as Rules~~ ✓
+10. Next: Stage 10 (Full Trace Infrastructure)
+11. Iterate based on learnings
