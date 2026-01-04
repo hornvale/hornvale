@@ -9,7 +9,7 @@ use crate::lang::SExpr;
 use crate::symbol::Symbol;
 use im::OrdMap;
 
-use super::command::{Command, GrammarMatch};
+use super::command::{Command, FallbackMatch, GrammarMatch};
 use super::trie::IntentTrie;
 use super::types::{TypePredicate, TypeRegistry};
 
@@ -20,6 +20,7 @@ use super::types::{TypePredicate, TypeRegistry};
 /// - Command registration with aliases
 /// - Input matching via trie dispatch + form matching
 /// - Direction registry for direction validation
+/// - Global fallback for unrecognized commands
 #[derive(Debug, Clone)]
 pub struct CommandRegistry {
     /// Type predicates.
@@ -30,6 +31,8 @@ pub struct CommandRegistry {
     trie: IntentTrie,
     /// Direction registry for direction validation.
     directions: DirectionRegistry,
+    /// Global fallback response for completely unrecognized input.
+    global_fallback: Option<SExpr>,
 }
 
 impl Default for CommandRegistry {
@@ -39,6 +42,7 @@ impl Default for CommandRegistry {
             commands: OrdMap::new(),
             trie: IntentTrie::default(),
             directions: DirectionRegistry::with_standard_directions(),
+            global_fallback: None,
         }
     }
 }
@@ -230,6 +234,88 @@ impl CommandRegistry {
     pub fn len(&self) -> usize {
         self.commands.len()
     }
+
+    /// Set the global fallback response.
+    ///
+    /// This is executed when no command matches the input at all.
+    pub fn set_global_fallback(&mut self, response: SExpr) {
+        self.global_fallback = Some(response);
+    }
+
+    /// Get the global fallback response.
+    pub fn global_fallback(&self) -> Option<&SExpr> {
+        self.global_fallback.as_ref()
+    }
+
+    /// Match input with fallback support.
+    ///
+    /// This tries in order:
+    /// 1. Regular form matching (returns GrammarMatch)
+    /// 2. Command-specific fallbacks (returns FallbackMatch)
+    /// 3. Global fallback (returns GlobalFallback)
+    ///
+    /// This is the recommended method for REPL use.
+    pub fn match_input_with_fallbacks(
+        &self,
+        world: &World,
+        actor: EntityId,
+        tokens: &[&str],
+    ) -> MatchResult {
+        // Step 1: Find command via trie
+        match self.trie.longest_match(tokens) {
+            None => {
+                // No command matched - try global fallback
+                match &self.global_fallback {
+                    Some(response) => MatchResult::GlobalFallback(response.clone()),
+                    None => MatchResult::NoMatch,
+                }
+            }
+            Some((command_name, consumed)) => {
+                // Step 2: Get the command
+                let command = match self.commands.get(&command_name) {
+                    Some(c) => c,
+                    None => {
+                        return match &self.global_fallback {
+                            Some(response) => MatchResult::GlobalFallback(response.clone()),
+                            None => MatchResult::NoMatch,
+                        };
+                    }
+                };
+
+                // Step 3: Try regular forms
+                let remaining = &tokens[consumed..];
+                if let Some(grammar_match) =
+                    command.match_forms(world, actor, remaining, &self.types, &self.directions)
+                {
+                    return MatchResult::Action(grammar_match);
+                }
+
+                // Step 4: Try command fallbacks
+                if let Some(fallback_match) = command.match_fallbacks(world, actor, remaining) {
+                    return MatchResult::Fallback(fallback_match);
+                }
+
+                // Step 5: No form or fallback matched - try global fallback
+                match &self.global_fallback {
+                    Some(response) => MatchResult::GlobalFallback(response.clone()),
+                    None => MatchResult::NoMatch,
+                }
+            }
+        }
+    }
+}
+
+/// Result of matching input with fallback support.
+#[derive(Debug, Clone)]
+pub enum MatchResult {
+    /// A regular action matched.
+    Action(GrammarMatch),
+    /// A command-specific fallback matched.
+    Fallback(FallbackMatch),
+    /// No command matched, but global fallback is available.
+    GlobalFallback(SExpr),
+    /// Nothing matched at all.
+    NoMatch,
 }
 
 /// Result of detailed input matching.

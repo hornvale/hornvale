@@ -5,6 +5,7 @@
 //! - **Command definitions**: Aliases + typed forms in one place
 //! - **Trie-based intent dispatch**: Longest prefix match for aliases
 //! - **Linear form matching**: Typed slots with predicate validation
+//! - **Fallback patterns**: DSL-defined error messages for partial matches
 //!
 //! ## Architecture
 //!
@@ -19,6 +20,9 @@
 //! 3. **Type Validation**: Slots can have type constraints (e.g., `:portable`).
 //!    Type predicates are DSL expressions evaluated against resolved entities.
 //!
+//! 4. **Fallback Matching**: If no form matches, command-specific fallbacks provide
+//!    helpful error messages. A global fallback handles completely unrecognized input.
+//!
 //! ## DSL Syntax
 //!
 //! ```lisp
@@ -26,21 +30,33 @@
 //! (type portable (has? entity :Portable))
 //! (type container (has? entity :Container))
 //!
-//! ;; Command definition
-//! (command look
-//!   :aliases ("l" "examine" "x")
+//! ;; Command definition with fallbacks
+//! (command kill
+//!   :aliases ("attack" "slay")
 //!   :forms
-//!     (()                        -> look-around)
-//!     (("at" obj:noun)           -> (examine obj))
-//!     (("in" obj:container)      -> (search obj))
-//!     ((dir:direction)           -> (look-direction dir)))
+//!     (((obj:living) -> (kill obj)))
+//!   :fallbacks
+//!     (((obj:noun) -> (say "You can't kill " (the obj) "."))
+//!      ((_) -> (say "Kill what?"))))
 //!
 //! (command take
 //!   :aliases ("get" "grab" ("pick" "up"))
 //!   :forms
 //!     ((obj:portable)            -> (take obj))
 //!     ((obj:portable "from" c:container) -> (take-from obj c)))
+//!
+//! ;; Global fallback for unrecognized commands
+//! (fallback :default (say "I don't understand that."))
 //! ```
+//!
+//! ## Fallback Patterns
+//!
+//! Fallbacks use a simpler pattern syntax than forms:
+//! - `obj:noun` - matches any resolvable entity (no type checking)
+//! - `_` or `rest` - catch-all that matches remaining tokens as text
+//! - `"word"` - literal word match
+//!
+//! Fallbacks are tried in priority order after all forms fail.
 //!
 //! ## Future Directions
 //!
@@ -57,7 +73,10 @@ mod registry;
 mod trie;
 mod types;
 
-pub use command::{Command, Form, FormAction, FormElement, GrammarMatch, SlotValue};
-pub use registry::CommandRegistry;
+pub use command::{
+    Command, Fallback, FallbackElement, FallbackMatch, Form, FormAction, FormElement, GrammarMatch,
+    SlotValue,
+};
+pub use registry::{CommandRegistry, MatchResult};
 pub use trie::IntentTrie;
 pub use types::{SlotType, TypePredicate, TypeRegistry};

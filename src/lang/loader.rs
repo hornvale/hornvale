@@ -5,7 +5,10 @@ use crate::action::{Action as ActionDef, ActionRegistry};
 use crate::core::{Cardinality, EntityId, RelationSchema, World};
 use crate::direction::{DirectionDef, DirectionRegistry};
 use crate::generator::{GenerationStub, GeneratorRegistry, StubStorage};
-use crate::grammar::{Command as GrammarCommand, CommandRegistry, Form, FormAction, FormElement};
+use crate::grammar::{
+    Command as GrammarCommand, CommandRegistry, Fallback, FallbackElement, Form, FormAction,
+    FormElement,
+};
 use crate::lang::function::{FunctionDef, FunctionRegistry};
 use crate::lang::{Atom, ParseError, SExpr, parse_all};
 use crate::precondition::{Precondition, PreconditionArg, PreconditionCall, PreconditionRegistry};
@@ -312,6 +315,8 @@ impl WorldLoader {
                 self.load_defun(expr)?;
             } else if expr.is_call("directions") {
                 self.load_directions(expr)?;
+            } else if expr.is_call("fallback") {
+                self.load_global_fallback(expr)?;
             }
         }
 
@@ -453,6 +458,9 @@ impl WorldLoader {
                 i += 2;
             } else if items[i].is_keyword("forms") && i + 1 < items.len() {
                 self.parse_forms(&mut command, &items[i + 1])?;
+                i += 2;
+            } else if items[i].is_keyword("fallbacks") && i + 1 < items.len() {
+                self.parse_fallbacks(&mut command, &items[i + 1])?;
                 i += 2;
             } else {
                 i += 1;
@@ -640,6 +648,143 @@ impl WorldLoader {
                 "action must be a symbol or list".to_string(),
             )),
         }
+    }
+
+    /// Parse fallback definitions.
+    ///
+    /// Format: `((pattern...) -> response)`
+    fn parse_fallbacks(&self, command: &mut GrammarCommand, expr: &SExpr) -> Result<(), LoadError> {
+        let items = expr
+            .as_list()
+            .ok_or_else(|| LoadError::InvalidDefinition("fallbacks must be a list".to_string()))?;
+
+        for item in items {
+            let fallback = self.parse_fallback(item)?;
+            command.add_fallback(fallback);
+        }
+
+        Ok(())
+    }
+
+    /// Parse a single fallback definition.
+    ///
+    /// Format: `((pattern...) -> response-expr)`
+    ///
+    /// Fallback patterns use simpler syntax than forms:
+    /// - `obj:noun` - matches any resolvable entity (no type check)
+    /// - `_` - catch-all that matches remaining tokens as text
+    /// - `"word"` - literal word match
+    ///
+    /// Examples:
+    /// - `((obj:noun) -> (say "You can't kill " (the obj) "."))` - typed noun
+    /// - `((_) -> (say "Kill what?"))` - catch-all
+    fn parse_fallback(&self, expr: &SExpr) -> Result<Fallback, LoadError> {
+        let items = expr
+            .as_list()
+            .ok_or_else(|| LoadError::InvalidDefinition("fallback must be a list".to_string()))?;
+
+        // Expected format: (pattern-tuple -> response)
+        if items.len() != 3 {
+            return Err(LoadError::InvalidDefinition(
+                "fallback must be (pattern -> response)".to_string(),
+            ));
+        }
+
+        if !items[1].is_symbol("->") {
+            return Err(LoadError::InvalidDefinition(
+                "fallback requires -> between pattern and response".to_string(),
+            ));
+        }
+
+        // Parse pattern elements
+        let pattern_items = items[0]
+            .as_list()
+            .ok_or_else(|| LoadError::InvalidDefinition("pattern must be a list".to_string()))?;
+
+        let mut elements = Vec::new();
+        for item in pattern_items {
+            let element = self.parse_fallback_element(item)?;
+            elements.push(element);
+        }
+
+        // Response is the raw expression to evaluate
+        let response = items[2].clone();
+
+        Ok(Fallback::new(elements, response))
+    }
+
+    /// Parse a fallback pattern element.
+    ///
+    /// Fallback patterns are simpler than form patterns:
+    /// - `_` - catch-all (matches remaining tokens as text)
+    /// - `obj:noun` - noun slot (resolves entity without type checking)
+    /// - `"word"` or `word` - literal word
+    fn parse_fallback_element(&self, expr: &SExpr) -> Result<FallbackElement, LoadError> {
+        match expr {
+            // String literal -> word element
+            SExpr::Atom(Atom::String(s), _) => Ok(FallbackElement::word(s.as_str())),
+
+            // Symbol -> check for slot syntax, catch-all, or plain word
+            SExpr::Atom(Atom::Symbol(sym), _) => {
+                let s = sym.as_str();
+
+                // Catch-all: _ or _name
+                if s == "_" {
+                    return Ok(FallbackElement::catch_all("_"));
+                }
+                if let Some(name) = s.strip_prefix('_') {
+                    return Ok(FallbackElement::catch_all(name));
+                }
+
+                // Typed slot: name:noun
+                if let Some((name, type_str)) = s.split_once(':') {
+                    if type_str == "noun" {
+                        return Ok(FallbackElement::noun(name));
+                    }
+                    // For fallbacks, all types are treated as noun (no type checking)
+                    return Ok(FallbackElement::noun(name));
+                }
+
+                // Plain symbol -> word element
+                Ok(FallbackElement::word(s))
+            }
+
+            _ => Err(LoadError::InvalidDefinition(
+                "fallback element must be a string or symbol".to_string(),
+            )),
+        }
+    }
+
+    /// Load a global fallback definition.
+    ///
+    /// Format: `(fallback :default response-expr)`
+    ///
+    /// This sets the response executed when no command matches at all.
+    ///
+    /// Example:
+    /// ```lisp
+    /// (fallback :default (say "I don't understand that."))
+    /// ```
+    fn load_global_fallback(&mut self, expr: &SExpr) -> Result<(), LoadError> {
+        let items = expr.as_list().unwrap();
+        if items.len() != 3 {
+            return Err(LoadError::InvalidDefinition(
+                "fallback requires :default and a response expression".to_string(),
+            ));
+        }
+
+        // Expect :default keyword
+        if !items[1].is_keyword("default") {
+            return Err(LoadError::InvalidDefinition(
+                "fallback requires :default keyword".to_string(),
+            ));
+        }
+
+        // The response expression
+        let response = items[2].clone();
+        self.command_registry.set_global_fallback(response);
+
+        Ok(())
     }
 
     /// Load a precondition definition.
@@ -3213,5 +3358,54 @@ mod tests {
             .get(Symbol::new("clockwise"))
             .unwrap();
         assert!(def.abbrev.is_none());
+    }
+
+    #[test]
+    fn test_load_command_with_fallbacks() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (command kill
+                  :forms
+                    (((obj:noun) -> (kill obj)))
+                  :fallbacks
+                    (((_) -> (say "Kill what?"))))
+                "#,
+            )
+            .unwrap();
+
+        assert!(loader.command_registry().has_command(Symbol::new("kill")));
+
+        // Get the command and check it has fallbacks
+        let cmd = loader
+            .command_registry()
+            .get_command(Symbol::new("kill"))
+            .unwrap();
+        assert_eq!(cmd.fallbacks.len(), 1);
+    }
+
+    #[test]
+    fn test_load_global_fallback() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (fallback :default (say "I don't understand."))
+                "#,
+            )
+            .unwrap();
+
+        assert!(loader.command_registry().global_fallback().is_some());
     }
 }

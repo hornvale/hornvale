@@ -10,7 +10,9 @@ use crate::symbol::Symbol;
 use im::OrdMap;
 use std::sync::Arc;
 
-use super::command::{Command, Form, FormElement, GrammarMatch, SlotValue};
+use super::command::{
+    Command, Fallback, FallbackElement, FallbackMatch, Form, FormElement, GrammarMatch, SlotValue,
+};
 use super::predicate::PredicateEvaluator;
 use super::types::{SlotType, TypeRegistry};
 
@@ -115,6 +117,153 @@ impl Command {
         }
 
         Err(failures)
+    }
+
+    /// Match remaining tokens against this command's fallbacks.
+    ///
+    /// Fallbacks are tried in priority order (higher priority first).
+    /// Returns the first successful match.
+    pub fn match_fallbacks(
+        &self,
+        world: &World,
+        actor: EntityId,
+        tokens: &[&str],
+    ) -> Option<FallbackMatch> {
+        let resolver = Resolver::new();
+
+        for fallback in &self.fallbacks {
+            if let Some(slots) = fallback.try_match(world, actor, tokens, &resolver) {
+                return Some(FallbackMatch::new(
+                    fallback.response.clone(),
+                    slots,
+                    self.name,
+                ));
+            }
+        }
+
+        None
+    }
+}
+
+impl Fallback {
+    /// Try to match this fallback against tokens.
+    pub fn try_match(
+        &self,
+        world: &World,
+        actor: EntityId,
+        tokens: &[&str],
+        resolver: &Resolver,
+    ) -> Option<OrdMap<Symbol, SlotValue>> {
+        // Empty pattern matches only empty tokens
+        if self.pattern.is_empty() {
+            return if tokens.is_empty() {
+                Some(OrdMap::new())
+            } else {
+                None
+            };
+        }
+
+        let mut slots = OrdMap::new();
+        let mut token_idx = 0;
+
+        for (elem_idx, elem) in self.pattern.iter().enumerate() {
+            match elem {
+                FallbackElement::Word(word) => {
+                    if token_idx >= tokens.len() {
+                        return None;
+                    }
+                    if tokens[token_idx].to_lowercase() != *word {
+                        return None;
+                    }
+                    token_idx += 1;
+                }
+                FallbackElement::Noun(name) => {
+                    if token_idx >= tokens.len() {
+                        return None;
+                    }
+
+                    // Find where noun phrase ends (at next word in pattern or end)
+                    let stop_at = self.find_noun_end(elem_idx, tokens, token_idx);
+                    if stop_at <= token_idx {
+                        return None;
+                    }
+
+                    // Collect noun phrase
+                    let phrase: Vec<&str> = tokens[token_idx..stop_at].to_vec();
+                    let phrase_str: Arc<str> = phrase.join(" ").into();
+
+                    // Try to resolve - if it resolves, store entity; otherwise store text
+                    match resolver.resolve_noun_phrase(world, actor, &phrase_str) {
+                        ResolutionResult::Resolved(entity) => {
+                            slots.insert(*name, SlotValue::Entity(entity));
+                        }
+                        _ => {
+                            // Store as text for fallback to use in error message
+                            slots.insert(*name, SlotValue::Text(phrase_str));
+                        }
+                    }
+
+                    token_idx = stop_at;
+                }
+                FallbackElement::CatchAll(name) => {
+                    // Consume all remaining tokens
+                    if token_idx >= tokens.len() {
+                        // No tokens left - store empty string
+                        slots.insert(*name, SlotValue::Text("".into()));
+                    } else {
+                        let remaining: Vec<&str> = tokens[token_idx..].to_vec();
+                        let text: Arc<str> = remaining.join(" ").into();
+                        slots.insert(*name, SlotValue::Text(text));
+                    }
+                    // CatchAll consumes everything
+                    token_idx = tokens.len();
+                }
+            }
+        }
+
+        // All pattern elements consumed; all tokens must also be consumed
+        if token_idx == tokens.len() {
+            Some(slots)
+        } else {
+            None
+        }
+    }
+
+    /// Find where a noun phrase ends in a fallback pattern.
+    fn find_noun_end(&self, current_elem: usize, tokens: &[&str], start_token: usize) -> usize {
+        // Look ahead to find the next Word element
+        let next_word = self.pattern[current_elem + 1..]
+            .iter()
+            .find_map(|e| match e {
+                FallbackElement::Word(w) => Some(w.as_str()),
+                _ => None,
+            });
+
+        // If no next word, consume until a preposition or end
+        let mut end = tokens.len();
+
+        for (i, token) in tokens.iter().enumerate().skip(start_token) {
+            let tok_lower = token.to_lowercase();
+
+            // Stop at the next pattern word
+            if let Some(word) = next_word {
+                if tok_lower == word {
+                    end = i;
+                    break;
+                }
+            }
+
+            // Stop at prepositions (unless it's the first token)
+            if i > start_token
+                && PREPOSITIONS.contains(&tok_lower.as_str())
+                && (next_word.is_some() || self.pattern.len() > current_elem + 1)
+            {
+                end = i;
+                break;
+            }
+        }
+
+        end
     }
 }
 

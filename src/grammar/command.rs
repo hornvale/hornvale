@@ -1,6 +1,7 @@
 //! Command definitions and grammar matching results.
 
 use crate::core::EntityId;
+use crate::lang::SExpr;
 use crate::symbol::Symbol;
 use im::OrdMap;
 use std::sync::Arc;
@@ -198,6 +199,86 @@ impl Form {
     }
 }
 
+/// An element in a fallback pattern.
+///
+/// Fallback patterns are more permissive than form patterns.
+/// They're used to provide helpful error messages when regular forms don't match.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FallbackElement {
+    /// A literal word that must match exactly (case-insensitive).
+    Word(String),
+    /// A noun slot that captures any resolvable entity (no type check).
+    Noun(Symbol),
+    /// A catch-all that matches any remaining tokens as text.
+    CatchAll(Symbol),
+}
+
+impl FallbackElement {
+    /// Create a literal word element.
+    pub fn word(w: impl Into<String>) -> Self {
+        Self::Word(w.into().to_lowercase())
+    }
+
+    /// Create a noun slot (resolves entity without type checking).
+    pub fn noun(name: impl Into<Symbol>) -> Self {
+        Self::Noun(name.into())
+    }
+
+    /// Create a catch-all element that matches remaining tokens.
+    pub fn catch_all(name: impl Into<Symbol>) -> Self {
+        Self::CatchAll(name.into())
+    }
+}
+
+/// A fallback pattern with its response expression.
+///
+/// Fallbacks are tried after all regular forms fail.
+/// They provide helpful error messages for common mistakes.
+#[derive(Debug, Clone)]
+pub struct Fallback {
+    /// Pattern elements to match.
+    pub pattern: Vec<FallbackElement>,
+    /// Response expression to evaluate on match.
+    pub response: SExpr,
+    /// Priority (higher = tried first). Defaults based on pattern specificity.
+    pub priority: i32,
+}
+
+impl Fallback {
+    /// Create a new fallback.
+    pub fn new(pattern: Vec<FallbackElement>, response: SExpr) -> Self {
+        let priority = Self::compute_priority(&pattern);
+        Self {
+            pattern,
+            response,
+            priority,
+        }
+    }
+
+    /// Create a new fallback with explicit priority.
+    pub fn with_priority(pattern: Vec<FallbackElement>, response: SExpr, priority: i32) -> Self {
+        Self {
+            pattern,
+            response,
+            priority,
+        }
+    }
+
+    /// Compute default priority from pattern.
+    /// More specific patterns get higher priority.
+    fn compute_priority(pattern: &[FallbackElement]) -> i32 {
+        let mut priority = 0;
+        for elem in pattern {
+            match elem {
+                FallbackElement::Word(_) => priority += 10, // Words are most specific
+                FallbackElement::Noun(_) => priority += 5,  // Nouns are moderately specific
+                FallbackElement::CatchAll(_) => priority += 1, // Catch-all is least specific
+            }
+        }
+        priority
+    }
+}
+
 /// A command definition with aliases and forms.
 ///
 /// Commands are the semantic operations that players can perform.
@@ -209,6 +290,8 @@ pub struct Command {
     pub name: Symbol,
     /// All forms for this command, in priority order.
     pub forms: Vec<Form>,
+    /// Fallback patterns for error messages, in priority order.
+    pub fallbacks: Vec<Fallback>,
 }
 
 impl Command {
@@ -217,6 +300,7 @@ impl Command {
         Self {
             name: name.into(),
             forms: Vec::new(),
+            fallbacks: Vec::new(),
         }
     }
 
@@ -230,6 +314,19 @@ impl Command {
     /// Builder method to add a form.
     pub fn with_form(mut self, form: Form) -> Self {
         self.add_form(form);
+        self
+    }
+
+    /// Add a fallback to this command.
+    pub fn add_fallback(&mut self, fallback: Fallback) {
+        self.fallbacks.push(fallback);
+        // Keep fallbacks sorted by priority (highest first)
+        self.fallbacks.sort_by(|a, b| b.priority.cmp(&a.priority));
+    }
+
+    /// Builder method to add a fallback.
+    pub fn with_fallback(mut self, fallback: Fallback) -> Self {
+        self.add_fallback(fallback);
         self
     }
 }
@@ -334,6 +431,45 @@ impl GrammarMatch {
     /// Get a direction from a slot.
     pub fn get_direction(&self, name: &str) -> Option<Symbol> {
         self.get_slot(name).and_then(|v| v.as_direction())
+    }
+
+    /// Get text from a slot.
+    pub fn get_text(&self, name: &str) -> Option<&str> {
+        self.get_slot(name).and_then(|v| v.as_text())
+    }
+}
+
+/// Result of matching a fallback pattern.
+///
+/// Contains the response to execute and captured slot values.
+#[derive(Debug, Clone)]
+pub struct FallbackMatch {
+    /// The response expression to execute.
+    pub response: SExpr,
+    /// Captured slot values (slot name -> resolved value).
+    pub slots: OrdMap<Symbol, SlotValue>,
+    /// The command that matched.
+    pub command: Symbol,
+}
+
+impl FallbackMatch {
+    /// Create a new fallback match.
+    pub fn new(response: SExpr, slots: OrdMap<Symbol, SlotValue>, command: Symbol) -> Self {
+        Self {
+            response,
+            slots,
+            command,
+        }
+    }
+
+    /// Get a slot value by name.
+    pub fn get_slot(&self, name: &str) -> Option<&SlotValue> {
+        self.slots.get(&Symbol::new(name))
+    }
+
+    /// Get an entity from a slot.
+    pub fn get_entity(&self, name: &str) -> Option<EntityId> {
+        self.get_slot(name).and_then(|v| v.as_entity())
     }
 
     /// Get text from a slot.

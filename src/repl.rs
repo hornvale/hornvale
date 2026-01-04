@@ -23,9 +23,11 @@ pub mod command;
 
 use crate::compiler::Compiler;
 use crate::core::{EntityId, World};
+use crate::grammar::MatchResult;
 use crate::io::WorldIO;
 use crate::lang::{self, WorldLoader, is_complete};
 use crate::rules::RuleSet;
+use crate::symbol::Symbol;
 use crate::systems::tick_world_n;
 use crate::verbs;
 use crate::vm::{StdLib, VM};
@@ -134,25 +136,53 @@ pub fn execute_command(
             // Create stdlib for hook execution
             let stdlib = StdLib::with_builtins();
 
-            // Try grammar-based command matching with full DSL action support
+            // Try grammar-based command matching with fallback support
             if let Some(player) = find_player(world) {
                 let tokens: Vec<&str> = input.split_whitespace().collect();
-                if let Some(grammar_match) = loader
+                match loader
                     .command_registry()
-                    .match_input(world, player, &tokens)
+                    .match_input_with_fallbacks(world, player, &tokens)
                 {
-                    // Use execute_grammar_action_full to enable DSL handlers
-                    let result = verbs::execute_grammar_action_full(
-                        world,
-                        player,
-                        &grammar_match,
-                        &stdlib,
-                        Some(loader.action_registry()),
-                        Some(loader.precondition_registry()),
-                        Some(loader.function_registry()),
-                    );
-                    io.println(result.output.as_ref());
-                    return ReplResult::Continue;
+                    MatchResult::Action(grammar_match) => {
+                        // Use execute_grammar_action_full to enable DSL handlers
+                        let result = verbs::execute_grammar_action_full(
+                            world,
+                            player,
+                            &grammar_match,
+                            &stdlib,
+                            Some(loader.action_registry()),
+                            Some(loader.precondition_registry()),
+                            Some(loader.function_registry()),
+                        );
+                        io.println(result.output.as_ref());
+                        return ReplResult::Continue;
+                    }
+                    MatchResult::Fallback(fallback_match) => {
+                        // Execute the fallback response expression
+                        let output = execute_fallback_response(
+                            world,
+                            player,
+                            &fallback_match,
+                            &stdlib,
+                            loader.function_registry(),
+                        );
+                        io.println(&output);
+                        return ReplResult::Continue;
+                    }
+                    MatchResult::GlobalFallback(response) => {
+                        // Execute the global fallback response
+                        let output = execute_response_expr(
+                            world,
+                            &response,
+                            &stdlib,
+                            loader.function_registry(),
+                        );
+                        io.println(&output);
+                        return ReplResult::Continue;
+                    }
+                    MatchResult::NoMatch => {
+                        // Fall through to default error message
+                    }
                 }
             }
 
@@ -175,6 +205,101 @@ fn find_player(world: &World) -> Option<EntityId> {
         }
     }
     None
+}
+
+/// Execute a fallback response expression.
+///
+/// This compiles and runs the response expression from a FallbackMatch.
+/// Slot values are bound by wrapping the expression in a let block.
+fn execute_fallback_response(
+    world: &World,
+    _actor: EntityId,
+    fallback_match: &crate::grammar::FallbackMatch,
+    stdlib: &StdLib,
+    functions: &crate::lang::FunctionRegistry,
+) -> String {
+    use crate::lang::{Atom, SExpr, Span};
+
+    // Build a let expression that binds the slot values
+    // (let ((name1 value1) (name2 value2) ...) response)
+    let span = Span::default();
+    let mut let_bindings = Vec::new();
+
+    for (name, slot_value) in &fallback_match.slots {
+        let value_expr = match slot_value {
+            crate::grammar::SlotValue::Entity(eid) => {
+                // (entity <id>)
+                SExpr::List(
+                    vec![
+                        SExpr::Atom(Atom::Symbol(Symbol::new("entity")), span),
+                        SExpr::Atom(Atom::Int(eid.raw() as i64), span),
+                    ],
+                    span,
+                )
+            }
+            crate::grammar::SlotValue::Direction(dir) => {
+                // :direction-symbol
+                SExpr::Atom(Atom::Keyword(*dir), span)
+            }
+            crate::grammar::SlotValue::Text(text) => {
+                // "text"
+                SExpr::Atom(Atom::String(text.to_string()), span)
+            }
+        };
+
+        let_bindings.push(SExpr::List(
+            vec![SExpr::Atom(Atom::Symbol(*name), span), value_expr],
+            span,
+        ));
+    }
+
+    // Wrap response in let if we have bindings
+    let expr_to_compile = if let_bindings.is_empty() {
+        fallback_match.response.clone()
+    } else {
+        SExpr::List(
+            vec![
+                SExpr::Atom(Atom::Symbol(Symbol::new("let")), span),
+                SExpr::List(let_bindings, span),
+                fallback_match.response.clone(),
+            ],
+            span,
+        )
+    };
+
+    execute_response_expr(world, &expr_to_compile, stdlib, functions)
+}
+
+/// Execute a response expression (from a fallback or global fallback).
+///
+/// Compiles and runs the expression, capturing any output from `say`.
+fn execute_response_expr(
+    world: &World,
+    response: &crate::lang::SExpr,
+    stdlib: &StdLib,
+    functions: &crate::lang::FunctionRegistry,
+) -> String {
+    // Compile the response expression with user functions
+    let chunk = match Compiler::compile_with_functions(response, functions) {
+        Ok(c) => c,
+        Err(e) => return format!("[Fallback compile error: {e}]"),
+    };
+
+    // Execute in VM
+    let mut vm = VM::new(&chunk, world, stdlib);
+
+    match vm.run() {
+        Ok(_) => {
+            // Return any output from say
+            let output = vm.take_output();
+            if output.is_empty() {
+                String::new()
+            } else {
+                output.join("")
+            }
+        }
+        Err(e) => format!("[Fallback runtime error: {e}]"),
+    }
 }
 
 /// Advance simulation by N ticks (default 1).

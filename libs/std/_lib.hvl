@@ -354,7 +354,9 @@
   :forms
     (((obj:noun) -> (take obj))
      (("up" obj:noun) -> (take obj))
-     ((obj:noun "up") -> (take obj))))
+     ((obj:noun "up") -> (take obj)))
+  :fallbacks
+    (((_rest) -> (say "Take what?"))))
 
 (command drop
   :aliases ("put")

@@ -110,3 +110,7 @@
   :pattern (= (get ?e Name) "cat")
   :every 5
   :effect (emit-message "The cat meows softly."))
+
+;; === GLOBAL FALLBACK ===
+
+(fallback :default (say "I don't understand that. Type 'help' for a list of commands."))
