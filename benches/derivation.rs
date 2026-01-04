@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use hornvale::core::EntityId;
-use hornvale::derive::{ComposeMode, Dependency, DerivationRule, DerivedProperty};
 use hornvale::rules::Pattern;
+use hornvale::{ComposeMode, DerivationRule, DerivedProperty, rules::Dependency};
 use hornvale::{DerivationEngine, Value, World};
 
 /// Benchmark deriving values with no caching.

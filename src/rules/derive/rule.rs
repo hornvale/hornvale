@@ -8,8 +8,8 @@
 
 use std::sync::Arc;
 
+use super::ComposeMode;
 use crate::core::{ComponentTypeId, EntityId, Value, World};
-use crate::derive::ComposeMode;
 use crate::rules::Pattern;
 use crate::symbol::Symbol;
 

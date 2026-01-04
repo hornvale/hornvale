@@ -1219,36 +1219,30 @@ Now that all unification stages are complete, we need to remove legacy systems t
 ---
 
 ### Cleanup Stage 3: Consolidate Derivation Systems
-**Goal**: Remove `src/derive/` module, use `src/rules/derivation.rs`
-**Status**: Not Started
+**Goal**: Move derivation into rules module
+**Status**: Complete ✓
 
-**Current State**:
-- `src/derive/` (~5 files, ~1500+ lines):
-  - `engine.rs`: `DerivationEngine` with rule registry and caching
-  - `rule.rs`: `DerivationRule` with pattern, property, value function
-  - `cache.rs`: `DerivedCache` with dependency-based invalidation
-  - `compose.rs`: `ComposeMode` and value composition
-  - `context.rs`: Derivation context utilities
-
-- `src/rules/derivation.rs`:
-  - `Trigger::Derive(Symbol)` variant
-  - `ComposeMode`, `DerivationRule`, `Epochs`, `DerivationCache`
-  - Integrated with `RuleSet` and `RuleIndex`
-
-**Overlap**: Both systems handle derived properties. The rules-based derivation is integrated with the unified rule system.
-
-**Migration Tasks**:
-1. Ensure `rules/derivation.rs` has feature parity with `derive/engine.rs`
-2. Port any missing cache invalidation logic
-3. Update `World` methods that use `DerivationEngine`
-4. Update all imports from `derive::` to `rules::derivation::`
-5. Remove `src/derive/` directory
+**Completed**:
+- Moved `src/derive/` (5 files) into `src/rules/derive/`
+  - `cache.rs`: DerivedCache with dependency-based invalidation
+  - `compose.rs`: ComposeMode and value composition
+  - `context.rs`: GenerationContext for RNG and debugging
+  - `engine.rs`: DerivationEngine with caching and cycle detection
+  - `rule.rs`: DerivationRule with ValueFn closures
+- Created `src/rules/derive/mod.rs` with exports
+- Deleted simpler `src/rules/derivation.rs` (replaced by full implementation)
+- Updated `rules.rs` to export from `derive` module
+- Updated `lib.rs` to re-export from `rules::derive`
+- Updated `core/world.rs` imports
+- Updated all doc tests
+- Deleted `src/derive.rs` and `src/derive/` directory
+- All 703 tests pass, no clippy warnings
 
 **Success Criteria**:
-- [ ] All derivation uses `rules::derivation`
-- [ ] Cache invalidation works via epochs
-- [ ] `src/derive/` directory deleted
-- [ ] All tests pass
+- [x] All derivation code in `rules/derive/`
+- [x] Cache invalidation works (dependency-based)
+- [x] `src/derive/` directory deleted
+- [x] All tests pass
 
 ---
 

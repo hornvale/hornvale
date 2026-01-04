@@ -177,7 +177,7 @@ impl GenerationContext {
     /// # Example
     ///
     /// ```
-    /// use hornvale::derive::GenerationContext;
+    /// use hornvale::rules::derive::GenerationContext;
     ///
     /// let ctx = GenerationContext::with_seed(12345);
     /// let mut rng = ctx.rng();
@@ -200,7 +200,7 @@ impl GenerationContext {
     /// # Example
     ///
     /// ```
-    /// use hornvale::derive::GenerationContext;
+    /// use hornvale::rules::derive::GenerationContext;
     ///
     /// let mut parent = GenerationContext::with_seed(12345);
     /// parent.set_parameter("biome", "forest");
@@ -232,7 +232,7 @@ impl GenerationContext {
     /// # Example
     ///
     /// ```
-    /// use hornvale::derive::GenerationContext;
+    /// use hornvale::rules::derive::GenerationContext;
     ///
     /// let ctx = GenerationContext::with_seed(12345);
     /// let room_ctx = ctx.fork_with_key(42); // Room ID 42

@@ -11,12 +11,10 @@ use std::cell::RefCell;
 use im::OrdMap;
 use im::OrdSet;
 
-use crate::core::{ComponentTypeId, EntityId, RelationTypeId, Value, World};
-use crate::derive::{
-    CacheEntry, Contribution, Dependency, DerivationRule, DerivedCache, compose_values,
-};
+use super::{CacheEntry, Contribution, Dependency, DerivationRule, DerivedCache, compose_values};
 #[cfg(test)]
-use crate::derive::{ComposeMode, DerivedProperty};
+use super::{ComposeMode, DerivedProperty};
+use crate::core::{ComponentTypeId, EntityId, RelationTypeId, Value, World};
 use crate::symbol::Symbol;
 
 /// Errors that can occur during derivation.
@@ -728,7 +726,7 @@ mod tests {
         ));
 
         // Derive with dependencies
-        let deps = vec![crate::derive::Dependency::component(entity, "HP")];
+        let deps = vec![super::Dependency::component(entity, "HP")];
         let result1 = engine
             .derive_with_dependencies(&world, entity, "EffectiveHP", deps)
             .unwrap();
@@ -743,7 +741,7 @@ mod tests {
 
         // Update the world and derive again
         world.set_component(entity, "HP", 150_i64);
-        let deps2 = vec![crate::derive::Dependency::component(entity, "HP")];
+        let deps2 = vec![super::Dependency::component(entity, "HP")];
         let result2 = engine
             .derive_with_dependencies(&world, entity, "EffectiveHP", deps2)
             .unwrap();

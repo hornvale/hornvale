@@ -26,9 +26,9 @@ use crate::core::{
     RelationTypeId, Value,
 };
 use crate::core::{EpochSnapshot, Layer, LayerError, Phase};
-use crate::derive::DerivationEngine;
 use crate::direction::DirectionRegistry;
 use crate::input::{self, Command, Input};
+use crate::rules::derive::DerivationEngine;
 use crate::symbol::Symbol;
 use im::OrdMap;
 
@@ -826,7 +826,7 @@ impl World {
         entity: EntityId,
         component: impl Into<ComponentTypeId>,
         engine: &DerivationEngine,
-    ) -> Result<Option<Value>, crate::derive::DerivationError> {
+    ) -> Result<Option<Value>, crate::rules::derive::DerivationError> {
         let component = component.into();
 
         // Check if this is a derived component
@@ -1161,7 +1161,7 @@ mod tests {
 
     #[test]
     fn test_get_component_derived_stored() {
-        use crate::derive::DerivationEngine;
+        use crate::rules::derive::DerivationEngine;
 
         let mut world = World::new();
         let entity = world.create_entity();
@@ -1178,8 +1178,8 @@ mod tests {
 
     #[test]
     fn test_get_component_derived_computed() {
-        use crate::derive::{DerivationEngine, DerivationRule, DerivedProperty};
         use crate::rules::Pattern;
+        use crate::rules::derive::{DerivationEngine, DerivationRule, DerivedProperty};
         use std::sync::Arc;
 
         let mut world = World::new();
@@ -1209,8 +1209,8 @@ mod tests {
 
     #[test]
     fn test_set_component_notify() {
-        use crate::derive::{Dependency, DerivationEngine, DerivationRule, DerivedProperty};
         use crate::rules::Pattern;
+        use crate::rules::derive::{Dependency, DerivationEngine, DerivationRule, DerivedProperty};
         use std::sync::Arc;
 
         let mut world = World::new();

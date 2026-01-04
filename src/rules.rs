@@ -30,7 +30,7 @@
 //! - Values are composed using modes: Add, Multiply, Max, Min, Replace
 //! - Results are cached and invalidated based on epochs
 
-pub mod derivation;
+pub mod derive;
 mod effect;
 mod engine;
 mod index;
@@ -39,8 +39,11 @@ mod precondition_rule;
 pub mod predicate;
 mod rule;
 
-pub use derivation::{
-    ComposeMode, DerivationCache, DerivationRule, DerivedValue, Epochs, compose_values,
+// Re-export derivation types from the derive module
+pub use derive::{
+    CacheEntry, ComposeMode, Contribution, Dependency, DerivationEngine, DerivationError,
+    DerivationRule, DerivedCache, DerivedProperty, GenerationContext, GenerationStep, ValueFn,
+    compose_values,
 };
 pub use effect::{Effect, EffectError, EffectResult};
 pub use engine::RuleSet;

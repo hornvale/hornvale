@@ -14,7 +14,6 @@
 pub mod action;
 pub mod compiler;
 pub mod core;
-pub mod derive;
 pub mod direction;
 pub mod execution;
 pub mod generator;
@@ -37,7 +36,6 @@ pub use core::{
     Cardinality, ComponentTypeId, EntityId, EpochSnapshot, Layer, LayerError, Phase,
     RelationSchema, RelationTypeId, Value, World,
 };
-pub use derive::{ComposeMode, DerivationEngine, DerivationError, DerivationRule, DerivedProperty};
 pub use generator::{
     GenerationResult, GenerationStub, Generator, GeneratorRegistry, StubStorage, get_or_generate,
     has_or_stub,
@@ -45,6 +43,9 @@ pub use generator::{
 pub use grammar::{
     Command as GrammarCommand, CommandRegistry, Form, FormAction, FormElement, GrammarMatch,
     IntentTrie, SlotType, SlotValue, TypePredicate, TypeRegistry,
+};
+pub use rules::derive::{
+    ComposeMode, DerivationEngine, DerivationError, DerivationRule, DerivedProperty,
 };
 // Hook types re-exported from vm module
 pub use input::{
