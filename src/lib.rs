@@ -19,7 +19,6 @@ pub mod direction;
 pub mod execution;
 pub mod generator;
 pub mod grammar;
-pub mod hooks;
 pub mod input;
 pub mod io;
 pub mod lang;
@@ -48,10 +47,7 @@ pub use grammar::{
     Command as GrammarCommand, CommandRegistry, Form, FormAction, FormElement, GrammarMatch,
     IntentTrie, SlotType, SlotValue, TypePredicate, TypeRegistry,
 };
-pub use hooks::{
-    HookError, HookPipelineResult, HookResult, PendingMutations, execute_hook, run_after_hooks,
-    run_before_hooks, run_hooks_for_action, run_on_hooks,
-};
+// Hook types re-exported from vm module
 pub use input::{
     Command, EntityCandidate, Input, ObjectRef, ResolutionResult, ResolvedCommand, Resolver,
     ScopeProvider, Token, parse_input,
@@ -61,6 +57,7 @@ pub use rng::SeededRng;
 pub use symbol::Symbol;
 pub use template::{FieldSpec, Template, TemplateRegistry};
 pub use verbs::{VerbResult, execute_grammar_action_full};
+pub use vm::{HookPipelineResult, HookResult, PendingMutations};
 
 // Action and precondition system
 pub use action::{

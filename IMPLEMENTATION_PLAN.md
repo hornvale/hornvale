@@ -1179,34 +1179,21 @@ Now that all unification stages are complete, we need to remove legacy systems t
 
 ### Cleanup Stage 1: Consolidate Hooks System
 **Goal**: Remove `src/hooks.rs`, migrate all hook functionality to rules
-**Status**: Not Started
+**Status**: Complete
 
-**Current State**:
-- `src/hooks.rs` (~1175 lines): Standalone hook execution engine
-  - Stores hooks as entity components (`On:burn`, `Before:take`, etc.)
-  - `execute_hook()` compiles and runs hook expressions via VM
-  - `run_hooks_for_action()` orchestrates Before/On/After pipeline
-  - `PendingMutations` struct for collecting mutations
-
-- `src/rules/rule.rs`: Unified rule system with `Trigger::Before/On/After`
-  - `RuleSet::import_hooks_from_world()` converts inline hooks to rules
-  - Rules use `Effect::Script` for VM execution
-  - Indexed by action via `RuleIndex`
-
-**Overlap**: Both systems handle Before/On/After hooks. The rule-based system is the unified approach, but hooks.rs is still used by the action system.
-
-**Migration Tasks**:
-1. Update `src/verbs.rs` to use `RuleSet` hooks instead of `hooks.rs` functions
-2. Move `PendingMutations` to `src/vm/` or `src/core/` (still needed)
-3. Move `HookResult` and `HookPipelineResult` to a shared location
-4. Update all callers of `run_hooks_for_action`, `run_before_hooks`, etc.
-5. Remove `src/hooks.rs` and update `lib.rs` exports
+**Completed**:
+- Moved `PendingMutations`, `HookResult`, `HookPipelineResult` to `src/vm/exec.rs`
+- Added `run_before_hooks()`, `run_on_hooks()`, `run_after_hooks()` to `RuleSet`
+- Updated `verbs.rs` to require `&mut RuleSet` parameter
+- Deleted `src/hooks.rs` (~1175 lines removed)
+- Updated `lib.rs` exports to use `vm::` types
+- All 733 tests pass
 
 **Success Criteria**:
-- [ ] All hook execution uses `RuleSet` queries
-- [ ] `hooks.rs` module deleted
-- [ ] All tests pass
-- [ ] No functionality regression
+- [x] All hook execution uses `RuleSet` queries
+- [x] `hooks.rs` module deleted
+- [x] All tests pass
+- [x] No functionality regression
 
 ---
 
@@ -1280,25 +1267,19 @@ Now that all unification stages are complete, we need to remove legacy systems t
 
 ### Cleanup Stage 4: Remove Legacy Effect Variant
 **Goal**: Remove `Effect::EmitMessage` in favor of `Effect::Script`
-**Status**: Not Started
+**Status**: Complete
 
-**Current State**:
-- `Effect::EmitMessage(String)` - Simple string output
-- `Effect::Script(SExpr)` - VM-executed script (can do `(say ...)`)
-- `Effect::NoOp` - Pattern-only rules
-
-**Overlap**: `EmitMessage` is a subset of `Script` functionality.
-
-**Migration Tasks**:
-1. Find all uses of `Effect::EmitMessage`
-2. Convert to `Effect::Script` with `(say "...")` expression
-3. Remove `EmitMessage` variant from `Effect` enum
-4. Update effect execution logic
+**Completed**:
+- Removed `Effect::EmitMessage` enum variant
+- Updated `emit_message()` to create `Effect::Script` with `(say "message")`
+- All existing code using `emit_message()` continues to work
+- Updated tests to match new behavior
+- All tests pass
 
 **Success Criteria**:
-- [ ] No `Effect::EmitMessage` in codebase
-- [ ] All message output uses `Effect::Script`
-- [ ] All tests pass
+- [x] No `Effect::EmitMessage` variant in codebase
+- [x] All message output uses `Effect::Script`
+- [x] All tests pass
 
 ---
 

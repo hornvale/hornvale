@@ -314,6 +314,163 @@ impl RuleSet {
             .collect()
     }
 
+    // =========================================================================
+    // Hook Execution
+    // =========================================================================
+
+    /// Execute all Before hooks for an action.
+    ///
+    /// Hooks are executed in priority order. If any hook returns :veto,
+    /// execution stops and the result is marked as vetoed.
+    pub fn run_before_hooks(
+        &mut self,
+        world: &World,
+        action: &str,
+        context: &crate::vm::ActionContext,
+        stdlib: &crate::vm::StdLib,
+    ) -> Result<crate::vm::HookPipelineResult, super::EffectError> {
+        self.run_hooks_for_phase(world, action, context, stdlib, "Before")
+    }
+
+    /// Execute all On hooks for an action.
+    ///
+    /// Hooks are executed in priority order. If any hook returns :handled,
+    /// execution stops and the result is marked as handled.
+    pub fn run_on_hooks(
+        &mut self,
+        world: &World,
+        action: &str,
+        context: &crate::vm::ActionContext,
+        stdlib: &crate::vm::StdLib,
+    ) -> Result<crate::vm::HookPipelineResult, super::EffectError> {
+        self.run_hooks_for_phase(world, action, context, stdlib, "On")
+    }
+
+    /// Execute all After hooks for an action.
+    ///
+    /// Hooks are executed in priority order. After hooks cannot veto or handle.
+    pub fn run_after_hooks(
+        &mut self,
+        world: &World,
+        action: &str,
+        context: &crate::vm::ActionContext,
+        stdlib: &crate::vm::StdLib,
+    ) -> Result<crate::vm::HookPipelineResult, super::EffectError> {
+        self.run_hooks_for_phase(world, action, context, stdlib, "After")
+    }
+
+    /// Internal: execute hooks for a specific phase.
+    fn run_hooks_for_phase(
+        &mut self,
+        world: &World,
+        action: &str,
+        context: &crate::vm::ActionContext,
+        stdlib: &crate::vm::StdLib,
+        phase: &str,
+    ) -> Result<crate::vm::HookPipelineResult, super::EffectError> {
+        use crate::vm::HookPipelineResult;
+
+        let mut result = HookPipelineResult::new();
+
+        // Get entities to check (in order: actor, direct_object, indirect_object, room)
+        let entities: Vec<EntityId> = [
+            Some(context.actor),
+            context.direct_object,
+            context.indirect_object,
+            context.room,
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        // Get rules for this phase
+        let rules: Vec<_> = match phase {
+            "Before" => self.before_hooks(action).into_iter().cloned().collect(),
+            "On" => self.on_hooks(action).into_iter().cloned().collect(),
+            "After" => self.after_hooks(action).into_iter().cloned().collect(),
+            _ => vec![],
+        };
+
+        // Execute rules that match any of the context entities
+        for rule in rules {
+            // Check if the rule's pattern matches any context entity
+            let matches_entity = entities.iter().any(|&e| rule.pattern.matches(world, e));
+            if !matches_entity {
+                continue;
+            }
+
+            // Execute the rule's effect
+            let (hook_result, output, mutations) =
+                self.execute_hook_effect(&rule.effect, world, context, stdlib)?;
+
+            result.output.extend(output);
+            result.mutations.extend(mutations);
+
+            // Handle veto/handled based on phase
+            match phase {
+                "Before" => {
+                    if hook_result.is_veto() {
+                        result.vetoed = true;
+                        return Ok(result);
+                    }
+                }
+                "On" => {
+                    if hook_result.is_handled() {
+                        result.handled = true;
+                        return Ok(result);
+                    }
+                }
+                "After" => {
+                    // After hooks can't veto or handle
+                }
+                _ => {}
+            }
+        }
+
+        Ok(result)
+    }
+
+    /// Execute a hook effect and interpret the result.
+    fn execute_hook_effect(
+        &self,
+        effect: &super::Effect,
+        world: &World,
+        context: &crate::vm::ActionContext,
+        stdlib: &crate::vm::StdLib,
+    ) -> Result<
+        (
+            crate::vm::HookResult,
+            Vec<String>,
+            crate::vm::PendingMutations,
+        ),
+        super::EffectError,
+    > {
+        use crate::vm::HookResult;
+
+        // For Script effects, we need to execute and check return value
+        if let super::Effect::Script(expr) = effect {
+            let effect_result = effect.execute_with_context(world, context, stdlib, 0)?;
+
+            // Execute the script again to get the return value
+            // (The effect already ran, but we need to know what it returned)
+            // Actually, we need a modified approach - let's execute once and check result
+
+            // The script might end with :handled or :veto symbol
+            // Let's check the expr for this pattern
+            let hook_result = interpret_hook_return_value(expr);
+
+            Ok((hook_result, effect_result.output, effect_result.mutations))
+        } else {
+            // Non-script effects just run
+            let effect_result = effect.execute_with_context(world, context, stdlib, 0)?;
+            Ok((
+                HookResult::Continue,
+                effect_result.output,
+                effect_result.mutations,
+            ))
+        }
+    }
+
     /// Evaluate all periodic rules against the current world state.
     ///
     /// Uses the rule index for O(1) lookup of periodic rules.
@@ -364,6 +521,48 @@ impl Default for RuleSet {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Interpret the return value of a hook expression.
+///
+/// Checks if the expression ends with :handled or :veto symbol.
+/// This is a static analysis of the script, not runtime execution.
+fn interpret_hook_return_value(expr: &crate::core::Value) -> crate::vm::HookResult {
+    use crate::core::Value;
+    use crate::vm::HookResult;
+
+    // Check if the last expression in a do-block is :veto or :handled
+    if let Value::List(items) = expr {
+        if items.is_empty() {
+            return HookResult::Continue;
+        }
+
+        // Check if it's a do-block
+        if let Some(Value::Symbol(s)) = items.first() {
+            if s.as_str() == "do" {
+                // Check last expression
+                if let Some(last) = items.last() {
+                    return interpret_hook_return_value(last);
+                }
+            }
+        }
+
+        // Check the last item of the list
+        if let Some(last) = items.last() {
+            return interpret_hook_return_value(last);
+        }
+    }
+
+    // Check if this is a :veto or :handled symbol
+    if let Value::Symbol(s) = expr {
+        match s.as_str().as_str() {
+            "veto" | ":veto" => return HookResult::Veto(String::new()),
+            "handled" | ":handled" => return HookResult::Handled(String::new()),
+            _ => {}
+        }
+    }
+
+    HookResult::Continue
 }
 
 /// Parse a hook component name like "Before:take" into (phase, action).

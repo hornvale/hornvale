@@ -184,9 +184,19 @@ pub fn execute_grammar_action(
     actor: EntityId,
     grammar_match: &crate::GrammarMatch,
     stdlib: &crate::vm::StdLib,
+    rule_set: &mut crate::rules::RuleSet,
 ) -> VerbResult {
     // Call the full version with no registries
-    execute_grammar_action_full(world, actor, grammar_match, stdlib, None, None, None)
+    execute_grammar_action_full(
+        world,
+        actor,
+        grammar_match,
+        stdlib,
+        None,
+        None,
+        None,
+        rule_set,
+    )
 }
 
 /// Execute an action based on a grammar match with full precondition support.
@@ -211,9 +221,9 @@ pub fn execute_grammar_action_full(
     action_registry: Option<&crate::action::ActionRegistry>,
     precondition_registry: Option<&crate::precondition::PreconditionRegistry>,
     function_registry: Option<&crate::lang::FunctionRegistry>,
+    rule_set: &mut crate::rules::RuleSet,
 ) -> VerbResult {
     use crate::action::check_action_preconditions;
-    use crate::hooks::{run_after_hooks, run_before_hooks, run_on_hooks};
     use crate::vm::ActionContext;
 
     let action_name = grammar_match.action.action_name();
@@ -254,7 +264,11 @@ pub fn execute_grammar_action_full(
     let mut output_parts: Vec<String> = Vec::new();
 
     // Run Before hooks
-    match run_before_hooks(world, &action_str, &action_context, stdlib) {
+    let before_result = rule_set
+        .run_before_hooks(world, &action_str, &action_context, stdlib)
+        .map_err(|e| format!("Hook error: {e}"));
+
+    match before_result {
         Ok(before_result) => {
             output_parts.extend(before_result.output);
 
@@ -275,12 +289,16 @@ pub fn execute_grammar_action_full(
         Err(e) => {
             // Hook execution error - rollback and report
             let _ = world.rollback_transaction();
-            return VerbResult::fail(format!("Hook error: {e}"));
+            return VerbResult::fail(e);
         }
     }
 
     // Run On hooks
-    let handled = match run_on_hooks(world, &action_str, &action_context, stdlib) {
+    let on_result = rule_set
+        .run_on_hooks(world, &action_str, &action_context, stdlib)
+        .map_err(|e| format!("Hook error: {e}"));
+
+    let handled = match on_result {
         Ok(on_result) => {
             output_parts.extend(on_result.output);
 
@@ -292,7 +310,7 @@ pub fn execute_grammar_action_full(
         Err(e) => {
             // Hook execution error - rollback and report
             let _ = world.rollback_transaction();
-            return VerbResult::fail(format!("Hook error: {e}"));
+            return VerbResult::fail(e);
         }
     };
 
@@ -341,7 +359,11 @@ pub fn execute_grammar_action_full(
     }
 
     // Run After hooks
-    match run_after_hooks(world, &action_str, &action_context, stdlib) {
+    let after_result = rule_set
+        .run_after_hooks(world, &action_str, &action_context, stdlib)
+        .map_err(|e| format!("Hook error: {e}"));
+
+    match after_result {
         Ok(after_result) => {
             output_parts.extend(after_result.output);
 
@@ -351,7 +373,7 @@ pub fn execute_grammar_action_full(
         Err(e) => {
             // After hook error - rollback and report
             let _ = world.rollback_transaction();
-            return VerbResult::fail(format!("Hook error: {e}"));
+            return VerbResult::fail(e);
         }
     }
 

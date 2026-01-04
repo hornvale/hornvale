@@ -23,18 +23,14 @@
 
 use crate::compiler::Compiler;
 use crate::core::{EntityId, Value, World};
-use crate::hooks::PendingMutations;
 use crate::io::WorldIO;
 use crate::lang::{Atom, SExpr, Span};
 use crate::symbol::Symbol;
-use crate::vm::{ActionContext, StdLib, VM};
+use crate::vm::{ActionContext, PendingMutations, StdLib, VM};
 
 /// An action taken when a rule fires.
 #[derive(Debug, Clone)]
 pub enum Effect {
-    /// Emit a message to the output (legacy, simple case).
-    EmitMessage(String),
-
     /// Execute a VM script (S-expression that gets compiled and run).
     ///
     /// The script has access to:
@@ -58,9 +54,15 @@ pub struct EffectResult {
 }
 
 impl Effect {
-    /// Create an EmitMessage effect.
+    /// Create a Script effect that emits a message.
+    ///
+    /// This is a convenience method that creates `(say "message")`.
     pub fn emit_message(message: impl Into<String>) -> Self {
-        Effect::EmitMessage(message.into())
+        let msg = message.into();
+        Effect::Script(Value::list(vec![
+            Value::Symbol(Symbol::new("say")),
+            Value::string(msg),
+        ]))
     }
 
     /// Create a Script effect from an S-expression.
@@ -82,9 +84,6 @@ impl Effect {
     /// for full control over execution context.
     pub fn execute(&self, world: &World, io: &mut dyn WorldIO, entity: EntityId, tick: u64) {
         match self {
-            Effect::EmitMessage(message) => {
-                io.println(&format!("[Tick {tick}] {message} (entity {entity})"));
-            }
             Effect::Script(expr) => {
                 let stdlib = StdLib::with_builtins();
                 let context = ActionContext {
@@ -118,16 +117,9 @@ impl Effect {
         world: &World,
         context: &ActionContext,
         stdlib: &StdLib,
-        tick: u64,
+        _tick: u64,
     ) -> Result<EffectResult, EffectError> {
         match self {
-            Effect::EmitMessage(message) => {
-                let formatted = format!("[Tick {tick}] {message} (entity {})", context.actor);
-                Ok(EffectResult {
-                    output: vec![formatted],
-                    mutations: PendingMutations::default(),
-                })
-            }
             Effect::Script(expr) => execute_script_effect(world, expr, context, stdlib),
             Effect::NoOp => Ok(EffectResult::default()),
         }
@@ -136,7 +128,6 @@ impl Effect {
     /// Get a human-readable description of this effect.
     pub fn describe(&self) -> String {
         match self {
-            Effect::EmitMessage(msg) => format!("emit \"{msg}\""),
             Effect::Script(expr) => format!("script {expr}"),
             Effect::NoOp => "no-op".to_string(),
         }
@@ -272,15 +263,18 @@ mod tests {
         let effect = Effect::emit_message("Hello, world!");
         effect.execute(&world, &mut io, entity, 100);
 
+        // emit_message now creates a Script effect with (say "...")
         assert!(io.output.contains("Hello, world!"));
         assert!(io.output.contains("Tick 100"));
-        assert!(io.output.contains("entity 42"));
     }
 
     #[test]
     fn test_effect_describe() {
+        // emit_message now creates a Script effect
         let effect = Effect::emit_message("Baa!");
-        assert_eq!(effect.describe(), "emit \"Baa!\"");
+        let desc = effect.describe();
+        assert!(desc.starts_with("script"));
+        assert!(desc.contains("Baa!"));
     }
 
     #[test]
@@ -351,8 +345,9 @@ mod tests {
 
     #[test]
     fn test_effect_is_script() {
+        // emit_message now creates a Script effect
         let emit = Effect::emit_message("test");
-        assert!(!emit.is_script());
+        assert!(emit.is_script());
 
         let script = Effect::script(Value::Int(42));
         assert!(script.is_script());
@@ -367,7 +362,10 @@ mod tests {
         let script = Effect::script(value.clone());
 
         assert_eq!(script.as_script(), Some(&value));
-        assert_eq!(Effect::emit_message("test").as_script(), None);
+
+        // emit_message now creates a Script effect, so as_script returns Some
+        let emit = Effect::emit_message("test");
+        assert!(emit.as_script().is_some());
     }
 
     #[test]

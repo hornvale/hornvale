@@ -153,6 +153,7 @@ pub fn execute_command(
                             Some(loader.action_registry()),
                             Some(loader.precondition_registry()),
                             Some(loader.function_registry()),
+                            rules,
                         );
                         io.println(result.output.as_ref());
                         return ReplResult::Continue;

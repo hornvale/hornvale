@@ -111,6 +111,128 @@ pub struct PendingRelation {
     pub to: EntityId,
 }
 
+/// All pending mutations from hook/effect execution.
+#[derive(Debug, Clone, Default)]
+pub struct PendingMutations {
+    /// Component mutations (set! calls).
+    pub set_components: Vec<PendingSetComponent>,
+    /// Relation additions (relate! calls).
+    pub relate: Vec<PendingRelation>,
+    /// Relation removals (unrelate! calls).
+    pub unrelate: Vec<PendingRelation>,
+    /// Entity deletions (destroy calls).
+    pub deletions: Vec<EntityId>,
+}
+
+impl PendingMutations {
+    /// Create empty pending mutations.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Check if there are any pending mutations.
+    pub fn is_empty(&self) -> bool {
+        self.set_components.is_empty()
+            && self.relate.is_empty()
+            && self.unrelate.is_empty()
+            && self.deletions.is_empty()
+    }
+
+    /// Extend with mutations from another PendingMutations.
+    pub fn extend(&mut self, other: PendingMutations) {
+        self.set_components.extend(other.set_components);
+        self.relate.extend(other.relate);
+        self.unrelate.extend(other.unrelate);
+        self.deletions.extend(other.deletions);
+    }
+
+    /// Apply all pending mutations to the world.
+    ///
+    /// This should be called within a transaction so changes can be rolled back.
+    pub fn apply_to(&self, world: &mut crate::core::World) {
+        // Apply component mutations
+        for m in &self.set_components {
+            world.set_component(m.entity, m.component, m.value.clone());
+        }
+
+        // Apply relation additions
+        for r in &self.relate {
+            world.add_relation(r.relation, r.from, r.to);
+        }
+
+        // Apply relation removals
+        for r in &self.unrelate {
+            world.remove_relation(r.relation, r.from, r.to);
+        }
+
+        // Apply deletions last
+        for entity in &self.deletions {
+            world.delete_entity(*entity);
+        }
+    }
+}
+
+/// Result of executing a single hook.
+#[derive(Debug, Clone)]
+pub enum HookResult {
+    /// Continue with the action normally.
+    Continue,
+    /// Skip the default handler, use this output instead.
+    Handled(String),
+    /// Cancel the action entirely with this message.
+    Veto(String),
+}
+
+impl HookResult {
+    /// Check if this result is a veto.
+    pub fn is_veto(&self) -> bool {
+        matches!(self, HookResult::Veto(_))
+    }
+
+    /// Check if this result is handled.
+    pub fn is_handled(&self) -> bool {
+        matches!(self, HookResult::Handled(_))
+    }
+
+    /// Get the output message, if any.
+    pub fn message(&self) -> Option<&str> {
+        match self {
+            HookResult::Continue => None,
+            HookResult::Handled(msg) | HookResult::Veto(msg) => Some(msg),
+        }
+    }
+}
+
+/// Result of running all hooks for an action phase.
+#[derive(Debug, Clone, Default)]
+pub struct HookPipelineResult {
+    /// Whether a Before hook vetoed the action.
+    pub vetoed: bool,
+    /// Whether an On hook handled the action.
+    pub handled: bool,
+    /// Combined output from all hooks.
+    pub output: Vec<String>,
+    /// All pending mutations from hooks.
+    pub mutations: PendingMutations,
+}
+
+impl HookPipelineResult {
+    /// Create a new empty result.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Get combined output as a single string.
+    pub fn combined_output(&self) -> String {
+        self.output.join("\n")
+    }
+
+    /// Get deletions (for backwards compatibility).
+    pub fn deletions(&self) -> &[EntityId] {
+        &self.mutations.deletions
+    }
+}
+
 /// Virtual machine for executing bytecode.
 pub struct VM<'a> {
     /// The bytecode chunk being executed.
