@@ -7,6 +7,12 @@
 //! Hook rules use Before/On/After triggers and are executed by the action system,
 //! not during tick evaluation. Use `before_hooks`, `on_hooks`, and `after_hooks`
 //! to query hook rules for a specific action.
+//!
+//! ## Indexing
+//!
+//! Rules are indexed by trigger type for O(1) lookups. The index is mandatory
+//! and is automatically rebuilt when rules change. This ensures rule lookup
+//! is always O(1), not O(all rules).
 
 use im::OrdMap;
 
@@ -14,15 +20,21 @@ use crate::core::{EntityId, World};
 use crate::io::WorldIO;
 use crate::symbol::Symbol;
 
+use super::index::RuleIndex;
 use super::rule::{Rule, Trigger};
 
 /// A collection of rules with evaluation state.
+///
+/// Rules are automatically indexed for O(1) lookup by trigger type.
+/// The index is rebuilt lazily when rules are added and queries are made.
 #[derive(Debug, Clone)]
 pub struct RuleSet {
     /// The rules in this set.
     rules: Vec<Rule>,
     /// Last tick each rule fired (by rule name).
     last_fired: OrdMap<Symbol, u64>,
+    /// Index for O(1) rule lookups.
+    index: RuleIndex,
 }
 
 impl RuleSet {
@@ -31,20 +43,45 @@ impl RuleSet {
         Self {
             rules: Vec::new(),
             last_fired: OrdMap::new(),
+            index: RuleIndex::new(),
         }
     }
 
     /// Create a rule set from a list of rules.
     pub fn from_rules(rules: Vec<Rule>) -> Self {
+        let mut index = RuleIndex::new();
+        index.rebuild(&rules);
         Self {
             rules,
             last_fired: OrdMap::new(),
+            index,
         }
     }
 
     /// Add a rule to the set.
+    ///
+    /// The index will be lazily rebuilt on the next query.
     pub fn add_rule(&mut self, rule: Rule) {
         self.rules.push(rule);
+        self.index.mark_dirty();
+    }
+
+    /// Ensure the index is up-to-date.
+    ///
+    /// Call this before any indexed queries. The index is rebuilt
+    /// lazily when marked dirty (after adding rules).
+    fn ensure_indexed(&mut self) {
+        if self.index.is_dirty() {
+            self.index.rebuild(&self.rules);
+        }
+    }
+
+    /// Rebuild the rule index.
+    ///
+    /// This is called automatically when needed, but can be called
+    /// explicitly to ensure the index is fresh (e.g., between ticks).
+    pub fn rebuild_index(&mut self) {
+        self.index.rebuild(&self.rules);
     }
 
     /// Get the number of rules.
@@ -69,90 +106,123 @@ impl RuleSet {
     }
 
     // =========================================================================
-    // Hook Rule Queries
+    // Hook Rule Queries (Indexed O(1) Lookups)
     // =========================================================================
 
     /// Get all Before hook rules for an action.
-    pub fn before_hooks(&self, action: &str) -> impl Iterator<Item = &Rule> {
+    ///
+    /// Uses the rule index for O(1) lookup.
+    pub fn before_hooks(&mut self, action: &str) -> Vec<&Rule> {
+        self.ensure_indexed();
         let action_sym = Symbol::new(action);
-        self.rules
+        self.index
+            .before(action_sym)
             .iter()
-            .filter(move |r| matches!(&r.trigger, Trigger::Before(a) if *a == action_sym))
+            .map(|&i| &self.rules[i])
+            .collect()
     }
 
     /// Get all On hook rules for an action.
-    pub fn on_hooks(&self, action: &str) -> impl Iterator<Item = &Rule> {
+    ///
+    /// Uses the rule index for O(1) lookup.
+    pub fn on_hooks(&mut self, action: &str) -> Vec<&Rule> {
+        self.ensure_indexed();
         let action_sym = Symbol::new(action);
-        self.rules
+        self.index
+            .on(action_sym)
             .iter()
-            .filter(move |r| matches!(&r.trigger, Trigger::On(a) if *a == action_sym))
+            .map(|&i| &self.rules[i])
+            .collect()
     }
 
     /// Get all After hook rules for an action.
-    pub fn after_hooks(&self, action: &str) -> impl Iterator<Item = &Rule> {
+    ///
+    /// Uses the rule index for O(1) lookup.
+    pub fn after_hooks(&mut self, action: &str) -> Vec<&Rule> {
+        self.ensure_indexed();
         let action_sym = Symbol::new(action);
-        self.rules
+        self.index
+            .after(action_sym)
             .iter()
-            .filter(move |r| matches!(&r.trigger, Trigger::After(a) if *a == action_sym))
+            .map(|&i| &self.rules[i])
+            .collect()
     }
 
     /// Get all hook rules (Before, On, After) for an action.
-    pub fn hooks_for_action(&self, action: &str) -> impl Iterator<Item = &Rule> {
+    ///
+    /// Uses the rule index for O(1) lookup.
+    pub fn hooks_for_action(&mut self, action: &str) -> Vec<&Rule> {
+        self.ensure_indexed();
         let action_sym = Symbol::new(action);
-        self.rules
-            .iter()
-            .filter(move |r| r.trigger.is_hook() && r.trigger.action() == Some(action_sym))
+        self.index
+            .all_hooks(action_sym)
+            .map(|i| &self.rules[i])
+            .collect()
     }
 
     // =========================================================================
-    // Derivation Rule Queries
+    // Derivation Rule Queries (Indexed O(1) Lookups)
     // =========================================================================
 
     /// Get all derivation rules for a property.
-    pub fn derive_rules(&self, property: &str) -> impl Iterator<Item = &Rule> {
+    ///
+    /// Uses the rule index for O(1) lookup.
+    pub fn derive_rules(&mut self, property: &str) -> Vec<&Rule> {
+        self.ensure_indexed();
         let property_sym = Symbol::new(property);
-        self.rules
+        self.index
+            .derive(property_sym)
             .iter()
-            .filter(move |r| matches!(&r.trigger, Trigger::Derive(p) if *p == property_sym))
+            .map(|&i| &self.rules[i])
+            .collect()
     }
 
     /// Get derivation rules that match a specific entity for a property.
+    ///
+    /// Uses the rule index for O(1) lookup, then filters by pattern.
     pub fn matching_derive_rules<'a>(
-        &'a self,
+        &'a mut self,
         world: &'a World,
         entity: EntityId,
         property: &str,
-    ) -> impl Iterator<Item = &'a Rule> + 'a {
+    ) -> Vec<&'a Rule> {
+        self.ensure_indexed();
         let property_sym = Symbol::new(property);
-        self.rules.iter().filter(move |r| {
-            matches!(&r.trigger, Trigger::Derive(p) if *p == property_sym)
-                && r.pattern.matches(world, entity)
-        })
+        let indexes = self.index.derive(property_sym).to_vec();
+        indexes
+            .into_iter()
+            .map(|i| &self.rules[i])
+            .filter(|r| r.pattern.matches(world, entity))
+            .collect()
     }
 
     /// Get hook rules that match a specific entity for an action phase.
     ///
-    /// This filters hook rules to only those whose pattern matches the entity.
+    /// Uses the rule index for O(1) lookup, then filters by pattern.
     pub fn matching_hooks<'a>(
-        &'a self,
+        &'a mut self,
         world: &'a World,
         entity: EntityId,
         phase: &'static str,
         action: &str,
-    ) -> impl Iterator<Item = &'a Rule> + 'a {
+    ) -> Vec<&'a Rule> {
+        self.ensure_indexed();
         let action_sym = Symbol::new(action);
-        self.rules.iter().filter(move |r| {
-            // Check trigger matches phase and action
-            let trigger_matches = match phase {
-                "Before" => matches!(&r.trigger, Trigger::Before(a) if *a == action_sym),
-                "On" => matches!(&r.trigger, Trigger::On(a) if *a == action_sym),
-                "After" => matches!(&r.trigger, Trigger::After(a) if *a == action_sym),
-                _ => false,
-            };
 
-            // Check pattern matches entity
-            trigger_matches && r.pattern.matches(world, entity)
-        })
+        // Get the appropriate index based on phase
+        let indexes: Vec<usize> = match phase {
+            "Before" => self.index.before(action_sym).to_vec(),
+            "On" => self.index.on(action_sym).to_vec(),
+            "After" => self.index.after(action_sym).to_vec(),
+            _ => vec![],
+        };
+
+        // Filter by pattern match
+        indexes
+            .into_iter()
+            .map(|i| &self.rules[i])
+            .filter(|r| r.pattern.matches(world, entity))
+            .collect()
     }
 
     // =========================================================================
@@ -209,24 +279,39 @@ impl RuleSet {
         }
     }
 
-    /// Evaluate all rules against the current world state.
+    /// Get all periodic rules.
     ///
-    /// For periodic rules, checks if enough ticks have elapsed since last firing.
+    /// Uses the rule index for O(1) lookup.
+    pub fn periodic_rules(&mut self) -> Vec<&Rule> {
+        self.ensure_indexed();
+        self.index
+            .periodic()
+            .iter()
+            .map(|&i| &self.rules[i])
+            .collect()
+    }
+
+    /// Evaluate all periodic rules against the current world state.
+    ///
+    /// Uses the rule index for O(1) lookup of periodic rules.
     /// For each matching entity, executes the rule's effect.
     pub fn evaluate(&mut self, world: &World, io: &mut dyn WorldIO, current_tick: u64) {
-        for rule in &self.rules {
-            if self.should_fire(rule, current_tick) {
+        self.ensure_indexed();
+
+        // Only evaluate periodic rules (indexed for O(1) lookup)
+        let periodic_indexes = self.index.periodic().to_vec();
+
+        for idx in periodic_indexes {
+            let rule = &self.rules[idx];
+            if self.should_fire_periodic(rule, current_tick) {
                 self.evaluate_rule(world, io, rule, current_tick);
                 self.last_fired.insert(rule.name, current_tick);
             }
         }
     }
 
-    /// Check if a rule should fire at the current tick.
-    ///
-    /// Note: Hook triggers (Before/On/After) are fired by the action system,
-    /// not during tick evaluation. This method returns false for them.
-    fn should_fire(&self, rule: &Rule, current_tick: u64) -> bool {
+    /// Check if a periodic rule should fire at the current tick.
+    fn should_fire_periodic(&self, rule: &Rule, current_tick: u64) -> bool {
         match &rule.trigger {
             Trigger::Periodic { interval } => {
                 // Fire on ticks that are multiples of the interval
@@ -236,10 +321,8 @@ impl RuleSet {
                 }
                 current_tick % interval == 0
             }
-            // Hook triggers are fired by the action system, not tick evaluation
-            Trigger::Before(_) | Trigger::On(_) | Trigger::After(_) => false,
-            // Derive triggers are fired on-demand when property values are requested
-            Trigger::Derive(_) => false,
+            // Non-periodic rules should not be evaluated here
+            _ => false,
         }
     }
 
@@ -461,47 +544,47 @@ mod tests {
 
     #[test]
     fn test_before_hooks_query() {
-        let rules = setup_hook_rules();
+        let mut rules = setup_hook_rules();
 
-        let before_take: Vec<_> = rules.before_hooks("take").collect();
+        let before_take = rules.before_hooks("take");
         assert_eq!(before_take.len(), 1);
         assert_eq!(before_take[0].name.as_str(), "holy-book-before-take");
 
-        let before_burn: Vec<_> = rules.before_hooks("burn").collect();
+        let before_burn = rules.before_hooks("burn");
         assert_eq!(before_burn.len(), 0);
     }
 
     #[test]
     fn test_on_hooks_query() {
-        let rules = setup_hook_rules();
+        let mut rules = setup_hook_rules();
 
-        let on_burn: Vec<_> = rules.on_hooks("burn").collect();
+        let on_burn = rules.on_hooks("burn");
         assert_eq!(on_burn.len(), 2);
 
-        let on_take: Vec<_> = rules.on_hooks("take").collect();
+        let on_take = rules.on_hooks("take");
         assert_eq!(on_take.len(), 0);
     }
 
     #[test]
     fn test_after_hooks_query() {
-        let rules = setup_hook_rules();
+        let mut rules = setup_hook_rules();
 
-        let after_open: Vec<_> = rules.after_hooks("open").collect();
+        let after_open = rules.after_hooks("open");
         assert_eq!(after_open.len(), 1);
         assert_eq!(after_open[0].name.as_str(), "chest-after-open");
     }
 
     #[test]
     fn test_hooks_for_action() {
-        let rules = setup_hook_rules();
+        let mut rules = setup_hook_rules();
 
-        let burn_hooks: Vec<_> = rules.hooks_for_action("burn").collect();
+        let burn_hooks = rules.hooks_for_action("burn");
         assert_eq!(burn_hooks.len(), 2);
 
-        let take_hooks: Vec<_> = rules.hooks_for_action("take").collect();
+        let take_hooks = rules.hooks_for_action("take");
         assert_eq!(take_hooks.len(), 1);
 
-        let open_hooks: Vec<_> = rules.hooks_for_action("open").collect();
+        let open_hooks = rules.hooks_for_action("open");
         assert_eq!(open_hooks.len(), 1);
     }
 
@@ -516,7 +599,7 @@ mod tests {
         world.set_component(paper, "Name", "paper");
 
         // Create rules that match specific entities
-        let rules = RuleSet::from_rules(vec![
+        let mut rules = RuleSet::from_rules(vec![
             Rule::new(
                 "holy-book-on-burn",
                 Pattern::has_component("?e", "HolyBook"),
@@ -532,13 +615,11 @@ mod tests {
         ]);
 
         // Holy book matches both rules (one specific, one general)
-        let holy_book_hooks: Vec<_> = rules
-            .matching_hooks(&world, holy_book, "On", "burn")
-            .collect();
+        let holy_book_hooks = rules.matching_hooks(&world, holy_book, "On", "burn");
         assert_eq!(holy_book_hooks.len(), 2);
 
         // Paper only matches the general rule
-        let paper_hooks: Vec<_> = rules.matching_hooks(&world, paper, "On", "burn").collect();
+        let paper_hooks = rules.matching_hooks(&world, paper, "On", "burn");
         assert_eq!(paper_hooks.len(), 1);
         assert_eq!(paper_hooks[0].name.as_str(), "paper-on-burn");
     }
@@ -623,19 +704,21 @@ mod tests {
         assert_eq!(rules.len(), 2);
 
         // Check Before hooks for "take"
-        let before_take: Vec<_> = rules.before_hooks("take").collect();
+        let before_take = rules.before_hooks("take");
         assert_eq!(before_take.len(), 1);
         assert!(before_take[0].name.as_str().contains("before:take"));
+        // Clone the pattern to check matches after dropping the borrow
+        let take_pattern = before_take[0].pattern.clone();
 
         // Check On hooks for "burn"
-        let on_burn: Vec<_> = rules.on_hooks("burn").collect();
+        let on_burn = rules.on_hooks("burn");
         assert_eq!(on_burn.len(), 1);
         assert!(on_burn[0].name.as_str().contains("on:burn"));
 
         // The rule's pattern should match only the holy_book entity
         let other_entity = world.create_entity();
-        assert!(before_take[0].pattern.matches(&world, holy_book));
-        assert!(!before_take[0].pattern.matches(&world, other_entity));
+        assert!(take_pattern.matches(&world, holy_book));
+        assert!(!take_pattern.matches(&world, other_entity));
     }
 
     // =========================================================================
@@ -644,7 +727,7 @@ mod tests {
 
     #[test]
     fn test_derive_rules_query() {
-        let rules = RuleSet::from_rules(vec![
+        let mut rules = RuleSet::from_rules(vec![
             Rule::new(
                 "fire-resist-base",
                 Pattern::has_component("?e", "Ancestry"),
@@ -672,13 +755,13 @@ mod tests {
             ),
         ]);
 
-        let fire_rules: Vec<_> = rules.derive_rules("FireResistance").collect();
+        let fire_rules = rules.derive_rules("FireResistance");
         assert_eq!(fire_rules.len(), 2);
 
-        let cold_rules: Vec<_> = rules.derive_rules("ColdResistance").collect();
+        let cold_rules = rules.derive_rules("ColdResistance");
         assert_eq!(cold_rules.len(), 1);
 
-        let poison_rules: Vec<_> = rules.derive_rules("PoisonResistance").collect();
+        let poison_rules = rules.derive_rules("PoisonResistance");
         assert_eq!(poison_rules.len(), 0);
     }
 
@@ -695,7 +778,7 @@ mod tests {
         let slime = world.create_entity();
         world.set_component(slime, "InRoom", true);
 
-        let rules = RuleSet::from_rules(vec![
+        let mut rules = RuleSet::from_rules(vec![
             Rule::new(
                 "fire-resist-ancestry",
                 Pattern::has_component("?e", "Ancestry"),
@@ -710,16 +793,12 @@ mod tests {
             ),
         ]);
 
-        // Goblin matches both rules
-        let goblin_rules: Vec<_> = rules
-            .matching_derive_rules(&world, goblin, "FireResistance")
-            .collect();
+        // Goblin matches both rules (matching_derive_rules returns Vec directly)
+        let goblin_rules = rules.matching_derive_rules(&world, goblin, "FireResistance");
         assert_eq!(goblin_rules.len(), 2);
 
         // Slime only matches biome rule
-        let slime_rules: Vec<_> = rules
-            .matching_derive_rules(&world, slime, "FireResistance")
-            .collect();
+        let slime_rules = rules.matching_derive_rules(&world, slime, "FireResistance");
         assert_eq!(slime_rules.len(), 1);
         assert_eq!(slime_rules[0].name.as_str(), "fire-resist-biome");
     }

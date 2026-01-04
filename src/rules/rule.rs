@@ -140,10 +140,12 @@ pub struct Rule {
     pub trigger: Trigger,
     /// What to do when the rule fires.
     pub effect: Effect,
+    /// Priority for ordering (higher = fires earlier within same trigger bucket).
+    pub priority: i32,
 }
 
 impl Rule {
-    /// Create a new rule.
+    /// Create a new rule with default priority (0).
     pub fn new(
         name: impl Into<Symbol>,
         pattern: Pattern,
@@ -155,6 +157,24 @@ impl Rule {
             pattern,
             trigger,
             effect,
+            priority: 0,
+        }
+    }
+
+    /// Create a new rule with explicit priority.
+    pub fn with_priority(
+        name: impl Into<Symbol>,
+        pattern: Pattern,
+        trigger: Trigger,
+        effect: Effect,
+        priority: i32,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            pattern,
+            trigger,
+            effect,
+            priority,
         }
     }
 

@@ -33,6 +33,7 @@
 pub mod derivation;
 mod effect;
 mod engine;
+mod index;
 mod pattern;
 pub mod predicate;
 mod rule;
@@ -42,6 +43,7 @@ pub use derivation::{
 };
 pub use effect::{Effect, EffectError, EffectResult};
 pub use engine::RuleSet;
+pub use index::RuleIndex;
 pub use pattern::{Pattern, Var};
 pub use predicate::{PatternFilter, PredicateError, PredicatePattern};
 pub use rule::{Rule, Trigger};
