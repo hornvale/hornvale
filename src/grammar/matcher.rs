@@ -4,6 +4,7 @@
 //! entity references and validating type constraints.
 
 use crate::core::{EntityId, World};
+use crate::direction::DirectionRegistry;
 use crate::input::{ResolutionResult, Resolver};
 use crate::symbol::Symbol;
 use im::OrdMap;
@@ -12,32 +13,6 @@ use std::sync::Arc;
 use super::command::{Command, Form, FormElement, GrammarMatch, SlotValue};
 use super::predicate::PredicateEvaluator;
 use super::types::{SlotType, TypeRegistry};
-
-/// Known directions for direction slot matching.
-const DIRECTIONS: &[&str] = &[
-    "north",
-    "south",
-    "east",
-    "west",
-    "up",
-    "down",
-    "northeast",
-    "northwest",
-    "southeast",
-    "southwest",
-    "n",
-    "s",
-    "e",
-    "w",
-    "u",
-    "d",
-    "ne",
-    "nw",
-    "se",
-    "sw",
-    "in",
-    "out",
-];
 
 /// Known prepositions that terminate noun phrases.
 const PREPOSITIONS: &[&str] = &[
@@ -79,12 +54,13 @@ impl Command {
         actor: EntityId,
         tokens: &[&str],
         types: &TypeRegistry,
+        directions: &DirectionRegistry,
     ) -> Option<GrammarMatch> {
         let resolver = Resolver::new();
         let evaluator = PredicateEvaluator::new(types);
 
         for form in &self.forms {
-            match form.try_match(world, actor, tokens, &resolver, &evaluator) {
+            match form.try_match(world, actor, tokens, &resolver, &evaluator, directions) {
                 MatchResult::Matched(slots) => {
                     return Some(GrammarMatch::new(
                         form.action.clone(),
@@ -116,13 +92,14 @@ impl Command {
         actor: EntityId,
         tokens: &[&str],
         types: &TypeRegistry,
+        directions: &DirectionRegistry,
     ) -> Result<GrammarMatch, Vec<MatchResult>> {
         let resolver = Resolver::new();
         let evaluator = PredicateEvaluator::new(types);
         let mut failures = Vec::new();
 
         for form in &self.forms {
-            match form.try_match(world, actor, tokens, &resolver, &evaluator) {
+            match form.try_match(world, actor, tokens, &resolver, &evaluator, directions) {
                 MatchResult::Matched(slots) => {
                     return Ok(GrammarMatch::new(
                         form.action.clone(),
@@ -150,6 +127,7 @@ impl Form {
         tokens: &[&str],
         resolver: &Resolver,
         evaluator: &PredicateEvaluator,
+        directions: &DirectionRegistry,
     ) -> MatchResult {
         // Empty pattern matches only if no tokens remain
         if self.pattern.is_empty() {
@@ -187,13 +165,13 @@ impl Form {
                             if token_idx >= tokens.len() {
                                 return MatchResult::NoMatch;
                             }
-                            let dir_token = tokens[token_idx].to_lowercase();
-                            if !DIRECTIONS.contains(&dir_token.as_str()) {
-                                return MatchResult::NoMatch;
-                            }
-                            // Normalize direction
-                            let normalized = normalize_direction(&dir_token);
-                            slots.insert(*name, SlotValue::Direction(Symbol::new(normalized)));
+                            let dir_token = &tokens[token_idx];
+                            // Use registry to normalize (handles abbreviations)
+                            let normalized = match directions.normalize(dir_token) {
+                                Some(sym) => sym,
+                                None => return MatchResult::NoMatch,
+                            };
+                            slots.insert(*name, SlotValue::Direction(normalized));
                             token_idx += 1;
                             elem_idx += 1;
                         }
@@ -309,40 +287,15 @@ impl Form {
     }
 }
 
-/// Normalize direction abbreviations to full form.
-fn normalize_direction(dir: &str) -> &'static str {
-    match dir {
-        "n" => "north",
-        "s" => "south",
-        "e" => "east",
-        "w" => "west",
-        "u" => "up",
-        "d" => "down",
-        "ne" => "northeast",
-        "nw" => "northwest",
-        "se" => "southeast",
-        "sw" => "southwest",
-        "north" => "north",
-        "south" => "south",
-        "east" => "east",
-        "west" => "west",
-        "up" => "up",
-        "down" => "down",
-        "northeast" => "northeast",
-        "northwest" => "northwest",
-        "southeast" => "southeast",
-        "southwest" => "southwest",
-        "in" => "in",
-        "out" => "out",
-        _ => "unknown", // This shouldn't happen if DIRECTIONS check passed
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::core::World;
     use crate::grammar::command::FormAction;
+
+    fn setup_directions() -> DirectionRegistry {
+        DirectionRegistry::with_standard_directions()
+    }
 
     fn setup_world() -> (World, EntityId, EntityId, EntityId) {
         use crate::core::{Cardinality, ComponentTypeId, RelationSchema, RelationTypeId, Value};
@@ -400,8 +353,9 @@ mod tests {
         let resolver = Resolver::new();
         let types = TypeRegistry::new();
         let evaluator = PredicateEvaluator::new(&types);
+        let directions = setup_directions();
 
-        let result = form.try_match(&world, actor, &[], &resolver, &evaluator);
+        let result = form.try_match(&world, actor, &[], &resolver, &evaluator, &directions);
         assert!(matches!(result, MatchResult::Matched(_)));
     }
 
@@ -413,8 +367,16 @@ mod tests {
         let resolver = Resolver::new();
         let types = TypeRegistry::new();
         let evaluator = PredicateEvaluator::new(&types);
+        let directions = setup_directions();
 
-        let result = form.try_match(&world, actor, &["extra"], &resolver, &evaluator);
+        let result = form.try_match(
+            &world,
+            actor,
+            &["extra"],
+            &resolver,
+            &evaluator,
+            &directions,
+        );
         assert!(matches!(result, MatchResult::NoMatch));
     }
 
@@ -426,16 +388,17 @@ mod tests {
         let resolver = Resolver::new();
         let types = TypeRegistry::new();
         let evaluator = PredicateEvaluator::new(&types);
+        let directions = setup_directions();
 
-        let result = form.try_match(&world, actor, &["at"], &resolver, &evaluator);
+        let result = form.try_match(&world, actor, &["at"], &resolver, &evaluator, &directions);
         assert!(matches!(result, MatchResult::Matched(_)));
 
         // Case insensitive
-        let result = form.try_match(&world, actor, &["AT"], &resolver, &evaluator);
+        let result = form.try_match(&world, actor, &["AT"], &resolver, &evaluator, &directions);
         assert!(matches!(result, MatchResult::Matched(_)));
 
         // Wrong word
-        let result = form.try_match(&world, actor, &["in"], &resolver, &evaluator);
+        let result = form.try_match(&world, actor, &["in"], &resolver, &evaluator, &directions);
         assert!(matches!(result, MatchResult::NoMatch));
     }
 
@@ -450,9 +413,17 @@ mod tests {
         let resolver = Resolver::new();
         let types = TypeRegistry::new();
         let evaluator = PredicateEvaluator::new(&types);
+        let directions = setup_directions();
 
         // Full direction
-        let result = form.try_match(&world, actor, &["north"], &resolver, &evaluator);
+        let result = form.try_match(
+            &world,
+            actor,
+            &["north"],
+            &resolver,
+            &evaluator,
+            &directions,
+        );
         if let MatchResult::Matched(slots) = result {
             assert_eq!(
                 slots.get(&Symbol::new("dir")),
@@ -463,7 +434,7 @@ mod tests {
         }
 
         // Abbreviation gets normalized
-        let result = form.try_match(&world, actor, &["n"], &resolver, &evaluator);
+        let result = form.try_match(&world, actor, &["n"], &resolver, &evaluator, &directions);
         if let MatchResult::Matched(slots) = result {
             assert_eq!(
                 slots.get(&Symbol::new("dir")),
@@ -474,7 +445,7 @@ mod tests {
         }
 
         // Non-direction fails
-        let result = form.try_match(&world, actor, &["lamp"], &resolver, &evaluator);
+        let result = form.try_match(&world, actor, &["lamp"], &resolver, &evaluator, &directions);
         assert!(matches!(result, MatchResult::NoMatch));
     }
 
@@ -489,8 +460,9 @@ mod tests {
         let resolver = Resolver::new();
         let types = TypeRegistry::new();
         let evaluator = PredicateEvaluator::new(&types);
+        let directions = setup_directions();
 
-        let result = form.try_match(&world, actor, &["lamp"], &resolver, &evaluator);
+        let result = form.try_match(&world, actor, &["lamp"], &resolver, &evaluator, &directions);
         if let MatchResult::Matched(slots) = result {
             assert_eq!(
                 slots.get(&Symbol::new("obj")),
@@ -512,8 +484,16 @@ mod tests {
         let resolver = Resolver::new();
         let types = TypeRegistry::new();
         let evaluator = PredicateEvaluator::new(&types);
+        let directions = setup_directions();
 
-        let result = form.try_match(&world, actor, &["at", "lamp"], &resolver, &evaluator);
+        let result = form.try_match(
+            &world,
+            actor,
+            &["at", "lamp"],
+            &resolver,
+            &evaluator,
+            &directions,
+        );
         if let MatchResult::Matched(slots) = result {
             assert_eq!(
                 slots.get(&Symbol::new("obj")),
@@ -535,16 +515,17 @@ mod tests {
 
         let (world, _, actor, lamp) = setup_world();
         let types = TypeRegistry::new();
+        let directions = setup_directions();
 
         // Empty matches first form (after priority sort, but empty has lowest priority)
         // Actually, "at" + noun has higher priority, so empty form is tried last
-        let result = cmd.match_forms(&world, actor, &[], &types);
+        let result = cmd.match_forms(&world, actor, &[], &types, &directions);
         assert!(result.is_some());
         let m = result.unwrap();
         assert_eq!(m.action.action_name(), Symbol::new("look-around"));
 
         // "at lamp" matches second form
-        let result = cmd.match_forms(&world, actor, &["at", "lamp"], &types);
+        let result = cmd.match_forms(&world, actor, &["at", "lamp"], &types, &directions);
         assert!(result.is_some());
         let m = result.unwrap();
         assert_eq!(m.action.action_name(), Symbol::new("examine"));
@@ -562,8 +543,16 @@ mod tests {
         let resolver = Resolver::new();
         let types = TypeRegistry::new();
         let evaluator = PredicateEvaluator::new(&types);
+        let directions = setup_directions();
 
-        let result = form.try_match(&world, actor, &["nonexistent"], &resolver, &evaluator);
+        let result = form.try_match(
+            &world,
+            actor,
+            &["nonexistent"],
+            &resolver,
+            &evaluator,
+            &directions,
+        );
         assert!(matches!(result, MatchResult::ResolutionFailed { .. }));
     }
 
@@ -575,9 +564,17 @@ mod tests {
         let resolver = Resolver::new();
         let types = TypeRegistry::new();
         let evaluator = PredicateEvaluator::new(&types);
+        let directions = setup_directions();
 
         // "at lamp" should fail because "lamp" is not consumed
-        let result = form.try_match(&world, actor, &["at", "lamp"], &resolver, &evaluator);
+        let result = form.try_match(
+            &world,
+            actor,
+            &["at", "lamp"],
+            &resolver,
+            &evaluator,
+            &directions,
+        );
         assert!(matches!(result, MatchResult::NoMatch));
     }
 }

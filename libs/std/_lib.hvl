@@ -13,6 +13,33 @@
 ;                  :success))
 
 ; ============================================================================
+; Standard Directions
+; ============================================================================
+; These are the default compass directions. Games can override by defining
+; their own (directions ...) form. Custom directions like "upstream",
+; "clockwise", etc. are fully supported.
+;
+; Each direction has:
+;   - name: canonical identifier (e.g., "north")
+;   - :abbrev: short form for input (e.g., "n")
+;   - :opposite: reverse direction (for auto-generating exits)
+;   - :display: text for output (e.g., "to the north")
+
+(directions
+  (north :abbrev "n" :opposite south :display "to the north")
+  (south :abbrev "s" :opposite north :display "to the south")
+  (east :abbrev "e" :opposite west :display "to the east")
+  (west :abbrev "w" :opposite east :display "to the west")
+  (up :abbrev "u" :opposite down :display "above")
+  (down :abbrev "d" :opposite up :display "below")
+  (northeast :abbrev "ne" :opposite southwest :display "to the northeast")
+  (northwest :abbrev "nw" :opposite southeast :display "to the northwest")
+  (southeast :abbrev "se" :opposite northwest :display "to the southeast")
+  (southwest :abbrev "sw" :opposite northeast :display "to the southwest")
+  (in :opposite out :display "inside")
+  (out :opposite in :display "outside"))
+
+; ============================================================================
 ; Helper Functions
 ; ============================================================================
 

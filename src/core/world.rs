@@ -26,6 +26,7 @@ use crate::core::{
     RelationTypeId, Value,
 };
 use crate::derive::DerivationEngine;
+use crate::direction::DirectionRegistry;
 use crate::input::{self, Command, Input};
 
 /// A frozen snapshot of world state.
@@ -759,14 +760,18 @@ impl World {
     /// Parse input on an entity and store the command.
     ///
     /// Returns the parsed command if successful.
-    pub fn parse_input_entity(&mut self, entity: EntityId) -> Option<Command> {
+    pub fn parse_input_entity(
+        &mut self,
+        entity: EntityId,
+        directions: &DirectionRegistry,
+    ) -> Option<Command> {
         // Get the raw input text
         let text = self.get_component(entity, input::components::input())?;
         let text = text.as_str()?;
 
         // Parse it
         let input = Input::new(text, 0);
-        let command = input::parse_input(&input)?;
+        let command = input::parse_input(&input, directions)?;
 
         // Store the command
         self.set_component(entity, input::components::command(), command.to_value());
@@ -785,12 +790,12 @@ impl World {
     /// Process all pending inputs, parsing them into commands.
     ///
     /// Returns the number of inputs processed.
-    pub fn process_inputs(&mut self) -> usize {
+    pub fn process_inputs(&mut self, directions: &DirectionRegistry) -> usize {
         let pending: Vec<EntityId> = self.pending_inputs();
         let mut count = 0;
 
         for entity in pending {
-            if self.parse_input_entity(entity).is_some() {
+            if self.parse_input_entity(entity, directions).is_some() {
                 count += 1;
             }
         }
@@ -1077,11 +1082,12 @@ mod tests {
     fn test_parse_input_entity() {
         let mut world = World::new();
         let player = world.create_entity();
+        let directions = DirectionRegistry::with_standard_directions();
 
         let input_entity = world.inject_input("go north", player);
 
         // Parse the input
-        let command = world.parse_input_entity(input_entity).unwrap();
+        let command = world.parse_input_entity(input_entity, &directions).unwrap();
 
         assert_eq!(command.verb.as_str(), "go");
         assert!(command.direct_object.is_some());
@@ -1091,6 +1097,7 @@ mod tests {
     fn test_pending_inputs() {
         let mut world = World::new();
         let player = world.create_entity();
+        let directions = DirectionRegistry::with_standard_directions();
 
         // Inject two inputs
         let input1 = world.inject_input("look", player);
@@ -1101,7 +1108,7 @@ mod tests {
         assert_eq!(pending.len(), 2);
 
         // Parse one
-        world.parse_input_entity(input1);
+        world.parse_input_entity(input1, &directions);
 
         // Only one should be pending now
         let pending = world.pending_inputs();
@@ -1113,6 +1120,7 @@ mod tests {
     fn test_process_inputs() {
         let mut world = World::new();
         let player = world.create_entity();
+        let directions = DirectionRegistry::with_standard_directions();
 
         // Inject three inputs
         world.inject_input("look", player);
@@ -1120,7 +1128,7 @@ mod tests {
         world.inject_input("take lamp", player);
 
         // Process all
-        let count = world.process_inputs();
+        let count = world.process_inputs(&directions);
         assert_eq!(count, 3);
 
         // None should be pending

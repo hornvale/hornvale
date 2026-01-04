@@ -3,6 +3,7 @@
 use crate::Value;
 use crate::action::{Action as ActionDef, ActionRegistry};
 use crate::core::{Cardinality, EntityId, RelationSchema, World};
+use crate::direction::{DirectionDef, DirectionRegistry};
 use crate::generator::{GenerationStub, GeneratorRegistry, StubStorage};
 use crate::grammar::{Command as GrammarCommand, CommandRegistry, Form, FormAction, FormElement};
 use crate::lang::function::{FunctionDef, FunctionRegistry};
@@ -60,6 +61,8 @@ pub struct WorldLoader {
     loading_stack: Vec<PathBuf>,
     /// User-defined functions.
     function_registry: FunctionRegistry,
+    /// Direction registry for configurable compass directions.
+    direction_registry: DirectionRegistry,
 }
 
 impl WorldLoader {
@@ -77,6 +80,7 @@ impl WorldLoader {
             loaded_files: OrdSet::new(),
             loading_stack: Vec::new(),
             function_registry: FunctionRegistry::new(),
+            direction_registry: DirectionRegistry::with_standard_directions(),
         }
     }
 
@@ -158,6 +162,16 @@ impl WorldLoader {
     /// Get the function registry mutably.
     pub fn function_registry_mut(&mut self) -> &mut FunctionRegistry {
         &mut self.function_registry
+    }
+
+    /// Get the direction registry.
+    pub fn direction_registry(&self) -> &DirectionRegistry {
+        &self.direction_registry
+    }
+
+    /// Get the direction registry mutably.
+    pub fn direction_registry_mut(&mut self) -> &mut DirectionRegistry {
+        &mut self.direction_registry
     }
 
     /// Check if a file has been loaded.
@@ -296,6 +310,8 @@ impl WorldLoader {
                 self.load_extend(expr)?;
             } else if expr.is_call("defun") {
                 self.load_defun(expr)?;
+            } else if expr.is_call("directions") {
+                self.load_directions(expr)?;
             }
         }
 
@@ -1048,6 +1064,89 @@ impl WorldLoader {
         self.function_registry.define(func);
 
         Ok(())
+    }
+
+    /// Load direction definitions.
+    ///
+    /// Syntax:
+    /// ```lisp
+    /// (directions
+    ///   (north :abbrev "n" :opposite south :display "to the north")
+    ///   (south :abbrev "s" :opposite north :display "to the south")
+    ///   (upstream :opposite downstream))
+    /// ```
+    ///
+    /// When a `(directions ...)` form is encountered, it replaces the default
+    /// compass directions, allowing games to define custom direction sets.
+    fn load_directions(&mut self, expr: &SExpr) -> Result<(), LoadError> {
+        let items = expr
+            .as_list()
+            .ok_or_else(|| LoadError::InvalidDefinition("directions must be a list".to_string()))?;
+
+        // Clear standard directions - user is defining their own set
+        self.direction_registry.clear();
+
+        // Parse each direction definition
+        for item in &items[1..] {
+            let dir_def = self.parse_direction_def(item)?;
+            self.direction_registry.register(dir_def);
+        }
+
+        // Sync to command registry so grammar matching uses custom directions
+        self.command_registry
+            .set_directions(self.direction_registry.clone());
+
+        Ok(())
+    }
+
+    /// Parse a single direction definition.
+    ///
+    /// Format: `(name :abbrev "abbrev" :opposite other :display "text")`
+    fn parse_direction_def(&self, expr: &SExpr) -> Result<DirectionDef, LoadError> {
+        let items = expr.as_list().ok_or_else(|| {
+            LoadError::InvalidDefinition("direction definition must be a list".to_string())
+        })?;
+
+        if items.is_empty() {
+            return Err(LoadError::InvalidDefinition(
+                "direction definition cannot be empty".to_string(),
+            ));
+        }
+
+        // First item is the direction name
+        let name = items[0].as_symbol().ok_or_else(|| {
+            LoadError::InvalidDefinition("direction name must be a symbol".to_string())
+        })?;
+
+        let mut def = DirectionDef::new(name);
+
+        // Parse keyword arguments
+        let mut i = 1;
+        while i < items.len() {
+            if items[i].is_keyword("abbrev") && i + 1 < items.len() {
+                let val = items[i + 1].as_string().ok_or_else(|| {
+                    LoadError::InvalidDefinition("direction :abbrev must be a string".to_string())
+                })?;
+                def = def.with_abbrev(val.to_string());
+                i += 2;
+            } else if items[i].is_keyword("opposite") && i + 1 < items.len() {
+                let val = items[i + 1].as_symbol().ok_or_else(|| {
+                    LoadError::InvalidDefinition("direction :opposite must be a symbol".to_string())
+                })?;
+                def = def.with_opposite(val);
+                i += 2;
+            } else if items[i].is_keyword("display") && i + 1 < items.len() {
+                let val = items[i + 1].as_string().ok_or_else(|| {
+                    LoadError::InvalidDefinition("direction :display must be a string".to_string())
+                })?;
+                def = def.with_display(val.to_string());
+                i += 2;
+            } else {
+                i += 1;
+            }
+        }
+
+        Ok(def)
     }
 
     /// Load an entity definition.
@@ -2993,5 +3092,126 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("unknown action"));
+    }
+
+    #[test]
+    fn test_load_directions_basic() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (directions
+                  (north :abbrev "n" :opposite south)
+                  (south :abbrev "s" :opposite north))
+                "#,
+            )
+            .unwrap();
+
+        // Should have exactly 2 directions (replaced defaults)
+        assert_eq!(loader.direction_registry().len(), 2);
+        assert!(loader.direction_registry().is_direction("north"));
+        assert!(loader.direction_registry().is_direction("south"));
+        assert!(loader.direction_registry().is_direction("n"));
+        assert!(loader.direction_registry().is_direction("s"));
+
+        // Standard directions should be gone
+        assert!(!loader.direction_registry().is_direction("east"));
+        assert!(!loader.direction_registry().is_direction("west"));
+    }
+
+    #[test]
+    fn test_load_directions_all_properties() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (directions
+                  (upstream :abbrev "us" :opposite downstream :display "upstream"))
+                "#,
+            )
+            .unwrap();
+
+        let def = loader
+            .direction_registry()
+            .get(Symbol::new("upstream"))
+            .unwrap();
+        assert_eq!(def.abbrev, Some("us".to_string()));
+        assert_eq!(def.opposite, Some(Symbol::new("downstream")));
+        assert_eq!(def.display, Some("upstream".to_string()));
+    }
+
+    #[test]
+    fn test_load_directions_replaces_defaults() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        // Verify defaults exist
+        assert!(loader.direction_registry().is_direction("north"));
+        assert_eq!(loader.direction_registry().len(), 12);
+
+        // Load custom directions
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (directions
+                  (fore :opposite aft)
+                  (aft :opposite fore)
+                  (port :opposite starboard)
+                  (starboard :opposite port))
+                "#,
+            )
+            .unwrap();
+
+        // Defaults should be gone
+        assert!(!loader.direction_registry().is_direction("north"));
+        assert!(!loader.direction_registry().is_direction("south"));
+
+        // Custom directions should exist
+        assert!(loader.direction_registry().is_direction("fore"));
+        assert!(loader.direction_registry().is_direction("aft"));
+        assert!(loader.direction_registry().is_direction("port"));
+        assert!(loader.direction_registry().is_direction("starboard"));
+        assert_eq!(loader.direction_registry().len(), 4);
+    }
+
+    #[test]
+    fn test_load_directions_no_abbrev() {
+        let mut world = World::new();
+        let mut rules = RuleSet::new();
+        let mut loader = WorldLoader::new();
+
+        loader
+            .load_str(
+                &mut world,
+                &mut rules,
+                r#"
+                (directions
+                  (clockwise :opposite counterclockwise))
+                "#,
+            )
+            .unwrap();
+
+        // Direction is valid by full name
+        assert!(loader.direction_registry().is_direction("clockwise"));
+
+        // No abbreviation means only full name works
+        let def = loader
+            .direction_registry()
+            .get(Symbol::new("clockwise"))
+            .unwrap();
+        assert!(def.abbrev.is_none());
     }
 }

@@ -988,13 +988,35 @@ Total project: 635 tests passing
 
 ### Stage 6: Configurable Directions
 **Goal**: Direction set defined in DSL, not hardcoded.
-**Status**: Not Started
+**Status**: Complete ✓
 
-- [ ] `(directions ...)` DSL form to define direction set
-- [ ] Direction properties: abbreviation, opposite, display name
-- [ ] Contextual directions: "home", "out", "back"
-- [ ] Computed directions: "toward X" (pathfinding)
-- [ ] Component naming convention: `Exit:north` (with pattern matching)
+- [x] `(directions ...)` DSL form to define direction set
+- [x] Direction properties: abbreviation, opposite, display name
+- [x] `DirectionDef` and `DirectionRegistry` types in Rust
+- [x] Remove hardcoded DIRECTIONS arrays from matcher.rs and input.rs
+- [x] Standard directions in `libs/std/_lib.hvl`
+- [ ] Contextual directions: "home", "out", "back" (deferred to future)
+- [ ] Computed directions: "toward X" (deferred to future, requires pathfinding)
+
+**Implementation Summary**:
+- Created `src/direction.rs` with `DirectionDef` and `DirectionRegistry`
+- `DirectionRegistry` stores canonical names, abbreviations, opposites, display text
+- `normalize()` method handles case-insensitive lookup with abbreviation expansion
+- `WorldLoader` parses `(directions ...)` form, syncs to `CommandRegistry`
+- Grammar matcher uses registry for direction slot validation
+- Input parser uses registry for direction classification
+- Default standard directions loaded by `DirectionRegistry::with_standard_directions()`
+- Custom directions fully supported: games can define "upstream", "clockwise", etc.
+
+**Files Created/Modified**:
+- `src/direction.rs` — DirectionDef, DirectionRegistry (new)
+- `src/lib.rs` — Export direction module
+- `src/lang/loader.rs` — Parse (directions ...) form, sync to command registry
+- `src/grammar/matcher.rs` — Use DirectionRegistry instead of hardcoded array
+- `src/grammar/registry.rs` — Hold DirectionRegistry, pass to matcher
+- `src/input.rs` — Use DirectionRegistry for direction classification
+- `src/core/world.rs` — Updated parse_input_entity signature
+- `libs/std/_lib.hvl` — Added standard directions definition
 
 **Example**:
 ```lisp
@@ -1005,14 +1027,17 @@ Total project: 635 tests passing
   (west :abbrev "w" :opposite east :display "to the west")
   (up :abbrev "u" :opposite down :display "above")
   (down :abbrev "d" :opposite up :display "below")
-  (in :abbrev nil :opposite out :display "inside")
-  (out :abbrev nil :opposite in :display "outside")
-  ;; Game-specific
-  (upstream :opposite downstream)
-  (home :contextual true))  ;; resolved via player state
+  (in :opposite out :display "inside")
+  (out :opposite in :display "outside")
+  ;; Game-specific custom directions
+  (upstream :opposite downstream :display "upstream")
+  (clockwise :opposite counterclockwise))
 ```
 
-**Success Criteria**: Can add custom directions without Rust changes.
+**Tests**: 27 new direction-related tests (11 direction module + 4 loader + 12 updated matcher/input tests)
+Total project: 643 tests passing
+
+**Success Criteria**: Can add custom directions without Rust changes. ✓
 
 ### Architecture Summary
 
@@ -1086,10 +1111,10 @@ Target: ~200 tests across all stages
   - 5D: 17 tests (defun user-defined functions) ✓
   - 5E: ~15 tests (stdlib integration)
   - 5F: 19 tests (DSL action handlers) ✓
-- Stage 6: ~5 tests (direction configuration)
+- Stage 6: 27 tests (direction configuration) ✓
 
-Current: 209 tests (Stage 1: 29, Stage 2: 48, Stage 3: 33, Stage 4: 31, Stage 5A: 13, Stage 5B: 10, Stage 5C: 9, Stage 5D: 17, Stage 5F: 19)
-Total project: 627 tests passing
+Current: 236 tests (Stage 1-5F: 209 + Stage 6: 27)
+Total project: 643 tests passing
 
 ---
 

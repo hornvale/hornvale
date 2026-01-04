@@ -14,13 +14,17 @@
 //!
 //! ```
 //! use hornvale::input::{Input, Command, parse_input};
+//! use hornvale::direction::DirectionRegistry;
 //!
+//! let directions = DirectionRegistry::with_standard_directions();
 //! let input = Input::new("go north", 0);
 //! let tokens = input.tokenize();
-//! let command = parse_input(&input);
+//! let command = parse_input(&input, &directions);
 //! ```
 
 mod resolve;
+
+use crate::direction::DirectionRegistry;
 
 pub use resolve::{
     EntityCandidate, ResolutionResult, ResolvedCommand, ResolvedObject, Resolver, ScopeProvider,
@@ -238,32 +242,6 @@ impl ObjectRef {
     }
 }
 
-/// Known directions.
-const DIRECTIONS: &[&str] = &[
-    "north",
-    "south",
-    "east",
-    "west",
-    "up",
-    "down",
-    "northeast",
-    "northwest",
-    "southeast",
-    "southwest",
-    "n",
-    "s",
-    "e",
-    "w",
-    "u",
-    "d",
-    "ne",
-    "nw",
-    "se",
-    "sw",
-    "in",
-    "out",
-];
-
 /// Known pronouns.
 const PRONOUNS: &[&str] = &[
     "it",
@@ -288,17 +266,17 @@ const PREPOSITIONS: &[&str] = &[
 /// - Verb + direction: "go north"
 /// - Verb + object: "take lamp"
 /// - Verb + object + preposition + object: "put lamp in chest"
-pub fn parse_input(input: &Input) -> Option<Command> {
+pub fn parse_input(input: &Input, directions: &DirectionRegistry) -> Option<Command> {
     let tokens = input.tokenize();
     if tokens.is_empty() {
         return None;
     }
 
-    parse_tokens(&tokens)
+    parse_tokens(&tokens, directions)
 }
 
 /// Parse a list of tokens into a command.
-pub fn parse_tokens(tokens: &[Token]) -> Option<Command> {
+pub fn parse_tokens(tokens: &[Token], directions: &DirectionRegistry) -> Option<Command> {
     if tokens.is_empty() {
         return None;
     }
@@ -326,7 +304,7 @@ pub fn parse_tokens(tokens: &[Token]) -> Option<Command> {
             .collect::<Vec<_>>()
             .join(" ");
 
-        let obj = classify_object(&direct_text);
+        let obj = classify_object(&direct_text, directions);
         cmd = cmd.with_direct(obj);
     }
 
@@ -344,7 +322,7 @@ pub fn parse_tokens(tokens: &[Token]) -> Option<Command> {
                     .collect::<Vec<_>>()
                     .join(" ");
 
-                let obj = classify_object(&indirect_text);
+                let obj = classify_object(&indirect_text, directions);
                 cmd = cmd.with_arg(prep, obj);
             }
         }
@@ -354,12 +332,12 @@ pub fn parse_tokens(tokens: &[Token]) -> Option<Command> {
 }
 
 /// Classify an object reference from text.
-fn classify_object(text: &str) -> ObjectRef {
+fn classify_object(text: &str, directions: &DirectionRegistry) -> ObjectRef {
     let normalized = text.to_lowercase();
 
-    // Check if it's a direction
-    if DIRECTIONS.contains(&normalized.as_str()) {
-        return ObjectRef::direction(expand_direction(&normalized));
+    // Check if it's a direction (uses registry to normalize abbreviations)
+    if let Some(canonical) = directions.normalize(&normalized) {
+        return ObjectRef::direction(canonical);
     }
 
     // Check if it's a pronoun
@@ -369,23 +347,6 @@ fn classify_object(text: &str) -> ObjectRef {
 
     // Otherwise it's an unresolved noun phrase
     ObjectRef::unresolved(text)
-}
-
-/// Expand direction abbreviations.
-fn expand_direction(dir: &str) -> &str {
-    match dir {
-        "n" => "north",
-        "s" => "south",
-        "e" => "east",
-        "w" => "west",
-        "u" => "up",
-        "d" => "down",
-        "ne" => "northeast",
-        "nw" => "northwest",
-        "se" => "southeast",
-        "sw" => "southwest",
-        _ => dir,
-    }
 }
 
 /// Canonical direction symbols.
@@ -434,6 +395,10 @@ pub mod directions {
 mod tests {
     use super::*;
 
+    fn setup_directions() -> DirectionRegistry {
+        DirectionRegistry::with_standard_directions()
+    }
+
     #[test]
     fn test_input_tokenize() {
         let input = Input::new("GO North", 0);
@@ -467,8 +432,9 @@ mod tests {
 
     #[test]
     fn test_parse_single_verb() {
+        let directions = setup_directions();
         let input = Input::new("look", 0);
-        let cmd = parse_input(&input).unwrap();
+        let cmd = parse_input(&input, &directions).unwrap();
 
         assert_eq!(cmd.verb.as_str(), "look");
         assert!(cmd.direct_object.is_none());
@@ -476,8 +442,9 @@ mod tests {
 
     #[test]
     fn test_parse_verb_direction() {
+        let directions = setup_directions();
         let input = Input::new("go north", 0);
-        let cmd = parse_input(&input).unwrap();
+        let cmd = parse_input(&input, &directions).unwrap();
 
         assert_eq!(cmd.verb.as_str(), "go");
         assert_eq!(cmd.direct_object, Some(ObjectRef::direction("north")));
@@ -485,8 +452,9 @@ mod tests {
 
     #[test]
     fn test_parse_verb_direction_abbrev() {
+        let directions = setup_directions();
         let input = Input::new("go n", 0);
-        let cmd = parse_input(&input).unwrap();
+        let cmd = parse_input(&input, &directions).unwrap();
 
         assert_eq!(cmd.verb.as_str(), "go");
         assert_eq!(cmd.direct_object, Some(ObjectRef::direction("north")));
@@ -494,8 +462,9 @@ mod tests {
 
     #[test]
     fn test_parse_verb_object() {
+        let directions = setup_directions();
         let input = Input::new("take lamp", 0);
-        let cmd = parse_input(&input).unwrap();
+        let cmd = parse_input(&input, &directions).unwrap();
 
         assert_eq!(cmd.verb.as_str(), "take");
         assert_eq!(cmd.direct_object, Some(ObjectRef::unresolved("lamp")));
@@ -503,8 +472,9 @@ mod tests {
 
     #[test]
     fn test_parse_verb_adjective_object() {
+        let directions = setup_directions();
         let input = Input::new("take brass lamp", 0);
-        let cmd = parse_input(&input).unwrap();
+        let cmd = parse_input(&input, &directions).unwrap();
 
         assert_eq!(cmd.verb.as_str(), "take");
         assert_eq!(cmd.direct_object, Some(ObjectRef::unresolved("brass lamp")));
@@ -512,8 +482,9 @@ mod tests {
 
     #[test]
     fn test_parse_verb_object_prep_object() {
+        let directions = setup_directions();
         let input = Input::new("put lamp in chest", 0);
-        let cmd = parse_input(&input).unwrap();
+        let cmd = parse_input(&input, &directions).unwrap();
 
         assert_eq!(cmd.verb.as_str(), "put");
         assert_eq!(cmd.direct_object, Some(ObjectRef::unresolved("lamp")));
@@ -524,8 +495,9 @@ mod tests {
 
     #[test]
     fn test_parse_pronoun() {
+        let directions = setup_directions();
         let input = Input::new("take it", 0);
-        let cmd = parse_input(&input).unwrap();
+        let cmd = parse_input(&input, &directions).unwrap();
 
         assert_eq!(cmd.verb.as_str(), "take");
         assert_eq!(cmd.direct_object, Some(ObjectRef::pronoun("it")));
@@ -533,8 +505,9 @@ mod tests {
 
     #[test]
     fn test_parse_empty() {
+        let directions = setup_directions();
         let input = Input::new("", 0);
-        assert!(parse_input(&input).is_none());
+        assert!(parse_input(&input, &directions).is_none());
     }
 
     #[test]

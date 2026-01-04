@@ -15,6 +15,7 @@ pub mod action;
 pub mod compiler;
 pub mod core;
 pub mod derive;
+pub mod direction;
 pub mod generator;
 pub mod grammar;
 pub mod hooks;
@@ -63,6 +64,7 @@ pub use action::{
     Action as ActionDef, ActionCheckResult, ActionRegistry, HandlerRegistry,
     check_action_preconditions,
 };
+pub use direction::{DirectionDef, DirectionRegistry};
 pub use precondition::{
     Precondition, PreconditionArg, PreconditionCall, PreconditionError, PreconditionRegistry,
     PreconditionResult,

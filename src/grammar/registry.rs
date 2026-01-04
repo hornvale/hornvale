@@ -4,6 +4,7 @@
 //! against the grammar. It combines the intent trie and form matching.
 
 use crate::core::{EntityId, World};
+use crate::direction::DirectionRegistry;
 use crate::lang::SExpr;
 use crate::symbol::Symbol;
 use im::OrdMap;
@@ -18,7 +19,8 @@ use super::types::{TypePredicate, TypeRegistry};
 /// - Type predicate registration and lookup
 /// - Command registration with aliases
 /// - Input matching via trie dispatch + form matching
-#[derive(Debug, Clone, Default)]
+/// - Direction registry for direction validation
+#[derive(Debug, Clone)]
 pub struct CommandRegistry {
     /// Type predicates.
     types: TypeRegistry,
@@ -26,6 +28,19 @@ pub struct CommandRegistry {
     commands: OrdMap<Symbol, Command>,
     /// Intent trie for dispatch.
     trie: IntentTrie,
+    /// Direction registry for direction validation.
+    directions: DirectionRegistry,
+}
+
+impl Default for CommandRegistry {
+    fn default() -> Self {
+        Self {
+            types: TypeRegistry::default(),
+            commands: OrdMap::new(),
+            trie: IntentTrie::default(),
+            directions: DirectionRegistry::with_standard_directions(),
+        }
+    }
 }
 
 impl CommandRegistry {
@@ -42,6 +57,21 @@ impl CommandRegistry {
     /// Get the type registry mutably.
     pub fn types_mut(&mut self) -> &mut TypeRegistry {
         &mut self.types
+    }
+
+    /// Get the direction registry.
+    pub fn directions(&self) -> &DirectionRegistry {
+        &self.directions
+    }
+
+    /// Get the direction registry mutably.
+    pub fn directions_mut(&mut self) -> &mut DirectionRegistry {
+        &mut self.directions
+    }
+
+    /// Set the direction registry (replaces any existing).
+    pub fn set_directions(&mut self, directions: DirectionRegistry) {
+        self.directions = directions;
     }
 
     /// Register a type predicate.
@@ -150,7 +180,7 @@ impl CommandRegistry {
 
         // Step 3: Match remaining tokens against forms
         let remaining = &tokens[consumed..];
-        command.match_forms(world, actor, remaining, &self.types)
+        command.match_forms(world, actor, remaining, &self.types, &self.directions)
     }
 
     /// Match input and return detailed error information.
@@ -172,7 +202,13 @@ impl CommandRegistry {
                     Some(command) => {
                         // Step 3: Match remaining tokens against forms
                         let remaining = &tokens[consumed..];
-                        match command.match_forms_detailed(world, actor, remaining, &self.types) {
+                        match command.match_forms_detailed(
+                            world,
+                            actor,
+                            remaining,
+                            &self.types,
+                            &self.directions,
+                        ) {
                             Ok(m) => MatchInputResult::Matched(m),
                             Err(failures) => MatchInputResult::FormsFailed {
                                 command: command_name,
