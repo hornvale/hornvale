@@ -2,8 +2,12 @@
 //!
 //! This module evaluates type predicates against entities to determine
 //! if they satisfy semantic constraints like "portable" or "container".
+//!
+//! Type predicates can be evaluated in two modes:
+//! - **Compiled (VM)**: Uses PredicatePattern for VM-based evaluation (preferred)
+//! - **Interpreted**: Falls back to direct SExpr interpretation (legacy)
 
-use crate::core::{ComponentTypeId, EntityId, RelationTypeId, World};
+use crate::core::{ComponentTypeId, EntityId, RelationTypeId, Value, World};
 use crate::lang::{Atom, SExpr};
 use crate::symbol::Symbol;
 
@@ -40,7 +44,21 @@ impl<'a> PredicateEvaluator<'a> {
         entity: EntityId,
     ) -> bool {
         match self.types.get(type_name) {
-            Some(type_pred) => self.eval_predicate(world, actor, entity, &type_pred.predicate),
+            Some(type_pred) => {
+                // Prefer compiled VM evaluation if available
+                if let Some(compiled) = type_pred.compiled() {
+                    let bindings = [
+                        (Symbol::new("entity"), Value::EntityRef(entity)),
+                        (Symbol::new("actor"), Value::EntityRef(actor)),
+                    ];
+                    compiled
+                        .evaluate_with_bindings(world, &bindings)
+                        .unwrap_or(false)
+                } else {
+                    // Fall back to interpreted evaluation
+                    self.eval_predicate(world, actor, entity, &type_pred.predicate)
+                }
+            }
             None => {
                 // Unknown type - be permissive for now
                 // In the future, this could be an error
@@ -499,6 +517,128 @@ mod tests {
             actor,
             entity,
             &SExpr::Atom(Atom::Bool(false), dummy_span())
+        ));
+    }
+
+    #[test]
+    fn test_type_check_via_vm() {
+        let (world, _, actor, lamp) = setup_world();
+
+        let mut types = TypeRegistry::new();
+
+        // Register "portable" type - this should compile to VM bytecode
+        let portable_pred = SExpr::List(
+            vec![
+                SExpr::Atom(Atom::Symbol(Symbol::new("has?")), dummy_span()),
+                SExpr::Atom(Atom::Symbol(Symbol::new("entity")), dummy_span()),
+                SExpr::Atom(Atom::Keyword(Symbol::new("Portable")), dummy_span()),
+            ],
+            dummy_span(),
+        );
+        let type_pred = TypePredicate::new("portable", portable_pred);
+
+        // Verify it compiled
+        assert!(type_pred.is_compiled());
+
+        types.register(type_pred);
+
+        let evaluator = PredicateEvaluator::new(&types);
+
+        // This should use VM evaluation (PredicatePattern::evaluate_with_bindings)
+        assert!(evaluator.check_type(&world, actor, Symbol::new("portable"), lamp));
+
+        // Table doesn't have Portable component
+        let table = EntityId::from_raw(1);
+        assert!(!evaluator.check_type(&world, actor, Symbol::new("portable"), table));
+    }
+
+    #[test]
+    fn test_complex_type_check_via_vm() {
+        use crate::core::{Cardinality, RelationSchema};
+
+        let mut world = World::new();
+
+        // Register relations
+        world.register_relation(RelationSchema::new(
+            "InRoom",
+            Cardinality::Many,
+            Cardinality::One,
+        ));
+        world.register_relation(RelationSchema::new(
+            "Contains",
+            Cardinality::One,
+            Cardinality::Many,
+        ));
+
+        // Create room
+        let room = world.create_entity();
+
+        // Create actor
+        let actor = world.create_entity();
+        world.add_relation(RelationTypeId::new("InRoom"), actor, room);
+
+        // Create portable item
+        let item = world.create_entity();
+        world.set_component(item, ComponentTypeId::new("Portable"), Value::Bool(true));
+        world.add_relation(RelationTypeId::new("InRoom"), item, room);
+
+        // Create fixed item
+        let fixed_item = world.create_entity();
+        world.set_component(
+            fixed_item,
+            ComponentTypeId::new("Portable"),
+            Value::Bool(true),
+        );
+        world.set_component(fixed_item, ComponentTypeId::new("Fixed"), Value::Bool(true));
+        world.add_relation(RelationTypeId::new("InRoom"), fixed_item, room);
+
+        let mut types = TypeRegistry::new();
+
+        // Register "portable-not-fixed" type: (and (has? entity :Portable) (not (has? entity :Fixed)))
+        let pred = SExpr::List(
+            vec![
+                SExpr::Atom(Atom::Symbol(Symbol::new("and")), dummy_span()),
+                SExpr::List(
+                    vec![
+                        SExpr::Atom(Atom::Symbol(Symbol::new("has?")), dummy_span()),
+                        SExpr::Atom(Atom::Symbol(Symbol::new("entity")), dummy_span()),
+                        SExpr::Atom(Atom::Keyword(Symbol::new("Portable")), dummy_span()),
+                    ],
+                    dummy_span(),
+                ),
+                SExpr::List(
+                    vec![
+                        SExpr::Atom(Atom::Symbol(Symbol::new("not")), dummy_span()),
+                        SExpr::List(
+                            vec![
+                                SExpr::Atom(Atom::Symbol(Symbol::new("has?")), dummy_span()),
+                                SExpr::Atom(Atom::Symbol(Symbol::new("entity")), dummy_span()),
+                                SExpr::Atom(Atom::Keyword(Symbol::new("Fixed")), dummy_span()),
+                            ],
+                            dummy_span(),
+                        ),
+                    ],
+                    dummy_span(),
+                ),
+            ],
+            dummy_span(),
+        );
+
+        let type_pred = TypePredicate::new("portable-not-fixed", pred);
+        assert!(type_pred.is_compiled());
+        types.register(type_pred);
+
+        let evaluator = PredicateEvaluator::new(&types);
+
+        // Item is portable and not fixed
+        assert!(evaluator.check_type(&world, actor, Symbol::new("portable-not-fixed"), item));
+
+        // Fixed item has both Portable and Fixed, so should fail
+        assert!(!evaluator.check_type(
+            &world,
+            actor,
+            Symbol::new("portable-not-fixed"),
+            fixed_item
         ));
     }
 }

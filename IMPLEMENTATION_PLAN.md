@@ -704,7 +704,7 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
 
 ### Stage 4: Unify Type Predicates
 **Goal**: Grammar type predicates use pattern entities
-**Status**: Not Started
+**Status**: Complete
 
 **Changes**:
 1. TypePredicate as Meta entity:
@@ -729,14 +729,23 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
    ```
 
 **Success Criteria**:
-- [ ] Type predicates as entities referencing patterns
-- [ ] Custom types definable in DSL
-- [ ] Grammar validation uses pattern matching
+- [x] Type predicates as entities referencing patterns
+- [x] Custom types definable in DSL (via TypePredicate with SExpr)
+- [x] Grammar validation uses pattern matching (VM when compiled, interpreter fallback)
 
 **Tests**:
-- Built-in `:portable` type works
-- User-defined types work
-- Invalid slot candidates rejected
+- [x] Built-in `:portable` type works
+- [x] User-defined types work (test_type_check_via_vm, test_complex_type_check_via_vm)
+- [x] Invalid slot candidates rejected
+
+**Implementation Notes**:
+- Updated `PredicatePattern` to support multiple bindings via `evaluate_with_bindings`
+- Added `from_sexpr` method for type predicates that use `entity` and `actor` bindings
+- Updated `TypePredicate` to automatically compile to `PredicatePattern` on creation
+- Added `compiled()`, `is_compiled()`, `try_compile()` methods to TypePredicate
+- Updated `PredicateEvaluator::check_type` to use VM evaluation when compiled predicate available
+- Kept interpreted evaluation as fallback for complex predicates that may not compile
+- Grammar slot validation now uses VM-based type checking for better performance
 
 ---
 
@@ -1517,5 +1526,6 @@ The following phases were completed prior to this unification effort (see git hi
 1. ~~Review and approve this plan~~ ✓
 2. ~~Begin Foundation Sprint (Stages 0 + 1 + 2 together)~~ ✓
 3. ~~Stage 3: Predicate Patterns~~ ✓
-4. Next: Stage 4 (Type Predicates) or Stage 5 (Hooks as Rules)
-5. Iterate based on learnings
+4. ~~Stage 4: Type Predicates~~ ✓
+5. Next: Stage 5 (Hooks as Rules) or Stage 6 (Derivations with Caching)
+6. Iterate based on learnings

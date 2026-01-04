@@ -1,6 +1,7 @@
 //! Type predicates and slot types for the grammar system.
 
 use crate::lang::SExpr;
+use crate::rules::predicate::{PredicateError, PredicatePattern};
 use crate::symbol::Symbol;
 use im::OrdMap;
 
@@ -20,18 +21,39 @@ use im::OrdMap;
 pub struct TypePredicate {
     /// Name of this type (e.g., "portable", "container").
     pub name: Symbol,
-    /// The predicate expression to evaluate.
-    /// The expression has access to `entity` (the candidate) and `actor` (the player).
+    /// The predicate expression to evaluate (kept for inspection/debugging).
     pub predicate: SExpr,
+    /// The compiled predicate pattern for VM evaluation.
+    compiled: Option<PredicatePattern>,
 }
 
 impl TypePredicate {
     /// Create a new type predicate.
     pub fn new(name: impl Into<Symbol>, predicate: SExpr) -> Self {
+        // Try to compile the predicate
+        let compiled = PredicatePattern::from_sexpr(predicate.clone()).ok();
+
         Self {
             name: name.into(),
             predicate,
+            compiled,
         }
+    }
+
+    /// Get the compiled predicate pattern, if available.
+    pub fn compiled(&self) -> Option<&PredicatePattern> {
+        self.compiled.as_ref()
+    }
+
+    /// Check if this type predicate has been successfully compiled.
+    pub fn is_compiled(&self) -> bool {
+        self.compiled.is_some()
+    }
+
+    /// Attempt to compile/recompile the predicate.
+    pub fn try_compile(&mut self) -> Result<(), PredicateError> {
+        self.compiled = Some(PredicatePattern::from_sexpr(self.predicate.clone())?);
+        Ok(())
     }
 }
 
@@ -187,5 +209,67 @@ mod tests {
         assert_eq!(format!("{}", SlotType::Noun), "noun");
         assert_eq!(format!("{}", SlotType::Direction), "direction");
         assert_eq!(format!("{}", SlotType::custom("portable")), "portable");
+    }
+
+    #[test]
+    fn test_type_predicate_compiled() {
+        // A simple boolean predicate should compile
+        let pred = TypePredicate::new("always-true", SExpr::Atom(Atom::Bool(true), dummy_span()));
+        assert!(pred.is_compiled());
+        assert!(pred.compiled().is_some());
+    }
+
+    #[test]
+    fn test_type_predicate_has_component_compiled() {
+        // (has? entity :Portable) should compile
+        let pred = TypePredicate::new(
+            "portable",
+            SExpr::List(
+                vec![
+                    SExpr::Atom(Atom::Symbol(Symbol::new("has?")), dummy_span()),
+                    SExpr::Atom(Atom::Symbol(Symbol::new("entity")), dummy_span()),
+                    SExpr::Atom(Atom::Keyword(Symbol::new("Portable")), dummy_span()),
+                ],
+                dummy_span(),
+            ),
+        );
+        assert!(pred.is_compiled());
+    }
+
+    #[test]
+    fn test_type_predicate_and_compiled() {
+        // (and (has? entity :Portable) (not (has? entity :Fixed))) should compile
+        let pred = TypePredicate::new(
+            "portable",
+            SExpr::List(
+                vec![
+                    SExpr::Atom(Atom::Symbol(Symbol::new("and")), dummy_span()),
+                    SExpr::List(
+                        vec![
+                            SExpr::Atom(Atom::Symbol(Symbol::new("has?")), dummy_span()),
+                            SExpr::Atom(Atom::Symbol(Symbol::new("entity")), dummy_span()),
+                            SExpr::Atom(Atom::Keyword(Symbol::new("Portable")), dummy_span()),
+                        ],
+                        dummy_span(),
+                    ),
+                    SExpr::List(
+                        vec![
+                            SExpr::Atom(Atom::Symbol(Symbol::new("not")), dummy_span()),
+                            SExpr::List(
+                                vec![
+                                    SExpr::Atom(Atom::Symbol(Symbol::new("has?")), dummy_span()),
+                                    SExpr::Atom(Atom::Symbol(Symbol::new("entity")), dummy_span()),
+                                    SExpr::Atom(Atom::Keyword(Symbol::new("Fixed")), dummy_span()),
+                                ],
+                                dummy_span(),
+                            ),
+                        ],
+                        dummy_span(),
+                    ),
+                ],
+                dummy_span(),
+            ),
+        );
+        assert!(pred.is_compiled());
     }
 }
