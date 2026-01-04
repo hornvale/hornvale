@@ -1,4 +1,4 @@
-//! Enhanced REPL for Phase 4.
+//! Interactive REPL for Hornvale.
 //!
 //! Commands:
 //! - tick [N]       : Advance simulation by 1 or N ticks
@@ -43,7 +43,7 @@ pub enum ReplResult {
 
 /// Run the REPL loop.
 pub fn run_repl(world: &mut World, rules: &mut RuleSet, io: &mut dyn WorldIO) {
-    io.println("Hornvale Phase 4 - Language");
+    io.println("Welcome to Hornvale.");
     io.println("Type 'help' for available commands.\n");
 
     let mut loader = WorldLoader::new();

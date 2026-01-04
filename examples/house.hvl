@@ -103,3 +103,10 @@
   (Adjectives ("orange" "sleepy" "tabby"))
   (Fixed true)
   (InRoom kitchen))
+
+;; === RULES ===
+
+(rule cat-meows
+  :pattern (= (get ?e Name) "cat")
+  :every 5
+  :effect (emit-message "The cat meows softly."))
