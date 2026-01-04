@@ -32,12 +32,85 @@
 use crate::compiler::Compiler;
 use crate::core::{EntityId, World};
 use crate::lang::SExpr;
-use crate::precondition::{PreconditionCall, PreconditionRegistry, PreconditionResult};
 use crate::symbol::Symbol;
 use crate::verbs::VerbResult;
 use crate::vm::{ActionContext, StdLib, VM};
 use im::OrdMap;
 use std::sync::Arc;
+
+// ============================================================================
+// Precondition Types (moved from precondition.rs)
+// ============================================================================
+
+/// An argument to a precondition call.
+#[derive(Debug, Clone)]
+pub enum PreconditionArg {
+    /// The actor entity.
+    Actor,
+    /// The direct object entity.
+    DirectObject,
+    /// The indirect object entity.
+    IndirectObject,
+    /// A specific entity by ID.
+    Entity(EntityId),
+    /// A symbol reference (resolved at runtime).
+    Symbol(Symbol),
+}
+
+/// A precondition invocation (precondition name + arguments).
+#[derive(Debug, Clone)]
+pub struct PreconditionCall {
+    /// The precondition name.
+    pub name: Symbol,
+    /// Arguments to the precondition.
+    pub args: Vec<PreconditionArg>,
+}
+
+impl PreconditionCall {
+    /// Create a new precondition call.
+    pub fn new(name: Symbol, args: Vec<PreconditionArg>) -> Self {
+        Self { name, args }
+    }
+}
+
+/// Result of checking a precondition.
+#[derive(Debug, Clone)]
+pub enum PreconditionResult {
+    /// Precondition passed.
+    Passed,
+    /// Precondition failed with a message.
+    Failed(String),
+}
+
+impl PreconditionResult {
+    /// Check if the precondition passed.
+    pub fn passed(&self) -> bool {
+        matches!(self, PreconditionResult::Passed)
+    }
+
+    /// Check if the precondition failed.
+    pub fn failed(&self) -> bool {
+        matches!(self, PreconditionResult::Failed(_))
+    }
+
+    /// Get the failure message, if any.
+    pub fn message(&self) -> Option<&str> {
+        match self {
+            PreconditionResult::Passed => None,
+            PreconditionResult::Failed(msg) => Some(msg),
+        }
+    }
+}
+
+/// Error during precondition evaluation.
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum PreconditionError {
+    #[error("unknown precondition: {0}")]
+    UnknownPrecondition(String),
+
+    #[error("missing required entity for argument: {0}")]
+    MissingEntity(String),
+}
 
 /// A handler function type for actions.
 pub type HandlerFn = Arc<
@@ -350,25 +423,177 @@ impl ActionCheckResult {
 }
 
 /// Check all preconditions for an action.
+///
+/// Checks built-in preconditions (reachable?, held?, portable?, etc.) directly.
 pub fn check_action_preconditions(
     action: &Action,
     world: &World,
     context: &ActionContext,
-    preconditions: &PreconditionRegistry,
-    stdlib: &StdLib,
 ) -> ActionCheckResult {
     for call in action.preconditions() {
-        match preconditions.check(world, call, context, stdlib) {
+        match check_builtin_precondition(world, call, context) {
             Ok(PreconditionResult::Passed) => continue,
             Ok(PreconditionResult::Failed(msg)) => return ActionCheckResult::Failed(msg),
             Err(e) => {
-                // Treat errors as failures
                 return ActionCheckResult::Failed(format!("Precondition error: {e}"));
             }
         }
     }
 
     ActionCheckResult::Passed
+}
+
+/// Check a built-in precondition.
+fn check_builtin_precondition(
+    world: &World,
+    call: &PreconditionCall,
+    context: &ActionContext,
+) -> Result<PreconditionResult, PreconditionError> {
+    let name = call.name.as_str();
+
+    match name.as_str() {
+        "reachable?" => {
+            let target = resolve_precondition_arg(call.args.get(1), context)?;
+            if let Some(target) = target {
+                if world.is_in_scope(context.actor, target) {
+                    Ok(PreconditionResult::Passed)
+                } else {
+                    let name = entity_name(world, target);
+                    Ok(PreconditionResult::Failed(format!(
+                        "You can't reach the {name}."
+                    )))
+                }
+            } else {
+                Ok(PreconditionResult::Failed(
+                    "You can't reach that.".to_string(),
+                ))
+            }
+        }
+
+        "visible?" => {
+            let target = resolve_precondition_arg(call.args.get(1), context)?;
+            if let Some(target) = target {
+                if world.is_in_scope(context.actor, target) {
+                    Ok(PreconditionResult::Passed)
+                } else {
+                    let name = entity_name(world, target);
+                    Ok(PreconditionResult::Failed(format!(
+                        "You can't see the {name}."
+                    )))
+                }
+            } else {
+                Ok(PreconditionResult::Failed(
+                    "You can't see that.".to_string(),
+                ))
+            }
+        }
+
+        "held?" => {
+            let target = resolve_precondition_arg(call.args.first(), context)?;
+            if let Some(target) = target {
+                if world.is_held_by(target, context.actor) {
+                    Ok(PreconditionResult::Passed)
+                } else {
+                    let name = entity_name(world, target);
+                    Ok(PreconditionResult::Failed(format!(
+                        "You're not holding the {name}."
+                    )))
+                }
+            } else {
+                Ok(PreconditionResult::Failed(
+                    "You're not holding that.".to_string(),
+                ))
+            }
+        }
+
+        "held-by?" => {
+            let target = resolve_precondition_arg(call.args.first(), context)?;
+            let holder = resolve_precondition_arg(call.args.get(1), context)?;
+            if let (Some(target), Some(holder)) = (target, holder) {
+                if world.is_held_by(target, holder) {
+                    Ok(PreconditionResult::Passed)
+                } else {
+                    let name = entity_name(world, target);
+                    let holder_name = entity_name(world, holder);
+                    Ok(PreconditionResult::Failed(format!(
+                        "The {holder_name} isn't holding the {name}."
+                    )))
+                }
+            } else {
+                Ok(PreconditionResult::Failed(
+                    "That isn't being held.".to_string(),
+                ))
+            }
+        }
+
+        "portable?" => {
+            let target = resolve_precondition_arg(call.args.first(), context)?;
+            if let Some(target) = target {
+                if world.is_portable(target) {
+                    Ok(PreconditionResult::Passed)
+                } else {
+                    let name = entity_name(world, target);
+                    Ok(PreconditionResult::Failed(format!(
+                        "The {name} is fixed in place."
+                    )))
+                }
+            } else {
+                Ok(PreconditionResult::Failed(
+                    "That's fixed in place.".to_string(),
+                ))
+            }
+        }
+
+        "not-held?" => {
+            let target = resolve_precondition_arg(call.args.first(), context)?;
+            if let Some(target) = target {
+                if !world.is_held_by(target, context.actor) {
+                    Ok(PreconditionResult::Passed)
+                } else {
+                    let name = entity_name(world, target);
+                    Ok(PreconditionResult::Failed(format!(
+                        "You're already holding the {name}."
+                    )))
+                }
+            } else {
+                Ok(PreconditionResult::Passed)
+            }
+        }
+
+        _ => Err(PreconditionError::UnknownPrecondition(name.to_string())),
+    }
+}
+
+/// Resolve a precondition argument to an entity.
+fn resolve_precondition_arg(
+    arg: Option<&PreconditionArg>,
+    context: &ActionContext,
+) -> Result<Option<EntityId>, PreconditionError> {
+    match arg {
+        None => Ok(None),
+        Some(PreconditionArg::Actor) => Ok(Some(context.actor)),
+        Some(PreconditionArg::DirectObject) => Ok(context.direct_object),
+        Some(PreconditionArg::IndirectObject) => Ok(context.indirect_object),
+        Some(PreconditionArg::Entity(id)) => Ok(Some(*id)),
+        Some(PreconditionArg::Symbol(sym)) => {
+            let s = sym.as_str();
+            match s.as_str() {
+                "actor" => Ok(Some(context.actor)),
+                "direct-object" => Ok(context.direct_object),
+                "indirect-object" => Ok(context.indirect_object),
+                _ => Ok(None),
+            }
+        }
+    }
+}
+
+/// Get the name of an entity for error messages.
+fn entity_name(world: &World, entity: EntityId) -> String {
+    world
+        .get_component(entity, "Name")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "something".to_string())
 }
 
 /// Error during DSL handler execution.
@@ -489,7 +714,6 @@ fn parse_action_result(value: &crate::core::Value) -> ActionResult {
 mod tests {
     use super::*;
     use crate::core::{Cardinality, RelationSchema, Value};
-    use crate::precondition::PreconditionArg;
 
     fn setup_world() -> (World, EntityId, EntityId, EntityId) {
         let mut world = World::new();
@@ -618,8 +842,6 @@ mod tests {
     #[test]
     fn test_check_action_preconditions_pass() {
         let (world, player, _, lamp) = setup_world();
-        let preconditions = PreconditionRegistry::with_builtins();
-        let stdlib = StdLib::with_builtins();
 
         let mut action = Action::new(Symbol::new("take"));
         action.add_precondition(PreconditionCall::new(
@@ -637,15 +859,13 @@ mod tests {
 
         let context = ActionContext::new(player).with_direct_object(lamp);
 
-        let result = check_action_preconditions(&action, &world, &context, &preconditions, &stdlib);
+        let result = check_action_preconditions(&action, &world, &context);
         assert!(result.passed());
     }
 
     #[test]
     fn test_check_action_preconditions_fail() {
         let (mut world, player, room, _) = setup_world();
-        let preconditions = PreconditionRegistry::with_builtins();
-        let stdlib = StdLib::with_builtins();
 
         // Create a fixed object
         let statue = world.create_entity();
@@ -661,7 +881,7 @@ mod tests {
 
         let context = ActionContext::new(player).with_direct_object(statue);
 
-        let result = check_action_preconditions(&action, &world, &context, &preconditions, &stdlib);
+        let result = check_action_preconditions(&action, &world, &context);
         assert!(result.failed());
         assert!(result.message().unwrap().contains("fixed in place"));
     }
@@ -669,13 +889,11 @@ mod tests {
     #[test]
     fn test_check_action_no_preconditions() {
         let (world, player, _, _) = setup_world();
-        let preconditions = PreconditionRegistry::with_builtins();
-        let stdlib = StdLib::with_builtins();
 
         let action = Action::new(Symbol::new("look"));
         let context = ActionContext::new(player);
 
-        let result = check_action_preconditions(&action, &world, &context, &preconditions, &stdlib);
+        let result = check_action_preconditions(&action, &world, &context);
         assert!(result.passed());
     }
 

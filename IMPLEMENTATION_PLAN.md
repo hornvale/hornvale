@@ -1198,36 +1198,23 @@ Now that all unification stages are complete, we need to remove legacy systems t
 ---
 
 ### Cleanup Stage 2: Unify Preconditions
-**Goal**: Consolidate `src/precondition.rs` with `src/rules/precondition_rule.rs`
-**Status**: Not Started
+**Goal**: Remove `src/precondition.rs`, use built-in checking in `action.rs`
+**Status**: Complete ✓
 
-**Current State**:
-- `src/precondition.rs` (~746 lines): Standalone precondition registry
-  - `PreconditionRegistry` with built-in preconditions (reachable?, held?, portable?, etc.)
-  - `Precondition` struct with name, params, check expression, failure template
-  - `PreconditionCall` and `PreconditionArg` types for invocation
-  - Hard-coded built-in implementations in `check_builtin()`
-
-- `src/rules/precondition_rule.rs`: Rule-based preconditions
-  - `PreconditionRule` wrapping `Rule` with precondition metadata
-  - `Trigger::Precondition(Symbol)` variant
-  - Template interpolation with `~(the param)` syntax
-  - Indexed in `RuleIndex::by_precondition`
-
-**Overlap**: Both systems define and check preconditions. The rule-based approach is more declarative and unified.
-
-**Migration Tasks**:
-1. Register built-in preconditions as `PreconditionRule` instances
-2. Update `ActionRegistry` to use `RuleSet::precondition_rules()`
-3. Move `PreconditionResult`, `PreconditionError` to shared location
-4. Update `check_action_preconditions()` to use rule-based preconditions
-5. Remove `PreconditionRegistry` and `src/precondition.rs`
+**Completed**:
+- Moved `PreconditionArg`, `PreconditionCall`, `PreconditionResult`, `PreconditionError` to `action.rs`
+- Added `check_builtin_precondition()` directly in `action.rs`
+- Updated `check_action_preconditions()` to take only 3 parameters (no registry needed)
+- Removed `PreconditionRegistry` - built-in preconditions hardcoded
+- Removed DSL `(precondition ...)` definition support (only built-ins remain)
+- Deleted `src/precondition.rs` (~746 lines removed)
+- All 716 tests pass
 
 **Success Criteria**:
-- [ ] All preconditions defined as rules
-- [ ] Built-in preconditions work via rule system
-- [ ] `precondition.rs` module deleted
-- [ ] All tests pass
+- [x] Built-in preconditions work without registry
+- [x] `precondition.rs` module deleted
+- [x] All tests pass
+- [x] No functionality regression for built-in preconditions
 
 ---
 
@@ -1285,25 +1272,31 @@ Now that all unification stages are complete, we need to remove legacy systems t
 
 ### Cleanup Stage 5: Evaluate Optional Modules
 **Goal**: Assess whether these modules are still needed
-**Status**: Not Started
+**Status**: Complete ✓
 
-**Modules to Evaluate**:
-1. `src/systems.rs` - Contains tick-based systems (goat says "Baa!")
-   - May be replaceable with periodic rules
+**Evaluation Results**:
 
-2. `src/template.rs` - Entity templates for spawning
-   - May need to integrate with generator system
+1. `src/systems.rs` - **KEEP**
+   - Used in `repl.rs` for `tick_world_n`
+   - Small, focused module (2 functions + tests)
+   - Provides clean abstraction for game loop
 
-3. `src/direction.rs` - Compass direction definitions
-   - Likely still needed for navigation
+2. `src/template.rs` - **KEEP**
+   - Used in `loader.rs` for entity spawning
+   - Integrated with the loader system
+   - Active feature for DSL template definitions
 
-4. `src/grammar/predicate.rs` - Grammar type predicates
-   - Check if fully replaced by `rules/predicate.rs`
+3. `src/direction.rs` - **KEEP**
+   - Used extensively: `loader.rs`, `world.rs`, `grammar/matcher.rs`, `grammar/registry.rs`, `input.rs`
+   - Core navigation functionality
+   - Clearly still needed
 
-**Assessment Criteria**:
-- Is the functionality used in the codebase?
-- Can it be replaced by the unified rule system?
-- Does it provide unique value not covered elsewhere?
+4. `src/grammar/predicate.rs` - **KEEP**
+   - Used in `grammar/types.rs`, `grammar/registry.rs`
+   - Different purpose than `rules/predicate.rs`
+   - Grammar predicates vs rule predicates are distinct concepts
+
+**Conclusion**: All modules remain actively used and provide distinct value. No modules removed.
 
 ---
 

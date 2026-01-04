@@ -2,6 +2,7 @@
 
 use crate::Value;
 use crate::action::{Action as ActionDef, ActionRegistry};
+use crate::action::{PreconditionArg, PreconditionCall};
 use crate::core::{Cardinality, EntityId, RelationSchema, World};
 use crate::direction::{DirectionDef, DirectionRegistry};
 use crate::generator::{GenerationStub, GeneratorRegistry, StubStorage};
@@ -11,7 +12,6 @@ use crate::grammar::{
 };
 use crate::lang::function::{FunctionDef, FunctionRegistry};
 use crate::lang::{Atom, ParseError, SExpr, parse_all};
-use crate::precondition::{Precondition, PreconditionArg, PreconditionCall, PreconditionRegistry};
 use crate::repl::command::{ReplCommandRegistry, parse_repl_command};
 use crate::rules::{Effect, Pattern, Rule, RuleSet, Trigger};
 use crate::symbol::Symbol;
@@ -54,8 +54,6 @@ pub struct WorldLoader {
     repl_commands: ReplCommandRegistry,
     /// Command registry for grammar-based command parsing.
     command_registry: CommandRegistry,
-    /// Precondition registry for action preconditions.
-    precondition_registry: PreconditionRegistry,
     /// Action registry for semantic action definitions.
     action_registry: ActionRegistry,
     /// Files that have been loaded (canonical paths to prevent double-loading).
@@ -78,7 +76,6 @@ impl WorldLoader {
             stubs: StubStorage::new(),
             repl_commands: ReplCommandRegistry::new(),
             command_registry: CommandRegistry::new(),
-            precondition_registry: PreconditionRegistry::with_builtins(),
             action_registry: ActionRegistry::new(),
             loaded_files: OrdSet::new(),
             loading_stack: Vec::new(),
@@ -135,16 +132,6 @@ impl WorldLoader {
     /// Get the command registry mutably.
     pub fn command_registry_mut(&mut self) -> &mut CommandRegistry {
         &mut self.command_registry
-    }
-
-    /// Get the precondition registry.
-    pub fn precondition_registry(&self) -> &PreconditionRegistry {
-        &self.precondition_registry
-    }
-
-    /// Get the precondition registry mutably.
-    pub fn precondition_registry_mut(&mut self) -> &mut PreconditionRegistry {
-        &mut self.precondition_registry
     }
 
     /// Get the action registry.
@@ -303,8 +290,6 @@ impl WorldLoader {
                 self.load_type(expr)?;
             } else if expr.is_call("command") {
                 self.load_command(expr)?;
-            } else if expr.is_call("precondition") {
-                self.load_precondition(expr)?;
             } else if expr.is_call("action") {
                 self.load_action(expr)?;
             } else if expr.is_call("override") {
@@ -785,85 +770,6 @@ impl WorldLoader {
         self.command_registry.set_global_fallback(response);
 
         Ok(())
-    }
-
-    /// Load a precondition definition.
-    ///
-    /// Format:
-    /// ```lisp
-    /// (precondition name
-    ///   :params (param1 param2)
-    ///   :check expr
-    ///   :failure "message template")
-    /// ```
-    ///
-    /// Example:
-    /// ```lisp
-    /// (precondition reachable?
-    ///   :params (actor target)
-    ///   :check (in-scope? target actor)
-    ///   :failure "You can't reach ~(name target).")
-    /// ```
-    fn load_precondition(&mut self, expr: &SExpr) -> Result<(), LoadError> {
-        let items = expr.as_list().unwrap();
-        if items.len() < 2 {
-            return Err(LoadError::InvalidDefinition(
-                "precondition requires a name".to_string(),
-            ));
-        }
-
-        let name = items[1].as_symbol().ok_or_else(|| {
-            LoadError::InvalidDefinition("precondition name must be a symbol".to_string())
-        })?;
-
-        let mut params: Vec<Symbol> = Vec::new();
-        let mut check: Option<SExpr> = None;
-        let mut failure: Option<String> = None;
-
-        // Parse keyword arguments
-        let mut i = 2;
-        while i < items.len() {
-            if items[i].is_keyword("params") && i + 1 < items.len() {
-                params = self.parse_param_list(&items[i + 1])?;
-                i += 2;
-            } else if items[i].is_keyword("check") && i + 1 < items.len() {
-                check = Some(items[i + 1].clone());
-                i += 2;
-            } else if items[i].is_keyword("failure") && i + 1 < items.len() {
-                failure = items[i + 1].as_string().map(|s| s.to_string());
-                i += 2;
-            } else {
-                i += 1;
-            }
-        }
-
-        let check = check.ok_or_else(|| {
-            LoadError::InvalidDefinition("precondition requires :check expression".to_string())
-        })?;
-
-        let failure = failure.unwrap_or_else(|| format!("Precondition {} failed.", name.as_str()));
-
-        let precondition = Precondition::new(name, params, check, failure);
-        self.precondition_registry.register(precondition);
-
-        Ok(())
-    }
-
-    /// Parse a parameter list.
-    fn parse_param_list(&self, expr: &SExpr) -> Result<Vec<Symbol>, LoadError> {
-        let items = expr
-            .as_list()
-            .ok_or_else(|| LoadError::InvalidDefinition("params must be a list".to_string()))?;
-
-        let mut params = Vec::new();
-        for item in items {
-            let sym = item.as_symbol().ok_or_else(|| {
-                LoadError::InvalidDefinition("param must be a symbol".to_string())
-            })?;
-            params.push(sym);
-        }
-
-        Ok(params)
     }
 
     /// Load an action definition.
@@ -2485,57 +2391,6 @@ mod tests {
     }
 
     #[test]
-    fn test_load_precondition_basic() {
-        let mut world = World::new();
-        let mut rules = RuleSet::new();
-        let mut loader = WorldLoader::new();
-
-        loader
-            .load_str(
-                &mut world,
-                &mut rules,
-                r#"
-                (precondition test-precond?
-                  :params (actor target)
-                  :check (= actor target)
-                  :failure "Test failed.")
-                "#,
-            )
-            .unwrap();
-
-        assert!(
-            loader
-                .precondition_registry()
-                .contains(Symbol::new("test-precond?"))
-        );
-    }
-
-    #[test]
-    fn test_load_precondition_default_failure() {
-        let mut world = World::new();
-        let mut rules = RuleSet::new();
-        let mut loader = WorldLoader::new();
-
-        loader
-            .load_str(
-                &mut world,
-                &mut rules,
-                r#"
-                (precondition custom?
-                  :params (obj)
-                  :check (has? obj :Custom))
-                "#,
-            )
-            .unwrap();
-
-        let precond = loader
-            .precondition_registry()
-            .get(Symbol::new("custom?"))
-            .unwrap();
-        assert!(precond.failure_template().contains("custom?"));
-    }
-
-    #[test]
     fn test_load_action_basic() {
         let mut world = World::new();
         let mut rules = RuleSet::new();
@@ -2668,7 +2523,7 @@ mod tests {
 
     #[test]
     fn test_load_precondition_args() {
-        use crate::precondition::PreconditionArg;
+        use crate::action::PreconditionArg;
 
         let mut world = World::new();
         let mut rules = RuleSet::new();
@@ -2701,20 +2556,6 @@ mod tests {
         assert_eq!(second.name, Symbol::new("has-key?"));
         assert_eq!(second.args.len(), 1);
         assert!(matches!(second.args[0], PreconditionArg::IndirectObject));
-    }
-
-    #[test]
-    fn test_builtin_preconditions_available() {
-        let loader = WorldLoader::new();
-
-        // Built-in preconditions should be registered
-        assert!(
-            loader
-                .precondition_registry()
-                .contains(Symbol::new("reachable?"))
-                || loader.precondition_registry().names().count() == 0
-        );
-        // Note: Built-ins are handled specially, not registered in the registry
     }
 
     // ============ File Loading Tests ============

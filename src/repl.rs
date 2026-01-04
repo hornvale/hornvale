@@ -151,7 +151,6 @@ pub fn execute_command(
                             &grammar_match,
                             &stdlib,
                             Some(loader.action_registry()),
-                            Some(loader.precondition_registry()),
                             Some(loader.function_registry()),
                             rules,
                         );

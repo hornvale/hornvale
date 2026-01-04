@@ -22,7 +22,6 @@ pub mod grammar;
 pub mod input;
 pub mod io;
 pub mod lang;
-pub mod precondition;
 pub mod query;
 pub mod repl;
 pub mod rng;
@@ -61,14 +60,10 @@ pub use vm::{HookPipelineResult, HookResult, PendingMutations};
 
 // Action and precondition system
 pub use action::{
-    Action as ActionDef, ActionCheckResult, ActionRegistry, HandlerRegistry,
-    check_action_preconditions,
+    Action as ActionDef, ActionCheckResult, ActionRegistry, HandlerRegistry, PreconditionArg,
+    PreconditionCall, PreconditionError, PreconditionResult, check_action_preconditions,
 };
 pub use direction::{DirectionDef, DirectionRegistry};
-pub use precondition::{
-    Precondition, PreconditionArg, PreconditionCall, PreconditionError, PreconditionRegistry,
-    PreconditionResult,
-};
 
 // Execution layer
 pub use execution::{

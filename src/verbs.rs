@@ -187,16 +187,7 @@ pub fn execute_grammar_action(
     rule_set: &mut crate::rules::RuleSet,
 ) -> VerbResult {
     // Call the full version with no registries
-    execute_grammar_action_full(
-        world,
-        actor,
-        grammar_match,
-        stdlib,
-        None,
-        None,
-        None,
-        rule_set,
-    )
+    execute_grammar_action_full(world, actor, grammar_match, stdlib, None, None, rule_set)
 }
 
 /// Execute an action based on a grammar match with full precondition support.
@@ -219,7 +210,6 @@ pub fn execute_grammar_action_full(
     grammar_match: &crate::GrammarMatch,
     stdlib: &crate::vm::StdLib,
     action_registry: Option<&crate::action::ActionRegistry>,
-    precondition_registry: Option<&crate::precondition::PreconditionRegistry>,
     function_registry: Option<&crate::lang::FunctionRegistry>,
     rule_set: &mut crate::rules::RuleSet,
 ) -> VerbResult {
@@ -245,12 +235,10 @@ pub fn execute_grammar_action_full(
         action_context = action_context.with_room(r);
     }
 
-    // Check preconditions (if registries are provided) BEFORE starting transaction
-    // Preconditions are pure checks, they don't mutate
-    if let (Some(action_reg), Some(precond_reg)) = (action_registry, precondition_registry) {
+    // Check preconditions BEFORE starting transaction
+    if let Some(action_reg) = action_registry {
         if let Some(action_def) = action_reg.get(action_name) {
-            let check_result =
-                check_action_preconditions(action_def, world, &action_context, precond_reg, stdlib);
+            let check_result = check_action_preconditions(action_def, world, &action_context);
 
             if check_result.failed() {
                 return VerbResult::fail(check_result.message().unwrap_or("You can't do that."));
