@@ -600,7 +600,7 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
 
 ### Stage 3: Predicate Patterns (VM for Filtering, Rust for Enumeration)
 **Goal**: Compiled predicates for filtering; Rust query plans for enumeration
-**Status**: Not Started
+**Status**: Complete
 
 **Key Insight**: There are two fundamentally different operations:
 - **Filtering** (given entity, is predicate true?) → VM is fine
@@ -680,16 +680,25 @@ fn is_cache_valid(cache: &CacheEntry, world: &World) -> bool {
    ```
 
 **Success Criteria**:
-- [ ] PredicatePattern entities for filtering
-- [ ] VM evaluation for known-entity checks
-- [ ] Rust MatchPlan for enumeration (no VM loops over all entities)
-- [ ] Combined: Rust enumeration + VM filter
+- [x] PredicatePattern entities for filtering
+- [x] VM evaluation for known-entity checks
+- [x] Rust MatchPlan for enumeration (no VM loops over all entities)
+- [x] Combined: Rust enumeration + VM filter (PatternFilter trait)
 
 **Tests**:
-- Predicate compiles and evaluates against single entity
-- MatchPlan enumerates without VM overhead
-- Combined query: MatchPlan + predicate filter
-- Performance: enumeration stays O(index), not O(all entities × VM)
+- [x] Predicate compiles and evaluates against single entity
+- [x] MatchPlan enumerates without VM overhead (existing Pattern enum)
+- [x] Combined query: MatchPlan + predicate filter (PatternFilter trait)
+- [x] Performance: enumeration stays O(index), not O(all entities × VM)
+
+**Implementation Notes**:
+- Created `src/rules/predicate.rs` with PredicatePattern struct
+- PredicatePattern stores SExpr and recompiles with bindings at evaluation time
+- Uses `Compiler::compile_with_bindings` to bake entity binding into bytecode
+- Added builder functions for common patterns: `has_component`, `component_equals`, `and`, `or`, `not`, `is_portable`, `is_creature`, `is_container`
+- PatternFilter trait allows filtering Vec<EntityId> with predicates
+- Existing Pattern enum in `src/rules/pattern.rs` preserved for Rust-based enumeration
+- Updated `src/rules.rs` to export PredicatePattern, PredicateError, PatternFilter
 
 ---
 
@@ -1507,5 +1516,6 @@ The following phases were completed prior to this unification effort (see git hi
 
 1. ~~Review and approve this plan~~ ✓
 2. ~~Begin Foundation Sprint (Stages 0 + 1 + 2 together)~~ ✓
-3. Next: Stage 3 (Predicate Patterns) or Stage 4 (Type Predicates)
-4. Iterate based on learnings
+3. ~~Stage 3: Predicate Patterns~~ ✓
+4. Next: Stage 4 (Type Predicates) or Stage 5 (Hooks as Rules)
+5. Iterate based on learnings
