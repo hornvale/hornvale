@@ -13,9 +13,14 @@ pub struct EntityId(pub u64);
 /// acceptable because all values are deterministic (tier-0 contract).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Value {
+    /// A reference to another entity.
     Entity(EntityId),
+    /// Free-form text.
     Text(String),
+    /// A finite floating-point number. Non-finite values are rejected at
+    /// ledger check time.
     Number(f64),
+    /// A boolean flag.
     Flag(bool),
 }
 
@@ -23,27 +28,40 @@ pub enum Value {
 /// time, provenance. Semantics live in the concept registry.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Fact {
+    /// The entity this fact is about.
     pub subject: EntityId,
+    /// The predicate name, resolved against the concept registry.
     pub predicate: String,
+    /// The value asserted for (subject, predicate).
     pub object: Value,
+    /// The entity where this fact was observed, if location-bound.
     pub place: Option<EntityId>,
+    /// The simulated day this fact was observed, if time-bound.
     pub day: Option<f64>,
+    /// Free-form description of what produced this fact.
     pub provenance: String,
 }
 
 /// Ledger validation error.
 #[derive(Debug)]
 pub enum LedgerError {
+    /// The predicate is not registered in the concept registry.
     UnknownPredicate {
+        /// The unrecognized predicate name.
         predicate: String,
     },
+    /// A functional predicate already holds a different value for this subject.
     Contradiction {
+        /// The entity holding the conflicting value.
         subject: EntityId,
+        /// The functional predicate in conflict.
         predicate: String,
     },
     /// A fact's object or day was a non-finite f64 (NaN or infinity).
     NonFiniteNumber {
+        /// The entity the offending fact is about.
         subject: EntityId,
+        /// The predicate the offending fact was committed under.
         predicate: String,
     },
 }

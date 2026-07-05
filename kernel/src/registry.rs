@@ -22,7 +22,10 @@ pub struct PredicateDef {
 #[derive(Debug)]
 pub enum RegistryError {
     /// A concept was re-registered with a different definition.
-    ConflictingDefinition { name: String },
+    ConflictingDefinition {
+        /// Name of the concept whose redefinition conflicted.
+        name: String,
+    },
 }
 
 impl std::fmt::Display for RegistryError {

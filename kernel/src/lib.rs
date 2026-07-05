@@ -1,6 +1,8 @@
 //! Hornvale kernel: the substrate every domain depends on — and the only
 //! thing any domain may depend on (Constitution §2.6).
 
+#![warn(missing_docs)]
+
 pub mod field;
 pub mod ledger;
 pub mod noise;

@@ -9,7 +9,9 @@ use serde::{Deserialize, Serialize};
 /// concern; the kernel only requires a metric-ish plane.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Position {
+    /// Horizontal coordinate.
     pub x: f64,
+    /// Vertical coordinate.
     pub y: f64,
 }
 
@@ -17,18 +19,23 @@ pub struct Position {
 /// wall-clock time anywhere in Hornvale.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WorldTime {
+    /// Fractional days since world genesis.
     pub day: f64,
 }
 
 /// A typed field over (space × time). Implementations must be pure:
 /// same (pos, time) → same value, always.
 pub trait Field<T> {
+    /// Sample the field's value at the given position and time.
     fn sample(&self, pos: Position, time: WorldTime) -> T;
 }
 
 /// The tier-0 field: the same value everywhere, forever.
 #[derive(Clone, Debug)]
-pub struct ConstantField<T: Clone>(pub T);
+pub struct ConstantField<T: Clone>(
+    /// The value returned for every position and time.
+    pub T,
+);
 
 impl<T: Clone> Field<T> for ConstantField<T> {
     fn sample(&self, _pos: Position, _time: WorldTime) -> T {
@@ -40,8 +47,11 @@ impl<T: Clone> Field<T> for ConstantField<T> {
 /// wavelength in world units.
 #[derive(Clone, Copy, Debug)]
 pub struct NoiseField {
+    /// Seed driving the underlying noise stream.
     pub seed: Seed,
+    /// Number of fbm octaves to accumulate.
     pub octaves: u32,
+    /// Feature wavelength in world units.
     pub scale: f64,
 }
 
