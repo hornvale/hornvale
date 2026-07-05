@@ -27,7 +27,7 @@ How do goblins on a Tatooine differ from goblins on a Hoth?
 
 ## 2. The Constitution
 
-Five principles that settle future design questions. When in doubt, defer to these.
+Six principles that settle future design questions. When in doubt, defer to these.
 
 1. **Sim first, game as lens.** Anything the player can experience must be a query
    any tool could make. The game renders queries; it never owns state.
@@ -54,6 +54,11 @@ Five principles that settle future design questions. When in doubt, defer to the
 5. **Nothing exists until it's observable.** Every system, from its first week,
    must be interrogable through the REPL and must contribute to the almanac.
    No abstraction ships without a window.
+
+6. **Domains depend only on the kernel, never on each other.** All cross-domain
+   communication flows through the kernel's trace protocol (§3.1.6). Adding a
+   new domain must never require editing an existing one. Agility and clean
+   extensibility outrank elegance, performance, and completeness.
 
 ## 3. Architecture
 
@@ -83,6 +88,57 @@ Small, finished early, changes rarely.
   the semantic seam — and it lives in the kernel because everything uses it.
 - **Provider Registry.** How domains declare query interfaces, register tiered
   implementations, and resolve one another's queries at configured fidelity.
+- **The Trace Protocol.** See §3.1.6 — the shared vocabularies through which
+  entities and domains communicate without knowing about each other.
+
+#### 3.1.6 The Trace Protocol
+
+The N×M coupling problem: cross-cutting entities (a dragon affects geology,
+religion, economics, settlement) would naively require every agent kind to know
+about every domain and vice versa. The resolution is an inversion:
+
+> **Entities don't provide information to systems. Entities leave *traces* in a
+> shared substrate, and systems *interpret* traces.**
+
+A dragon is not a source of geological or religious information; it is a source
+of marks on the world — a hollow mountain, a wealth concentration, a periodic
+terrible light in the sky. Each domain reads those marks through its own lens.
+The fields and the fact ledger are the blackboard. Three kernel vocabularies
+constitute the protocol:
+
+1. **Facts** — writes to the ledger. Typed assertions in a deliberately dumb
+   kernel envelope (subject, predicate, object, place, time, provenance).
+   Predicates are *registered by domain crates*, not designed up front.
+2. **Field contributions** — writes to fields. Entities contribute additively to
+   named fields (a dragon raises `geological-disturbance`, `terror`,
+   `wealth-concentration` near its lair). Consumers read aggregate field values
+   and cannot tell — by design — whether `terror` comes from a dragon, a plague,
+   or a warlord. That ignorance is what lets meaning-making systems interpret
+   without enumerating causes.
+3. **Phenomena** — the universal read. One query, consumed by every
+   meaning-making system: *enumerate the phenomena salient to an observer at
+   (place, culture, time), with periodicity and character*. The two moons and a
+   dragon's monthly flight are both just phenomena. Religion, language/naming,
+   historiography — and eventually the game's room descriptions — are all
+   focalized phenomena queries. This vocabulary is load-bearing; it should be
+   stress-tested against every new domain at design time.
+
+**Dependency rule** (Constitution §2.6): every domain crate depends only on the
+kernel. Adding a domain means writing a new interpreter of existing traces;
+existing crates are never edited for it.
+
+**The concept registry.** The known failure mode of shared-vocabulary systems is
+the ontology trap: attempting the universal schema up front. Guard: the kernel
+envelope stays dumb; predicates, field names, and phenomenon kinds live in a
+concept registry that grows campaign by campaign. Reviewing the registry — "do
+these names still carve the world at its joints?" — is an explicit
+end-of-campaign ritual, alongside the book chapter. Coherence is maintained in
+the registry, not in the crates.
+
+**Agents are LOD'd like everything else.** An unobserved dragon *is nothing but*
+its field contributions plus occasional statistically-generated ledger events;
+an observed dragon is a full agent. Live behavior must refine, never contradict,
+the coarse statistical self. There is no always-on agent simulation.
 
 ### 3.2 The Domains
 
@@ -124,6 +180,18 @@ unconstrained). It is both layers of the kernel applied to time:
   *lazily, on observation*, constrained by the field values there-and-then and by
   every previously committed fact. Noise supplies correlation; the ledger
   supplies causation, conservation laws, and identity.
+
+**Base plus deltas.** Agents modifying the world (dragons dig; dwarves quarry)
+does not violate coarse-constrains-fine. Any queried state = immutable
+noise-derived base field + composed ledger deltas (the Minecraft persistence
+model: procgen plus edit list). Determinism survives: seed → base, ledger →
+deltas, both replayable. For modifications that *predate* observation — ancient
+wyrm tunnels, the underdark's succession of svirfneblin, duergar, drow, aboleth
+— this is simply the fields+ledger history model applied underground: the noise
+prior parameterizes where ancient agents acted (dragons dug where the gold and
+geothermal fields say), and *occupation strata* over (space × depth × time) are
+confabulated into specific tunnels and fallen cities on first observation. The
+underdark is archaeology, and it feeds historiography for free.
 
 **Historiography, not history.** Inhabitants (and, largely, the player) never
 access the objective event layer — they access myths, chronicles, and oral
@@ -213,7 +281,9 @@ multiple worlds — the "alternate universes" of the Zork paper on the wall.
 - **Book-driven development.** Each campaign opens by writing (or reviving) its
   book chapter — the why, the query vocabulary, the aesthetic constraints —
   before code. The book becomes the design instrument rather than a
-  retrospective.
+  retrospective. Each campaign *closes* with the concept-registry review
+  (§3.1.6): do the registered predicates, field names, and phenomenon kinds
+  still carve the world at its joints?
 - **Division of labor.** Nathan owns: constitution, interfaces, aesthetics, book
   chapters, taste calls. Claude owns: implementation against agreed specs via
   subagent-driven development, test suites (property tests asserting provider
@@ -261,3 +331,11 @@ multiple worlds — the "alternate universes" of the Zork paper on the wall.
 - **The tower without a window** (historical failure mode) is mitigated
   constitutionally: Principle 5, the REPL demo as the definition of progress,
   and campaigns that always end in a shareable artifact.
+- **The ontology trap** (historical failure mode) is mitigated by the trace
+  protocol's dumb envelope, domain-registered vocabulary, and the concept
+  registry reviewed at each campaign boundary (§3.1.6). No universal schema is
+  ever designed up front.
+- **The phenomena vocabulary may not generalize.** The claim that "what would an
+  observer notice" is expressible once for every domain is the protocol's
+  biggest bet. Stress-test it against each new domain during campaign design;
+  if it cracks, split it by observer kind before it ossifies.
