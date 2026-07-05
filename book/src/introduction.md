@@ -11,13 +11,22 @@ that one first if you want the soul; read this one if you want the machine.
 
 ## The altitude of this book
 
-This book is written at a deliberate level of abstraction: technical and
-mathematical, but with **no source code**. If a chapter cannot explain a
-subsystem without showing Rust, the chapter has failed and gets rewritten.
-The code is the implementation; this book is the *comprehension* — and keeping
-its principal human author fully cognizant of the system is not a courtesy
-but a methodological requirement. Hornvale claims research ambitions, and a
-result that no human comprehends is output, not research.
+This book is written at a deliberate level of abstraction: technical,
+mathematical, and conversational. Rust appears where it illuminates — a type
+signature that *is* the design, a ten-line function worth savoring — but
+never as a substitute for explanation. The test: every chapter must be fully
+comprehensible without reading any code it shows, because this book is not a
+code review. The code is the implementation; this book is the
+*comprehension* — and keeping its principal human author fully cognizant of
+the system is not a courtesy but a methodological requirement. Hornvale
+claims research ambitions, and a result that no human comprehends is output,
+not research.
+
+(Interactive evaluation blocks — type a seed, watch a world generate, right
+in the page — are planned once the kernel is compiled to WebAssembly. The
+standard mdBook "run this code" button won't work here, since it executes on
+the public Rust playground, which doesn't know Hornvale exists; our own
+in-browser widgets will.)
 
 ## How this book stays honest
 

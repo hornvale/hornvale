@@ -299,9 +299,11 @@ multiple worlds — the "alternate universes" of the Zork paper on the wall.
   ending — the anti-burnout mechanism.
 - **The project book** (`book/`, mdbook, deployed to GitHub Pages by CI) is the
   living technical record, distinct from the vision book: constitution,
-  architecture at a deliberate altitude (technical/mathematical, **no source
-  code**), a chronicle chapter per campaign, a gallery of generated artifacts,
-  reference, and an honest open-questions "confidence gradient." Two anti-drift
+  architecture at a deliberate altitude (technical/mathematical; Rust welcome
+  where it illuminates, but every chapter must be comprehensible without
+  reading the code it shows — the book is not a code review), a chronicle
+  chapter per campaign, a gallery of generated artifacts, reference, and an
+  honest open-questions "confidence gradient." Two anti-drift
   mechanisms: (1) gallery artifacts are *generated* from pinned seeds and CI
   fails if committed copies differ from regeneration — determinism turns doc
   drift into a testable property; (2) the **comprehension gate**: every
