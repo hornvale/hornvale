@@ -11,7 +11,9 @@ use serde::{Deserialize, Serialize};
 /// the producing system — only on kind, period, character, salience.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Phenomenon {
+    /// Registered phenomenon kind (concept-registry key).
     pub kind: String,
+    /// Human-readable character of the phenomenon.
     pub description: String,
     /// None = constant or aperiodic; Some(d) = recurs every d days.
     pub period_days: Option<f64>,
@@ -23,13 +25,16 @@ pub struct Phenomenon {
 /// campaign; adding a field here must not break existing sources.
 #[derive(Clone, Copy, Debug)]
 pub struct ObserverContext {
+    /// Entity id of the observer's location.
     pub place: EntityId,
+    /// Simulated time of the observation.
     pub time: WorldTime,
 }
 
 /// Anything that contributes observable phenomena. Implementations must
 /// be pure: same context → same phenomena.
 pub trait PhenomenaSource {
+    /// Phenomena this source contributes for the given observer.
     fn phenomena(&self, ctx: &ObserverContext) -> Vec<Phenomenon>;
 }
 
