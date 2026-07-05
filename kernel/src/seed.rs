@@ -45,6 +45,7 @@ pub struct Stream {
 }
 
 impl Stream {
+    /// Next raw 64-bit value from the stream.
     pub fn next_u64(&mut self) -> u64 {
         splitmix64(&mut self.state)
     }
