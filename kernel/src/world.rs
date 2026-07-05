@@ -101,13 +101,13 @@ mod tests {
 
     #[test]
     fn world_saves_and_loads_from_disk() {
-        let dir = std::env::temp_dir().join("hornvale-kernel-test");
+        let dir = std::env::temp_dir().join(format!("hornvale-kernel-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("world.json");
         let w = World::new(Seed(42));
         w.save(&path).unwrap();
         let w2 = World::load(&path).unwrap();
         assert_eq!(w2.seed, Seed(42));
-        std::fs::remove_file(&path).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }
