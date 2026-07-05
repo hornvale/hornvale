@@ -42,6 +42,17 @@ pub fn render(ctx: &AlmanacContext) -> String {
         ctx.sky.bodies.join(", ")
     ));
 
+    if !ctx.phenomena.is_empty() {
+        doc.push_str("Salient phenomena, most attention-demanding first:\n\n");
+        for p in &ctx.phenomena {
+            doc.push_str(&format!(
+                "- [{:.2}] *{}* — {}\n",
+                p.salience, p.kind, p.description
+            ));
+        }
+        doc.push('\n');
+    }
+
     doc.push_str("## The Land\n\n");
     if ctx.places.is_empty() {
         doc.push_str("No places are known.\n\n");
@@ -148,6 +159,8 @@ mod tests {
             "## The Gods",
             "Ever-Flame",
             "celestial-body",
+            "a golden sun fixed at zenith",
+            "[1.00]",
         ] {
             assert!(doc.contains(expected), "missing: {expected}");
         }
