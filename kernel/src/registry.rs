@@ -10,13 +10,18 @@ use std::collections::BTreeMap;
 /// rule the ledger enforces.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PredicateDef {
+    /// Predicate name (map key).
     pub name: String,
+    /// At most one distinct object per subject.
     pub functional: bool,
+    /// Human-readable description.
     pub doc: String,
 }
 
+/// Errors from concept registration.
 #[derive(Debug)]
 pub enum RegistryError {
+    /// A concept was re-registered with a different definition.
     ConflictingDefinition { name: String },
 }
 
@@ -65,6 +70,7 @@ impl ConceptRegistry {
         }
     }
 
+    /// Look up a predicate definition by name.
     pub fn predicate(&self, name: &str) -> Option<&PredicateDef> {
         self.predicates.get(name)
     }
@@ -84,6 +90,7 @@ impl ConceptRegistry {
         }
     }
 
+    /// Look up a phenomenon kind's doc by name.
     pub fn phenomenon_kind(&self, name: &str) -> Option<&str> {
         self.phenomenon_kinds.get(name).map(String::as_str)
     }
