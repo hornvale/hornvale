@@ -1,0 +1,15 @@
+[book]
+title = "Hornvale: The Project Book"
+authors = ["Nathan Douglas", "Claude"]
+description = "The living technical record of Hornvale — what exists, how it works, and what we learned building it."
+language = "en"
+src = "src"
+
+[build]
+build-dir = "book"
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "coal"
+git-repository-url = "https://github.com/hornvale/hornvale"
+edit-url-template = "https://github.com/hornvale/hornvale/edit/main/book/{path}"

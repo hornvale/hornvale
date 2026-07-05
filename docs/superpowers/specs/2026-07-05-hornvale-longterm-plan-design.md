@@ -297,6 +297,23 @@ multiple worlds — the "alternate universes" of the Zork paper on the wall.
 - **Guard rails.** Every session ends green (compiles, tests pass). The REPL demo
   is the definition of progress. The almanac gives every campaign a shareable
   ending — the anti-burnout mechanism.
+- **The project book** (`book/`, mdbook, deployed to GitHub Pages by CI) is the
+  living technical record, distinct from the vision book: constitution,
+  architecture at a deliberate altitude (technical/mathematical, **no source
+  code**), a chronicle chapter per campaign, a gallery of generated artifacts,
+  reference, and an honest open-questions "confidence gradient." Two anti-drift
+  mechanisms: (1) gallery artifacts are *generated* from pinned seeds and CI
+  fails if committed copies differ from regeneration — determinism turns doc
+  drift into a testable property; (2) the **comprehension gate**: every
+  campaign closes with book updates that Nathan reviews, and if he cannot
+  explain the campaign from the book alone, the chapter is rewritten until he
+  can. His comprehension is a methodological requirement (research value needs
+  a human who understands the claims), not a courtesy.
+- **Artifact-driven completion.** No campaign is complete until it has produced
+  demonstrable artifacts (images, documents, graphs) in the gallery. Long-term
+  demo vehicle: the kernel's constitution (no wall-clock, no I/O in the hot
+  path, pure functions of seed) makes it directly WASM-compatible — in-browser
+  seed-to-almanac demos on GitHub Pages are planned from Campaign 1b onward.
 
 ## 6. Testing Strategy
 
