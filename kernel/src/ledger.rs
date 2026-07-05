@@ -41,6 +41,11 @@ pub enum LedgerError {
         subject: EntityId,
         predicate: String,
     },
+    /// A fact's object or day was a non-finite f64 (NaN or infinity).
+    NonFiniteNumber {
+        subject: EntityId,
+        predicate: String,
+    },
 }
 
 impl std::fmt::Display for LedgerError {
@@ -52,6 +57,11 @@ impl std::fmt::Display for LedgerError {
             LedgerError::Contradiction { subject, predicate } => write!(
                 f,
                 "contradiction: entity {} already holds a different '{predicate}'",
+                subject.0
+            ),
+            LedgerError::NonFiniteNumber { subject, predicate } => write!(
+                f,
+                "entity {} '{predicate}': non-finite numbers cannot be committed",
                 subject.0
             ),
         }
@@ -83,6 +93,14 @@ impl Ledger {
                 .ok_or_else(|| LedgerError::UnknownPredicate {
                     predicate: fact.predicate.clone(),
                 })?;
+        let object_is_non_finite = matches!(fact.object, Value::Number(n) if !n.is_finite());
+        let day_is_non_finite = matches!(fact.day, Some(d) if !d.is_finite());
+        if object_is_non_finite || day_is_non_finite {
+            return Err(LedgerError::NonFiniteNumber {
+                subject: fact.subject,
+                predicate: fact.predicate.clone(),
+            });
+        }
         if def.functional {
             let clash = self.facts.iter().any(|f| {
                 f.subject == fact.subject
@@ -259,6 +277,60 @@ mod tests {
             .unwrap();
         }
         assert_eq!(l.facts_about(village).count(), 2);
+    }
+
+    #[test]
+    fn non_finite_number_object_is_rejected() {
+        let r = registry();
+        let mut l = Ledger::default();
+        let e = l.mint_entity();
+        let f = Fact {
+            subject: e,
+            predicate: "name".to_string(),
+            object: Value::Number(f64::NAN),
+            place: None,
+            day: None,
+            provenance: "test".to_string(),
+        };
+        assert!(matches!(
+            l.commit(f, &r),
+            Err(LedgerError::NonFiniteNumber { .. })
+        ));
+    }
+
+    #[test]
+    fn non_finite_day_is_rejected() {
+        let r = registry();
+        let mut l = Ledger::default();
+        let e = l.mint_entity();
+        let f = Fact {
+            subject: e,
+            predicate: "name".to_string(),
+            object: Value::Text("Zaggrak".to_string()),
+            place: None,
+            day: Some(f64::INFINITY),
+            provenance: "test".to_string(),
+        };
+        assert!(matches!(
+            l.commit(f, &r),
+            Err(LedgerError::NonFiniteNumber { .. })
+        ));
+    }
+
+    #[test]
+    fn finite_numbers_still_commit() {
+        let r = registry();
+        let mut l = Ledger::default();
+        let e = l.mint_entity();
+        let f = Fact {
+            subject: e,
+            predicate: "name".to_string(),
+            object: Value::Number(42.5),
+            place: None,
+            day: Some(3.0),
+            provenance: "test".to_string(),
+        };
+        assert!(l.commit(f, &r).unwrap());
     }
 
     #[test]
