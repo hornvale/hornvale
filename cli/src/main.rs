@@ -2,6 +2,7 @@
 #![warn(missing_docs)]
 
 mod concepts;
+mod repl;
 mod world_builder;
 
 use hornvale_kernel::{Seed, World};
@@ -20,6 +21,7 @@ fn main() -> ExitCode {
     let result = match args.first().map(String::as_str) {
         Some("new") => cmd_new(&args),
         Some("almanac") => cmd_almanac(&args),
+        Some("repl") => cmd_repl(&args),
         Some("concepts") => cmd_concepts(),
         Some("help") | None => {
             print!("{USAGE}");
@@ -75,6 +77,13 @@ fn cmd_almanac(args: &[String]) -> Result<(), String> {
     let ctx = world_builder::almanac_context(&world);
     print!("{}", hornvale_almanac::render(&ctx));
     Ok(())
+}
+
+fn cmd_repl(args: &[String]) -> Result<(), String> {
+    let world = load_world(args)?;
+    let stdin = std::io::stdin();
+    let stdout = std::io::stdout();
+    repl::run(&world, stdin.lock(), stdout.lock()).map_err(|e| e.to_string())
 }
 
 fn cmd_concepts() -> Result<(), String> {
