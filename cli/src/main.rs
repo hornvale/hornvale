@@ -87,11 +87,7 @@ fn cmd_repl(args: &[String]) -> Result<(), String> {
 }
 
 fn cmd_concepts() -> Result<(), String> {
-    let mut registry = hornvale_kernel::ConceptRegistry::default();
-    registry
-        .register_predicate("name", true, "canonical name of an entity")
-        .map_err(|e| e.to_string())?;
-    world_builder::register_all(&mut registry).map_err(|e| e.to_string())?;
-    print!("{}", concepts::render_concepts(&registry));
+    let world = world_builder::build_world(Seed(0)).map_err(|e| e.to_string())?;
+    print!("{}", concepts::render_concepts(&world.registry));
     Ok(())
 }
