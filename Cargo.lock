@@ -17,6 +17,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-culture"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-kernel"
 version = "0.1.0"
 dependencies = [
