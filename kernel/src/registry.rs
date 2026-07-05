@@ -97,6 +97,18 @@ impl ConceptRegistry {
     pub fn phenomenon_kind(&self, name: &str) -> Option<&str> {
         self.phenomenon_kinds.get(name).map(String::as_str)
     }
+
+    /// Iterate over registered predicates, in name order.
+    pub fn predicates(&self) -> impl Iterator<Item = &PredicateDef> {
+        self.predicates.values()
+    }
+
+    /// Iterate over registered phenomenon kinds as (kind, doc), in name order.
+    pub fn phenomenon_kinds(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.phenomenon_kinds
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+    }
 }
 
 #[cfg(test)]
@@ -164,5 +176,26 @@ mod tests {
         let json = serde_json::to_string(&r).unwrap();
         let r2: ConceptRegistry = serde_json::from_str(&json).unwrap();
         assert!(r2.predicate("name").unwrap().functional);
+    }
+
+    #[test]
+    fn predicates_iterate_in_name_order() {
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("zeta", false, "z").unwrap();
+        r.register_predicate("alpha", true, "a").unwrap();
+        let names: Vec<&str> = r.predicates().map(|p| p.name.as_str()).collect();
+        assert_eq!(names, vec!["alpha", "zeta"]);
+    }
+
+    #[test]
+    fn phenomenon_kinds_iterate_in_name_order() {
+        let mut r = ConceptRegistry::default();
+        r.register_phenomenon_kind("wind", "moving air").unwrap();
+        r.register_phenomenon_kind("aurora", "sky lights").unwrap();
+        let kinds: Vec<(&str, &str)> = r.phenomenon_kinds().collect();
+        assert_eq!(
+            kinds,
+            vec![("aurora", "sky lights"), ("wind", "moving air")]
+        );
     }
 }

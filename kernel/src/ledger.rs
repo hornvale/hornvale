@@ -198,6 +198,11 @@ impl Ledger {
     pub fn minting_is_valid(&self) -> bool {
         self.next_entity >= self.max_entity_id()
     }
+
+    /// Iterate over every committed fact, in commit order.
+    pub fn iter(&self) -> impl Iterator<Item = &Fact> {
+        self.facts.iter()
+    }
 }
 
 #[cfg(test)]
@@ -387,5 +392,23 @@ mod tests {
         let fresh = l2.mint_entity();
         assert!(l2.facts_about(fresh).count() == 0);
         assert!(fresh.0 > 1);
+    }
+
+    #[test]
+    fn iter_yields_facts_in_commit_order() {
+        let r = registry();
+        let mut l = Ledger::default();
+        let a = named(&mut l, "Zaggrak");
+        let b = named(&mut l, "Bolnar");
+        l.commit(a, &r).unwrap();
+        l.commit(b, &r).unwrap();
+        let names: Vec<&Value> = l.iter().map(|f| &f.object).collect();
+        assert_eq!(
+            names,
+            vec![
+                &Value::Text("Zaggrak".to_string()),
+                &Value::Text("Bolnar".to_string())
+            ]
+        );
     }
 }
