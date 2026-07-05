@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["kernel", "domains/*", "windows/*"]
+members = ["kernel", "domains/*", "windows/*", "cli"]
 
 [workspace.package]
 edition = "2024"
