@@ -3,6 +3,19 @@
 version = 4
 
 [[package]]
+name = "hornvale-almanac"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-climate",
+ "hornvale-culture",
+ "hornvale-kernel",
+ "hornvale-religion",
+ "hornvale-settlement",
+ "hornvale-terrain",
+]
+
+[[package]]
 name = "hornvale-astronomy"
 version = "0.1.0"
 dependencies = [
