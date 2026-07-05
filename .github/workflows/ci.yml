@@ -25,4 +25,7 @@ jobs:
       - name: Artifacts are current (determinism check)
         run: |
           cargo run -p hornvale-kernel --example first_light
-          git diff --exit-code book/src/gallery/
+          cargo run -p hornvale -- new --seed 42 --out /tmp/hv-ci-42.json
+          cargo run -p hornvale -- almanac --world /tmp/hv-ci-42.json > book/src/gallery/almanac-seed-42.md
+          cargo run -p hornvale -- concepts > book/src/reference/concept-registry-generated.md
+          git diff --exit-code book/src/gallery/ book/src/reference/

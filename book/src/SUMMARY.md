@@ -26,6 +26,7 @@
 # The Gallery
 
 - [First Light (seed 42)](./gallery/first-light.md)
+- [The Almanac of Seed 42](./gallery/almanac.md)
 
 # Reference
 
