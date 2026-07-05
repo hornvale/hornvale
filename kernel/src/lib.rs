@@ -8,6 +8,7 @@ pub mod phenomena;
 pub mod refine;
 pub mod registry;
 pub mod seed;
+pub mod world;
 
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
 pub use ledger::{EntityId, Fact, Ledger, LedgerError, Value};
@@ -16,3 +17,4 @@ pub use phenomena::{ObserverContext, PhenomenaSource, Phenomenon, observe};
 pub use refine::choose_consistent;
 pub use registry::{ConceptRegistry, PredicateDef, RegistryError};
 pub use seed::{Seed, Stream};
+pub use world::World;
