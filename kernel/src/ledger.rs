@@ -157,6 +157,29 @@ impl Ledger {
     pub fn is_empty(&self) -> bool {
         self.facts.is_empty()
     }
+
+    /// The maximum entity id referenced by any fact (subjects, `Value::Entity`
+    /// objects, and `place` fields), or 0 if the ledger is empty.
+    pub fn max_entity_id(&self) -> u64 {
+        self.facts
+            .iter()
+            .flat_map(|f| {
+                let object_id = match f.object {
+                    Value::Entity(e) => Some(e.0),
+                    _ => None,
+                };
+                [Some(f.subject.0), object_id, f.place.map(|p| p.0)]
+            })
+            .flatten()
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// Valid when no future mint can collide with an entity id already
+    /// referenced in a fact.
+    pub fn minting_is_valid(&self) -> bool {
+        self.next_entity >= self.max_entity_id()
+    }
 }
 
 #[cfg(test)]

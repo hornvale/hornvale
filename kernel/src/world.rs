@@ -42,7 +42,14 @@ impl World {
 
     /// Deserialize a world from JSON.
     pub fn from_json(json: &str) -> Result<World, serde_json::Error> {
-        serde_json::from_str(json)
+        use serde::de::Error as _;
+        let world: World = serde_json::from_str(json)?;
+        if !world.ledger.minting_is_valid() {
+            return Err(serde_json::Error::custom(
+                "corrupt world: next_entity is behind entity ids referenced in facts",
+            ));
+        }
+        Ok(world)
     }
 
     /// Save this world to a JSON file.
@@ -97,6 +104,34 @@ mod tests {
     #[test]
     fn world_json_is_deterministic() {
         assert_eq!(World::new(Seed(9)).to_json(), World::new(Seed(9)).to_json());
+    }
+
+    #[test]
+    fn from_json_rejects_corrupt_minting_state() {
+        let mut w = World::new(Seed(42));
+        let e = w.ledger.mint_entity();
+        w.ledger
+            .commit(
+                Fact {
+                    subject: e,
+                    predicate: "name".to_string(),
+                    object: Value::Text("Zaggrak".to_string()),
+                    place: None,
+                    day: None,
+                    provenance: "test".to_string(),
+                },
+                &w.registry,
+            )
+            .unwrap();
+        let json = w.to_json();
+        // Corrupt the minting state so it no longer covers the referenced entity id.
+        let corrupt = json.replacen(
+            &format!("\"next_entity\": {}", e.0),
+            "\"next_entity\": 0",
+            1,
+        );
+        assert_ne!(json, corrupt, "test setup must actually corrupt the json");
+        assert!(World::from_json(&corrupt).is_err());
     }
 
     #[test]
