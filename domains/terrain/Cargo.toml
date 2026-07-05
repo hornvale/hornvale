@@ -1,0 +1,9 @@
+[package]
+name = "hornvale-terrain"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Hornvale terrain domain: places and land."
+
+[dependencies]
+hornvale-kernel = { path = "../../kernel" }
