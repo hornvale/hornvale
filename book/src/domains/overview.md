@@ -1,24 +1,31 @@
-# Domains
+# The Cascade at Tier 0
 
-No domains exist yet. This is deliberate.
+As of Campaign 1b, every domain exists — at the shallowest depth that could
+possibly work. This was the plan's central bet about sustainability: build the
+*whole* cascade at tier 0 before deepening any part of it, so that every
+kernel interface has a real consumer from the first months, and every later
+campaign deepens something that already runs rather than bolting on something
+new.
 
-Campaign 1a built only the kernel; Campaign 1b brings the **tier-0 cascade**:
-the simplest possible implementation of *every* domain, all at once — a sun
-that is always up, a climate that is always mild, one valley, one goblin
-village with a stub caste structure, one belief derived from the sky. The
-point of tier-0-everything is that every kernel interface gains a real
-consumer immediately, and every later campaign deepens an existing domain
-rather than bolting on a new kind of thing.
+The cascade, in dependency order, with its current state:
 
-The planned cascade, in dependency order:
+| Domain | Tier 0 | Consumes | Contributes |
+|---|---|---|---|
+| [Astronomy](./astronomy.md) | a sun that never sets | — | phenomena (the sky) |
+| [Climate](./climate.md) | uniform mildness | — | phenomena (the air) |
+| [Terrain](./terrain.md) | one hand-placed vale | — | place facts |
+| [Settlement](./settlement.md) | one goblin village | a place to stand | settlement facts |
+| [Culture](./culture.md) | a fixed caste ladder | a village to structure | caste facts |
+| [Religion](./religion.md) | one belief | **phenomena only** | belief facts |
 
-> astronomy → climate → terrain/hydrology → ecology → subsistence →
-> settlement → social structure → language → religion → historiography
-
-Each domain will get its own chapter here as it comes to exist, at the same
-altitude as the architecture chapters: what questions it answers, what it
-consumes from the cascade above it, what its fidelity tiers are, and what it
-contributes to the almanac.
+Two things about this table are load-bearing. First, the *Consumes* column
+never names a domain — settlement consumes "a place to stand," not "terrain."
+Wiring a specific place to a specific village happens in one file, the
+composition root, which is the only place in the codebase where all domains
+meet. Second, religion's row is the whole thesis in miniature: it consumes
+phenomena and nothing else, so the same religion code that mythologizes
+today's changeless sun will mythologize Campaign 2's moons without being
+edited.
 
 A standing rule from the roadmap: **no domain may lead another by more than
 about two tiers.** Depth stays balanced across the cascade, which keeps the

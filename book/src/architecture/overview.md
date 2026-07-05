@@ -6,20 +6,23 @@ Hornvale is organized as four layers, from substrate to surface:
 capabilities every other part of the system depends on: hierarchical seeding,
 coherent noise, fields, the fact ledger, refinement, and the trace protocol's
 shared vocabularies. The kernel is the *only* thing a domain is allowed to
-depend on. As of Campaign 1a, the kernel exists in full (at tier-0 depth) and
-is the only layer that does.
+depend on. Built in Campaign 1a; gained enumeration interfaces in 1b;
+otherwise already stable.
 
 **The Domains** — one module per pillar of the vision: astronomy, climate,
 terrain, ecology, subsistence, settlement, social structure, language,
 religion, historiography. They form an enrichment cascade — a directed
 acyclic graph where settlement reads climate, which reads astronomy — but
 they communicate exclusively through kernel vocabularies, never directly.
-Each domain will exist at multiple fidelity tiers over the years.
+Each domain will exist at multiple fidelity tiers over the years. As of
+Campaign 1b, six domains exist at tier 0 — see
+[The Cascade at Tier 0](../domains/overview.md).
 
 **The Windows** — how humans see in. The REPL (interrogate any layer of a
 generated world), and the Almanac (generated world documents: calendars,
 maps, ethnographies, mythologies — the demonstration artifact each campaign
-must produce).
+must produce). Both exist as of Campaign 1b, as commands of the `hornvale`
+tool.
 
 **The Game** — the eventual thin skin: a player character as a situated,
 restricted, sensory view of the same query surface every other window uses.

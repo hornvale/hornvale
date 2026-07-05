@@ -15,11 +15,12 @@ seeded position and returns the first candidate whose commitment would be
 *accepted* — i.e., would contradict nothing. Uniform when unconstrained,
 consistent when constrained, empty-handed when nothing survives.
 
-That is genuinely all it does, and Campaign 1a uses it for exactly one
-decision (a village's name, chosen so as not to collide with any committed
-name). Its signature, not its sophistication, is the commitment: everything
-that chooses *through* this interface inherits consistency checking for free,
-and the machinery behind the interface can grow — constraint propagation,
+That is genuinely all it does, and as of Campaign 1b it has exactly one real
+client: settlement genesis chooses each village's name through it, so no
+village can ever take a name that contradicts a committed fact. Its
+signature, not its sophistication, is the commitment: everything that
+chooses *through* this interface inherits consistency checking for free, and
+the machinery behind the interface can grow — constraint propagation,
 backtracking, aesthetic scoring — without callers changing.
 
 ## Why this is the boss fight

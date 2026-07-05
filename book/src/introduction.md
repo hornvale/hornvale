@@ -48,10 +48,13 @@ Documentation drifts. This book has two defenses:
 
 ## Where things stand
 
-**Campaign 1a is complete:** the kernel exists — seeds, noise, fields, the
-fact ledger, trivial refinement, and the trace protocol's vocabulary — with
-a determinism suite proving that identical seeds produce byte-identical
-worlds. There are no domains yet, no REPL, no almanac; those are Campaign 1b.
-The world of seed 42 currently contains one valley, one village, and one
-revered phenomenon. It is very small, and it is *provably the same world
-every time*, which is the entire point of starting here.
+**Campaigns 1a and 1b are complete.** The kernel exists (seeds, noise,
+fields, the fact ledger, refinement, the trace protocol), and above it the
+entire domain cascade exists at tier 0: a sun that never sets, a uniformly
+mild climate, one vale, the goblin village of Gruugish, a five-rung caste
+ladder, and one belief — derived, with queryable provenance, from the most
+salient thing in the sky. The `hornvale` tool creates worlds, answers
+questions about them interactively, and renders the almanac; an end-to-end
+suite proves the whole path byte-deterministic. The world is very small, and
+every part of it can explain itself, which is the entire point. Campaign 2
+gives the sky its first period.

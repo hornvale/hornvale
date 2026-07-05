@@ -24,5 +24,10 @@ potential looks like before meaning arrives.
 ---
 
 *Two entities, two facts, one belief, and a proof of sameness. Campaign 1b
-gives this world a sky that moves, land with shape, more goblins, and its
-first real almanac.*
+delivered the first real almanac — see [The Almanac of Seed 42](almanac.md),
+where this seed's village is **Gruugish**, not Bolnar: the mini-genesis here
+and the real cascade draw names from different candidate pools, a permanent
+and instructive reminder that "the same seed" promises the same world only
+under the same generation contracts. The sky that moves and the land with
+shape are Campaigns 2 and 3. This page is preserved as Campaign 1a's
+artifact, exactly as first generated.*

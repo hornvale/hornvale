@@ -47,7 +47,10 @@ statistically-generated ledger events. An observed dragon is a full agent.
 The live agent's behavior must refine — never contradict — its own coarse
 statistical self. There is no always-on agent simulation, by design.
 
-As of Campaign 1a, the vocabularies exist and are exercised end-to-end by the
-integration suite (a miniature "religion" reveres the most salient phenomenon
-a miniature "sun" emits, with neither knowing the other exists). The first
-real producers and consumers arrive in Campaign 1b.
+As of Campaign 1b, the protocol carries real traffic: astronomy and climate
+produce phenomena, terrain through religion commit facts through the dumb
+envelope, and religion — the first real meaning-making consumer — reveres
+what it observes without knowing what produced it. Its tests mythologize a
+periodic wanderer no current provider can emit, which is the protocol's
+promise stated as an executable fact: consumers are ready for producers that
+do not yet exist.
