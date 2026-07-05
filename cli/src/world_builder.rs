@@ -85,8 +85,6 @@ pub fn build_world(seed: Seed) -> Result<World, BuildError> {
 
 /// Gather everything the almanac renders, reconstructing the stateless
 /// tier-0 providers.
-// used from Task 10 (almanac command)
-#[allow(dead_code)]
 pub fn almanac_context(world: &World) -> AlmanacContext {
     let sun = ConstantSun;
     let climate = UniformClimate;
