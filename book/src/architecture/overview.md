@@ -2,11 +2,12 @@
 
 Hornvale is organized as four layers, from substrate to surface:
 
-**The Kernel** — small, finished early, changes rarely. It provides the six
+**The Kernel** — small, finished early, changes rarely. It provides the seven
 capabilities every other part of the system depends on: hierarchical seeding,
-coherent noise, fields, the fact ledger, refinement, and the trace protocol's
-shared vocabularies. The kernel is the *only* thing a domain is allowed to
-depend on. Built in Campaign 1a; gained enumeration interfaces in 1b;
+coherent noise, fields, the fact ledger, refinement, the trace protocol's
+shared vocabularies, and the geosphere (a spherical region graph). The kernel
+is the *only* thing a domain is allowed to depend on. Built in Campaign 1a;
+gained enumeration interfaces in 1b; the geosphere arrived in Campaign 3;
 otherwise already stable.
 
 **The Domains** — one module per pillar of the vision: astronomy, climate,

@@ -32,6 +32,7 @@
 - [Campaign 2a: System Genesis](./chronicle/campaign-2a.md)
 - [Campaign 2b: The Sky's Debut](./chronicle/campaign-2b.md)
 - [Campaign L0: The Laboratory](./chronicle/campaign-l0-lab.md)
+- [Campaign 3b: The Tectonic Globe](./chronicle/campaign-3b.md)
 
 # The Gallery
 
