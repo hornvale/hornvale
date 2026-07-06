@@ -95,6 +95,11 @@ contradicts, lower ("coarse constrains fine").
   variant gets a one-line doc comment.
 - Rust edition 2024. Run `cargo fmt` as the final step before every commit —
   fmt-gate skips have been the most common review finding.
+- **Typed quantities:** coherent physical units crossing API boundaries are
+  hand-rolled newtypes with validating constructors and named conversions
+  (`Au`, `Mm`, `LightYears`, `SolarMasses`, `StdDays`, `LocalDays`, …);
+  dimensionless ratios stay bare `f64`. No dimensional-analysis crates.
+  Rationale and scope: Campaign 2 spec, design principle 5.
 - Ratified decisions (recorded in plan Self-Review Notes — do not
   relitigate): `Fact.day` stays a bare `Option<f64>`; `PredicateDef.name`
   duplicates its registry key.

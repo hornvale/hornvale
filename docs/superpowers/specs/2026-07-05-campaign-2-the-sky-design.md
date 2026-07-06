@@ -34,6 +34,22 @@ enrichment-thesis demonstration.
    (the ratified regeneration mechanism), never a silent change.
 4. **Tiers coexist.** `ConstantSun` (tier 0) remains untouched and usable;
    the new provider is additive.
+5. **Typed quantities (amended 2026-07-06, ratified project-wide).** Every
+   coherent physical unit crossing an API boundary is a hand-rolled newtype
+   with a validating constructor and explicit named conversions —
+   `SolarMasses`, `EarthMasses`, `LunarMasses`, `Au`, `Mm`, `LightYears`,
+   `StdDays`, `LocalDays`, `Degrees` — making invalid states (negative
+   years, unit confusion at the two-clocks seam) unrepresentable at compile
+   time. Rationale: subagent implementers each see one task; the compiler is
+   the only reviewer that sees every call site. Interior `.0` access within
+   the owning module keeps formulas readable; **dimensionless ratios**
+   (salience, relative tide, relative angular diameter) **stay bare `f64`**
+   — ceremony without protection. The fact-ledger envelope stays dumb
+   (facts carry bare numbers), so this costs nothing in the save format if
+   done before 2b ships worlds. Plan 2b therefore OPENS with the retrofit
+   of `StarSystem`/`Anchor`/`Moon`/`Neighbor`/`SkyPins`, proven
+   behavior-free by the existing 128-seed battery. No dimensional-analysis
+   crates (`uom` etc.) — the no-new-deps rule holds; boring newtypes only.
 
 ## 3. Phase 0 — ratified opening chores (from the 1b final review)
 
