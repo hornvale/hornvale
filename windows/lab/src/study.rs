@@ -63,6 +63,14 @@ impl std::fmt::Display for StudyError {
 
 impl std::error::Error for StudyError {}
 
+/// True if `s` is non-empty and contains only lowercase ASCII letters,
+/// digits, and hyphens ("lowercase-kebab").
+fn is_lowercase_kebab(s: &str) -> bool {
+    !s.is_empty()
+        && s.chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+}
+
 /// Load and validate a study from a JSON file.
 pub fn load_study(path: &Path) -> Result<Study, StudyError> {
     let contents = fs::read_to_string(path).map_err(|e| StudyError {
@@ -83,24 +91,20 @@ impl Study {
     /// Rules:
     /// - name is non-empty and contains only lowercase ASCII, digits, and hyphens
     /// - seeds.count > 0
+    /// - the seed range `from ..= from + count - 1` does not overflow u64
     /// - at least one pin set exists
+    /// - every pin-set label is non-empty and contains only lowercase ASCII,
+    ///   digits, and hyphens
     /// - no duplicate pin set labels
     /// - every pin parses successfully
     /// - MetricSelection::All string equals "all"
     /// - every named metric exists in registry
     pub fn validate(&self) -> Result<(), StudyError> {
         // Check name
-        if self.name.is_empty() {
+        if !is_lowercase_kebab(&self.name) {
             return Err(StudyError {
                 message: format!("name must be lowercase-kebab, got {:#?}", self.name),
             });
-        }
-        for c in self.name.chars() {
-            if !c.is_ascii_lowercase() && !c.is_ascii_digit() && c != '-' {
-                return Err(StudyError {
-                    message: format!("name must be lowercase-kebab, got {:#?}", self.name),
-                });
-            }
         }
 
         // Check seeds.count
@@ -110,11 +114,35 @@ impl Study {
             });
         }
 
+        // Check that the seed range doesn't overflow u64. The runner iterates
+        // seeds `from ..= from + (count - 1)`, so that's the last seed value
+        // that must fit.
+        if self.seeds.from.checked_add(self.seeds.count - 1).is_none() {
+            return Err(StudyError {
+                message: format!(
+                    "seed range overflows u64: from {} + count {} would exceed u64::MAX",
+                    self.seeds.from, self.seeds.count
+                ),
+            });
+        }
+
         // Check at least one pin set
         if self.pin_sets.is_empty() {
             return Err(StudyError {
                 message: "at least one pin set is required".to_string(),
             });
+        }
+
+        // Check every pin-set label is lowercase-kebab
+        for pin_set in &self.pin_sets {
+            if !is_lowercase_kebab(&pin_set.label) {
+                return Err(StudyError {
+                    message: format!(
+                        "pin-set label must be lowercase-kebab, got {:#?}",
+                        pin_set.label
+                    ),
+                });
+            }
         }
 
         // Check for duplicate pin set labels
@@ -444,6 +472,91 @@ mod tests {
         assert_eq!(parsed[0].0, "locked");
         // Verify the pins were actually parsed and set
         assert!(parsed[0].1.rotation.is_some());
+    }
+
+    #[test]
+    fn seed_range_overflow_rejected() {
+        let json = r#"{
+            "name": "my-study",
+            "description": "Test",
+            "seeds": { "from": 18446744073709551615, "count": 2 },
+            "pin_sets": [{ "label": "default", "pins": [] }],
+            "metrics": "all"
+        }"#;
+
+        let study: Study = serde_json::from_str(json).unwrap();
+        let err = study.validate().unwrap_err();
+        assert!(
+            err.message.contains("18446744073709551615"),
+            "message should name the offending range: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn seed_range_ending_exactly_at_u64_max_is_valid() {
+        let json = r#"{
+            "name": "my-study",
+            "description": "Test",
+            "seeds": { "from": 18446744073709551615, "count": 1 },
+            "pin_sets": [{ "label": "default", "pins": [] }],
+            "metrics": "all"
+        }"#;
+
+        let study: Study = serde_json::from_str(json).unwrap();
+        assert!(study.validate().is_ok());
+    }
+
+    #[test]
+    fn pin_set_label_with_comma_rejected() {
+        let json = r#"{
+            "name": "my-study",
+            "description": "Test",
+            "seeds": { "from": 1, "count": 10 },
+            "pin_sets": [{ "label": "a,b", "pins": [] }],
+            "metrics": "all"
+        }"#;
+
+        let study: Study = serde_json::from_str(json).unwrap();
+        let err = study.validate().unwrap_err();
+        assert!(
+            err.message.contains("a,b"),
+            "message should quote the offending label: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn pin_set_label_with_path_traversal_rejected() {
+        let json = r#"{
+            "name": "my-study",
+            "description": "Test",
+            "seeds": { "from": 1, "count": 10 },
+            "pin_sets": [{ "label": "../x", "pins": [] }],
+            "metrics": "all"
+        }"#;
+
+        let study: Study = serde_json::from_str(json).unwrap();
+        let err = study.validate().unwrap_err();
+        assert!(
+            err.message.contains("../x"),
+            "message should quote the offending label: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn pin_set_label_valid_kebab_passes() {
+        let json = r#"{
+            "name": "my-study",
+            "description": "Test",
+            "seeds": { "from": 1, "count": 10 },
+            "pin_sets": [{ "label": "locked-world", "pins": [] }],
+            "metrics": "all"
+        }"#;
+
+        let study: Study = serde_json::from_str(json).unwrap();
+        assert!(study.validate().is_ok());
     }
 
     #[test]

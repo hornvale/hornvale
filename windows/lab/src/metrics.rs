@@ -224,25 +224,32 @@ pub fn registry() -> Vec<Metric> {
     ]
 }
 
-/// Render the metrics list as a markdown table.
+/// Render the metrics list as a markdown table, in registry order.
+///
+/// Each row names the metric, its summary kind, its histogram bucket edges
+/// (populated for `SummaryKind::Numeric`; blank for `Categorical`/`Flag`,
+/// which have no buckets), and its one-line doc.
 pub fn render_metric_list() -> String {
     let metrics = registry();
-    let mut table = String::from("| Name | Kind | Buckets |\n");
-    table.push_str("|---|---|---|\n");
+    let mut table = String::from("| Name | Kind | Buckets | Doc |\n");
+    table.push_str("|---|---|---|---|\n");
     for m in metrics {
-        let kind_str = match &m.summary {
-            SummaryKind::Categorical => "Categorical".to_string(),
-            SummaryKind::Flag => "Flag".to_string(),
+        let (kind_str, buckets_str) = match &m.summary {
+            SummaryKind::Categorical => ("Categorical".to_string(), String::new()),
+            SummaryKind::Flag => ("Flag".to_string(), String::new()),
             SummaryKind::Numeric { bucket_edges } => {
                 let bucket_list = bucket_edges
                     .iter()
                     .map(|e| format!("{}", e))
                     .collect::<Vec<_>>()
                     .join(", ");
-                format!("Numeric [{}]", bucket_list)
+                ("Numeric".to_string(), format!("[{}]", bucket_list))
             }
         };
-        table.push_str(&format!("| {} | {} | {} |\n", m.name, kind_str, ""));
+        table.push_str(&format!(
+            "| {} | {} | {} | {} |\n",
+            m.name, kind_str, buckets_str, m.doc
+        ));
     }
     table
 }
@@ -411,5 +418,23 @@ mod tests {
         for m in metrics {
             assert!(table.contains(m.name), "Missing {}", m.name);
         }
+    }
+
+    #[test]
+    fn render_metric_list_contains_metric_docs() {
+        let table = render_metric_list();
+        let metrics = registry();
+        let moons_admitted = metrics.iter().find(|m| m.name == "moons-admitted").unwrap();
+        assert!(
+            table.contains(moons_admitted.doc),
+            "Missing doc for moons-admitted: {}",
+            moons_admitted.doc
+        );
+        let belief_kind = metrics.iter().find(|m| m.name == "belief-kind").unwrap();
+        assert!(
+            table.contains(belief_kind.doc),
+            "Missing doc for belief-kind: {}",
+            belief_kind.doc
+        );
     }
 }

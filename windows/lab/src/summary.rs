@@ -130,12 +130,22 @@ pub fn render_summary(result: &RunResult) -> String {
     output.push_str(&format!("{}\n\n", result.study.description));
 
     // 3. Seeds and rows info
+    //
+    // The displayed upper bound is exclusive (`from..from+count`), which is
+    // one past the last seed the runner actually visits
+    // (`from + (count - 1)`, see `Study::validate`'s overflow check). Use
+    // saturating arithmetic so a seed range validated only against the
+    // inclusive last-seed bound can never panic or wrap here.
     let pin_set_count = result.study.pin_sets.len();
     let refusal_count = result.rows.iter().filter(|r| r.refusal.is_some()).count();
     output.push_str(&format!(
         "Seeds {}..{} × {} pin set(s); {} rows; {} refusals.\n\n",
         result.study.seeds.from,
-        result.study.seeds.from + result.study.seeds.count,
+        result
+            .study
+            .seeds
+            .from
+            .saturating_add(result.study.seeds.count),
         pin_set_count,
         result.rows.len(),
         refusal_count
