@@ -79,7 +79,7 @@ pub fn generate_anchor(
         }
     };
 
-    let (inner, outer) = star.habitable_zone;
+    let (inner, outer) = (star.habitable_zone.inner(), star.habitable_zone.outer());
     let (orbit, year) = match pins.year_local_days {
         Some(local_days) => {
             let Rotation::Spinning { day } = rotation else {
@@ -171,7 +171,7 @@ mod tests {
             a,
             generate_anchor(Seed(42), &s, &SkyPins::default()).unwrap()
         );
-        let (inner, outer) = s.habitable_zone;
+        let (inner, outer) = (s.habitable_zone.inner(), s.habitable_zone.outer());
         assert!((inner.get()..=outer.get()).contains(&a.orbit.get()));
         assert!((0.5..=2.0).contains(&a.mass.get()));
         assert!((0.0..=35.0).contains(&a.obliquity.get()));
@@ -246,7 +246,7 @@ mod tests {
             ..SkyPins::default()
         };
         let a = generate_anchor(Seed(1), &s, &pins).unwrap();
-        let (inner, outer) = s.habitable_zone;
+        let (inner, outer) = (s.habitable_zone.inner(), s.habitable_zone.outer());
         assert!((inner.get()..=outer.get()).contains(&a.orbit.get()));
         assert!((a.orbit.get() - default_anchor.orbit.get()).abs() < 1e-9);
         // An absurd year lands far outside the zone for ANY legal star

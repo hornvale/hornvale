@@ -25,8 +25,8 @@ pub use provider::{GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE};
 pub use star::{Star, generate_star};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
-    Au, Degrees, EarthMasses, LightYears, LocalDays, LunarMasses, Megameters, SolarLuminosities,
-    SolarMasses, StdDays, UnitError,
+    Au, Degrees, EarthMasses, HabitableZone, LightYears, LocalDays, LunarMasses, Megameters,
+    SolarLuminosities, SolarMasses, StdDays, UnitError,
 };
 
 use hornvale_kernel::{

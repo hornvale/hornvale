@@ -2,7 +2,7 @@
 //! (model card: L = M^3.5; habitable zone 0.95√L–1.37√L AU).
 
 use crate::streams;
-use crate::units::{Au, SolarLuminosities, SolarMasses};
+use crate::units::{Au, HabitableZone, SolarLuminosities, SolarMasses};
 use hornvale_kernel::Seed;
 
 /// A main-sequence star: mass drawn, everything else derived.
@@ -14,8 +14,8 @@ pub struct Star {
     pub luminosity: SolarLuminosities,
     /// Human-readable spectral character.
     pub class_name: String,
-    /// Habitable-zone bounds in AU (derived: 0.95√L, 1.37√L).
-    pub habitable_zone: (Au, Au),
+    /// Habitable-zone bounds in AU (derived: 0.95√L inner, 1.37√L outer).
+    pub habitable_zone: HabitableZone,
 }
 
 /// Generate the star from the astronomy domain seed.
@@ -36,7 +36,8 @@ pub fn generate_star(astronomy_seed: Seed) -> Star {
         mass,
         luminosity,
         class_name,
-        habitable_zone: (Au(0.95 * sqrt_l), Au(1.37 * sqrt_l)),
+        habitable_zone: HabitableZone::new(Au(0.95 * sqrt_l), Au(1.37 * sqrt_l))
+            .expect("0.95√L < 1.37√L for all L > 0"),
     }
 }
 
@@ -56,10 +57,10 @@ mod tests {
         let s = generate_star(Seed(7));
         let expected_l = s.mass.get().powf(3.5);
         assert!((s.luminosity.get() - expected_l).abs() < 1e-12);
-        let (inner, outer) = s.habitable_zone;
-        assert!((inner.get() - 0.95 * expected_l.sqrt()).abs() < 1e-12);
-        assert!((outer.get() - 1.37 * expected_l.sqrt()).abs() < 1e-12);
-        assert!(inner.get() < outer.get());
+        let zone = s.habitable_zone;
+        assert!((zone.inner().get() - 0.95 * expected_l.sqrt()).abs() < 1e-12);
+        assert!((zone.outer().get() - 1.37 * expected_l.sqrt()).abs() < 1e-12);
+        assert!(zone.inner().get() < zone.outer().get());
     }
 
     #[test]
