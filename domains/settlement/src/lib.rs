@@ -14,9 +14,33 @@ pub const LOCATED_IN: &str = "located-in";
 /// Predicate giving a settlement's population.
 pub const POPULATION: &str = "population";
 
+/// Seed-derivation labels used by this crate. Labels are permanent
+/// save-format contracts (spec §3); regeneration uses epoch suffixes.
+mod streams {
+    /// Root stream label for settlement.
+    pub const ROOT: &str = "settlement";
+    /// Candidate-name generation stream.
+    pub const NAME: &str = "name";
+    /// Name-pick offset stream.
+    pub const NAME_PICK: &str = "name-pick";
+    /// Population draw stream.
+    pub const POPULATION: &str = "population";
+}
+
 const SYLLABLES: [&str; 10] = [
     "zag", "gru", "mok", "nar", "bol", "ish", "rak", "ug", "tor", "gna",
 ];
+
+/// Every seed-derivation label (or pattern) this crate uses, with docs.
+/// Slash-joined paths document derivation chains; the manifest renders them.
+pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
+    vec![
+        ("settlement", "root stream for settlement generation"),
+        ("settlement/name", "candidate village names"),
+        ("settlement/name-pick", "which candidate survives refinement"),
+        ("settlement/population", "village population draw"),
+    ]
+}
 
 /// Register settlement's contribution to the concept registry.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
@@ -66,9 +90,9 @@ fn fact(subject: EntityId, predicate: &str, object: Value, home: EntityId) -> Fa
 pub fn genesis(world: &mut World, home: EntityId) -> Result<EntityId, LedgerError> {
     let village = world.ledger.mint_entity();
 
-    let candidates = candidate_names(&mut world.seed.derive("settlement").derive("name").stream());
+    let candidates = candidate_names(&mut world.seed.derive(streams::ROOT).derive(streams::NAME).stream());
     let name_fact = |n: &String| fact(village, hornvale_kernel::NAME, Value::Text(n.clone()), home);
-    let mut pick_stream = world.seed.derive("settlement").derive("name-pick").stream();
+    let mut pick_stream = world.seed.derive(streams::ROOT).derive(streams::NAME_PICK).stream();
     let idx = choose_consistent(
         &mut pick_stream,
         &world.ledger,
@@ -83,8 +107,8 @@ pub fn genesis(world: &mut World, home: EntityId) -> Result<EntityId, LedgerErro
 
     let population = world
         .seed
-        .derive("settlement")
-        .derive("population")
+        .derive(streams::ROOT)
+        .derive(streams::POPULATION)
         .stream()
         .range_u32(40, 80);
     world.ledger.commit(
@@ -183,5 +207,18 @@ mod tests {
     fn no_village_means_none() {
         let (w, _home) = world(1);
         assert!(village_info(&w).is_none());
+    }
+
+    #[test]
+    fn stream_labels_declare_every_derivation() {
+        let labels: Vec<&str> = stream_labels().iter().map(|(l, _)| *l).collect();
+        for expected in [
+            "settlement",
+            "settlement/name",
+            "settlement/name-pick",
+            "settlement/population",
+        ] {
+            assert!(labels.contains(&expected), "missing {expected}");
+        }
     }
 }

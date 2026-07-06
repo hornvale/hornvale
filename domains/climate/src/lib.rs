@@ -8,6 +8,11 @@ use hornvale_kernel::{
 /// Phenomenon kind for pervasive atmospheric conditions.
 pub const AMBIENT: &str = "ambient";
 
+/// Every seed-derivation label this crate uses (none yet).
+pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
+    Vec::new()
+}
+
 /// Register climate's contribution to the concept registry.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_phenomenon_kind(AMBIENT, "a pervasive atmospheric condition")

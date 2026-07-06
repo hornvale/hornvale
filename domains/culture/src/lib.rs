@@ -10,6 +10,11 @@ pub const HAS_CASTE: &str = "has-caste";
 /// The tier-0 caste structure, lowest to highest.
 pub const CASTES: [&str; 5] = ["slave", "fighter", "cook", "shaman", "chief"];
 
+/// Every seed-derivation label this crate uses (none yet).
+pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
+    Vec::new()
+}
+
 /// Register culture's contribution to the concept registry.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(HAS_CASTE, false, "a caste present in a settlement")

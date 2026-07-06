@@ -16,8 +16,24 @@ pub const TENET: &str = "tenet";
 /// Predicate recording which phenomenon kind a belief mythologizes.
 pub const DERIVED_FROM_PHENOMENON: &str = "derived-from-phenomenon";
 
+/// Seed-derivation labels used by this crate (permanent contracts).
+mod streams {
+    /// Root stream label for religion.
+    pub const ROOT: &str = "religion";
+    /// Epithet-pick stream.
+    pub const EPITHET: &str = "epithet";
+}
+
 const ETERNAL_EPITHETS: [&str; 3] = ["the Unblinking Eye", "the Ever-Flame", "the Gold Warden"];
 const CYCLIC_EPITHETS: [&str; 3] = ["the Returning One", "the Tidewalker", "the Promised Lamp"];
+
+/// Every seed-derivation label this crate uses, with docs.
+pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
+    vec![
+        ("religion", "root stream for religion generation"),
+        ("religion/epithet", "deity epithet pick"),
+    ]
+}
 
 /// Register religion's contribution to the concept registry.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
@@ -52,7 +68,7 @@ pub fn genesis(
     let Some(top) = phenomena.first() else {
         return Ok(None);
     };
-    let mut stream = world.seed.derive("religion").derive("epithet").stream();
+    let mut stream = world.seed.derive(streams::ROOT).derive(streams::EPITHET).stream();
     let tenet = match top.period_days {
         None => {
             let epithet = *stream.pick(&ETERNAL_EPITHETS).expect("non-empty");
@@ -208,5 +224,12 @@ mod tests {
         let explanation = why(&w, belief).unwrap();
         assert!(explanation.contains("celestial-body"));
         assert!(explanation.contains("religion"));
+    }
+
+    #[test]
+    fn stream_labels_declare_every_derivation() {
+        let labels: Vec<&str> = stream_labels().iter().map(|(l, _)| *l).collect();
+        assert!(labels.contains(&"religion"));
+        assert!(labels.contains(&"religion/epithet"));
     }
 }

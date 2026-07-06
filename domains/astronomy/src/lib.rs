@@ -9,6 +9,11 @@ use hornvale_kernel::{
 /// Phenomenon kind for bodies visible in the sky.
 pub const CELESTIAL_BODY: &str = "celestial-body";
 
+/// Every seed-derivation label this crate uses (none yet).
+pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
+    Vec::new()
+}
+
 /// Register astronomy's contribution to the concept registry.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_phenomenon_kind(CELESTIAL_BODY, "a body visible in the sky")

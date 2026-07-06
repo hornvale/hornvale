@@ -37,6 +37,7 @@ pub fn value_noise_2d(seed: Seed, x: f64, y: f64) -> f64 {
 /// Fractal Brownian motion over `value_noise_2d`, normalized to [0, 1).
 /// Gain 0.5, lacunarity 2.0. Octave 0 uses the seed directly so that
 /// one-octave fbm equals plain value noise. Panics if octaves == 0.
+/// Internally derives per-octave streams labeled "octave-{n}" (n ≥ 1).
 pub fn fbm_2d(seed: Seed, x: f64, y: f64, octaves: u32) -> f64 {
     assert!(octaves > 0, "fbm_2d: octaves must be >= 1");
     let mut sum = 0.0;

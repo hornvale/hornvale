@@ -9,6 +9,11 @@ pub const IS_PLACE: &str = "is-place";
 /// Predicate giving a place's biome.
 pub const BIOME: &str = "biome";
 
+/// Every seed-derivation label this crate uses (none yet).
+pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
+    Vec::new()
+}
+
 /// Register terrain's contribution to the concept registry.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(IS_PLACE, true, "subject is a traversable place")?;
