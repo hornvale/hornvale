@@ -2,6 +2,7 @@
 #![warn(missing_docs)]
 
 pub mod circulation;
+pub mod temperature;
 
 pub use circulation::{RotationRegime, band_count_for};
 
