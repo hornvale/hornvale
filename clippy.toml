@@ -1,0 +1,10 @@
+# Determinism bans (decisions 0001 and 0005): iteration order and wall-clock
+# time must never leak into worlds or artifacts. CI runs clippy with
+# `-D warnings`, so these are compile-time errors. A justified exception gets
+# a scoped `#[allow(clippy::disallowed_types)]` with a comment.
+disallowed-types = [
+    { path = "std::collections::HashMap", reason = "iteration order is nondeterministic; use BTreeMap (decision 0005)" },
+    { path = "std::collections::HashSet", reason = "iteration order is nondeterministic; use BTreeSet (decision 0005)" },
+    { path = "std::time::SystemTime", reason = "wall-clock time is forbidden; time is WorldTime (decision 0001)" },
+    { path = "std::time::Instant", reason = "wall-clock time is forbidden; time is WorldTime (decision 0001)" },
+]

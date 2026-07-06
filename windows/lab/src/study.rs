@@ -146,7 +146,7 @@ impl Study {
         }
 
         // Check for duplicate pin set labels
-        let mut seen_labels = std::collections::HashSet::new();
+        let mut seen_labels = std::collections::BTreeSet::new();
         for pin_set in &self.pin_sets {
             if !seen_labels.insert(&pin_set.label) {
                 return Err(StudyError {
@@ -184,7 +184,7 @@ impl Study {
             }
             MetricSelection::Named(names) => {
                 let reg = registry();
-                let valid_names: std::collections::HashSet<_> =
+                let valid_names: std::collections::BTreeSet<_> =
                     reg.iter().map(|m| m.name).collect();
                 for name in names {
                     if !valid_names.contains(name.as_str()) {
@@ -205,7 +205,7 @@ impl Study {
         match &self.metrics {
             MetricSelection::All(_) => Ok(reg),
             MetricSelection::Named(names) => {
-                let name_set: std::collections::HashSet<_> = names.iter().cloned().collect();
+                let name_set: std::collections::BTreeSet<_> = names.iter().cloned().collect();
                 Ok(reg
                     .into_iter()
                     .filter(|m| name_set.contains(m.name))

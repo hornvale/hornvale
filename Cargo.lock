@@ -16,6 +16,7 @@ dependencies = [
  "hornvale-settlement",
  "hornvale-terrain",
  "hornvale-worldgen",
+ "serde_json",
 ]
 
 [[package]]

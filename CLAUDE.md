@@ -52,7 +52,7 @@ mdbook build book          # or `mdbook serve book` to preview
 
 ## Architecture
 
-**Layering (constitutional, enforced via Cargo.toml):**
+**Layering (constitutional, enforced by `cli/tests/architecture.rs`):**
 `kernel/` → `domains/*` → `windows/*` → `cli/`.
 A domain crate depends on `hornvale-kernel` and **nothing else** — never
 another domain. Windows (`windows/almanac`) may depend on domains because
@@ -82,10 +82,13 @@ contradicts, lower ("coarse constrains fine").
 
 - Same seed + same pins → byte-identical worlds, almanacs, and artifacts.
   Tests assert this; CI's drift check enforces it on committed artifacts.
-- **No wall-clock time anywhere** (`std::time` is forbidden in kernel and
-  domain code). Time is `WorldTime { day: f64 }` — absolute standard days.
-- No `HashMap` in anything ordered or serialized — `BTreeMap`/`Vec` only.
-  Float sorting uses `total_cmp` with deterministic tie-breaks.
+- **No wall-clock time anywhere**. Time is `WorldTime { day: f64 }` —
+  absolute standard days.
+- No `HashMap`/`HashSet` — `BTreeMap`/`BTreeSet`/`Vec` only. Float sorting
+  uses `total_cmp` with deterministic tie-breaks. (This ban and the
+  wall-clock one are enforced workspace-wide by `clippy.toml`
+  `disallowed-types`; a justified exception gets a scoped
+  `#[allow(clippy::disallowed_types)]` with a comment.)
 - **Save-format contracts** (changing any silently corrupts every world):
   seed-derivation labels (declared as constants in each crate's `streams`
   module, published via `stream_labels()` into the generated manifest),
@@ -102,9 +105,10 @@ contradicts, lower ("coarse constrains fine").
 
 ## Constraints and conventions
 
-- Dependencies: `serde` + `serde_json` only, workspace-wide. No new crates
-  (no rand, chrono, clap, thiserror — randomness comes from the kernel's
-  `Seed`/`Stream`, CLI parsing is std-only).
+- Dependencies: `serde` + `serde_json` only, workspace-wide (allowlist
+  enforced by `cli/tests/architecture.rs`). No new crates (no rand, chrono,
+  clap, thiserror — randomness comes from the kernel's `Seed`/`Stream`, CLI
+  parsing is std-only).
 - **Models author, dice roll** (Constitution ratified constraint): no ML
   model ever runs in the sim core. Runtime generation is deterministic and
   seeded; models are offline authoring tools whose output is committed and

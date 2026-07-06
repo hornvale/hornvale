@@ -16,3 +16,6 @@ hornvale-religion = { path = "../domains/religion" }
 hornvale-almanac = { path = "../windows/almanac" }
 hornvale-worldgen = { path = "../windows/worldgen" }
 hornvale-lab = { path = "../windows/lab" }
+
+[dev-dependencies]
+serde_json = { workspace = true }
