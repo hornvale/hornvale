@@ -29,15 +29,21 @@ therefore the ones that maximize the number of checkable invariants, and the
 honest way to read every confidence tag below is as an estimate of how much
 of the idea can be verified rather than merely admired.
 
-This produces a gradient. Physics-grounded systems sit at the top (a claim
-either matches a formula or it doesn't). Systems grounded in a real
-scholarly literature sit in the middle (a generated joke can be checked
-against whether it cites norms the culture actually holds, even if whether it
-*lands* is a matter of taste). Purely aesthetic goals sit at the bottom and
-require a human in the loop rather than a bigger single ask — chart
-legibility and prose quality live here, and so, honestly, does "is this
-goblin funny." Naming which tier an ambition occupies is the first act of
-designing it.
+This produces a gradient, and the tiers deserve names — "name which tier an
+ambition occupies" is only a usable instruction when the tiers are crisp.
+**Formula-checked** systems sit at the top: a claim either matches a
+physical law or it doesn't (astronomy). **Calibration-checked** systems sit
+just below: the mechanisms are real (Hadley cells, lapse rates) but the
+constants are tuned to Earth as a single ground-truth sample, so tests can
+check distributions and qualitative reorganizations rather than exact
+values — climate is the first resident of this tier, and settlements will
+be the second. **Literature-checked** systems sit in the middle: a
+generated joke can be checked against whether it cites norms the culture
+actually holds, even if whether it *lands* is a matter of taste.
+**Taste-checked** goals sit at the bottom and require a human in the loop
+rather than a bigger single ask — chart legibility and prose quality live
+here, and so, honestly, does "is this goblin funny." Naming which tier an
+ambition occupies is the first act of designing it.
 
 ---
 
@@ -48,14 +54,26 @@ designing it.
    drift-checked distributions. It is listed first because it is the
    instrument that makes every other item on this list measurable: any
    claim that "cultures plagued by trickster gods develop more defensive
-   architecture" becomes a study one can actually run.
+   architecture" becomes a study one can actually run. One discipline,
+   ratified before the juicy claims arrive: determinism cuts both ways —
+   seeds can be swept until a desired pattern appears — so a study
+   preregisters its hypothesis in its JSON before the sweep runs, and the
+   book's laboratory pages publish negative results (decision 0016). That is
+   the difference between the Lab as instrument and the Lab as anecdote
+   generator.
 
 2. **The epistemic layer** *(architecture-ready; whether it is fun is open)*.
    Player and scholar knowledge as a second, provenance-tagged ledger,
    distinct from the true generative ledger. Maps become documents with
    authors and errors; source criticism becomes a mechanic. The single
    biggest under-ambition risk, because the architecture already supports it
-   and the payoff is large.
+   and the payoff is large. The tier-0 move needs none of the second ledger:
+   the almanac is already a *document*, currently written by an omniscient
+   narrator. Generate the same document from a vantage point — one
+   location's observable phenomena, one hemisphere of sky — and it becomes
+   an honest, wrong-by-omission text through the existing almanac-context
+   seam, with the diff against the true almanac supplying the measurable
+   wrongness score years early.
 
 3. **Deep language** *(high confidence on mechanics)*. Per-culture
    proto-languages plus deterministic sound-change laws applied over
@@ -76,6 +94,19 @@ designing it.
    system rule bases — while runtime generation stays purely deterministic.
    There is never a runtime model in the simulation core. See the ratified
    decision in the long-term-plan spec.
+
+6. **Paleoclimate as the first history** *(high confidence;
+   formula-checked — the top of the gradient)*. Everything built so far is
+   genesis-time: the world has a present but no past. The cheapest deep time
+   on offer is Milankovitch-style glacial cycling — a pure function of
+   orbital elements the astronomy domain already holds (obliquity,
+   eccentricity, precession), so ice ages derive from the existing sky with
+   no new draws. That yields strata: fossil shorelines, "this valley was
+   under ice," refugia — archaeology-grade material for myth ("the frost
+   retreated"), a past that predates all witnesses for the epistemic layer
+   to reconstruct and mis-reconstruct, and biogeography later. Social
+   history sits low on the verification gradient; this history sits at the
+   very top, which is why it should come first.
 
 ---
 
@@ -219,6 +250,13 @@ is a natural CLI verb — `hornvale explain --world w.json <thing>` — sibling
 to `almanac` and `scout`, with a REPL "more info" affordance over it, and it
 doubles as the tool for explaining a study's outliers.
 
+*Near-term hook:* tier-1 climate makes this even cheaper than the general
+story, because climate draws **nothing** — it is a pure dataflow with no
+stream draws to capture, and the answer to "why is this desert here?" is
+already computed as intermediate values (prevailing wind → upwind ridge →
+moisture stripped). The rain-shadow question is `explain`'s natural tier 0
+and a candidate Campaign 4 opener, not a someday-verb.
+
 The important distinction: the debug "why" and the player "why" are
 different objects. `explain` reads the *true* generative trace, omniscient.
 The player-facing counterpart is a generated **ethnography** built only from
@@ -227,6 +265,29 @@ unreliable informants). The *difference* between the two documents — what the
 player got wrong — is measurable, and therefore a score, a gameplay beat, or
 both. Asking an NPC to explain a joke is this in miniature: the explanation
 is a norms lesson, and needing it marks the asker an outsider.
+
+---
+
+## Two sequencing notes for the remaining Year-1 campaigns
+
+Both are about cashing dividends already banked, not proposing new systems.
+
+- **Tidal lock is the cheapest alien-religion generator.** The Year-1 exit
+  demo is two worlds differing only in astronomy yielding legibly different
+  religions, and Campaign 3c ships the precursor: rotation pins alone
+  reorganize an entire climate (banded versus day–night). Campaign 5 should
+  cash this deliberately — a culture on the locked world's terminator ring
+  has a *motionless* sun: no days, no seasons, no celestial cycles at all,
+  so its entire temporal religion must hang on moons, weather, and tides.
+  Radical religious divergence falls out of astronomy alone, before species
+  psychology exists.
+
+- **Hydrology is People-infrastructure, not Land-refinement.** Rivers are
+  banked as terrain polish (with erosion, out of Campaign 3's scope), but
+  they are the skeleton of Campaign 4: settlement placement, borders,
+  trade, and half of real-world toponymy hang on them. Sequencing rivers
+  should be decided on Campaign 4's grounds — possibly inside it — not
+  deferred as a geological nicety.
 
 ---
 
@@ -242,5 +303,7 @@ Turner, *The Ritual Process*, and Arnold van Gennep, *Rites of Passage*
 (liminality and sacred placement); Mary Douglas, *Purity and Danger* (queued,
 for taboo generation); James Ryan and the UCSC Expressive Intelligence Studio,
 *Talk of the Town* / *Bad News* (character-scale knowledge and gossip);
-Solodow, *Latin Alive* (prestige as a language parameter). The map moves when
-the reading feeds it — which is the collaborator's role, demonstrated.
+Solodow, *Latin Alive* (prestige as a language parameter); Milutin
+Milanković, orbital forcing of climate (paleoclimate as the first history).
+The map moves when the reading feeds it — which is the collaborator's role,
+demonstrated.
