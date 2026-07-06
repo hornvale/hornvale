@@ -27,6 +27,10 @@ jobs:
           cargo run -p hornvale-kernel --example first_light
           cargo run -p hornvale -- new --seed 42 --sky constant --out /tmp/hv-ci-42.json
           cargo run -p hornvale -- almanac --world /tmp/hv-ci-42.json > book/src/gallery/almanac-seed-42.md
+          cargo run -p hornvale -- new --seed 42 --out /tmp/hv-ci-sky.json
+          cargo run -p hornvale -- almanac --world /tmp/hv-ci-sky.json > book/src/gallery/almanac-seed-42-sky.md
+          cargo run -p hornvale -- new --seed 42 --rotation locked --out /tmp/hv-ci-locked.json
+          cargo run -p hornvale -- almanac --world /tmp/hv-ci-locked.json > book/src/gallery/almanac-seed-42-locked.md
           cargo run -p hornvale -- concepts > book/src/reference/concept-registry-generated.md
           cargo run -p hornvale -- streams > book/src/reference/stream-manifest-generated.md
           git diff --exit-code book/src/gallery/ book/src/reference/
