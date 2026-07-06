@@ -32,6 +32,47 @@ pub struct Geosphere {
     neighbors: Vec<Vec<CellId>>,
 }
 
+/// A value per cell, indexed by `CellId`. Built from a `Geosphere`, so it has
+/// exactly one entry per cell. This is the representation domains use for
+/// derived per-cell data (elevation, temperature, biome).
+#[derive(Clone, Debug, PartialEq)]
+pub struct CellMap<T> {
+    values: Vec<T>,
+}
+
+impl<T> CellMap<T> {
+    /// Build a `CellMap` by evaluating `f` at every cell of `geo`, in
+    /// ascending `CellId` order.
+    pub fn from_fn(geo: &Geosphere, mut f: impl FnMut(CellId) -> T) -> CellMap<T> {
+        CellMap {
+            values: geo.cells().map(&mut f).collect(),
+        }
+    }
+
+    /// The value at a cell.
+    pub fn get(&self, id: CellId) -> &T {
+        &self.values[id.0 as usize]
+    }
+
+    /// The number of cells.
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
+
+    /// Whether the map is empty.
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
+    }
+
+    /// Iterate `(CellId, &value)` pairs in ascending `CellId` order.
+    pub fn iter(&self) -> impl Iterator<Item = (CellId, &T)> {
+        self.values
+            .iter()
+            .enumerate()
+            .map(|(i, v)| (CellId(i as u32), v))
+    }
+}
+
 /// Normalize a 3-vector to unit length.
 fn normalize(v: [f64; 3]) -> [f64; 3] {
     let [x, y, z] = v;
@@ -296,5 +337,32 @@ mod tests {
             c.latitude
         );
         assert!(c.longitude > -180.0 && c.longitude <= 180.0);
+    }
+
+    #[test]
+    fn cellmap_covers_every_cell_and_indexes_by_id() {
+        let geo = Geosphere::new(2);
+        let doubled = CellMap::from_fn(&geo, |id| id.0 * 2);
+        assert_eq!(doubled.len(), geo.cell_count());
+        assert!(!doubled.is_empty());
+        for id in geo.cells() {
+            assert_eq!(*doubled.get(id), id.0 * 2);
+        }
+        let total: u32 = doubled.iter().map(|(_, v)| *v).sum();
+        let expected: u32 = geo.cells().map(|id| id.0 * 2).sum();
+        assert_eq!(total, expected);
+    }
+
+    #[test]
+    fn geosphere_is_deterministic() {
+        // Same level -> byte-identical mesh (positions, neighbors, coords).
+        let a = Geosphere::new(4);
+        let b = Geosphere::new(4);
+        assert_eq!(a.cell_count(), b.cell_count());
+        for id in a.cells() {
+            assert_eq!(a.position(id), b.position(id), "position drift at {id:?}");
+            assert_eq!(a.neighbors(id), b.neighbors(id), "neighbor drift at {id:?}");
+            assert_eq!(a.coord(id), b.coord(id), "coord drift at {id:?}");
+        }
     }
 }

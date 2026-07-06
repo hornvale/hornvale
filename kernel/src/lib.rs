@@ -14,7 +14,7 @@ pub mod seed;
 pub mod world;
 
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
-pub use geosphere::{CellId, Geosphere};
+pub use geosphere::{CellId, CellMap, GeoCoord, Geosphere};
 pub use ledger::{EntityId, Fact, Ledger, LedgerError, Value};
 pub use noise::{fbm_2d, value_noise_2d};
 pub use phenomena::{ObserverContext, PhenomenaSource, Phenomenon, observe};
