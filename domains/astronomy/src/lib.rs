@@ -7,9 +7,9 @@ pub mod pins;
 pub mod star;
 pub mod streams;
 
-pub use anchor::{generate_anchor, Anchor, Rotation};
+pub use anchor::{Anchor, Rotation, generate_anchor};
 pub use pins::{GenesisError, NeighborClass, RotationPin, SkyPins};
-pub use star::{generate_star, Star};
+pub use star::{Star, generate_star};
 
 use hornvale_kernel::{
     ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, RegistryError, WorldTime,
@@ -29,8 +29,14 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ("astronomy/orbit", "anchor orbital distance draw"),
         ("astronomy/obliquity", "axial tilt draw"),
         ("astronomy/moon-count", "how many moons"),
-        ("astronomy/moons", "per-moon mass/distance draws (sequential attempts)"),
-        ("astronomy/neighbors", "notable-neighbor class/distance draws"),
+        (
+            "astronomy/moons",
+            "per-moon mass/distance draws (sequential attempts)",
+        ),
+        (
+            "astronomy/neighbors",
+            "notable-neighbor class/distance draws",
+        ),
     ]
 }
 

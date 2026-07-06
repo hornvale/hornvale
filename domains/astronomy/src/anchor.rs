@@ -43,7 +43,12 @@ pub fn generate_anchor(
     star: &Star,
     pins: &SkyPins,
 ) -> Result<Anchor, GenesisError> {
-    let mass_earths = 0.5 + astronomy_seed.derive(streams::ANCHOR_MASS).stream().next_f64() * 1.5;
+    let mass_earths = 0.5
+        + astronomy_seed
+            .derive(streams::ANCHOR_MASS)
+            .stream()
+            .next_f64()
+            * 1.5;
 
     let rotation = match &pins.rotation {
         Some(RotationPin::Locked) => Rotation::Locked,
@@ -111,7 +116,13 @@ pub fn generate_anchor(
             }
             deg
         }
-        None => astronomy_seed.derive(streams::OBLIQUITY).stream().next_f64() * 35.0,
+        None => {
+            astronomy_seed
+                .derive(streams::OBLIQUITY)
+                .stream()
+                .next_f64()
+                * 35.0
+        }
     };
 
     Ok(Anchor {
