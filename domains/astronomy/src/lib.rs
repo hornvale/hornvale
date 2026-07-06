@@ -9,6 +9,7 @@ pub mod pins;
 pub mod star;
 pub mod streams;
 pub mod system;
+pub mod units;
 
 pub use anchor::{Anchor, Rotation, generate_anchor};
 pub use moons::{Moon, generate_moons, hill_radius_mm};
@@ -16,6 +17,10 @@ pub use neighborhood::{Neighbor, class_luminosity, generate_neighbors};
 pub use pins::{GenesisError, NeighborClass, RotationPin, SkyPins};
 pub use star::{Star, generate_star};
 pub use system::{StarSystem, generate};
+pub use units::{
+    Au, Degrees, EarthMasses, LightYears, LocalDays, LunarMasses, Mm, SolarLuminosities,
+    SolarMasses, StdDays, UnitError,
+};
 
 use hornvale_kernel::{
     ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, RegistryError, WorldTime,
