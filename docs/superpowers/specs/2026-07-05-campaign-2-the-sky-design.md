@@ -217,11 +217,17 @@ naming deferral) alongside the untouched `ConstantSun`:
 
 ## 9. Exit criterion and artifacts
 
-- **Exit demo:** `hornvale new --seed 42 --moons 0` vs `--moons 2` (same
-  seed, one pin different) produce almanacs whose religions **legibly
-  differ** — eternal-watcher vs cyclic-deity tenets — and whose calendars
-  differ for stated physical reasons. This is the enrichment thesis's first
-  real data point.
+- **Exit demo (amended 2026-07-06 — §7/§9 conflict found during 2b design):**
+  tier-0 religion mythologizes only the *top* phenomenon, and the sun
+  out-ranks any moon in both worlds, so a moon pin cannot flip the belief
+  without changing religion (which §7 forbids this campaign). The honest
+  pair: **`--rotation normal` vs `--rotation locked`** on the same seed
+  flips the religion legibly (cyclic deity vs eternal watcher), while
+  **`--moons 0` vs `--moons 2`** flips the calendar and night sky for
+  stated physical reasons with the belief held constant. Both pairs are the
+  exit demo; beliefs that react to moons arrive with Campaign 5's pantheon
+  work. This is still the enrichment thesis's first real data point — one
+  pinned cause, legible downstream difference.
 - **Gallery:** the paired almanacs, committed and CI drift-checked like
   seed 42's; optionally a third variant (`--neighbor blue-giant`).
 - **Book:** astronomy domain chapter rewritten for tiers 1–2 (with the
