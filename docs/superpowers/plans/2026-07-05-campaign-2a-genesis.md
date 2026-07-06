@@ -1123,7 +1123,7 @@ git commit -m "feat(astronomy): anchor world in the habitable zone by constructi
 **Interfaces:**
 - Consumes: `Anchor`, `Star`, `SkyPins`, `GenesisError`, `streams`.
 - Produces: `Moon { mass_lunar: f64, distance_mm: f64, period_std_days: f64, angular_diameter_rel: f64, tide_rel: f64 }` (derives `Debug, Clone, PartialEq`); `generate_moons(astronomy_seed: Seed, star: &Star, anchor: &Anchor, pins: &SkyPins) -> Result<Vec<Moon>, GenesisError>` (sorted by distance ascending).
-- Physics/constraints from Global Constraints, verbatim. Attempt budget: 32 per moon; exhaustion → `UnsatisfiablePin` (pin name `moons` if pinned, else the internal draw is re-reported under `moons` with reason "drawn configuration exhausted its stability budget" — deterministic either way).
+- Physics/constraints from Global Constraints, verbatim. Attempt budget: 128 per moon; exhaustion with a pinned count → `UnsatisfiablePin`; with a drawn count → accept the moons admitted so far (the system cannot hold another).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1250,7 +1250,7 @@ pub fn hill_radius_mm(star: &Star, anchor: &Anchor) -> f64 {
         * 1.496e5
 }
 
-const ATTEMPTS_PER_MOON: u32 = 32;
+const ATTEMPTS_PER_MOON: u32 = 128;
 const TIDE_CAP: f64 = 8.0;
 
 fn derive_moon(mass_lunar: f64, distance_mm: f64, anchor: &Anchor) -> Moon {
@@ -1716,4 +1716,4 @@ git commit -m "feat(astronomy): sky genesis assembly with the property battery"
   drawn configuration exhausts the moon budget; the plan directs reporting
   over loosening. Ranges were chosen so admission is easy (distance floor 60
   Mm is 3× Roche; tide cap 8 admits three heavy close moons), so this is
-  unlikely but not impossible.
+  unlikely but not impossible. (Fired during implementation: seeds 10/15/42/47/55/58 exhausted 32 attempts on 3-moon configurations — spacing is the binding constraint. Budget raised to 128 pre-merge; inequalities and ranges unchanged. Seed 10 additionally has NO feasible third slot at any budget, so drawn-count exhaustion now degrades honestly while pinned counts still fail loudly per spec §4.3.)

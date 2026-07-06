@@ -29,7 +29,7 @@ pub fn hill_radius_mm(star: &Star, anchor: &Anchor) -> f64 {
         * 1.496e5
 }
 
-const ATTEMPTS_PER_MOON: u32 = 32;
+const ATTEMPTS_PER_MOON: u32 = 128;
 const TIDE_CAP: f64 = 8.0;
 
 fn derive_moon(mass_lunar: f64, distance_mm: f64, anchor: &Anchor) -> Moon {
@@ -100,14 +100,20 @@ pub fn generate_moons(
             }
         }
         if !admitted {
-            return Err(GenesisError::UnsatisfiablePin {
-                pin: "moons".to_string(),
-                reason: format!(
-                    "moon {} of {count} found no stable orbit within the attempt budget \
-                     (Hill radius {hill:.0} Mm, tide cap {TIDE_CAP})",
-                    index + 1
-                ),
-            });
+            if pins.moons.is_some() {
+                return Err(GenesisError::UnsatisfiablePin {
+                    pin: "moons".to_string(),
+                    reason: format!(
+                        "moon {} of {count} found no stable orbit within the attempt budget \
+                         (Hill radius {hill:.0} Mm, tide cap {TIDE_CAP})",
+                        index + 1
+                    ),
+                });
+            }
+            // Drawn count: this system genuinely cannot hold another stable
+            // moon — accept the ones admitted (spec §4.3: loud failure is
+            // for pins; drawn configurations degrade honestly).
+            break;
         }
     }
 
@@ -151,6 +157,15 @@ mod tests {
             generate_moons(Seed(42), &star, &anchor, &pins),
             Err(GenesisError::InvalidPin { .. })
         ));
+    }
+
+    #[test]
+    fn drawn_counts_degrade_when_no_stable_slot_exists() {
+        // Seed 10 draws 3 moons but has no feasible third slot; unpinned
+        // generation degrades to the admitted set instead of failing.
+        let (star, anchor) = system(10);
+        let moons = generate_moons(Seed(10), &star, &anchor, &SkyPins::default()).unwrap();
+        assert!(moons.len() < 3 && !moons.is_empty());
     }
 
     #[test]
