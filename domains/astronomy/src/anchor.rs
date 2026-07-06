@@ -65,7 +65,8 @@ pub fn generate_anchor(
         }
         Some(RotationPin::Normal) | None => {
             let mut stream = astronomy_seed.derive(streams::ROTATION).stream();
-            let locked = pins.rotation.is_none() && stream.next_f64() < 0.05;
+            let lock_roll = stream.next_f64();
+            let locked = pins.rotation.is_none() && lock_roll < 0.05;
             if locked {
                 Rotation::Locked
             } else {
@@ -187,6 +188,22 @@ mod tests {
         };
         let a = generate_anchor(Seed(1), &s, &pins).unwrap();
         assert_eq!(a.rotation, Rotation::Spinning { day_std_days: 1.25 });
+    }
+
+    #[test]
+    fn normal_pin_matches_the_unpinned_draw_for_spinning_worlds() {
+        let s = star();
+        let default_anchor = generate_anchor(Seed(42), &s, &SkyPins::default()).unwrap();
+        assert!(
+            matches!(default_anchor.rotation, Rotation::Spinning { .. }),
+            "seed 42's default anchor must be Spinning for this test to be meaningful"
+        );
+        let pins = SkyPins {
+            rotation: Some(RotationPin::Normal),
+            ..SkyPins::default()
+        };
+        let pinned_anchor = generate_anchor(Seed(42), &s, &pins).unwrap();
+        assert_eq!(pinned_anchor, default_anchor);
     }
 
     #[test]
