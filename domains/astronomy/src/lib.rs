@@ -2,10 +2,12 @@
 //! astronomy only through phenomena — never this crate.
 #![warn(missing_docs)]
 
+pub mod anchor;
 pub mod pins;
 pub mod star;
 pub mod streams;
 
+pub use anchor::{generate_anchor, Anchor, Rotation};
 pub use pins::{GenesisError, NeighborClass, RotationPin, SkyPins};
 pub use star::{generate_star, Star};
 
