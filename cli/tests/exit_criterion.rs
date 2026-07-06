@@ -16,6 +16,10 @@ fn temp_dir(tag: &str) -> PathBuf {
 }
 
 fn make_world(dir: &std::path::Path, seed: u64) -> PathBuf {
+    make_world_with(dir, seed, &[])
+}
+
+fn make_world_with(dir: &std::path::Path, seed: u64, extra_args: &[&str]) -> PathBuf {
     let path = dir.join(format!("world-{seed}.json"));
     let out = bin()
         .args([
@@ -25,6 +29,7 @@ fn make_world(dir: &std::path::Path, seed: u64) -> PathBuf {
             "--out",
             path.to_str().unwrap(),
         ])
+        .args(extra_args)
         .output()
         .unwrap();
     assert!(out.status.success(), "new failed: {:?}", out);
@@ -72,8 +77,12 @@ fn almanac_is_byte_deterministic_and_seed_sensitive() {
 
 #[test]
 fn repl_answers_sky_village_and_belief() {
+    // This is the campaign-1b (tier-0) exit criterion: it asserts the
+    // constant sun's "zenith" wording specifically, so it pins --sky
+    // constant explicitly now that `new`'s default has flipped to
+    // generated (spec §8, Task 7).
     let dir = temp_dir("repl");
-    let world = make_world(&dir, 42);
+    let world = make_world_with(&dir, 42, &["--sky", "constant"]);
     let mut child = bin()
         .args(["repl", "--world", world.to_str().unwrap()])
         .stdin(Stdio::piped())
