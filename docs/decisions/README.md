@@ -55,3 +55,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0013](0013-definition-of-done-includes-the-book.md) | Definition of Done includes the project book | Accepted |
 | [0014](0014-fact-day-stays-bare-option.md) | `Fact.day` stays a bare `Option<f64>` | Accepted |
 | [0015](0015-predicatedef-name-duplicates-key.md) | `PredicateDef.name` duplicates its registry key | Accepted |
+| [0016](0016-studies-preregister-hypotheses.md) | Studies preregister their hypotheses | Accepted |
