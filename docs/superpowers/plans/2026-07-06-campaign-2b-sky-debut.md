@@ -1115,8 +1115,8 @@ Six tests, exact assertions:
 5. `scout_is_deterministic_and_finds_three_moon_worlds`:
    `scout --moons 3 --limit 2` twice → identical stdout, contains at least
    one `"seed "` line and a final `"scanned"` line.
-6. `refusals_are_recorded_in_the_world`: `new --seed 10` (default pins,
-   generated sky); almanac contains `"was sought"` under Notes from genesis.
+6. `refusals_are_recorded_in_the_world`: `new --seed 23` (default pins,
+   generated sky); almanac contains `"was sought"` under Notes from genesis. (Seed 23, not 10: the full pipeline derives the astronomy domain seed, so the degrading world differs from moons.rs unit-test seeds — Task 6 report.)
 
 - [ ] **Step 2: Run (expect green), gate, commit**
 
