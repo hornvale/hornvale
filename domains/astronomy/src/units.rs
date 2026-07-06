@@ -119,7 +119,7 @@ quantity!(
     "Orbital distance in AU."
 );
 quantity!(
-    Mm,
+    Megameters,
     "megameters",
     positive,
     "Distance in Mm (1000 km; Luna orbits at 384.4)."
