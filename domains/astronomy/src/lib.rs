@@ -2,6 +2,10 @@
 //! astronomy only through phenomena — never this crate.
 #![warn(missing_docs)]
 
+pub mod pins;
+
+pub use pins::{GenesisError, NeighborClass, RotationPin, SkyPins};
+
 use hornvale_kernel::{
     ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, RegistryError, WorldTime,
 };
