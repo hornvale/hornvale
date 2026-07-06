@@ -68,7 +68,11 @@ pub fn genesis(
     let Some(top) = phenomena.first() else {
         return Ok(None);
     };
-    let mut stream = world.seed.derive(streams::ROOT).derive(streams::EPITHET).stream();
+    let mut stream = world
+        .seed
+        .derive(streams::ROOT)
+        .derive(streams::EPITHET)
+        .stream();
     let tenet = match top.period_days {
         None => {
             let epithet = *stream.pick(&ETERNAL_EPITHETS).expect("non-empty");

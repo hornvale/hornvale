@@ -37,7 +37,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     vec![
         ("settlement", "root stream for settlement generation"),
         ("settlement/name", "candidate village names"),
-        ("settlement/name-pick", "which candidate survives refinement"),
+        (
+            "settlement/name-pick",
+            "which candidate survives refinement",
+        ),
         ("settlement/population", "village population draw"),
     ]
 }
@@ -90,9 +93,19 @@ fn fact(subject: EntityId, predicate: &str, object: Value, home: EntityId) -> Fa
 pub fn genesis(world: &mut World, home: EntityId) -> Result<EntityId, LedgerError> {
     let village = world.ledger.mint_entity();
 
-    let candidates = candidate_names(&mut world.seed.derive(streams::ROOT).derive(streams::NAME).stream());
+    let candidates = candidate_names(
+        &mut world
+            .seed
+            .derive(streams::ROOT)
+            .derive(streams::NAME)
+            .stream(),
+    );
     let name_fact = |n: &String| fact(village, hornvale_kernel::NAME, Value::Text(n.clone()), home);
-    let mut pick_stream = world.seed.derive(streams::ROOT).derive(streams::NAME_PICK).stream();
+    let mut pick_stream = world
+        .seed
+        .derive(streams::ROOT)
+        .derive(streams::NAME_PICK)
+        .stream();
     let idx = choose_consistent(
         &mut pick_stream,
         &world.ledger,
