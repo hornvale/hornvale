@@ -5,7 +5,7 @@
 //! `Field`. This is the spatial substrate the terrain and climate domains
 //! compute over.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Identifier for a cell — an index into the mesh's vertices.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -19,9 +19,8 @@ pub struct Geosphere {
     level: u32,
     /// Unit-sphere position per cell, indexed by `CellId`.
     positions: Vec<[f64; 3]>,
-    /// Triangular faces as cell-index triples (used to derive adjacency).
-    #[allow(dead_code)]
-    faces: Vec<[u32; 3]>,
+    /// Adjacent cells per cell, ascending, indexed by `CellId`.
+    neighbors: Vec<Vec<CellId>>,
 }
 
 /// Normalize a 3-vector to unit length.
@@ -110,6 +109,21 @@ fn subdivide(positions: Vec<[f64; 3]>, faces: Vec<[u32; 3]>) -> (Vec<[f64; 3]>, 
     (positions, new_faces)
 }
 
+/// Derive per-cell adjacency from the triangular faces: two cells are
+/// adjacent iff they share a face edge. Neighbor lists are sorted ascending.
+fn build_neighbors(cell_count: usize, faces: &[[u32; 3]]) -> Vec<Vec<CellId>> {
+    let mut sets: Vec<BTreeSet<u32>> = vec![BTreeSet::new(); cell_count];
+    for &[a, b, c] in faces {
+        for (u, v) in [(a, b), (b, c), (c, a)] {
+            sets[u as usize].insert(v);
+            sets[v as usize].insert(u);
+        }
+    }
+    sets.into_iter()
+        .map(|s| s.into_iter().map(CellId).collect())
+        .collect()
+}
+
 impl Geosphere {
     /// Build an icosphere subdivided `level` times. (Task 1 handles the base;
     /// Task 2 adds subdivision for `level > 0`.)
@@ -118,10 +132,11 @@ impl Geosphere {
         for _ in 0..level {
             (positions, faces) = subdivide(positions, faces);
         }
+        let neighbors = build_neighbors(positions.len(), &faces);
         Geosphere {
             level,
             positions,
-            faces,
+            neighbors,
         }
     }
 
@@ -143,6 +158,11 @@ impl Geosphere {
     /// The unit-sphere position of a cell.
     pub fn position(&self, id: CellId) -> [f64; 3] {
         self.positions[id.0 as usize]
+    }
+
+    /// The cells adjacent to `id`, in ascending `CellId` order.
+    pub fn neighbors(&self, id: CellId) -> &[CellId] {
+        &self.neighbors[id.0 as usize]
     }
 }
 
@@ -185,5 +205,39 @@ mod tests {
                 "cell {id:?} not unit-length: {len}"
             );
         }
+    }
+
+    #[test]
+    fn adjacency_is_mutual_and_has_the_right_valence() {
+        let geo = Geosphere::new(3);
+        let mut fives = 0usize;
+        let mut sixes = 0usize;
+        for id in geo.cells() {
+            let ns = geo.neighbors(id);
+            match ns.len() {
+                5 => fives += 1,
+                6 => sixes += 1,
+                other => panic!("cell {id:?} has {other} neighbors (expected 5 or 6)"),
+            }
+            // sorted ascending, no self, no duplicates
+            let mut sorted = ns.to_vec();
+            sorted.sort();
+            sorted.dedup();
+            assert_eq!(
+                sorted.as_slice(),
+                ns,
+                "neighbors of {id:?} not sorted/deduped"
+            );
+            assert!(!ns.contains(&id), "cell {id:?} lists itself as a neighbor");
+            // mutual: each neighbor lists id back
+            for &n in ns {
+                assert!(
+                    geo.neighbors(n).contains(&id),
+                    "{n:?} not mutual with {id:?}"
+                );
+            }
+        }
+        assert_eq!(fives, 12, "exactly twelve pentagonal cells expected");
+        assert_eq!(sixes, geo.cell_count() - 12);
     }
 }
