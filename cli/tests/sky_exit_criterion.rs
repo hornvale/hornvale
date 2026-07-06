@@ -185,30 +185,29 @@ fn graded_pins_never_fail_above_min() {
     let dir = temp_dir("pins");
 
     for seed in 1..=20 {
-        // Test with both --moons 0 and --moons 3
-        for moons in &[0, 3] {
-            let out = bin()
-                .args([
-                    "new",
-                    "--seed",
-                    &seed.to_string(),
-                    "--moons",
-                    &moons.to_string(),
-                    "--out",
-                    dir.join(format!("world-{seed}-{moons}.json"))
-                        .to_str()
-                        .unwrap(),
-                ])
-                .output()
-                .unwrap();
-            assert!(
-                out.status.success(),
-                "new --seed {} --moons {} failed: {:?}",
-                seed,
+        // Test with graded pin --moons 0+3 (min 0, never hard-fails)
+        let moons = "0+3";
+        let out = bin()
+            .args([
+                "new",
+                "--seed",
+                &seed.to_string(),
+                "--moons",
                 moons,
-                out
-            );
-        }
+                "--out",
+                dir.join(format!("world-{seed}-graded.json"))
+                    .to_str()
+                    .unwrap(),
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "new --seed {} --moons {} failed: {:?}",
+            seed,
+            moons,
+            out
+        );
     }
 
     std::fs::remove_dir_all(&dir).unwrap();
