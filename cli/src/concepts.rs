@@ -28,7 +28,7 @@ pub fn render_concepts(registry: &ConceptRegistry) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world_builder::register_all;
+    use hornvale_worldgen::register_all;
 
     #[test]
     fn renders_all_registered_concepts() {

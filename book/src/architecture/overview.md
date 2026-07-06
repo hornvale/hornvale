@@ -21,8 +21,12 @@ Campaign 1b, six domains exist at tier 0 — see
 **The Windows** — how humans see in. The REPL (interrogate any layer of a
 generated world), and the Almanac (generated world documents: calendars,
 maps, ethnographies, mythologies — the demonstration artifact each campaign
-must produce). Both exist as of Campaign 1b, as commands of the `hornvale`
-tool.
+must produce), both as of Campaign 1b. Campaign L0 added two more: a
+composition-root library (`worldgen`, where all domains are wired into a
+world — extracted so both the CLI and other windows build worlds the same
+way) and the **Laboratory** (`lab`), a batch harness that sweeps thousands
+of seeds and publishes measured distributions as drift-checked artifacts.
+A window may depend on a domain, or on another window — never the reverse.
 
 **The Game** — the eventual thin skin: a player character as a situated,
 restricted, sensory view of the same query surface every other window uses.

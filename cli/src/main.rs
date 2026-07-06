@@ -4,10 +4,10 @@
 mod concepts;
 mod repl;
 mod streams;
-mod world_builder;
 
 use hornvale_astronomy::{SkyPins, parse_pin};
 use hornvale_kernel::{Seed, World};
+use hornvale_worldgen as world_builder;
 use std::process::ExitCode;
 
 const SKY_FLAGS: &str =
@@ -31,6 +31,8 @@ usage:
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
+  hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
+  hornvale lab list-metrics                list every metric in the lab's registry
 
 sky flags (shared by new and scout):
 ";
@@ -48,6 +50,7 @@ fn main() -> ExitCode {
         Some("repl") => cmd_repl(&args),
         Some("concepts") => cmd_concepts(),
         Some("streams") => cmd_streams(),
+        Some("lab") => cmd_lab(&args),
         Some("help") | None => {
             print!("{}", usage());
             Ok(())
@@ -204,6 +207,47 @@ fn cmd_streams() -> Result<(), String> {
     Ok(())
 }
 
+/// Dispatch `lab` subcommands: `run <PATH>` and `list-metrics`.
+fn cmd_lab(args: &[String]) -> Result<(), String> {
+    match args.get(1).map(String::as_str) {
+        Some("run") => cmd_lab_run(args),
+        Some("list-metrics") => cmd_lab_list_metrics(),
+        Some(other) => Err(format!("lab: unknown subcommand '{other}'\n{}", usage())),
+        None => Err(format!(
+            "lab: requires a subcommand (run <PATH>|list-metrics)\n{}",
+            usage()
+        )),
+    }
+}
+
+/// Run a study end to end: load, run, write the CSV to `lab-out/`, publish
+/// the summary and charts into the book, and report a one-line tally.
+fn cmd_lab_run(args: &[String]) -> Result<(), String> {
+    let path = args.get(2).ok_or("lab run requires <PATH>")?;
+    let study = hornvale_lab::load_study(std::path::Path::new(path)).map_err(|e| e.to_string())?;
+    let result = hornvale_lab::run(&study).map_err(|e| e.to_string())?;
+    hornvale_lab::write_csv(&result, std::path::Path::new("lab-out")).map_err(|e| e.to_string())?;
+    let written = hornvale_lab::publish(
+        &result,
+        std::path::Path::new("book/src/laboratory/generated"),
+    )
+    .map_err(|e| e.to_string())?;
+    let refusals = result.rows.iter().filter(|r| r.refusal.is_some()).count();
+    println!(
+        "study {}: {} rows, {} refusals; summary + {} charts published.",
+        result.study.name,
+        result.rows.len(),
+        refusals,
+        written.len() - 1
+    );
+    Ok(())
+}
+
+fn cmd_lab_list_metrics() -> Result<(), String> {
+    print!("{}", hornvale_lab::render_metric_list());
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -341,6 +385,36 @@ mod tests {
     #[test]
     fn usage_mentions_scout() {
         assert!(USAGE.contains("scout"));
+    }
+
+    #[test]
+    fn usage_mentions_lab() {
+        assert!(USAGE.contains("lab run"));
+        assert!(USAGE.contains("list-metrics"));
+    }
+
+    #[test]
+    fn lab_run_unknown_path_is_an_error() {
+        let err = cmd_lab(&args(&["lab", "run", "studies/does-not-exist.study.json"])).unwrap_err();
+        assert!(!err.is_empty());
+    }
+
+    #[test]
+    fn lab_unknown_subcommand_is_an_error() {
+        let err = cmd_lab(&args(&["lab", "bogus"])).unwrap_err();
+        assert!(err.contains("bogus"));
+    }
+
+    #[test]
+    fn lab_with_no_subcommand_is_an_error() {
+        let err = cmd_lab(&args(&["lab"])).unwrap_err();
+        assert!(err.contains("subcommand"));
+    }
+
+    #[test]
+    fn list_metrics_output_contains_belief_kind() {
+        let output = hornvale_lab::render_metric_list();
+        assert!(output.contains("belief-kind"));
     }
 
     #[test]

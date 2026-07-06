@@ -31,12 +31,18 @@
 - [Campaign 1b: The Tier-0 Cascade](./chronicle/campaign-1b.md)
 - [Campaign 2a: System Genesis](./chronicle/campaign-2a.md)
 - [Campaign 2b: The Sky's Debut](./chronicle/campaign-2b.md)
+- [Campaign L0: The Laboratory](./chronicle/campaign-l0-lab.md)
 
 # The Gallery
 
 - [First Light (seed 42)](./gallery/first-light.md)
 - [The Almanac of Seed 42](./gallery/almanac.md)
 - [The Sky of Seed 42](./gallery/the-sky.md)
+
+# The Laboratory
+
+- [The Laboratory](./laboratory/overview.md)
+- [Study 001: The Census of Skies](./laboratory/study-001.md)
 
 # Reference
 

@@ -11,9 +11,11 @@ dependencies = [
  "hornvale-climate",
  "hornvale-culture",
  "hornvale-kernel",
+ "hornvale-lab",
  "hornvale-religion",
  "hornvale-settlement",
  "hornvale-terrain",
+ "hornvale-worldgen",
 ]
 
 [[package]]
@@ -59,6 +61,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-lab"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-kernel",
+ "hornvale-religion",
+ "hornvale-worldgen",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "hornvale-religion"
 version = "0.1.0"
 dependencies = [
@@ -77,6 +91,20 @@ name = "hornvale-terrain"
 version = "0.1.0"
 dependencies = [
  "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-worldgen"
+version = "0.1.0"
+dependencies = [
+ "hornvale-almanac",
+ "hornvale-astronomy",
+ "hornvale-climate",
+ "hornvale-culture",
+ "hornvale-kernel",
+ "hornvale-religion",
+ "hornvale-settlement",
+ "hornvale-terrain",
 ]
 
 [[package]]

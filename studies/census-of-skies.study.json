@@ -1,0 +1,5 @@
+{ "name": "census-of-skies",
+  "description": "Distributions of everything the sky generator produces, plus the belief split as instrument calibration.",
+  "seeds": { "from": 0, "count": 10000 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": "all" }

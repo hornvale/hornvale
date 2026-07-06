@@ -1,0 +1,23 @@
+<svg viewBox="0 0 640 300" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif, system-ui, sans-serif">
+<text x="56" y="20" font-size="13" font-weight="600" fill="currentColor">neighbor-count — default</text>
+<line x1="56.0" y1="186.0" x2="624.0" y2="186.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="186.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">1250</text>
+<line x1="56.0" y1="136.0" x2="624.0" y2="136.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="136.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">2500</text>
+<line x1="56.0" y1="86.0" x2="624.0" y2="86.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">3750</text>
+<line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">5000</text>
+<rect x="66.7" y="137.6" width="120.7" height="98.4" fill="#5b8dd9" rx="2" />
+<text x="127.0" y="133.6" font-size="11" fill="currentColor" text-anchor="middle">2460</text>
+<text x="127.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">2</text>
+<rect x="208.7" y="135.9" width="120.7" height="100.1" fill="#5b8dd9" rx="2" />
+<text x="269.0" y="131.9" font-size="11" fill="currentColor" text-anchor="middle">2502</text>
+<text x="269.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">3</text>
+<rect x="350.6" y="132.5" width="120.7" height="103.5" fill="#5b8dd9" rx="2" />
+<text x="411.0" y="128.5" font-size="11" fill="currentColor" text-anchor="middle">2588</text>
+<text x="411.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">4</text>
+<rect x="492.6" y="138.0" width="120.7" height="98.0" fill="#5b8dd9" rx="2" />
+<text x="553.0" y="134.0" font-size="11" fill="currentColor" text-anchor="middle">2450</text>
+<text x="553.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">5</text>
+</svg>

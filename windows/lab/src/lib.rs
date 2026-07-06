@@ -1,0 +1,16 @@
+//! Hornvale laboratory: batch studies over generated worlds.
+#![warn(missing_docs)]
+
+pub mod chart;
+mod metrics;
+pub mod publish;
+pub mod runner;
+pub mod study;
+pub mod summary;
+
+pub use chart::{bar_chart_svg, charts_for};
+pub use metrics::{Metric, MetricValue, SummaryKind, WorldView, registry, render_metric_list};
+pub use publish::publish;
+pub use runner::{Row, RunResult, run, write_csv};
+pub use study::{MetricSelection, PinSet, Seeds, Study, StudyError, load_study};
+pub use summary::render_summary;

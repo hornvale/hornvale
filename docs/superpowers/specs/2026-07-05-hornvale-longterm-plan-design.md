@@ -60,6 +60,17 @@ Six principles that settle future design questions. When in doubt, defer to thes
    new domain must never require editing an existing one. Agility and clean
    extensibility outrank elegance, performance, and completeness.
 
+**Ratified constraint (2026-07-06) — models author, dice roll.** A direct
+consequence of Principle 3, stated explicitly because it will be tempting to
+violate: **no machine-learning model ever runs inside the simulation core.**
+Language models are welcome as *offline authoring amplifiers* — they may
+produce data that is then committed and drift-checked (grammars, motif
+libraries, lexicons, expert-system rule bases) — but runtime generation is
+purely deterministic, seeded, and inspectable. A world's content is a
+function of its seed and ledger, never of a model invocation at play time.
+Rationale and the wider frontier this sits in: `docs/vision/frontier.md`
+(non-binding).
+
 ## 3. Architecture
 
 Four layers, bottom to top.

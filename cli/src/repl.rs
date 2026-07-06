@@ -2,6 +2,7 @@
 //! input/output so tests drive it with buffers.
 
 use hornvale_kernel::{EntityId, Value, World, WorldTime};
+use hornvale_worldgen as world_builder;
 use std::io::{BufRead, Write};
 
 const HELP: &str = "\
@@ -37,20 +38,20 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
             "help" => write!(output, "{HELP}")?,
             "sky" => {
                 let day = argument.and_then(|a| a.parse().ok()).unwrap_or(0.0);
-                match crate::world_builder::sky_report(world, WorldTime { day }) {
+                match world_builder::sky_report(world, WorldTime { day }) {
                     Ok(report) => writeln!(output, "{}", report.description)?,
                     Err(e) => writeln!(output, "error: {e}")?,
                 }
             }
             "climate" => {
-                let report = crate::world_builder::climate_report(world);
+                let report = world_builder::climate_report(world);
                 writeln!(
                     output,
                     "{} ({:.0}°C)",
                     report.description, report.temperature_c
                 )?;
             }
-            "calendar" => match crate::world_builder::calendar_lines(world) {
+            "calendar" => match world_builder::calendar_lines(world) {
                 Ok(lines) if lines.is_empty() => writeln!(
                     output,
                     "this world has no generated sky; time is measured in standard days"
@@ -110,7 +111,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
             }
             "phenomena" => {
                 let day = argument.and_then(|a| a.parse().ok()).unwrap_or(0.0);
-                match crate::world_builder::observed_phenomena(world, day) {
+                match world_builder::observed_phenomena(world, day) {
                     Ok(phenomena) => {
                         for p in phenomena {
                             writeln!(output, "[{:.2}] {} — {}", p.salience, p.kind, p.description)?;
@@ -154,9 +155,9 @@ fn render_value(value: &Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world_builder::{SkyChoice, build_world};
     use hornvale_astronomy::SkyPins;
     use hornvale_kernel::Seed;
+    use world_builder::{SkyChoice, build_world};
 
     fn drive(commands: &str) -> String {
         let world = build_world(Seed(42), &SkyPins::default(), SkyChoice::Constant).unwrap();
