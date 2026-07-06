@@ -3,6 +3,7 @@
 #![warn(missing_docs)]
 
 pub mod anchor;
+pub mod calendar;
 pub mod moons;
 pub mod neighborhood;
 pub mod pins;
@@ -12,6 +13,7 @@ pub mod system;
 pub mod units;
 
 pub use anchor::{Anchor, Rotation, generate_anchor};
+pub use calendar::{Calendar, calendar_of};
 pub use moons::{Moon, generate_moons, hill_radius_mm};
 pub use neighborhood::{Neighbor, class_luminosity, generate_neighbors};
 pub use pins::{GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins};
