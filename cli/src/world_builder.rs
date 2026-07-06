@@ -213,6 +213,98 @@ pub fn climate_report(_world: &World) -> ClimateReport {
     UniformClimate.climate_at(hornvale_kernel::Position { x: 0.0, y: 0.0 })
 }
 
+/// The ordinal word for a zero-based moon index, capped at the legal
+/// maximum of three moons.
+fn moon_ordinal(index: usize) -> &'static str {
+    ["first", "second", "third"][index]
+}
+
+/// The world's cycles as reader-facing lines: year length, the seasonal
+/// swell of daylight (if the world has axial tilt), and one line per moon.
+/// Empty for constant-sky worlds, which have no generated calendar to
+/// describe.
+pub fn calendar_lines(world: &World) -> Vec<String> {
+    let sky = sky_of(world).expect("a saved world's own pins must reconstruct its provider");
+    let Sky::Generated(sky) = &sky else {
+        return Vec::new();
+    };
+    let calendar = sky.calendar();
+    let system = sky.system();
+    let year_std = calendar.year_length().get();
+    let day_std = calendar.day_length().map(|d| d.get());
+
+    let mut lines = Vec::new();
+    match day_std {
+        Some(day_std) => lines.push(format!(
+            "The year is {:.1} local days ({:.1} standard days).",
+            year_std / day_std,
+            year_std
+        )),
+        None => lines.push(format!(
+            "This world is tidally locked: no local day exists; the year is {year_std:.1} standard days."
+        )),
+    }
+
+    if day_std.is_some() && system.anchor.obliquity.get() > 0.0 {
+        let half = (system.anchor.obliquity.get() / 90.0) / 2.0;
+        let max = 0.5 + half;
+        let min = 0.5 - half;
+        lines.push(format!(
+            "Daylight swells to {:.0}% at midsummer and shrinks to {:.0}% at midwinter.",
+            max * 100.0,
+            min * 100.0
+        ));
+    }
+
+    for (index, moon) in system.moons.iter().enumerate() {
+        let ordinal = moon_ordinal(index);
+        let months = calendar
+            .months_per_year(index)
+            .expect("moon index in range");
+        match day_std {
+            Some(day_std) => lines.push(format!(
+                "The {ordinal} moon circles every {:.1} local days — {:.1} months to a year.",
+                moon.period.get() / day_std,
+                months
+            )),
+            None => lines.push(format!(
+                "The {ordinal} moon circles every {:.1} standard days — {:.1} months to a year.",
+                moon.period.get(),
+                months
+            )),
+        }
+    }
+
+    lines
+}
+
+/// The night sky as a single sentence naming its notable neighbor stars,
+/// brightest first. `None` for constant-sky worlds, which have no
+/// neighborhood to describe.
+pub fn night_sky_line(world: &World) -> Option<String> {
+    let sky = sky_of(world).expect("a saved world's own pins must reconstruct its provider");
+    let Sky::Generated(sky) = &sky else {
+        return None;
+    };
+    let parts: Vec<String> = sky
+        .system()
+        .neighbors
+        .iter()
+        .map(|n| format!("a {} star that does not wander", n.color))
+        .collect();
+    Some(format!("By night: {}.", parts.join("; ")))
+}
+
+/// Notes recorded during sky genesis. Empty for constant-sky worlds, which
+/// are never generated.
+pub fn genesis_notes(world: &World) -> Vec<String> {
+    let sky = sky_of(world).expect("a saved world's own pins must reconstruct its provider");
+    match &sky {
+        Sky::Constant(_) => Vec::new(),
+        Sky::Generated(sky) => sky.notes().to_vec(),
+    }
+}
+
 /// Gather everything the almanac renders, reconstructing the stateless
 /// tier-0 providers.
 pub fn almanac_context(world: &World) -> AlmanacContext {
@@ -230,6 +322,9 @@ pub fn almanac_context(world: &World) -> AlmanacContext {
         village,
         castes,
         beliefs: hornvale_religion::beliefs_of(world),
+        calendar_lines: calendar_lines(world),
+        night_sky: night_sky_line(world),
+        genesis_notes: genesis_notes(world),
     }
 }
 
@@ -329,5 +424,44 @@ mod tests {
         let mut world = World::new(Seed(1));
         register_all(&mut world.registry).unwrap();
         assert!(matches!(sky_of(&world).unwrap(), Sky::Constant(_)));
+    }
+
+    #[test]
+    fn constant_world_has_no_calendar_or_night_sky_or_notes() {
+        let world = constant(42);
+        assert!(calendar_lines(&world).is_empty());
+        assert!(night_sky_line(&world).is_none());
+        assert!(genesis_notes(&world).is_empty());
+    }
+
+    #[test]
+    fn locked_rotation_pin_yields_a_tidally_locked_calendar_line() {
+        use hornvale_astronomy::RotationPin;
+        let pins = SkyPins {
+            rotation: Some(RotationPin::Locked),
+            ..SkyPins::default()
+        };
+        let world = build_world(Seed(42), &pins, SkyChoice::Generated).unwrap();
+        let lines = calendar_lines(&world);
+        assert!(lines[0].contains("tidally locked"));
+    }
+
+    #[test]
+    fn two_moon_pin_yields_first_and_second_moon_lines() {
+        use hornvale_astronomy::MoonsPin;
+        let pins = SkyPins {
+            moons: Some(MoonsPin::exact(2).unwrap()),
+            ..SkyPins::default()
+        };
+        let world = build_world(Seed(42), &pins, SkyChoice::Generated).unwrap();
+        let lines = calendar_lines(&world);
+        assert!(lines.iter().any(|l| l.contains("first moon")));
+        assert!(lines.iter().any(|l| l.contains("second moon")));
+    }
+
+    #[test]
+    fn seed_23_generated_default_has_genesis_notes() {
+        let world = generated(23);
+        assert!(!genesis_notes(&world).is_empty());
     }
 }

@@ -8,6 +8,7 @@ const HELP: &str = "\
 commands:
   sky [day]        what the sky looks like (default day 0)
   climate          local climate
+  calendar         the world's cycles
   places           known places
   village          the settlement
   castes           the settlement's castes
@@ -46,6 +47,19 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     "{} ({:.0}°C)",
                     report.description, report.temperature_c
                 )?;
+            }
+            "calendar" => {
+                let lines = crate::world_builder::calendar_lines(world);
+                if lines.is_empty() {
+                    writeln!(
+                        output,
+                        "this world has no generated sky; time is measured in standard days"
+                    )?;
+                } else {
+                    for line in lines {
+                        writeln!(output, "{line}")?;
+                    }
+                }
             }
             "places" => {
                 for place in hornvale_terrain::places(world) {
@@ -148,6 +162,20 @@ mod tests {
     #[test]
     fn sky_reports_the_constant_sun() {
         assert!(drive("sky\nquit\n").contains("zenith"));
+    }
+
+    #[test]
+    fn calendar_on_constant_world_says_no_generated_sky() {
+        assert!(drive("calendar\nquit\n").contains("no generated sky"));
+    }
+
+    #[test]
+    fn calendar_on_generated_world_reports_the_year() {
+        let world = build_world(Seed(42), &SkyPins::default(), SkyChoice::Generated).unwrap();
+        let mut out = Vec::new();
+        run(&world, "calendar\nquit\n".as_bytes(), &mut out).unwrap();
+        let out = String::from_utf8(out).unwrap();
+        assert!(out.contains("year is"));
     }
 
     #[test]

@@ -27,6 +27,12 @@ pub struct AlmanacContext {
     pub castes: Vec<String>,
     /// Recorded beliefs.
     pub beliefs: Vec<Belief>,
+    /// The world's cycles, reader-facing; empty for constant-sky worlds.
+    pub calendar_lines: Vec<String>,
+    /// The night sky as a sentence; `None` for constant-sky worlds.
+    pub night_sky: Option<String>,
+    /// Notes recorded during sky genesis; empty for constant-sky worlds.
+    pub genesis_notes: Vec<String>,
 }
 
 /// Render the one-page world document as markdown. Deterministic: same
@@ -51,6 +57,25 @@ pub fn render(ctx: &AlmanacContext) -> String {
             ));
         }
         doc.push('\n');
+    }
+
+    if let Some(night_sky) = &ctx.night_sky {
+        doc.push_str(&format!("{night_sky}\n\n"));
+    }
+
+    if !ctx.calendar_lines.is_empty() {
+        doc.push_str("## The Calendar\n\n");
+        for line in &ctx.calendar_lines {
+            doc.push_str(&format!("- {line}\n"));
+        }
+        doc.push('\n');
+        if !ctx.genesis_notes.is_empty() {
+            doc.push_str("Notes from genesis:\n\n");
+            for note in &ctx.genesis_notes {
+                doc.push_str(&format!("- {note}\n"));
+            }
+            doc.push('\n');
+        }
     }
 
     doc.push_str("## The Land\n\n");
@@ -138,6 +163,9 @@ mod tests {
                 tenet: "the Ever-Flame never blinks.".to_string(),
                 source_kind: "celestial-body".to_string(),
             }],
+            calendar_lines: vec![],
+            night_sky: None,
+            genesis_notes: vec![],
         }
     }
 
@@ -183,5 +211,40 @@ mod tests {
         let doc = render(&ctx);
         assert!(doc.contains("No settlements are known."));
         assert!(doc.contains("No beliefs are recorded."));
+        assert!(!doc.contains("## The Calendar"));
+    }
+
+    #[test]
+    fn calendar_section_renders_between_sky_and_land() {
+        let ctx = AlmanacContext {
+            calendar_lines: vec![
+                "The year is 365.2 local days (365.2 standard days).".to_string(),
+                "The first moon circles every 29.5 local days — 12.4 months to a year.".to_string(),
+            ],
+            night_sky: Some("By night: a hard blue-white star that does not wander.".to_string()),
+            genesis_notes: vec!["a showpiece neighbor was forced by pin".to_string()],
+            ..sample_context()
+        };
+        let doc = render(&ctx);
+
+        assert!(doc.contains("## The Calendar"));
+        let sky_pos = doc.find("## The Sky").unwrap();
+        let calendar_pos = doc.find("## The Calendar").unwrap();
+        let land_pos = doc.find("## The Land").unwrap();
+        assert!(sky_pos < calendar_pos, "Calendar must come after Sky");
+        assert!(calendar_pos < land_pos, "Calendar must come before Land");
+
+        assert!(doc.contains("- The year is 365.2 local days (365.2 standard days)."));
+        assert!(
+            doc.contains("- The first moon circles every 29.5 local days — 12.4 months to a year.")
+        );
+        assert!(doc.contains("Notes from genesis:"));
+        assert!(doc.contains("- a showpiece neighbor was forced by pin"));
+
+        // The night sky reads as part of the Sky section, before Calendar.
+        let night_sky_pos = doc
+            .find("By night: a hard blue-white star that does not wander.")
+            .unwrap();
+        assert!(sky_pos < night_sky_pos && night_sky_pos < calendar_pos);
     }
 }
