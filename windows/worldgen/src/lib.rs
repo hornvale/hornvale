@@ -1,7 +1,9 @@
-//! The composition root: the only place all domains meet. Wires
-//! registrations and geneses in cascade order, and gathers the almanac's
-//! context. Domains stay ignorant of each other; this module is where the
-//! application composes them (Constitution §2.6).
+//! Hornvale composition root — the only place all domains meet.
+//!
+//! Wires registrations and geneses in cascade order, and gathers the
+//! almanac's context. Domains stay ignorant of each other; this module is
+//! where the application composes them (Constitution §2.6).
+#![warn(missing_docs)]
 
 use hornvale_almanac::AlmanacContext;
 use hornvale_astronomy::{

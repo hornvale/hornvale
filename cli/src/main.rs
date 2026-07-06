@@ -4,10 +4,10 @@
 mod concepts;
 mod repl;
 mod streams;
-mod world_builder;
 
 use hornvale_astronomy::{SkyPins, parse_pin};
 use hornvale_kernel::{Seed, World};
+use hornvale_worldgen as world_builder;
 use std::process::ExitCode;
 
 const SKY_FLAGS: &str =
