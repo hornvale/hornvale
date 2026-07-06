@@ -1,0 +1,192 @@
+//! Moons: drawn, then admitted only past the stability inequalities
+//! (Roche floor, Hill cap, mutual spacing, combined-tide cap).
+
+use crate::anchor::Anchor;
+use crate::pins::{GenesisError, SkyPins};
+use crate::star::Star;
+use crate::streams;
+use hornvale_kernel::Seed;
+
+/// A moon of the anchor world. Mass and distance drawn; the rest derived.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Moon {
+    /// Mass in lunar masses (drawn, 0.05–2.5).
+    pub mass_lunar: f64,
+    /// Orbital distance in Mm (drawn within Roche/Hill bounds).
+    pub distance_mm: f64,
+    /// Orbital period in standard days (derived: Kepler III).
+    pub period_std_days: f64,
+    /// Apparent size relative to Luna-from-Earth (derived).
+    pub angular_diameter_rel: f64,
+    /// Tidal strength relative to Luna-on-Earth (derived: m/d³).
+    pub tide_rel: f64,
+}
+
+/// The anchor's Hill radius in Mm (model card formula).
+pub fn hill_radius_mm(star: &Star, anchor: &Anchor) -> f64 {
+    anchor.orbit_au
+        * (anchor.mass_earths * 3.003e-6 / (3.0 * star.mass_solar)).powf(1.0 / 3.0)
+        * 1.496e5
+}
+
+const ATTEMPTS_PER_MOON: u32 = 32;
+const TIDE_CAP: f64 = 8.0;
+
+fn derive_moon(mass_lunar: f64, distance_mm: f64, anchor: &Anchor) -> Moon {
+    Moon {
+        mass_lunar,
+        distance_mm,
+        period_std_days: 27.32 * ((distance_mm / 384.4).powi(3) / anchor.mass_earths).sqrt(),
+        angular_diameter_rel: mass_lunar.powf(1.0 / 3.0) * 384.4 / distance_mm,
+        tide_rel: mass_lunar / (distance_mm / 384.4).powi(3),
+    }
+}
+
+/// Generate the moons: count drawn or pinned; each admitted only past the
+/// stability inequalities, with a bounded redraw budget.
+pub fn generate_moons(
+    astronomy_seed: Seed,
+    star: &Star,
+    anchor: &Anchor,
+    pins: &SkyPins,
+) -> Result<Vec<Moon>, GenesisError> {
+    let count = match pins.moons {
+        Some(n) if n <= 3 => n,
+        Some(n) => {
+            return Err(GenesisError::InvalidPin {
+                pin: "moons".to_string(),
+                reason: format!("{n} moons requested; the legal range is 0–3"),
+            });
+        }
+        None => {
+            let roll = astronomy_seed
+                .derive(streams::MOON_COUNT)
+                .stream()
+                .range_u32(1, 100);
+            match roll {
+                1..=15 => 0,
+                16..=55 => 1,
+                56..=85 => 2,
+                _ => 3,
+            }
+        }
+    };
+
+    let hill = hill_radius_mm(star, anchor);
+    let max_distance = (0.4 * hill).min(900.0);
+    let mut stream = astronomy_seed.derive(streams::MOONS).stream();
+    let mut moons: Vec<Moon> = Vec::new();
+
+    for index in 0..count {
+        let mut admitted = false;
+        for _ in 0..ATTEMPTS_PER_MOON {
+            let mass = 0.05 + stream.next_f64() * 2.45;
+            let distance = 60.0 + stream.next_f64() * (max_distance - 60.0).max(0.0);
+            let candidate = derive_moon(mass, distance, anchor);
+            let spacing_ok = moons.iter().all(|m| {
+                let (near, far) = if m.distance_mm < distance {
+                    (m.distance_mm, distance)
+                } else {
+                    (distance, m.distance_mm)
+                };
+                far / near >= 1.5
+            });
+            let tide_total: f64 =
+                moons.iter().map(|m| m.tide_rel).sum::<f64>() + candidate.tide_rel;
+            if distance >= 20.0 && distance <= 0.4 * hill && spacing_ok && tide_total <= TIDE_CAP {
+                moons.push(candidate);
+                admitted = true;
+                break;
+            }
+        }
+        if !admitted {
+            return Err(GenesisError::UnsatisfiablePin {
+                pin: "moons".to_string(),
+                reason: format!(
+                    "moon {} of {count} found no stable orbit within the attempt budget \
+                     (Hill radius {hill:.0} Mm, tide cap {TIDE_CAP})",
+                    index + 1
+                ),
+            });
+        }
+    }
+
+    moons.sort_by(|a, b| a.distance_mm.total_cmp(&b.distance_mm));
+    Ok(moons)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::anchor::generate_anchor;
+    use crate::star::generate_star;
+
+    fn system(seed: u64) -> (Star, Anchor) {
+        let star = generate_star(Seed(seed));
+        let anchor = generate_anchor(Seed(seed), &star, &SkyPins::default()).unwrap();
+        (star, anchor)
+    }
+
+    #[test]
+    fn moon_count_pin_is_honored_for_every_legal_value() {
+        let (star, anchor) = system(42);
+        for count in 0..=3u32 {
+            let pins = SkyPins {
+                moons: Some(count),
+                ..SkyPins::default()
+            };
+            let moons = generate_moons(Seed(42), &star, &anchor, &pins).unwrap();
+            assert_eq!(moons.len() as u32, count);
+        }
+    }
+
+    #[test]
+    fn moon_count_pin_validates_range() {
+        let (star, anchor) = system(42);
+        let pins = SkyPins {
+            moons: Some(7),
+            ..SkyPins::default()
+        };
+        assert!(matches!(
+            generate_moons(Seed(42), &star, &anchor, &pins),
+            Err(GenesisError::InvalidPin { .. })
+        ));
+    }
+
+    #[test]
+    fn every_generated_moon_satisfies_the_inequalities() {
+        for seed in 0..64 {
+            let (star, anchor) = system(seed);
+            let moons = generate_moons(Seed(seed), &star, &anchor, &SkyPins::default()).unwrap();
+            let hill = hill_radius_mm(&star, &anchor);
+            let mut previous: Option<f64> = None;
+            let mut total_tide = 0.0;
+            for moon in &moons {
+                assert!(moon.distance_mm >= 20.0, "Roche floor");
+                assert!(moon.distance_mm <= 0.4 * hill, "Hill cap");
+                if let Some(prev) = previous {
+                    assert!(moon.distance_mm / prev >= 1.5, "mutual spacing");
+                }
+                previous = Some(moon.distance_mm);
+                total_tide += moon.tide_rel;
+                // Derived quantities match the model card.
+                let expected_period =
+                    27.32 * ((moon.distance_mm / 384.4).powi(3) / anchor.mass_earths).sqrt();
+                assert!((moon.period_std_days - expected_period).abs() < 1e-9);
+                let expected_theta = moon.mass_lunar.powf(1.0 / 3.0) * 384.4 / moon.distance_mm;
+                assert!((moon.angular_diameter_rel - expected_theta).abs() < 1e-9);
+                let expected_tide = moon.mass_lunar / (moon.distance_mm / 384.4).powi(3);
+                assert!((moon.tide_rel - expected_tide).abs() < 1e-9);
+            }
+            assert!(total_tide <= 8.0, "combined tide cap");
+        }
+    }
+
+    #[test]
+    fn moons_are_deterministic() {
+        let (star, anchor) = system(9);
+        let a = generate_moons(Seed(9), &star, &anchor, &SkyPins::default()).unwrap();
+        let b = generate_moons(Seed(9), &star, &anchor, &SkyPins::default()).unwrap();
+        assert_eq!(a, b);
+    }
+}
