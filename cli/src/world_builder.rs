@@ -4,8 +4,8 @@
 //! application composes them (Constitution §2.6).
 
 use hornvale_almanac::AlmanacContext;
-use hornvale_astronomy::ConstantSun;
-use hornvale_climate::UniformClimate;
+use hornvale_astronomy::{ConstantSun, SkyReport};
+use hornvale_climate::{ClimateReport, UniformClimate};
 use hornvale_kernel::{
     ConceptRegistry, LedgerError, ObserverContext, PhenomenaSource, Phenomenon, RegistryError,
     Seed, World, WorldTime, observe,
@@ -83,11 +83,20 @@ pub fn build_world(seed: Seed) -> Result<World, BuildError> {
     Ok(world)
 }
 
+/// The sky at `time`, from whichever astronomy provider this world uses.
+/// The single construction site for the provider (Constitution §2.4 tiers).
+pub fn sky_report(_world: &World, time: WorldTime) -> SkyReport {
+    ConstantSun.sky_at(time)
+}
+
+/// The local climate, from whichever climate provider this world uses.
+pub fn climate_report(_world: &World) -> ClimateReport {
+    UniformClimate.climate_at(hornvale_kernel::Position { x: 0.0, y: 0.0 })
+}
+
 /// Gather everything the almanac renders, reconstructing the stateless
 /// tier-0 providers.
 pub fn almanac_context(world: &World) -> AlmanacContext {
-    let sun = ConstantSun;
-    let climate = UniformClimate;
     let village = hornvale_settlement::village_info(world);
     let castes = village
         .as_ref()
@@ -95,8 +104,8 @@ pub fn almanac_context(world: &World) -> AlmanacContext {
         .unwrap_or_default();
     AlmanacContext {
         seed: world.seed.0,
-        sky: sun.sky_at(WorldTime { day: 0.0 }),
-        climate: climate.climate_at(hornvale_kernel::Position { x: 0.0, y: 0.0 }),
+        sky: sky_report(world, WorldTime { day: 0.0 }),
+        climate: climate_report(world),
         phenomena: observed_phenomena(world, 0.0),
         places: hornvale_terrain::places(world),
         village,
@@ -146,5 +155,14 @@ mod tests {
         assert!(!ctx.castes.is_empty());
         assert!(!ctx.beliefs.is_empty());
         assert!(!ctx.phenomena.is_empty());
+    }
+
+    #[test]
+    fn sky_and_climate_reports_come_from_the_composition_root() {
+        let world = build_world(Seed(42)).unwrap();
+        let sky = sky_report(&world, hornvale_kernel::WorldTime { day: 0.0 });
+        assert!(sky.description.contains("zenith"));
+        let climate = climate_report(&world);
+        assert_eq!(climate.temperature_c, 18.0);
     }
 }

@@ -1,9 +1,7 @@
 //! The REPL window: interrogate a world line by line. Generic over
 //! input/output so tests drive it with buffers.
 
-use hornvale_astronomy::ConstantSun;
-use hornvale_climate::UniformClimate;
-use hornvale_kernel::{EntityId, Position, Value, World, WorldTime};
+use hornvale_kernel::{EntityId, Value, World, WorldTime};
 use std::io::{BufRead, Write};
 
 const HELP: &str = "\
@@ -38,11 +36,11 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
             "help" => write!(output, "{HELP}")?,
             "sky" => {
                 let day = argument.and_then(|a| a.parse().ok()).unwrap_or(0.0);
-                let report = ConstantSun.sky_at(WorldTime { day });
+                let report = crate::world_builder::sky_report(world, WorldTime { day });
                 writeln!(output, "{}", report.description)?;
             }
             "climate" => {
-                let report = UniformClimate.climate_at(Position { x: 0.0, y: 0.0 });
+                let report = crate::world_builder::climate_report(world);
                 writeln!(
                     output,
                     "{} ({:.0}°C)",
