@@ -98,7 +98,7 @@ Generation order:
 
 | Pin | CLI flag | Values |
 |---|---|---|
-| Moon count | `--moons N` | 0–3 |
+| Moon count | `--moons N` (exact) or `--moons MIN+K` (graded) | 0–3; graded = MIN essential, MIN+K desired |
 | Rotation regime | `--rotation normal\|locked` | or pinned period via `--day-hours N` |
 | Obliquity | `--obliquity none\|N` | degrees, 0–35 |
 | Year length | `--year-days N` | local days; must admit an in-zone orbit |
@@ -107,6 +107,24 @@ Generation order:
 Unpinned = drawn. Pin validation errors are user-facing CLI errors with the
 physical reason ("a 4000-day year places the anchor outside the habitable
 zone of this star").
+
+### Graded pins, refusals, and genesis notes (amended 2026-07-06)
+
+- **Moon pins carry min/want semantics.** `--moons 3` = min 3, want 3 (exact,
+  loud failure below). `--moons 2+1` = essential 2, desired 3: physics
+  refusing the third yields 2 plus a recorded note; refusing the second is an
+  `UnsatisfiablePin`, loud, naming which threshold broke.
+- **Every degradation is recorded as a genesis-note fact** committed to the
+  world entity's ledger (provenance `astronomy`): e.g. *"a third moon was
+  sought; no stable orbit exists within this system's Hill sphere and tide
+  budget."* Applies to unpinned degradation too (seed 10's world carries its
+  refusal in its own record). Refusals become queryable, almanac-visible,
+  and eventually diegetic — never ephemeral stderr.
+- **The seed is identity, never a means.** Generation never retries across
+  seeds; "the world of seed 42" is inviolable. Cross-seed search is an
+  explicit verb: `hornvale scout --moons 3 --from-seed S --limit N`
+  deterministically scans seeds and reports which satisfy the pins (also our
+  tool for hunting gallery-worthy showcase seeds).
 
 ## 5. The model card
 
@@ -172,7 +190,9 @@ naming deferral) alongside the untouched `ConstantSun`:
   carry their experimental setup inside the ledger. Predicate names follow
   the ratified naming conventions and are reviewed at campaign close.
 - REPL: `calendar` command; `sky [time]` gains the richer report;
-  `phenomena [time]` now visibly varies with time of day.
+  `phenomena [time]` now visibly varies with time of day; genesis notes
+  surface through ordinary fact queries.
+- CLI: `hornvale scout` (§4 amendment) as a small 2b task.
 - Almanac: **The Calendar** section (year, months per moon, season
   structure) and a night-sky paragraph under The Sky.
 - `hornvale new` gains the pin flags (§4); provider selection defaults to

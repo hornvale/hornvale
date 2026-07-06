@@ -17,6 +17,13 @@ example of the trace protocol's read side: everything downstream knows the
 sky only as *salience-ranked phenomena with periodicities and character* —
 never as orbital mechanics.
 
+**Behind the curtain (as of Campaign 2a):** the star-system generator now
+exists — star, habitable anchor, stability-checked moons, notable neighbors,
+all pinnable for controlled experiments — but no world consumes it yet.
+Worlds still see the constant sun until Plan 2b wires the generator into
+genesis and gives it a calendar. See the
+[Campaign 2a chronicle](../chronicle/campaign-2a.md).
+
 **The tier ladder ahead** (Campaign 2 climbs the first rungs):
 
 1. A 24-hour cycle: sunrise, sunset, visibility effects — the sky gains a

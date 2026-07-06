@@ -56,5 +56,10 @@ ladder, and one belief — derived, with queryable provenance, from the most
 salient thing in the sky. The `hornvale` tool creates worlds, answers
 questions about them interactively, and renders the almanac; an end-to-end
 suite proves the whole path byte-deterministic. The world is very small, and
-every part of it can explain itself, which is the entire point. Campaign 2
-gives the sky its first period.
+every part of it can explain itself, which is the entire point.
+
+**Campaign 2a landed the star-system generator** — anchor-first, pinnable,
+stability-checked, proven across a 128-seed battery — but worlds cannot see
+it yet: they still live under the constant sun until Plan 2b wires the
+generator into genesis, the calendar, and the almanac. The sky exists; the
+sky's debut is next.

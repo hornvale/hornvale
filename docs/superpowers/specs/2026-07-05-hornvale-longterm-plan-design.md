@@ -311,6 +311,13 @@ multiple worlds — the "alternate universes" of the Zork paper on the wall.
   explain the campaign from the book alone, the chapter is rewritten until he
   can. His comprehension is a methodological requirement (research value needs
   a human who understands the claims), not a courtesy.
+- **Definition of Done for every merged plan (amended 2026-07-06, Nathan's
+  catch):** a plan is not finished at merge — it is finished when the project
+  book reflects it: a chronicle entry for the merged plan (not deferred to
+  campaign close) plus a freshness sweep of any chapter the merge made stale,
+  gated by Nathan's comprehension review. The campaign-close ritual remains
+  (registry/manifest reviews, vision-book chapter), but the book may never
+  lag merged reality.
 - **Artifact-driven completion.** No campaign is complete until it has produced
   demonstrable artifacts (images, documents, graphs) in the gallery. Long-term
   demo vehicle: the kernel's constitution (no wall-clock, no I/O in the hot
