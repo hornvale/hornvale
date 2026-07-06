@@ -160,7 +160,13 @@ mod tests {
     use world_builder::{SkyChoice, build_world};
 
     fn drive(commands: &str) -> String {
-        let world = build_world(Seed(42), &SkyPins::default(), SkyChoice::Constant).unwrap();
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Constant,
+            &hornvale_terrain::TerrainPins::default(),
+        )
+        .unwrap();
         let mut out = Vec::new();
         run(&world, commands.as_bytes(), &mut out).unwrap();
         String::from_utf8(out).unwrap()
@@ -178,7 +184,13 @@ mod tests {
 
     #[test]
     fn calendar_on_generated_world_reports_the_year() {
-        let world = build_world(Seed(42), &SkyPins::default(), SkyChoice::Generated).unwrap();
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+        )
+        .unwrap();
         let mut out = Vec::new();
         run(&world, "calendar\nquit\n".as_bytes(), &mut out).unwrap();
         let out = String::from_utf8(out).unwrap();

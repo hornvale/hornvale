@@ -12,9 +12,11 @@ use hornvale_astronomy::{
 };
 use hornvale_climate::{ClimateReport, UniformClimate};
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Fact, LedgerError, ObserverContext, PhenomenaSource, Phenomenon,
-    RegistryError, Seed, Value, World, WorldTime, observe,
+    ConceptRegistry, EntityId, Fact, Geosphere, LedgerError, ObserverContext, PhenomenaSource,
+    Phenomenon, RegistryError, Seed, Value, World, WorldTime, observe,
 };
+use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
+use std::sync::OnceLock;
 
 /// Errors from building a world.
 #[derive(Debug)]
@@ -27,6 +29,8 @@ pub enum BuildError {
     Genesis(GenesisError),
     /// A committed pin string could not be parsed back.
     Pins(String),
+    /// Terrain genesis refused a pin.
+    TerrainGenesis(hornvale_terrain::GenesisError),
 }
 
 impl std::fmt::Display for BuildError {
@@ -36,6 +40,7 @@ impl std::fmt::Display for BuildError {
             BuildError::Ledger(e) => write!(f, "ledger: {e}"),
             BuildError::Genesis(e) => write!(f, "sky genesis: {e}"),
             BuildError::Pins(reason) => write!(f, "pins: {reason}"),
+            BuildError::TerrainGenesis(e) => write!(f, "terrain genesis: {e}"),
         }
     }
 }
@@ -100,6 +105,14 @@ pub fn register_all(registry: &mut ConceptRegistry) -> Result<(), RegistryError>
     hornvale_religion::register_concepts(registry)
 }
 
+/// The shared Geosphere at `GLOBE_LEVEL`: seed-independent, computed once
+/// per process and cloned into providers, so per-world mesh cost is a
+/// memcpy (spec §3: "computed once, shared across all worlds").
+fn shared_geosphere() -> &'static Geosphere {
+    static GEO: OnceLock<Geosphere> = OnceLock::new();
+    GEO.get_or_init(|| Geosphere::new(GLOBE_LEVEL))
+}
+
 fn scenario_fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     Fact {
         subject,
@@ -143,6 +156,40 @@ pub fn sky_of(world: &World) -> Result<Sky, BuildError> {
     }
 }
 
+/// Reconstruct the tectonic terrain provider from the world's seed and its
+/// committed terrain-pin facts (the `sky_of` pattern). Worlds saved before
+/// terrain pins existed simply have none and regenerate with defaults. The
+/// single construction site for the terrain provider.
+pub fn terrain_of(world: &World) -> Result<GeneratedTerrain, BuildError> {
+    let mut pins = TerrainPins::default();
+    for pin_fact in world.ledger.find(hornvale_terrain::facts::TERRAIN_PIN) {
+        if let Value::Text(s) = &pin_fact.object {
+            hornvale_terrain::parse_pin(s, &mut pins).map_err(BuildError::Pins)?;
+        }
+    }
+    let outcome = hornvale_terrain::generate(world.seed, shared_geosphere(), &pins)
+        .map_err(BuildError::TerrainGenesis)?;
+    Ok(GeneratedTerrain::new(shared_geosphere().clone(), outcome))
+}
+
+/// The land's headline lines for the almanac: plates and ocean coverage,
+/// then the highest land above the sea.
+pub fn land_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    let terrain = terrain_of(world)?;
+    let summary = hornvale_terrain::summarize(terrain.globe());
+    Ok(vec![
+        format!(
+            "The globe breaks into {} plates; the sea claims {:.0}% of its surface.",
+            summary.plate_count,
+            summary.ocean_fraction * 100.0
+        ),
+        format!(
+            "The highest land stands {:.0} m above the sea.",
+            summary.highest_elevation_m - summary.sea_level_m
+        ),
+    ])
+}
+
 /// The tier-0/1/2 phenomena sources, observed at the world's first place.
 pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, BuildError> {
     let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
@@ -161,11 +208,17 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
 }
 
 /// Build a complete world: mint the world entity and record its sky choice
-/// and scenario pins first; run sky genesis for `Generated`; then the
-/// tier-0 cascade (terrain → settlement → culture →
-/// religion-from-phenomena), with phenomena routed through whichever
-/// provider this world uses.
-pub fn build_world(seed: Seed, pins: &SkyPins, sky: SkyChoice) -> Result<World, BuildError> {
+/// and scenario pins first; run sky genesis for `Generated`; commit the
+/// terrain pins and run tectonic genesis; then the tier-0 cascade
+/// (terrain-Vale → settlement → culture → religion-from-phenomena). The
+/// Vale stays the social cascade's seam (Campaign 3 spec §8); the tectonic
+/// globe is an additional queryable capability, not a replacement.
+pub fn build_world(
+    seed: Seed,
+    pins: &SkyPins,
+    sky: SkyChoice,
+    terrain_pins: &TerrainPins,
+) -> Result<World, BuildError> {
     let mut world = World::new(seed);
     register_all(&mut world.registry)?;
 
@@ -193,6 +246,20 @@ pub fn build_world(seed: Seed, pins: &SkyPins, sky: SkyChoice) -> Result<World, 
         let outcome = generate(seed, pins).map_err(BuildError::Genesis)?;
         facts::genesis(&mut world, world_entity, &outcome)?;
     }
+
+    for pin_string in hornvale_terrain::pin_strings(terrain_pins) {
+        world.ledger.commit(
+            scenario_fact(
+                world_entity,
+                hornvale_terrain::facts::TERRAIN_PIN,
+                Value::Text(pin_string),
+            ),
+            &world.registry,
+        )?;
+    }
+    let terrain_outcome = hornvale_terrain::generate(seed, shared_geosphere(), terrain_pins)
+        .map_err(BuildError::TerrainGenesis)?;
+    hornvale_terrain::facts::genesis(&mut world, world_entity, &terrain_outcome)?;
 
     let vale = hornvale_terrain::genesis(&mut world)?;
     let village = hornvale_settlement::genesis(&mut world, vale)?;
@@ -319,6 +386,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         climate: climate_report(world),
         phenomena: observed_phenomena(world, 0.0)?,
         places: hornvale_terrain::places(world),
+        land_lines: land_lines(world)?,
         village,
         castes,
         beliefs: hornvale_religion::beliefs_of(world),
@@ -333,11 +401,23 @@ mod tests {
     use super::*;
 
     fn constant(seed: u64) -> World {
-        build_world(Seed(seed), &SkyPins::default(), SkyChoice::Constant).unwrap()
+        build_world(
+            Seed(seed),
+            &SkyPins::default(),
+            SkyChoice::Constant,
+            &hornvale_terrain::TerrainPins::default(),
+        )
+        .unwrap()
     }
 
     fn generated(seed: u64) -> World {
-        build_world(Seed(seed), &SkyPins::default(), SkyChoice::Generated).unwrap()
+        build_world(
+            Seed(seed),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+        )
+        .unwrap()
     }
 
     #[test]
@@ -441,7 +521,13 @@ mod tests {
             rotation: Some(RotationPin::Locked),
             ..SkyPins::default()
         };
-        let world = build_world(Seed(42), &pins, SkyChoice::Generated).unwrap();
+        let world = build_world(
+            Seed(42),
+            &pins,
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+        )
+        .unwrap();
         let lines = calendar_lines(&world).unwrap();
         assert!(lines[0].contains("tidally locked"));
     }
@@ -453,7 +539,13 @@ mod tests {
             moons: Some(MoonsPin::exact(2).unwrap()),
             ..SkyPins::default()
         };
-        let world = build_world(Seed(42), &pins, SkyChoice::Generated).unwrap();
+        let world = build_world(
+            Seed(42),
+            &pins,
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+        )
+        .unwrap();
         let lines = calendar_lines(&world).unwrap();
         assert!(lines.iter().any(|l| l.contains("first moon")));
         assert!(lines.iter().any(|l| l.contains("second moon")));
@@ -557,5 +649,56 @@ mod tests {
         assert!(night_sky_line(&world).is_err());
         assert!(genesis_notes(&world).is_err());
         assert!(almanac_context(&world).is_err());
+    }
+
+    #[test]
+    fn terrain_reconstructs_from_seed_and_pins() {
+        let world = constant(42);
+        let a = terrain_of(&world).unwrap();
+        let b = terrain_of(&world).unwrap();
+        assert_eq!(a.globe(), b.globe());
+        assert_eq!(a.geosphere().level(), hornvale_terrain::GLOBE_LEVEL);
+    }
+
+    #[test]
+    fn terrain_pins_round_trip_through_the_ledger() {
+        let pins = hornvale_terrain::TerrainPins {
+            plates: Some(12),
+            ocean_fraction: Some(0.7),
+            ..hornvale_terrain::TerrainPins::default()
+        };
+        let world = build_world(Seed(42), &SkyPins::default(), SkyChoice::Constant, &pins).unwrap();
+        let terrain = terrain_of(&world).unwrap();
+        assert_eq!(terrain.globe().plates.len(), 12);
+        let summary = hornvale_terrain::summarize(terrain.globe());
+        assert!((summary.ocean_fraction - 0.7).abs() < 0.01);
+    }
+
+    #[test]
+    fn terrain_facts_are_committed_at_build() {
+        let world = constant(42);
+        assert!(
+            world
+                .ledger
+                .find(hornvale_terrain::facts::PLATE_COUNT)
+                .next()
+                .is_some()
+        );
+        assert!(
+            world
+                .ledger
+                .find(hornvale_terrain::facts::OCEAN_FRACTION)
+                .next()
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn land_lines_describe_the_globe() {
+        let world = constant(42);
+        let lines = land_lines(&world).unwrap();
+        assert_eq!(lines.len(), 2);
+        assert!(lines[0].contains("plates"));
+        assert!(lines[1].contains("above the sea"));
     }
 }

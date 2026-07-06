@@ -21,6 +21,8 @@ pub struct AlmanacContext {
     pub phenomena: Vec<Phenomenon>,
     /// Known places.
     pub places: Vec<PlaceInfo>,
+    /// The tectonic globe's headline lines, from the composition root.
+    pub land_lines: Vec<String>,
     /// The settlement, if any.
     pub village: Option<VillageInfo>,
     /// The settlement's castes, lowest to highest.
@@ -83,6 +85,12 @@ pub fn render(ctx: &AlmanacContext) -> String {
     }
 
     doc.push_str("## The Land\n\n");
+    for line in &ctx.land_lines {
+        doc.push_str(&format!("{line}\n"));
+    }
+    if !ctx.land_lines.is_empty() {
+        doc.push('\n');
+    }
     if ctx.places.is_empty() {
         doc.push_str("No places are known.\n\n");
     } else {
@@ -155,6 +163,9 @@ mod tests {
                 name: "the Vale".to_string(),
                 biome: "temperate forest".to_string(),
             }],
+            land_lines: vec![
+                "The globe breaks into 23 plates; the sea claims 63% of its surface.".to_string(),
+            ],
             village: Some(VillageInfo {
                 id: EntityId(2),
                 name: "Bolnar".to_string(),
@@ -181,6 +192,7 @@ mod tests {
             "## The Sky",
             "zenith",
             "## The Land",
+            "23 plates",
             "the Vale",
             "temperate forest",
             "## The People",

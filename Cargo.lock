@@ -67,6 +67,7 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-kernel",
  "hornvale-religion",
+ "hornvale-terrain",
  "hornvale-worldgen",
  "serde",
  "serde_json",

@@ -108,7 +108,9 @@ fn cmd_new(args: &[String]) -> Result<(), String> {
         .map_err(|e| format!("--seed must be a u64: {e}"))?;
     let out = flag_value(args, "--out").unwrap_or("world.json");
     let (pins, sky) = parse_sky_args(args)?;
-    let world = world_builder::build_world(Seed(seed), &pins, sky).map_err(|e| e.to_string())?;
+    let terrain_pins = hornvale_terrain::TerrainPins::default();
+    let world = world_builder::build_world(Seed(seed), &pins, sky, &terrain_pins)
+        .map_err(|e| e.to_string())?;
     world
         .save(std::path::Path::new(out))
         .map_err(|e| format!("saving {out}: {e}"))?;
@@ -196,6 +198,7 @@ fn cmd_concepts() -> Result<(), String> {
         Seed(0),
         &SkyPins::default(),
         world_builder::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
     )
     .map_err(|e| e.to_string())?;
     print!("{}", concepts::render_concepts(&world.registry));
