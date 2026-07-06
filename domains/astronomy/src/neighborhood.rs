@@ -20,6 +20,13 @@ pub struct Neighbor {
     pub color: String,
 }
 
+impl Neighbor {
+    /// The normative night-sky description of this star.
+    pub fn night_description(&self) -> String {
+        format!("a {} star that does not wander", self.color)
+    }
+}
+
 /// Luminosity of a spectral class in solar units (model card).
 pub fn class_luminosity(class: NeighborClass) -> f64 {
     match class {
@@ -121,6 +128,16 @@ mod tests {
         assert_eq!(default_distances, pinned_distances);
 
         assert!(pinned.iter().any(|n| n.class == NeighborClass::BlueGiant));
+    }
+
+    #[test]
+    fn night_description_names_the_color_and_the_stillness() {
+        let neighbors = generate_neighbors(Seed(3), &SkyPins::default());
+        let neighbor = &neighbors[0];
+        assert_eq!(
+            neighbor.night_description(),
+            format!("a {} star that does not wander", neighbor.color)
+        );
     }
 
     #[test]

@@ -108,6 +108,21 @@ mod tests {
     }
 
     #[test]
+    fn night_star_phenomenon_description_matches_the_neighbor_s_own_wording() {
+        let s = sky(SkyPins {
+            rotation: Some(RotationPin::Locked),
+            ..SkyPins::default()
+        });
+        let seen = s.phenomena(&ctx(0.0));
+        for neighbor in &s.system().neighbors {
+            assert!(
+                seen.iter()
+                    .any(|p| p.kind == NIGHT_STAR && p.description == neighbor.night_description())
+            );
+        }
+    }
+
+    #[test]
     fn sky_reports_vary_with_time_and_are_deterministic() {
         let s = sky(SkyPins {
             rotation: Some(RotationPin::PeriodHours(24.0)),
@@ -320,7 +335,7 @@ impl PhenomenaSource for GeneratedSky {
             for neighbor in &self.system.neighbors {
                 out.push(Phenomenon {
                     kind: NIGHT_STAR.to_string(),
-                    description: format!("a {} star that does not wander", neighbor.color),
+                    description: neighbor.night_description(),
                     period_days: None,
                     salience: round2(
                         (0.1 + 0.1 * (1.0 + neighbor.apparent_brightness).ln()).clamp(0.1, 0.6),

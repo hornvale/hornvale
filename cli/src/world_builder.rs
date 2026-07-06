@@ -288,7 +288,7 @@ pub fn night_sky_line(world: &World) -> Result<Option<String>, BuildError> {
         .system()
         .neighbors
         .iter()
-        .map(|n| format!("a {} star that does not wander", n.color))
+        .map(|n| n.night_description())
         .collect();
     Ok(Some(format!("By night: {}.", parts.join("; "))))
 }
