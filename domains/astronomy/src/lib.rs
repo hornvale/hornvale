@@ -3,8 +3,11 @@
 #![warn(missing_docs)]
 
 pub mod pins;
+pub mod star;
+pub mod streams;
 
 pub use pins::{GenesisError, NeighborClass, RotationPin, SkyPins};
+pub use star::{generate_star, Star};
 
 use hornvale_kernel::{
     ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, RegistryError, WorldTime,
@@ -13,9 +16,20 @@ use hornvale_kernel::{
 /// Phenomenon kind for bodies visible in the sky.
 pub const CELESTIAL_BODY: &str = "celestial-body";
 
-/// Every seed-derivation label this crate uses (none yet).
+/// Every seed-derivation label this crate uses, with docs. All chains hang
+/// off the world seed's "astronomy" derivation.
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
-    Vec::new()
+    vec![
+        ("astronomy", "root stream for sky genesis"),
+        ("astronomy/star-mass", "main-sequence star mass draw"),
+        ("astronomy/anchor-mass", "anchor world mass draw"),
+        ("astronomy/rotation", "rotation regime and period draw"),
+        ("astronomy/orbit", "anchor orbital distance draw"),
+        ("astronomy/obliquity", "axial tilt draw"),
+        ("astronomy/moon-count", "how many moons"),
+        ("astronomy/moons", "per-moon mass/distance draws (sequential attempts)"),
+        ("astronomy/neighbors", "notable-neighbor class/distance draws"),
+    ]
 }
 
 /// Register astronomy's contribution to the concept registry.

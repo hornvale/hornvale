@@ -4,7 +4,17 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 ### hornvale-astronomy
 
-*(no seed-derivation streams)*
+| Label | Meaning |
+|---|---|
+| `astronomy` | root stream for sky genesis |
+| `astronomy/star-mass` | main-sequence star mass draw |
+| `astronomy/anchor-mass` | anchor world mass draw |
+| `astronomy/rotation` | rotation regime and period draw |
+| `astronomy/orbit` | anchor orbital distance draw |
+| `astronomy/obliquity` | axial tilt draw |
+| `astronomy/moon-count` | how many moons |
+| `astronomy/moons` | per-moon mass/distance draws (sequential attempts) |
+| `astronomy/neighbors` | notable-neighbor class/distance draws |
 
 ### hornvale-climate
 
