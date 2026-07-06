@@ -100,12 +100,12 @@ fn unsatisfiable_pins_fail_loudly_with_the_physical_reason() {
 #[test]
 fn pinned_worlds_differ_from_unpinned_only_downstream_of_the_pin() {
     // Same seed, moons pinned to the drawn count => identical system.
-    let default = generate(Seed(42), &SkyPins::default()).unwrap();
+    let default = generate(Seed(42), &SkyPins::default()).unwrap().system;
     let pinned_same = SkyPins {
-        moons: Some(MoonsPin::exact(default.system.moons.len() as u32).unwrap()),
+        moons: Some(MoonsPin::exact(default.moons.len() as u32).unwrap()),
         ..SkyPins::default()
     };
-    assert_eq!(generate(Seed(42), &pinned_same).unwrap(), default);
+    assert_eq!(generate(Seed(42), &pinned_same).unwrap().system, default);
 }
 
 #[test]
@@ -113,16 +113,13 @@ fn pin_isolation_holds_at_the_system_level() {
     // A Normal rotation pin re-affirms the drawn regime; it must not perturb
     // any other draw. Seed 42's default anchor draws Spinning, so the pinned
     // system must be byte-for-byte identical to the default.
-    let default = generate(Seed(42), &SkyPins::default()).unwrap();
-    assert!(matches!(
-        default.system.anchor.rotation,
-        Rotation::Spinning { .. }
-    ));
+    let default = generate(Seed(42), &SkyPins::default()).unwrap().system;
+    assert!(matches!(default.anchor.rotation, Rotation::Spinning { .. }));
     let pins = SkyPins {
         rotation: Some(RotationPin::Normal),
         ..SkyPins::default()
     };
-    assert_eq!(generate(Seed(42), &pins).unwrap(), default);
+    assert_eq!(generate(Seed(42), &pins).unwrap().system, default);
 
     // A neighbor pin overrides the showpiece's class only; the rest of the
     // neighborhood (count and distance draws) must be untouched. Compare the
@@ -134,16 +131,9 @@ fn pin_isolation_holds_at_the_system_level() {
         ..SkyPins::default()
     };
     let pinned = generate(Seed(42), &pins).unwrap();
-    assert_eq!(
-        default.system.neighbors.len(),
-        pinned.system.neighbors.len()
-    );
-    let mut default_distances: Vec<f64> = default
-        .system
-        .neighbors
-        .iter()
-        .map(|n| n.distance.get())
-        .collect();
+    assert_eq!(default.neighbors.len(), pinned.system.neighbors.len());
+    let mut default_distances: Vec<f64> =
+        default.neighbors.iter().map(|n| n.distance.get()).collect();
     let mut pinned_distances: Vec<f64> = pinned
         .system
         .neighbors
