@@ -108,9 +108,12 @@ contradicts, lower ("coarse constrains fine").
   (`Au`, `Mm`, `LightYears`, `SolarMasses`, `StdDays`, `LocalDays`, …);
   dimensionless ratios stay bare `f64`. No dimensional-analysis crates.
   Rationale and scope: Campaign 2 spec, design principle 5.
-- Ratified decisions (recorded in plan Self-Review Notes — do not
-  relitigate): `Fact.day` stays a bare `Option<f64>`; `PredicateDef.name`
-  duplicates its registry key.
+- **Ratified decisions live in `docs/decisions/`** — the decision log is the
+  durable, grep-able home for settled choices (do not relitigate without new
+  information; supersede, never edit). Consult it before reopening an
+  architectural or process question. Examples: `Fact.day` stays a bare
+  `Option<f64>` (0014); `PredicateDef.name` duplicates its registry key
+  (0015); config is JSON not YAML (0012); models author, dice roll (0009).
 
 ## Process
 
