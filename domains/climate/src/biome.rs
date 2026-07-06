@@ -176,6 +176,70 @@ pub fn classify_land(
     }
 }
 
+/// Frozen-surface threshold (°C).
+const SEA_ICE_C: f64 = -2.0;
+
+/// Classify a marine cell by depth, surface temperature, seafloor feature,
+/// and upwelling, in precedence order (see the task's interface note).
+pub fn classify_marine(
+    depth_m: f64,
+    sst_c: f64,
+    feature: SeafloorFeature,
+    upwelling: bool,
+) -> Biome {
+    if sst_c < SEA_ICE_C {
+        return Biome::SeaIce;
+    }
+    if feature == SeafloorFeature::Trench && depth_m > 6000.0 {
+        return Biome::HadalTrench;
+    }
+    if feature == SeafloorFeature::Ridge {
+        return Biome::HydrothermalVent;
+    }
+    if depth_m < 200.0 {
+        if sst_c > 20.0 {
+            return Biome::CoralReef;
+        }
+        if sst_c < 12.0 {
+            return Biome::KelpForest;
+        }
+    }
+    if upwelling && depth_m < 1000.0 {
+        return Biome::Upwelling;
+    }
+    if depth_m < 200.0 {
+        Biome::Epipelagic
+    } else if depth_m < 1000.0 {
+        Biome::Mesopelagic
+    } else if depth_m < 4000.0 {
+        Biome::Bathypelagic
+    } else if depth_m < 6000.0 {
+        Biome::Abyssal
+    } else {
+        Biome::HadalTrench
+    }
+}
+
+/// Classify any cell: marine when below sea level (depth = sea_level − elev),
+/// otherwise land. `sst_c` is the surface temperature used for marine cells.
+#[allow(clippy::too_many_arguments)]
+pub fn classify(
+    temp_c: f64,
+    moisture: f64,
+    sst_c: f64,
+    elevation_m: f64,
+    sea_level_m: f64,
+    latitude_deg: f64,
+    feature: SeafloorFeature,
+    upwelling: bool,
+) -> Biome {
+    if elevation_m < sea_level_m {
+        classify_marine(sea_level_m - elevation_m, sst_c, feature, upwelling)
+    } else {
+        classify_land(temp_c, moisture, elevation_m, sea_level_m, latitude_deg)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -243,5 +307,74 @@ mod tests {
         names.dedup();
         assert_eq!(names.len(), len, "duplicate biome names");
         assert_eq!(len, 22);
+    }
+
+    #[test]
+    fn marine_precedence_is_correct() {
+        // Warm shallow → reef; cold shallow → kelp.
+        assert_eq!(
+            classify_marine(50.0, 25.0, SeafloorFeature::None, false),
+            Biome::CoralReef
+        );
+        assert_eq!(
+            classify_marine(50.0, 8.0, SeafloorFeature::None, false),
+            Biome::KelpForest
+        );
+        // Frozen surface beats everything.
+        assert_eq!(
+            classify_marine(50.0, -3.0, SeafloorFeature::Ridge, false),
+            Biome::SeaIce
+        );
+        // Ridge → vent; ocean-ocean trench (deep) → hadal.
+        assert_eq!(
+            classify_marine(3000.0, 4.0, SeafloorFeature::Ridge, false),
+            Biome::HydrothermalVent
+        );
+        assert_eq!(
+            classify_marine(7000.0, 2.0, SeafloorFeature::Trench, false),
+            Biome::HadalTrench
+        );
+        // Upwelling on a productive shelf.
+        assert_eq!(
+            classify_marine(300.0, 15.0, SeafloorFeature::None, true),
+            Biome::Upwelling
+        );
+        // Plain depth zones.
+        assert_eq!(
+            classify_marine(500.0, 10.0, SeafloorFeature::None, false),
+            Biome::Mesopelagic
+        );
+        assert_eq!(
+            classify_marine(5000.0, 3.0, SeafloorFeature::None, false),
+            Biome::Abyssal
+        );
+    }
+
+    #[test]
+    fn classify_dispatches_land_and_sea() {
+        // Below sea level → marine.
+        let m = classify(
+            10.0,
+            0.5,
+            22.0,
+            -50.0,
+            0.0,
+            20.0,
+            SeafloorFeature::None,
+            false,
+        );
+        assert!(m.is_marine());
+        // Above sea level → land.
+        let l = classify(
+            25.0,
+            0.9,
+            25.0,
+            300.0,
+            0.0,
+            0.0,
+            SeafloorFeature::None,
+            false,
+        );
+        assert_eq!(l, Biome::TropicalRainforest);
     }
 }
