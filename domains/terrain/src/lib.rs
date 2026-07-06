@@ -5,15 +5,18 @@
 
 pub mod boundaries;
 pub mod elevation;
+pub mod facts;
 pub mod globe;
 pub mod pins;
 pub mod plates;
+pub mod provider;
 pub mod streams;
 
 pub use boundaries::{BoundaryKind, CellBoundary};
 pub use globe::{GenesisOutcome, GlobeSummary, TectonicGlobe, generate, summarize};
 pub use pins::{GenesisError, TerrainPins, parse_pin, pin_strings};
 pub use plates::Plate;
+pub use provider::GeneratedTerrain;
 
 use hornvale_kernel::{ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World};
 
@@ -56,10 +59,37 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     ]
 }
 
-/// Register terrain's contribution to the concept registry.
+/// Register terrain's contribution to the concept registry: the tier-0
+/// place predicates plus the tectonic summary predicates. Idempotent.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(IS_PLACE, true, "subject is a traversable place")?;
-    registry.register_predicate(BIOME, true, "biome of a place")
+    registry.register_predicate(BIOME, true, "biome of a place")?;
+    registry.register_predicate(
+        facts::PLATE_COUNT,
+        true,
+        "how many tectonic plates the globe has",
+    )?;
+    registry.register_predicate(
+        facts::OCEAN_FRACTION,
+        true,
+        "fraction of globe cells below sea level",
+    )?;
+    registry.register_predicate(facts::SEA_LEVEL_M, true, "sea level in meters")?;
+    registry.register_predicate(
+        facts::HIGHEST_ELEVATION_M,
+        true,
+        "highest globe cell elevation in meters",
+    )?;
+    registry.register_predicate(
+        facts::TERRAIN_PIN,
+        false,
+        "a terrain scenario pin, round-trippable",
+    )?;
+    registry.register_predicate(
+        facts::TERRAIN_NOTE,
+        false,
+        "a note recorded during tectonic genesis",
+    )
 }
 
 /// A place as terrain knows it.
