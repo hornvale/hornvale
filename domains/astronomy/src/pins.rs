@@ -18,7 +18,12 @@ impl MoonsPin {
     }
     /// `min` essential plus up to `extra` desired.
     pub fn graded(min: u32, extra: u32) -> Result<MoonsPin, GenesisError> {
-        let want = min + extra;
+        let Some(want) = min.checked_add(extra) else {
+            return Err(GenesisError::InvalidPin {
+                pin: "moons".to_string(),
+                reason: format!("{min}+{extra} moons requested; the legal maximum is 3"),
+            });
+        };
         if want > 3 {
             return Err(GenesisError::InvalidPin {
                 pin: "moons".to_string(),
@@ -379,5 +384,24 @@ mod tests {
         assert!(parse_pin("obliquity=-1", &mut pins).is_err());
         // year-days must be a non-negative finite LocalDays value.
         assert!(parse_pin("year-days=-5", &mut pins).is_err());
+    }
+
+    #[test]
+    fn graded_moons_pin_rejects_overflowing_sum_instead_of_wrapping() {
+        let err = MoonsPin::graded(u32::MAX, 1).unwrap_err();
+        match err {
+            GenesisError::InvalidPin { pin, reason } => {
+                assert_eq!(pin, "moons");
+                assert!(reason.contains("legal maximum"));
+            }
+            other => panic!("expected InvalidPin, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_pin_rejects_moons_sum_that_overflows_u32() {
+        let mut pins = SkyPins::default();
+        let err = parse_pin("moons=4294967295+1", &mut pins).unwrap_err();
+        assert!(err.contains("moons"), "unexpected error text: {err}");
     }
 }
