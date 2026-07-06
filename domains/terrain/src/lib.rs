@@ -4,6 +4,7 @@
 #![warn(missing_docs)]
 
 pub mod boundaries;
+pub mod elevation;
 pub mod pins;
 pub mod plates;
 pub mod streams;
