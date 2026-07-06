@@ -1,5 +1,7 @@
 //! Seed-derivation labels for astronomy (permanent contracts, spec §3).
 
+/// Root stream label for astronomy.
+pub const ROOT: &str = "astronomy";
 /// Star mass draw.
 pub const STAR_MASS: &str = "star-mass";
 /// Anchor mass draw.

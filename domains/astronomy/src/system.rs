@@ -5,6 +5,7 @@ use crate::moons::{Moon, generate_moons};
 use crate::neighborhood::{Neighbor, generate_neighbors};
 use crate::pins::{GenesisError, SkyPins};
 use crate::star::{Star, generate_star};
+use crate::streams;
 use hornvale_kernel::Seed;
 
 /// A complete generated star system.
@@ -24,7 +25,7 @@ pub struct StarSystem {
 /// loud failure on unsatisfiable pins. Takes the WORLD seed and derives
 /// the astronomy domain seed internally.
 pub fn generate(world_seed: Seed, pins: &SkyPins) -> Result<StarSystem, GenesisError> {
-    let astronomy_seed = world_seed.derive("astronomy");
+    let astronomy_seed = world_seed.derive(streams::ROOT);
     let star = generate_star(astronomy_seed);
     let anchor = generate_anchor(astronomy_seed, &star, pins)?;
     let moons = generate_moons(astronomy_seed, &star, &anchor, pins)?;
