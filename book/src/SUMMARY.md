@@ -32,12 +32,14 @@
 - [Campaign 2a: System Genesis](./chronicle/campaign-2a.md)
 - [Campaign 2b: The Sky's Debut](./chronicle/campaign-2b.md)
 - [Campaign L0: The Laboratory](./chronicle/campaign-l0-lab.md)
+- [Campaign 3b: The Tectonic Globe](./chronicle/campaign-3b.md)
 
 # The Gallery
 
 - [First Light (seed 42)](./gallery/first-light.md)
 - [The Almanac of Seed 42](./gallery/almanac.md)
 - [The Sky of Seed 42](./gallery/the-sky.md)
+- [The Land of Seed 42](./gallery/elevation-seed-42.md)
 
 # The Laboratory
 

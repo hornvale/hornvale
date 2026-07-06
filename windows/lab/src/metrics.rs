@@ -23,7 +23,12 @@ impl WorldView {
     /// Build a complete world view: generate the world, extract the sky,
     /// derive the calendar, and gather the notes. Generated sky only.
     pub fn build(seed: Seed, pins: &SkyPins) -> Result<WorldView, BuildError> {
-        let world = build_world(seed, pins, SkyChoice::Generated)?;
+        let world = build_world(
+            seed,
+            pins,
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+        )?;
         let sky = sky_of(&world)?;
         let Sky::Generated(sky) = sky else {
             return Err(BuildError::Pins(

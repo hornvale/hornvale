@@ -33,5 +33,6 @@ jobs:
           cargo run -p hornvale -- almanac --world /tmp/hv-ci-locked.json > book/src/gallery/almanac-seed-42-locked.md
           cargo run -p hornvale -- concepts > book/src/reference/concept-registry-generated.md
           cargo run -p hornvale -- streams > book/src/reference/stream-manifest-generated.md
+          cargo run -p hornvale -- map --world /tmp/hv-ci-sky.json --out book/src/gallery/elevation-seed-42.ppm > book/src/gallery/elevation-seed-42.md
           cargo run -p hornvale -- lab run studies/census-drift.study.json
           git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/

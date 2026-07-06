@@ -29,6 +29,7 @@ usage:
                                             scan seeds for ones satisfying the pins
   hornvale almanac [--world <PATH>]        render the almanac (default: world.json)
   hornvale repl [--world <PATH>]           interrogate a world interactively
+  hornvale map [--world <PATH>] [--out <PPM>] render the elevation map (markdown to stdout)
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
   hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
@@ -37,8 +38,14 @@ usage:
 sky flags (shared by new and scout):
 ";
 
+const TERRAIN_FLAGS: &str = "\
+  [--plates N]                             pin the plate count (2-64)
+  [--ocean-fraction F]                     pin the target ocean fraction (0.05-0.95)
+  [--supercontinent true|false]            cluster the continents into one landmass
+";
+
 fn usage() -> String {
-    format!("{USAGE}{SKY_FLAGS}")
+    format!("{USAGE}{SKY_FLAGS}\nterrain flags (new only):\n{TERRAIN_FLAGS}")
 }
 
 fn main() -> ExitCode {
@@ -48,6 +55,7 @@ fn main() -> ExitCode {
         Some("scout") => cmd_scout(&args),
         Some("almanac") => cmd_almanac(&args),
         Some("repl") => cmd_repl(&args),
+        Some("map") => cmd_map(&args),
         Some("concepts") => cmd_concepts(),
         Some("streams") => cmd_streams(),
         Some("lab") => cmd_lab(&args),
@@ -101,6 +109,23 @@ fn parse_sky_args(args: &[String]) -> Result<(SkyPins, world_builder::SkyChoice)
     Ok((pins, sky))
 }
 
+/// Parse the terrain flags into pins. One parser: every flag becomes a
+/// `key=value` pin string and folds through `hornvale_terrain::parse_pin`,
+/// so pin-string syntax never drifts from flag syntax.
+fn parse_terrain_args(args: &[String]) -> Result<hornvale_terrain::TerrainPins, String> {
+    let mut pins = hornvale_terrain::TerrainPins::default();
+    for (flag, key) in [
+        ("--plates", "plates"),
+        ("--ocean-fraction", "ocean-fraction"),
+        ("--supercontinent", "supercontinent"),
+    ] {
+        if let Some(value) = flag_value(args, flag) {
+            hornvale_terrain::parse_pin(&format!("{key}={value}"), &mut pins)?;
+        }
+    }
+    Ok(pins)
+}
+
 fn cmd_new(args: &[String]) -> Result<(), String> {
     let seed: u64 = flag_value(args, "--seed")
         .ok_or("new requires --seed <N>")?
@@ -108,7 +133,9 @@ fn cmd_new(args: &[String]) -> Result<(), String> {
         .map_err(|e| format!("--seed must be a u64: {e}"))?;
     let out = flag_value(args, "--out").unwrap_or("world.json");
     let (pins, sky) = parse_sky_args(args)?;
-    let world = world_builder::build_world(Seed(seed), &pins, sky).map_err(|e| e.to_string())?;
+    let terrain_pins = parse_terrain_args(args)?;
+    let world = world_builder::build_world(Seed(seed), &pins, sky, &terrain_pins)
+        .map_err(|e| e.to_string())?;
     world
         .save(std::path::Path::new(out))
         .map_err(|e| format!("saving {out}: {e}"))?;
@@ -188,6 +215,36 @@ fn cmd_repl(args: &[String]) -> Result<(), String> {
     repl::run(&world, stdin.lock(), stdout.lock()).map_err(|e| e.to_string())
 }
 
+/// Render the world's elevation map: a markdown page (title, land lines,
+/// ASCII map) to stdout and, with `--out`, the PPM image to disk. Both are
+/// deterministic; CI drift-checks the committed copies.
+fn cmd_map(args: &[String]) -> Result<(), String> {
+    let world = load_world(args)?;
+    let terrain = world_builder::terrain_of(&world).map_err(|e| e.to_string())?;
+    let mut doc = format!("# The Land of Seed {}\n\n", world.seed.0);
+    for line in world_builder::land_lines(&world).map_err(|e| e.to_string())? {
+        doc.push_str(&format!("{line}\n"));
+    }
+    doc.push_str("\n```text\n");
+    doc.push_str(&hornvale_terrain::render::elevation_ascii(
+        terrain.geosphere(),
+        terrain.globe(),
+    ));
+    doc.push_str("```\n\n");
+    if let Some(out) = flag_value(args, "--out") {
+        let ppm = hornvale_terrain::render::elevation_ppm(terrain.geosphere(), terrain.globe());
+        std::fs::write(out, ppm).map_err(|e| format!("writing {out}: {e}"))?;
+        let name = std::path::Path::new(out)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(out);
+        doc.push_str(&format!("Full-color render: [`{name}`](./{name})\n\n"));
+    }
+    doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
+    print!("{doc}");
+    Ok(())
+}
+
 fn cmd_concepts() -> Result<(), String> {
     // Generated, not constant: the registry is identical either way (every
     // predicate is registered up front), but this exercises the fuller
@@ -196,6 +253,7 @@ fn cmd_concepts() -> Result<(), String> {
         Seed(0),
         &SkyPins::default(),
         world_builder::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
     )
     .map_err(|e| e.to_string())?;
     print!("{}", concepts::render_concepts(&world.registry));
@@ -262,6 +320,27 @@ mod tests {
         let (pins, sky) = parse_sky_args(&args(&[])).unwrap();
         assert_eq!(sky, world_builder::SkyChoice::Generated);
         assert_eq!(pins, SkyPins::default());
+    }
+
+    #[test]
+    fn terrain_flags_fold_into_pins() {
+        let a = args(&[
+            "new",
+            "--plates",
+            "12",
+            "--ocean-fraction",
+            "0.7",
+            "--supercontinent",
+            "true",
+        ]);
+        let pins = parse_terrain_args(&a).unwrap();
+        assert_eq!(pins.plates, Some(12));
+        assert_eq!(pins.ocean_fraction, Some(0.7));
+        assert_eq!(pins.supercontinent, Some(true));
+        assert_eq!(
+            parse_terrain_args(&args(&["new"])).unwrap(),
+            hornvale_terrain::TerrainPins::default()
+        );
     }
 
     #[test]

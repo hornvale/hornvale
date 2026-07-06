@@ -46,6 +46,7 @@ mod tests {
             "<!-- GENERATED FILE",
             "| `settlement/name` |",
             "| `religion/epithet` |",
+            "| `terrain/plate-count` |",
             "octave-{n}",
         ] {
             assert!(doc.contains(expected), "missing: {expected}");

@@ -42,7 +42,16 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 ### hornvale-terrain
 
-*(no seed-derivation streams)*
+| Label | Meaning |
+|---|---|
+| `terrain` | root stream for tectonic genesis |
+| `terrain/plate-count` | how many plates |
+| `terrain/plate-seeds` | per-plate seed positions on the sphere |
+| `terrain/plate-kind` | continental fraction and per-plate continental rolls |
+| `terrain/plate-motion` | per-plate Euler pole axis and rate draws |
+| `terrain/maturity` | per-plate orogenic maturity draws |
+| `terrain/hotspots` | hotspot count, positions, and strengths |
+| `terrain/ocean-fraction` | target ocean fraction draw |
 
 ### hornvale-kernel (internal)
 

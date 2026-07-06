@@ -13,6 +13,9 @@ Salient phenomena, most attention-demanding first:
 
 ## The Land
 
+The globe breaks into 16 plates; the sea claims 73% of its surface.
+The highest land stands 3919 m above the sea.
+
 - **the Vale** — temperate forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)

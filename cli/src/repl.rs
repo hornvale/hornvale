@@ -9,6 +9,8 @@ const HELP: &str = "\
 commands:
   sky [day]        what the sky looks like (default day 0)
   climate          local climate
+  map              ASCII elevation map of the globe
+  land <lat> <lon> the terrain at a coordinate (degrees)
   calendar         the world's cycles
   places           known places
   village          the settlement
@@ -50,6 +52,43 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     "{} ({:.0}°C)",
                     report.description, report.temperature_c
                 )?;
+            }
+            "map" => match world_builder::terrain_of(world) {
+                Ok(terrain) => write!(
+                    output,
+                    "{}",
+                    hornvale_terrain::render::elevation_ascii(terrain.geosphere(), terrain.globe())
+                )?,
+                Err(e) => writeln!(output, "error: {e}")?,
+            },
+            "land" => {
+                let coords = argument
+                    .and_then(|lat| Some((lat, parts.next()?)))
+                    .and_then(|(lat, lon)| {
+                        Some((lat.parse::<f64>().ok()?, lon.parse::<f64>().ok()?))
+                    });
+                match coords {
+                    None => writeln!(output, "usage: land <latitude> <longitude>")?,
+                    Some((lat, lon)) => match world_builder::terrain_of(world) {
+                        Ok(terrain) => {
+                            let cell = terrain.nearest_cell(lat, lon);
+                            let relative = terrain.elevation_at(cell) - terrain.sea_level();
+                            let surface = if terrain.is_ocean(cell) {
+                                format!("ocean, {:.0} m deep", -relative)
+                            } else {
+                                format!("land, {relative:.0} m above the sea")
+                            };
+                            writeln!(
+                                output,
+                                "cell {}: {surface}; plate {}; unrest {:.2}",
+                                cell.0,
+                                terrain.plate_of(cell),
+                                terrain.unrest_at(cell)
+                            )?;
+                        }
+                        Err(e) => writeln!(output, "error: {e}")?,
+                    },
+                }
             }
             "calendar" => match world_builder::calendar_lines(world) {
                 Ok(lines) if lines.is_empty() => writeln!(
@@ -160,7 +199,13 @@ mod tests {
     use world_builder::{SkyChoice, build_world};
 
     fn drive(commands: &str) -> String {
-        let world = build_world(Seed(42), &SkyPins::default(), SkyChoice::Constant).unwrap();
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Constant,
+            &hornvale_terrain::TerrainPins::default(),
+        )
+        .unwrap();
         let mut out = Vec::new();
         run(&world, commands.as_bytes(), &mut out).unwrap();
         String::from_utf8(out).unwrap()
@@ -178,7 +223,13 @@ mod tests {
 
     #[test]
     fn calendar_on_generated_world_reports_the_year() {
-        let world = build_world(Seed(42), &SkyPins::default(), SkyChoice::Generated).unwrap();
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+        )
+        .unwrap();
         let mut out = Vec::new();
         run(&world, "calendar\nquit\n".as_bytes(), &mut out).unwrap();
         let out = String::from_utf8(out).unwrap();
@@ -205,6 +256,13 @@ mod tests {
         // The OR tolerates entity-numbering shifts (the world entity is
         // minted first as of 2b); either subject is a legitimate answer.
         assert!(out.contains("(settlement)") || out.contains("(terrain)"));
+    }
+
+    #[test]
+    fn map_and_land_answer_terrain_queries() {
+        let out = drive("map\nland 45 -30\nquit\n");
+        assert!(out.contains('~'), "no ascii ocean");
+        assert!(out.contains("plate"), "no per-cell land report");
     }
 
     #[test]
