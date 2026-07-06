@@ -1,14 +1,3 @@
-warning: function `validate` is never used
-  --> domains/terrain/src/pins.rs:55:15
-   |
-55 | pub(crate) fn validate(pins: &TerrainPins) -> Result<(), GenesisError> {
-   |               ^^^^^^^^
-   |
-   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
-
-warning: `hornvale-terrain` (lib) generated 1 warning
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.02s
-     Running `target/debug/hornvale streams`
 <!-- GENERATED FILE — do not edit. Regenerate with `hornvale streams`. -->
 
 Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.g. `settlement/name/v2`), never renames.
