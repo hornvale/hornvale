@@ -4,9 +4,11 @@
 #![warn(missing_docs)]
 
 pub mod pins;
+pub mod plates;
 pub mod streams;
 
 pub use pins::{GenesisError, TerrainPins, parse_pin, pin_strings};
+pub use plates::Plate;
 
 use hornvale_kernel::{ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World};
 
