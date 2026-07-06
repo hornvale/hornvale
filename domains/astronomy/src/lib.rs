@@ -7,6 +7,7 @@ pub mod calendar;
 pub mod moons;
 pub mod neighborhood;
 pub mod pins;
+pub mod provider;
 pub mod star;
 pub mod streams;
 pub mod system;
@@ -17,6 +18,7 @@ pub use calendar::{Calendar, calendar_of};
 pub use moons::{Moon, generate_moons, hill_radius_mm};
 pub use neighborhood::{Neighbor, class_luminosity, generate_neighbors};
 pub use pins::{GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins};
+pub use provider::{GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE};
 pub use star::{Star, generate_star};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
@@ -55,7 +57,9 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 
 /// Register astronomy's contribution to the concept registry.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
-    registry.register_phenomenon_kind(CELESTIAL_BODY, "a body visible in the sky")
+    registry.register_phenomenon_kind(CELESTIAL_BODY, "a body visible in the sky")?;
+    registry.register_phenomenon_kind(SEASONAL_CYCLE, "the annual daylight cycle")?;
+    registry.register_phenomenon_kind(NIGHT_STAR, "a fixed star notable in the night sky")
 }
 
 /// Tier-0 astronomy: the sun is always up, fixed at zenith.
