@@ -6,18 +6,16 @@ use crate::summary::render_summary;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Delete every existing file in `dir` whose file name starts with `prefix`,
-/// in deterministic (sorted) order. Used to clear stale artifacts from a
-/// previous `publish` run before writing fresh ones.
-fn remove_stale_artifacts(dir: &Path, prefix: &str) -> std::io::Result<()> {
+/// Delete every regular file inside `dir`, in deterministic (sorted) order.
+///
+/// Used to clear a study's own artifact subdirectory before writing fresh
+/// ones. The caller is responsible for ensuring `dir` is wholly owned by a
+/// single study, so no name matching is needed: everything in it is stale.
+fn remove_stale_artifacts(dir: &Path) -> std::io::Result<()> {
     let mut stale: Vec<PathBuf> = fs::read_dir(dir)?
         .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_file()))
         .map(|entry| entry.path())
-        .filter(|path| {
-            path.file_name()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| name.starts_with(prefix))
-        })
         .collect();
 
     stale.sort();
@@ -30,28 +28,32 @@ fn remove_stale_artifacts(dir: &Path, prefix: &str) -> std::io::Result<()> {
 }
 
 /// Write `{study.name}-summary.md` and every `{stem}.svg` chart for a run
-/// result into `generated_dir`, creating it if needed.
+/// result into `base_dir/{study.name}/`, creating that subdirectory as
+/// needed.
 ///
-/// Before writing, every existing file in `generated_dir` whose name starts
-/// with `{study.name}-` is deleted, so artifacts from a previous run whose
-/// metrics or pin sets no longer exist don't linger. Files belonging to
-/// other studies are left untouched.
+/// Each study owns its subdirectory outright: study names are unconstrained
+/// kebab-case, so a shared flat directory can't be cleaned by filename
+/// prefix alone (a study named `census` would collide with one named
+/// `census-drift`). Before writing, every regular file already inside
+/// `base_dir/{study.name}/` is deleted, so artifacts from a previous run
+/// whose metrics or pin sets no longer exist don't linger. Other studies'
+/// subdirectories are untouched by construction.
 ///
 /// Returns the written paths, sorted.
-pub fn publish(result: &RunResult, generated_dir: &Path) -> std::io::Result<Vec<PathBuf>> {
-    fs::create_dir_all(generated_dir)?;
+pub fn publish(result: &RunResult, base_dir: &Path) -> std::io::Result<Vec<PathBuf>> {
+    let study_dir = base_dir.join(&result.study.name);
+    fs::create_dir_all(&study_dir)?;
 
-    let prefix = format!("{}-", result.study.name);
-    remove_stale_artifacts(generated_dir, &prefix)?;
+    remove_stale_artifacts(&study_dir)?;
 
     let mut written = Vec::new();
 
-    let summary_path = generated_dir.join(format!("{}-summary.md", result.study.name));
+    let summary_path = study_dir.join(format!("{}-summary.md", result.study.name));
     fs::write(&summary_path, render_summary(result))?;
     written.push(summary_path);
 
     for (stem, svg) in charts_for(result) {
-        let chart_path = generated_dir.join(format!("{}.svg", stem));
+        let chart_path = study_dir.join(format!("{}.svg", stem));
         fs::write(&chart_path, svg)?;
         written.push(chart_path);
     }
@@ -122,12 +124,14 @@ mod tests {
         sorted_expected.sort();
         assert_eq!(written, sorted_expected, "paths must be returned sorted");
 
-        let summary_path = dir.join("publish-study-summary.md");
+        let study_dir = dir.join("publish-study");
+
+        let summary_path = study_dir.join("publish-study-summary.md");
         assert!(written.contains(&summary_path));
         assert!(summary_path.exists());
 
-        let chart1 = dir.join("publish-study-default-star-class.svg");
-        let chart2 = dir.join("publish-study-default-moons-admitted.svg");
+        let chart1 = study_dir.join("publish-study-default-star-class.svg");
+        let chart2 = study_dir.join("publish-study-default-moons-admitted.svg");
         assert!(written.contains(&chart1));
         assert!(written.contains(&chart2));
         assert!(chart1.exists());
@@ -144,9 +148,10 @@ mod tests {
             std::process::id()
         ));
         let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).unwrap();
+        let study_dir = dir.join("publish-study");
+        fs::create_dir_all(&study_dir).unwrap();
 
-        let stale_path = dir.join("publish-study-oldpin-oldmetric.svg");
+        let stale_path = study_dir.join("publish-study-oldpin-oldmetric.svg");
         fs::write(&stale_path, "stale").unwrap();
 
         let written = publish(&result, &dir).expect("publish should succeed");
@@ -178,6 +183,40 @@ mod tests {
         assert_eq!(
             fs::read_to_string(&other_path).unwrap(),
             "other study content"
+        );
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// The exact collision that motivated the per-study-subdirectory fix:
+    /// a study named `census` must never delete artifacts belonging to a
+    /// study named `census-drift`, since `"census-drift-...".starts_with`
+    /// `"census-"` is true under bare prefix matching.
+    #[test]
+    fn publish_does_not_collide_with_study_whose_name_is_a_prefix_extension() {
+        let mut result = build_result();
+        result.study.name = "census".to_string();
+
+        let dir = std::env::temp_dir().join(format!(
+            "hornvale-publish-collision-test-{}",
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&dir);
+
+        let other_study_dir = dir.join("census-drift");
+        fs::create_dir_all(&other_study_dir).unwrap();
+        let other_path = other_study_dir.join("census-drift-summary.md");
+        fs::write(&other_path, "census-drift content").unwrap();
+
+        publish(&result, &dir).expect("publish should succeed");
+
+        assert!(
+            other_path.exists(),
+            "census-drift's artifacts must survive publishing census"
+        );
+        assert_eq!(
+            fs::read_to_string(&other_path).unwrap(),
+            "census-drift content"
         );
 
         fs::remove_dir_all(&dir).unwrap();
