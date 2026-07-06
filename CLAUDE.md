@@ -46,10 +46,13 @@ mdbook build book          # or `mdbook serve book` to preview
 `kernel/` → `domains/*` → `windows/*` → `cli/`.
 A domain crate depends on `hornvale-kernel` and **nothing else** — never
 another domain. Windows (`windows/almanac`) may depend on domains because
-they present them. `cli/src/world_builder.rs` is the **composition root**:
-the only file where all domains meet, and the only place providers
-(astronomy/climate implementations) are constructed. Adding a domain must
-never require editing an existing one.
+they present them (and a window may depend on another window — `windows/lab`
+builds worlds through `windows/worldgen`). `windows/worldgen` (crate
+`hornvale-worldgen`) is the **composition root**: the library where all
+domains meet, and the only place providers (astronomy/climate
+implementations) are constructed. The CLI and every window build worlds
+through it (`cli/` re-exports it). Adding a domain must never require
+editing an existing one.
 
 **A world is a seed plus a ledger.** `World { seed, registry, ledger }`
 serializes to JSON; everything else is re-derived deterministically.
@@ -91,6 +94,11 @@ contradicts, lower ("coarse constrains fine").
 - Dependencies: `serde` + `serde_json` only, workspace-wide. No new crates
   (no rand, chrono, clap, thiserror — randomness comes from the kernel's
   `Seed`/`Stream`, CLI parsing is std-only).
+- **Models author, dice roll** (Constitution ratified constraint): no ML
+  model ever runs in the sim core. Runtime generation is deterministic and
+  seeded; models are offline authoring tools whose output is committed and
+  drift-checked. See `docs/vision/frontier.md` for the wider (non-binding)
+  vision map.
 - Every crate sets `#![warn(missing_docs)]`; every public item, field, and
   variant gets a one-line doc comment.
 - Rust edition 2024. Run `cargo fmt` as the final step before every commit —
