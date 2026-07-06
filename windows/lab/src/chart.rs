@@ -39,12 +39,13 @@ fn nice_ceiling(value: f64) -> f64 {
     10.0 * power
 }
 
-/// Format a nice-number gridline value with no decimals for integers.
+/// Format a nice-number gridline value: bare integers for whole numbers,
+/// fixed one-decimal precision for fractional values.
 fn format_axis_value(value: f64) -> String {
     if value.fract() == 0.0 {
         format!("{}", value as i64)
     } else {
-        format!("{}", value)
+        format!("{:.1}", value)
     }
 }
 
@@ -242,6 +243,26 @@ mod tests {
         let svg = bar_chart_svg("Title", &labels, &counts);
 
         assert!(!svg.contains("rotate(-30"));
+    }
+
+    #[test]
+    fn gridline_labels_use_fixed_one_decimal_precision() {
+        // max count 23 -> nice_max 25 -> gridlines 6.25, 12.5, 18.75, 25.
+        let labels = vec!["A".to_string()];
+        let counts = vec![23u64];
+        let svg = bar_chart_svg("Title", &labels, &counts);
+
+        assert!(svg.contains(">6.2<"), "expected 6.25 formatted as 6.2");
+        assert!(svg.contains(">12.5<"), "expected 12.5 formatted as 12.5");
+        assert!(svg.contains(">18.8<"), "expected 18.75 formatted as 18.8");
+        assert!(
+            svg.contains(">25<"),
+            "expected whole number 25 as bare integer"
+        );
+        assert!(
+            !svg.contains("6.25"),
+            "raw two-decimal value must not appear"
+        );
     }
 
     #[test]
