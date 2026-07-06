@@ -5,6 +5,8 @@
 //! `Field`. This is the spatial substrate the terrain and climate domains
 //! compute over.
 
+use std::collections::BTreeMap;
+
 /// Identifier for a cell — an index into the mesh's vertices.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CellId(pub u32);
@@ -74,11 +76,48 @@ fn base_icosahedron() -> (Vec<[f64; 3]>, Vec<[u32; 3]>) {
     (vertices, faces)
 }
 
+/// Subdivide each triangular face into four, projecting new edge-midpoint
+/// vertices onto the unit sphere. Shared midpoints are deduplicated via an
+/// edge cache keyed by the ordered vertex-index pair, so vertex numbering is
+/// deterministic (faces visited in order; a new midpoint takes the next
+/// sequential index on first encounter).
+fn subdivide(positions: Vec<[f64; 3]>, faces: Vec<[u32; 3]>) -> (Vec<[f64; 3]>, Vec<[u32; 3]>) {
+    let mut positions = positions;
+    let mut cache: BTreeMap<(u32, u32), u32> = BTreeMap::new();
+    let mut midpoint = |a: u32, b: u32, positions: &mut Vec<[f64; 3]>| -> u32 {
+        let key = (a.min(b), a.max(b));
+        if let Some(&idx) = cache.get(&key) {
+            return idx;
+        }
+        let [ax, ay, az] = positions[a as usize];
+        let [bx, by, bz] = positions[b as usize];
+        let mid = normalize([(ax + bx) / 2.0, (ay + by) / 2.0, (az + bz) / 2.0]);
+        let idx = positions.len() as u32;
+        positions.push(mid);
+        cache.insert(key, idx);
+        idx
+    };
+    let mut new_faces = Vec::with_capacity(faces.len() * 4);
+    for [a, b, c] in faces {
+        let ab = midpoint(a, b, &mut positions);
+        let bc = midpoint(b, c, &mut positions);
+        let ca = midpoint(c, a, &mut positions);
+        new_faces.push([a, ab, ca]);
+        new_faces.push([b, bc, ab]);
+        new_faces.push([c, ca, bc]);
+        new_faces.push([ab, bc, ca]);
+    }
+    (positions, new_faces)
+}
+
 impl Geosphere {
     /// Build an icosphere subdivided `level` times. (Task 1 handles the base;
     /// Task 2 adds subdivision for `level > 0`.)
     pub fn new(level: u32) -> Geosphere {
-        let (positions, faces) = base_icosahedron();
+        let (mut positions, mut faces) = base_icosahedron();
+        for _ in 0..level {
+            (positions, faces) = subdivide(positions, faces);
+        }
         Geosphere {
             level,
             positions,
@@ -116,6 +155,28 @@ mod tests {
         let geo = Geosphere::new(0);
         assert_eq!(geo.level(), 0);
         assert_eq!(geo.cell_count(), 12);
+        for id in geo.cells() {
+            let [x, y, z] = geo.position(id);
+            let len = (x * x + y * y + z * z).sqrt();
+            assert!(
+                (len - 1.0).abs() < 1e-12,
+                "cell {id:?} not unit-length: {len}"
+            );
+        }
+    }
+
+    #[test]
+    fn subdivision_yields_the_icosphere_cell_counts() {
+        // 10 * 4^L + 2
+        assert_eq!(Geosphere::new(0).cell_count(), 12);
+        assert_eq!(Geosphere::new(1).cell_count(), 42);
+        assert_eq!(Geosphere::new(2).cell_count(), 162);
+        assert_eq!(Geosphere::new(3).cell_count(), 642);
+    }
+
+    #[test]
+    fn subdivided_cells_are_all_unit_length() {
+        let geo = Geosphere::new(3);
         for id in geo.cells() {
             let [x, y, z] = geo.position(id);
             let len = (x * x + y * y + z * z).sqrt();
