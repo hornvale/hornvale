@@ -16,6 +16,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
 }
 
 /// A place as terrain knows it.
+#[derive(Debug, Clone, PartialEq)]
 pub struct PlaceInfo {
     /// The place's entity id.
     pub id: EntityId,
@@ -61,17 +62,18 @@ pub fn places(world: &World) -> Vec<PlaceInfo> {
         .map(|f| f.subject)
         .map(|id| PlaceInfo {
             id,
-            name: text_of(world, id, "name").unwrap_or_else(|| format!("place {}", id.0)),
-            biome: text_of(world, id, BIOME).unwrap_or_else(|| "unknown".to_string()),
+            name: world
+                .ledger
+                .text_of(id, hornvale_kernel::NAME)
+                .map(str::to_string)
+                .unwrap_or_else(|| format!("place {}", id.0)),
+            biome: world
+                .ledger
+                .text_of(id, BIOME)
+                .map(str::to_string)
+                .unwrap_or_else(|| "unknown".to_string()),
         })
         .collect()
-}
-
-fn text_of(world: &World, subject: EntityId, predicate: &str) -> Option<String> {
-    match world.ledger.value_of(subject, predicate) {
-        Some(Value::Text(t)) => Some(t.clone()),
-        _ => None,
-    }
 }
 
 #[cfg(test)]

@@ -8,6 +8,9 @@ use crate::seed::Seed;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
+/// The core name predicate, registered by `World::new` for every world.
+pub const NAME: &str = "name";
+
 /// A world is a seed plus everything ever observed about it.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
@@ -25,7 +28,7 @@ impl World {
     pub fn new(seed: Seed) -> World {
         let mut registry = ConceptRegistry::default();
         registry
-            .register_predicate("name", true, "canonical name of an entity")
+            .register_predicate(NAME, true, "canonical name of an entity")
             .expect("core concept registration cannot conflict in an empty registry");
         World {
             seed,
@@ -73,6 +76,12 @@ mod tests {
     fn new_world_registers_core_concepts() {
         let w = World::new(Seed(42));
         assert!(w.registry.predicate("name").unwrap().functional);
+    }
+
+    #[test]
+    fn name_constant_is_the_registered_core_predicate() {
+        let w = World::new(Seed(1));
+        assert!(w.registry.predicate(crate::world::NAME).unwrap().functional);
     }
 
     #[test]

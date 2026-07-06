@@ -32,6 +32,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
 }
 
 /// A belief as this domain knows it.
+#[derive(Debug, Clone, PartialEq)]
 pub struct Belief {
     /// The belief's entity id.
     pub id: EntityId,
@@ -102,8 +103,16 @@ pub fn beliefs_of(world: &World) -> Vec<Belief> {
         .map(|f| f.subject)
         .map(|id| Belief {
             id,
-            tenet: text_of(world, id, TENET).unwrap_or_default(),
-            source_kind: text_of(world, id, DERIVED_FROM_PHENOMENON).unwrap_or_default(),
+            tenet: world
+                .ledger
+                .text_of(id, TENET)
+                .map(str::to_string)
+                .unwrap_or_default(),
+            source_kind: world
+                .ledger
+                .text_of(id, DERIVED_FROM_PHENOMENON)
+                .map(str::to_string)
+                .unwrap_or_default(),
         })
         .collect()
 }
@@ -111,7 +120,7 @@ pub fn beliefs_of(world: &World) -> Vec<Belief> {
 /// Explain a belief from its committed provenance: which phenomenon kind
 /// it mythologizes and which system asserted it.
 pub fn why(world: &World, belief: EntityId) -> Option<String> {
-    let source = text_of(world, belief, DERIVED_FROM_PHENOMENON)?;
+    let source = world.ledger.text_of(belief, DERIVED_FROM_PHENOMENON)?;
     let provenance = world
         .ledger
         .facts_about(belief)
@@ -121,13 +130,6 @@ pub fn why(world: &World, belief: EntityId) -> Option<String> {
         "Derived from the most salient observed phenomenon (kind: {source}); \
          asserted by {provenance}."
     ))
-}
-
-fn text_of(world: &World, subject: EntityId, predicate: &str) -> Option<String> {
-    match world.ledger.value_of(subject, predicate) {
-        Some(Value::Text(t)) => Some(t.clone()),
-        _ => None,
-    }
 }
 
 #[cfg(test)]

@@ -166,6 +166,14 @@ impl Ledger {
             .map(|f| &f.object)
     }
 
+    /// The text value of (subject, predicate), if present and textual.
+    pub fn text_of(&self, subject: EntityId, predicate: &str) -> Option<&str> {
+        match self.value_of(subject, predicate) {
+            Some(Value::Text(t)) => Some(t.as_str()),
+            _ => None,
+        }
+    }
+
     /// Number of facts in the ledger.
     pub fn len(&self) -> usize {
         self.facts.len()
@@ -392,6 +400,17 @@ mod tests {
         let fresh = l2.mint_entity();
         assert!(l2.facts_about(fresh).count() == 0);
         assert!(fresh.0 > 1);
+    }
+
+    #[test]
+    fn text_of_returns_text_values_only() {
+        let r = registry();
+        let mut l = Ledger::default();
+        let f = named(&mut l, "Zaggrak");
+        let subject = f.subject;
+        l.commit(f, &r).unwrap();
+        assert_eq!(l.text_of(subject, "name"), Some("Zaggrak"));
+        assert_eq!(l.text_of(subject, "located-in"), None);
     }
 
     #[test]

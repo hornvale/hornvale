@@ -17,6 +17,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
 pub struct UniformClimate;
 
 /// Local climate conditions.
+#[derive(Debug, Clone, PartialEq)]
 pub struct ClimateReport {
     /// Air temperature in degrees Celsius.
     pub temperature_c: f64,

@@ -19,4 +19,4 @@ pub use phenomena::{ObserverContext, PhenomenaSource, Phenomenon, observe};
 pub use refine::choose_consistent;
 pub use registry::{ConceptRegistry, PredicateDef, RegistryError};
 pub use seed::{Seed, Stream};
-pub use world::World;
+pub use world::{NAME, World};

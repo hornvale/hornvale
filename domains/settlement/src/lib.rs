@@ -26,6 +26,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
 }
 
 /// A settlement as this domain knows it.
+#[derive(Debug, Clone, PartialEq)]
 pub struct VillageInfo {
     /// The settlement's entity id.
     pub id: EntityId,
@@ -66,7 +67,7 @@ pub fn genesis(world: &mut World, home: EntityId) -> Result<EntityId, LedgerErro
     let village = world.ledger.mint_entity();
 
     let candidates = candidate_names(&mut world.seed.derive("settlement").derive("name").stream());
-    let name_fact = |n: &String| fact(village, "name", Value::Text(n.clone()), home);
+    let name_fact = |n: &String| fact(village, hornvale_kernel::NAME, Value::Text(n.clone()), home);
     let mut pick_stream = world.seed.derive("settlement").derive("name-pick").stream();
     let idx = choose_consistent(
         &mut pick_stream,
@@ -109,10 +110,11 @@ pub fn genesis(world: &mut World, home: EntityId) -> Result<EntityId, LedgerErro
 /// The first settlement in the world, if any.
 pub fn village_info(world: &World) -> Option<VillageInfo> {
     let id = world.ledger.find(IS_SETTLEMENT).next()?.subject;
-    let name = match world.ledger.value_of(id, "name") {
-        Some(Value::Text(t)) => t.clone(),
-        _ => format!("settlement {}", id.0),
-    };
+    let name = world
+        .ledger
+        .text_of(id, hornvale_kernel::NAME)
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("settlement {}", id.0));
     let population = match world.ledger.value_of(id, POPULATION) {
         Some(Value::Number(n)) => *n as u32,
         _ => 0,
