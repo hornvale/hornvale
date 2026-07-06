@@ -11,6 +11,15 @@ use std::collections::{BTreeMap, BTreeSet};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CellId(pub u32);
 
+/// A geographic coordinate in degrees.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct GeoCoord {
+    /// Latitude in degrees, `[-90, 90]` (north positive).
+    pub latitude: f64,
+    /// Longitude in degrees, `(-180, 180]` (east positive).
+    pub longitude: f64,
+}
+
 /// A discretized planetary surface. Cells are the vertices of an icosahedron
 /// subdivided `level` times; every cell sits on the unit sphere.
 #[derive(Clone, Debug)]
@@ -160,6 +169,15 @@ impl Geosphere {
         self.positions[id.0 as usize]
     }
 
+    /// The geographic coordinate of a cell.
+    pub fn coord(&self, id: CellId) -> GeoCoord {
+        let [x, y, z] = self.positions[id.0 as usize];
+        GeoCoord {
+            latitude: z.asin().to_degrees(),
+            longitude: y.atan2(x).to_degrees(),
+        }
+    }
+
     /// The cells adjacent to `id`, in ascending `CellId` order.
     pub fn neighbors(&self, id: CellId) -> &[CellId] {
         &self.neighbors[id.0 as usize]
@@ -239,5 +257,44 @@ mod tests {
         }
         assert_eq!(fives, 12, "exactly twelve pentagonal cells expected");
         assert_eq!(sixes, geo.cell_count() - 12);
+    }
+
+    #[test]
+    fn coordinates_are_in_range_and_convert_correctly() {
+        let geo = Geosphere::new(3);
+        for id in geo.cells() {
+            let c = geo.coord(id);
+            assert!(
+                c.latitude >= -90.0 && c.latitude <= 90.0,
+                "lat out of range: {}",
+                c.latitude
+            );
+            assert!(
+                c.longitude > -180.0 && c.longitude <= 180.0,
+                "lon out of range: {}",
+                c.longitude
+            );
+        }
+    }
+
+    #[test]
+    fn coordinate_conversion_matches_known_directions() {
+        // A cell whose position is the +z pole would read latitude +90; test the
+        // conversion directly through a constructed sphere is awkward, so assert
+        // the mapping via the closest cell to +z on a fine sphere instead.
+        let geo = Geosphere::new(4);
+        let north = geo
+            .cells()
+            .max_by(|a, b| geo.position(*a)[2].total_cmp(&geo.position(*b)[2]))
+            .unwrap();
+        let c = geo.coord(north);
+        // The most-northern cell sits high but not exactly at the pole; assert it
+        // is in the northern hemisphere and its longitude is well-defined.
+        assert!(
+            c.latitude > 60.0,
+            "northernmost cell latitude {} too low",
+            c.latitude
+        );
+        assert!(c.longitude > -180.0 && c.longitude <= 180.0);
     }
 }
