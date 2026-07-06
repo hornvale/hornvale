@@ -91,7 +91,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "how many moons the anchor world has",
     )?;
     registry.register_predicate(
-        facts::MOON_PERIOD_DAYS,
+        facts::MOON_PERIOD_STD,
         false,
         "orbital period of a moon, in standard days",
     )?;

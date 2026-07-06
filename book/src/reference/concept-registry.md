@@ -31,10 +31,33 @@ cardinality and meaning, and names exist to read correctly. Four rules:
    `derived-from-phenomenon`) — relationships, read strictly left-to-right
    from the subject: *village located-in vale*; *belief held-by village*.
    Passive forms (`-by`) mark inverse-direction relationships.
+5. **Bare adjective phrases** (`tidally-locked`) — *property flags*,
+   ratified at the Campaign 2 review: boolean states (not kinds), functional,
+   object always a true-flag, **asserted only when true** — absence means
+   false. Distinct from rule 2's `is-<kind>` membership flags.
+
+Two riders from the Campaign 2 review:
+
+- **Units in numeric predicate names:** the suffix `-std` means "in standard
+  days" (`day-length-std`, `year-length-std`, `moon-period-std`); other units
+  are named in full (`obliquity-degrees`). Names should read correctly on
+  their own, but the schema is the truth — see below.
+- **Rule 3 softened:** `has-<thing>` is *preferred* for repeatables, but bare
+  noun phrases are acceptable where `has-` reads awkwardly
+  (`notable-neighbor`, `genesis-note`, `scenario-pin`). No naming scheme
+  eliminates all ambiguity; the registry's *functional* column — not the
+  name — is the cardinality truth. Consequently the schema itself is slated
+  to grow two columns in Campaign 3: a **value kind** (Entity/Text/Number/
+  Flag, *enforced* at commit time — mistyped facts become uncommittable) and
+  an informational **unit** for numeric predicates. Subject-kind constraints
+  (domain/range modeling) are explicitly refused — that road leads to the
+  ontology trap.
 
 Known wart, accepted: `derived-from-phenomenon` relates a belief to a
 phenomenon *kind* (text), not an entity, because phenomena are observations,
 not entities. Revisit if phenomenon instances ever become first-class.
+Noted for a future review: `night-star` is conceptually a sub-kind of
+`celestial-body`; a kind taxonomy question will knock around Campaign 5.
 
 The tables below are **generated** — dumped from the registry of a freshly
 built world by `hornvale concepts` and verified fresh by CI. They cannot

@@ -25,7 +25,7 @@ pub const OBLIQUITY_DEGREES: &str = "obliquity-degrees";
 pub const MOON_COUNT: &str = "moon-count";
 /// Orbital period of a moon, in standard days (non-functional, Number —
 /// one per moon).
-pub const MOON_PERIOD_DAYS: &str = "moon-period-days";
+pub const MOON_PERIOD_STD: &str = "moon-period-std";
 /// A notable neighbor star visible in the night sky (non-functional, Text —
 /// one per neighbor).
 pub const NOTABLE_NEIGHBOR: &str = "notable-neighbor";
@@ -53,7 +53,7 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
 /// Commit the generated system's headline parameters as facts about
 /// `subject` (the world entity): star class; tidally-locked flag OR
 /// day-length, depending on rotation regime; year length; obliquity;
-/// moon count; one moon-period-days per moon; one notable-neighbor per
+/// moon count; one moon-period-std per moon; one notable-neighbor per
 /// neighbor; one genesis-note per recorded degradation.
 pub fn genesis(
     world: &mut World,
@@ -113,7 +113,7 @@ pub fn genesis(
 
     for moon in &system.moons {
         world.ledger.commit(
-            fact(subject, MOON_PERIOD_DAYS, Value::Number(moon.period.get())),
+            fact(subject, MOON_PERIOD_STD, Value::Number(moon.period.get())),
             &world.registry,
         )?;
     }
@@ -178,7 +178,7 @@ mod tests {
         assert_eq!(
             w.ledger
                 .facts_about(subject)
-                .filter(|f| f.predicate == MOON_PERIOD_DAYS)
+                .filter(|f| f.predicate == MOON_PERIOD_STD)
                 .count(),
             2
         );

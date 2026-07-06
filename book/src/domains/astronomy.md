@@ -31,6 +31,32 @@ the seed itself is never a means. The generator's model card (derived vs
 approximated vs drawn) lives in the Campaign 2 spec; chronicles:
 [2a](../chronicle/campaign-2a.md), [2b](../chronicle/campaign-2b.md).
 
+## The model card
+
+Every quantity the generator touches sits in exactly one column — mirrored
+here from the Campaign 2 spec at the close ritual, so the book states
+plainly what is physics, what is approximation, and what is dice.
+
+**Derived (real formulas):** stellar luminosity (mass–luminosity, L = M^3.5);
+the habitable zone (0.95√L–1.37√L AU); every orbital period (Kepler III —
+the year from the orbit, each moon's month from its distance); moon angular
+diameters; relative tidal strengths (m/d³, Luna = 1); neighbor apparent
+brightness (inverse square); day/night geometry from rotation, obliquity,
+and season.
+
+**Approximated (declared):** circular orbits; no orbital evolution,
+resonance, or N-body effects; seasonal daylight as a smooth sinusoid in
+obliquity and year phase; neighbor stars observational-only (no gravity, no
+radiation); no eclipses yet (the angular diameters exist, so tier 3 can
+derive them).
+
+**Drawn from the seed (or pinned):** star mass; anchor mass and orbital
+distance (within the zone); rotation regime and period; obliquity; moon
+count, masses, and distances; neighborhood size, classes, and distances.
+
+Promoting a drawn quantity to a derived one is an **epoch bump**, never a
+silent change — saved worlds must keep the skies they were born under.
+
 **The tier ladder ahead:**
 
 3. Realistic multi-body configurations: binary suns, moons in resonance,

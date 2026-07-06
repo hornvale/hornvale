@@ -15,7 +15,7 @@
 | `is-settlement` | yes | subject is a settlement |
 | `located-in` | no | spatial containment |
 | `moon-count` | yes | how many moons the anchor world has |
-| `moon-period-days` | no | orbital period of a moon, in standard days |
+| `moon-period-std` | no | orbital period of a moon, in standard days |
 | `name` | yes | canonical name of an entity |
 | `notable-neighbor` | no | a notable neighbor star visible in the night sky |
 | `obliquity-degrees` | yes | axial tilt of the anchor world, in degrees |
