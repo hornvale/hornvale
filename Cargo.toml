@@ -4,7 +4,7 @@ members = ["kernel", "domains/*", "windows/*", "cli"]
 
 [workspace.package]
 edition = "2024"
-license = "Unlicense"
+license = "MIT"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
