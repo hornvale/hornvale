@@ -5,17 +5,18 @@ use crate::anchor::Anchor;
 use crate::pins::{GenesisError, SkyPins};
 use crate::star::Star;
 use crate::streams;
+use crate::units::{LunarMasses, Mm, StdDays};
 use hornvale_kernel::Seed;
 
 /// A moon of the anchor world. Mass and distance drawn; the rest derived.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Moon {
     /// Mass in lunar masses (drawn, 0.05–2.5).
-    pub mass_lunar: f64,
+    pub mass: LunarMasses,
     /// Orbital distance in Mm (drawn within Roche/Hill bounds).
-    pub distance_mm: f64,
+    pub distance: Mm,
     /// Orbital period in standard days (derived: Kepler III).
-    pub period_std_days: f64,
+    pub period: StdDays,
     /// Apparent size relative to Luna-from-Earth (derived).
     pub angular_diameter_rel: f64,
     /// Tidal strength relative to Luna-on-Earth (derived: m/d³).
@@ -24,21 +25,19 @@ pub struct Moon {
 
 /// The anchor's Hill radius in Mm (model card formula).
 pub fn hill_radius_mm(star: &Star, anchor: &Anchor) -> f64 {
-    anchor.orbit_au
-        * (anchor.mass_earths * 3.003e-6 / (3.0 * star.mass_solar)).powf(1.0 / 3.0)
-        * 1.496e5
+    anchor.orbit.0 * (anchor.mass.0 * 3.003e-6 / (3.0 * star.mass.0)).powf(1.0 / 3.0) * 1.496e5
 }
 
 const ATTEMPTS_PER_MOON: u32 = 128;
 const TIDE_CAP: f64 = 8.0;
 
-fn derive_moon(mass_lunar: f64, distance_mm: f64, anchor: &Anchor) -> Moon {
+fn derive_moon(mass: f64, distance: f64, anchor: &Anchor) -> Moon {
     Moon {
-        mass_lunar,
-        distance_mm,
-        period_std_days: 27.32 * ((distance_mm / 384.4).powi(3) / anchor.mass_earths).sqrt(),
-        angular_diameter_rel: mass_lunar.powf(1.0 / 3.0) * 384.4 / distance_mm,
-        tide_rel: mass_lunar / (distance_mm / 384.4).powi(3),
+        mass: LunarMasses(mass),
+        distance: Mm(distance),
+        period: StdDays(27.32 * ((distance / 384.4).powi(3) / anchor.mass.0).sqrt()),
+        angular_diameter_rel: mass.powf(1.0 / 3.0) * 384.4 / distance,
+        tide_rel: mass / (distance / 384.4).powi(3),
     }
 }
 
@@ -84,10 +83,10 @@ pub fn generate_moons(
             let distance = 60.0 + stream.next_f64() * (max_distance - 60.0).max(0.0);
             let candidate = derive_moon(mass, distance, anchor);
             let spacing_ok = moons.iter().all(|m| {
-                let (near, far) = if m.distance_mm < distance {
-                    (m.distance_mm, distance)
+                let (near, far) = if m.distance.0 < distance {
+                    (m.distance.0, distance)
                 } else {
-                    (distance, m.distance_mm)
+                    (distance, m.distance.0)
                 };
                 far / near >= 1.5
             });
@@ -117,7 +116,7 @@ pub fn generate_moons(
         }
     }
 
-    moons.sort_by(|a, b| a.distance_mm.total_cmp(&b.distance_mm));
+    moons.sort_by(|a, b| a.distance.0.total_cmp(&b.distance.0));
     Ok(moons)
 }
 
@@ -177,20 +176,20 @@ mod tests {
             let mut previous: Option<f64> = None;
             let mut total_tide = 0.0;
             for moon in &moons {
-                assert!(moon.distance_mm >= 20.0, "Roche floor");
-                assert!(moon.distance_mm <= 0.4 * hill, "Hill cap");
+                assert!(moon.distance.get() >= 20.0, "Roche floor");
+                assert!(moon.distance.get() <= 0.4 * hill, "Hill cap");
                 if let Some(prev) = previous {
-                    assert!(moon.distance_mm / prev >= 1.5, "mutual spacing");
+                    assert!(moon.distance.get() / prev >= 1.5, "mutual spacing");
                 }
-                previous = Some(moon.distance_mm);
+                previous = Some(moon.distance.get());
                 total_tide += moon.tide_rel;
                 // Derived quantities match the model card.
                 let expected_period =
-                    27.32 * ((moon.distance_mm / 384.4).powi(3) / anchor.mass_earths).sqrt();
-                assert!((moon.period_std_days - expected_period).abs() < 1e-9);
-                let expected_theta = moon.mass_lunar.powf(1.0 / 3.0) * 384.4 / moon.distance_mm;
+                    27.32 * ((moon.distance.get() / 384.4).powi(3) / anchor.mass.get()).sqrt();
+                assert!((moon.period.get() - expected_period).abs() < 1e-9);
+                let expected_theta = moon.mass.get().powf(1.0 / 3.0) * 384.4 / moon.distance.get();
                 assert!((moon.angular_diameter_rel - expected_theta).abs() < 1e-9);
-                let expected_tide = moon.mass_lunar / (moon.distance_mm / 384.4).powi(3);
+                let expected_tide = moon.mass.get() / (moon.distance.get() / 384.4).powi(3);
                 assert!((moon.tide_rel - expected_tide).abs() < 1e-9);
             }
             assert!(total_tide <= 8.0, "combined tide cap");

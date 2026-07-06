@@ -4,6 +4,7 @@
 
 use crate::pins::{NeighborClass, SkyPins};
 use crate::streams;
+use crate::units::LightYears;
 use hornvale_kernel::Seed;
 
 /// A notable neighbor star, visible in the night sky.
@@ -12,7 +13,7 @@ pub struct Neighbor {
     /// Spectral class (drawn or pinned).
     pub class: NeighborClass,
     /// Distance in light-years (drawn, 4–80).
-    pub distance_ly: f64,
+    pub distance: LightYears,
     /// Apparent brightness, relative units (derived: L/d²).
     pub apparent_brightness: f64,
     /// Human-readable color character.
@@ -65,11 +66,11 @@ pub fn generate_neighbors(astronomy_seed: Seed, pins: &SkyPins) -> Vec<Neighbor>
                 (0, Some(pinned)) => pinned,
                 _ => draw_class(roll),
             };
-            let distance_ly = 4.0 + stream.next_f64() * 76.0;
+            let distance = LightYears(4.0 + stream.next_f64() * 76.0);
             Neighbor {
                 class,
-                distance_ly,
-                apparent_brightness: class_luminosity(class) / (distance_ly * distance_ly),
+                distance,
+                apparent_brightness: class_luminosity(class) / (distance.0 * distance.0),
                 color: class_color(class).to_string(),
             }
         })
@@ -96,9 +97,9 @@ mod tests {
             assert!(pair[0].apparent_brightness >= pair[1].apparent_brightness);
         }
         for n in &neighbors {
-            let expected = class_luminosity(n.class) / (n.distance_ly * n.distance_ly);
+            let expected = class_luminosity(n.class) / (n.distance.get() * n.distance.get());
             assert!((n.apparent_brightness - expected).abs() < 1e-12);
-            assert!((4.0..=80.0).contains(&n.distance_ly));
+            assert!((4.0..=80.0).contains(&n.distance.get()));
         }
     }
 
@@ -113,8 +114,8 @@ mod tests {
 
         assert_eq!(default.len(), pinned.len());
 
-        let mut default_distances: Vec<f64> = default.iter().map(|n| n.distance_ly).collect();
-        let mut pinned_distances: Vec<f64> = pinned.iter().map(|n| n.distance_ly).collect();
+        let mut default_distances: Vec<f64> = default.iter().map(|n| n.distance.get()).collect();
+        let mut pinned_distances: Vec<f64> = pinned.iter().map(|n| n.distance.get()).collect();
         default_distances.sort_by(f64::total_cmp);
         pinned_distances.sort_by(f64::total_cmp);
         assert_eq!(default_distances, pinned_distances);

@@ -4,6 +4,7 @@
 use crate::pins::{GenesisError, RotationPin, SkyPins};
 use crate::star::Star;
 use crate::streams;
+use crate::units::{Au, Degrees, EarthMasses, SolarMasses, StdDays};
 use hornvale_kernel::Seed;
 
 /// Rotation regime of the anchor world.
@@ -12,7 +13,7 @@ pub enum Rotation {
     /// Ordinary spin with a solar day of this many standard days.
     Spinning {
         /// Day length in standard days.
-        day_std_days: f64,
+        day: StdDays,
     },
     /// Tidally locked: no local solar day exists.
     Locked,
@@ -22,19 +23,19 @@ pub enum Rotation {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Anchor {
     /// Mass in Earth masses (drawn, 0.5–2.0).
-    pub mass_earths: f64,
+    pub mass: EarthMasses,
     /// Orbital distance in AU (in the habitable zone by construction).
-    pub orbit_au: f64,
+    pub orbit: Au,
     /// Year length in standard days (derived: Kepler III).
-    pub year_std_days: f64,
+    pub year: StdDays,
     /// Rotation regime (drawn or pinned).
     pub rotation: Rotation,
     /// Axial tilt in degrees (drawn 0–35 or pinned).
-    pub obliquity_deg: f64,
+    pub obliquity: Degrees,
 }
 
-fn year_from_orbit(orbit_au: f64, star_mass: f64) -> f64 {
-    365.25 * (orbit_au.powi(3) / star_mass).sqrt()
+fn year_from_orbit(orbit: Au, star_mass: SolarMasses) -> StdDays {
+    StdDays(365.25 * (orbit.0.powi(3) / star_mass.0).sqrt())
 }
 
 /// Generate the anchor: in-zone by construction, pins conditioned on.
@@ -43,12 +44,13 @@ pub fn generate_anchor(
     star: &Star,
     pins: &SkyPins,
 ) -> Result<Anchor, GenesisError> {
-    let mass_earths = 0.5
-        + astronomy_seed
+    let mass = EarthMasses(
+        0.5 + astronomy_seed
             .derive(streams::ANCHOR_MASS)
             .stream()
             .next_f64()
-            * 1.5;
+            * 1.5,
+    );
 
     let rotation = match &pins.rotation {
         Some(RotationPin::Locked) => Rotation::Locked,
@@ -60,7 +62,7 @@ pub fn generate_anchor(
                 });
             }
             Rotation::Spinning {
-                day_std_days: h / 24.0,
+                day: StdDays(h / 24.0),
             }
         }
         Some(RotationPin::Normal) | None => {
@@ -71,73 +73,83 @@ pub fn generate_anchor(
                 Rotation::Locked
             } else {
                 Rotation::Spinning {
-                    day_std_days: (16.0 + stream.next_f64() * 24.0) / 24.0,
+                    day: StdDays((16.0 + stream.next_f64() * 24.0) / 24.0),
                 }
             }
         }
     };
 
-    let (inner, outer) = star.habitable_zone_au;
-    let (orbit_au, year_std_days) = match pins.year_local_days {
+    let (inner, outer) = star.habitable_zone;
+    let (orbit, year) = match pins.year_local_days {
         Some(local_days) => {
-            let Rotation::Spinning { day_std_days } = rotation else {
+            let Rotation::Spinning { day } = rotation else {
                 return Err(GenesisError::UnsatisfiablePin {
                     pin: "year-days".to_string(),
                     reason: "a tidally locked world has no local days to count a year in"
                         .to_string(),
                 });
             };
-            if !local_days.is_finite() || local_days <= 0.0 {
+            // Zero is a valid time POINT (LocalDays permits it) but not a
+            // valid year length; negative/non-finite values are already
+            // unrepresentable — LocalDays::new rejects them at construction.
+            if local_days.get() <= 0.0 {
                 return Err(GenesisError::InvalidPin {
                     pin: "year-days".to_string(),
-                    reason: format!("{local_days} local days is not a positive, finite year"),
+                    reason: format!(
+                        "{} local days is not a positive, finite year",
+                        local_days.get()
+                    ),
                 });
             }
-            let year_std = local_days * day_std_days;
-            let orbit = (star.mass_solar * (year_std / 365.25).powi(2)).powf(1.0 / 3.0);
-            if !(inner..=outer).contains(&orbit) {
+            let year_std = StdDays(local_days.0 * day.0);
+            let orbit = Au((star.mass.0 * (year_std.0 / 365.25).powi(2)).powf(1.0 / 3.0));
+            if !(inner.0..=outer.0).contains(&orbit.0) {
                 return Err(GenesisError::UnsatisfiablePin {
                     pin: "year-days".to_string(),
                     reason: format!(
-                        "a {local_days}-local-day year places the anchor at {orbit:.2} AU, \
-                         outside the habitable zone ({inner:.2}–{outer:.2} AU)"
+                        "a {}-local-day year places the anchor at {:.2} AU, \
+                         outside the habitable zone ({:.2}–{:.2} AU)",
+                        local_days.get(),
+                        orbit.0,
+                        inner.0,
+                        outer.0
                     ),
                 });
             }
             (orbit, year_std)
         }
         None => {
-            let orbit =
-                inner + astronomy_seed.derive(streams::ORBIT).stream().next_f64() * (outer - inner);
-            (orbit, year_from_orbit(orbit, star.mass_solar))
+            let orbit = Au(inner.0
+                + astronomy_seed.derive(streams::ORBIT).stream().next_f64() * (outer.0 - inner.0));
+            (orbit, year_from_orbit(orbit, star.mass))
         }
     };
 
-    let obliquity_deg = match pins.obliquity_deg {
+    let obliquity = match pins.obliquity {
         Some(deg) => {
-            if !(0.0..=35.0).contains(&deg) {
+            if !(0.0..=35.0).contains(&deg.get()) {
                 return Err(GenesisError::InvalidPin {
                     pin: "obliquity".to_string(),
-                    reason: format!("{deg}° is outside the legal range 0–35"),
+                    reason: format!("{}° is outside the legal range 0–35", deg.get()),
                 });
             }
             deg
         }
-        None => {
+        None => Degrees(
             astronomy_seed
                 .derive(streams::OBLIQUITY)
                 .stream()
                 .next_f64()
-                * 35.0
-        }
+                * 35.0,
+        ),
     };
 
     Ok(Anchor {
-        mass_earths,
-        orbit_au,
-        year_std_days,
+        mass,
+        orbit,
+        year,
         rotation,
-        obliquity_deg,
+        obliquity,
     })
 }
 
@@ -145,6 +157,7 @@ pub fn generate_anchor(
 mod tests {
     use super::*;
     use crate::star::generate_star;
+    use crate::units::LocalDays;
 
     fn star() -> Star {
         generate_star(Seed(42))
@@ -158,18 +171,18 @@ mod tests {
             a,
             generate_anchor(Seed(42), &s, &SkyPins::default()).unwrap()
         );
-        let (inner, outer) = s.habitable_zone_au;
-        assert!((inner..=outer).contains(&a.orbit_au));
-        assert!((0.5..=2.0).contains(&a.mass_earths));
-        assert!((0.0..=35.0).contains(&a.obliquity_deg));
+        let (inner, outer) = s.habitable_zone;
+        assert!((inner.get()..=outer.get()).contains(&a.orbit.get()));
+        assert!((0.5..=2.0).contains(&a.mass.get()));
+        assert!((0.0..=35.0).contains(&a.obliquity.get()));
     }
 
     #[test]
     fn year_satisfies_kepler() {
         let s = star();
         let a = generate_anchor(Seed(7), &s, &SkyPins::default()).unwrap();
-        let expected = 365.25 * (a.orbit_au.powi(3) / s.mass_solar).sqrt();
-        assert!((a.year_std_days - expected).abs() < 1e-9);
+        let expected = 365.25 * (a.orbit.get().powi(3) / s.mass.get()).sqrt();
+        assert!((a.year.get() - expected).abs() < 1e-9);
     }
 
     #[test]
@@ -187,7 +200,7 @@ mod tests {
             ..SkyPins::default()
         };
         let a = generate_anchor(Seed(1), &s, &pins).unwrap();
-        assert_eq!(a.rotation, Rotation::Spinning { day_std_days: 1.25 });
+        assert_eq!(a.rotation, Rotation::Spinning { day: StdDays(1.25) });
     }
 
     #[test]
@@ -229,18 +242,18 @@ mod tests {
         let default_anchor = generate_anchor(Seed(1), &s, &SkyPins::default()).unwrap();
         let pins = SkyPins {
             rotation: Some(RotationPin::PeriodHours(24.0)),
-            year_local_days: Some(default_anchor.year_std_days), // 24h day => local == std
+            year_local_days: Some(LocalDays::new(default_anchor.year.get()).unwrap()), // 24h day => local == std
             ..SkyPins::default()
         };
         let a = generate_anchor(Seed(1), &s, &pins).unwrap();
-        let (inner, outer) = s.habitable_zone_au;
-        assert!((inner..=outer).contains(&a.orbit_au));
-        assert!((a.orbit_au - default_anchor.orbit_au).abs() < 1e-9);
+        let (inner, outer) = s.habitable_zone;
+        assert!((inner.get()..=outer.get()).contains(&a.orbit.get()));
+        assert!((a.orbit.get() - default_anchor.orbit.get()).abs() < 1e-9);
         // An absurd year lands far outside the zone for ANY legal star
         // (a >= (0.6·(4000/365.25)²)^(1/3) ≈ 4.2 AU; max outer ≈ 2.5 AU).
         let pins = SkyPins {
             rotation: Some(RotationPin::PeriodHours(24.0)),
-            year_local_days: Some(4000.0),
+            year_local_days: Some(LocalDays::new(4000.0).unwrap()),
             ..SkyPins::default()
         };
         assert!(matches!(
@@ -254,7 +267,7 @@ mod tests {
         let s = star();
         let pins = SkyPins {
             rotation: Some(RotationPin::Locked),
-            year_local_days: Some(300.0),
+            year_local_days: Some(LocalDays::new(300.0).unwrap()),
             ..SkyPins::default()
         };
         assert!(matches!(
@@ -264,37 +277,43 @@ mod tests {
     }
 
     #[test]
-    fn year_pin_rejects_non_positive_values() {
+    fn year_pin_rejects_a_zero_length_year() {
+        // Zero is a valid LocalDays time POINT (constructible), but the
+        // anchor still refuses it as a year length.
         let s = star();
-        for bad in [-365.0, 0.0, f64::NAN] {
-            let pins = SkyPins {
-                rotation: Some(RotationPin::PeriodHours(24.0)),
-                year_local_days: Some(bad),
-                ..SkyPins::default()
-            };
-            assert!(
-                matches!(
-                    generate_anchor(Seed(1), &s, &pins),
-                    Err(GenesisError::InvalidPin { .. })
-                ),
-                "expected InvalidPin for year_local_days = {bad}"
-            );
-        }
+        let pins = SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            year_local_days: Some(LocalDays::new(0.0).unwrap()),
+            ..SkyPins::default()
+        };
+        assert!(matches!(
+            generate_anchor(Seed(1), &s, &pins),
+            Err(GenesisError::InvalidPin { .. })
+        ));
+    }
+
+    #[test]
+    fn negative_and_non_finite_years_are_unrepresentable() {
+        // Negative/NaN years can no longer reach the anchor at all: LocalDays
+        // rejects them at construction, the CLI boundary for pins.
+        assert!(LocalDays::new(-365.0).is_err());
+        assert!(LocalDays::new(f64::NAN).is_err());
     }
 
     #[test]
     fn obliquity_pin_is_honored_and_validated() {
         let s = star();
         let pins = SkyPins {
-            obliquity_deg: Some(0.0),
+            obliquity: Some(Degrees::new(0.0).unwrap()),
             ..SkyPins::default()
         };
         assert_eq!(
-            generate_anchor(Seed(1), &s, &pins).unwrap().obliquity_deg,
+            generate_anchor(Seed(1), &s, &pins).unwrap().obliquity.get(),
             0.0
         );
+        // Degrees permits up to 360, but the anchor keeps its own 0-35 check.
         let pins = SkyPins {
-            obliquity_deg: Some(60.0),
+            obliquity: Some(Degrees::new(60.0).unwrap()),
             ..SkyPins::default()
         };
         assert!(matches!(

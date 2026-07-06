@@ -2,6 +2,8 @@
 //! Downstream generation conditions on pinned values identically to drawn
 //! ones; unsatisfiable pins fail loudly.
 
+use crate::units::{Degrees, LocalDays};
+
 /// The scenario pins for sky genesis. Every field: `None` = drawn from the
 /// seed; `Some` = supplied by the experimenter and conditioned on.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -11,9 +13,9 @@ pub struct SkyPins {
     /// Rotation regime of the anchor world.
     pub rotation: Option<RotationPin>,
     /// Axial tilt in degrees (0–35); 0 = no seasons.
-    pub obliquity_deg: Option<f64>,
+    pub obliquity: Option<Degrees>,
     /// Year length in local days (requires a spinning world).
-    pub year_local_days: Option<f64>,
+    pub year_local_days: Option<LocalDays>,
     /// Force one showpiece neighbor of this class.
     pub neighbor: Option<NeighborClass>,
 }
@@ -89,7 +91,7 @@ mod tests {
         let pins = SkyPins::default();
         assert!(pins.moons.is_none());
         assert!(pins.rotation.is_none());
-        assert!(pins.obliquity_deg.is_none());
+        assert!(pins.obliquity.is_none());
         assert!(pins.year_local_days.is_none());
         assert!(pins.neighbor.is_none());
     }

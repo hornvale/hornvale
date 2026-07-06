@@ -45,8 +45,8 @@ mod tests {
     #[test]
     fn generate_assembles_a_complete_system() {
         let system = generate(Seed(42), &SkyPins::default()).unwrap();
-        assert!(system.star.luminosity_solar > 0.0);
-        assert!(system.anchor.year_std_days > 0.0);
+        assert!(system.star.luminosity.get() > 0.0);
+        assert!(system.anchor.year.get() > 0.0);
         assert!(system.moons.len() <= 3);
         assert!(!system.neighbors.is_empty());
     }

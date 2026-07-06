@@ -2,7 +2,8 @@
 //! seeds and the pin matrix, satisfies the model card's invariants.
 
 use hornvale_astronomy::{
-    GenesisError, NeighborClass, Rotation, RotationPin, SkyPins, generate, hill_radius_mm,
+    Degrees, GenesisError, LocalDays, NeighborClass, Rotation, RotationPin, SkyPins, generate,
+    hill_radius_mm,
 };
 use hornvale_kernel::Seed;
 
@@ -11,24 +12,24 @@ fn every_default_system_satisfies_every_invariant() {
     for seed in 0..128 {
         let system = generate(Seed(seed), &SkyPins::default())
             .unwrap_or_else(|e| panic!("seed {seed} failed default genesis: {e}"));
-        let (inner, outer) = system.star.habitable_zone_au;
+        let (inner, outer) = system.star.habitable_zone;
         assert!(
-            (inner..=outer).contains(&system.anchor.orbit_au),
+            (inner.get()..=outer.get()).contains(&system.anchor.orbit.get()),
             "seed {seed}: anchor out of zone"
         );
         let expected_year =
-            365.25 * (system.anchor.orbit_au.powi(3) / system.star.mass_solar).sqrt();
-        assert!((system.anchor.year_std_days - expected_year).abs() < 1e-9);
+            365.25 * (system.anchor.orbit.get().powi(3) / system.star.mass.get()).sqrt();
+        assert!((system.anchor.year.get() - expected_year).abs() < 1e-9);
         let hill = hill_radius_mm(&system.star, &system.anchor);
         let mut total_tide = 0.0;
         for pair in system.moons.windows(2) {
             assert!(
-                pair[1].distance_mm / pair[0].distance_mm >= 1.5,
+                pair[1].distance.get() / pair[0].distance.get() >= 1.5,
                 "seed {seed}: spacing"
             );
         }
         for moon in &system.moons {
-            assert!(moon.distance_mm >= 20.0 && moon.distance_mm <= 0.4 * hill);
+            assert!(moon.distance.get() >= 20.0 && moon.distance.get() <= 0.4 * hill);
             total_tide += moon.tide_rel;
         }
         assert!(total_tide <= 8.0, "seed {seed}: tide cap");
@@ -54,10 +55,13 @@ fn the_pin_matrix_is_honored() {
         Rotation::Locked
     );
     let pins = SkyPins {
-        obliquity_deg: Some(0.0),
+        obliquity: Some(Degrees::new(0.0).unwrap()),
         ..SkyPins::default()
     };
-    assert_eq!(generate(Seed(42), &pins).unwrap().anchor.obliquity_deg, 0.0);
+    assert_eq!(
+        generate(Seed(42), &pins).unwrap().anchor.obliquity.get(),
+        0.0
+    );
     let pins = SkyPins {
         neighbor: Some(NeighborClass::BlueGiant),
         ..SkyPins::default()
@@ -72,7 +76,7 @@ fn the_pin_matrix_is_honored() {
 fn unsatisfiable_pins_fail_loudly_with_the_physical_reason() {
     let pins = SkyPins {
         rotation: Some(RotationPin::PeriodHours(24.0)),
-        year_local_days: Some(4000.0),
+        year_local_days: Some(LocalDays::new(4000.0).unwrap()),
         ..SkyPins::default()
     };
     match generate(Seed(42), &pins) {
@@ -119,8 +123,10 @@ fn pin_isolation_holds_at_the_system_level() {
     };
     let pinned = generate(Seed(42), &pins).unwrap();
     assert_eq!(default.neighbors.len(), pinned.neighbors.len());
-    let mut default_distances: Vec<f64> = default.neighbors.iter().map(|n| n.distance_ly).collect();
-    let mut pinned_distances: Vec<f64> = pinned.neighbors.iter().map(|n| n.distance_ly).collect();
+    let mut default_distances: Vec<f64> =
+        default.neighbors.iter().map(|n| n.distance.get()).collect();
+    let mut pinned_distances: Vec<f64> =
+        pinned.neighbors.iter().map(|n| n.distance.get()).collect();
     default_distances.sort_by(f64::total_cmp);
     pinned_distances.sort_by(f64::total_cmp);
     assert_eq!(default_distances, pinned_distances);
