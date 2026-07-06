@@ -60,9 +60,10 @@ pub fn generate_neighbors(astronomy_seed: Seed, pins: &SkyPins) -> Vec<Neighbor>
     let count = stream.range_u32(2, 5);
     let mut neighbors: Vec<Neighbor> = (0..count)
         .map(|index| {
+            let roll = stream.range_u32(1, 100);
             let class = match (index, pins.neighbor) {
                 (0, Some(pinned)) => pinned,
-                _ => draw_class(stream.range_u32(1, 100)),
+                _ => draw_class(roll),
             };
             let distance_ly = 4.0 + stream.next_f64() * 76.0;
             Neighbor {
@@ -99,6 +100,26 @@ mod tests {
             assert!((n.apparent_brightness - expected).abs() < 1e-12);
             assert!((4.0..=80.0).contains(&n.distance_ly));
         }
+    }
+
+    #[test]
+    fn neighbor_pin_leaves_the_rest_of_the_neighborhood_untouched() {
+        let default = generate_neighbors(Seed(3), &SkyPins::default());
+        let pins = SkyPins {
+            neighbor: Some(NeighborClass::BlueGiant),
+            ..SkyPins::default()
+        };
+        let pinned = generate_neighbors(Seed(3), &pins);
+
+        assert_eq!(default.len(), pinned.len());
+
+        let mut default_distances: Vec<f64> = default.iter().map(|n| n.distance_ly).collect();
+        let mut pinned_distances: Vec<f64> = pinned.iter().map(|n| n.distance_ly).collect();
+        default_distances.sort_by(f64::total_cmp);
+        pinned_distances.sort_by(f64::total_cmp);
+        assert_eq!(default_distances, pinned_distances);
+
+        assert!(pinned.iter().any(|n| n.class == NeighborClass::BlueGiant));
     }
 
     #[test]
