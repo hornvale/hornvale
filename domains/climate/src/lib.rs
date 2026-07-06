@@ -1,10 +1,12 @@
 //! Climate, tier 0: mild and temperate everywhere, forever.
 #![warn(missing_docs)]
 
+pub mod biome;
 pub mod circulation;
 pub mod moisture;
 pub mod temperature;
 
+pub use biome::{Biome, SeafloorFeature};
 pub use circulation::{RotationRegime, band_count_for};
 
 use hornvale_kernel::{

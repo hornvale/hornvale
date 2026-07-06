@@ -1,0 +1,247 @@
+//! Biomes: a queryable field over the globe, derived per cell from
+//! temperature, moisture, elevation, and (for the sea) depth, surface
+//! temperature, and seafloor features. Land follows a Whittaker lookup with
+//! ice/alpine specials; marine follows depth/SST/boundary/upwelling. Biomes
+//! are never committed as facts (spec §3, §6) — the tier-0 `biome` fact stays
+//! with the Vale.
+
+/// A seafloor tectonic feature at an ocean cell (climate-owned; the
+/// composition root maps `terrain::BoundaryKind` into this so climate imports
+/// no domain).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SeafloorFeature {
+    /// No notable boundary feature.
+    None,
+    /// A deep trench (ocean–ocean convergent subduction).
+    Trench,
+    /// A spreading ridge with hydrothermal vents (oceanic divergent).
+    Ridge,
+}
+
+/// A biome class — terrestrial or marine.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Biome {
+    /// Permanent land ice.
+    Ice,
+    /// Treeless cold ground.
+    Tundra,
+    /// Boreal coniferous forest.
+    Taiga,
+    /// Temperate grassland / steppe.
+    TemperateGrassland,
+    /// Dry temperate shrubland.
+    Shrubland,
+    /// Temperate broadleaf forest.
+    TemperateForest,
+    /// Wet temperate rainforest.
+    TemperateRainforest,
+    /// Hot desert.
+    Desert,
+    /// Tropical grassland with scattered trees.
+    Savanna,
+    /// Tropical forest with a dry season.
+    TropicalSeasonalForest,
+    /// Tropical rainforest.
+    TropicalRainforest,
+    /// Bare high ground above the tree line.
+    Alpine,
+    /// Frozen sea surface.
+    SeaIce,
+    /// Warm shallow reef.
+    CoralReef,
+    /// Cold shallow kelp forest.
+    KelpForest,
+    /// A hydrothermal-vent field on a spreading ridge.
+    HydrothermalVent,
+    /// A hadal ocean trench.
+    HadalTrench,
+    /// A wind-driven coastal upwelling zone (high productivity).
+    Upwelling,
+    /// Sunlit surface waters (0–200 m).
+    Epipelagic,
+    /// Twilight waters (200–1000 m).
+    Mesopelagic,
+    /// Dark waters (1000–4000 m).
+    Bathypelagic,
+    /// The abyssal plain (4000–6000 m).
+    Abyssal,
+}
+
+/// The tree line in meters at a latitude: 4000 m at the equator, falling
+/// 40 m per degree, floored at 0.
+pub fn tree_line_m(latitude_deg: f64) -> f64 {
+    (4000.0 - 40.0 * latitude_deg.abs()).max(0.0)
+}
+
+/// Ice threshold: annual-mean below this is permanent ice.
+const ICE_C: f64 = -20.0;
+
+impl Biome {
+    /// True for the marine variants.
+    pub fn is_marine(self) -> bool {
+        matches!(
+            self,
+            Biome::SeaIce
+                | Biome::CoralReef
+                | Biome::KelpForest
+                | Biome::HydrothermalVent
+                | Biome::HadalTrench
+                | Biome::Upwelling
+                | Biome::Epipelagic
+                | Biome::Mesopelagic
+                | Biome::Bathypelagic
+                | Biome::Abyssal
+        )
+    }
+
+    /// The canonical kebab-case name (Lab metrics, CSV, book prose).
+    pub fn name(self) -> &'static str {
+        match self {
+            Biome::Ice => "ice",
+            Biome::Tundra => "tundra",
+            Biome::Taiga => "taiga",
+            Biome::TemperateGrassland => "temperate-grassland",
+            Biome::Shrubland => "shrubland",
+            Biome::TemperateForest => "temperate-forest",
+            Biome::TemperateRainforest => "temperate-rainforest",
+            Biome::Desert => "desert",
+            Biome::Savanna => "savanna",
+            Biome::TropicalSeasonalForest => "tropical-seasonal-forest",
+            Biome::TropicalRainforest => "tropical-rainforest",
+            Biome::Alpine => "alpine",
+            Biome::SeaIce => "sea-ice",
+            Biome::CoralReef => "coral-reef",
+            Biome::KelpForest => "kelp-forest",
+            Biome::HydrothermalVent => "hydrothermal-vent",
+            Biome::HadalTrench => "hadal-trench",
+            Biome::Upwelling => "upwelling",
+            Biome::Epipelagic => "epipelagic",
+            Biome::Mesopelagic => "mesopelagic",
+            Biome::Bathypelagic => "bathypelagic",
+            Biome::Abyssal => "abyssal",
+        }
+    }
+}
+
+/// Classify a land cell. Specials first (ice below `ICE_C`, alpine above the
+/// tree line), then a Whittaker lookup on (annual-mean temperature, moisture).
+pub fn classify_land(
+    temp_c: f64,
+    moisture: f64,
+    elevation_m: f64,
+    sea_level_m: f64,
+    latitude_deg: f64,
+) -> Biome {
+    if temp_c < ICE_C {
+        return Biome::Ice;
+    }
+    if elevation_m - sea_level_m > tree_line_m(latitude_deg) {
+        return Biome::Alpine;
+    }
+    if temp_c < 0.0 {
+        // Cold: dry tundra, wetter taiga.
+        if moisture < 0.35 {
+            Biome::Tundra
+        } else {
+            Biome::Taiga
+        }
+    } else if temp_c < 7.0 {
+        if moisture < 0.3 {
+            Biome::Tundra
+        } else {
+            Biome::Taiga
+        }
+    } else if temp_c < 20.0 {
+        // Temperate.
+        if moisture < 0.25 {
+            Biome::TemperateGrassland
+        } else if moisture < 0.4 {
+            Biome::Shrubland
+        } else if moisture < 0.75 {
+            Biome::TemperateForest
+        } else {
+            Biome::TemperateRainforest
+        }
+    } else {
+        // Hot.
+        if moisture < 0.2 {
+            Biome::Desert
+        } else if moisture < 0.45 {
+            Biome::Savanna
+        } else if moisture < 0.7 {
+            Biome::TropicalSeasonalForest
+        } else {
+            Biome::TropicalRainforest
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn whittaker_hits_known_corners() {
+        // Hot & wet → tropical rainforest; hot & dry → desert.
+        assert_eq!(
+            classify_land(27.0, 0.9, 300.0, 0.0, 0.0),
+            Biome::TropicalRainforest
+        );
+        assert_eq!(classify_land(27.0, 0.05, 300.0, 0.0, 10.0), Biome::Desert);
+        // Temperate mid-moisture → temperate forest.
+        assert_eq!(
+            classify_land(12.0, 0.5, 200.0, 0.0, 45.0),
+            Biome::TemperateForest
+        );
+        // Cold → taiga/tundra.
+        assert_eq!(classify_land(-2.0, 0.4, 100.0, 0.0, 60.0), Biome::Taiga);
+    }
+
+    #[test]
+    fn specials_take_precedence() {
+        // Below the ice threshold → Ice regardless of moisture.
+        assert_eq!(classify_land(-25.0, 0.8, 100.0, 0.0, 80.0), Biome::Ice);
+        // Above the tree line → Alpine.
+        assert_eq!(classify_land(5.0, 0.5, 4500.0, 0.0, 0.0), Biome::Alpine);
+    }
+
+    #[test]
+    fn names_are_kebab_and_unique() {
+        let all = [
+            Biome::Ice,
+            Biome::Tundra,
+            Biome::Taiga,
+            Biome::TemperateGrassland,
+            Biome::Shrubland,
+            Biome::TemperateForest,
+            Biome::TemperateRainforest,
+            Biome::Desert,
+            Biome::Savanna,
+            Biome::TropicalSeasonalForest,
+            Biome::TropicalRainforest,
+            Biome::Alpine,
+            Biome::SeaIce,
+            Biome::CoralReef,
+            Biome::KelpForest,
+            Biome::HydrothermalVent,
+            Biome::HadalTrench,
+            Biome::Upwelling,
+            Biome::Epipelagic,
+            Biome::Mesopelagic,
+            Biome::Bathypelagic,
+            Biome::Abyssal,
+        ];
+        let mut names: Vec<&str> = all.iter().map(|b| b.name()).collect();
+        for n in &names {
+            assert!(
+                n.chars().all(|c| c.is_ascii_lowercase() || c == '-'),
+                "not kebab: {n}"
+            );
+        }
+        let len = names.len();
+        names.sort();
+        names.dedup();
+        assert_eq!(names.len(), len, "duplicate biome names");
+        assert_eq!(len, 22);
+    }
+}
