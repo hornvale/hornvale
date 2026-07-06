@@ -38,7 +38,6 @@ pub(crate) fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
 }
 
 /// a − b.
-#[allow(dead_code)]
 pub(crate) fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
@@ -49,13 +48,11 @@ pub(crate) fn scale(a: [f64; 3], s: f64) -> [f64; 3] {
 }
 
 /// Euclidean length.
-#[allow(dead_code)]
 pub(crate) fn norm(a: [f64; 3]) -> f64 {
     dot(a, a).sqrt()
 }
 
 /// a normalized to unit length.
-#[allow(dead_code)]
 pub(crate) fn normalize(a: [f64; 3]) -> [f64; 3] {
     scale(a, 1.0 / norm(a))
 }

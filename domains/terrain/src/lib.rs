@@ -3,10 +3,12 @@
 //! computed over the shared kernel Geosphere.
 #![warn(missing_docs)]
 
+pub mod boundaries;
 pub mod pins;
 pub mod plates;
 pub mod streams;
 
+pub use boundaries::{BoundaryKind, CellBoundary};
 pub use pins::{GenesisError, TerrainPins, parse_pin, pin_strings};
 pub use plates::Plate;
 
