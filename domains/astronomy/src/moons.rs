@@ -42,32 +42,28 @@ fn derive_moon(mass: f64, distance: f64, anchor: &Anchor) -> Moon {
 }
 
 /// Generate the moons: count drawn or pinned; each admitted only past the
-/// stability inequalities, with a bounded redraw budget.
+/// stability inequalities, with a bounded redraw budget. Returns moons and
+/// notes about any degradation that occurred.
 pub fn generate_moons(
     astronomy_seed: Seed,
     star: &Star,
     anchor: &Anchor,
     pins: &SkyPins,
-) -> Result<Vec<Moon>, GenesisError> {
-    let count = match pins.moons {
-        Some(n) if n <= 3 => n,
-        Some(n) => {
-            return Err(GenesisError::InvalidPin {
-                pin: "moons".to_string(),
-                reason: format!("{n} moons requested; the legal range is 0–3"),
-            });
-        }
+) -> Result<(Vec<Moon>, Vec<String>), GenesisError> {
+    let (count, min) = match pins.moons {
+        Some(pin) => (pin.want(), pin.min()),
         None => {
             let roll = astronomy_seed
                 .derive(streams::MOON_COUNT)
                 .stream()
                 .range_u32(1, 100);
-            match roll {
+            let drawn_count = match roll {
                 1..=15 => 0,
                 16..=55 => 1,
                 56..=85 => 2,
                 _ => 3,
-            }
+            };
+            (drawn_count, 0)
         }
     };
 
@@ -75,6 +71,7 @@ pub fn generate_moons(
     let max_distance = (0.4 * hill).min(900.0);
     let mut stream = astronomy_seed.derive(streams::MOONS).stream();
     let mut moons: Vec<Moon> = Vec::new();
+    let mut notes: Vec<String> = Vec::new();
 
     for index in 0..count {
         let mut admitted = false;
@@ -99,31 +96,33 @@ pub fn generate_moons(
             }
         }
         if !admitted {
-            if pins.moons.is_some() {
+            let sought = index + 1;
+            if (moons.len() as u32) < min {
                 return Err(GenesisError::UnsatisfiablePin {
                     pin: "moons".to_string(),
                     reason: format!(
-                        "moon {} of {count} found no stable orbit within the attempt budget \
-                         (Hill radius {hill:.0} Mm, tide cap {TIDE_CAP})",
-                        index + 1
+                        "moon {sought} of {count} found no stable orbit within the attempt budget \
+                         (Hill radius {hill:.0} Mm, tide cap {TIDE_CAP})"
                     ),
                 });
             }
-            // Drawn count: this system genuinely cannot hold another stable
-            // moon — accept the ones admitted (spec §4.3: loud failure is
-            // for pins; drawn configurations degrade honestly).
+            notes.push(format!(
+                "moon {sought} of {count} was sought; no stable orbit exists within the \
+                 Hill sphere, spacing, and tide budget"
+            ));
             break;
         }
     }
 
     moons.sort_by(|a, b| a.distance.0.total_cmp(&b.distance.0));
-    Ok(moons)
+    Ok((moons, notes))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::anchor::generate_anchor;
+    use crate::pins::MoonsPin;
     use crate::star::generate_star;
 
     fn system(seed: u64) -> (Star, Anchor) {
@@ -133,29 +132,62 @@ mod tests {
     }
 
     #[test]
+    fn graded_pin_degrades_with_a_note_above_min() {
+        // Seed 10 cannot hold a third moon; graded 2+1 accepts 2 + a note.
+        let (star, anchor) = system(10);
+        let pins = SkyPins {
+            moons: Some(MoonsPin::graded(2, 1).unwrap()),
+            ..SkyPins::default()
+        };
+        let (moons, notes) = generate_moons(Seed(10), &star, &anchor, &pins).unwrap();
+        assert_eq!(moons.len(), 2);
+        assert_eq!(notes.len(), 1);
+        assert!(notes[0].contains("moon 3 of 3 was sought"));
+    }
+
+    #[test]
+    fn graded_pin_fails_loudly_below_min() {
+        let (star, anchor) = system(10);
+        let pins = SkyPins {
+            moons: Some(MoonsPin::exact(3).unwrap()),
+            ..SkyPins::default()
+        };
+        assert!(matches!(
+            generate_moons(Seed(10), &star, &anchor, &pins),
+            Err(GenesisError::UnsatisfiablePin { .. })
+        ));
+    }
+
+    #[test]
+    fn drawn_degradation_is_noted() {
+        let (star, anchor) = system(10);
+        let (moons, notes) = generate_moons(Seed(10), &star, &anchor, &SkyPins::default()).unwrap();
+        assert!(moons.len() < 3);
+        assert_eq!(notes.len(), 1);
+        assert!(notes[0].contains("was sought"));
+    }
+
+    #[test]
+    fn moons_pin_constructors_validate() {
+        assert!(MoonsPin::exact(3).is_ok());
+        assert!(MoonsPin::exact(4).is_err());
+        assert!(MoonsPin::graded(2, 1).is_ok());
+        assert!(MoonsPin::graded(2, 2).is_err());
+        let p = MoonsPin::graded(1, 2).unwrap();
+        assert_eq!((p.min(), p.want()), (1, 3));
+    }
+
+    #[test]
     fn moon_count_pin_is_honored_for_every_legal_value() {
         let (star, anchor) = system(42);
         for count in 0..=3u32 {
             let pins = SkyPins {
-                moons: Some(count),
+                moons: Some(MoonsPin::exact(count).unwrap()),
                 ..SkyPins::default()
             };
-            let moons = generate_moons(Seed(42), &star, &anchor, &pins).unwrap();
+            let (moons, _) = generate_moons(Seed(42), &star, &anchor, &pins).unwrap();
             assert_eq!(moons.len() as u32, count);
         }
-    }
-
-    #[test]
-    fn moon_count_pin_validates_range() {
-        let (star, anchor) = system(42);
-        let pins = SkyPins {
-            moons: Some(7),
-            ..SkyPins::default()
-        };
-        assert!(matches!(
-            generate_moons(Seed(42), &star, &anchor, &pins),
-            Err(GenesisError::InvalidPin { .. })
-        ));
     }
 
     #[test]
@@ -163,15 +195,18 @@ mod tests {
         // Seed 10 draws 3 moons but has no feasible third slot; unpinned
         // generation degrades to the admitted set instead of failing.
         let (star, anchor) = system(10);
-        let moons = generate_moons(Seed(10), &star, &anchor, &SkyPins::default()).unwrap();
+        let (moons, notes) = generate_moons(Seed(10), &star, &anchor, &SkyPins::default()).unwrap();
         assert!(moons.len() < 3 && !moons.is_empty());
+        assert_eq!(notes.len(), 1);
+        assert!(notes[0].contains("was sought"));
     }
 
     #[test]
     fn every_generated_moon_satisfies_the_inequalities() {
         for seed in 0..64 {
             let (star, anchor) = system(seed);
-            let moons = generate_moons(Seed(seed), &star, &anchor, &SkyPins::default()).unwrap();
+            let (moons, _) =
+                generate_moons(Seed(seed), &star, &anchor, &SkyPins::default()).unwrap();
             let hill = hill_radius_mm(&star, &anchor);
             let mut previous: Option<f64> = None;
             let mut total_tide = 0.0;

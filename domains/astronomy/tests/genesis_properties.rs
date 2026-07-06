@@ -2,16 +2,17 @@
 //! seeds and the pin matrix, satisfies the model card's invariants.
 
 use hornvale_astronomy::{
-    Degrees, GenesisError, LocalDays, NeighborClass, Rotation, RotationPin, SkyPins, generate,
-    hill_radius_mm,
+    Degrees, GenesisError, LocalDays, MoonsPin, NeighborClass, Rotation, RotationPin, SkyPins,
+    generate, hill_radius_mm,
 };
 use hornvale_kernel::Seed;
 
 #[test]
 fn every_default_system_satisfies_every_invariant() {
     for seed in 0..128 {
-        let system = generate(Seed(seed), &SkyPins::default())
+        let outcome = generate(Seed(seed), &SkyPins::default())
             .unwrap_or_else(|e| panic!("seed {seed} failed default genesis: {e}"));
+        let system = &outcome.system;
         let (inner, outer) = system.star.habitable_zone;
         assert!(
             (inner.get()..=outer.get()).contains(&system.anchor.orbit.get()),
@@ -41,17 +42,20 @@ fn every_default_system_satisfies_every_invariant() {
 fn the_pin_matrix_is_honored() {
     for moons in 0..=3u32 {
         let pins = SkyPins {
-            moons: Some(moons),
+            moons: Some(MoonsPin::exact(moons).unwrap()),
             ..SkyPins::default()
         };
-        assert_eq!(generate(Seed(42), &pins).unwrap().moons.len() as u32, moons);
+        assert_eq!(
+            generate(Seed(42), &pins).unwrap().system.moons.len() as u32,
+            moons
+        );
     }
     let pins = SkyPins {
         rotation: Some(RotationPin::Locked),
         ..SkyPins::default()
     };
     assert_eq!(
-        generate(Seed(42), &pins).unwrap().anchor.rotation,
+        generate(Seed(42), &pins).unwrap().system.anchor.rotation,
         Rotation::Locked
     );
     let pins = SkyPins {
@@ -59,7 +63,12 @@ fn the_pin_matrix_is_honored() {
         ..SkyPins::default()
     };
     assert_eq!(
-        generate(Seed(42), &pins).unwrap().anchor.obliquity.get(),
+        generate(Seed(42), &pins)
+            .unwrap()
+            .system
+            .anchor
+            .obliquity
+            .get(),
         0.0
     );
     let pins = SkyPins {
@@ -67,7 +76,7 @@ fn the_pin_matrix_is_honored() {
         ..SkyPins::default()
     };
     assert_eq!(
-        generate(Seed(42), &pins).unwrap().neighbors[0].class,
+        generate(Seed(42), &pins).unwrap().system.neighbors[0].class,
         NeighborClass::BlueGiant
     );
 }
@@ -93,7 +102,7 @@ fn pinned_worlds_differ_from_unpinned_only_downstream_of_the_pin() {
     // Same seed, moons pinned to the drawn count => identical system.
     let default = generate(Seed(42), &SkyPins::default()).unwrap();
     let pinned_same = SkyPins {
-        moons: Some(default.moons.len() as u32),
+        moons: Some(MoonsPin::exact(default.system.moons.len() as u32).unwrap()),
         ..SkyPins::default()
     };
     assert_eq!(generate(Seed(42), &pinned_same).unwrap(), default);
@@ -105,7 +114,10 @@ fn pin_isolation_holds_at_the_system_level() {
     // any other draw. Seed 42's default anchor draws Spinning, so the pinned
     // system must be byte-for-byte identical to the default.
     let default = generate(Seed(42), &SkyPins::default()).unwrap();
-    assert!(matches!(default.anchor.rotation, Rotation::Spinning { .. }));
+    assert!(matches!(
+        default.system.anchor.rotation,
+        Rotation::Spinning { .. }
+    ));
     let pins = SkyPins {
         rotation: Some(RotationPin::Normal),
         ..SkyPins::default()
@@ -122,16 +134,28 @@ fn pin_isolation_holds_at_the_system_level() {
         ..SkyPins::default()
     };
     let pinned = generate(Seed(42), &pins).unwrap();
-    assert_eq!(default.neighbors.len(), pinned.neighbors.len());
-    let mut default_distances: Vec<f64> =
-        default.neighbors.iter().map(|n| n.distance.get()).collect();
-    let mut pinned_distances: Vec<f64> =
-        pinned.neighbors.iter().map(|n| n.distance.get()).collect();
+    assert_eq!(
+        default.system.neighbors.len(),
+        pinned.system.neighbors.len()
+    );
+    let mut default_distances: Vec<f64> = default
+        .system
+        .neighbors
+        .iter()
+        .map(|n| n.distance.get())
+        .collect();
+    let mut pinned_distances: Vec<f64> = pinned
+        .system
+        .neighbors
+        .iter()
+        .map(|n| n.distance.get())
+        .collect();
     default_distances.sort_by(f64::total_cmp);
     pinned_distances.sort_by(f64::total_cmp);
     assert_eq!(default_distances, pinned_distances);
     assert!(
         pinned
+            .system
             .neighbors
             .iter()
             .any(|n| n.class == NeighborClass::BlueGiant)

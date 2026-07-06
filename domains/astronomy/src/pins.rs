@@ -4,12 +4,45 @@
 
 use crate::units::{Degrees, LocalDays};
 
+/// A graded moon request: `min` essential, `want` desired (spec §4).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MoonsPin {
+    min: u32,
+    want: u32,
+}
+
+impl MoonsPin {
+    /// Exactly `n` moons: loud failure below n.
+    pub fn exact(n: u32) -> Result<MoonsPin, GenesisError> {
+        MoonsPin::graded(n, 0)
+    }
+    /// `min` essential plus up to `extra` desired.
+    pub fn graded(min: u32, extra: u32) -> Result<MoonsPin, GenesisError> {
+        let want = min + extra;
+        if want > 3 {
+            return Err(GenesisError::InvalidPin {
+                pin: "moons".to_string(),
+                reason: format!("{min}+{extra} moons requested; the legal maximum is 3"),
+            });
+        }
+        Ok(MoonsPin { min, want })
+    }
+    /// The essential count.
+    pub fn min(&self) -> u32 {
+        self.min
+    }
+    /// The desired count.
+    pub fn want(&self) -> u32 {
+        self.want
+    }
+}
+
 /// The scenario pins for sky genesis. Every field: `None` = drawn from the
 /// seed; `Some` = supplied by the experimenter and conditioned on.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SkyPins {
-    /// Number of moons (0–3).
-    pub moons: Option<u32>,
+    /// Moon request: exact or graded; None = drawn.
+    pub moons: Option<MoonsPin>,
     /// Rotation regime of the anchor world.
     pub rotation: Option<RotationPin>,
     /// Axial tilt in degrees (0–35); 0 = no seasons.
