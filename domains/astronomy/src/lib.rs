@@ -4,12 +4,14 @@
 
 pub mod anchor;
 pub mod moons;
+pub mod neighborhood;
 pub mod pins;
 pub mod star;
 pub mod streams;
 
 pub use anchor::{Anchor, Rotation, generate_anchor};
 pub use moons::{Moon, generate_moons, hill_radius_mm};
+pub use neighborhood::{Neighbor, class_luminosity, generate_neighbors};
 pub use pins::{GenesisError, NeighborClass, RotationPin, SkyPins};
 pub use star::{Star, generate_star};
 
