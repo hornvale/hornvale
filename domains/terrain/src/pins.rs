@@ -52,7 +52,6 @@ impl std::error::Error for GenesisError {}
 /// Check every pinned value against its legal range. Called once at the top
 /// of `generate`; pins constructed directly (not via `parse_pin`) are still
 /// validated here.
-#[allow(dead_code)]
 pub(crate) fn validate(pins: &TerrainPins) -> Result<(), GenesisError> {
     if let Some(n) = pins.plates
         && !(2..=64).contains(&n)
