@@ -58,8 +58,13 @@ questions about them interactively, and renders the almanac; an end-to-end
 suite proves the whole path byte-deterministic. The world is very small, and
 every part of it can explain itself, which is the entire point.
 
-**Campaign 2a landed the star-system generator** — anchor-first, pinnable,
-stability-checked, proven across a 128-seed battery — but worlds cannot see
-it yet: they still live under the constant sun until Plan 2b wires the
-generator into genesis, the calendar, and the almanac. The sky exists; the
-sky's debut is next.
+**Campaign 2 is complete: new worlds have real skies.** A generated world's
+sun rises and sets on a seed-drawn day length; its moons show phases; its
+night holds notable stars; its almanac has a Calendar. Worlds carry their
+experimental configuration — the pins — as facts in their own ledgers, and
+rebuild their skies from them at load. The campaign's exit criterion is
+proven and published: the same seed's goblins worship a returning god under
+a spinning sun and an unblinking one under a tidally locked sun, with
+religion's code untouched — the enrichment thesis's first real data point.
+Campaign 3 brings the land: terrain and climate, consuming the calendar the
+sky now keeps.

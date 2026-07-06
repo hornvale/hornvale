@@ -30,6 +30,7 @@
 - [Campaign 1a: The Kernel](./chronicle/campaign-1a.md)
 - [Campaign 1b: The Tier-0 Cascade](./chronicle/campaign-1b.md)
 - [Campaign 2a: System Genesis](./chronicle/campaign-2a.md)
+- [Campaign 2b: The Sky's Debut](./chronicle/campaign-2b.md)
 
 # The Gallery
 
