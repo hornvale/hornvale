@@ -1,0 +1,40 @@
+<svg viewBox="0 0 640 300" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif, system-ui, sans-serif">
+<text x="56" y="20" font-size="13" font-weight="600" fill="currentColor">year-local-days — default</text>
+<line x1="56.0" y1="186.0" x2="624.0" y2="186.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="186.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">1250</text>
+<line x1="56.0" y1="136.0" x2="624.0" y2="136.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="136.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">2500</text>
+<line x1="56.0" y1="86.0" x2="624.0" y2="86.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">3750</text>
+<line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">5000</text>
+<text x="84.4" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
+<text x="84.4" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 84.4 252.0)">< 0</text>
+<rect x="117.1" y="174.4" width="48.3" height="61.6" fill="#5b8dd9" rx="2" />
+<text x="141.2" y="170.4" font-size="11" fill="currentColor" text-anchor="middle">1539</text>
+<text x="141.2" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 141.2 252.0)">[0, 200)</text>
+<rect x="173.9" y="99.0" width="48.3" height="137.0" fill="#5b8dd9" rx="2" />
+<text x="198.0" y="95.0" font-size="11" fill="currentColor" text-anchor="middle">3426</text>
+<text x="198.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 198.0 252.0)">[200, 400)</text>
+<rect x="230.7" y="145.8" width="48.3" height="90.2" fill="#5b8dd9" rx="2" />
+<text x="254.8" y="141.8" font-size="11" fill="currentColor" text-anchor="middle">2255</text>
+<text x="254.8" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 254.8 252.0)">[400, 600)</text>
+<rect x="287.5" y="185.0" width="48.3" height="51.0" fill="#5b8dd9" rx="2" />
+<text x="311.6" y="181.0" font-size="11" fill="currentColor" text-anchor="middle">1274</text>
+<text x="311.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 311.6 252.0)">[600, 800)</text>
+<rect x="344.3" y="209.2" width="48.3" height="26.8" fill="#5b8dd9" rx="2" />
+<text x="368.4" y="205.2" font-size="11" fill="currentColor" text-anchor="middle">671</text>
+<text x="368.4" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 368.4 252.0)">[800, 1000)</text>
+<rect x="401.1" y="225.5" width="48.3" height="10.5" fill="#5b8dd9" rx="2" />
+<text x="425.2" y="221.5" font-size="11" fill="currentColor" text-anchor="middle">262</text>
+<text x="425.2" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 425.2 252.0)">[1000, 1200)</text>
+<rect x="457.9" y="232.4" width="48.3" height="3.6" fill="#5b8dd9" rx="2" />
+<text x="482.0" y="228.4" font-size="11" fill="currentColor" text-anchor="middle">89</text>
+<text x="482.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 482.0 252.0)">[1200, 1400)</text>
+<rect x="514.7" y="234.9" width="48.3" height="1.1" fill="#5b8dd9" rx="2" />
+<text x="538.8" y="230.9" font-size="11" fill="currentColor" text-anchor="middle">27</text>
+<text x="538.8" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 538.8 252.0)">>= 1400</text>
+<rect x="571.5" y="217.7" width="48.3" height="18.3" fill="#5b8dd9" rx="2" />
+<text x="595.6" y="213.7" font-size="11" fill="currentColor" text-anchor="middle">457</text>
+<text x="595.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 595.6 252.0)">absent</text>
+</svg>
