@@ -1,0 +1,96 @@
+//! The property battery (spec §10): every generated system, across many
+//! seeds and the pin matrix, satisfies the model card's invariants.
+
+use hornvale_astronomy::{
+    GenesisError, NeighborClass, Rotation, RotationPin, SkyPins, generate, hill_radius_mm,
+};
+use hornvale_kernel::Seed;
+
+#[test]
+fn every_default_system_satisfies_every_invariant() {
+    for seed in 0..128 {
+        let system = generate(Seed(seed), &SkyPins::default())
+            .unwrap_or_else(|e| panic!("seed {seed} failed default genesis: {e}"));
+        let (inner, outer) = system.star.habitable_zone_au;
+        assert!(
+            (inner..=outer).contains(&system.anchor.orbit_au),
+            "seed {seed}: anchor out of zone"
+        );
+        let expected_year =
+            365.25 * (system.anchor.orbit_au.powi(3) / system.star.mass_solar).sqrt();
+        assert!((system.anchor.year_std_days - expected_year).abs() < 1e-9);
+        let hill = hill_radius_mm(&system.star, &system.anchor);
+        let mut total_tide = 0.0;
+        for pair in system.moons.windows(2) {
+            assert!(
+                pair[1].distance_mm / pair[0].distance_mm >= 1.5,
+                "seed {seed}: spacing"
+            );
+        }
+        for moon in &system.moons {
+            assert!(moon.distance_mm >= 20.0 && moon.distance_mm <= 0.4 * hill);
+            total_tide += moon.tide_rel;
+        }
+        assert!(total_tide <= 8.0, "seed {seed}: tide cap");
+        assert!((2..=5).contains(&system.neighbors.len()));
+    }
+}
+
+#[test]
+fn the_pin_matrix_is_honored() {
+    for moons in 0..=3u32 {
+        let pins = SkyPins {
+            moons: Some(moons),
+            ..SkyPins::default()
+        };
+        assert_eq!(generate(Seed(42), &pins).unwrap().moons.len() as u32, moons);
+    }
+    let pins = SkyPins {
+        rotation: Some(RotationPin::Locked),
+        ..SkyPins::default()
+    };
+    assert_eq!(
+        generate(Seed(42), &pins).unwrap().anchor.rotation,
+        Rotation::Locked
+    );
+    let pins = SkyPins {
+        obliquity_deg: Some(0.0),
+        ..SkyPins::default()
+    };
+    assert_eq!(generate(Seed(42), &pins).unwrap().anchor.obliquity_deg, 0.0);
+    let pins = SkyPins {
+        neighbor: Some(NeighborClass::BlueGiant),
+        ..SkyPins::default()
+    };
+    assert_eq!(
+        generate(Seed(42), &pins).unwrap().neighbors[0].class,
+        NeighborClass::BlueGiant
+    );
+}
+
+#[test]
+fn unsatisfiable_pins_fail_loudly_with_the_physical_reason() {
+    let pins = SkyPins {
+        rotation: Some(RotationPin::PeriodHours(24.0)),
+        year_local_days: Some(4000.0),
+        ..SkyPins::default()
+    };
+    match generate(Seed(42), &pins) {
+        Err(GenesisError::UnsatisfiablePin { pin, reason }) => {
+            assert_eq!(pin, "year-days");
+            assert!(reason.contains("habitable zone"));
+        }
+        other => panic!("expected UnsatisfiablePin, got {other:?}"),
+    }
+}
+
+#[test]
+fn pinned_worlds_differ_from_unpinned_only_downstream_of_the_pin() {
+    // Same seed, moons pinned to the drawn count => identical system.
+    let default = generate(Seed(42), &SkyPins::default()).unwrap();
+    let pinned_same = SkyPins {
+        moons: Some(default.moons.len() as u32),
+        ..SkyPins::default()
+    };
+    assert_eq!(generate(Seed(42), &pinned_same).unwrap(), default);
+}
