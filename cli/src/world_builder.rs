@@ -142,20 +142,20 @@ pub fn sky_of(world: &World) -> Result<Sky, BuildError> {
 }
 
 /// The tier-0/1/2 phenomena sources, observed at the world's first place.
-pub fn observed_phenomena(world: &World, day: f64) -> Vec<Phenomenon> {
+pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, BuildError> {
     let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
-    let sky = sky_of(world).expect("a saved world's own pins must reconstruct its provider");
+    let sky = sky_of(world)?;
     let climate = UniformClimate;
     let sources: [&dyn PhenomenaSource; 2] = [&sky, &climate];
-    observe(
+    Ok(observe(
         &sources,
         &ObserverContext {
             place,
             time: WorldTime { day },
         },
-    )
+    ))
 }
 
 /// Build a complete world: mint the world entity and record its sky choice
@@ -195,17 +195,15 @@ pub fn build_world(seed: Seed, pins: &SkyPins, sky: SkyChoice) -> Result<World, 
     let vale = hornvale_terrain::genesis(&mut world)?;
     let village = hornvale_settlement::genesis(&mut world, vale)?;
     hornvale_culture::genesis(&mut world, village)?;
-    let seen = observed_phenomena(&world, 0.0);
+    let seen = observed_phenomena(&world, 0.0)?;
     hornvale_religion::genesis(&mut world, village, &seen)?;
     Ok(world)
 }
 
 /// The sky at `time`, from whichever astronomy provider this world uses.
 /// The single construction site for the provider (Constitution §2.4 tiers).
-pub fn sky_report(world: &World, time: WorldTime) -> SkyReport {
-    sky_of(world)
-        .expect("a saved world's own pins must reconstruct its provider")
-        .sky_at(time)
+pub fn sky_report(world: &World, time: WorldTime) -> Result<SkyReport, BuildError> {
+    Ok(sky_of(world)?.sky_at(time))
 }
 
 /// The local climate, from whichever climate provider this world uses.
@@ -223,10 +221,10 @@ fn moon_ordinal(index: usize) -> &'static str {
 /// swell of daylight (if the world has axial tilt), and one line per moon.
 /// Empty for constant-sky worlds, which have no generated calendar to
 /// describe.
-pub fn calendar_lines(world: &World) -> Vec<String> {
-    let sky = sky_of(world).expect("a saved world's own pins must reconstruct its provider");
+pub fn calendar_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    let sky = sky_of(world)?;
     let Sky::Generated(sky) = &sky else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
     let calendar = sky.calendar();
     let system = sky.system();
@@ -275,16 +273,16 @@ pub fn calendar_lines(world: &World) -> Vec<String> {
         }
     }
 
-    lines
+    Ok(lines)
 }
 
 /// The night sky as a single sentence naming its notable neighbor stars,
 /// brightest first. `None` for constant-sky worlds, which have no
 /// neighborhood to describe.
-pub fn night_sky_line(world: &World) -> Option<String> {
-    let sky = sky_of(world).expect("a saved world's own pins must reconstruct its provider");
+pub fn night_sky_line(world: &World) -> Result<Option<String>, BuildError> {
+    let sky = sky_of(world)?;
     let Sky::Generated(sky) = &sky else {
-        return None;
+        return Ok(None);
     };
     let parts: Vec<String> = sky
         .system()
@@ -292,40 +290,40 @@ pub fn night_sky_line(world: &World) -> Option<String> {
         .iter()
         .map(|n| format!("a {} star that does not wander", n.color))
         .collect();
-    Some(format!("By night: {}.", parts.join("; ")))
+    Ok(Some(format!("By night: {}.", parts.join("; "))))
 }
 
 /// Notes recorded during sky genesis. Empty for constant-sky worlds, which
 /// are never generated.
-pub fn genesis_notes(world: &World) -> Vec<String> {
-    let sky = sky_of(world).expect("a saved world's own pins must reconstruct its provider");
-    match &sky {
+pub fn genesis_notes(world: &World) -> Result<Vec<String>, BuildError> {
+    let sky = sky_of(world)?;
+    Ok(match &sky {
         Sky::Constant(_) => Vec::new(),
         Sky::Generated(sky) => sky.notes().to_vec(),
-    }
+    })
 }
 
 /// Gather everything the almanac renders, reconstructing the stateless
 /// tier-0 providers.
-pub fn almanac_context(world: &World) -> AlmanacContext {
+pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     let village = hornvale_settlement::village_info(world);
     let castes = village
         .as_ref()
         .map(|v| hornvale_culture::castes_of(world, v.id))
         .unwrap_or_default();
-    AlmanacContext {
+    Ok(AlmanacContext {
         seed: world.seed.0,
-        sky: sky_report(world, WorldTime { day: 0.0 }),
+        sky: sky_report(world, WorldTime { day: 0.0 })?,
         climate: climate_report(world),
-        phenomena: observed_phenomena(world, 0.0),
+        phenomena: observed_phenomena(world, 0.0)?,
         places: hornvale_terrain::places(world),
         village,
         castes,
         beliefs: hornvale_religion::beliefs_of(world),
-        calendar_lines: calendar_lines(world),
-        night_sky: night_sky_line(world),
-        genesis_notes: genesis_notes(world),
-    }
+        calendar_lines: calendar_lines(world)?,
+        night_sky: night_sky_line(world)?,
+        genesis_notes: genesis_notes(world)?,
+    })
 }
 
 #[cfg(test)]
@@ -368,7 +366,7 @@ mod tests {
     #[test]
     fn almanac_context_gathers_everything() {
         let world = constant(42);
-        let ctx = almanac_context(&world);
+        let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.seed, 42);
         assert!(!ctx.places.is_empty());
         assert!(ctx.village.is_some());
@@ -380,7 +378,7 @@ mod tests {
     #[test]
     fn sky_and_climate_reports_come_from_the_composition_root() {
         let world = constant(42);
-        let sky = sky_report(&world, hornvale_kernel::WorldTime { day: 0.0 });
+        let sky = sky_report(&world, hornvale_kernel::WorldTime { day: 0.0 }).unwrap();
         assert!(sky.description.contains("zenith"));
         let climate = climate_report(&world);
         assert_eq!(climate.temperature_c, 18.0);
@@ -403,10 +401,10 @@ mod tests {
     #[test]
     fn generated_sky_round_trips_through_save_and_load() {
         let world = generated(42);
-        let before = sky_report(&world, WorldTime { day: 0.0 });
+        let before = sky_report(&world, WorldTime { day: 0.0 }).unwrap();
         let reloaded = World::from_json(&world.to_json()).unwrap();
         assert!(matches!(sky_of(&reloaded).unwrap(), Sky::Generated(_)));
-        let after = sky_report(&reloaded, WorldTime { day: 0.0 });
+        let after = sky_report(&reloaded, WorldTime { day: 0.0 }).unwrap();
         assert_eq!(before, after);
     }
 
@@ -414,7 +412,7 @@ mod tests {
     fn constant_choice_yields_constant_sky_and_unchanged_almanac_context() {
         let world = constant(42);
         assert!(matches!(sky_of(&world).unwrap(), Sky::Constant(_)));
-        let ctx = almanac_context(&world);
+        let ctx = almanac_context(&world).unwrap();
         assert!(ctx.sky.description.contains("zenith"));
     }
 
@@ -429,9 +427,9 @@ mod tests {
     #[test]
     fn constant_world_has_no_calendar_or_night_sky_or_notes() {
         let world = constant(42);
-        assert!(calendar_lines(&world).is_empty());
-        assert!(night_sky_line(&world).is_none());
-        assert!(genesis_notes(&world).is_empty());
+        assert!(calendar_lines(&world).unwrap().is_empty());
+        assert!(night_sky_line(&world).unwrap().is_none());
+        assert!(genesis_notes(&world).unwrap().is_empty());
     }
 
     #[test]
@@ -442,7 +440,7 @@ mod tests {
             ..SkyPins::default()
         };
         let world = build_world(Seed(42), &pins, SkyChoice::Generated).unwrap();
-        let lines = calendar_lines(&world);
+        let lines = calendar_lines(&world).unwrap();
         assert!(lines[0].contains("tidally locked"));
     }
 
@@ -454,7 +452,7 @@ mod tests {
             ..SkyPins::default()
         };
         let world = build_world(Seed(42), &pins, SkyChoice::Generated).unwrap();
-        let lines = calendar_lines(&world);
+        let lines = calendar_lines(&world).unwrap();
         assert!(lines.iter().any(|l| l.contains("first moon")));
         assert!(lines.iter().any(|l| l.contains("second moon")));
     }
@@ -462,6 +460,100 @@ mod tests {
     #[test]
     fn seed_23_generated_default_has_genesis_notes() {
         let world = generated(23);
-        assert!(!genesis_notes(&world).is_empty());
+        assert!(!genesis_notes(&world).unwrap().is_empty());
+    }
+
+    #[test]
+    fn sky_of_rejects_an_unrecognized_sky_provider_value() {
+        // A corrupted save: sky-provider names a provider that doesn't
+        // exist. sky_of must error, never panic.
+        let mut world = World::new(Seed(1));
+        register_all(&mut world.registry).unwrap();
+        let subject = world.ledger.mint_entity();
+        world
+            .ledger
+            .commit(
+                scenario_fact(
+                    subject,
+                    facts::SKY_PROVIDER,
+                    Value::Text("zeppelin".to_string()),
+                ),
+                &world.registry,
+            )
+            .unwrap();
+        assert!(matches!(sky_of(&world), Err(BuildError::Pins(_))));
+    }
+
+    #[test]
+    fn sky_of_rejects_an_unparseable_scenario_pin() {
+        // A corrupted save: a scenario-pin fact that doesn't parse. sky_of
+        // must error, never panic.
+        let mut world = World::new(Seed(1));
+        register_all(&mut world.registry).unwrap();
+        let subject = world.ledger.mint_entity();
+        world
+            .ledger
+            .commit(
+                scenario_fact(
+                    subject,
+                    facts::SKY_PROVIDER,
+                    Value::Text("generated".to_string()),
+                ),
+                &world.registry,
+            )
+            .unwrap();
+        world
+            .ledger
+            .commit(
+                scenario_fact(
+                    subject,
+                    facts::SCENARIO_PIN,
+                    Value::Text("moons=banana".to_string()),
+                ),
+                &world.registry,
+            )
+            .unwrap();
+        assert!(matches!(sky_of(&world), Err(BuildError::Pins(_))));
+    }
+
+    #[test]
+    fn corrupt_scenario_pin_errors_instead_of_panicking_through_every_accessor() {
+        // The same corrupted-save shape as above, driven through every
+        // accessor that used to `.expect()` on sky_of. None may panic.
+        let mut world = World::new(Seed(1));
+        register_all(&mut world.registry).unwrap();
+        let subject = world.ledger.mint_entity();
+        world
+            .ledger
+            .commit(
+                scenario_fact(
+                    subject,
+                    facts::SKY_PROVIDER,
+                    Value::Text("generated".to_string()),
+                ),
+                &world.registry,
+            )
+            .unwrap();
+        world
+            .ledger
+            .commit(
+                scenario_fact(
+                    subject,
+                    facts::SCENARIO_PIN,
+                    Value::Text("moons=banana".to_string()),
+                ),
+                &world.registry,
+            )
+            .unwrap();
+
+        assert!(sky_report(&world, WorldTime { day: 0.0 }).is_err());
+        // No place exists on this hand-built world, so observed_phenomena
+        // short-circuits to Ok(empty) before ever touching sky_of — the
+        // existing "no place, no phenomena" contract, not a panic risk.
+        assert_eq!(observed_phenomena(&world, 0.0).unwrap(), Vec::new());
+        assert!(calendar_lines(&world).is_err());
+        assert!(night_sky_line(&world).is_err());
+        assert!(genesis_notes(&world).is_err());
+        assert!(almanac_context(&world).is_err());
     }
 }

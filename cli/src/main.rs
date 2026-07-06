@@ -173,7 +173,7 @@ fn load_world(args: &[String]) -> Result<World, String> {
 
 fn cmd_almanac(args: &[String]) -> Result<(), String> {
     let world = load_world(args)?;
-    let ctx = world_builder::almanac_context(&world);
+    let ctx = world_builder::almanac_context(&world).map_err(|e| e.to_string())?;
     print!("{}", hornvale_almanac::render(&ctx));
     Ok(())
 }

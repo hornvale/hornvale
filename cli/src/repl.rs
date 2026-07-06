@@ -37,8 +37,10 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
             "help" => write!(output, "{HELP}")?,
             "sky" => {
                 let day = argument.and_then(|a| a.parse().ok()).unwrap_or(0.0);
-                let report = crate::world_builder::sky_report(world, WorldTime { day });
-                writeln!(output, "{}", report.description)?;
+                match crate::world_builder::sky_report(world, WorldTime { day }) {
+                    Ok(report) => writeln!(output, "{}", report.description)?,
+                    Err(e) => writeln!(output, "error: {e}")?,
+                }
             }
             "climate" => {
                 let report = crate::world_builder::climate_report(world);
@@ -48,19 +50,18 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     report.description, report.temperature_c
                 )?;
             }
-            "calendar" => {
-                let lines = crate::world_builder::calendar_lines(world);
-                if lines.is_empty() {
-                    writeln!(
-                        output,
-                        "this world has no generated sky; time is measured in standard days"
-                    )?;
-                } else {
+            "calendar" => match crate::world_builder::calendar_lines(world) {
+                Ok(lines) if lines.is_empty() => writeln!(
+                    output,
+                    "this world has no generated sky; time is measured in standard days"
+                )?,
+                Ok(lines) => {
                     for line in lines {
                         writeln!(output, "{line}")?;
                     }
                 }
-            }
+                Err(e) => writeln!(output, "error: {e}")?,
+            },
             "places" => {
                 for place in hornvale_terrain::places(world) {
                     writeln!(
@@ -109,8 +110,13 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
             }
             "phenomena" => {
                 let day = argument.and_then(|a| a.parse().ok()).unwrap_or(0.0);
-                for p in crate::world_builder::observed_phenomena(world, day) {
-                    writeln!(output, "[{:.2}] {} — {}", p.salience, p.kind, p.description)?;
+                match crate::world_builder::observed_phenomena(world, day) {
+                    Ok(phenomena) => {
+                        for p in phenomena {
+                            writeln!(output, "[{:.2}] {} — {}", p.salience, p.kind, p.description)?;
+                        }
+                    }
+                    Err(e) => writeln!(output, "error: {e}")?,
                 }
             }
             "facts" => {
