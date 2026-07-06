@@ -4,6 +4,7 @@
 
 pub mod anchor;
 pub mod calendar;
+pub mod facts;
 pub mod moons;
 pub mod neighborhood;
 pub mod pins;
@@ -17,7 +18,9 @@ pub use anchor::{Anchor, Rotation, generate_anchor};
 pub use calendar::{Calendar, calendar_of};
 pub use moons::{Moon, generate_moons, hill_radius_mm};
 pub use neighborhood::{Neighbor, class_luminosity, generate_neighbors};
-pub use pins::{GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins};
+pub use pins::{
+    GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, parse_pin, pin_strings,
+};
 pub use provider::{GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE};
 pub use star::{Star, generate_star};
 pub use system::{GenesisOutcome, StarSystem, generate};
@@ -59,7 +62,59 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_phenomenon_kind(CELESTIAL_BODY, "a body visible in the sky")?;
     registry.register_phenomenon_kind(SEASONAL_CYCLE, "the annual daylight cycle")?;
-    registry.register_phenomenon_kind(NIGHT_STAR, "a fixed star notable in the night sky")
+    registry.register_phenomenon_kind(NIGHT_STAR, "a fixed star notable in the night sky")?;
+
+    registry.register_predicate(
+        facts::STAR_CLASS,
+        true,
+        "the host star's descriptive spectral class",
+    )?;
+    registry.register_predicate(
+        facts::TIDALLY_LOCKED,
+        true,
+        "the anchor world is tidally locked (no local day)",
+    )?;
+    registry.register_predicate(
+        facts::DAY_LENGTH_STD,
+        true,
+        "solar day length in standard days, for spinning worlds",
+    )?;
+    registry.register_predicate(facts::YEAR_LENGTH_STD, true, "year length in standard days")?;
+    registry.register_predicate(
+        facts::OBLIQUITY_DEGREES,
+        true,
+        "axial tilt of the anchor world, in degrees",
+    )?;
+    registry.register_predicate(
+        facts::MOON_COUNT,
+        true,
+        "how many moons the anchor world has",
+    )?;
+    registry.register_predicate(
+        facts::MOON_PERIOD_DAYS,
+        false,
+        "orbital period of a moon, in standard days",
+    )?;
+    registry.register_predicate(
+        facts::NOTABLE_NEIGHBOR,
+        false,
+        "a notable neighbor star visible in the night sky",
+    )?;
+    registry.register_predicate(
+        facts::GENESIS_NOTE,
+        false,
+        "a degradation or refusal recorded during sky genesis",
+    )?;
+    registry.register_predicate(
+        facts::SKY_PROVIDER,
+        true,
+        "which astronomy provider this world uses (constant or generated)",
+    )?;
+    registry.register_predicate(
+        facts::SCENARIO_PIN,
+        false,
+        "an experimenter-supplied pin string conditioning genesis",
+    )
 }
 
 /// Tier-0 astronomy: the sun is always up, fixed at zenith.

@@ -115,6 +115,138 @@ impl std::fmt::Display for GenesisError {
 
 impl std::error::Error for GenesisError {}
 
+/// Render every pinned field of `pins` as a round-trippable `key=value`
+/// string (spec §8). Unpinned (`None`) fields emit nothing.
+pub fn pin_strings(pins: &SkyPins) -> Vec<String> {
+    let mut out = Vec::new();
+
+    if let Some(moons) = pins.moons {
+        if moons.min() == moons.want() {
+            out.push(format!("moons={}", moons.want()));
+        } else {
+            out.push(format!(
+                "moons={}+{}",
+                moons.min(),
+                moons.want() - moons.min()
+            ));
+        }
+    }
+
+    match &pins.rotation {
+        Some(RotationPin::Normal) => out.push("rotation=normal".to_string()),
+        Some(RotationPin::Locked) => out.push("rotation=locked".to_string()),
+        Some(RotationPin::PeriodHours(hours)) => out.push(format!("day-hours={hours}")),
+        None => {}
+    }
+
+    if let Some(degrees) = pins.obliquity {
+        if degrees.get() == 0.0 {
+            out.push("obliquity=none".to_string());
+        } else {
+            out.push(format!("obliquity={}", degrees.get()));
+        }
+    }
+
+    if let Some(local_days) = pins.year_local_days {
+        out.push(format!("year-days={}", local_days.get()));
+    }
+
+    if let Some(neighbor) = pins.neighbor {
+        out.push(format!("neighbor={}", neighbor_class_name(neighbor)));
+    }
+
+    out
+}
+
+/// Parse one `key=value` pin string (as produced by `pin_strings`) into
+/// `pins`, overwriting whichever field it names. Unknown keys or malformed
+/// values are user-facing errors naming the offending key/value.
+pub fn parse_pin(s: &str, pins: &mut SkyPins) -> Result<(), String> {
+    let (key, value) = s
+        .split_once('=')
+        .ok_or_else(|| format!("malformed pin '{s}': expected key=value"))?;
+    match key {
+        "moons" => {
+            let moons = match value.split_once('+') {
+                Some((min_s, extra_s)) => {
+                    let min: u32 = min_s
+                        .parse()
+                        .map_err(|_| format!("moons: invalid min '{min_s}'"))?;
+                    let extra: u32 = extra_s
+                        .parse()
+                        .map_err(|_| format!("moons: invalid extra '{extra_s}'"))?;
+                    MoonsPin::graded(min, extra)
+                }
+                None => {
+                    let n: u32 = value
+                        .parse()
+                        .map_err(|_| format!("moons: invalid count '{value}'"))?;
+                    MoonsPin::exact(n)
+                }
+            }
+            .map_err(|e| e.to_string())?;
+            pins.moons = Some(moons);
+        }
+        "rotation" => {
+            pins.rotation = Some(match value {
+                "normal" => RotationPin::Normal,
+                "locked" => RotationPin::Locked,
+                other => return Err(format!("rotation: unknown value '{other}'")),
+            });
+        }
+        "day-hours" => {
+            let hours: f64 = value
+                .parse()
+                .map_err(|_| format!("day-hours: invalid number '{value}'"))?;
+            pins.rotation = Some(RotationPin::PeriodHours(hours));
+        }
+        "obliquity" => {
+            let degrees = if value == "none" {
+                0.0
+            } else {
+                value
+                    .parse()
+                    .map_err(|_| format!("obliquity: invalid number '{value}'"))?
+            };
+            pins.obliquity = Some(Degrees::new(degrees).map_err(|e| e.to_string())?);
+        }
+        "year-days" => {
+            let days: f64 = value
+                .parse()
+                .map_err(|_| format!("year-days: invalid number '{value}'"))?;
+            pins.year_local_days = Some(LocalDays::new(days).map_err(|e| e.to_string())?);
+        }
+        "neighbor" => {
+            pins.neighbor = Some(neighbor_class_from_name(value)?);
+        }
+        other => return Err(format!("unknown pin key '{other}'")),
+    }
+    Ok(())
+}
+
+fn neighbor_class_name(class: NeighborClass) -> &'static str {
+    match class {
+        NeighborClass::RedDwarf => "red-dwarf",
+        NeighborClass::SunLike => "sun-like",
+        NeighborClass::WhiteDwarf => "white-dwarf",
+        NeighborClass::OrangeGiant => "orange-giant",
+        NeighborClass::RedGiant => "red-giant",
+        NeighborClass::BlueGiant => "blue-giant",
+    }
+}
+
+fn neighbor_class_from_name(name: &str) -> Result<NeighborClass, String> {
+    match name {
+        "red-dwarf" => Ok(NeighborClass::RedDwarf),
+        "sun-like" => Ok(NeighborClass::SunLike),
+        "white-dwarf" => Ok(NeighborClass::WhiteDwarf),
+        "orange-giant" => Ok(NeighborClass::OrangeGiant),
+        "red-giant" => Ok(NeighborClass::RedGiant),
+        "blue-giant" => Ok(NeighborClass::BlueGiant),
+        other => Err(format!("neighbor: unknown class '{other}'")),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -138,5 +270,114 @@ mod tests {
         let text = e.to_string();
         assert!(text.contains("year-days"));
         assert!(text.contains("habitable zone"));
+    }
+
+    #[test]
+    fn pin_strings_round_trip_through_parse() {
+        let pins = SkyPins {
+            moons: Some(MoonsPin::graded(1, 2).unwrap()),
+            rotation: Some(RotationPin::Locked),
+            obliquity: Some(Degrees::new(12.5).unwrap()),
+            year_local_days: None,
+            neighbor: Some(NeighborClass::BlueGiant),
+        };
+        let mut rebuilt = SkyPins::default();
+        for s in pin_strings(&pins) {
+            parse_pin(&s, &mut rebuilt).unwrap();
+        }
+        assert_eq!(rebuilt, pins);
+        assert!(pin_strings(&SkyPins::default()).is_empty());
+    }
+
+    #[test]
+    fn pin_strings_emits_one_string_per_pinned_field() {
+        let pins = SkyPins {
+            moons: Some(MoonsPin::exact(2).unwrap()),
+            rotation: Some(RotationPin::Normal),
+            obliquity: Some(Degrees::new(0.0).unwrap()),
+            year_local_days: Some(LocalDays::new(300.0).unwrap()),
+            neighbor: Some(NeighborClass::RedGiant),
+        };
+        let strings = pin_strings(&pins);
+        assert_eq!(strings.len(), 5);
+        assert!(strings.contains(&"moons=2".to_string()));
+        assert!(strings.contains(&"rotation=normal".to_string()));
+        assert!(strings.contains(&"obliquity=none".to_string()));
+        assert!(strings.contains(&"year-days=300".to_string()));
+        assert!(strings.contains(&"neighbor=red-giant".to_string()));
+    }
+
+    #[test]
+    fn graded_moons_pin_round_trips() {
+        let pins = SkyPins {
+            moons: Some(MoonsPin::graded(1, 2).unwrap()),
+            ..SkyPins::default()
+        };
+        assert_eq!(pin_strings(&pins), vec!["moons=1+2".to_string()]);
+        let mut rebuilt = SkyPins::default();
+        parse_pin("moons=1+2", &mut rebuilt).unwrap();
+        assert_eq!(rebuilt.moons, pins.moons);
+    }
+
+    #[test]
+    fn day_hours_pin_sets_a_period_hours_rotation() {
+        let mut pins = SkyPins::default();
+        parse_pin("day-hours=30", &mut pins).unwrap();
+        assert_eq!(pins.rotation, Some(RotationPin::PeriodHours(30.0)));
+        assert_eq!(pin_strings(&pins), vec!["day-hours=30".to_string()]);
+    }
+
+    #[test]
+    fn obliquity_numeric_value_round_trips() {
+        let mut pins = SkyPins::default();
+        parse_pin("obliquity=7.5", &mut pins).unwrap();
+        assert_eq!(pins.obliquity, Some(Degrees::new(7.5).unwrap()));
+        assert_eq!(pin_strings(&pins), vec!["obliquity=7.5".to_string()]);
+    }
+
+    #[test]
+    fn every_neighbor_class_round_trips() {
+        for class in [
+            NeighborClass::RedDwarf,
+            NeighborClass::SunLike,
+            NeighborClass::WhiteDwarf,
+            NeighborClass::OrangeGiant,
+            NeighborClass::RedGiant,
+            NeighborClass::BlueGiant,
+        ] {
+            let pins = SkyPins {
+                neighbor: Some(class),
+                ..SkyPins::default()
+            };
+            let mut rebuilt = SkyPins::default();
+            for s in pin_strings(&pins) {
+                parse_pin(&s, &mut rebuilt).unwrap();
+            }
+            assert_eq!(rebuilt.neighbor, Some(class));
+        }
+    }
+
+    #[test]
+    fn parse_pin_rejects_malformed_and_unknown_input() {
+        let mut pins = SkyPins::default();
+        assert!(parse_pin("no-equals-sign", &mut pins).is_err());
+        assert!(parse_pin("bogus=whatever", &mut pins).is_err());
+        assert!(parse_pin("rotation=sideways", &mut pins).is_err());
+        assert!(parse_pin("neighbor=green-dwarf", &mut pins).is_err());
+        assert!(parse_pin("moons=abc", &mut pins).is_err());
+        assert!(parse_pin("day-hours=abc", &mut pins).is_err());
+        assert!(parse_pin("obliquity=abc", &mut pins).is_err());
+        assert!(parse_pin("year-days=abc", &mut pins).is_err());
+    }
+
+    #[test]
+    fn parse_pin_propagates_constructor_validation() {
+        let mut pins = SkyPins::default();
+        // moons=4 exceeds the legal maximum of 3.
+        assert!(parse_pin("moons=4", &mut pins).is_err());
+        // Degrees::new rejects negative values.
+        assert!(parse_pin("obliquity=-1", &mut pins).is_err());
+        // year-days must be a non-negative finite LocalDays value.
+        assert!(parse_pin("year-days=-5", &mut pins).is_err());
     }
 }

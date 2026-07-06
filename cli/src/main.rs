@@ -55,7 +55,13 @@ fn cmd_new(args: &[String]) -> Result<(), String> {
         .parse()
         .map_err(|e| format!("--seed must be a u64: {e}"))?;
     let out = flag_value(args, "--out").unwrap_or("world.json");
-    let world = world_builder::build_world(Seed(seed)).map_err(|e| e.to_string())?;
+    // Constant sky until Task 7 wires the pin flags and flips the default.
+    let world = world_builder::build_world(
+        Seed(seed),
+        &hornvale_astronomy::SkyPins::default(),
+        world_builder::SkyChoice::Constant,
+    )
+    .map_err(|e| e.to_string())?;
     world
         .save(std::path::Path::new(out))
         .map_err(|e| format!("saving {out}: {e}"))?;
@@ -90,7 +96,15 @@ fn cmd_repl(args: &[String]) -> Result<(), String> {
 }
 
 fn cmd_concepts() -> Result<(), String> {
-    let world = world_builder::build_world(Seed(0)).map_err(|e| e.to_string())?;
+    // Generated, not constant: the registry is identical either way (every
+    // predicate is registered up front), but this exercises the fuller
+    // pipeline as a bonus smoke test of the sky genesis wiring.
+    let world = world_builder::build_world(
+        Seed(0),
+        &hornvale_astronomy::SkyPins::default(),
+        world_builder::SkyChoice::Generated,
+    )
+    .map_err(|e| e.to_string())?;
     print!("{}", concepts::render_concepts(&world.registry));
     Ok(())
 }

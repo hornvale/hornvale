@@ -134,11 +134,12 @@ fn render_value(value: &Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world_builder::build_world;
+    use crate::world_builder::{SkyChoice, build_world};
+    use hornvale_astronomy::SkyPins;
     use hornvale_kernel::Seed;
 
     fn drive(commands: &str) -> String {
-        let world = build_world(Seed(42)).unwrap();
+        let world = build_world(Seed(42), &SkyPins::default(), SkyChoice::Constant).unwrap();
         let mut out = Vec::new();
         run(&world, commands.as_bytes(), &mut out).unwrap();
         String::from_utf8(out).unwrap()
