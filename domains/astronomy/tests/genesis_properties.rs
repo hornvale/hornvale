@@ -94,3 +94,40 @@ fn pinned_worlds_differ_from_unpinned_only_downstream_of_the_pin() {
     };
     assert_eq!(generate(Seed(42), &pinned_same).unwrap(), default);
 }
+
+#[test]
+fn pin_isolation_holds_at_the_system_level() {
+    // A Normal rotation pin re-affirms the drawn regime; it must not perturb
+    // any other draw. Seed 42's default anchor draws Spinning, so the pinned
+    // system must be byte-for-byte identical to the default.
+    let default = generate(Seed(42), &SkyPins::default()).unwrap();
+    assert!(matches!(default.anchor.rotation, Rotation::Spinning { .. }));
+    let pins = SkyPins {
+        rotation: Some(RotationPin::Normal),
+        ..SkyPins::default()
+    };
+    assert_eq!(generate(Seed(42), &pins).unwrap(), default);
+
+    // A neighbor pin overrides the showpiece's class only; the rest of the
+    // neighborhood (count and distance draws) must be untouched. Compare the
+    // sorted multiset of distances rather than positional order, since
+    // sort-by-brightness can reorder entries when the pinned class's
+    // brightness changes.
+    let pins = SkyPins {
+        neighbor: Some(NeighborClass::BlueGiant),
+        ..SkyPins::default()
+    };
+    let pinned = generate(Seed(42), &pins).unwrap();
+    assert_eq!(default.neighbors.len(), pinned.neighbors.len());
+    let mut default_distances: Vec<f64> = default.neighbors.iter().map(|n| n.distance_ly).collect();
+    let mut pinned_distances: Vec<f64> = pinned.neighbors.iter().map(|n| n.distance_ly).collect();
+    default_distances.sort_by(f64::total_cmp);
+    pinned_distances.sort_by(f64::total_cmp);
+    assert_eq!(default_distances, pinned_distances);
+    assert!(
+        pinned
+            .neighbors
+            .iter()
+            .any(|n| n.class == NeighborClass::BlueGiant)
+    );
+}

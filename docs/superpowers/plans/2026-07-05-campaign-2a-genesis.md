@@ -1039,7 +1039,8 @@ pub fn generate_anchor(
         }
         Some(RotationPin::Normal) | None => {
             let mut stream = astronomy_seed.derive(streams::ROTATION).stream();
-            let locked = pins.rotation.is_none() && stream.next_f64() < 0.05;
+            let lock_roll = stream.next_f64();
+            let locked = pins.rotation.is_none() && lock_roll < 0.05;
             if locked {
                 Rotation::Locked
             } else {
@@ -1060,6 +1061,12 @@ pub fn generate_anchor(
                         .to_string(),
                 });
             };
+            if !local_days.is_finite() || local_days <= 0.0 {
+                return Err(GenesisError::InvalidPin {
+                    pin: "year-days".to_string(),
+                    reason: format!("{local_days} local days is not a positive, finite year"),
+                });
+            }
             let year_std = local_days * day_std_days;
             let orbit = (star.mass_solar * (year_std / 365.25).powi(2)).powf(1.0 / 3.0);
             if !(inner..=outer).contains(&orbit) {
@@ -1321,14 +1328,20 @@ pub fn generate_moons(
             }
         }
         if !admitted {
-            return Err(GenesisError::UnsatisfiablePin {
-                pin: "moons".to_string(),
-                reason: format!(
-                    "moon {} of {count} found no stable orbit within the attempt budget \
-                     (Hill radius {hill:.0} Mm, tide cap {TIDE_CAP})",
-                    index + 1
-                ),
-            });
+            if pins.moons.is_some() {
+                return Err(GenesisError::UnsatisfiablePin {
+                    pin: "moons".to_string(),
+                    reason: format!(
+                        "moon {} of {count} found no stable orbit within the attempt budget \
+                         (Hill radius {hill:.0} Mm, tide cap {TIDE_CAP})",
+                        index + 1
+                    ),
+                });
+            }
+            // Drawn count: this system genuinely cannot hold another stable
+            // moon — accept the ones admitted (spec §4.3: loud failure is
+            // for pins; drawn configurations degrade honestly).
+            break;
         }
     }
 
@@ -1403,8 +1416,8 @@ mod tests {
         };
         let neighbors = generate_neighbors(Seed(3), &pins);
         assert!(neighbors.iter().any(|n| n.class == NeighborClass::BlueGiant));
-        // A blue giant at any legal distance outshines everything else here;
-        // sorted-descending puts it first.
+        // A blue giant at 4–80 ly usually dominates; these seeds' draws make
+        // it brightest here (asserted, not assumed).
         assert_eq!(neighbors[0].class, NeighborClass::BlueGiant);
         assert_eq!(neighbors[0].color, "hard blue-white");
     }
@@ -1476,9 +1489,10 @@ pub fn generate_neighbors(astronomy_seed: Seed, pins: &SkyPins) -> Vec<Neighbor>
     let count = stream.range_u32(2, 5);
     let mut neighbors: Vec<Neighbor> = (0..count)
         .map(|index| {
+            let roll = stream.range_u32(1, 100);
             let class = match (index, pins.neighbor) {
                 (0, Some(pinned)) => pinned,
-                _ => draw_class(stream.range_u32(1, 100)),
+                _ => draw_class(roll),
             };
             let distance_ly = 4.0 + stream.next_f64() * 76.0;
             Neighbor {
@@ -1717,3 +1731,4 @@ git commit -m "feat(astronomy): sky genesis assembly with the property battery"
   over loosening. Ranges were chosen so admission is easy (distance floor 60
   Mm is 3× Roche; tide cap 8 admits three heavy close moons), so this is
   unlikely but not impossible. (Fired during implementation: seeds 10/15/42/47/55/58 exhausted 32 attempts on 3-moon configurations — spacing is the binding constraint. Budget raised to 128 pre-merge; inequalities and ranges unchanged. Seed 10 additionally has NO feasible third slot at any budget, so drawn-count exhaustion now degrades honestly while pinned counts still fail loudly per spec §4.3.)
+- (Final review: three pin-isolation defects fixed pre-merge — negative-year guard, rotation-Normal lock-roll consumption, neighbor-pin class-roll consumption; spec §2.2 governs over the plan's original samples.)

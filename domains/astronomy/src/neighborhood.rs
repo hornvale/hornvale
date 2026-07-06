@@ -134,8 +134,8 @@ mod tests {
                 .iter()
                 .any(|n| n.class == NeighborClass::BlueGiant)
         );
-        // A blue giant at any legal distance outshines everything else here;
-        // sorted-descending puts it first.
+        // A blue giant at 4–80 ly usually dominates; these seeds' draws make
+        // it brightest here (asserted, not assumed).
         assert_eq!(neighbors[0].class, NeighborClass::BlueGiant);
         assert_eq!(neighbors[0].color, "hard blue-white");
     }
