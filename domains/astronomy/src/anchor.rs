@@ -86,6 +86,12 @@ pub fn generate_anchor(
                         .to_string(),
                 });
             };
+            if !local_days.is_finite() || local_days <= 0.0 {
+                return Err(GenesisError::InvalidPin {
+                    pin: "year-days".to_string(),
+                    reason: format!("{local_days} local days is not a positive, finite year"),
+                });
+            }
             let year_std = local_days * day_std_days;
             let orbit = (star.mass_solar * (year_std / 365.25).powi(2)).powf(1.0 / 3.0);
             if !(inner..=outer).contains(&orbit) {
@@ -238,6 +244,25 @@ mod tests {
             generate_anchor(Seed(1), &s, &pins),
             Err(GenesisError::UnsatisfiablePin { .. })
         ));
+    }
+
+    #[test]
+    fn year_pin_rejects_non_positive_values() {
+        let s = star();
+        for bad in [-365.0, 0.0, f64::NAN] {
+            let pins = SkyPins {
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                year_local_days: Some(bad),
+                ..SkyPins::default()
+            };
+            assert!(
+                matches!(
+                    generate_anchor(Seed(1), &s, &pins),
+                    Err(GenesisError::InvalidPin { .. })
+                ),
+                "expected InvalidPin for year_local_days = {bad}"
+            );
+        }
     }
 
     #[test]
