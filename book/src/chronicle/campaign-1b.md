@@ -24,11 +24,13 @@ campaign:
 
 - **Domains depend only on the kernel** — verified three ways (manifests,
   dependency lock, source scan). No domain can see another.
-- **The trace protocol works.** Religion's tests feed it a *periodic*
-  phenomenon — a pale wanderer with a thirty-day cycle — which no tier-0
-  provider can produce. Religion mythologizes it correctly anyway, proving it
-  genuinely neither knows nor cares what is upstream. When real moons arrive
-  in Campaign 2, religion is already ready for them.
+- **The trace protocol works.** Religion's tests hand-construct a *periodic*
+  phenomenon — a pale wanderer with a thirty-day cycle — that exists in no
+  world and that no tier-0 provider can produce, and feed it directly to
+  genesis. Religion mythologizes it correctly anyway, proving it genuinely
+  neither knows nor cares what is upstream. The world itself contains no
+  moon; the readiness is in the code, so that when real moons arrive in
+  Campaign 2, religion needs no edits to receive them.
 - **Refinement got its first real client.** Gruugish's name was not merely
   picked; it was chosen through the consistency engine, which will refuse any
   name that contradicts a committed fact. With an empty world this constraint

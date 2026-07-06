@@ -23,13 +23,17 @@ The epithet is drawn from a seeded pool, so different worlds venerate
 differently-named gods of the same sun.
 
 **The constitutional point.** Religion consumes *only* phenomena — it imports
-nothing from astronomy, climate, or anything else, and its tests prove it by
-feeding it a thirty-day wanderer no tier-0 provider can produce. It
-mythologizes the moon before the moon exists. This is the enrichment thesis'
-mechanism established in advance: when Campaign 2 gives the sky periods and
-Campaign 5 deepens the templating, the *legibly different religions from
-different skies* demo — year one's exit criterion — is a composition of parts
-that already work, not a new invention.
+nothing from astronomy, climate, or anything else. Its test suite proves this
+interface-blindness directly: the tests hand-construct a fictional phenomenon
+(a pale wanderer with a thirty-day period), which exists in no world and
+which no tier-0 provider can emit, and feed it straight to genesis. Religion
+produces a correct cyclic tenet from it anyway. To be clear, the *world*
+contains no moon and assumes none — the point is about the code: religion is
+written against phenomena in general, so it is already correct for kinds of
+sky that do not yet exist. When Campaign 2 gives the sky periods and Campaign
+5 deepens the templating, the *legibly different religions from different
+skies* demo — year one's exit criterion — is a composition of parts that
+already work, not a new invention.
 
 **Honest limitations of tier 0:** one belief, two templates, no relationship
 to social structure, no myth *narrative* — a tenet, not a story. The tier
