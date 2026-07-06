@@ -38,6 +38,11 @@
 - [The Almanac of Seed 42](./gallery/almanac.md)
 - [The Sky of Seed 42](./gallery/the-sky.md)
 
+# The Laboratory
+
+- [The Laboratory](./laboratory/overview.md)
+- [Study 001: The Census of Skies](./laboratory/study-001.md)
+
 # Reference
 
 - [The Concept Registry](./reference/concept-registry.md)
