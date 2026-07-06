@@ -49,6 +49,15 @@ fn format_axis_value(value: f64) -> String {
     }
 }
 
+/// Escape text for safe placement inside an SVG `<text>` element's content.
+/// Ampersand must be escaped first so the entities it introduces are not
+/// themselves re-escaped.
+fn xml_escape(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+}
+
 /// Render a single-series bar chart as a deterministic SVG string.
 pub fn bar_chart_svg(title: &str, x_labels: &[String], counts: &[u64]) -> String {
     let mut svg = String::new();
@@ -60,7 +69,7 @@ pub fn bar_chart_svg(title: &str, x_labels: &[String], counts: &[u64]) -> String
 
     svg.push_str(&format!(
         "<text x=\"56\" y=\"20\" font-size=\"13\" font-weight=\"600\" fill=\"currentColor\">{}</text>\n",
-        title
+        xml_escape(title)
     ));
 
     let max_count = counts.iter().copied().max().unwrap_or(0);
@@ -77,7 +86,7 @@ pub fn bar_chart_svg(title: &str, x_labels: &[String], counts: &[u64]) -> String
         svg.push_str(&format!(
             "<text x=\"50\" y=\"{:.1}\" font-size=\"11\" fill=\"currentColor\" opacity=\"0.75\" text-anchor=\"end\">{}</text>\n",
             y,
-            format_axis_value(value)
+            xml_escape(&format_axis_value(value))
         ));
     }
 
@@ -106,12 +115,14 @@ pub fn bar_chart_svg(title: &str, x_labels: &[String], counts: &[u64]) -> String
                     "<text x=\"{:.1}\" y=\"{:.1}\" font-size=\"11\" fill=\"currentColor\" text-anchor=\"middle\">{}</text>\n",
                     cx,
                     bar_y - 4.0,
-                    count
+                    xml_escape(&count.to_string())
                 ));
             } else {
                 svg.push_str(&format!(
                     "<text x=\"{:.1}\" y=\"{:.1}\" font-size=\"11\" fill=\"currentColor\" text-anchor=\"middle\">{}</text>\n",
-                    cx, 232.0, count
+                    cx,
+                    232.0,
+                    xml_escape(&count.to_string())
                 ));
             }
 
@@ -119,12 +130,12 @@ pub fn bar_chart_svg(title: &str, x_labels: &[String], counts: &[u64]) -> String
             if any_long_label {
                 svg.push_str(&format!(
                     "<text x=\"{:.1}\" y=\"{:.1}\" font-size=\"11\" fill=\"currentColor\" opacity=\"0.85\" text-anchor=\"end\" transform=\"rotate(-30 {:.1} {:.1})\">{}</text>\n",
-                    cx, ly, cx, ly, label
+                    cx, ly, cx, ly, xml_escape(label)
                 ));
             } else {
                 svg.push_str(&format!(
                     "<text x=\"{:.1}\" y=\"{:.1}\" font-size=\"11\" fill=\"currentColor\" opacity=\"0.85\" text-anchor=\"middle\">{}</text>\n",
-                    cx, ly, label
+                    cx, ly, xml_escape(label)
                 ));
             }
         }
@@ -262,6 +273,20 @@ mod tests {
         assert!(
             !svg.contains("6.25"),
             "raw two-decimal value must not appear"
+        );
+    }
+
+    #[test]
+    fn bucket_labels_with_angle_brackets_are_xml_escaped() {
+        let labels = vec!["< 16".to_string(), ">= 40".to_string()];
+        let counts = vec![3u64, 5u64];
+        let svg = bar_chart_svg("Title", &labels, &counts);
+
+        assert!(svg.contains("&lt; 16"), "expected escaped '&lt; 16'");
+        assert!(svg.contains("&gt;= 40"), "expected escaped '&gt;= 40'");
+        assert!(
+            !svg.contains(">< "),
+            "raw '<' immediately after '>' must not appear in text content"
         );
     }
 
