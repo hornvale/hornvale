@@ -17,24 +17,34 @@ cargo test --workspace
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
 
-# Single test / single crate / the astronomy property battery:
+# Single test / single crate / the property batteries:
 cargo test -p hornvale-kernel text_of
 cargo test -p hornvale-astronomy --test genesis_properties
+cargo test -p hornvale-terrain --test tectonic_properties
 
-# The CLI (crate `hornvale` in cli/):
-cargo run -p hornvale -- new --seed 42 --out world.json
+# The CLI (crate `hornvale` in cli/; `hornvale help` lists every flag):
+cargo run -p hornvale -- new --seed 42 --out world.json   # plus sky pins (--sky,
+                                         # --moons, --rotation, --neighbor, …) and
+                                         # terrain pins (--plates, --ocean-fraction,
+                                         # --supercontinent)
+cargo run -p hornvale -- scout --neighbor red-giant       # scan seeds satisfying pins
 cargo run -p hornvale -- repl --world world.json
 cargo run -p hornvale -- almanac --world world.json
+cargo run -p hornvale -- map --world world.json --out elevation.ppm
 cargo run -p hornvale -- concepts        # registry dump (book reference page)
 cargo run -p hornvale -- streams         # stream manifest (book reference page)
+cargo run -p hornvale -- lab run studies/census-drift.study.json
+cargo run -p hornvale -- lab list-metrics
 
-# Generated-artifact freshness (CI fails if these drift from committed copies):
+# Generated-artifact freshness: CI regenerates every committed artifact
+# (three seed-42 almanacs, the elevation map, registry/manifest dumps, lab
+# studies) and fails on drift. The authoritative command list is the
+# "Artifacts are current" step in .github/workflows/ci.yml; the shape:
 cargo run -p hornvale-kernel --example first_light
 cargo run -p hornvale -- new --seed 42 --out /tmp/hv.json
-cargo run -p hornvale -- almanac --world /tmp/hv.json > book/src/gallery/almanac-seed-42.md
-cargo run -p hornvale -- concepts > book/src/reference/concept-registry-generated.md
-cargo run -p hornvale -- streams > book/src/reference/stream-manifest-generated.md
-git diff --exit-code book/src/gallery/ book/src/reference/
+cargo run -p hornvale -- almanac --world /tmp/hv.json > book/src/gallery/almanac-seed-42-sky.md
+cargo run -p hornvale -- lab run studies/census-drift.study.json
+git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/
 
 # The project book:
 mdbook build book          # or `mdbook serve book` to preview
@@ -49,7 +59,7 @@ another domain. Windows (`windows/almanac`) may depend on domains because
 they present them (and a window may depend on another window — `windows/lab`
 builds worlds through `windows/worldgen`). `windows/worldgen` (crate
 `hornvale-worldgen`) is the **composition root**: the library where all
-domains meet, and the only place providers (astronomy/climate
+domains meet, and the only place providers (astronomy/climate/terrain
 implementations) are constructed. The CLI and every window build worlds
 through it (`cli/` re-exports it). Adding a domain must never require
 editing an existing one.
@@ -81,7 +91,8 @@ contradicts, lower ("coarse constrains fine").
   module, published via `stream_labels()` into the generated manifest),
   **stream consumption order** (a pin must consume the same draws as the
   unpinned path — see the pin-isolation tests in
-  `domains/astronomy/tests/genesis_properties.rs`), the hash/noise constants
+  `domains/astronomy/tests/genesis_properties.rs` and
+  `domains/terrain/tests/tectonic_properties.rs`), the hash/noise constants
   in `kernel/src/seed.rs` and `noise.rs`, and the physics formulas in
   `domains/astronomy` (the spec's model card lists derived vs approximated
   vs drawn). Deliberate regeneration uses an epoch suffix
@@ -113,7 +124,8 @@ contradicts, lower ("coarse constrains fine").
   information; supersede, never edit). Consult it before reopening an
   architectural or process question. Examples: `Fact.day` stays a bare
   `Option<f64>` (0014); `PredicateDef.name` duplicates its registry key
-  (0015); config is JSON not YAML (0012); models author, dice roll (0009).
+  (0015); config is JSON not YAML (0012); models author, dice roll (0009);
+  studies are data, metrics are code (0011).
 
 ## Process
 
