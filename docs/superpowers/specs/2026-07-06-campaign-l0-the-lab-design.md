@@ -112,12 +112,13 @@ New top-level section:
   arg parsing, house style).
 - Boundary note: the runner needs `build_world`, which lives in the cli
   crate (the composition root). Since windows must not depend on the bin
-  crate, **the composition root's world-building moves to `windows/lab` OR
-  a small `windows/worldgen` library crate the cli re-exports** — the plan
-  decides the cleanest cut; the constitution's constraint is only that
-  domains stay kernel-only and windows may depend on domains. (This also
-  discharges the long-deferred "extract a lib target for WASM reuse" chore —
-  the same extraction serves both.)
+  crate, **the composition root (world_builder + its accessors) extracts to
+  a new `windows/worldgen` library crate**; the cli re-exports it, and
+  `windows/lab` depends on it (windows may depend on windows — the
+  constitution constrains only domains). This extraction also discharges
+  the long-deferred "lib target for WASM reuse" chore — the same cut
+  serves both, and it must be behavior-preserving (the committed almanac
+  artifacts are the referee, as in every Phase-0-style refactor).
 
 ## 9. CI
 
