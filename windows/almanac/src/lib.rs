@@ -69,6 +69,10 @@ pub fn render(ctx: &AlmanacContext) -> String {
             doc.push_str(&format!("- {line}\n"));
         }
         doc.push('\n');
+        // Nested inside the calendar-lines check deliberately: genesis
+        // notes only ever exist alongside a generated calendar (both are
+        // empty for constant-sky worlds), so this stays in lockstep with
+        // world_builder's calendar_lines/genesis_notes pairing.
         if !ctx.genesis_notes.is_empty() {
             doc.push_str("Notes from genesis:\n\n");
             for note in &ctx.genesis_notes {

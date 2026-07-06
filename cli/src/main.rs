@@ -13,7 +13,7 @@ use std::process::ExitCode;
 const SKY_FLAGS: &str =
     "  [--sky constant|generated]               sky provider (default: generated)
   [--moons N|MIN+K]                        pin the moon count, exact or graded
-  [--rotation normal|locked]                pin the rotation regime
+  [--rotation normal|locked]               pin the rotation regime
   [--day-hours F]                          pin the solar day length, in standard hours
   [--obliquity none|F]                     pin axial tilt in degrees
   [--year-days F]                          pin the year length, in local days

@@ -207,6 +207,8 @@ impl GeneratedSky {
         &self.notes
     }
 
+    // Clamps negative time to 0.0; NaN also maps to 0.0 via f64::max
+    // semantics — genesis-time queries never predate the world.
     fn t(&self, time: WorldTime) -> StdDays {
         StdDays(time.day.max(0.0))
     }

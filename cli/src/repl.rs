@@ -201,6 +201,8 @@ mod tests {
     #[test]
     fn facts_lists_an_entity() {
         let out = drive("facts 2\nquit\n");
+        // The OR tolerates entity-numbering shifts (the world entity is
+        // minted first as of 2b); either subject is a legitimate answer.
         assert!(out.contains("(settlement)") || out.contains("(terrain)"));
     }
 
