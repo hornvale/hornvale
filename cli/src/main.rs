@@ -3,6 +3,7 @@
 
 mod concepts;
 mod repl;
+mod streams;
 mod world_builder;
 
 use hornvale_kernel::{Seed, World};
@@ -14,6 +15,7 @@ usage:
   hornvale almanac [--world <PATH>]        render the almanac (default: world.json)
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale concepts                        dump the concept registry as markdown
+  hornvale streams                         dump the stream manifest as markdown
 ";
 
 fn main() -> ExitCode {
@@ -23,6 +25,7 @@ fn main() -> ExitCode {
         Some("almanac") => cmd_almanac(&args),
         Some("repl") => cmd_repl(&args),
         Some("concepts") => cmd_concepts(),
+        Some("streams") => cmd_streams(),
         Some("help") | None => {
             print!("{USAGE}");
             Ok(())
@@ -89,5 +92,10 @@ fn cmd_repl(args: &[String]) -> Result<(), String> {
 fn cmd_concepts() -> Result<(), String> {
     let world = world_builder::build_world(Seed(0)).map_err(|e| e.to_string())?;
     print!("{}", concepts::render_concepts(&world.registry));
+    Ok(())
+}
+
+fn cmd_streams() -> Result<(), String> {
+    print!("{}", streams::render_streams());
     Ok(())
 }

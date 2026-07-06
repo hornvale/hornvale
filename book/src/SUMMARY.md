@@ -38,6 +38,7 @@
 # Reference
 
 - [The Concept Registry](./reference/concept-registry.md)
+- [The Stream Manifest](./reference/stream-manifest.md)
 
 # Open Questions
 
