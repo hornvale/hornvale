@@ -1,6 +1,10 @@
 //! Climate, tier 0: mild and temperate everywhere, forever.
 #![warn(missing_docs)]
 
+pub mod circulation;
+
+pub use circulation::{RotationRegime, band_count_for};
+
 use hornvale_kernel::{
     ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, Position, RegistryError,
 };
