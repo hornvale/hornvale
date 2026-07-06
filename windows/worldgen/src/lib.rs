@@ -84,6 +84,16 @@ impl Sky {
             Sky::Generated(sky) => sky.sky_at(time),
         }
     }
+
+    /// The derived calendar, if this world has a generated sky. `None` for
+    /// the tier-0 constant sun, which has no cycles. Climate consumes this
+    /// at the composition root (spec §13 opener).
+    pub fn calendar(&self) -> Option<&hornvale_astronomy::Calendar> {
+        match self {
+            Sky::Constant(_) => None,
+            Sky::Generated(sky) => Some(sky.calendar()),
+        }
+    }
 }
 
 impl PhenomenaSource for Sky {
@@ -649,6 +659,16 @@ mod tests {
         assert!(night_sky_line(&world).is_err());
         assert!(genesis_notes(&world).is_err());
         assert!(almanac_context(&world).is_err());
+    }
+
+    #[test]
+    fn sky_calendar_accessor_present_for_generated_absent_for_constant() {
+        assert!(sky_of(&constant(42)).unwrap().calendar().is_none());
+        let generated_sky = sky_of(&generated(42)).unwrap();
+        let cal = generated_sky
+            .calendar()
+            .expect("generated sky has a calendar");
+        assert!(cal.year_length().get() > 0.0);
     }
 
     #[test]
