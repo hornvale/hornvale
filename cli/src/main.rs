@@ -37,8 +37,14 @@ usage:
 sky flags (shared by new and scout):
 ";
 
+const TERRAIN_FLAGS: &str = "\
+  [--plates N]                             pin the plate count (2-64)
+  [--ocean-fraction F]                     pin the target ocean fraction (0.05-0.95)
+  [--supercontinent true|false]            cluster the continents into one landmass
+";
+
 fn usage() -> String {
-    format!("{USAGE}{SKY_FLAGS}")
+    format!("{USAGE}{SKY_FLAGS}\nterrain flags (new only):\n{TERRAIN_FLAGS}")
 }
 
 fn main() -> ExitCode {
@@ -101,6 +107,23 @@ fn parse_sky_args(args: &[String]) -> Result<(SkyPins, world_builder::SkyChoice)
     Ok((pins, sky))
 }
 
+/// Parse the terrain flags into pins. One parser: every flag becomes a
+/// `key=value` pin string and folds through `hornvale_terrain::parse_pin`,
+/// so pin-string syntax never drifts from flag syntax.
+fn parse_terrain_args(args: &[String]) -> Result<hornvale_terrain::TerrainPins, String> {
+    let mut pins = hornvale_terrain::TerrainPins::default();
+    for (flag, key) in [
+        ("--plates", "plates"),
+        ("--ocean-fraction", "ocean-fraction"),
+        ("--supercontinent", "supercontinent"),
+    ] {
+        if let Some(value) = flag_value(args, flag) {
+            hornvale_terrain::parse_pin(&format!("{key}={value}"), &mut pins)?;
+        }
+    }
+    Ok(pins)
+}
+
 fn cmd_new(args: &[String]) -> Result<(), String> {
     let seed: u64 = flag_value(args, "--seed")
         .ok_or("new requires --seed <N>")?
@@ -108,7 +131,7 @@ fn cmd_new(args: &[String]) -> Result<(), String> {
         .map_err(|e| format!("--seed must be a u64: {e}"))?;
     let out = flag_value(args, "--out").unwrap_or("world.json");
     let (pins, sky) = parse_sky_args(args)?;
-    let terrain_pins = hornvale_terrain::TerrainPins::default();
+    let terrain_pins = parse_terrain_args(args)?;
     let world = world_builder::build_world(Seed(seed), &pins, sky, &terrain_pins)
         .map_err(|e| e.to_string())?;
     world
@@ -265,6 +288,27 @@ mod tests {
         let (pins, sky) = parse_sky_args(&args(&[])).unwrap();
         assert_eq!(sky, world_builder::SkyChoice::Generated);
         assert_eq!(pins, SkyPins::default());
+    }
+
+    #[test]
+    fn terrain_flags_fold_into_pins() {
+        let a = args(&[
+            "new",
+            "--plates",
+            "12",
+            "--ocean-fraction",
+            "0.7",
+            "--supercontinent",
+            "true",
+        ]);
+        let pins = parse_terrain_args(&a).unwrap();
+        assert_eq!(pins.plates, Some(12));
+        assert_eq!(pins.ocean_fraction, Some(0.7));
+        assert_eq!(pins.supercontinent, Some(true));
+        assert_eq!(
+            parse_terrain_args(&args(&["new"])).unwrap(),
+            hornvale_terrain::TerrainPins::default()
+        );
     }
 
     #[test]
