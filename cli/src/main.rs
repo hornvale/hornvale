@@ -29,6 +29,7 @@ usage:
                                             scan seeds for ones satisfying the pins
   hornvale almanac [--world <PATH>]        render the almanac (default: world.json)
   hornvale repl [--world <PATH>]           interrogate a world interactively
+  hornvale map [--world <PATH>] [--out <PPM>] render the elevation map (markdown to stdout)
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
   hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
@@ -54,6 +55,7 @@ fn main() -> ExitCode {
         Some("scout") => cmd_scout(&args),
         Some("almanac") => cmd_almanac(&args),
         Some("repl") => cmd_repl(&args),
+        Some("map") => cmd_map(&args),
         Some("concepts") => cmd_concepts(),
         Some("streams") => cmd_streams(),
         Some("lab") => cmd_lab(&args),
@@ -211,6 +213,36 @@ fn cmd_repl(args: &[String]) -> Result<(), String> {
     let stdin = std::io::stdin();
     let stdout = std::io::stdout();
     repl::run(&world, stdin.lock(), stdout.lock()).map_err(|e| e.to_string())
+}
+
+/// Render the world's elevation map: a markdown page (title, land lines,
+/// ASCII map) to stdout and, with `--out`, the PPM image to disk. Both are
+/// deterministic; CI drift-checks the committed copies.
+fn cmd_map(args: &[String]) -> Result<(), String> {
+    let world = load_world(args)?;
+    let terrain = world_builder::terrain_of(&world).map_err(|e| e.to_string())?;
+    let mut doc = format!("# The Land of Seed {}\n\n", world.seed.0);
+    for line in world_builder::land_lines(&world).map_err(|e| e.to_string())? {
+        doc.push_str(&format!("{line}\n"));
+    }
+    doc.push_str("\n```text\n");
+    doc.push_str(&hornvale_terrain::render::elevation_ascii(
+        terrain.geosphere(),
+        terrain.globe(),
+    ));
+    doc.push_str("```\n\n");
+    if let Some(out) = flag_value(args, "--out") {
+        let ppm = hornvale_terrain::render::elevation_ppm(terrain.geosphere(), terrain.globe());
+        std::fs::write(out, ppm).map_err(|e| format!("writing {out}: {e}"))?;
+        let name = std::path::Path::new(out)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(out);
+        doc.push_str(&format!("Full-color render: [`{name}`](./{name})\n\n"));
+    }
+    doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
+    print!("{doc}");
+    Ok(())
 }
 
 fn cmd_concepts() -> Result<(), String> {

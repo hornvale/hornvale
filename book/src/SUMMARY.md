@@ -38,6 +38,7 @@
 - [First Light (seed 42)](./gallery/first-light.md)
 - [The Almanac of Seed 42](./gallery/almanac.md)
 - [The Sky of Seed 42](./gallery/the-sky.md)
+- [The Land of Seed 42](./gallery/elevation-seed-42.md)
 
 # The Laboratory
 

@@ -10,6 +10,7 @@ pub mod globe;
 pub mod pins;
 pub mod plates;
 pub mod provider;
+pub mod render;
 pub mod streams;
 
 pub use boundaries::{BoundaryKind, CellBoundary};
