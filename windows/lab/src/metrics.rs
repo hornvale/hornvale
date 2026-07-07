@@ -724,7 +724,7 @@ mod tests {
     }
 
     #[test]
-    fn registry_has_thirty_two_metrics_after_the_census_of_faiths() {
+    fn registry_has_thirty_three_metrics_after_firm_ground() {
         assert_eq!(registry().len(), 33);
     }
 
