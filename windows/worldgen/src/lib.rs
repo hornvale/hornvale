@@ -598,39 +598,54 @@ pub fn flagship_of(world: &World, species: &str) -> Option<hornvale_settlement::
 }
 
 /// Headline lines describing the world's people for the almanac: how many
-/// settlements, and the flagship's name, population, and biome.
+/// settlements, then one chief-settlement line per species that placed
+/// (registry order, goblin first). A world with exactly one such species
+/// keeps the legacy unprefixed wording — byte-stable for goblin-only worlds;
+/// two-or-more-species worlds prefix each chief line with its species.
 pub fn settlement_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let places = hornvale_terrain::places(world);
     let mut lines = vec![format!("The land holds {} settlement(s).", places.len())];
-    if let Some(v) = hornvale_settlement::village_info(world) {
+
+    let registry = hornvale_species::registry();
+    let flagships: Vec<(&str, hornvale_settlement::VillageInfo)> = registry
+        .keys()
+        .filter_map(|name| flagship_of(world, name).map(|v| (*name, v)))
+        .collect();
+    let multi_species = flagships.len() > 1;
+
+    for (species, v) in &flagships {
         let biome = places
             .iter()
             .find(|p| p.id == v.id)
             .map(|p| p.biome.clone())
             .unwrap_or_else(|| "unknown".to_string());
-        lines.push(format!(
-            "The chief settlement, {}, holds {} souls amid {}.",
-            v.name, v.population, biome
-        ));
+        if multi_species {
+            lines.push(format!(
+                "The chief {species} settlement, {}, holds {} souls amid {}.",
+                v.name, v.population, biome
+            ));
+        } else {
+            lines.push(format!(
+                "The chief settlement, {}, holds {} souls amid {}.",
+                v.name, v.population, biome
+            ));
+        }
     }
     Ok(lines)
 }
 
 /// Headline culture lines for the almanac's People section: the flagship's
 /// subsistence mode, then a one-line summary of its emergent role structure.
-/// Empty when there is no flagship (an empty world).
-pub fn culture_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    let Some(village) = hornvale_settlement::village_info(world) else {
-        return Ok(Vec::new());
+/// Empty when the flagship has no committed culture yet.
+pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo) -> Vec<String> {
+    let Some(subsistence) = hornvale_culture::subsistence_of(world, flagship.id) else {
+        return Vec::new();
     };
-    let Some(subsistence) = hornvale_culture::subsistence_of(world, village.id) else {
-        return Ok(Vec::new());
-    };
-    let castes = hornvale_culture::castes_of(world, village.id);
-    Ok(vec![
-        format!("{} lives by {subsistence}.", village.name),
+    let castes = hornvale_culture::castes_of(world, flagship.id);
+    vec![
+        format!("{} lives by {subsistence}.", flagship.name),
         format!("Its roles, lowest to highest: {}.", castes.join(", ")),
-    ])
+    ]
 }
 
 /// The sky at `time`, from whichever astronomy provider this world uses.
@@ -739,7 +754,20 @@ pub fn genesis_notes(world: &World) -> Result<Vec<String>, BuildError> {
 /// Gather everything the almanac renders, reconstructing the stateless
 /// tier-0 providers.
 pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
-    let village = hornvale_settlement::village_info(world);
+    let registry = hornvale_species::registry();
+    let peoples = registry
+        .iter()
+        .filter_map(|(name, def)| {
+            let flagship = flagship_of(world, name)?;
+            Some(hornvale_almanac::PeopleBlock {
+                species: (*name).to_string(),
+                noun: def.noun.to_string(),
+                name: flagship.name.clone(),
+                population: flagship.population,
+                culture_lines: culture_lines(world, &flagship),
+            })
+        })
+        .collect();
     Ok(AlmanacContext {
         seed: world.seed.0,
         sky: sky_report(world, WorldTime { day: 0.0 })?,
@@ -748,13 +776,12 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         places: hornvale_terrain::places(world),
         land_lines: land_lines(world)?,
         biome_lines: biome_lines(world)?,
-        village,
+        peoples,
         beliefs: hornvale_religion::beliefs_of(world),
         calendar_lines: calendar_lines(world)?,
         night_sky: night_sky_line(world)?,
         genesis_notes: genesis_notes(world)?,
         settlement_lines: settlement_lines(world)?,
-        culture_lines: culture_lines(world)?,
         cult_form: hornvale_religion::cult_form_of(world),
     })
 }
@@ -874,7 +901,7 @@ mod tests {
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.seed, 42);
         assert!(!ctx.places.is_empty());
-        assert!(ctx.village.is_some());
+        assert!(!ctx.peoples.is_empty());
         assert!(!ctx.beliefs.is_empty());
         assert!(!ctx.phenomena.is_empty());
     }
@@ -1312,7 +1339,7 @@ mod tests {
         let village = hornvale_settlement::village_info(&world).expect("flagship settlement");
         let subsistence =
             hornvale_culture::subsistence_of(&world, village.id).expect("flagship subsistence");
-        let lines = culture_lines(&world).unwrap();
+        let lines = culture_lines(&world, &village);
         assert!(!lines.is_empty());
         assert!(lines[0].contains(&village.name));
         assert!(lines[0].contains(&subsistence));

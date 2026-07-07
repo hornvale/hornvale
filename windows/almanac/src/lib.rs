@@ -6,8 +6,24 @@ use hornvale_astronomy::SkyReport;
 use hornvale_climate::ClimateReport;
 use hornvale_kernel::Phenomenon;
 use hornvale_religion::Belief;
-use hornvale_settlement::VillageInfo;
 use hornvale_terrain::PlaceInfo;
+
+/// One species' flagship settlement, rendered as its own block under The
+/// People. Replaces the old single `village`/`culture_lines` pair now that
+/// worlds hold more than one species.
+pub struct PeopleBlock {
+    /// The species name ("goblin", "kobold").
+    pub species: String,
+    /// The species' settlement noun ("village", "warren").
+    pub noun: String,
+    /// The flagship settlement's name.
+    pub name: String,
+    /// The flagship settlement's population.
+    pub population: u32,
+    /// The flagship's emergent culture: its subsistence mode and a one-line
+    /// role-structure summary.
+    pub culture_lines: Vec<String>,
+}
 
 /// Everything the almanac needs, gathered by the composition root.
 pub struct AlmanacContext {
@@ -25,8 +41,6 @@ pub struct AlmanacContext {
     pub land_lines: Vec<String>,
     /// The globe's biome/habitability headline lines, from the composition root.
     pub biome_lines: Vec<String>,
-    /// The settlement, if any.
-    pub village: Option<VillageInfo>,
     /// Recorded beliefs.
     pub beliefs: Vec<Belief>,
     /// The world's cycles, reader-facing; empty for constant-sky worlds.
@@ -38,9 +52,9 @@ pub struct AlmanacContext {
     /// Headline lines describing the world's people: how many settlements,
     /// and the flagship's name, population, and biome.
     pub settlement_lines: Vec<String>,
-    /// The flagship's emergent culture: its subsistence mode and a one-line
-    /// role-structure summary. Empty for worlds with no flagship.
-    pub culture_lines: Vec<String>,
+    /// One block per species that placed settlements, registry order
+    /// (goblin first). Empty for worlds with no settlements.
+    pub peoples: Vec<PeopleBlock>,
     /// The pantheon's cult form (`"organized"` or `"folk"`), if a pantheon
     /// exists; `None` for worlds with no beliefs.
     pub cult_form: Option<String>,
@@ -125,17 +139,18 @@ pub fn render(ctx: &AlmanacContext) -> String {
     if !ctx.settlement_lines.is_empty() {
         doc.push('\n');
     }
-    match &ctx.village {
-        None => doc.push_str("No settlements are known.\n\n"),
-        Some(v) => {
+    if ctx.peoples.is_empty() {
+        doc.push_str("No settlements are known.\n\n");
+    } else {
+        for p in &ctx.peoples {
             doc.push_str(&format!(
-                "The goblin village of **{}**, population {}.\n\n",
-                v.name, v.population
+                "The {} {} of **{}**, population {}.\n\n",
+                p.species, p.noun, p.name, p.population
             ));
-            for line in &ctx.culture_lines {
+            for line in &p.culture_lines {
                 doc.push_str(&format!("{line}\n"));
             }
-            if !ctx.culture_lines.is_empty() {
+            if !p.culture_lines.is_empty() {
                 doc.push('\n');
             }
         }
@@ -200,11 +215,13 @@ mod tests {
                 "The globe breaks into 23 plates; the sea claims 63% of its surface.".to_string(),
             ],
             biome_lines: vec![],
-            village: Some(VillageInfo {
-                id: EntityId(2),
+            peoples: vec![PeopleBlock {
+                species: "goblin".to_string(),
+                noun: "village".to_string(),
                 name: "Bolnar".to_string(),
                 population: 60,
-            }),
+                culture_lines: vec![],
+            }],
             beliefs: vec![Belief {
                 id: EntityId(3),
                 tenet: "the Ever-Flame never blinks.".to_string(),
@@ -215,7 +232,6 @@ mod tests {
             night_sky: None,
             genesis_notes: vec![],
             settlement_lines: vec![],
-            culture_lines: vec![],
             cult_form: None,
         }
     }
@@ -252,10 +268,16 @@ mod tests {
     #[test]
     fn culture_lines_render_under_the_people_section() {
         let ctx = AlmanacContext {
-            culture_lines: vec![
-                "Bolnar lives by farming.".to_string(),
-                "Its roles, lowest to highest: farmer, chief.".to_string(),
-            ],
+            peoples: vec![PeopleBlock {
+                species: "goblin".to_string(),
+                noun: "village".to_string(),
+                name: "Bolnar".to_string(),
+                population: 60,
+                culture_lines: vec![
+                    "Bolnar lives by farming.".to_string(),
+                    "Its roles, lowest to highest: farmer, chief.".to_string(),
+                ],
+            }],
             ..sample_context()
         };
         let doc = render(&ctx);
@@ -271,7 +293,7 @@ mod tests {
     #[test]
     fn empty_world_renders_honestly() {
         let ctx = AlmanacContext {
-            village: None,
+            peoples: vec![],
             beliefs: vec![],
             places: vec![],
             ..sample_context()
@@ -280,6 +302,66 @@ mod tests {
         assert!(doc.contains("No settlements are known."));
         assert!(doc.contains("No beliefs are recorded."));
         assert!(!doc.contains("## The Calendar"));
+    }
+
+    #[test]
+    fn a_lone_goblin_block_is_byte_identical_to_the_legacy_string() {
+        let ctx = AlmanacContext {
+            peoples: vec![PeopleBlock {
+                species: "goblin".to_string(),
+                noun: "village".to_string(),
+                name: "Grumoknar".to_string(),
+                population: 359,
+                culture_lines: vec![],
+            }],
+            ..sample_context()
+        };
+        let doc = render(&ctx);
+        assert!(doc.contains("The goblin village of **Grumoknar**, population 359.\n\n"));
+    }
+
+    #[test]
+    fn two_species_render_as_separate_blocks_goblin_first() {
+        let ctx = AlmanacContext {
+            peoples: vec![
+                PeopleBlock {
+                    species: "goblin".to_string(),
+                    noun: "village".to_string(),
+                    name: "Grum".to_string(),
+                    population: 200,
+                    culture_lines: vec![
+                        "Grum lives by farming.".to_string(),
+                        "Its roles, lowest to highest: farmer, chief.".to_string(),
+                    ],
+                },
+                PeopleBlock {
+                    species: "kobold".to_string(),
+                    noun: "warren".to_string(),
+                    name: "Zikthur".to_string(),
+                    population: 80,
+                    culture_lines: vec![
+                        "Zikthur lives by mining.".to_string(),
+                        "Its roles, lowest to highest: digger, elders.".to_string(),
+                    ],
+                },
+            ],
+            ..sample_context()
+        };
+        let doc = render(&ctx);
+        assert!(doc.contains("The goblin village of **Grum**, population 200."));
+        assert!(doc.contains("The kobold warren of **Zikthur**, population 80."));
+        assert!(doc.contains("Grum lives by farming."));
+        assert!(doc.contains("Zikthur lives by mining."));
+
+        let goblin_pos = doc.find("The goblin village of **Grum**").unwrap();
+        let kobold_pos = doc.find("The kobold warren of **Zikthur**").unwrap();
+        assert!(goblin_pos < kobold_pos, "kobold block must follow goblin");
+
+        // Each block's culture lines follow its own settlement line.
+        let goblin_culture_pos = doc.find("Grum lives by farming.").unwrap();
+        let kobold_culture_pos = doc.find("Zikthur lives by mining.").unwrap();
+        assert!(goblin_pos < goblin_culture_pos && goblin_culture_pos < kobold_pos);
+        assert!(kobold_pos < kobold_culture_pos);
     }
 
     #[test]
