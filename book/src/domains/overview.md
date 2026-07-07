@@ -12,8 +12,8 @@ The cascade, in dependency order, with its current state:
 | Domain | Tier 0 | Consumes | Contributes |
 |---|---|---|---|
 | [Astronomy](./astronomy.md) | a sun that never sets | — | phenomena (the sky) |
-| [Climate](./climate.md) | uniform mildness | — | phenomena (the air) |
-| [Terrain](./terrain.md) | one hand-placed vale | — | place facts |
+| [Climate](./climate.md) | uniform mildness → banded climate + biomes (tier 1) | — (tier 0); elevation, sea level, seafloor, and the sky's insolation/obliquity/rotation (tier 1) | phenomena (the air); the biome + habitability field (tier 1) |
+| [Terrain](./terrain.md) | one hand-placed vale → tectonic globe (tier 1) | — | place facts; the tectonic globe's elevation, boundary, and unrest fields (tier 1) |
 | [Settlement](./settlement.md) | one goblin village | a place to stand | settlement facts |
 | [Culture](./culture.md) | a fixed caste ladder | a village to structure | caste facts |
 | [Religion](./religion.md) | one belief | **phenomena only** | belief facts |

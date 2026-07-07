@@ -33,6 +33,7 @@
 - [Campaign 2b: The Sky's Debut](./chronicle/campaign-2b.md)
 - [Campaign L0: The Laboratory](./chronicle/campaign-l0-lab.md)
 - [Campaign 3b: The Tectonic Globe](./chronicle/campaign-3b.md)
+- [Campaign 3c: Climate & Biomes](./chronicle/campaign-3c.md)
 
 # The Gallery
 
@@ -40,11 +41,14 @@
 - [The Almanac of Seed 42](./gallery/almanac.md)
 - [The Sky of Seed 42](./gallery/the-sky.md)
 - [The Land of Seed 42](./gallery/elevation-seed-42.md)
+- [The Biomes of Seed 42](./gallery/biome-seed-42.md)
+- [The Biomes of Seed 42 (tidally locked)](./gallery/biome-seed-42-locked.md)
 
 # The Laboratory
 
 - [The Laboratory](./laboratory/overview.md)
 - [Study 001: The Census of Skies](./laboratory/study-001.md)
+- [Study 002: The Census of Lands](./laboratory/study-002.md)
 
 # Reference
 
