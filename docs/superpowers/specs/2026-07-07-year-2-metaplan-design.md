@@ -54,6 +54,15 @@ to the correct species above a preregistered accuracy across 10,000 worlds.
 If the second species' culture reads as a reskin — same pantheon shape, same
 social structure, different names — the thesis fails, and is allowed to fail.
 
+One confound must be controlled: species draw from their own labeled streams,
+so two species with *identical* vectors would still differ world-by-world
+(different draws). The claim is therefore statistical and needs a **null
+control**, preregistered alongside the main studies: a study population where
+the second species carries the goblins' exact vectors must be
+distributionally indistinguishable from goblins in aggregate (and score at
+chance on blind attribution) — establishing that measured divergence is
+attributable to the vectors, not to stream noise.
+
 ## 3. Campaign sequence
 
 Five campaigns, strict dependency order; every campaign ends observable and
@@ -236,8 +245,10 @@ Campaign 5 did for Year 1.
 - **The preregistered comparative study suite** (all hypotheses stated before
   running, ADR 0016): head-deity domain × activity cycle × lock state; social
   verticality × psychology (status basis, in-group radius); naming-morphology
-  divergence × articulatory envelope; and the blind-attribution metric at its
-  preregistered accuracy threshold across 10,000 worlds.
+  divergence × articulatory envelope; the blind-attribution metric at its
+  preregistered accuracy threshold across 10,000 worlds; and the **null
+  control** from §2 (identical-vector species must be distributionally
+  indistinguishable and score at chance on blind attribution).
 - **The capstone artifact:** the successor to `the-gods-seed-42.md` — one
   seed, one sky, two peoples side by side: two flagships placed for different
   reasons, two social structures, two pantheons, two languages, myths in two
