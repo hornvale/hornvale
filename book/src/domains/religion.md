@@ -105,9 +105,12 @@ returns feasted; pin the same seed's sky to tidally locked and the head
 becomes **the Still Crown**, an eternal sun fixed forever above the day
 side — the only line in the pantheon that changes, because a locked world
 still keeps its moons, only loses its seasons and its head deity's cycle.
-Same land, same society, only the sky moved, and the theology moved with
-it. The two full "The Gods" sections are quoted verbatim in the gallery:
-[The Gods of Seed 42](../gallery/the-gods-seed-42.md).
+The same globe, a different flagship under each sky (since Campaign Y2-0's
+placement fix, the sky moves settlement too), yet two societies alike
+enough to hand religion the same summary — so the theology moved exactly
+where the sky moved and nowhere else. The two full "The Gods" sections are
+quoted verbatim in the gallery: [The Gods of Seed
+42](../gallery/the-gods-seed-42.md).
 
 **The model card.**
 

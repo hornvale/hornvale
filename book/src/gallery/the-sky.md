@@ -1,16 +1,22 @@
 # The Sky of Seed 42
 
 Campaign 2b's exit artifact: one pinned cause, one legible downstream
-difference. Both almanacs below are the same seed, the same village, the
-same goblins — the only thing that changes is the sun's rotation. Spinning,
-it rises and sets, and Gruugish worships the Returning One, a god who
-departs and returns and is mourned and feasted in turn. Locked, it never
-moves, and the same goblins worship the Unblinking Eye, a god who has never
-departed and will never blink.
+difference. Both almanacs below are the same seed — the only pin that
+differs is the sun's rotation. When this page first appeared, one village
+stood in both worlds and only its single belief changed: Gruugish worshipped
+the Returning One under a spinning sun, a god who departs and returns and is
+mourned and feasted in turn, and the Unblinking Eye under a locked one, a
+god who has never departed and will never blink. Four campaigns of deepening
+later, the same one-bit difference reaches much further down the page: the
+spinning sky's climate scatters 58 settlements and crowns **Grumoknar**,
+whose priesthood is headed by the Wheel-Turner; the locked sky collapses
+habitability toward the terminator ring, places 27, crowns **Bolugrak**, and
+raises the Still Crown, a head deity that never sets.
 
-Compare the **Gods** and **Calendar** sections between the two — everything
-else holds still while the sky's rotation rewrites what the village
-believes and how it counts its days.
+Compare the two almanacs section by section — the Land's biomes, the People,
+the Gods, the Calendar — and every difference traces back to the one pinned
+bit. The full reading of the pair is [The Gods of Seed
+42](./the-gods-seed-42.md).
 
 Regenerated in CI alongside the constant-sky almanac; if either page below
 goes stale, the build fails.

@@ -37,6 +37,7 @@
 - [Campaign 4a: Placement & Drainage](./chronicle/campaign-4a.md)
 - [Campaign 4b: Emergent Society](./chronicle/campaign-4b.md)
 - [Campaign 5: The Gods](./chronicle/campaign-5.md)
+- [Campaign Y2-0: Firm Ground](./chronicle/campaign-y2-0.md)
 
 # The Gallery
 

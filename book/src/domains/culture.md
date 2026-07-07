@@ -70,15 +70,19 @@ need — is Year-2 work (spec §14), not attempted here.
   population or environment would later change.
 
 The exit-demo cascade: the same seed 7 land, under a spinning sky, places a
-flagship whose environment nets out as fishing — a lean two-rung
-`[fisher, chief]` hamlet of 463 in shrubland. Pin the sky to tidally locked
-and the *same* seed's flagship relocates entirely: a farming town of 397 in
-temperate forest, stratified into the full `[slave, farmer, artisan, shaman,
-chief]`. Nothing about culture changed — only the sky did, and subsistence
-*and* structure reorganized together, the cascade the astronomy-to-biome
-chain promised back in Campaign 3c now reaching all the way to who a
-settlement's chief rules over. Laboratory: [Study 003, the Census of
-Peoples](../laboratory/study-003.md). Chronicle: [4b, Emergent
+farming town of 403 in temperate forest that grows a lean three-rung
+`[farmer, shaman, chief]`. Pin the sky to tidally locked and the *same*
+seed's flagship relocates entirely: a farming town of 348, also temperate
+forest, stratified into the full `[slave, farmer, artisan, shaman, chief]`.
+Nothing about culture changed — only the sky did, and though both flagships
+now farm (forest farms regardless of coast), the structure still
+reorganizes with the move: the locked site's environmental pressures earn
+the slave and artisan rungs the spinning site does not, the cascade the
+astronomy-to-biome chain promised back in Campaign 3c still reaching all
+the way to who a settlement's chief rules over. (Campaign Y2-0's placement
+fix re-drew this pair — the pre-fix version, a fishing hamlet against a
+farm town, is preserved in the 4b chronicle.) Laboratory: [Study 003, the
+Census of Peoples](../laboratory/study-003.md). Chronicle: [4b, Emergent
 Society](../chronicle/campaign-4b.md).
 
 **The tier ladder ahead:** structure that revises as a settlement's
