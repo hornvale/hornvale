@@ -2,6 +2,9 @@
 //! straight from the vision book's goblin village chapter.
 #![warn(missing_docs)]
 
+pub mod subsistence;
+pub use subsistence::{BiomeClass, Subsistence, fertility, subsistence};
+
 use hornvale_kernel::{ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World};
 
 /// Predicate relating a settlement to a caste present in it.
