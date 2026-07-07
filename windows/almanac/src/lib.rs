@@ -194,6 +194,7 @@ mod tests {
                 id: EntityId(3),
                 tenet: "the Ever-Flame never blinks.".to_string(),
                 source_kind: "celestial-body".to_string(),
+                high_god: false,
             }],
             calendar_lines: vec![],
             night_sky: None,

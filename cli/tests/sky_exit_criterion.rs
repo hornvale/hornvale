@@ -117,7 +117,7 @@ fn rotation_flip_flips_the_religion() {
 }
 
 #[test]
-fn moons_flip_flips_the_calendar_not_the_faith() {
+fn moons_flip_flips_the_calendar_and_grows_the_pantheon_without_displacing_the_head() {
     let dir = temp_dir("moons");
     let seed = 42u64;
 
@@ -141,10 +141,19 @@ fn moons_flip_flips_the_calendar_not_the_faith() {
     let three_gods = extract_gods_section(&three_almanac);
     let three_calendar = extract_calendar_section(&three_almanac);
 
-    // Gods sections must be equal
+    // The pantheon is salience-ordered with the sun always first; each moon
+    // is itself a salient celestial-body phenomenon, so more moons seat more
+    // deities. The head deity (the sun) must stay put regardless — "coarse
+    // constrains fine": moons never displace it.
+    let head_belief = |gods: &str| gods.split("\n\n").nth(1).unwrap_or("").to_string();
     assert_eq!(
+        head_belief(&zero_gods),
+        head_belief(&three_gods),
+        "the head deity is unchanged by moon count"
+    );
+    assert_ne!(
         zero_gods, three_gods,
-        "Gods sections must be equal regardless of moons"
+        "more moons seat more deities in the pantheon"
     );
 
     // Calendar sections must differ
