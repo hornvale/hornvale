@@ -27,6 +27,11 @@ pub struct TectonicGlobe {
     /// interiors). Recomputed at genesis, never serialized; consumed by
     /// marine biomes via the composition root (spec §6).
     pub boundary: CellMap<Option<CellBoundary>>,
+    /// Flow-accumulation drainage per cell (upstream land-cell count; 0 on
+    /// ocean). Recomputed at genesis, never serialized.
+    pub drainage: CellMap<f64>,
+    /// Endorheic mask: land cells whose downhill path never reaches the sea.
+    pub endorheic: CellMap<bool>,
 }
 
 /// What tectonic genesis produced: the globe plus degradation notes.
@@ -65,6 +70,8 @@ pub fn generate(
     let sea_level = elevation::derive_sea_level(terrain_seed, pins, &elevation_map);
     let unrest =
         elevation::generate_unrest(geosphere, &plate_list, &plate_of, &boundary_map, &distances);
+    let (drainage, endorheic) =
+        crate::drainage::drainage_field(geosphere, &elevation_map, sea_level);
 
     let mut notes = Vec::new();
     let mut populated = vec![false; plate_list.len()];
@@ -87,6 +94,8 @@ pub fn generate(
             sea_level,
             plates: plate_list,
             boundary: boundary_map,
+            drainage,
+            endorheic,
         },
         notes,
     })

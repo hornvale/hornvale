@@ -95,6 +95,16 @@ impl GeneratedTerrain {
         }
         best
     }
+
+    /// Flow-accumulation drainage at a cell (upstream land-cell count; 0 on ocean).
+    pub fn drainage_at(&self, id: CellId) -> f64 {
+        *self.globe.drainage.get(id)
+    }
+
+    /// Whether a cell is an endorheic (interior-draining) land cell.
+    pub fn is_endorheic(&self, id: CellId) -> bool {
+        *self.globe.endorheic.get(id)
+    }
 }
 
 #[cfg(test)]
@@ -154,5 +164,22 @@ mod tests {
         }
         // At least one cell is a classified boundary on a real globe.
         assert!(geo.cells().any(|c| terrain.boundary_at(c).is_some()));
+    }
+
+    #[test]
+    fn provider_exposes_drainage_and_endorheic() {
+        let geo = Geosphere::new(3);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let terrain = GeneratedTerrain::new(geo.clone(), outcome.clone());
+        for cell in geo.cells() {
+            assert_eq!(terrain.drainage_at(cell), *outcome.globe.drainage.get(cell));
+            assert_eq!(
+                terrain.is_endorheic(cell),
+                *outcome.globe.endorheic.get(cell)
+            );
+        }
+        // Land cells accumulate at least themselves.
+        let land = geo.cells().find(|c| !terrain.is_ocean(*c)).unwrap();
+        assert!(terrain.drainage_at(land) >= 1.0);
     }
 }
