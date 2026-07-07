@@ -6,7 +6,7 @@ pub mod subsistence;
 pub use subsistence::{BiomeClass, Subsistence, fertility, subsistence};
 
 pub mod structure;
-pub use structure::{EnvSummary, structure};
+pub use structure::{EnvSummary, PsychSummary, RoleVocabulary, structure};
 
 use hornvale_kernel::{ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World};
 
@@ -33,6 +33,7 @@ pub fn genesis(
     world: &mut World,
     settlement: EntityId,
     env: &EnvSummary,
+    psych: &PsychSummary,
 ) -> Result<(), LedgerError> {
     world.ledger.commit(
         Fact {
@@ -45,7 +46,7 @@ pub fn genesis(
         },
         &world.registry,
     )?;
-    for caste in structure(env) {
+    for caste in structure(env, psych) {
         world.ledger.commit(
             Fact {
                 subject: settlement,
@@ -98,8 +99,9 @@ mod tests {
             population: 500,
             threat: 0.1,
         };
-        genesis(&mut w, s, &env).unwrap();
-        assert_eq!(castes_of(&w, s), structure(&env));
+        let psych = PsychSummary::default();
+        genesis(&mut w, s, &env, &psych).unwrap();
+        assert_eq!(castes_of(&w, s), structure(&env, &psych));
         assert_eq!(subsistence_of(&w, s).as_deref(), Some("farming"));
     }
 
@@ -115,7 +117,8 @@ mod tests {
             population: 30,
             threat: 0.1,
         };
-        genesis(&mut w, lean, &lean_env).unwrap();
+        let psych = PsychSummary::default();
+        genesis(&mut w, lean, &lean_env, &psych).unwrap();
 
         let rich = w.ledger.mint_entity();
         let rich_env = EnvSummary {
@@ -124,7 +127,7 @@ mod tests {
             population: 500,
             threat: 0.1,
         };
-        genesis(&mut w, rich, &rich_env).unwrap();
+        genesis(&mut w, rich, &rich_env, &psych).unwrap();
 
         let lean_castes = castes_of(&w, lean);
         let rich_castes = castes_of(&w, rich);
@@ -145,7 +148,8 @@ mod tests {
             population: 500,
             threat: 0.1,
         };
-        genesis(&mut w, s, &env).unwrap();
+        let psych = PsychSummary::default();
+        genesis(&mut w, s, &env, &psych).unwrap();
         let other = w.ledger.mint_entity();
         assert!(castes_of(&w, other).is_empty());
         assert_eq!(subsistence_of(&w, other), None);

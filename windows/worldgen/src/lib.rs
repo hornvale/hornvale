@@ -475,7 +475,12 @@ pub fn build_world(
             population,
             threat,
         };
-        hornvale_culture::genesis(&mut world, flagship, &env)?;
+        hornvale_culture::genesis(
+            &mut world,
+            flagship,
+            &env,
+            &hornvale_culture::PsychSummary::default(),
+        )?;
         let castes = hornvale_culture::castes_of(&world, flagship);
         let society = hornvale_religion::SocietySummary {
             strata: castes.len(),
@@ -1134,7 +1139,7 @@ mod tests {
 
         assert_eq!(
             hornvale_culture::castes_of(&world, village.id),
-            hornvale_culture::structure(&env)
+            hornvale_culture::structure(&env, &hornvale_culture::PsychSummary::default())
         );
         assert_eq!(
             hornvale_culture::subsistence_of(&world, village.id).as_deref(),
