@@ -15,6 +15,8 @@ commands:
   biome <lat> <lon> the biome at a coordinate (degrees)
   calendar         the world's cycles
   places           known places
+  settlements      every settlement: name, population, biome
+  settlement <lat> <lon> the settlement nearest a coordinate (degrees)
   village          the settlement
   castes           the settlement's castes
   beliefs          recorded beliefs
@@ -149,6 +151,52 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                         "{} — {} (entity {})",
                         place.name, place.biome, place.id.0
                     )?;
+                }
+            }
+            "settlements" => {
+                for place in hornvale_terrain::places(world) {
+                    let population = match world
+                        .ledger
+                        .value_of(place.id, hornvale_settlement::POPULATION)
+                    {
+                        Some(Value::Number(n)) => *n as u32,
+                        _ => 0,
+                    };
+                    writeln!(
+                        output,
+                        "{} — population {} — {}",
+                        place.name, population, place.biome
+                    )?;
+                }
+            }
+            "settlement" => {
+                let coords = argument
+                    .and_then(|lat| Some((lat, parts.next()?)))
+                    .and_then(|(lat, lon)| {
+                        Some((lat.parse::<f64>().ok()?, lon.parse::<f64>().ok()?))
+                    });
+                match coords {
+                    None => writeln!(output, "usage: settlement <latitude> <longitude>")?,
+                    Some((lat, lon)) => match world_builder::terrain_of(world) {
+                        Ok(terrain) => {
+                            let cell = terrain.nearest_cell(lat, lon);
+                            let found = hornvale_terrain::places(world).into_iter().find(|p| {
+                                matches!(
+                                    world.ledger.value_of(p.id, hornvale_settlement::CELL_ID),
+                                    Some(Value::Number(n)) if *n as u32 == cell.0
+                                )
+                            });
+                            match found {
+                                Some(place) => writeln!(
+                                    output,
+                                    "{} — {} (entity {})",
+                                    place.name, place.biome, place.id.0
+                                )?,
+                                None => writeln!(output, "no settlement on this cell")?,
+                            }
+                        }
+                        Err(e) => writeln!(output, "error: {e}")?,
+                    },
                 }
             }
             "village" => match hornvale_settlement::village_info(world) {
@@ -303,6 +351,52 @@ mod tests {
         let out = drive("map\nland 45 -30\nquit\n");
         assert!(out.contains('~'), "no ascii ocean");
         assert!(out.contains("plate"), "no per-cell land report");
+    }
+
+    #[test]
+    fn settlements_and_settlement_answer_queries() {
+        let out = drive("settlements\nquit\n");
+        assert!(out.contains("population"), "no settlements listing");
+
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Constant,
+            &hornvale_terrain::TerrainPins::default(),
+        )
+        .unwrap();
+        let village = hornvale_settlement::village_info(&world).expect("a village exists");
+        let lat = match world
+            .ledger
+            .value_of(village.id, hornvale_settlement::LATITUDE)
+        {
+            Some(Value::Number(n)) => *n,
+            _ => panic!("village has no latitude"),
+        };
+        let lon = match world
+            .ledger
+            .value_of(village.id, hornvale_settlement::LONGITUDE)
+        {
+            Some(Value::Number(n)) => *n,
+            _ => panic!("village has no longitude"),
+        };
+        let mut out = Vec::new();
+        run(
+            &world,
+            format!("settlement {lat} {lon}\nquit\n").as_bytes(),
+            &mut out,
+        )
+        .unwrap();
+        let out = String::from_utf8(out).unwrap();
+        assert!(
+            out.contains(&village.name),
+            "expected the settlement nearest ({lat}, {lon}) to be reported; got: {out}"
+        );
+    }
+
+    #[test]
+    fn settlement_without_coordinates_reports_usage() {
+        assert!(drive("settlement\nquit\n").contains("usage: settlement"));
     }
 
     #[test]

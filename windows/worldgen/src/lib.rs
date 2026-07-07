@@ -416,10 +416,7 @@ pub fn build_world(
 /// settlements, and the flagship's name, population, and biome.
 pub fn settlement_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let places = hornvale_terrain::places(world);
-    let mut lines = vec![format!(
-        "The land holds {} settlement(s).",
-        places.iter().filter(|_| true).count()
-    )];
+    let mut lines = vec![format!("The land holds {} settlement(s).", places.len())];
     if let Some(v) = hornvale_settlement::village_info(world) {
         let biome = places
             .iter()

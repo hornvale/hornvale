@@ -4,6 +4,7 @@
 
 pub mod genesis;
 pub mod placement;
+pub mod render;
 
 pub use genesis::{PlacedSettlement, genesis};
 pub use placement::{Placement, SiteInput, place, suitability};
