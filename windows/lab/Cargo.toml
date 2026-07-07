@@ -10,6 +10,7 @@ hornvale-kernel = { path = "../../kernel" }
 hornvale-worldgen = { path = "../worldgen" }
 hornvale-astronomy = { path = "../../domains/astronomy" }
 hornvale-terrain = { path = "../../domains/terrain" }
+hornvale-climate = { path = "../../domains/climate" }
 hornvale-religion = { path = "../../domains/religion" }
 serde = { workspace = true }
 serde_json = { workspace = true }

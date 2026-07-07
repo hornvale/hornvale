@@ -1,9 +1,11 @@
-//! Tier-1 metrics extractors: fourteen analyzable properties of generated worlds.
+//! Tier-1 metrics extractors: twenty-one analyzable properties of generated worlds.
 
 use hornvale_astronomy::{Calendar, NeighborClass, Rotation, StarSystem};
+use hornvale_climate::GeneratedClimate;
 use hornvale_kernel::{Seed, World};
 use hornvale_religion::beliefs_of;
-use hornvale_worldgen::{BuildError, Sky, SkyChoice, build_world, sky_of};
+use hornvale_terrain::GlobeSummary;
+use hornvale_worldgen::{BuildError, Sky, SkyChoice, build_world, climate_of, sky_of, terrain_of};
 
 use hornvale_astronomy::SkyPins;
 
@@ -17,6 +19,12 @@ pub struct WorldView {
     pub calendar: Calendar,
     /// Genesis notes recorded during sky generation.
     pub notes: Vec<String>,
+    /// The tectonic globe summary (plates, ocean fraction, sea level, peak).
+    pub globe: GlobeSummary,
+    /// The full tectonic globe (for coverage metrics over cells).
+    pub terrain: hornvale_terrain::GeneratedTerrain,
+    /// The derived climate (biome + habitability).
+    pub climate: GeneratedClimate,
 }
 
 impl WorldView {
@@ -35,11 +43,17 @@ impl WorldView {
                 "expected Generated sky, got Constant".to_string(),
             ));
         };
+        let terrain = terrain_of(&world)?;
+        let globe = hornvale_terrain::summarize(terrain.globe());
+        let climate = climate_of(&world)?;
         Ok(WorldView {
             world,
             system: sky.system().clone(),
             calendar: sky.calendar().clone(),
             notes: sky.notes().to_vec(),
+            globe,
+            terrain,
+            climate,
         })
     }
 }
@@ -83,7 +97,7 @@ pub struct Metric {
     pub extract: fn(&WorldView) -> MetricValue,
 }
 
-/// Build the registry of fourteen tier-1 metrics.
+/// Build the registry of twenty-one tier-1 metrics.
 pub fn registry() -> Vec<Metric> {
     vec![
         Metric {
@@ -225,6 +239,106 @@ pub fn registry() -> Vec<Metric> {
             doc: "Number of genesis notes recorded",
             summary: SummaryKind::Categorical,
             extract: |v| MetricValue::Text(v.notes.len().to_string()),
+        },
+        Metric {
+            name: "plate-count",
+            doc: "Number of tectonic plates the globe drew or was pinned to",
+            summary: SummaryKind::Categorical,
+            extract: |v| MetricValue::Text(v.globe.plate_count.to_string()),
+        },
+        Metric {
+            name: "ocean-fraction",
+            doc: "Fraction of globe cells below sea level",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            },
+            extract: |v| MetricValue::Number(v.globe.ocean_fraction),
+        },
+        Metric {
+            name: "mountain-coverage",
+            doc: "Fraction of land cells standing above 2000 m over the sea",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
+            },
+            extract: |v| {
+                let geo = v.terrain.geosphere();
+                let sea = v.terrain.sea_level();
+                let (mut land, mut high) = (0usize, 0usize);
+                for cell in geo.cells() {
+                    let e = v.terrain.elevation_at(cell);
+                    if e >= sea {
+                        land += 1;
+                        if e - sea > 2000.0 {
+                            high += 1;
+                        }
+                    }
+                }
+                MetricValue::Number(if land == 0 {
+                    0.0
+                } else {
+                    high as f64 / land as f64
+                })
+            },
+        },
+        Metric {
+            name: "band-count",
+            doc: "Circulation bands per hemisphere; 'locked' if tidally locked",
+            summary: SummaryKind::Categorical,
+            extract: |v| match v.climate.band_count() {
+                Some(n) => MetricValue::Text(n.to_string()),
+                None => MetricValue::Text("locked".to_string()),
+            },
+        },
+        Metric {
+            name: "habitable-fraction",
+            doc: "Fraction of cells that are habitable (land, water, tolerable season)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5],
+            },
+            extract: |v| MetricValue::Number(v.climate.habitable_fraction()),
+        },
+        Metric {
+            name: "unrest-coverage",
+            doc: "Fraction of cells with tectonic unrest above 0.3",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
+            },
+            extract: |v| {
+                let geo = v.terrain.geosphere();
+                let total = geo.cell_count();
+                let restless = geo
+                    .cells()
+                    .filter(|c| v.terrain.unrest_at(*c) > 0.3)
+                    .count();
+                MetricValue::Number(if total == 0 {
+                    0.0
+                } else {
+                    restless as f64 / total as f64
+                })
+            },
+        },
+        Metric {
+            name: "dominant-land-biome",
+            doc: "The most common land biome by cell count, kebab-case",
+            summary: SummaryKind::Categorical,
+            extract: |v| {
+                let biomes = v.climate.biome_map();
+                // Count land biomes in ascending name order for determinism.
+                let mut counts: std::collections::BTreeMap<&'static str, usize> =
+                    std::collections::BTreeMap::new();
+                for (_, b) in biomes.iter() {
+                    if !b.is_marine() {
+                        *counts.entry(b.name()).or_insert(0) += 1;
+                    }
+                }
+                match counts
+                    .into_iter()
+                    .max_by(|a, b| a.1.cmp(&b.1).then(b.0.cmp(a.0)))
+                {
+                    Some((name, _)) => MetricValue::Text(name.to_string()),
+                    None => MetricValue::Absent,
+                }
+            },
         },
     ]
 }
@@ -401,9 +515,34 @@ mod tests {
     }
 
     #[test]
-    fn registry_has_fourteen_metrics() {
-        let metrics = registry();
-        assert_eq!(metrics.len(), 14);
+    fn registry_has_twenty_one_metrics_after_lands() {
+        assert_eq!(registry().len(), 21);
+    }
+
+    #[test]
+    fn land_metrics_extract_for_seed_42() {
+        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let reg = registry();
+        let m = |name: &str| (reg.iter().find(|m| m.name == name).unwrap().extract)(&view);
+        assert!(matches!(m("plate-count"), MetricValue::Text(_)));
+        assert!(matches!(m("ocean-fraction"), MetricValue::Number(f) if (0.0..=1.0).contains(&f)));
+        assert!(
+            matches!(m("habitable-fraction"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
+        );
+        assert!(matches!(m("band-count"), MetricValue::Text(_)));
+        assert!(matches!(m("dominant-land-biome"), MetricValue::Text(_)));
+    }
+
+    #[test]
+    fn locked_world_band_count_metric_is_locked() {
+        let pins = SkyPins {
+            rotation: Some(hornvale_astronomy::pins::RotationPin::Locked),
+            ..SkyPins::default()
+        };
+        let view = WorldView::build(Seed(42), &pins).unwrap();
+        let reg = registry();
+        let bc = (reg.iter().find(|m| m.name == "band-count").unwrap().extract)(&view);
+        assert_eq!(bc, MetricValue::Text("locked".to_string()));
     }
 
     #[test]

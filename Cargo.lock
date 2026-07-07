@@ -66,6 +66,7 @@ name = "hornvale-lab"
 version = "0.1.0"
 dependencies = [
  "hornvale-astronomy",
+ "hornvale-climate",
  "hornvale-kernel",
  "hornvale-religion",
  "hornvale-terrain",
