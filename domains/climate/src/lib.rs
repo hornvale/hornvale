@@ -6,6 +6,7 @@ pub mod circulation;
 pub mod habitability;
 pub mod moisture;
 pub mod provider;
+pub mod render;
 pub mod temperature;
 
 pub use biome::{Biome, SeafloorFeature};

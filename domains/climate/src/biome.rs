@@ -121,6 +121,61 @@ impl Biome {
             Biome::Abyssal => "abyssal",
         }
     }
+
+    /// A single ASCII glyph for the REPL biome map.
+    pub fn glyph(self) -> char {
+        match self {
+            Biome::Ice | Biome::SeaIce => '*',
+            Biome::Tundra => ',',
+            Biome::Taiga => 't',
+            Biome::TemperateGrassland => '"',
+            Biome::Shrubland => ';',
+            Biome::TemperateForest => 'f',
+            Biome::TemperateRainforest => 'F',
+            Biome::Desert => '.',
+            Biome::Savanna => ':',
+            Biome::TropicalSeasonalForest => 'w',
+            Biome::TropicalRainforest => 'W',
+            Biome::Alpine => '^',
+            Biome::CoralReef => 'o',
+            Biome::KelpForest => 'k',
+            Biome::HydrothermalVent => 'v',
+            Biome::HadalTrench => '#',
+            Biome::Upwelling => '=',
+            Biome::Epipelagic => '~',
+            Biome::Mesopelagic => '-',
+            Biome::Bathypelagic => '_',
+            Biome::Abyssal => ' ',
+        }
+    }
+
+    /// An RGB color for the PPM biome map.
+    pub fn color(self) -> [u8; 3] {
+        match self {
+            Biome::Ice => [235, 235, 245],
+            Biome::Tundra => [170, 175, 155],
+            Biome::Taiga => [70, 105, 80],
+            Biome::TemperateGrassland => [160, 180, 100],
+            Biome::Shrubland => [155, 150, 95],
+            Biome::TemperateForest => [60, 130, 70],
+            Biome::TemperateRainforest => [35, 100, 60],
+            Biome::Desert => [210, 195, 130],
+            Biome::Savanna => [180, 165, 85],
+            Biome::TropicalSeasonalForest => [90, 150, 65],
+            Biome::TropicalRainforest => [25, 110, 45],
+            Biome::Alpine => [150, 140, 135],
+            Biome::SeaIce => [220, 230, 240],
+            Biome::CoralReef => [230, 150, 160],
+            Biome::KelpForest => [40, 90, 95],
+            Biome::HydrothermalVent => [120, 60, 90],
+            Biome::HadalTrench => [10, 15, 45],
+            Biome::Upwelling => [60, 160, 170],
+            Biome::Epipelagic => [70, 140, 200],
+            Biome::Mesopelagic => [45, 95, 160],
+            Biome::Bathypelagic => [25, 55, 110],
+            Biome::Abyssal => [12, 30, 70],
+        }
+    }
 }
 
 /// Classify a land cell. Specials first (ice below `ICE_C`, alpine above the
@@ -376,5 +431,18 @@ mod tests {
             false,
         );
         assert_eq!(l, Biome::TropicalRainforest);
+    }
+
+    #[test]
+    fn every_biome_has_a_distinct_enough_glyph_and_a_color() {
+        for b in [
+            Biome::Desert,
+            Biome::TropicalRainforest,
+            Biome::Abyssal,
+            Biome::CoralReef,
+        ] {
+            let _ = b.glyph();
+            let _ = b.color();
+        }
     }
 }
