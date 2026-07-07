@@ -50,25 +50,6 @@ pub struct GeneratedClimate {
     regime: RotationRegime,
 }
 
-// Manual impl: `Geosphere` (kernel) derives only `Debug, Clone`, not
-// `PartialEq` — it is fully determined by its subdivision `level`, so level
-// equality stands in for mesh equality here.
-impl PartialEq for GeneratedClimate {
-    fn eq(&self, other: &Self) -> bool {
-        self.geosphere.level() == other.geosphere.level()
-            && self.elevation == other.elevation
-            && self.sea_level == other.sea_level
-            && self.mean_temp == other.mean_temp
-            && self.moisture == other.moisture
-            && self.biome == other.biome
-            && self.habitability == other.habitability
-            && self.band_count == other.band_count
-            && self.obliquity_deg == other.obliquity_deg
-            && self.year_length_std == other.year_length_std
-            && self.regime == other.regime
-    }
-}
-
 /// Whether an ocean cell has a coastal upwelling: it borders land and the
 /// prevailing wind carries surface water offshore (wind points away from the
 /// mean direction to its land neighbors).

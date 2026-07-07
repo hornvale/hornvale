@@ -145,7 +145,8 @@ elevation field, wetting windward slopes and drying leeward ones.
 - *Derived:* band count and wind directions (from rotation), temperature, moisture.
 - *Approximated (declared):* analytic bands (not fluid dynamics); no ocean
   currents (ocean is thermal buffer + moisture source only); no cloud/albedo
-  feedback; smooth-sinusoid seasons; single-pass rain shadow.
+  feedback; smooth-sinusoid seasons; single-pass rain shadow; prograde rotation
+  only (no retrograde worlds).
 
 ## 6. Biomes (land and sea)
 

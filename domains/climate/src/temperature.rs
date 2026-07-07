@@ -53,7 +53,8 @@ pub fn mean_temperature(
         match regime {
             RotationRegime::Spinning { .. } => {
                 let lat = geo.coord(cell).latitude.to_radians();
-                // 30 °C equator, -30 °C pole at Earth insolation, scaled by S^(1/4).
+                // Blackbody baseline (288 K × S^(1/4)) plus a latitude term of +30 °C at the
+                // equator to -30 °C at the pole; endpoints land near +45 °C / -15 °C, area-mean ~15 °C.
                 let base_k = 288.0 * scale;
                 let lat_term = 30.0 - 60.0 * lat.sin() * lat.sin();
                 (base_k - 273.15) + lat_term - lapse
