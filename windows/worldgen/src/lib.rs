@@ -626,10 +626,6 @@ pub fn genesis_notes(world: &World) -> Result<Vec<String>, BuildError> {
 /// tier-0 providers.
 pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     let village = hornvale_settlement::village_info(world);
-    let castes = village
-        .as_ref()
-        .map(|v| hornvale_culture::castes_of(world, v.id))
-        .unwrap_or_default();
     Ok(AlmanacContext {
         seed: world.seed.0,
         sky: sky_report(world, WorldTime { day: 0.0 })?,
@@ -639,7 +635,6 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         land_lines: land_lines(world)?,
         biome_lines: biome_lines(world)?,
         village,
-        castes,
         beliefs: hornvale_religion::beliefs_of(world),
         calendar_lines: calendar_lines(world)?,
         night_sky: night_sky_line(world)?,
@@ -765,7 +760,6 @@ mod tests {
         assert_eq!(ctx.seed, 42);
         assert!(!ctx.places.is_empty());
         assert!(ctx.village.is_some());
-        assert!(!ctx.castes.is_empty());
         assert!(!ctx.beliefs.is_empty());
         assert!(!ctx.phenomena.is_empty());
     }

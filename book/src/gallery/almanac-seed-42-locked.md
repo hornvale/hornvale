@@ -73,8 +73,6 @@ The chief settlement, Bolugrak, holds 559 souls amid temperate-rainforest.
 
 The goblin village of **Bolugrak**, population 559.
 
-Castes, lowest to highest: slave, farmer, artisan, shaman, chief.
-
 Bolugrak lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 

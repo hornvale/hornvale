@@ -27,8 +27,6 @@ pub struct AlmanacContext {
     pub biome_lines: Vec<String>,
     /// The settlement, if any.
     pub village: Option<VillageInfo>,
-    /// The settlement's castes, lowest to highest.
-    pub castes: Vec<String>,
     /// Recorded beliefs.
     pub beliefs: Vec<Belief>,
     /// The world's cycles, reader-facing; empty for constant-sky worlds.
@@ -131,12 +129,6 @@ pub fn render(ctx: &AlmanacContext) -> String {
                 "The goblin village of **{}**, population {}.\n\n",
                 v.name, v.population
             ));
-            if !ctx.castes.is_empty() {
-                doc.push_str(&format!(
-                    "Castes, lowest to highest: {}.\n\n",
-                    ctx.castes.join(", ")
-                ));
-            }
             for line in &ctx.culture_lines {
                 doc.push_str(&format!("{line}\n"));
             }
@@ -198,7 +190,6 @@ mod tests {
                 name: "Bolnar".to_string(),
                 population: 60,
             }),
-            castes: vec!["slave".to_string(), "chief".to_string()],
             beliefs: vec![Belief {
                 id: EntityId(3),
                 tenet: "the Ever-Flame never blinks.".to_string(),
@@ -226,8 +217,6 @@ mod tests {
             "## The People",
             "Bolnar",
             "60",
-            "slave",
-            "chief",
             "## The Gods",
             "Ever-Flame",
             "celestial-body",
@@ -266,7 +255,6 @@ mod tests {
     fn empty_world_renders_honestly() {
         let ctx = AlmanacContext {
             village: None,
-            castes: vec![],
             beliefs: vec![],
             places: vec![],
             ..sample_context()
