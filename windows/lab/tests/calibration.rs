@@ -158,3 +158,26 @@ fn head_deity_is_eternal_exactly_when_tidally_locked() {
         );
     }
 }
+
+#[test]
+fn flagships_are_sometimes_inland_and_sometimes_coastal() {
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let coastal_i = idx("flagship-coastal");
+    let (mut coastal, mut inland) = (0u32, 0u32);
+    for row in &result.rows {
+        match row.values[coastal_i] {
+            MetricValue::Flag(true) => coastal += 1,
+            MetricValue::Flag(false) => inland += 1,
+            _ => {}
+        }
+    }
+    // Campaign Y2-0: seawater is not freshwater. Before the fix every
+    // censused flagship was coastal (100% at 10,000 seeds; Study 003 records
+    // the history). Exact-count pin over the 500-seed drift study
+    // (deterministic): the fixed model's realized split, measured 2026-07
+    // at re-baseline.
+    assert_eq!(coastal, 498, "coastal flagship count drifted");
+    assert_eq!(inland, 2, "inland flagship count drifted");
+}

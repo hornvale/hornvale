@@ -422,10 +422,9 @@ pub fn build_world(
             let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
             let moisture = climate.moisture_at(cell);
             let drainage_norm = (terrain.drainage_at(cell) / DRAINAGE_REF).min(1.0);
-            let freshwater = drainage_norm
-                .max(if coastal { 1.0 } else { 0.0 })
-                .max(moisture)
-                .clamp(0.0, 1.0);
+            // Seawater is not freshwater: coastal access is priced by the
+            // coast term in settlement's suitability, not smuggled in here.
+            let freshwater = drainage_norm.max(moisture).clamp(0.0, 1.0);
             let aridity = ((0.2 - moisture).max(0.0) * 5.0).clamp(0.0, 1.0);
             let hostility = terrain.unrest_at(cell).max(aridity).clamp(0.0, 1.0);
             hornvale_settlement::SiteInput {

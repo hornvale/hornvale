@@ -1,26 +1,26 @@
 # The Peoples of Seed 42
 
-The land holds 29 settlement(s).
-The chief settlement, Bolugrak, holds 559 souls amid temperate-rainforest.
+The land holds 27 settlement(s).
+The chief settlement, Bolugrak, holds 522 souls amid temperate-rainforest.
 
 ```text
                                                                         
                                                                         
                                                                         
                                                                         
-                   o                         o                          
-                        o                      o                        
-                   o                                                    
+                   o    o                    o                          
                                                o                        
+                   o                                                    
+                                                o                       
                    o o                                                  
                    o                             o                      
                                                  o                      
                     o                                                   
                   o                                o                    
-                                                     o                  
-                      o                                                 
-                   o  o  o                        o @                   
-                                            o  o                        
+                     o                               o                  
+                                                                        
+                   o  o                           o @                   
+                                                o                       
                                                                         
                                                o                        
                                                                         

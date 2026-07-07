@@ -25,12 +25,13 @@ this prose and a bar in a chart below are sampling variance between a
 10,000-seed and a 500-seed draw, not drift — only the `census-lands-drift`
 charts are drift-checked.
 
-Two worlds in the 10,000-seed sample hold no pantheon at all — the same two
-seeds every earlier census already flagged as reaching 0% habitable
-fraction, and so placing no settlements and raising no flagship community to
-observe anything. A world with nothing to stand a religion on stands none;
-the remaining 9,998 worlds carry a pantheon of at least one deity, as the
-no-cap floor guarantees.
+Three worlds in the 10,000-seed sample hold no pantheon at all — the same
+three seeds Study 003 already flags as placing no settlements at all: two
+reaching exactly 0% habitable fraction, and (new since the Campaign Y2-0
+placement fix) a third whose land is technically 0.01% habitable but too
+fragmented for even one settlement to clear the placement floor. A world
+with nothing to stand a religion on stands none; the remaining 9,997 worlds
+carry a pantheon of at least one deity, as the no-cap floor guarantees.
 
 ## The calibrations hold
 
@@ -45,10 +46,14 @@ that re-derivation from `flagship-structure-size` in every world —
 `census-lands-drift` sample on every CI build, the fourth member of the
 calibration family after belief⇔lock, band-count⇔rotation, and
 subsistence⇔biome. Across the full 10,000-world census it holds without a
-single exception: **3,755 worlds (37.6%) are ranked, and every one of them
-has a structure of size 4 or 5; 6,243 worlds (62.4%) are flat, and every one
-of them has a structure of size 1 through 3.** Zero mismatches, over 9,998
-worlds with a pantheon.
+single exception, though the Campaign Y2-0 placement fix has flipped which
+side of the split is now the majority: **7,729 worlds (77.3%) are ranked,
+and every one of them has a structure of size 4, 5, or 6; 2,268 worlds
+(22.7%) are flat, and every one of them has a structure of size 2 or 3.**
+Zero mismatches, over 9,997 worlds with a pantheon — the same shift Study
+003 already reported in `flagship-structure-size` itself (size 5 now the
+overwhelming mode) propagates exactly through this threshold, as the
+re-derivation guarantees it must.
 
 {{#include generated/census-lands-drift/census-lands-drift-default-pantheon-verticality.svg}}
 
@@ -59,12 +64,14 @@ locked world's sun never sets, so its head is eternal — the pantheon-head
 extension of tier 0's original belief⇔lock calibration, now checked against
 the whole pantheon rather than a single tier-0 belief. It holds exactly
 across the full census too: **457 worlds (4.6%) yield an eternal head
-deity, and all 457 are tidally locked; the remaining 9,541 (95.4%) yield a
+deity, and all 457 are tidally locked; the remaining 9,540 (95.4%) yield a
 cyclic head deity, and none of them are locked.** That 457 is not a
-coincidence of rounding — it is the identical count Study 002 already
-reported for tidally locked worlds in this same seed range, reached here by
-an entirely different metric (a pantheon's head-deity tenet, not a rotation
-flag), the same fact seen from theology instead of astronomy.
+coincidence of rounding, and it is unchanged by the Campaign Y2-0 placement
+fix (sky and rotation are upstream of settlement placement) — it is the
+identical count Study 002 already reports for tidally locked worlds in this
+same seed range, reached here by an entirely different metric (a pantheon's
+head-deity tenet, not a rotation flag), the same fact seen from theology
+instead of astronomy.
 
 {{#include generated/census-lands-drift/census-lands-drift-default-head-deity-periodicity.svg}}
 
@@ -89,28 +96,31 @@ the *sky* imposes instead.
 
 `cult-form` and `pantheon-verticality` are both read from the same
 `SocietySummary`, but they are not the same question, and the census is
-what makes the difference legible instead of assumed. Overall, **62.2% of
-pantheons (6,220 worlds) are tended by an organized priesthood and 37.8%
-(3,778) are folk animism held by the whole community** — a coarser split
-than verticality's, because priesthood asks only "does a shaman caste
-exist," a threshold that a lean structure can clear without ever reaching
-the four-strata bar verticality needs.
+what makes the difference legible instead of assumed. Overall, **84.7% of
+pantheons (8,472 worlds) are tended by an organized priesthood and 15.2%
+(1,525) are folk animism held by the whole community** — organized cults
+grew far more common with the Campaign Y2-0 placement fix, tracking the
+same shift toward higher `flagship-structure-size` Study 003 reports, since
+priesthood asks only "does a shaman caste exist," a coarser threshold than
+verticality's four-strata bar that a lean structure clears more easily.
 
 {{#include generated/census-lands-drift/census-lands-drift-default-cult-form.svg}}
 
 Crossing the two axes shows exactly how much room separates them: every
-flat pantheon in a folk cult (37.8% of the census) behaves as expected, and
-every ranked pantheon is organized (37.6%, with zero ranked-but-folk
+flat pantheon in a folk cult (15.2% of the census) behaves as expected, and
+every ranked pantheon is organized (77.3%, with zero ranked-but-folk
 exceptions in the sample) — a stratified enough society to crown a high god
-always has a shaman to tend the cult. But **24.7% of the census (2,465
-worlds) is organized *and* flat**: a shaman caste presiding over a
-three-rung structure (worker, shaman, chief) that never reaches the fourth
-stratum verticality requires. An organized priesthood, in other words, is
-not a leading indicator of a ranked pantheon in this generator — nearly two
-out of five organized cults tend a flat pantheon of co-equal spirits, a
-combination the design's two independent thresholds (strata ≥ 4 for rank,
-a shaman caste for organization) permit and the census is the first
-instrument to have actually counted.
+always has a shaman to tend the cult. But **7.4% of the census (743 worlds)
+is organized *and* flat**: almost the entire size-3 population (743 of 744),
+a shaman caste presiding over a three-rung structure (worker, shaman,
+chief) that never reaches the fourth stratum verticality requires. An organized priesthood, in other words, is
+still not a leading indicator of a ranked pantheon in this generator — even
+after the Campaign Y2-0 placement fix pushed most flagships toward the
+five-rung structure that verticality rewards, roughly one in eleven
+organized cults (8.8% of them) still tends a flat pantheon of co-equal
+spirits, a combination the design's two independent thresholds (strata ≥ 4
+for rank, a shaman caste for organization) permit and the census is the
+instrument that keeps counting it.
 
 ## What the census does not yet say
 

@@ -35,32 +35,30 @@ The air organizes into a single day–night overturning (tidally locked); 10 lan
 Some 8% of the surface is habitable — land with water and a tolerable season.
 
 - **Bolugrak** — temperate-rainforest
-- **Gnator** — temperate-forest
 - **Mokishmok** — temperate-rainforest
+- **Gnator** — temperate-forest
 - **Boltorgna** — temperate-forest
 - **Rakrak** — temperate-forest
-- **Torgrutor** — temperate-forest
-- **Torgna** — tropical-seasonal-forest
-- **Ishzag** — tropical-seasonal-forest
-- **Torrakmok** — tropical-seasonal-forest
-- **Zagbolish** — tropical-seasonal-forest
-- **Torishmok** — tropical-seasonal-forest
-- **Mokish** — tropical-seasonal-forest
+- **Narzag** — temperate-forest
 - **Ishugzag** — temperate-forest
 - **Ishnar** — temperate-forest
 - **Ishgna** — temperate-forest
+- **Ishzag** — tropical-seasonal-forest
+- **Torgna** — tropical-seasonal-forest
+- **Bolgnator** — temperate-forest
+- **Bolgru** — tropical-seasonal-forest
+- **Mokish** — tropical-seasonal-forest
 - **Zagzagmok** — tropical-seasonal-forest
-- **Bolish** — tropical-seasonal-forest
+- **Bolbolzag** — tropical-seasonal-forest
+- **Torishmok** — tropical-seasonal-forest
+- **Nartornar** — tropical-seasonal-forest
 - **Moktor** — tropical-seasonal-forest
-- **Ishish** — savanna
 - **Ugnar** — tropical-seasonal-forest
 - **Zagish** — tropical-seasonal-forest
+- **Bolmok** — tropical-seasonal-forest
 - **Ugbolug** — tropical-seasonal-forest
-- **Moknarish** — tropical-seasonal-forest
-- **Bolgnator** — temperate-forest
-- **Mokgna** — tropical-seasonal-forest
-- **Zaggrutor** — savanna
-- **Boltorgru** — savanna
+- **Boltor** — tropical-seasonal-forest
+- **Raktor** — tropical-seasonal-forest
 - **Narbol** — tropical-seasonal-forest
 - **Gnaish** — tropical-seasonal-forest
 
@@ -68,10 +66,10 @@ Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
-The land holds 29 settlement(s).
-The chief settlement, Bolugrak, holds 559 souls amid temperate-rainforest.
+The land holds 27 settlement(s).
+The chief settlement, Bolugrak, holds 522 souls amid temperate-rainforest.
 
-The goblin village of **Bolugrak**, population 559.
+The goblin village of **Bolugrak**, population 522.
 
 Bolugrak lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.

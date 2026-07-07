@@ -36,75 +36,75 @@ The highest land stands 3919 m above the sea.
 The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 9 marine biomes cover the globe.
 Some 19% of the surface is habitable — land with water and a tolerable season.
 
-- **Torgna** — temperate-rainforest
+- **Grumoknar** — temperate-rainforest
 - **Narnar** — temperate-rainforest
-- **Mokzaggna** — temperate-forest
-- **Bolrak** — temperate-forest
-- **Rakgrugna** — temperate-forest
-- **Ishzag** — temperate-forest
-- **Mokzag** — temperate-forest
-- **Zagtorgna** — temperate-forest
+- **Bolugrak** — temperate-rainforest
+- **Zagug** — temperate-forest
+- **Zagish** — temperate-forest
 - **Tornar** — temperate-rainforest
 - **Torzagzag** — temperate-rainforest
-- **Torrakmok** — temperate-forest
+- **Zagtorgna** — temperate-forest
+- **Raktor** — temperate-forest
+- **Zagtorug** — temperate-rainforest
+- **Mokzag** — temperate-forest
+- **Bolrakrak** — temperate-rainforest
+- **Ugrakug** — tropical-rainforest
 - **Bolmok** — temperate-forest
-- **Mokgru** — temperate-forest
-- **Grutor** — temperate-forest
-- **Boltorrak** — temperate-forest
-- **Grugru** — tropical-seasonal-forest
-- **Ugugrak** — temperate-forest
-- **Raknar** — tropical-rainforest
-- **Moknarnar** — temperate-rainforest
-- **Uggnator** — tropical-seasonal-forest
 - **Rakrakmok** — tropical-rainforest
-- **Bolbol** — tropical-seasonal-forest
-- **Narzag** — tropical-seasonal-forest
-- **Ishbolmok** — tropical-seasonal-forest
-- **Ishug** — shrubland
-- **Gnator** — temperate-forest
-- **Zagtor** — tropical-seasonal-forest
-- **Bolrak** — tropical-rainforest
-- **Bolzagzag** — tropical-seasonal-forest
-- **Mokugnar** — temperate-forest
-- **Rakgnator** — tropical-seasonal-forest
-- **Grutorgna** — temperate-rainforest
-- **Torzag** — tropical-rainforest
+- **Grugnarak** — temperate-rainforest
+- **Mokgru** — tropical-rainforest
+- **Torbol** — tropical-rainforest
+- **Ishbolbol** — tropical-rainforest
+- **Gnator** — tropical-rainforest
+- **Mokmok** — tropical-rainforest
+- **Mokish** — temperate-rainforest
+- **Ugbol** — tropical-rainforest
+- **Grutor** — temperate-forest
+- **Ugugrak** — temperate-forest
+- **Nartorug** — tropical-rainforest
+- **Rakugnar** — tropical-rainforest
+- **Rakug** — tropical-rainforest
+- **Grugnanar** — temperate-rainforest
 - **Gnazag** — tropical-rainforest
-- **Mokzag** — tropical-rainforest
-- **Grubolbol** — temperate-forest
+- **Bolrak** — tropical-rainforest
+- **Tortor** — tropical-seasonal-forest
+- **Mokgru** — temperate-forest
+- **Grubol** — temperate-forest
+- **Bolgrumok** — temperate-forest
+- **Gnanar** — temperate-forest
 - **Rakmokgna** — taiga
+- **Gnabolgna** — temperate-forest
+- **Gruboltor** — temperate-forest
+- **Tortormok** — temperate-forest
 - **Grutor** — taiga
-- **Torrakmok** — temperate-forest
-- **Mokgru** — tundra
-- **Ishish** — tundra
-- **Narzag** — temperate-forest
-- **Zagzag** — tundra
-- **Gnaug** — temperate-forest
-- **Ishgru** — temperate-forest
-- **Zagnar** — temperate-forest
-- **Mokgnazag** — tundra
-- **Rakbolbol** — tundra
-- **Gnarak** — taiga
-- **Mokgna** — temperate-forest
-- **Narishrak** — temperate-forest
 - **Zaggnator** — temperate-forest
+- **Ishug** — shrubland
 - **Ugrak** — temperate-forest
+- **Mokishzag** — temperate-forest
+- **Nargrugru** — temperate-forest
+- **Uggna** — temperate-forest
 - **Bolraktor** — tundra
-- **Ishnar** — taiga
-- **Narnargru** — tropical-seasonal-forest
-- **Gnaishgna** — tropical-seasonal-forest
-- **Torish** — shrubland
+- **Ishtormok** — temperate-forest
+- **Bolgrubol** — tropical-seasonal-forest
+- **Bolbolzag** — tropical-seasonal-forest
+- **Uggrumok** — tropical-seasonal-forest
+- **Mokgru** — tundra
+- **Gnarak** — taiga
+- **Rakbolgru** — tundra
+- **Zagzag** — tundra
+- **Torbol** — shrubland
+- **Mokgnazag** — tundra
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
 The land holds 58 settlement(s).
-The chief settlement, Torgna, holds 506 souls amid temperate-rainforest.
+The chief settlement, Grumoknar, holds 359 souls amid temperate-rainforest.
 
-The goblin village of **Torgna**, population 506.
+The goblin village of **Grumoknar**, population 359.
 
-Torgna lives by farming.
+Grumoknar lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 
 ## The Gods
