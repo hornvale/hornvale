@@ -2,7 +2,7 @@
 
 Study 002 already put a number on it without asking why: across the
 10,000-seed Census of Lands, ice dominates 37.8% of worlds and alpine
-another 20.6% — together 58.4%, the "~60% frozen" figure spec §4 fix 3
+another 20.6% — together 58.3% (5,833 of 10,000), the "~60% frozen" figure spec §4 fix 3
 names — while desert, savanna, temperate grassland, shrubland, and every
 rainforest variant round out the tail at under half a percent each, and
 several never win a single world outright. Spec §4 fix 3 does not ask for a
@@ -68,8 +68,7 @@ thresholds goes through its own reviewed change, not this diagnosis.
 
 ## Results
 
-**The full dominant-biome distribution**, over the 9,997 worlds that place
-any land at all:
+**The full dominant-biome distribution**, over all 10,000 censused worlds:
 
 | Dominant biome | Worlds | Share |
 |---|---|---|
@@ -85,6 +84,12 @@ any land at all:
 Temperate grassland, shrubland, temperate rainforest, and tropical
 rainforest never win a single world. Frozen (ice + alpine) totals 5,833
 worlds, 58.3% — the figure spec §4 fix 3 names.
+
+The Question's inherited "never dominate" claim holds for three of its
+four named biomes even at 10,000 seeds — grassland, shrubland, and
+rainforest are still zero — but desert dominates exactly one world
+(0.01%): the earlier, smaller-sample framing rounded a thin tail to
+nothing that a census this size resolves as thin but not empty.
 
 **H1: `mean-land-temperature-c` against ice-dominance.**
 
