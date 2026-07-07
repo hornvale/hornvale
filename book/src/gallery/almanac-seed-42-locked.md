@@ -31,6 +31,9 @@ By night: a smoldering red star that does not wander; a warm yellow star that do
 The globe breaks into 16 plates; the sea claims 73% of its surface.
 The highest land stands 3919 m above the sea.
 
+The air organizes into a single day–night overturning (tidally locked); 10 land biomes and 8 marine biomes cover the globe.
+Some 8% of the surface is habitable — land with water and a tolerable season.
+
 - **the Vale** — temperate forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)

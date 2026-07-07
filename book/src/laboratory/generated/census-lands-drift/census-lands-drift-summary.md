@@ -1,8 +1,8 @@
 <!-- GENERATED FILE — do not edit. Regenerate with `hornvale lab run`. -->
 
-## Study: census-drift
+## Study: census-lands-drift
 
-Distributions of everything the sky generator produces, plus the belief split as instrument calibration.
+Distributions of everything the land and sky generators produce over 500 seeds, plus the belief and band-count calibrations, rerun in CI as a determinism guard.
 
 Seeds 0..500 × 1 pin set(s); 500 rows; 0 refusals.
 
@@ -157,4 +157,112 @@ Seeds 0..500 × 1 pin set(s); 500 rows; 0 refusals.
 |---|---|---|
 | 0 | 480 | 96.0% |
 | 1 | 20 | 4.0% |
+
+### plate-count — default
+
+| value | count | share |
+|---|---|---|
+| 10 | 15 | 3.0% |
+| 11 | 13 | 2.6% |
+| 12 | 14 | 2.8% |
+| 13 | 10 | 2.0% |
+| 14 | 11 | 2.2% |
+| 15 | 24 | 4.8% |
+| 16 | 17 | 3.4% |
+| 17 | 15 | 3.0% |
+| 18 | 7 | 1.4% |
+| 19 | 17 | 3.4% |
+| 20 | 11 | 2.2% |
+| 21 | 13 | 2.6% |
+| 22 | 13 | 2.6% |
+| 23 | 17 | 3.4% |
+| 24 | 18 | 3.6% |
+| 25 | 15 | 3.0% |
+| 26 | 15 | 3.0% |
+| 27 | 26 | 5.2% |
+| 28 | 12 | 2.4% |
+| 29 | 18 | 3.6% |
+| 30 | 31 | 6.2% |
+| 31 | 9 | 1.8% |
+| 32 | 10 | 2.0% |
+| 33 | 18 | 3.6% |
+| 34 | 12 | 2.4% |
+| 35 | 26 | 5.2% |
+| 36 | 11 | 2.2% |
+| 37 | 14 | 2.8% |
+| 38 | 18 | 3.6% |
+| 39 | 17 | 3.4% |
+| 40 | 13 | 2.6% |
+| 8 | 11 | 2.2% |
+| 9 | 9 | 1.8% |
+
+### ocean-fraction — default
+
+| value | count | share |
+|---|---|---|
+| < 0.3 | 0 | 0.0% |
+| [0.3, 0.4) | 0 | 0.0% |
+| [0.4, 0.5) | 0 | 0.0% |
+| [0.5, 0.6) | 203 | 40.6% |
+| [0.6, 0.7) | 201 | 40.2% |
+| [0.7, 0.8) | 96 | 19.2% |
+| [0.8, 0.9) | 0 | 0.0% |
+| >= 0.9 | 0 | 0.0% |
+
+### mountain-coverage — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 0.02) | 139 | 27.8% |
+| [0.02, 0.05) | 82 | 16.4% |
+| [0.05, 0.1) | 11 | 2.2% |
+| [0.1, 0.2) | 2 | 0.4% |
+| [0.2, 0.3) | 6 | 1.2% |
+| >= 0.3 | 260 | 52.0% |
+
+### band-count — default
+
+| value | count | share |
+|---|---|---|
+| 3 | 403 | 80.6% |
+| 5 | 74 | 14.8% |
+| locked | 23 | 4.6% |
+
+### habitable-fraction — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 0.05) | 68 | 13.6% |
+| [0.05, 0.1) | 73 | 14.6% |
+| [0.1, 0.2) | 212 | 42.4% |
+| [0.2, 0.3) | 134 | 26.8% |
+| [0.3, 0.4) | 13 | 2.6% |
+| [0.4, 0.5) | 0 | 0.0% |
+| >= 0.5 | 0 | 0.0% |
+
+### unrest-coverage — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 0.05) | 279 | 55.8% |
+| [0.05, 0.1) | 219 | 43.8% |
+| [0.1, 0.2) | 2 | 0.4% |
+| [0.2, 0.3) | 0 | 0.0% |
+| [0.3, 0.5) | 0 | 0.0% |
+| >= 0.5 | 0 | 0.0% |
+
+### dominant-land-biome — default
+
+| value | count | share |
+|---|---|---|
+| alpine | 112 | 22.4% |
+| ice | 190 | 38.0% |
+| savanna | 3 | 0.6% |
+| taiga | 51 | 10.2% |
+| temperate-forest | 38 | 7.6% |
+| tropical-seasonal-forest | 82 | 16.4% |
+| tundra | 24 | 4.8% |
 

@@ -1,0 +1,5 @@
+{ "name": "census-lands-drift",
+  "description": "Distributions of everything the land and sky generators produce over 500 seeds, plus the belief and band-count calibrations, rerun in CI as a determinism guard.",
+  "seeds": { "from": 0, "count": 500 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": "all" }
