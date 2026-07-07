@@ -37,6 +37,9 @@ pub struct AlmanacContext {
     pub night_sky: Option<String>,
     /// Notes recorded during sky genesis; empty for constant-sky worlds.
     pub genesis_notes: Vec<String>,
+    /// Headline lines describing the world's people: how many settlements,
+    /// and the flagship's name, population, and biome.
+    pub settlement_lines: Vec<String>,
 }
 
 /// Render the one-page world document as markdown. Deterministic: same
@@ -112,6 +115,12 @@ pub fn render(ctx: &AlmanacContext) -> String {
     }
 
     doc.push_str("## The People\n\n");
+    for line in &ctx.settlement_lines {
+        doc.push_str(&format!("{line}\n"));
+    }
+    if !ctx.settlement_lines.is_empty() {
+        doc.push('\n');
+    }
     match &ctx.village {
         None => doc.push_str("No settlements are known.\n\n"),
         Some(v) => {
@@ -190,6 +199,7 @@ mod tests {
             calendar_lines: vec![],
             night_sky: None,
             genesis_notes: vec![],
+            settlement_lines: vec![],
         }
     }
 
