@@ -342,6 +342,29 @@ pub fn registry() -> Vec<Metric> {
             },
         },
         Metric {
+            name: "mean-land-temperature-c",
+            doc: "Annual-mean temperature averaged over land cells, °C; Absent \
+                   if the world has no land",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-30.0, -20.0, -10.0, 0.0, 10.0, 20.0, 30.0],
+            },
+            extract: |v| {
+                let geo = v.terrain.geosphere();
+                let (mut sum, mut count) = (0.0_f64, 0_u32);
+                for cell in geo.cells() {
+                    if !v.terrain.is_ocean(cell) {
+                        sum += v.climate.mean_temperature_at(cell);
+                        count += 1;
+                    }
+                }
+                if count == 0 {
+                    MetricValue::Absent
+                } else {
+                    MetricValue::Number(sum / f64::from(count))
+                }
+            },
+        },
+        Metric {
             name: "settlement-count",
             doc: "Number of settlements placed in the world",
             summary: SummaryKind::Numeric {
@@ -702,7 +725,7 @@ mod tests {
 
     #[test]
     fn registry_has_thirty_two_metrics_after_the_census_of_faiths() {
-        assert_eq!(registry().len(), 32);
+        assert_eq!(registry().len(), 33);
     }
 
     #[test]
@@ -717,6 +740,10 @@ mod tests {
         );
         assert!(matches!(m("band-count"), MetricValue::Text(_)));
         assert!(matches!(m("dominant-land-biome"), MetricValue::Text(_)));
+        assert!(matches!(
+            m("mean-land-temperature-c"),
+            MetricValue::Number(_) | MetricValue::Absent
+        ));
     }
 
     #[test]
