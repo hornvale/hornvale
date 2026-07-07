@@ -2,6 +2,10 @@
 //! population, placed in a home terrain entity.
 #![warn(missing_docs)]
 
+pub mod placement;
+
+pub use placement::{Placement, SiteInput, place, suitability};
+
 use hornvale_kernel::{
     ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Stream, Value, World,
     choose_consistent,
