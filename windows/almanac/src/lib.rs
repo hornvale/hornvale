@@ -27,8 +27,6 @@ pub struct AlmanacContext {
     pub biome_lines: Vec<String>,
     /// The settlement, if any.
     pub village: Option<VillageInfo>,
-    /// The settlement's castes, lowest to highest.
-    pub castes: Vec<String>,
     /// Recorded beliefs.
     pub beliefs: Vec<Belief>,
     /// The world's cycles, reader-facing; empty for constant-sky worlds.
@@ -40,6 +38,9 @@ pub struct AlmanacContext {
     /// Headline lines describing the world's people: how many settlements,
     /// and the flagship's name, population, and biome.
     pub settlement_lines: Vec<String>,
+    /// The flagship's emergent culture: its subsistence mode and a one-line
+    /// role-structure summary. Empty for worlds with no flagship.
+    pub culture_lines: Vec<String>,
 }
 
 /// Render the one-page world document as markdown. Deterministic: same
@@ -128,11 +129,11 @@ pub fn render(ctx: &AlmanacContext) -> String {
                 "The goblin village of **{}**, population {}.\n\n",
                 v.name, v.population
             ));
-            if !ctx.castes.is_empty() {
-                doc.push_str(&format!(
-                    "Castes, lowest to highest: {}.\n\n",
-                    ctx.castes.join(", ")
-                ));
+            for line in &ctx.culture_lines {
+                doc.push_str(&format!("{line}\n"));
+            }
+            if !ctx.culture_lines.is_empty() {
+                doc.push('\n');
             }
         }
     }
@@ -188,9 +189,7 @@ mod tests {
                 id: EntityId(2),
                 name: "Bolnar".to_string(),
                 population: 60,
-                located_in: Some(EntityId(1)),
             }),
-            castes: vec!["slave".to_string(), "chief".to_string()],
             beliefs: vec![Belief {
                 id: EntityId(3),
                 tenet: "the Ever-Flame never blinks.".to_string(),
@@ -200,6 +199,7 @@ mod tests {
             night_sky: None,
             genesis_notes: vec![],
             settlement_lines: vec![],
+            culture_lines: vec![],
         }
     }
 
@@ -217,8 +217,6 @@ mod tests {
             "## The People",
             "Bolnar",
             "60",
-            "slave",
-            "chief",
             "## The Gods",
             "Ever-Flame",
             "celestial-body",
@@ -235,10 +233,28 @@ mod tests {
     }
 
     #[test]
+    fn culture_lines_render_under_the_people_section() {
+        let ctx = AlmanacContext {
+            culture_lines: vec![
+                "Bolnar lives by farming.".to_string(),
+                "Its roles, lowest to highest: farmer, chief.".to_string(),
+            ],
+            ..sample_context()
+        };
+        let doc = render(&ctx);
+        let people_pos = doc.find("## The People").unwrap();
+        let culture_pos = doc.find("Bolnar lives by farming.").unwrap();
+        assert!(
+            people_pos < culture_pos,
+            "culture lines belong under The People"
+        );
+        assert!(doc.contains("Its roles, lowest to highest: farmer, chief."));
+    }
+
+    #[test]
     fn empty_world_renders_honestly() {
         let ctx = AlmanacContext {
             village: None,
-            castes: vec![],
             beliefs: vec![],
             places: vec![],
             ..sample_context()

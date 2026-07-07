@@ -20,7 +20,7 @@ pub use pins::{GenesisError, TerrainPins, parse_pin, pin_strings};
 pub use plates::Plate;
 pub use provider::GeneratedTerrain;
 
-use hornvale_kernel::{ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World};
+use hornvale_kernel::{ConceptRegistry, EntityId, RegistryError, World};
 
 /// The fixed subdivision level of the shared Geosphere (10 × 4^5 + 2 =
 /// 10,242 cells). The composition root builds `Geosphere::new(GLOBE_LEVEL)`
@@ -105,34 +105,6 @@ pub struct PlaceInfo {
     pub biome: String,
 }
 
-fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
-    Fact {
-        subject,
-        predicate: predicate.to_string(),
-        object,
-        place: None,
-        day: Some(0.0),
-        provenance: "terrain".to_string(),
-    }
-}
-
-/// Tier-0 genesis: commit one hand-placed vale; return its entity id.
-pub fn genesis(world: &mut World) -> Result<EntityId, LedgerError> {
-    let vale = world.ledger.mint_entity();
-    world.ledger.commit(
-        fact(vale, "name", Value::Text("the Vale".to_string())),
-        &world.registry,
-    )?;
-    world
-        .ledger
-        .commit(fact(vale, IS_PLACE, Value::Flag(true)), &world.registry)?;
-    world.ledger.commit(
-        fact(vale, BIOME, Value::Text("temperate forest".to_string())),
-        &world.registry,
-    )?;
-    Ok(vale)
-}
-
 /// Every known place, in commit order.
 pub fn places(world: &World) -> Vec<PlaceInfo> {
     world
@@ -158,34 +130,6 @@ pub fn places(world: &World) -> Vec<PlaceInfo> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::Seed;
-
-    fn world() -> World {
-        let mut w = World::new(Seed(42));
-        register_concepts(&mut w.registry).unwrap();
-        w
-    }
-
-    #[test]
-    fn genesis_commits_one_named_place() {
-        let mut w = world();
-        let vale = genesis(&mut w).unwrap();
-        let all = places(&w);
-        assert_eq!(all.len(), 1);
-        assert_eq!(all[0].id, vale);
-        assert_eq!(all[0].name, "the Vale");
-        assert_eq!(all[0].biome, "temperate forest");
-    }
-
-    #[test]
-    fn genesis_is_idempotent_on_facts() {
-        // Re-running genesis on the same world must not contradict; the
-        // second entity is distinct but its facts must still commit cleanly.
-        let mut w = world();
-        genesis(&mut w).unwrap();
-        genesis(&mut w).unwrap();
-        assert_eq!(places(&w).len(), 2);
-    }
 
     #[test]
     fn concepts_register_idempotently() {

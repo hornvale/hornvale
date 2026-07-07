@@ -1,14 +1,20 @@
-//! Culture, tier 0: a fixed caste structure for the goblin village,
-//! straight from the vision book's goblin village chapter.
+//! Culture, tier 1: emergent caste/role structure derived from
+//! environmental pressures (subsistence, surplus, population, threat).
 #![warn(missing_docs)]
+
+pub mod subsistence;
+pub use subsistence::{BiomeClass, Subsistence, fertility, subsistence};
+
+pub mod structure;
+pub use structure::{EnvSummary, structure};
 
 use hornvale_kernel::{ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World};
 
 /// Predicate relating a settlement to a caste present in it.
 pub const HAS_CASTE: &str = "has-caste";
 
-/// The tier-0 caste structure, lowest to highest.
-pub const CASTES: [&str; 5] = ["slave", "fighter", "cook", "shaman", "chief"];
+/// Predicate: a settlement's subsistence mode (functional, Text).
+pub const SUBSISTENCE: &str = "subsistence";
 
 /// Every seed-derivation label this crate uses (none yet).
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
@@ -17,17 +23,34 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 
 /// Register culture's contribution to the concept registry.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
-    registry.register_predicate(HAS_CASTE, false, "a caste present in a settlement")
+    registry.register_predicate(HAS_CASTE, false, "a caste present in a settlement")?;
+    registry.register_predicate(SUBSISTENCE, true, "a settlement's subsistence mode")
 }
 
-/// Tier-0 genesis: give the village the fixed caste structure.
-pub fn genesis(world: &mut World, village: EntityId) -> Result<(), LedgerError> {
-    for caste in CASTES {
+/// Tier-1 genesis: commit the settlement's subsistence mode and its emergent
+/// caste/role structure (from `structure`). Replaces the tier-0 fixed ladder.
+pub fn genesis(
+    world: &mut World,
+    settlement: EntityId,
+    env: &EnvSummary,
+) -> Result<(), LedgerError> {
+    world.ledger.commit(
+        Fact {
+            subject: settlement,
+            predicate: SUBSISTENCE.to_string(),
+            object: Value::Text(env.subsistence.name().to_string()),
+            place: None,
+            day: Some(0.0),
+            provenance: "culture".to_string(),
+        },
+        &world.registry,
+    )?;
+    for caste in structure(env) {
         world.ledger.commit(
             Fact {
-                subject: village,
+                subject: settlement,
                 predicate: HAS_CASTE.to_string(),
-                object: Value::Text(caste.to_string()),
+                object: Value::Text(caste),
                 place: None,
                 day: Some(0.0),
                 provenance: "culture".to_string(),
@@ -38,11 +61,11 @@ pub fn genesis(world: &mut World, village: EntityId) -> Result<(), LedgerError> 
     Ok(())
 }
 
-/// The castes of `village`, in commit order.
-pub fn castes_of(world: &World, village: EntityId) -> Vec<String> {
+/// The castes of `settlement`, in commit order.
+pub fn castes_of(world: &World, settlement: EntityId) -> Vec<String> {
     world
         .ledger
-        .facts_about(village)
+        .facts_about(settlement)
         .filter(|f| f.predicate == HAS_CASTE)
         .filter_map(|f| match &f.object {
             Value::Text(t) => Some(t.clone()),
@@ -51,27 +74,80 @@ pub fn castes_of(world: &World, village: EntityId) -> Vec<String> {
         .collect()
 }
 
+/// The subsistence mode committed for a settlement, if any.
+pub fn subsistence_of(world: &World, settlement: EntityId) -> Option<String> {
+    match world.ledger.value_of(settlement, SUBSISTENCE) {
+        Some(Value::Text(t)) => Some(t.clone()),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use hornvale_kernel::Seed;
 
     #[test]
-    fn genesis_gives_the_village_all_five_castes_in_order() {
+    fn genesis_commits_the_emergent_structure_and_subsistence() {
         let mut w = World::new(Seed(42));
         register_concepts(&mut w.registry).unwrap();
-        let village = w.ledger.mint_entity();
-        genesis(&mut w, village).unwrap();
-        assert_eq!(castes_of(&w, village), CASTES.to_vec());
+        let s = w.ledger.mint_entity();
+        let env = EnvSummary {
+            subsistence: Subsistence::Farming,
+            surplus: 0.8,
+            population: 500,
+            threat: 0.1,
+        };
+        genesis(&mut w, s, &env).unwrap();
+        assert_eq!(castes_of(&w, s), structure(&env));
+        assert_eq!(subsistence_of(&w, s).as_deref(), Some("farming"));
+    }
+
+    #[test]
+    fn lean_vs_rich_yield_different_structures() {
+        let mut w = World::new(Seed(42));
+        register_concepts(&mut w.registry).unwrap();
+
+        let lean = w.ledger.mint_entity();
+        let lean_env = EnvSummary {
+            subsistence: Subsistence::Foraging,
+            surplus: 0.1,
+            population: 30,
+            threat: 0.1,
+        };
+        genesis(&mut w, lean, &lean_env).unwrap();
+
+        let rich = w.ledger.mint_entity();
+        let rich_env = EnvSummary {
+            subsistence: Subsistence::Farming,
+            surplus: 0.8,
+            population: 500,
+            threat: 0.1,
+        };
+        genesis(&mut w, rich, &rich_env).unwrap();
+
+        let lean_castes = castes_of(&w, lean);
+        let rich_castes = castes_of(&w, rich);
+
+        assert!(lean_castes.len() < rich_castes.len());
+        assert_eq!(subsistence_of(&w, lean).as_deref(), Some("foraging"));
+        assert_eq!(subsistence_of(&w, rich).as_deref(), Some("farming"));
     }
 
     #[test]
     fn other_entities_have_no_castes() {
         let mut w = World::new(Seed(42));
         register_concepts(&mut w.registry).unwrap();
-        let village = w.ledger.mint_entity();
+        let s = w.ledger.mint_entity();
+        let env = EnvSummary {
+            subsistence: Subsistence::Farming,
+            surplus: 0.8,
+            population: 500,
+            threat: 0.1,
+        };
+        genesis(&mut w, s, &env).unwrap();
         let other = w.ledger.mint_entity();
-        genesis(&mut w, village).unwrap();
         assert!(castes_of(&w, other).is_empty());
+        assert_eq!(subsistence_of(&w, other), None);
     }
 }

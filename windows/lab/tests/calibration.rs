@@ -1,7 +1,30 @@
 //! Calibration: at tier 0, belief kind is a pure function of rotation.
 //! The instrument must reproduce known ground truth exactly (spec §2.5).
+use hornvale_culture::{BiomeClass, subsistence};
 use hornvale_lab::{MetricValue, load_study, run};
 use std::path::Path;
+
+/// Map a `flagship-biome` metric's kebab-case name back to culture's coarse
+/// `BiomeClass`, mirroring `hornvale_worldgen::biome_class`'s grouping. A
+/// small duplicate is unavoidable here: the metric reports the biome as a
+/// committed Text fact (a `String`), not the `hornvale_climate::Biome` enum
+/// that `biome_class` maps from, so the calibration re-derives its
+/// expectation from this independent metric column rather than the enum
+/// itself — which is the point (spec §10): it checks the committed
+/// subsistence fact against biome + coastal, not against its own inputs.
+fn biome_class_from_name(name: &str) -> BiomeClass {
+    match name {
+        "temperate-forest"
+        | "temperate-rainforest"
+        | "tropical-seasonal-forest"
+        | "tropical-rainforest"
+        | "taiga" => BiomeClass::Forest,
+        "savanna" | "temperate-grassland" => BiomeClass::Grassland,
+        "desert" | "shrubland" => BiomeClass::Arid,
+        "tundra" => BiomeClass::Cold,
+        _ => BiomeClass::Barren,
+    }
+}
 
 #[test]
 fn eternal_beliefs_coincide_exactly_with_tidal_locking() {
@@ -49,6 +72,43 @@ fn band_count_matches_the_known_function_of_rotation() {
             actual, expected,
             "seed {}: band-count calibration violated",
             row.seed
+        );
+    }
+}
+
+#[test]
+fn flagship_subsistence_matches_biome_and_coastal_columns() {
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let (subsistence_i, biome_i, coastal_i) = (
+        idx("flagship-subsistence"),
+        idx("flagship-biome"),
+        idx("flagship-coastal"),
+    );
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        // Absent means no flagship (or no committed subsistence) in this
+        // world; nothing to calibrate.
+        let MetricValue::Text(actual) = &row.values[subsistence_i] else {
+            continue;
+        };
+        let biome = match &row.values[biome_i] {
+            MetricValue::Text(b) => b,
+            other => panic!("seed {}: flagship-biome not text: {other:?}", row.seed),
+        };
+        let coastal = match &row.values[coastal_i] {
+            MetricValue::Flag(c) => *c,
+            other => panic!("seed {}: flagship-coastal not a flag: {other:?}", row.seed),
+        };
+        let class = biome_class_from_name(biome);
+        let expected = subsistence(class, coastal).name();
+        assert_eq!(
+            actual, expected,
+            "seed {}: subsistence-biome calibration violated (biome={}, coastal={})",
+            row.seed, biome, coastal
         );
     }
 }

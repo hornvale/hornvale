@@ -77,7 +77,8 @@ The chief settlement, Gnaug, holds 615 souls amid shrubland.
 
 The goblin village of **Gnaug**, population 615.
 
-Castes, lowest to highest: slave, fighter, cook, shaman, chief.
+Gnaug lives by fishing.
+Its roles, lowest to highest: fisher, chief.
 
 ## The Gods
 

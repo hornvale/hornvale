@@ -13,8 +13,6 @@ use hornvale_kernel::{ConceptRegistry, EntityId, RegistryError, Value, World};
 
 /// Predicate marking an entity as a settlement.
 pub const IS_SETTLEMENT: &str = "is-settlement";
-/// Predicate relating a settlement to the place containing it.
-pub const LOCATED_IN: &str = "located-in";
 /// Predicate giving a settlement's population.
 pub const POPULATION: &str = "population";
 /// Predicate key marking an entity a traversable place (owned/registered by
@@ -30,6 +28,10 @@ pub const CELL_ID: &str = "cell-id";
 pub const LATITUDE: &str = "latitude";
 /// Predicate: longitude of a settlement, degrees (functional, Number).
 pub const LONGITUDE: &str = "longitude";
+/// Predicate: one round-trippable settlement scenario pin string per pinned
+/// value (non-functional, Text) — the settlement sibling of terrain's
+/// terrain-pin and sky's scenario-pin.
+pub const SETTLEMENT_PIN: &str = "settlement-pin";
 
 /// Seed-derivation labels used by this crate. Labels are permanent
 /// save-format contracts (spec §3); regeneration uses epoch suffixes.
@@ -63,11 +65,15 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 /// Register settlement's contribution to the concept registry.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(IS_SETTLEMENT, true, "subject is a settlement")?;
-    registry.register_predicate(LOCATED_IN, false, "spatial containment")?;
     registry.register_predicate(POPULATION, true, "population of a settlement")?;
     registry.register_predicate(CELL_ID, true, "Geosphere cell id a settlement sits on")?;
     registry.register_predicate(LATITUDE, true, "settlement latitude, degrees")?;
-    registry.register_predicate(LONGITUDE, true, "settlement longitude, degrees")
+    registry.register_predicate(LONGITUDE, true, "settlement longitude, degrees")?;
+    registry.register_predicate(
+        SETTLEMENT_PIN,
+        false,
+        "a settlement scenario pin, round-trippable",
+    )
 }
 
 /// A settlement as this domain knows it.
@@ -79,8 +85,6 @@ pub struct VillageInfo {
     pub name: String,
     /// How many live there.
     pub population: u32,
-    /// The entity containing this settlement, if recorded.
-    pub located_in: Option<EntityId>,
 }
 
 /// Generate one settlement name deterministically from the world seed and a
@@ -123,15 +127,10 @@ pub fn village_info(world: &World) -> Option<VillageInfo> {
         Some(Value::Number(n)) => *n as u32,
         _ => 0,
     };
-    let located_in = match world.ledger.value_of(id, LOCATED_IN) {
-        Some(Value::Entity(e)) => Some(*e),
-        _ => None,
-    };
     Some(VillageInfo {
         id,
         name,
         population,
-        located_in,
     })
 }
 

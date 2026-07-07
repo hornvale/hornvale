@@ -35,6 +35,7 @@
 - [Campaign 3b: The Tectonic Globe](./chronicle/campaign-3b.md)
 - [Campaign 3c: Climate & Biomes](./chronicle/campaign-3c.md)
 - [Campaign 4a: Placement & Drainage](./chronicle/campaign-4a.md)
+- [Campaign 4b: Emergent Society](./chronicle/campaign-4b.md)
 
 # The Gallery
 
@@ -52,6 +53,7 @@
 - [The Laboratory](./laboratory/overview.md)
 - [Study 001: The Census of Skies](./laboratory/study-001.md)
 - [Study 002: The Census of Lands](./laboratory/study-002.md)
+- [Study 003: The Census of Peoples](./laboratory/study-003.md)
 
 # Reference
 

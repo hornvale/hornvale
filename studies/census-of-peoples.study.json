@@ -1,0 +1,5 @@
+{ "name": "census-of-peoples",
+  "description": "The full Census of Peoples: settlement scale, the flagship's subsistence, biome, coast, and structural stratification over 10,000 worlds, plus the subsistence-biome calibration at author-time scale.",
+  "seeds": { "from": 0, "count": 10000 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": "all" }
