@@ -34,13 +34,44 @@ The highest land stands 3919 m above the sea.
 The air organizes into a single day–night overturning (tidally locked); 10 land biomes and 8 marine biomes cover the globe.
 Some 8% of the surface is habitable — land with water and a tolerable season.
 
-- **the Vale** — temperate forest
+- **Bolugrak** — temperate-rainforest
+- **Gnator** — temperate-forest
+- **Mokishmok** — temperate-rainforest
+- **Boltorgna** — temperate-forest
+- **Rakrak** — temperate-forest
+- **Torgrutor** — temperate-forest
+- **Torgna** — tropical-seasonal-forest
+- **Ishzag** — tropical-seasonal-forest
+- **Torrakmok** — tropical-seasonal-forest
+- **Zagbolish** — tropical-seasonal-forest
+- **Torishmok** — tropical-seasonal-forest
+- **Mokish** — tropical-seasonal-forest
+- **Ishugzag** — temperate-forest
+- **Ishnar** — temperate-forest
+- **Ishgna** — temperate-forest
+- **Zagzagmok** — tropical-seasonal-forest
+- **Bolish** — tropical-seasonal-forest
+- **Moktor** — tropical-seasonal-forest
+- **Ishish** — savanna
+- **Ugnar** — tropical-seasonal-forest
+- **Zagish** — tropical-seasonal-forest
+- **Ugbolug** — tropical-seasonal-forest
+- **Moknarish** — tropical-seasonal-forest
+- **Bolgnator** — temperate-forest
+- **Mokgna** — tropical-seasonal-forest
+- **Zaggrutor** — savanna
+- **Boltorgru** — savanna
+- **Narbol** — tropical-seasonal-forest
+- **Gnaish** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
-The goblin village of **Gruugish**, population 57.
+The land holds 29 settlement(s).
+The chief settlement, Bolugrak, holds 559 souls amid temperate-rainforest.
+
+The goblin village of **Bolugrak**, population 559.
 
 Castes, lowest to highest: slave, fighter, cook, shaman, chief.
 

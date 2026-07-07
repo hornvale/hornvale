@@ -5,6 +5,7 @@
 | Predicate | Functional | Meaning |
 |---|---|---|
 | `biome` | yes | biome of a place |
+| `cell-id` | yes | Geosphere cell id a settlement sits on |
 | `day-length-std` | yes | solar day length in standard days, for spinning worlds |
 | `derived-from-phenomenon` | yes | phenomenon kind a belief mythologizes |
 | `genesis-note` | no | a degradation or refusal recorded during sky genesis |
@@ -14,7 +15,9 @@
 | `is-belief` | yes | subject is a belief |
 | `is-place` | yes | subject is a traversable place |
 | `is-settlement` | yes | subject is a settlement |
+| `latitude` | yes | settlement latitude, degrees |
 | `located-in` | no | spatial containment |
+| `longitude` | yes | settlement longitude, degrees |
 | `moon-count` | yes | how many moons the anchor world has |
 | `moon-period-std` | no | orbital period of a moon, in standard days |
 | `name` | yes | canonical name of an entity |

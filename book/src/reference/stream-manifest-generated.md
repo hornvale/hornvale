@@ -36,9 +36,8 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | Label | Meaning |
 |---|---|
 | `settlement` | root stream for settlement generation |
-| `settlement/name` | candidate village names |
-| `settlement/name-pick` | which candidate survives refinement |
-| `settlement/population` | village population draw |
+| `settlement/name` | per-settlement generated name |
+| `settlement/placement` | per-settlement population against carrying capacity |
 
 ### hornvale-terrain
 

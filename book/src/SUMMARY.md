@@ -34,6 +34,7 @@
 - [Campaign L0: The Laboratory](./chronicle/campaign-l0-lab.md)
 - [Campaign 3b: The Tectonic Globe](./chronicle/campaign-3b.md)
 - [Campaign 3c: Climate & Biomes](./chronicle/campaign-3c.md)
+- [Campaign 4a: Placement & Drainage](./chronicle/campaign-4a.md)
 
 # The Gallery
 
@@ -43,6 +44,8 @@
 - [The Land of Seed 42](./gallery/elevation-seed-42.md)
 - [The Biomes of Seed 42](./gallery/biome-seed-42.md)
 - [The Biomes of Seed 42 (tidally locked)](./gallery/biome-seed-42-locked.md)
+- [The Peoples of Seed 42](./gallery/settlement-seed-42.md)
+- [The Peoples of Seed 42 (tidally locked)](./gallery/settlement-seed-42-locked.md)
 
 # The Laboratory
 

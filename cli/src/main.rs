@@ -31,6 +31,7 @@ usage:
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale map [--world <PATH>] [--out <PPM>] render the elevation map (markdown to stdout)
   hornvale biome-map [--world <PATH>] [--out <PPM>] render the biome map (markdown to stdout)
+  hornvale settlement-map [--world <PATH>] [--out <PPM>] render the settlement map (markdown to stdout)
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
   hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
@@ -58,6 +59,7 @@ fn main() -> ExitCode {
         Some("repl") => cmd_repl(&args),
         Some("map") => cmd_map(&args),
         Some("biome-map") => cmd_biome_map(&args),
+        Some("settlement-map") => cmd_settlement_map(&args),
         Some("concepts") => cmd_concepts(),
         Some("streams") => cmd_streams(),
         Some("lab") => cmd_lab(&args),
@@ -265,6 +267,58 @@ fn cmd_biome_map(args: &[String]) -> Result<(), String> {
     doc.push_str("```\n\n");
     if let Some(out) = flag_value(args, "--out") {
         let ppm = hornvale_climate::render::biome_ppm(climate.geosphere(), &climate.biome_map());
+        std::fs::write(out, ppm).map_err(|e| format!("writing {out}: {e}"))?;
+        let name = std::path::Path::new(out)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(out);
+        doc.push_str(&format!("Full-color render: [`{name}`](./{name})\n\n"));
+    }
+    doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
+    print!("{doc}");
+    Ok(())
+}
+
+/// Latitude/longitude of a place, read from settlement's facts (`Number`
+/// values on `LATITUDE`/`LONGITUDE`). `None` if either is missing.
+fn place_latlon(world: &World, id: hornvale_kernel::EntityId) -> Option<(f64, f64)> {
+    let lat = match world.ledger.value_of(id, hornvale_settlement::LATITUDE) {
+        Some(hornvale_kernel::Value::Number(n)) => *n,
+        _ => return None,
+    };
+    let lon = match world.ledger.value_of(id, hornvale_settlement::LONGITUDE) {
+        Some(hornvale_kernel::Value::Number(n)) => *n,
+        _ => return None,
+    };
+    Some((lat, lon))
+}
+
+/// Render the world's settlement map: a markdown page (title, settlement
+/// lines, ASCII overlay) to stdout and, with `--out`, the biome PPM overlaid
+/// with settlement marks to disk. Both are deterministic.
+fn cmd_settlement_map(args: &[String]) -> Result<(), String> {
+    let world = load_world(args)?;
+    let climate = world_builder::climate_of(&world).map_err(|e| e.to_string())?;
+    let places = hornvale_terrain::places(&world);
+    let sites: Vec<(f64, f64)> = places
+        .iter()
+        .filter_map(|p| place_latlon(&world, p.id))
+        .collect();
+    let flagship =
+        hornvale_settlement::village_info(&world).and_then(|v| place_latlon(&world, v.id));
+    let mut doc = format!("# The Peoples of Seed {}\n\n", world.seed.0);
+    for line in world_builder::settlement_lines(&world).map_err(|e| e.to_string())? {
+        doc.push_str(&format!("{line}\n"));
+    }
+    doc.push_str("\n```text\n");
+    doc.push_str(&hornvale_settlement::render::settlement_ascii(
+        &sites, flagship,
+    ));
+    doc.push_str("```\n\n");
+    if let Some(out) = flag_value(args, "--out") {
+        let biome_ppm =
+            hornvale_climate::render::biome_ppm(climate.geosphere(), &climate.biome_map());
+        let ppm = hornvale_settlement::render::overlay_ppm(&biome_ppm, &sites, flagship);
         std::fs::write(out, ppm).map_err(|e| format!("writing {out}: {e}"))?;
         let name = std::path::Path::new(out)
             .file_name()
@@ -507,6 +561,11 @@ mod tests {
     #[test]
     fn usage_mentions_biome_map() {
         assert!(USAGE.contains("biome-map"));
+    }
+
+    #[test]
+    fn usage_mentions_settlement_map() {
+        assert!(USAGE.contains("settlement-map"));
     }
 
     #[test]

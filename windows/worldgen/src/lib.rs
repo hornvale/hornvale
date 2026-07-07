@@ -302,10 +302,10 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
 
 /// Build a complete world: mint the world entity and record its sky choice
 /// and scenario pins first; run sky genesis for `Generated`; commit the
-/// terrain pins and run tectonic genesis; then the tier-0 cascade
-/// (terrain-Vale → settlement → culture → religion-from-phenomena). The
-/// Vale stays the social cascade's seam (Campaign 3 spec §8); the tectonic
-/// globe is an additional queryable capability, not a replacement.
+/// terrain pins and run tectonic genesis; then assemble per-cell site inputs
+/// from terrain and climate, place a spaced scatter of settlements, commit
+/// each as its own place entity, and run the culture/religion cascade on the
+/// flagship (the most-suitable settlement, placed first).
 pub fn build_world(
     seed: Seed,
     pins: &SkyPins,
@@ -354,12 +354,81 @@ pub fn build_world(
         .map_err(BuildError::TerrainGenesis)?;
     hornvale_terrain::facts::genesis(&mut world, world_entity, &terrain_outcome)?;
 
-    let vale = hornvale_terrain::genesis(&mut world)?;
-    let village = hornvale_settlement::genesis(&mut world, vale)?;
-    hornvale_culture::genesis(&mut world, village)?;
-    let seen = observed_phenomena(&world, 0.0)?;
-    hornvale_religion::genesis(&mut world, village, &seen)?;
+    // Reconstruct terrain + climate, assemble per-cell site inputs, place a
+    // spaced scatter of settlements, and commit each as its own place entity.
+    let terrain = terrain_of(&world)?;
+    let climate = climate_of(&world)?;
+    let geo = terrain.geosphere();
+    const DRAINAGE_REF: f64 = 200.0;
+    let sites: Vec<hornvale_settlement::SiteInput> = geo
+        .cells()
+        .map(|cell| {
+            let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
+            let moisture = climate.moisture_at(cell);
+            let drainage_norm = (terrain.drainage_at(cell) / DRAINAGE_REF).min(1.0);
+            let freshwater = drainage_norm
+                .max(if coastal { 1.0 } else { 0.0 })
+                .max(moisture)
+                .clamp(0.0, 1.0);
+            let aridity = ((0.2 - moisture).max(0.0) * 5.0).clamp(0.0, 1.0);
+            let hostility = terrain.unrest_at(cell).max(aridity).clamp(0.0, 1.0);
+            hornvale_settlement::SiteInput {
+                cell,
+                position: geo.position(cell),
+                habitable: *climate.habitability().get(cell),
+                freshwater,
+                coastal,
+                temperature_c: climate.mean_temperature_at(cell),
+                hostility,
+            }
+        })
+        .collect();
+    let min_sep = (12.0_f64.to_radians()).cos();
+    let placements = hornvale_settlement::place(&sites, min_sep, 0.25);
+    let placed: Vec<hornvale_settlement::PlacedSettlement> = placements
+        .iter()
+        .map(|p| {
+            let coord = geo.coord(p.cell);
+            hornvale_settlement::PlacedSettlement {
+                cell: p.cell.0,
+                latitude: coord.latitude,
+                longitude: coord.longitude,
+                biome: climate.biome_at(p.cell).name().to_string(),
+                name: hornvale_settlement::generate_name(seed, u64::from(p.cell.0)),
+                population: hornvale_settlement::draw_population(
+                    seed,
+                    u64::from(p.cell.0),
+                    p.suitability,
+                ),
+            }
+        })
+        .collect();
+    let ids = hornvale_settlement::genesis(&mut world, &placed)?;
+    if let Some(&flagship) = ids.first() {
+        hornvale_culture::genesis(&mut world, flagship)?;
+        let seen = observed_phenomena(&world, 0.0)?;
+        hornvale_religion::genesis(&mut world, flagship, &seen)?;
+    }
     Ok(world)
+}
+
+/// Headline lines describing the world's people for the almanac: how many
+/// settlements, and the flagship's name, population, and biome.
+pub fn settlement_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    let places = hornvale_terrain::places(world);
+    let mut lines = vec![format!("The land holds {} settlement(s).", places.len())];
+    if let Some(v) = hornvale_settlement::village_info(world) {
+        let biome = places
+            .iter()
+            .find(|p| p.id == v.id)
+            .map(|p| p.biome.clone())
+            .unwrap_or_else(|| "unknown".to_string());
+        lines.push(format!(
+            "The chief settlement, {}, holds {} souls amid {}.",
+            v.name, v.population, biome
+        ));
+    }
+    Ok(lines)
 }
 
 /// The sky at `time`, from whichever astronomy provider this world uses.
@@ -487,6 +556,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         calendar_lines: calendar_lines(world)?,
         night_sky: night_sky_line(world)?,
         genesis_notes: genesis_notes(world)?,
+        settlement_lines: settlement_lines(world)?,
     })
 }
 
@@ -515,9 +585,72 @@ mod tests {
     }
 
     #[test]
+    fn build_world_generates_settlements_and_no_vale() {
+        let world = generated(42);
+        let places = hornvale_terrain::places(&world);
+        assert!(
+            places.len() >= 3,
+            "expected a scatter of settlements, got {}",
+            places.len()
+        );
+        assert!(
+            !places.iter().any(|p| p.name == "the Vale"),
+            "the Vale must be retired"
+        );
+        // The flagship carries a settlement + population.
+        let village = hornvale_settlement::village_info(&world).expect("flagship settlement");
+        assert!(village.population >= 40);
+        // The cascade still runs on the flagship.
+        assert_eq!(
+            hornvale_culture::castes_of(&world, village.id).len(),
+            hornvale_culture::CASTES.len()
+        );
+        assert!(!hornvale_religion::beliefs_of(&world).is_empty());
+    }
+
+    #[test]
+    fn settlements_reorganize_between_spinning_and_locked() {
+        use hornvale_astronomy::RotationPin;
+        let spinning = generated(42);
+        let locked = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::Locked),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+        )
+        .unwrap();
+        let cells = |w: &World| {
+            hornvale_terrain::places(w)
+                .iter()
+                .map(|p| p.name.clone())
+                .collect::<Vec<_>>()
+        };
+        assert_ne!(
+            cells(&spinning),
+            cells(&locked),
+            "people must reorganize under a different sky"
+        );
+    }
+
+    #[test]
+    fn settlement_lines_describe_the_people() {
+        let lines = settlement_lines(&generated(42)).unwrap();
+        assert!(!lines.is_empty());
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("settlement") || l.contains("village"))
+        );
+    }
+
+    #[test]
     fn build_world_produces_the_full_cascade() {
         let world = constant(42);
-        assert_eq!(hornvale_terrain::places(&world).len(), 1);
+        let places = hornvale_terrain::places(&world);
+        assert!(!places.is_empty());
         let village = hornvale_settlement::village_info(&world).expect("village");
         assert_eq!(
             hornvale_culture::castes_of(&world, village.id).len(),
