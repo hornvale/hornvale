@@ -22,3 +22,9 @@ target
 book/book
 lab-out/
 .superpowers/
+
+# 10k author-time census output; committed charts come from census-lands-drift only
+book/src/laboratory/generated/census-of-lands/
+book/src/laboratory/generated/census-of-peoples/
+book/src/laboratory/generated/census-of-faiths/
+book/src/laboratory/generated/census-of-skies/
