@@ -182,10 +182,17 @@ facts.
 
 ## 8. The byte-identity contract (keystone test)
 
-`hornvale new --seed 42 --species goblin` produces a world **byte-identical
-to pre-C1 main** — same ledger, same almanac — asserted in CI, not in prose.
-This holds by construction: goblin ≡ the baseline vector (all modulations
-identity) and goblin draws keep legacy labels. Mechanism: before the first code
+`hornvale new --seed 42 --species goblin` reproduces pre-C1 main as a
+**superset**: the almanac is byte-identical, and the ledger restricted to
+pre-C1 predicates is identical — new facts appear only under the new species
+predicates (plus the one `settlement-pin` fact recording the `--species` pin
+itself, which the comparison also sets aside since the pre-C1 world was
+unpinned). Asserted in CI, not in prose. This holds by construction: goblin
+≡ the baseline vector (all modulations identity), goblin draws keep legacy
+labels, species entities are minted after settlements (settlement entity ids
+unchanged) and carry no facts under pre-existing predicates. Universal
+`peopled-by` facts (§7) are thereby compatible with the contract: symmetric
+provenance for both peoples, additive-only divergence from the fixture. Mechanism: before the first code
 change, the plan commits the current seed-42 almanac and world JSON as test
 fixtures (`tests/fixtures/pre-species-seed-42.*`); a dedicated CI test
 generates `--species goblin` seed 42 and asserts byte-equality against them.
