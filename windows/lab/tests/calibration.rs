@@ -174,10 +174,10 @@ fn flagships_are_sometimes_inland_and_sometimes_coastal() {
         }
     }
     // Campaign Y2-0: seawater is not freshwater. Before the fix every
-    // flagship was coastal (2,000/2,000 censused worlds); after it, both
-    // kinds must occur. Task 2 pins the exact counts.
-    // Exact-count pin over the 500-seed drift study (deterministic): the
-    // fixed model's realized split, measured 2026-07 at re-baseline.
+    // censused flagship was coastal (100% at 10,000 seeds; Study 003 records
+    // the history). Exact-count pin over the 500-seed drift study
+    // (deterministic): the fixed model's realized split, measured 2026-07
+    // at re-baseline.
     assert_eq!(coastal, 498, "coastal flagship count drifted");
     assert_eq!(inland, 2, "inland flagship count drifted");
 }
