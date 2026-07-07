@@ -41,6 +41,9 @@ pub struct AlmanacContext {
     /// The flagship's emergent culture: its subsistence mode and a one-line
     /// role-structure summary. Empty for worlds with no flagship.
     pub culture_lines: Vec<String>,
+    /// The pantheon's cult form (`"organized"` or `"folk"`), if a pantheon
+    /// exists; `None` for worlds with no beliefs.
+    pub cult_form: Option<String>,
 }
 
 /// Render the one-page world document as markdown. Deterministic: same
@@ -142,9 +145,21 @@ pub fn render(ctx: &AlmanacContext) -> String {
     if ctx.beliefs.is_empty() {
         doc.push_str("No beliefs are recorded.\n\n");
     } else {
+        if let Some(form) = &ctx.cult_form {
+            let lead = match form.as_str() {
+                "organized" => "An organized priesthood tends a pantheon:",
+                _ => "The people keep a folk pantheon:",
+            };
+            doc.push_str(&format!("{lead}\n\n"));
+        }
         for belief in &ctx.beliefs {
+            let mark = if belief.high_god {
+                " *(who presides)*"
+            } else {
+                ""
+            };
             doc.push_str(&format!(
-                "> {}\n>\n> — a belief derived from the phenomenon *{}*\n\n",
+                "> {}{mark}\n>\n> — derived from the phenomenon *{}*\n\n",
                 belief.tenet, belief.source_kind
             ));
         }
@@ -194,12 +209,14 @@ mod tests {
                 id: EntityId(3),
                 tenet: "the Ever-Flame never blinks.".to_string(),
                 source_kind: "celestial-body".to_string(),
+                high_god: false,
             }],
             calendar_lines: vec![],
             night_sky: None,
             genesis_notes: vec![],
             settlement_lines: vec![],
             culture_lines: vec![],
+            cult_form: None,
         }
     }
 
@@ -263,6 +280,38 @@ mod tests {
         assert!(doc.contains("No settlements are known."));
         assert!(doc.contains("No beliefs are recorded."));
         assert!(!doc.contains("## The Calendar"));
+    }
+
+    #[test]
+    fn the_gods_section_renders_a_structured_pantheon() {
+        let ctx = AlmanacContext {
+            beliefs: vec![
+                Belief {
+                    id: EntityId(3),
+                    tenet: "the Ever-Flame never blinks.".to_string(),
+                    source_kind: "celestial-body".to_string(),
+                    high_god: true,
+                },
+                Belief {
+                    id: EntityId(4),
+                    tenet: "the Tidewalker returns.".to_string(),
+                    source_kind: "seasonal-cycle".to_string(),
+                    high_god: false,
+                },
+            ],
+            cult_form: Some("organized".to_string()),
+            ..sample_context()
+        };
+        let doc = render(&ctx);
+        assert!(doc.contains("organized"), "cult form named");
+        assert!(doc.contains("Ever-Flame"));
+        assert!(doc.contains("Tidewalker"));
+        // The high god is distinguished from the lesser deities.
+        let gods = doc.split("## The Gods").nth(1).unwrap();
+        assert!(
+            gods.contains("presides") || gods.contains("high"),
+            "high god marked"
+        );
     }
 
     #[test]

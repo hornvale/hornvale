@@ -109,9 +109,19 @@ Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 
 ## The Gods
 
-> the Returning One departs and returns every 0.88 days; its absences are mourned and its returns feasted.
+An organized priesthood tends a pantheon:
+
+> the Wheel-Turner departs and returns every 0.88 days; its absences are mourned and its returns feasted. *(who presides)*
 >
-> — a belief derived from the phenomenon *celestial-body*
+> — derived from the phenomenon *celestial-body*
+
+> the Tidewalker departs and returns every 15.99 days; its absences are mourned and its returns feasted.
+>
+> — derived from the phenomenon *celestial-body*
+
+> the Waning Herald departs and returns every 32.55 days; its absences are mourned and its returns feasted.
+>
+> — derived from the phenomenon *celestial-body*
 
 ---
 

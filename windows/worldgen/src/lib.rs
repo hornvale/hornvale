@@ -477,8 +477,13 @@ pub fn build_world(
             threat,
         };
         hornvale_culture::genesis(&mut world, flagship, &env)?;
+        let castes = hornvale_culture::castes_of(&world, flagship);
+        let society = hornvale_religion::SocietySummary {
+            strata: castes.len(),
+            has_priesthood: castes.iter().any(|c| c == "shaman"),
+        };
         let seen = observed_phenomena(&world, 0.0)?;
-        hornvale_religion::genesis(&mut world, flagship, &seen)?;
+        hornvale_religion::genesis(&mut world, flagship, &seen, &society)?;
     }
     Ok(world)
 }
@@ -641,6 +646,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         genesis_notes: genesis_notes(world)?,
         settlement_lines: settlement_lines(world)?,
         culture_lines: culture_lines(world)?,
+        cult_form: hornvale_religion::cult_form_of(world),
     })
 }
 
@@ -1200,5 +1206,55 @@ mod tests {
         assert!(!lines.is_empty());
         assert!(lines[0].contains(&village.name));
         assert!(lines[0].contains(&subsistence));
+    }
+
+    #[test]
+    fn the_pantheon_reorganizes_between_spinning_and_locked() {
+        use hornvale_astronomy::RotationPin;
+        let spinning = generated(42);
+        let locked = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::Locked),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let head_tenet = |w: &World| {
+            hornvale_religion::beliefs_of(w)
+                .first()
+                .map(|b| b.tenet.clone())
+                .unwrap_or_default()
+        };
+        // The head deity's periodicity flips with the sun's rotation regime.
+        assert!(
+            head_tenet(&locked).contains("never"),
+            "locked world: an eternal high god"
+        );
+        assert!(
+            head_tenet(&spinning).contains("return") || !head_tenet(&spinning).contains("never"),
+            "spinning world: a cyclic head deity"
+        );
+        assert_ne!(
+            head_tenet(&spinning),
+            head_tenet(&locked),
+            "the two skies yield different religions"
+        );
+        // A pantheon, not a single belief.
+        assert!(!hornvale_religion::beliefs_of(&spinning).is_empty());
+    }
+
+    #[test]
+    fn the_flagship_pantheon_reflects_its_society() {
+        let world = generated(42);
+        let beliefs = hornvale_religion::beliefs_of(&world);
+        assert!(!beliefs.is_empty(), "the flagship has a pantheon");
+        // cult form is set and consistent.
+        assert!(hornvale_religion::cult_form_of(&world).is_some());
+        // At most one high god.
+        assert!(beliefs.iter().filter(|b| b.high_god).count() <= 1);
     }
 }
