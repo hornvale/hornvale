@@ -13,8 +13,6 @@ use hornvale_kernel::{ConceptRegistry, EntityId, RegistryError, Value, World};
 
 /// Predicate marking an entity as a settlement.
 pub const IS_SETTLEMENT: &str = "is-settlement";
-/// Predicate relating a settlement to the place containing it.
-pub const LOCATED_IN: &str = "located-in";
 /// Predicate giving a settlement's population.
 pub const POPULATION: &str = "population";
 /// Predicate key marking an entity a traversable place (owned/registered by
@@ -63,7 +61,6 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 /// Register settlement's contribution to the concept registry.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(IS_SETTLEMENT, true, "subject is a settlement")?;
-    registry.register_predicate(LOCATED_IN, false, "spatial containment")?;
     registry.register_predicate(POPULATION, true, "population of a settlement")?;
     registry.register_predicate(CELL_ID, true, "Geosphere cell id a settlement sits on")?;
     registry.register_predicate(LATITUDE, true, "settlement latitude, degrees")?;
@@ -79,8 +76,6 @@ pub struct VillageInfo {
     pub name: String,
     /// How many live there.
     pub population: u32,
-    /// The entity containing this settlement, if recorded.
-    pub located_in: Option<EntityId>,
 }
 
 /// Generate one settlement name deterministically from the world seed and a
@@ -123,15 +118,10 @@ pub fn village_info(world: &World) -> Option<VillageInfo> {
         Some(Value::Number(n)) => *n as u32,
         _ => 0,
     };
-    let located_in = match world.ledger.value_of(id, LOCATED_IN) {
-        Some(Value::Entity(e)) => Some(*e),
-        _ => None,
-    };
     Some(VillageInfo {
         id,
         name,
         population,
-        located_in,
     })
 }
 

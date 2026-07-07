@@ -188,7 +188,6 @@ mod tests {
                 id: EntityId(2),
                 name: "Bolnar".to_string(),
                 population: 60,
-                located_in: Some(EntityId(1)),
             }),
             castes: vec!["slave".to_string(), "chief".to_string()],
             beliefs: vec![Belief {
