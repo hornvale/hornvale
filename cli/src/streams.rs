@@ -45,6 +45,7 @@ mod tests {
         for expected in [
             "<!-- GENERATED FILE",
             "| `settlement/name` |",
+            "| `settlement/placement` |",
             "| `religion/epithet` |",
             "| `terrain/plate-count` |",
             "octave-{n}",

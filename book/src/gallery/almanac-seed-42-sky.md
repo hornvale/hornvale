@@ -36,13 +36,73 @@ The highest land stands 3919 m above the sea.
 The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 9 marine biomes cover the globe.
 Some 19% of the surface is habitable — land with water and a tolerable season.
 
-- **the Vale** — temperate forest
+- **Torgna** — temperate-rainforest
+- **Narnar** — temperate-rainforest
+- **Mokzaggna** — temperate-forest
+- **Bolrak** — temperate-forest
+- **Rakgrugna** — temperate-forest
+- **Ishzag** — temperate-forest
+- **Mokzag** — temperate-forest
+- **Zagtorgna** — temperate-forest
+- **Tornar** — temperate-rainforest
+- **Torzagzag** — temperate-rainforest
+- **Torrakmok** — temperate-forest
+- **Bolmok** — temperate-forest
+- **Mokgru** — temperate-forest
+- **Grutor** — temperate-forest
+- **Boltorrak** — temperate-forest
+- **Grugru** — tropical-seasonal-forest
+- **Ugugrak** — temperate-forest
+- **Raknar** — tropical-rainforest
+- **Moknarnar** — temperate-rainforest
+- **Uggnator** — tropical-seasonal-forest
+- **Rakrakmok** — tropical-rainforest
+- **Bolbol** — tropical-seasonal-forest
+- **Narzag** — tropical-seasonal-forest
+- **Ishbolmok** — tropical-seasonal-forest
+- **Ishug** — shrubland
+- **Gnator** — temperate-forest
+- **Zagtor** — tropical-seasonal-forest
+- **Bolrak** — tropical-rainforest
+- **Bolzagzag** — tropical-seasonal-forest
+- **Mokugnar** — temperate-forest
+- **Rakgnator** — tropical-seasonal-forest
+- **Grutorgna** — temperate-rainforest
+- **Torzag** — tropical-rainforest
+- **Gnazag** — tropical-rainforest
+- **Mokzag** — tropical-rainforest
+- **Grubolbol** — temperate-forest
+- **Rakmokgna** — taiga
+- **Grutor** — taiga
+- **Torrakmok** — temperate-forest
+- **Mokgru** — tundra
+- **Ishish** — tundra
+- **Narzag** — temperate-forest
+- **Zagzag** — tundra
+- **Gnaug** — temperate-forest
+- **Ishgru** — temperate-forest
+- **Zagnar** — temperate-forest
+- **Mokgnazag** — tundra
+- **Rakbolbol** — tundra
+- **Gnarak** — taiga
+- **Mokgna** — temperate-forest
+- **Narishrak** — temperate-forest
+- **Zaggnator** — temperate-forest
+- **Ugrak** — temperate-forest
+- **Bolraktor** — tundra
+- **Ishnar** — taiga
+- **Narnargru** — tropical-seasonal-forest
+- **Gnaishgna** — tropical-seasonal-forest
+- **Torish** — shrubland
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
-The goblin village of **Gruugish**, population 57.
+The land holds 58 settlement(s).
+The chief settlement, Torgna, holds 506 souls amid temperate-rainforest.
+
+The goblin village of **Torgna**, population 506.
 
 Castes, lowest to highest: slave, fighter, cook, shaman, chief.
 
