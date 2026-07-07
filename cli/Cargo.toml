@@ -9,10 +9,11 @@ description = "Hornvale: an experimental text adventure and computational social
 hornvale-kernel = { path = "../kernel" }
 hornvale-astronomy = { path = "../domains/astronomy" }
 hornvale-climate = { path = "../domains/climate" }
-hornvale-terrain = { path = "../domains/terrain" }
-hornvale-settlement = { path = "../domains/settlement" }
 hornvale-culture = { path = "../domains/culture" }
 hornvale-religion = { path = "../domains/religion" }
+hornvale-settlement = { path = "../domains/settlement" }
+hornvale-species = { path = "../domains/species" }
+hornvale-terrain = { path = "../domains/terrain" }
 hornvale-almanac = { path = "../windows/almanac" }
 hornvale-worldgen = { path = "../windows/worldgen" }
 hornvale-lab = { path = "../windows/lab" }

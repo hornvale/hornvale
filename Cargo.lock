@@ -15,6 +15,7 @@ dependencies = [
  "hornvale-lab",
  "hornvale-religion",
  "hornvale-settlement",
+ "hornvale-species",
  "hornvale-terrain",
  "hornvale-worldgen",
  "serde_json",
@@ -94,6 +95,13 @@ dependencies = [
 
 [[package]]
 name = "hornvale-settlement"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-species"
 version = "0.1.0"
 dependencies = [
  "hornvale-kernel",

@@ -3,12 +3,13 @@
 /// Render every registered crate's stream labels as the book's generated
 /// reference page. Labels are permanent save-format contracts.
 pub fn render_streams() -> String {
-    let sources: [(&str, Vec<(&'static str, &'static str)>); 6] = [
+    let sources: [(&str, Vec<(&'static str, &'static str)>); 7] = [
         ("hornvale-astronomy", hornvale_astronomy::stream_labels()),
         ("hornvale-climate", hornvale_climate::stream_labels()),
         ("hornvale-culture", hornvale_culture::stream_labels()),
         ("hornvale-religion", hornvale_religion::stream_labels()),
         ("hornvale-settlement", hornvale_settlement::stream_labels()),
+        ("hornvale-species", hornvale_species::stream_labels()),
         ("hornvale-terrain", hornvale_terrain::stream_labels()),
     ];
     let mut doc = String::new();
