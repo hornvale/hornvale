@@ -94,7 +94,7 @@ fn repl_answers_sky_village_and_belief() {
         .stdin
         .take()
         .unwrap()
-        .write_all(b"sky\nvillage\nbeliefs\nwhy 1\nquit\n")
+        .write_all(b"sky\nvillage\nbeliefs\nquit\n")
         .unwrap();
     let out = child.wait_with_output().unwrap();
     assert!(out.status.success());
@@ -102,7 +102,39 @@ fn repl_answers_sky_village_and_belief() {
     assert!(stdout.contains("zenith"), "sky answered");
     assert!(stdout.contains("population"), "village answered");
     assert!(stdout.contains("1."), "belief listed");
-    assert!(stdout.contains("celestial-body"), "why answered");
+    // Extract the first belief's entity id from "1. [id]" format.
+    let first_belief_id = stdout
+        .lines()
+        .find(|line| line.starts_with("1. ["))
+        .and_then(|line| {
+            line.split('[')
+                .nth(1)
+                .and_then(|s| s.split(']').next())
+                .and_then(|s| s.parse::<u64>().ok())
+        });
+    assert!(
+        first_belief_id.is_some(),
+        "belief listing has [id] format: {}",
+        stdout
+    );
+    // Query the why information for the first belief via a second REPL run.
+    let mut child2 = bin()
+        .args(["repl", "--world", world.to_str().unwrap()])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let id = first_belief_id.unwrap();
+    child2
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(format!("why {id}\nquit\n").as_bytes())
+        .unwrap();
+    let out2 = child2.wait_with_output().unwrap();
+    assert!(out2.status.success());
+    let stdout2 = String::from_utf8(out2.stdout).unwrap();
+    assert!(stdout2.contains("celestial-body"), "why answered");
     std::fs::remove_dir_all(&dir).unwrap();
 }
 

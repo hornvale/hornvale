@@ -242,21 +242,6 @@ pub fn cult_form_of(world: &World) -> Option<String> {
     }
 }
 
-/// Explain a belief from its committed provenance: which phenomenon kind
-/// it mythologizes and which system asserted it.
-pub fn why(world: &World, belief: EntityId) -> Option<String> {
-    let source = world.ledger.text_of(belief, DERIVED_FROM_PHENOMENON)?;
-    let provenance = world
-        .ledger
-        .facts_about(belief)
-        .find(|f| f.predicate == DERIVED_FROM_PHENOMENON)
-        .map(|f| f.provenance.clone())?;
-    Some(format!(
-        "Derived from the most salient observed phenomenon (kind: {source}); \
-         asserted by {provenance}."
-    ))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

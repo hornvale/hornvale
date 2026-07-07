@@ -20,7 +20,7 @@ commands:
   village          the settlement
   castes           the settlement's castes
   beliefs          recorded beliefs
-  why <n>          why belief n (from `beliefs`) is held
+  why <id>         recount how an entity came to be (ids from beliefs/places)
   phenomena [day]  salient phenomena (default day 0)
   facts <id>       every fact about entity id
   quit             leave
@@ -220,22 +220,19 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     writeln!(output, "no beliefs are recorded")?;
                 }
                 for (i, belief) in beliefs.iter().enumerate() {
-                    writeln!(output, "{}. {}", i + 1, belief.tenet)?;
+                    writeln!(output, "{}. [{}] {}", i + 1, belief.id.0, belief.tenet)?;
                 }
             }
-            "why" => {
-                let beliefs = hornvale_religion::beliefs_of(world);
-                let picked = argument
-                    .and_then(|a| a.parse::<usize>().ok())
-                    .and_then(|n| beliefs.get(n.checked_sub(1)?));
-                match picked {
-                    Some(belief) => match hornvale_religion::why(world, belief.id) {
-                        Some(reason) => writeln!(output, "{reason}")?,
-                        None => writeln!(output, "no recorded derivation")?,
-                    },
-                    None => writeln!(output, "usage: why <n> — n from `beliefs`")?,
-                }
-            }
+            "why" => match argument.and_then(|a| a.parse::<u64>().ok()) {
+                Some(id) => match hornvale_historiography::recount(world, EntityId(id)) {
+                    Some(text) => write!(output, "{text}")?,
+                    None => writeln!(output, "nothing is recorded about entity {id}")?,
+                },
+                None => writeln!(
+                    output,
+                    "usage: why <entity-id> (ids from `beliefs`, `places`)"
+                )?,
+            },
             "phenomena" => {
                 let day = argument.and_then(|a| a.parse().ok()).unwrap_or(0.0);
                 match world_builder::observed_phenomena(world, day) {
@@ -339,7 +336,25 @@ mod tests {
 
     #[test]
     fn why_explains_belief_one() {
-        let out = drive("why 1\nquit\n");
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Constant,
+            &hornvale_terrain::TerrainPins::default(),
+            &world_builder::SettlementPins::default(),
+        )
+        .unwrap();
+        let beliefs = hornvale_religion::beliefs_of(&world);
+        assert!(!beliefs.is_empty(), "test world has beliefs");
+        let belief_id = beliefs[0].id.0;
+        let mut out = Vec::new();
+        run(
+            &world,
+            format!("why {belief_id}\nquit\n").as_bytes(),
+            &mut out,
+        )
+        .unwrap();
+        let out = String::from_utf8(out).unwrap();
         assert!(out.contains("celestial-body"));
     }
 
@@ -432,5 +447,41 @@ mod tests {
         let out = String::from_utf8(out).unwrap();
         assert!(out.lines().count() > 24, "no ascii biome map");
         assert!(out.contains("biome"), "no per-cell biome report");
+    }
+
+    #[test]
+    fn why_recounts_any_entity_by_id() {
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &world_builder::SettlementPins::default(),
+        )
+        .unwrap();
+        // The flagship belief entities are listed with ids by `beliefs`.
+        let listing = {
+            let mut o = Vec::new();
+            run(&world, "beliefs\nquit\n".as_bytes(), &mut o).unwrap();
+            String::from_utf8(o).unwrap()
+        };
+        assert!(
+            listing.contains('['),
+            "beliefs lists entity ids in brackets"
+        );
+        // Recount the flagship settlement (entity from village_info).
+        let id = hornvale_settlement::village_info(&world).unwrap().id.0;
+        let mut out = Vec::new();
+        run(&world, format!("why {id}\nquit\n").as_bytes(), &mut out).unwrap();
+        let out = String::from_utf8(out).unwrap();
+        assert!(out.contains("asserted by"), "recount names provenance");
+        // An unknown entity is reported, not fatal.
+        let mut out2 = Vec::new();
+        run(&world, "why 99999\nquit\n".as_bytes(), &mut out2).unwrap();
+        assert!(
+            String::from_utf8(out2)
+                .unwrap()
+                .contains("nothing is recorded")
+        );
     }
 }

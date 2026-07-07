@@ -10,6 +10,7 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-climate",
  "hornvale-culture",
+ "hornvale-historiography",
  "hornvale-kernel",
  "hornvale-lab",
  "hornvale-religion",
