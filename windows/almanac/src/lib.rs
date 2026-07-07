@@ -23,6 +23,8 @@ pub struct AlmanacContext {
     pub places: Vec<PlaceInfo>,
     /// The tectonic globe's headline lines, from the composition root.
     pub land_lines: Vec<String>,
+    /// The globe's biome/habitability headline lines, from the composition root.
+    pub biome_lines: Vec<String>,
     /// The settlement, if any.
     pub village: Option<VillageInfo>,
     /// The settlement's castes, lowest to highest.
@@ -89,6 +91,12 @@ pub fn render(ctx: &AlmanacContext) -> String {
         doc.push_str(&format!("{line}\n"));
     }
     if !ctx.land_lines.is_empty() {
+        doc.push('\n');
+    }
+    for line in &ctx.biome_lines {
+        doc.push_str(&format!("{line}\n"));
+    }
+    if !ctx.biome_lines.is_empty() {
         doc.push('\n');
     }
     if ctx.places.is_empty() {
@@ -166,6 +174,7 @@ mod tests {
             land_lines: vec![
                 "The globe breaks into 23 plates; the sea claims 63% of its surface.".to_string(),
             ],
+            biome_lines: vec![],
             village: Some(VillageInfo {
                 id: EntityId(2),
                 name: "Bolnar".to_string(),
