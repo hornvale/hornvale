@@ -178,6 +178,14 @@ fn flagships_are_sometimes_inland_and_sometimes_coastal() {
     // the history). Exact-count pin over the 500-seed drift study
     // (deterministic): the fixed model's realized split, measured 2026-07
     // at re-baseline.
+    //
+    // Campaign Y2-1: `flagship-coastal` now names the goblin flagship
+    // specifically (religion's community, spec §6), not just whichever
+    // species' settlement happened to place first. Under joint-greedy
+    // placement the two seeds that used to report an inland goblin flagship
+    // instead lose that site to a higher-scoring kobold placement, leaving
+    // no goblin settlement at all (`flagship-coastal` reports `Absent`) —
+    // hence coastal is unchanged but inland drops from 2 to 0.
     assert_eq!(coastal, 498, "coastal flagship count drifted");
-    assert_eq!(inland, 2, "inland flagship count drifted");
+    assert_eq!(inland, 0, "inland flagship count drifted");
 }

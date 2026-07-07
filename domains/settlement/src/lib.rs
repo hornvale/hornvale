@@ -7,7 +7,10 @@ pub mod placement;
 pub mod render;
 
 pub use genesis::{PlacedSettlement, genesis};
-pub use placement::{Placement, SiteInput, place, suitability};
+pub use placement::{
+    BASELINE_WEIGHTS, Placement, SiteInput, SuitabilityWeights, place, place_tagged, suitability,
+    suitability_weighted,
+};
 
 use hornvale_kernel::{ConceptRegistry, EntityId, RegistryError, Value, World};
 

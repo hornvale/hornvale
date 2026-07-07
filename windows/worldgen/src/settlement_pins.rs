@@ -6,11 +6,14 @@
 
 /// The scenario pins for settlement placement. `None` = drawn default;
 /// `Some` = supplied by the experimenter and conditioned on.
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct SettlementPins {
     /// Minimum suitability required to place a settlement (legal `[0, 1]`);
     /// the placement floor defaults to 0.25 when `None`.
     pub min_suitability: Option<f64>,
+    /// Restrict the placed species set to this one species; `None` = all
+    /// registry species. Validated against the species registry at build.
+    pub species: Option<String>,
 }
 
 impl SettlementPins {
@@ -20,6 +23,9 @@ impl SettlementPins {
         let mut out = Vec::new();
         if let Some(f) = self.min_suitability {
             out.push(format!("min-suitability={f}"));
+        }
+        if let Some(s) = &self.species {
+            out.push(format!("species={s}"));
         }
         out
     }
@@ -40,6 +46,7 @@ pub fn parse_pin(s: &str, pins: &mut SettlementPins) -> Result<(), String> {
                 .map_err(|_| format!("min-suitability: invalid number '{value}'"))?;
             pins.min_suitability = Some(f);
         }
+        "species" => pins.species = Some(value.to_string()),
         other => return Err(format!("unknown settlement pin key '{other}'")),
     }
     Ok(())
@@ -58,6 +65,20 @@ mod tests {
     fn pin_strings_round_trip_through_parse_pin() {
         let pins = SettlementPins {
             min_suitability: Some(0.5),
+            ..SettlementPins::default()
+        };
+        let mut rebuilt = SettlementPins::default();
+        for s in pins.pin_strings() {
+            parse_pin(&s, &mut rebuilt).unwrap();
+        }
+        assert_eq!(rebuilt, pins);
+    }
+
+    #[test]
+    fn species_pin_round_trips_through_parse_pin() {
+        let pins = SettlementPins {
+            species: Some("kobold".into()),
+            ..SettlementPins::default()
         };
         let mut rebuilt = SettlementPins::default();
         for s in pins.pin_strings() {

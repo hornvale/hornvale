@@ -48,6 +48,7 @@ const TERRAIN_FLAGS: &str = "\
 
 const SETTLEMENT_FLAGS: &str = "\
   [--min-suitability F]                    pin the settlement placement floor (0-1)
+  --species <NAME>  place only this species (default: all known species)
 ";
 
 fn usage() -> String {
@@ -142,7 +143,10 @@ fn parse_terrain_args(args: &[String]) -> Result<hornvale_terrain::TerrainPins, 
 /// `parse_terrain_args`).
 fn parse_settlement_args(args: &[String]) -> Result<world_builder::SettlementPins, String> {
     let mut pins = world_builder::SettlementPins::default();
-    for (flag, key) in [("--min-suitability", "min-suitability")] {
+    for (flag, key) in [
+        ("--min-suitability", "min-suitability"),
+        ("--species", "species"),
+    ] {
         if let Some(value) = flag_value(args, flag) {
             world_builder::settlement_pins::parse_pin(&format!("{key}={value}"), &mut pins)?;
         }

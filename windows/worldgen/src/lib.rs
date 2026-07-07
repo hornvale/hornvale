@@ -116,6 +116,7 @@ pub fn register_all(registry: &mut ConceptRegistry) -> Result<(), RegistryError>
     hornvale_climate::register_concepts(registry)?;
     hornvale_terrain::register_concepts(registry)?;
     hornvale_settlement::register_concepts(registry)?;
+    hornvale_species::register_concepts(registry)?;
     hornvale_culture::register_concepts(registry)?;
     hornvale_religion::register_concepts(registry)
 }
@@ -230,6 +231,19 @@ pub fn biome_class(biome: hornvale_climate::Biome) -> hornvale_culture::BiomeCla
         | Biome::Mesopelagic
         | Biome::Bathypelagic
         | Biome::Abyssal => BiomeClass::Barren,
+    }
+}
+
+/// Per-species suitability weights derived from the psychology vector
+/// (spec §4); identity at the goblin baseline.
+pub fn species_weights(
+    p: &hornvale_species::PsychVector,
+) -> hornvale_settlement::SuitabilityWeights {
+    hornvale_settlement::SuitabilityWeights {
+        freshwater: 0.45 * (0.5 + p.time_horizon),
+        coast: 0.20 * (2.0 * p.in_group_radius),
+        temperance: 0.35,
+        hostility: 0.50 * (1.5 - p.threat_response),
     }
 }
 
@@ -440,56 +454,147 @@ pub fn build_world(
         .collect();
     let min_sep = (12.0_f64.to_radians()).cos();
     let floor = settlement_pins.min_suitability.unwrap_or(0.25);
-    let placements = hornvale_settlement::place(&sites, min_sep, floor);
+
+    // Which species this world places: the whole registry, or the pinned one.
+    let all_species = hornvale_species::registry();
+    let species_set: Vec<&hornvale_species::SpeciesDef> = match &settlement_pins.species {
+        None => all_species.values().collect(),
+        Some(name) => match all_species.get(name.as_str()) {
+            Some(def) => vec![def],
+            None => {
+                let known: Vec<&str> = all_species.keys().copied().collect();
+                return Err(BuildError::Pins(format!(
+                    "unknown species '{name}'; known species: {}",
+                    known.join(", ")
+                )));
+            }
+        },
+    };
+
+    // Joint greedy across species: every (site × species) pair scored with
+    // that species' psychology-derived weights, one shared spacing pass.
+    let mut scored: Vec<(hornvale_settlement::SiteInput, f64, u32)> = Vec::new();
+    for (tag, def) in species_set.iter().enumerate() {
+        let weights = species_weights(&def.psych);
+        for site in &sites {
+            if let Some(score) = hornvale_settlement::suitability_weighted(site, &weights) {
+                scored.push((*site, score, tag as u32));
+            }
+        }
+    }
+    let placements = hornvale_settlement::place_tagged(&scored, min_sep, floor);
     let placed: Vec<hornvale_settlement::PlacedSettlement> = placements
         .iter()
-        .map(|p| {
+        .map(|(p, tag)| {
+            let def = species_set[*tag as usize];
             let coord = geo.coord(p.cell);
+            let (name, population) = if def.name == "goblin" {
+                (
+                    hornvale_settlement::generate_name(seed, u64::from(p.cell.0)),
+                    hornvale_settlement::draw_population(seed, u64::from(p.cell.0), p.suitability),
+                )
+            } else {
+                (
+                    hornvale_settlement::generate_species_name(
+                        seed,
+                        def.name,
+                        def.syllables,
+                        u64::from(p.cell.0),
+                    ),
+                    hornvale_settlement::draw_species_population(
+                        seed,
+                        def.name,
+                        u64::from(p.cell.0),
+                        p.suitability,
+                    ),
+                )
+            };
             hornvale_settlement::PlacedSettlement {
                 cell: p.cell.0,
                 latitude: coord.latitude,
                 longitude: coord.longitude,
                 biome: climate.biome_at(p.cell).name().to_string(),
-                name: hornvale_settlement::generate_name(seed, u64::from(p.cell.0)),
-                population: hornvale_settlement::draw_population(
-                    seed,
-                    u64::from(p.cell.0),
-                    p.suitability,
-                ),
+                name,
+                population,
             }
         })
         .collect();
     let ids = hornvale_settlement::genesis(&mut world, &placed)?;
-    if let Some(&flagship) = ids.first() {
-        let fcell = placements[0].cell;
+
+    // Species entities AFTER settlements (entity-id stability, spec §8),
+    // then the peopled-by link for every settlement.
+    hornvale_species::genesis(&mut world)?;
+    for (id, (_, tag)) in ids.iter().zip(placements.iter()) {
+        hornvale_species::people(&mut world, *id, species_set[*tag as usize].name)?;
+    }
+
+    // Per-species flagship culture; religion on the goblin flagship only.
+    for (tag, def) in species_set.iter().enumerate() {
+        let Some(pos) = placements.iter().position(|(_, t)| *t as usize == tag) else {
+            continue; // a species may place nothing on a hostile world
+        };
+        let flagship = ids[pos];
+        let fcell = placements[pos].0.cell;
         let coastal = geo.neighbors(fcell).iter().any(|n| terrain.is_ocean(*n));
         let moisture = climate.moisture_at(fcell);
         let class = biome_class(climate.biome_at(fcell));
         let subsistence = hornvale_culture::subsistence(class, coastal);
         let surplus = (hornvale_culture::fertility(class) * moisture).clamp(0.0, 1.0);
         let threat = terrain.unrest_at(fcell).clamp(0.0, 1.0);
-        let population = placed[0].population;
         let env = hornvale_culture::EnvSummary {
             subsistence,
             surplus,
-            population,
+            population: placed[pos].population,
             threat,
         };
-        hornvale_culture::genesis(
-            &mut world,
-            flagship,
-            &env,
-            &hornvale_culture::PsychSummary::default(),
-        )?;
-        let castes = hornvale_culture::castes_of(&world, flagship);
-        let society = hornvale_religion::SocietySummary {
-            strata: castes.len(),
-            has_priesthood: castes.iter().any(|c| c == "shaman"),
+        let psych = hornvale_culture::PsychSummary {
+            threat_response: def.psych.threat_response,
+            time_horizon: def.psych.time_horizon,
+            communal: def.psych.sociality == hornvale_species::Sociality::Communal,
+            rank_status: def.psych.status_basis == hornvale_species::StatusBasis::Rank,
+            vocabulary: hornvale_culture::RoleVocabulary {
+                worker_override: def.worker_override.map(str::to_string),
+                warrior: def.warrior.to_string(),
+                artisan: def.artisan.to_string(),
+                shaman: def.shaman.to_string(),
+                top: def.top.to_string(),
+            },
         };
-        let seen = observed_phenomena(&world, 0.0)?;
-        hornvale_religion::genesis(&mut world, flagship, &seen, &society)?;
+        hornvale_culture::genesis(&mut world, flagship, &env, &psych)?;
+        if def.name == "goblin" {
+            let castes = hornvale_culture::castes_of(&world, flagship);
+            let society = hornvale_religion::SocietySummary {
+                strata: castes.len(),
+                has_priesthood: castes.iter().any(|c| c == "shaman"),
+            };
+            let seen = observed_phenomena(&world, 0.0)?;
+            hornvale_religion::genesis(&mut world, flagship, &seen, &society)?;
+        }
     }
     Ok(world)
+}
+
+/// The first-placed settlement of `species` (its flagship), if any.
+pub fn flagship_of(world: &World, species: &str) -> Option<hornvale_settlement::VillageInfo> {
+    let id = world
+        .ledger
+        .find(hornvale_settlement::IS_SETTLEMENT)
+        .map(|f| f.subject)
+        .find(|s| hornvale_species::species_of(world, *s).as_deref() == Some(species))?;
+    let name = world
+        .ledger
+        .text_of(id, hornvale_kernel::NAME)
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("settlement {}", id.0));
+    let population = match world.ledger.value_of(id, hornvale_settlement::POPULATION) {
+        Some(Value::Number(n)) => *n as u32,
+        _ => 0,
+    };
+    Some(hornvale_settlement::VillageInfo {
+        id,
+        name,
+        population,
+    })
 }
 
 /// Headline lines describing the world's people for the almanac: how many
@@ -1189,6 +1294,7 @@ mod tests {
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins {
                 min_suitability: Some(0.5),
+                ..SettlementPins::default()
             },
         )
         .unwrap();

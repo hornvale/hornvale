@@ -5,7 +5,9 @@ use hornvale_climate::GeneratedClimate;
 use hornvale_kernel::{CellId, Seed, Value, World};
 use hornvale_religion::beliefs_of;
 use hornvale_terrain::GlobeSummary;
-use hornvale_worldgen::{BuildError, Sky, SkyChoice, build_world, climate_of, sky_of, terrain_of};
+use hornvale_worldgen::{
+    BuildError, Sky, SkyChoice, build_world, climate_of, flagship_of, sky_of, terrain_of,
+};
 
 use hornvale_astronomy::SkyPins;
 
@@ -403,10 +405,11 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "flagship-subsistence",
-            doc: "The flagship settlement's committed subsistence mode; Absent if there is \
-                   no flagship or no committed subsistence",
+            doc: "The goblin flagship settlement's committed subsistence mode (the pantheon's \
+                   community, spec §6); Absent if there is no goblin flagship or no committed \
+                   subsistence",
             summary: SummaryKind::Categorical,
-            extract: |v| match hornvale_settlement::village_info(&v.world) {
+            extract: |v| match flagship_of(&v.world, "goblin") {
                 Some(info) => match hornvale_culture::subsistence_of(&v.world, info.id) {
                     Some(s) => MetricValue::Text(s),
                     None => MetricValue::Absent,
@@ -416,9 +419,10 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "flagship-biome",
-            doc: "The flagship settlement's committed biome; Absent if there is no flagship",
+            doc: "The goblin flagship settlement's committed biome; Absent if there is no \
+                   goblin flagship",
             summary: SummaryKind::Categorical,
-            extract: |v| match hornvale_settlement::village_info(&v.world) {
+            extract: |v| match flagship_of(&v.world, "goblin") {
                 Some(info) => match v.world.ledger.text_of(info.id, hornvale_settlement::BIOME) {
                     Some(b) => MetricValue::Text(b.to_string()),
                     None => MetricValue::Absent,
@@ -428,11 +432,11 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "flagship-coastal",
-            doc: "Whether the flagship settlement's cell borders an ocean cell, recomputed \
-                   from the terrain provider; Absent if there is no flagship",
+            doc: "Whether the goblin flagship settlement's cell borders an ocean cell, \
+                   recomputed from the terrain provider; Absent if there is no goblin flagship",
             summary: SummaryKind::Flag,
             extract: |v| {
-                let Some(info) = hornvale_settlement::village_info(&v.world) else {
+                let Some(info) = flagship_of(&v.world, "goblin") else {
                     return MetricValue::Absent;
                 };
                 let Some(Value::Number(cell_id)) = v
@@ -454,12 +458,14 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "flagship-structure-size",
-            doc: "Number of castes present in the flagship settlement's emergent structure \
-                   (a stratification proxy); Absent if there is no flagship",
+            doc: "Number of castes present in the goblin flagship settlement's emergent \
+                   structure (a stratification proxy, matched against the same community \
+                   religion's pantheon-verticality reasons about); Absent if there is no \
+                   goblin flagship",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
-            extract: |v| match hornvale_settlement::village_info(&v.world) {
+            extract: |v| match flagship_of(&v.world, "goblin") {
                 Some(info) => {
                     MetricValue::Number(hornvale_culture::castes_of(&v.world, info.id).len() as f64)
                 }
