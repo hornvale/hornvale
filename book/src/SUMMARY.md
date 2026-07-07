@@ -22,6 +22,7 @@
   - [Climate](./domains/climate.md)
   - [Terrain](./domains/terrain.md)
   - [Settlement](./domains/settlement.md)
+  - [Species](./domains/species.md)
   - [Culture](./domains/culture.md)
   - [Religion](./domains/religion.md)
 
