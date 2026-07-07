@@ -646,6 +646,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         genesis_notes: genesis_notes(world)?,
         settlement_lines: settlement_lines(world)?,
         culture_lines: culture_lines(world)?,
+        cult_form: hornvale_religion::cult_form_of(world),
     })
 }
 

@@ -82,9 +82,11 @@ Its roles, lowest to highest: fisher, chief.
 
 ## The Gods
 
-> the Unblinking Eye is a golden sun fixed at zenith; it has never departed and will never blink.
+The people keep a folk pantheon:
+
+> the Still Crown is a golden sun fixed at zenith; it has never departed and will never blink.
 >
-> — a belief derived from the phenomenon *celestial-body*
+> — derived from the phenomenon *celestial-body*
 
 ---
 

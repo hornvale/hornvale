@@ -6,11 +6,13 @@
 |---|---|---|
 | `biome` | yes | biome of a place |
 | `cell-id` | yes | Geosphere cell id a settlement sits on |
+| `cult-form` | yes | the cult form of a belief (organized or folk) |
 | `day-length-std` | yes | solar day length in standard days, for spinning worlds |
 | `derived-from-phenomenon` | yes | phenomenon kind a belief mythologizes |
 | `genesis-note` | no | a degradation or refusal recorded during sky genesis |
 | `has-caste` | no | a caste present in a settlement |
 | `held-by` | no | a community holding a belief |
+| `high-god` | yes | the presiding deity of a ranked pantheon |
 | `highest-elevation-m` | yes | highest globe cell elevation in meters |
 | `is-belief` | yes | subject is a belief |
 | `is-place` | yes | subject is a traversable place |
