@@ -20,62 +20,61 @@ The air organizes into 3 circulation band(s) per hemisphere; 12 land biomes and 
 Some 12% of the surface is habitable — land with water and a tolerable season.
 
 - **Gnaug** — shrubland
-- **Rakbolgru** — shrubland
+- **Torish** — shrubland
 - **Gruzag** — shrubland
-- **Torgrugru** — shrubland
-- **Grugna** — shrubland
+- **Rakbolgru** — shrubland
 - **Torgru** — shrubland
+- **Gnarak** — temperate-forest
+- **Bolgnator** — temperate-forest
 - **Rakrakzag** — shrubland
-- **Zagugug** — shrubland
-- **Ugugnar** — shrubland
-- **Ishzag** — savanna
-- **Gruish** — tundra
-- **Zagbol** — savanna
-- **Zagzagbol** — taiga
-- **Zagrak** — tundra
-- **Ishnar** — temperate-forest
-- **Grugna** — savanna
-- **Bolmok** — shrubland
-- **Gnagru** — taiga
-- **Gnagna** — tropical-seasonal-forest
-- **Rakug** — tropical-rainforest
+- **Bolbol** — tropical-rainforest
+- **Grugnaug** — tropical-rainforest
+- **Zagrak** — tropical-rainforest
 - **Bolugrak** — tropical-rainforest
-- **Grutor** — tropical-seasonal-forest
+- **Ugnarbol** — temperate-forest
+- **Grunar** — tropical-rainforest
+- **Rakish** — tropical-rainforest
+- **Raknar** — taiga
+- **Rakug** — tropical-rainforest
 - **Ugmok** — taiga
-- **Tornarnar** — tropical-rainforest
-- **Ishbol** — taiga
-- **Bolgna** — taiga
-- **Raktor** — tropical-seasonal-forest
-- **Rakgna** — tropical-seasonal-forest
-- **Nargrutor** — alpine
-- **Narzag** — taiga
+- **Grugruug** — taiga
+- **Tormok** — tropical-rainforest
+- **Bolraktor** — savanna
+- **Moktor** — tropical-rainforest
 - **Ishish** — tropical-rainforest
-- **Mokgru** — tropical-seasonal-forest
-- **Torrak** — tropical-seasonal-forest
+- **Nargrutor** — alpine
+- **Uggru** — temperate-grassland
+- **Rakgnagna** — shrubland
+- **Rakgna** — tropical-seasonal-forest
+- **Raknar** — tropical-rainforest
+- **Zagzagbol** — taiga
 - **Grubolgna** — tropical-rainforest
 - **Rakzag** — tropical-rainforest
-- **Gruishnar** — tropical-seasonal-forest
-- **Bolraktor** — savanna
+- **Ishgna** — temperate-grassland
+- **Bolzag** — tropical-rainforest
+- **Rakgrugru** — tropical-rainforest
+- **Bolgna** — taiga
 - **Narbolug** — tropical-rainforest
-- **Gnabol** — tropical-rainforest
-- **Bolmokmok** — shrubland
-- **Mokrakgru** — tropical-seasonal-forest
 - **Mokug** — temperate-forest
-- **Ishgruzag** — temperate-grassland
+- **Rakgrugru** — tropical-rainforest
+- **Ishbol** — taiga
+- **Bolgna** — tropical-rainforest
 - **Ishugtor** — alpine
-- **Ugnar** — savanna
+- **Bolgnazag** — taiga
+- **Rakgna** — taiga
 - **Gnagrubol** — alpine
-- **Raknar** — tropical-seasonal-forest
-- **Bolbolug** — tropical-seasonal-forest
+- **Torgru** — savanna
+- **Bolbolmok** — tropical-seasonal-forest
+- **Mokug** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
-The land holds 48 settlement(s).
-The chief settlement, Gnaug, holds 615 souls amid shrubland.
+The land holds 47 settlement(s).
+The chief settlement, Gnaug, holds 448 souls amid shrubland.
 
-The goblin village of **Gnaug**, population 615.
+The goblin village of **Gnaug**, population 448.
 
 Gnaug lives by fishing.
 Its roles, lowest to highest: fisher, chief.

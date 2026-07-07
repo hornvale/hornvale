@@ -1,7 +1,7 @@
 # The Peoples of Seed 42
 
 The land holds 58 settlement(s).
-The chief settlement, Torgna, holds 506 souls amid temperate-rainforest.
+The chief settlement, Grumoknar, holds 359 souls amid temperate-rainforest.
 
 ```text
                                                                         
@@ -11,17 +11,17 @@ The chief settlement, Torgna, holds 506 souls amid temperate-rainforest.
                                                                         
                                                                         
                                                o                        
-                     o       o  o                                o      
-                 o o  o               o  o  o   o                       
-                 o       o  o  o o  o            o          o   o       
-                     o                 o  o  o           o     o  o     
-                 o     o  o    o               o       o    o           
-                                                          o       o o   
-                 o  o   o    o                    o  o         o        
-                      o    o                        o               o   
-                   o    o                        o               @    o 
+                     o       o  o                                       
+                 o o  o              o  o  o    o                       
+                 o        o   o  o  o         o  o          o    o      
+                     o  o              o o  o           o          o    
+                  o        o   o               o o    o       o         
+                o      o o                                 o      o o   
+                   o  o   o  o                    o  o         o        
+                  o                                                o    
+                     o  o                         o o            @    o 
                                                                    o    
-                                                o                o     o
+                                                               o       o
                                                                         
                                                                         
                                                                         
