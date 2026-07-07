@@ -17,7 +17,7 @@ pub struct SiteInput {
     pub position: [f64; 3],
     /// Whether the cell is habitable (land, water, tolerable season).
     pub habitable: bool,
-    /// Freshwater availability in `[0, 1]` (drainage/coast/moisture, at root).
+    /// Freshwater availability in `[0, 1]` (drainage/moisture, at root).
     pub freshwater: f64,
     /// Whether the cell borders the ocean.
     pub coastal: bool,

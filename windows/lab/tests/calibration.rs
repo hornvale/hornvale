@@ -158,3 +158,27 @@ fn head_deity_is_eternal_exactly_when_tidally_locked() {
         );
     }
 }
+
+#[test]
+fn flagships_are_sometimes_inland_and_sometimes_coastal() {
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let coastal_i = idx("flagship-coastal");
+    let (mut coastal, mut inland) = (0u32, 0u32);
+    for row in &result.rows {
+        match row.values[coastal_i] {
+            MetricValue::Flag(true) => coastal += 1,
+            MetricValue::Flag(false) => inland += 1,
+            _ => {}
+        }
+    }
+    // Campaign Y2-0: seawater is not freshwater. Before the fix every
+    // flagship was coastal (2,000/2,000 censused worlds); after it, both
+    // kinds must occur. Task 2 pins the exact counts.
+    assert!(
+        inland > 0,
+        "placement degeneracy: all {coastal} flagships coastal"
+    );
+    assert!(coastal > 0, "overcorrection: all {inland} flagships inland");
+}
