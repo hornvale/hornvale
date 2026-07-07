@@ -13,16 +13,19 @@ The cascade, in dependency order, with its current state:
 |---|---|---|---|
 | [Astronomy](./astronomy.md) | a sun that never sets | — | phenomena (the sky) |
 | [Climate](./climate.md) | uniform mildness → banded climate + biomes (tier 1) | — (tier 0); elevation, sea level, seafloor, and the sky's insolation/obliquity/rotation (tier 1) | phenomena (the air); the biome + habitability field (tier 1) |
-| [Terrain](./terrain.md) | one hand-placed vale → tectonic globe (tier 1) | — | place facts; the tectonic globe's elevation, boundary, and unrest fields (tier 1) |
-| [Settlement](./settlement.md) | one goblin village | a place to stand | settlement facts |
-| [Culture](./culture.md) | a fixed caste ladder | a village to structure | caste facts |
+| [Terrain](./terrain.md) | one hand-placed vale → tectonic globe (tier 1) | — | place facts; the tectonic globe's elevation, boundary, unrest, and drainage fields (tier 1) |
+| [Settlement](./settlement.md) | one goblin village → a scatter placed by suitability (tier 1, the Vale retired) | the globe's habitability, freshwater, coast, temperature, and hostility, cell by cell | settlement facts for every placed site, one of them the flagship |
+| [Culture](./culture.md) | a fixed caste ladder → subsistence + emergent structure (tier 1) | the flagship's environment (biome, coast, surplus, population, threat) | subsistence + caste facts on the flagship |
 | [Religion](./religion.md) | one belief | **phenomena only** | belief facts |
 
 Two things about this table are load-bearing. First, the *Consumes* column
-never names a domain — settlement consumes "a place to stand," not "terrain."
-Wiring a specific place to a specific village happens in one file, the
-composition root, which is the only place in the codebase where all domains
-meet. Second, religion's row is the whole thesis in miniature: it consumes
+never names a domain — settlement consumes "habitability, freshwater, coast,
+temperature, and hostility, cell by cell," not "terrain and climate," and
+culture consumes "the flagship's environment," not "settlement." Wiring
+specific fields to a specific settlement, and a specific settlement to a
+specific society, happens in one file, the composition root, which is the
+only place in the codebase where all domains meet. Second, religion's row is
+the whole thesis in miniature: it consumes
 phenomena and nothing else, so the same religion code that mythologizes
 today's changeless sun will mythologize Campaign 2's moons without being
 edited.

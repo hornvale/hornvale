@@ -266,3 +266,79 @@ Seeds 0..500 × 1 pin set(s); 500 rows; 0 refusals.
 | tropical-seasonal-forest | 82 | 16.4% |
 | tundra | 24 | 4.8% |
 
+### settlement-count — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 10) | 10 | 2.0% |
+| [10, 20) | 18 | 3.6% |
+| [20, 40) | 90 | 18.0% |
+| [40, 60) | 138 | 27.6% |
+| [60, 80) | 157 | 31.4% |
+| [80, 120) | 87 | 17.4% |
+| >= 120 | 0 | 0.0% |
+
+### mean-population — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 100) | 0 | 0.0% |
+| [100, 200) | 0 | 0.0% |
+| [200, 300) | 28 | 5.6% |
+| [300, 400) | 429 | 85.8% |
+| [400, 500) | 43 | 8.6% |
+| >= 500 | 0 | 0.0% |
+
+### flagship-subsistence — default
+
+| value | count | share |
+|---|---|---|
+| farming | 336 | 67.2% |
+| fishing | 164 | 32.8% |
+
+### flagship-biome — default
+
+| value | count | share |
+|---|---|---|
+| alpine | 46 | 9.2% |
+| shrubland | 114 | 22.8% |
+| taiga | 54 | 10.8% |
+| temperate-forest | 209 | 41.8% |
+| temperate-grassland | 5 | 1.0% |
+| temperate-rainforest | 67 | 13.4% |
+| tropical-rainforest | 1 | 0.2% |
+| tundra | 4 | 0.8% |
+
+### flagship-coastal — default
+
+| value | count | share |
+|---|---|---|
+| true | 500 | 100.0% |
+| false | 0 | 0.0% |
+
+### flagship-structure-size — default
+
+| value | count | share |
+|---|---|---|
+| < 1 | 0 | 0.0% |
+| [1, 2) | 0 | 0.0% |
+| [2, 3) | 183 | 36.6% |
+| [3, 4) | 124 | 24.8% |
+| [4, 5) | 2 | 0.4% |
+| [5, 6) | 191 | 38.2% |
+| >= 6 | 0 | 0.0% |
+
+### endorheic-coverage — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 0.02) | 1 | 0.2% |
+| [0.02, 0.05) | 9 | 1.8% |
+| [0.05, 0.1) | 19 | 3.8% |
+| [0.1, 0.2) | 52 | 10.4% |
+| [0.2, 0.3) | 32 | 6.4% |
+| >= 0.3 | 387 | 77.4% |
+

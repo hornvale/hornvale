@@ -104,7 +104,10 @@ The chief settlement, Torgna, holds 506 souls amid temperate-rainforest.
 
 The goblin village of **Torgna**, population 506.
 
-Castes, lowest to highest: slave, fighter, cook, shaman, chief.
+Castes, lowest to highest: slave, farmer, artisan, shaman, chief.
+
+Torgna lives by farming.
+Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 
 ## The Gods
 

@@ -16,7 +16,6 @@
 | `is-place` | yes | subject is a traversable place |
 | `is-settlement` | yes | subject is a settlement |
 | `latitude` | yes | settlement latitude, degrees |
-| `located-in` | no | spatial containment |
 | `longitude` | yes | settlement longitude, degrees |
 | `moon-count` | yes | how many moons the anchor world has |
 | `moon-period-std` | no | orbital period of a moon, in standard days |
@@ -28,8 +27,10 @@
 | `population` | yes | population of a settlement |
 | `scenario-pin` | no | an experimenter-supplied pin string conditioning genesis |
 | `sea-level-m` | yes | sea level in meters |
+| `settlement-pin` | no | a settlement scenario pin, round-trippable |
 | `sky-provider` | yes | which astronomy provider this world uses (constant or generated) |
 | `star-class` | yes | the host star's descriptive spectral class |
+| `subsistence` | yes | a settlement's subsistence mode |
 | `tenet` | yes | the tenet text of a belief |
 | `terrain-note` | no | a note recorded during tectonic genesis |
 | `terrain-pin` | no | a terrain scenario pin, round-trippable |
