@@ -1,0 +1,5 @@
+{ "name": "census-of-faiths",
+  "description": "The full Census of Faiths: pantheon size, cult form, verticality, and head-deity periodicity over 10,000 worlds — the verticality and head-deity calibrations at author-time scale.",
+  "seeds": { "from": 0, "count": 10000 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": "all" }
