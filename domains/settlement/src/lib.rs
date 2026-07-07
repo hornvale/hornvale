@@ -59,6 +59,14 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "settlement/placement",
             "per-settlement population against carrying capacity",
         ),
+        (
+            "settlement/kobold/name",
+            "per-settlement generated name, kobold stream (species-qualified; goblin keeps settlement/name)",
+        ),
+        (
+            "settlement/kobold/population",
+            "per-settlement population, kobold stream (species-qualified; goblin keeps settlement/placement)",
+        ),
     ]
 }
 
@@ -112,6 +120,48 @@ pub fn draw_population(seed: hornvale_kernel::Seed, salt: u64, suitability: f64)
         .stream();
     let base = 40.0 + 460.0 * suitability.clamp(0.0, 1.0); // 40..500 by suitability
     let jitter = 0.75 + 0.5 * stream.next_f64(); // x[0.75, 1.25]
+    (base * jitter).round() as u32
+}
+
+/// Generate a settlement name for a non-goblin species from its own labeled
+/// stream (`settlement/<species>/name`) and its own syllable pool. Goblin
+/// names keep `generate_name` and the legacy label untouched.
+pub fn generate_species_name(
+    seed: hornvale_kernel::Seed,
+    species: &str,
+    syllables: &[&str],
+    salt: u64,
+) -> String {
+    let mut stream = seed
+        .derive(streams::ROOT)
+        .derive(species)
+        .derive(streams::NAME)
+        .derive(&salt.to_string())
+        .stream();
+    let count = stream.range_u32(2, 3);
+    let raw: String = (0..count)
+        .map(|_| *stream.pick(syllables).expect("syllable pool is non-empty"))
+        .collect();
+    format!("{}{}", raw[..1].to_uppercase(), &raw[1..])
+}
+
+/// Draw a non-goblin settlement's population from its species-qualified
+/// stream (`settlement/<species>/population`), same capacity curve as the
+/// goblin draw.
+pub fn draw_species_population(
+    seed: hornvale_kernel::Seed,
+    species: &str,
+    salt: u64,
+    suitability: f64,
+) -> u32 {
+    let mut stream = seed
+        .derive(streams::ROOT)
+        .derive(species)
+        .derive("population")
+        .derive(&salt.to_string())
+        .stream();
+    let base = 40.0 + 460.0 * suitability.clamp(0.0, 1.0);
+    let jitter = 0.75 + 0.5 * stream.next_f64();
     (base * jitter).round() as u32
 }
 
@@ -211,6 +261,38 @@ mod tests {
     fn stream_labels_declare_every_derivation() {
         let labels: Vec<&str> = stream_labels().iter().map(|(l, _)| *l).collect();
         for expected in ["settlement", "settlement/name", "settlement/placement"] {
+            assert!(labels.contains(&expected), "missing {expected}");
+        }
+    }
+
+    #[test]
+    fn species_name_draws_are_disjoint_from_goblin_draws() {
+        // Kobold names come from a different labeled stream AND pool; the
+        // legacy goblin path must be untouched by their existence.
+        let goblin_before = generate_name(Seed(9), 7);
+        let kobold = generate_species_name(Seed(9), "kobold", &["zik", "thur", "kra"], 7);
+        let goblin_after = generate_name(Seed(9), 7);
+        assert_eq!(goblin_before, goblin_after);
+        assert_ne!(kobold, goblin_before);
+        assert!(kobold.chars().next().unwrap().is_uppercase());
+    }
+
+    #[test]
+    fn species_population_is_deterministic_and_species_scoped() {
+        let a = draw_species_population(Seed(3), "kobold", 5, 0.5);
+        let b = draw_species_population(Seed(3), "kobold", 5, 0.5);
+        let g = draw_population(Seed(3), 5, 0.5);
+        assert_eq!(a, b);
+        // Different labeled stream ⇒ (almost surely) different jitter; assert
+        // determinism and range, not inequality with the goblin draw.
+        assert!((30..=625).contains(&a));
+        let _ = g;
+    }
+
+    #[test]
+    fn stream_labels_declare_the_kobold_streams() {
+        let labels: Vec<&str> = stream_labels().iter().map(|(l, _)| *l).collect();
+        for expected in ["settlement/kobold/name", "settlement/kobold/population"] {
             assert!(labels.contains(&expected), "missing {expected}");
         }
     }

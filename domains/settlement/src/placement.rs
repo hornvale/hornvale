@@ -7,6 +7,28 @@
 
 use hornvale_kernel::CellId;
 
+/// The four suitability weights; per-species values are derived at the
+/// composition root from the psychology vector (spec §4).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SuitabilityWeights {
+    /// Weight on freshwater availability.
+    pub freshwater: f64,
+    /// Weight on coastal access.
+    pub coast: f64,
+    /// Weight on temperance.
+    pub temperance: f64,
+    /// Penalty weight on hostility.
+    pub hostility: f64,
+}
+
+/// The goblin-baseline weights — the pre-species formula, unchanged.
+pub const BASELINE_WEIGHTS: SuitabilityWeights = SuitabilityWeights {
+    freshwater: 0.45,
+    coast: 0.20,
+    temperance: 0.35,
+    hostility: 0.50,
+};
+
 /// The bare per-cell inputs the composition root assembles from terrain and
 /// climate. Settlement never imports those domains; it sees only this.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -38,19 +60,25 @@ pub struct Placement {
     pub suitability: f64,
 }
 
+/// Suitability under explicit weights; `None` if uninhabitable.
+pub fn suitability_weighted(site: &SiteInput, w: &SuitabilityWeights) -> Option<f64> {
+    if !site.habitable {
+        return None;
+    }
+    let temperance = (1.0 - (site.temperature_c - 15.0).abs() / 15.0).clamp(0.0, 1.0);
+    let coast = if site.coastal { 1.0 } else { 0.0 };
+    let raw = w.freshwater * site.freshwater.clamp(0.0, 1.0)
+        + w.coast * coast
+        + w.temperance * temperance
+        - w.hostility * site.hostility.clamp(0.0, 1.0);
+    Some(raw.clamp(0.0, 1.0))
+}
+
 /// Score a site's suitability for settlement in `[0, 1]`; `None` if the cell
 /// is uninhabitable. Watered, coastal, temperate, calm cells score high;
 /// dry, inland, extreme, hostile cells score low.
 pub fn suitability(site: &SiteInput) -> Option<f64> {
-    if !site.habitable {
-        return None;
-    }
-    // Temperance: a triangular preference peaking at 15 °C, zero by 0/30 °C.
-    let temperance = (1.0 - (site.temperature_c - 15.0).abs() / 15.0).clamp(0.0, 1.0);
-    let coast = if site.coastal { 1.0 } else { 0.0 };
-    let raw = 0.45 * site.freshwater.clamp(0.0, 1.0) + 0.20 * coast + 0.35 * temperance
-        - 0.5 * site.hostility.clamp(0.0, 1.0);
-    Some(raw.clamp(0.0, 1.0))
+    suitability_weighted(site, &BASELINE_WEIGHTS)
 }
 
 /// Dot product of two 3-vectors.
@@ -58,34 +86,53 @@ fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
-/// Place a spaced scatter of settlements. Rank habitable sites by suitability
-/// (descending; ties by ascending `CellId`), then greedily accept a site only
-/// if it is at least `min_separation_dot`-far (smaller dot = farther) from
-/// every already-placed settlement and its suitability is at least `floor`.
-/// The first element is the flagship (global suitability argmax).
-pub fn place(sites: &[SiteInput], min_separation_dot: f64, floor: f64) -> Vec<Placement> {
-    let mut scored: Vec<(SiteInput, f64)> = sites
-        .iter()
-        .filter_map(|s| suitability(s).map(|score| (*s, score)))
-        .filter(|(_, score)| *score >= floor)
-        .collect();
-    scored.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cell.0.cmp(&b.0.cell.0)));
-
-    let mut placed: Vec<Placement> = Vec::new();
-    for (site, score) in scored {
+/// Place a spaced scatter from pre-scored, tagged sites (tag = species index
+/// at the root). Sort by score descending, ties by ascending cell then
+/// ascending tag; greedily accept sites at least `min_separation_dot`-far
+/// from EVERY already-placed site regardless of tag, at or above `floor`.
+pub fn place_tagged(
+    scored: &[(SiteInput, f64, u32)],
+    min_separation_dot: f64,
+    floor: f64,
+) -> Vec<(Placement, u32)> {
+    let mut ranked: Vec<&(SiteInput, f64, u32)> =
+        scored.iter().filter(|(_, s, _)| *s >= floor).collect();
+    ranked.sort_by(|a, b| {
+        b.1.total_cmp(&a.1)
+            .then(a.0.cell.0.cmp(&b.0.cell.0))
+            .then(a.2.cmp(&b.2))
+    });
+    let mut placed: Vec<(Placement, u32)> = Vec::new();
+    for (site, score, tag) in ranked {
         let too_close = placed
             .iter()
-            .any(|p| dot(p.position, site.position) > min_separation_dot);
+            .any(|(p, _)| dot(p.position, site.position) > min_separation_dot);
         if too_close {
             continue;
         }
-        placed.push(Placement {
-            cell: site.cell,
-            position: site.position,
-            suitability: score,
-        });
+        placed.push((
+            Placement {
+                cell: site.cell,
+                position: site.position,
+                suitability: *score,
+            },
+            *tag,
+        ));
     }
     placed
+}
+
+/// Place a spaced scatter under baseline weights (the original single-people
+/// path) — a tag-0 wrapper over `place_tagged`.
+pub fn place(sites: &[SiteInput], min_separation_dot: f64, floor: f64) -> Vec<Placement> {
+    let scored: Vec<(SiteInput, f64, u32)> = sites
+        .iter()
+        .filter_map(|s| suitability(s).map(|score| (*s, score, 0u32)))
+        .collect();
+    place_tagged(&scored, min_separation_dot, floor)
+        .into_iter()
+        .map(|(p, _)| p)
+        .collect()
 }
 
 #[cfg(test)]
@@ -168,5 +215,46 @@ mod tests {
         ];
         let sep = (12.0_f64.to_radians()).cos();
         assert_eq!(place(&sites, sep, 0.25), place(&sites, sep, 0.25));
+    }
+
+    #[test]
+    fn weighted_suitability_is_identity_at_baseline_weights() {
+        let s = site(1, [1.0, 0.0, 0.0], true, 0.7, true, 15.0, 0.2);
+        assert_eq!(suitability(&s), suitability_weighted(&s, &BASELINE_WEIGHTS));
+    }
+
+    #[test]
+    fn place_tagged_with_one_tag_matches_place_exactly() {
+        let sites = vec![
+            site(10, [1.0, 0.0, 0.0], true, 0.9, true, 15.0, 0.0),
+            site(12, [-1.0, 0.0, 0.0], true, 0.85, true, 15.0, 0.0),
+            site(13, [0.0, 1.0, 0.0], true, 0.05, false, 40.0, 0.9),
+        ];
+        let sep = (12.0_f64.to_radians()).cos();
+        let scored: Vec<(SiteInput, f64, u32)> = sites
+            .iter()
+            .filter_map(|s| suitability(s).map(|sc| (*s, sc, 0u32)))
+            .collect();
+        let tagged: Vec<Placement> = place_tagged(&scored, sep, 0.25)
+            .into_iter()
+            .map(|(p, _)| p)
+            .collect();
+        assert_eq!(tagged, place(&sites, sep, 0.25));
+    }
+
+    #[test]
+    fn tagged_placement_enforces_spacing_across_tags() {
+        let close_a = [1.0, 0.0, 0.0];
+        let close_b = [0.9998, 0.02, 0.0]; // ~1.1° away
+        let a = site(1, close_a, true, 0.9, true, 15.0, 0.0);
+        let b = site(2, close_b, true, 0.8, true, 15.0, 0.0);
+        let sep = (12.0_f64.to_radians()).cos();
+        let placed = place_tagged(&[(a, 0.9, 0), (b, 0.8, 1)], sep, 0.25);
+        assert_eq!(
+            placed.len(),
+            1,
+            "cross-tag spacing must exclude the close site"
+        );
+        assert_eq!(placed[0].1, 0, "higher score wins regardless of tag");
     }
 }
