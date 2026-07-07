@@ -36,6 +36,7 @@ impl WorldView {
             pins,
             SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
+            &hornvale_worldgen::SettlementPins::default(),
         )?;
         let sky = sky_of(&world)?;
         let Sky::Generated(sky) = sky else {

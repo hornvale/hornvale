@@ -292,6 +292,7 @@ mod tests {
             &SkyPins::default(),
             SkyChoice::Constant,
             &hornvale_terrain::TerrainPins::default(),
+            &world_builder::SettlementPins::default(),
         )
         .unwrap();
         let mut out = Vec::new();
@@ -316,6 +317,7 @@ mod tests {
             &SkyPins::default(),
             SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
+            &world_builder::SettlementPins::default(),
         )
         .unwrap();
         let mut out = Vec::new();
@@ -328,7 +330,10 @@ mod tests {
     fn village_and_castes_and_beliefs_report() {
         let out = drive("village\ncastes\nbeliefs\nquit\n");
         assert!(out.contains("population"));
-        assert!(out.contains("shaman"));
+        // Castes are emergent now (Campaign 4b): every settlement grows at
+        // least a worker and a chief (`structure`'s invariant), but which
+        // higher roles appear depends on its actual environment.
+        assert!(out.contains("chief"));
         assert!(out.contains("1."));
     }
 
@@ -363,6 +368,7 @@ mod tests {
             &SkyPins::default(),
             SkyChoice::Constant,
             &hornvale_terrain::TerrainPins::default(),
+            &world_builder::SettlementPins::default(),
         )
         .unwrap();
         let village = hornvale_settlement::village_info(&world).expect("a village exists");
@@ -418,6 +424,7 @@ mod tests {
             &SkyPins::default(),
             SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
+            &world_builder::SettlementPins::default(),
         )
         .unwrap();
         let mut out = Vec::new();

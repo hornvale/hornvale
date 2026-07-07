@@ -20,6 +20,9 @@ use hornvale_kernel::{
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
 use std::sync::OnceLock;
 
+pub mod settlement_pins;
+pub use settlement_pins::SettlementPins;
+
 /// Errors from building a world.
 #[derive(Debug)]
 pub enum BuildError {
@@ -196,6 +199,40 @@ fn seafloor_feature(boundary: Option<hornvale_terrain::CellBoundary>) -> Seafloo
     }
 }
 
+/// Map a climate biome into culture's coarse biome class: total over every
+/// biome, so culture's subsistence function is always defined. Culture
+/// imports no domain (spec §2.6); this map lives only at the composition
+/// root. Forest biomes (and taiga) farm; grassland/savanna farm or herd;
+/// desert/shrubland herd; tundra forages; alpine, ice, and every marine
+/// biome are barren (defensively — settlements never sit on open ocean, but
+/// the map must still be total).
+pub fn biome_class(biome: hornvale_climate::Biome) -> hornvale_culture::BiomeClass {
+    use hornvale_climate::Biome;
+    use hornvale_culture::BiomeClass;
+    match biome {
+        Biome::TropicalRainforest
+        | Biome::TropicalSeasonalForest
+        | Biome::TemperateRainforest
+        | Biome::TemperateForest
+        | Biome::Taiga => BiomeClass::Forest,
+        Biome::Savanna | Biome::TemperateGrassland => BiomeClass::Grassland,
+        Biome::Desert | Biome::Shrubland => BiomeClass::Arid,
+        Biome::Tundra => BiomeClass::Cold,
+        Biome::Alpine
+        | Biome::Ice
+        | Biome::SeaIce
+        | Biome::CoralReef
+        | Biome::KelpForest
+        | Biome::HydrothermalVent
+        | Biome::HadalTrench
+        | Biome::Upwelling
+        | Biome::Epipelagic
+        | Biome::Mesopelagic
+        | Biome::Bathypelagic
+        | Biome::Abyssal => BiomeClass::Barren,
+    }
+}
+
 /// The scalar stellar inputs climate needs, derived from this world's sky.
 /// Constant-sky worlds get an Earth baseline so the biome map exists for
 /// every world (spec: the coarse globe is generated for all).
@@ -303,14 +340,16 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
 /// Build a complete world: mint the world entity and record its sky choice
 /// and scenario pins first; run sky genesis for `Generated`; commit the
 /// terrain pins and run tectonic genesis; then assemble per-cell site inputs
-/// from terrain and climate, place a spaced scatter of settlements, commit
-/// each as its own place entity, and run the culture/religion cascade on the
-/// flagship (the most-suitable settlement, placed first).
+/// from terrain and climate, place a spaced scatter of settlements (honoring
+/// the settlement pins' suitability floor), commit each as its own place
+/// entity, and run the culture/religion cascade on the flagship (the
+/// most-suitable settlement, placed first) from its actual environment.
 pub fn build_world(
     seed: Seed,
     pins: &SkyPins,
     sky: SkyChoice,
     terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
 ) -> Result<World, BuildError> {
     let mut world = World::new(seed);
     register_all(&mut world.registry)?;
@@ -354,6 +393,28 @@ pub fn build_world(
         .map_err(BuildError::TerrainGenesis)?;
     hornvale_terrain::facts::genesis(&mut world, world_entity, &terrain_outcome)?;
 
+    // Settlement pins are never reconstructed (settlements persist as their
+    // own committed facts, not re-derived from a provider like sky/terrain);
+    // record them on their own subject purely for round-trip fidelity and
+    // scout-style inspection, so they never collide with sky's own
+    // scenario-pin facts on `world_entity`. Minted only when there is
+    // something to record, so unpinned worlds keep their entity numbering
+    // (a save-format-adjacent stability every other test relies on).
+    let settlement_pin_strings = settlement_pins.pin_strings();
+    if !settlement_pin_strings.is_empty() {
+        let settlement_pin_subject = world.ledger.mint_entity();
+        for pin_string in settlement_pin_strings {
+            world.ledger.commit(
+                scenario_fact(
+                    settlement_pin_subject,
+                    facts::SCENARIO_PIN,
+                    Value::Text(pin_string),
+                ),
+                &world.registry,
+            )?;
+        }
+    }
+
     // Reconstruct terrain + climate, assemble per-cell site inputs, place a
     // spaced scatter of settlements, and commit each as its own place entity.
     let terrain = terrain_of(&world)?;
@@ -384,7 +445,8 @@ pub fn build_world(
         })
         .collect();
     let min_sep = (12.0_f64.to_radians()).cos();
-    let placements = hornvale_settlement::place(&sites, min_sep, 0.25);
+    let floor = settlement_pins.min_suitability.unwrap_or(0.25);
+    let placements = hornvale_settlement::place(&sites, min_sep, floor);
     let placed: Vec<hornvale_settlement::PlacedSettlement> = placements
         .iter()
         .map(|p| {
@@ -405,7 +467,21 @@ pub fn build_world(
         .collect();
     let ids = hornvale_settlement::genesis(&mut world, &placed)?;
     if let Some(&flagship) = ids.first() {
-        hornvale_culture::genesis(&mut world, flagship)?;
+        let fcell = placements[0].cell;
+        let coastal = geo.neighbors(fcell).iter().any(|n| terrain.is_ocean(*n));
+        let moisture = climate.moisture_at(fcell);
+        let class = biome_class(climate.biome_at(fcell));
+        let subsistence = hornvale_culture::subsistence(class, coastal);
+        let surplus = (hornvale_culture::fertility(class) * moisture).clamp(0.0, 1.0);
+        let threat = terrain.unrest_at(fcell).clamp(0.0, 1.0);
+        let population = placed[0].population;
+        let env = hornvale_culture::EnvSummary {
+            subsistence,
+            surplus,
+            population,
+            threat,
+        };
+        hornvale_culture::genesis(&mut world, flagship, &env)?;
         let seen = observed_phenomena(&world, 0.0)?;
         hornvale_religion::genesis(&mut world, flagship, &seen)?;
     }
@@ -429,6 +505,23 @@ pub fn settlement_lines(world: &World) -> Result<Vec<String>, BuildError> {
         ));
     }
     Ok(lines)
+}
+
+/// Headline culture lines for the almanac's People section: the flagship's
+/// subsistence mode, then a one-line summary of its emergent role structure.
+/// Empty when there is no flagship (an empty world).
+pub fn culture_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    let Some(village) = hornvale_settlement::village_info(world) else {
+        return Ok(Vec::new());
+    };
+    let Some(subsistence) = hornvale_culture::subsistence_of(world, village.id) else {
+        return Ok(Vec::new());
+    };
+    let castes = hornvale_culture::castes_of(world, village.id);
+    Ok(vec![
+        format!("{} lives by {subsistence}.", village.name),
+        format!("Its roles, lowest to highest: {}.", castes.join(", ")),
+    ])
 }
 
 /// The sky at `time`, from whichever astronomy provider this world uses.
@@ -557,6 +650,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         night_sky: night_sky_line(world)?,
         genesis_notes: genesis_notes(world)?,
         settlement_lines: settlement_lines(world)?,
+        culture_lines: culture_lines(world)?,
     })
 }
 
@@ -570,6 +664,7 @@ mod tests {
             &SkyPins::default(),
             SkyChoice::Constant,
             &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
         )
         .unwrap()
     }
@@ -580,6 +675,7 @@ mod tests {
             &SkyPins::default(),
             SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
         )
         .unwrap()
     }
@@ -601,10 +697,7 @@ mod tests {
         let village = hornvale_settlement::village_info(&world).expect("flagship settlement");
         assert!(village.population >= 40);
         // The cascade still runs on the flagship.
-        assert_eq!(
-            hornvale_culture::castes_of(&world, village.id).len(),
-            hornvale_culture::CASTES.len()
-        );
+        assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
         assert!(!hornvale_religion::beliefs_of(&world).is_empty());
     }
 
@@ -620,6 +713,7 @@ mod tests {
             },
             SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
         )
         .unwrap();
         let cells = |w: &World| {
@@ -652,10 +746,7 @@ mod tests {
         let places = hornvale_terrain::places(&world);
         assert!(!places.is_empty());
         let village = hornvale_settlement::village_info(&world).expect("village");
-        assert_eq!(
-            hornvale_culture::castes_of(&world, village.id).len(),
-            hornvale_culture::CASTES.len()
-        );
+        assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
         assert_eq!(hornvale_religion::beliefs_of(&world).len(), 1);
     }
 
@@ -753,6 +844,7 @@ mod tests {
             &pins,
             SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
         )
         .unwrap();
         let lines = calendar_lines(&world).unwrap();
@@ -771,6 +863,7 @@ mod tests {
             &pins,
             SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
         )
         .unwrap();
         let lines = calendar_lines(&world).unwrap();
@@ -904,7 +997,14 @@ mod tests {
             ocean_fraction: Some(0.7),
             ..hornvale_terrain::TerrainPins::default()
         };
-        let world = build_world(Seed(42), &SkyPins::default(), SkyChoice::Constant, &pins).unwrap();
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Constant,
+            &pins,
+            &SettlementPins::default(),
+        )
+        .unwrap();
         let terrain = terrain_of(&world).unwrap();
         assert_eq!(terrain.globe().plates.len(), 12);
         let summary = hornvale_terrain::summarize(terrain.globe());
@@ -961,6 +1061,7 @@ mod tests {
             &SkyPins::default(),
             SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
         )
         .unwrap();
         let locked = build_world(
@@ -971,6 +1072,7 @@ mod tests {
             },
             SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
         )
         .unwrap();
         // Same land seed, different sky → different biome map.
@@ -992,5 +1094,122 @@ mod tests {
         let world = constant(42);
         let climate = climate_of(&world).unwrap();
         assert!(climate.geosphere().cell_count() > 0);
+    }
+
+    /// The flagship's cell, read back from its committed `CELL_ID` fact
+    /// (independent of `placements`, which build_world already consumed).
+    fn flagship_cell(world: &World, village_id: EntityId) -> hornvale_kernel::CellId {
+        match world
+            .ledger
+            .value_of(village_id, hornvale_settlement::CELL_ID)
+        {
+            Some(Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+            _ => panic!("flagship has no cell-id fact"),
+        }
+    }
+
+    #[test]
+    fn flagship_has_a_non_empty_subsistence_and_castes() {
+        let world = generated(42);
+        let village = hornvale_settlement::village_info(&world).expect("flagship settlement");
+        assert!(hornvale_culture::subsistence_of(&world, village.id).is_some());
+        assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
+    }
+
+    #[test]
+    fn flagship_castes_match_the_structure_recomputed_from_its_environment() {
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let village = hornvale_settlement::village_info(&world).expect("flagship settlement");
+        let cell = flagship_cell(&world, village.id);
+
+        let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
+        let moisture = climate.moisture_at(cell);
+        let class = biome_class(climate.biome_at(cell));
+        let subsistence = hornvale_culture::subsistence(class, coastal);
+        let surplus = (hornvale_culture::fertility(class) * moisture).clamp(0.0, 1.0);
+        let threat = terrain.unrest_at(cell).clamp(0.0, 1.0);
+        let env = hornvale_culture::EnvSummary {
+            subsistence,
+            surplus,
+            population: village.population,
+            threat,
+        };
+
+        assert_eq!(
+            hornvale_culture::castes_of(&world, village.id),
+            hornvale_culture::structure(&env)
+        );
+        assert_eq!(
+            hornvale_culture::subsistence_of(&world, village.id).as_deref(),
+            Some(subsistence.name())
+        );
+    }
+
+    #[test]
+    fn locked_rotation_changes_the_flagship_cascade() {
+        // Seed 7 (not 42: at 42 the globally best cell happens to land in
+        // the same class under both regimes, so the cascade coincides).
+        use hornvale_astronomy::RotationPin;
+        let spinning = generated(7);
+        let locked = build_world(
+            Seed(7),
+            &SkyPins {
+                rotation: Some(RotationPin::Locked),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let cascade_state = |w: &World| {
+            hornvale_settlement::village_info(w).map(|v| {
+                (
+                    hornvale_culture::subsistence_of(w, v.id),
+                    hornvale_culture::castes_of(w, v.id),
+                )
+            })
+        };
+        assert_ne!(
+            cascade_state(&spinning),
+            cascade_state(&locked),
+            "a different sky must enrich the flagship's environment differently"
+        );
+    }
+
+    #[test]
+    fn min_suitability_pin_reduces_the_settlement_count() {
+        let default_world = generated(42);
+        let pinned_world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins {
+                min_suitability: Some(0.5),
+            },
+        )
+        .unwrap();
+        let default_count = hornvale_terrain::places(&default_world).len();
+        let pinned_count = hornvale_terrain::places(&pinned_world).len();
+        assert!(
+            pinned_count < default_count,
+            "raising the suitability floor must reduce the settlement count: {pinned_count} >= {default_count}"
+        );
+    }
+
+    #[test]
+    fn culture_lines_name_the_flagship_and_its_subsistence() {
+        let world = generated(42);
+        let village = hornvale_settlement::village_info(&world).expect("flagship settlement");
+        let subsistence =
+            hornvale_culture::subsistence_of(&world, village.id).expect("flagship subsistence");
+        let lines = culture_lines(&world).unwrap();
+        assert!(!lines.is_empty());
+        assert!(lines[0].contains(&village.name));
+        assert!(lines[0].contains(&subsistence));
     }
 }

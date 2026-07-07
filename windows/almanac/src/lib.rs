@@ -40,6 +40,9 @@ pub struct AlmanacContext {
     /// Headline lines describing the world's people: how many settlements,
     /// and the flagship's name, population, and biome.
     pub settlement_lines: Vec<String>,
+    /// The flagship's emergent culture: its subsistence mode and a one-line
+    /// role-structure summary. Empty for worlds with no flagship.
+    pub culture_lines: Vec<String>,
 }
 
 /// Render the one-page world document as markdown. Deterministic: same
@@ -134,6 +137,12 @@ pub fn render(ctx: &AlmanacContext) -> String {
                     ctx.castes.join(", ")
                 ));
             }
+            for line in &ctx.culture_lines {
+                doc.push_str(&format!("{line}\n"));
+            }
+            if !ctx.culture_lines.is_empty() {
+                doc.push('\n');
+            }
         }
     }
 
@@ -199,6 +208,7 @@ mod tests {
             night_sky: None,
             genesis_notes: vec![],
             settlement_lines: vec![],
+            culture_lines: vec![],
         }
     }
 
@@ -231,6 +241,25 @@ mod tests {
     #[test]
     fn render_is_deterministic() {
         assert_eq!(render(&sample_context()), render(&sample_context()));
+    }
+
+    #[test]
+    fn culture_lines_render_under_the_people_section() {
+        let ctx = AlmanacContext {
+            culture_lines: vec![
+                "Bolnar lives by farming.".to_string(),
+                "Its roles, lowest to highest: farmer, chief.".to_string(),
+            ],
+            ..sample_context()
+        };
+        let doc = render(&ctx);
+        let people_pos = doc.find("## The People").unwrap();
+        let culture_pos = doc.find("Bolnar lives by farming.").unwrap();
+        assert!(
+            people_pos < culture_pos,
+            "culture lines belong under The People"
+        );
+        assert!(doc.contains("Its roles, lowest to highest: farmer, chief."));
     }
 
     #[test]

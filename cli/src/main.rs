@@ -46,8 +46,14 @@ const TERRAIN_FLAGS: &str = "\
   [--supercontinent true|false]            cluster the continents into one landmass
 ";
 
+const SETTLEMENT_FLAGS: &str = "\
+  [--min-suitability F]                    pin the settlement placement floor (0-1)
+";
+
 fn usage() -> String {
-    format!("{USAGE}{SKY_FLAGS}\nterrain flags (new only):\n{TERRAIN_FLAGS}")
+    format!(
+        "{USAGE}{SKY_FLAGS}\nterrain flags (new only):\n{TERRAIN_FLAGS}\nsettlement flags (new only):\n{SETTLEMENT_FLAGS}"
+    )
 }
 
 fn main() -> ExitCode {
@@ -130,6 +136,20 @@ fn parse_terrain_args(args: &[String]) -> Result<hornvale_terrain::TerrainPins, 
     Ok(pins)
 }
 
+/// Parse the settlement flags into pins. One parser: every flag becomes a
+/// `key=value` pin string and folds through `world_builder`'s settlement pin
+/// parser, so pin-string syntax never drifts from flag syntax (mirrors
+/// `parse_terrain_args`).
+fn parse_settlement_args(args: &[String]) -> Result<world_builder::SettlementPins, String> {
+    let mut pins = world_builder::SettlementPins::default();
+    for (flag, key) in [("--min-suitability", "min-suitability")] {
+        if let Some(value) = flag_value(args, flag) {
+            world_builder::settlement_pins::parse_pin(&format!("{key}={value}"), &mut pins)?;
+        }
+    }
+    Ok(pins)
+}
+
 fn cmd_new(args: &[String]) -> Result<(), String> {
     let seed: u64 = flag_value(args, "--seed")
         .ok_or("new requires --seed <N>")?
@@ -138,7 +158,8 @@ fn cmd_new(args: &[String]) -> Result<(), String> {
     let out = flag_value(args, "--out").unwrap_or("world.json");
     let (pins, sky) = parse_sky_args(args)?;
     let terrain_pins = parse_terrain_args(args)?;
-    let world = world_builder::build_world(Seed(seed), &pins, sky, &terrain_pins)
+    let settlement_pins = parse_settlement_args(args)?;
+    let world = world_builder::build_world(Seed(seed), &pins, sky, &terrain_pins, &settlement_pins)
         .map_err(|e| e.to_string())?;
     world
         .save(std::path::Path::new(out))
@@ -340,6 +361,7 @@ fn cmd_concepts() -> Result<(), String> {
         &SkyPins::default(),
         world_builder::SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
+        &world_builder::SettlementPins::default(),
     )
     .map_err(|e| e.to_string())?;
     print!("{}", concepts::render_concepts(&world.registry));
@@ -426,6 +448,17 @@ mod tests {
         assert_eq!(
             parse_terrain_args(&args(&["new"])).unwrap(),
             hornvale_terrain::TerrainPins::default()
+        );
+    }
+
+    #[test]
+    fn settlement_flags_fold_into_pins() {
+        let a = args(&["new", "--min-suitability", "0.5"]);
+        let pins = parse_settlement_args(&a).unwrap();
+        assert_eq!(pins.min_suitability, Some(0.5));
+        assert_eq!(
+            parse_settlement_args(&args(&["new"])).unwrap(),
+            world_builder::SettlementPins::default()
         );
     }
 
@@ -598,5 +631,10 @@ mod tests {
         assert!(full.contains("--sky"));
         assert!(full.contains("--moons"));
         assert!(full.contains("--neighbor"));
+    }
+
+    #[test]
+    fn usage_mentions_min_suitability() {
+        assert!(usage().contains("--min-suitability"));
     }
 }
