@@ -342,3 +342,36 @@ Seeds 0..500 × 1 pin set(s); 500 rows; 0 refusals.
 | [0.2, 0.3) | 32 | 6.4% |
 | >= 0.3 | 387 | 77.4% |
 
+### pantheon-size — default
+
+| value | count | share |
+|---|---|---|
+| < 1 | 0 | 0.0% |
+| [1, 2) | 22 | 4.4% |
+| [2, 3) | 127 | 25.4% |
+| [3, 4) | 176 | 35.2% |
+| [4, 5) | 128 | 25.6% |
+| [5, 6) | 43 | 8.6% |
+| >= 6 | 4 | 0.8% |
+
+### cult-form — default
+
+| value | count | share |
+|---|---|---|
+| folk | 183 | 36.6% |
+| organized | 317 | 63.4% |
+
+### pantheon-verticality — default
+
+| value | count | share |
+|---|---|---|
+| flat | 307 | 61.4% |
+| ranked | 193 | 38.6% |
+
+### head-deity-periodicity — default
+
+| value | count | share |
+|---|---|---|
+| cyclic | 477 | 95.4% |
+| eternal | 23 | 4.6% |
+

@@ -467,6 +467,65 @@ pub fn registry() -> Vec<Metric> {
                 })
             },
         },
+        Metric {
+            name: "pantheon-size",
+            doc: "Number of beliefs in the world's pantheon; Absent if there are none",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            },
+            extract: |v| {
+                let beliefs = beliefs_of(&v.world);
+                if beliefs.is_empty() {
+                    MetricValue::Absent
+                } else {
+                    MetricValue::Number(beliefs.len() as f64)
+                }
+            },
+        },
+        Metric {
+            name: "cult-form",
+            doc: "The pantheon's shared cult form ('organized' or 'folk'); Absent if there \
+                   are no beliefs",
+            summary: SummaryKind::Categorical,
+            extract: |v| match hornvale_religion::cult_form_of(&v.world) {
+                Some(form) => MetricValue::Text(form),
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "pantheon-verticality",
+            doc: "Whether the flagship pantheon is ranked (a high god presides) or flat; \
+                   Absent if there are no beliefs",
+            summary: SummaryKind::Categorical,
+            extract: |v| {
+                let beliefs = beliefs_of(&v.world);
+                if beliefs.is_empty() {
+                    MetricValue::Absent
+                } else if beliefs.iter().any(|b| b.high_god) {
+                    MetricValue::Text("ranked".to_string())
+                } else {
+                    MetricValue::Text("flat".to_string())
+                }
+            },
+        },
+        Metric {
+            name: "head-deity-periodicity",
+            doc: "Category of the head deity (the most salient belief): 'eternal' if its \
+                   tenet contains 'never', else 'cyclic'; Absent if no beliefs",
+            summary: SummaryKind::Categorical,
+            extract: |v| {
+                let beliefs = beliefs_of(&v.world);
+                if let Some(head) = beliefs.first() {
+                    if head.tenet.contains("never") {
+                        MetricValue::Text("eternal".to_string())
+                    } else {
+                        MetricValue::Text("cyclic".to_string())
+                    }
+                } else {
+                    MetricValue::Absent
+                }
+            },
+        },
     ]
 }
 
@@ -642,8 +701,8 @@ mod tests {
     }
 
     #[test]
-    fn registry_has_twenty_eight_metrics_after_the_census_of_peoples() {
-        assert_eq!(registry().len(), 28);
+    fn registry_has_thirty_two_metrics_after_the_census_of_faiths() {
+        assert_eq!(registry().len(), 32);
     }
 
     #[test]

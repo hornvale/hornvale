@@ -112,3 +112,49 @@ fn flagship_subsistence_matches_biome_and_coastal_columns() {
         );
     }
 }
+
+#[test]
+fn pantheon_verticality_matches_stratification() {
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let (vert_i, size_i) = (idx("pantheon-verticality"), idx("flagship-structure-size"));
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        if matches!(row.values[vert_i], MetricValue::Absent) {
+            continue;
+        }
+        let ranked = matches!(&row.values[vert_i], MetricValue::Text(t) if t == "ranked");
+        let stratified = matches!(&row.values[size_i], MetricValue::Number(n) if *n >= 4.0);
+        assert_eq!(
+            ranked, stratified,
+            "seed {}: verticality calibration violated",
+            row.seed
+        );
+    }
+}
+
+#[test]
+fn head_deity_is_eternal_exactly_when_tidally_locked() {
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let (head_i, lock_i) = (idx("head-deity-periodicity"), idx("tidally-locked"));
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        if matches!(row.values[head_i], MetricValue::Absent) {
+            continue;
+        }
+        let eternal = matches!(&row.values[head_i], MetricValue::Text(t) if t == "eternal");
+        let locked = matches!(row.values[lock_i], MetricValue::Flag(true));
+        assert_eq!(
+            eternal, locked,
+            "seed {}: head-deity calibration violated",
+            row.seed
+        );
+    }
+}

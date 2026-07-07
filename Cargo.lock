@@ -10,6 +10,7 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-climate",
  "hornvale-culture",
+ "hornvale-historiography",
  "hornvale-kernel",
  "hornvale-lab",
  "hornvale-religion",
@@ -48,6 +49,13 @@ dependencies = [
 
 [[package]]
 name = "hornvale-culture"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-historiography"
 version = "0.1.0"
 dependencies = [
  "hornvale-kernel",
