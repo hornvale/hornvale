@@ -5,6 +5,9 @@
 pub mod subsistence;
 pub use subsistence::{BiomeClass, Subsistence, fertility, subsistence};
 
+pub mod structure;
+pub use structure::{EnvSummary, structure};
+
 use hornvale_kernel::{ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World};
 
 /// Predicate relating a settlement to a caste present in it.
