@@ -521,13 +521,6 @@ pub fn build_world(
         .collect();
     let ids = hornvale_settlement::genesis(&mut world, &placed)?;
 
-    // Species entities AFTER settlements (entity-id stability, spec §8),
-    // then the peopled-by link for every settlement.
-    hornvale_species::genesis(&mut world)?;
-    for (id, (_, tag)) in ids.iter().zip(placements.iter()) {
-        hornvale_species::people(&mut world, *id, species_set[*tag as usize].name)?;
-    }
-
     // Per-species flagship culture; religion on the goblin flagship only.
     for (tag, def) in species_set.iter().enumerate() {
         let Some(pos) = placements.iter().position(|(_, t)| *t as usize == tag) else {
@@ -570,6 +563,16 @@ pub fn build_world(
             let seen = observed_phenomena(&world, 0.0)?;
             hornvale_religion::genesis(&mut world, flagship, &seen, &society)?;
         }
+    }
+
+    // Species entities AFTER every pre-species subsystem (settlements,
+    // culture, religion) — entity-id stability, spec §8: a goblin-pinned
+    // world must mint the exact same ids for pre-C1 entities as pre-species
+    // main, so the new, Y2-1-only entities are appended last rather than
+    // interleaved. Then the peopled-by link for every settlement.
+    hornvale_species::genesis(&mut world)?;
+    for (id, (_, tag)) in ids.iter().zip(placements.iter()) {
+        hornvale_species::people(&mut world, *id, species_set[*tag as usize].name)?;
     }
     Ok(world)
 }
