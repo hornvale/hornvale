@@ -1,8 +1,8 @@
-//! Tier-1 metrics extractors: twenty-one analyzable properties of generated worlds.
+//! Tier-1 metrics extractors: analyzable properties of generated worlds.
 
 use hornvale_astronomy::{Calendar, NeighborClass, Rotation, StarSystem};
 use hornvale_climate::GeneratedClimate;
-use hornvale_kernel::{Seed, World};
+use hornvale_kernel::{CellId, Seed, Value, World};
 use hornvale_religion::beliefs_of;
 use hornvale_terrain::GlobeSummary;
 use hornvale_worldgen::{BuildError, Sky, SkyChoice, build_world, climate_of, sky_of, terrain_of};
@@ -98,7 +98,7 @@ pub struct Metric {
     pub extract: fn(&WorldView) -> MetricValue,
 }
 
-/// Build the registry of twenty-one tier-1 metrics.
+/// Build the registry of tier-1 metrics.
 pub fn registry() -> Vec<Metric> {
     vec![
         Metric {
@@ -341,6 +341,132 @@ pub fn registry() -> Vec<Metric> {
                 }
             },
         },
+        Metric {
+            name: "settlement-count",
+            doc: "Number of settlements placed in the world",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 10.0, 20.0, 40.0, 60.0, 80.0, 120.0],
+            },
+            extract: |v| MetricValue::Number(hornvale_terrain::places(&v.world).len() as f64),
+        },
+        Metric {
+            name: "mean-population",
+            doc: "Mean population across every settlement's committed population fact; \
+                   Absent if there are none",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
+            },
+            extract: |v| {
+                let places = hornvale_terrain::places(&v.world);
+                let pops: Vec<f64> = places
+                    .iter()
+                    .filter_map(|p| {
+                        match v
+                            .world
+                            .ledger
+                            .value_of(p.id, hornvale_settlement::POPULATION)
+                        {
+                            Some(Value::Number(n)) => Some(*n),
+                            _ => None,
+                        }
+                    })
+                    .collect();
+                if pops.is_empty() {
+                    MetricValue::Absent
+                } else {
+                    MetricValue::Number(pops.iter().sum::<f64>() / pops.len() as f64)
+                }
+            },
+        },
+        Metric {
+            name: "flagship-subsistence",
+            doc: "The flagship settlement's committed subsistence mode; Absent if there is \
+                   no flagship or no committed subsistence",
+            summary: SummaryKind::Categorical,
+            extract: |v| match hornvale_settlement::village_info(&v.world) {
+                Some(info) => match hornvale_culture::subsistence_of(&v.world, info.id) {
+                    Some(s) => MetricValue::Text(s),
+                    None => MetricValue::Absent,
+                },
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "flagship-biome",
+            doc: "The flagship settlement's committed biome; Absent if there is no flagship",
+            summary: SummaryKind::Categorical,
+            extract: |v| match hornvale_settlement::village_info(&v.world) {
+                Some(info) => match v.world.ledger.text_of(info.id, hornvale_settlement::BIOME) {
+                    Some(b) => MetricValue::Text(b.to_string()),
+                    None => MetricValue::Absent,
+                },
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "flagship-coastal",
+            doc: "Whether the flagship settlement's cell borders an ocean cell, recomputed \
+                   from the terrain provider; Absent if there is no flagship",
+            summary: SummaryKind::Flag,
+            extract: |v| {
+                let Some(info) = hornvale_settlement::village_info(&v.world) else {
+                    return MetricValue::Absent;
+                };
+                let Some(Value::Number(cell_id)) = v
+                    .world
+                    .ledger
+                    .value_of(info.id, hornvale_settlement::CELL_ID)
+                else {
+                    return MetricValue::Absent;
+                };
+                let cell = CellId(*cell_id as u32);
+                let coastal = v
+                    .terrain
+                    .geosphere()
+                    .neighbors(cell)
+                    .iter()
+                    .any(|n| v.terrain.is_ocean(*n));
+                MetricValue::Flag(coastal)
+            },
+        },
+        Metric {
+            name: "flagship-structure-size",
+            doc: "Number of castes present in the flagship settlement's emergent structure \
+                   (a stratification proxy); Absent if there is no flagship",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            },
+            extract: |v| match hornvale_settlement::village_info(&v.world) {
+                Some(info) => {
+                    MetricValue::Number(hornvale_culture::castes_of(&v.world, info.id).len() as f64)
+                }
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "endorheic-coverage",
+            doc: "Fraction of land cells that are endorheic (interior-draining)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
+            },
+            extract: |v| {
+                let geo = v.terrain.geosphere();
+                let (mut land, mut endorheic) = (0usize, 0usize);
+                for cell in geo.cells() {
+                    if !v.terrain.is_ocean(cell) {
+                        land += 1;
+                        if v.terrain.is_endorheic(cell) {
+                            endorheic += 1;
+                        }
+                    }
+                }
+                MetricValue::Number(if land == 0 {
+                    0.0
+                } else {
+                    endorheic as f64 / land as f64
+                })
+            },
+        },
     ]
 }
 
@@ -516,8 +642,8 @@ mod tests {
     }
 
     #[test]
-    fn registry_has_twenty_one_metrics_after_lands() {
-        assert_eq!(registry().len(), 21);
+    fn registry_has_twenty_eight_metrics_after_the_census_of_peoples() {
+        assert_eq!(registry().len(), 28);
     }
 
     #[test]
@@ -532,6 +658,22 @@ mod tests {
         );
         assert!(matches!(m("band-count"), MetricValue::Text(_)));
         assert!(matches!(m("dominant-land-biome"), MetricValue::Text(_)));
+    }
+
+    #[test]
+    fn census_of_peoples_metrics_extract_for_seed_42() {
+        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let reg = registry();
+        let m = |name: &str| (reg.iter().find(|m| m.name == name).unwrap().extract)(&view);
+        assert!(matches!(m("settlement-count"), MetricValue::Number(n) if n > 0.0));
+        assert!(matches!(m("mean-population"), MetricValue::Number(n) if n > 0.0));
+        assert!(matches!(m("flagship-subsistence"), MetricValue::Text(_)));
+        assert!(matches!(m("flagship-biome"), MetricValue::Text(_)));
+        assert!(matches!(m("flagship-coastal"), MetricValue::Flag(_)));
+        assert!(matches!(m("flagship-structure-size"), MetricValue::Number(n) if n >= 1.0));
+        assert!(
+            matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
+        );
     }
 
     #[test]

@@ -67,8 +67,10 @@ version = "0.1.0"
 dependencies = [
  "hornvale-astronomy",
  "hornvale-climate",
+ "hornvale-culture",
  "hornvale-kernel",
  "hornvale-religion",
+ "hornvale-settlement",
  "hornvale-terrain",
  "hornvale-worldgen",
  "serde",
