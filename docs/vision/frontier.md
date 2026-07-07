@@ -60,7 +60,17 @@ ambition occupies is the first act of designing it.
    preregisters its hypothesis in its JSON before the sweep runs, and the
    book's laboratory pages publish negative results (decision 0016). That is
    the difference between the Lab as instrument and the Lab as anecdote
-   generator.
+   generator. Three expansion axes are already visible, each to be built
+   when a campaign pulls for it rather than on spec: **time as a study
+   axis** (every current census is a snapshot sweep across seeds; once
+   peoples evolve, metrics want sampling along `WorldTime` within one
+   world — population trajectories, settlement founding and abandonment
+   rates); **sensitivity studies** (hold the seed, vary one pin, measure
+   the downstream distributions — the instrument that catches "ocean
+   fraction secretly dominates everything"); and **paired comparisons**
+   (tier-0 versus generated provider on the same seed, turning "higher
+   fidelity refines, never contradicts" from a unit-tested promise into a
+   statistically monitored one).
 
 2. **The epistemic layer** *(architecture-ready; whether it is fun is open)*.
    Player and scholar knowledge as a second, provenance-tagged ledger,
@@ -107,6 +117,52 @@ ambition occupies is the first act of designing it.
    to reconstruct and mis-reconstruct, and biogeography later. Social
    history sits low on the verification gradient; this history sits at the
    very top, which is why it should come first.
+
+7. **Population as a field, settlements as its condensations** *(high
+   confidence; calibration-checked — the tier's second resident)*. The
+   tier-0 settlement model is a static equilibrium: suitability scoring
+   plus separation answers "where would settlements be," never "how did
+   they get there." The upgrade path: a carrying-capacity field derived
+   from climate and terrain, a population-density field relaxing toward
+   it, and discrete settlements as condensations of that field — textbook
+   coarse-constrains-fine, with the field as the tier-0 prior that any
+   finer dynamics must integrate to. History then arrives as an era-ticked
+   pass at genesis, appending founding, growth, fission, and abandonment
+   to the ledger as facts — so ghost towns, mother-city lineages, and
+   migration waves exist as narrative substrate the moment historiography
+   and religion look, because a settlement abandoned two eras ago *and
+   why* is a story in a way a settlement that merely exists is not. The
+   species-psychology substrate slots in as per-species dispersal appetite
+   and tolerance bands feeding the same dynamics, yielding niche
+   partitioning and contact zones (which writing and religion later
+   consume). One tension resolved in advance: era-scale ticking happens at
+   genesis and lands in the ledger, keeping the ledger the single source
+   of history and observation cheap; lazy fine-scale derivation can come
+   later, constrained by the coarse record. This is the social history
+   that item 6 deliberately sequences behind physical history.
+
+8. **Writing as a culture acquiring its own ledger** *(high confidence on
+   mechanics; downstream of surplus, stratification, and contact)*. The
+   architecture gives literacy a meaning most simulations cannot: the
+   world already distinguishes facts (durable, append-only) from phenomena
+   (salience-ranked observations whose producer is hidden). An oral
+   culture should know the world only through phenomena — lossy, decaying,
+   drifting into myth over generations; that religion consumes phenomena
+   without learning their source *is* oral epistemology, already shipped.
+   A literate culture gets to freeze phenomena into facts: a recorded
+   eclipse stays a dated eclipse instead of becoming a dragon story.
+   Writing changes a people's relationship to time, and the trace protocol
+   expresses that natively; the historiography window is the payoff —
+   in-world chronicles whose reliability varies with the script's
+   maturity, feeding the epistemic layer (item 2) exactly the biased
+   sources it wants. The evolution is friendly to the emergent-structure
+   style: scripts appear where the structure ladder already grows artisans
+   and surplus (accounting tokens → pictographs → rebus → phonetic
+   borrowing), and are mostly *borrowed* rather than invented —
+   independent invention happened perhaps three or four times on Earth —
+   so script families become a fossil record of contact between peoples,
+   legible in ruins. Deep language (item 3) supplies the sounds; this
+   supplies their shadow on clay.
 
 ---
 
@@ -237,6 +293,40 @@ It does not alter the Year-1 roadmap.
 
 ---
 
+## Social structure as orthogonal axes — cashing the substrate
+
+*(High confidence on direction; literature-checked via cross-cultural data.)*
+
+The tier-0 social model is one linear ladder with threshold-gated rungs
+drawn from a closed six-role vocabulary — the right lean start, and every
+society it can express is a human chiefdom, more or less stratified. Three
+hardcoded assumptions cap the exoticism: a **single hierarchy** (no
+moieties, age-grades, parallel priestly/secular ladders, or acephalous
+segmentary societies — nothing whose org chart is not a ladder); a
+**closed role vocabulary** (every culture stratifies into the same six
+nouns); and **environment-only inputs** (the same valley produces the same
+society regardless of who lives in it — precisely the input the
+species-psychology substrate above exists to supply).
+
+The fix, when its campaign comes, is decomposition rather than a bigger
+enum: orthogonal axes — authority locus (hereditary / achieved /
+gerontocratic / distributed), legitimacy source (sacred / martial / wealth
+/ consensus), descent and household form, exchange mode — with the
+psychology vector acting as a *viability filter* over combinations, so a
+eusocial species' viable structure space barely overlaps a solitary
+territorial one's. Exotic structures then emerge from combinatorics nobody
+authored — a gerontocratic gift-economy moiety system falls out of axis
+values plus a disposition, and the interesting ones are the corners of the
+space no one foresaw. It is the same generative-over-taxonomic move the
+rest of the project makes. The verification hook that keeps it honest:
+Murdock's *Ethnographic Atlas* is a real cross-cultural joint distribution
+to sanity-check the axis space against — more ground truth than most
+social systems ever get. Downstream, religion, the architecture cluster's
+status-projection rule, and writing all read from axes; none of them can
+read anything from a role ladder.
+
+---
+
 ## Provenance interrogation — the `explain` verb
 
 *(High confidence; small; no new architecture required.)*
@@ -304,6 +394,10 @@ Turner, *The Ritual Process*, and Arnold van Gennep, *Rites of Passage*
 for taboo generation); James Ryan and the UCSC Expressive Intelligence Studio,
 *Talk of the Town* / *Bad News* (character-scale knowledge and gossip);
 Solodow, *Latin Alive* (prestige as a language parameter); Milutin
-Milanković, orbital forcing of climate (paleoclimate as the first history).
+Milanković, orbital forcing of climate (paleoclimate as the first history);
+Denise Schmandt-Besserat, *Before Writing* (accounting tokens as writing's
+ancestor); George Murdock, *Ethnographic Atlas* (the cross-cultural joint
+distribution behind the social-structure axes); Walter Christaller, central
+place theory (settlement condensation over a carrying-capacity field).
 The map moves when the reading feeds it — which is the collaborator's role,
 demonstrated.

@@ -137,6 +137,9 @@ Work proceeds in campaigns: spec (`docs/superpowers/specs/`) → implementation
 plan (`docs/superpowers/plans/`) → execution → merge. **Definition of Done
 for every merged plan includes the project book**: a chronicle entry
 (`book/src/chronicle/`) and a freshness sweep of stale chapters — the book
-may never lag merged reality. Book prose is written at a deliberate
+may never lag merged reality. It also includes a one-page campaign
+retrospective in `docs/retrospectives/` (decision 0020) — process lessons,
+not product. Campaigns are named by sequence number + name; the Year-N
+prefix is retired (decision 0017). Book prose is written at a deliberate
 altitude: technical and mathematical, comprehensible without reading the
 code it may show.

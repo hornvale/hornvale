@@ -56,3 +56,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0014](0014-fact-day-stays-bare-option.md) | `Fact.day` stays a bare `Option<f64>` | Accepted |
 | [0015](0015-predicatedef-name-duplicates-key.md) | `PredicateDef.name` duplicates its registry key | Accepted |
 | [0016](0016-studies-preregister-hypotheses.md) | Studies preregister their hypotheses | Accepted |
+| [0017](0017-campaigns-drop-year-naming.md) | Campaigns drop the "Year" naming | Accepted |
+| [0018](0018-gallery-images-are-hand-rolled-png.md) | Gallery images are hand-rolled PNG | Accepted |
+| [0019](0019-no-procedural-macros.md) | No procedural macros | Accepted |
+| [0020](0020-campaigns-write-retrospectives.md) | Campaigns write retrospectives | Accepted |
