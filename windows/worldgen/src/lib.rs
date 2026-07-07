@@ -395,24 +395,19 @@ pub fn build_world(
 
     // Settlement pins are never reconstructed (settlements persist as their
     // own committed facts, not re-derived from a provider like sky/terrain);
-    // record them on their own subject purely for round-trip fidelity and
-    // scout-style inspection, so they never collide with sky's own
-    // scenario-pin facts on `world_entity`. Minted only when there is
-    // something to record, so unpinned worlds keep their entity numbering
-    // (a save-format-adjacent stability every other test relies on).
-    let settlement_pin_strings = settlement_pins.pin_strings();
-    if !settlement_pin_strings.is_empty() {
-        let settlement_pin_subject = world.ledger.mint_entity();
-        for pin_string in settlement_pin_strings {
-            world.ledger.commit(
-                scenario_fact(
-                    settlement_pin_subject,
-                    facts::SCENARIO_PIN,
-                    Value::Text(pin_string),
-                ),
-                &world.registry,
-            )?;
-        }
+    // record them on `world_entity` under their own predicate purely for
+    // round-trip fidelity and scout-style inspection, mirroring terrain-pin
+    // above — a distinct predicate keeps them from colliding with sky's own
+    // scenario-pin facts without needing a freshly-minted subject.
+    for pin_string in settlement_pins.pin_strings() {
+        world.ledger.commit(
+            scenario_fact(
+                world_entity,
+                hornvale_settlement::SETTLEMENT_PIN,
+                Value::Text(pin_string),
+            ),
+            &world.registry,
+        )?;
     }
 
     // Reconstruct terrain + climate, assemble per-cell site inputs, place a

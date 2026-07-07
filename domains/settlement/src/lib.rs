@@ -28,6 +28,10 @@ pub const CELL_ID: &str = "cell-id";
 pub const LATITUDE: &str = "latitude";
 /// Predicate: longitude of a settlement, degrees (functional, Number).
 pub const LONGITUDE: &str = "longitude";
+/// Predicate: one round-trippable settlement scenario pin string per pinned
+/// value (non-functional, Text) — the settlement sibling of terrain's
+/// terrain-pin and sky's scenario-pin.
+pub const SETTLEMENT_PIN: &str = "settlement-pin";
 
 /// Seed-derivation labels used by this crate. Labels are permanent
 /// save-format contracts (spec §3); regeneration uses epoch suffixes.
@@ -64,7 +68,12 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_predicate(POPULATION, true, "population of a settlement")?;
     registry.register_predicate(CELL_ID, true, "Geosphere cell id a settlement sits on")?;
     registry.register_predicate(LATITUDE, true, "settlement latitude, degrees")?;
-    registry.register_predicate(LONGITUDE, true, "settlement longitude, degrees")
+    registry.register_predicate(LONGITUDE, true, "settlement longitude, degrees")?;
+    registry.register_predicate(
+        SETTLEMENT_PIN,
+        false,
+        "a settlement scenario pin, round-trippable",
+    )
 }
 
 /// A settlement as this domain knows it.
