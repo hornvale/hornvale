@@ -57,6 +57,7 @@
 - [Study 002: The Census of Lands](./laboratory/study-002.md)
 - [Study 003: The Census of Peoples](./laboratory/study-003.md)
 - [Study 004: The Census of Faiths](./laboratory/study-004.md)
+- [Study 005: The Frozen Worlds](./laboratory/study-005.md)
 
 # Reference
 
