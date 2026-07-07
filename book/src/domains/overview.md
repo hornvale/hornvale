@@ -1,4 +1,4 @@
-# The Cascade at Tier 0
+# The Cascade, Tier 0 to Tier 1
 
 As of Campaign 1b, every domain exists — at the shallowest depth that could
 possibly work. This was the plan's central bet about sustainability: build the
@@ -11,7 +11,7 @@ The cascade, in dependency order, with its current state:
 
 | Domain | Tier 0 | Consumes | Contributes |
 |---|---|---|---|
-| [Astronomy](./astronomy.md) | a sun that never sets | — | phenomena (the sky) |
+| [Astronomy](./astronomy.md) | a sun that never sets → a generated star system with a two-clock calendar (tier 1) | — | phenomena (the sky) (tier 0); phenomena (day/night, seasons, moon phases, notable neighbors) plus the sky's insolation, obliquity, and rotation fields (tier 1) |
 | [Climate](./climate.md) | uniform mildness → banded climate + biomes (tier 1) | — (tier 0); elevation, sea level, seafloor, and the sky's insolation/obliquity/rotation (tier 1) | phenomena (the air); the biome + habitability field (tier 1) |
 | [Terrain](./terrain.md) | one hand-placed vale → tectonic globe (tier 1) | — | place facts; the tectonic globe's elevation, boundary, unrest, and drainage fields (tier 1) |
 | [Settlement](./settlement.md) | one goblin village → a scatter placed by suitability (tier 1, the Vale retired) | the globe's habitability, freshwater, coast, temperature, and hostility, cell by cell | settlement facts for every placed site, one of them the flagship |

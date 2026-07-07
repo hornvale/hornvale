@@ -50,7 +50,7 @@ pub fn recount(world: &World, entity: EntityId) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::{ConceptRegistry, Fact, Seed};
+    use hornvale_kernel::{Fact, Seed};
 
     fn world() -> World {
         let mut w = World::new(Seed(42));
@@ -132,7 +132,6 @@ mod tests {
                 &w.registry,
             )
             .unwrap();
-        let _ = ConceptRegistry::default;
         assert_eq!(recount(&w, e), recount(&w, e));
     }
 }
