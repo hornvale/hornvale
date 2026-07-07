@@ -1,0 +1,9 @@
+[package]
+name = "hornvale-historiography"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Hornvale historiography window: recount an entity's provenance."
+
+[dependencies]
+hornvale-kernel = { path = "../../kernel" }
