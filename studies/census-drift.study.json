@@ -1,5 +1,0 @@
-{ "name": "census-drift",
-  "description": "Distributions of everything the sky generator produces, plus the belief split as instrument calibration.",
-  "seeds": { "from": 0, "count": 500 },
-  "pin_sets": [ { "label": "default", "pins": [] } ],
-  "metrics": "all" }

@@ -13,7 +13,10 @@ fn every_default_system_satisfies_every_invariant() {
         let outcome = generate(Seed(seed), &SkyPins::default())
             .unwrap_or_else(|e| panic!("seed {seed} failed default genesis: {e}"));
         let system = &outcome.system;
-        let (inner, outer) = system.star.habitable_zone;
+        let (inner, outer) = (
+            system.star.habitable_zone.inner(),
+            system.star.habitable_zone.outer(),
+        );
         assert!(
             (inner.get()..=outer.get()).contains(&system.anchor.orbit.get()),
             "seed {seed}: anchor out of zone"

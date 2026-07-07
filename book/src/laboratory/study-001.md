@@ -7,6 +7,13 @@ to, and asked anyway, to check that the instrument tells the truth. The
 other had never been asked, because until the Lab existed there was no way
 to ask it.
 
+*This chapter predates the land metrics of Campaign 3c.* Its committed
+summary and charts measure only the sky; the tectonic and climate metrics
+that the registry has since grown are the subject of
+[Study 002: The Census of Lands](./study-002.md). Both are author-time
+runs; the sky census stands here unchanged, historical, as the Lab's first
+published measurement.
+
 {{#include generated/census-of-skies/census-of-skies-summary.md}}
 
 ## The calibration holds

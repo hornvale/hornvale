@@ -10,7 +10,9 @@ use hornvale_astronomy::{
     ConstantSun, GeneratedSky, GenesisError, SkyPins, SkyReport, facts, generate, parse_pin,
     pin_strings,
 };
-use hornvale_climate::{ClimateReport, UniformClimate};
+use hornvale_climate::{
+    ClimateInputs, ClimateReport, GeneratedClimate, RotationRegime, SeafloorFeature, UniformClimate,
+};
 use hornvale_kernel::{
     ConceptRegistry, EntityId, Fact, Geosphere, LedgerError, ObserverContext, PhenomenaSource,
     Phenomenon, RegistryError, Seed, Value, World, WorldTime, observe,
@@ -82,6 +84,16 @@ impl Sky {
         match self {
             Sky::Constant(sun) => sun.sky_at(time),
             Sky::Generated(sky) => sky.sky_at(time),
+        }
+    }
+
+    /// The derived calendar, if this world has a generated sky. `None` for
+    /// the tier-0 constant sun, which has no cycles. Climate consumes this
+    /// at the composition root (spec §13 opener).
+    pub fn calendar(&self) -> Option<&hornvale_astronomy::Calendar> {
+        match self {
+            Sky::Constant(_) => None,
+            Sky::Generated(sky) => Some(sky.calendar()),
         }
     }
 }
@@ -170,6 +182,87 @@ pub fn terrain_of(world: &World) -> Result<GeneratedTerrain, BuildError> {
     let outcome = hornvale_terrain::generate(world.seed, shared_geosphere(), &pins)
         .map_err(BuildError::TerrainGenesis)?;
     Ok(GeneratedTerrain::new(shared_geosphere().clone(), outcome))
+}
+
+/// Map a terrain boundary contact to the seafloor feature climate consumes
+/// (only ocean cells use it): ocean–ocean convergent arcs become trenches;
+/// oceanic ridges become vent-bearing ridges; everything else is featureless.
+fn seafloor_feature(boundary: Option<hornvale_terrain::CellBoundary>) -> SeafloorFeature {
+    use hornvale_terrain::BoundaryKind;
+    match boundary.map(|b| b.kind) {
+        Some(BoundaryKind::IslandArc) => SeafloorFeature::Trench,
+        Some(BoundaryKind::OceanicRidge) => SeafloorFeature::Ridge,
+        _ => SeafloorFeature::None,
+    }
+}
+
+/// The scalar stellar inputs climate needs, derived from this world's sky.
+/// Constant-sky worlds get an Earth baseline so the biome map exists for
+/// every world (spec: the coarse globe is generated for all).
+fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64) {
+    match sky {
+        Sky::Constant(_) => (1.0, 23.5, RotationRegime::Spinning { day_std: 1.0 }, 365.25),
+        Sky::Generated(generated) => {
+            let system = generated.system();
+            let luminosity = system.star.luminosity.get();
+            let orbit = system.anchor.orbit.get();
+            // Insolation relative to Earth (L=1, d=1): L / d².
+            let insolation = luminosity / (orbit * orbit);
+            let obliquity = system.anchor.obliquity.get();
+            let regime = match system.anchor.rotation {
+                hornvale_astronomy::Rotation::Spinning { day } => {
+                    RotationRegime::Spinning { day_std: day.get() }
+                }
+                hornvale_astronomy::Rotation::Locked => RotationRegime::Locked,
+            };
+            let year = generated.calendar().year_length().get();
+            (insolation, obliquity, regime, year)
+        }
+    }
+}
+
+/// Reconstruct the tier-1 climate for this world: rebuild the terrain globe
+/// and the sky, map their outputs into climate's kernel-only inputs, and
+/// derive temperature/moisture/biome/habitability. The single construction
+/// site for `GeneratedClimate` (the `terrain_of`/`sky_of` pattern).
+pub fn climate_of(world: &World) -> Result<GeneratedClimate, BuildError> {
+    let terrain = terrain_of(world)?;
+    let sky = sky_of(world)?;
+    let geo = terrain.geosphere();
+    let elevation = &terrain.globe().elevation;
+    let seafloor =
+        hornvale_kernel::CellMap::from_fn(geo, |cell| seafloor_feature(terrain.boundary_at(cell)));
+    let (insolation, obliquity_deg, regime, year_length_std) = stellar_inputs(&sky);
+    Ok(GeneratedClimate::generate(&ClimateInputs {
+        geosphere: geo,
+        elevation,
+        sea_level: terrain.sea_level(),
+        seafloor: &seafloor,
+        insolation,
+        obliquity_deg,
+        regime,
+        year_length_std,
+    }))
+}
+
+/// Headline biome/habitability lines for the almanac's Land section.
+pub fn biome_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    let climate = climate_of(world)?;
+    let summary = hornvale_climate::summarize(&climate);
+    let bands = match summary.band_count {
+        Some(n) => format!("{n} circulation band(s) per hemisphere"),
+        None => "a single day–night overturning (tidally locked)".to_string(),
+    };
+    Ok(vec![
+        format!(
+            "The air organizes into {bands}; {} land biomes and {} marine biomes cover the globe.",
+            summary.land_biome_count, summary.marine_biome_count
+        ),
+        format!(
+            "Some {:.0}% of the surface is habitable — land with water and a tolerable season.",
+            summary.habitable_fraction * 100.0
+        ),
+    ])
 }
 
 /// The land's headline lines for the almanac: plates and ocean coverage,
@@ -387,6 +480,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         phenomena: observed_phenomena(world, 0.0)?,
         places: hornvale_terrain::places(world),
         land_lines: land_lines(world)?,
+        biome_lines: biome_lines(world)?,
         village,
         castes,
         beliefs: hornvale_religion::beliefs_of(world),
@@ -652,6 +746,16 @@ mod tests {
     }
 
     #[test]
+    fn sky_calendar_accessor_present_for_generated_absent_for_constant() {
+        assert!(sky_of(&constant(42)).unwrap().calendar().is_none());
+        let generated_sky = sky_of(&generated(42)).unwrap();
+        let cal = generated_sky
+            .calendar()
+            .expect("generated sky has a calendar");
+        assert!(cal.year_length().get() > 0.0);
+    }
+
+    #[test]
     fn terrain_reconstructs_from_seed_and_pins() {
         let world = constant(42);
         let a = terrain_of(&world).unwrap();
@@ -700,5 +804,60 @@ mod tests {
         assert_eq!(lines.len(), 2);
         assert!(lines[0].contains("plates"));
         assert!(lines[1].contains("above the sea"));
+    }
+
+    #[test]
+    fn climate_reconstructs_deterministically_and_maps_biomes() {
+        let world = generated(42);
+        let a = climate_of(&world).unwrap();
+        let b = climate_of(&world).unwrap();
+        assert_eq!(a.biome_map(), b.biome_map());
+        assert_eq!(a.geosphere().level(), hornvale_terrain::GLOBE_LEVEL);
+        // A generated spinning world has a band count; ocean cells are marine.
+        assert!(
+            a.band_count().is_some()
+                || matches!(a.regime(), hornvale_climate::RotationRegime::Locked)
+        );
+    }
+
+    #[test]
+    fn locked_and_spinning_biome_maps_reorganize_from_the_same_land() {
+        use hornvale_astronomy::RotationPin;
+        let spinning = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+        )
+        .unwrap();
+        let locked = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::Locked),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+        )
+        .unwrap();
+        // Same land seed, different sky → different biome map.
+        assert_ne!(
+            climate_of(&spinning).unwrap().biome_map(),
+            climate_of(&locked).unwrap().biome_map()
+        );
+    }
+
+    #[test]
+    fn biome_lines_describe_the_globe() {
+        let lines = biome_lines(&generated(42)).unwrap();
+        assert!(!lines.is_empty());
+        assert!(lines.iter().any(|l| l.contains("habitable")));
+    }
+
+    #[test]
+    fn constant_sky_world_still_has_a_climate() {
+        let world = constant(42);
+        let climate = climate_of(&world).unwrap();
+        assert!(climate.geosphere().cell_count() > 0);
     }
 }

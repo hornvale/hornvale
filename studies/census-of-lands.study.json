@@ -1,0 +1,5 @@
+{ "name": "census-of-lands",
+  "description": "The full Census of Lands: every land and sky metric over 10,000 worlds — the habitable-fraction unknown number and the band-count calibration at author-time scale.",
+  "seeds": { "from": 0, "count": 10000 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": "all" }

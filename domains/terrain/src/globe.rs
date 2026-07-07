@@ -1,10 +1,11 @@
 //! The tectonic globe: the assembled outcome of terrain genesis. A world is
 //! a seed plus a ledger — the globe is never serialized, always re-derived.
 
+use crate::boundaries::{self, CellBoundary};
 use crate::pins::{self, GenesisError, TerrainPins};
 use crate::plates::Plate;
 use crate::streams;
-use crate::{boundaries, elevation, plates};
+use crate::{elevation, plates};
 use hornvale_kernel::{CellMap, Geosphere, Seed};
 
 /// A generated tectonic globe over the shared Geosphere. Recomputed from
@@ -22,6 +23,10 @@ pub struct TectonicGlobe {
     pub sea_level: f64,
     /// The plates, indexed by `plate_of`'s values.
     pub plates: Vec<Plate>,
+    /// The strongest cross-plate boundary contact per cell (`None` for plate
+    /// interiors). Recomputed at genesis, never serialized; consumed by
+    /// marine biomes via the composition root (spec §6).
+    pub boundary: CellMap<Option<CellBoundary>>,
 }
 
 /// What tectonic genesis produced: the globe plus degradation notes.
@@ -81,6 +86,7 @@ pub fn generate(
             unrest,
             sea_level,
             plates: plate_list,
+            boundary: boundary_map,
         },
         notes,
     })

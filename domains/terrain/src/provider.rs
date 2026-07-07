@@ -1,5 +1,6 @@
 //! The tier-1 terrain provider: a queryable generated tectonic globe.
 
+use crate::boundaries::CellBoundary;
 use crate::globe::{GenesisOutcome, TectonicGlobe};
 use crate::plates::dot;
 use hornvale_kernel::{CellId, Geosphere};
@@ -71,6 +72,11 @@ impl GeneratedTerrain {
         self.elevation_at(id) < self.globe.sea_level
     }
 
+    /// The strongest cross-plate boundary contact at a cell, if any.
+    pub fn boundary_at(&self, id: CellId) -> Option<CellBoundary> {
+        *self.globe.boundary.get(id)
+    }
+
     /// The cell nearest a geographic coordinate (degrees), by maximum dot
     /// product with the coordinate's unit vector; ties break to the lower
     /// cell id. Inverts the kernel's coord convention — latitude = asin(z),
@@ -136,5 +142,17 @@ mod tests {
         let geo = Geosphere::new(3);
         let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
         GeneratedTerrain::new(Geosphere::new(2), outcome);
+    }
+
+    #[test]
+    fn provider_exposes_boundary_classification() {
+        let geo = Geosphere::new(3);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let terrain = GeneratedTerrain::new(geo.clone(), outcome.clone());
+        for cell in geo.cells() {
+            assert_eq!(terrain.boundary_at(cell), *outcome.globe.boundary.get(cell));
+        }
+        // At least one cell is a classified boundary on a real globe.
+        assert!(geo.cells().any(|c| terrain.boundary_at(c).is_some()));
     }
 }

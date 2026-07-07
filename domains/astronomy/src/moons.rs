@@ -5,7 +5,7 @@ use crate::anchor::Anchor;
 use crate::pins::{GenesisError, SkyPins};
 use crate::star::Star;
 use crate::streams;
-use crate::units::{LunarMasses, Mm, StdDays};
+use crate::units::{LunarMasses, Megameters, StdDays};
 use hornvale_kernel::Seed;
 
 /// A moon of the anchor world. Mass and distance drawn; the rest derived.
@@ -14,7 +14,7 @@ pub struct Moon {
     /// Mass in lunar masses (drawn, 0.05–2.5).
     pub mass: LunarMasses,
     /// Orbital distance in Mm (drawn within Roche/Hill bounds).
-    pub distance: Mm,
+    pub distance: Megameters,
     /// Orbital period in standard days (derived: Kepler III).
     pub period: StdDays,
     /// Apparent size relative to Luna-from-Earth (derived).
@@ -34,7 +34,7 @@ const TIDE_CAP: f64 = 8.0;
 fn derive_moon(mass: f64, distance: f64, anchor: &Anchor) -> Moon {
     Moon {
         mass: LunarMasses(mass),
-        distance: Mm(distance),
+        distance: Megameters(distance),
         period: StdDays(27.32 * ((distance / 384.4).powi(3) / anchor.mass.0).sqrt()),
         angular_diameter_rel: mass.powf(1.0 / 3.0) * 384.4 / distance,
         tide_rel: mass / (distance / 384.4).powi(3),

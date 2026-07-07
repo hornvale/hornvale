@@ -119,7 +119,7 @@ quantity!(
     "Orbital distance in AU."
 );
 quantity!(
-    Mm,
+    Megameters,
     "megameters",
     positive,
     "Distance in Mm (1000 km; Luna orbits at 384.4)."
@@ -169,6 +169,46 @@ impl Degrees {
     /// The raw value.
     pub fn get(self) -> f64 {
         self.0
+    }
+}
+
+/// A star's circumstellar habitable zone: the annulus (in AU) where liquid
+/// water is possible. Inner strictly precedes outer, enforced at
+/// construction — anchor-first genesis makes a zone-less world
+/// unrepresentable, so this is never `Option`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct HabitableZone {
+    inner: Au,
+    outer: Au,
+}
+
+impl HabitableZone {
+    /// Validating constructor: both bounds finite and `inner < outer`.
+    pub fn new(inner: Au, outer: Au) -> Result<HabitableZone, UnitError> {
+        if inner.0 >= outer.0 {
+            return Err(UnitError {
+                unit: "habitable zone",
+                value: inner.0,
+                reason: "inner bound must be strictly less than outer",
+            });
+        }
+        Ok(HabitableZone { inner, outer })
+    }
+    /// The inner (hot) bound.
+    pub fn inner(self) -> Au {
+        self.inner
+    }
+    /// The outer (cold) bound.
+    pub fn outer(self) -> Au {
+        self.outer
+    }
+    /// The arithmetic center of the zone.
+    pub fn center(self) -> Au {
+        Au((self.inner.0 + self.outer.0) / 2.0)
+    }
+    /// Whether `orbit` lies within `[inner, outer]`.
+    pub fn contains(self, orbit: Au) -> bool {
+        (self.inner.0..=self.outer.0).contains(&orbit.0)
     }
 }
 
@@ -227,5 +267,18 @@ mod tests {
         let local = StdDays::new(2.5).unwrap().in_local(day30);
         assert_eq!(local.get(), 2.0);
         assert_eq!(local.in_std(day30).get(), 2.5);
+    }
+
+    #[test]
+    fn habitable_zone_enforces_inner_before_outer_and_answers_containment() {
+        let zone = HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap()).unwrap();
+        assert_eq!(zone.inner().get(), 0.9);
+        assert_eq!(zone.outer().get(), 1.4);
+        assert!(zone.contains(Au::new(1.0).unwrap()));
+        assert!(!zone.contains(Au::new(2.0).unwrap()));
+        assert!((zone.center().get() - 1.15).abs() < 1e-12);
+        // inner must strictly precede outer
+        assert!(HabitableZone::new(Au::new(1.4).unwrap(), Au::new(0.9).unwrap()).is_err());
+        assert!(HabitableZone::new(Au::new(1.0).unwrap(), Au::new(1.0).unwrap()).is_err());
     }
 }

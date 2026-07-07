@@ -18,10 +18,13 @@ cargo run -p hornvale -- lab run studies/census-of-skies.study.json
 
 ### The instrument's self-check
 
-`census-drift` is a small, fast study (500 seeds) that CI reruns on every
-build. Its outputs are committed artifacts: if the generator's behavior
-ever drifts from what's checked in, the rerun produces different numbers
-and the diff fails the build. The instrument is honest because it re-proves
-itself every time.
+`census-lands-drift` is a small, fast study (500 seeds, every metric the
+unified registry knows — sky and land alike) that CI reruns on every build.
+Its outputs are committed artifacts: if the generator's behavior ever
+drifts from what's checked in, the rerun produces different numbers and the
+diff fails the build. The instrument is honest because it re-proves itself
+every time. (It was named `census-drift` through Campaign 3b, before the
+land metrics arrived; the Campaign 3c rename is a label change only — the
+same one study, still the CI-checked half of every census.)
 
-{{#include generated/census-drift/census-drift-summary.md}}
+{{#include generated/census-lands-drift/census-lands-drift-summary.md}}

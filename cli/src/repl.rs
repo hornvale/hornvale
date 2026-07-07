@@ -10,7 +10,9 @@ commands:
   sky [day]        what the sky looks like (default day 0)
   climate          local climate
   map              ASCII elevation map of the globe
+  biomes           biome map of the globe
   land <lat> <lon> the terrain at a coordinate (degrees)
+  biome <lat> <lon> the biome at a coordinate (degrees)
   calendar         the world's cycles
   places           known places
   village          the settlement
@@ -87,6 +89,44 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                             )?;
                         }
                         Err(e) => writeln!(output, "error: {e}")?,
+                    },
+                }
+            }
+            "biomes" => match world_builder::climate_of(world) {
+                Ok(climate) => write!(
+                    output,
+                    "{}",
+                    hornvale_climate::render::biome_ascii(
+                        climate.geosphere(),
+                        &climate.biome_map()
+                    )
+                )?,
+                Err(e) => writeln!(output, "error: {e}")?,
+            },
+            "biome" => {
+                let coords = argument
+                    .and_then(|lat| Some((lat, parts.next()?)))
+                    .and_then(|(lat, lon)| {
+                        Some((lat.parse::<f64>().ok()?, lon.parse::<f64>().ok()?))
+                    });
+                match coords {
+                    None => writeln!(output, "usage: biome <latitude> <longitude>")?,
+                    Some((lat, lon)) => match (
+                        world_builder::terrain_of(world),
+                        world_builder::climate_of(world),
+                    ) {
+                        (Ok(terrain), Ok(climate)) => {
+                            let cell = terrain.nearest_cell(lat, lon);
+                            writeln!(
+                                output,
+                                "cell {}: biome {} — {:.0}°C, moisture {:.2}",
+                                cell.0,
+                                climate.biome_at(cell).name(),
+                                climate.mean_temperature_at(cell),
+                                climate.moisture_at(cell)
+                            )?;
+                        }
+                        (Err(e), _) | (_, Err(e)) => writeln!(output, "error: {e}")?,
                     },
                 }
             }
@@ -275,5 +315,21 @@ mod tests {
     #[test]
     fn eof_ends_the_loop_without_quit() {
         assert!(drive("sky\n").contains("zenith"));
+    }
+
+    #[test]
+    fn biomes_and_biome_answer_queries() {
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+        )
+        .unwrap();
+        let mut out = Vec::new();
+        run(&world, "biomes\nbiome 5 -40\nquit\n".as_bytes(), &mut out).unwrap();
+        let out = String::from_utf8(out).unwrap();
+        assert!(out.lines().count() > 24, "no ascii biome map");
+        assert!(out.contains("biome"), "no per-cell biome report");
     }
 }
