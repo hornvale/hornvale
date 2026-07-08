@@ -17,7 +17,7 @@ pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
 pub use geosphere::{CellId, CellMap, GeoCoord, Geosphere};
 pub use ledger::{EntityId, Fact, Ledger, LedgerError, Value};
 pub use noise::{fbm_2d, value_noise_2d};
-pub use phenomena::{ObserverContext, PhenomenaSource, Phenomenon, observe};
+pub use phenomena::{ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, Venue, observe};
 pub use refine::choose_consistent;
 pub use registry::{ConceptRegistry, PredicateDef, RegistryError};
 pub use seed::{Seed, Stream};

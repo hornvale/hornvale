@@ -7,7 +7,7 @@ use crate::calendar::{Calendar, calendar_of};
 use crate::system::{GenesisOutcome, StarSystem};
 use crate::units::StdDays;
 use crate::{CELESTIAL_BODY, SkyReport};
-use hornvale_kernel::{ObserverContext, PhenomenaSource, Phenomenon, WorldTime};
+use hornvale_kernel::{ObserverContext, PhenomenaSource, Phenomenon, Venue, WorldTime};
 
 #[cfg(test)]
 mod tests {
@@ -21,10 +21,7 @@ mod tests {
     }
 
     fn ctx(day: f64) -> ObserverContext {
-        ObserverContext {
-            place: EntityId(1),
-            time: WorldTime { day },
-        }
+        ObserverContext::at(EntityId(1), WorldTime { day })
     }
 
     #[test]
@@ -302,12 +299,14 @@ impl PhenomenaSource for GeneratedSky {
                 description: format!("the sun, a {}", self.system.star.class_name),
                 period_days: Some(round2(day.get())),
                 salience: 1.0,
+                venue: Venue::DaySky,
             }),
             Rotation::Locked => out.push(Phenomenon {
                 kind: CELESTIAL_BODY.to_string(),
                 description: "a sun fixed forever above the day side".to_string(),
                 period_days: None,
                 salience: 1.0,
+                venue: Venue::DaySky,
             }),
         }
 
@@ -318,6 +317,7 @@ impl PhenomenaSource for GeneratedSky {
                 description: format!("a {} moon", size_word(angular)),
                 period_days: Some(round2(moon.period.get())),
                 salience: round2(0.35 + 0.35 * angular.min(2.0) / 2.0),
+                venue: Venue::NightSky,
             });
         }
 
@@ -328,6 +328,7 @@ impl PhenomenaSource for GeneratedSky {
                 description: "the slow swelling and shrinking of daylight".to_string(),
                 period_days: Some(round2(self.system.anchor.year.get())),
                 salience: round2(0.5 * self.system.anchor.obliquity.get() / 35.0),
+                venue: Venue::Ambient,
             });
         }
 
@@ -342,6 +343,7 @@ impl PhenomenaSource for GeneratedSky {
                     salience: round2(
                         (0.1 + 0.1 * (1.0 + neighbor.apparent_brightness).ln()).clamp(0.1, 0.6),
                     ),
+                    venue: Venue::NightSky,
                 });
             }
         }

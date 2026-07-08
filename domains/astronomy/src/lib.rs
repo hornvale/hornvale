@@ -30,7 +30,7 @@ pub use units::{
 };
 
 use hornvale_kernel::{
-    ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, RegistryError, WorldTime,
+    ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, RegistryError, Venue, WorldTime,
 };
 
 /// Phenomenon kind for bodies visible in the sky.
@@ -147,6 +147,7 @@ impl PhenomenaSource for ConstantSun {
             description: "a golden sun fixed at zenith".to_string(),
             period_days: None,
             salience: 1.0,
+            venue: Venue::DaySky,
         }]
     }
 }
@@ -157,10 +158,7 @@ mod tests {
     use hornvale_kernel::EntityId;
 
     fn ctx(day: f64) -> ObserverContext {
-        ObserverContext {
-            place: EntityId(1),
-            time: WorldTime { day },
-        }
+        ObserverContext::at(EntityId(1), WorldTime { day })
     }
 
     #[test]

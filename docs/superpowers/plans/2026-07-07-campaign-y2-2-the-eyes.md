@@ -115,9 +115,10 @@ git commit -m "test(fixtures): freeze pre-Eyes seed-42 outputs for the identity 
 ```rust
 #[test]
 fn identity_lens_is_a_byte_level_no_op() {
-    // Salience values chosen to be non-representable in binary (0.15) so
-    // any multiply-then-round would show: identity must skip arithmetic.
-    let a = FixedSource(vec![ph("breeze", 0.15), ph("sun", 1.0)]);
+    // 0.3333 is chosen because round2(0.3333) = 0.33 != 0.3333: any
+    // arithmetic leaking onto the identity path flips bits and fails
+    // the assertion below. Identity must skip arithmetic entirely.
+    let a = FixedSource(vec![ph("breeze", 0.3333), ph("sun", 1.0)]);
     let plain = observe(&[&a], &ctx());
     let via_identity = observe(
         &[&a],
@@ -127,7 +128,7 @@ fn identity_lens_is_a_byte_level_no_op() {
         },
     );
     assert_eq!(plain, via_identity);
-    assert_eq!(plain[1].salience.to_bits(), 0.15_f64.to_bits());
+    assert_eq!(plain[1].salience.to_bits(), 0.3333_f64.to_bits());
 }
 
 #[test]

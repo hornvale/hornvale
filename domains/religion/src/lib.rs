@@ -245,7 +245,7 @@ pub fn cult_form_of(world: &World) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::Seed;
+    use hornvale_kernel::{Seed, Venue};
 
     fn world(seed: u64) -> (World, EntityId) {
         let mut w = World::new(Seed(seed));
@@ -260,6 +260,7 @@ mod tests {
             description: desc.to_string(),
             period_days: period,
             salience,
+            venue: Venue::Ambient,
         }
     }
 

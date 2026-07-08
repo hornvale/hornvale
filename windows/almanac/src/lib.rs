@@ -187,7 +187,7 @@ pub fn render(ctx: &AlmanacContext) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::EntityId;
+    use hornvale_kernel::{EntityId, Venue};
 
     fn sample_context() -> AlmanacContext {
         AlmanacContext {
@@ -205,6 +205,7 @@ mod tests {
                 description: "a golden sun fixed at zenith".to_string(),
                 period_days: None,
                 salience: 1.0,
+                venue: Venue::Ambient,
             }],
             places: vec![PlaceInfo {
                 id: EntityId(1),

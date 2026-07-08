@@ -3,7 +3,7 @@
 
 use hornvale_kernel::{
     ConstantField, EntityId, Fact, Field, ObserverContext, PhenomenaSource, Phenomenon, Position,
-    Seed, Value, World, WorldTime, choose_consistent, fbm_2d, observe,
+    Seed, Value, Venue, World, WorldTime, choose_consistent, fbm_2d, observe,
 };
 
 struct MiniSun;
@@ -15,6 +15,7 @@ impl PhenomenaSource for MiniSun {
             description: "a golden sun fixed at zenith".to_string(),
             period_days: None,
             salience: 1.0,
+            venue: Venue::DaySky,
         }]
     }
 }
@@ -75,13 +76,7 @@ fn mini_genesis(seed: Seed) -> String {
 
     // Religion-ish: revere the most salient phenomenon, source-blind.
     let sun = MiniSun;
-    let seen = observe(
-        &[&sun],
-        &ObserverContext {
-            place: vale,
-            time: WorldTime { day: 0.0 },
-        },
-    );
+    let seen = observe(&[&sun], &ObserverContext::at(vale, WorldTime { day: 0.0 }));
     world
         .ledger
         .commit(

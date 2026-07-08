@@ -9,8 +9,8 @@
 //! Run from the workspace root: `cargo run -p hornvale-kernel --example first_light`
 
 use hornvale_kernel::{
-    EntityId, Fact, Ledger, ObserverContext, PhenomenaSource, Phenomenon, Seed, Value, World,
-    WorldTime, choose_consistent, fbm_2d, observe,
+    EntityId, Fact, Ledger, ObserverContext, PhenomenaSource, Phenomenon, Seed, Value, Venue,
+    World, WorldTime, choose_consistent, fbm_2d, observe,
 };
 use std::io::Write as _;
 use std::path::Path;
@@ -83,6 +83,7 @@ impl PhenomenaSource for MiniSun {
             description: "a golden sun fixed at zenith".to_string(),
             period_days: None,
             salience: 1.0,
+            venue: Venue::DaySky,
         }]
     }
 }
@@ -126,10 +127,7 @@ fn render_world_document() -> String {
         .expect("name commits");
 
     let sun = MiniSun;
-    let ctx = ObserverContext {
-        place: vale,
-        time: WorldTime { day: 0.0 },
-    };
+    let ctx = ObserverContext::at(vale, WorldTime { day: 0.0 });
     let seen = observe(&[&sun], &ctx);
     world
         .ledger

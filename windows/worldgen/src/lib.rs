@@ -344,10 +344,7 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
     let sources: [&dyn PhenomenaSource; 2] = [&sky, &climate];
     Ok(observe(
         &sources,
-        &ObserverContext {
-            place,
-            time: WorldTime { day },
-        },
+        &ObserverContext::at(place, WorldTime { day }),
     ))
 }
 

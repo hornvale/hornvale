@@ -15,7 +15,7 @@ pub use habitability::{habitable_fraction, is_habitable};
 pub use provider::{ClimateInputs, ClimateSummary, GeneratedClimate, summarize};
 
 use hornvale_kernel::{
-    ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, Position, RegistryError,
+    ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, Position, RegistryError, Venue,
 };
 
 /// Phenomenon kind for pervasive atmospheric conditions.
@@ -60,6 +60,7 @@ impl PhenomenaSource for UniformClimate {
             description: "warm, still, unchanging air".to_string(),
             period_days: None,
             salience: 0.15,
+            venue: Venue::Ambient,
         }]
     }
 }
@@ -82,10 +83,7 @@ mod tests {
     #[test]
     fn climate_contributes_a_low_salience_phenomenon() {
         let c = UniformClimate;
-        let seen = c.phenomena(&ObserverContext {
-            place: EntityId(1),
-            time: WorldTime { day: 3.0 },
-        });
+        let seen = c.phenomena(&ObserverContext::at(EntityId(1), WorldTime { day: 3.0 }));
         assert_eq!(seen.len(), 1);
         assert_eq!(seen[0].kind, AMBIENT);
         assert!(seen[0].salience < 0.5);
