@@ -130,6 +130,11 @@ contradicts, lower ("coarse constrains fine").
   `Option<f64>` (0014); `PredicateDef.name` duplicates its registry key
   (0015); config is JSON not YAML (0012); models author, dice roll (0009);
   studies are data, metrics are code (0011).
+- **The documentation map is `docs/README.md`** — what knowledge lives where
+  and how an idea flows from first mention to merged reality. For speculative
+  directions, `docs/vision/idea-registry.md` is the scannable index (check it
+  before proposing or reopening any idea; a `rejected`/`ratified` row is a
+  closed question), and `docs/vision/frontier.md` holds the essays behind it.
 
 ## Process
 

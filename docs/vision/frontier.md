@@ -16,6 +16,27 @@ earns elaboration only when something concrete needs it, and the smallest
 version that changes a downstream output is always preferred to the
 elaborate one.
 
+**This document holds the *essays* — the interconnected argument.** For the
+scannable *registry* — every idea as one line with a stable ID, a status
+(including the rejected ones), and a pointer to where it is discussed — see
+[`idea-registry.md`](idea-registry.md). Consult the registry before
+proposing or reopening anything; consult these essays to understand it. The
+map of the whole documentation set is [`docs/README.md`](../README.md).
+
+## Contents
+
+- [The governing principle: ambition is bounded by verification surface](#the-governing-principle-ambition-is-bounded-by-verification-surface)
+- [The frontier map](#the-frontier-map) — items 1–9
+- [The unification thesis](#the-unification-thesis)
+- [The expressive-culture cluster](#the-expressive-culture-cluster) — music, perception, humour, drama, architecture
+- [The species-psychology substrate](#the-species-psychology-substrate--the-layer-beneath-the-cluster)
+- [Social structure as orthogonal axes](#social-structure-as-orthogonal-axes--cashing-the-substrate) — incl. the inequality seam
+- [The biological substrate](#the-biological-substrate--body-reproduction-and-deep-time) — body, reproduction, deep time
+- [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
+- [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
+- [Sequencing the deep-time stack](#sequencing-the-deep-time-stack)
+- [Intellectual lineage](#intellectual-lineage)
+
 ---
 
 ## The governing principle: ambition is bounded by verification surface
