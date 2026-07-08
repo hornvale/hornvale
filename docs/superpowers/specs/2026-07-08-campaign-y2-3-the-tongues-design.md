@@ -261,7 +261,13 @@ Preregistered before any census runs (ADR 0016):
 3. **Voice/morphology calibration keyed to status basis** — goblin deity
    epithets carry an honorific affix; kobold epithets never do — asserted
    row-by-row from independent metric columns, like The Eyes' head-domain
-   calibration.
+   calibration. The `epithet-honorific` flag is a **content-derived
+   cross-check**, not a config echo: it reads each committed epithet fact and
+   detects the prepended affix STRUCTURALLY against an independently
+   re-derived honorific-OFF stem (case-folded, the committed epithet must end
+   with the plain stem and be strictly longer). A broken honorific pipeline —
+   a goblin epithet committed without its affix — would match the plain stem
+   and flip the flag to false, so the calibration is genuinely falsifiable.
 Optional anti-reskin echo (defined here, may run in The Meeting): attributing a
 name to its species from phonology alone (the sibilance/labiality signature) —
 the blind-attribution pattern applied to sound. New metrics: per-species

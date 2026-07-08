@@ -394,3 +394,70 @@ fn blind_attribution_beats_chance_decisively() {
         "mooned blind attribution not perfect: {correct_mooned}/{total_mooned}"
     );
 }
+
+#[test]
+fn phonotactic_validity_is_true_for_every_generated_name() {
+    // Preregistered (ADR 0016, spec §9.2): the instrument must reproduce its
+    // own grammar exactly. Every generated name — settlement, deity,
+    // epithet — must re-validate against its species' own re-derived
+    // phonotactics. If this is ever false the engine is producing names it
+    // calls invalid: this is a STOP-and-report-BLOCKED condition (task
+    // brief), never an assertion to loosen.
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    for species in ["goblin", "kobold"] {
+        let v_i = idx(&format!("phonotactic-validity-{species}"));
+        for row in &result.rows {
+            match &row.values[v_i] {
+                MetricValue::Flag(valid) => assert!(
+                    *valid,
+                    "seed {}: {species} produced a name that fails its own phonotactics — BLOCKED",
+                    row.seed
+                ),
+                MetricValue::Absent => {} // species placed nothing, held no pantheon
+                other => panic!(
+                    "seed {}: phonotactic-validity-{species} not a flag: {other:?}",
+                    row.seed
+                ),
+            }
+        }
+    }
+}
+
+#[test]
+fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
+    // Preregistered (ADR 0016, spec §9.2), directional: goblin's Rank status
+    // basis draws honorific-prefixed epithets (spec §7's morph_options
+    // mapping); kobold's Knowledge status basis does not. Row-by-row, since
+    // Absent (no pantheon this world) is a legitimate skip.
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let (g_i, k_i) = (
+        idx("epithet-honorific-goblin"),
+        idx("epithet-honorific-kobold"),
+    );
+    for row in &result.rows {
+        match &row.values[g_i] {
+            MetricValue::Flag(v) => {
+                assert!(*v, "seed {}: goblin epithet-honorific false", row.seed)
+            }
+            MetricValue::Absent => {}
+            other => panic!(
+                "seed {}: epithet-honorific-goblin not a flag: {other:?}",
+                row.seed
+            ),
+        }
+        match &row.values[k_i] {
+            MetricValue::Flag(v) => {
+                assert!(!*v, "seed {}: kobold epithet-honorific true", row.seed)
+            }
+            MetricValue::Absent => {}
+            other => panic!(
+                "seed {}: epithet-honorific-kobold not a flag: {other:?}",
+                row.seed
+            ),
+        }
+    }
+}

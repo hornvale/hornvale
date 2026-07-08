@@ -79,6 +79,7 @@ dependencies = [
  "hornvale-climate",
  "hornvale-culture",
  "hornvale-kernel",
+ "hornvale-language",
  "hornvale-religion",
  "hornvale-settlement",
  "hornvale-species",
