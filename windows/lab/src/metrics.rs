@@ -221,19 +221,21 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "belief-kind",
-            doc: "Category of the first belief: 'eternal' if its tenet contains 'never', \
-                   else 'cyclic'; Absent if no beliefs",
+            doc: "The first belief's sentiment tag ('eternal', 'cyclic', or 'ambient'); \
+                   Absent if no beliefs",
             summary: SummaryKind::Categorical,
             extract: |v| {
                 let beliefs = beliefs_of(&v.world);
-                if let Some(first) = beliefs.first() {
-                    if first.tenet.contains("never") {
-                        MetricValue::Text("eternal".to_string())
-                    } else {
-                        MetricValue::Text("cyclic".to_string())
-                    }
-                } else {
-                    MetricValue::Absent
+                match beliefs.first() {
+                    Some(first) => MetricValue::Text(
+                        match first.sentiment {
+                            hornvale_religion::Sentiment::Eternal => "eternal",
+                            hornvale_religion::Sentiment::Cyclic => "cyclic",
+                            hornvale_religion::Sentiment::Ambient => "ambient",
+                        }
+                        .to_string(),
+                    ),
+                    None => MetricValue::Absent,
                 }
             },
         },
@@ -550,23 +552,24 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "head-deity-periodicity",
-            doc: "Category of the goblin flagship's head deity (the most salient belief): \
-                   'eternal' if its tenet contains 'never', else 'cyclic'; Absent if no \
-                   goblin beliefs",
+            doc: "The sentiment tag of the goblin flagship's head deity (the most salient \
+                   belief): 'eternal', 'cyclic', or 'ambient'; Absent if no goblin beliefs",
             summary: SummaryKind::Categorical,
             extract: |v| {
                 let Some(info) = flagship_of(&v.world, "goblin") else {
                     return MetricValue::Absent;
                 };
                 let beliefs = hornvale_religion::beliefs_held_by(&v.world, info.id);
-                if let Some(head) = beliefs.first() {
-                    if head.tenet.contains("never") {
-                        MetricValue::Text("eternal".to_string())
-                    } else {
-                        MetricValue::Text("cyclic".to_string())
-                    }
-                } else {
-                    MetricValue::Absent
+                match beliefs.first() {
+                    Some(head) => MetricValue::Text(
+                        match head.sentiment {
+                            hornvale_religion::Sentiment::Eternal => "eternal",
+                            hornvale_religion::Sentiment::Cyclic => "cyclic",
+                            hornvale_religion::Sentiment::Ambient => "ambient",
+                        }
+                        .to_string(),
+                    ),
+                    None => MetricValue::Absent,
                 }
             },
         },

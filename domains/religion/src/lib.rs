@@ -5,14 +5,17 @@
 #![warn(missing_docs)]
 
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Fact, LedgerError, Phenomenon, RegistryError, Value, World,
+    ConceptRegistry, EntityId, Fact, LedgerError, Phenomenon, RegistryError, Value, Venue, World,
 };
 
 /// Predicate marking an entity as a belief.
 pub const IS_BELIEF: &str = "is-belief";
 /// Predicate relating a belief to a community that holds it.
 pub const HELD_BY: &str = "held-by";
-/// Predicate giving a belief's tenet text.
+/// Predicate giving a belief's tenet text. Retired: new genesis never
+/// commits this fact (spec §6/§8 — structured content replaces it), but the
+/// constant stays defined because pre-Tongues saves still carry `tenet`
+/// facts and historiography still recounts them.
 pub const TENET: &str = "tenet";
 /// Predicate recording which phenomenon kind a belief mythologizes.
 pub const DERIVED_FROM_PHENOMENON: &str = "derived-from-phenomenon";
@@ -20,48 +23,29 @@ pub const DERIVED_FROM_PHENOMENON: &str = "derived-from-phenomenon";
 pub const HIGH_GOD: &str = "high-god";
 /// Predicate: the cult form of a belief — `organized` or `folk` (functional Text).
 pub const CULT_FORM: &str = "cult-form";
-
-/// Seed-derivation labels used by this crate (permanent contracts).
-mod streams {
-    /// Root stream label for religion.
-    pub const ROOT: &str = "religion";
-    /// Epithet-pick stream.
-    pub const EPITHET: &str = "epithet";
-}
+/// Predicate: a belief's deity name, roman transcription (functional Text).
+pub const DEITY_NAME: &str = "deity-name";
+/// Predicate: a belief's deity name, IPA transcription (functional Text).
+pub const DEITY_NAME_IPA: &str = "deity-name-ipa";
+/// Predicate: a belief's epithet, roman transcription (functional Text).
+pub const DEITY_EPITHET: &str = "deity-epithet";
+/// Predicate: a belief's epithet, IPA transcription (functional Text).
+pub const DEITY_EPITHET_IPA: &str = "deity-epithet-ipa";
+/// Predicate: a belief's sentiment — `eternal`, `cyclic`, or `ambient`
+/// (functional Text).
+pub const SENTIMENT: &str = "sentiment";
 
 /// Salience a phenomenon must reach to seat a deity in the pantheon.
 const PANTHEON_FLOOR: f64 = 0.25;
 /// Social strata at or above which the pantheon is ranked (a high god presides).
 const RANKED_STRATA: usize = 4;
 
-// Extended append-only: the first three of each pool are unchanged from tier 0.
-const ETERNAL_EPITHETS: [&str; 6] = [
-    "the Unblinking Eye",
-    "the Ever-Flame",
-    "the Gold Warden",
-    "the Still Crown",
-    "the Deathless Watch",
-    "the Fixed Star",
-];
-const CYCLIC_EPITHETS: [&str; 6] = [
-    "the Returning One",
-    "the Tidewalker",
-    "the Promised Lamp",
-    "the Wheel-Turner",
-    "the Waning Herald",
-    "the Patient Pilgrim",
-];
-
-/// Every seed-derivation label this crate uses, with docs.
+/// Every seed-derivation label this crate uses, with docs. Empty: religion
+/// no longer draws from the seed directly — deity and epithet naming (and
+/// the streams behind them) are the `DeityNamer` implementation's business,
+/// which for language-backed names lives in `domains/language`.
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
-    vec![
-        ("religion", "root stream for religion generation"),
-        ("religion/epithet", "deity epithet pick"),
-        (
-            "religion/kobold/epithet",
-            "deity epithet pick (kobold pantheon)",
-        ),
-    ]
+    Vec::new()
 }
 
 /// Register religion's contribution to the concept registry.
@@ -79,6 +63,23 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         CULT_FORM,
         true,
         "the cult form of a belief (organized or folk)",
+    )?;
+    registry.register_predicate(DEITY_NAME, true, "a belief's deity name (roman)")?;
+    registry.register_predicate(
+        DEITY_NAME_IPA,
+        true,
+        "a belief's deity name (IPA transcription)",
+    )?;
+    registry.register_predicate(DEITY_EPITHET, true, "a belief's epithet (roman)")?;
+    registry.register_predicate(
+        DEITY_EPITHET_IPA,
+        true,
+        "a belief's epithet (IPA transcription)",
+    )?;
+    registry.register_predicate(
+        SENTIMENT,
+        true,
+        "a belief's sentiment (eternal, cyclic, or ambient)",
     )
 }
 
@@ -93,15 +94,84 @@ pub struct SocietySummary {
     pub has_priesthood: bool,
 }
 
+/// A belief's felt relationship to the phenomenon it mythologizes —
+/// watched (eternal), mourned-and-feasted (cyclic), or felt through the
+/// ambient world rather than watched (ambient). Derived from the source
+/// phenomenon's venue and periodicity (spec §6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Sentiment {
+    /// An unchanging presence in the day or night sky: always watched.
+    Eternal,
+    /// A presence that departs and returns: mourned in absence, feasted on
+    /// return.
+    Cyclic,
+    /// Felt through the ambient world (air, seasons) rather than watched.
+    Ambient,
+}
+
+impl Sentiment {
+    /// Derive a sentiment from a phenomenon's venue and periodicity:
+    /// `Venue::Ambient` is always `Ambient`; otherwise an aperiodic
+    /// phenomenon (`period_days: None`) is `Eternal` and a periodic one is
+    /// `Cyclic`.
+    pub fn of(phenomenon: &Phenomenon) -> Self {
+        if phenomenon.venue == Venue::Ambient {
+            Sentiment::Ambient
+        } else if phenomenon.period_days.is_none() {
+            Sentiment::Eternal
+        } else {
+            Sentiment::Cyclic
+        }
+    }
+
+    /// The lowercase tag committed to the ledger's `sentiment` fact.
+    fn as_str(self) -> &'static str {
+        match self {
+            Sentiment::Eternal => "eternal",
+            Sentiment::Cyclic => "cyclic",
+            Sentiment::Ambient => "ambient",
+        }
+    }
+
+    /// Parse the lowercase tag committed to the ledger's `sentiment` fact.
+    /// `None` for anything else (a legacy save with no `sentiment` fact,
+    /// for instance).
+    fn parse(tag: &str) -> Option<Self> {
+        match tag {
+            "eternal" => Some(Sentiment::Eternal),
+            "cyclic" => Some(Sentiment::Cyclic),
+            "ambient" => Some(Sentiment::Ambient),
+            _ => None,
+        }
+    }
+}
+
+/// Supplies a deity's name and epithet without religion knowing which
+/// language — or whether any language at all — produced them (religion
+/// stays language-agnostic, spec §6). Both methods return `(roman, ipa)`
+/// pairs. `salt` is the minted belief entity's id: deterministic and
+/// unique per deity, so an implementation can derive its own seed streams
+/// from it without religion knowing anything about streams.
+pub trait DeityNamer {
+    /// A deity's name for the belief salted by `salt`.
+    fn deity(&mut self, salt: u64) -> (String, String);
+    /// An epithet for the belief salted by `salt`, fitting `sentiment`.
+    fn epithet(&mut self, salt: u64, sentiment: Sentiment) -> (String, String);
+}
+
 /// A belief as this domain knows it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Belief {
     /// The belief's entity id.
     pub id: EntityId,
-    /// The belief's tenet text.
-    pub tenet: String,
+    /// The deity's name (roman transcription).
+    pub deity: String,
+    /// The deity's epithet (roman transcription).
+    pub epithet: String,
     /// The phenomenon kind it mythologizes.
     pub source_kind: String,
+    /// The belief's sentiment (eternal, cyclic, or ambient).
+    pub sentiment: Sentiment,
     /// Whether this belief is the pantheon's presiding high god.
     pub high_god: bool,
 }
@@ -113,15 +183,17 @@ pub struct Belief {
 /// follows the priesthood. Phenomena arrive salience-descending. Returns the
 /// pantheon in that order (element 0 is the head).
 ///
-/// `stream_qualifier`: `None` draws epithets from the legacy
-/// `religion/epithet` stream; `Some(s)` from `religion/<s>/epithet` —
-/// permanent labels, ADR 0006.
+/// Emits structured content, not prose (spec §6): each member phenomenon's
+/// `Sentiment` is derived, then `names` is asked for the deity's name and an
+/// epithet fitting that sentiment (salted by the freshly minted belief's
+/// entity id — deterministic, unique per deity). The rendered tenet is a
+/// downstream concern (Task 8); this crate commits meaning, never prose.
 pub fn genesis(
     world: &mut World,
     community: EntityId,
     phenomena: &[Phenomenon],
     society: &SocietySummary,
-    stream_qualifier: Option<&str>,
+    names: &mut dyn DeityNamer,
 ) -> Result<Vec<EntityId>, LedgerError> {
     // Members: everything above the floor; else the single most salient; else none.
     let above = phenomena
@@ -144,45 +216,16 @@ pub fn genesis(
     } else {
         "folk"
     };
-    let base = world.seed.derive(streams::ROOT);
-    let mut stream = match stream_qualifier {
-        None => base.derive(streams::EPITHET).stream(),
-        Some(q) => base.derive(q).derive(streams::EPITHET).stream(),
-    };
 
-    // Distinct epithets within a pantheon: draw an index, advance past any
-    // already used (deterministic; pools of 6 cover the realistic pantheon
-    // size — if ever exhausted, repeats are allowed rather than failing).
-    let mut used: Vec<&'static str> = Vec::new();
     let mut ids = Vec::with_capacity(members.len());
     for (i, p) in members.iter().enumerate() {
-        let pool: &[&'static str] = match p.period_days {
-            None => &ETERNAL_EPITHETS,
-            Some(_) => &CYCLIC_EPITHETS,
-        };
-        let start = stream.range_u32(0, pool.len() as u32 - 1) as usize;
-        let mut epithet = pool[start];
-        for step in 0..pool.len() {
-            let candidate = pool[(start + step) % pool.len()];
-            if !used.contains(&candidate) {
-                epithet = candidate;
-                break;
-            }
-        }
-        used.push(epithet);
-
-        let tenet = match p.period_days {
-            None => format!(
-                "{epithet} is {}; it has never departed and will never blink.",
-                p.description
-            ),
-            Some(period) => format!(
-                "{epithet} departs and returns every {period} days; its absences are mourned \
-                 and its returns feasted."
-            ),
-        };
+        let sentiment = Sentiment::of(p);
 
         let belief = world.ledger.mint_entity();
+        let salt = belief.0;
+        let (deity_name, deity_ipa) = names.deity(salt);
+        let (epithet, epithet_ipa) = names.epithet(salt, sentiment);
+
         let fact = |predicate: &str, object: Value| Fact {
             subject: belief,
             predicate: predicate.to_string(),
@@ -196,7 +239,22 @@ pub fn genesis(
             .commit(fact(IS_BELIEF, Value::Flag(true)), &world.registry)?;
         world
             .ledger
-            .commit(fact(TENET, Value::Text(tenet)), &world.registry)?;
+            .commit(fact(DEITY_NAME, Value::Text(deity_name)), &world.registry)?;
+        world.ledger.commit(
+            fact(DEITY_NAME_IPA, Value::Text(deity_ipa)),
+            &world.registry,
+        )?;
+        world
+            .ledger
+            .commit(fact(DEITY_EPITHET, Value::Text(epithet)), &world.registry)?;
+        world.ledger.commit(
+            fact(DEITY_EPITHET_IPA, Value::Text(epithet_ipa)),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(SENTIMENT, Value::Text(sentiment.as_str().to_string())),
+            &world.registry,
+        )?;
         world
             .ledger
             .commit(fact(HELD_BY, Value::Entity(community)), &world.registry)?;
@@ -218,7 +276,11 @@ pub fn genesis(
     Ok(ids)
 }
 
-/// Every belief in the world, in commit order.
+/// Every belief in the world, in commit order. A belief with no `sentiment`
+/// fact (a legacy, pre-Tongues save) reads as `Sentiment::Ambient` here —
+/// its raw `tenet` fact is still available and still recounted by
+/// historiography, which reads facts directly rather than through this
+/// structured view.
 pub fn beliefs_of(world: &World) -> Vec<Belief> {
     world
         .ledger
@@ -226,9 +288,14 @@ pub fn beliefs_of(world: &World) -> Vec<Belief> {
         .map(|f| f.subject)
         .map(|id| Belief {
             id,
-            tenet: world
+            deity: world
                 .ledger
-                .text_of(id, TENET)
+                .text_of(id, DEITY_NAME)
+                .map(str::to_string)
+                .unwrap_or_default(),
+            epithet: world
+                .ledger
+                .text_of(id, DEITY_EPITHET)
                 .map(str::to_string)
                 .unwrap_or_default(),
             source_kind: world
@@ -236,6 +303,11 @@ pub fn beliefs_of(world: &World) -> Vec<Belief> {
                 .text_of(id, DERIVED_FROM_PHENOMENON)
                 .map(str::to_string)
                 .unwrap_or_default(),
+            sentiment: world
+                .ledger
+                .text_of(id, SENTIMENT)
+                .and_then(Sentiment::parse)
+                .unwrap_or(Sentiment::Ambient),
             high_god: matches!(world.ledger.value_of(id, HIGH_GOD), Some(Value::Flag(true))),
         })
         .collect()
@@ -277,7 +349,25 @@ pub fn cult_form_held_by(world: &World, community: EntityId) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::{Seed, Venue};
+    use hornvale_kernel::Seed;
+
+    /// A deterministic test `DeityNamer`: `("XarN", "xarN")` for deities,
+    /// `("EpithetN(sentiment)", "epithetN")` for epithets, where `N` is the
+    /// salt. Distinct salts (minted belief ids) always yield distinct pairs.
+    struct StubNamer;
+
+    impl DeityNamer for StubNamer {
+        fn deity(&mut self, salt: u64) -> (String, String) {
+            (format!("Xar{salt}"), format!("xar{salt}"))
+        }
+
+        fn epithet(&mut self, salt: u64, sentiment: Sentiment) -> (String, String) {
+            (
+                format!("the {:?} Epithet{salt}", sentiment),
+                format!("epithet{salt}"),
+            )
+        }
+    }
 
     fn world(seed: u64) -> (World, EntityId) {
         let mut w = World::new(Seed(seed));
@@ -286,23 +376,29 @@ mod tests {
         (w, community)
     }
 
-    fn ph(kind: &str, desc: &str, period: Option<f64>, salience: f64) -> Phenomenon {
+    fn ph(kind: &str, desc: &str, period: Option<f64>, salience: f64, venue: Venue) -> Phenomenon {
         Phenomenon {
             kind: kind.to_string(),
             description: desc.to_string(),
             period_days: period,
             salience,
-            venue: Venue::Ambient,
+            venue,
         }
     }
 
     // Pre-sorted salience-descending, as kernel::observe delivers.
     fn sky() -> Vec<Phenomenon> {
         vec![
-            ph("celestial-body", "the sun", None, 1.0), // eternal
-            ph("seasonal-cycle", "the seasons", Some(365.0), 0.5),
-            ph("celestial-body", "a moon", Some(29.0), 0.4),
-            ph("ambient", "still air", None, 0.15), // below floor
+            ph("celestial-body", "the sun", None, 1.0, Venue::DaySky), // eternal
+            ph(
+                "seasonal-cycle",
+                "the seasons",
+                Some(365.0),
+                0.5,
+                Venue::Ambient,
+            ), // ambient venue wins regardless of period
+            ph("celestial-body", "a moon", Some(29.0), 0.4, Venue::NightSky), // cyclic
+            ph("ambient", "still air", None, 0.15, Venue::Ambient),    // below floor
         ]
     }
 
@@ -316,11 +412,7 @@ mod tests {
     #[test]
     fn pantheon_takes_every_phenomenon_above_the_floor() {
         let (mut w, c) = world(42);
-        let society = SocietySummary {
-            strata: 5,
-            has_priesthood: true,
-        };
-        let ids = genesis(&mut w, c, &sky(), &society, None).unwrap();
+        let ids = genesis(&mut w, c, &sky(), &society(), &mut StubNamer).unwrap();
         assert_eq!(
             ids.len(),
             3,
@@ -333,17 +425,7 @@ mod tests {
     #[test]
     fn a_ranked_society_crowns_the_most_salient_deity() {
         let (mut w, c) = world(42);
-        let ids = genesis(
-            &mut w,
-            c,
-            &sky(),
-            &SocietySummary {
-                strata: 5,
-                has_priesthood: true,
-            },
-            None,
-        )
-        .unwrap();
+        let ids = genesis(&mut w, c, &sky(), &society(), &mut StubNamer).unwrap();
         let beliefs = beliefs_of(&w);
         assert!(
             beliefs[0].high_god,
@@ -360,17 +442,11 @@ mod tests {
     #[test]
     fn a_flat_society_has_no_high_god() {
         let (mut w, c) = world(42);
-        let ids = genesis(
-            &mut w,
-            c,
-            &sky(),
-            &SocietySummary {
-                strata: 2,
-                has_priesthood: false,
-            },
-            None,
-        )
-        .unwrap();
+        let flat = SocietySummary {
+            strata: 2,
+            has_priesthood: false,
+        };
+        let ids = genesis(&mut w, c, &sky(), &flat, &mut StubNamer).unwrap();
         let _ = ids;
         assert!(
             beliefs_of(&w).iter().all(|b| !b.high_god),
@@ -381,75 +457,72 @@ mod tests {
     #[test]
     fn priesthood_sets_the_cult_form() {
         let (mut w, c) = world(42);
-        genesis(
-            &mut w,
-            c,
-            &sky(),
-            &SocietySummary {
-                strata: 5,
-                has_priesthood: true,
-            },
-            None,
-        )
-        .unwrap();
+        genesis(&mut w, c, &sky(), &society(), &mut StubNamer).unwrap();
         assert_eq!(cult_form_of(&w).as_deref(), Some("organized"));
         let (mut w2, c2) = world(42);
-        genesis(
-            &mut w2,
-            c2,
-            &sky(),
-            &SocietySummary {
-                strata: 2,
-                has_priesthood: false,
-            },
-            None,
-        )
-        .unwrap();
+        let flat = SocietySummary {
+            strata: 2,
+            has_priesthood: false,
+        };
+        genesis(&mut w2, c2, &sky(), &flat, &mut StubNamer).unwrap();
         assert_eq!(cult_form_of(&w2).as_deref(), Some("folk"));
     }
 
     #[test]
-    fn tenets_track_periodicity_and_a_locked_sun_is_eternal() {
+    fn beliefs_carry_deity_epithet_and_sentiment_no_tenet() {
         let (mut w, c) = world(42);
-        // Locked sky: eternal sun, no seasons.
+        // Locked sky: eternal sun (day sky, aperiodic), cyclic moon (night
+        // sky, periodic).
         let locked = vec![
-            ph("celestial-body", "a fixed sun", None, 1.0),
-            ph("celestial-body", "a moon", Some(29.0), 0.4),
+            ph("celestial-body", "a fixed sun", None, 1.0, Venue::DaySky),
+            ph("celestial-body", "a moon", Some(29.0), 0.4, Venue::NightSky),
         ];
-        genesis(
-            &mut w,
-            c,
-            &locked,
-            &SocietySummary {
-                strata: 5,
-                has_priesthood: true,
-            },
-            None,
-        )
-        .unwrap();
-        let head = &beliefs_of(&w)[0];
-        assert!(
-            head.tenet.contains("never"),
-            "eternal sun yields an eternal tenet"
+        let ids = genesis(&mut w, c, &locked, &society(), &mut StubNamer).unwrap();
+        let beliefs = beliefs_of(&w);
+        let head = &beliefs[0];
+        assert!(!head.deity.is_empty(), "deity name committed");
+        assert!(!head.epithet.is_empty(), "epithet committed");
+        assert_eq!(
+            head.sentiment,
+            Sentiment::Eternal,
+            "an aperiodic day-sky sun is eternal"
         );
+        assert_eq!(
+            beliefs[1].sentiment,
+            Sentiment::Cyclic,
+            "a periodic moon is cyclic"
+        );
+
+        // No tenet fact is committed for any minted belief.
+        for id in &ids {
+            assert!(
+                w.ledger.text_of(*id, TENET).is_none(),
+                "genesis must not commit a tenet fact"
+            );
+        }
+    }
+
+    #[test]
+    fn ambient_venue_phenomena_yield_ambient_sentiment_regardless_of_period() {
+        let (mut w, c) = world(42);
+        let seasons = vec![ph(
+            "seasonal-cycle",
+            "the seasons",
+            Some(365.0),
+            1.0,
+            Venue::Ambient,
+        )];
+        genesis(&mut w, c, &seasons, &society(), &mut StubNamer).unwrap();
+        assert_eq!(beliefs_of(&w)[0].sentiment, Sentiment::Ambient);
     }
 
     #[test]
     fn empty_phenomena_means_no_pantheon() {
         let (mut w, c) = world(42);
         assert!(
-            genesis(
-                &mut w,
-                c,
-                &[],
-                &SocietySummary {
-                    strata: 5,
-                    has_priesthood: true,
-                },
-                None,
-            )
-            .unwrap()
-            .is_empty()
+            genesis(&mut w, c, &[], &society(), &mut StubNamer)
+                .unwrap()
+                .is_empty()
         );
         assert!(beliefs_of(&w).is_empty());
     }
@@ -458,20 +531,14 @@ mod tests {
     fn below_floor_only_still_yields_the_single_most_salient() {
         let (mut w, c) = world(42);
         let faint = vec![
-            ph("ambient", "a whisper of air", None, 0.15),
-            ph("celestial-body", "a dim star", None, 0.1),
+            ph("ambient", "a whisper of air", None, 0.15, Venue::Ambient),
+            ph("celestial-body", "a dim star", None, 0.1, Venue::DaySky),
         ];
-        let ids = genesis(
-            &mut w,
-            c,
-            &faint,
-            &SocietySummary {
-                strata: 2,
-                has_priesthood: false,
-            },
-            None,
-        )
-        .unwrap();
+        let flat = SocietySummary {
+            strata: 2,
+            has_priesthood: false,
+        };
+        let ids = genesis(&mut w, c, &faint, &flat, &mut StubNamer).unwrap();
         assert_eq!(ids.len(), 1, "never godless while something is observed");
         assert_eq!(beliefs_of(&w)[0].source_kind, "ambient");
     }
@@ -480,45 +547,34 @@ mod tests {
     fn genesis_is_deterministic() {
         let run = || {
             let (mut w, c) = world(7);
-            genesis(
-                &mut w,
-                c,
-                &sky(),
-                &SocietySummary {
-                    strata: 5,
-                    has_priesthood: true,
-                },
-                None,
-            )
-            .unwrap();
+            genesis(&mut w, c, &sky(), &society(), &mut StubNamer).unwrap();
             beliefs_of(&w)
                 .iter()
-                .map(|b| b.tenet.clone())
+                .map(|b| (b.deity.clone(), b.epithet.clone(), b.sentiment))
                 .collect::<Vec<_>>()
         };
         assert_eq!(run(), run());
     }
 
     #[test]
-    fn a_qualified_stream_draws_independently_of_the_legacy_stream() {
+    fn each_deity_is_salted_by_its_own_belief_id() {
         let (mut w, c) = world(42);
         let c2 = w.ledger.mint_entity();
-        genesis(&mut w, c, &sky(), &society(), None).unwrap();
-        genesis(&mut w, c2, &sky(), &society(), Some("kobold")).unwrap();
+        genesis(&mut w, c, &sky(), &society(), &mut StubNamer).unwrap();
+        genesis(&mut w, c2, &sky(), &society(), &mut StubNamer).unwrap();
         let all = beliefs_of(&w);
-        let held_c: Vec<_> = beliefs_held_by(&w, c);
-        let held_c2: Vec<_> = beliefs_held_by(&w, c2);
+        let held_c = beliefs_held_by(&w, c);
+        let held_c2 = beliefs_held_by(&w, c2);
         assert_eq!(held_c.len() + held_c2.len(), all.len());
         assert_eq!(held_c.len(), 3);
         assert_eq!(held_c2.len(), 3);
-        // Same phenomena, same code — but independent streams, so the epithet
-        // sequences must not be forced equal. (They may coincide per-deity by
-        // chance; the tenets differing anywhere is the check.)
-        let tenets = |bs: &[Belief]| bs.iter().map(|b| b.tenet.clone()).collect::<Vec<_>>();
+        // Different belief entities → different salts → different names,
+        // even though both communities see the identical phenomena.
+        let deities = |bs: &[Belief]| bs.iter().map(|b| b.deity.clone()).collect::<Vec<_>>();
         assert_ne!(
-            tenets(&held_c),
-            tenets(&held_c2),
-            "kobold epithets replayed the goblin stream — the qualifier is not wired"
+            deities(&held_c),
+            deities(&held_c2),
+            "distinct belief ids must salt distinct deity names"
         );
     }
 
@@ -526,28 +582,12 @@ mod tests {
     fn cult_form_is_read_per_community() {
         let (mut w, c) = world(42);
         let c2 = w.ledger.mint_entity();
-        genesis(
-            &mut w,
-            c,
-            &sky(),
-            &SocietySummary {
-                strata: 5,
-                has_priesthood: true,
-            },
-            None,
-        )
-        .unwrap();
-        genesis(
-            &mut w,
-            c2,
-            &sky(),
-            &SocietySummary {
-                strata: 2,
-                has_priesthood: false,
-            },
-            Some("kobold"),
-        )
-        .unwrap();
+        genesis(&mut w, c, &sky(), &society(), &mut StubNamer).unwrap();
+        let flat = SocietySummary {
+            strata: 2,
+            has_priesthood: false,
+        };
+        genesis(&mut w, c2, &sky(), &flat, &mut StubNamer).unwrap();
         assert_eq!(cult_form_held_by(&w, c).as_deref(), Some("organized"));
         assert_eq!(cult_form_held_by(&w, c2).as_deref(), Some("folk"));
     }

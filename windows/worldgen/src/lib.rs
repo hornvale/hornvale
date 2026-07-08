@@ -437,6 +437,29 @@ pub fn observed_phenomena_as(world: &World, species: &str) -> Result<Vec<Phenome
     ))
 }
 
+// TEMPORARY (Task 9 replaces): a placeholder `DeityNamer` until the
+// language-backed composition-root namer lands (spec §6/§9). Returns
+// deterministic, non-linguistic placeholder pairs keyed only by `salt`
+// (the belief's own entity id) and, for epithets, `sentiment` — enough to
+// keep the workspace compiling and every downstream consumer (almanac,
+// repl, lab) rendering *something* structured in the meantime.
+struct PlaceholderDeityNamer;
+
+impl hornvale_religion::DeityNamer for PlaceholderDeityNamer {
+    fn deity(&mut self, salt: u64) -> (String, String) {
+        (format!("Deity{salt}"), format!("deity{salt}"))
+    }
+
+    fn epithet(&mut self, salt: u64, sentiment: hornvale_religion::Sentiment) -> (String, String) {
+        let tag = match sentiment {
+            hornvale_religion::Sentiment::Eternal => "eternal",
+            hornvale_religion::Sentiment::Cyclic => "cyclic",
+            hornvale_religion::Sentiment::Ambient => "ambient",
+        };
+        (format!("the {tag} one {salt}"), format!("{tag}{salt}"))
+    }
+}
+
 /// Build a complete world: mint the world entity and record its sky choice
 /// and scenario pins first; run sky genesis for `Generated`; commit the
 /// terrain pins and run tectonic genesis; then assemble per-cell site inputs
@@ -651,12 +674,13 @@ pub fn build_world(
             has_priesthood: castes.iter().any(|c| c == def.shaman),
         };
         let seen = observed_phenomena_as(&world, def.name)?;
-        let qualifier = if def.name == "goblin" {
-            None
-        } else {
-            Some(def.name)
-        };
-        hornvale_religion::genesis(&mut world, flagship, &seen, &society, qualifier)?;
+        hornvale_religion::genesis(
+            &mut world,
+            flagship,
+            &seen,
+            &society,
+            &mut PlaceholderDeityNamer,
+        )?;
     }
 
     // Species entities AFTER every pre-species subsystem (settlements,
@@ -1493,24 +1517,25 @@ mod tests {
             &SettlementPins::default(),
         )
         .unwrap();
-        let head_tenet = |w: &World| {
+        let head_sentiment = |w: &World| {
             hornvale_religion::beliefs_of(w)
                 .first()
-                .map(|b| b.tenet.clone())
-                .unwrap_or_default()
+                .map(|b| b.sentiment)
         };
         // The head deity's periodicity flips with the sun's rotation regime.
-        assert!(
-            head_tenet(&locked).contains("never"),
+        assert_eq!(
+            head_sentiment(&locked),
+            Some(hornvale_religion::Sentiment::Eternal),
             "locked world: an eternal high god"
         );
-        assert!(
-            head_tenet(&spinning).contains("return") || !head_tenet(&spinning).contains("never"),
-            "spinning world: a cyclic head deity"
+        assert_ne!(
+            head_sentiment(&spinning),
+            Some(hornvale_religion::Sentiment::Eternal),
+            "spinning world: not an eternal head deity"
         );
         assert_ne!(
-            head_tenet(&spinning),
-            head_tenet(&locked),
+            head_sentiment(&spinning),
+            head_sentiment(&locked),
             "the two skies yield different religions"
         );
         // A pantheon, not a single belief.

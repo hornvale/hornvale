@@ -208,9 +208,12 @@ pub fn render(ctx: &AlmanacContext) -> String {
                 } else {
                     ""
                 };
+                // TEMPORARY (Task 8 replaces): the register renderer isn't
+                // built yet — show the structured deity/epithet fields
+                // directly rather than a rendered tenet sentence.
                 doc.push_str(&format!(
-                    "> {}{mark}\n>\n> — derived from the phenomenon *{}*\n\n",
-                    belief.tenet, belief.source_kind
+                    "> {}, {}{mark}\n>\n> — derived from the phenomenon *{}*\n\n",
+                    belief.deity, belief.epithet, belief.source_kind
                 ));
             }
         }
@@ -224,6 +227,7 @@ pub fn render(ctx: &AlmanacContext) -> String {
 mod tests {
     use super::*;
     use hornvale_kernel::{EntityId, Venue};
+    use hornvale_religion::Sentiment;
 
     fn sample_context() -> AlmanacContext {
         AlmanacContext {
@@ -266,8 +270,10 @@ mod tests {
                 cult_form: Some("organized".to_string()),
                 beliefs: vec![Belief {
                     id: EntityId(3),
-                    tenet: "the Ever-Flame never blinks.".to_string(),
+                    deity: "Ignathar".to_string(),
+                    epithet: "the Ever-Flame".to_string(),
                     source_kind: "celestial-body".to_string(),
+                    sentiment: Sentiment::Eternal,
                     high_god: true,
                 }],
             }],
@@ -417,14 +423,18 @@ mod tests {
                 beliefs: vec![
                     Belief {
                         id: EntityId(3),
-                        tenet: "the Ever-Flame never blinks.".to_string(),
+                        deity: "Ignathar".to_string(),
+                        epithet: "the Ever-Flame".to_string(),
                         source_kind: "celestial-body".to_string(),
+                        sentiment: Sentiment::Eternal,
                         high_god: true,
                     },
                     Belief {
                         id: EntityId(4),
-                        tenet: "the Tidewalker returns.".to_string(),
+                        deity: "Meraleth".to_string(),
+                        epithet: "the Tidewalker".to_string(),
                         source_kind: "seasonal-cycle".to_string(),
+                        sentiment: Sentiment::Cyclic,
                         high_god: false,
                     },
                 ],
@@ -465,8 +475,10 @@ mod tests {
             cult_form: Some("folk".to_string()),
             beliefs: vec![Belief {
                 id: EntityId(99),
-                tenet: "the Tidewalker departs and returns every 18 days; its absences are mourned and its returns feasted.".to_string(),
+                deity: "Meraleth".to_string(),
+                epithet: "the Tidewalker".to_string(),
                 source_kind: "celestial-body".to_string(),
+                sentiment: Sentiment::Cyclic,
                 high_god: true,
             }],
         });

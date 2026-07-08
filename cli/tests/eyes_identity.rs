@@ -52,6 +52,9 @@ fn filtered(world: &hornvale_kernel::World) -> Vec<String> {
 }
 
 #[test]
+#[ignore = "superseded by The Tongues structural invariants (tongues_identity.rs, Task 11); \
+            byte-identity against pre-Eyes/pre-species fixtures does not survive belief \
+            restructuring — spec §8"]
 fn goblin_pinned_seed_42_is_a_superset_of_pre_eyes_main() {
     let fixture: hornvale_kernel::World =
         serde_json::from_str(include_str!("fixtures/pre-eyes-seed-42-goblin-world.json")).unwrap();
@@ -70,6 +73,9 @@ fn goblin_pinned_seed_42_is_a_superset_of_pre_eyes_main() {
 }
 
 #[test]
+#[ignore = "superseded by The Tongues structural invariants (tongues_identity.rs, Task 11); \
+            byte-identity against pre-Eyes/pre-species fixtures does not survive belief \
+            restructuring — spec §8"]
 fn the_default_worlds_goblin_pantheon_is_unmoved() {
     let fixture: hornvale_kernel::World =
         serde_json::from_str(include_str!("fixtures/pre-eyes-seed-42-default-world.json")).unwrap();

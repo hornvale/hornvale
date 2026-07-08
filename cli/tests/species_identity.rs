@@ -46,6 +46,9 @@ fn filtered(world: &hornvale_kernel::World) -> Vec<String> {
 }
 
 #[test]
+#[ignore = "superseded by The Tongues structural invariants (tongues_identity.rs, Task 11); \
+            byte-identity against pre-Eyes/pre-species fixtures does not survive belief \
+            restructuring — spec §8"]
 fn goblin_pinned_seed_42_is_a_superset_of_pre_species_main() {
     let fixture: hornvale_kernel::World =
         serde_json::from_str(include_str!("fixtures/pre-species-seed-42-world.json"))

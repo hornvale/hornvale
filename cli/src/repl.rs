@@ -220,7 +220,18 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     writeln!(output, "no beliefs are recorded")?;
                 }
                 for (i, belief) in beliefs.iter().enumerate() {
-                    writeln!(output, "{}. [{}] {}", i + 1, belief.id.0, belief.tenet)?;
+                    // TEMPORARY (Task 8 replaces): no register renderer yet
+                    // — show the structured fields directly rather than a
+                    // rendered tenet sentence.
+                    writeln!(
+                        output,
+                        "{}. [{}] {}, {} ({:?})",
+                        i + 1,
+                        belief.id.0,
+                        belief.deity,
+                        belief.epithet,
+                        belief.sentiment
+                    )?;
                 }
             }
             "why" => match argument.and_then(|a| a.parse::<u64>().ok()) {

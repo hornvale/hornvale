@@ -47,7 +47,6 @@ mod tests {
             "<!-- GENERATED FILE",
             "| `settlement/name` |",
             "| `settlement/placement` |",
-            "| `religion/epithet` |",
             "| `terrain/plate-count` |",
             "octave-{n}",
         ] {
