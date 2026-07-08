@@ -71,6 +71,7 @@
 
 - [The Concept Registry](./reference/concept-registry.md)
 - [The Stream Manifest](./reference/stream-manifest.md)
+- [Phonology](./reference/phonology.md)
 
 # Open Questions
 
