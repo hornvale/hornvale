@@ -1,0 +1,6353 @@
+{
+  "seed": 42,
+  "registry": {
+    "predicates": {
+      "biome": {
+        "name": "biome",
+        "functional": true,
+        "doc": "biome of a place"
+      },
+      "cell-id": {
+        "name": "cell-id",
+        "functional": true,
+        "doc": "Geosphere cell id a settlement sits on"
+      },
+      "cult-form": {
+        "name": "cult-form",
+        "functional": true,
+        "doc": "the cult form of a belief (organized or folk)"
+      },
+      "day-length-std": {
+        "name": "day-length-std",
+        "functional": true,
+        "doc": "solar day length in standard days, for spinning worlds"
+      },
+      "derived-from-phenomenon": {
+        "name": "derived-from-phenomenon",
+        "functional": true,
+        "doc": "phenomenon kind a belief mythologizes"
+      },
+      "genesis-note": {
+        "name": "genesis-note",
+        "functional": false,
+        "doc": "a degradation or refusal recorded during sky genesis"
+      },
+      "has-caste": {
+        "name": "has-caste",
+        "functional": false,
+        "doc": "a caste present in a settlement"
+      },
+      "held-by": {
+        "name": "held-by",
+        "functional": false,
+        "doc": "a community holding a belief"
+      },
+      "high-god": {
+        "name": "high-god",
+        "functional": true,
+        "doc": "the presiding deity of a ranked pantheon"
+      },
+      "highest-elevation-m": {
+        "name": "highest-elevation-m",
+        "functional": true,
+        "doc": "highest globe cell elevation in meters"
+      },
+      "is-belief": {
+        "name": "is-belief",
+        "functional": true,
+        "doc": "subject is a belief"
+      },
+      "is-place": {
+        "name": "is-place",
+        "functional": true,
+        "doc": "subject is a traversable place"
+      },
+      "is-settlement": {
+        "name": "is-settlement",
+        "functional": true,
+        "doc": "subject is a settlement"
+      },
+      "latitude": {
+        "name": "latitude",
+        "functional": true,
+        "doc": "settlement latitude, degrees"
+      },
+      "longitude": {
+        "name": "longitude",
+        "functional": true,
+        "doc": "settlement longitude, degrees"
+      },
+      "moon-count": {
+        "name": "moon-count",
+        "functional": true,
+        "doc": "how many moons the anchor world has"
+      },
+      "moon-period-std": {
+        "name": "moon-period-std",
+        "functional": false,
+        "doc": "orbital period of a moon, in standard days"
+      },
+      "name": {
+        "name": "name",
+        "functional": true,
+        "doc": "canonical name of an entity"
+      },
+      "notable-neighbor": {
+        "name": "notable-neighbor",
+        "functional": false,
+        "doc": "a notable neighbor star visible in the night sky"
+      },
+      "obliquity-degrees": {
+        "name": "obliquity-degrees",
+        "functional": true,
+        "doc": "axial tilt of the anchor world, in degrees"
+      },
+      "ocean-fraction": {
+        "name": "ocean-fraction",
+        "functional": true,
+        "doc": "fraction of globe cells below sea level"
+      },
+      "peopled-by": {
+        "name": "peopled-by",
+        "functional": true,
+        "doc": "the species that peoples a settlement"
+      },
+      "plate-count": {
+        "name": "plate-count",
+        "functional": true,
+        "doc": "how many tectonic plates the globe has"
+      },
+      "population": {
+        "name": "population",
+        "functional": true,
+        "doc": "population of a settlement"
+      },
+      "scenario-pin": {
+        "name": "scenario-pin",
+        "functional": false,
+        "doc": "an experimenter-supplied pin string conditioning genesis"
+      },
+      "sea-level-m": {
+        "name": "sea-level-m",
+        "functional": true,
+        "doc": "sea level in meters"
+      },
+      "settlement-pin": {
+        "name": "settlement-pin",
+        "functional": false,
+        "doc": "a settlement scenario pin, round-trippable"
+      },
+      "sky-provider": {
+        "name": "sky-provider",
+        "functional": true,
+        "doc": "which astronomy provider this world uses (constant or generated)"
+      },
+      "species-activity-cycle": {
+        "name": "species-activity-cycle",
+        "functional": true,
+        "doc": "when a species is awake: diurnal, nocturnal, crepuscular"
+      },
+      "species-deliberation-latency": {
+        "name": "species-deliberation-latency",
+        "functional": true,
+        "doc": "decision slowness, 0-1"
+      },
+      "species-in-group-radius": {
+        "name": "species-in-group-radius",
+        "functional": true,
+        "doc": "how wide 'us' is drawn, 0-1"
+      },
+      "species-name": {
+        "name": "species-name",
+        "functional": true,
+        "doc": "a species entity's name"
+      },
+      "species-night-vision": {
+        "name": "species-night-vision",
+        "functional": true,
+        "doc": "night-sky acuity, 0-1"
+      },
+      "species-sky-attention": {
+        "name": "species-sky-attention",
+        "functional": true,
+        "doc": "sky vs. ground attention, 0-1"
+      },
+      "species-sociality-mode": {
+        "name": "species-sociality-mode",
+        "functional": true,
+        "doc": "hierarchic or communal"
+      },
+      "species-status-basis": {
+        "name": "species-status-basis",
+        "functional": true,
+        "doc": "rank, knowledge, or generosity"
+      },
+      "species-threat-response": {
+        "name": "species-threat-response",
+        "functional": true,
+        "doc": "flee 0 ↔ stand 1"
+      },
+      "species-time-horizon": {
+        "name": "species-time-horizon",
+        "functional": true,
+        "doc": "planning depth, 0-1"
+      },
+      "star-class": {
+        "name": "star-class",
+        "functional": true,
+        "doc": "the host star's descriptive spectral class"
+      },
+      "subsistence": {
+        "name": "subsistence",
+        "functional": true,
+        "doc": "a settlement's subsistence mode"
+      },
+      "tenet": {
+        "name": "tenet",
+        "functional": true,
+        "doc": "the tenet text of a belief"
+      },
+      "terrain-note": {
+        "name": "terrain-note",
+        "functional": false,
+        "doc": "a note recorded during tectonic genesis"
+      },
+      "terrain-pin": {
+        "name": "terrain-pin",
+        "functional": false,
+        "doc": "a terrain scenario pin, round-trippable"
+      },
+      "tidally-locked": {
+        "name": "tidally-locked",
+        "functional": true,
+        "doc": "the anchor world is tidally locked (no local day)"
+      },
+      "year-length-std": {
+        "name": "year-length-std",
+        "functional": true,
+        "doc": "year length in standard days"
+      }
+    },
+    "phenomenon_kinds": {
+      "ambient": "a pervasive atmospheric condition",
+      "celestial-body": "a body visible in the sky",
+      "night-star": "a fixed star notable in the night sky",
+      "seasonal-cycle": "the annual daylight cycle"
+    }
+  },
+  "ledger": {
+    "facts": [
+      {
+        "subject": 1,
+        "predicate": "sky-provider",
+        "object": {
+          "Text": "generated"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "scenario"
+      },
+      {
+        "subject": 1,
+        "predicate": "star-class",
+        "object": {
+          "Text": "yellow dwarf (G)"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "day-length-std",
+        "object": {
+          "Number": 0.8798799803519574
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "year-length-std",
+        "object": {
+          "Number": 368.05357093462703
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "obliquity-degrees",
+        "object": {
+          "Number": 0.9593056670606165
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-count",
+        "object": {
+          "Number": 2.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-period-std",
+        "object": {
+          "Number": 15.993805342676167
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-period-std",
+        "object": {
+          "Number": 32.55499951908771
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "notable-neighbor",
+        "object": {
+          "Text": "a smoldering red star at 68 light-years"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "notable-neighbor",
+        "object": {
+          "Text": "a warm yellow star at 4 light-years"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "notable-neighbor",
+        "object": {
+          "Text": "a deep orange star at 39 light-years"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "notable-neighbor",
+        "object": {
+          "Text": "a dim red star at 58 light-years"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "notable-neighbor",
+        "object": {
+          "Text": "a pale white star at 67 light-years"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "plate-count",
+        "object": {
+          "Number": 16.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "terrain"
+      },
+      {
+        "subject": 1,
+        "predicate": "ocean-fraction",
+        "object": {
+          "Number": 0.7324741261472368
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "terrain"
+      },
+      {
+        "subject": 1,
+        "predicate": "sea-level-m",
+        "object": {
+          "Number": 409.0054089516639
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "terrain"
+      },
+      {
+        "subject": 1,
+        "predicate": "highest-elevation-m",
+        "object": {
+          "Number": 4328.497184910964
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "terrain"
+      },
+      {
+        "subject": 2,
+        "predicate": "name",
+        "object": {
+          "Text": "Grumoknar"
+        },
+        "place": 2,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 2,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 2,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 2,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-rainforest"
+        },
+        "place": 2,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 2,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 2,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 2,
+        "predicate": "population",
+        "object": {
+          "Number": 359.0
+        },
+        "place": 2,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 2,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 4109.0
+        },
+        "place": 2,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 2,
+        "predicate": "latitude",
+        "object": {
+          "Number": -23.502371327110584
+        },
+        "place": 2,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 2,
+        "predicate": "longitude",
+        "object": {
+          "Number": 146.0873629471159
+        },
+        "place": 2,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 3,
+        "predicate": "name",
+        "object": {
+          "Text": "Narnar"
+        },
+        "place": 3,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 3,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 3,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 3,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-rainforest"
+        },
+        "place": 3,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 3,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 3,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 3,
+        "predicate": "population",
+        "object": {
+          "Number": 458.0
+        },
+        "place": 3,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 3,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 8269.0
+        },
+        "place": 3,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 3,
+        "predicate": "latitude",
+        "object": {
+          "Number": 22.21586468804764
+        },
+        "place": 3,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 3,
+        "predicate": "longitude",
+        "object": {
+          "Number": -10.214355301392398
+        },
+        "place": 3,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 4,
+        "predicate": "name",
+        "object": {
+          "Text": "Bolugrak"
+        },
+        "place": 4,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 4,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 4,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 4,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-rainforest"
+        },
+        "place": 4,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 4,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 4,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 4,
+        "predicate": "population",
+        "object": {
+          "Number": 504.0
+        },
+        "place": 4,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 4,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 242.0
+        },
+        "place": 4,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 4,
+        "predicate": "latitude",
+        "object": {
+          "Number": -23.553615682934776
+        },
+        "place": 4,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 4,
+        "predicate": "longitude",
+        "object": {
+          "Number": 84.84757676561699
+        },
+        "place": 4,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 5,
+        "predicate": "name",
+        "object": {
+          "Text": "Uszuszssk"
+        },
+        "place": 5,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 5,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 5,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 5,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-rainforest"
+        },
+        "place": 5,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 5,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 5,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 5,
+        "predicate": "population",
+        "object": {
+          "Number": 425.0
+        },
+        "place": 5,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 5,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 4331.0
+        },
+        "place": 5,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 5,
+        "predicate": "latitude",
+        "object": {
+          "Number": -20.1599769278465
+        },
+        "place": 5,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 5,
+        "predicate": "longitude",
+        "object": {
+          "Number": 169.86862275327974
+        },
+        "place": 5,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 6,
+        "predicate": "name",
+        "object": {
+          "Text": "Zikkra"
+        },
+        "place": 6,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 6,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 6,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 6,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-rainforest"
+        },
+        "place": 6,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 6,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 6,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 6,
+        "predicate": "population",
+        "object": {
+          "Number": 371.0
+        },
+        "place": 6,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 6,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 3240.0
+        },
+        "place": 6,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 6,
+        "predicate": "latitude",
+        "object": {
+          "Number": 17.02699696412
+        },
+        "place": 6,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 6,
+        "predicate": "longitude",
+        "object": {
+          "Number": 66.10676274603495
+        },
+        "place": 6,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 7,
+        "predicate": "name",
+        "object": {
+          "Text": "Zagish"
+        },
+        "place": 7,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 7,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 7,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 7,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 7,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 7,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 7,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 7,
+        "predicate": "population",
+        "object": {
+          "Number": 403.0
+        },
+        "place": 7,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 7,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 2886.0
+        },
+        "place": 7,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 7,
+        "predicate": "latitude",
+        "object": {
+          "Number": 21.24567236215713
+        },
+        "place": 7,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 7,
+        "predicate": "longitude",
+        "object": {
+          "Number": 146.12318482446048
+        },
+        "place": 7,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 8,
+        "predicate": "name",
+        "object": {
+          "Text": "Kekzik"
+        },
+        "place": 8,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 8,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 8,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 8,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-rainforest"
+        },
+        "place": 8,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 8,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 8,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 8,
+        "predicate": "population",
+        "object": {
+          "Number": 461.0
+        },
+        "place": 8,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 8,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 4499.0
+        },
+        "place": 8,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 8,
+        "predicate": "latitude",
+        "object": {
+          "Number": 8.164366757257802
+        },
+        "place": 8,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 8,
+        "predicate": "longitude",
+        "object": {
+          "Number": 158.45432471028363
+        },
+        "place": 8,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 9,
+        "predicate": "name",
+        "object": {
+          "Text": "Sskzikzik"
+        },
+        "place": 9,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 9,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 9,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 9,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-rainforest"
+        },
+        "place": 9,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 9,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 9,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 9,
+        "predicate": "population",
+        "object": {
+          "Number": 436.0
+        },
+        "place": 9,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 9,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 3058.0
+        },
+        "place": 9,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 9,
+        "predicate": "latitude",
+        "object": {
+          "Number": 9.55999480637511
+        },
+        "place": 9,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 9,
+        "predicate": "longitude",
+        "object": {
+          "Number": 104.14797593663339
+        },
+        "place": 9,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 10,
+        "predicate": "name",
+        "object": {
+          "Text": "Zikplivex"
+        },
+        "place": 10,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 10,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 10,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 10,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-rainforest"
+        },
+        "place": 10,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 10,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 10,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 10,
+        "predicate": "population",
+        "object": {
+          "Number": 375.0
+        },
+        "place": 10,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 10,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 8092.0
+        },
+        "place": 10,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 10,
+        "predicate": "latitude",
+        "object": {
+          "Number": -11.250000000000002
+        },
+        "place": 10,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 10,
+        "predicate": "longitude",
+        "object": {
+          "Number": -31.71747441146101
+        },
+        "place": 10,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 11,
+        "predicate": "name",
+        "object": {
+          "Text": "Zagtorgna"
+        },
+        "place": 11,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 11,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 11,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 11,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 11,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 11,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 11,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 11,
+        "predicate": "population",
+        "object": {
+          "Number": 357.0
+        },
+        "place": 11,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 11,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 7271.0
+        },
+        "place": 11,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 11,
+        "predicate": "latitude",
+        "object": {
+          "Number": 17.462420029540223
+        },
+        "place": 11,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 11,
+        "predicate": "longitude",
+        "object": {
+          "Number": -93.6936584812188
+        },
+        "place": 11,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 12,
+        "predicate": "name",
+        "object": {
+          "Text": "Plikra"
+        },
+        "place": 12,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 12,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 12,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 12,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-rainforest"
+        },
+        "place": 12,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 12,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 12,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 12,
+        "predicate": "population",
+        "object": {
+          "Number": 308.0
+        },
+        "place": 12,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 12,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 4473.0
+        },
+        "place": 12,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 12,
+        "predicate": "latitude",
+        "object": {
+          "Number": -7.0122776569309355
+        },
+        "place": 12,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 12,
+        "predicate": "longitude",
+        "object": {
+          "Number": 164.54956291367418
+        },
+        "place": 12,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 13,
+        "predicate": "name",
+        "object": {
+          "Text": "Raktor"
+        },
+        "place": 13,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 13,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 13,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 13,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 13,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 13,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 13,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 13,
+        "predicate": "population",
+        "object": {
+          "Number": 485.0
+        },
+        "place": 13,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 13,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 1690.0
+        },
+        "place": 13,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 13,
+        "predicate": "latitude",
+        "object": {
+          "Number": 20.050501136718882
+        },
+        "place": 13,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 13,
+        "predicate": "longitude",
+        "object": {
+          "Number": -28.12783237205863
+        },
+        "place": 13,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 14,
+        "predicate": "name",
+        "object": {
+          "Text": "Kekvexmir"
+        },
+        "place": 14,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 14,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 14,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 14,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-rainforest"
+        },
+        "place": 14,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 14,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 14,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 14,
+        "predicate": "population",
+        "object": {
+          "Number": 346.0
+        },
+        "place": 14,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 14,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 2635.0
+        },
+        "place": 14,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 14,
+        "predicate": "latitude",
+        "object": {
+          "Number": 19.579571911276428
+        },
+        "place": 14,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 14,
+        "predicate": "longitude",
+        "object": {
+          "Number": 119.35539173220852
+        },
+        "place": 14,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 15,
+        "predicate": "name",
+        "object": {
+          "Text": "Dakkra"
+        },
+        "place": 15,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 15,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 15,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 15,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": 15,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 15,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 15,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 15,
+        "predicate": "population",
+        "object": {
+          "Number": 420.0
+        },
+        "place": 15,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 15,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 3023.0
+        },
+        "place": 15,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 15,
+        "predicate": "latitude",
+        "object": {
+          "Number": 1.9136048438561617
+        },
+        "place": 15,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 15,
+        "predicate": "longitude",
+        "object": {
+          "Number": 93.16789001916773
+        },
+        "place": 15,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 16,
+        "predicate": "name",
+        "object": {
+          "Text": "Ugrakug"
+        },
+        "place": 16,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 16,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 16,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 16,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": 16,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 16,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 16,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 16,
+        "predicate": "population",
+        "object": {
+          "Number": 379.0
+        },
+        "place": 16,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 16,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 7377.0
+        },
+        "place": 16,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 16,
+        "predicate": "latitude",
+        "object": {
+          "Number": -13.338988558851433
+        },
+        "place": 16,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 16,
+        "predicate": "longitude",
+        "object": {
+          "Number": -68.9275773304838
+        },
+        "place": 16,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 17,
+        "predicate": "name",
+        "object": {
+          "Text": "Kekkra"
+        },
+        "place": 17,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 17,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 17,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 17,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": 17,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 17,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 17,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 17,
+        "predicate": "population",
+        "object": {
+          "Number": 295.0
+        },
+        "place": 17,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 17,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 3183.0
+        },
+        "place": 17,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 17,
+        "predicate": "latitude",
+        "object": {
+          "Number": 3.7874354571590123
+        },
+        "place": 17,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 17,
+        "predicate": "longitude",
+        "object": {
+          "Number": 69.49895238864995
+        },
+        "place": 17,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 18,
+        "predicate": "name",
+        "object": {
+          "Text": "Uszmir"
+        },
+        "place": 18,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 18,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 18,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 18,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-rainforest"
+        },
+        "place": 18,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 18,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 18,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 18,
+        "predicate": "population",
+        "object": {
+          "Number": 439.0
+        },
+        "place": 18,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 18,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 3545.0
+        },
+        "place": 18,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 18,
+        "predicate": "latitude",
+        "object": {
+          "Number": -13.378668995958813
+        },
+        "place": 18,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 18,
+        "predicate": "longitude",
+        "object": {
+          "Number": 71.03699015878657
+        },
+        "place": 18,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 19,
+        "predicate": "name",
+        "object": {
+          "Text": "Rakgna"
+        },
+        "place": 19,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 19,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 19,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 19,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 19,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 19,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 19,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 19,
+        "predicate": "population",
+        "object": {
+          "Number": 391.0
+        },
+        "place": 19,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 19,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 2603.0
+        },
+        "place": 19,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 19,
+        "predicate": "latitude",
+        "object": {
+          "Number": 24.384971326213584
+        },
+        "place": 19,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 19,
+        "predicate": "longitude",
+        "object": {
+          "Number": 132.8226604366843
+        },
+        "place": 19,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 20,
+        "predicate": "name",
+        "object": {
+          "Text": "Bolmok"
+        },
+        "place": 20,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 20,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 20,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 20,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 20,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 20,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 20,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 20,
+        "predicate": "population",
+        "object": {
+          "Number": 452.0
+        },
+        "place": 20,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 20,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 9921.0
+        },
+        "place": 20,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 20,
+        "predicate": "latitude",
+        "object": {
+          "Number": 15.09754062262958
+        },
+        "place": 20,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 20,
+        "predicate": "longitude",
+        "object": {
+          "Number": 1.9768345310273459
+        },
+        "place": 20,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 21,
+        "predicate": "name",
+        "object": {
+          "Text": "Rakrakmok"
+        },
+        "place": 21,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 21,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 21,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 21,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": 21,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 21,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 21,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 21,
+        "predicate": "population",
+        "object": {
+          "Number": 453.0
+        },
+        "place": 21,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 21,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 4187.0
+        },
+        "place": 21,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 21,
+        "predicate": "latitude",
+        "object": {
+          "Number": -10.34574283220534
+        },
+        "place": 21,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 21,
+        "predicate": "longitude",
+        "object": {
+          "Number": 139.71023518209074
+        },
+        "place": 21,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 22,
+        "predicate": "name",
+        "object": {
+          "Text": "Torbol"
+        },
+        "place": 22,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 22,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 22,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 22,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": 22,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 22,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 22,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 22,
+        "predicate": "population",
+        "object": {
+          "Number": 441.0
+        },
+        "place": 22,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 22,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 9946.0
+        },
+        "place": 22,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 22,
+        "predicate": "latitude",
+        "object": {
+          "Number": 11.395722542196214
+        },
+        "place": 22,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 22,
+        "predicate": "longitude",
+        "object": {
+          "Number": 15.603584876639715
+        },
+        "place": 22,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 23,
+        "predicate": "name",
+        "object": {
+          "Text": "Ishbolbol"
+        },
+        "place": 23,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 23,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 23,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 23,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": 23,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 23,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 23,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 23,
+        "predicate": "population",
+        "object": {
+          "Number": 427.0
+        },
+        "place": 23,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 23,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 3362.0
+        },
+        "place": 23,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 23,
+        "predicate": "latitude",
+        "object": {
+          "Number": -1.8857132715533125
+        },
+        "place": 23,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 23,
+        "predicate": "longitude",
+        "object": {
+          "Number": 119.12018577617177
+        },
+        "place": 23,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 24,
+        "predicate": "name",
+        "object": {
+          "Text": "Gnator"
+        },
+        "place": 24,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 24,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 24,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 24,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": 24,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 24,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 24,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 24,
+        "predicate": "population",
+        "object": {
+          "Number": 429.0
+        },
+        "place": 24,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 24,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 3680.0
+        },
+        "place": 24,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 24,
+        "predicate": "latitude",
+        "object": {
+          "Number": -11.515966704019254
+        },
+        "place": 24,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 24,
+        "predicate": "longitude",
+        "object": {
+          "Number": 85.19615917865326
+        },
+        "place": 24,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 25,
+        "predicate": "name",
+        "object": {
+          "Text": "Ugbol"
+        },
+        "place": 25,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 25,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 25,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 25,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": 25,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 25,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 25,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 25,
+        "predicate": "population",
+        "object": {
+          "Number": 409.0
+        },
+        "place": 25,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 25,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 10206.0
+        },
+        "place": 25,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 25,
+        "predicate": "latitude",
+        "object": {
+          "Number": 10.223082137956482
+        },
+        "place": 25,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 25,
+        "predicate": "longitude",
+        "object": {
+          "Number": 29.671857548541112
+        },
+        "place": 25,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 26,
+        "predicate": "name",
+        "object": {
+          "Text": "Zikmir"
+        },
+        "place": 26,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 26,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 26,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 26,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-rainforest"
+        },
+        "place": 26,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 26,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 26,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 26,
+        "predicate": "population",
+        "object": {
+          "Number": 379.0
+        },
+        "place": 26,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 26,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 7444.0
+        },
+        "place": 26,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 26,
+        "predicate": "latitude",
+        "object": {
+          "Number": -5.7366010446711115
+        },
+        "place": 26,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 26,
+        "predicate": "longitude",
+        "object": {
+          "Number": -95.55847723680819
+        },
+        "place": 26,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 27,
+        "predicate": "name",
+        "object": {
+          "Text": "Nartorug"
+        },
+        "place": 27,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 27,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 27,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 27,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": 27,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 27,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 27,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 27,
+        "predicate": "population",
+        "object": {
+          "Number": 377.0
+        },
+        "place": 27,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 27,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 1054.0
+        },
+        "place": 27,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 27,
+        "predicate": "latitude",
+        "object": {
+          "Number": 4.621501613475574
+        },
+        "place": 27,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 27,
+        "predicate": "longitude",
+        "object": {
+          "Number": 134.66070327825318
+        },
+        "place": 27,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 28,
+        "predicate": "name",
+        "object": {
+          "Text": "Rakugnar"
+        },
+        "place": 28,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 28,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 28,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 28,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": 28,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 28,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 28,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 28,
+        "predicate": "population",
+        "object": {
+          "Number": 281.0
+        },
+        "place": 28,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 28,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 8067.0
+        },
+        "place": 28,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 28,
+        "predicate": "latitude",
+        "object": {
+          "Number": -2.3255043189194233
+        },
+        "place": 28,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 28,
+        "predicate": "longitude",
+        "object": {
+          "Number": -51.85338020058564
+        },
+        "place": 28,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 29,
+        "predicate": "name",
+        "object": {
+          "Text": "Kekkekmir"
+        },
+        "place": 29,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 29,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 29,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 29,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 29,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 29,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 29,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 29,
+        "predicate": "population",
+        "object": {
+          "Number": 278.0
+        },
+        "place": 29,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 29,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 4775.0
+        },
+        "place": 29,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 29,
+        "predicate": "latitude",
+        "object": {
+          "Number": 22.983739852540882
+        },
+        "place": 29,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 29,
+        "predicate": "longitude",
+        "object": {
+          "Number": 22.565779948880138
+        },
+        "place": 29,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 30,
+        "predicate": "name",
+        "object": {
+          "Text": "Rakug"
+        },
+        "place": 30,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 30,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 30,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 30,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": 30,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 30,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 30,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 30,
+        "predicate": "population",
+        "object": {
+          "Number": 374.0
+        },
+        "place": 30,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 30,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 10105.0
+        },
+        "place": 30,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 30,
+        "predicate": "latitude",
+        "object": {
+          "Number": 8.105581853946937
+        },
+        "place": 30,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 30,
+        "predicate": "longitude",
+        "object": {
+          "Number": 43.61212601672358
+        },
+        "place": 30,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 31,
+        "predicate": "name",
+        "object": {
+          "Text": "Uszvexkek"
+        },
+        "place": 31,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 31,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 31,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 31,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": 31,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 31,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 31,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 31,
+        "predicate": "population",
+        "object": {
+          "Number": 278.0
+        },
+        "place": 31,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 31,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 8420.0
+        },
+        "place": 31,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 31,
+        "predicate": "latitude",
+        "object": {
+          "Number": 6.993729562561996
+        },
+        "place": 31,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 31,
+        "predicate": "longitude",
+        "object": {
+          "Number": -23.588263756365375
+        },
+        "place": 31,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 32,
+        "predicate": "name",
+        "object": {
+          "Text": "Pliplivex"
+        },
+        "place": 32,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 32,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 32,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 32,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 32,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 32,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 32,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 32,
+        "predicate": "population",
+        "object": {
+          "Number": 337.0
+        },
+        "place": 32,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 32,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 4875.0
+        },
+        "place": 32,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 32,
+        "predicate": "latitude",
+        "object": {
+          "Number": 23.162710160154766
+        },
+        "place": 32,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 32,
+        "predicate": "longitude",
+        "object": {
+          "Number": 38.28455072139304
+        },
+        "place": 32,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 33,
+        "predicate": "name",
+        "object": {
+          "Text": "Bolrak"
+        },
+        "place": 33,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 33,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 33,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 33,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": 33,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 33,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 33,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 33,
+        "predicate": "population",
+        "object": {
+          "Number": 308.0
+        },
+        "place": 33,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 33,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 4450.0
+        },
+        "place": 33,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 33,
+        "predicate": "latitude",
+        "object": {
+          "Number": -3.435592921728038
+        },
+        "place": 33,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 33,
+        "predicate": "longitude",
+        "object": {
+          "Number": 150.30102997643996
+        },
+        "place": 33,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 34,
+        "predicate": "name",
+        "object": {
+          "Text": "Sskdakmir"
+        },
+        "place": 34,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 34,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 34,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 34,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 34,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 34,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 34,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 34,
+        "predicate": "population",
+        "object": {
+          "Number": 400.0
+        },
+        "place": 34,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 34,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 6540.0
+        },
+        "place": 34,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 34,
+        "predicate": "latitude",
+        "object": {
+          "Number": 17.531702374680066
+        },
+        "place": 34,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 34,
+        "predicate": "longitude",
+        "object": {
+          "Number": -43.426036606656844
+        },
+        "place": 34,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 35,
+        "predicate": "name",
+        "object": {
+          "Text": "Tortor"
+        },
+        "place": 35,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 35,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 35,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 35,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-seasonal-forest"
+        },
+        "place": 35,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 35,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 35,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 35,
+        "predicate": "population",
+        "object": {
+          "Number": 386.0
+        },
+        "place": 35,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 35,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 1142.0
+        },
+        "place": 35,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 35,
+        "predicate": "latitude",
+        "object": {
+          "Number": 6.113249806291626
+        },
+        "place": 35,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 35,
+        "predicate": "longitude",
+        "object": {
+          "Number": 56.28823569723753
+        },
+        "place": 35,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 36,
+        "predicate": "name",
+        "object": {
+          "Text": "Mokgru"
+        },
+        "place": 36,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 36,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 36,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 36,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 36,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 36,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 36,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 36,
+        "predicate": "population",
+        "object": {
+          "Number": 314.0
+        },
+        "place": 36,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 36,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 1960.0
+        },
+        "place": 36,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 36,
+        "predicate": "latitude",
+        "object": {
+          "Number": -24.097206364288894
+        },
+        "place": 36,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 36,
+        "predicate": "longitude",
+        "object": {
+          "Number": -57.81467208224929
+        },
+        "place": 36,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 37,
+        "predicate": "name",
+        "object": {
+          "Text": "Mirthurdak"
+        },
+        "place": 37,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 37,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 37,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 37,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 37,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 37,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 37,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 37,
+        "predicate": "population",
+        "object": {
+          "Number": 290.0
+        },
+        "place": 37,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 37,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 4612.0
+        },
+        "place": 37,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 37,
+        "predicate": "latitude",
+        "object": {
+          "Number": 20.772859011505687
+        },
+        "place": 37,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 37,
+        "predicate": "longitude",
+        "object": {
+          "Number": 52.52241562342213
+        },
+        "place": 37,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 38,
+        "predicate": "name",
+        "object": {
+          "Text": "Uszthur"
+        },
+        "place": 38,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 38,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 38,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 38,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 38,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 38,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 38,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 38,
+        "predicate": "population",
+        "object": {
+          "Number": 340.0
+        },
+        "place": 38,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 38,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 7667.0
+        },
+        "place": 38,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 38,
+        "predicate": "latitude",
+        "object": {
+          "Number": -17.489289603145643
+        },
+        "place": 38,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 38,
+        "predicate": "longitude",
+        "object": {
+          "Number": -88.7582867962038
+        },
+        "place": 38,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 39,
+        "predicate": "name",
+        "object": {
+          "Text": "Mirpli"
+        },
+        "place": 39,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 39,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 39,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 39,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 39,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 39,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 39,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 39,
+        "predicate": "population",
+        "object": {
+          "Number": 271.0
+        },
+        "place": 39,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 39,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 6989.0
+        },
+        "place": 39,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 39,
+        "predicate": "latitude",
+        "object": {
+          "Number": 9.532983565984527
+        },
+        "place": 39,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 39,
+        "predicate": "longitude",
+        "object": {
+          "Number": -71.64683819668028
+        },
+        "place": 39,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 40,
+        "predicate": "name",
+        "object": {
+          "Text": "Thurplizik"
+        },
+        "place": 40,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 40,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 40,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 40,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 40,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 40,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 40,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 40,
+        "predicate": "population",
+        "object": {
+          "Number": 349.0
+        },
+        "place": 40,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 40,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 1650.0
+        },
+        "place": 40,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 40,
+        "predicate": "latitude",
+        "object": {
+          "Number": 13.723032816197948
+        },
+        "place": 40,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 40,
+        "predicate": "longitude",
+        "object": {
+          "Number": -58.73308433875728
+        },
+        "place": 40,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 41,
+        "predicate": "name",
+        "object": {
+          "Text": "Uszzik"
+        },
+        "place": 41,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 41,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 41,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 41,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 41,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 41,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 41,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 41,
+        "predicate": "population",
+        "object": {
+          "Number": 260.0
+        },
+        "place": 41,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 41,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 9896.0
+        },
+        "place": 41,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 41,
+        "predicate": "latitude",
+        "object": {
+          "Number": 26.979963167890705
+        },
+        "place": 41,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 41,
+        "predicate": "longitude",
+        "object": {
+          "Number": 8.489080171305755
+        },
+        "place": 41,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 42,
+        "predicate": "name",
+        "object": {
+          "Text": "Zikkra"
+        },
+        "place": 42,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 42,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 42,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 42,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 42,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 42,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 42,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 42,
+        "predicate": "population",
+        "object": {
+          "Number": 300.0
+        },
+        "place": 42,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 42,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 885.0
+        },
+        "place": 42,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 42,
+        "predicate": "latitude",
+        "object": {
+          "Number": -26.28693204677916
+        },
+        "place": 42,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 42,
+        "predicate": "longitude",
+        "object": {
+          "Number": 67.51804525427592
+        },
+        "place": 42,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 43,
+        "predicate": "name",
+        "object": {
+          "Text": "Dakvexkra"
+        },
+        "place": 43,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 43,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 43,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 43,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 43,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 43,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 43,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 43,
+        "predicate": "population",
+        "object": {
+          "Number": 298.0
+        },
+        "place": 43,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 43,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 6949.0
+        },
+        "place": 43,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 43,
+        "predicate": "latitude",
+        "object": {
+          "Number": 3.828227537611713
+        },
+        "place": 43,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 43,
+        "predicate": "longitude",
+        "object": {
+          "Number": -85.63948234694308
+        },
+        "place": 43,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 44,
+        "predicate": "name",
+        "object": {
+          "Text": "Mirkra"
+        },
+        "place": 44,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 44,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 44,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 44,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 44,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 44,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 44,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 44,
+        "predicate": "population",
+        "object": {
+          "Number": 328.0
+        },
+        "place": 44,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 44,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 7216.0
+        },
+        "place": 44,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 44,
+        "predicate": "latitude",
+        "object": {
+          "Number": 23.40224890406364
+        },
+        "place": 44,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 44,
+        "predicate": "longitude",
+        "object": {
+          "Number": -82.37582159005515
+        },
+        "place": 44,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 45,
+        "predicate": "name",
+        "object": {
+          "Text": "Mirkra"
+        },
+        "place": 45,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 45,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 45,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 45,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 45,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 45,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 45,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 45,
+        "predicate": "population",
+        "object": {
+          "Number": 321.0
+        },
+        "place": 45,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 45,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 7769.0
+        },
+        "place": 45,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 45,
+        "predicate": "latitude",
+        "object": {
+          "Number": -14.018635498714644
+        },
+        "place": 45,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 45,
+        "predicate": "longitude",
+        "object": {
+          "Number": -48.558208279724326
+        },
+        "place": 45,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 46,
+        "predicate": "name",
+        "object": {
+          "Text": "Vexmir"
+        },
+        "place": 46,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 46,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 46,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 46,
+        "predicate": "biome",
+        "object": {
+          "Text": "tundra"
+        },
+        "place": 46,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 46,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 46,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 46,
+        "predicate": "population",
+        "object": {
+          "Number": 229.0
+        },
+        "place": 46,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 46,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 6734.0
+        },
+        "place": 46,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 46,
+        "predicate": "latitude",
+        "object": {
+          "Number": 35.53009070782003
+        },
+        "place": 46,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 46,
+        "predicate": "longitude",
+        "object": {
+          "Number": -71.69858337765088
+        },
+        "place": 46,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 47,
+        "predicate": "name",
+        "object": {
+          "Text": "Sskthurusz"
+        },
+        "place": 47,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 47,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 47,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 47,
+        "predicate": "biome",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": 47,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 47,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 47,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 47,
+        "predicate": "population",
+        "object": {
+          "Number": 265.0
+        },
+        "place": 47,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 47,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 7340.0
+        },
+        "place": 47,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 47,
+        "predicate": "latitude",
+        "object": {
+          "Number": -24.56000817310325
+        },
+        "place": 47,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 47,
+        "predicate": "longitude",
+        "object": {
+          "Number": -73.59432848890023
+        },
+        "place": 47,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 48,
+        "predicate": "name",
+        "object": {
+          "Text": "Ugmokgru"
+        },
+        "place": 48,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 48,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 48,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 48,
+        "predicate": "biome",
+        "object": {
+          "Text": "shrubland"
+        },
+        "place": 48,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 48,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 48,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 48,
+        "predicate": "population",
+        "object": {
+          "Number": 271.0
+        },
+        "place": 48,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 48,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 4046.0
+        },
+        "place": 48,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 48,
+        "predicate": "latitude",
+        "object": {
+          "Number": -30.73609028115227
+        },
+        "place": 48,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 48,
+        "predicate": "longitude",
+        "object": {
+          "Number": 160.1189849652554
+        },
+        "place": 48,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 49,
+        "predicate": "name",
+        "object": {
+          "Text": "Grutor"
+        },
+        "place": 49,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 49,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 49,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 49,
+        "predicate": "biome",
+        "object": {
+          "Text": "taiga"
+        },
+        "place": 49,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 49,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 49,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 49,
+        "predicate": "population",
+        "object": {
+          "Number": 216.0
+        },
+        "place": 49,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 49,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 7232.0
+        },
+        "place": 49,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 49,
+        "predicate": "latitude",
+        "object": {
+          "Number": 29.640255231923266
+        },
+        "place": 49,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 49,
+        "predicate": "longitude",
+        "object": {
+          "Number": -93.95359832397693
+        },
+        "place": 49,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 50,
+        "predicate": "name",
+        "object": {
+          "Text": "Thursskvex"
+        },
+        "place": 50,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 50,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 50,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 50,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-seasonal-forest"
+        },
+        "place": 50,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 50,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 50,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 50,
+        "predicate": "population",
+        "object": {
+          "Number": 326.0
+        },
+        "place": 50,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 50,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 1860.0
+        },
+        "place": 50,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 50,
+        "predicate": "latitude",
+        "object": {
+          "Number": -7.657806953803067
+        },
+        "place": 50,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 50,
+        "predicate": "longitude",
+        "object": {
+          "Number": -81.20424427877053
+        },
+        "place": 50,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 51,
+        "predicate": "name",
+        "object": {
+          "Text": "Kekkra"
+        },
+        "place": 51,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 51,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 51,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 51,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-seasonal-forest"
+        },
+        "place": 51,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 51,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 51,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 51,
+        "predicate": "population",
+        "object": {
+          "Number": 252.0
+        },
+        "place": 51,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 51,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 7284.0
+        },
+        "place": 51,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 51,
+        "predicate": "latitude",
+        "object": {
+          "Number": -1.887411302070772
+        },
+        "place": 51,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 51,
+        "predicate": "longitude",
+        "object": {
+          "Number": -64.85310177603176
+        },
+        "place": 51,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 52,
+        "predicate": "name",
+        "object": {
+          "Text": "Mirthurkek"
+        },
+        "place": 52,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 52,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 52,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 52,
+        "predicate": "biome",
+        "object": {
+          "Text": "tropical-seasonal-forest"
+        },
+        "place": 52,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 52,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 52,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 52,
+        "predicate": "population",
+        "object": {
+          "Number": 304.0
+        },
+        "place": 52,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 52,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 8153.0
+        },
+        "place": 52,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 52,
+        "predicate": "latitude",
+        "object": {
+          "Number": 4.646100966637388
+        },
+        "place": 52,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 52,
+        "predicate": "longitude",
+        "object": {
+          "Number": -41.90597459613899
+        },
+        "place": 52,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 53,
+        "predicate": "name",
+        "object": {
+          "Text": "Grugna"
+        },
+        "place": 53,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 53,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 53,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 53,
+        "predicate": "biome",
+        "object": {
+          "Text": "taiga"
+        },
+        "place": 53,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 53,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 53,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 53,
+        "predicate": "population",
+        "object": {
+          "Number": 195.0
+        },
+        "place": 53,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 53,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 4833.0
+        },
+        "place": 53,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 53,
+        "predicate": "latitude",
+        "object": {
+          "Number": 30.77342681417602
+        },
+        "place": 53,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 53,
+        "predicate": "longitude",
+        "object": {
+          "Number": 62.34548203906075
+        },
+        "place": 53,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 54,
+        "predicate": "name",
+        "object": {
+          "Text": "Ishgrumok"
+        },
+        "place": 54,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 54,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 54,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 54,
+        "predicate": "biome",
+        "object": {
+          "Text": "taiga"
+        },
+        "place": 54,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 54,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 54,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 54,
+        "predicate": "population",
+        "object": {
+          "Number": 185.0
+        },
+        "place": 54,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 54,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 4032.0
+        },
+        "place": 54,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 54,
+        "predicate": "latitude",
+        "object": {
+          "Number": -38.25
+        },
+        "place": 54,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 54,
+        "predicate": "longitude",
+        "object": {
+          "Number": 148.282525588539
+        },
+        "place": 54,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 55,
+        "predicate": "name",
+        "object": {
+          "Text": "Rakgnabol"
+        },
+        "place": 55,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 55,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 55,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 55,
+        "predicate": "biome",
+        "object": {
+          "Text": "taiga"
+        },
+        "place": 55,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 55,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 55,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 55,
+        "predicate": "population",
+        "object": {
+          "Number": 232.0
+        },
+        "place": 55,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 55,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 3958.0
+        },
+        "place": 55,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 55,
+        "predicate": "latitude",
+        "object": {
+          "Number": -31.964703932672272
+        },
+        "place": 55,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 55,
+        "predicate": "longitude",
+        "object": {
+          "Number": 174.1698583515145
+        },
+        "place": 55,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 56,
+        "predicate": "name",
+        "object": {
+          "Text": "Keksskpli"
+        },
+        "place": 56,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 56,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 56,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 56,
+        "predicate": "biome",
+        "object": {
+          "Text": "shrubland"
+        },
+        "place": 56,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 56,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 56,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 56,
+        "predicate": "population",
+        "object": {
+          "Number": 180.0
+        },
+        "place": 56,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 56,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 6922.0
+        },
+        "place": 56,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 56,
+        "predicate": "latitude",
+        "object": {
+          "Number": 22.644412834561724
+        },
+        "place": 56,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 56,
+        "predicate": "longitude",
+        "object": {
+          "Number": -68.27809230850458
+        },
+        "place": 56,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 57,
+        "predicate": "name",
+        "object": {
+          "Text": "Mokgru"
+        },
+        "place": 57,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 57,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 57,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 57,
+        "predicate": "biome",
+        "object": {
+          "Text": "tundra"
+        },
+        "place": 57,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 57,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 57,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 57,
+        "predicate": "population",
+        "object": {
+          "Number": 229.0
+        },
+        "place": 57,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 57,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 6841.0
+        },
+        "place": 57,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 57,
+        "predicate": "latitude",
+        "object": {
+          "Number": 37.15806555037892
+        },
+        "place": 57,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 57,
+        "predicate": "longitude",
+        "object": {
+          "Number": -34.2460427941681
+        },
+        "place": 57,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 58,
+        "predicate": "name",
+        "object": {
+          "Text": "Zagzag"
+        },
+        "place": 58,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 58,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 58,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 58,
+        "predicate": "biome",
+        "object": {
+          "Text": "tundra"
+        },
+        "place": 58,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 58,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 58,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 58,
+        "predicate": "population",
+        "object": {
+          "Number": 147.0
+        },
+        "place": 58,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 58,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 6691.0
+        },
+        "place": 58,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 58,
+        "predicate": "latitude",
+        "object": {
+          "Number": 33.955221797684956
+        },
+        "place": 58,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 58,
+        "predicate": "longitude",
+        "object": {
+          "Number": -17.312109261625412
+        },
+        "place": 58,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 59,
+        "predicate": "name",
+        "object": {
+          "Text": "Plimir"
+        },
+        "place": 59,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 59,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 59,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 59,
+        "predicate": "biome",
+        "object": {
+          "Text": "tundra"
+        },
+        "place": 59,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 59,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 59,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 59,
+        "predicate": "population",
+        "object": {
+          "Number": 162.0
+        },
+        "place": 59,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 59,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 1666.0
+        },
+        "place": 59,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 59,
+        "predicate": "latitude",
+        "object": {
+          "Number": 26.632067552866125
+        },
+        "place": 59,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 59,
+        "predicate": "longitude",
+        "object": {
+          "Number": -54.2313790283787
+        },
+        "place": 59,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 60,
+        "predicate": "name",
+        "object": {
+          "Text": "Dakthur"
+        },
+        "place": 60,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 60,
+        "predicate": "is-place",
+        "object": {
+          "Flag": true
+        },
+        "place": 60,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 60,
+        "predicate": "biome",
+        "object": {
+          "Text": "tundra"
+        },
+        "place": 60,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 60,
+        "predicate": "is-settlement",
+        "object": {
+          "Flag": true
+        },
+        "place": 60,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 60,
+        "predicate": "population",
+        "object": {
+          "Number": 172.0
+        },
+        "place": 60,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 60,
+        "predicate": "cell-id",
+        "object": {
+          "Number": 4763.0
+        },
+        "place": 60,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 60,
+        "predicate": "latitude",
+        "object": {
+          "Number": 33.75
+        },
+        "place": 60,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 60,
+        "predicate": "longitude",
+        "object": {
+          "Number": 31.717474411461016
+        },
+        "place": 60,
+        "day": 0.0,
+        "provenance": "settlement"
+      },
+      {
+        "subject": 2,
+        "predicate": "subsistence",
+        "object": {
+          "Text": "farming"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 2,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "slave"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 2,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "farmer"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 2,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "artisan"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 2,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "shaman"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 2,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "chief"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 61,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "tenet",
+        "object": {
+          "Text": "the Wheel-Turner departs and returns every 0.88 days; its absences are mourned and its returns feasted."
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 2
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "high-god",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 62,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 62,
+        "predicate": "tenet",
+        "object": {
+          "Text": "the Tidewalker departs and returns every 15.99 days; its absences are mourned and its returns feasted."
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 62,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 2
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 62,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 62,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 63,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 63,
+        "predicate": "tenet",
+        "object": {
+          "Text": "the Waning Herald departs and returns every 32.55 days; its absences are mourned and its returns feasted."
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 63,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 2
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 63,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 63,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 5,
+        "predicate": "subsistence",
+        "object": {
+          "Text": "farming"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 5,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "digger"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 5,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "shaper"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 5,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "keeper"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 5,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "elders"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 64,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "tenet",
+        "object": {
+          "Text": "the Wheel-Turner departs and returns every 15.99 days; its absences are mourned and its returns feasted."
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "high-god",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "tenet",
+        "object": {
+          "Text": "the Waning Herald departs and returns every 32.55 days; its absences are mourned and its returns feasted."
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "tenet",
+        "object": {
+          "Text": "the Promised Lamp departs and returns every 0.88 days; its absences are mourned and its returns feasted."
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 67,
+        "predicate": "species-name",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 67,
+        "predicate": "species-threat-response",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 67,
+        "predicate": "species-deliberation-latency",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 67,
+        "predicate": "species-in-group-radius",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 67,
+        "predicate": "species-time-horizon",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 67,
+        "predicate": "species-sociality-mode",
+        "object": {
+          "Text": "hierarchic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 67,
+        "predicate": "species-status-basis",
+        "object": {
+          "Text": "rank"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 67,
+        "predicate": "species-activity-cycle",
+        "object": {
+          "Text": "diurnal"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 67,
+        "predicate": "species-night-vision",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 67,
+        "predicate": "species-sky-attention",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 68,
+        "predicate": "species-name",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 68,
+        "predicate": "species-threat-response",
+        "object": {
+          "Number": 0.8
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 68,
+        "predicate": "species-deliberation-latency",
+        "object": {
+          "Number": 0.7
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 68,
+        "predicate": "species-in-group-radius",
+        "object": {
+          "Number": 0.2
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 68,
+        "predicate": "species-time-horizon",
+        "object": {
+          "Number": 0.8
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 68,
+        "predicate": "species-sociality-mode",
+        "object": {
+          "Text": "communal"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 68,
+        "predicate": "species-status-basis",
+        "object": {
+          "Text": "knowledge"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 68,
+        "predicate": "species-activity-cycle",
+        "object": {
+          "Text": "nocturnal"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 68,
+        "predicate": "species-night-vision",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 68,
+        "predicate": "species-sky-attention",
+        "object": {
+          "Number": 0.8
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 2,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 3,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 4,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 5,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 6,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 7,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 8,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 9,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 10,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 11,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 12,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 13,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 14,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 15,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 16,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 17,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 18,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 19,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 20,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 21,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 22,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 23,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 24,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 25,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 26,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 27,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 28,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 29,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 30,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 31,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 32,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 33,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 34,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 35,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 36,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 37,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 38,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 39,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 40,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 41,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 42,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 43,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 44,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 45,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 46,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 47,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 48,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 49,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 50,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 51,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 52,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 53,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 54,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 55,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 56,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 57,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 58,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 59,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 60,
+        "predicate": "peopled-by",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      }
+    ],
+    "next_entity": 68
+  }
+}
