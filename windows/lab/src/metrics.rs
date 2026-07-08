@@ -523,11 +523,14 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "pantheon-verticality",
-            doc: "Whether the flagship pantheon is ranked (a high god presides) or flat; \
-                   Absent if there are no beliefs",
+            doc: "Whether the goblin flagship's pantheon is ranked (a high god presides) or \
+                   flat; Absent if there is no goblin flagship pantheon",
             summary: SummaryKind::Categorical,
             extract: |v| {
-                let beliefs = beliefs_of(&v.world);
+                let Some(info) = flagship_of(&v.world, "goblin") else {
+                    return MetricValue::Absent;
+                };
+                let beliefs = hornvale_religion::beliefs_held_by(&v.world, info.id);
                 if beliefs.is_empty() {
                     MetricValue::Absent
                 } else if beliefs.iter().any(|b| b.high_god) {

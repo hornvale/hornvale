@@ -1,6 +1,5 @@
 //! Two-species worlds: both peoples place, flagships are per-species, the
 //! species pin restricts, and unknown species fail loudly.
-use hornvale_kernel::Value;
 use hornvale_worldgen::{BuildError, SettlementPins, SkyChoice, build_world, flagship_of};
 
 fn pins(species: Option<&str>) -> SettlementPins {
@@ -29,26 +28,17 @@ fn default_worlds_carry_both_peoples_with_their_own_flagships() {
     let kobold_castes = hornvale_culture::castes_of(&world, kobold.id);
     assert_eq!(kobold_castes.last().map(String::as_str), Some("elders"));
     assert!(!kobold_castes.contains(&"slave".to_string()));
-    // Religion runs on the goblin flagship only (spec §6). `beliefs_of` is
-    // world-wide, not per-entity (see `domains/religion/src/lib.rs`), so we
-    // check the pantheon's `held-by` subject directly instead of asserting
-    // on a per-entity accessor that doesn't exist.
-    assert!(!hornvale_religion::beliefs_of(&world).is_empty());
-    let held_by_kobold = world
-        .ledger
-        .find(hornvale_religion::HELD_BY)
-        .any(|f| f.object == Value::Entity(kobold.id));
+    // Religion runs on every species-flagship (spec §5): both peoples hold
+    // their own pantheon.
+    let goblin_beliefs = hornvale_religion::beliefs_held_by(&world, goblin.id);
+    let kobold_beliefs = hornvale_religion::beliefs_held_by(&world, kobold.id);
     assert!(
-        !held_by_kobold,
-        "the kobold flagship must hold no beliefs — religion runs on goblin only"
+        !goblin_beliefs.is_empty(),
+        "the goblin flagship must hold its own pantheon"
     );
-    let held_by_goblin = world
-        .ledger
-        .find(hornvale_religion::HELD_BY)
-        .any(|f| f.object == Value::Entity(goblin.id));
     assert!(
-        held_by_goblin,
-        "the goblin flagship must hold the world's pantheon"
+        !kobold_beliefs.is_empty(),
+        "the kobold flagship must hold its own pantheon"
     );
 }
 

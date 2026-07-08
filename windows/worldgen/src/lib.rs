@@ -607,7 +607,7 @@ pub fn build_world(
         .collect();
     let ids = hornvale_settlement::genesis(&mut world, &placed)?;
 
-    // Per-species flagship culture; religion on the goblin flagship only.
+    // Per-species flagship culture and religion.
     for (tag, def) in species_set.iter().enumerate() {
         let Some(pos) = placements.iter().position(|(_, t)| *t as usize == tag) else {
             continue; // a species may place nothing on a hostile world
@@ -640,15 +640,23 @@ pub fn build_world(
             },
         };
         hornvale_culture::genesis(&mut world, flagship, &env, &psych)?;
-        if def.name == "goblin" {
-            let castes = hornvale_culture::castes_of(&world, flagship);
-            let society = hornvale_religion::SocietySummary {
-                strata: castes.len(),
-                has_priesthood: castes.iter().any(|c| c == "shaman"),
-            };
-            let seen = observed_phenomena(&world, 0.0)?;
-            hornvale_religion::genesis(&mut world, flagship, &seen, &society, None)?;
-        }
+
+        // Religion for every species-flagship (spec §5): each species sees
+        // the sky through its own lens at its own hour. The priesthood
+        // check uses the species' own shaman-rung word — kobold "keeper"
+        // is a priesthood exactly as goblin "shaman" is.
+        let castes = hornvale_culture::castes_of(&world, flagship);
+        let society = hornvale_religion::SocietySummary {
+            strata: castes.len(),
+            has_priesthood: castes.iter().any(|c| c == def.shaman),
+        };
+        let seen = observed_phenomena_as(&world, def.name)?;
+        let qualifier = if def.name == "goblin" {
+            None
+        } else {
+            Some(def.name)
+        };
+        hornvale_religion::genesis(&mut world, flagship, &seen, &society, qualifier)?;
     }
 
     // Species entities AFTER every pre-species subsystem (settlements,
@@ -968,7 +976,12 @@ mod tests {
         assert!(!places.is_empty());
         let village = hornvale_settlement::village_info(&world).expect("village");
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
-        assert_eq!(hornvale_religion::beliefs_of(&world).len(), 1);
+        // The flagship's own pantheon (not the world total — a default world
+        // now carries one pantheon per species-flagship, spec §5).
+        assert_eq!(
+            hornvale_religion::beliefs_held_by(&world, village.id).len(),
+            1
+        );
     }
 
     #[test]
@@ -1476,10 +1489,14 @@ mod tests {
     #[test]
     fn the_flagship_pantheon_reflects_its_society() {
         let world = generated(42);
-        let beliefs = hornvale_religion::beliefs_of(&world);
+        let village = hornvale_settlement::village_info(&world).expect("village");
+        // The flagship's own pantheon — a default world now carries one
+        // pantheon per species-flagship (spec §5), so "at most one high
+        // god" is a per-community invariant, not a world-wide one.
+        let beliefs = hornvale_religion::beliefs_held_by(&world, village.id);
         assert!(!beliefs.is_empty(), "the flagship has a pantheon");
         // cult form is set and consistent.
-        assert!(hornvale_religion::cult_form_of(&world).is_some());
+        assert!(hornvale_religion::cult_form_held_by(&world, village.id).is_some());
         // At most one high god.
         assert!(beliefs.iter().filter(|b| b.high_god).count() <= 1);
     }
