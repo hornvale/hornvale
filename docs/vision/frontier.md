@@ -641,6 +641,55 @@ Both are about cashing dividends already banked, not proposing new systems.
 
 ---
 
+## Sequencing the deep-time stack
+
+The three late seams — contact/exchange (item 9), the inequality and
+social-structure axes, and the biological substrate — plus language
+demographics are not a menu to pick from in any order. They form a
+**dependency DAG**, and building a layer before the one it reads from
+forces that layer to reinvent its input piecemeal — the exact waste the
+species-psychology substrate was sequenced upstream of the culture
+campaigns to avoid. The edges, each already argued in its own section,
+collected here so the ordering is not re-derived:
+
+- **The biological substrate is upstream of gender and of dimorphism.**
+  Gender arrangements are scaffolding on breeding system × subsistence ×
+  property; sexual dimorphism is derived from mating system and parental
+  investment. Both need the life-history and reproduction parameters to
+  exist first, so the substrate's minimal body-vector precedes any
+  social-structure campaign that consumes it — the same relation the
+  psychology substrate already has to culture.
+
+- **The interaction layer (item 9) is upstream of two things at once:**
+  language demographics (pidgins, creoles, shift, and lingua francas are
+  meaningless without a contact history to respond to — the two are one
+  system) and the genetic-divergence half of the biological substrate
+  (founder effects and diaspora drift are *driven by* item 9's migrations
+  and enslavements). Item 9 in turn depends on item 7's carrying-capacity
+  fields for niche overlap, so the spine is **7 → 9 → {language
+  demographics, genetic divergence}**.
+
+- **Racecraft is downstream of subjugation.** "Race" is a legitimating
+  output the subjugation regime manufactures (decision 0021), so it cannot
+  precede the interaction layer that produces the regime. Build it earlier
+  and there is no extraction for the ideology to launder — the causal arrow
+  inverts into the genre default the decision exists to forbid.
+
+- **Gene–culture coevolution is the return edge that closes the loop, and
+  comes last.** It needs a culture layer generating selection pressures and
+  a substrate to evolve, so it presupposes nearly everything above. It is
+  the payoff, not the foundation.
+
+Two caveats hold the whole stack honest. None of this is scheduled — the
+edges constrain *order*, not *timing*, and each seam still earns its spec
+only when a campaign pulls for it. And the ontology-trap caution is
+sharpest here of anywhere on the map: every axis of gender, every disease
+term, every allele must change a settlement, a myth, or a life, or it is
+folk science ossified into false precision. The discipline that saved the
+psychology substrate is the discipline that saves this.
+
+---
+
 ## Intellectual lineage
 
 So the reasoning is recoverable when it has gone cold: benign-violation
