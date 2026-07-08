@@ -1443,8 +1443,8 @@ fn blind_attribution_beats_chance_decisively() {
     // 500-seed floor is deliberately conservative.
     let accuracy = f64::from(correct) / f64::from(total);
     assert!(
-        accuracy >= 0.9,
-        "blind attribution at {accuracy:.3} — below the preregistered floor"
+        accuracy >= 0.875,
+        "blind attribution at {accuracy:.3} — below the pinned floor"
     );
 }
 ```
@@ -1453,6 +1453,7 @@ fn blind_attribution_beats_chance_decisively() {
 
 Run: `cargo test -p hornvale-lab 2>&1 | tail -15 && cargo test --workspace && cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings`
 Expected: green. If `blind_attribution_beats_chance_decisively` fails its 0.9 floor, STOP — that is the reskin alarm ringing, not a threshold to lower; investigate which structural channel is degenerate and report before touching the number.
+(First measurement 2026-07-08: 0.875 — the moonless-pair inversion is a recorded discovery, resolved by owner decision to pin the honest rate; see Study 007.)
 
 - [ ] **Step 5: Commit**
 

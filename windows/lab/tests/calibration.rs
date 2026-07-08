@@ -282,3 +282,88 @@ fn kobold_flagships_are_less_coastal_than_goblin_flagships() {
     let kobold = rate(idx("kobold-flagship-coastal"));
     assert!(kobold < goblin, "kobold {kobold:.3} !< goblin {goblin:.3}");
 }
+
+#[test]
+fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let (g_i, k_i, moons_i) = (
+        idx("head-deity-domain-goblin"),
+        idx("head-deity-domain-kobold"),
+        idx("moons-admitted"),
+    );
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        if let MetricValue::Text(domain) = &row.values[g_i] {
+            assert_eq!(domain, "solar", "seed {}: goblin head not solar", row.seed);
+        }
+        let mooned = matches!(&row.values[moons_i], MetricValue::Text(n) if n != "0");
+        if mooned && let MetricValue::Text(domain) = &row.values[k_i] {
+            assert_eq!(
+                domain, "lunar",
+                "seed {}: kobold head not lunar despite a moon",
+                row.seed
+            );
+        }
+        // Moonless kobold heads split night-star/sun by star brightness —
+        // recorded, not asserted; the split is pinned at the 10k census
+        // (spec §9.1), Task 11.
+    }
+}
+
+#[test]
+fn blind_attribution_beats_chance_decisively() {
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let (a_i, moons_i) = (idx("blind-attribution-correct"), idx("moons-admitted"));
+    let (mut correct, mut total) = (0u32, 0u32);
+    let (mut correct_mooned, mut total_mooned) = (0u32, 0u32);
+    for row in &result.rows {
+        let mooned = matches!(&row.values[moons_i], MetricValue::Text(n) if n != "0");
+        match &row.values[a_i] {
+            MetricValue::Flag(true) => {
+                correct += 1;
+                total += 1;
+                if mooned {
+                    correct_mooned += 1;
+                    total_mooned += 1;
+                }
+            }
+            MetricValue::Flag(false) => {
+                total += 1;
+                if mooned {
+                    total_mooned += 1;
+                }
+            }
+            _ => {}
+        }
+    }
+    assert!(total > 0, "no attributable world pairs in the drift study");
+    // Directional preregistration (spec §9.2): decisively above chance.
+    // The plan's original preregistered floor was 0.9; the first measurement
+    // (2026-07-08, 500-seed drift study) came in at 0.875 (434/496). The
+    // miss is entirely the 62 moonless pairs, where the cyclic-share tier
+    // inverts because night-stars are eternal (period None) — recorded as a
+    // discovery for Study 007. The spec's directional preregistration
+    // ("well above chance") is satisfied; by owner decision the
+    // preregistered rule stays untouched and the honest measured rate is
+    // pinned. Exact counts are pinned at the re-baseline task.
+    let accuracy = f64::from(correct) / f64::from(total);
+    assert!(
+        accuracy >= 0.875,
+        "blind attribution at {accuracy:.3} — below the pinned floor"
+    );
+    // Pinned calibration row, first measured 2026-07-08 — the anti-reskin
+    // claim at the head-domain calibration's own scope: restricted to pairs
+    // on worlds with at least one moon, the fixed rule attributes the
+    // kobold pantheon perfectly.
+    assert!(total_mooned > 0, "no mooned attributable pairs");
+    assert_eq!(
+        correct_mooned, total_mooned,
+        "mooned blind attribution not perfect: {correct_mooned}/{total_mooned}"
+    );
+}

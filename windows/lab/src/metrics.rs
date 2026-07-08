@@ -498,12 +498,15 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "pantheon-size",
-            doc: "Number of beliefs in the world's pantheon; Absent if there are none",
+            doc: "Number of beliefs in the goblin flagship's pantheon; Absent if there are none",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
             extract: |v| {
-                let beliefs = beliefs_of(&v.world);
+                let Some(info) = flagship_of(&v.world, "goblin") else {
+                    return MetricValue::Absent;
+                };
+                let beliefs = hornvale_religion::beliefs_held_by(&v.world, info.id);
                 if beliefs.is_empty() {
                     MetricValue::Absent
                 } else {
@@ -513,12 +516,17 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "cult-form",
-            doc: "The pantheon's shared cult form ('organized' or 'folk'); Absent if there \
-                   are no beliefs",
+            doc: "The goblin flagship's pantheon's shared cult form ('organized' or 'folk'); \
+                   Absent if there are no beliefs",
             summary: SummaryKind::Categorical,
-            extract: |v| match hornvale_religion::cult_form_of(&v.world) {
-                Some(form) => MetricValue::Text(form),
-                None => MetricValue::Absent,
+            extract: |v| {
+                let Some(info) = flagship_of(&v.world, "goblin") else {
+                    return MetricValue::Absent;
+                };
+                match hornvale_religion::cult_form_held_by(&v.world, info.id) {
+                    Some(form) => MetricValue::Text(form),
+                    None => MetricValue::Absent,
+                }
             },
         },
         Metric {
@@ -542,11 +550,15 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "head-deity-periodicity",
-            doc: "Category of the head deity (the most salient belief): 'eternal' if its \
-                   tenet contains 'never', else 'cyclic'; Absent if no beliefs",
+            doc: "Category of the goblin flagship's head deity (the most salient belief): \
+                   'eternal' if its tenet contains 'never', else 'cyclic'; Absent if no \
+                   goblin beliefs",
             summary: SummaryKind::Categorical,
             extract: |v| {
-                let beliefs = beliefs_of(&v.world);
+                let Some(info) = flagship_of(&v.world, "goblin") else {
+                    return MetricValue::Absent;
+                };
+                let beliefs = hornvale_religion::beliefs_held_by(&v.world, info.id);
                 if let Some(head) = beliefs.first() {
                     if head.tenet.contains("never") {
                         MetricValue::Text("eternal".to_string())
@@ -670,7 +682,150 @@ pub fn registry() -> Vec<Metric> {
             },
             extract: |v| MetricValue::Number(species_settlement_count(v, "kobold")),
         },
+        Metric {
+            name: "head-deity-domain-goblin",
+            doc: "Venue domain of the goblin flagship's head deity: solar, lunar, or ambient; Absent without a goblin pantheon",
+            summary: SummaryKind::Categorical,
+            extract: |v| match pantheon_sig(v, "goblin") {
+                Some(s) => MetricValue::Text(s.domain.to_string()),
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "head-deity-domain-kobold",
+            doc: "Venue domain of the kobold flagship's head deity: solar, lunar, or ambient; Absent without a kobold pantheon",
+            summary: SummaryKind::Categorical,
+            extract: |v| match pantheon_sig(v, "kobold") {
+                Some(s) => MetricValue::Text(s.domain.to_string()),
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "pantheon-size-goblin",
+            doc: "Number of deities in the goblin flagship's pantheon; Absent without one",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            },
+            extract: |v| match pantheon_sig(v, "goblin") {
+                Some(s) => MetricValue::Number(s.size as f64),
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "pantheon-size-kobold",
+            doc: "Number of deities in the kobold flagship's pantheon; Absent without one",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            },
+            extract: |v| match pantheon_sig(v, "kobold") {
+                Some(s) => MetricValue::Number(s.size as f64),
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "cult-form-goblin",
+            doc: "Cult form of the goblin flagship's pantheon (organized/folk); Absent without one",
+            summary: SummaryKind::Categorical,
+            extract: |v| match pantheon_sig(v, "goblin") {
+                Some(s) => MetricValue::Text(s.cult),
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "cult-form-kobold",
+            doc: "Cult form of the kobold flagship's pantheon (organized/folk); Absent without one",
+            summary: SummaryKind::Categorical,
+            extract: |v| match pantheon_sig(v, "kobold") {
+                Some(s) => MetricValue::Text(s.cult),
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "blind-attribution-correct",
+            doc: "Whether the fixed structural rule (lunar head, then cyclic share, then size — no lexical input) attributes the kobold pantheon correctly; Absent unless both peoples hold pantheons",
+            summary: SummaryKind::Flag,
+            extract: |v| {
+                let (Some(g), Some(k)) = (pantheon_sig(v, "goblin"), pantheon_sig(v, "kobold"))
+                else {
+                    return MetricValue::Absent;
+                };
+                // The rule is a symmetric function of the unordered pair;
+                // presenting (goblin, kobold) and requiring index 1 is the
+                // correctness check, not a labeling leak.
+                MetricValue::Flag(pick_kobold([&g, &k]) == Some(1))
+            },
+        },
     ]
+}
+
+/// A flagship pantheon's structural signature — every lexical channel
+/// (names, epithets, tenets) deliberately absent (spec §9.2).
+struct PantheonSig {
+    /// solar | lunar | ambient — the venue of the perceived top phenomenon.
+    domain: &'static str,
+    /// Number of deities.
+    size: usize,
+    /// Whether one deity presides. Part of the structural signature (spec
+    /// §9.2); `pick_kobold`'s fixed rule doesn't need it to separate the
+    /// two pantheons in this task, but it stays on the struct for the
+    /// distributional-twin control and other structure-only consumers to
+    /// come (spec §9.2, §13).
+    #[allow(dead_code)]
+    ranked: bool,
+    /// organized | folk.
+    cult: String,
+    /// Fraction of the pantheon's source phenomena that are periodic.
+    cyclic_share: f64,
+}
+
+fn pantheon_sig(v: &WorldView, species: &str) -> Option<PantheonSig> {
+    let flagship = flagship_of(&v.world, species)?;
+    let beliefs = hornvale_religion::beliefs_held_by(&v.world, flagship.id);
+    if beliefs.is_empty() {
+        return None;
+    }
+    let seen = hornvale_worldgen::observed_phenomena_as(&v.world, species).ok()?;
+    let top = seen.first()?;
+    let domain = match top.venue {
+        hornvale_kernel::Venue::DaySky => "solar",
+        hornvale_kernel::Venue::NightSky => "lunar",
+        hornvale_kernel::Venue::Ambient => "ambient",
+    };
+    let members = &seen[..beliefs.len().min(seen.len())];
+    let cyclic = members.iter().filter(|p| p.period_days.is_some()).count();
+    Some(PantheonSig {
+        domain,
+        size: beliefs.len(),
+        ranked: beliefs.iter().any(|b| b.high_god),
+        cult: hornvale_religion::cult_form_held_by(&v.world, flagship.id)
+            .unwrap_or_else(|| "folk".to_string()),
+        cyclic_share: cyclic as f64 / members.len().max(1) as f64,
+    })
+}
+
+/// The fixed blind-attribution rule (spec §9.2, preregistered): given two
+/// unlabeled signatures, pick the kobold. Structure only — no lexical
+/// input. Returns the index (0/1), or None when indistinguishable.
+fn pick_kobold(pair: [&PantheonSig; 2]) -> Option<usize> {
+    // Rule 1: exactly one lunar-headed pantheon → it is the kobolds'.
+    match (pair[0].domain == "lunar", pair[1].domain == "lunar") {
+        (true, false) => return Some(0),
+        (false, true) => return Some(1),
+        _ => {}
+    }
+    // Rule 2: the more cyclic pantheon (moon-and-star gods recur).
+    if pair[0].cyclic_share != pair[1].cyclic_share {
+        return Some(if pair[0].cyclic_share > pair[1].cyclic_share {
+            0
+        } else {
+            1
+        });
+    }
+    // Rule 3: the larger pantheon (the boosted night sky seats more gods).
+    if pair[0].size != pair[1].size {
+        return Some(if pair[0].size > pair[1].size { 0 } else { 1 });
+    }
+    None // indistinguishable: scored as a miss
 }
 
 /// Recompute a species flagship's subsistence surplus directly from the
@@ -898,8 +1053,8 @@ mod tests {
     }
 
     #[test]
-    fn registry_has_forty_three_metrics_after_the_peoples() {
-        assert_eq!(registry().len(), 43);
+    fn registry_has_fifty_metrics_after_the_eyes() {
+        assert_eq!(registry().len(), 50);
     }
 
     #[test]
