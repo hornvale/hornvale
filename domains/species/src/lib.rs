@@ -1,9 +1,12 @@
 //! Species, tier 1: authored species definitions — a closed six-dimension
 //! psychology vector, a closed three-dimension perception vector, a closed
-//! six-dimension articulation vector, vocabulary stopgaps, and placeholder
-//! syllables. Species are data; the social grammar stays code (spec §2).
-//! Goblin is the baseline: scalars 0.5, default enum variants; every
-//! downstream modulation is the identity function at this vector.
+//! six-dimension articulation vector, and vocabulary stopgaps. Species are
+//! data; the social grammar stays code (spec §2). Goblin is the baseline:
+//! scalars 0.5, default enum variants; every downstream modulation is the
+//! identity function at this vector. Placeholder name syllables (the
+//! pre-Tongues stopgap) are retired — names are generated from the
+//! articulation vector by `hornvale-language`, wired at the composition
+//! root (spec §7).
 #![warn(missing_docs)]
 
 use std::collections::BTreeMap;
@@ -165,14 +168,7 @@ pub struct SpeciesDef {
     pub shaman: &'static str,
     /// The top-rung word ("chief", "elders").
     pub top: &'static str,
-    /// Placeholder name syllables (goblin's pool stays in settlement).
-    pub syllables: &'static [&'static str],
 }
-
-/// Kobold placeholder syllables — distinct mouth-feel from the goblin pool.
-const KOBOLD_SYLLABLES: [&str; 10] = [
-    "zik", "thur", "kra", "ssk", "vex", "mir", "dak", "usz", "pli", "kek",
-];
 
 /// The authored species registry, ordered (goblin sorts first). Kobold
 /// values are derived from D&D 5E SRD lore — see the species chapter's
@@ -210,7 +206,6 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
             artisan: "artisan",
             shaman: "shaman",
             top: "chief",
-            syllables: &[], // goblin names keep settlement's legacy pool
         },
     );
     reg.insert(
@@ -244,7 +239,6 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
             artisan: "shaper",
             shaman: "keeper",
             top: "elders",
-            syllables: &KOBOLD_SYLLABLES,
         },
     );
     reg

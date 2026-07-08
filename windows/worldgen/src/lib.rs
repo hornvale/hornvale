@@ -18,6 +18,7 @@ use hornvale_kernel::{
     PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime, observe,
 };
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
+use std::collections::BTreeSet;
 use std::sync::OnceLock;
 
 pub mod settlement_pins;
@@ -437,26 +438,126 @@ pub fn observed_phenomena_as(world: &World, species: &str) -> Result<Vec<Phenome
     ))
 }
 
-// TEMPORARY (Task 9 replaces): a placeholder `DeityNamer` until the
-// language-backed composition-root namer lands (spec §6/§9). Returns
-// deterministic, non-linguistic placeholder pairs keyed only by `salt`
-// (the belief's own entity id) and, for epithets, `sentiment` — enough to
-// keep the workspace compiling and every downstream consumer (almanac,
-// repl, lab) rendering *something* structured in the meantime.
-struct PlaceholderDeityNamer;
+/// Map a species' articulation vector onto language's own `Envelope` copy
+/// (spec §7): every scalar dimension is a direct 1:1 carry — both vectors
+/// share the same 0–1 scale and semantics — and `ExoticManner` maps onto
+/// language's own `ExoticSeg` one variant at a time. This is the only place
+/// either vector is ever converted; language never imports species.
+pub fn envelope_of(art: &hornvale_species::ArticulationVector) -> hornvale_language::Envelope {
+    hornvale_language::Envelope {
+        labiality: art.labiality,
+        vowel_space: art.vowel_space,
+        voicing: art.voicing,
+        sibilance: art.sibilance,
+        voice_loudness: art.voice_loudness,
+        exotic: match art.exotic {
+            hornvale_species::ExoticManner::None => hornvale_language::ExoticSeg::None,
+            hornvale_species::ExoticManner::Trill => hornvale_language::ExoticSeg::Trill,
+            hornvale_species::ExoticManner::Click => hornvale_language::ExoticSeg::Click,
+            hornvale_species::ExoticManner::Ejective => hornvale_language::ExoticSeg::Ejective,
+        },
+    }
+}
 
-impl hornvale_religion::DeityNamer for PlaceholderDeityNamer {
+/// Draw `species`' phonology from this world's seed and its authored
+/// articulation vector — rebuildable from (seed, species, envelope) alone,
+/// the same reconstruction idiom as `terrain_of`/`sky_of`/`climate_of`. The
+/// single construction site for a species' `Phonology`. Panics if `species`
+/// is not in the registry; every caller sources `species` from the registry
+/// itself.
+pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology {
+    let registry = hornvale_species::registry();
+    let def = registry
+        .get(species)
+        .unwrap_or_else(|| panic!("language_of: unknown species '{species}'"));
+    hornvale_language::draw_phonology(&world.seed, species, &envelope_of(&def.articulation))
+}
+
+/// A status basis' contribution to the `formality`/`epithet_density` voice
+/// knobs (spec §7): `Rank` — the goblin baseline — reads as the "high" end;
+/// `Knowledge`/`Generosity` read lower. `Rank`'s value is fixed at exactly
+/// the voice engine's identity value, 0.5, so a Rank-basis species with an
+/// otherwise-baseline psychology nets out to identity by construction.
+fn status_register(status: hornvale_species::StatusBasis) -> f64 {
+    use hornvale_species::StatusBasis;
+    match status {
+        StatusBasis::Rank => 0.5,
+        StatusBasis::Knowledge | StatusBasis::Generosity => 0.2,
+    }
+}
+
+/// A sociality mode's contribution to the `repetition` voice knob (spec
+/// §7): `Communal` reads high (kobold's echoed refrains); `Hierarchic` — the
+/// goblin baseline — sits at the voice engine's identity value, 0.5.
+fn sociality_register(sociality: hornvale_species::Sociality) -> f64 {
+    use hornvale_species::Sociality;
+    match sociality {
+        Sociality::Hierarchic => 0.5,
+        Sociality::Communal => 0.8,
+    }
+}
+
+/// Derive a species' voice knobs from its psychology vector (spec §7):
+/// `formality` blends the status register with deliberation latency;
+/// `repetition` follows sociality alone; `epithet_density` follows the
+/// status register alone. Every field is exactly the identity 0.5 at the
+/// goblin baseline (`Rank`, `Hierarchic`, `deliberation_latency == 0.5`):
+/// `status_register(Rank) == sociality_register(Hierarchic) == 0.5`, so
+/// blending two 0.5s (or reading either directly) always yields 0.5.
+pub fn voice_params(psych: &hornvale_species::PsychVector) -> hornvale_language::VoiceParams {
+    hornvale_language::VoiceParams {
+        formality: (status_register(psych.status_basis) + psych.deliberation_latency) / 2.0,
+        repetition: sociality_register(psych.sociality),
+        epithet_density: status_register(psych.status_basis),
+    }
+}
+
+/// Derive a species' naming morphology from its psychology vector (spec
+/// §7): honorifics are drawn only for a rank-based status basis — the
+/// goblin baseline — matching `voice_params`' epithet-density reading of
+/// the same field.
+pub fn morph_options(psych: &hornvale_species::PsychVector) -> hornvale_language::MorphOptions {
+    hornvale_language::MorphOptions {
+        honorifics: psych.status_basis == hornvale_species::StatusBasis::Rank,
+    }
+}
+
+/// Backs religion's `DeityNamer` trait with a species' language `Namer`,
+/// sharing this world's whole-world `used` name set (spec §7/§9) so a
+/// deity's name and epithet never collide with any other name in the
+/// world — settlement or deity, any species. Religion never learns this
+/// exists; it only ever sees the `DeityNamer` trait (spec §6's ignorance
+/// discipline).
+struct LanguageDeityNamer<'a, 'b> {
+    namer: &'a mut hornvale_language::Namer<'b>,
+    morph: hornvale_language::MorphOptions,
+    used: &'a mut BTreeSet<String>,
+}
+
+impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_> {
     fn deity(&mut self, salt: u64) -> (String, String) {
-        (format!("Deity{salt}"), format!("deity{salt}"))
+        let g = self.namer.name(
+            hornvale_language::NameKind::Deity,
+            salt,
+            &self.morph,
+            self.used,
+        );
+        self.used.insert(g.roman.clone());
+        (g.roman, g.ipa)
     }
 
-    fn epithet(&mut self, salt: u64, sentiment: hornvale_religion::Sentiment) -> (String, String) {
-        let tag = match sentiment {
-            hornvale_religion::Sentiment::Eternal => "eternal",
-            hornvale_religion::Sentiment::Cyclic => "cyclic",
-            hornvale_religion::Sentiment::Ambient => "ambient",
-        };
-        (format!("the {tag} one {salt}"), format!("{tag}{salt}"))
+    fn epithet(&mut self, salt: u64, _sentiment: hornvale_religion::Sentiment) -> (String, String) {
+        // Sentiment fits the epithet at render time (Task 11's `render_line`
+        // reads it from the belief's own committed `sentiment` fact); the
+        // generated word itself is sentiment-agnostic.
+        let g = self.namer.name(
+            hornvale_language::NameKind::Epithet,
+            salt,
+            &self.morph,
+            self.used,
+        );
+        self.used.insert(g.roman.clone());
+        (g.roman, g.ipa)
     }
 }
 
@@ -592,42 +693,49 @@ pub fn build_world(
         }
     }
     let placements = hornvale_settlement::place_tagged(&scored, min_sep, floor);
-    let placed: Vec<hornvale_settlement::PlacedSettlement> = placements
+
+    // Each placed species' phonology, drawn once from the world seed and
+    // its authored articulation vector, and a `Namer` built over it. A
+    // single world-wide `used` set (spec §7/§9) threads through every name
+    // drawn below — settlement names first, then deity/epithet names —
+    // so no two names in the whole world collide, species or kind
+    // notwithstanding.
+    let phonologies: std::collections::BTreeMap<&str, hornvale_language::Phonology> = species_set
         .iter()
-        .map(|(p, tag)| {
-            let def = species_set[*tag as usize];
-            let coord = geo.coord(p.cell);
-            let (name, population) = if def.name == "goblin" {
-                (
-                    hornvale_settlement::generate_name(seed, u64::from(p.cell.0)),
-                    hornvale_settlement::draw_population(seed, u64::from(p.cell.0), p.suitability),
-                )
-            } else {
-                (
-                    hornvale_settlement::generate_species_name(
-                        seed,
-                        def.name,
-                        def.syllables,
-                        u64::from(p.cell.0),
-                    ),
-                    hornvale_settlement::draw_species_population(
-                        seed,
-                        def.name,
-                        u64::from(p.cell.0),
-                        p.suitability,
-                    ),
-                )
-            };
-            hornvale_settlement::PlacedSettlement {
-                cell: p.cell.0,
-                latitude: coord.latitude,
-                longitude: coord.longitude,
-                biome: climate.biome_at(p.cell).name().to_string(),
-                name,
-                population,
-            }
-        })
+        .map(|def| (def.name, language_of(&world, def.name)))
         .collect();
+    let mut namers: std::collections::BTreeMap<&str, hornvale_language::Namer> = phonologies
+        .iter()
+        .map(|(name, ph)| (*name, hornvale_language::Namer::new(&seed, name, ph)))
+        .collect();
+    let mut used: BTreeSet<String> = BTreeSet::new();
+
+    let mut placed: Vec<hornvale_settlement::PlacedSettlement> =
+        Vec::with_capacity(placements.len());
+    for (p, tag) in &placements {
+        let def = species_set[*tag as usize];
+        let coord = geo.coord(p.cell);
+        let salt = u64::from(p.cell.0);
+        let namer = namers
+            .get_mut(def.name)
+            .expect("a Namer was built for every placed species");
+        let morph = morph_options(&def.psych);
+        let generated = namer.name(hornvale_language::NameKind::Settlement, salt, &morph, &used);
+        used.insert(generated.roman.clone());
+        let population = if def.name == "goblin" {
+            hornvale_settlement::draw_population(seed, salt, p.suitability)
+        } else {
+            hornvale_settlement::draw_species_population(seed, def.name, salt, p.suitability)
+        };
+        placed.push(hornvale_settlement::PlacedSettlement {
+            cell: p.cell.0,
+            latitude: coord.latitude,
+            longitude: coord.longitude,
+            biome: climate.biome_at(p.cell).name().to_string(),
+            name: generated.roman,
+            population,
+        });
+    }
     let ids = hornvale_settlement::genesis(&mut world, &placed)?;
 
     // Per-species flagship culture and religion.
@@ -674,13 +782,16 @@ pub fn build_world(
             has_priesthood: castes.iter().any(|c| c == def.shaman),
         };
         let seen = observed_phenomena_as(&world, def.name)?;
-        hornvale_religion::genesis(
-            &mut world,
-            flagship,
-            &seen,
-            &society,
-            &mut PlaceholderDeityNamer,
-        )?;
+        let namer = namers
+            .get_mut(def.name)
+            .expect("a Namer was built for every placed species");
+        let morph = morph_options(&def.psych);
+        let mut deity_namer = LanguageDeityNamer {
+            namer,
+            morph,
+            used: &mut used,
+        };
+        hornvale_religion::genesis(&mut world, flagship, &seen, &society, &mut deity_namer)?;
     }
 
     // Species entities AFTER every pre-species subsystem (settlements,
@@ -1622,5 +1733,38 @@ mod tests {
         .unwrap();
         let t = observation_time(&world, hornvale_species::ActivityCycle::Nocturnal).unwrap();
         assert_eq!(t, 0.0);
+    }
+
+    #[test]
+    fn goblin_voice_params_are_the_baseline() {
+        let reg = hornvale_species::registry();
+        let v = voice_params(&reg["goblin"].psych);
+        assert!((v.formality - 0.5).abs() < 1e-12 && (v.epithet_density - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn seed_42_names_are_non_english_and_unique_per_species() {
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let names: Vec<String> = hornvale_settlement::all_settlements(&world)
+            .iter()
+            .map(|v| v.name.clone())
+            .collect();
+        assert!(!names.is_empty());
+        // No settlement name is a legacy syllable-pool word.
+        assert!(
+            names
+                .iter()
+                .all(|n| !["Zag", "Gru", "Bol"].iter().any(|s| n.starts_with(s)))
+        );
+        // Uniqueness within the world.
+        let set: std::collections::BTreeSet<_> = names.iter().collect();
+        assert_eq!(set.len(), names.len(), "in-world names are unique");
     }
 }
