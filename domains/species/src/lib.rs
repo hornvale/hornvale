@@ -1,5 +1,6 @@
 //! Species, tier 1: authored species definitions — a closed six-dimension
-//! psychology vector, vocabulary stopgaps, and placeholder syllables. Species
+//! psychology vector, a closed three-dimension perception vector, vocabulary
+//! stopgaps, and placeholder syllables. Species
 //! are data; the social grammar stays code (spec §2). Goblin is the baseline:
 //! scalars 0.5, default enum variants; every downstream modulation is the
 //! identity function at this vector.

@@ -517,7 +517,7 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "cult-form",
             doc: "The goblin flagship's pantheon's shared cult form ('organized' or 'folk'); \
-                   Absent if there are no beliefs",
+                   Absent if no goblin beliefs",
             summary: SummaryKind::Categorical,
             extract: |v| {
                 let Some(info) = flagship_of(&v.world, "goblin") else {
