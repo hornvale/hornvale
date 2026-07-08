@@ -214,26 +214,20 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                 }
                 None => writeln!(output, "no settlement is known")?,
             },
-            "beliefs" => {
-                let beliefs = hornvale_religion::beliefs_of(world);
-                if beliefs.is_empty() {
-                    writeln!(output, "no beliefs are recorded")?;
+            "beliefs" => match world_builder::rendered_beliefs(world) {
+                Ok(rendered) => {
+                    if rendered.is_empty() {
+                        writeln!(output, "no beliefs are recorded")?;
+                    }
+                    // Each tenet is rendered through the content→render seam
+                    // (spec §6): `hornvale_language::render_line` voiced by
+                    // the holding species' psychology-derived `VoiceParams`.
+                    for (i, (belief, tenet)) in rendered.iter().enumerate() {
+                        writeln!(output, "{}. [{}] {}", i + 1, belief.id.0, tenet)?;
+                    }
                 }
-                for (i, belief) in beliefs.iter().enumerate() {
-                    // TEMPORARY (Task 8 replaces): no register renderer yet
-                    // — show the structured fields directly rather than a
-                    // rendered tenet sentence.
-                    writeln!(
-                        output,
-                        "{}. [{}] {}, {} ({:?})",
-                        i + 1,
-                        belief.id.0,
-                        belief.deity,
-                        belief.epithet,
-                        belief.sentiment
-                    )?;
-                }
-            }
+                Err(e) => writeln!(output, "error: {e}")?,
+            },
             "why" => match argument.and_then(|a| a.parse::<u64>().ok()) {
                 Some(id) => match hornvale_historiography::recount(world, EntityId(id)) {
                     Some(text) => {

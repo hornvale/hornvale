@@ -127,7 +127,7 @@ impl<'a> Namer<'a> {
     /// any other name (see the module docs — this is what makes settlement
     /// names pin-isolated by construction). Uniqueness across a world's
     /// names is de-facto, not guaranteed.
-    pub fn name(&mut self, kind: NameKind, salt: u64, morph: &MorphOptions) -> GeneratedName {
+    pub fn name(&self, kind: NameKind, salt: u64, morph: &MorphOptions) -> GeneratedName {
         let mut stream = self
             .seed
             .derive("language")
@@ -327,8 +327,8 @@ mod tests {
     #[test]
     fn names_are_deterministic_and_carry_both_views() {
         let ph = kobold_ph();
-        let mut n1 = Namer::new(&Seed(1), "kobold", &ph);
-        let mut n2 = Namer::new(&Seed(1), "kobold", &ph);
+        let n1 = Namer::new(&Seed(1), "kobold", &ph);
+        let n2 = Namer::new(&Seed(1), "kobold", &ph);
         let a = n1.name(
             NameKind::Settlement,
             10,
@@ -351,7 +351,7 @@ mod tests {
         // pin-isolated by construction (spec §8) — a name never depends on
         // which other settlements a world places.
         let ph = kobold_ph();
-        let mut namer = Namer::new(&Seed(2), "kobold", &ph);
+        let namer = Namer::new(&Seed(2), "kobold", &ph);
         let mut first: Vec<String> = Vec::new();
         for salt in 0..50u64 {
             let g = namer.name(
@@ -363,7 +363,7 @@ mod tests {
             first.push(g.roman);
         }
         // A second pass over the same salts reproduces every name exactly.
-        let mut namer2 = Namer::new(&Seed(2), "kobold", &ph);
+        let namer2 = Namer::new(&Seed(2), "kobold", &ph);
         for (salt, expected) in first.iter().enumerate() {
             let g = namer2.name(
                 NameKind::Settlement,
@@ -377,10 +377,10 @@ mod tests {
     #[test]
     fn honorific_morphology_appears_only_when_requested() {
         let ph = kobold_ph();
-        let mut namer = Namer::new(&Seed(3), "kobold", &ph);
+        let namer = Namer::new(&Seed(3), "kobold", &ph);
         // Epithets with honorifics enabled must be able to differ from those without.
         let with = namer.name(NameKind::Epithet, 5, &MorphOptions { honorifics: true });
-        let mut namer2 = Namer::new(&Seed(3), "kobold", &ph);
+        let namer2 = Namer::new(&Seed(3), "kobold", &ph);
         let without = namer2.name(NameKind::Epithet, 5, &MorphOptions { honorifics: false });
         assert_ne!(
             with.roman, without.roman,
@@ -395,7 +395,7 @@ mod tests {
     #[test]
     fn generated_names_never_contain_the_unrepresentable_glyph() {
         let ph = kobold_ph();
-        let mut namer = Namer::new(&Seed(11), "kobold", &ph);
+        let namer = Namer::new(&Seed(11), "kobold", &ph);
         for (salt, kind, honorifics) in [
             (0u64, NameKind::Settlement, false),
             (1, NameKind::Deity, false),

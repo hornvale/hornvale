@@ -528,7 +528,7 @@ pub fn morph_options(psych: &hornvale_species::PsychVector) -> hornvale_language
 /// this exists; it only ever sees the `DeityNamer` trait (spec §6's
 /// ignorance discipline).
 struct LanguageDeityNamer<'a, 'b> {
-    namer: &'a mut hornvale_language::Namer<'b>,
+    namer: &'a hornvale_language::Namer<'b>,
     morph: hornvale_language::MorphOptions,
 }
 
@@ -696,7 +696,7 @@ pub fn build_world(
         .iter()
         .map(|def| (def.name, language_of(&world, def.name)))
         .collect();
-    let mut namers: std::collections::BTreeMap<&str, hornvale_language::Namer> = phonologies
+    let namers: std::collections::BTreeMap<&str, hornvale_language::Namer> = phonologies
         .iter()
         .map(|(name, ph)| (*name, hornvale_language::Namer::new(&seed, name, ph)))
         .collect();
@@ -708,7 +708,7 @@ pub fn build_world(
         let coord = geo.coord(p.cell);
         let salt = u64::from(p.cell.0);
         let namer = namers
-            .get_mut(def.name)
+            .get(def.name)
             .expect("a Namer was built for every placed species");
         let morph = morph_options(&def.psych);
         let generated = namer.name(hornvale_language::NameKind::Settlement, salt, &morph);
@@ -773,7 +773,7 @@ pub fn build_world(
         };
         let seen = observed_phenomena_as(&world, def.name)?;
         let namer = namers
-            .get_mut(def.name)
+            .get(def.name)
             .expect("a Namer was built for every placed species");
         let morph = morph_options(&def.psych);
         let mut deity_namer = LanguageDeityNamer { namer, morph };
@@ -969,6 +969,132 @@ pub fn genesis_notes(world: &World) -> Result<Vec<String>, BuildError> {
     })
 }
 
+/// Map religion's `Sentiment` onto language's own copy of the same
+/// distinction (spec §6): `domains/language` never imports
+/// `hornvale-religion`, so this conversion lives only here, at the
+/// composition root.
+fn line_sentiment_of(sentiment: hornvale_religion::Sentiment) -> hornvale_language::LineSentiment {
+    match sentiment {
+        hornvale_religion::Sentiment::Eternal => hornvale_language::LineSentiment::Eternal,
+        hornvale_religion::Sentiment::Cyclic => hornvale_language::LineSentiment::Cyclic,
+        hornvale_religion::Sentiment::Ambient => hornvale_language::LineSentiment::Ambient,
+    }
+}
+
+/// Build one belief's `LineContent` (spec §6). Every field but the period
+/// comes straight off the belief's own committed facts; `period_days` is
+/// **not** itself a committed fact (`religion::genesis` never stores one on
+/// the belief), so it is recovered from `phenomenon` — the source
+/// observation at this belief's own position in the species' salience-
+/// ranked list, the exact list `genesis` consumed, in that exact order, to
+/// mint it. `None` (an eternal/ambient tenet, or a phenomenon that's gone
+/// missing) simply renders no period.
+fn line_content_for(
+    belief: &hornvale_religion::Belief,
+    phenomenon: Option<&Phenomenon>,
+) -> hornvale_language::LineContent {
+    hornvale_language::LineContent {
+        deity: belief.deity.clone(),
+        epithet: belief.epithet.clone(),
+        sentiment: line_sentiment_of(belief.sentiment),
+        period_days: phenomenon.and_then(|p| p.period_days),
+        high_god: belief.high_god,
+    }
+}
+
+/// Render every belief in `beliefs` — one community's pantheon, in commit
+/// order — into its tenet, voiced by `voice`. `phenomena` must be the same
+/// species-observed, salience-ranked list `religion::genesis` consumed to
+/// mint these beliefs, so position `i` in each list names the same deity
+/// (see [`line_content_for`]).
+fn tenets_for(
+    beliefs: &[hornvale_religion::Belief],
+    phenomena: &[Phenomenon],
+    voice: &hornvale_language::VoiceParams,
+) -> Vec<String> {
+    beliefs
+        .iter()
+        .enumerate()
+        .map(|(i, b)| hornvale_language::render_line(&line_content_for(b, phenomena.get(i)), voice))
+        .collect()
+}
+
+/// One species-flagship's pantheon, each belief paired with its rendered
+/// tenet: the settlement holding it and the `(Belief, tenet)` pairs, head
+/// first.
+type RenderedPantheon = (
+    hornvale_settlement::VillageInfo,
+    Vec<(hornvale_religion::Belief, String)>,
+);
+
+/// `None` if `species` placed no flagship, or its flagship holds no
+/// beliefs. The single site both [`almanac_context`] and
+/// [`rendered_beliefs`] build a species' voiced pantheon (the
+/// content→render seam, spec §6) through.
+fn rendered_pantheon_of(
+    world: &World,
+    species: &str,
+    def: &hornvale_species::SpeciesDef,
+) -> Result<Option<RenderedPantheon>, BuildError> {
+    let Some(v) = flagship_of(world, species) else {
+        return Ok(None);
+    };
+    let beliefs = hornvale_religion::beliefs_held_by(world, v.id);
+    if beliefs.is_empty() {
+        return Ok(None);
+    }
+    let phenomena = observed_phenomena_as(world, species)?;
+    let voice = voice_params(&def.psych);
+    let tenets = tenets_for(&beliefs, &phenomena, &voice);
+    Ok(Some((v, beliefs.into_iter().zip(tenets).collect())))
+}
+
+/// Render a pre-species save's beliefs (`beliefs_of` — no `peopled-by`
+/// facts exist to recover a species from), as the single anonymous pantheon
+/// they always were: voiced at the goblin baseline (voice's identity value,
+/// since no species is recoverable) with periods recovered from the world's
+/// unlensed phenomena (the pre-species observation path,
+/// `observed_phenomena`). Empty if the world has no beliefs at all. Shared
+/// by [`rendered_beliefs`] and [`almanac_context`]'s legacy fallback.
+fn legacy_rendered_beliefs(
+    world: &World,
+) -> Result<Vec<(hornvale_religion::Belief, String)>, BuildError> {
+    let beliefs = hornvale_religion::beliefs_of(world);
+    if beliefs.is_empty() {
+        return Ok(Vec::new());
+    }
+    let phenomena = observed_phenomena(world, 0.0)?;
+    let voice = hornvale_language::VoiceParams {
+        formality: 0.5,
+        repetition: 0.5,
+        epithet_density: 0.5,
+    };
+    let tenets = tenets_for(&beliefs, &phenomena, &voice);
+    Ok(beliefs.into_iter().zip(tenets).collect())
+}
+
+/// Every belief in the world, each paired with its rendered tenet — grouped
+/// by species-flagship pantheon in registry order (goblin first), each
+/// pantheon's beliefs head first (matching `beliefs_of`/`beliefs_held_by`'s
+/// own ordering). The seam-wiring site the REPL's `beliefs` command renders
+/// through (spec §6, Task 11); the almanac renders the same seam via
+/// [`almanac_context`]'s `PantheonBlock`s. Legacy fallback: see
+/// [`legacy_rendered_beliefs`].
+pub fn rendered_beliefs(
+    world: &World,
+) -> Result<Vec<(hornvale_religion::Belief, String)>, BuildError> {
+    let mut out = Vec::new();
+    for (name, def) in hornvale_species::registry() {
+        if let Some((_, rendered)) = rendered_pantheon_of(world, name, &def)? {
+            out.extend(rendered);
+        }
+    }
+    if out.is_empty() {
+        out = legacy_rendered_beliefs(world)?;
+    }
+    Ok(out)
+}
+
 /// Gather everything the almanac renders, reconstructing the stateless
 /// tier-0 providers.
 pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
@@ -998,31 +1124,34 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         pantheons: {
             let mut blocks = Vec::new();
             for (name, def) in hornvale_species::registry() {
-                if let Some(v) = flagship_of(world, name) {
-                    let beliefs = hornvale_religion::beliefs_held_by(world, v.id);
-                    if !beliefs.is_empty() {
-                        blocks.push(hornvale_almanac::PantheonBlock {
-                            species: name.to_string(),
-                            noun: def.noun.to_string(),
-                            settlement: v.name.clone(),
-                            cult_form: hornvale_religion::cult_form_held_by(world, v.id),
-                            beliefs,
-                        });
-                    }
+                if let Some((v, rendered)) = rendered_pantheon_of(world, name, &def)? {
+                    blocks.push(hornvale_almanac::PantheonBlock {
+                        species: name.to_string(),
+                        noun: def.noun.to_string(),
+                        settlement: v.name.clone(),
+                        cult_form: hornvale_religion::cult_form_held_by(world, v.id),
+                        beliefs: rendered
+                            .into_iter()
+                            .map(|(belief, tenet)| hornvale_almanac::BeliefLine { belief, tenet })
+                            .collect(),
+                    });
                 }
             }
             // Legacy fallback: pre-species saves have beliefs but no
             // peopled-by facts — render them as the single anonymous
-            // pantheon they always were.
+            // pantheon they always were (see `legacy_rendered_beliefs`).
             if blocks.is_empty() {
-                let beliefs = hornvale_religion::beliefs_of(world);
-                if !beliefs.is_empty() {
+                let rendered = legacy_rendered_beliefs(world)?;
+                if !rendered.is_empty() {
                     blocks.push(hornvale_almanac::PantheonBlock {
                         species: String::new(),
                         noun: String::new(),
                         settlement: String::new(),
                         cult_form: hornvale_religion::cult_form_of(world),
-                        beliefs,
+                        beliefs: rendered
+                            .into_iter()
+                            .map(|(belief, tenet)| hornvale_almanac::BeliefLine { belief, tenet })
+                            .collect(),
                     });
                 }
             }

@@ -25,6 +25,19 @@ pub struct PeopleBlock {
     pub culture_lines: Vec<String>,
 }
 
+/// One belief, paired with its rendered tenet — the content→render seam's
+/// output (spec §6). The composition root builds a `LineContent` from the
+/// belief's structured facts and a species' `VoiceParams` from its
+/// psychology vector, then calls `hornvale_language::render_line`; the
+/// almanac only ever displays the resulting string, never the structured
+/// fields directly.
+pub struct BeliefLine {
+    /// The belief's structured content (deity, epithet, sentiment, rank).
+    pub belief: Belief,
+    /// The rendered tenet sentence, voiced by the holding species.
+    pub tenet: String,
+}
+
 /// One community's pantheon, ready to render: the species and settlement
 /// it belongs to, its cult form, and its beliefs in salience order.
 pub struct PantheonBlock {
@@ -37,8 +50,9 @@ pub struct PantheonBlock {
     pub settlement: String,
     /// The pantheon's cult form (`"organized"` or `"folk"`), if recorded.
     pub cult_form: Option<String>,
-    /// The pantheon's beliefs, head first.
-    pub beliefs: Vec<Belief>,
+    /// The pantheon's beliefs, head first, each paired with its rendered
+    /// tenet.
+    pub beliefs: Vec<BeliefLine>,
 }
 
 /// Everything the almanac needs, gathered by the composition root.
@@ -202,18 +216,18 @@ pub fn render(ctx: &AlmanacContext) -> String {
                 };
                 doc.push_str(&format!("{lead}\n\n"));
             }
-            for belief in &pantheon.beliefs {
-                let mark = if belief.high_god {
+            for line in &pantheon.beliefs {
+                let mark = if line.belief.high_god {
                     " *(who presides)*"
                 } else {
                     ""
                 };
-                // TEMPORARY (Task 8 replaces): the register renderer isn't
-                // built yet — show the structured deity/epithet fields
-                // directly rather than a rendered tenet sentence.
+                // The content→render seam (spec §6): `line.tenet` is
+                // `hornvale_language::render_line` applied to the belief's
+                // structured content under the holding species' voice.
                 doc.push_str(&format!(
-                    "> {}, {}{mark}\n>\n> — derived from the phenomenon *{}*\n\n",
-                    belief.deity, belief.epithet, belief.source_kind
+                    "> {}{mark}\n>\n> — derived from the phenomenon *{}*\n\n",
+                    line.tenet, line.belief.source_kind
                 ));
             }
         }
@@ -268,13 +282,17 @@ mod tests {
                 noun: "village".to_string(),
                 settlement: "Bolnar".to_string(),
                 cult_form: Some("organized".to_string()),
-                beliefs: vec![Belief {
-                    id: EntityId(3),
-                    deity: "Ignathar".to_string(),
-                    epithet: "the Ever-Flame".to_string(),
-                    source_kind: "celestial-body".to_string(),
-                    sentiment: Sentiment::Eternal,
-                    high_god: true,
+                beliefs: vec![BeliefLine {
+                    belief: Belief {
+                        id: EntityId(3),
+                        deity: "Ignathar".to_string(),
+                        epithet: "the Ever-Flame".to_string(),
+                        source_kind: "celestial-body".to_string(),
+                        sentiment: Sentiment::Eternal,
+                        high_god: true,
+                    },
+                    tenet: "Ignathar the Ever-Flame is ever: Ignathar the Ever-Flame watches unceasing."
+                        .to_string(),
                 }],
             }],
             calendar_lines: vec![],
@@ -421,21 +439,28 @@ mod tests {
                 settlement: "Bolnar".to_string(),
                 cult_form: Some("organized".to_string()),
                 beliefs: vec![
-                    Belief {
-                        id: EntityId(3),
-                        deity: "Ignathar".to_string(),
-                        epithet: "the Ever-Flame".to_string(),
-                        source_kind: "celestial-body".to_string(),
-                        sentiment: Sentiment::Eternal,
-                        high_god: true,
+                    BeliefLine {
+                        belief: Belief {
+                            id: EntityId(3),
+                            deity: "Ignathar".to_string(),
+                            epithet: "the Ever-Flame".to_string(),
+                            source_kind: "celestial-body".to_string(),
+                            sentiment: Sentiment::Eternal,
+                            high_god: true,
+                        },
+                        tenet: "Ignathar the Ever-Flame is ever: Ignathar the Ever-Flame watches unceasing."
+                            .to_string(),
                     },
-                    Belief {
-                        id: EntityId(4),
-                        deity: "Meraleth".to_string(),
-                        epithet: "the Tidewalker".to_string(),
-                        source_kind: "seasonal-cycle".to_string(),
-                        sentiment: Sentiment::Cyclic,
-                        high_god: false,
+                    BeliefLine {
+                        belief: Belief {
+                            id: EntityId(4),
+                            deity: "Meraleth".to_string(),
+                            epithet: "the Tidewalker".to_string(),
+                            source_kind: "seasonal-cycle".to_string(),
+                            sentiment: Sentiment::Cyclic,
+                            high_god: false,
+                        },
+                        tenet: "Meraleth the Tidewalker returns every 29 days.".to_string(),
                     },
                 ],
             }],
@@ -473,13 +498,16 @@ mod tests {
             noun: "warren".to_string(),
             settlement: "Zikthur".to_string(),
             cult_form: Some("folk".to_string()),
-            beliefs: vec![Belief {
-                id: EntityId(99),
-                deity: "Meraleth".to_string(),
-                epithet: "the Tidewalker".to_string(),
-                source_kind: "celestial-body".to_string(),
-                sentiment: Sentiment::Cyclic,
-                high_god: true,
+            beliefs: vec![BeliefLine {
+                belief: Belief {
+                    id: EntityId(99),
+                    deity: "Meraleth".to_string(),
+                    epithet: "the Tidewalker".to_string(),
+                    source_kind: "celestial-body".to_string(),
+                    sentiment: Sentiment::Cyclic,
+                    high_god: true,
+                },
+                tenet: "Meraleth the Tidewalker returns every 29 days.".to_string(),
             }],
         });
         let doc = render(&ctx);
