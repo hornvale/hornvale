@@ -63,6 +63,7 @@
 - [Study 004: The Census of Faiths](./laboratory/study-004.md)
 - [Study 005: The Frozen Worlds](./laboratory/study-005.md)
 - [Study 006: The Census of Peoples II: Two Peoples](./laboratory/study-006.md)
+- [Study 007: The Census of Eyes](./laboratory/study-007.md)
 
 # Reference
 

@@ -293,6 +293,7 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
         idx("head-deity-domain-kobold"),
         idx("moons-admitted"),
     );
+    let (mut moonless_solar, mut moonless_lunar) = (0u32, 0u32);
     for row in &result.rows {
         if row.refusal.is_some() {
             continue;
@@ -308,10 +309,32 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
                 row.seed
             );
         }
-        // Moonless kobold heads split night-star/sun by star brightness —
-        // recorded, not asserted; the split is pinned at the 10k census
-        // (spec §9.1), Task 11.
+        if !mooned && let MetricValue::Text(domain) = &row.values[k_i] {
+            // Moonless kobold heads split night-star/sun by star
+            // brightness — spec §9.2 declines to preregister this split,
+            // pinning it as a calibration row after measurement instead.
+            match domain.as_str() {
+                "solar" => moonless_solar += 1,
+                "lunar" => moonless_lunar += 1,
+                other => panic!(
+                    "seed {}: unexpected moonless kobold head domain {other}",
+                    row.seed
+                ),
+            }
+        }
     }
+    // Pinned calibration row (measured at the Y2-2 re-baseline, 500-seed
+    // drift study): moonless kobold heads split 62 solar / 10 lunar — the
+    // sun wins most moonless skies, but a bright-enough night-star still
+    // outshines it in a minority of cases.
+    assert_eq!(
+        moonless_solar, 62,
+        "moonless-solar kobold head count drifted"
+    );
+    assert_eq!(
+        moonless_lunar, 10,
+        "moonless-lunar kobold head count drifted"
+    );
 }
 
 #[test]
@@ -357,6 +380,10 @@ fn blind_attribution_beats_chance_decisively() {
         accuracy >= 0.875,
         "blind attribution at {accuracy:.3} — below the pinned floor"
     );
+    // Pinned calibration row (measured at the Y2-2 re-baseline; the drift
+    // study is 500 seeds, so this is an exact count, not a rate):
+    assert_eq!(correct, 434, "blind-attribution count drifted");
+    assert_eq!(total, 496, "attributable-pair count drifted");
     // Pinned calibration row, first measured 2026-07-08 — the anti-reskin
     // claim at the head-domain calibration's own scope: restricted to pairs
     // on worlds with at least one moon, the fixed rule attributes the

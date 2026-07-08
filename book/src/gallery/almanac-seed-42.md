@@ -95,6 +95,12 @@ The people keep a folk pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
+In the warren of **Sskzik**, an organized priesthood tends its own pantheon:
+
+> the Still Crown is a golden sun fixed at zenith; it has never departed and will never blink. *(who presides)*
+>
+> — derived from the phenomenon *celestial-body*
+
 ---
 
 *Generated deterministically: this seed always yields this page.*

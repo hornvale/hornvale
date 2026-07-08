@@ -148,9 +148,8 @@ Seeds 0..500 × 1 pin set(s); 500 rows; 0 refusals.
 
 | value | count | share |
 |---|---|---|
-| cyclic | 475 | 95.0% |
+| cyclic | 477 | 95.4% |
 | eternal | 23 | 4.6% |
-| absent | 2 | 0.4% |
 
 ### genesis-note-count — default
 
@@ -509,4 +508,71 @@ Seeds 0..500 × 1 pin set(s); 500 rows; 0 refusals.
 | [4, 8) | 18 | 3.6% |
 | [8, 16) | 99 | 19.8% |
 | >= 16 | 376 | 75.2% |
+
+### head-deity-domain-goblin — default
+
+| value | count | share |
+|---|---|---|
+| solar | 498 | 99.6% |
+| absent | 2 | 0.4% |
+
+### head-deity-domain-kobold — default
+
+| value | count | share |
+|---|---|---|
+| lunar | 436 | 87.2% |
+| solar | 62 | 12.4% |
+| absent | 2 | 0.4% |
+
+### pantheon-size-goblin — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 22 | 4.4% |
+| [2, 3) | 126 | 25.2% |
+| [3, 4) | 176 | 35.2% |
+| [4, 5) | 127 | 25.4% |
+| [5, 6) | 43 | 8.6% |
+| >= 6 | 4 | 0.8% |
+| absent | 2 | 0.4% |
+
+### pantheon-size-kobold — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 34 | 6.8% |
+| [2, 3) | 125 | 25.0% |
+| [3, 4) | 174 | 34.8% |
+| [4, 5) | 116 | 23.2% |
+| [5, 6) | 39 | 7.8% |
+| >= 6 | 10 | 2.0% |
+| absent | 2 | 0.4% |
+
+### cult-form-goblin — default
+
+| value | count | share |
+|---|---|---|
+| folk | 103 | 20.6% |
+| organized | 395 | 79.0% |
+| absent | 2 | 0.4% |
+
+### cult-form-kobold — default
+
+| value | count | share |
+|---|---|---|
+| folk | 86 | 17.2% |
+| organized | 412 | 82.4% |
+| absent | 2 | 0.4% |
+
+### blind-attribution-correct — default
+
+| value | count | share |
+|---|---|---|
+| true | 434 | 86.8% |
+| false | 62 | 12.4% |
+| absent | 4 | 0.8% |
 

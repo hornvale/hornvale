@@ -1,0 +1,30 @@
+<svg viewBox="0 0 640 300" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif, system-ui, sans-serif">
+<text x="56" y="20" font-size="13" font-weight="600" fill="currentColor">ocean-fraction — default</text>
+<line x1="56.0" y1="186.0" x2="624.0" y2="186.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="186.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">1250</text>
+<line x1="56.0" y1="136.0" x2="624.0" y2="136.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="136.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">2500</text>
+<line x1="56.0" y1="86.0" x2="624.0" y2="86.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">3750</text>
+<line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">5000</text>
+<text x="91.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
+<text x="91.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 91.5 252.0)">&lt; 0.3</text>
+<text x="162.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
+<text x="162.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 162.5 252.0)">[0.3, 0.4)</text>
+<text x="233.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
+<text x="233.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 233.5 252.0)">[0.4, 0.5)</text>
+<rect x="274.3" y="72.7" width="60.4" height="163.3" fill="#5b8dd9" rx="2" />
+<text x="304.5" y="68.7" font-size="11" fill="currentColor" text-anchor="middle">4082</text>
+<text x="304.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 304.5 252.0)">[0.5, 0.6)</text>
+<rect x="345.3" y="76.2" width="60.4" height="159.8" fill="#5b8dd9" rx="2" />
+<text x="375.5" y="72.2" font-size="11" fill="currentColor" text-anchor="middle">3994</text>
+<text x="375.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 375.5 252.0)">[0.6, 0.7)</text>
+<rect x="416.3" y="159.0" width="60.4" height="77.0" fill="#5b8dd9" rx="2" />
+<text x="446.5" y="155.0" font-size="11" fill="currentColor" text-anchor="middle">1924</text>
+<text x="446.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 446.5 252.0)">[0.7, 0.8)</text>
+<text x="517.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
+<text x="517.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 517.5 252.0)">[0.8, 0.9)</text>
+<text x="588.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
+<text x="588.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 588.5 252.0)">&gt;= 0.9</text>
+</svg>

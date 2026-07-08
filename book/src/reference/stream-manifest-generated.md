@@ -30,6 +30,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 |---|---|
 | `religion` | root stream for religion generation |
 | `religion/epithet` | deity epithet pick |
+| `religion/kobold/epithet` | deity epithet pick (kobold pantheon) |
 
 ### hornvale-settlement
 

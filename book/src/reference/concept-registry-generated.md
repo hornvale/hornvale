@@ -32,9 +32,12 @@
 | `sea-level-m` | yes | sea level in meters |
 | `settlement-pin` | no | a settlement scenario pin, round-trippable |
 | `sky-provider` | yes | which astronomy provider this world uses (constant or generated) |
+| `species-activity-cycle` | yes | when a species is awake: diurnal, nocturnal, crepuscular |
 | `species-deliberation-latency` | yes | decision slowness, 0-1 |
 | `species-in-group-radius` | yes | how wide 'us' is drawn, 0-1 |
 | `species-name` | yes | a species entity's name |
+| `species-night-vision` | yes | night-sky acuity, 0-1 |
+| `species-sky-attention` | yes | sky vs. ground attention, 0-1 |
 | `species-sociality-mode` | yes | hierarchic or communal |
 | `species-status-basis` | yes | rank, knowledge, or generosity |
 | `species-threat-response` | yes | flee 0 ↔ stand 1 |

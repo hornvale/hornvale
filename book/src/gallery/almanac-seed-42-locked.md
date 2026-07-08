@@ -97,6 +97,20 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
+The warren of **Thurzikdak** keeps its own folk pantheon:
+
+> the Wheel-Turner departs and returns every 15.99 days; its absences are mourned and its returns feasted.
+>
+> — derived from the phenomenon *celestial-body*
+
+> the Waning Herald departs and returns every 32.55 days; its absences are mourned and its returns feasted.
+>
+> — derived from the phenomenon *celestial-body*
+
+> the Gold Warden is a sun fixed forever above the day side; it has never departed and will never blink.
+>
+> — derived from the phenomenon *celestial-body*
+
 ---
 
 *Generated deterministically: this seed always yields this page.*
