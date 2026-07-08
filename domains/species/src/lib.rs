@@ -25,6 +25,12 @@ pub const SOCIALITY_MODE: &str = "species-sociality-mode";
 pub const STATUS_BASIS: &str = "species-status-basis";
 /// Predicate: the species that peoples a settlement (functional, Text).
 pub const PEOPLED_BY: &str = "peopled-by";
+/// Predicate: a species' activity cycle — diurnal, nocturnal, crepuscular (functional, Text).
+pub const SPECIES_ACTIVITY_CYCLE: &str = "species-activity-cycle";
+/// Predicate: how well a species sees at night, 0-1 (functional, Number).
+pub const SPECIES_NIGHT_VISION: &str = "species-night-vision";
+/// Predicate: how much of a species' attention the sky claims, 0-1 (functional, Number).
+pub const SPECIES_SKY_ATTENTION: &str = "species-sky-attention";
 
 /// How a species organizes authority.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -46,6 +52,18 @@ pub enum StatusBasis {
     Generosity,
 }
 
+/// When a species is awake and watching.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ActivityCycle {
+    /// Awake by day (the goblin baseline).
+    Diurnal,
+    /// Awake by night.
+    Nocturnal,
+    /// Awake at the boundaries (idle this campaign; authored now so a
+    /// future species is a data change).
+    Crepuscular,
+}
+
 /// The closed six-dimension psychology vector (spec §3). Scalars are bare
 /// ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening the vector
 /// requires its own campaign.
@@ -65,6 +83,19 @@ pub struct PsychVector {
     pub status_basis: StatusBasis,
 }
 
+/// The closed three-dimension perception vector (spec §4). Scalars are bare
+/// ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening the vector
+/// requires its own campaign. Every dimension is authored — nothing drawn.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PerceptionVector {
+    /// When this species observes.
+    pub activity: ActivityCycle,
+    /// Night-sky acuity: blind 0 ↔ owl-eyed 1.
+    pub night_vision: f64,
+    /// Celestial vs. terrestrial attention: earthbound 0 ↔ sky-rapt 1.
+    pub sky_attention: f64,
+}
+
 /// One authored species: vector, vocabulary stopgaps (deleted by The
 /// Tongues), and a placeholder syllable pool for names.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -75,6 +106,8 @@ pub struct SpeciesDef {
     pub noun: &'static str,
     /// The psychology vector.
     pub psych: PsychVector,
+    /// The perception vector.
+    pub perception: PerceptionVector,
     /// Worker-role override; `None` = the subsistence worker word.
     pub worker_override: Option<&'static str>,
     /// The warrior-rung word.
@@ -112,6 +145,11 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 sociality: Sociality::Hierarchic,
                 status_basis: StatusBasis::Rank,
             },
+            perception: PerceptionVector {
+                activity: ActivityCycle::Diurnal,
+                night_vision: 0.5,
+                sky_attention: 0.5,
+            },
             worker_override: None,
             warrior: "warrior",
             artisan: "artisan",
@@ -132,6 +170,11 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 time_horizon: 0.8,
                 sociality: Sociality::Communal,
                 status_basis: StatusBasis::Knowledge,
+            },
+            perception: PerceptionVector {
+                activity: ActivityCycle::Nocturnal,
+                night_vision: 0.9,
+                sky_attention: 0.8,
             },
             worker_override: Some("digger"),
             warrior: "warden",
@@ -159,6 +202,13 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_predicate(SOCIALITY_MODE, true, "hierarchic or communal")?;
     registry.register_predicate(STATUS_BASIS, true, "rank, knowledge, or generosity")?;
     registry.register_predicate(PEOPLED_BY, true, "the species that peoples a settlement")?;
+    registry.register_predicate(
+        SPECIES_ACTIVITY_CYCLE,
+        true,
+        "when a species is awake: diurnal, nocturnal, crepuscular",
+    )?;
+    registry.register_predicate(SPECIES_NIGHT_VISION, true, "night-sky acuity, 0-1")?;
+    registry.register_predicate(SPECIES_SKY_ATTENTION, true, "sky vs. ground attention, 0-1")?;
     Ok(())
 }
 
@@ -223,6 +273,35 @@ pub fn genesis(world: &mut World) -> Result<BTreeMap<String, EntityId>, LedgerEr
             fact(id, STATUS_BASIS, Value::Text(status.to_string())),
             &world.registry,
         )?;
+        let activity = match def.perception.activity {
+            ActivityCycle::Diurnal => "diurnal",
+            ActivityCycle::Nocturnal => "nocturnal",
+            ActivityCycle::Crepuscular => "crepuscular",
+        };
+        world.ledger.commit(
+            fact(
+                id,
+                SPECIES_ACTIVITY_CYCLE,
+                Value::Text(activity.to_string()),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                id,
+                SPECIES_NIGHT_VISION,
+                Value::Number(def.perception.night_vision),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                id,
+                SPECIES_SKY_ATTENTION,
+                Value::Number(def.perception.sky_attention),
+            ),
+            &world.registry,
+        )?;
         ids.insert(name.to_string(), id);
     }
     Ok(ids)
@@ -243,6 +322,15 @@ pub fn species_of(world: &World, settlement: EntityId) -> Option<String> {
         Some(Value::Text(t)) => Some(t.clone()),
         _ => None,
     }
+}
+
+/// The species entity carrying `name`'s authored vector, if genesis ran.
+pub fn species_entity(world: &World, name: &str) -> Option<EntityId> {
+    world
+        .ledger
+        .find(SPECIES_NAME)
+        .find(|f| matches!(&f.object, Value::Text(t) if t == name))
+        .map(|f| f.subject)
 }
 
 #[cfg(test)]
@@ -311,5 +399,34 @@ mod tests {
                 f.predicate
             );
         }
+    }
+
+    #[test]
+    fn goblin_perception_is_the_baseline_and_kobold_contrasts() {
+        let reg = registry();
+        let g = &reg["goblin"].perception;
+        assert_eq!(g.activity, ActivityCycle::Diurnal);
+        assert_eq!(g.night_vision, 0.5);
+        assert_eq!(g.sky_attention, 0.5);
+        let k = &reg["kobold"].perception;
+        assert_eq!(k.activity, ActivityCycle::Nocturnal);
+        assert!(k.night_vision > 0.5 && k.sky_attention > 0.5);
+    }
+
+    #[test]
+    fn genesis_commits_perception_facts() {
+        let mut w = World::new(Seed(42));
+        register_concepts(&mut w.registry).unwrap();
+        let ids = genesis(&mut w).unwrap();
+        let kobold = ids["kobold"];
+        assert_eq!(
+            w.ledger.text_of(kobold, SPECIES_ACTIVITY_CYCLE),
+            Some("nocturnal")
+        );
+        assert!(matches!(
+            w.ledger.value_of(kobold, SPECIES_NIGHT_VISION),
+            Some(Value::Number(n)) if *n > 0.5
+        ));
+        assert_eq!(species_entity(&w, "kobold"), Some(kobold));
     }
 }
