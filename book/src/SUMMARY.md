@@ -39,6 +39,7 @@
 - [Campaign 4b: Emergent Society](./chronicle/campaign-4b.md)
 - [Campaign 5: The Gods](./chronicle/campaign-5.md)
 - [Campaign Y2-0: Firm Ground](./chronicle/campaign-y2-0.md)
+- [Campaign Y2-1: The Peoples](./chronicle/campaign-y2-1.md)
 
 # The Gallery
 

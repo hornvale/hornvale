@@ -24,8 +24,8 @@ show.
 Once the two flagships are read as their own settlements rather than one
 settlement wearing two skies, the comparison gets sharper, not weaker.
 Everywhere the sky reaches, the two villages diverge: a different name, a
-different population (359 against 522), a different neighborhood (58
-settlements scattered across the spinning globe against 27 on the locked
+different population (359 against 522), a different neighborhood (59
+settlements scattered across the spinning globe against 28 on the locked
 one, the same terminator-driven collapse Campaign 3c's biome map predicted
 and Campaign 4a's settlement scatter first measured), and — at the very top of each pantheon — a different presiding
 god. Everywhere the sky does not reach, the two villages converge: both
@@ -51,18 +51,31 @@ the sharper one: the sky-reaches/sky-doesn't-reach split, cashed out on a
 single seed where the caste ladder holds still long enough to make the
 head-deity contrast the whole story.
 
+Since Campaign Y2-1, a kobold warren stands beside each goblin village in
+the quoted excerpts below — **Uszuszssk** under the spinning sky,
+**Thurzikdak** under the locked one — but raises no pantheon of its own:
+religion is still goblin-only, so the gods comparison this page makes is
+untouched by the second people. The warrens are quoted anyway, because the
+almanac is quoted verbatim or not at all.
+
 ## Spinning: the Wheel-Turner presides
 
 Quoted verbatim from the committed [`almanac-seed-42-sky.md`](./almanac-seed-42-sky.md):
 
 ```text
-The land holds 58 settlement(s).
-The chief settlement, Grumoknar, holds 359 souls amid temperate-rainforest.
+The land holds 59 settlement(s).
+The chief goblin settlement, Grumoknar, holds 359 souls amid temperate-rainforest.
+The chief kobold settlement, Uszuszssk, holds 425 souls amid temperate-rainforest.
 
 The goblin village of **Grumoknar**, population 359.
 
 Grumoknar lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
+
+The kobold warren of **Uszuszssk**, population 425.
+
+Uszuszssk lives by farming.
+Its roles, lowest to highest: digger, shaper, keeper, elders.
 ```
 
 The "The Gods" section of the same almanac:
@@ -96,13 +109,19 @@ like the two lesser cyclic deities beneath it.
 Quoted verbatim from the committed [`almanac-seed-42-locked.md`](./almanac-seed-42-locked.md):
 
 ```text
-The land holds 27 settlement(s).
-The chief settlement, Bolugrak, holds 522 souls amid temperate-rainforest.
+The land holds 28 settlement(s).
+The chief goblin settlement, Bolugrak, holds 522 souls amid temperate-rainforest.
+The chief kobold settlement, Thurzikdak, holds 328 souls amid alpine.
 
 The goblin village of **Bolugrak**, population 522.
 
 Bolugrak lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
+
+The kobold warren of **Thurzikdak**, population 328.
+
+Thurzikdak lives by fishing.
+Its roles, lowest to highest: digger, elders.
 ```
 
 The "The Gods" section of the same almanac:

@@ -44,11 +44,25 @@ vocabulary is unchanged; only how the castes are chosen changed, so the
 almanac and REPL read tier-1 societies through the exact same queries tier 0
 answered.
 
-**Goblin-only, declared.** Every settlement in Hornvale is still goblin —
-the role vocabulary (`farmer`, `warrior`, `shaman`, `chief`, …) is the same
-cultural furniture tier 0 used, restructured rather than replaced. A second
-species — and the psychology substrate a real inter-species contrast would
-need — is Year-2 work (spec §14), not attempted here.
+**Two peoples, one function (Campaign Y2-1).** The role vocabulary no
+longer belongs to goblins alone. `structure` takes a `PsychSummary` whose
+`vocabulary` field supplies the words a species uses for each rung — goblin
+keeps the tier-0 words (`farmer`/`herder`/`fisher`/`forager`, `warrior`,
+`artisan`, `shaman`, `chief`); kobold substitutes its own (a fixed
+`digger` worker rung regardless of subsistence mode, `warden`, `shaper`,
+`keeper`, `elders`) — while the thresholds that decide *which* rungs exist
+stay the one reviewed function this section describes, now also modulated
+by two more psychology inputs: `threat_response` shifts the warrior
+threshold, `time_horizon` shifts the artisan threshold, and a
+knowledge-based status basis (rather than rank) suppresses the slave rung
+outright regardless of surplus or scale. Every modulation is the identity
+function at the goblin baseline, so this section's formulas and examples
+are unchanged for goblin; kobold's knowledge-based, communal psychology
+makes a slave rung structurally unreachable and caps every kobold ladder at
+`elders` — never `chief` — a fact [Study 006](../laboratory/study-006.md)
+confirms holds without exception across 10,000 worlds. See
+[Species](./species.md) for the vector these dimensions come from and the
+SRD-derived kobold values themselves.
 
 **The model card.**
 
@@ -62,9 +76,10 @@ need — is Year-2 work (spec §14), not attempted here.
 - **Approximated (declared):** a rule-table sociology, not a simulated
   economy or a solved bargaining/stratification model — thresholds on
   surplus, scale, and threat, chosen to be legible rather than fit to any
-  external data; only the flagship settlement runs tier-1 culture (every
-  other placed settlement stays without a committed society, an artifact of
-  the composition root's current scope, not a claim that they have none); no
+  external data; only each species' flagship settlement runs tier-1 culture
+  (every other placed settlement, of either species, stays without a
+  committed society, an artifact of the composition root's current scope,
+  not a claim that they have none); no
   inter-settlement politics, trade, or cultural diffusion; the structure is
   **static** — it is computed once at genesis and never revises as
   population or environment would later change.
@@ -86,10 +101,11 @@ Census of Peoples](../laboratory/study-003.md). Chronicle: [4b, Emergent
 Society](../chronicle/campaign-4b.md).
 
 **The tier ladder ahead:** structure that revises as a settlement's
-environment or population changes rather than freezing at genesis; a second
-species and the comparative questions it would let religion ask (the
-hobgoblin-domination questions from the vision book's comparative-religion
-chapter — paternalism? hegemony? enslavement? — deferred to Year 2);
-inter-settlement politics and trade; and the trace protocol's *cause-blind
-fields* earning their keep here — a `misery` field to which a caste system
-contributes, readable by religion without religion knowing castes exist.
+environment or population changes rather than freezing at genesis; the
+comparative questions two peoples now make askable but that religion does
+not yet ask (the hobgoblin-domination questions from the vision book's
+comparative-religion chapter — paternalism? hegemony? enslavement? —
+waiting on religion itself going two-species); inter-settlement politics
+and trade; and the trace protocol's *cause-blind fields* earning their
+keep here — a `misery` field to which a caste system contributes, readable
+by religion without religion knowing castes exist.

@@ -69,6 +69,33 @@ settlement is its own committed fact, not a re-derived field. Choosing which
 placed site becomes the flagship is not yet pinnable (deferred, spec §9);
 the flagship is always the suitability argmax.
 
+**Joint greedy, two peoples (Campaign Y2-1).** Every world now places for
+the whole species registry by default — goblin and kobold — rather than one
+fixed people. Suitability's weights are no longer a single constant: each
+species reads its own weighted sum from its psychology vector (`domains/
+species`), `freshwater = 0.45 × (0.5 + time_horizon)`, `coast = 0.20 × (2 ×
+in_group_radius)`, `hostility = 0.50 × (1.5 − threat_response)`, temperance
+unweighted at 0.35 — an *identity* substitution at the goblin baseline
+(every scalar 0.5 reproduces exactly 0.45/0.20/0.35/0.50, the tier-1
+constants above), and a real divergence at kobold's authored values: a
+steep in-group-radius discount cuts the coast term to 0.08, a higher time
+horizon lifts freshwater to 0.585, a higher threat response relaxes the
+hostility penalty to 0.35. Every `(site, species)` pair is scored once with
+its own species' weights into one combined ranked list, and a single
+greedy spacing pass accepts sites from that shared list regardless of which
+species scored them — goblin and kobold compete for the same land, and the
+12° spacing rule applies between them exactly as it does within a species.
+A `--species NAME` pin restricts placement to one species (used by the
+superset-contract test to reproduce a goblin-only world); the unpinned
+default places every species the registry holds. Names and populations for
+any non-goblin species draw from their own species-qualified stream labels
+(`settlement/kobold/name`, `settlement/kobold/population`) and their own
+syllable pool, so goblin's placement, naming, and population draws are
+byte-identical to the pre-species code — the species substrate's
+byte-identity contract, mechanical rather than tuned, described fully in
+[Species](./species.md). The settlement noun itself is species-specific: a
+goblin settlement is a "village," a kobold one a "warren."
+
 **The model card.**
 
 - **Drawn (from the seed, or pinned):** the placement suitability floor
@@ -89,16 +116,18 @@ the flagship is always the suitability argmax.
   Campaign 4b's successor); no settlement history — every settlement is
   founded, fully formed, at genesis.
 
-Seed 42 under a spinning sky places 58 settlements; the flagship,
-**Grumoknar**, holds 359 souls in temperate rainforest. The gallery holds
-the exit-demo pair: [The Peoples of Seed
+Seed 42 under a spinning sky places 59 settlements across both peoples; the
+goblin flagship, **Grumoknar**, holds 359 souls in temperate rainforest,
+and the kobold flagship, **Uszuszssk**, 425 souls in the same biome. The
+gallery holds the exit-demo pair: [The Peoples of Seed
 42](../gallery/settlement-seed-42.md) against [its tidally-locked
 twin](../gallery/settlement-seed-42-locked.md), where habitability's
 collapse toward the terminator ring (Campaign 3c's biome map already
-predicted it) thins the same globe to 27 settlements. Chronicle: [4a,
-Placement & Drainage](../chronicle/campaign-4a.md), and [Campaign Y2-0,
-Firm Ground](../chronicle/campaign-y2-0.md) for the freshwater fix that
-re-drew this scatter.
+predicted it) thins the same globe to 28 settlements. Chronicle: [4a,
+Placement & Drainage](../chronicle/campaign-4a.md), [Campaign Y2-0, Firm
+Ground](../chronicle/campaign-y2-0.md) for the freshwater fix that re-drew
+this scatter, and [Campaign Y2-1, The Peoples](../chronicle/campaign-y2-1.md)
+for the joint placement that split it into two.
 
 **The tier ladder ahead:** multiple settlements with relationships and
 trade, settlement histories as the fields-and-ledger model of deep time

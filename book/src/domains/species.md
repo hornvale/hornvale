@@ -81,10 +81,18 @@ reproduced here — only parameter derivations, paraphrased to one line each.*
 Kobold's values are authored judgment, not a fixed translation — the
 design's requirement is only that they land somewhere meaningfully unlike
 the goblin baseline, and that 0.5 (or the goblin enum variant) always means
-goblin. A vocabulary rides alongside the vector: kobold roles render as
-"digger," "warden," "shaper," and "keeper" where goblin roles render as
-"farmer," "warrior," "artisan," and "shaman," the settlement itself a
-"warren" rather than a "village" — pre-language stopgaps, English by
+goblin. A vocabulary rides alongside the vector, one word per rung: kobold's
+worker rung is always "digger" — fixed regardless of subsistence mode,
+unlike goblin's, which still names the subsistence worker itself
+(farmer/herder/fisher/forager) — and kobold's warrior, artisan, shaman, and
+top rungs render as "warden," "shaper," "keeper," and "elders" where
+goblin's render as "warrior," "artisan," "shaman," and "chief"; the
+settlement itself is a "warren" rather than a "village." A structural
+consequence rides along for free: kobold's knowledge-based status basis
+(below) makes the rank-gated slave rung unreachable, so no kobold ladder
+ever needs a word for it, and every kobold structure tops out at "elders,"
+never "chief" (`domains/culture`'s structure function; see
+[Culture](./culture.md)). These are pre-language stopgaps, English by
 convenience, waiting to be deleted once a generated tongue exists.
 
 **Idle by design; banked for later.** Not every dimension pulls its weight

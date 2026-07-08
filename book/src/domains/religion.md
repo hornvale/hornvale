@@ -125,9 +125,12 @@ quoted verbatim in the gallery: [The Gods of Seed
   earth gods from tectonic unrest, no sea gods from tides, both explicitly
   deferred; **static theology** — the pantheon is computed once at genesis
   and never revises as the sky, society, or a religious history would
-  later change (that history is the Year-2 event ledger); single species
-  (goblin) — the comparative multi-species theology the vision book raises
-  waits for Year 2's species-psychology substrate.
+  later change (that history is the Year-2 event ledger); goblin-only —
+  Campaign Y2-1's second people places its own settlements and grows its
+  own structure, but only the goblin flagship raises a pantheon, and the
+  priesthood check is a literal `shaman` match that does not yet know a
+  kobold "keeper" is a shaman by another name; both wait on religion
+  going two-species.
 
 Laboratory: [Study 004, the Census of Faiths](../laboratory/study-004.md).
 Chronicle: [Campaign 5, The Gods](../chronicle/campaign-5.md).
@@ -136,5 +139,6 @@ Chronicle: [Campaign 5, The Gods](../chronicle/campaign-5.md).
 gods from unrest, sea gods from tides); comparative religion and diffusion
 across the full settlement scatter, not just the flagship; per-caste patron
 deities; a religious history that revises instead of freezing at genesis,
-once the event ledger exists; and the multi-species theology a second
-species would make possible.
+once the event ledger exists; and the comparative theology the second
+people (Campaign Y2-1) now makes possible — a kobold pantheon, and the
+species-aware priesthood check it would require.

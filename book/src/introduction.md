@@ -66,5 +66,47 @@ rebuild their skies from them at load. The campaign's exit criterion is
 proven and published: the same seed's goblins worship a returning god under
 a spinning sun and an unblinking one under a tidally locked sun, with
 religion's code untouched — the enrichment thesis's first real data point.
-Campaign 3 brings the land: terrain and climate, consuming the calendar the
-sky now keeps.
+
+**Campaign 3 gives the world land.** Terrain grows a tectonic globe —
+plates, elevation, a drainage skeleton — and climate turns that globe and
+the sky together into circulation bands and a biome map, the first proof
+that two domains importing nothing from each other still produce a
+legibly coupled world: coarse constrains fine, all the way from rotation
+to which biome a given cell grows.
+
+**Campaign 4 places a real settlement scatter and grows a society from
+it.** The single hand-fed vale is retired; every world scores every
+habitable cell for suitability and places a spaced scatter, with the
+global suitability argmax standing as the flagship. That flagship's
+subsistence mode and caste ladder are no longer a fixed template — they
+emerge from the land's own fertility, population, and threat, functions
+the Lab can check row by row against ten thousand worlds.
+
+**Campaign 5 gives that society gods, and closes Year 1.** Religion stops
+minting one belief and mints a pantheon, shaped by the sky's phenomena and
+the flagship's own social strata; `why`/`recount` generalizes into a
+domain-agnostic provenance replay for any entity, not just a belief. Every
+domain the plan named is now at tier 1, and the astronomy-to-theology
+cascade — one rotation bit at genesis producing a different god's name at
+the top of an almanac page, with no domain aware of any other — is proven
+rather than promised.
+
+**Campaign Y2-0 (Firm Ground) opens Year 2 by fixing what Year 1 got
+wrong before building on it.** A placement-suitability conflation had made
+the flagship coastal in every censused world, silently forbidding two of
+culture's four subsistence modes from ever appearing; the fix is one line
+at the composition root, and every committed artifact and 10k census
+re-baselines exactly once so later campaigns inherit corrected numbers
+instead of re-deriving them mid-flight.
+
+**Campaign Y2-1 (The Peoples) gives the world a second people.** A new
+kernel-only domain, `domains/species`, holds authored psychology vectors —
+goblin as the baseline, kobold authored from the D&D 5E SRD — consumed by
+settlement's now-joint placement and culture's role vocabulary and
+thresholds, with a byte-identity superset test proving the goblin path is
+untouched by construction, not by convention. Two peoples now compete for
+the same land, diverging in where they settle and how they organize for
+reasons a player can be told; a census turns up competitive exclusion, an
+unauthored emergent property of joint placement that runs in both
+directions. Religion has not yet followed the second species — that, and
+an observer-dependent perception vector, belong to Campaign 15: The Eyes.

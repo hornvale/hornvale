@@ -14,8 +14,9 @@ The cascade, in dependency order, with its current state:
 | [Astronomy](./astronomy.md) | a sun that never sets → a generated star system with a two-clock calendar (tier 1) | — | phenomena (the sky) (tier 0); phenomena (day/night, seasons, moon phases, notable neighbors) plus the sky's insolation, obliquity, and rotation fields (tier 1) |
 | [Climate](./climate.md) | uniform mildness → banded climate + biomes (tier 1) | — (tier 0); elevation, sea level, seafloor, and the sky's insolation/obliquity/rotation (tier 1) | phenomena (the air); the biome + habitability field (tier 1) |
 | [Terrain](./terrain.md) | one hand-placed vale → tectonic globe (tier 1) | — | place facts; the tectonic globe's elevation, boundary, unrest, and drainage fields (tier 1) |
-| [Settlement](./settlement.md) | one goblin village → a scatter placed by suitability (tier 1, the Vale retired) | the globe's habitability, freshwater, coast, temperature, and hostility, cell by cell | settlement facts for every placed site, one of them the flagship |
-| [Culture](./culture.md) | a fixed caste ladder → subsistence + emergent structure (tier 1) | the flagship's environment (biome, coast, surplus, population, threat) | subsistence + caste facts on the flagship |
+| [Settlement](./settlement.md) | one goblin village → a scatter placed by suitability, jointly across every species the registry holds (tier 1, the Vale retired) | the globe's habitability, freshwater, coast, temperature, and hostility, cell by cell; each species' psychology-derived suitability weights | settlement facts for every placed site, one flagship per species that placed |
+| [Species](./species.md) | (Campaign Y2-1; no tier ladder of its own — authored data, not a generator) | — | a closed six-dimension psychology vector and role vocabulary per species, consumed at the composition root to modulate settlement and culture |
+| [Culture](./culture.md) | a fixed caste ladder → subsistence + emergent structure, modulated by species psychology (tier 1) | each flagship's environment (biome, coast, surplus, population, threat) and its species' psychology vector | subsistence + caste facts on each species' flagship |
 | [Religion](./religion.md) | one belief → a pantheon, structured by society (tier 1) | phenomena only (tier 0); phenomena plus a bare society summary — strata count, priesthood presence (tier 1) | belief facts (tier 0); pantheon, `high-god`, and `cult-form` facts (tier 1) |
 
 Two things about this table are load-bearing. First, the *Consumes* column
@@ -48,3 +49,17 @@ spinning-vs-locked pair, threaded through every gallery page in this book,
 is the same claim made visually at each layer; [Campaign 5's
 chronicle](../chronicle/campaign-5.md) closes the year with the full
 retrospective.
+
+**Year 2 so far: firm ground, then a second people.** Campaign Y2-0
+re-baselined every census once, on corrected placement, before Year 2 built
+anything new on top of it. Campaign Y2-1 then added the row above:
+`domains/species` holds authored psychology vectors for goblin (the
+baseline) and kobold, consumed by settlement's joint placement and
+culture's role vocabulary and thresholds — the same coarse-constrains-fine
+discipline the astronomy-to-theology cascade already proved, now widened
+into a second axis (which people, not just which sky) that settlement and
+culture must stay legible under. Religion has not yet followed; its
+`SocietySummary` input still describes one flagship's society, goblin only
+— the next campaign this table's religion row will change is whichever one
+takes religion two-species, not this one. [Campaign Y2-1's
+chronicle](../chronicle/campaign-y2-1.md) has the full account.
