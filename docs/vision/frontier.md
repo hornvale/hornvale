@@ -301,6 +301,31 @@ noise injected into a civilization's inference process — which turns the
 vision book's "belief makes gods real" loop into a concrete feedback edge
 between the ledger and its agents.
 
+A third corollary, and the most concrete: **authored transmission media — the
+"stones" — decouple a capability from its earthly prerequisites.**
+Instantaneous communication, energy at a distance, and rapid transport arrive
+on Earth only after electromagnetism, thermodynamics, and information theory
+are paid for; a seeded second physics can grant the affordance directly, with
+an exact authored law and none of the substrate, pollution, or tech-tree
+ladder that normally gates it. Model each medium as an independent *latent
+graph-construction system* — a communication stone realizes a communication
+graph, a transport stone a transport graph — which is what lifts the idea up
+the verification gradient: graphs carry checkable invariants (diameter,
+connectivity, centrality), so "the comms graph's diameter falls as craft-skill
+rises" is a claim a test can catch. Two mechanisms give it a technological
+shape without a tech tree. A stone's *realized* capability is its pinned
+world-potential times a craft fraction set by metallurgy and skill (TECH-1,
+TECH-2): the same ore is a village whistle in one hand and a continental
+telegraph in another, coarse constraining fine. And raw ore emits diagnostic
+phenomena — a mild shock, an impossible throw, a murmured echo — so discovery
+is itself UNI-1 inference, perception-gated by EXP-3: a people that cannot hear
+never finds the murmuring stone, and different peoples discover different
+stones. The systems are optional and independently tunable, which makes them
+UNI-2's controlled science in its most literal form — dial one on and measure
+the downstream reorganization of contact (MAP-9), carrying capacity (MAP-7),
+and the reach of authority (SOC-1) with no confounds: a Lab apparatus (MAP-1,
+TOOL-4) for counterfactual social history.
+
 ---
 
 ## The expressive-culture cluster
