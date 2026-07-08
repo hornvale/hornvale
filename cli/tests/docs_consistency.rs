@@ -106,15 +106,14 @@ fn check_links(file: &Path, errors: &mut Vec<String>) {
             ));
             continue;
         }
-        if let Some(fragment) = fragment {
-            if target.extension().and_then(|e| e.to_str()) == Some("md")
-                && !anchors(&read(&target)).contains(fragment)
-            {
-                errors.push(format!(
-                    "{}: link `{url}` names an anchor that no heading produces",
-                    file.display()
-                ));
-            }
+        if let Some(fragment) = fragment
+            && target.extension().and_then(|e| e.to_str()) == Some("md")
+            && !anchors(&read(&target)).contains(fragment)
+        {
+            errors.push(format!(
+                "{}: link `{url}` names an anchor that no heading produces",
+                file.display()
+            ));
         }
     }
 }
