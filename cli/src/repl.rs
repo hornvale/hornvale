@@ -21,7 +21,7 @@ commands:
   castes           the settlement's castes
   beliefs          recorded beliefs
   why <id>         recount how an entity came to be (ids from beliefs/places)
-  phenomena [day]  salient phenomena (default day 0)
+  phenomena [day] [--as <species>] — salient phenomena, optionally through a species' eyes
   facts <id>       every fact about entity id
   quit             leave
 ";
@@ -225,7 +225,22 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
             }
             "why" => match argument.and_then(|a| a.parse::<u64>().ok()) {
                 Some(id) => match hornvale_historiography::recount(world, EntityId(id)) {
-                    Some(text) => write!(output, "{text}")?,
+                    Some(text) => {
+                        write!(output, "{text}")?;
+                        // A belief recounts onward to the eyes that ranked
+                        // its phenomenon: held-by → settlement → peopled-by
+                        // → the species entity's authored vector.
+                        if let Some(Value::Entity(community)) = world
+                            .ledger
+                            .value_of(EntityId(id), hornvale_religion::HELD_BY)
+                            && let Some(species) = hornvale_species::species_of(world, *community)
+                            && let Some(entity) = hornvale_species::species_entity(world, &species)
+                            && let Some(text) = hornvale_historiography::recount(world, entity)
+                        {
+                            writeln!(output, "Seen through {species} eyes:")?;
+                            write!(output, "{text}")?;
+                        }
+                    }
                     None => writeln!(output, "nothing is recorded about entity {id}")?,
                 },
                 None => writeln!(
@@ -234,8 +249,22 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                 )?,
             },
             "phenomena" => {
-                let day = argument.and_then(|a| a.parse().ok()).unwrap_or(0.0);
-                match world_builder::observed_phenomena(world, day) {
+                // `argument` already popped one token from `parts`; the rest
+                // of the line (e.g. the species name after `--as`) is still
+                // sitting in `parts`, so both must be chained together.
+                let tokens: Vec<&str> = argument.into_iter().chain(parts).collect();
+                let species = tokens
+                    .iter()
+                    .position(|t| *t == "--as")
+                    .and_then(|i| tokens.get(i + 1).copied());
+                let result = match species {
+                    Some(s) => world_builder::observed_phenomena_as(world, s),
+                    None => {
+                        let day = tokens.first().and_then(|a| a.parse().ok()).unwrap_or(0.0);
+                        world_builder::observed_phenomena(world, day)
+                    }
+                };
+                match result {
                     Ok(phenomena) => {
                         for p in phenomena {
                             writeln!(output, "[{:.2}] {} — {}", p.salience, p.kind, p.description)?;
@@ -447,6 +476,58 @@ mod tests {
         let out = String::from_utf8(out).unwrap();
         assert!(out.lines().count() > 24, "no ascii biome map");
         assert!(out.contains("biome"), "no per-cell biome report");
+    }
+
+    fn drive_generated(commands: &str) -> String {
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &world_builder::SettlementPins::default(),
+        )
+        .unwrap();
+        let mut out = Vec::new();
+        run(&world, commands.as_bytes(), &mut out).unwrap();
+        String::from_utf8(out).unwrap()
+    }
+
+    #[test]
+    fn phenomena_as_kobold_ranks_the_night_sky_first() {
+        let out = drive_generated("phenomena --as kobold\n");
+        // line 0 is the REPL's banner ("hornvale repl — world of seed …"),
+        // printed unconditionally by `run`; the first *reported* phenomenon
+        // is line 1.
+        let first = out.lines().nth(1).unwrap();
+        assert!(
+            first.contains("moon") || first.contains("star"),
+            "kobold-lensed ranking must be night-headed, got: {first}"
+        );
+    }
+
+    #[test]
+    fn phenomena_as_unknown_species_fails_loudly() {
+        let out = drive_generated("phenomena --as elf\n");
+        assert!(out.contains("unknown species 'elf'"));
+        assert!(out.contains("goblin"), "the error lists known species");
+    }
+
+    #[test]
+    fn why_a_belief_recounts_through_the_species_eyes() {
+        let out = drive_generated("beliefs\n");
+        // line 0 is the REPL's banner; the first listed belief is line 1.
+        let first_id: u64 = out
+            .lines()
+            .nth(1)
+            .and_then(|l| l.split(['[', ']']).nth(1))
+            .and_then(|s| s.parse().ok())
+            .expect("beliefs lists at least one id");
+        let recounted = drive_generated(&format!("why {first_id}\n"));
+        assert!(
+            recounted.contains("Seen through goblin eyes:"),
+            "the species hop is missing: {recounted}"
+        );
+        assert!(recounted.contains("night-sky acuity"));
     }
 
     #[test]
