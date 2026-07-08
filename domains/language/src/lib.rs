@@ -13,7 +13,11 @@ pub mod phoneme;
 /// The phonology engine: per-species inventory and phonotactics drawn
 /// under the articulation envelope.
 pub mod phonology;
+/// The register renderer: `render_line`, the permanent content→render
+/// seam.
+pub mod register;
 
 pub use naming::{GeneratedName, MorphOptions, NameKind, Namer};
 pub use phoneme::{Backness, Height, Manner, Place, Segment, ipa, romanize, sonority};
 pub use phonology::{Envelope, ExoticSeg, Phonology, draw_phonology, permits};
+pub use register::{LineContent, LineSentiment, VoiceParams, render_line};
