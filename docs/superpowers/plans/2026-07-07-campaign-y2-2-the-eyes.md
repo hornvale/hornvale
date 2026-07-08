@@ -288,15 +288,15 @@ Update the in-module test `ctx()` helper to use `ObserverContext::at(EntityId(1)
 
 - [ ] **Step 4: Declare venues at every construction site**
 
-| File | Phenomenon | `venue:` value |
-|---|---|---|
-| `domains/astronomy/src/lib.rs` ~149 (ConstantSun) | the constant sun | `Venue::DaySky` |
-| `domains/astronomy/src/provider.rs` ~300 (spinning sun) | the sun | `Venue::DaySky` |
-| `domains/astronomy/src/provider.rs` ~306 (locked sun) | fixed sun | `Venue::DaySky` |
-| `domains/astronomy/src/provider.rs` ~316 (moons) | each moon | `Venue::NightSky` |
-| `domains/astronomy/src/provider.rs` ~326 (seasons) | seasonal cycle | `Venue::Ambient` |
-| `domains/astronomy/src/provider.rs` ~338 (night-stars) | each neighbor star | `Venue::NightSky` |
-| `domains/climate/src/lib.rs` ~58 (UniformClimate) | ambient air | `Venue::Ambient` |
+| File                                                    | Phenomenon         | `venue:` value    |
+| ------------------------------------------------------- | ------------------ | ----------------- |
+| `domains/astronomy/src/lib.rs` ~149 (ConstantSun)       | the constant sun   | `Venue::DaySky`   |
+| `domains/astronomy/src/provider.rs` ~300 (spinning sun) | the sun            | `Venue::DaySky`   |
+| `domains/astronomy/src/provider.rs` ~306 (locked sun)   | fixed sun          | `Venue::DaySky`   |
+| `domains/astronomy/src/provider.rs` ~316 (moons)        | each moon          | `Venue::NightSky` |
+| `domains/astronomy/src/provider.rs` ~326 (seasons)      | seasonal cycle     | `Venue::Ambient`  |
+| `domains/astronomy/src/provider.rs` ~338 (night-stars)  | each neighbor star | `Venue::NightSky` |
+| `domains/climate/src/lib.rs` ~58 (UniformClimate)       | ambient air        | `Venue::Ambient`  |
 
 Import `Venue` where needed (these crates already import kernel phenomena types). Update remaining `Phenomenon` literals in tests (`domains/religion/src/lib.rs` `ph()` helper → `Venue::Ambient` default is fine there; `windows/almanac/src/lib.rs` test literals → any venue, use `Venue::Ambient`; `kernel/tests/determinism.rs`; `kernel/examples/first_light.rs`). Update `ObserverContext` struct literals to `ObserverContext::at(...)` in: `windows/worldgen/src/lib.rs` ~347, `domains/astronomy/src/provider.rs` tests, `domains/climate/src/lib.rs` tests, `domains/astronomy/src/lib.rs` tests.
 

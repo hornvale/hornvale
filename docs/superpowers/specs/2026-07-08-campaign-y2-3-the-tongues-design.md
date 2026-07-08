@@ -106,14 +106,14 @@ perception), authored per species, goblin = baseline. Abstract feature
 dimensions — each a named capacity the phonology engine intersects with the
 drawn inventory, so every phoneme difference recounts to a dimension:
 
-| Dimension | Type | Goblin (baseline) | Kobold | Rationale (kobold) |
-|---|---|---|---|---|
-| labiality | `f64` [0,1] | 0.5 | 0.1 | reptilian/draconic mouth — few bilabials/labiodentals |
-| vowel-space breadth | `f64` [0,1] | 0.5 | 0.3 | a tighter vowel set |
-| voicing contrast | `f64` [0,1] | 0.5 | 0.6 | — |
-| sibilance | `f64` [0,1] | 0.5 | 0.9 | the draconic hiss — sibilant-rich |
-| voice loudness | `f64` [0,1] | 0.5 | 0.2 | small/frail/stealthy → a dampable phonology; **authored now, model-card-noted to derive from body/frailty (BIO-1) later** — the nocturnality-banking precedent |
-| exotic manner | enum `{None, Trill, Click, Ejective}` | None | Trill | a signature resonant manner the anatomy affords (down-weighted in the draw by low voice-loudness) |
+| Dimension           | Type                                  | Goblin (baseline) | Kobold | Rationale (kobold)                                                                                                                                             |
+| ------------------- | ------------------------------------- | ----------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| labiality           | `f64` [0,1]                           | 0.5               | 0.1    | reptilian/draconic mouth — few bilabials/labiodentals                                                                                                          |
+| vowel-space breadth | `f64` [0,1]                           | 0.5               | 0.3    | a tighter vowel set                                                                                                                                            |
+| voicing contrast    | `f64` [0,1]                           | 0.5               | 0.6    | —                                                                                                                                                              |
+| sibilance           | `f64` [0,1]                           | 0.5               | 0.9    | the draconic hiss — sibilant-rich                                                                                                                              |
+| voice loudness      | `f64` [0,1]                           | 0.5               | 0.2    | small/frail/stealthy → a dampable phonology; **authored now, model-card-noted to derive from body/frailty (BIO-1) later** — the nocturnality-banking precedent |
+| exotic manner       | enum `{None, Trill, Click, Ejective}` | None              | Trill  | a signature resonant manner the anatomy affords (down-weighted in the draw by low voice-loudness)                                                              |
 
 Kobold values are authored data — Nathan's to retune; the design requires only
 meaningful contrast and identity at the goblin baseline. The **voice-loudness ×

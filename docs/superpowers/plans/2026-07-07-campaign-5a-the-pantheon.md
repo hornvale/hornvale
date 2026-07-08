@@ -25,13 +25,13 @@
 
 ## File Structure
 
-| File | Action | Responsibility |
-|---|---|---|
-| `domains/religion/src/lib.rs` | Modify | `SocietySummary`; `HIGH_GOD`/`CULT_FORM` predicates; tier-1 `genesis` (pantheon from the floor; verticality + priesthood); extended epithet pools; `Belief.high_god` + `cult_form_of`; `beliefs_of` reads the flag. |
-| `windows/worldgen/src/lib.rs` | Modify | Build `SocietySummary` from the flagship's committed castes; pass it to `religion::genesis`; the exit-demo test. |
-| `windows/almanac/src/lib.rs` | Modify | "The Gods" renders the pantheon: the cult form, the high god marked, each deity's tenet. |
-| `.github/workflows/ci.yml` | (unchanged) | The exit-demo almanacs (seed 42 sky + locked) are already rendered + drift-checked; 5a only changes their content. |
-| `book/src/gallery/almanac-seed-42*.md`, `book/src/reference/*-generated.md` | Regenerate | Committed generated artifacts (the pantheon now appears; two new predicates). |
+| File                                                                        | Action      | Responsibility                                                                                                                                                                                                      |
+| --------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `domains/religion/src/lib.rs`                                               | Modify      | `SocietySummary`; `HIGH_GOD`/`CULT_FORM` predicates; tier-1 `genesis` (pantheon from the floor; verticality + priesthood); extended epithet pools; `Belief.high_god` + `cult_form_of`; `beliefs_of` reads the flag. |
+| `windows/worldgen/src/lib.rs`                                               | Modify      | Build `SocietySummary` from the flagship's committed castes; pass it to `religion::genesis`; the exit-demo test.                                                                                                    |
+| `windows/almanac/src/lib.rs`                                                | Modify      | "The Gods" renders the pantheon: the cult form, the high god marked, each deity's tenet.                                                                                                                            |
+| `.github/workflows/ci.yml`                                                  | (unchanged) | The exit-demo almanacs (seed 42 sky + locked) are already rendered + drift-checked; 5a only changes their content.                                                                                                  |
+| `book/src/gallery/almanac-seed-42*.md`, `book/src/reference/*-generated.md` | Regenerate  | Committed generated artifacts (the pantheon now appears; two new predicates).                                                                                                                                       |
 
 Dataflow: `worldgen` maps flagship castes → `SocietySummary` → `religion::genesis(phenomena, summary)` → pantheon beliefs → `beliefs_of` → almanac.
 

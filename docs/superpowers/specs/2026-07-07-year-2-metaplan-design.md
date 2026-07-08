@@ -68,13 +68,13 @@ attributable to the vectors, not to stream noise.
 Five campaigns, strict dependency order; every campaign ends observable and
 is abortable at a week boundary.
 
-| # | Campaign | Delivers | Observable ending |
-|---|----------|----------|-------------------|
-| 0 | **Firm Ground** | hardening + new baselines | censuses re-run, placement degeneracy gone |
-| 1 | **The Peoples** | species substrate + psychology vector | two social structures in one almanac |
-| 2 | **The Eyes** | perception profiles, observer-dependent salience | two pantheons in one world (raw demo) |
-| 3 | **The Tongues** | phonology, naming grammars, register | every proper noun generated, myths in voice |
-| 4 | **The Meeting** | preregistered comparative studies, capstone | the polished demo artifact + book close |
+| #   | Campaign        | Delivers                                         | Observable ending                           |
+| --- | --------------- | ------------------------------------------------ | ------------------------------------------- |
+| 0   | **Firm Ground** | hardening + new baselines                        | censuses re-run, placement degeneracy gone  |
+| 1   | **The Peoples** | species substrate + psychology vector            | two social structures in one almanac        |
+| 2   | **The Eyes**    | perception profiles, observer-dependent salience | two pantheons in one world (raw demo)       |
+| 3   | **The Tongues** | phonology, naming grammars, register             | every proper noun generated, myths in voice |
+| 4   | **The Meeting** | preregistered comparative studies, capstone      | the polished demo artifact + book close     |
 
 Sequencing rationale: substrate-first follows the frontier's note that species
 psychology sits upstream of all culture campaigns. Nothing is built

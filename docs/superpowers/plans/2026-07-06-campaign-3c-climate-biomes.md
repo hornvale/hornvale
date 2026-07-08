@@ -41,43 +41,43 @@ These resolve ambiguities in the spec so the executor never has to guess. They a
 
 ## File Structure
 
-| File | Action | Responsibility |
-|---|---|---|
-| `domains/astronomy/src/units.rs` | Modify | Rename `Mm` → `Megameters` (quantity macro invocation + label). |
-| `domains/astronomy/src/moons.rs` | Modify | Use `Megameters` (was `Mm`). |
-| `domains/astronomy/src/star.rs` | Modify | `HabitableZone` newtype (inner < outer invariant); `Star::habitable_zone: HabitableZone`. |
-| `domains/astronomy/src/anchor.rs` | Modify | Read `HabitableZone` bounds via accessors (was tuple destructure). |
-| `domains/astronomy/src/lib.rs` | Modify | Re-export `Megameters`, `HabitableZone` (drop `Mm`). |
-| `domains/astronomy/tests/genesis_properties.rs` | Modify | Read zone via accessors. |
-| `windows/worldgen/src/lib.rs` | Modify | `Sky::calendar()` accessor; `climate_of`, stellar-input mapping, seafloor mapping, biome/habitability queries, almanac land/biome lines, climate build wiring. |
-| `domains/terrain/src/globe.rs` | Modify | Store the per-cell boundary field on `TectonicGlobe` (recomputed, not serialized). |
-| `domains/terrain/src/provider.rs` | Modify | `boundary_at(cell) -> Option<CellBoundary>` accessor. |
-| `domains/climate/src/lib.rs` | Modify | Module declarations, re-exports, keep tier-0 `UniformClimate`, keep `register_concepts`/`stream_labels`. |
-| `domains/climate/src/circulation.rs` | Create | `RotationRegime`, `band_count_for`, per-cell prevailing-wind tangent. |
-| `domains/climate/src/temperature.rs` | Create | Annual-mean temperature field (spinning + locked), seasonal amplitude, `temperature_at`. |
-| `domains/climate/src/moisture.rs` | Create | Base moisture by band, ocean proximity, single-pass rain shadow (spinning); locked moisture. |
-| `domains/climate/src/biome.rs` | Create | `Biome` enum, `SeafloorFeature`, land Whittaker + specials, marine classification, `classify`. |
-| `domains/climate/src/habitability.rs` | Create | Per-cell habitability predicate + fraction. |
-| `domains/climate/src/provider.rs` | Create | `GeneratedClimate`, `ClimateInputs`, `generate`, `biome_map`, `habitability`, `band_count`, `temperature_at`, `summarize`. |
-| `domains/climate/src/render.rs` | Create | Deterministic P6 PPM + ASCII biome map (recolor of the elevation renderer). |
-| `cli/src/main.rs` | Modify | `biome-map` command (markdown + PPM), usage text. |
-| `cli/src/repl.rs` | Modify | `biome <lat> <lon>` and `biomes` commands. |
-| `windows/lab/Cargo.toml` | Modify | Add `hornvale-climate` dependency. |
-| `windows/lab/src/metrics.rs` | Modify | `WorldView` holds terrain globe + climate provider; 7 new land metrics. |
-| `studies/census-drift.study.json` | Delete → rename | Becomes `studies/census-lands-drift.study.json`. |
-| `studies/census-lands-drift.study.json` | Create | Unified CI drift study (500 seeds, `"all"`). |
-| `studies/census-of-lands.study.json` | Create | Author-time headline census (10 000 seeds, `"all"`). |
-| `windows/lab/tests/calibration.rs` | Modify | Load `census-lands-drift`; add band-count⇔rotation calibration. |
-| `.github/workflows/ci.yml` | Modify | Biome-map renders (spinning + locked twin) + `census-lands-drift` rerun in the drift net; drop `census-drift`. |
-| `book/src/gallery/biome-seed-42.md` / `.ppm` | Create (generated) | The biome-map artifact pair. |
-| `book/src/gallery/biome-seed-42-locked.md` / `.ppm` | Create (generated) | The tidally-locked twin. |
-| `book/src/laboratory/study-002.md` | Create | The Census of Lands chapter (comprehension-gated). |
-| `book/src/chronicle/campaign-3c.md` | Create | Chronicle entry. |
-| `book/src/domains/climate.md`, `book/src/domains/terrain.md` | Modify | Promote to tier 1 with model cards. |
-| `book/src/domains/overview.md` | Modify | Update the tier-0 cascade table's climate/terrain rows. |
-| `book/src/SUMMARY.md` | Modify | Gallery + laboratory + chronicle entries. |
-| `book/src/laboratory/generated/census-lands-drift/*`, `book/src/laboratory/generated/census-drift/*` | Regenerate/remove | Rename generated dir. |
-| `book/src/gallery/almanac-*.md`, `book/src/reference/*-generated.md` | Regenerate | Committed generated artifacts (new almanac biome lines; registry/manifest unchanged but regenerate to be safe). |
+| File                                                                                                 | Action             | Responsibility                                                                                                                                                 |
+| ---------------------------------------------------------------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `domains/astronomy/src/units.rs`                                                                     | Modify             | Rename `Mm` → `Megameters` (quantity macro invocation + label).                                                                                                |
+| `domains/astronomy/src/moons.rs`                                                                     | Modify             | Use `Megameters` (was `Mm`).                                                                                                                                   |
+| `domains/astronomy/src/star.rs`                                                                      | Modify             | `HabitableZone` newtype (inner < outer invariant); `Star::habitable_zone: HabitableZone`.                                                                      |
+| `domains/astronomy/src/anchor.rs`                                                                    | Modify             | Read `HabitableZone` bounds via accessors (was tuple destructure).                                                                                             |
+| `domains/astronomy/src/lib.rs`                                                                       | Modify             | Re-export `Megameters`, `HabitableZone` (drop `Mm`).                                                                                                           |
+| `domains/astronomy/tests/genesis_properties.rs`                                                      | Modify             | Read zone via accessors.                                                                                                                                       |
+| `windows/worldgen/src/lib.rs`                                                                        | Modify             | `Sky::calendar()` accessor; `climate_of`, stellar-input mapping, seafloor mapping, biome/habitability queries, almanac land/biome lines, climate build wiring. |
+| `domains/terrain/src/globe.rs`                                                                       | Modify             | Store the per-cell boundary field on `TectonicGlobe` (recomputed, not serialized).                                                                             |
+| `domains/terrain/src/provider.rs`                                                                    | Modify             | `boundary_at(cell) -> Option<CellBoundary>` accessor.                                                                                                          |
+| `domains/climate/src/lib.rs`                                                                         | Modify             | Module declarations, re-exports, keep tier-0 `UniformClimate`, keep `register_concepts`/`stream_labels`.                                                       |
+| `domains/climate/src/circulation.rs`                                                                 | Create             | `RotationRegime`, `band_count_for`, per-cell prevailing-wind tangent.                                                                                          |
+| `domains/climate/src/temperature.rs`                                                                 | Create             | Annual-mean temperature field (spinning + locked), seasonal amplitude, `temperature_at`.                                                                       |
+| `domains/climate/src/moisture.rs`                                                                    | Create             | Base moisture by band, ocean proximity, single-pass rain shadow (spinning); locked moisture.                                                                   |
+| `domains/climate/src/biome.rs`                                                                       | Create             | `Biome` enum, `SeafloorFeature`, land Whittaker + specials, marine classification, `classify`.                                                                 |
+| `domains/climate/src/habitability.rs`                                                                | Create             | Per-cell habitability predicate + fraction.                                                                                                                    |
+| `domains/climate/src/provider.rs`                                                                    | Create             | `GeneratedClimate`, `ClimateInputs`, `generate`, `biome_map`, `habitability`, `band_count`, `temperature_at`, `summarize`.                                     |
+| `domains/climate/src/render.rs`                                                                      | Create             | Deterministic P6 PPM + ASCII biome map (recolor of the elevation renderer).                                                                                    |
+| `cli/src/main.rs`                                                                                    | Modify             | `biome-map` command (markdown + PPM), usage text.                                                                                                              |
+| `cli/src/repl.rs`                                                                                    | Modify             | `biome <lat> <lon>` and `biomes` commands.                                                                                                                     |
+| `windows/lab/Cargo.toml`                                                                             | Modify             | Add `hornvale-climate` dependency.                                                                                                                             |
+| `windows/lab/src/metrics.rs`                                                                         | Modify             | `WorldView` holds terrain globe + climate provider; 7 new land metrics.                                                                                        |
+| `studies/census-drift.study.json`                                                                    | Delete → rename    | Becomes `studies/census-lands-drift.study.json`.                                                                                                               |
+| `studies/census-lands-drift.study.json`                                                              | Create             | Unified CI drift study (500 seeds, `"all"`).                                                                                                                   |
+| `studies/census-of-lands.study.json`                                                                 | Create             | Author-time headline census (10 000 seeds, `"all"`).                                                                                                           |
+| `windows/lab/tests/calibration.rs`                                                                   | Modify             | Load `census-lands-drift`; add band-count⇔rotation calibration.                                                                                                |
+| `.github/workflows/ci.yml`                                                                           | Modify             | Biome-map renders (spinning + locked twin) + `census-lands-drift` rerun in the drift net; drop `census-drift`.                                                 |
+| `book/src/gallery/biome-seed-42.md` / `.ppm`                                                         | Create (generated) | The biome-map artifact pair.                                                                                                                                   |
+| `book/src/gallery/biome-seed-42-locked.md` / `.ppm`                                                  | Create (generated) | The tidally-locked twin.                                                                                                                                       |
+| `book/src/laboratory/study-002.md`                                                                   | Create             | The Census of Lands chapter (comprehension-gated).                                                                                                             |
+| `book/src/chronicle/campaign-3c.md`                                                                  | Create             | Chronicle entry.                                                                                                                                               |
+| `book/src/domains/climate.md`, `book/src/domains/terrain.md`                                         | Modify             | Promote to tier 1 with model cards.                                                                                                                            |
+| `book/src/domains/overview.md`                                                                       | Modify             | Update the tier-0 cascade table's climate/terrain rows.                                                                                                        |
+| `book/src/SUMMARY.md`                                                                                | Modify             | Gallery + laboratory + chronicle entries.                                                                                                                      |
+| `book/src/laboratory/generated/census-lands-drift/*`, `book/src/laboratory/generated/census-drift/*` | Regenerate/remove  | Rename generated dir.                                                                                                                                          |
+| `book/src/gallery/almanac-*.md`, `book/src/reference/*-generated.md`                                 | Regenerate         | Committed generated artifacts (new almanac biome lines; registry/manifest unchanged but regenerate to be safe).                                                |
 
 **Dataflow (acyclic, wired at the root):** terrain (elevation, sea level, boundary) + astronomy (insolation, obliquity, regime, year) → `climate_of` → `GeneratedClimate` → temperature + moisture → biome field + habitability → map artifact / almanac / REPL / Lab.
 

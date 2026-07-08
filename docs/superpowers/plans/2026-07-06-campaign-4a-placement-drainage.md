@@ -39,26 +39,26 @@
 
 ## File Structure
 
-| File | Action | Responsibility |
-|---|---|---|
-| `domains/terrain/src/drainage.rs` | Create | Flow-accumulation drainage field + endorheic-basin detection over the Geosphere. |
-| `domains/terrain/src/globe.rs` | Modify | Store `drainage: CellMap<f64>` and `endorheic: CellMap<bool>` on `TectonicGlobe`; compute in `generate`. |
-| `domains/terrain/src/provider.rs` | Modify | `drainage_at(cell) -> f64`, `is_endorheic(cell) -> bool` accessors. |
-| `domains/settlement/src/lib.rs` | Modify | Module wiring, `SITE`/placement stream label, re-exports; keep tier-0 name/population helpers. |
-| `domains/settlement/src/placement.rs` | Create | `SiteInput`, `Placement`, `place`, suitability scoring, greedy spherical spacing. |
-| `domains/settlement/src/genesis.rs` | Create | Tier-1 genesis: commit a scatter of settlements (each its own place entity tagged with `CellId`/lat/lon/biome/population). |
-| `windows/worldgen/src/lib.rs` | Modify | Rewire `build_world`: assemble `SiteInput`s from terrain + climate, place, commit, run culture/religion on the flagship; remove the Vale genesis; `settlement_lines` for the almanac. |
-| `windows/almanac/src/lib.rs` | Modify | Generated settlement section (`settlement_lines` field) in "The People". |
-| `domains/settlement/src/render.rs` | Create | Deterministic settlement-map render (biome map overlaid with settlement marks; flagship distinguished). |
-| `cli/src/main.rs` | Modify | `settlement-map` command (markdown + PPM); usage text. |
-| `cli/src/repl.rs` | Modify | `settlements` and `settlement <lat> <lon>` commands. |
-| `cli/src/streams.rs` | Modify | Manifest test asserts the new settlement placement label. |
-| `windows/lab/src/metrics.rs` | Modify | `WorldView` already reconstructs terrain/climate; no new metrics in 4a (Census of Peoples is 4b) — update any Vale-dependent test expectations. |
-| `.github/workflows/ci.yml` | Modify | Settlement-map render(s) added to the drift check. |
-| `book/src/gallery/settlement-seed-42.md` / `.ppm` | Create (generated) | The settlement-map artifact. |
-| `book/src/chronicle/campaign-4a.md` | Create | Chronicle entry (DoD per merged plan). |
-| `book/src/SUMMARY.md` | Modify | Gallery + chronicle entries. |
-| `book/src/gallery/almanac-*.md`, `book/src/reference/*-generated.md` | Regenerate | Committed generated artifacts (new People section, new stream label). |
+| File                                                                 | Action             | Responsibility                                                                                                                                                                        |
+| -------------------------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `domains/terrain/src/drainage.rs`                                    | Create             | Flow-accumulation drainage field + endorheic-basin detection over the Geosphere.                                                                                                      |
+| `domains/terrain/src/globe.rs`                                       | Modify             | Store `drainage: CellMap<f64>` and `endorheic: CellMap<bool>` on `TectonicGlobe`; compute in `generate`.                                                                              |
+| `domains/terrain/src/provider.rs`                                    | Modify             | `drainage_at(cell) -> f64`, `is_endorheic(cell) -> bool` accessors.                                                                                                                   |
+| `domains/settlement/src/lib.rs`                                      | Modify             | Module wiring, `SITE`/placement stream label, re-exports; keep tier-0 name/population helpers.                                                                                        |
+| `domains/settlement/src/placement.rs`                                | Create             | `SiteInput`, `Placement`, `place`, suitability scoring, greedy spherical spacing.                                                                                                     |
+| `domains/settlement/src/genesis.rs`                                  | Create             | Tier-1 genesis: commit a scatter of settlements (each its own place entity tagged with `CellId`/lat/lon/biome/population).                                                            |
+| `windows/worldgen/src/lib.rs`                                        | Modify             | Rewire `build_world`: assemble `SiteInput`s from terrain + climate, place, commit, run culture/religion on the flagship; remove the Vale genesis; `settlement_lines` for the almanac. |
+| `windows/almanac/src/lib.rs`                                         | Modify             | Generated settlement section (`settlement_lines` field) in "The People".                                                                                                              |
+| `domains/settlement/src/render.rs`                                   | Create             | Deterministic settlement-map render (biome map overlaid with settlement marks; flagship distinguished).                                                                               |
+| `cli/src/main.rs`                                                    | Modify             | `settlement-map` command (markdown + PPM); usage text.                                                                                                                                |
+| `cli/src/repl.rs`                                                    | Modify             | `settlements` and `settlement <lat> <lon>` commands.                                                                                                                                  |
+| `cli/src/streams.rs`                                                 | Modify             | Manifest test asserts the new settlement placement label.                                                                                                                             |
+| `windows/lab/src/metrics.rs`                                         | Modify             | `WorldView` already reconstructs terrain/climate; no new metrics in 4a (Census of Peoples is 4b) — update any Vale-dependent test expectations.                                       |
+| `.github/workflows/ci.yml`                                           | Modify             | Settlement-map render(s) added to the drift check.                                                                                                                                    |
+| `book/src/gallery/settlement-seed-42.md` / `.ppm`                    | Create (generated) | The settlement-map artifact.                                                                                                                                                          |
+| `book/src/chronicle/campaign-4a.md`                                  | Create             | Chronicle entry (DoD per merged plan).                                                                                                                                                |
+| `book/src/SUMMARY.md`                                                | Modify             | Gallery + chronicle entries.                                                                                                                                                          |
+| `book/src/gallery/almanac-*.md`, `book/src/reference/*-generated.md` | Regenerate         | Committed generated artifacts (new People section, new stream label).                                                                                                                 |
 
 Dataflow inside settlement: `placement` (pure scoring + spacing over `SiteInput`s) → `genesis` (commits the returned `Placement`s). Terrain: `drainage` → `globe` (assembly) → `provider`.
 
@@ -1003,7 +1003,7 @@ git commit -m "feat(cli): settlement-map artifact + REPL settlement queries"
 - Modify: `book/src/SUMMARY.md`
 - Regenerate: `book/src/gallery/almanac-*.md`, `book/src/reference/*-generated.md`
 
-- [ ] **Step 1: Manifest test.** In `cli/src/streams.rs` tests, assert the manifest contains `` | `settlement/placement` | ``. Run: `cargo test -p hornvale streams` (or the manifest test's crate). 
+- [ ] **Step 1: Manifest test.** In `cli/src/streams.rs` tests, assert the manifest contains `` | `settlement/placement` | ``. Run: `cargo test -p hornvale streams` (or the manifest test's crate).
 
 - [ ] **Step 2: CI drift check.** In `.github/workflows/ci.yml`, after the biome-map renders, add:
 

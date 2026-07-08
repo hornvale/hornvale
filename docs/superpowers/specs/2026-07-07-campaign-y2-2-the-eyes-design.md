@@ -111,26 +111,26 @@ In `kernel/src/phenomena.rs`:
 **Venue declarations for every existing phenomenon** (the authored table;
 one-line edits in producers):
 
-| Producer | Phenomenon | Venue | Note |
-|---|---|---|---|
-| astronomy | the sun (spinning) | DaySky | |
-| astronomy | the fixed sun (locked) | DaySky | it defines the day side |
-| astronomy | moons | NightSky | salient at night, whenever seen |
-| astronomy | night-stars | NightSky | |
-| astronomy | seasonal cycle | Ambient | felt through the whole world, not watched — authored call, tunable |
-| climate | ambient air | Ambient | |
-| kernel (tier 0) | ConstantSun | DaySky | |
+| Producer        | Phenomenon             | Venue    | Note                                                               |
+| --------------- | ---------------------- | -------- | ------------------------------------------------------------------ |
+| astronomy       | the sun (spinning)     | DaySky   |                                                                    |
+| astronomy       | the fixed sun (locked) | DaySky   | it defines the day side                                            |
+| astronomy       | moons                  | NightSky | salient at night, whenever seen                                    |
+| astronomy       | night-stars            | NightSky |                                                                    |
+| astronomy       | seasonal cycle         | Ambient  | felt through the whole world, not watched — authored call, tunable |
+| climate         | ambient air            | Ambient  |                                                                    |
+| kernel (tier 0) | ConstantSun            | DaySky   |                                                                    |
 
 ## 4. The perception vector
 
 `PerceptionVector` in `domains/species`, closed at three, every dimension
 **authored** (model card: nothing drawn):
 
-| Dimension | Type | Goblin (baseline) | Kobold | 5E derivation (kobold) |
-|---|---|---|---|---|
-| activity cycle | enum `{Diurnal, Nocturnal, Crepuscular}` | Diurnal | Nocturnal | darkvision 60 ft, sunlight sensitivity |
-| night vision | `f64` [0,1] | 0.5 | 0.9 | darkvision; a life underground |
-| sky attention | `f64` [0,1] | 0.5 | 0.8 | omen-readers and dragon-watchers; the warren's night is spent under the open sky |
+| Dimension      | Type                                     | Goblin (baseline) | Kobold    | 5E derivation (kobold)                                                           |
+| -------------- | ---------------------------------------- | ----------------- | --------- | -------------------------------------------------------------------------------- |
+| activity cycle | enum `{Diurnal, Nocturnal, Crepuscular}` | Diurnal           | Nocturnal | darkvision 60 ft, sunlight sensitivity                                           |
+| night vision   | `f64` [0,1]                              | 0.5               | 0.9       | darkvision; a life underground                                                   |
+| sky attention  | `f64` [0,1]                              | 0.5               | 0.8       | omen-readers and dragon-watchers; the warren's night is spent under the open sky |
 
 `Crepuscular` completes the closed vocabulary bound by the metaplan; no
 Year-2 species uses it — declared idle in the model card (the Y2-1

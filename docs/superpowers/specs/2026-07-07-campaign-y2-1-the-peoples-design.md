@@ -80,14 +80,14 @@ inter-settlement and inter-species politics.
   goblin sorts before kobold, so registry order is goblin-first.
 - **`PsychVector`**, closed at six:
 
-  | Dimension | Type | Goblin (baseline) | Kobold | 5E derivation (kobold) |
-  |---|---|---|---|---|
-  | threat response (flee↔stand) | `f64` [0,1] | 0.5 | 0.8 | cowardly in the field but entrenched at home — traps, tunnels, the warren held |
-  | deliberation latency | `f64` [0,1] | 0.5 | 0.7 | communal decisions, slow consensus |
-  | in-group radius | `f64` [0,1] | 0.5 | 0.2 | insular warrens, tight pack loyalty |
-  | time horizon | `f64` [0,1] | 0.5 | 0.8 | generational works: tunnel complexes, egg-tending |
-  | sociality mode | enum `{Hierarchic, Communal}` | Hierarchic | Communal | pack tactics, communal egg-tending |
-  | status basis | enum `{Rank, Knowledge, Generosity}` | Rank | Knowledge | trap-cunning and craft esteemed over dominance |
+  | Dimension                    | Type                                 | Goblin (baseline) | Kobold    | 5E derivation (kobold)                                                         |
+  | ---------------------------- | ------------------------------------ | ----------------- | --------- | ------------------------------------------------------------------------------ |
+  | threat response (flee↔stand) | `f64` [0,1]                          | 0.5               | 0.8       | cowardly in the field but entrenched at home — traps, tunnels, the warren held |
+  | deliberation latency         | `f64` [0,1]                          | 0.5               | 0.7       | communal decisions, slow consensus                                             |
+  | in-group radius              | `f64` [0,1]                          | 0.5               | 0.2       | insular warrens, tight pack loyalty                                            |
+  | time horizon                 | `f64` [0,1]                          | 0.5               | 0.8       | generational works: tunnel complexes, egg-tending                              |
+  | sociality mode               | enum `{Hierarchic, Communal}`        | Hierarchic        | Communal  | pack tactics, communal egg-tending                                             |
+  | status basis                 | enum `{Rank, Knowledge, Generosity}` | Rank              | Knowledge | trap-cunning and craft esteemed over dominance                                 |
 
   Kobold scalar values are authored data — Nathan's to retune; the design
   requires only meaningful contrast and the identity property at goblin.
@@ -106,12 +106,12 @@ Suitability keeps its shape (`w_f·freshwater + w_c·coast + w_t·temperance −
 w_h·hostility`, clamped [0,1]); the weights become per-species derivations,
 each identity at baseline and monotone in one dimension:
 
-| Weight | Goblin | Derivation | Kobold |
-|---|---|---|---|
-| `w_f` freshwater | 0.45 | `0.45 · (0.5 + time_horizon)` | 0.585 |
-| `w_c` coast | 0.20 | `0.20 · (2 · in_group_radius)` | 0.08 |
-| `w_t` temperance | 0.35 | shared — physiological, not psychological; revisited when species get bodies | 0.35 |
-| `w_h` hostility | 0.50 | `0.50 · (1.5 − threat_response)` | 0.35 |
+| Weight           | Goblin | Derivation                                                                   | Kobold |
+| ---------------- | ------ | ---------------------------------------------------------------------------- | ------ |
+| `w_f` freshwater | 0.45   | `0.45 · (0.5 + time_horizon)`                                                | 0.585  |
+| `w_c` coast      | 0.20   | `0.20 · (2 · in_group_radius)`                                               | 0.08   |
+| `w_t` temperance | 0.35   | shared — physiological, not psychological; revisited when species get bodies | 0.35   |
+| `w_h` hostility  | 0.50   | `0.50 · (1.5 − threat_response)`                                             | 0.35   |
 
 **Joint greedy across species:** score every (habitable cell × species)
 pair with that species' weights; sort once (score descending, ties by cell

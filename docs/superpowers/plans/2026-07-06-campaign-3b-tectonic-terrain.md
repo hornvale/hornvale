@@ -24,31 +24,31 @@
 
 ## File Structure
 
-| File | Action | Responsibility |
-|---|---|---|
-| `domains/terrain/src/streams.rs` | Create | Seed-derivation labels for tectonic genesis (save-format contract). |
-| `domains/terrain/src/pins.rs` | Create | `TerrainPins`, `GenesisError`, `parse_pin`, `pin_strings`, `validate`. |
-| `domains/terrain/src/plates.rs` | Create | `Plate`, vector math, drawn plate count/seeds/kinds/motions/maturities, Voronoi assignment, Euler velocities. |
-| `domains/terrain/src/boundaries.rs` | Create | `BoundaryKind`, `CellBoundary`, per-edge classification, per-cell boundary field, multi-source same-plate BFS distance. |
-| `domains/terrain/src/elevation.rs` | Create | Elevation assembly (base + boundary uplift with maturity + hotspots + strict-ordering epsilon), sea level from target ocean fraction, unrest field. |
-| `domains/terrain/src/globe.rs` | Create | `TectonicGlobe`, `GenesisOutcome`, `GlobeSummary`, top-level `generate`, `summarize`. |
-| `domains/terrain/src/provider.rs` | Create | `GeneratedTerrain`: queryable provider owning its Geosphere. |
-| `domains/terrain/src/facts.rs` | Create | Tectonic summary predicates + `facts::genesis` ledger commits. |
-| `domains/terrain/src/render.rs` | Create | Deterministic P6 PPM elevation map + ASCII map + latitude-band nearest-cell index. |
-| `domains/terrain/src/lib.rs` | Modify | Module declarations, `GLOBE_LEVEL`, re-exports, real `stream_labels()`, extended `register_concepts`; tier-0 Vale content **stays**. |
-| `domains/terrain/tests/tectonic_properties.rs` | Create | Pin-isolation tests + N-seed property battery. |
-| `windows/worldgen/src/lib.rs` | Modify | `BuildError::TerrainGenesis`, shared Geosphere (`OnceLock`), `build_world` 4th arg, terrain-pin facts + genesis commits, `terrain_of`, `land_lines`, almanac context field. |
-| `windows/almanac/src/lib.rs` | Modify | `AlmanacContext.land_lines` field + rendering in "The Land". |
-| `windows/lab/Cargo.toml` | Modify | Add `hornvale-terrain` dependency. |
-| `windows/lab/src/metrics.rs` | Modify | `WorldView::build` passes default terrain pins. |
-| `cli/src/main.rs` | Modify | `parse_terrain_args`, `--plates`/`--ocean-fraction`/`--supercontinent` flags, `map` command, usage text, call-site updates. |
-| `cli/src/repl.rs` | Modify | `map` and `land <lat> <lon>` REPL commands; test-harness call-site updates. |
-| `cli/src/streams.rs` | Modify | Manifest test asserts a terrain label. |
-| `.github/workflows/ci.yml` | Modify | Elevation-map render added to the artifact drift check. |
-| `book/src/SUMMARY.md` | Modify | Gallery entry "The Land of Seed 42"; chronicle entry "Campaign 3b". |
-| `book/src/gallery/elevation-seed-42.md` / `.ppm` | Create (generated) | The drift-checked map artifact pair. |
-| `book/src/chronicle/campaign-3b.md` | Create | Chronicle entry. |
-| `book/src/reference/*-generated.md`, `book/src/gallery/almanac-*.md` | Regenerate | Committed generated artifacts (new predicates, new stream labels, new almanac Land lines). |
+| File                                                                 | Action             | Responsibility                                                                                                                                                              |
+| -------------------------------------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `domains/terrain/src/streams.rs`                                     | Create             | Seed-derivation labels for tectonic genesis (save-format contract).                                                                                                         |
+| `domains/terrain/src/pins.rs`                                        | Create             | `TerrainPins`, `GenesisError`, `parse_pin`, `pin_strings`, `validate`.                                                                                                      |
+| `domains/terrain/src/plates.rs`                                      | Create             | `Plate`, vector math, drawn plate count/seeds/kinds/motions/maturities, Voronoi assignment, Euler velocities.                                                               |
+| `domains/terrain/src/boundaries.rs`                                  | Create             | `BoundaryKind`, `CellBoundary`, per-edge classification, per-cell boundary field, multi-source same-plate BFS distance.                                                     |
+| `domains/terrain/src/elevation.rs`                                   | Create             | Elevation assembly (base + boundary uplift with maturity + hotspots + strict-ordering epsilon), sea level from target ocean fraction, unrest field.                         |
+| `domains/terrain/src/globe.rs`                                       | Create             | `TectonicGlobe`, `GenesisOutcome`, `GlobeSummary`, top-level `generate`, `summarize`.                                                                                       |
+| `domains/terrain/src/provider.rs`                                    | Create             | `GeneratedTerrain`: queryable provider owning its Geosphere.                                                                                                                |
+| `domains/terrain/src/facts.rs`                                       | Create             | Tectonic summary predicates + `facts::genesis` ledger commits.                                                                                                              |
+| `domains/terrain/src/render.rs`                                      | Create             | Deterministic P6 PPM elevation map + ASCII map + latitude-band nearest-cell index.                                                                                          |
+| `domains/terrain/src/lib.rs`                                         | Modify             | Module declarations, `GLOBE_LEVEL`, re-exports, real `stream_labels()`, extended `register_concepts`; tier-0 Vale content **stays**.                                        |
+| `domains/terrain/tests/tectonic_properties.rs`                       | Create             | Pin-isolation tests + N-seed property battery.                                                                                                                              |
+| `windows/worldgen/src/lib.rs`                                        | Modify             | `BuildError::TerrainGenesis`, shared Geosphere (`OnceLock`), `build_world` 4th arg, terrain-pin facts + genesis commits, `terrain_of`, `land_lines`, almanac context field. |
+| `windows/almanac/src/lib.rs`                                         | Modify             | `AlmanacContext.land_lines` field + rendering in "The Land".                                                                                                                |
+| `windows/lab/Cargo.toml`                                             | Modify             | Add `hornvale-terrain` dependency.                                                                                                                                          |
+| `windows/lab/src/metrics.rs`                                         | Modify             | `WorldView::build` passes default terrain pins.                                                                                                                             |
+| `cli/src/main.rs`                                                    | Modify             | `parse_terrain_args`, `--plates`/`--ocean-fraction`/`--supercontinent` flags, `map` command, usage text, call-site updates.                                                 |
+| `cli/src/repl.rs`                                                    | Modify             | `map` and `land <lat> <lon>` REPL commands; test-harness call-site updates.                                                                                                 |
+| `cli/src/streams.rs`                                                 | Modify             | Manifest test asserts a terrain label.                                                                                                                                      |
+| `.github/workflows/ci.yml`                                           | Modify             | Elevation-map render added to the artifact drift check.                                                                                                                     |
+| `book/src/SUMMARY.md`                                                | Modify             | Gallery entry "The Land of Seed 42"; chronicle entry "Campaign 3b".                                                                                                         |
+| `book/src/gallery/elevation-seed-42.md` / `.ppm`                     | Create (generated) | The drift-checked map artifact pair.                                                                                                                                        |
+| `book/src/chronicle/campaign-3b.md`                                  | Create             | Chronicle entry.                                                                                                                                                            |
+| `book/src/reference/*-generated.md`, `book/src/gallery/almanac-*.md` | Regenerate         | Committed generated artifacts (new predicates, new stream labels, new almanac Land lines).                                                                                  |
 
 Dataflow inside the terrain crate: `pins` → `plates` → `boundaries` → `elevation` → `globe` (assembly) → `provider`/`facts`/`render`. Each module's generator takes the derived `terrain_seed` plus explicit inputs, so every stage is unit-testable with hand-built fixtures.
 

@@ -112,13 +112,13 @@ Generation order:
 
 ### Pins shipped this campaign
 
-| Pin | CLI flag | Values |
-|---|---|---|
-| Moon count | `--moons N` (exact) or `--moons MIN+K` (graded) | 0–3; graded = MIN essential, MIN+K desired |
-| Rotation regime | `--rotation normal\|locked` | or pinned period via `--day-hours N` |
-| Obliquity | `--obliquity none\|N` | degrees, 0–35 |
-| Year length | `--year-days N` | local days; must admit an in-zone orbit |
-| Showpiece neighbor | `--neighbor none\|blue-giant\|red-giant\|white-dwarf` | forces one; rest drawn |
+| Pin                | CLI flag                                              | Values                                     |
+| ------------------ | ----------------------------------------------------- | ------------------------------------------ |
+| Moon count         | `--moons N` (exact) or `--moons MIN+K` (graded)       | 0–3; graded = MIN essential, MIN+K desired |
+| Rotation regime    | `--rotation normal\|locked`                           | or pinned period via `--day-hours N`       |
+| Obliquity          | `--obliquity none\|N`                                 | degrees, 0–35                              |
+| Year length        | `--year-days N`                                       | local days; must admit an in-zone orbit    |
+| Showpiece neighbor | `--neighbor none\|blue-giant\|red-giant\|white-dwarf` | forces one; rest drawn                     |
 
 Unpinned = drawn. Pin validation errors are user-facing CLI errors with the
 physical reason ("a 4000-day year places the anchor outside the habitable

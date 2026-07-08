@@ -129,22 +129,22 @@ pub fn render_metric_list() -> String   // markdown table for `lab list-metrics`
 
 - The fourteen tier-1 metrics, with exact names, kinds, and semantics:
 
-| name | kind | value |
-|---|---|---|
-| `star-class` | Categorical | `system.star.class_name` |
-| `tidally-locked` | Flag | rotation is Locked |
-| `day-length-hours` | Numeric `[16,20,24,28,32,36,40]` | day×24; Absent if locked |
-| `year-std-days` | Numeric `[0,200,400,600,800,1000,1200,1400]` | anchor year |
-| `year-local-days` | Numeric `[0,200,400,600,800,1000,1200,1400]` | year in local days; Absent if locked |
-| `obliquity-degrees` | Numeric `[0,5,10,15,20,25,30,35]` | obliquity |
-| `moons-admitted` | Categorical | moons.len() as text |
-| `refused-a-moon` | Flag | `!notes.is_empty()` |
-| `total-tide` | Numeric `[0,1,2,3,4,5,6,7,8]` | Σ tide_rel |
-| `months-per-year-innermost` | Numeric `[0,5,10,25,50,100,250,700]` | year/period of moons[0]; Absent if no moons |
-| `neighbor-count` | Categorical | neighbors.len() as text |
-| `brightest-neighbor-class` | Categorical | Debug-name of neighbors[0].class in kebab (map explicitly: RedDwarf→"red-dwarf", SunLike→"sun-like", WhiteDwarf→"white-dwarf", OrangeGiant→"orange-giant", RedGiant→"red-giant", BlueGiant→"blue-giant") |
-| `belief-kind` | Categorical | first belief's tenet contains "never" → "eternal", else "cyclic"; Absent if no beliefs. **Deliberately classified from tenet TEXT, independent of rotation, so the calibration against rotation is non-circular.** |
-| `genesis-note-count` | Categorical | notes.len() as text |
+| name                        | kind                                         | value                                                                                                                                                                                                              |
+| --------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `star-class`                | Categorical                                  | `system.star.class_name`                                                                                                                                                                                           |
+| `tidally-locked`            | Flag                                         | rotation is Locked                                                                                                                                                                                                 |
+| `day-length-hours`          | Numeric `[16,20,24,28,32,36,40]`             | day×24; Absent if locked                                                                                                                                                                                           |
+| `year-std-days`             | Numeric `[0,200,400,600,800,1000,1200,1400]` | anchor year                                                                                                                                                                                                        |
+| `year-local-days`           | Numeric `[0,200,400,600,800,1000,1200,1400]` | year in local days; Absent if locked                                                                                                                                                                               |
+| `obliquity-degrees`         | Numeric `[0,5,10,15,20,25,30,35]`            | obliquity                                                                                                                                                                                                          |
+| `moons-admitted`            | Categorical                                  | moons.len() as text                                                                                                                                                                                                |
+| `refused-a-moon`            | Flag                                         | `!notes.is_empty()`                                                                                                                                                                                                |
+| `total-tide`                | Numeric `[0,1,2,3,4,5,6,7,8]`                | Σ tide_rel                                                                                                                                                                                                         |
+| `months-per-year-innermost` | Numeric `[0,5,10,25,50,100,250,700]`         | year/period of moons[0]; Absent if no moons                                                                                                                                                                        |
+| `neighbor-count`            | Categorical                                  | neighbors.len() as text                                                                                                                                                                                            |
+| `brightest-neighbor-class`  | Categorical                                  | Debug-name of neighbors[0].class in kebab (map explicitly: RedDwarf→"red-dwarf", SunLike→"sun-like", WhiteDwarf→"white-dwarf", OrangeGiant→"orange-giant", RedGiant→"red-giant", BlueGiant→"blue-giant")           |
+| `belief-kind`               | Categorical                                  | first belief's tenet contains "never" → "eternal", else "cyclic"; Absent if no beliefs. **Deliberately classified from tenet TEXT, independent of rotation, so the calibration against rotation is non-circular.** |
+| `genesis-note-count`        | Categorical                                  | notes.len() as text                                                                                                                                                                                                |
 
 - [ ] **Step 1: Manifest + failing tests**
 

@@ -24,23 +24,23 @@
 
 ## File Structure
 
-| File | Action | Responsibility |
-|---|---|---|
-| `windows/historiography/Cargo.toml` | Create | New kernel-only window crate. |
-| `windows/historiography/src/lib.rs` | Create | `recount(world, entity) -> Option<String>` — generic provenance replay. |
-| `cli/Cargo.toml` | Modify | Add `hornvale-historiography` dependency. |
-| `cli/src/repl.rs` | Modify | `why <entity-id>` calls `recount`; `beliefs` lists each belief's entity id (so `why` is usable); help text. |
-| `domains/religion/src/lib.rs` | Modify | Remove the subsumed belief-specific `why` (and its test); keep `beliefs_of`/`cult_form_of`/genesis. |
-| `windows/lab/src/metrics.rs` | Modify | Census-of-Faiths metrics (pantheon size, cult form, verticality, head-deity periodicity); metric-count test → new total. |
-| `windows/lab/tests/calibration.rs` | Modify | Add the verticality⇔stratification and head-deity-eternal⇔lock calibrations. |
-| `studies/census-of-faiths.study.json` | Create | Author-time 10k faith census. |
-| `book/src/domains/religion.md` | Modify | Promote to tier 1 with the pantheon + provenance model card. |
-| `book/src/domains/overview.md` | Modify | Cascade table: religion → tier 1; a Year-1 "all five deepened" note. |
-| `book/src/laboratory/study-004.md` | Create | The Census of Faiths chapter (comprehension-gated). |
-| `book/src/gallery/the-gods-seed-42.md` | Create | The capstone gallery page: the two pantheons (spinning vs. locked) side by side. |
-| `book/src/chronicle/campaign-5.md` | Create | The Campaign 5 + Year-1 capstone chronicle. |
-| `book/src/SUMMARY.md` | Modify | Study 004, the capstone gallery page, the Campaign 5 chronicle. |
-| `book/src/reference/*-generated.md`, `book/src/gallery/almanac-*.md`, `book/src/laboratory/generated/*` | Regenerate | Committed generated artifacts (census-lands-drift grows religion metrics/charts). |
+| File                                                                                                    | Action     | Responsibility                                                                                                           |
+| ------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `windows/historiography/Cargo.toml`                                                                     | Create     | New kernel-only window crate.                                                                                            |
+| `windows/historiography/src/lib.rs`                                                                     | Create     | `recount(world, entity) -> Option<String>` — generic provenance replay.                                                  |
+| `cli/Cargo.toml`                                                                                        | Modify     | Add `hornvale-historiography` dependency.                                                                                |
+| `cli/src/repl.rs`                                                                                       | Modify     | `why <entity-id>` calls `recount`; `beliefs` lists each belief's entity id (so `why` is usable); help text.              |
+| `domains/religion/src/lib.rs`                                                                           | Modify     | Remove the subsumed belief-specific `why` (and its test); keep `beliefs_of`/`cult_form_of`/genesis.                      |
+| `windows/lab/src/metrics.rs`                                                                            | Modify     | Census-of-Faiths metrics (pantheon size, cult form, verticality, head-deity periodicity); metric-count test → new total. |
+| `windows/lab/tests/calibration.rs`                                                                      | Modify     | Add the verticality⇔stratification and head-deity-eternal⇔lock calibrations.                                             |
+| `studies/census-of-faiths.study.json`                                                                   | Create     | Author-time 10k faith census.                                                                                            |
+| `book/src/domains/religion.md`                                                                          | Modify     | Promote to tier 1 with the pantheon + provenance model card.                                                             |
+| `book/src/domains/overview.md`                                                                          | Modify     | Cascade table: religion → tier 1; a Year-1 "all five deepened" note.                                                     |
+| `book/src/laboratory/study-004.md`                                                                      | Create     | The Census of Faiths chapter (comprehension-gated).                                                                      |
+| `book/src/gallery/the-gods-seed-42.md`                                                                  | Create     | The capstone gallery page: the two pantheons (spinning vs. locked) side by side.                                         |
+| `book/src/chronicle/campaign-5.md`                                                                      | Create     | The Campaign 5 + Year-1 capstone chronicle.                                                                              |
+| `book/src/SUMMARY.md`                                                                                   | Modify     | Study 004, the capstone gallery page, the Campaign 5 chronicle.                                                          |
+| `book/src/reference/*-generated.md`, `book/src/gallery/almanac-*.md`, `book/src/laboratory/generated/*` | Regenerate | Committed generated artifacts (census-lands-drift grows religion metrics/charts).                                        |
 
 Dataflow: `recount` reads the ledger+registry; the REPL and (later) other windows call it. The Lab reads religion facts via `beliefs_of`/`cult_form_of` for the Census + calibrations.
 
