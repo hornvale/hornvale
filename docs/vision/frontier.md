@@ -25,21 +25,23 @@ map of the whole documentation set is [`docs/README.md`](../README.md).
 
 ## Contents
 
-- [The governing principle: ambition is bounded by verification surface](#the-governing-principle-ambition-is-bounded-by-verification-surface)
-- [The frontier map](#the-frontier-map) — items 1–9
-- [The unification thesis](#the-unification-thesis)
-- [The expressive-culture cluster](#the-expressive-culture-cluster) — music, perception, humour, drama, architecture
-- [The species-psychology substrate](#the-species-psychology-substrate--the-layer-beneath-the-cluster)
-- [Social structure as orthogonal axes](#social-structure-as-orthogonal-axes--cashing-the-substrate) — incl. the inequality seam
-- [The biological substrate](#the-biological-substrate--body-reproduction-and-deep-time) — body, reproduction, deep time
-- [The biosphere — the living substrate](#the-biosphere--the-living-substrate) — flora, funga, fauna, agriculture, the pharmacopoeia
-- [Technology as capability thresholds](#technology-as-capability-thresholds) — thresholds, not a tech tree
-- [The underworld — the vertical dimension](#the-underworld--the-vertical-dimension) — caves, mining, the deep
-- [The cultural-memory economy](#the-cultural-memory-economy--knowledge-as-a-maintained-thing) — upkeep, decay, the channels, institutions
-- [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
-- [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
-- [Sequencing the deep-time stack](#sequencing-the-deep-time-stack)
-- [Intellectual lineage](#intellectual-lineage)
+- [The Frontier — a non-binding vision map](#the-frontier--a-non-binding-vision-map)
+  - [Contents](#contents)
+  - [The governing principle: ambition is bounded by verification surface](#the-governing-principle-ambition-is-bounded-by-verification-surface)
+  - [The frontier map](#the-frontier-map)
+  - [The unification thesis](#the-unification-thesis)
+  - [The expressive-culture cluster](#the-expressive-culture-cluster)
+  - [The species-psychology substrate — the layer beneath the cluster](#the-species-psychology-substrate--the-layer-beneath-the-cluster)
+  - [Social structure as orthogonal axes — cashing the substrate](#social-structure-as-orthogonal-axes--cashing-the-substrate)
+  - [The biological substrate — body, reproduction, and deep time](#the-biological-substrate--body-reproduction-and-deep-time)
+  - [The biosphere — the living substrate](#the-biosphere--the-living-substrate)
+  - [Technology as capability thresholds](#technology-as-capability-thresholds)
+  - [The underworld — the vertical dimension](#the-underworld--the-vertical-dimension)
+  - [The cultural-memory economy — knowledge as a maintained thing](#the-cultural-memory-economy--knowledge-as-a-maintained-thing)
+  - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
+  - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
+  - [Sequencing the deep-time stack](#sequencing-the-deep-time-stack)
+  - [Intellectual lineage](#intellectual-lineage)
 
 ---
 
