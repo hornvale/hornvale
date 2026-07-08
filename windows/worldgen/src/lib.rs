@@ -874,12 +874,43 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         land_lines: land_lines(world)?,
         biome_lines: biome_lines(world)?,
         peoples,
-        beliefs: hornvale_religion::beliefs_of(world),
+        pantheons: {
+            let mut blocks = Vec::new();
+            for (name, def) in hornvale_species::registry() {
+                if let Some(v) = flagship_of(world, name) {
+                    let beliefs = hornvale_religion::beliefs_held_by(world, v.id);
+                    if !beliefs.is_empty() {
+                        blocks.push(hornvale_almanac::PantheonBlock {
+                            species: name.to_string(),
+                            noun: def.noun.to_string(),
+                            settlement: v.name.clone(),
+                            cult_form: hornvale_religion::cult_form_held_by(world, v.id),
+                            beliefs,
+                        });
+                    }
+                }
+            }
+            // Legacy fallback: pre-species saves have beliefs but no
+            // peopled-by facts — render them as the single anonymous
+            // pantheon they always were.
+            if blocks.is_empty() {
+                let beliefs = hornvale_religion::beliefs_of(world);
+                if !beliefs.is_empty() {
+                    blocks.push(hornvale_almanac::PantheonBlock {
+                        species: String::new(),
+                        noun: String::new(),
+                        settlement: String::new(),
+                        cult_form: hornvale_religion::cult_form_of(world),
+                        beliefs,
+                    });
+                }
+            }
+            blocks
+        },
         calendar_lines: calendar_lines(world)?,
         night_sky: night_sky_line(world)?,
         genesis_notes: genesis_notes(world)?,
         settlement_lines: settlement_lines(world)?,
-        cult_form: hornvale_religion::cult_form_of(world),
     })
 }
 
@@ -1004,7 +1035,7 @@ mod tests {
         assert_eq!(ctx.seed, 42);
         assert!(!ctx.places.is_empty());
         assert!(!ctx.peoples.is_empty());
-        assert!(!ctx.beliefs.is_empty());
+        assert!(!ctx.pantheons.is_empty());
         assert!(!ctx.phenomena.is_empty());
     }
 

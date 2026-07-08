@@ -25,6 +25,22 @@ pub struct PeopleBlock {
     pub culture_lines: Vec<String>,
 }
 
+/// One community's pantheon, ready to render: the species and settlement
+/// it belongs to, its cult form, and its beliefs in salience order.
+pub struct PantheonBlock {
+    /// The species name ("goblin", "kobold"); empty for legacy saves that
+    /// predate species facts.
+    pub species: String,
+    /// The settlement noun ("village", "warren").
+    pub noun: String,
+    /// The holding settlement's name.
+    pub settlement: String,
+    /// The pantheon's cult form (`"organized"` or `"folk"`), if recorded.
+    pub cult_form: Option<String>,
+    /// The pantheon's beliefs, head first.
+    pub beliefs: Vec<Belief>,
+}
+
 /// Everything the almanac needs, gathered by the composition root.
 pub struct AlmanacContext {
     /// The world seed, for the title.
@@ -41,8 +57,6 @@ pub struct AlmanacContext {
     pub land_lines: Vec<String>,
     /// The globe's biome/habitability headline lines, from the composition root.
     pub biome_lines: Vec<String>,
-    /// Recorded beliefs.
-    pub beliefs: Vec<Belief>,
     /// The world's cycles, reader-facing; empty for constant-sky worlds.
     pub calendar_lines: Vec<String>,
     /// The night sky as a sentence; `None` for constant-sky worlds.
@@ -55,9 +69,10 @@ pub struct AlmanacContext {
     /// One block per species that placed settlements, registry order
     /// (goblin first). Empty for worlds with no settlements.
     pub peoples: Vec<PeopleBlock>,
-    /// The pantheon's cult form (`"organized"` or `"folk"`), if a pantheon
-    /// exists; `None` for worlds with no beliefs.
-    pub cult_form: Option<String>,
+    /// One block per species-flagship pantheon, in the order gathered by
+    /// the composition root; legacy saves fall back to a single anonymous
+    /// block. Empty for worlds with no beliefs.
+    pub pantheons: Vec<PantheonBlock>,
 }
 
 /// Render the one-page world document as markdown. Deterministic: same
@@ -157,26 +172,47 @@ pub fn render(ctx: &AlmanacContext) -> String {
     }
 
     doc.push_str("## The Gods\n\n");
-    if ctx.beliefs.is_empty() {
+    if ctx.pantheons.iter().all(|p| p.beliefs.is_empty()) {
         doc.push_str("No beliefs are recorded.\n\n");
     } else {
-        if let Some(form) = &ctx.cult_form {
-            let lead = match form.as_str() {
-                "organized" => "An organized priesthood tends a pantheon:",
-                _ => "The people keep a folk pantheon:",
-            };
-            doc.push_str(&format!("{lead}\n\n"));
-        }
-        for belief in &ctx.beliefs {
-            let mark = if belief.high_god {
-                " *(who presides)*"
+        for (i, pantheon) in ctx.pantheons.iter().enumerate() {
+            if pantheon.beliefs.is_empty() {
+                continue;
+            }
+            // The first block reproduces the legacy section byte-for-byte
+            // (the identity contract); later blocks name their people.
+            if i == 0 {
+                if let Some(form) = &pantheon.cult_form {
+                    let lead = match form.as_str() {
+                        "organized" => "An organized priesthood tends a pantheon:",
+                        _ => "The people keep a folk pantheon:",
+                    };
+                    doc.push_str(&format!("{lead}\n\n"));
+                }
             } else {
-                ""
-            };
-            doc.push_str(&format!(
-                "> {}{mark}\n>\n> — derived from the phenomenon *{}*\n\n",
-                belief.tenet, belief.source_kind
-            ));
+                let lead = match pantheon.cult_form.as_deref() {
+                    Some("organized") => format!(
+                        "In the {} of **{}**, an organized priesthood tends its own pantheon:",
+                        pantheon.noun, pantheon.settlement
+                    ),
+                    _ => format!(
+                        "The {} of **{}** keeps its own folk pantheon:",
+                        pantheon.noun, pantheon.settlement
+                    ),
+                };
+                doc.push_str(&format!("{lead}\n\n"));
+            }
+            for belief in &pantheon.beliefs {
+                let mark = if belief.high_god {
+                    " *(who presides)*"
+                } else {
+                    ""
+                };
+                doc.push_str(&format!(
+                    "> {}{mark}\n>\n> — derived from the phenomenon *{}*\n\n",
+                    belief.tenet, belief.source_kind
+                ));
+            }
         }
     }
 
@@ -223,17 +259,22 @@ mod tests {
                 population: 60,
                 culture_lines: vec![],
             }],
-            beliefs: vec![Belief {
-                id: EntityId(3),
-                tenet: "the Ever-Flame never blinks.".to_string(),
-                source_kind: "celestial-body".to_string(),
-                high_god: false,
+            pantheons: vec![PantheonBlock {
+                species: "goblin".to_string(),
+                noun: "village".to_string(),
+                settlement: "Bolnar".to_string(),
+                cult_form: Some("organized".to_string()),
+                beliefs: vec![Belief {
+                    id: EntityId(3),
+                    tenet: "the Ever-Flame never blinks.".to_string(),
+                    source_kind: "celestial-body".to_string(),
+                    high_god: true,
+                }],
             }],
             calendar_lines: vec![],
             night_sky: None,
             genesis_notes: vec![],
             settlement_lines: vec![],
-            cult_form: None,
         }
     }
 
@@ -295,7 +336,7 @@ mod tests {
     fn empty_world_renders_honestly() {
         let ctx = AlmanacContext {
             peoples: vec![],
-            beliefs: vec![],
+            pantheons: vec![],
             places: vec![],
             ..sample_context()
         };
@@ -368,21 +409,26 @@ mod tests {
     #[test]
     fn the_gods_section_renders_a_structured_pantheon() {
         let ctx = AlmanacContext {
-            beliefs: vec![
-                Belief {
-                    id: EntityId(3),
-                    tenet: "the Ever-Flame never blinks.".to_string(),
-                    source_kind: "celestial-body".to_string(),
-                    high_god: true,
-                },
-                Belief {
-                    id: EntityId(4),
-                    tenet: "the Tidewalker returns.".to_string(),
-                    source_kind: "seasonal-cycle".to_string(),
-                    high_god: false,
-                },
-            ],
-            cult_form: Some("organized".to_string()),
+            pantheons: vec![PantheonBlock {
+                species: "goblin".to_string(),
+                noun: "village".to_string(),
+                settlement: "Bolnar".to_string(),
+                cult_form: Some("organized".to_string()),
+                beliefs: vec![
+                    Belief {
+                        id: EntityId(3),
+                        tenet: "the Ever-Flame never blinks.".to_string(),
+                        source_kind: "celestial-body".to_string(),
+                        high_god: true,
+                    },
+                    Belief {
+                        id: EntityId(4),
+                        tenet: "the Tidewalker returns.".to_string(),
+                        source_kind: "seasonal-cycle".to_string(),
+                        high_god: false,
+                    },
+                ],
+            }],
             ..sample_context()
         };
         let doc = render(&ctx);
@@ -394,6 +440,43 @@ mod tests {
         assert!(
             gods.contains("presides") || gods.contains("high"),
             "high god marked"
+        );
+    }
+
+    #[test]
+    fn a_single_pantheon_renders_exactly_as_before() {
+        // Byte-identity: the first block must reproduce the legacy section.
+        let ctx = sample_context(); // one goblin pantheon, organized, one high god
+        let doc = render(&ctx);
+        assert!(doc.contains("## The Gods\n\nAn organized priesthood tends a pantheon:\n\n"));
+        assert!(
+            !doc.contains("its own"),
+            "single-pantheon worlds name no species"
+        );
+    }
+
+    #[test]
+    fn a_second_pantheon_gets_a_species_lead() {
+        let mut ctx = sample_context();
+        ctx.pantheons.push(PantheonBlock {
+            species: "kobold".to_string(),
+            noun: "warren".to_string(),
+            settlement: "Zikthur".to_string(),
+            cult_form: Some("folk".to_string()),
+            beliefs: vec![Belief {
+                id: EntityId(99),
+                tenet: "the Tidewalker departs and returns every 18 days; its absences are mourned and its returns feasted.".to_string(),
+                source_kind: "celestial-body".to_string(),
+                high_god: true,
+            }],
+        });
+        let doc = render(&ctx);
+        assert!(doc.contains("The warren of **Zikthur** keeps its own folk pantheon:"));
+        let gods = doc.split("## The Gods").nth(1).unwrap();
+        assert!(
+            gods.find("priesthood tends a pantheon").unwrap()
+                < gods.find("its own folk pantheon").unwrap(),
+            "goblin block renders first, exactly as before"
         );
     }
 
