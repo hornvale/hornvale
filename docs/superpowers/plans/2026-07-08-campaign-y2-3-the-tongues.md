@@ -94,7 +94,7 @@ git commit -m "test(fixtures): freeze pre-Tongues seed-42 outputs for the struct
 **Interfaces:**
 - Consumes: kernel only.
 - Produces:
-  - `pub enum Place { Labial, Alveolar, Postalveolar, Velar, Uvular, Glottal }` (`Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize`)
+  - `pub enum Place { Labial, Alveolar, Postalveolar, Velar, Uvular, Glottal }` (`Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord`)
   - `pub enum Manner { Stop, Fricative, Sibilant, Nasal, Trill, Click, Ejective, Approximant }` (same derives)
   - `pub enum Height { High, Mid, Low }`, `pub enum Backness { Front, Central, Back }` (same derives)
   - `pub enum Segment { Consonant { place: Place, manner: Manner, voiced: bool }, Vowel { height: Height, backness: Backness, rounded: bool } }` (same derives)
@@ -114,7 +114,6 @@ description = "Hornvale language domain: feature-bearing phonemes, generative ph
 
 [dependencies]
 hornvale-kernel = { path = "../../kernel" }
-serde = { workspace = true }
 ```
 
 - [ ] **Step 2: `lib.rs` module wiring**

@@ -1,0 +1,9 @@
+[package]
+name = "hornvale-language"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Hornvale language domain: feature-bearing phonemes, generative phonology, naming, and register."
+
+[dependencies]
+hornvale-kernel = { path = "../../kernel" }
