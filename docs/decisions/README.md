@@ -60,3 +60,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0018](0018-gallery-images-are-hand-rolled-png.md) | Gallery images are hand-rolled PNG | Accepted |
 | [0019](0019-no-procedural-macros.md) | No procedural macros | Accepted |
 | [0020](0020-campaigns-write-retrospectives.md) | Campaigns write retrospectives | Accepted |
+| [0021](0021-no-alignment-axis.md) | No alignment axis; species are not moral types | Accepted |

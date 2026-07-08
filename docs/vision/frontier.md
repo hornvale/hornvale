@@ -92,6 +92,37 @@ ambition occupies is the first act of designing it.
    conservatism act as a *damping field* on change, producing diglossia,
    frozen ceremonial registers, and dead languages.
 
+   *Language demographics — the layer that reads the interaction ledger.*
+   At this altitude the modeling is **who speaks what, with what competence,
+   and how the distribution moves** — not individual psycholinguistic
+   acquisition, which waits for character-scale simulation. Almost every
+   mechanic here is a *consumer of item 9's contact history*, which is why
+   the two are one system: **pidgins** mark trade contact and **creoles**
+   mark the moment a generation nativizes a pidgin (Bickerton) — and since
+   real creoles nearly all carry a plantation-slavery or intense-trade past,
+   a creole on the map is *archaeological verification* of the interaction
+   ledger, the two systems checking each other. The single best mechanic is
+   the **L2-simplification law** (Lupyan & Dale; Trudgill's esoteric /
+   exoteric distinction): languages with many adult second-language learners
+   shed inflectional morphology, isolated ones grow baroque — a published
+   quantitative correlation that makes **morphological complexity a readable
+   fossil of social history** (an empire's lingua franca is simple *because*
+   it was one; the impenetrable mountain tongue is impenetrable *because* no
+   adult ever had to learn it). **Language shift** follows prestige
+   asymmetry on Fishman's three-generation pattern (monolingual old tongue →
+   bilingual → monolingual prestige tongue), driven by item 9's subjugation
+   regimes and braked by the liturgical damping field; **lingua-franca
+   selection** is trade-network centrality, not raw population — routing
+   through rivers again. The species twist Earth-linguistics cannot do:
+   cross-species acquisition is filtered through *hardware* — a goblin maps
+   the human tongue through a goblin vocal tract and goblin perception, so
+   loanwords deform in species-characteristic ways, some species-pairs can
+   only ever meet in a gestural-lexical hybrid, and "accent" is anatomically
+   derived. And the unification thesis absorbs it: acquisition is inference
+   over a hidden ruleset — a child inducing grammar from noisy input is the
+   scholar reading the sky and the player identifying a potion, one mechanic
+   at three altitudes.
+
 4. **Myth phylogenetics** *(medium confidence; genuine research)*.
    Proto-myths as motif structures propagated through noisy cultural
    transmission, then reconstructed by comparative method and scored against
@@ -163,6 +194,68 @@ ambition occupies is the first act of designing it.
    so script families become a fossil record of contact between peoples,
    legible in ruins. Deep language (item 3) supplies the sounds; this
    supplies their shadow on clay.
+
+9. **Contact and exchange — the interaction layer** *(high confidence;
+   mixed verification, the trade half formula-checked)*. When two peoples
+   meet at a contact zone, their relationship should be *derived from
+   measurable quantities, never a species-pair lookup table*: **niche
+   overlap** (from the carrying-capacity fields — low overlap yields
+   peaceful cohabitation for free, no special-casing), **complementarity**
+   (do production profiles differ enough that exchange beats raiding?),
+   **power asymmetry** (population, organization, the threat-derived
+   warrior rung), and **psychology** (in-group radius and threat response
+   gate which regimes a species can even enter). A contact zone carries a
+   relationship state — avoidance / raid / tribute / trade / integration /
+   subjugation / extermination — that transitions per era under those
+   factors, appending facts as it goes, so the long scale lives in the
+   era-tick of item 7 and the short scale (a market day, one captive) is
+   the game-lens reading it years later.
+
+   *The dark material, mechanized honestly.* Atrocity modeled without
+   ground truth degrades into edginess, so each mode gets a real theory
+   and a real check. **Slavery** has the Nieboer–Domar hypothesis (coerced
+   labor arises where land is abundant, labor scarce, and coercion cheap —
+   all quantities the sim holds); note the structure ladder *already*
+   grows a slave rung from surplus and scale, and inter-group slavery is
+   that same rung resolved across a contact zone under asymmetry, not a new
+   mechanic. **Persecution and genocide** concentrate where cleavages align
+   (Turchin's meta-ethnic frontiers: when the species line coincides with
+   the religious, subsistence, and language lines, conflict on any one
+   mobilizes all). **Menageries** — a caged captive on display — are
+   surplus plus a spectacle status-basis plus asymmetry, and the phenomena
+   protocol makes the captive *observed differently by every species
+   watching*. Two commitments keep it from being decoration: dark events
+   must be **consequential** (ruins, diasporas, resentment as a durable
+   ledger fact, a justification myth), and — because of the epistemic layer
+   — **the perpetrators write the chronicle**, so a genocide present in the
+   true ledger but euphemized in the literate victor's historiography is
+   that layer's most serious use, far past "the map has errors."
+
+   *The counterweights, ranked by the strength the literature actually
+   grants them — dampers, not guarantees.* **Gains from trade** sit at the
+   top and are formula-checked: Ricardian comparative advantage is a
+   theorem (both partners profit even under absolute asymmetry), and Smith's
+   division of labor compounds it, limited by market extent — which is
+   reachable population, which is why hydrology is *peace* infrastructure
+   too. **Cross-cutting cleavages** are the structural antidote to Turchin:
+   fosterage, guest-friendship, blood-brotherhood, and shared cult across
+   the species line dampen any single conflict axis (species intermarriage
+   may be biologically barred, but these ties are not). **Religion as
+   in-group technology** is special because the domain exists: a
+   doctrinally-defined moral community ("all who keep the rites") versus a
+   descent-defined one ("the children of the mountain") is one axis on a
+   creed, and a universalizing creed is a machine for extending in-group
+   radius past biology — so religion is both the amplifier of holy war and
+   the damper across the frontier, from one parameter. **Superordinate
+   threats** (a monster, an advancing glacier — paleoclimate) and **war
+   exhaustion** (fortification raising the raid's cost) round it out. The
+   calibration target matches history: interdependence lowers frequency and
+   severity without abolishing war, and the effect sizes are *preregisterable
+   Lab studies* ("denser river-trade networks → fewer extinction-level
+   wars"). One dividend falls out free: the same forces that build
+   exploitation can retire it — slavery recedes where labor markets,
+   universalist creeds, and shifting economics make it unprofitable and
+   illegitimate — so abolition is emergent, never a scripted redemption.
 
 ---
 
@@ -325,6 +418,173 @@ social systems ever get. Downstream, religion, the architecture cluster's
 status-projection rule, and writing all read from axes; none of them can
 read anything from a role ladder.
 
+**Inequality as an output, not a constant — the deepest and most novel
+seam.** *(High potential value; the domain almost no simulation has
+attempted, and where the theory has genuinely never been applied this way.)*
+The axes above describe *which* strata exist; a second question is *who
+lands where and why*, and the strong claim — well-supported and rarely
+rendered generatively — is that the great inequalities are **materially
+derived, historically contingent, and often manufactured to justify an
+existing extraction**, not natural facts.
+
+- **Gender arrangements are computed from subsistence × property × breeding
+  system, not drawn.** The Boserup plough hypothesis (plough agriculture,
+  rewarding upper-body strength, removes women from primary production and
+  hardens the gender division — Alesina et al. confirmed it predicts
+  *modern* attitudes from ancestral plough use, a dataset-checked
+  correlation) plus Engels (women's status falls as heritable private
+  property demands controlled paternity) plus Hrdy (cooperative breeding and
+  alloparenting shape female life-history) mean the whole spectrum —
+  matrifocal hoe-horticultural egalitarianism to plough-patrilineal
+  patriarchy — is *generated* from variables the sim already holds.
+  Descent, residence (matri-/patri-/neolocal), and authority are separate
+  axes that need not align: the "matrilineal puzzle" (Richards) is exactly
+  what a Mosuo- or Iroquois-like configuration produces, and it falls out of
+  axis combinatorics.
+
+- **Sex and gender are not fixed at two, at either layer.** Gender-*role*
+  count is a cultural variable — many human societies institutionalized
+  third or fourth genders — and the *biological* substrate is even wider
+  once species diverge (see the biological-substrate section: sequential
+  hermaphroditism, haplodiploidy, temperature-dependent determination). A
+  eusocial species with a single reproductive female has a gender politics
+  with no human analogue that *must* be generated from first principles
+  rather than analogized. This is the "culture is scaffolding around
+  psychology" thesis extended down to reproductive biology.
+
+- **Intersectionality is literally a data structure here.** An individual's
+  standing is a vector over (species, caste, sex, cult-membership,
+  language-competence, servile status), disadvantage compounds
+  non-additively (Crenshaw), and because identity in this engine already
+  *is* a vector, the sim can represent compounding disadvantage natively —
+  something prose worldbuilding can only gesture at.
+
+- **"Race" is manufactured by the exploitation regime, not prior to it —
+  the payoff, and the direct partner of decision 0021's no-alignment
+  stance.** The species boundary is biological; *race* — the ideology
+  ranking species as superior and inferior — is a legitimating technology
+  generated to justify an extraction already underway (Fields & Fields,
+  "racecraft": race follows slavery, it does not precede it). So racism is
+  an **output** appended to the ledger by item 9's subjugation regime — a
+  justification myth — and the historiography records it as truth. There is
+  no evil species; there is an exploitation regime that *manufactures the
+  doctrine of an evil species to excuse itself*, and a player excavating the
+  gap between the true ledger and the chronicle's racecraft is doing the
+  most serious work the epistemic layer affords. Prejudice's structure is
+  itself theorized (Allport's contact conditions — equal status, common
+  goals, cooperation, institutional support — give item 9's counterweights
+  their real shape; Sherif's resource conflict versus Tajfel's bare
+  identity-bias let the Lab *decompose* which term dominates a given
+  frontier).
+
+The honest caution mirrors the psychology substrate's: outside the
+plough/lactase-grade cases with real datasets, verification is internal
+coherence and downstream consequence, and the ontology trap is acute —
+every axis must change a settlement, a myth, or a life, or it is folk
+sociology ossified into false science. But the upside is a world where
+inequality is legible as *history and ideology* rather than baked-in type,
+which is both truer and far more interesting to inhabit.
+
+---
+
+## The biological substrate — body, reproduction, and deep time
+
+*(High potential value; the population-genetics core is calibration- to
+formula-checked, which is unusually strong for material this exotic.)*
+
+The species-psychology substrate makes culture scaffolding around a
+*psychology*; this section widens the substrate to the whole **body** —
+life-history, reproduction, metabolism — and then closes the loop that
+psychology alone cannot: over deep time, **the scaffolding reshapes the
+body**. It is the biological floor under gender, sexuality, sanitation, and
+the slow drift of a people's very form, and its core is real
+population-genetics math, so it sits far higher on the verification gradient
+than its subject matter suggests.
+
+- **Life-history on one axis.** The fast–slow continuum (r/K, in older
+  language) covaries body size, offspring number, lifespan, parental
+  investment, and age at maturity along a *single* theorized dimension —
+  exactly the minimal-axis discipline the frontier demands. The goblin end
+  (small, many offspring, short life, low investment) and the elf end
+  (large, few, long-lived, high investment) are one parameter with many
+  correlated consequences — and drama-as-error-correcting-code, already in
+  the expressive cluster, is *downstream of the slow end's lifespan*. One
+  number, and the demographic-reproductive profile and its art follow.
+
+- **Dimorphism and mating system are derived, not drawn.** Bateman–Trivers
+  parental-investment theory: the sex investing more is choosy, the sex
+  investing less competes, and the asymmetry's intensity predicts sexual
+  dimorphism (size, ornament, weaponry). Mating system tracks it —
+  highly polygynous species are highly dimorphic (elephant seals),
+  monogamous ones barely (most birds) — so dimorphism is *computed* from
+  investment and mating system, and this is precisely the **biological
+  substrate under the Engels/Boserup social layer** in the section above.
+  Sex-determination itself is a species parameter with no obligation to the
+  mammalian default: XY, ZW, **haplodiploidy** (bees and ants — and
+  Hamilton's 0.75 sister-relatedness is the classic road to the *eusocial*
+  value of the sociality master-axis, so reproductive genetics and the
+  psychology substrate turn out to be the same substrate seen twice),
+  temperature-dependent determination, sequential hermaphroditism
+  (rank-triggered sex change, as in clownfish), parthenogenesis.
+
+- **Gene–culture coevolution — the engine, and the genuinely novel feature.**
+  The era-tick becomes *bidirectional*: the culture layer generates
+  selection pressures and the species substrate evolves in response. The
+  textbook cases are all dated, magnitude-known selective sweeps, which is
+  what makes exotic content calibration-checked — **lactase persistence**
+  (dairying culture drove the allele to high frequency in ~5000 years:
+  culture changed the genome), **amylase copy number** and starch/grain
+  diets, alcohol dehydrogenase and fermentation, high-altitude adaptation,
+  and malaria-and-sickle-cell (a subsistence-created disease environment
+  selecting a blood allele). So goblins that take up dairying evolve lactase
+  persistence; goblins driven underground evolve better scotopic vision
+  (relaxed selection on photopic, positive on night sight); goblins in a
+  grain economy evolve amylase — Richerson & Boyd / Cavalli-Sforza, rendered
+  playable. The math stays determinism-friendly and needs no individual
+  genomes: allele frequencies and quantitative traits are **fields evolving
+  under a breeder's equation** (response = heritability × selection
+  differential), a pure dataflow like climate, drawing nothing. And it
+  couples straight into item 9: a diaspora carries a non-representative
+  allele sample (founder effect), so a goblin population enslaved and
+  transported becomes, eras later, *measurably* different — smaller, or
+  climate-adapted — a readable fossil of the historical crime, with incipient
+  speciation at the far end. Everything connects: the interaction layer moves
+  the peoples, and the genetics layer records the move in their bodies.
+
+- **Excretion, sanitation, and purity — the taboo that is actually
+  infrastructure.** *(Medium confidence; the disease-ecology half is
+  calibration-checked.)* Almost absent from fantasy, genuinely varied in
+  history, and not mere flavor: waste management sets a **settlement's
+  population ceiling** through fecal–oral disease (density-dependent cholera
+  and dysentery), so sanitation technology is a term in item 7's
+  carrying-capacity field — Rome's sewers and the flush toilet raise the
+  ceiling; the cesspit caps it. The belief half is *Mary Douglas, already in
+  the lineage*: dirt is "matter out of place," and pollution rules are a
+  structured output of social structure (grid/group) — so latrine practice,
+  purity ablution, food taboo, menstrual seclusion, and the **untouchable
+  caste of waste-handlers** (Dalits, burakumin — real) all fall out of *one*
+  purity-classification system, a very Hornvale unification (one engine,
+  four rituals). The species substrate makes it concrete: metabolism sets
+  the waste — uricotelic species (bird/reptile-like, water-conserving paste)
+  versus ureotelic (mammal-like, water-hungry) differ in toilet
+  architecture *and* water economy, and since nightsoil and guano are
+  high-value nitrogen (they sustained East Asian intensive agriculture and
+  the Andean states), a species whose waste is fertilizer has a wholly
+  different sanitation politics than one whose waste is only a disease
+  vector — excretion routes back into the fertility field that feeds
+  carrying capacity. A species with scent-marking psychology treats
+  urination as *territory and signal*, reshaping settlement boundaries. So
+  "what does a goblin toilet look like?" has a computed answer — goblin
+  metabolism, goblin water economy, goblin purity grid, goblin marking
+  behavior — never an authored one.
+
+The unifying thesis across these three seams (contact, inequality, body):
+**the body is the substrate, culture is the scaffolding built around it, and
+over deep time the scaffolding reshapes the body.** That closes the existing
+"culture is scaffolding around psychology" thesis into a feedback loop — now
+scaffolding around a whole biology, with gene–culture coevolution as the
+return edge.
+
 ---
 
 ## Provenance interrogation — the `explain` verb
@@ -398,6 +658,25 @@ Milanković, orbital forcing of climate (paleoclimate as the first history);
 Denise Schmandt-Besserat, *Before Writing* (accounting tokens as writing's
 ancestor); George Murdock, *Ethnographic Atlas* (the cross-cultural joint
 distribution behind the social-structure axes); Walter Christaller, central
-place theory (settlement condensation over a carrying-capacity field).
+place theory (settlement condensation over a carrying-capacity field);
+Herman Nieboer and Evsey Domar (land–labour–coercion theory of slavery);
+Peter Turchin, *War and Peace and War* (meta-ethnic frontiers and aligned
+cleavages); David Ricardo and Adam Smith (comparative advantage and the
+division of labour as peace dividends); Gordon Allport, *The Nature of
+Prejudice*, with Muzafer Sherif and Henri Tajfel (contact conditions,
+realistic-conflict versus social-identity accounts of bias); Derek
+Bickerton (creole genesis and the bioprogram); Lupyan & Dale and Peter
+Trudgill (L2-simplification and the esoteric/exoteric distinction); Joshua
+Fishman (three-generation language shift); Ester Boserup with Alesina,
+Giuliano & Nunn (the plough and the origins of gender roles); Friedrich
+Engels, *The Origin of the Family, Private Property and the State*; Sarah
+Blaffer Hrdy, *Mothers and Others* (cooperative breeding and female
+life-history); Audrey Richards (the matrilineal puzzle); Kimberlé Crenshaw
+(intersectionality); Karen & Barbara Fields, *Racecraft* (race as
+manufactured legitimation of extraction); Robert Trivers and A. J. Bateman
+(parental investment and sexual selection); W. D. Hamilton (kin selection,
+haplodiploidy, and eusociality); Peter Richerson & Robert Boyd and
+L. L. Cavalli-Sforza (gene–culture coevolution); the lactase-persistence and
+amylase literatures (dated selective sweeps as calibration anchors).
 The map moves when the reading feeds it — which is the collaborator's role,
 demonstrated.
