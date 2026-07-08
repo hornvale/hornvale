@@ -72,6 +72,7 @@ spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
 | UNI-1 | Science, magic, theology, roguelike ID are one mechanic — inference over a hidden seeded ruleset                                 | elaborated | — (thesis) | [frontier §unification](frontier.md#the-unification-thesis) |
 | UNI-2 | Magic as a second physics — pins promoted from parameter to rule-system selection; comparative metaphysics as controlled science | elaborated | med        | [frontier §unification](frontier.md#the-unification-thesis) |
 | UNI-3 | Interventionist/trickster deities as adversarial noise injected into a civilization's inference                                  | elaborated | med        | [frontier §unification](frontier.md#the-unification-thesis) |
+| UNI-4 | The undead as a metaphysical-ruleset output — whether death is animate is a magic-physics selection (UNI-2), so skeleton/ghost/lich/vampire are one ruleset's taxonomy, observed per-species (EXP-3) and coupled to the corpse-as-ur-pollutant purity grid (BIO-5) and funerary religion; a phenomenon a culture infers over, never a bestiary | raw | med | [frontier §unification](frontier.md#the-unification-thesis) |
 
 ---
 
@@ -87,6 +88,7 @@ spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
 | EXP-5  | Drama — narrative as an error-correcting code tuned to a culture's transmission channel; lifespan sets the channel                      | elaborated | med         | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
 | EXP-6  | Architecture — layout as constraint satisfaction over body/environment/structure/threat; sacred placement derivable from theology       | elaborated | high        | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
 | EXP-7  | Phonology, naming grammars & register — feature-bearing phonemes, a per-species articulation envelope, generative naming, and the content→render prose seam; the text arm of EXP-1's four-media engine, one medium lit | spec'd     | high        | [Campaign Y2-3 spec](../superpowers/specs/2026-07-08-campaign-y2-3-the-tongues-design.md) |
+| EXP-8 | Martial traditions as culture, not choreography — embodied combat practice fused with dance, ritual, and belief (capoeira, Okinawan te) arising downstream of disarmament under coercion (MAP-9a): a subjugated people denied weapons encodes fighting as art, and the payload is the tradition and its significance, not the moves; the body is BIO-1, the transmission is mentorship and register | raw | med | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
 
 ---
 
@@ -96,6 +98,7 @@ spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------ | --------------------------------------------------------------------------------------------------- |
 | PSY-1 | Culture as scaffolding around psychology — a bounded per-species vector (threat response, deliberation latency, sociality mode, in-group radius, time horizon, status basis) upstream of the culture campaigns | elaborated | high value / weak verify | [frontier §psychology](frontier.md#the-species-psychology-substrate--the-layer-beneath-the-cluster) |
 | PSY-2 | De-privilege the goblin baseline — identity-vector-at-goblin and unqualified legacy stream labels are a measurement frame, not a design commitment; fix via epoch-suffixed label migration (ADR 0006) + an abstract reference baseline no species need occupy | raw        | high                     | [Campaign Y2-2 spec §11](../superpowers/specs/2026-07-07-campaign-y2-2-the-eyes-design.md) |
+| PSY-3 | No default-civilization attractor — the culture stack must land as readily near a non-European analogue (Heian Japan, Ptolemaic Egypt, Classic Maya) as near medieval Europe; the anti-goal generalizes PSY-2 from the goblin baseline to the whole output space, guarded by derive-from-psychology×subsistence×environment rather than templates (SOC-6), eventually a Lab distribution over derived-culture space | raw | med | [frontier §psychology](frontier.md#the-species-psychology-substrate--the-layer-beneath-the-cluster) |
 
 ---
 
@@ -143,6 +146,7 @@ spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
 | TECH-1 | Technology as capability thresholds, not a tech tree — a capability is crossed when biome resources × subsistence × surplus clear a bar; its consequence routes into demography and social structure, never a "tech level" scalar | raw    | high | [frontier §technology](frontier.md#technology-as-capability-thresholds)      |
 | TECH-2 | The pyrotechnology ladder — pottery/ceramics gate storage→surplus→the culture rung ladder; kiln temperature gates smelting; metallurgy yields tools, weapons (MAP-9's war-cost damper), and coinage (SOC-1's exchange axis) | raw    | med  | [frontier §technology](frontier.md#technology-as-capability-thresholds)      |
 | TECH-3 | Extraction & the underworld's ores — mining/refinement needs the vertical terrain layer (MAP-10) plus ore as a terrain field; refining is a carrying-capacity sink and a contact-zone prize (MAP-9) | raw    | med  | [frontier §technology](frontier.md#technology-as-capability-thresholds)      |
+| TECH-4 | Electricity — natural electrical phenomena (lightning, bioelectricity) as a possible future field/phenomenon, and electrical power as a far-future capability threshold (TECH-1), an instance of the ladder like steam, not a node; the "Redstone" buildable-logic-automation reading is rejected as game-as-lens — a construction toy contradicts sim-first | raw | low | [frontier §technology](frontier.md#technology-as-capability-thresholds) |
 
 ---
 
