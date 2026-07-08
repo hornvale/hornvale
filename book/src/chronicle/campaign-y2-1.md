@@ -1,6 +1,6 @@
 # Campaign Y2-1: The Peoples
 
-**July 2026 · 14 commits · outcome: complete, merged — Campaign 14 in the
+**July 2026 · 12 commits · outcome: complete, merged — Campaign 14 in the
 new sequence (decision 0017), the first spine campaign of Year 2's second
 act, gives the world a second people**
 

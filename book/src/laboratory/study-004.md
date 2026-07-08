@@ -103,9 +103,9 @@ worlds never approach. That five-world tail is the esoterica the design
 predicted: no ceiling was authored, and the census is what shows the ceiling
 the *sky* imposes instead. This entire distribution — mean, median,
 standard deviation, and every percentage in this paragraph — survived the
-two-peoples re-baseline untouched, exactly as it should: pantheon
-membership is a function of observed phenomena, and the sky does not care
-where joint placement put the flagship.
+two-peoples re-baseline untouched, exactly as it should: a pantheon's
+composition, where one exists at all, is a function of observed phenomena,
+and the sky does not care where joint placement put the flagship.
 
 {{#include generated/census-lands-drift/census-lands-drift-default-pantheon-size.svg}}
 
