@@ -24,6 +24,7 @@
   - [Settlement](./domains/settlement.md)
   - [Species](./domains/species.md)
   - [Perception](./domains/perception.md)
+  - [Language](./domains/language.md)
   - [Culture](./domains/culture.md)
   - [Religion](./domains/religion.md)
 
