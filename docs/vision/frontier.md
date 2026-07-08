@@ -38,6 +38,7 @@ map of the whole documentation set is [`docs/README.md`](../README.md).
   - [Technology as capability thresholds](#technology-as-capability-thresholds)
   - [The underworld — the vertical dimension](#the-underworld--the-vertical-dimension)
   - [The cultural-memory economy — knowledge as a maintained thing](#the-cultural-memory-economy--knowledge-as-a-maintained-thing)
+  - [Prophecy and the shape of time](#prophecy-and-the-shape-of-time)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
   - [Sequencing the deep-time stack](#sequencing-the-deep-time-stack)
@@ -917,6 +918,118 @@ abandon the things that carry them. That theory is explicitly **out of
 MEM-1's scope for now** — the scoping line is the guard rail against the
 generalise-into-worthlessness failure the cluster was designed to avoid.
 Captured so it is not lost; deferred so MEM-1 stays checkable.
+
+---
+
+## Prophecy and the shape of time
+
+*(Medium confidence on direction; metaphysics-gated, and verifiable through
+forecast-skill curves and a truth-versus-chronicle gap. Carries one genuinely
+open design problem, named at the end.)*
+
+The cultural-memory economy is time's backward face: what a culture spends to
+keep of its past, and what melts when it cannot. Prophecy is the forward face
+of the same organ — the epistemic layer (MAP-2) indexed into the future rather
+than the past — and it is implementable on machinery already in hand, provided
+one distinction is kept scrupulously.
+
+**Determinism is not foreknowledge.** Because the world is a pure function of
+the seed, an *external* observer — the player, the almanac, a Lab study
+sampling `WorldTime` (TOOL-3) — can forward-compute any day it likes; nothing
+it learns feeds back into the computation. The paradox appears only when the
+observer is *inside* the world, and only for the part of the future in-world
+actors cause: their foreknowledge-driven choice is itself an input to the
+future they would be reading, and that future was computed assuming they had
+no such knowledge. Read-then-act breaks the assumption the read depended on.
+
+**Two kinds of future, and only one is safe to see directly.**
+Feedback-free physical fields — eclipses, tides, paleoclimate famine
+(MAP-6), a neighbour star's death — are closed-form functions of the seed
+that no decision perturbs, so foreseeing them is veridical and paradox-free.
+This is the mythologically classic register of prophecy: augury reads the
+heavens and the harvest, not next Tuesday's betrayal. The actor-caused social
+ledger is the dangerous half, and the resolution is that social foresight is
+**inferential, not observational** — a forecast extrapolated from present
+fields, not a peek at the committed answer. This is not a patch but the
+project's own thesis (UNI-1): all knowledge is inference over a hidden seeded
+ruleset, and prophecy is that inference reaching *forward in time* rather than
+inward into hidden present structure. Once foresight is a forecast, a
+self-defeating prophecy — the doom foreseen, averted by the foreseeing — is a
+*measurable divergence*, not a contradiction (MAP-13).
+
+**Fallibility is a design surface, not a nuisance,** and a fallible oracle is
+the more interesting object anyway. Three flavours are mechanically distinct:
+*statistical* error (the forecast is simply wrong, confidence decaying with
+horizon Δ under UNI-3 noise); *interpretation* error (the prophecy is true but
+misread); and *credence* error (the prophecy is true, understood, and
+disbelieved — Cassandra — a trust term in how a `foreseen` fact propagates
+socially).
+
+**Interpretation lives in representation.** A prophecy is committed as
+structured content and rendered to a surface epithet through the same
+content→render seam The Tongues built for belief (EXP-7); ambiguity is a
+property of the rendering, dialable, not a failure of accuracy. The sharp case
+is the **exhaustive-partition prophecy** (MAP-16): when the readings partition
+the outcome space — often a bare binary, "if you cross the river a great
+empire will fall," his own or the enemy's — the oracle is *unfalsifiable*,
+fulfilled under some reading whatever happens, and the entire drama collapses
+onto the actor's branch-bet. Two futures that exhaust the search space make
+the seer correct by construction and the tragedy purely one of reading.
+
+**Whether the future is fixed at all is one scalar.** The fear of "endless
+nested loops reaching quiescence" is dissolved by never letting the forecast
+and the realized timeline mutually determine each other. Instead, *fate
+rigidity* (MAP-14) picks which is primary and derives the other in a single
+forward pass. At rigidity 0 the timeline runs forward normally and the
+prophecy is an inert, fallible belief that can be averted or self-negate — a
+mutable, improvable future (Back to the Future; *Terminator 2*'s "no fate but
+what we make"; Nineveh). At rigidity 1 a target fact is *drawn first* and the
+intervening path generated *toward* it, so the actor's flight is the seeded
+mechanism of fulfilment — self-consistency **constructed, not solved**
+(Oedipus; the *Terminator*-1 causal loop). The middle — the richest, the *12
+Monkeys* texture — draws a *coarse* target and generates fine detail freely
+under an attractor of that strength: broad strokes fixed, details free.
+Rigidity is a metaphysical pin (UNI-2), so a world *is* fatalistic or mutable
+by selection, not by law — and a single franchise flipping from rigidity 1 to
+rigidity 0 between films is the proof that it is a world parameter.
+
+**The attractor, made concrete — a delimited game.** The honest form of "put a
+thumb on the scale, but not too blatantly" is a bounded game. Model a
+prophesied event-chain as a delimited game tree — finite horizon, finite
+branching — with two notional players: the actor, steering away from the
+foreseen outcome, and *fate*, steering toward it. Solve it by minimax with
+alpha-beta pruning, which is deterministic given the seed and cheap because
+pruning collapses most of the tree and the game is invoked only for the rare,
+salient, actually-prophesied chain — never for ordinary history. Two knobs
+fall out cleanly. **Rigidity becomes "does the reach-the-target player have a
+forced win?"** — inescapable fate is fate winning under optimal actor play.
+And **"not too blatant" becomes a plausibility floor on fate's moves:** fate
+may only select transitions whose unbiased likelihood exceeds a threshold, so
+it works through plausible coincidence rather than miracle, and the threshold
+*is* the rigidity dial (a lower floor lets fate engineer less probable
+convergences). This is the one place the idea is not yet solved: the floor has
+to be calibrated so that fate reads as uncanny inevitability rather than an
+authored cheat, and that calibration is a taste-and-Lab problem, not a formula.
+
+**Reputation is not skill — the payoff.** Because disconfirmed prophecies melt
+faster than confirmed ones (a plain consequence of MEM-1's upkeep and MEM-3's
+salience-weighted stickiness: the hit is retold, the miss forgotten), the
+*chronicle* will report oracles as far more reliable than the *true ledger*
+warrants. "Prophets are trustworthy" is thus a **manufactured myth** produced
+by survivorship bias in cultural memory — structurally identical to the SOC-5
+truth-versus-chronicle gap — and the Lab can measure both quantities and
+report the delta. Prophecy's reputation is an emergent artifact independent of
+prophecy's accuracy.
+
+**Is this even its own domain?** Probably not, and the suspicion is
+load-bearing for sequencing. Religion already turns phenomena into gods;
+prophecy turns forecasts into belief-facts; the manufactured "reliable seer"
+is built exactly as a cult's founding miracle is. This cluster may be a *mode*
+of the religion-and-epistemic stack rather than a new domain, and the right
+discipline is to resist a prophecy campaign until (a) the attractor's
+plausibility floor is pinned and (b) it is shown that the religion stack
+cannot already express it — the same restraint the memory economy's MEM-5
+deferral models.
 
 ---
 
