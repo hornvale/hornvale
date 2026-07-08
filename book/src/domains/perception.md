@@ -123,8 +123,13 @@ posture the species model card kept: nothing here is drawn or fit. Kobold's
 resulting lens is `(0.52, 1.82, 0.70)` — night vision and sky attention
 together make the night sky weigh more to a kobold's eyes than the day sky
 ever does to a goblin's, which is the whole design intent stated as a
-number: the moons and the night-stars, not the sun, are what a kobold
-pantheon will crown. `Crepuscular` is part of the closed vocabulary this
+number, and a 10,000-seed census confirms it holds exactly: every kobold
+flagship on a mooned world crowns a lunar head — 8,490 of 8,490, zero
+exceptions (Study 007). Only on the 1,487 moonless worlds does the sun
+reclaim most kobold pantheons (90.4%), a bright night-star taking the rest
+— the identity lens makes no claim past what it was built to guarantee,
+and the moonless split is exactly that honest remainder, measured rather
+than assumed. `Crepuscular` is part of the closed vocabulary this
 vector is bound to but is claimed by no species this campaign, and rather
 than leave it undefined until some future people needs it, its activity
 factor (0.7) is authored now and the enumeration variant declared idle in
@@ -133,15 +138,24 @@ latency, a dimension banked ahead of the rule that will consume it. A
 future crepuscular people is then a data change, not a code change: the
 formula above already knows what to do with it.
 
-**The skies ahead:** religion run through each species' own eyes at its own
-hour, so the sky each pantheon mythologizes is the sky its people actually
-watched, and `why` recounting a head deity not only to its source phenomenon
-but to the perception facts that made that phenomenon the one worth
-noticing; sky-report prose rendered in each species' own voice, once a
+**The skies ahead.** Religion already runs through each species' own eyes
+at its own hour — the composition root calls it once per species-flagship,
+each time with that species' own lens and characteristic hour, so the sky
+each pantheon mythologizes is the sky its people actually watched (see
+[Religion](./religion.md)). What is still ahead: `why` recounting a head
+deity not only to its source phenomenon but to the perception facts that
+made that phenomenon the one worth noticing — `recount` today replays only
+the facts committed on the belief entity itself, not the species entity's
+perception vector, so the chain stops one step short of the eye that did
+the noticing; sky-report prose rendered in each species' own voice, once a
 generated tongue exists to speak it; terrestrial phenomena rich enough that
 a deep-dwelling people could raise an earthy pantheon — the reading set
-aside for the kobold, kept open for a people after it; comparative studies
-over the two pantheons a shared valley can now hold; and, if ever, the
+aside for the kobold, kept open for a people after it; the
+distributional-twin control — a species carrying the goblins' exact
+perception vector, which should score at chance under the blind-attribution
+rule this campaign's census introduced, proving the rule reads structure
+and not an accident of which species a world generates second — defined
+this campaign but waiting on a third species to run; and, if ever, the
 perception tiers this vector deliberately excludes — spectral response,
 hearing, smell, per-individual variation — each real work for a later
 campaign, none a quiet widening of a three-dimensional vector.

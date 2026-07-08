@@ -84,6 +84,29 @@ decides its *members*.
   Text, `organized`/`folk`) join the tier-0 vocabulary
   (`is-belief`/`tenet`/`held-by`/`derived-from-phenomenon`) unchanged.
 
+**Per species-flagship, each through its own eyes (Campaign 15).** Religion
+still takes the same two inputs it always has — a salience-ranked list of
+phenomena and a `SocietySummary` — but the composition root now calls it
+once per species that placed a flagship, not once per world. What changed
+sits entirely upstream, in [Perception](./perception.md): each species
+observes at its own characteristic hour and reweights what it saw through
+its own lens, so the phenomena list religion receives for a kobold warren
+is genuinely different from the one it receives for the goblin village on
+the same globe, without religion importing perception any more than it
+ever imported astronomy. The priesthood check moved from a literal
+`"shaman"` string match to each species' own shaman-rung word — a kobold
+`"keeper"` presides over an organized cult exactly as a goblin `"shaman"`
+does. The almanac's "The Gods" section now holds one block per pantheon
+that formed; the first block still reproduces the pre-Eyes, single-pantheon
+page byte-for-byte, the identity contract cashed at the page a reader
+actually sees — a spec-level corner case worth naming here: that
+byte-stability rule assumes the registry-first species (goblin) is the one
+holding the first block's beliefs, and a world where goblin places no
+pantheon of its own would render the surviving pantheon with that same
+anonymous, unnamed lead, silently losing its species attribution. No
+census seed exercises this path; it is recorded as a debt for whichever
+campaign next touches the renderer.
+
 **Provenance by replay: `why`/`recount`.** Every belief already carried a
 committed `derived-from-phenomenon` record; Campaign 5 gives the world a
 general way to read it back. `windows/historiography::recount(world,
@@ -108,8 +131,13 @@ still keeps its moons, only loses its seasons and its head deity's cycle.
 The same globe, a different flagship under each sky (since Campaign Y2-0's
 placement fix, the sky moves settlement too), yet two societies alike
 enough to hand religion the same summary — so the theology moved exactly
-where the sky moved and nowhere else. The two full "The Gods" sections are
-quoted verbatim in the gallery: [The Gods of Seed
+where the sky moved and nowhere else. Since Campaign 15, the almanac's
+"The Gods" section is no longer one pantheon but two: the kobold warren
+standing beside each goblin village raises its own pantheon, through its
+own lens, at its own hour, and its head deity is lunar rather than solar
+on both skies — a divergence that tracks *species*, orthogonal to the one
+above that tracks rotation. The full "The Gods" sections for both peoples,
+under both skies, are quoted verbatim in the gallery: [The Gods of Seed
 42](../gallery/the-gods-seed-42.md).
 
 **The model card.**
@@ -120,25 +148,27 @@ quoted verbatim in the gallery: [The Gods of Seed
 - **Derived:** pantheon membership from the salience floor; verticality
   from strata; cult form from priesthood presence; each tenet from its
   phenomenon's periodicity, exactly as tier 0's two templates already did.
-- **Approximated (declared):** one flagship's pantheon, not comparative
-  religion across the scatter; celestial-and-ambient phenomena only — no
-  earth gods from tectonic unrest, no sea gods from tides, both explicitly
-  deferred; **static theology** — the pantheon is computed once at genesis
-  and never revises as the sky, society, or a religious history would
-  later change (that history is the Year-2 event ledger); goblin-only —
-  Campaign Y2-1's second people places its own settlements and grows its
-  own structure, but only the goblin flagship raises a pantheon, and the
-  priesthood check is a literal `shaman` match that does not yet know a
-  kobold "keeper" is a shaman by another name; both wait on religion
-  going two-species.
+- **Approximated (declared):** one flagship's pantheon per species, not
+  comparative religion across the full scatter; celestial-and-ambient
+  phenomena only — no earth gods from tectonic unrest, no sea gods from
+  tides, both explicitly deferred; **static theology** — the pantheon is
+  computed once at genesis and never revises as the sky, society, or a
+  religious history would later change (that history is the Year-2 event
+  ledger).
 
-Laboratory: [Study 004, the Census of Faiths](../laboratory/study-004.md).
-Chronicle: [Campaign 5, The Gods](../chronicle/campaign-5.md).
+Laboratory: [Study 004, the Census of Faiths](../laboratory/study-004.md)
+(the goblin-flagship baseline); [Study 007, the Census of
+Eyes](../laboratory/study-007.md) (the two-pantheon comparison).
+Chronicle: [Campaign 5, The Gods](../chronicle/campaign-5.md); [Campaign
+15, The Eyes](../chronicle/15-the-eyes.md).
 
 **The tier ladder ahead:** terrain and climate as phenomena sources (earth
 gods from unrest, sea gods from tides); comparative religion and diffusion
-across the full settlement scatter, not just the flagship; per-caste patron
-deities; a religious history that revises instead of freezing at genesis,
-once the event ledger exists; and the comparative theology the second
-people (Campaign Y2-1) now makes possible — a kobold pantheon, and the
-species-aware priesthood check it would require.
+across the full settlement scatter, not just each species' flagship;
+per-caste patron deities; a religious history that revises instead of
+freezing at genesis, once the event ledger exists; and the
+distributional-twin control — a third species carrying the goblins' exact
+perception vector, which should score at chance under the blind-attribution
+rule and thereby prove the rule reads structure rather than an accident of
+generation order — defined by Campaign 15 but requiring a species this
+project has not yet authored to run.

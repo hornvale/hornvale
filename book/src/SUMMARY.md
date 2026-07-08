@@ -41,6 +41,7 @@
 - [Campaign 5: The Gods](./chronicle/campaign-5.md)
 - [Campaign Y2-0: Firm Ground](./chronicle/campaign-y2-0.md)
 - [Campaign Y2-1: The Peoples](./chronicle/campaign-y2-1.md)
+- [Campaign 15: The Eyes](./chronicle/15-the-eyes.md)
 
 # The Gallery
 

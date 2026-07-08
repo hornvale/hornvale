@@ -97,17 +97,22 @@ convenience, waiting to be deleted once a generated tongue exists.
 
 **Idle by design; banked for later.** Not every dimension pulls its weight
 yet. Deliberation latency is authored, differs meaningfully between the two
-peoples, and is consumed by no rule this campaign — declared idle in the
-model card rather than force-fitted into a formula that does not need it,
-because a dimension can exist for the contrast it will eventually explain
-rather than for use on a deadline; this one is banked for the salience work
-a later campaign on perception will need, once observers judge each other's
-decisiveness. Kobold nocturnality is banked the same way, more literally: an
-activity-cycle dimension has no seat in this closed vector, so nocturnality
-is recorded now, in the model card, as authored data with nowhere to live —
-night vision, activity cycle, and sky attention are a perception vector a
-later campaign will open, and this chapter's kobold is nocturnal in prose
-long before it is nocturnal in any formula.
+peoples, and is still consumed by no rule — declared idle in the model card
+rather than force-fitted into a formula that does not need it, because a
+dimension can exist for the contrast it will eventually explain rather than
+for use on a deadline; it remains banked for a future salience or
+negotiation rule, once observers judge each other's decisiveness. Kobold
+nocturnality was banked the same way through this chapter's first campaign,
+more literally: an activity-cycle dimension had no seat in this closed
+vector, so nocturnality lived only as authored prose with nowhere to run.
+Campaign 15 (The Eyes) spent it: `domains/species` now also holds a closed
+three-dimension **perception vector** — activity cycle, night vision, sky
+attention — sitting alongside this six-dimension psychology vector on the
+same `SpeciesDef`, and kobold's authored nocturnality finally reaches a
+formula, a species-specific characteristic hour and salience lens that
+crowns the moons and the night sky over the sun. See
+[Perception](./perception.md) for the vector, the lens derivation, and what
+it let religion do with two peoples instead of one.
 
 **The ontology-trap posture.** This closedness is a stance, not an
 oversight. The frontier map warns, more than once, against traits that grow
@@ -119,13 +124,13 @@ varies goblin-to-goblin rather than only goblin-to-kobold, is real work with
 its own design principles; it does not arrive as a quiet addition to a
 struct that happened to have room.
 
-**The peoples ahead:** an observer-dependent perception vector and the
-salience it would let religion and culture read (deliberation latency and
-kobold nocturnality both wait here); a generated tongue that deletes this
-chapter's vocabulary and syllable stopgaps outright; comparative religion,
-once a second people can hold its own pantheon; drawn variation, both
-per-species and eventually per-individual, in place of one authored point
-per people; a physiology this vector does not yet have, so habitat affinity
-and temperance stay shared rather than species-derived; inter-species
-politics, trade, and conflict; and, past two, however many further peoples
-the registry is asked to hold.
+**The peoples ahead:** deliberation latency, still idle after two
+campaigns' worth of dimensions consuming its neighbors; a generated tongue
+that deletes this chapter's vocabulary and syllable stopgaps outright;
+comparative religion across more than a pair, once a third people exists to
+make "comparative" mean something beyond two pantheons on one globe; drawn
+variation, both per-species and eventually per-individual, in place of one
+authored point per people; a physiology this vector does not yet have, so
+habitat affinity and temperance stay shared rather than species-derived;
+inter-species politics, trade, and conflict; and, past two, however many
+further peoples the registry is asked to hold.

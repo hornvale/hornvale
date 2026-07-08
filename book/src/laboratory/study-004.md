@@ -142,22 +142,30 @@ keeps counting it.
 
 ## What the census does not yet say
 
-Every pantheon in this sample belongs to the flagship alone — the scatter's
+Every pantheon in this sample belongs to a flagship alone — the scatter's
 other settlements are named, populated, and structured, but raise no
 pantheon of their own, a scope limit of the composition root (spec §13),
-not a claim that a Census of comparative religion across a whole scatter
+not a claim that a census of comparative religion across a whole scatter
 would be uninteresting. The pantheon draws only from celestial and ambient
 phenomena; earth gods from tectonic unrest and sea gods from tidal fields
 are explicitly deferred substrate, not yet a source religion reads. Theology
 here is static — computed once at genesis and never revised — so this
 census cannot yet ask how a pantheon would drift under a religious history,
-a question that waits on the Year-2 event ledger. And though the world now
-holds two peoples (Campaign Y2-1), religion is still goblin-only: the
-kobold flagship raises no pantheon, and this census asks no comparative
-question — the multi-species theology the vision book raises waits on
-religion itself going two-species, which also means teaching the priesthood
-check that a kobold "keeper" is a shaman by another name. For now the
-fourth leg of the census stands next to the sky, the land, and the people:
-built, calibrated against two facts the code already guaranteed, and honest
-about the boundary between what it measures and what it has not yet been
-asked to explain.
+a question that waits on the Year-2 event ledger.
+
+This chapter's numbers were measured before religion went two-species and
+still describe only the goblin flagship's pantheon, by deliberate choice
+rather than an unclosed gap: religion now runs once per species-flagship
+(Campaign 15, The Eyes), each through that species' own perception lens,
+and the goblin-flagship metrics here are rescoped rather than retired
+precisely so this chapter's calibrations stay comparable across campaigns
+instead of shifting underfoot. The comparative question this census
+declined to ask — do the two peoples' pantheons actually differ, and is
+the difference structural rather than lexical — is [Study 007, the Census
+of Eyes](study-007.md), which also resolves the other half of the debt
+named here: the priesthood check no longer needs teaching that a kobold
+"keeper" is a shaman by another name, because it already asks each species
+for its own word. For now the fourth leg of the census stands next to the
+sky, the land, and the people: built, calibrated against two facts the
+code already guaranteed, and honest about the boundary between what it
+measures and what it has not yet been asked to explain.

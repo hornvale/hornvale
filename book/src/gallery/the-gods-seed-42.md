@@ -53,10 +53,17 @@ head-deity contrast the whole story.
 
 Since Campaign Y2-1, a kobold warren stands beside each goblin village in
 the quoted excerpts below — **Uszuszssk** under the spinning sky,
-**Thurzikdak** under the locked one — but raises no pantheon of its own:
-religion is still goblin-only, so the gods comparison this page makes is
-untouched by the second people. The warrens are quoted anyway, because the
-almanac is quoted verbatim or not at all.
+**Thurzikdak** under the locked one. Since Campaign 15 (The Eyes), that
+warren raises a pantheon of its own: religion now runs once per
+species-flagship, each through that species' own perception lens and at
+its own characteristic hour, so the almanac's single "The Gods" section
+holds two blocks per world, not one. The comparison this page was built to
+make — the same sky, read two different ways — now runs on two axes at
+once: pin the rotation and the goblin head changes while the kobold head
+does not; hold the rotation fixed and read the *other* pantheon on the
+same page, and the head changes from solar to lunar while the sky itself
+does not move at all. Two independent divergences, on one globe, from one
+seed.
 
 ## Spinning: the Wheel-Turner presides
 
@@ -96,6 +103,20 @@ An organized priesthood tends a pantheon:
 > the Waning Herald departs and returns every 32.55 days; its absences are mourned and its returns feasted.
 >
 > — derived from the phenomenon *celestial-body*
+
+In the warren of **Uszuszssk**, an organized priesthood tends its own pantheon:
+
+> the Wheel-Turner departs and returns every 15.99 days; its absences are mourned and its returns feasted. *(who presides)*
+>
+> — derived from the phenomenon *celestial-body*
+
+> the Waning Herald departs and returns every 32.55 days; its absences are mourned and its returns feasted.
+>
+> — derived from the phenomenon *celestial-body*
+
+> the Promised Lamp departs and returns every 0.88 days; its absences are mourned and its returns feasted.
+>
+> — derived from the phenomenon *celestial-body*
 ```
 
 A spinning world's sun rises and sets, so the phenomenon religion observes
@@ -103,6 +124,21 @@ is periodic, and the eternal-vs-cyclic template (tier 0's original
 distinction, unchanged since Campaign 1b) mints a cyclic head deity: **the
 Wheel-Turner**, mourned in its absence and feasted on its return, exactly
 like the two lesser cyclic deities beneath it.
+
+Read past the goblin block and the same page holds a second **Wheel-Turner**
+— a different god wearing the epithet each pantheon's own draw happened to
+land on, presiding over Uszuszssk instead of Grumoknar, over a 15.99-day
+period instead of a 0.88-day one. That period is the first moon's, not the
+sun's: Uszuszssk's pantheon is headed by a moon, because a kobold's lens
+weighs the night sky at `1.82` against a goblin's `1.0` day sky, and a
+vast moon at raw salience 0.64 clears that weighted bar before the sun,
+raw salience 1.00 but scaled by a kobold's `0.52` day-sky factor, ever
+gets the chance. The sun still makes the kobold pantheon — as the
+**Promised Lamp**, third and least salient — it is simply outweighed, not
+unseen. Every belief in both blocks is a **derived** phenomenon (the
+provenance line reads *celestial-body* either way); what changed between
+the two pantheons is not what exists in the sky, only which pair of eyes
+was doing the noticing.
 
 ## Tidally locked: the Still Crown presides
 
@@ -142,7 +178,35 @@ An organized priesthood tends a pantheon:
 > the Waning Herald departs and returns every 32.55 days; its absences are mourned and its returns feasted.
 >
 > — derived from the phenomenon *celestial-body*
+
+The warren of **Thurzikdak** keeps its own folk pantheon:
+
+> the Wheel-Turner departs and returns every 15.99 days; its absences are mourned and its returns feasted.
+>
+> — derived from the phenomenon *celestial-body*
+
+> the Waning Herald departs and returns every 32.55 days; its absences are mourned and its returns feasted.
+>
+> — derived from the phenomenon *celestial-body*
+
+> the Gold Warden is a sun fixed forever above the day side; it has never departed and will never blink.
+>
+> — derived from the phenomenon *celestial-body*
 ```
+
+Thurzikdak's pantheon carries no `*(who presides)*` mark at all — its
+role ladder is just two rungs, digger and elders, with no keeper caste to
+tend an organized cult and not enough strata to crown a ranked pantheon
+either, so every one of its three spirits stands co-equal, the same
+**folk** cult a lean goblin camp would keep. The list order still tells
+the story the mark would have: the **Wheel-Turner**, the same first moon
+Uszuszssk's pantheon crowned, leads it, ahead of the sun's own **Gold
+Warden**. A kobold's lens does not care whether the sun it is discounting
+happens to be rising and setting or fixed forever above the day side — the
+`0.52` day-sky factor applies to either shape of sun, so the lock pin that
+retunes the *goblin* head deity's tenet (cyclic Wheel-Turner to eternal
+Still Crown) leaves the *kobold* head unmoved: lunar under both skies,
+because the moons themselves never stopped moving when the sun did.
 
 Pin the same seed's rotation to tidally locked and the sun stops setting.
 The identical template, fed the identical phenomenon slot with a different
@@ -180,10 +244,25 @@ reorganized its bands around it, terrain's globe never moved, settlement
 placed a flagship the reorganized climate actually preferred, culture grew
 a society from whatever environment that flagship landed in, and religion
 mythologized whatever phenomena were left standing at the top of the list.
-See [Religion](../domains/religion.md) for the tier-1 model card, [Study
-004, the Census of Faiths](../laboratory/study-004.md) for the two
+
+**The kobold pantheon adds a second axis to the same proof, orthogonal to
+the first.** Rotation moves the *goblin* head deity's tenet, cyclic to
+eternal, while leaving the sky's members and the kobold head untouched;
+species moves the *kobold* head deity's domain, solar to lunar, while
+leaving the rotation-driven tenet swap on the goblin side untouched. Ask
+Uszuszssk's Wheel-Turner and Grumoknar's Wheel-Turner the same `why`, and
+`recount` gives back the same predicate vocabulary — `derived-from-
+phenomenon`, a period, a cult form — cited against two different
+phenomena, because religion still does not know, and does not need to
+know, that a lens or a species even exists upstream of the list it was
+handed. See [Religion](../domains/religion.md) for the tier-1 model card
+and how a species-flagship call now differs from a world call, [Study 004,
+the Census of Faiths](../laboratory/study-004.md) for the two rotation
 calibrations this pair exemplifies at the scale of ten thousand worlds,
-[Campaign 5, The Gods](../chronicle/campaign-5.md) for the Year-1
-retrospective this capstone originally closed, and [Campaign Y2-0, Firm
-Ground](../chronicle/campaign-y2-0.md) for the placement fix that gave this
-page its sharper, truer shape.
+[Study 007, the Census of Eyes](../laboratory/study-007.md) for the
+species calibrations, [Campaign 5, The Gods](../chronicle/campaign-5.md)
+for the Year-1 retrospective this capstone originally closed, [Campaign
+Y2-0, Firm Ground](../chronicle/campaign-y2-0.md) for the placement fix
+that gave this page its sharper, truer shape, and [Campaign 15, The
+Eyes](../chronicle/15-the-eyes.md) for the perception vector that gave it
+its second pantheon.

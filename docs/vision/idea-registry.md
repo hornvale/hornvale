@@ -80,7 +80,7 @@ spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
 | ------ | --------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------- | ------------------------------------------------------------------ |
 | EXP-1  | One seeded grammar engine, four media (text / image / music / space) from a small per-culture vector                                    | elaborated | — (framing) | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
 | EXP-2  | Music and tuning — the Pythagorean comma as a necessary hidden ruleset; tuning stance as theology and belief-fact                       | elaborated | med         | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
-| EXP-3  | Species perception — photoreceptor profiles make salience = f(phenomenon, observer); different species, different skies and astronomies | spec'd     | med         | [Campaign Y2-2 spec](../superpowers/specs/2026-07-07-campaign-y2-2-the-eyes-design.md) |
+| EXP-3  | Species perception — photoreceptor profiles make salience = f(phenomenon, observer); different species, different skies and astronomies | shipped    | med         | [Campaign Y2-2 spec](../superpowers/specs/2026-07-07-campaign-y2-2-the-eyes-design.md) |
 | EXP-3a | Colour lexicons (Berlin & Kay) as evidence of a species' vision; art palettes on species gamut; drawn scattering regime                 | raw        | med         | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
 | EXP-4  | Humor — benign-violation theory; jokes as the fastest norm-probes; a humourless species has an empty violation set                      | elaborated | taste-gated | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
 | EXP-5  | Drama — narrative as an error-correcting code tuned to a culture's transmission channel; lifespan sets the channel                      | elaborated | med         | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
@@ -132,6 +132,7 @@ spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
 | TOOL-4 | Lab: sensitivity studies — hold the seed, vary one pin, measure downstream distributions                                                         | raw             | high         | [frontier §map, item 1](frontier.md#the-frontier-map)                       |
 | TOOL-5 | Lab: paired comparisons — tier-0 vs. generated provider on one seed; "refines, never contradicts" as a statistic                                 | raw             | high         | [frontier §map, item 1](frontier.md#the-frontier-map)                       |
 | TOOL-6 | Gallery images as hand-rolled pure-std PNG (stored deflate + CRC32) so they render in-browser                                                    | ratified (0018) | —            | [decision 0018](../decisions/0018-gallery-images-are-hand-rolled-png.md)    |
+| TOOL-7 | Lab: parallel study runner — std::thread pool (no new deps), results collected by seed index for byte-identity (sequential-equivalence test as the proof), plus a deterministic stderr progress line every N seeds; timings stay at shell/CI level (wall-clock ban) | raw             | high         | [frontier §map, item 1](frontier.md#the-frontier-map)                       |
 
 ---
 

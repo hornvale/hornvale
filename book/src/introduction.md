@@ -108,5 +108,21 @@ untouched by construction, not by convention. Two peoples now compete for
 the same land, diverging in where they settle and how they organize for
 reasons a player can be told; a census turns up competitive exclusion, an
 unauthored emergent property of joint placement that runs in both
-directions. Religion has not yet followed the second species — that, and
-an observer-dependent perception vector, belong to Campaign 15: The Eyes.
+directions.
+
+**Campaign 15 (The Eyes) gives each people its own eyes, and closes the
+gap Campaign Y2-1 left open.** A closed three-dimension perception vector —
+activity cycle, night vision, sky attention — sits alongside the
+psychology one on every species definition, authored the same way and read
+from the same D&D 5E corpus. A species-specific salience lens and
+characteristic hour replace the single observer-independent salience every
+prior campaign assumed, built so the goblin baseline is the identity
+function by construction; religion now runs once per species-flagship,
+each through its own lens, so a goblin's sun-headed pantheon and a
+kobold's moon-headed one stand side by side on the same globe under the
+same seed. A 10,000-seed census confirms the two exact claims the campaign
+staked out before running it — goblin heads are always solar, and kobold
+heads are always lunar on every world that carries a moon — and measures,
+rather than assumes, what happens on the moonless remainder: the sun
+reclaims most kobold pantheons there, a fact about eternal night-stars and
+finite moons, not a defect in the rule that found it.
