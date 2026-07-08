@@ -1,9 +1,9 @@
 //! Species, tier 1: authored species definitions — a closed six-dimension
-//! psychology vector, a closed three-dimension perception vector, vocabulary
-//! stopgaps, and placeholder syllables. Species
-//! are data; the social grammar stays code (spec §2). Goblin is the baseline:
-//! scalars 0.5, default enum variants; every downstream modulation is the
-//! identity function at this vector.
+//! psychology vector, a closed three-dimension perception vector, a closed
+//! six-dimension articulation vector, vocabulary stopgaps, and placeholder
+//! syllables. Species are data; the social grammar stays code (spec §2).
+//! Goblin is the baseline: scalars 0.5, default enum variants; every
+//! downstream modulation is the identity function at this vector.
 #![warn(missing_docs)]
 
 use std::collections::BTreeMap;
@@ -32,6 +32,18 @@ pub const SPECIES_ACTIVITY_CYCLE: &str = "species-activity-cycle";
 pub const SPECIES_NIGHT_VISION: &str = "species-night-vision";
 /// Predicate: how much of a species' attention the sky claims, 0-1 (functional, Number).
 pub const SPECIES_SKY_ATTENTION: &str = "species-sky-attention";
+/// Predicate: a species' lip-rounding and jaw-closure degree, 0-1 (functional, Number).
+pub const SPECIES_LABIALITY: &str = "species-labiality";
+/// Predicate: a species' vowel-space size, 0-1 (functional, Number).
+pub const SPECIES_VOWEL_SPACE: &str = "species-vowel-space";
+/// Predicate: a species' voicing (voiced vs. voiceless), 0-1 (functional, Number).
+pub const SPECIES_VOICING: &str = "species-voicing";
+/// Predicate: a species' sibilance emphasis, 0-1 (functional, Number).
+pub const SPECIES_SIBILANCE: &str = "species-sibilance";
+/// Predicate: a species' voice-loudness range, 0-1 (functional, Number).
+pub const SPECIES_VOICE_LOUDNESS: &str = "species-voice-loudness";
+/// Predicate: a species' exotic manner — none, trill, click, ejective (functional, Text).
+pub const SPECIES_EXOTIC_MANNER: &str = "species-exotic-manner";
 
 /// How a species organizes authority.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -63,6 +75,19 @@ pub enum ActivityCycle {
     /// Awake at the boundaries (idle this campaign; authored now so a
     /// future species is a data change).
     Crepuscular,
+}
+
+/// An exotic manner of articulation found in a species' phonology.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ExoticManner {
+    /// No exotic manner (the goblin baseline).
+    None,
+    /// Trill: rapid vibration of an articulator.
+    Trill,
+    /// Click: sharp ingressive oral sound.
+    Click,
+    /// Ejective: sharp egressive sound made with trapped air.
+    Ejective,
 }
 
 /// The closed six-dimension psychology vector (spec §3). Scalars are bare
@@ -97,6 +122,25 @@ pub struct PerceptionVector {
     pub sky_attention: f64,
 }
 
+/// The closed six-dimension articulation vector (spec §5). Scalars are bare
+/// ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening the vector
+/// requires its own campaign. Every dimension is authored — nothing drawn.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ArticulationVector {
+    /// Lip-rounding and jaw-closure degree: unrounded 0 ↔ rounded 1.
+    pub labiality: f64,
+    /// Vowel-space size: compressed 0 ↔ expanded 1.
+    pub vowel_space: f64,
+    /// Voicing emphasis: voiceless 0 ↔ voiced 1.
+    pub voicing: f64,
+    /// Sibilance emphasis: minimal 0 ↔ pronounced 1.
+    pub sibilance: f64,
+    /// Voice-loudness range: quiet 0 ↔ loud 1.
+    pub voice_loudness: f64,
+    /// Exotic manner of articulation.
+    pub exotic: ExoticManner,
+}
+
 /// One authored species: vector, vocabulary stopgaps (deleted by The
 /// Tongues), and a placeholder syllable pool for names.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -109,6 +153,8 @@ pub struct SpeciesDef {
     pub psych: PsychVector,
     /// The perception vector.
     pub perception: PerceptionVector,
+    /// The articulation vector.
+    pub articulation: ArticulationVector,
     /// Worker-role override; `None` = the subsistence worker word.
     pub worker_override: Option<&'static str>,
     /// The warrior-rung word.
@@ -151,6 +197,14 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 night_vision: 0.5,
                 sky_attention: 0.5,
             },
+            articulation: ArticulationVector {
+                labiality: 0.5,
+                vowel_space: 0.5,
+                voicing: 0.5,
+                sibilance: 0.5,
+                voice_loudness: 0.5,
+                exotic: ExoticManner::None,
+            },
             worker_override: None,
             warrior: "warrior",
             artisan: "artisan",
@@ -176,6 +230,14 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 activity: ActivityCycle::Nocturnal,
                 night_vision: 0.9,
                 sky_attention: 0.8,
+            },
+            articulation: ArticulationVector {
+                labiality: 0.1,
+                vowel_space: 0.3,
+                voicing: 0.6,
+                sibilance: 0.9,
+                voice_loudness: 0.2,
+                exotic: ExoticManner::Trill,
             },
             worker_override: Some("digger"),
             warrior: "warden",
@@ -210,6 +272,16 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     )?;
     registry.register_predicate(SPECIES_NIGHT_VISION, true, "night-sky acuity, 0-1")?;
     registry.register_predicate(SPECIES_SKY_ATTENTION, true, "sky vs. ground attention, 0-1")?;
+    registry.register_predicate(SPECIES_LABIALITY, true, "lip-rounding and jaw-closure, 0-1")?;
+    registry.register_predicate(SPECIES_VOWEL_SPACE, true, "vowel-space size, 0-1")?;
+    registry.register_predicate(SPECIES_VOICING, true, "voicing emphasis, 0-1")?;
+    registry.register_predicate(SPECIES_SIBILANCE, true, "sibilance emphasis, 0-1")?;
+    registry.register_predicate(SPECIES_VOICE_LOUDNESS, true, "voice-loudness range, 0-1")?;
+    registry.register_predicate(
+        SPECIES_EXOTIC_MANNER,
+        true,
+        "exotic manner: none, trill, click, ejective",
+    )?;
     Ok(())
 }
 
@@ -301,6 +373,52 @@ pub fn genesis(world: &mut World) -> Result<BTreeMap<String, EntityId>, LedgerEr
                 SPECIES_SKY_ATTENTION,
                 Value::Number(def.perception.sky_attention),
             ),
+            &world.registry,
+        )?;
+        let exotic = match def.articulation.exotic {
+            ExoticManner::None => "none",
+            ExoticManner::Trill => "trill",
+            ExoticManner::Click => "click",
+            ExoticManner::Ejective => "ejective",
+        };
+        world.ledger.commit(
+            fact(
+                id,
+                SPECIES_LABIALITY,
+                Value::Number(def.articulation.labiality),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                id,
+                SPECIES_VOWEL_SPACE,
+                Value::Number(def.articulation.vowel_space),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(id, SPECIES_VOICING, Value::Number(def.articulation.voicing)),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                id,
+                SPECIES_SIBILANCE,
+                Value::Number(def.articulation.sibilance),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                id,
+                SPECIES_VOICE_LOUDNESS,
+                Value::Number(def.articulation.voice_loudness),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(id, SPECIES_EXOTIC_MANNER, Value::Text(exotic.to_string())),
             &world.registry,
         )?;
         ids.insert(name.to_string(), id);
@@ -429,5 +547,29 @@ mod tests {
             Some(Value::Number(n)) if *n > 0.5
         ));
         assert_eq!(species_entity(&w, "kobold"), Some(kobold));
+    }
+
+    #[test]
+    fn goblin_articulation_is_baseline_kobold_hisses_and_is_quiet() {
+        let reg = registry();
+        let g = &reg["goblin"].articulation;
+        assert_eq!(g.labiality, 0.5);
+        assert_eq!(g.voice_loudness, 0.5);
+        assert_eq!(g.exotic, ExoticManner::None);
+        let k = &reg["kobold"].articulation;
+        assert!(k.sibilance > 0.5 && k.labiality < 0.5 && k.voice_loudness < 0.5);
+        assert_eq!(k.exotic, ExoticManner::Trill);
+    }
+
+    #[test]
+    fn genesis_commits_articulation_facts() {
+        let mut w = World::new(Seed(42));
+        register_concepts(&mut w.registry).unwrap();
+        let ids = genesis(&mut w).unwrap();
+        let k = ids["kobold"];
+        assert_eq!(w.ledger.text_of(k, SPECIES_EXOTIC_MANNER), Some("trill"));
+        assert!(
+            matches!(w.ledger.value_of(k, SPECIES_SIBILANCE), Some(Value::Number(n)) if *n > 0.5)
+        );
     }
 }

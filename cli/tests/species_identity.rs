@@ -12,7 +12,7 @@ use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 /// the psychology vector, the peopled-by link, and the settlement pin fact
 /// that records the `--species` pin itself. Excluded from the pre-C1 ledger
 /// comparison.
-const NEW_PREDICATES: [&str; 12] = [
+const NEW_PREDICATES: [&str; 18] = [
     hornvale_species::SPECIES_NAME,
     hornvale_species::THREAT_RESPONSE,
     hornvale_species::DELIBERATION_LATENCY,
@@ -24,6 +24,12 @@ const NEW_PREDICATES: [&str; 12] = [
     hornvale_species::SPECIES_ACTIVITY_CYCLE,
     hornvale_species::SPECIES_NIGHT_VISION,
     hornvale_species::SPECIES_SKY_ATTENTION,
+    hornvale_species::SPECIES_LABIALITY,
+    hornvale_species::SPECIES_VOWEL_SPACE,
+    hornvale_species::SPECIES_VOICING,
+    hornvale_species::SPECIES_SIBILANCE,
+    hornvale_species::SPECIES_VOICE_LOUDNESS,
+    hornvale_species::SPECIES_EXOTIC_MANNER,
     hornvale_settlement::SETTLEMENT_PIN,
 ];
 

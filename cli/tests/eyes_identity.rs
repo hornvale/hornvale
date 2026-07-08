@@ -1,15 +1,28 @@
 //! The Eyes identity contract (spec §7): a goblin-pinned world reproduces
 //! pre-Eyes main as a superset (almanac byte-identical; ledger identical
-//! off the three new perception predicates), and the default world's goblin
-//! pantheon — entities, facts, and rendered section — is unmoved.
+//! off the species predicates added since the pre-Eyes baseline — the three
+//! perception predicates and, from The Tongues, the six articulation
+//! predicates), and the default world's goblin pantheon — entities, facts,
+//! and rendered section — is unmoved.
 
 use hornvale_kernel::Seed;
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
-const PERCEPTION_PREDICATES: [&str; 3] = [
+/// Species predicates added AFTER the pre-Eyes fixture was frozen: the three
+/// perception predicates (The Eyes) and the six articulation predicates (The
+/// Tongues). The fixture has neither, so the superset comparison excludes
+/// them — extending them is the same superset rule the campaigns before it
+/// applied.
+const POST_BASELINE_SPECIES_PREDICATES: [&str; 9] = [
     hornvale_species::SPECIES_ACTIVITY_CYCLE,
     hornvale_species::SPECIES_NIGHT_VISION,
     hornvale_species::SPECIES_SKY_ATTENTION,
+    hornvale_species::SPECIES_LABIALITY,
+    hornvale_species::SPECIES_VOWEL_SPACE,
+    hornvale_species::SPECIES_VOICING,
+    hornvale_species::SPECIES_SIBILANCE,
+    hornvale_species::SPECIES_VOICE_LOUDNESS,
+    hornvale_species::SPECIES_EXOTIC_MANNER,
 ];
 
 fn build(species: Option<&str>) -> hornvale_kernel::World {
@@ -33,7 +46,7 @@ fn filtered(world: &hornvale_kernel::World) -> Vec<String> {
     world
         .ledger
         .iter()
-        .filter(|f| !PERCEPTION_PREDICATES.contains(&f.predicate.as_str()))
+        .filter(|f| !POST_BASELINE_SPECIES_PREDICATES.contains(&f.predicate.as_str()))
         .map(|f| format!("{f:?}"))
         .collect()
 }
