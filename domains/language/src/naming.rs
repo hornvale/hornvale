@@ -14,14 +14,19 @@
 //! `MorphOptions::honorifics` is set by the composition root (status basis
 //! `Rank` → `true`), prefixed with a short bound honorific affix. Every
 //! draw is rooted at
-//! `seed.derive("language").derive(species).derive("name").derive(kind_label).derive(&salt.to_string()).derive(&redraw.to_string()).stream()`
-//! so a name is reproducible from `(seed, species, kind, salt)` alone, and a
-//! uniqueness collision advances only the `redraw` leg of the path.
+//! `seed.derive("language").derive(species).derive("name").derive(kind_label).derive(&salt.to_string()).stream()`
+//! so a name is a pure, single deterministic function of `(seed, species,
+//! kind, salt)` — no re-draw, no dependence on any other name. Uniqueness is
+//! not guaranteed here: the phonology name space is vast enough that
+//! collisions are rare in practice (measured as a calibration, spec §9), and
+//! the composition root deliberately does NOT thread a shared "used" set
+//! through naming. That purity is load-bearing: it makes settlement names
+//! pin-isolated by construction (a name depends only on its own cell, never
+//! on which other settlements — or species — a world happens to place).
 
 use crate::phoneme::{Manner, Segment, ipa, romanize};
 use crate::phonology::Phonology;
 use hornvale_kernel::{Seed, Stream};
-use std::collections::BTreeSet;
 
 /// What kind of name is being drawn; selects the morphology rules and the
 /// `derive` label for the name's seed path.
@@ -74,14 +79,6 @@ pub struct GeneratedName {
     pub ipa: String,
 }
 
-/// The cap on uniqueness re-draws before `name` gives up and returns the
-/// last-drawn candidate even though it collides with `used`. 10,000 is
-/// astronomically larger than any plausible in-world namespace for a single
-/// `(kind, salt)` pair — the early return inside the loop is expected to
-/// fire on the first or second attempt in practice. The cap exists only so
-/// `name` is total (never loops forever, never panics).
-const MAX_REDRAWS: u64 = 10_000;
-
 /// The chance (per attempt) that a drawn epithet root is reduplicated
 /// (one of its syllables doubled) before any honorific prefix is applied.
 const REDUPLICATION_CHANCE: f64 = 0.5;
@@ -124,33 +121,22 @@ impl<'a> Namer<'a> {
     }
 
     /// Draw a name of `kind` for `salt` (the caller's per-entity draw
-    /// index — e.g. the Nth settlement), applying `morph`'s morphology, and
-    /// re-drawing deterministically until the romanized form is not in
-    /// `used`. See [`MAX_REDRAWS`] for the (practically unreachable) cap.
-    pub fn name(
-        &mut self,
-        kind: NameKind,
-        salt: u64,
-        morph: &MorphOptions,
-        used: &BTreeSet<String>,
-    ) -> GeneratedName {
-        let kind_label = kind.label();
-        for redraw in 0..MAX_REDRAWS {
-            let mut stream = self
-                .seed
-                .derive("language")
-                .derive(&self.species)
-                .derive("name")
-                .derive(kind_label)
-                .derive(&salt.to_string())
-                .derive(&redraw.to_string())
-                .stream();
-            let candidate = self.build_name(kind, morph, &mut stream);
-            if redraw == MAX_REDRAWS - 1 || !used.contains(&candidate.roman) {
-                return candidate;
-            }
-        }
-        unreachable!("MAX_REDRAWS is nonzero, so the loop always returns")
+    /// index — e.g. the Nth settlement's cell id), applying `morph`'s
+    /// morphology. A single deterministic draw: the name is a pure function
+    /// of `(seed, species, kind, salt)` with no re-draw and no dependence on
+    /// any other name (see the module docs — this is what makes settlement
+    /// names pin-isolated by construction). Uniqueness across a world's
+    /// names is de-facto, not guaranteed.
+    pub fn name(&mut self, kind: NameKind, salt: u64, morph: &MorphOptions) -> GeneratedName {
+        let mut stream = self
+            .seed
+            .derive("language")
+            .derive(&self.species)
+            .derive("name")
+            .derive(kind.label())
+            .derive(&salt.to_string())
+            .stream();
+        self.build_name(kind, morph, &mut stream)
     }
 
     /// Build one candidate name from a single stream draw, applying the
@@ -322,7 +308,6 @@ mod tests {
     use super::*;
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
-    use std::collections::BTreeSet;
 
     fn kobold_ph() -> crate::phonology::Phonology {
         draw_phonology(
@@ -348,35 +333,44 @@ mod tests {
             NameKind::Settlement,
             10,
             &MorphOptions { honorifics: false },
-            &BTreeSet::new(),
         );
         let b = n2.name(
             NameKind::Settlement,
             10,
             &MorphOptions { honorifics: false },
-            &BTreeSet::new(),
         );
         assert_eq!(a.roman, b.roman);
         assert!(!a.roman.is_empty() && !a.ipa.is_empty());
     }
 
     #[test]
-    fn uniqueness_redraw_avoids_collision() {
+    fn a_name_is_a_pure_function_of_seed_species_kind_and_salt() {
+        // No re-draw, no shared "used" set: the same (seed, species, kind,
+        // salt) always yields the same name, and distinct salts draw
+        // independently. This purity is what makes settlement names
+        // pin-isolated by construction (spec §8) — a name never depends on
+        // which other settlements a world places.
         let ph = kobold_ph();
         let mut namer = Namer::new(&Seed(2), "kobold", &ph);
-        let mut used = BTreeSet::new();
+        let mut first: Vec<String> = Vec::new();
         for salt in 0..50u64 {
             let g = namer.name(
                 NameKind::Settlement,
                 salt,
                 &MorphOptions { honorifics: false },
-                &used,
             );
-            assert!(
-                !used.contains(&g.roman),
-                "re-draw must avoid an in-world collision"
+            assert!(!g.roman.is_empty());
+            first.push(g.roman);
+        }
+        // A second pass over the same salts reproduces every name exactly.
+        let mut namer2 = Namer::new(&Seed(2), "kobold", &ph);
+        for (salt, expected) in first.iter().enumerate() {
+            let g = namer2.name(
+                NameKind::Settlement,
+                salt as u64,
+                &MorphOptions { honorifics: false },
             );
-            used.insert(g.roman);
+            assert_eq!(&g.roman, expected, "salt {salt} must redraw identically");
         }
     }
 
@@ -385,19 +379,9 @@ mod tests {
         let ph = kobold_ph();
         let mut namer = Namer::new(&Seed(3), "kobold", &ph);
         // Epithets with honorifics enabled must be able to differ from those without.
-        let with = namer.name(
-            NameKind::Epithet,
-            5,
-            &MorphOptions { honorifics: true },
-            &BTreeSet::new(),
-        );
+        let with = namer.name(NameKind::Epithet, 5, &MorphOptions { honorifics: true });
         let mut namer2 = Namer::new(&Seed(3), "kobold", &ph);
-        let without = namer2.name(
-            NameKind::Epithet,
-            5,
-            &MorphOptions { honorifics: false },
-            &BTreeSet::new(),
-        );
+        let without = namer2.name(NameKind::Epithet, 5, &MorphOptions { honorifics: false });
         assert_ne!(
             with.roman, without.roman,
             "status-basis keying must change epithet shape"
@@ -412,14 +396,13 @@ mod tests {
     fn generated_names_never_contain_the_unrepresentable_glyph() {
         let ph = kobold_ph();
         let mut namer = Namer::new(&Seed(11), "kobold", &ph);
-        let mut used = BTreeSet::new();
         for (salt, kind, honorifics) in [
             (0u64, NameKind::Settlement, false),
             (1, NameKind::Deity, false),
             (2, NameKind::Epithet, false),
             (3, NameKind::Epithet, true),
         ] {
-            let g = namer.name(kind, salt, &MorphOptions { honorifics }, &used);
+            let g = namer.name(kind, salt, &MorphOptions { honorifics });
             assert!(
                 !g.roman.contains('?'),
                 "roman {:?} contains the unrepresentable-segment glyph",
@@ -430,7 +413,6 @@ mod tests {
                 "ipa {:?} contains the unrepresentable-segment glyph",
                 g.ipa
             );
-            used.insert(g.roman);
         }
     }
 }

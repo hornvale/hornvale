@@ -21,7 +21,7 @@
 - **The envelope is authored; the phonology is drawn.** Model-card: every articulation dimension declared authored; inventory/phonotactics declared drawn.
 - Goblin is the baseline: articulation scalars 0.5, `exotic manner = None`; every derivation (voice params, morphology, inventory bias) is identity/neutral at the goblin vector.
 - **Byte-identity does NOT hold this campaign.** The keystone is structural invariants (Task 2, Task 11), not a byte-for-byte fixture. Determinism (same seed → identical output across runs) still holds and is tested.
-- Stream labels are permanent (ADR 0006): settlement names move to `settlement/name/v2`; the old `settlement/name` and `settlement/kobold/name` labels are never renamed. New labels `language/<species>/...` are additive. The `name` predicate keeps its identity; the `tenet` predicate is never renamed (old saves keep loading).
+- Stream labels are permanent (ADR 0006): settlement-name generation moves out of `settlement/*` entirely — names now derive under `hornvale-language`'s own `language/<species>/name/...` labels (the language engine draws the name, not settlement). The old `settlement/name` and `settlement/kobold/name` labels are never renamed and stay documented as retired; no phantom `settlement/name/v2` is minted (nothing under `settlement/*` derives a name any longer). The `name` predicate keeps its identity; the `tenet` predicate is never renamed (old saves keep loading). **[Design correction, post-Task-9 review — supersedes the original `settlement/name/v2` plan below.]**
 - Preregistration discipline (ADR 0016): directional calibration claims are written before the census runs; exact rates pinned after measurement, never tuned to pass.
 - Evidence discipline (campaign-standing, per the Y2-1 & Y2-2 retrospectives): implementer reports carry verbatim command transcripts; gate claims are void unless the controller independently reruns the gate. A plan-authored test constant or code sketch that a reviewer flags gets fixed with mutation-test evidence, not defended.
 - Work on branch `campaign-y2-3-the-tongues` (worktree per `superpowers:using-git-worktrees`).
@@ -323,7 +323,20 @@ git add -A
 git commit -m "feat(language): per-species phonology drawn under the articulation envelope"
 ```
 
-### Task 6: The naming grammars — stems, morphology, psychology keying, uniqueness
+### Task 6: The naming grammars — stems, morphology, psychology keying
+
+> **Design correction (post-Task-9 review, owner decision):** the uniqueness
+> re-draw sketched below was **removed**. `Namer::name` takes no `used` set
+> and performs no re-draw — a name is a single deterministic draw, a pure
+> function of `(seed, species, kind, salt)`. Rationale: a re-draw makes a name
+> depend on which *other* settlements a world places, which breaks
+> pin-isolation (species displace one another during spacing, so a shared-cell
+> goblin name could re-draw differently pinned vs. unpinned). The vast
+> phonology name space makes re-draw unnecessary; uniqueness is de-facto and
+> measured as a calibration (Task 12). The sketches below retain their
+> original wording for the historical record; the shipped `name` signature is
+> `name(&mut self, kind, salt, morph)` and the derive path omits the `redraw`
+> leg.
 
 **Files:**
 - Create: `domains/language/src/naming.rs`
@@ -502,9 +515,22 @@ git commit -m "feat(language): register renderer — render_line behind the perm
 
 ### Task 9: Composition-root wiring — build languages, generate all names, render tenets
 
+> **Design correction (post-Task-9 review, owner decision):** no world-wide
+> `used` set. Names are pure per-`(seed, species, kind, salt)` draws (see the
+> Task 6 correction), so the composition root does NOT maintain a
+> `BTreeSet<String>` of used names, and `LanguageDeityNamer` holds no such
+> set. Settlement names do NOT move to a `settlement/name/v2` label — they
+> move out of `settlement/*` entirely, into `hornvale-language`'s real
+> `language/<species>/name/settlement` derivation. `domains/language` gains a
+> `stream_labels()` publishing its real labels; `cli/src/streams.rs` adds it
+> to the manifest source list; `domains/settlement::stream_labels()` mints no
+> `settlement/name/v2` (it would be a phantom). Pin-isolation then holds by
+> construction.
+
 **Files:**
 - Modify: `windows/worldgen/src/lib.rs`
-- Modify: `domains/settlement/src/lib.rs` (name generation → `settlement/name/v2`; delete syllable pools)
+- Modify: `domains/settlement/src/lib.rs` (delete syllable pools + dead name fns; retire the old name labels in docs — no `/v2` mint)
+- Modify: `domains/language/src/lib.rs` (add `stream_labels()`), `cli/src/streams.rs` (register it), `cli/Cargo.toml` (language dep)
 
 **Interfaces:**
 - Consumes: everything from Tasks 3–8.
@@ -636,7 +662,7 @@ git commit -m "feat(almanac,cli): render tenets through the seam; the Tongues st
 - (optional, may run in The Meeting) phonology-based species attribution beats chance.
 ```
 
-Write the first two as row-by-row assertions over `census-lands-drift.study.json`. Exact rates (e.g. any residual collision-redraw rate) are pinned in Task 13.
+Write the first two as row-by-row assertions over `census-lands-drift.study.json`. Exact rates (e.g. the measured in-world collision rate — a reported property of the large name space, since there is no re-draw) are pinned in Task 13.
 
 - [ ] **Step 3: Full gate** incl. `cargo test -p hornvale-lab --test calibration`. If phonotactic validity is ever FALSE, STOP and report BLOCKED — the engine is producing names it calls invalid.
 
@@ -654,7 +680,7 @@ git commit -m "feat(lab): phonotactic-validity, epithet-honorific, name-length m
 - Modify: `book/src/laboratory/overview.md`, `book/src/SUMMARY.md`, `windows/lab/tests/calibration.rs` (pin measured rates), and regenerate every committed artifact (almanacs, reference dumps, studies).
 
 - [ ] **Step 1: Author `census-of-tongues.study.json`** (10k default seeds, `metrics: all`), mirroring `census-of-eyes.study.json`.
-- [ ] **Step 2: Run the author-time censuses** (`cargo run --release -p hornvale -- lab run studies/*.study.json` for each), capturing headline numbers: phonotactic validity (must be 100%), honorific split (goblin 100% / kobold 0%), name-length distributions, any re-draw collision rate.
+- [ ] **Step 2: Run the author-time censuses** (`cargo run --release -p hornvale -- lab run studies/*.study.json` for each), capturing headline numbers: phonotactic validity (must be 100%), honorific split (goblin 100% / kobold 0%), name-length distributions, the measured in-world collision rate (de-facto, from the large name space — there is no re-draw).
 - [ ] **Step 3: Pin** the measured collision/validity counts as exact calibration rows (verify determinism: the drift-study counts must not move).
 - [ ] **Step 4: Regenerate all committed artifacts** (the CI "Artifacts are current" command list verbatim) and diff — every proper noun changes (expected, the whole point); anything structural changing is a bug — STOP and diagnose. Add `census-of-tongues` to CI only if the other 10k censuses are CI-run (they are author-time-only — say so in the study page).
 - [ ] **Step 5: Write Study 008** (mirror study-007.md): the naming/voice baseline, the preregistered claims with dates, measured results, the phonology-attribution note (defined here, runs in The Meeting). Add the `scripts/tts.sh` espeak-ng convenience (ungated; documented as never-in-CI).

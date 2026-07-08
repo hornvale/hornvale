@@ -18,7 +18,6 @@ use hornvale_kernel::{
     PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime, observe,
 };
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
-use std::collections::BTreeSet;
 use std::sync::OnceLock;
 
 pub mod settlement_pins;
@@ -522,27 +521,22 @@ pub fn morph_options(psych: &hornvale_species::PsychVector) -> hornvale_language
     }
 }
 
-/// Backs religion's `DeityNamer` trait with a species' language `Namer`,
-/// sharing this world's whole-world `used` name set (spec §7/§9) so a
-/// deity's name and epithet never collide with any other name in the
-/// world — settlement or deity, any species. Religion never learns this
-/// exists; it only ever sees the `DeityNamer` trait (spec §6's ignorance
-/// discipline).
+/// Backs religion's `DeityNamer` trait with a species' language `Namer`.
+/// Each deity name and epithet is a single deterministic draw salted by the
+/// belief's own id — no shared "used" set, no re-draw (names are pure
+/// functions of seed+species+kind+salt, spec §8). Religion never learns
+/// this exists; it only ever sees the `DeityNamer` trait (spec §6's
+/// ignorance discipline).
 struct LanguageDeityNamer<'a, 'b> {
     namer: &'a mut hornvale_language::Namer<'b>,
     morph: hornvale_language::MorphOptions,
-    used: &'a mut BTreeSet<String>,
 }
 
 impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_> {
     fn deity(&mut self, salt: u64) -> (String, String) {
-        let g = self.namer.name(
-            hornvale_language::NameKind::Deity,
-            salt,
-            &self.morph,
-            self.used,
-        );
-        self.used.insert(g.roman.clone());
+        let g = self
+            .namer
+            .name(hornvale_language::NameKind::Deity, salt, &self.morph);
         (g.roman, g.ipa)
     }
 
@@ -550,13 +544,9 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_> {
         // Sentiment fits the epithet at render time (Task 11's `render_line`
         // reads it from the belief's own committed `sentiment` fact); the
         // generated word itself is sentiment-agnostic.
-        let g = self.namer.name(
-            hornvale_language::NameKind::Epithet,
-            salt,
-            &self.morph,
-            self.used,
-        );
-        self.used.insert(g.roman.clone());
+        let g = self
+            .namer
+            .name(hornvale_language::NameKind::Epithet, salt, &self.morph);
         (g.roman, g.ipa)
     }
 }
@@ -695,11 +685,13 @@ pub fn build_world(
     let placements = hornvale_settlement::place_tagged(&scored, min_sep, floor);
 
     // Each placed species' phonology, drawn once from the world seed and
-    // its authored articulation vector, and a `Namer` built over it. A
-    // single world-wide `used` set (spec §7/§9) threads through every name
-    // drawn below — settlement names first, then deity/epithet names —
-    // so no two names in the whole world collide, species or kind
-    // notwithstanding.
+    // its authored articulation vector, and a `Namer` built over it. Every
+    // name below — settlement, then deity/epithet — is a single
+    // deterministic draw salted by the entity's own id (the settlement cell,
+    // the belief). No shared "used" set threads through them: names are pure
+    // functions of seed+species+kind+salt, so settlement names are
+    // pin-isolated by construction (spec §8) and cross-world uniqueness is
+    // de-facto (measured as a calibration, spec §9), not enforced.
     let phonologies: std::collections::BTreeMap<&str, hornvale_language::Phonology> = species_set
         .iter()
         .map(|def| (def.name, language_of(&world, def.name)))
@@ -708,7 +700,6 @@ pub fn build_world(
         .iter()
         .map(|(name, ph)| (*name, hornvale_language::Namer::new(&seed, name, ph)))
         .collect();
-    let mut used: BTreeSet<String> = BTreeSet::new();
 
     let mut placed: Vec<hornvale_settlement::PlacedSettlement> =
         Vec::with_capacity(placements.len());
@@ -720,8 +711,7 @@ pub fn build_world(
             .get_mut(def.name)
             .expect("a Namer was built for every placed species");
         let morph = morph_options(&def.psych);
-        let generated = namer.name(hornvale_language::NameKind::Settlement, salt, &morph, &used);
-        used.insert(generated.roman.clone());
+        let generated = namer.name(hornvale_language::NameKind::Settlement, salt, &morph);
         let population = if def.name == "goblin" {
             hornvale_settlement::draw_population(seed, salt, p.suitability)
         } else {
@@ -786,11 +776,7 @@ pub fn build_world(
             .get_mut(def.name)
             .expect("a Namer was built for every placed species");
         let morph = morph_options(&def.psych);
-        let mut deity_namer = LanguageDeityNamer {
-            namer,
-            morph,
-            used: &mut used,
-        };
+        let mut deity_namer = LanguageDeityNamer { namer, morph };
         hornvale_religion::genesis(&mut world, flagship, &seen, &society, &mut deity_namer)?;
     }
 
@@ -1743,7 +1729,7 @@ mod tests {
     }
 
     #[test]
-    fn seed_42_names_are_non_english_and_unique_per_species() {
+    fn seed_42_names_are_non_english_and_de_facto_unique() {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
@@ -1757,14 +1743,24 @@ mod tests {
             .map(|v| v.name.clone())
             .collect();
         assert!(!names.is_empty());
-        // No settlement name is a legacy syllable-pool word.
+        // No settlement name is a legacy syllable-pool word (the stopgap
+        // pools are deleted; names now come from the language engine).
         assert!(
             names
                 .iter()
                 .all(|n| !["Zag", "Gru", "Bol"].iter().any(|s| n.starts_with(s)))
         );
-        // Uniqueness within the world.
+        // Names are pure per-cell draws, so world-wide uniqueness is NOT
+        // guaranteed — it is de-facto, arising from the vast phonology name
+        // space, and is measured as a collision-rate calibration in Task 12.
+        // Seed 42 happens to be collision-free; we assert that empirically
+        // here to catch a gross regression (e.g. every name collapsing to
+        // one string), NOT as a guaranteed invariant.
         let set: std::collections::BTreeSet<_> = names.iter().collect();
-        assert_eq!(set.len(), names.len(), "in-world names are unique");
+        assert_eq!(
+            set.len(),
+            names.len(),
+            "seed 42 is de-facto collision-free (empirical, not guaranteed)"
+        );
     }
 }

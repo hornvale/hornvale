@@ -13,6 +13,7 @@ dependencies = [
  "hornvale-historiography",
  "hornvale-kernel",
  "hornvale-lab",
+ "hornvale-language",
  "hornvale-religion",
  "hornvale-settlement",
  "hornvale-species",
