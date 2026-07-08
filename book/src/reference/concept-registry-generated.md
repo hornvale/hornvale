@@ -25,12 +25,20 @@
 | `notable-neighbor` | no | a notable neighbor star visible in the night sky |
 | `obliquity-degrees` | yes | axial tilt of the anchor world, in degrees |
 | `ocean-fraction` | yes | fraction of globe cells below sea level |
+| `peopled-by` | yes | the species that peoples a settlement |
 | `plate-count` | yes | how many tectonic plates the globe has |
 | `population` | yes | population of a settlement |
 | `scenario-pin` | no | an experimenter-supplied pin string conditioning genesis |
 | `sea-level-m` | yes | sea level in meters |
 | `settlement-pin` | no | a settlement scenario pin, round-trippable |
 | `sky-provider` | yes | which astronomy provider this world uses (constant or generated) |
+| `species-deliberation-latency` | yes | decision slowness, 0-1 |
+| `species-in-group-radius` | yes | how wide 'us' is drawn, 0-1 |
+| `species-name` | yes | a species entity's name |
+| `species-sociality-mode` | yes | hierarchic or communal |
+| `species-status-basis` | yes | rank, knowledge, or generosity |
+| `species-threat-response` | yes | flee 0 ↔ stand 1 |
+| `species-time-horizon` | yes | planning depth, 0-1 |
 | `star-class` | yes | the host star's descriptive spectral class |
 | `subsistence` | yes | a settlement's subsistence mode |
 | `tenet` | yes | the tenet text of a belief |

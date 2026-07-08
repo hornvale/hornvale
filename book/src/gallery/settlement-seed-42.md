@@ -1,7 +1,8 @@
 # The Peoples of Seed 42
 
-The land holds 58 settlement(s).
-The chief settlement, Grumoknar, holds 359 souls amid temperate-rainforest.
+The land holds 59 settlement(s).
+The chief goblin settlement, Grumoknar, holds 359 souls amid temperate-rainforest.
+The chief kobold settlement, Uszuszssk, holds 425 souls amid temperate-rainforest.
 
 ```text
                                                                         
@@ -10,18 +11,18 @@ The chief settlement, Grumoknar, holds 359 souls amid temperate-rainforest.
                                                                         
                                                                         
                                                                         
-                                               o                        
-                     o       o  o                                       
-                 o o  o              o  o  o    o                       
-                 o        o   o  o  o         o  o          o    o      
+                                                                        
+                     o       o  o         o     o                       
+                 o o  o  o           o  o  o                  o         
+                 o         o  o  o  o         o  o         o     o      
                      o  o              o o  o           o          o    
                   o        o   o               o o    o       o         
                 o      o o                                 o      o o   
                    o  o   o  o                    o  o         o        
-                  o                                                o    
-                     o  o                         o o            @    o 
-                                                                   o    
-                                                               o       o
+                  o                                                  o  
+                     o  o                        o  o            @      
+                                                                    o o 
+                                                                 o      
                                                                         
                                                                         
                                                                         

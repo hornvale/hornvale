@@ -26,6 +26,16 @@ and a bar in a chart below are sampling variance between a 10,000-seed and a
 500-seed draw, not drift — only the `census-lands-drift` charts are
 drift-checked.
 
+**A note on the two-peoples re-baseline.** This chapter's numbers were
+first measured against a single-species (goblin-only) default. Campaign
+Y2-1 added a second species, kobolds, competing for the same settlement
+sites through joint placement — and per that campaign's re-baseline
+clause, every number below that placement touches shifted, some
+substantially. Updated figures are marked inline; the full per-species
+detail — coastal rates, settlement counts, role ladders, and the
+competitive-exclusion phenomenon two-species placement turned up — is
+[Study 006](study-006.md), not repeated here.
+
 ## The calibration holds
 
 Subsistence is not authored per settlement; it is `subsistence(BiomeClass,
@@ -61,6 +71,22 @@ and grassland do not need a coast). Herding and foraging were always legal
 outputs of the function; it took a placement fix that let an inland cell
 occasionally win the argmax for the census to actually observe one.
 
+**Superseded by the two-peoples re-baseline.** The paragraph above
+describes the single-species default; it no longer describes the world a
+fresh census generates. Once kobolds compete for sites, they claim almost
+every inland cell a lone goblin population would otherwise have won, and
+the finding above **fully reverses**: at 10k, **all 9,972 present goblin
+flagships are coastal (100.0%, zero inland)**, and the goblin subsistence
+split collapses to **farming 85.8% (8,558 worlds) and fishing 14.2% (1,414
+worlds) — zero foraging, zero herding**. Nothing changed in
+`subsistence(BiomeClass, coastal)` itself; herding and foraging remain
+legal outputs of the same function, they simply have no goblin flagship
+left to attach to, because kobolds now hold the inland sites that would
+have needed them. See [Study 006](study-006.md) for the kobold-side
+figures (85.3% coastal — kobolds remain measurably less coastal than
+goblins, the campaign's first preregistered hypothesis) and the
+competitive-exclusion worlds this reversal sits alongside.
+
 {{#include generated/census-lands-drift/census-lands-drift-default-flagship-subsistence.svg}}
 
 ## The first unknown number: how many settlements, and how big
@@ -80,6 +106,17 @@ weights. Settlement count still correlates strongly with habitable fraction
 more room the biome map leaves habitable, the more spaced-apart
 12°-separated sites there are room for, exactly the relationship Campaign
 4a's placement model would predict without a single additional draw.
+
+**Updated by the two-peoples re-baseline.** With two species now placing
+settlements across the same worlds, total settlement count rises slightly
+to **mean 58.4 (median 60, standard deviation 22.4, range 0–124)**, and —
+for the first time — splits by species: kobolds place fewer settlements
+than goblins on the same worlds (mean 26.8 vs. 31.6). The same three
+zero-habitable-fraction seeds (895, 1009, 4322) still place nothing at
+all, for either species, and the habitable-fraction correlation is
+unchanged in strength (+0.90). Mean population per world moves from 289.2
+to **294.9**. Full per-species distributions are
+[Study 006](study-006.md).
 
 {{#include generated/census-lands-drift/census-lands-drift-default-settlement-count.svg}}
 
@@ -118,6 +155,18 @@ with population than the pre-fix run showed (+0.34, up from +0.18) but
 subsistence remains the dominant lever, because a farming settlement's
 fertility (0.9 or 0.7 by biome class) does most of the work of clearing the
 surplus thresholds that scale alone cannot.
+
+**Updated by the two-peoples re-baseline.** Since the herding and foraging
+flagships above no longer occur once kobolds compete for inland sites (see
+the calibration section above), the distribution shifts again: **17.4%
+hold size 2, 8.9% hold size 3, 5.0% hold size 4, 68.7% hold size 5, and
+size 6 is not observed at all (0.0%)** in the 10k re-baseline census —
+size 6 required exactly the rare herding/foraging-plus-`warrior`
+combination that the goblin side no longer produces. The
+population–structure-size correlation is essentially unchanged (+0.35).
+Kobold structures, absent from this metric entirely (it stays
+goblin-pointed for continuity), have their own ceiling and shape recorded
+in [Study 006](study-006.md).
 
 {{#include generated/census-lands-drift/census-lands-drift-default-flagship-structure-size.svg}}
 

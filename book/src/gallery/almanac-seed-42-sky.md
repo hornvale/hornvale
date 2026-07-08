@@ -39,73 +39,80 @@ Some 19% of the surface is habitable — land with water and a tolerable season.
 - **Grumoknar** — temperate-rainforest
 - **Narnar** — temperate-rainforest
 - **Bolugrak** — temperate-rainforest
-- **Zagug** — temperate-forest
+- **Uszuszssk** — temperate-rainforest
+- **Zikkra** — temperate-rainforest
 - **Zagish** — temperate-forest
-- **Tornar** — temperate-rainforest
-- **Torzagzag** — temperate-rainforest
+- **Kekzik** — temperate-rainforest
+- **Sskzikzik** — temperate-rainforest
+- **Zikplivex** — temperate-rainforest
 - **Zagtorgna** — temperate-forest
+- **Plikra** — temperate-rainforest
 - **Raktor** — temperate-forest
-- **Zagtorug** — temperate-rainforest
-- **Mokzag** — temperate-forest
-- **Bolrakrak** — temperate-rainforest
+- **Kekvexmir** — temperate-rainforest
+- **Dakkra** — tropical-rainforest
 - **Ugrakug** — tropical-rainforest
+- **Kekkra** — tropical-rainforest
+- **Uszmir** — temperate-rainforest
+- **Rakgna** — temperate-forest
 - **Bolmok** — temperate-forest
 - **Rakrakmok** — tropical-rainforest
-- **Grugnarak** — temperate-rainforest
-- **Mokgru** — tropical-rainforest
 - **Torbol** — tropical-rainforest
 - **Ishbolbol** — tropical-rainforest
 - **Gnator** — tropical-rainforest
-- **Mokmok** — tropical-rainforest
-- **Mokish** — temperate-rainforest
 - **Ugbol** — tropical-rainforest
-- **Grutor** — temperate-forest
-- **Ugugrak** — temperate-forest
+- **Zikmir** — temperate-rainforest
 - **Nartorug** — tropical-rainforest
 - **Rakugnar** — tropical-rainforest
+- **Kekkekmir** — temperate-forest
 - **Rakug** — tropical-rainforest
-- **Grugnanar** — temperate-rainforest
-- **Gnazag** — tropical-rainforest
+- **Uszvexkek** — tropical-rainforest
+- **Pliplivex** — temperate-forest
 - **Bolrak** — tropical-rainforest
+- **Sskdakmir** — temperate-forest
 - **Tortor** — tropical-seasonal-forest
 - **Mokgru** — temperate-forest
-- **Grubol** — temperate-forest
-- **Bolgrumok** — temperate-forest
-- **Gnanar** — temperate-forest
-- **Rakmokgna** — taiga
-- **Gnabolgna** — temperate-forest
-- **Gruboltor** — temperate-forest
-- **Tortormok** — temperate-forest
+- **Mirthurdak** — temperate-forest
+- **Uszthur** — temperate-forest
+- **Mirpli** — temperate-forest
+- **Thurplizik** — temperate-forest
+- **Uszzik** — temperate-forest
+- **Zikkra** — temperate-forest
+- **Dakvexkra** — temperate-forest
+- **Mirkra** — temperate-forest
+- **Mirkra** — temperate-forest
+- **Vexmir** — tundra
+- **Sskthurusz** — temperate-forest
+- **Ugmokgru** — shrubland
 - **Grutor** — taiga
-- **Zaggnator** — temperate-forest
-- **Ishug** — shrubland
-- **Ugrak** — temperate-forest
-- **Mokishzag** — temperate-forest
-- **Nargrugru** — temperate-forest
-- **Uggna** — temperate-forest
-- **Bolraktor** — tundra
-- **Ishtormok** — temperate-forest
-- **Bolgrubol** — tropical-seasonal-forest
-- **Bolbolzag** — tropical-seasonal-forest
-- **Uggrumok** — tropical-seasonal-forest
+- **Thursskvex** — tropical-seasonal-forest
+- **Kekkra** — tropical-seasonal-forest
+- **Mirthurkek** — tropical-seasonal-forest
+- **Grugna** — taiga
+- **Ishgrumok** — taiga
+- **Rakgnabol** — taiga
+- **Keksskpli** — shrubland
 - **Mokgru** — tundra
-- **Gnarak** — taiga
-- **Rakbolgru** — tundra
 - **Zagzag** — tundra
-- **Torbol** — shrubland
-- **Mokgnazag** — tundra
+- **Plimir** — tundra
+- **Dakthur** — tundra
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
-The land holds 58 settlement(s).
-The chief settlement, Grumoknar, holds 359 souls amid temperate-rainforest.
+The land holds 59 settlement(s).
+The chief goblin settlement, Grumoknar, holds 359 souls amid temperate-rainforest.
+The chief kobold settlement, Uszuszssk, holds 425 souls amid temperate-rainforest.
 
 The goblin village of **Grumoknar**, population 359.
 
 Grumoknar lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
+
+The kobold warren of **Uszuszssk**, population 425.
+
+Uszuszssk lives by farming.
+Its roles, lowest to highest: digger, shaper, keeper, elders.
 
 ## The Gods
 

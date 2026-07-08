@@ -38,6 +38,12 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `settlement` | root stream for settlement generation |
 | `settlement/name` | per-settlement generated name |
 | `settlement/placement` | per-settlement population against carrying capacity |
+| `settlement/kobold/name` | per-settlement generated name, kobold stream (species-qualified; goblin keeps settlement/name) |
+| `settlement/kobold/population` | per-settlement population, kobold stream (species-qualified; goblin keeps settlement/placement) |
+
+### hornvale-species
+
+*(no seed-derivation streams)*
 
 ### hornvale-terrain
 

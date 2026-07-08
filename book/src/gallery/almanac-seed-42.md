@@ -23,61 +23,69 @@ Some 12% of the surface is habitable — land with water and a tolerable season.
 - **Torish** — shrubland
 - **Gruzag** — shrubland
 - **Rakbolgru** — shrubland
+- **Sskzik** — tropical-rainforest
 - **Torgru** — shrubland
 - **Gnarak** — temperate-forest
 - **Bolgnator** — temperate-forest
 - **Rakrakzag** — shrubland
+- **Vexmir** — savanna
+- **Thurpliusz** — temperate-rainforest
 - **Bolbol** — tropical-rainforest
-- **Grugnaug** — tropical-rainforest
-- **Zagrak** — tropical-rainforest
+- **Thurplissk** — tropical-rainforest
 - **Bolugrak** — tropical-rainforest
 - **Ugnarbol** — temperate-forest
 - **Grunar** — tropical-rainforest
-- **Rakish** — tropical-rainforest
+- **Ziksskusz** — alpine
+- **Mirthur** — tropical-rainforest
 - **Raknar** — taiga
-- **Rakug** — tropical-rainforest
 - **Ugmok** — taiga
+- **Uszmirusz** — temperate-forest
+- **Mirkekdak** — alpine
+- **Zikkrapli** — tropical-rainforest
+- **Vexvex** — tropical-rainforest
 - **Grugruug** — taiga
-- **Tormok** — tropical-rainforest
-- **Bolraktor** — savanna
-- **Moktor** — tropical-rainforest
-- **Ishish** — tropical-rainforest
-- **Nargrutor** — alpine
-- **Uggru** — temperate-grassland
-- **Rakgnagna** — shrubland
+- **Thurkramir** — tropical-rainforest
+- **Thurzik** — temperate-grassland
+- **Uszvexmir** — shrubland
+- **Vexplikra** — temperate-grassland
+- **Zikssk** — savanna
+- **Uszssk** — tropical-rainforest
+- **Krakekssk** — alpine
+- **Vexzik** — tropical-rainforest
+- **Thurusz** — tropical-rainforest
 - **Rakgna** — tropical-seasonal-forest
-- **Raknar** — tropical-rainforest
-- **Zagzagbol** — taiga
-- **Grubolgna** — tropical-rainforest
-- **Rakzag** — tropical-rainforest
-- **Ishgna** — temperate-grassland
-- **Bolzag** — tropical-rainforest
-- **Rakgrugru** — tropical-rainforest
+- **Kekvexmir** — tropical-rainforest
+- **Uszmir** — tropical-rainforest
+- **Uszzikvex** — tropical-rainforest
+- **Krassk** — tropical-rainforest
+- **Kekpliusz** — tropical-rainforest
 - **Bolgna** — taiga
-- **Narbolug** — tropical-rainforest
-- **Mokug** — temperate-forest
-- **Rakgrugru** — tropical-rainforest
+- **Torish** — taiga
+- **Krazik** — temperate-grassland
+- **Uszzik** — tropical-seasonal-forest
 - **Ishbol** — taiga
-- **Bolgna** — tropical-rainforest
-- **Ishugtor** — alpine
+- **Vexvexusz** — tropical-seasonal-forest
 - **Bolgnazag** — taiga
-- **Rakgna** — taiga
-- **Gnagrubol** — alpine
-- **Torgru** — savanna
-- **Bolbolmok** — tropical-seasonal-forest
-- **Mokug** — tropical-seasonal-forest
+- **Vexdakssk** — taiga
+- **Sskssk** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
-The land holds 47 settlement(s).
-The chief settlement, Gnaug, holds 448 souls amid shrubland.
+The land holds 49 settlement(s).
+The chief goblin settlement, Gnaug, holds 448 souls amid shrubland.
+The chief kobold settlement, Sskzik, holds 348 souls amid tropical-rainforest.
 
 The goblin village of **Gnaug**, population 448.
 
 Gnaug lives by fishing.
 Its roles, lowest to highest: fisher, chief.
+
+The kobold warren of **Sskzik**, population 348.
+
+Sskzik lives by farming.
+Its roles, lowest to highest: digger, warden, shaper, keeper, elders.
 
 ## The Gods
 

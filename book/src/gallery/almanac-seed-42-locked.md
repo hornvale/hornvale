@@ -38,41 +38,48 @@ Some 8% of the surface is habitable — land with water and a tolerable season.
 - **Mokishmok** — temperate-rainforest
 - **Gnator** — temperate-forest
 - **Boltorgna** — temperate-forest
-- **Rakrak** — temperate-forest
-- **Narzag** — temperate-forest
-- **Ishugzag** — temperate-forest
-- **Ishnar** — temperate-forest
-- **Ishgna** — temperate-forest
-- **Ishzag** — tropical-seasonal-forest
+- **Thurzikdak** — alpine
+- **Uszvexthur** — temperate-forest
+- **Dakthur** — temperate-forest
+- **Sskvex** — temperate-forest
+- **Vexsskkra** — temperate-forest
+- **Thurkra** — temperate-forest
+- **Vexmir** — tropical-seasonal-forest
 - **Torgna** — tropical-seasonal-forest
-- **Bolgnator** — temperate-forest
 - **Bolgru** — tropical-seasonal-forest
 - **Mokish** — tropical-seasonal-forest
 - **Zagzagmok** — tropical-seasonal-forest
 - **Bolbolzag** — tropical-seasonal-forest
-- **Torishmok** — tropical-seasonal-forest
+- **Dakmirthur** — temperate-forest
+- **Torgna** — tropical-seasonal-forest
 - **Nartornar** — tropical-seasonal-forest
 - **Moktor** — tropical-seasonal-forest
 - **Ugnar** — tropical-seasonal-forest
 - **Zagish** — tropical-seasonal-forest
+- **Thurthurdak** — tropical-seasonal-forest
 - **Bolmok** — tropical-seasonal-forest
-- **Ugbolug** — tropical-seasonal-forest
-- **Boltor** — tropical-seasonal-forest
-- **Raktor** — tropical-seasonal-forest
-- **Narbol** — tropical-seasonal-forest
-- **Gnaish** — tropical-seasonal-forest
+- **Mirkek** — tropical-seasonal-forest
+- **Zagnarzag** — tropical-seasonal-forest
+- **Mirthur** — tropical-seasonal-forest
+- **Thurmir** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
-The land holds 27 settlement(s).
-The chief settlement, Bolugrak, holds 522 souls amid temperate-rainforest.
+The land holds 28 settlement(s).
+The chief goblin settlement, Bolugrak, holds 522 souls amid temperate-rainforest.
+The chief kobold settlement, Thurzikdak, holds 328 souls amid alpine.
 
 The goblin village of **Bolugrak**, population 522.
 
 Bolugrak lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
+
+The kobold warren of **Thurzikdak**, population 328.
+
+Thurzikdak lives by fishing.
+Its roles, lowest to highest: digger, elders.
 
 ## The Gods
 
