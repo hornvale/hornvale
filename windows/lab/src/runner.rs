@@ -86,12 +86,25 @@ pub fn run(study: &Study) -> Result<RunResult, StudyError> {
     })
 }
 
+/// Quote a CSV field per RFC 4180 if it contains a comma, quote, or newline
+/// (embedded quotes are doubled); otherwise return it unchanged. Some Text
+/// metrics (e.g. the per-species flagship role ladders) are themselves
+/// comma-joined, so the writer must be able to round-trip them.
+fn csv_field(text: &str) -> String {
+    if text.contains(',') || text.contains('"') || text.contains('\n') {
+        format!("\"{}\"", text.replace('"', "\"\""))
+    } else {
+        text.to_string()
+    }
+}
+
 /// Write a RunResult to CSV.
 ///
 /// Creates `out_root/<study.name>/` directories and writes `rows.csv` with:
 /// - Header: seed,pin_set,<metric names...>,refusal
 /// - Number values: displayed with default Rust formatting
-/// - Text values: written verbatim
+/// - Text values: quoted per RFC 4180 when they contain a comma, quote, or
+///   newline; written verbatim otherwise
 /// - Flag values: "true" or "false"
 /// - Absent values: empty field
 /// - Refusal column: the error message or empty
@@ -119,7 +132,7 @@ pub fn write_csv(result: &RunResult, out_root: &Path) -> std::io::Result<PathBuf
             csv_content.push(',');
             match value {
                 MetricValue::Number(n) => csv_content.push_str(&format!("{}", n)),
-                MetricValue::Text(t) => csv_content.push_str(t),
+                MetricValue::Text(t) => csv_content.push_str(&csv_field(t)),
                 MetricValue::Flag(f) => csv_content.push_str(if *f { "true" } else { "false" }),
                 MetricValue::Absent => {
                     // empty field
@@ -280,8 +293,41 @@ mod tests {
         assert_eq!(b_rows.len(), 3);
     }
 
+    /// Split one CSV line into fields, honoring RFC 4180 quoting (a quoted
+    /// field may itself contain commas; a doubled quote is an escaped
+    /// literal quote). Mirrors what any real CSV reader (and Excel) does, so
+    /// this is what the round-trip test below checks against.
+    fn parse_csv_line(line: &str) -> Vec<String> {
+        let mut fields = Vec::new();
+        let mut field = String::new();
+        let mut in_quotes = false;
+        let mut chars = line.chars().peekable();
+        while let Some(c) = chars.next() {
+            if in_quotes {
+                if c == '"' {
+                    if chars.peek() == Some(&'"') {
+                        field.push('"');
+                        chars.next();
+                    } else {
+                        in_quotes = false;
+                    }
+                } else {
+                    field.push(c);
+                }
+            } else if c == '"' {
+                in_quotes = true;
+            } else if c == ',' {
+                fields.push(std::mem::take(&mut field));
+            } else {
+                field.push(c);
+            }
+        }
+        fields.push(field);
+        fields
+    }
+
     #[test]
-    fn csv_text_fields_contain_no_commas() {
+    fn csv_round_trips_comma_containing_text_fields() {
         let study = Study {
             name: "t".to_string(),
             description: "test".to_string(),
@@ -294,22 +340,43 @@ mod tests {
         };
 
         let result = run(&study).expect("Run should succeed");
+        assert!(
+            result.rows.iter().any(|row| row
+                .values
+                .iter()
+                .any(|v| matches!(v, MetricValue::Text(t) if t.contains(',')))),
+            "expected at least one comma-containing Text value (e.g. a flagship role \
+             ladder) to exercise the quoting path"
+        );
 
-        // Verify no Text value contains a comma
-        for row in &result.rows {
-            for value in &row.values {
+        let temp = std::env::temp_dir().join(format!(
+            "hornvale-test-csv-roundtrip-{}",
+            std::process::id()
+        ));
+        let csv_path = write_csv(&result, &temp).expect("Write should succeed");
+        let content = fs::read_to_string(&csv_path).expect("Read should succeed");
+        let mut lines = content.lines();
+        let header = parse_csv_line(lines.next().expect("header line"));
+        let expected_columns = header.len();
+
+        for (row, line) in result.rows.iter().zip(lines) {
+            let fields = parse_csv_line(line);
+            assert_eq!(
+                fields.len(),
+                expected_columns,
+                "seed {}: CSV line split into the wrong number of fields \
+                 (a comma-containing Text field was not quoted correctly)",
+                row.seed
+            );
+            // seed, pin_set, then one column per metric, then refusal.
+            for (value, field) in row.values.iter().zip(&fields[2..]) {
                 if let MetricValue::Text(t) = value {
-                    assert!(
-                        !t.contains(','),
-                        "Text value should not contain comma: {}",
-                        t
-                    );
+                    assert_eq!(field, t, "seed {}: Text value did not round-trip", row.seed);
                 }
             }
         }
 
         // Cleanup temp
-        let temp = std::env::temp_dir().join(format!("hornvale-test-csv-{}", std::process::id()));
         let _ = fs::remove_dir_all(&temp);
     }
 }

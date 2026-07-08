@@ -14,5 +14,6 @@ hornvale-climate = { path = "../../domains/climate" }
 hornvale-religion = { path = "../../domains/religion" }
 hornvale-settlement = { path = "../../domains/settlement" }
 hornvale-culture = { path = "../../domains/culture" }
+hornvale-species = { path = "../../domains/species" }
 serde = { workspace = true }
 serde_json = { workspace = true }

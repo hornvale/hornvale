@@ -555,7 +555,172 @@ pub fn registry() -> Vec<Metric> {
                 }
             },
         },
+        Metric {
+            name: "goblin-flagship-roles",
+            doc: "The goblin flagship's committed role ladder, comma-joined, \
+                   lowest to highest; Absent if goblins placed no settlement",
+            summary: SummaryKind::Categorical,
+            extract: |v| match flagship_of(&v.world, "goblin") {
+                Some(info) => {
+                    let castes = hornvale_culture::castes_of(&v.world, info.id);
+                    if castes.is_empty() {
+                        MetricValue::Absent
+                    } else {
+                        MetricValue::Text(castes.join(","))
+                    }
+                }
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "kobold-flagship-roles",
+            doc: "The kobold flagship's committed role ladder, comma-joined, \
+                   lowest to highest; Absent if kobolds placed no settlement",
+            summary: SummaryKind::Categorical,
+            extract: |v| match flagship_of(&v.world, "kobold") {
+                Some(info) => {
+                    let castes = hornvale_culture::castes_of(&v.world, info.id);
+                    if castes.is_empty() {
+                        MetricValue::Absent
+                    } else {
+                        MetricValue::Text(castes.join(","))
+                    }
+                }
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "goblin-flagship-population",
+            doc: "The goblin flagship settlement's committed population; \
+                   Absent if goblins placed no settlement",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
+            },
+            extract: |v| match flagship_of(&v.world, "goblin") {
+                Some(info) => MetricValue::Number(f64::from(info.population)),
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "kobold-flagship-population",
+            doc: "The kobold flagship settlement's committed population; \
+                   Absent if kobolds placed no settlement",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
+            },
+            extract: |v| match flagship_of(&v.world, "kobold") {
+                Some(info) => MetricValue::Number(f64::from(info.population)),
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "goblin-flagship-surplus",
+            doc: "The goblin flagship cell's subsistence surplus, recomputed \
+                   from providers as fertility(biome_class) × moisture (the \
+                   independent column the slave calibration needs); Absent \
+                   if goblins placed no settlement",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: |v| flagship_surplus(v, "goblin"),
+        },
+        Metric {
+            name: "kobold-flagship-surplus",
+            doc: "The kobold flagship cell's subsistence surplus, recomputed \
+                   from providers as fertility(biome_class) × moisture (the \
+                   independent column the slave calibration needs); Absent \
+                   if kobolds placed no settlement",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: |v| flagship_surplus(v, "kobold"),
+        },
+        Metric {
+            name: "goblin-flagship-coastal",
+            doc: "Whether the goblin flagship settlement's cell borders an \
+                   ocean cell, recomputed from the terrain provider; Absent \
+                   if goblins placed no settlement",
+            summary: SummaryKind::Flag,
+            extract: |v| flagship_coastal(v, "goblin"),
+        },
+        Metric {
+            name: "kobold-flagship-coastal",
+            doc: "Whether the kobold flagship settlement's cell borders an \
+                   ocean cell, recomputed from the terrain provider; Absent \
+                   if kobolds placed no settlement",
+            summary: SummaryKind::Flag,
+            extract: |v| flagship_coastal(v, "kobold"),
+        },
+        Metric {
+            name: "goblin-settlement-count",
+            doc: "Number of settlements peopled by goblins",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
+            },
+            extract: |v| MetricValue::Number(species_settlement_count(v, "goblin")),
+        },
+        Metric {
+            name: "kobold-settlement-count",
+            doc: "Number of settlements peopled by kobolds",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
+            },
+            extract: |v| MetricValue::Number(species_settlement_count(v, "kobold")),
+        },
     ]
+}
+
+/// Recompute a species flagship's subsistence surplus directly from the
+/// climate/terrain providers, independent of the culture-committed inputs —
+/// the independence the slave calibration needs (spec §9.2).
+fn flagship_surplus(v: &WorldView, species: &str) -> MetricValue {
+    let Some(info) = flagship_of(&v.world, species) else {
+        return MetricValue::Absent;
+    };
+    let Some(Value::Number(cell_id)) = v
+        .world
+        .ledger
+        .value_of(info.id, hornvale_settlement::CELL_ID)
+    else {
+        return MetricValue::Absent;
+    };
+    let cell = CellId(*cell_id as u32);
+    let class = hornvale_worldgen::biome_class(v.climate.biome_at(cell));
+    let surplus =
+        (hornvale_culture::fertility(class) * v.climate.moisture_at(cell)).clamp(0.0, 1.0);
+    MetricValue::Number(surplus)
+}
+
+/// Recompute whether a species flagship's cell borders an ocean cell,
+/// directly from the terrain provider.
+fn flagship_coastal(v: &WorldView, species: &str) -> MetricValue {
+    let Some(info) = flagship_of(&v.world, species) else {
+        return MetricValue::Absent;
+    };
+    let Some(Value::Number(cell_id)) = v
+        .world
+        .ledger
+        .value_of(info.id, hornvale_settlement::CELL_ID)
+    else {
+        return MetricValue::Absent;
+    };
+    let cell = CellId(*cell_id as u32);
+    let coastal = v
+        .terrain
+        .geosphere()
+        .neighbors(cell)
+        .iter()
+        .any(|n| v.terrain.is_ocean(*n));
+    MetricValue::Flag(coastal)
+}
+
+/// Count settlements peopled by `species`.
+fn species_settlement_count(v: &WorldView, species: &str) -> f64 {
+    v.world
+        .ledger
+        .find(hornvale_settlement::IS_SETTLEMENT)
+        .filter(|f| hornvale_species::species_of(&v.world, f.subject).as_deref() == Some(species))
+        .count() as f64
 }
 
 /// Render the metrics list as a markdown table, in registry order.
@@ -730,8 +895,8 @@ mod tests {
     }
 
     #[test]
-    fn registry_has_thirty_three_metrics_after_firm_ground() {
-        assert_eq!(registry().len(), 33);
+    fn registry_has_forty_three_metrics_after_the_peoples() {
+        assert_eq!(registry().len(), 43);
     }
 
     #[test]
@@ -766,6 +931,35 @@ mod tests {
         assert!(
             matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
         );
+    }
+
+    #[test]
+    fn per_species_metrics_have_the_expected_kinds_for_seed_42() {
+        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let reg = registry();
+        let m = |name: &str| (reg.iter().find(|m| m.name == name).unwrap().extract)(&view);
+        for species in ["goblin", "kobold"] {
+            assert!(matches!(
+                m(&format!("{species}-flagship-roles")),
+                MetricValue::Text(_) | MetricValue::Absent
+            ));
+            assert!(matches!(
+                m(&format!("{species}-flagship-population")),
+                MetricValue::Number(_) | MetricValue::Absent
+            ));
+            assert!(matches!(
+                m(&format!("{species}-flagship-surplus")),
+                MetricValue::Number(_) | MetricValue::Absent
+            ));
+            assert!(matches!(
+                m(&format!("{species}-flagship-coastal")),
+                MetricValue::Flag(_) | MetricValue::Absent
+            ));
+            assert!(matches!(
+                m(&format!("{species}-settlement-count")),
+                MetricValue::Number(_)
+            ));
+        }
     }
 
     #[test]

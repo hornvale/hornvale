@@ -160,7 +160,7 @@ fn head_deity_is_eternal_exactly_when_tidally_locked() {
 }
 
 #[test]
-fn flagships_are_sometimes_inland_and_sometimes_coastal() {
+fn goblin_flagship_coastal_split_is_pinned() {
     let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
     let result = run(&study).unwrap();
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
@@ -183,9 +183,102 @@ fn flagships_are_sometimes_inland_and_sometimes_coastal() {
     // specifically (religion's community, spec §6), not just whichever
     // species' settlement happened to place first. Under joint-greedy
     // placement the two seeds that used to report an inland goblin flagship
-    // instead lose that site to a higher-scoring kobold placement, leaving
-    // no goblin settlement at all (`flagship-coastal` reports `Absent`) —
-    // hence coastal is unchanged but inland drops from 2 to 0.
+    // (172 and 257) instead lose that site to a higher-scoring kobold
+    // placement — both are total-kobold-exclusion worlds where goblins
+    // place nothing at all, so `flagship-coastal` reports `Absent` for
+    // them, independently verified. Coastal is unchanged at 498; inland
+    // drops from 2 to 0 (renamed from
+    // `flagships_are_sometimes_inland_and_sometimes_coastal`, now false).
     assert_eq!(coastal, 498, "coastal flagship count drifted");
     assert_eq!(inland, 0, "inland flagship count drifted");
+}
+
+#[test]
+fn kobold_structures_never_enslave_and_top_out_with_elders() {
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let (kob_i, gob_i) = (idx("kobold-flagship-roles"), idx("goblin-flagship-roles"));
+    for row in &result.rows {
+        if let MetricValue::Text(roles) = &row.values[kob_i] {
+            assert!(
+                !roles.contains("slave"),
+                "seed {}: kobold slavery",
+                row.seed
+            );
+            assert!(
+                roles.ends_with("elders"),
+                "seed {}: kobold top rung",
+                row.seed
+            );
+        }
+        if let MetricValue::Text(roles) = &row.values[gob_i] {
+            assert!(
+                roles.ends_with("chief"),
+                "seed {}: goblin top rung",
+                row.seed
+            );
+        }
+    }
+}
+
+#[test]
+fn the_slave_rung_is_an_exact_function_of_rank_surplus_and_scale() {
+    // Preregistered (spec §9.2): slave ⇔ Rank ∧ surplus > 0.6 ∧ population >
+    // 300, checked on goblin rows (Rank) and kobold rows (¬Rank) from
+    // independent recomputed columns.
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    for species in ["goblin", "kobold"] {
+        let (r_i, s_i, p_i) = (
+            idx(&format!("{species}-flagship-roles")),
+            idx(&format!("{species}-flagship-surplus")),
+            idx(&format!("{species}-flagship-population")),
+        );
+        for row in &result.rows {
+            let MetricValue::Text(roles) = &row.values[r_i] else {
+                continue;
+            };
+            let MetricValue::Number(surplus) = &row.values[s_i] else {
+                continue;
+            };
+            let MetricValue::Number(pop) = &row.values[p_i] else {
+                continue;
+            };
+            let expected = species == "goblin" && *surplus > 0.6 && *pop > 300.0;
+            assert_eq!(
+                roles.split(',').any(|r| r == "slave"),
+                expected,
+                "seed {}: slave calibration violated ({species}, surplus={surplus}, pop={pop})",
+                row.seed
+            );
+        }
+    }
+}
+
+#[test]
+fn kobold_flagships_are_less_coastal_than_goblin_flagships() {
+    // Preregistered directional hypothesis (spec §9.1); Task 10 pins exact
+    // counts after measurement.
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let rate = |col: usize| {
+        let (mut t, mut n) = (0u32, 0u32);
+        for row in &result.rows {
+            match row.values[col] {
+                MetricValue::Flag(true) => {
+                    t += 1;
+                    n += 1
+                }
+                MetricValue::Flag(false) => n += 1,
+                _ => {}
+            }
+        }
+        f64::from(t) / f64::from(n.max(1))
+    };
+    let goblin = rate(idx("goblin-flagship-coastal"));
+    let kobold = rate(idx("kobold-flagship-coastal"));
+    assert!(kobold < goblin, "kobold {kobold:.3} !< goblin {goblin:.3}");
 }

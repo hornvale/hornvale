@@ -148,8 +148,9 @@ Seeds 0..500 × 1 pin set(s); 500 rows; 0 refusals.
 
 | value | count | share |
 |---|---|---|
-| cyclic | 477 | 95.4% |
+| cyclic | 475 | 95.0% |
 | eternal | 23 | 4.6% |
+| absent | 2 | 0.4% |
 
 ### genesis-note-count — default
 
@@ -284,12 +285,12 @@ Seeds 0..500 × 1 pin set(s); 500 rows; 0 refusals.
 | value | count | share |
 |---|---|---|
 | < 0 | 0 | 0.0% |
-| [0, 10) | 11 | 2.2% |
-| [10, 20) | 18 | 3.6% |
-| [20, 40) | 98 | 19.6% |
-| [40, 60) | 131 | 26.2% |
-| [60, 80) | 158 | 31.6% |
-| [80, 120) | 84 | 16.8% |
+| [0, 10) | 10 | 2.0% |
+| [10, 20) | 17 | 3.4% |
+| [20, 40) | 84 | 16.8% |
+| [40, 60) | 135 | 27.0% |
+| [60, 80) | 154 | 30.8% |
+| [80, 120) | 100 | 20.0% |
 | >= 120 | 0 | 0.0% |
 
 ### mean-population — default
@@ -298,9 +299,9 @@ Seeds 0..500 × 1 pin set(s); 500 rows; 0 refusals.
 |---|---|---|
 | < 0 | 0 | 0.0% |
 | [0, 100) | 0 | 0.0% |
-| [100, 200) | 1 | 0.2% |
-| [200, 300) | 309 | 61.8% |
-| [300, 400) | 190 | 38.0% |
+| [100, 200) | 0 | 0.0% |
+| [200, 300) | 285 | 57.0% |
+| [300, 400) | 215 | 43.0% |
 | [400, 500) | 0 | 0.0% |
 | >= 500 | 0 | 0.0% |
 
@@ -308,27 +309,31 @@ Seeds 0..500 × 1 pin set(s); 500 rows; 0 refusals.
 
 | value | count | share |
 |---|---|---|
-| farming | 429 | 85.8% |
-| fishing | 71 | 14.2% |
+| farming | 411 | 82.2% |
+| fishing | 87 | 17.4% |
+| absent | 2 | 0.4% |
 
 ### flagship-biome — default
 
 | value | count | share |
 |---|---|---|
-| alpine | 55 | 11.0% |
-| shrubland | 16 | 3.2% |
-| taiga | 61 | 12.2% |
-| temperate-forest | 69 | 13.8% |
-| temperate-grassland | 2 | 0.4% |
-| temperate-rainforest | 287 | 57.4% |
-| tropical-rainforest | 10 | 2.0% |
+| alpine | 65 | 13.0% |
+| savanna | 1 | 0.2% |
+| shrubland | 21 | 4.2% |
+| taiga | 65 | 13.0% |
+| temperate-forest | 91 | 18.2% |
+| temperate-rainforest | 243 | 48.6% |
+| tropical-rainforest | 11 | 2.2% |
+| tundra | 1 | 0.2% |
+| absent | 2 | 0.4% |
 
 ### flagship-coastal — default
 
 | value | count | share |
 |---|---|---|
 | true | 498 | 99.6% |
-| false | 2 | 0.4% |
+| false | 0 | 0.0% |
+| absent | 2 | 0.4% |
 
 ### flagship-structure-size — default
 
@@ -336,11 +341,12 @@ Seeds 0..500 × 1 pin set(s); 500 rows; 0 refusals.
 |---|---|---|
 | < 1 | 0 | 0.0% |
 | [1, 2) | 0 | 0.0% |
-| [2, 3) | 84 | 16.8% |
-| [3, 4) | 24 | 4.8% |
-| [4, 5) | 25 | 5.0% |
-| [5, 6) | 367 | 73.4% |
+| [2, 3) | 103 | 20.6% |
+| [3, 4) | 30 | 6.0% |
+| [4, 5) | 26 | 5.2% |
+| [5, 6) | 339 | 67.8% |
 | >= 6 | 0 | 0.0% |
+| absent | 2 | 0.4% |
 
 ### endorheic-coverage — default
 
@@ -360,30 +366,147 @@ Seeds 0..500 × 1 pin set(s); 500 rows; 0 refusals.
 |---|---|---|
 | < 1 | 0 | 0.0% |
 | [1, 2) | 22 | 4.4% |
-| [2, 3) | 127 | 25.4% |
+| [2, 3) | 126 | 25.2% |
 | [3, 4) | 176 | 35.2% |
-| [4, 5) | 128 | 25.6% |
+| [4, 5) | 127 | 25.4% |
 | [5, 6) | 43 | 8.6% |
 | >= 6 | 4 | 0.8% |
+| absent | 2 | 0.4% |
 
 ### cult-form — default
 
 | value | count | share |
 |---|---|---|
-| folk | 84 | 16.8% |
-| organized | 416 | 83.2% |
+| folk | 103 | 20.6% |
+| organized | 395 | 79.0% |
+| absent | 2 | 0.4% |
 
 ### pantheon-verticality — default
 
 | value | count | share |
 |---|---|---|
-| flat | 108 | 21.6% |
-| ranked | 392 | 78.4% |
+| flat | 133 | 26.6% |
+| ranked | 365 | 73.0% |
+| absent | 2 | 0.4% |
 
 ### head-deity-periodicity — default
 
 | value | count | share |
 |---|---|---|
-| cyclic | 477 | 95.4% |
+| cyclic | 475 | 95.0% |
 | eternal | 23 | 4.6% |
+| absent | 2 | 0.4% |
+
+### goblin-flagship-roles — default
+
+| value | count | share |
+|---|---|---|
+| farmer,artisan,shaman,chief | 26 | 5.2% |
+| farmer,chief | 16 | 3.2% |
+| farmer,shaman,chief | 30 | 6.0% |
+| fisher,chief | 87 | 17.4% |
+| slave,farmer,artisan,shaman,chief | 339 | 67.8% |
+| absent | 2 | 0.4% |
+
+### kobold-flagship-roles — default
+
+| value | count | share |
+|---|---|---|
+| digger,elders | 77 | 15.4% |
+| digger,shaper,keeper,elders | 370 | 74.0% |
+| digger,warden,elders | 9 | 1.8% |
+| digger,warden,shaper,keeper,elders | 42 | 8.4% |
+| absent | 2 | 0.4% |
+
+### goblin-flagship-population — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 100) | 0 | 0.0% |
+| [100, 200) | 3 | 0.6% |
+| [200, 300) | 35 | 7.0% |
+| [300, 400) | 199 | 39.8% |
+| [400, 500) | 205 | 41.0% |
+| >= 500 | 56 | 11.2% |
+| absent | 2 | 0.4% |
+
+### kobold-flagship-population — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 100) | 0 | 0.0% |
+| [100, 200) | 1 | 0.2% |
+| [200, 300) | 59 | 11.8% |
+| [300, 400) | 214 | 42.8% |
+| [400, 500) | 177 | 35.4% |
+| >= 500 | 47 | 9.4% |
+| absent | 2 | 0.4% |
+
+### goblin-flagship-surplus — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 0.2) | 87 | 17.4% |
+| [0.2, 0.4) | 16 | 3.2% |
+| [0.4, 0.6) | 30 | 6.0% |
+| [0.6, 0.8) | 365 | 73.0% |
+| [0.8, 1) | 0 | 0.0% |
+| >= 1 | 0 | 0.0% |
+| absent | 2 | 0.4% |
+
+### kobold-flagship-surplus — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 0.2) | 85 | 17.0% |
+| [0.2, 0.4) | 1 | 0.2% |
+| [0.4, 0.6) | 30 | 6.0% |
+| [0.6, 0.8) | 303 | 60.6% |
+| [0.8, 1) | 79 | 15.8% |
+| >= 1 | 0 | 0.0% |
+| absent | 2 | 0.4% |
+
+### goblin-flagship-coastal — default
+
+| value | count | share |
+|---|---|---|
+| true | 498 | 99.6% |
+| false | 0 | 0.0% |
+| absent | 2 | 0.4% |
+
+### kobold-flagship-coastal — default
+
+| value | count | share |
+|---|---|---|
+| true | 427 | 85.4% |
+| false | 71 | 14.2% |
+| absent | 2 | 0.4% |
+
+### goblin-settlement-count — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 2 | 0.4% |
+| [1, 2) | 4 | 0.8% |
+| [2, 4) | 13 | 2.6% |
+| [4, 8) | 22 | 4.4% |
+| [8, 16) | 45 | 9.0% |
+| >= 16 | 414 | 82.8% |
+
+### kobold-settlement-count — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 2 | 0.4% |
+| [1, 2) | 2 | 0.4% |
+| [2, 4) | 3 | 0.6% |
+| [4, 8) | 18 | 3.6% |
+| [8, 16) | 99 | 19.8% |
+| >= 16 | 376 | 75.2% |
 
