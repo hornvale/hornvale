@@ -32,6 +32,9 @@ map of the whole documentation set is [`docs/README.md`](../README.md).
 - [The species-psychology substrate](#the-species-psychology-substrate--the-layer-beneath-the-cluster)
 - [Social structure as orthogonal axes](#social-structure-as-orthogonal-axes--cashing-the-substrate) — incl. the inequality seam
 - [The biological substrate](#the-biological-substrate--body-reproduction-and-deep-time) — body, reproduction, deep time
+- [The biosphere — the living substrate](#the-biosphere--the-living-substrate) — flora, funga, fauna, agriculture, the pharmacopoeia
+- [Technology as capability thresholds](#technology-as-capability-thresholds) — thresholds, not a tech tree
+- [The underworld — the vertical dimension](#the-underworld--the-vertical-dimension) — caves, mining, the deep
 - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
 - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
 - [Sequencing the deep-time stack](#sequencing-the-deep-time-stack)
@@ -605,6 +608,173 @@ over deep time the scaffolding reshapes the body.** That closes the existing
 "culture is scaffolding around psychology" thesis into a feedback loop — now
 scaffolding around a whole biology, with gene–culture coevolution as the
 return edge.
+
+---
+
+## The biosphere — the living substrate
+
+The world already has climate, biomes, and elevation — the *stage*. It has no
+life on that stage but the peoples themselves: no forests to fell, no herds to
+follow, no blight to flee, no mushroom to fear or revere. A biosphere layer is
+the missing prior between the physical world and the cultural one, and it wants
+the project's standard shape — **fields the world computes, not entities it
+places.** Vegetation is not a bestiary of trees; it is cover, productivity, and
+composition as typed functions over (space × climate), exactly as habitability
+already is. The ontology trap is loud here — a taxonomy of ten thousand species
+is the fastest way to drown — so the discipline is the psychology vector's:
+close the parameter set small, let variety come from the generative grammar,
+never from a catalogue.
+
+- **Flora and funga as fields** *(medium; wants the phenomena-path upgrade,
+  SEQ-4)*. A vegetation field derives from the climate and terrain already
+  computed — net primary productivity from temperature and moisture (the Miami
+  model is a two-line empirical fit; Lieth), canopy from productivity and
+  disturbance, fungal load from moisture and deadwood. This is the layer that
+  finally gives the *terrestrial* phenomena the observation path is starved of:
+  a flowering, a mast year, a mushroom flush, a wildfire are all phenomena a
+  community observes, and they are exactly what a low-sky-attention species —
+  the deep-dweller pantheon The Eyes deferred — would build its gods from.
+  Funga earns its own billing rather than folding into "plants": a mycelial
+  network under a forest is infrastructure a fungus-attentive species reads the
+  way another reads stars, and the parasitic fungus is a disease-ecology bridge
+  to BIO-5. **Lab candidate:** productivity against latitude should reproduce
+  the real biomass gradient.
+
+- **Fauna on the fast–slow axis** *(medium; BIO-2 already holds the frame)*.
+  The life-history axis — body size, offspring number, lifespan, investment
+  covarying — was written for peoples, but it is the *general* animal frame,
+  and the SRD corpus Y2-1 mined for kobolds already spans the whole beast range
+  (the measurement frame that "spans peoples and beasts," noted then). Animals
+  and fish are drawn, not catalogued: a species is a point in (size, trophic
+  level, life-history speed, habitat) and its ecological role — predator, prey,
+  forage, pest — falls out. Predation and forage become fields feeding
+  subsistence (a herding or fishing mode is a fauna field made legible) and
+  hazard (the superordinate-threat damper on war, one of MAP-9's counterweights,
+  finally gets its monster). The trophic pyramid is a carrying-capacity term,
+  not a food-web simulation. **Lab candidate:** predator density should track
+  prey productivity with the classic lag.
+
+- **Domestication and agriculture** *(high; the load-bearing one)*. This is
+  where the biosphere routes into everything already built. Agriculture is not
+  a technology the peoples *have*; it is the culture layer *harnessing* the
+  biosphere fields — a staple crop is the highest-productivity cultivable point
+  of the local flora field, and which staple it is (grain, tuber, rice, none)
+  sets the whole downstream. The project already leans on this from two
+  directions without having it: SOC-2's gender arrangements take the Boserup
+  plough hypothesis (plough agriculture, heavy and grip-strength-biased,
+  concentrates field labour by sex) as an *input it cannot yet compute*, and
+  BIO-5's nightsoil economy assumes a fertility cycle there is no farming to
+  close. Agriculture supplies both. It also supplies the first real *history*:
+  a harvest is a paleoclimate draw (MAP-6) against a carrying-capacity ceiling
+  (MAP-7), so **famine is derivable, dated, and downstream of orbital
+  mechanics** — the Milankovitch glacial the frontier already wants, felt as
+  hunger. And domestication is bidirectional in the gene–culture sense already
+  in the lineage: the dairying-drives-lactase sweep is domestication seen from
+  the genome. **Lab candidate:** staple against biome, and the plough-cell
+  fraction SOC-2 will consume, both preregisterable.
+
+- **Ethnobotany and the pharmacopoeia** *(medium; a near-term religion
+  extension)*. The Eyes made religion consume phenomena; a psychoactive or
+  sacred substance is simply another **phenomenon source** — a
+  substance-mediated observation a community can have — so a mushroom cult, a
+  fermented-milk rite, a sacred-egg taboo become pantheon deities and
+  belief-facts by the *exact* genesis path the sun and moon already travel,
+  with no new religion code. What makes it Hornvale rather than flavour is that
+  three systems already in the lineage decide its content deterministically,
+  from opposite ends. **Which substances exist** is a biosphere field (the
+  flora/funga/fauna above — a particular mushroom, a vine, milk from a
+  particular domesticate). **Which are metabolically active in a given species**
+  is gene–culture: alcohol dehydrogenase and the fermentation sweep are already
+  named in BIO-4, so a substance that intoxicates one people is inert or poison
+  to another — the divergence engine The Eyes ran on perception, run on
+  chemistry. **Which active substances are *sacred* versus *taboo* versus
+  *profane*** is Mary Douglas's purity grid, BIO-5's one-engine-four-rituals
+  classifier applied to ingestion: matter taken into the body is the most
+  policed boundary there is, so entheogen, dietary law, and pollution rule are
+  one output. The split is clean and very Hornvale — existence is fields,
+  activity is genetics, sacredness is the culture vector, three layers meeting
+  on a mushroom. **Lab candidate:** across a census, sacred-substance class
+  should track subsistence and purity-grid coordinates, never seed noise.
+
+---
+
+## Technology as capability thresholds
+
+The instinct here is a tech tree, and the tech tree is the ontology trap
+wearing an engineer's hat — a directed graph of nodes you "research," a
+progress scalar, a civilisation with a *level*. Reject it the way the project
+rejects the alignment axis (REJ-2): it collapses a rich derived situation into
+a lookup. A technology in Hornvale is not a node a people unlocks; it is a
+**capability threshold the world crosses when a computed bar is cleared** —
+biome resources × subsistence mode × accumulated surplus — and its interest is
+entirely in *what its crossing changes downstream*, which is always demography
+and social structure, never a number that goes up. Coarse constrains fine, as
+everywhere: a capability, once available, refines what a settlement can be and
+never contradicts the physics beneath it.
+
+- **The capability-threshold frame** *(high; the governing idea)*. Each
+  capability is a predicate over already-computed fields plus a consequence
+  that routes into a system that already exists. Storage — a granary, a
+  smokehouse — is a threshold on surplus and a *cause* of more of it: it raises
+  the carrying-capacity ceiling (MAP-7) and lengthens the time horizon a
+  culture can act on (the psychology vector's own axis). No capability is worth
+  adding whose consequence is not already a term somewhere; that test keeps the
+  set small and every addition load-bearing, the same discipline the expressive
+  cluster passes.
+
+- **The pyrotechnology ladder** *(medium; the richest chain)*. Fire is one
+  lever with rising temperature thresholds, and the real archaeological
+  sequence is a temperature ladder, not a tree: cooking, then pottery and
+  ceramics (storage and cuisine, and the potter's purity associations feed
+  BIO-5), then — at kiln temperatures — smelting, then metallurgy, whose
+  products are tools that raise agricultural yield, weapons that reprice raiding
+  in MAP-9's war-cost damper, and coinage, which is the *exchange* axis of
+  SOC-1's social-structure vector made physical. Each rung is a threshold on
+  fuel (a flora field) and skill (a craft rung the culture ladder already
+  grows). Metallurgy is the chain's centre of gravity because it is the rung
+  that most demands the layer below it.
+
+- **Extraction and the underworld's ores** *(medium; couples to MAP-10)*.
+  Mining and ore refinement are the capability that cannot be faked on the
+  surface: they need ore as a terrain field (a genesis-time draw over the
+  tectonic globe, the way elevation and unrest already are) and the vertical
+  dimension to reach it. Refining is a carrying-capacity *sink* — it burns fuel
+  and labour a settlement must be able to spare — and a contact-zone prize, so
+  an ore body is exactly the aligned cleavage the persecution and contact items
+  (MAP-9, MAP-9b) predict conflict over. The kobolds, already authored as
+  deep-dwelling tunnel-builders, are the people this most obviously wants:
+  their psychology — long time horizon, entrenched-at-home threat response — is
+  a mining economy's psychology, waiting for the terrain to dig into.
+
+---
+
+## The underworld — the vertical dimension
+
+Terrain is a surface: a globe of cells with elevation, drainage, unrest. It has
+no *under*. Yet the second people the project shipped are deep-dwellers, mining
+wants somewhere to descend, and a whole class of phenomena — the lightless, the
+echoing, the still — has no venue in a sky-and-surface world. The underworld is
+the vertical dimension, and it is tractable if taken in the project's usual
+order: coarse before fine, features before layers.
+
+- **Cave mouths as cell features first** *(medium; the cheap first tier)*.
+  Before any subterranean layer, a karst/cave field over the existing globe —
+  derivable from lithology and hydrology, since limestone plus water carves and
+  the predictor is simple — marks which surface cells hold a descent. That
+  alone gives mining its entry, the deep-dweller flagship a reason to sit where
+  it sits, and the almanac a new kind of place. **Lab candidate:** cave-cell
+  fraction should track the wet-limestone intersection.
+
+- **The subterranean venue** *(low; the deferred deep tier)*. A true
+  under-layer — depth as a coordinate, settlements that descend, a lightless
+  ecology where the funga of the biosphere layer comes into its own because
+  nothing photosynthesises — is the ambitious end, and the honest note is that
+  it doubles the spatial model and should wait until a people genuinely lives
+  down there rather than merely atop a cave. When it comes, it poses a clean
+  question back to The Eyes' machinery: the underworld needs its own **venue
+  vocabulary** (the lightless has no day sky), so a subterranean phenomenon
+  layer is the natural second customer of the venue enum perception introduced
+  — evidence the seam was cut in the right place.
 
 ---
 

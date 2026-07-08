@@ -50,6 +50,7 @@ spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
 | MAP-7 | Population as a field, settlements as condensations — carrying-capacity prior, era-ticked genesis history to the ledger                         | elaborated      | high (calib)         | [frontier §map](frontier.md#the-frontier-map)                 |
 | MAP-8 | Writing as a culture acquiring its own ledger — oral = phenomena, literate = freezing phenomena into facts; borrowed scripts as contact fossils | elaborated      | high (mechanics)     | [frontier §map](frontier.md#the-frontier-map)                 |
 | MAP-9 | Contact and exchange — the interaction layer; contact-zone regimes derived from overlap × asymmetry × psychology                                | elaborated      | high (trade formula) | [frontier §map](frontier.md#the-frontier-map)                 |
+| MAP-10 | The underworld — the vertical dimension of terrain: cave mouths and karst as cell features first, then a subterranean settlement layer; the deep-dweller venue-vocabulary question the kobolds already pose | raw | med | [frontier §underworld](frontier.md#the-underworld--the-vertical-dimension) |
 
 ### Ideas under the interaction layer (MAP-9)
 
@@ -119,6 +120,27 @@ spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
 | BIO-3 | Dimorphism and mating system derived (Bateman–Trivers); sex-determination as a species parameter (haplodiploidy → eusociality via Hamilton)                         | elaborated | high                    | [frontier §biological](frontier.md#the-biological-substrate--body-reproduction-and-deep-time) |
 | BIO-4 | Gene–culture coevolution — bidirectional era-tick; allele/trait fields under a breeder's equation; lactase/amylase/dark-vision, dated sweeps as calibration anchors | elaborated | high (calib)            | [frontier §biological](frontier.md#the-biological-substrate--body-reproduction-and-deep-time) |
 | BIO-5 | Excretion, sanitation, purity — sanitation as a carrying-capacity term; Douglas pollution grid generating latrine/taboo/caste; nightsoil as fertility input         | elaborated | med                     | [frontier §biological](frontier.md#the-biological-substrate--body-reproduction-and-deep-time) |
+
+---
+
+## The biosphere — the living substrate
+
+| ID    | Idea                                                                                                                                                                              | Status | Conf | Where                                                                 |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ---- | --------------------------------------------------------------------- |
+| BIO-6 | Flora & funga as fields — vegetation/fungal cover as typed functions over (space × climate) atop the biome prior; the terrestrial phenomena SEQ-4's observation path and the deep-dweller pantheon both want | raw    | med  | [frontier §biosphere](frontier.md#the-biosphere--the-living-substrate) |
+| BIO-7 | Fauna on the life-history axis — animals/fish drawn through BIO-2's fast–slow frame; the SRD corpus already spans beasts; predator/prey/forage as fields feeding subsistence and hazard | raw    | med  | [frontier §biosphere](frontier.md#the-biosphere--the-living-substrate) |
+| BIO-8 | Domestication & agriculture — the culture layer harnessing biosphere fields; staple crop per biome, the Boserup plough (SOC-2's input), nightsoil (BIO-5), famine as paleoclimate (MAP-6) × carrying capacity (MAP-7) | raw    | high | [frontier §biosphere](frontier.md#the-biosphere--the-living-substrate) |
+| BIO-9 | Ethnobotany & the pharmacopoeia — psychoactive/sacred substances as a ritual phenomena source for religion, gated by metabolism (BIO-4) and the purity grid (BIO-5); existence is fields, activity is genetics, sacredness is the culture vector | raw    | med  | [frontier §biosphere](frontier.md#the-biosphere--the-living-substrate) |
+
+---
+
+## Technology
+
+| ID     | Idea                                                                                                                                                                        | Status | Conf | Where                                                                       |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ---- | --------------------------------------------------------------------------- |
+| TECH-1 | Technology as capability thresholds, not a tech tree — a capability is crossed when biome resources × subsistence × surplus clear a bar; its consequence routes into demography and social structure, never a "tech level" scalar | raw    | high | [frontier §technology](frontier.md#technology-as-capability-thresholds)      |
+| TECH-2 | The pyrotechnology ladder — pottery/ceramics gate storage→surplus→the culture rung ladder; kiln temperature gates smelting; metallurgy yields tools, weapons (MAP-9's war-cost damper), and coinage (SOC-1's exchange axis) | raw    | med  | [frontier §technology](frontier.md#technology-as-capability-thresholds)      |
+| TECH-3 | Extraction & the underworld's ores — mining/refinement needs the vertical terrain layer (MAP-10) plus ore as a terrain field; refining is a carrying-capacity sink and a contact-zone prize (MAP-9) | raw    | med  | [frontier §technology](frontier.md#technology-as-capability-thresholds)      |
 
 ---
 
