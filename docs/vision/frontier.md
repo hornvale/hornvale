@@ -395,6 +395,25 @@ even if it ships with only one medium lit.
   *Near-term hook:* when Campaign 4's settlement tiers are designed, tier 1
   should be a layout grammar, not a population count at a point.
 
+- **Martial traditions** *(medium; couples to MAP-9's oppression layer)*. Not
+  choreography — the project needs no fight simulation — but the *tradition and
+  its significance*, which arise as a downstream consequence of **disarmament
+  under coercion**. A subjugated people denied weapons — the enslaved goblins a
+  bugbear master will not arm, MAP-9a's slave rung resolved across a contact
+  zone — encodes combat as something the master will tolerate: dance, worship,
+  play. The Earthly anchors are exact: capoeira disguised as dance in the
+  Brazilian *quilombos*, Okinawan *te* developed under a weapons ban. The
+  mechanism predicts both *where* such a tradition appears (an aligned cleavage
+  with weapon asymmetry, the same geometry MAP-9b reads for persecution) and
+  *what* it fuses with — whichever ritual and expressive forms the oppressed
+  are already permitted. The body it works through is BIO-1; the thing
+  transmitted is a lineage of mentorship and register, so it is an
+  expressive-culture output with an interaction-layer *cause* — the *Karate
+  Kid* layer, where the discipline carries the meaning and the fighting is
+  almost incidental. **Lab candidate:** unarmed martial lineages should
+  concentrate in disarmed subordinate populations, not among the armed and
+  free.
+
 ---
 
 ## The species-psychology substrate — the layer beneath the cluster
