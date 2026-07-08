@@ -35,6 +35,7 @@ map of the whole documentation set is [`docs/README.md`](../README.md).
 - [The biosphere — the living substrate](#the-biosphere--the-living-substrate) — flora, funga, fauna, agriculture, the pharmacopoeia
 - [Technology as capability thresholds](#technology-as-capability-thresholds) — thresholds, not a tech tree
 - [The underworld — the vertical dimension](#the-underworld--the-vertical-dimension) — caves, mining, the deep
+- [The cultural-memory economy](#the-cultural-memory-economy--knowledge-as-a-maintained-thing) — upkeep, decay, the channels, institutions
 - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
 - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
 - [Sequencing the deep-time stack](#sequencing-the-deep-time-stack)
@@ -822,6 +823,101 @@ order: coarse before fine, features before layers.
 
 ---
 
+## The cultural-memory economy — knowledge as a maintained thing
+
+*(Medium confidence; the spine formula-adjacent, the cluster around it
+literature-checked.)* Every system above assumes a culture *has* its
+knowledge. None asks what it costs to keep. The Library of Alexandria is the
+standing rebuke: not burned by Caesar in a night but let go over centuries,
+because papyrus rots and a scroll survives only while someone pays a scribe
+to copy it before it does. Roger Bagnall's inversion is the thesis in one
+line — *the fact that the library was allowed to die shows the dark age had
+already arrived.* Loss is the default; survival is the anomaly that needs
+explaining. This section is the frame that turns that observation into
+mechanism, and its first move completes item 8: **writing freezes phenomena
+into facts, and this is the melt.** MAP-8 runs one way today; a fact whose
+upkeep lapses should slide back down the ledger — durable fact → decaying
+phenomenon → myth (item 4's territory) — so the two systems close into a
+cycle rather than a ratchet.
+
+**MEM-1 — the memory economy** *(the spine; elaborated)*. Every retained
+fact carries an **upkeep cost**: the scribe recopying the scroll, the master
+drilling the apprentice, the cantor rehearsing the cycle. A culture holds a
+fact only while **surplus × will** exceeds that upkeep. When the product
+falls below the cost — a lean century, a war, a shift in what the powerful
+value — the fact is not dramatically destroyed but *silently released*, and
+the institution that curated it is abandoned. So institutional death is a
+**symptom, not a cause**: the abandoned library is downstream of a regress
+already underway, and the fire the chronicles blame is the *myth a culture
+tells about a loss that was really negligence* — exactly Hornvale's grain,
+where the witnessed event is a story and the true cause is a slow field. The
+verification story is as clean as MAP-7's: **Lab candidate** — survival
+curves of recorded facts against a surplus trace, and founding/abandonment
+rates of memory institutions, are measurable distributions, not vibes.
+
+**The subdivision that keeps this tractable: cut by transmission channel.**
+"Cultural inertia" as one substance generalizes into worthlessness; the
+scholarship's escape is to refuse the monolith and model the *channel*,
+because each has its own physics — durability, upkeep cost, fidelity, and a
+characteristic failure mode. Three channels, and Hornvale already houses each:
+
+- **Inscribed** (clay, scroll, stone) — high durability per copy, but rots
+  unless recopied; the failure mode is the unpaid scribe. This is MAP-8.
+- **Incorporated** (the body — ritual, dance, craft, the martial lineage of
+  EXP-8) — Paul Connerton's *inscribing vs. incorporating* distinction; the
+  carrier is BIO-1's body and the failure mode is absolute: the practice
+  dies with the last practitioner, leaving no fragment to reconstruct from.
+- **Oral-formulaic** (song, epic, genealogy) — where the **redundancy is the
+  preservation technology** (Parry–Lord, already the engine behind EXP-5's
+  drama-as-error-correcting-code); the failure mode is drift into myth, slow
+  and reconstructable, which is why item 4's phylogenetics has anything to
+  work on.
+
+The memory economy is the accounting layer that runs *over* all three
+channels; the channel sets the constants.
+
+Three raw sub-mechanisms hang off the spine, captured here as stubs:
+
+- **MEM-2 — the floating gap** *(raw)*. Jan Assmann's finding: living
+  **communicative memory** reaches back only ~3 generations (~80 years),
+  after which a memory is either institutionalised into **cultural memory**
+  or lost outright. That transition *is* the precise Alexandria moment — the
+  crisis window where the last witness dies and the fact either got written
+  down or didn't. A natural era-tick event at genesis (MAP-7's machinery),
+  and the sharpest single lever on what a later historiography can recover.
+
+- **MEM-3 — cultural stickiness** *(raw)*. Cultural-attraction theory
+  (Sperber; Boyer; Morin): emotionally salient, **minimally counterintuitive**
+  content decays slower *independent of institutional support*. A per-item
+  modulator on the decay rate — why the myth outlives the treatise, why a
+  ghost story survives a tax record. It makes MEM-1's melt selective rather
+  than uniform, and hands item 4 a principled noise model.
+
+- **MEM-4 — preservation as craft** *(raw)*. The active-voice complement to
+  MEM-1's passive rot: a conservator institution — priesthood, conservatory,
+  scribal school, a guild that "keeps the old songs" — spends surplus
+  *specifically to lower* the decay rate of chosen items. This is the
+  liturgical **damping field** item 3 already names, seen from the memory
+  side: it manufactures diglossia, frozen ceremonial registers, and dead
+  languages preserved long past their last native speaker. What a culture
+  chooses to pay to keep is a portrait of what it holds sacred.
+
+**MEM-5 — institutions at large** *(raw; the deliberate deferral)*. The
+generalisation is real and fertile, and the discipline is to name it without
+chasing it yet. An institution, in the limit, is a **durable commitment of
+surplus to a function** — memory (the library), legitimacy (the temple),
+exchange (the mint), skill (the guild, the martial school) — each with a
+founding condition, an upkeep cost, a patronage dependency, and a
+founding→neglect→death lifecycle structurally identical to MAP-7's
+settlements. Memory is then one cargo among many, and the whole cluster above
+becomes the worked example of a general theory of how cultures build and
+abandon the things that carry them. That theory is explicitly **out of
+MEM-1's scope for now** — the scoping line is the guard rail against the
+generalise-into-worthlessness failure the cluster was designed to avoid.
+Captured so it is not lost; deferred so MEM-1 stays checkable.
+
+---
+
 ## Provenance interrogation — the `explain` verb
 
 *(High confidence; small; no new architecture required.)*
@@ -961,6 +1057,12 @@ manufactured legitimation of extraction); Robert Trivers and A. J. Bateman
 (parental investment and sexual selection); W. D. Hamilton (kin selection,
 haplodiploidy, and eusociality); Peter Richerson & Robert Boyd and
 L. L. Cavalli-Sforza (gene–culture coevolution); the lactase-persistence and
-amylase literatures (dated selective sweeps as calibration anchors).
+amylase literatures (dated selective sweeps as calibration anchors); Roger
+Bagnall on the death of the Library of Alexandria (negligence over
+catastrophe; decay as the symptom of a regress already arrived); Paul
+Connerton, *How Societies Remember* (inscribing versus incorporating memory);
+Jan and Aleida Assmann (communicative versus cultural memory and the floating
+gap); Dan Sperber, Pascal Boyer, and Olivier Morin (cultural attraction and
+minimally-counterintuitive content as a stability bias).
 The map moves when the reading feeds it — which is the collaborator's role,
 demonstrated.

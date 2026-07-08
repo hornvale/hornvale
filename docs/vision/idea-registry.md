@@ -151,6 +151,23 @@ spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
 
 ---
 
+## The cultural-memory economy
+
+Knowledge as a thing that must be *maintained*, and decays when it isn't —
+the missing inverse of MAP-8. Cut by transmission channel so it stays
+tractable; the spine is checkable, the generalisation is deliberately
+deferred.
+
+| ID    | Idea                                                                                                                                                                                       | Status     | Conf                | Where                                                                            |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------- | -------------------------------------------------------------------------------- |
+| MEM-1 | The memory economy — every retained fact carries an upkeep cost; held only while surplus × will exceeds it, else it melts fact → phenomenon → myth (the inverse of MAP-8); institutional death is a *symptom* of regress, not its cause (Bagnall); survival curves are a Lab metric | elaborated | med (spine)         | [frontier §cultural-memory](frontier.md#the-cultural-memory-economy--knowledge-as-a-maintained-thing) |
+| MEM-2 | The floating gap — living communicative memory reaches ~3 generations, then a memory is institutionalised into cultural memory or lost (Assmann); the precise Alexandria moment, an era-tick event gating what historiography can recover | raw        | med                 | [frontier §cultural-memory](frontier.md#the-cultural-memory-economy--knowledge-as-a-maintained-thing) |
+| MEM-3 | Cultural stickiness — emotionally salient, minimally-counterintuitive content decays slower independent of institutional support (Sperber/Boyer/Morin); a per-item modulator making MEM-1's melt selective, and item 4's principled noise model | raw        | med                 | [frontier §cultural-memory](frontier.md#the-cultural-memory-economy--knowledge-as-a-maintained-thing) |
+| MEM-4 | Preservation as craft — a conservator institution spends surplus specifically to *lower* the decay rate of chosen items; the active-voice complement to MEM-1's rot, and the memory-side reading of MAP-3's liturgical damping field (diglossia, dead languages) | raw        | med                 | [frontier §cultural-memory](frontier.md#the-cultural-memory-economy--knowledge-as-a-maintained-thing) |
+| MEM-5 | Institutions at large — an institution as a durable commitment of surplus to a function (memory/legitimacy/exchange/skill), each with a MAP-7-style founding→neglect→death lifecycle; memory is one cargo among many. The deliberate deferral: captured so it is not lost, scoped out of MEM-1 as the guard against generalising into worthlessness | raw        | low (generalise)    | [frontier §cultural-memory](frontier.md#the-cultural-memory-economy--knowledge-as-a-maintained-thing) |
+
+---
+
 ## Tools, verbs, and the Lab
 
 | ID     | Idea                                                                                                                                             | Status          | Conf         | Where                                                                       |
