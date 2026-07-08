@@ -57,6 +57,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     vec![
         ("religion", "root stream for religion generation"),
         ("religion/epithet", "deity epithet pick"),
+        (
+            "religion/kobold/epithet",
+            "deity epithet pick (kobold pantheon)",
+        ),
     ]
 }
 
@@ -108,11 +112,16 @@ pub struct Belief {
 /// salient deity presides (`high-god`) in a stratified society; the cult form
 /// follows the priesthood. Phenomena arrive salience-descending. Returns the
 /// pantheon in that order (element 0 is the head).
+///
+/// `stream_qualifier`: `None` draws epithets from the legacy
+/// `religion/epithet` stream; `Some(s)` from `religion/<s>/epithet` —
+/// permanent labels, ADR 0006.
 pub fn genesis(
     world: &mut World,
     community: EntityId,
     phenomena: &[Phenomenon],
     society: &SocietySummary,
+    stream_qualifier: Option<&str>,
 ) -> Result<Vec<EntityId>, LedgerError> {
     // Members: everything above the floor; else the single most salient; else none.
     let above = phenomena
@@ -135,11 +144,11 @@ pub fn genesis(
     } else {
         "folk"
     };
-    let mut stream = world
-        .seed
-        .derive(streams::ROOT)
-        .derive(streams::EPITHET)
-        .stream();
+    let base = world.seed.derive(streams::ROOT);
+    let mut stream = match stream_qualifier {
+        None => base.derive(streams::EPITHET).stream(),
+        Some(q) => base.derive(q).derive(streams::EPITHET).stream(),
+    };
 
     // Distinct epithets within a pantheon: draw an index, advance past any
     // already used (deterministic; pools of 6 cover the realistic pantheon
@@ -242,6 +251,29 @@ pub fn cult_form_of(world: &World) -> Option<String> {
     }
 }
 
+/// The beliefs held by one community, in commit order (element 0 is the
+/// pantheon's most salient deity — its head where one presides).
+pub fn beliefs_held_by(world: &World, community: EntityId) -> Vec<Belief> {
+    beliefs_of(world)
+        .into_iter()
+        .filter(|b| {
+            matches!(
+                world.ledger.value_of(b.id, HELD_BY),
+                Some(Value::Entity(c)) if *c == community
+            )
+        })
+        .collect()
+}
+
+/// The cult form of one community's pantheon, from its first belief.
+pub fn cult_form_held_by(world: &World, community: EntityId) -> Option<String> {
+    let first = beliefs_held_by(world, community).into_iter().next()?;
+    match world.ledger.value_of(first.id, CULT_FORM) {
+        Some(Value::Text(t)) => Some(t.clone()),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -274,6 +306,13 @@ mod tests {
         ]
     }
 
+    fn society() -> SocietySummary {
+        SocietySummary {
+            strata: 5,
+            has_priesthood: true,
+        }
+    }
+
     #[test]
     fn pantheon_takes_every_phenomenon_above_the_floor() {
         let (mut w, c) = world(42);
@@ -281,7 +320,7 @@ mod tests {
             strata: 5,
             has_priesthood: true,
         };
-        let ids = genesis(&mut w, c, &sky(), &society).unwrap();
+        let ids = genesis(&mut w, c, &sky(), &society, None).unwrap();
         assert_eq!(
             ids.len(),
             3,
@@ -302,6 +341,7 @@ mod tests {
                 strata: 5,
                 has_priesthood: true,
             },
+            None,
         )
         .unwrap();
         let beliefs = beliefs_of(&w);
@@ -328,6 +368,7 @@ mod tests {
                 strata: 2,
                 has_priesthood: false,
             },
+            None,
         )
         .unwrap();
         let _ = ids;
@@ -348,6 +389,7 @@ mod tests {
                 strata: 5,
                 has_priesthood: true,
             },
+            None,
         )
         .unwrap();
         assert_eq!(cult_form_of(&w).as_deref(), Some("organized"));
@@ -360,6 +402,7 @@ mod tests {
                 strata: 2,
                 has_priesthood: false,
             },
+            None,
         )
         .unwrap();
         assert_eq!(cult_form_of(&w2).as_deref(), Some("folk"));
@@ -381,6 +424,7 @@ mod tests {
                 strata: 5,
                 has_priesthood: true,
             },
+            None,
         )
         .unwrap();
         let head = &beliefs_of(&w)[0];
@@ -401,7 +445,8 @@ mod tests {
                 &SocietySummary {
                     strata: 5,
                     has_priesthood: true,
-                }
+                },
+                None,
             )
             .unwrap()
             .is_empty()
@@ -424,6 +469,7 @@ mod tests {
                 strata: 2,
                 has_priesthood: false,
             },
+            None,
         )
         .unwrap();
         assert_eq!(ids.len(), 1, "never godless while something is observed");
@@ -442,6 +488,7 @@ mod tests {
                     strata: 5,
                     has_priesthood: true,
                 },
+                None,
             )
             .unwrap();
             beliefs_of(&w)
@@ -450,5 +497,58 @@ mod tests {
                 .collect::<Vec<_>>()
         };
         assert_eq!(run(), run());
+    }
+
+    #[test]
+    fn a_qualified_stream_draws_independently_of_the_legacy_stream() {
+        let (mut w, c) = world(42);
+        let c2 = w.ledger.mint_entity();
+        genesis(&mut w, c, &sky(), &society(), None).unwrap();
+        genesis(&mut w, c2, &sky(), &society(), Some("kobold")).unwrap();
+        let all = beliefs_of(&w);
+        let held_c: Vec<_> = beliefs_held_by(&w, c);
+        let held_c2: Vec<_> = beliefs_held_by(&w, c2);
+        assert_eq!(held_c.len() + held_c2.len(), all.len());
+        assert_eq!(held_c.len(), 3);
+        assert_eq!(held_c2.len(), 3);
+        // Same phenomena, same code — but independent streams, so the epithet
+        // sequences must not be forced equal. (They may coincide per-deity by
+        // chance; the tenets differing anywhere is the check.)
+        let tenets = |bs: &[Belief]| bs.iter().map(|b| b.tenet.clone()).collect::<Vec<_>>();
+        assert_ne!(
+            tenets(&held_c),
+            tenets(&held_c2),
+            "kobold epithets replayed the goblin stream — the qualifier is not wired"
+        );
+    }
+
+    #[test]
+    fn cult_form_is_read_per_community() {
+        let (mut w, c) = world(42);
+        let c2 = w.ledger.mint_entity();
+        genesis(
+            &mut w,
+            c,
+            &sky(),
+            &SocietySummary {
+                strata: 5,
+                has_priesthood: true,
+            },
+            None,
+        )
+        .unwrap();
+        genesis(
+            &mut w,
+            c2,
+            &sky(),
+            &SocietySummary {
+                strata: 2,
+                has_priesthood: false,
+            },
+            Some("kobold"),
+        )
+        .unwrap();
+        assert_eq!(cult_form_held_by(&w, c).as_deref(), Some("organized"));
+        assert_eq!(cult_form_held_by(&w, c2).as_deref(), Some("folk"));
     }
 }

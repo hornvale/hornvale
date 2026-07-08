@@ -647,7 +647,7 @@ pub fn build_world(
                 has_priesthood: castes.iter().any(|c| c == "shaman"),
             };
             let seen = observed_phenomena(&world, 0.0)?;
-            hornvale_religion::genesis(&mut world, flagship, &seen, &society)?;
+            hornvale_religion::genesis(&mut world, flagship, &seen, &society, None)?;
         }
     }
 
