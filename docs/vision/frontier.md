@@ -39,6 +39,7 @@ map of the whole documentation set is [`docs/README.md`](../README.md).
   - [The underworld — the vertical dimension](#the-underworld--the-vertical-dimension)
   - [The cultural-memory economy — knowledge as a maintained thing](#the-cultural-memory-economy--knowledge-as-a-maintained-thing)
   - [Prophecy and the shape of time](#prophecy-and-the-shape-of-time)
+  - [The projection layer](#the-projection-layer)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
   - [Sequencing the deep-time stack](#sequencing-the-deep-time-stack)
@@ -1030,6 +1031,91 @@ discipline is to resist a prophecy campaign until (a) the attractor's
 plausibility floor is pinned and (b) it is shown that the religion stack
 cannot already express it — the same restraint the memory economy's MEM-5
 deferral models.
+
+---
+
+## The projection layer
+
+*(Medium confidence on the framing, high on its fit to machinery already
+built, low on the one mechanism that would make it buildable — named at the
+end. This is a governing principle, not a system: it reorganizes several
+sections above rather than adding a domain.)*
+
+The simulation keeps an observable record — settlements, contact, subsistence,
+war — and leaves a vast unobservable remainder: what a people fears, resents,
+grieves, and cannot say. A **monster is how the second becomes the first.** The
+claim, general enough to name a layer, is that a monster is the projection of a
+culture's *latent* psychology into an *observable phenomenon*, unattributed to
+its source and unrecognised by the culture that produced it. The revenant is a
+society's own buried guilt; the vampire its fear of an aristocracy that feeds;
+the zombie its dread of a self dissolved into the mass; the ghost its terror of
+being forgotten and the unreadability of the dead; the lich its fear that
+ambition outlives its purpose. None of these is an authored correspondence —
+they are what the horror canon already shows — and the wager is that they are
+*derivable* rather than assigned.
+
+**It is the other half of what religion already does.** The phenomena layer is
+the sim's universal read, and religion turns phenomena into gods — a culture
+inferring a hidden agency behind a flood or an eclipse. The projection layer
+names the complementary move: some of the phenomena a culture infers over have
+no external referent at all; their true subject is the culture's own interior,
+pushed outward and mistaken for a thing in the world. Gods and monsters are the
+same mechanism at two polarities of feeling — reverence and dread — and both
+are inferred over (UNI-1) without the inferrer seeing the source.
+
+**It is also the twin of humour.** The expressive cluster frames jokes as
+benign-violation norm-probes (EXP-4): a joke lands when it violates a norm the
+audience holds, *safely*. Horror is the same violation held *unsafely* — the
+malign twin. A culture's bestiary and its comedy are therefore one organ read
+from two sides: the same survey of what it holds sacred and what it fears to
+lose, mapped once in laughter and once in monsters. A people with no anxieties
+has an empty bestiary for the same reason a humourless one has an empty joke
+set.
+
+**The three faces close into one thesis.** Monsters project the present-and-past
+interior — guilt, fear, resentment. Prophecy (see the previous section)
+projects the *future* interior — the doom foreseen is very often the doom
+feared, hope and dread extrapolated forward and read back as foreknowledge. The
+cultural-memory economy is the *retained* interior, what a people spends to keep
+of itself. All three are latent psychological state pushed into the phenomena
+layer and then inferred over as if external. This completes the unification
+thesis: UNI-1 held that science, magic, and theology are inference over a hidden
+ruleset, and the projection layer adds that **part of that ruleset's output is
+the inferrer's own psychology** — so a culture doing divination or demonology is
+partly reading itself in a mirror it cannot recognise as a mirror.
+
+**What keeps it honest is the racecraft shape.** The discipline that separates
+this from authored allegory is exactly SOC-5's: the anxiety must be *derived*
+(from subsistence shortfall, from a suppressed injustice sitting in the true
+ledger, from a niche-overlap threat, from the psychology vector), the projection
+into a phenomenon *mechanical*, and the culture's *misreading* of that phenomenon
+the output. The instant one writes "this people fears X, therefore spawn monster
+Y," the whole thing collapses into the lookup table decision 0021 forecloses.
+Done correctly, the payoff is the epistemic layer's richest object yet: the gap
+between the derived latent state (true ledger) and the projected, misread
+creature (the chronicle's monster), and the Lab metric is whether the bestiary a
+culture generates actually tracks its material stressors rather than an author's
+taste.
+
+**The unsolved mechanism** is the mirror of fate-rigidity's plausibility floor:
+how to compute "this culture's dominant anxiety" from the ledger, and render it
+into a phenomenon, without a hand-authored anxiety-to-monster lookup. The honest
+sketch is that the anxieties are *already in the sim* as salient unresolved
+tensions — a subsistence deficit, a repressed crime, a status inversion, a
+predator on the border — each with a signature; the monster's *source* is the
+tension and its *form* is drawn through the perception machinery (EXP-3) and the
+expressive grammar (EXP-1). The open problem is calibration: making the mapping
+read as inevitable rather than arbitrary, the same taste-and-Lab burden the
+whole expressive cluster carries.
+
+**Sequencing.** Almost certainly not its own domain — a mode of the religion,
+psychology, and epistemic stack, held under the same restraint MEM-5 and the
+prophecy section model. It waits on the psychology substrate (PSY), the
+epistemic layer (MAP-2), and enough material-tension signals to derive from. But
+its cheapest instance already exists in miniature: the revenant (UNI-11), where
+the latent state is *already a ledger fact* (a buried injustice) and the
+projection is nearly mechanical. That is where to prototype the principle before
+trusting it with anything softer.
 
 ---
 
