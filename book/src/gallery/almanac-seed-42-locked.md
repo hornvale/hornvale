@@ -34,80 +34,80 @@ The highest land stands 3919 m above the sea.
 The air organizes into a single day–night overturning (tidally locked); 10 land biomes and 8 marine biomes cover the globe.
 Some 8% of the surface is habitable — land with water and a tolerable season.
 
-- **Bolugrak** — temperate-rainforest
-- **Mokishmok** — temperate-rainforest
-- **Gnator** — temperate-forest
-- **Boltorgna** — temperate-forest
-- **Thurzikdak** — alpine
-- **Uszvexthur** — temperate-forest
-- **Dakthur** — temperate-forest
-- **Sskvex** — temperate-forest
-- **Vexsskkra** — temperate-forest
-- **Thurkra** — temperate-forest
-- **Vexmir** — tropical-seasonal-forest
-- **Torgna** — tropical-seasonal-forest
-- **Bolgru** — tropical-seasonal-forest
-- **Mokish** — tropical-seasonal-forest
-- **Zagzagmok** — tropical-seasonal-forest
-- **Bolbolzag** — tropical-seasonal-forest
-- **Dakmirthur** — temperate-forest
-- **Torgna** — tropical-seasonal-forest
-- **Nartornar** — tropical-seasonal-forest
-- **Moktor** — tropical-seasonal-forest
-- **Ugnar** — tropical-seasonal-forest
-- **Zagish** — tropical-seasonal-forest
-- **Thurthurdak** — tropical-seasonal-forest
-- **Bolmok** — tropical-seasonal-forest
-- **Mirkek** — tropical-seasonal-forest
-- **Zagnarzag** — tropical-seasonal-forest
-- **Mirthur** — tropical-seasonal-forest
-- **Thurmir** — tropical-seasonal-forest
+- **Xngodfnokzhvad** — temperate-rainforest
+- **Vngaknod** — temperate-rainforest
+- **Zhfetzhvadnak** — temperate-forest
+- **Xnedsvobnged** — temperate-forest
+- **Rokro** — alpine
+- **Raqrogra** — temperate-forest
+- **Xarraqxak** — temperate-forest
+- **Rotxagrot** — temperate-forest
+- **Rraxo** — temperate-forest
+- **Rrarra** — temperate-forest
+- **Raqrrog** — tropical-seasonal-forest
+- **Ngatngebfnak** — tropical-seasonal-forest
+- **Zhvaknab** — tropical-seasonal-forest
+- **Zhxedzfabzhfak** — tropical-seasonal-forest
+- **Zveknodxngat** — tropical-seasonal-forest
+- **Zhvetzfok** — tropical-seasonal-forest
+- **Rraxora** — temperate-forest
+- **Ngedzhxatsfek** — tropical-seasonal-forest
+- **Zhxotsvodzhvob** — tropical-seasonal-forest
+- **Zhfetzhfet** — tropical-seasonal-forest
+- **Zhfabngod** — tropical-seasonal-forest
+- **Ngadfngakfnot** — tropical-seasonal-forest
+- **Ratrrarra** — tropical-seasonal-forest
+- **Sfotvnad** — tropical-seasonal-forest
+- **Rroqrrat** — tropical-seasonal-forest
+- **Zhxotzxabnod** — tropical-seasonal-forest
+- **Rotrro** — tropical-seasonal-forest
+- **Xokrrorra** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
 The land holds 28 settlement(s).
-The chief goblin settlement, Bolugrak, holds 522 souls amid temperate-rainforest.
-The chief kobold settlement, Thurzikdak, holds 328 souls amid alpine.
+The chief goblin settlement, Xngodfnokzhvad, holds 522 souls amid temperate-rainforest.
+The chief kobold settlement, Rokro, holds 328 souls amid alpine.
 
-The goblin village of **Bolugrak**, population 522.
+The goblin village of **Xngodfnokzhvad**, population 522.
 
-Bolugrak lives by farming.
+Xngodfnokzhvad lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 
-The kobold warren of **Thurzikdak**, population 328.
+The kobold warren of **Rokro**, population 328.
 
-Thurzikdak lives by fishing.
+Rokro lives by fishing.
 Its roles, lowest to highest: digger, elders.
 
 ## The Gods
 
 An organized priesthood tends a pantheon:
 
-> the Still Crown is a sun fixed forever above the day side; it has never departed and will never blink. *(who presides)*
+> Xngeknet the Sxodsxodsxodngod is ever: Xngeknet the Sxodsxodsxodngod watches unceasing. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> the Tidewalker departs and returns every 15.99 days; its absences are mourned and its returns feasted.
+> Vngodnetzhfod the Vnodxngetzhxed returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> the Waning Herald departs and returns every 32.55 days; its absences are mourned and its returns feasted.
+> Natxnok the Nadfngok returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-The warren of **Thurzikdak** keeps its own folk pantheon:
+The warren of **Rokro** keeps its own folk pantheon:
 
-> the Wheel-Turner departs and returns every 15.99 days; its absences are mourned and its returns feasted.
+> Rroqrroq Xoq comes back every 15.99 days. That's how it's always been. That's how it's always been. Rroqrroq is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> the Waning Herald departs and returns every 32.55 days; its absences are mourned and its returns feasted.
+> Ragrrotrok Rrakrrarra comes back every 32.55 days. That's how it's always been. That's how it's always been. Ragrrotrok is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> the Gold Warden is a sun fixed forever above the day side; it has never departed and will never blink.
+> Xokxok Xoxo is: Xokxok Xoxo is always watching. That's how it's always been. That's how it's always been. Xokxok is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 

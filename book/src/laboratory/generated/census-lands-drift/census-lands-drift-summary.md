@@ -576,3 +576,80 @@ Seeds 0..500 × 1 pin set(s); 500 rows; 0 refusals.
 | false | 62 | 12.4% |
 | absent | 4 | 0.8% |
 
+### phonotactic-validity-goblin — default
+
+| value | count | share |
+|---|---|---|
+| true | 498 | 99.6% |
+| false | 0 | 0.0% |
+| absent | 2 | 0.4% |
+
+### phonotactic-validity-kobold — default
+
+| value | count | share |
+|---|---|---|
+| true | 498 | 99.6% |
+| false | 0 | 0.0% |
+| absent | 2 | 0.4% |
+
+### epithet-honorific-goblin — default
+
+| value | count | share |
+|---|---|---|
+| true | 498 | 99.6% |
+| false | 0 | 0.0% |
+| absent | 2 | 0.4% |
+
+### epithet-honorific-kobold — default
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 498 | 99.6% |
+| absent | 2 | 0.4% |
+
+### name-length-goblin — default
+
+| value | count | share |
+|---|---|---|
+| < 2 | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 4) | 0 | 0.0% |
+| [4, 5) | 1 | 0.2% |
+| [5, 6) | 11 | 2.2% |
+| [6, 7) | 41 | 8.2% |
+| [7, 8) | 58 | 11.6% |
+| [8, 9) | 73 | 14.6% |
+| [9, 10) | 77 | 15.4% |
+| >= 10 | 237 | 47.4% |
+| absent | 2 | 0.4% |
+
+### name-length-kobold — default
+
+| value | count | share |
+|---|---|---|
+| < 2 | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 4) | 0 | 0.0% |
+| [4, 5) | 4 | 0.8% |
+| [5, 6) | 20 | 4.0% |
+| [6, 7) | 27 | 5.4% |
+| [7, 8) | 59 | 11.8% |
+| [8, 9) | 76 | 15.2% |
+| [9, 10) | 90 | 18.0% |
+| >= 10 | 222 | 44.4% |
+| absent | 2 | 0.4% |
+
+### name-collision-rate — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 0.01) | 336 | 67.2% |
+| [0.01, 0.02) | 5 | 1.0% |
+| [0.02, 0.05) | 84 | 16.8% |
+| [0.05, 0.1) | 43 | 8.6% |
+| [0.1, 0.2) | 25 | 5.0% |
+| [0.2, 0.4) | 6 | 1.2% |
+| >= 0.4 | 1 | 0.2% |
+
