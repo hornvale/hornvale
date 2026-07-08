@@ -7,5 +7,9 @@
 
 /// The phoneme model: segments as articulatory feature-bundles.
 pub mod phoneme;
+/// The phonology engine: per-species inventory and phonotactics drawn
+/// under the articulation envelope.
+pub mod phonology;
 
 pub use phoneme::{Backness, Height, Manner, Place, Segment, ipa, romanize, sonority};
+pub use phonology::{Envelope, ExoticSeg, Phonology, draw_phonology, permits};

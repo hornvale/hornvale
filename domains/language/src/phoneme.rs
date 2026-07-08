@@ -95,10 +95,10 @@ pub enum Segment {
     },
 }
 
-/// The curated segment inventory the engine can draw from. A later task's
-/// phonology draw filters this set under an authored articulation envelope;
-/// unused until that task lands.
-#[allow(dead_code)]
+/// The curated segment inventory the engine can draw from. The phonology
+/// draw (`phonology::draw_phonology`) filters this set under a species'
+/// articulation envelope; `romanize`/`ipa` are exhaustive only over
+/// exactly this set.
 pub(crate) fn canonical_segments() -> Vec<Segment> {
     use Backness::*;
     use Height::*;
