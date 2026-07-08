@@ -86,6 +86,7 @@ spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
 | EXP-4  | Humor — benign-violation theory; jokes as the fastest norm-probes; a humourless species has an empty violation set                      | elaborated | taste-gated | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
 | EXP-5  | Drama — narrative as an error-correcting code tuned to a culture's transmission channel; lifespan sets the channel                      | elaborated | med         | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
 | EXP-6  | Architecture — layout as constraint satisfaction over body/environment/structure/threat; sacred placement derivable from theology       | elaborated | high        | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
+| EXP-7  | Phonology, naming grammars & register — feature-bearing phonemes, a per-species articulation envelope, generative naming, and the content→render prose seam; the text arm of EXP-1's four-media engine, one medium lit | spec'd     | high        | [Campaign Y2-3 spec](../superpowers/specs/2026-07-08-campaign-y2-3-the-tongues-design.md) |
 
 ---
 
@@ -131,6 +132,7 @@ spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
 | BIO-7 | Fauna on the life-history axis — animals/fish drawn through BIO-2's fast–slow frame; the SRD corpus already spans beasts; predator/prey/forage as fields feeding subsistence and hazard | raw    | med  | [frontier §biosphere](frontier.md#the-biosphere--the-living-substrate) |
 | BIO-8 | Domestication & agriculture — the culture layer harnessing biosphere fields; staple crop per biome, the Boserup plough (SOC-2's input), nightsoil (BIO-5), famine as paleoclimate (MAP-6) × carrying capacity (MAP-7) | raw    | high | [frontier §biosphere](frontier.md#the-biosphere--the-living-substrate) |
 | BIO-9 | Ethnobotany & the pharmacopoeia — psychoactive/sacred substances as a ritual phenomena source for religion, gated by metabolism (BIO-4) and the purity grid (BIO-5); existence is fields, activity is genetics, sacredness is the culture vector | raw    | med  | [frontier §biosphere](frontier.md#the-biosphere--the-living-substrate) |
+| BIO-10 | Paralinguistic vocal signaling — mating/alarm calls and dimorphic voice as a system distinct from speech (a fauna-and-body vocalization layer, BIO-3/BIO-7), feeding music (EXP-2) and register; the vocal-loudness/resonance axis The Tongues bank-authors also lives here | raw    | med  | [frontier §biosphere](frontier.md#the-biosphere--the-living-substrate) |
 
 ---
 
