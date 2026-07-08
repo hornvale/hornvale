@@ -80,7 +80,7 @@ spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
 | ------ | --------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------- | ------------------------------------------------------------------ |
 | EXP-1  | One seeded grammar engine, four media (text / image / music / space) from a small per-culture vector                                    | elaborated | — (framing) | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
 | EXP-2  | Music and tuning — the Pythagorean comma as a necessary hidden ruleset; tuning stance as theology and belief-fact                       | elaborated | med         | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
-| EXP-3  | Species perception — photoreceptor profiles make salience = f(phenomenon, observer); different species, different skies and astronomies | elaborated | med         | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
+| EXP-3  | Species perception — photoreceptor profiles make salience = f(phenomenon, observer); different species, different skies and astronomies | spec'd     | med         | [Campaign Y2-2 spec](../superpowers/specs/2026-07-07-campaign-y2-2-the-eyes-design.md) |
 | EXP-3a | Colour lexicons (Berlin & Kay) as evidence of a species' vision; art palettes on species gamut; drawn scattering regime                 | raw        | med         | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
 | EXP-4  | Humor — benign-violation theory; jokes as the fastest norm-probes; a humourless species has an empty violation set                      | elaborated | taste-gated | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
 | EXP-5  | Drama — narrative as an error-correcting code tuned to a culture's transmission channel; lifespan sets the channel                      | elaborated | med         | [frontier §expressive](frontier.md#the-expressive-culture-cluster) |
@@ -93,6 +93,7 @@ spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
 | ID    | Idea                                                                                                                                                                                                           | Status     | Conf                     | Where                                                                                               |
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------ | --------------------------------------------------------------------------------------------------- |
 | PSY-1 | Culture as scaffolding around psychology — a bounded per-species vector (threat response, deliberation latency, sociality mode, in-group radius, time horizon, status basis) upstream of the culture campaigns | elaborated | high value / weak verify | [frontier §psychology](frontier.md#the-species-psychology-substrate--the-layer-beneath-the-cluster) |
+| PSY-2 | De-privilege the goblin baseline — identity-vector-at-goblin and unqualified legacy stream labels are a measurement frame, not a design commitment; fix via epoch-suffixed label migration (ADR 0006) + an abstract reference baseline no species need occupy | raw        | high                     | [Campaign Y2-2 spec §11](../superpowers/specs/2026-07-07-campaign-y2-2-the-eyes-design.md) |
 
 ---
 
@@ -141,6 +142,7 @@ spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
 | SEQ-1 | Tidal lock is the cheapest alien-religion generator — a motionless sun forces a religion with no celestial cycles                    | elaborated | high | [frontier §year-1 sequencing](frontier.md#two-sequencing-notes-for-the-remaining-year-1-campaigns) |
 | SEQ-2 | Hydrology is people-infrastructure, not land-refinement — rivers are the skeleton of settlement, trade, borders, toponymy            | elaborated | high | [frontier §year-1 sequencing](frontier.md#two-sequencing-notes-for-the-remaining-year-1-campaigns) |
 | SEQ-3 | The deep-time stack DAG — 7 → 9 → {language demographics, genetic divergence}; racecraft downstream of subjugation; coevolution last | elaborated | —    | [frontier §deep-time stack](frontier.md#sequencing-the-deep-time-stack)                            |
+| SEQ-4 | Phenomena-path fidelity — generated worlds observe through tier-0 UniformClimate, anchored at places[0] and genesis day 0; a future Firm-Ground-style campaign upgrades the observation path | raw        | high | [Campaign Y2-2 spec §11](../superpowers/specs/2026-07-07-campaign-y2-2-the-eyes-design.md) |
 
 ---
 
