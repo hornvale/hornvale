@@ -22,6 +22,8 @@ restating it.
 - **Status** — where the idea sits in the pipeline:
   - `shipped` — built and merged into the world.
   - `ratified (NNNN)` — settled as a decision; the number links the record.
+  - `spec'd` — draining into a binding spec; **Where** points at the spec,
+    not the essay.
   - `elaborated` — has a full essay in `frontier.md`; awaiting a spec.
   - `raw` — captured but not yet elaborated; a stub, not an argument.
   - `rejected` — considered and set aside; the row says why. **This is the
