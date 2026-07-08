@@ -14,8 +14,8 @@ use hornvale_climate::{
     ClimateInputs, ClimateReport, GeneratedClimate, RotationRegime, SeafloorFeature, UniformClimate,
 };
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Fact, Geosphere, LedgerError, ObserverContext, PhenomenaSource,
-    Phenomenon, RegistryError, Seed, Value, World, WorldTime, observe,
+    ConceptRegistry, EntityId, Fact, Geosphere, LedgerError, ObserverContext, PerceptionLens,
+    PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime, observe,
 };
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
 use std::sync::OnceLock;
@@ -345,6 +345,95 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
     Ok(observe(
         &sources,
         &ObserverContext::at(place, WorldTime { day }),
+    ))
+}
+
+/// Derive a species' perception lens from its authored vector (spec §4).
+/// Identity at the goblin baseline (Diurnal, 0.5, 0.5) by construction:
+/// every factor is exactly 1.0 there.
+pub fn perception_lens(p: &hornvale_species::PerceptionVector) -> PerceptionLens {
+    let activity_factor = match p.activity {
+        hornvale_species::ActivityCycle::Diurnal => 1.0,
+        hornvale_species::ActivityCycle::Crepuscular => 0.7,
+        hornvale_species::ActivityCycle::Nocturnal => 0.4,
+    };
+    let sky = 0.5 + p.sky_attention;
+    PerceptionLens {
+        day_sky: activity_factor * sky,
+        night_sky: (0.5 + p.night_vision) * sky,
+        ambient: 1.5 - p.sky_attention,
+    }
+}
+
+/// The characteristic hour: when a species with this activity cycle
+/// observes (spec §5). Diurnal observes at day 0.0 (the legacy path,
+/// byte-identical); Nocturnal at the first non-daylight instant found by a
+/// deterministic scan of 1/24-local-day steps over two local days;
+/// Crepuscular at the first light/dark boundary the same scan finds.
+/// Worlds without a day/night cycle (constant sun, tidal lock) observe at
+/// day 0.0 regardless.
+pub fn observation_time(
+    world: &World,
+    activity: hornvale_species::ActivityCycle,
+) -> Result<f64, BuildError> {
+    use hornvale_species::ActivityCycle;
+    if activity == ActivityCycle::Diurnal {
+        return Ok(0.0);
+    }
+    let sky = sky_of(world)?;
+    let Some(calendar) = sky.calendar() else {
+        return Ok(0.0);
+    };
+    let Some(day_len) = calendar.day_length() else {
+        return Ok(0.0); // locked: no day/night cycle
+    };
+    let step = day_len.get() / 24.0;
+    let daylight_at = |t: f64| {
+        hornvale_astronomy::StdDays::new(t)
+            .ok()
+            .and_then(|d| calendar.is_daylight(d))
+    };
+    let at_zero = daylight_at(0.0);
+    for k in 0..48 {
+        let t = k as f64 * step;
+        let here = daylight_at(t);
+        let hit = match activity {
+            ActivityCycle::Nocturnal => here == Some(false),
+            ActivityCycle::Crepuscular => here != at_zero,
+            ActivityCycle::Diurnal => unreachable!("early-returned above"),
+        };
+        if hit {
+            return Ok(t);
+        }
+    }
+    Ok(0.0) // pathological all-daylight window: fall back deterministically
+}
+
+/// The phenomena a species observes: its characteristic hour, its lens,
+/// the world's first place (spec §5 — the place debt is SEQ-4's).
+pub fn observed_phenomena_as(world: &World, species: &str) -> Result<Vec<Phenomenon>, BuildError> {
+    let registry = hornvale_species::registry();
+    let Some(def) = registry.get(species) else {
+        let known: Vec<&str> = registry.keys().copied().collect();
+        return Err(BuildError::Pins(format!(
+            "unknown species '{species}'; known species: {}",
+            known.join(", ")
+        )));
+    };
+    let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
+        return Ok(Vec::new());
+    };
+    let day = observation_time(world, def.perception.activity)?;
+    let sky = sky_of(world)?;
+    let climate = UniformClimate;
+    let sources: [&dyn PhenomenaSource; 2] = [&sky, &climate];
+    Ok(observe(
+        &sources,
+        &ObserverContext {
+            place,
+            time: WorldTime { day },
+            lens: perception_lens(&def.perception),
+        },
     ))
 }
 
@@ -1393,5 +1482,72 @@ mod tests {
         assert!(hornvale_religion::cult_form_of(&world).is_some());
         // At most one high god.
         assert!(beliefs.iter().filter(|b| b.high_god).count() <= 1);
+    }
+
+    #[test]
+    fn goblin_lens_is_exactly_identity() {
+        let reg = hornvale_species::registry();
+        assert!(perception_lens(&reg["goblin"].perception).is_identity());
+    }
+
+    #[test]
+    fn kobold_lens_matches_the_spec_derivation() {
+        let reg = hornvale_species::registry();
+        let lens = perception_lens(&reg["kobold"].perception);
+        assert!((lens.day_sky - 0.52).abs() < 1e-12);
+        assert!((lens.night_sky - 1.82).abs() < 1e-12);
+        assert!((lens.ambient - 0.70).abs() < 1e-12);
+    }
+
+    #[test]
+    fn goblin_observation_reproduces_the_unlensed_path_bytewise() {
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            observed_phenomena_as(&world, "goblin").unwrap(),
+            observed_phenomena(&world, 0.0).unwrap(),
+        );
+    }
+
+    #[test]
+    fn a_nocturnal_observer_on_a_spinning_world_sees_night_stars() {
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let seen = observed_phenomena_as(&world, "kobold").unwrap();
+        assert!(
+            seen.iter().any(|p| p.kind == "night-star"),
+            "the characteristic hour must land in the dark"
+        );
+        assert_eq!(
+            seen[0].venue,
+            hornvale_kernel::Venue::NightSky,
+            "the kobold ranking is night-headed"
+        );
+    }
+
+    #[test]
+    fn observation_time_is_zero_for_constant_and_locked_skies() {
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Constant,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let t = observation_time(&world, hornvale_species::ActivityCycle::Nocturnal).unwrap();
+        assert_eq!(t, 0.0);
     }
 }
