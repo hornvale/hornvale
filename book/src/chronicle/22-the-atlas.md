@@ -22,7 +22,7 @@ choices a client makes about bytes it was never trusted to alter.
 **A second toolchain, and the workspace never felt it.** The no-new-dependencies
 rule has held since the kernel's first commit, and it still holds — for the
 Rust workspace. What decision 0023 settles is that the rule was always about
-the workspace, not about clients standing outside it: a Ring-3 client gets
+the workspace, not about clients standing outside it: an external client gets
 its own dependency stack and its own toolchain, commits what it builds, and
 answers to its own CI job rather than borrowing the Rust gate's. The atlas
 lives under `clients/atlas/`, written in TypeScript against a single pinned
