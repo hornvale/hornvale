@@ -607,6 +607,10 @@ fn null_control_blind_attribution_is_at_chance() {
         indistinguishable as f64 / pairs as f64 > 0.5,
         "expected the null control to be mostly indistinguishable, got {indistinguishable}/{pairs}"
     );
+    // Dormant by design for this perfect vector-clone: `decided` is asserted
+    // to be exactly 0 below, so this branch never runs today. It stays as a
+    // defensive guard that would only activate if a future non-identical
+    // null control ever produced a decided pair.
     if decided > 0 {
         let rate = picks_twin as f64 / decided as f64;
         assert!(

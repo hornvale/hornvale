@@ -188,10 +188,11 @@ descriptive: it echoes its refrain twice a line — *"That's how it's always
 been. That's how it's always been."* — and it *names* its head deity's rank in
 plain words, *"Rragratxok is the highest among the gods,"* where the goblin
 telling would never spell it out. The formality and the stacked honorifics
-trace to `status-basis`; the doubled refrain traces to `sociality`. The same
-two dimensions that decided who stands where on the ladder and how a god's
-title is shaped now decide the cadence of the myth — one vector reaching three
-layers deep, from a settlement's castes to a deity's name to the rhythm of the
+trace to `status-basis`, the same dimension that already decided who stands
+where on the ladder and how a god's title is shaped; the doubled refrain
+traces to `sociality`, the dimension the ladder never reads at all. One
+vector, status-basis, reaches two layers deep, from a settlement's castes to
+a deity's title; a second, sociality, supplies the third — the rhythm of the
 sentence that venerates it.
 
 ## What this proves
