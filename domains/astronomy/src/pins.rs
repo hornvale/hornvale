@@ -170,6 +170,12 @@ pub fn pin_strings(pins: &SkyPins) -> Vec<String> {
         out.push(format!("neighbor={}", neighbor_class_name(neighbor)));
     }
 
+    if let Some(forcing) = pins.forcing {
+        match forcing {
+            ForcingPin::Zero => out.push("forcing=zero".to_string()),
+        }
+    }
+
     out
 }
 
@@ -233,6 +239,12 @@ pub fn parse_pin(s: &str, pins: &mut SkyPins) -> Result<(), String> {
         }
         "neighbor" => {
             pins.neighbor = Some(neighbor_class_from_name(value)?);
+        }
+        "forcing" => {
+            pins.forcing = Some(match value {
+                "zero" => ForcingPin::Zero,
+                other => return Err(format!("forcing: unknown value '{other}'")),
+            });
         }
         other => return Err(format!("unknown pin key '{other}'")),
     }
@@ -416,5 +428,18 @@ mod tests {
         let mut pins = SkyPins::default();
         let err = parse_pin("moons=4294967295+1", &mut pins).unwrap_err();
         assert!(err.contains("moons"), "unexpected error text: {err}");
+    }
+
+    #[test]
+    fn forcing_pin_round_trips() {
+        let pins = SkyPins {
+            forcing: Some(ForcingPin::Zero),
+            ..SkyPins::default()
+        };
+        let strings = pin_strings(&pins);
+        assert!(strings.contains(&"forcing=zero".to_string()));
+        let mut rebuilt = SkyPins::default();
+        parse_pin("forcing=zero", &mut rebuilt).unwrap();
+        assert_eq!(rebuilt.forcing, Some(ForcingPin::Zero));
     }
 }
