@@ -63,7 +63,10 @@ export function canvasToTile(
   const fx = (x - v.tx) / v.scale / cw;
   const fy = (y - v.ty) / v.scale / ch;
   if (fx < 0 || fx >= 1 || fy < 0 || fy >= 1) return null;
-  return { px: Math.floor(fx * scene.width), py: Math.floor(fy * scene.height) };
+  return {
+    px: Math.min(scene.width - 1, Math.floor(fx * scene.width)),
+    py: Math.min(scene.height - 1, Math.floor(fy * scene.height)),
+  };
 }
 
 /** The tile center's lat/lon — the schema's grid convention. */

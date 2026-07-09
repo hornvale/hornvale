@@ -61,6 +61,18 @@ Deno.test("unrest buckets are monotonic in lightness", () => {
   assert(dark < light, "unrest 1.0 must be darker than 0.0");
 });
 
+Deno.test("biome index beyond the palette renders neutral gray", () => {
+  const tiles = 16 * 8;
+  const biome = Array(tiles).fill(0);
+  biome[0] = 22; // one past BIOME_RGB's 22 entries; a future legend-grown index
+  const s = scene({
+    biome,
+    biome_legend: Array.from({ length: 23 }, (_, i) => `b${i}`),
+  });
+  const px = layerPixels(s, "biome");
+  assertEquals([px[0], px[1], px[2]], [128, 128, 128]);
+});
+
 Deno.test("ocean layer is two-valued", () => {
   const tiles = 16 * 8;
   const ocean = Array(tiles).fill(false);

@@ -11,12 +11,30 @@ const SCENE_URL = "./scene-tiles-seed-42.json";
 
 function fallback(message: string) {
   const holder = document.getElementById("atlas-holder");
-  if (holder) {
-    holder.innerHTML = `<p><em>${message}</em> The data this page renders is ` +
-      `<a href="./scene-tiles-seed-42.json">the committed scene document</a>; static renders ` +
-      `are in <a href="./elevation-seed-42.html">the elevation</a> and ` +
-      `<a href="./biome-seed-42.html">biome</a> pages.</p>`;
-  }
+  if (!holder) return;
+  holder.replaceChildren();
+
+  const p = document.createElement("p");
+  const em = document.createElement("em");
+  em.textContent = message;
+  p.append(em, " The data this page renders is ");
+
+  const sceneLink = document.createElement("a");
+  sceneLink.href = "./scene-tiles-seed-42.json";
+  sceneLink.textContent = "the committed scene document";
+  p.append(sceneLink, "; static renders are in ");
+
+  const elevationLink = document.createElement("a");
+  elevationLink.href = "./elevation-seed-42.html";
+  elevationLink.textContent = "the elevation";
+  p.append(elevationLink, " and ");
+
+  const biomeLink = document.createElement("a");
+  biomeLink.href = "./biome-seed-42.html";
+  biomeLink.textContent = "biome";
+  p.append(biomeLink, " pages.");
+
+  holder.append(p);
 }
 
 async function boot() {
@@ -75,7 +93,7 @@ async function boot() {
       ch * viewport.scale,
     );
     for (const f of scene.features) {
-      const { x, y } = featureCanvasXY(scene, viewport, f, cw, ch);
+      const { x, y } = featureCanvasXY(viewport, f, cw, ch);
       if (x < -8 || y < -8 || x > cw + 8 || y > ch + 8) continue;
       ctx.beginPath();
       ctx.arc(x, y, f.kind === "flagship" ? 5 : 3.5, 0, Math.PI * 2);

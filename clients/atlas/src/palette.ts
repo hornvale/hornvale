@@ -88,7 +88,7 @@ function elevationColor(elevation: number, seaLevel: number): [number, number, n
 function tileColor(scene: TilesScene, layer: Layer, i: number): [number, number, number] {
   switch (layer) {
     case "biome":
-      return BIOME_RGB[scene.biome[i]];
+      return BIOME_RGB[scene.biome[i]] ?? [128, 128, 128];
     case "elevation":
       return elevationColor(scene.elevation_m[i], scene.sea_level_m);
     case "plate":

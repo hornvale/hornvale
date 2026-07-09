@@ -38,12 +38,10 @@ export function featureAt(
 
 /** A feature's canvas position (marker drawing). */
 export function featureCanvasXY(
-  scene: TilesScene,
   v: Viewport,
   f: Feature,
   cw: number,
   ch: number,
 ): { x: number; y: number } {
-  void scene;
   return latLonToCanvas(v, f.latitude, f.longitude, cw, ch);
 }
