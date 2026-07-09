@@ -284,31 +284,40 @@ impl<'a> Namer<'a> {
     }
 }
 
-/// Flatten `syllables` (onset → nucleus → coda, in sequence) into their
-/// ordered segments and render all three surface views in the same pass:
-/// the single segment→views reduction, so no caller re-derives
-/// romanization/IPA/espeak logic from a segment sequence. `Namer::build_name`
-/// uses the `GeneratedName` half; etymology's `proto_root` (over syllables
-/// drawn from [`Namer::draw_syllables`]) uses the flat `Vec<Segment>` half
-/// as its proto-root, reusing this module's stem machinery without
-/// duplicating the onset/nucleus/coda flattening or the romanization match
-/// arms. `pub(crate)` for that cross-module reuse.
-pub(crate) fn views_of(syllables: &[Syllable]) -> (Vec<Segment>, GeneratedName) {
+/// Render a bare segment sequence's three surface views in one pass — the
+/// segment-level half of the reduction [`views_of`] performs over
+/// [`Syllable`]s, factored out so a caller that already holds a flat
+/// `Vec<Segment>` (lexicon's roots and recipe compounds, over `evolve`'s
+/// modern forms) reuses the same romanization/IPA/espeak logic instead of
+/// re-deriving it. `pub(crate)` for that cross-module reuse.
+pub(crate) fn render_views(segments: &[Segment]) -> GeneratedName {
     let mut roman = String::new();
     let mut ipa_str = String::new();
-    let mut segments: Vec<Segment> = Vec::new();
-    for syllable in syllables {
-        for seg in syllable.segments() {
-            roman.push_str(romanize(seg));
-            ipa_str.push_str(ipa(seg));
-            segments.push(*seg);
-        }
+    for seg in segments {
+        roman.push_str(romanize(seg));
+        ipa_str.push_str(ipa(seg));
     }
-    let name = GeneratedName {
+    GeneratedName {
         roman: capitalize_first(&roman),
         ipa: ipa_str,
-        espeak: espeak_word(&segments),
-    };
+        espeak: espeak_word(segments),
+    }
+}
+
+/// Flatten `syllables` (onset → nucleus → coda, in sequence) into their
+/// ordered segments and render all three surface views via
+/// [`render_views`]. `Namer::build_name` uses the `GeneratedName` half;
+/// etymology's `proto_root` (over syllables drawn from
+/// [`Namer::draw_syllables`]) uses the flat `Vec<Segment>` half as its
+/// proto-root, reusing this module's stem machinery without duplicating the
+/// onset/nucleus/coda flattening or the romanization match arms.
+/// `pub(crate)` for that cross-module reuse.
+pub(crate) fn views_of(syllables: &[Syllable]) -> (Vec<Segment>, GeneratedName) {
+    let segments: Vec<Segment> = syllables
+        .iter()
+        .flat_map(|syllable| syllable.segments().copied())
+        .collect();
+    let name = render_views(&segments);
     (segments, name)
 }
 
