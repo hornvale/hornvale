@@ -7,7 +7,8 @@ use hornvale_language::{Manner, MorphOptions, NameKind, Namer, Phonology, Segmen
 use hornvale_religion::beliefs_of;
 use hornvale_terrain::GlobeSummary;
 use hornvale_worldgen::{
-    BuildError, Sky, SkyChoice, build_world, climate_of, flagship_of, sky_of, terrain_of,
+    BuildError, Sky, SkyChoice, build_world_with_roster, climate_of, flagship_of, language_of_in,
+    observed_phenomena_as_in, sky_of, terrain_of,
 };
 
 use hornvale_astronomy::SkyPins;
@@ -28,18 +29,29 @@ pub struct WorldView {
     pub terrain: hornvale_terrain::GeneratedTerrain,
     /// The derived climate (biome + habitability).
     pub climate: GeneratedClimate,
+    /// The species roster this view was built from (default = shipped).
+    pub roster: Vec<hornvale_species::SpeciesDef>,
 }
 
 impl WorldView {
-    /// Build a complete world view: generate the world, extract the sky,
-    /// derive the calendar, and gather the notes. Generated sky only.
+    /// Build a world view with the shipped species roster.
     pub fn build(seed: Seed, pins: &SkyPins) -> Result<WorldView, BuildError> {
-        let world = build_world(
+        Self::build_with_roster(seed, pins, hornvale_worldgen::default_roster())
+    }
+
+    /// Build a world view with an explicit species roster (spec §3).
+    pub fn build_with_roster(
+        seed: Seed,
+        pins: &SkyPins,
+        roster: Vec<hornvale_species::SpeciesDef>,
+    ) -> Result<WorldView, BuildError> {
+        let world = build_world_with_roster(
             seed,
             pins,
             SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &hornvale_worldgen::SettlementPins::default(),
+            &roster,
         )?;
         let sky = sky_of(&world)?;
         let Sky::Generated(sky) = sky else {
@@ -58,6 +70,7 @@ impl WorldView {
             globe,
             terrain,
             climate,
+            roster,
         })
     }
 }
@@ -844,7 +857,7 @@ fn pantheon_sig(v: &WorldView, species: &str) -> Option<PantheonSig> {
     if beliefs.is_empty() {
         return None;
     }
-    let seen = hornvale_worldgen::observed_phenomena_as(&v.world, species).ok()?;
+    let seen = observed_phenomena_as_in(&v.world, &v.roster, species).ok()?;
     let top = seen.first()?;
     let domain = match top.venue {
         hornvale_kernel::Venue::DaySky => "solar",
@@ -968,7 +981,7 @@ fn phonotactic_validity(v: &WorldView, species: &str) -> MetricValue {
     if names.is_empty() {
         return MetricValue::Absent;
     }
-    let ph = hornvale_worldgen::language_of(&v.world, species);
+    let ph = language_of_in(&v.world, &v.roster, species);
     MetricValue::Flag(names.iter().all(|n| is_phonotactically_valid(n, &ph)))
 }
 
@@ -998,7 +1011,7 @@ fn epithet_honorific(v: &WorldView, species: &str) -> MetricValue {
     if beliefs.is_empty() {
         return MetricValue::Absent;
     }
-    let ph = hornvale_worldgen::language_of(&v.world, species);
+    let ph = language_of_in(&v.world, &v.roster, species);
     let namer = Namer::new(&v.world.seed, species, &ph);
     let carries = |b: &hornvale_religion::Belief| {
         let plain = namer
@@ -1496,5 +1509,21 @@ mod tests {
             "Missing doc for belief-kind: {}",
             belief_kind.doc
         );
+    }
+
+    #[test]
+    fn build_with_roster_resolves_a_renamed_solo_species() {
+        use hornvale_species::SpeciesDef;
+        let goblin = hornvale_species::registry()["goblin"];
+        let twin = SpeciesDef {
+            name: "goblin-twin",
+            ..goblin
+        };
+        let view = WorldView::build_with_roster(Seed(42), &SkyPins::default(), vec![twin]).unwrap();
+        // The twin resolves through the view's roster (it is NOT in the global registry).
+        let ph = hornvale_worldgen::language_of_in(&view.world, &view.roster, "goblin-twin");
+        assert!(!ph.inventory.is_empty(), "twin phonology must draw");
+        // And it placed a flagship peopled by the twin's name.
+        assert!(flagship_of(&view.world, "goblin-twin").is_some());
     }
 }
