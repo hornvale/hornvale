@@ -32,6 +32,7 @@ map of the whole documentation set is [`docs/README.md`](../README.md).
   - [The unification thesis](#the-unification-thesis)
   - [The expressive-culture cluster](#the-expressive-culture-cluster)
   - [The species-psychology substrate — the layer beneath the cluster](#the-species-psychology-substrate--the-layer-beneath-the-cluster)
+  - [Ideonomic cognition — novel thought as seeded combinatorics](#ideonomic-cognition--novel-thought-as-seeded-combinatorics)
   - [Social structure as orthogonal axes — cashing the substrate](#social-structure-as-orthogonal-axes--cashing-the-substrate)
   - [The biological substrate — body, reproduction, and deep time](#the-biological-substrate--body-reproduction-and-deep-time)
   - [The biosphere — the living substrate](#the-biosphere--the-living-substrate)
@@ -477,6 +478,70 @@ joke, or myth has not earned its place.
 substrate" campaign, sitting **upstream** of the culture campaigns (C4/C5) so
 they consume a psychology layer rather than each reinventing one piecemeal.
 It does not alter the Year-1 roadmap.
+
+---
+
+## Ideonomic cognition — novel thought as seeded combinatorics
+
+*(Medium confidence; the mechanism is checkable, the output quality is
+taste-gated.)*
+
+The culture stack derives what a people *does* — its jokes, gods, buildings,
+grammars — from substrate vectors, but nowhere in it does anyone ever *think
+of something new*. Patrick Gunkel's **ideonomy** (via Grace Kind's synthesis)
+supplies the missing mechanism in exactly the shape this project can legally
+use: ideation as a small closed catalog of structural operations — negate a
+definitional property, substitute one value along one axis, combine two
+captured ideas, abstract and re-instantiate across domains — applied to
+ideas captured as structured artifacts. It is a combinatorial,
+catalog-driven, dice-compatible model of creativity: the operator catalog is
+authored offline and committed (models author), and which operator fires on
+which held concept is a seeded draw (dice roll). It may be the only theory
+of ideation that is *constitutionally legal* here (decision 0009) — no
+runtime model, no retrieval, just streams over a closed vocabulary.
+
+The intake and output sides already exist. A creature can only ideate over
+what it has observed — phenomena, the salience-ranked read — so salience
+doubles as *provocation*; and a new idea becomes visible only as facts and
+behavior, imitable and transmissible through observation alone (no telepathy
+without crossing LANG-2's explicit boundary). The lifecycle is a state
+machine: latent → noticed → held → expressed → transmitted → ritualized,
+and the ideonomic operators fire on the held → mutated edge. Negation of a
+held taboo is its inversion; substitution along one axis of a held technique
+is a variant technique; combination of two held ideas is syncretism; and a
+*mis*-instantiated abstraction is a false cause — superstition, the religion
+pipeline's raw input, derived rather than authored. The inference program
+(UNI-1) gains its error term, and the projection layer (UNI-12) gains a
+generator. Cultural conservatism falls out of the machine's trigger
+asymmetry — the ritualized state is easy to enter and hard to leave.
+
+Tiering follows the provider doctrine. Tier 0 is cultures drifting with no
+individual ideation at all — drift as pure transmission noise, which MEM-3's
+stickiness already models; higher fidelity is per-creature seeded ideation
+*events*, sparse and salience-gated like phenomena, never per-tick. The
+design gaps the state machine exposes, in order of hardness: the
+**evaluation primitive** (what makes a creature keep a mutated idea rather
+than discard it — drive satisfaction, social standing; an "interestingness
+score" is the ontology trap's favourite door); the **held-ideas repertoire**
+as new per-creature ledger state; and **target selection** (which held
+concept gets operated on — salience again, probably).
+
+**The honest caution is PSY-1's, sharpened.** No ground truth exists for
+what a goblin would invent, so the checkable claims are internal: ideation
+events are deterministic and byte-stable; every held idea has a derivation
+chain back to observed phenomena (TOOL-1's `explain` verb extended to
+thoughts); and the Lab can hold distributions over invention — does a
+high-deliberation-latency species innovate slower but retain better?
+Whether the output reads as *creativity* rather than combinatorial noise is
+taste-gated, exactly like humor (EXP-4).
+
+*Sequencing:* strictly downstream of the psychology substrate (PSY-1
+supplies the drives that select operators and evaluate results) and of a
+concept layer to operate on — LANG-4's `ConceptDef` inventory is the natural
+substrate, making The Words a prerequisite rather than a sibling. Not a
+near-term campaign; captured because it names the mechanism the culture
+stack will eventually need when "where do new ideas come from" stops being
+deferrable.
 
 ---
 
@@ -1330,6 +1395,9 @@ catastrophe; decay as the symptom of a regress already arrived); Paul
 Connerton, *How Societies Remember* (inscribing versus incorporating memory);
 Jan and Aleida Assmann (communicative versus cultural memory and the floating
 gap); Dan Sperber, Pascal Boyer, and Olivier Morin (cultural attraction and
-minimally-counterintuitive content as a stability bias).
+minimally-counterintuitive content as a stability bias); Patrick Gunkel,
+the ideonomy monographs, via Grace Kind's synthesis essays at gracekind.net
+(ideation as a closed catalog of structural operations — operators,
+organons, dimensions — over captured ideas).
 The map moves when the reading feeds it — which is the collaborator's role,
 demonstrated.
