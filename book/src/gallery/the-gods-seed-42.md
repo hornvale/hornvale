@@ -79,7 +79,11 @@ read two different ways — now runs on two axes at once: pin the rotation
 and the goblin head changes while the kobold head does not; hold the
 rotation fixed and read the *other* pantheon on the same page, and the head
 changes from solar to lunar while the sky itself does not move at all. Two
-independent divergences, on one globe, from one seed.
+independent divergences, on one globe, from one seed. That two-pantheon demo is
+where Year 2's spine begins; the page it grew into — the same seed with the sky
+held *fixed* and the two peoples traced apart across all three of Year 2's
+vectors at once — is [The Meeting of Seed 42](./the-meeting-seed-42.md), this
+gallery's Year-2 capstone.
 
 ## Spinning: Nodvnotngak the Nebsxad presides
 
