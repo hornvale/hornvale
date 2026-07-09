@@ -73,8 +73,12 @@ follow the existing patterns; nothing here changes shape under this spec.
 **Members.** The gallery's deterministic artifacts: three ASCII map renders
 (elevation, biome, settlement — 72×24 equirectangular, one `render.rs` per
 domain); their 256×128 raster siblings (P6 PPM today); the First Light 512×512
-BMP; the content-addressed espeak audio clips. Future members: the star chart
-(§3), PCM music (frontier, expressive-culture cluster), higher-resolution
+BMP; the content-addressed espeak audio clips; and — shipped by The Orrery
+(Campaign 22) — **deterministic terminal-recording animation** (an asciinema
+`.cast`: a render evaluated over a time range, framed with synthetic timing so
+the recording is byte-reproducible and drift-checked, `serde_json`-only,
+embeddable in the book, transcoded to mp4 only by external tools). Future
+members: PCM music (frontier, expressive-culture cluster), higher-resolution
 renders, diegetic documents.
 
 **Contracts.** Same seed + same pins → byte-identical artifacts, enforced by
