@@ -207,6 +207,36 @@ mod tests {
         );
     }
 
+    /// A raw stream that is an exact multiple of the stored-block size:
+    /// 28 × 771 RGB → (28 × 3 + 1) × 771 = 65,535 filtered bytes — one
+    /// full stored block that is also the final block (LEN = 0xFFFF,
+    /// BFINAL = 1).
+    #[test]
+    fn exact_block_multiple_ends_on_a_full_final_block() {
+        let (w, h) = (28_u32, 771_u32);
+        let rgb: Vec<u8> = (0..w as usize * h as usize * 3)
+            .map(|i| (i % 253) as u8)
+            .collect();
+        let png = encode_rgb(w, h, &rgb);
+
+        // Locate the IDAT payload.
+        let mut idat = Vec::new();
+        let mut pos = 8;
+        while pos < png.len() {
+            let len = u32::from_be_bytes(png[pos..pos + 4].try_into().unwrap()) as usize;
+            if &png[pos + 4..pos + 8] == b"IDAT" {
+                idat.extend_from_slice(&png[pos + 8..pos + 8 + len]);
+            }
+            pos += 12 + len;
+        }
+
+        // One stored block: BFINAL = 1, LEN = 0xFFFF, then exactly the
+        // 65,535 payload bytes and the 4-byte Adler-32 — nothing else.
+        assert_eq!(idat[2], 1, "single full block must be final");
+        assert_eq!(u16::from_le_bytes([idat[3], idat[4]]), 0xFFFF);
+        assert_eq!(idat.len(), 2 + 5 + 65_535 + 4);
+    }
+
     #[test]
     #[should_panic(expected = "width * height * 3")]
     fn wrong_buffer_length_panics() {
