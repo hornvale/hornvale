@@ -46,6 +46,46 @@ pub fn chart_ascii(neighbors: &[Neighbor]) -> String {
     out
 }
 
+/// The fixed night sky as a 72×24 ANSI chart: each star its brightness-rank
+/// digit, tinted by spectral class; the celestial equator dashed. The colored
+/// sibling of [`chart_ascii`]; same layout, same determinism.
+pub fn chart_ansi(neighbors: &[Neighbor]) -> String {
+    let mut grid: Vec<Vec<(char, &'static str)>> = vec![vec![(' ', ""); ASCII_WIDTH]; ASCII_HEIGHT];
+    let equator = ASCII_HEIGHT / 2;
+    for (col, cell) in grid[equator].iter_mut().enumerate() {
+        if col % 2 == 0 {
+            *cell = ('-', "");
+        }
+    }
+    for (index, neighbor) in neighbors.iter().enumerate().rev() {
+        let col = ((neighbor.right_ascension / 360.0) * ASCII_WIDTH as f64) as usize;
+        let row = (((90.0 - neighbor.declination) / 180.0) * ASCII_HEIGHT as f64) as usize;
+        let digit =
+            char::from_digit(index as u32 + 1, 10).expect("digit glyphs run out past 9 neighbors");
+        grid[row.min(ASCII_HEIGHT - 1)][col.min(ASCII_WIDTH - 1)] =
+            (digit, spectral_color(neighbor.class));
+    }
+    emit_ansi_grid(&grid)
+}
+
+/// Emit a `(glyph, sgr)` grid as rows, resetting after every colored cell.
+fn emit_ansi_grid(grid: &[Vec<(char, &'static str)>]) -> String {
+    let mut out = String::new();
+    for row in grid {
+        for &(ch, color) in row {
+            if color.is_empty() {
+                out.push(ch);
+            } else {
+                out.push_str(color);
+                out.push(ch);
+                out.push_str("\u{1b}[0m");
+            }
+        }
+        out.push('\n');
+    }
+    out
+}
+
 /// One timeless phase-cycle line per moon: the strip, the moon's size
 /// word, and its synodic month. Skips (with an honest note) a moon whose
 /// synodic cycle is degenerate.
@@ -411,5 +451,20 @@ mod tests {
             star_color("orange dwarf"),
             spectral_color(NeighborClass::SunLike)
         );
+    }
+
+    #[test]
+    fn chart_ansi_is_deterministic_and_tinted() {
+        let stars = vec![
+            star(45.0, 30.0, 3.0),
+            star(-20.0, 200.0, 2.0),
+            star(0.0, 359.0, 1.0),
+        ];
+        let a = chart_ansi(&stars);
+        assert_eq!(a, chart_ansi(&stars), "must be deterministic");
+        assert!(a.contains("\u{1b}[38;5;"), "stars must be colored");
+        assert!(a.contains("\u{1b}[0m"), "colors must reset");
+        // Same 72×24 shape as the ASCII chart: 24 newline-terminated rows.
+        assert_eq!(a.matches('\n').count(), ASCII_HEIGHT);
     }
 }
