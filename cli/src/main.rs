@@ -1,6 +1,7 @@
 //! The hornvale CLI: create worlds, render almanacs, interrogate via REPL.
 #![warn(missing_docs)]
 
+mod audio;
 mod concepts;
 mod phonology;
 mod repl;
