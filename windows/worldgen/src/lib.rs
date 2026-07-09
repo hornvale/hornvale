@@ -14,8 +14,9 @@ use hornvale_climate::{
     ClimateInputs, ClimateReport, GeneratedClimate, RotationRegime, SeafloorFeature, UniformClimate,
 };
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Fact, Geosphere, LedgerError, ObserverContext, PerceptionLens,
-    PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime, observe,
+    ConceptRegistry, EntityId, Fact, GeoCoord, Geosphere, LedgerError, ObserverContext,
+    PerceptionLens, PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime,
+    observe,
 };
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
 use std::sync::OnceLock;
@@ -334,17 +335,49 @@ pub fn land_lines(world: &World) -> Result<Vec<String>, BuildError> {
     ])
 }
 
-/// The tier-0/1/2 phenomena sources, observed at the world's first place.
+/// The geographic position of a place, from its committed latitude/longitude
+/// facts (each set from `Geosphere::coord` at genesis — `domains/settlement`).
+/// `None` for a place carrying no such facts (a legacy or non-settlement
+/// place), leaving the observation position-blind — the pre-vantage behavior.
+fn place_coord(world: &World, place: EntityId) -> Option<GeoCoord> {
+    let latitude = match world
+        .ledger
+        .value_of(place, hornvale_settlement::LATITUDE)?
+    {
+        Value::Number(n) => *n,
+        _ => return None,
+    };
+    let longitude = match world
+        .ledger
+        .value_of(place, hornvale_settlement::LONGITUDE)?
+    {
+        Value::Number(n) => *n,
+        _ => return None,
+    };
+    Some(GeoCoord {
+        latitude,
+        longitude,
+    })
+}
+
+/// The tier-0/1/2 phenomena sources, observed from the world's first place —
+/// the flagship (SEQ-4). The vantage's hemisphere culls the sky (SEQ-5).
 pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, BuildError> {
     let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
         return Ok(Vec::new());
     };
+    let position = place_coord(world, place);
     let sky = sky_of(world)?;
     let climate = UniformClimate;
     let sources: [&dyn PhenomenaSource; 2] = [&sky, &climate];
     Ok(observe(
         &sources,
-        &ObserverContext::at(place, WorldTime { day }),
+        &ObserverContext {
+            place,
+            time: WorldTime { day },
+            lens: PerceptionLens::identity(),
+            position,
+        },
     ))
 }
 
@@ -440,6 +473,7 @@ pub fn observed_phenomena_as_in(
         return Ok(Vec::new());
     };
     let day = observation_time(world, def.perception.activity)?;
+    let position = place_coord(world, place);
     let sky = sky_of(world)?;
     let climate = UniformClimate;
     let sources: [&dyn PhenomenaSource; 2] = [&sky, &climate];
@@ -449,7 +483,7 @@ pub fn observed_phenomena_as_in(
             place,
             time: WorldTime { day },
             lens: perception_lens(&def.perception),
-            position: None,
+            position,
         },
     ))
 }
@@ -951,9 +985,24 @@ pub fn calendar_lines(world: &World) -> Result<Vec<String>, BuildError> {
     }
 
     if day_std.is_some() && system.anchor.obliquity.get() > 0.0 {
-        let half = (system.anchor.obliquity.get() / 90.0) / 2.0;
-        let max = 0.5 + half;
-        let min = 0.5 - half;
+        // The daylight range at the flagship's own latitude (SKY-8) — the
+        // placed observer's sky. The year-phase offset (Plan 1) moves where the
+        // solstices fall in `t`, so scan the year for the extremes. Falls back
+        // to the equator (a flat half) if no vantage resolves.
+        let latitude = hornvale_terrain::places(world)
+            .first()
+            .and_then(|p| place_coord(world, p.id))
+            .map(|c| c.latitude)
+            .unwrap_or(0.0);
+        let year = calendar.year_length().get();
+        let (mut max, mut min) = (0.0_f64, 1.0_f64);
+        for k in 0..365 {
+            let t = hornvale_astronomy::StdDays::new(k as f64 * year / 365.0).unwrap();
+            if let Some(f) = calendar.daylight_fraction_at(t, latitude) {
+                max = max.max(f);
+                min = min.min(f);
+            }
+        }
         lines.push(format!(
             "Daylight swells to {:.0}% at midsummer and shrinks to {:.0}% at midwinter.",
             max * 100.0,
@@ -1229,6 +1278,43 @@ mod tests {
             &SettlementPins::default(),
         )
         .unwrap()
+    }
+
+    #[test]
+    fn the_default_vantage_resolves_to_the_flagship_and_is_deterministic() {
+        let world = generated(42);
+        let place = hornvale_terrain::places(&world).first().unwrap().id;
+        assert!(
+            place_coord(&world, place).is_some(),
+            "the flagship must carry a coord"
+        );
+        let a = observed_phenomena(&world, 0.0).unwrap();
+        let b = observed_phenomena(&world, 0.0).unwrap();
+        assert_eq!(a, b, "the placed observation must be deterministic");
+    }
+
+    #[test]
+    fn a_locked_worlds_pantheon_sees_exactly_one_hemisphere() {
+        // The placed observer made observable: on a locked world the flagship
+        // sees the sun XOR the night sky, never both (the pre-Plan-2 bug).
+        let locked = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(hornvale_astronomy::RotationPin::Locked),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let ph = observed_phenomena(&locked, 0.0).unwrap();
+        let sees_sun = ph.iter().any(|p| p.description.contains("sun"));
+        let sees_night = ph.iter().any(|p| p.kind == hornvale_astronomy::NIGHT_STAR);
+        assert!(
+            sees_sun ^ sees_night,
+            "a locked flagship sees exactly one hemisphere (sun XOR night sky)"
+        );
     }
 
     #[test]
