@@ -512,6 +512,260 @@ pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology
     language_of_in(world, &default_roster(), species)
 }
 
+/// Map a species' perception vector onto the color pack's two acquisition
+/// ladders (spec §7 model card, authored verbatim — implement exactly, do
+/// not "improve"): `hue` runs 2 (dark/light only) through 5 (every hue
+/// through brown) as night vision runs from owl-eyed to blind — a species
+/// that sees well in the dark has spent less of its evolutionary history
+/// straining at daylight hue distinctions. `luminance` is a coarse
+/// two-step switch: a species with keen night vision (`night_vision >
+/// 0.6`) has lexicalized the full gloom/shadow/starlit ladder (3); every
+/// other species has only the coarsest term (1). At the goblin baseline
+/// (`night_vision == 0.5`), `hue == 4` (blue lexicalized, brown not) and
+/// `luminance == 1`; the kobold roster value (`night_vision == 0.9`) gives
+/// `hue == 2` (blue *not* lexicalized — kobolds stop before blue) and
+/// `luminance == 3`.
+pub fn pack_depths(p: &hornvale_species::PerceptionVector) -> hornvale_language::PackDepths {
+    let hue = 2 + ((1.0 - p.night_vision) * 3.0).round() as u8;
+    let luminance = if p.night_vision > 0.6 { 3 } else { 1 };
+    hornvale_language::PackDepths { hue, luminance }
+}
+
+/// The luminance-ladder concept ids within `color_pack` (mirrors the
+/// private `LUMINANCE_CONCEPTS` list documented on
+/// `hornvale_language::in_ladder`) — needed here only to word a Perceptual
+/// gap's reason with the ladder it was actually excluded from; the
+/// exclusion test itself always goes through `in_ladder`.
+const LUMINANCE_CONCEPTS: &[&str] = &["gloom", "shadow", "starlit"];
+
+/// Word a color-pack entry's Perceptual gap: which ladder excluded it, at
+/// what rank, against what depth, from what night-vision value.
+fn perceptual_reason(
+    entry: &hornvale_language::PackEntry,
+    depths: &hornvale_language::PackDepths,
+    night_vision: f64,
+) -> String {
+    let (ladder, depth) = if LUMINANCE_CONCEPTS.contains(&entry.concept) {
+        ("luminance", depths.luminance)
+    } else {
+        ("hue", depths.hue)
+    };
+    format!(
+        "{ladder} rank {} exceeds depth {depth} from night-vision {night_vision}",
+        entry.ladder_rank
+    )
+}
+
+/// Whether `name` is one of climate's registered biome concepts (used to
+/// word Unknown biome concepts with the brief's "no settlement in or
+/// beside <biome>" phrasing rather than the generic fallback).
+fn is_biome_concept(name: &str) -> bool {
+    hornvale_climate::biome::ALL
+        .iter()
+        .any(|b| b.concept_name() == name)
+}
+
+/// Word an Unknown concept's Experiential gap: biome concepts (and `sea`,
+/// which shares their geographic character though it is terrain's own
+/// concept) read as a missing settlement; everything else reads as a
+/// missing exposure for the species.
+fn experiential_reason(species: &str, name: &str) -> String {
+    if is_biome_concept(name) || name == "sea" {
+        format!("no settlement in or beside {name}")
+    } else {
+        format!("{species} has no exposure to '{name}'")
+    }
+}
+
+/// The Geosphere cells a species has settled: every committed settlement
+/// `peopled-by` this species, read back by its `cell-id` fact.
+fn settled_cells(world: &World, species: &str) -> Vec<hornvale_kernel::CellId> {
+    world
+        .ledger
+        .find(hornvale_settlement::IS_SETTLEMENT)
+        .filter(|f| hornvale_species::species_of(world, f.subject).as_deref() == Some(species))
+        .filter_map(|f| {
+            match world
+                .ledger
+                .value_of(f.subject, hornvale_settlement::CELL_ID)
+            {
+                Some(Value::Number(n)) => Some(hornvale_kernel::CellId(*n as u32)),
+                _ => None,
+            }
+        })
+        .collect()
+}
+
+/// Whether some cell within `max_hops` of `start` (inclusive of `start`
+/// itself) satisfies `pred` — the "lies within N cells" proximity test
+/// `exposure_of` uses for `sea`. A plain breadth-first walk over the
+/// Geosphere's adjacency; `max_hops` is small (2) so this is cheap per
+/// settled cell.
+fn within_hops(
+    geo: &Geosphere,
+    start: hornvale_kernel::CellId,
+    max_hops: u32,
+    pred: impl Fn(hornvale_kernel::CellId) -> bool,
+) -> bool {
+    use std::collections::BTreeSet;
+    if pred(start) {
+        return true;
+    }
+    let mut visited: BTreeSet<hornvale_kernel::CellId> = BTreeSet::new();
+    visited.insert(start);
+    let mut frontier = vec![start];
+    for _ in 0..max_hops {
+        let mut next = Vec::new();
+        for cell in &frontier {
+            for &n in geo.neighbors(*cell) {
+                if visited.insert(n) {
+                    if pred(n) {
+                        return true;
+                    }
+                    next.push(n);
+                }
+            }
+        }
+        frontier = next;
+    }
+    false
+}
+
+/// Classify every concept in the world's registry for `species`'s culture
+/// (spec §7): `Steeped` concepts get their own root word, `KnowsOf`
+/// concepts are named as compounds, and `Unknown` concepts get a
+/// recountable reason. Exactly one class per registered concept — the
+/// map's keys are always exactly `world.registry.concepts()`'s names.
+///
+/// - **Steeped**: the universal stratum (always — water, fire, sun, one's
+///   own name, and so on, `hornvale_language::universal_stratum`); every
+///   body-pack and kin-pack entry (always in ladder — unranked); every
+///   color-pack entry within the species' `pack_depths`; the biome of
+///   every cell the species has settled; the species' own living-kind
+///   concept (`"<species>-kind"`); and, once the species has settled
+///   anywhere, its own domestic and religious social concepts (`home`,
+///   `hearth`, `god`, `spirit` — "own social... kinds").
+/// - **KnowsOf**: the biome of every cell adjacent to a settled cell (that
+///   isn't already `Steeped` from the species' own settlements); and
+///   `sea`, if any settled cell lies within two cells of a below-sea-level
+///   (ocean) cell.
+/// - **Unknown**: every other registered concept — most visibly a
+///   color-pack entry excluded by ladder depth (`GapReason::Perceptual`)
+///   and a biome/`sea` concept the species neither settled nor neighbors
+///   (`GapReason::Experiential`, "no settlement in or beside `<biome>`");
+///   every remaining leftover concept (a foreign species' living-kind, or
+///   a social/geographic concept the species hasn't settled to reach) gets
+///   a generic but still recountable `GapReason::Experiential`.
+pub fn exposure_of(
+    world: &World,
+    species: &str,
+) -> Result<std::collections::BTreeMap<String, hornvale_language::ExposureClass>, BuildError> {
+    use hornvale_language::{
+        ExposureClass, GapReason, body_pack, color_pack, in_ladder, kin_pack, universal_stratum,
+    };
+
+    let roster = default_roster();
+    let def = def_in(&roster, species)?;
+    let depths = pack_depths(&def.perception);
+
+    let geo = shared_geosphere();
+    let terrain = terrain_of(world)?;
+    let climate = climate_of(world)?;
+    let settled = settled_cells(world, species);
+
+    let mut classes: std::collections::BTreeMap<String, ExposureClass> =
+        std::collections::BTreeMap::new();
+
+    // Steeped: the universal stratum, unconditionally.
+    for entry in universal_stratum() {
+        classes.insert(entry.concept.to_string(), ExposureClass::Steeped);
+    }
+
+    // Steeped/Unknown: the two ladder-gated packs plus the two unranked
+    // (always-in) packs.
+    for entry in color_pack().iter().chain(body_pack()).chain(kin_pack()) {
+        let class = if in_ladder(entry, &depths) {
+            ExposureClass::Steeped
+        } else {
+            ExposureClass::Unknown {
+                reason: GapReason::Perceptual(perceptual_reason(
+                    entry,
+                    &depths,
+                    def.perception.night_vision,
+                )),
+            }
+        };
+        classes.insert(entry.concept.to_string(), class);
+    }
+
+    // Steeped: the biome of every settled cell.
+    for &cell in &settled {
+        let name = climate.biome_at(cell).concept_name().to_string();
+        classes.insert(name, ExposureClass::Steeped);
+    }
+
+    // Steeped: the species' own living kind, and, once settled anywhere,
+    // its own domestic/religious social concepts.
+    let own_kind = format!("{species}-kind");
+    if world.registry.concept(&own_kind).is_some() {
+        classes.insert(own_kind, ExposureClass::Steeped);
+    }
+    if !settled.is_empty() {
+        for concept in ["home", "hearth", "god", "spirit"] {
+            if world.registry.concept(concept).is_some() {
+                classes.insert(concept.to_string(), ExposureClass::Steeped);
+            }
+        }
+    }
+
+    // KnowsOf: the biome of every cell adjacent to a settled cell, unless
+    // it is already Steeped (the species' own settled biome wins).
+    for &cell in &settled {
+        for &n in geo.neighbors(cell) {
+            let name = climate.biome_at(n).concept_name().to_string();
+            classes.entry(name).or_insert(ExposureClass::KnowsOf);
+        }
+    }
+
+    // KnowsOf: sea, if any settled cell lies within two cells of ocean.
+    if world.registry.concept("sea").is_some() {
+        let near_sea = settled
+            .iter()
+            .any(|&cell| within_hops(geo, cell, 2, |c| terrain.is_ocean(c)));
+        if near_sea {
+            classes
+                .entry("sea".to_string())
+                .or_insert(ExposureClass::KnowsOf);
+        }
+    }
+
+    // Unknown: every remaining registered concept.
+    for concept in world.registry.concepts() {
+        classes
+            .entry(concept.name.clone())
+            .or_insert_with(|| ExposureClass::Unknown {
+                reason: GapReason::Experiential(experiential_reason(species, &concept.name)),
+            });
+    }
+
+    Ok(classes)
+}
+
+/// Build a species' full lexicon in one call — the re-derivation path
+/// surfaces use (nothing about a lexicon is persisted): draw its phonology
+/// (`language_of`), classify every concept's exposure (`exposure_of`), and
+/// assemble the two into a `Lexicon` (`hornvale_language::build_lexicon`).
+pub fn lexicon_of(world: &World, species: &str) -> Result<hornvale_language::Lexicon, BuildError> {
+    let ph = language_of(world, species);
+    let exposures = exposure_of(world, species)?;
+    Ok(hornvale_language::build_lexicon(
+        &world.seed,
+        species,
+        &ph,
+        &exposures,
+    ))
+}
+
 /// A status basis' contribution to the `formality`/`epithet_density` voice
 /// knobs (spec §7): `Rank` — the goblin baseline — reads as the "high" end;
 /// `Knowledge`/`Generosity` read lower. `Rank`'s value is fixed at exactly
