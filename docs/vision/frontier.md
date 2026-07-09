@@ -153,6 +153,26 @@ ambition occupies is the first act of designing it.
    scholar reading the sky and the player identifying a potion, one mechanic
    at three altitudes.
 
+   *Phylogeny and the lexicon as archaeology.* The language tree forks where
+   the species tree does: a proto-goblinoid tongue travels with its speakers,
+   and when populations speciate (SEQ-3's genetic divergence), each daughter
+   inherits the proto-phonology *through its own articulation envelope*
+   (EXP-7) — inherited segments the new anatomy cannot produce remap along
+   their nearest features, so a whole class of sound changes is
+   **anatomically forced** rather than drawn, and a kobold reflex of a
+   proto-goblinoid labial recounts to the labiality dimension. Earth's
+   comparative method assumes one shared vocal tract; Hornvale's daughters
+   diverge in hardware, giving chain shifts a physical cause. Borrowing,
+   meanwhile, keys to **semantic domain** (the *Wörter und Sachen*
+   principle: words travel with the things and skills they name — Latin took
+   its cart-and-carriage vocabulary from the wagon-building Gauls), so loan
+   strata record *who taught whom what*: core vocabulary resists while craft
+   and trade vocabulary flows from the specialist culture, making etymology
+   an archaeology of technology transfer on top of item 9's contact ledger.
+   The Lab study this wants mirrors item 4 exactly: run the comparative
+   method as an instrument — reconstruct proto-forms from the daughters and
+   score them against the true proto-language the generator actually used.
+
 4. **Myth phylogenetics** *(medium confidence; genuine research)*.
    Proto-myths as motif structures propagated through noisy cultural
    transmission, then reconstructed by comparative method and scored against
