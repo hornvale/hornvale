@@ -81,11 +81,11 @@ mod tests {
         for k in 0..1000 {
             let t = k as f64 * P_OBLIQUITY / 500.0;
             let d = (f.obliquity_at(t) - f.obliquity_mean).abs();
-            // Tolerance accounts for: (1) the formula allows oscillations proportional to
-            // |sin(θ) - sin(phase)|, which can exceed 1 when phase is large; (2) floating-point
-            // precision at large t values. The bound is roughly 2 * amp for typical phases.
+            // Deviation is amp·(sinθ − sinφ); its magnitude is at most
+            // amp·(1 + |sinφ|) ≤ 2·amp for any phase (the −sinφ anchor term
+            // makes the swing asymmetric, so the peak exceeds amp).
             assert!(
-                d <= 2.2 * f.obliquity_amp + 1e-6,
+                d <= 2.0 * f.obliquity_amp + 1e-9,
                 "obliquity left its band at t={t}"
             );
         }
