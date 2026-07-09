@@ -202,6 +202,38 @@ pub fn chart_png(neighbors: &[Neighbor]) -> Vec<u8> {
     hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_HEIGHT, &pixels)
 }
 
+/// A star's terminal color from its spectral class — a **render** decision
+/// (paint), not domain data: hot O/B blue-white through cool M red. 256-color
+/// SGR escape; pair with a `\x1b[0m` reset. Total over `NeighborClass`.
+pub fn spectral_color(class: NeighborClass) -> &'static str {
+    match class {
+        NeighborClass::BlueGiant => "\u{1b}[38;5;39m", // blue-white
+        NeighborClass::WhiteDwarf => "\u{1b}[38;5;255m", // white
+        NeighborClass::SunLike => "\u{1b}[38;5;220m",  // yellow
+        NeighborClass::OrangeGiant => "\u{1b}[38;5;208m", // orange
+        NeighborClass::RedGiant => "\u{1b}[38;5;196m", // red
+        NeighborClass::RedDwarf => "\u{1b}[38;5;124m", // dim red
+    }
+}
+
+/// The anchor star's color from its human-readable `class_name` (which carries
+/// the spectral letter, e.g. "yellow dwarf (G)"). Falls back to Sun-like.
+pub fn star_color(class_name: &str) -> &'static str {
+    let letter = class_name
+        .rsplit('(')
+        .next()
+        .and_then(|s| s.chars().find(|c| c.is_ascii_alphabetic()))
+        .unwrap_or('G');
+    match letter.to_ascii_uppercase() {
+        'O' | 'B' => spectral_color(NeighborClass::BlueGiant),
+        'A' => spectral_color(NeighborClass::WhiteDwarf),
+        'F' | 'G' => spectral_color(NeighborClass::SunLike),
+        'K' => spectral_color(NeighborClass::OrangeGiant),
+        'M' => spectral_color(NeighborClass::RedDwarf),
+        _ => spectral_color(NeighborClass::SunLike),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -335,5 +367,35 @@ mod tests {
         assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
         assert_eq!(&a[16..20], &MAP_WIDTH.to_be_bytes());
         assert_eq!(&a[20..24], &MAP_HEIGHT.to_be_bytes());
+    }
+
+    #[test]
+    fn spectral_color_is_total_and_distinct_by_temperature() {
+        use crate::pins::NeighborClass;
+        // Every variant maps to a non-empty SGR escape.
+        for class in [
+            NeighborClass::BlueGiant,
+            NeighborClass::WhiteDwarf,
+            NeighborClass::SunLike,
+            NeighborClass::OrangeGiant,
+            NeighborClass::RedGiant,
+            NeighborClass::RedDwarf,
+        ] {
+            let c = spectral_color(class);
+            assert!(
+                c.starts_with("\u{1b}[38;5;") && c.ends_with('m'),
+                "{class:?}: {c:?}"
+            );
+        }
+        // Hot and cool ends differ.
+        assert_ne!(
+            spectral_color(NeighborClass::BlueGiant),
+            spectral_color(NeighborClass::RedDwarf)
+        );
+        // The anchor star classifies from its class_name letter.
+        assert_eq!(
+            star_color("yellow dwarf (G)"),
+            spectral_color(NeighborClass::SunLike)
+        );
     }
 }
