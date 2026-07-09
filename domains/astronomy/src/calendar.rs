@@ -4,13 +4,14 @@
 
 use crate::anchor::Rotation;
 use crate::system::StarSystem;
-use crate::units::{Degrees, StdDays};
+use crate::units::StdDays;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::pins::{MoonsPin, RotationPin, SkyPins};
     use crate::system::generate;
+    use crate::units::Degrees;
     use hornvale_kernel::Seed;
 
     fn spinning_system() -> StarSystem {
@@ -53,7 +54,13 @@ mod tests {
 
     #[test]
     fn daylight_follows_the_declared_sinusoid() {
-        let system = spinning_system();
+        let pins = SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            moons: Some(MoonsPin::exact(1).unwrap()),
+            forcing: Some(crate::pins::ForcingPin::Zero),
+            ..SkyPins::default()
+        };
+        let system = generate(Seed(42), &pins).unwrap().system;
         let cal = calendar_of(&system);
         let year = cal.year_length().get();
         let obliquity = system.anchor.obliquity.get();
@@ -71,12 +78,45 @@ mod tests {
         let pins = SkyPins {
             rotation: Some(RotationPin::PeriodHours(24.0)),
             obliquity: Some(Degrees::new(0.0).unwrap()),
+            forcing: Some(crate::pins::ForcingPin::Zero),
             ..SkyPins::default()
         };
         let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
         let t = StdDays::new(100.0).unwrap();
         assert!(cal.season_phase(t).is_none());
         assert_eq!(cal.daylight_fraction(t).unwrap(), 0.5);
+    }
+
+    #[test]
+    fn t0_daylight_matches_the_pre_forcing_value() {
+        // At t=0 the obliquity term equals ε₀ (anchored). With no eccentricity
+        // the daylight at year-phase 0 is 0.5 (equinoctial), unchanged.
+        let pins = SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            obliquity: Some(Degrees::new(0.0).unwrap()),
+            forcing: Some(crate::pins::ForcingPin::Zero),
+            ..SkyPins::default()
+        };
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        assert_eq!(
+            cal.daylight_fraction(StdDays::new(0.0).unwrap()).unwrap(),
+            0.5
+        );
+    }
+
+    #[test]
+    fn zero_tilt_world_still_has_a_year_from_eccentricity() {
+        // Zero obliquity, but forcing (eccentricity) present → season_phase exists.
+        let pins = SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            obliquity: Some(Degrees::new(0.0).unwrap()),
+            ..SkyPins::default() // forcing drawn, eccentricity non-zero
+        };
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        assert!(
+            cal.season_phase(StdDays::new(50.0).unwrap()).is_some(),
+            "eccentricity gives even a zero-tilt world a year (SKY-2)"
+        );
     }
 
     #[test]
@@ -115,7 +155,6 @@ mod tests {
 pub struct Calendar {
     day: Option<StdDays>,
     year: StdDays,
-    obliquity: Degrees,
     moon_periods: Vec<StdDays>,
     forcing: crate::forcing::OrbitalForcing,
 }
@@ -129,7 +168,6 @@ pub fn calendar_of(system: &StarSystem) -> Calendar {
     Calendar {
         day,
         year: system.anchor.year,
-        obliquity: system.anchor.obliquity,
         moon_periods: system.moons.iter().map(|m| m.period).collect(),
         forcing: system.forcing.clone(),
     }
@@ -155,22 +193,26 @@ impl Calendar {
     pub fn year_phase(&self, t: StdDays) -> f64 {
         (t.0 / self.year.0 + self.forcing.year_phase_offset).fract()
     }
-    /// Seasonal phase, absent on a world without axial tilt.
+    /// Seasonal phase; present when either driver (tilt or eccentricity) acts.
     pub fn season_phase(&self, t: StdDays) -> Option<f64> {
-        if self.obliquity.0 == 0.0 {
+        let obliquity = self.forcing.obliquity_at(t.0);
+        let ecc = self.forcing.eccentricity_at(t.0);
+        if obliquity == 0.0 && ecc == 0.0 {
             return None;
         }
         Some(self.year_phase(t))
     }
-    /// Daylight fraction of the local day: the model card's sinusoid.
+    /// Daylight fraction: the tilt sinusoid (time-varying obliquity) plus a
+    /// smaller apsidal term from eccentricity (a tilt-independent driver).
     /// Absent on a tidally locked world.
     pub fn daylight_fraction(&self, t: StdDays) -> Option<f64> {
         self.day?;
-        Some(
-            0.5 + (self.obliquity.0 / 90.0)
-                * 0.5
-                * (std::f64::consts::TAU * self.year_phase(t)).sin(),
-        )
+        let obliquity = self.forcing.obliquity_at(t.0);
+        let ecc = self.forcing.eccentricity_at(t.0);
+        let phase = self.year_phase(t);
+        let tilt_term = (obliquity / 90.0) * 0.5 * (std::f64::consts::TAU * phase).sin();
+        let apsidal_term = ecc * 0.5 * (std::f64::consts::TAU * phase).sin();
+        Some((0.5 + tilt_term + apsidal_term).clamp(0.0, 1.0))
     }
     /// Is it daylight at `t`? Daylight is a centered window of the local day.
     pub fn is_daylight(&self, t: StdDays) -> Option<bool> {
