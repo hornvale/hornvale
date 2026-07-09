@@ -31,10 +31,11 @@ pub fn chart_ascii(neighbors: &[Neighbor]) -> String {
         }
     }
     // Dimmest first, so a brighter star's digit overwrites on collision.
-    for (index, n) in neighbors.iter().enumerate().rev() {
-        let col = ((n.right_ascension / 360.0) * ASCII_WIDTH as f64) as usize;
-        let row = (((90.0 - n.declination) / 180.0) * ASCII_HEIGHT as f64) as usize;
-        let digit = char::from_digit(index as u32 + 1, 10).expect("≤ 5 neighbors");
+    for (index, neighbor) in neighbors.iter().enumerate().rev() {
+        let col = ((neighbor.right_ascension / 360.0) * ASCII_WIDTH as f64) as usize;
+        let row = (((90.0 - neighbor.declination) / 180.0) * ASCII_HEIGHT as f64) as usize;
+        let digit =
+            char::from_digit(index as u32 + 1, 10).expect("digit glyphs run out past 9 neighbors");
         grid[row.min(ASCII_HEIGHT - 1)][col.min(ASCII_WIDTH - 1)] = digit;
     }
     let mut out = String::with_capacity((ASCII_WIDTH + 1) * ASCII_HEIGHT);
@@ -188,14 +189,14 @@ pub fn chart_png(neighbors: &[Neighbor]) -> Vec<u8> {
     draw_disc(&mut pixels, NORTH_CENTER);
     draw_disc(&mut pixels, SOUTH_CENTER);
     // Dimmest first, so the brighter dot and label win any overlap.
-    for (index, n) in neighbors.iter().enumerate().rev() {
-        let (x, y) = star_xy(n);
+    for (index, neighbor) in neighbors.iter().enumerate().rev() {
+        let (x, y) = star_xy(neighbor);
         let radius = match index {
             0 => 3,
             1 | 2 => 2,
             _ => 1,
         };
-        draw_dot(&mut pixels, x, y, radius, class_rgb(n.class));
+        draw_dot(&mut pixels, x, y, radius, class_rgb(neighbor.class));
         draw_digit(&mut pixels, index + 1, x as i64 + radius + 2, y as i64 - 2);
     }
     hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_HEIGHT, &pixels)
