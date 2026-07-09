@@ -230,6 +230,25 @@ deferred.
 
 ---
 
+## Rendering — the observation stack
+
+The rendering-strategy spec
+([2026-07-09](../superpowers/specs/2026-07-09-rendering-strategy-design.md))
+places every render on a four-ring axis (text in process → committed
+artifacts → scene descriptions → external clients) under decision 0022's
+seam: sim emits data, clients render. Rows here are the speculative rings;
+the PNG migration stays TOOL-6, and the star chart is constitutionally
+promised work (§3.4), not speculation.
+
+| ID       | Idea                                                                                                                                                                                                                                                                              | Status | Conf | Where                                                                                     |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ---- | ----------------------------------------------------------------------------------------- |
+| RENDER-1 | Scene-description protocol — `windows/scene`, semantic-only JSON over the query surface (what an observer sees, never how to draw it; no producer identity); cartographic pole (tile lattice — where "tilemaps" lives) and situated pole (observer at a place and time — the phenomena protocol serialized); schemas are save-format-class contracts | spec'd | high | [rendering strategy](../superpowers/specs/2026-07-09-rendering-strategy-design.md)        |
+| RENDER-2 | In-book web viewer — hand-written vanilla JS in `book/` (no npm, no build step) reading committed scene JSON: pan a biome map, scrub the sky through a year; the book as interactive public window at zero workspace dependencies                                                   | raw    | med  | [rendering strategy, Ring 3](../superpowers/specs/2026-07-09-rendering-strategy-design.md) |
+| RENDER-3 | TUI world viewer — an external repo with its own deps, driving `hornvale scene` as a subprocess; browse maps, watch the sky animate in ASCII; the bridge between REPL and game                                                                                                      | raw    | med  | [rendering strategy, Ring 3](../superpowers/specs/2026-07-09-rendering-strategy-design.md) |
+| RENDER-4 | Tilemap game view — the game lens's secondary render (focalized prose stays primary, Constitution §3.5); requires observer-relative knowledge (the fog is TOOL-2's player-knowledge ledger), per-species senses (EXP-3), and salience-ranked detail from RENDER-1's situated pole   | raw    | med  | [rendering strategy, Ring 3](../superpowers/specs/2026-07-09-rendering-strategy-design.md) |
+
+---
+
 ## Astronomy — the sky's near-term deficits
 
 The astronomy domain (Campaign 2) is physically honest but **frozen and

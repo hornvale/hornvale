@@ -61,3 +61,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0019](0019-no-procedural-macros.md) | No procedural macros | Accepted |
 | [0020](0020-campaigns-write-retrospectives.md) | Campaigns write retrospectives | Accepted |
 | [0021](0021-no-alignment-axis.md) | No alignment axis; species are not moral types | Accepted |
+| [0022](0022-sim-emits-data-clients-render.md) | Sim emits data, clients render | Accepted |
