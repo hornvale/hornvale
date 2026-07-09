@@ -2,7 +2,7 @@
 
 # Phonology
 
-Per-species phoneme inventories, phonotactic templates, and sample name transcriptions, drawn from reference seed 42. The `Segment` feature-bundle is the truth; romanization (the almanac's spelling) and IPA (this page) are both views over it, never stored independently (spec §3–4).
+Per-species phoneme inventories, phonotactic templates, and sample name transcriptions, drawn from reference seed 42. The `Segment` feature-bundle is the truth; romanization (the almanac's spelling) and IPA (this page) are both views over it, never stored independently (spec §3–4); the espeak formulation (audio column) is the third view, authored to clips by `hornvale voice`.
 
 ## Goblin
 
@@ -36,12 +36,12 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 ### Sample names
 
-| Kind | Romanization | IPA |
-|---|---|---|
-| Settlement | Zvetnot | /zvetnot/ |
-| Settlement | Ngodsvedsxak | /ŋodsvedsxak/ |
-| Settlement | Vnebsfot | /vnebsfot/ |
-| Deity | Nekxnob | /nekxnob/ |
+| Kind | Romanization | IPA | Espeak | Audio |
+|---|---|---|---|---|
+| Settlement | Zvetnot | /zvetnot/ | `[[zv'etnot]]` | <audio controls preload="none" src="../audio/b98f6a7c.mp3"></audio> |
+| Settlement | Ngodsvedsxak | /ŋodsvedsxak/ | `[[N'odsvedsxak]]` | <audio controls preload="none" src="../audio/30463f24.mp3"></audio> |
+| Settlement | Vnebsfot | /vnebsfot/ | `[[vn'ebsfot]]` | <audio controls preload="none" src="../audio/a6635453.mp3"></audio> |
+| Deity | Nekxnob | /nekxnob/ | `[[n'ekxnob]]` | <audio controls preload="none" src="../audio/a60dbfaf.mp3"></audio> |
 
 ## Kobold
 
@@ -69,10 +69,10 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 
 ### Sample names
 
-| Kind | Romanization | IPA |
-|---|---|---|
-| Settlement | Xakraq | /xakraq/ |
-| Settlement | Roroq | /roroq/ |
-| Settlement | Rrokraro | /rrokraro/ |
-| Deity | Xokrrok | /xokrrok/ |
+| Kind | Romanization | IPA | Espeak | Audio |
+|---|---|---|---|---|
+| Settlement | Xakraq | /xakraq/ | `[[x'akraq]]` | <audio controls preload="none" src="../audio/c9a20b87.mp3"></audio> |
+| Settlement | Roroq | /roroq/ | `[[r'oroq]]` | <audio controls preload="none" src="../audio/e01fbedf.mp3"></audio> |
+| Settlement | Rrokraro | /rrokraro/ | `[[rr'okraro]]` | <audio controls preload="none" src="../audio/e40cd3ca.mp3"></audio> |
+| Deity | Xokrrok | /xokrrok/ | `[[x'okrrok]]` | <audio controls preload="none" src="../audio/162730a2.mp3"></audio> |
 

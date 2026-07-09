@@ -6,7 +6,6 @@
 /// CRC-32/IEEE (the zlib polynomial, reflected, bitwise — no table), the
 /// checksum content-addressing the book's audio clips. Hand-rolled to keep
 /// the serde-only dependency allowlist intact.
-#[allow(dead_code)]
 pub(crate) fn crc32(bytes: &[u8]) -> u32 {
     let mut crc: u32 = 0xffff_ffff;
     for &byte in bytes {
@@ -23,7 +22,6 @@ pub(crate) fn crc32(bytes: &[u8]) -> u32 {
 /// digits of its CRC-32, `.mp3`. Content-addressing is the freshness
 /// mechanism — a phonology change alters the formulation, hence the
 /// filename, and the artifact-set test fails until `hornvale voice` runs.
-#[allow(dead_code)]
 pub(crate) fn audio_filename(formulation: &str) -> String {
     format!("{:08x}.mp3", crc32(formulation.as_bytes()))
 }

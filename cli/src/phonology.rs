@@ -3,17 +3,17 @@
 //! generated names, each in both romanization and IPA.
 
 use hornvale_kernel::{Seed, World};
-use hornvale_language::{Manner, NameKind, Namer, Segment, ipa, romanize};
+use hornvale_language::{GeneratedName, Manner, NameKind, Namer, Segment, ipa, romanize};
 use hornvale_worldgen as world_builder;
 
 /// The reference seed the page draws every species' inventory and sample
 /// names from — the same canonical seed 42 used throughout the book's
 /// gallery pages, so this page's output is comparable against them.
-const REFERENCE_SEED: u64 = 42;
+pub(crate) const REFERENCE_SEED: u64 = 42;
 
 /// How many settlement-name samples to draw per species (in addition to one
 /// deity name), each from a distinct salt so the samples show real variety.
-const SETTLEMENT_SAMPLES: u64 = 3;
+pub(crate) const SETTLEMENT_SAMPLES: u64 = 3;
 
 /// Render every registered species' phonology as markdown for the book's
 /// reference section. Deterministic: a pure function of the reference seed
@@ -31,7 +31,8 @@ pub fn render_phonology() -> String {
          name transcriptions, drawn from reference seed {REFERENCE_SEED}. The \
          `Segment` feature-bundle is the truth; romanization (the almanac's \
          spelling) and IPA (this page) are both views over it, never stored \
-         independently (spec §3–4).\n\n"
+         independently (spec §3–4); the espeak formulation (audio column) is \
+         the third view, authored to clips by `hornvale voice`.\n\n"
     ));
 
     for (species, def) in hornvale_species::registry() {
@@ -67,21 +68,40 @@ pub fn render_phonology() -> String {
         ));
 
         doc.push_str("### Sample names\n\n");
-        doc.push_str("| Kind | Romanization | IPA |\n|---|---|---|\n");
-        let namer = Namer::new(&world.seed, species, &phonology);
-        let morph = world_builder::morph_options(&def.psych);
-        for salt in 0..SETTLEMENT_SAMPLES {
-            let name = namer.name(NameKind::Settlement, salt, &morph);
+        doc.push_str("| Kind | Romanization | IPA | Espeak | Audio |\n|---|---|---|---|---|\n");
+        for (kind, name) in sample_names_for(&world, species, &def) {
             doc.push_str(&format!(
-                "| Settlement | {} | /{}/ |\n",
-                name.roman, name.ipa
+                "| {} | {} | /{}/ | `{}` | <audio controls preload=\"none\" src=\"../audio/{}\"></audio> |\n",
+                kind,
+                name.roman,
+                name.ipa,
+                name.espeak,
+                crate::audio::audio_filename(&name.espeak),
             ));
         }
-        let deity = namer.name(NameKind::Deity, 0, &morph);
-        doc.push_str(&format!("| Deity | {} | /{}/ |\n", deity.roman, deity.ipa));
         doc.push('\n');
     }
     doc
+}
+
+/// The sample-name set for one species — three settlement names then one
+/// deity name, in the order the page's table renders them. Shared with
+/// `hornvale voice`, which authors one audio clip per entry, so the page
+/// and the artifact set agree by construction.
+pub(crate) fn sample_names_for(
+    world: &World,
+    species: &str,
+    def: &hornvale_species::SpeciesDef,
+) -> Vec<(&'static str, GeneratedName)> {
+    let phonology = world_builder::language_of(world, species);
+    let namer = Namer::new(&world.seed, species, &phonology);
+    let morph = world_builder::morph_options(&def.psych);
+    let mut samples = Vec::new();
+    for salt in 0..SETTLEMENT_SAMPLES {
+        samples.push(("Settlement", namer.name(NameKind::Settlement, salt, &morph)));
+    }
+    samples.push(("Deity", namer.name(NameKind::Deity, 0, &morph)));
+    samples
 }
 
 /// A segment's raw structural feature-bundle, compactly rendered — the
@@ -216,5 +236,34 @@ mod tests {
     #[test]
     fn render_is_deterministic() {
         assert_eq!(render_phonology(), render_phonology());
+    }
+
+    /// Every sample-name row must reference a content-addressed audio clip
+    /// whose filename is the CRC-32 of that row's espeak formulation — the
+    /// page and `hornvale voice` must agree on names by construction.
+    #[test]
+    fn sample_rows_carry_espeak_and_content_addressed_audio() {
+        let doc = render_phonology();
+        assert!(doc.contains("Espeak"), "missing the Espeak column");
+        let world = World::new(Seed(REFERENCE_SEED));
+        let registry = hornvale_species::registry();
+        let (species, def) = registry.iter().next().expect("at least one species");
+        let samples = sample_names_for(&world, species, def);
+        assert_eq!(samples.len(), SETTLEMENT_SAMPLES as usize + 1);
+        for (_, name) in &samples {
+            assert!(
+                doc.contains(&format!("`{}`", name.espeak)),
+                "page must show formulation {}",
+                name.espeak
+            );
+            assert!(
+                doc.contains(&format!(
+                    "src=\"../audio/{}\"",
+                    crate::audio::audio_filename(&name.espeak)
+                )),
+                "page must reference {}'s clip by its CRC-32 name",
+                name.roman
+            );
+        }
     }
 }
