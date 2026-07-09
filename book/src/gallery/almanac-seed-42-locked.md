@@ -9,14 +9,7 @@ Visible bodies: the sun, moon 1, moon 2.
 Salient phenomena, most attention-demanding first:
 
 - [1.00] *celestial-body* — a sun fixed forever above the day side
-- [0.64] *celestial-body* — a vast moon
-- [0.47] *celestial-body* — a small, distant moon
 - [0.15] *ambient* — warm, still, unchanging air
-- [0.11] *night-star* — a smoldering red star that does not wander
-- [0.11] *night-star* — a warm yellow star that does not wander
-- [0.10] *night-star* — a deep orange star that does not wander
-- [0.10] *night-star* — a dim red star that does not wander
-- [0.10] *night-star* — a pale white star that does not wander
 
 By night: a smoldering red star that does not wander; a warm yellow star that does not wander; a deep orange star that does not wander; a dim red star that does not wander; a pale white star that does not wander.
 
@@ -89,25 +82,9 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
-> Vngodnetzhfod the Vnodxngetzhxed returns every 15.99 days. So it was, so it is.
->
-> — derived from the phenomenon *celestial-body*
-
-> Natxnok the Nadfngok returns every 32.55 days. So it was, so it is.
->
-> — derived from the phenomenon *celestial-body*
-
 The warren of **Rokro** keeps its own folk pantheon:
 
-> Rroqrroq Xoq comes back every 15.99 days. That's how it's always been. That's how it's always been. Rroqrroq is a great one among the gods.
->
-> — derived from the phenomenon *celestial-body*
-
-> Ragrrotrok Rrakrrarra comes back every 32.55 days. That's how it's always been. That's how it's always been. Ragrrotrok is a great one among the gods.
->
-> — derived from the phenomenon *celestial-body*
-
-> Xokxok Xoxo is: Xokxok Xoxo is always watching. That's how it's always been. That's how it's always been. Xokxok is a great one among the gods.
+> Xotxatrag Xagxag is: Xotxatrag Xagxag is always watching. That's how it's always been. That's how it's always been. Xotxatrag is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
