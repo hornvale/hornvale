@@ -1,6 +1,7 @@
 //! Deterministic sweep engine: run studies, collect metrics, write results.
 
-use crate::{MetricValue, Study, StudyError, WorldView};
+use crate::{Metric, MetricValue, Study, StudyError, WorldView};
+use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_worldgen::BuildError;
 use std::fs;
@@ -41,42 +42,15 @@ pub fn run(study: &Study) -> Result<RunResult, StudyError> {
 
     let metric_names: Vec<&'static str> = metrics.iter().map(|m| m.name).collect();
 
+    // Pin sets in file order; within each, seeds ascending from seeds.from. The
+    // seed sweep runs in parallel across the available CPUs, but the output is
+    // byte-identical to a sequential run: every world is a pure function of its
+    // seed, results are reassembled by seed offset (never by which thread
+    // finished first), and the thread count affects only speed. The
+    // `parallel_run_matches_sequential` test pins that equivalence.
     let mut rows = Vec::new();
-
-    // Iterate: pin_sets in file order, seeds ascending from seeds.from
-    for (label, pins) in pin_sets {
-        for seed_offset in 0..study.seeds.count {
-            let seed_value = study.seeds.from + seed_offset;
-            let seed = Seed(seed_value);
-
-            match WorldView::build(seed, &pins) {
-                Ok(view) => {
-                    let values: Vec<MetricValue> =
-                        metrics.iter().map(|m| (m.extract)(&view)).collect();
-                    rows.push(Row {
-                        seed: seed_value,
-                        pin_set: label.clone(),
-                        values,
-                        refusal: None,
-                    });
-                }
-                Err(BuildError::Genesis(e)) => {
-                    let refusal_msg = e.to_string();
-                    let values = vec![MetricValue::Absent; metrics.len()];
-                    rows.push(Row {
-                        seed: seed_value,
-                        pin_set: label.clone(),
-                        values,
-                        refusal: Some(refusal_msg),
-                    });
-                }
-                Err(e) => {
-                    return Err(StudyError {
-                        message: format!("seed {}, set {}: {}", seed_value, label, e),
-                    });
-                }
-            }
-        }
+    for (label, pins) in &pin_sets {
+        rows.extend(run_pin_set(study, label, pins, &metrics)?);
     }
 
     Ok(RunResult {
@@ -84,6 +58,95 @@ pub fn run(study: &Study) -> Result<RunResult, StudyError> {
         metric_names,
         rows,
     })
+}
+
+/// Build the row for one (seed offset, pin set): a successful measurement, a
+/// genesis refusal (recorded as a row, not an error), or a fatal `StudyError`.
+/// A pure function of its inputs — the unit of parallel work.
+fn build_row(
+    study: &Study,
+    label: &str,
+    pins: &SkyPins,
+    seed_offset: u64,
+    metrics: &[Metric],
+) -> Result<Row, StudyError> {
+    let seed_value = study.seeds.from + seed_offset;
+    match WorldView::build(Seed(seed_value), pins) {
+        Ok(view) => Ok(Row {
+            seed: seed_value,
+            pin_set: label.to_string(),
+            values: metrics.iter().map(|m| (m.extract)(&view)).collect(),
+            refusal: None,
+        }),
+        Err(BuildError::Genesis(e)) => Ok(Row {
+            seed: seed_value,
+            pin_set: label.to_string(),
+            values: vec![MetricValue::Absent; metrics.len()],
+            refusal: Some(e.to_string()),
+        }),
+        Err(e) => Err(StudyError {
+            message: format!("seed {seed_value}, set {label}: {e}"),
+        }),
+    }
+}
+
+/// Build every seed's row for one pin set, in ascending seed order, sweeping
+/// the seeds in parallel across the available CPUs. Returns the earliest
+/// (lowest seed offset) fatal error, matching the sequential path's
+/// first-error-wins semantics.
+fn run_pin_set(
+    study: &Study,
+    label: &str,
+    pins: &SkyPins,
+    metrics: &[Metric],
+) -> Result<Vec<Row>, StudyError> {
+    let count = study.seeds.count;
+    if count == 0 {
+        return Ok(Vec::new());
+    }
+    let threads = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1)
+        .clamp(1, count as usize);
+
+    if threads == 1 {
+        return (0..count)
+            .map(|off| build_row(study, label, pins, off, metrics))
+            .collect();
+    }
+
+    // One result slot per seed offset, filled by worker threads and read back
+    // in offset order on the main thread — so output order never depends on
+    // scheduling. Each thread owns a contiguous seed range (no shared writes).
+    let mut slots: Vec<Option<Result<Row, StudyError>>> = (0..count).map(|_| None).collect();
+    let chunk = count.div_ceil(threads as u64);
+
+    std::thread::scope(|scope| {
+        let mut handles = Vec::with_capacity(threads);
+        for t in 0..threads as u64 {
+            let lo = t * chunk;
+            if lo >= count {
+                break;
+            }
+            let hi = ((t + 1) * chunk).min(count);
+            handles.push(scope.spawn(move || {
+                (lo..hi)
+                    .map(|off| (off, build_row(study, label, pins, off, metrics)))
+                    .collect::<Vec<_>>()
+            }));
+        }
+        for handle in handles {
+            for (off, res) in handle.join().expect("a study worker thread panicked") {
+                slots[off as usize] = Some(res);
+            }
+        }
+    });
+
+    let mut rows = Vec::with_capacity(count as usize);
+    for slot in slots {
+        rows.push(slot.expect("every seed offset produced a result")?);
+    }
+    Ok(rows)
 }
 
 /// Quote a CSV field per RFC 4180 if it contains a comma, quote, or newline
@@ -154,6 +217,74 @@ pub fn write_csv(result: &RunResult, out_root: &Path) -> std::io::Result<PathBuf
 mod tests {
     use super::*;
     use crate::{MetricSelection, PinSet, Seeds};
+
+    /// The reference sequential sweep — the oracle the parallel `run` is
+    /// checked against, byte for byte, by `parallel_run_matches_sequential`.
+    fn run_sequential(study: &Study) -> Result<RunResult, StudyError> {
+        let metrics = study.selected_metrics()?;
+        let pin_sets = study.pin_sets_parsed()?;
+        let metric_names: Vec<&'static str> = metrics.iter().map(|m| m.name).collect();
+        let mut rows = Vec::new();
+        for (label, pins) in &pin_sets {
+            for off in 0..study.seeds.count {
+                rows.push(build_row(study, label, pins, off, &metrics)?);
+            }
+        }
+        Ok(RunResult {
+            study: study.clone(),
+            metric_names,
+            rows,
+        })
+    }
+
+    #[test]
+    fn parallel_run_matches_sequential() {
+        // Two pin sets × enough seeds to span multiple worker threads. If the
+        // parallel sweep ever diverged from the sequential one — a reassembly
+        // bug, a shared-state leak, a nondeterministic metric — either equality
+        // below would fail.
+        let study = Study {
+            name: "par".to_string(),
+            description: "parallel-equivalence".to_string(),
+            seeds: Seeds { from: 0, count: 16 },
+            pin_sets: vec![
+                PinSet {
+                    label: "a".to_string(),
+                    pins: vec![],
+                },
+                PinSet {
+                    label: "b".to_string(),
+                    pins: vec![],
+                },
+            ],
+            metrics: MetricSelection::Named(vec![
+                "star-class".to_string(),
+                "moons-admitted".to_string(),
+                "tidally-locked".to_string(),
+            ]),
+        };
+
+        let parallel = run(&study).expect("parallel run");
+        let sequential = run_sequential(&study).expect("sequential run");
+        assert_eq!(
+            parallel, sequential,
+            "parallel sweep must be byte-identical to sequential"
+        );
+
+        // And identical in the committed-artifact form (CSV bytes).
+        let t1 = std::env::temp_dir().join(format!("hv-par-{}", std::process::id()));
+        let t2 = std::env::temp_dir().join(format!("hv-seq-{}", std::process::id()));
+        fs::create_dir_all(&t1).unwrap();
+        fs::create_dir_all(&t2).unwrap();
+        let par_bytes = fs::read(write_csv(&parallel, &t1).unwrap()).unwrap();
+        let seq_bytes = fs::read(write_csv(&sequential, &t2).unwrap()).unwrap();
+        assert_eq!(
+            par_bytes, seq_bytes,
+            "parallel and sequential CSV bytes must match"
+        );
+        let _ = fs::remove_dir_all(&t1);
+        let _ = fs::remove_dir_all(&t2);
+    }
 
     #[test]
     fn five_seed_study_runs_and_is_deterministic() {
