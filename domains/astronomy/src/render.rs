@@ -8,6 +8,8 @@ use crate::moons::Moon;
 use crate::neighborhood::Neighbor;
 use crate::pins::NeighborClass;
 use crate::provider::size_word;
+use crate::system::StarSystem;
+use crate::units::StdDays;
 
 /// ASCII chart width in characters.
 pub const ASCII_WIDTH: usize = 72;
@@ -41,6 +43,46 @@ pub fn chart_ascii(neighbors: &[Neighbor]) -> String {
     let mut out = String::with_capacity((ASCII_WIDTH + 1) * ASCII_HEIGHT);
     for row in grid {
         out.extend(row);
+        out.push('\n');
+    }
+    out
+}
+
+/// The fixed night sky as a 72×24 ANSI chart: each star its brightness-rank
+/// digit, tinted by spectral class; the celestial equator dashed. The colored
+/// sibling of [`chart_ascii`]; same layout, same determinism.
+pub fn chart_ansi(neighbors: &[Neighbor]) -> String {
+    let mut grid: Vec<Vec<(char, &'static str)>> = vec![vec![(' ', ""); ASCII_WIDTH]; ASCII_HEIGHT];
+    let equator = ASCII_HEIGHT / 2;
+    for (col, cell) in grid[equator].iter_mut().enumerate() {
+        if col % 2 == 0 {
+            *cell = ('-', "");
+        }
+    }
+    for (index, neighbor) in neighbors.iter().enumerate().rev() {
+        let col = ((neighbor.right_ascension / 360.0) * ASCII_WIDTH as f64) as usize;
+        let row = (((90.0 - neighbor.declination) / 180.0) * ASCII_HEIGHT as f64) as usize;
+        let digit =
+            char::from_digit(index as u32 + 1, 10).expect("digit glyphs run out past 9 neighbors");
+        grid[row.min(ASCII_HEIGHT - 1)][col.min(ASCII_WIDTH - 1)] =
+            (digit, spectral_color(neighbor.class));
+    }
+    emit_ansi_grid(&grid)
+}
+
+/// Emit a `(glyph, sgr)` grid as rows, resetting after every colored cell.
+fn emit_ansi_grid(grid: &[Vec<(char, &'static str)>]) -> String {
+    let mut out = String::new();
+    for row in grid {
+        for &(ch, color) in row {
+            if color.is_empty() {
+                out.push(ch);
+            } else {
+                out.push_str(color);
+                out.push(ch);
+                out.push_str("\u{1b}[0m");
+            }
+        }
         out.push('\n');
     }
     out
@@ -202,6 +244,123 @@ pub fn chart_png(neighbors: &[Neighbor]) -> Vec<u8> {
     hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_HEIGHT, &pixels)
 }
 
+/// A star's terminal color from its spectral class — a **render** decision
+/// (paint), not domain data: hot O/B blue-white through cool M red. 256-color
+/// SGR escape; pair with a `\x1b[0m` reset. Total over `NeighborClass`.
+pub fn spectral_color(class: NeighborClass) -> &'static str {
+    match class {
+        NeighborClass::BlueGiant => "\u{1b}[38;5;39m", // blue-white
+        NeighborClass::WhiteDwarf => "\u{1b}[38;5;255m", // white
+        NeighborClass::SunLike => "\u{1b}[38;5;220m",  // yellow
+        NeighborClass::OrangeGiant => "\u{1b}[38;5;208m", // orange
+        NeighborClass::RedGiant => "\u{1b}[38;5;196m", // red
+        NeighborClass::RedDwarf => "\u{1b}[38;5;124m", // dim red
+    }
+}
+
+/// The anchor star's color from its human-readable `class_name` (which carries
+/// the spectral letter, e.g. "yellow dwarf (G)"). Falls back to Sun-like.
+pub fn star_color(class_name: &str) -> &'static str {
+    // Spectral letter lives in a trailing (LETTER) suffix; without it, fall back to Sun-like.
+    let letter = class_name
+        .rsplit_once('(')
+        .and_then(|(_, after)| after.chars().find(|c| c.is_ascii_alphabetic()))
+        .unwrap_or('G');
+    match letter.to_ascii_uppercase() {
+        'O' | 'B' => spectral_color(NeighborClass::BlueGiant),
+        'A' => spectral_color(NeighborClass::WhiteDwarf),
+        'F' | 'G' => spectral_color(NeighborClass::SunLike),
+        'K' => spectral_color(NeighborClass::OrangeGiant),
+        'M' => spectral_color(NeighborClass::RedDwarf),
+        _ => spectral_color(NeighborClass::SunLike),
+    }
+}
+
+/// Orrery grid width in characters.
+pub const ORRERY_WIDTH: usize = 61;
+/// Orrery grid height in characters (terminal cells read ~2:1 tall, so the
+/// x-axis is scaled ×2 for round orbits).
+pub const ORRERY_HEIGHT: usize = 31;
+
+/// A synodic-phase glyph: `o` new, `)` waxing, `O` full, `(` waning — the
+/// provider's phase-word thresholds.
+fn phase_glyph(phase: f64) -> char {
+    if !(0.125..0.875).contains(&phase) {
+        'o'
+    } else if phase < 0.5 {
+        ')'
+    } else if phase < 0.625 {
+        'O'
+    } else {
+        '('
+    }
+}
+
+/// A top-down ANSI orbital schematic of the system at absolute time `t`
+/// (standard days): the star at center (class-colored), the habitable zone as
+/// a dotted ring, the world on its orbit at the year's phase, and each moon in
+/// a tight ring around the world showing its synodic phase. Deterministic in
+/// `(system, t)`. A schematic, not to scale beyond the orbit-to-grid fit.
+pub fn orrery_ansi(system: &StarSystem, calendar: &Calendar, t: StdDays) -> String {
+    let (w, h) = (ORRERY_WIDTH, ORRERY_HEIGHT);
+    let (cx, cy) = (w as f64 / 2.0, h as f64 / 2.0);
+    let aspect = 2.0; // char cells ~2:1 tall
+    let mut grid: Vec<Vec<(char, &'static str)>> = vec![vec![(' ', ""); w]; h];
+
+    let plot = |grid: &mut Vec<Vec<(char, &'static str)>>,
+                r: f64,
+                theta: f64,
+                ch: char,
+                color: &'static str| {
+        let x = (cx + aspect * r * theta.cos()).round() as isize;
+        let y = (cy + r * theta.sin()).round() as isize;
+        if x >= 0 && (x as usize) < w && y >= 0 && (y as usize) < h {
+            grid[y as usize][x as usize] = (ch, color);
+        }
+    };
+
+    // Scale so the world's orbit sits at 80% of the half-height.
+    let orbit = system.anchor.orbit.get();
+    let scale = ((h as f64 / 2.0 - 1.0) * 0.8) / orbit;
+
+    // Habitable-zone ring (dotted, uncolored).
+    let hz_in = system.star.habitable_zone.inner().get() * scale;
+    let hz_out = system.star.habitable_zone.outer().get() * scale;
+    let mut a = 0.0_f64;
+    while a < std::f64::consts::TAU {
+        plot(&mut grid, hz_in, a, '.', "");
+        plot(&mut grid, hz_out, a, '.', "");
+        a += 0.15;
+    }
+
+    // The star at center.
+    grid[cy as usize][cx as usize] = ('*', star_color(&system.star.class_name));
+
+    // The world on its orbit (green), and its screen position.
+    let theta = std::f64::consts::TAU * calendar.year_phase(t);
+    let world_r = orbit * scale;
+    plot(&mut grid, world_r, theta, 'O', "\u{1b}[38;5;42m");
+    let wx = cx + aspect * world_r * theta.cos();
+    let wy = cy + world_r * theta.sin();
+
+    // Moons: sidereal orbital angle around the world, synodic-phase glyph.
+    for (index, moon) in system.moons.iter().enumerate() {
+        let ma = std::f64::consts::TAU * (t.0 / moon.period.get()).fract();
+        let mr = 2.0 + index as f64;
+        let glyph = calendar
+            .moon_phase(t, index)
+            .map(phase_glyph)
+            .unwrap_or('o');
+        let x = (wx + aspect * mr * ma.cos()).round() as isize;
+        let y = (wy + mr * ma.sin()).round() as isize;
+        if x >= 0 && (x as usize) < w && y >= 0 && (y as usize) < h {
+            grid[y as usize][x as usize] = (glyph, "\u{1b}[38;5;250m");
+        }
+    }
+
+    emit_ansi_grid(&grid)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -335,5 +494,101 @@ mod tests {
         assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
         assert_eq!(&a[16..20], &MAP_WIDTH.to_be_bytes());
         assert_eq!(&a[20..24], &MAP_HEIGHT.to_be_bytes());
+    }
+
+    #[test]
+    fn spectral_color_is_total_and_distinct_by_temperature() {
+        use crate::pins::NeighborClass;
+        // Every variant maps to a non-empty SGR escape.
+        for class in [
+            NeighborClass::BlueGiant,
+            NeighborClass::WhiteDwarf,
+            NeighborClass::SunLike,
+            NeighborClass::OrangeGiant,
+            NeighborClass::RedGiant,
+            NeighborClass::RedDwarf,
+        ] {
+            let c = spectral_color(class);
+            assert!(
+                c.starts_with("\u{1b}[38;5;") && c.ends_with('m'),
+                "{class:?}: {c:?}"
+            );
+        }
+        // Hot and cool ends differ.
+        assert_ne!(
+            spectral_color(NeighborClass::BlueGiant),
+            spectral_color(NeighborClass::RedDwarf)
+        );
+        // The anchor star classifies from its class_name letter.
+        assert_eq!(
+            star_color("yellow dwarf (G)"),
+            spectral_color(NeighborClass::SunLike)
+        );
+        // Real production class_name shapes with the spectral parenthetical.
+        assert_eq!(
+            star_color("orange dwarf (K)"),
+            spectral_color(NeighborClass::OrangeGiant)
+        );
+        assert_eq!(
+            star_color("yellow-white dwarf (F)"),
+            spectral_color(NeighborClass::SunLike)
+        );
+        // No parenthetical → Sun-like fallback (not a misroute off the descriptive word).
+        assert_eq!(
+            star_color("orange dwarf"),
+            spectral_color(NeighborClass::SunLike)
+        );
+    }
+
+    #[test]
+    fn chart_ansi_is_deterministic_and_tinted() {
+        let stars = vec![
+            star(45.0, 30.0, 3.0),
+            star(-20.0, 200.0, 2.0),
+            star(0.0, 359.0, 1.0),
+        ];
+        let a = chart_ansi(&stars);
+        assert_eq!(a, chart_ansi(&stars), "must be deterministic");
+        assert!(a.contains("\u{1b}[38;5;"), "stars must be colored");
+        assert!(a.contains("\u{1b}[0m"), "colors must reset");
+        // Same 72×24 shape as the ASCII chart: 24 newline-terminated rows.
+        assert_eq!(a.matches('\n').count(), ASCII_HEIGHT);
+    }
+
+    #[test]
+    fn orrery_is_deterministic_and_structured() {
+        use crate::calendar::calendar_of;
+        use crate::pins::{MoonsPin, RotationPin, SkyPins};
+        use crate::system::generate;
+        use crate::units::StdDays;
+        use hornvale_kernel::Seed;
+        let system = generate(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                moons: Some(MoonsPin::exact(2).unwrap()),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap()
+        .system;
+        let cal = calendar_of(&system);
+        let t = StdDays::new(10.0).unwrap();
+        let a = orrery_ansi(&system, &cal, t);
+        assert_eq!(
+            a,
+            orrery_ansi(&system, &cal, t),
+            "deterministic in (system, t)"
+        );
+        assert_eq!(a.matches('\n').count(), ORRERY_HEIGHT, "one row per line");
+        assert!(a.contains('*'), "the star sits at center");
+        assert!(a.contains('O'), "the world is drawn");
+        // The world moves: a half-year later the frame differs.
+        let half = StdDays::new(10.0 + system.anchor.year.get() / 2.0).unwrap();
+        assert_ne!(
+            a,
+            orrery_ansi(&system, &cal, half),
+            "the world orbits over time"
+        );
     }
 }
