@@ -577,6 +577,19 @@ fn experiential_reason(species: &str, name: &str) -> String {
     }
 }
 
+/// Every species placed in this world, in name order: the distinct
+/// `peopled-by` objects across every committed settlement.
+fn placed_species(world: &World) -> std::collections::BTreeSet<String> {
+    world
+        .ledger
+        .find(hornvale_species::PEOPLED_BY)
+        .filter_map(|f| match &f.object {
+            Value::Text(s) => Some(s.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
 /// The Geosphere cells a species has settled: every committed settlement
 /// `peopled-by` this species, read back by its `cell-id` fact.
 fn settled_cells(world: &World, species: &str) -> Vec<hornvale_kernel::CellId> {
@@ -642,9 +655,11 @@ fn within_hops(
 ///   body-pack and kin-pack entry (always in ladder — unranked); every
 ///   color-pack entry within the species' `pack_depths`; the biome of
 ///   every cell the species has settled; the species' own living-kind
-///   concept (`"<species>-kind"`); and, once the species has settled
-///   anywhere, its own domestic and religious social concepts (`home`,
-///   `hearth`, `god`, `spirit` — "own social... kinds").
+///   concept (`"<species>-kind"` — a people always knows itself); and, once
+///   the species has settled anywhere, the living kind of every species
+///   placed in this world (coexistence in one shared world is exposure —
+///   spec §3's free endonym/exonym) plus its own domestic and religious
+///   social concepts (`home`, `hearth`, `god`, `spirit`).
 /// - **KnowsOf**: the biome of every cell adjacent to a settled cell (that
 ///   isn't already `Steeped` from the species' own settlements); and
 ///   `sea`, if any settled cell lies within two cells of a below-sea-level
@@ -653,9 +668,9 @@ fn within_hops(
 ///   color-pack entry excluded by ladder depth (`GapReason::Perceptual`)
 ///   and a biome/`sea` concept the species neither settled nor neighbors
 ///   (`GapReason::Experiential`, "no settlement in or beside `<biome>`");
-///   every remaining leftover concept (a foreign species' living-kind, or
-///   a social/geographic concept the species hasn't settled to reach) gets
-///   a generic but still recountable `GapReason::Experiential`.
+///   every remaining leftover concept (an unplaced species' living-kind,
+///   or a social/geographic concept the species hasn't settled to reach)
+///   gets a generic but still recountable `GapReason::Experiential`.
 pub fn exposure_of(
     world: &World,
     species: &str,
@@ -704,13 +719,28 @@ pub fn exposure_of(
         classes.insert(name, ExposureClass::Steeped);
     }
 
-    // Steeped: the species' own living kind, and, once settled anywhere,
-    // its own domestic/religious social concepts.
+    // Steeped: the species' own living kind (a people always knows itself),
+    // and — once this species has settled anywhere — the living kind of
+    // every species placed in this world, plus its own domestic/religious
+    // social concepts. Coexistence in one shared world is exposure (spec
+    // §3: each language holds its own words for goblin-kind and kobold-kind,
+    // so endonym and exonym fall out free): the peoples' settlements are
+    // placed by one shared spacing pass; they know each other. Refining
+    // this to contact-graded exposure (distance, trade routes) waits for a
+    // contact ledger. Kinds of species NOT placed in this world are left
+    // to the closing Unknown loop — the placed set is read from the
+    // ledger's `peopled-by` facts, never hardcoded to the roster.
     let own_kind = format!("{species}-kind");
     if world.registry.concept(&own_kind).is_some() {
         classes.insert(own_kind, ExposureClass::Steeped);
     }
     if !settled.is_empty() {
+        for placed in placed_species(world) {
+            let kind = format!("{placed}-kind");
+            if world.registry.concept(&kind).is_some() {
+                classes.insert(kind, ExposureClass::Steeped);
+            }
+        }
         for concept in ["home", "hearth", "god", "spirit"] {
             if world.registry.concept(concept).is_some() {
                 classes.insert(concept.to_string(), ExposureClass::Steeped);

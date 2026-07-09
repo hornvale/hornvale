@@ -54,6 +54,37 @@ fn kobold_blue_is_a_perceptual_gap_and_goblin_blue_is_not() {
 }
 
 #[test]
+fn each_placed_species_holds_a_root_for_every_placed_species_kind() {
+    // Spec §3: "each language will hold its own words for goblin-kind and
+    // kobold-kind — endonym and exonym fall out free." Coexistence in one
+    // shared world is exposure: both peoples place, so each is Steeped in
+    // the other's kind and each lexicon roots both.
+    let w = world();
+    let goblin = lexicon_of(&w, "goblin").unwrap();
+    let kobold = lexicon_of(&w, "kobold").unwrap();
+
+    let mut romans = Vec::new();
+    for (lex, species) in [(&goblin, "goblin"), (&kobold, "kobold")] {
+        for concept in ["goblin-kind", "kobold-kind"] {
+            match lex.entry(concept) {
+                Some(LexEntry::Root { views, .. }) => romans.push(views.roman.clone()),
+                other => panic!("{species}'s '{concept}' should be a Root, got {other:?}"),
+            }
+        }
+    }
+    // The exonym exists and differs between the two languages: each species
+    // draws its word for either kind from its own phonology.
+    assert_ne!(
+        romans[0], romans[2],
+        "goblin and kobold words for goblin-kind should differ"
+    );
+    assert_ne!(
+        romans[1], romans[3],
+        "goblin and kobold words for kobold-kind should differ"
+    );
+}
+
+#[test]
 fn every_unknown_entrys_reason_is_non_empty() {
     let w = world();
     for species in ["goblin", "kobold"] {
