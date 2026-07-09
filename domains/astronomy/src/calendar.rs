@@ -36,7 +36,10 @@ mod tests {
         assert_eq!(cal.day_length().unwrap().get(), 1.0);
         let (index, fraction) = cal.local_day(StdDays::new(2.25).unwrap()).unwrap();
         assert_eq!(index, 2);
-        assert!((fraction - 0.25).abs() < 1e-12);
+        // The genesis day-phase offset (SKY-4) shifts where in the day t=0
+        // falls, so the expected fraction is 0.25 plus that offset.
+        let expected = (0.25 + cal.forcing.day_phase_offset).fract();
+        assert!((fraction - expected).abs() < 1e-12);
     }
 
     #[test]
@@ -54,8 +57,11 @@ mod tests {
         let cal = calendar_of(&system);
         let year = cal.year_length().get();
         let obliquity = system.anchor.obliquity.get();
-        // Midsummer (year phase 0.25): maximum daylight.
-        let t = StdDays::new(0.25 * year).unwrap();
+        // Midsummer is year phase 0.25; the genesis year-phase offset
+        // (SKY-4) shifts which absolute day that falls on, so solve for it
+        // rather than assuming t=0 is the start of the year.
+        let t_frac = (0.25 - cal.forcing.year_phase_offset).rem_euclid(1.0);
+        let t = StdDays::new(t_frac * year).unwrap();
         let expected = 0.5 + (obliquity / 90.0) * 0.5;
         assert!((cal.daylight_fraction(t).unwrap() - expected).abs() < 1e-9);
     }
@@ -78,11 +84,29 @@ mod tests {
         let system = spinning_system();
         let cal = calendar_of(&system);
         let period = system.moons[0].period.get();
+        let t0 = StdDays::new(0.0).unwrap();
         let t = StdDays::new(period * 1.5).unwrap();
-        assert!((cal.moon_phase(t, 0).unwrap() - 0.5).abs() < 1e-9);
+        // Half a period advances the phase by 0.5, modulo wraparound — the
+        // offset shifts where day 0 sits but not how fast the phase moves.
+        let advance =
+            (cal.moon_phase(t, 0).unwrap() - cal.moon_phase(t0, 0).unwrap()).rem_euclid(1.0);
+        assert!((advance - 0.5).abs() < 1e-9);
         let months = cal.months_per_year(0).unwrap();
         assert!((months - cal.year_length().get() / period).abs() < 1e-12);
         assert!(cal.moon_phase(t, 5).is_none());
+    }
+
+    #[test]
+    fn genesis_day_zero_is_not_a_grand_alignment() {
+        let cal = calendar_of(&spinning_system());
+        // At least one of year/day/moon phase is non-zero at t=0.
+        let y = cal.year_phase(StdDays::new(0.0).unwrap());
+        let (_, dfrac) = cal.local_day(StdDays::new(0.0).unwrap()).unwrap();
+        let m = cal.moon_phase(StdDays::new(0.0).unwrap(), 0).unwrap_or(0.0);
+        assert!(
+            y != 0.0 || dfrac != 0.0 || m != 0.0,
+            "day 0 is still a grand alignment"
+        );
     }
 }
 
@@ -93,6 +117,7 @@ pub struct Calendar {
     year: StdDays,
     obliquity: Degrees,
     moon_periods: Vec<StdDays>,
+    forcing: crate::forcing::OrbitalForcing,
 }
 
 /// Derive the calendar from a generated system.
@@ -106,6 +131,7 @@ pub fn calendar_of(system: &StarSystem) -> Calendar {
         year: system.anchor.year,
         obliquity: system.anchor.obliquity,
         moon_periods: system.moons.iter().map(|m| m.period).collect(),
+        forcing: system.forcing.clone(),
     }
 }
 
@@ -122,11 +148,12 @@ impl Calendar {
     pub fn local_day(&self, t: StdDays) -> Option<(u64, f64)> {
         let day = self.day?;
         let local = t.0 / day.0;
-        Some((local as u64, local.fract()))
+        let fraction = (local.fract() + self.forcing.day_phase_offset).fract();
+        Some((local as u64, fraction))
     }
     /// Fraction of the year elapsed at `t`.
     pub fn year_phase(&self, t: StdDays) -> f64 {
-        (t.0 / self.year.0).fract()
+        (t.0 / self.year.0 + self.forcing.year_phase_offset).fract()
     }
     /// Seasonal phase, absent on a world without axial tilt.
     pub fn season_phase(&self, t: StdDays) -> Option<f64> {
@@ -154,7 +181,13 @@ impl Calendar {
     /// Phase of moon `index` at `t`, if that moon exists.
     pub fn moon_phase(&self, t: StdDays, index: usize) -> Option<f64> {
         let period = self.moon_periods.get(index)?;
-        Some((t.0 / period.0).fract())
+        let offset = self
+            .forcing
+            .moon_phase_offsets
+            .get(index)
+            .copied()
+            .unwrap_or(0.0);
+        Some((t.0 / period.0 + offset).fract())
     }
     /// How many of moon `index`'s cycles fit in a year.
     pub fn months_per_year(&self, index: usize) -> Option<f64> {

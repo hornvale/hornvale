@@ -21,7 +21,7 @@ pub const P_PRECESSION: f64 = 21_000.0 * 365.25;
 /// The deep-time forcing of one world: means, amplitudes, and phases for the
 /// Milankovitch triad. All fields are set at genesis; the `*_at` methods are
 /// pure functions of absolute standard days.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct OrbitalForcing {
     /// Mean obliquity, degrees (equals the anchor's genesis obliquity ε₀).
     pub obliquity_mean: f64,
@@ -37,6 +37,15 @@ pub struct OrbitalForcing {
     pub ecc_phase: f64,
     /// Axial-precession phase at genesis, radians.
     pub precession_phase: f64,
+    /// Genesis year-phase offset, a fraction in `[0,1)` (SKY-4): keeps day 0
+    /// from being the start of the year.
+    pub year_phase_offset: f64,
+    /// Genesis day-phase offset, a fraction in `[0,1)` (SKY-4): keeps day 0
+    /// from being local midnight.
+    pub day_phase_offset: f64,
+    /// Genesis phase offset per moon, fractions in `[0,1)` (SKY-4): keeps
+    /// day 0 from being every moon's new phase.
+    pub moon_phase_offsets: Vec<f64>,
 }
 
 impl OrbitalForcing {
@@ -86,6 +95,13 @@ pub fn generate_forcing(
     let obliquity_amp_drawn = base_wobble * damping;
     // The forcing pin zeroes the amplitudes AFTER the draws (pin isolation).
     let zeroed = matches!(pins.forcing, Some(crate::pins::ForcingPin::Zero));
+    // Per-body genesis phase offsets (SKY-4): drawn unconditionally — a phase
+    // offset is not "forcing", it only moves day 0 off the grand alignment
+    // that falls out of every phase being a bare `(t/period).fract()`.
+    let mut p = astronomy_seed.derive(streams::PHASE_OFFSETS).stream();
+    let year_phase_offset = p.next_f64();
+    let day_phase_offset = p.next_f64();
+    let moon_phase_offsets: Vec<f64> = (0..moons.len()).map(|_| p.next_f64()).collect();
     OrbitalForcing {
         obliquity_mean: anchor.obliquity.get(),
         obliquity_amp: if zeroed { 0.0 } else { obliquity_amp_drawn },
@@ -94,6 +110,9 @@ pub fn generate_forcing(
         ecc_amp: if zeroed { 0.0 } else { ecc_amp },
         ecc_phase,
         precession_phase,
+        year_phase_offset,
+        day_phase_offset,
+        moon_phase_offsets,
     }
 }
 
@@ -110,6 +129,9 @@ mod tests {
             ecc_amp: 0.02,
             ecc_phase: 1.1,
             precession_phase: 0.4,
+            year_phase_offset: 0.0,
+            day_phase_offset: 0.0,
+            moon_phase_offsets: Vec::new(),
         }
     }
 
