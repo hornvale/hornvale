@@ -828,6 +828,65 @@ pub fn registry() -> Vec<Metric> {
             },
             extract: name_collision_rate,
         },
+        Metric {
+            name: "head-deity-domain-goblin-twin",
+            doc: "Venue domain of the goblin-twin flagship's head deity (null control, spec §4); Absent without a goblin-twin pantheon",
+            summary: SummaryKind::Categorical,
+            extract: |v| match pantheon_sig(v, "goblin-twin") {
+                Some(s) => MetricValue::Text(s.domain.to_string()),
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "pantheon-size-goblin-twin",
+            doc: "Number of deities in the goblin-twin flagship's pantheon (null control); Absent without one",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            },
+            extract: |v| match pantheon_sig(v, "goblin-twin") {
+                Some(s) => MetricValue::Number(s.size as f64),
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "cult-form-goblin-twin",
+            doc: "Cult form of the goblin-twin flagship's pantheon (null control); Absent without one",
+            summary: SummaryKind::Categorical,
+            extract: |v| match pantheon_sig(v, "goblin-twin") {
+                Some(s) => MetricValue::Text(s.cult),
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "name-length-goblin-twin",
+            doc: "Mean character length of every generated name attributed to the goblin-twin (null control); Absent if it produced no names",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+            },
+            extract: |v| mean_name_length(v, "goblin-twin"),
+        },
+        Metric {
+            name: "pantheon-cyclic-share-goblin",
+            doc: "Fraction of the goblin flagship pantheon's source phenomena that are periodic (the pick_kobold input the null control needs); Absent without a goblin pantheon",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: |v| match pantheon_sig(v, "goblin") {
+                Some(s) => MetricValue::Number(s.cyclic_share),
+                None => MetricValue::Absent,
+            },
+        },
+        Metric {
+            name: "pantheon-cyclic-share-goblin-twin",
+            doc: "Fraction of the goblin-twin flagship pantheon's source phenomena that are periodic (null control); Absent without one",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: |v| match pantheon_sig(v, "goblin-twin") {
+                Some(s) => MetricValue::Number(s.cyclic_share),
+                None => MetricValue::Absent,
+            },
+        },
     ]
 }
 
@@ -1345,8 +1404,8 @@ mod tests {
     }
 
     #[test]
-    fn registry_has_fifty_seven_metrics_after_the_tongues() {
-        assert_eq!(registry().len(), 57);
+    fn registry_has_sixty_three_metrics_after_the_meeting() {
+        assert_eq!(registry().len(), 63);
     }
 
     #[test]
@@ -1509,6 +1568,56 @@ mod tests {
             "Missing doc for belief-kind: {}",
             belief_kind.doc
         );
+    }
+
+    #[test]
+    fn solo_goblin_and_twin_share_placement_and_head_domain_at_seed_42() {
+        let g = WorldView::build_with_roster(
+            Seed(42),
+            &SkyPins::default(),
+            crate::goblin_solo_roster(),
+        )
+        .unwrap();
+        let t = WorldView::build_with_roster(
+            Seed(42),
+            &SkyPins::default(),
+            crate::goblin_twin_solo_roster(),
+        )
+        .unwrap();
+        let gf = flagship_of(&g.world, "goblin").unwrap();
+        let tf = flagship_of(&t.world, "goblin-twin").unwrap();
+        // Identical vectors + no competitor ⇒ identical cell (spec §3).
+        let gcell = g
+            .world
+            .ledger
+            .value_of(gf.id, hornvale_settlement::CELL_ID)
+            .cloned();
+        let tcell = t
+            .world
+            .ledger
+            .value_of(tf.id, hornvale_settlement::CELL_ID)
+            .cloned();
+        assert_eq!(
+            gcell, tcell,
+            "solo goblin and twin must land in the same cell"
+        );
+        // Same cell, same sky, same perception ⇒ same head-deity domain.
+        let reg = registry();
+        let dom = |view: &WorldView, name: &str| match (reg
+            .iter()
+            .find(|m| m.name == name)
+            .unwrap()
+            .extract)(view)
+        {
+            MetricValue::Text(s) => s,
+            other => panic!("expected domain text, got {other:?}"),
+        };
+        assert_eq!(
+            dom(&g, "head-deity-domain-goblin"),
+            dom(&t, "head-deity-domain-goblin-twin")
+        );
+        // But names differ (independent stream).
+        assert_ne!(gf.name, tf.name, "twin names must differ from goblin's");
     }
 
     #[test]
