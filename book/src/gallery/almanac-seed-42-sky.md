@@ -25,8 +25,8 @@ By night: a smoldering red star that does not wander; a warm yellow star that do
 
 - The year is 418.3 local days (368.1 standard days).
 - Daylight swells to 51% at midsummer and shrinks to 49% at midwinter.
-- The first moon circles every 18.2 local days — 23.0 months to a year.
-- The second moon circles every 37.0 local days — 11.3 months to a year.
+- The first moon circles every 18.2 local days — 22.0 months to a year.
+- The second moon circles every 37.0 local days — 10.3 months to a year.
 
 ## The Land
 

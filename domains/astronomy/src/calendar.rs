@@ -30,6 +30,18 @@ mod tests {
         generate(Seed(42), &pins).unwrap().system
     }
 
+    /// A minimal calendar with one moon at the given sidereal period, in a
+    /// year of the given length (both in standard days) — for exercising
+    /// the sidereal/synodic conversion at exact, hand-checkable values.
+    fn calendar_with_moon(sidereal_days: f64, year_days: f64) -> Calendar {
+        Calendar {
+            day: None,
+            year: StdDays::new(year_days).unwrap(),
+            obliquity: Degrees::new(0.0).unwrap(),
+            moon_periods: vec![StdDays::new(sidereal_days).unwrap()],
+        }
+    }
+
     #[test]
     fn local_days_advance_with_absolute_time() {
         let cal = calendar_of(&spinning_system());
@@ -74,15 +86,42 @@ mod tests {
     }
 
     #[test]
-    fn moon_phase_and_months_derive_from_kepler_periods() {
+    fn moon_phase_and_months_derive_from_synodic_periods() {
         let system = spinning_system();
         let cal = calendar_of(&system);
-        let period = system.moons[0].period.get();
-        let t = StdDays::new(period * 1.5).unwrap();
+        let synodic = cal.synodic_month(0).unwrap().get();
+        let t = StdDays::new(synodic * 1.5).unwrap();
         assert!((cal.moon_phase(t, 0).unwrap() - 0.5).abs() < 1e-9);
         let months = cal.months_per_year(0).unwrap();
-        assert!((months - cal.year_length().get() / period).abs() < 1e-12);
+        assert!((months - cal.year_length().get() / synodic).abs() < 1e-12);
         assert!(cal.moon_phase(t, 5).is_none());
+    }
+
+    /// Luna-like check: 27.32 d sidereal in a 365.25 d year → 29.53 d synodic.
+    #[test]
+    fn synodic_month_matches_the_luna_check_value() {
+        let cal = calendar_with_moon(27.32, 365.25);
+        let synodic = cal.synodic_month(0).unwrap().0;
+        assert!((synodic - 29.5306).abs() < 0.01, "got {synodic}");
+        assert!((cal.months_per_year(0).unwrap() - 365.25 / synodic).abs() < 1e-12);
+    }
+
+    /// Illumination phase cycles on the synodic period, not the sidereal.
+    #[test]
+    fn moon_phase_cycles_on_the_synodic_period() {
+        let cal = calendar_with_moon(27.32, 365.25);
+        let synodic = cal.synodic_month(0).unwrap().0;
+        assert!((cal.moon_phase(StdDays(synodic * 0.5), 0).unwrap() - 0.5).abs() < 1e-9);
+        assert!(cal.moon_phase(StdDays(synodic), 0).unwrap() < 1e-9);
+    }
+
+    /// A sidereal period at or beyond the year is degenerate: no synodic cycle.
+    #[test]
+    fn synodic_month_guards_the_degenerate_case() {
+        let cal = calendar_with_moon(400.0, 365.25);
+        assert!(cal.synodic_month(0).is_none());
+        assert!(cal.moon_phase(StdDays(1.0), 0).is_none());
+        assert!(cal.months_per_year(0).is_none());
     }
 }
 
@@ -151,14 +190,28 @@ impl Calendar {
         let f = self.daylight_fraction(t)?;
         Some(fraction > (1.0 - f) / 2.0 && fraction < (1.0 + f) / 2.0)
     }
-    /// Phase of moon `index` at `t`, if that moon exists.
-    pub fn moon_phase(&self, t: StdDays, index: usize) -> Option<f64> {
-        let period = self.moon_periods.get(index)?;
-        Some((t.0 / period.0).fract())
+    /// The synodic month of moon `index` — the illumination cycle seen from
+    /// the anchor: `P_syn = P_sid × Y / (Y − P_sid)` (spec §2, fixing
+    /// SKY-20). `None` if the moon doesn't exist or `P_sid ≥ Y` (degenerate:
+    /// the moon never laps the sun).
+    pub fn synodic_month(&self, index: usize) -> Option<StdDays> {
+        let sidereal = self.moon_periods.get(index)?;
+        if sidereal.0 >= self.year.0 {
+            return None;
+        }
+        Some(StdDays(
+            sidereal.0 * self.year.0 / (self.year.0 - sidereal.0),
+        ))
     }
-    /// How many of moon `index`'s cycles fit in a year.
+    /// Illumination phase of moon `index` at `t` (0 = new, 0.5 = full),
+    /// cycling on the synodic month.
+    pub fn moon_phase(&self, t: StdDays, index: usize) -> Option<f64> {
+        let synodic = self.synodic_month(index)?;
+        Some((t.0 / synodic.0).fract())
+    }
+    /// How many synodic months of moon `index` fit in a year.
     pub fn months_per_year(&self, index: usize) -> Option<f64> {
-        let period = self.moon_periods.get(index)?;
-        Some(self.year.0 / period.0)
+        let synodic = self.synodic_month(index)?;
+        Some(self.year.0 / synodic.0)
     }
 }
