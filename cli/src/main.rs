@@ -274,7 +274,11 @@ fn cmd_map(args: &[String]) -> Result<(), String> {
     ));
     doc.push_str("```\n\n");
     if let Some(out) = flag_value(args, "--out") {
-        let png = hornvale_terrain::render::elevation_png(terrain.geosphere(), terrain.globe());
+        let png = hornvale_terrain::render::elevation_png(
+            terrain.geosphere(),
+            terrain.globe(),
+            world.seed,
+        );
         std::fs::write(out, png).map_err(|e| format!("writing {out}: {e}"))?;
         let name = std::path::Path::new(out)
             .file_name()
