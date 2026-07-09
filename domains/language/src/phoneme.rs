@@ -606,6 +606,23 @@ pub fn espeak(seg: &Segment) -> &'static str {
     }
 }
 
+/// Assemble a whole word's espeak-ng formulation: each segment's mnemonic
+/// in order, a `'` stress marker before the first vowel (explicit stress
+/// keeps the formulation self-contained rather than leaning on espeak's
+/// automatic assignment), wrapped in `[[…]]` for direct phoneme input.
+pub fn espeak_word(segments: &[Segment]) -> String {
+    let mut body = String::new();
+    let mut stressed = false;
+    for seg in segments {
+        if !stressed && matches!(seg, Segment::Vowel { .. }) {
+            body.push('\'');
+            stressed = true;
+        }
+        body.push_str(espeak(seg));
+    }
+    format!("[[{body}]]")
+}
+
 /// The sonority rank of a segment, 0 (least sonorous) to 5 (most): the
 /// scale a later task's loudness bias and phonotactics depend on. Ranked by
 /// manner alone — place and voicing do not affect sonority.
@@ -747,5 +764,63 @@ mod tests {
                 "{seg:?} has espeak mnemonic {m:?}"
             );
         }
+    }
+
+    #[test]
+    fn espeak_word_stresses_the_first_vowel_and_wraps_for_phoneme_input() {
+        use Backness::*;
+        use Height::*;
+        use Manner::*;
+        use Place::*;
+        // z-v-e-t-n-o-t — the seed-42 goblin sample "Zvetnot".
+        let segs = [
+            Segment::Consonant {
+                place: Alveolar,
+                manner: Sibilant,
+                voiced: true,
+            },
+            Segment::Consonant {
+                place: Labial,
+                manner: Fricative,
+                voiced: true,
+            },
+            Segment::Vowel {
+                height: Mid,
+                backness: Front,
+                rounded: false,
+            },
+            Segment::Consonant {
+                place: Alveolar,
+                manner: Stop,
+                voiced: false,
+            },
+            Segment::Consonant {
+                place: Alveolar,
+                manner: Nasal,
+                voiced: true,
+            },
+            Segment::Vowel {
+                height: Mid,
+                backness: Back,
+                rounded: true,
+            },
+            Segment::Consonant {
+                place: Alveolar,
+                manner: Stop,
+                voiced: false,
+            },
+        ];
+        assert_eq!(espeak_word(&segs), "[[zv'etnot]]");
+    }
+
+    #[test]
+    fn espeak_word_of_a_vowelless_or_empty_run_carries_no_stress_marker() {
+        let segs = [Segment::Consonant {
+            place: Place::Alveolar,
+            manner: Manner::Sibilant,
+            voiced: false,
+        }];
+        assert_eq!(espeak_word(&segs), "[[s]]");
+        assert_eq!(espeak_word(&[]), "[[]]");
     }
 }

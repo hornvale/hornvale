@@ -19,7 +19,9 @@ pub mod phonology;
 pub mod register;
 
 pub use naming::{GeneratedName, MorphOptions, NameKind, Namer};
-pub use phoneme::{Backness, Height, Manner, Place, Segment, espeak, ipa, romanize, sonority};
+pub use phoneme::{
+    Backness, Height, Manner, Place, Segment, espeak, espeak_word, ipa, romanize, sonority,
+};
 pub use phonology::{Envelope, ExoticSeg, Phonology, draw_phonology, permits};
 pub use register::{LineContent, LineSentiment, VoiceParams, render_line};
 
