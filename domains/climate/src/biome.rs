@@ -149,7 +149,7 @@ impl Biome {
         }
     }
 
-    /// An RGB color for the PPM biome map.
+    /// An RGB color for the PNG biome map.
     pub fn color(self) -> [u8; 3] {
         match self {
             Biome::Ice => [235, 235, 245],

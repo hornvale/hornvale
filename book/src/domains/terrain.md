@@ -73,9 +73,9 @@ globe is serialized; a world re-derives it from the seed through eight
 labeled streams, permanent save-format contracts in the manifest.
 
 The gallery holds the artifact: [The Land of Seed
-42](../gallery/elevation-seed-42.md), a hand-rolled elevation map (PPM and
-ASCII), drift-checked in CI like every other committed artifact. Chronicle:
-[3b, the tectonic globe](../chronicle/campaign-3b.md).
+42](../gallery/elevation-seed-42.md), a hand-rolled elevation map (PNG and
+ASCII; decision 0018), drift-checked in CI like every other committed
+artifact. Chronicle: [3b, the tectonic globe](../chronicle/campaign-3b.md).
 
 **The tier ladder ahead:** place names that feel authored rather than
 generated, and eventually the region-graph refinement that gives a
