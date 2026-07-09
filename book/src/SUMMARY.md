@@ -63,6 +63,7 @@
 - [The Peoples of Seed 42 (tidally locked)](./gallery/settlement-seed-42-locked.md)
 - [The Gods of Seed 42](./gallery/the-gods-seed-42.md)
 - [The Meeting of Seed 42](./gallery/the-meeting-seed-42.md)
+- [The Atlas of Seed 42](./gallery/atlas.md)
 
 # The Laboratory
 

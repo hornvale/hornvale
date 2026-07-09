@@ -115,7 +115,9 @@ discipline as the rest of the world's on-disk formats:
 - The committed example, `gallery/scene-tiles-seed-42.json`, is regenerated
   from seed 42 and checked byte-for-byte by CI; if the generator's output
   ever drifts from the committed file, the build fails rather than let the
-  schema silently change underneath its own example.
+  schema silently change underneath its own example. The [atlas
+  page](../gallery/atlas.md) renders this same document interactively — the
+  schema's first live consumer.
 
 ## Getting one
 
