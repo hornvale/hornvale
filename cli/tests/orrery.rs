@@ -60,5 +60,39 @@ fn orrery_frame_and_cast_are_deterministic() {
         text.contains("\\r\\n"),
         "cast frames must use CRLF line endings for the raw-terminal replay"
     );
+
+    // Emoji mode: the header width doubles (two columns per cell), still
+    // deterministic. Header is the first line: {"version": 2, "width": ...}.
+    let ecast = dir.join("e.cast");
+    let erun = || {
+        assert!(
+            bin()
+                .args([
+                    "orrery",
+                    "--world",
+                    world.to_str().unwrap(),
+                    "--day",
+                    "0..10",
+                    "--step",
+                    "2",
+                    "--glyphs",
+                    "emoji",
+                    "--cast",
+                    ecast.to_str().unwrap()
+                ])
+                .status()
+                .unwrap()
+                .success()
+        );
+        std::fs::read(&ecast).unwrap()
+    };
+    let efirst = erun();
+    assert_eq!(efirst, erun(), "emoji .cast is deterministic");
+    let etext = String::from_utf8(efirst).unwrap();
+    let header = etext.lines().next().unwrap();
+    assert!(
+        header.contains("\"width\": 122"),
+        "emoji header is two columns per cell (122), got: {header}"
+    );
     std::fs::remove_dir_all(&dir).unwrap();
 }

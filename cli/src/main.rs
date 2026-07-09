@@ -35,8 +35,8 @@ usage:
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
   hornvale settlement-map [--world <PATH>] [--out <PNG>] render the settlement map (markdown to stdout)
   hornvale star-chart [--world <PATH>] [--out <PNG>] render the star chart (markdown to stdout)
-  hornvale orrery [--world <PATH>] [--day <D>]            print one orrery frame (ANSI)
-  hornvale orrery [--world <PATH>] --day <A..B> [--step <k>] [--fps <f>] --cast <OUT>   animate to a .cast
+  hornvale orrery [--world <PATH>] [--day <D>] [--glyphs unicode|emoji]   print one orrery frame (ANSI)
+  hornvale orrery [--world <PATH>] --day <A..B> [--step <k>] [--fps <f>] [--glyphs unicode|emoji] --cast <OUT>   animate to a .cast
   hornvale scene tiles [--world <PATH>] [--width <N>] emit scene/tiles/v1 JSON to stdout
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
@@ -429,7 +429,7 @@ fn cmd_star_chart(args: &[String]) -> Result<(), String> {
 /// world with no generated sky.
 fn cmd_orrery(args: &[String]) -> Result<(), String> {
     use hornvale_astronomy::StdDays;
-    use hornvale_astronomy::render::{GlyphSet, ORRERY_HEIGHT, ORRERY_WIDTH, orrery_ansi};
+    use hornvale_astronomy::render::{GlyphSet, ORRERY_HEIGHT, orrery_ansi, orrery_cols};
     let world = load_world(args)?;
     let sky = world_builder::sky_of(&world).map_err(|e| e.to_string())?;
     let Some(system) = sky.system() else {
@@ -438,6 +438,15 @@ fn cmd_orrery(args: &[String]) -> Result<(), String> {
     let calendar = sky
         .calendar()
         .expect("a generated sky always has a calendar");
+    let glyphs = match flag_value(args, "--glyphs").unwrap_or("unicode") {
+        "unicode" => GlyphSet::Unicode,
+        "emoji" => GlyphSet::Emoji,
+        other => {
+            return Err(format!(
+                "unknown --glyphs '{other}'; expected 'unicode' or 'emoji'"
+            ));
+        }
+    };
     let day_arg = flag_value(args, "--day").unwrap_or("0");
     let mk = |d: f64| StdDays::new(d).map_err(|e| e.to_string());
 
@@ -472,7 +481,7 @@ fn cmd_orrery(args: &[String]) -> Result<(), String> {
             // cursor and its cooked-mode ONLCR translates LF→CRLF.)
             frames.push(format!(
                 "\u{1b}[?25l\u{1b}[2J\u{1b}[H{}",
-                orrery_ansi(system, calendar, mk(d)?, GlyphSet::Unicode).replace('\n', "\r\n")
+                orrery_ansi(system, calendar, mk(d)?, glyphs).replace('\n', "\r\n")
             ));
             d += step;
         }
@@ -480,14 +489,18 @@ fn cmd_orrery(args: &[String]) -> Result<(), String> {
         // speed (default 6 fps ≈ a slow, watchable ~12 s for a 73-frame year).
         // The value is synthetic; only its ratio to real time matters.
         let dt = 1.0 / fps;
-        let cast =
-            hornvale_kernel::asciinema_v2(ORRERY_WIDTH as u16, ORRERY_HEIGHT as u16, dt, &frames);
+        let cast = hornvale_kernel::asciinema_v2(
+            orrery_cols(glyphs) as u16,
+            ORRERY_HEIGHT as u16,
+            dt,
+            &frames,
+        );
         std::fs::write(cast_path, cast).map_err(|e| format!("writing {cast_path}: {e}"))?;
         println!("wrote {} frames to {cast_path}", frames.len());
         Ok(())
     } else {
         let t = mk(day_arg.parse().map_err(|_| "bad --day")?)?;
-        print!("{}", orrery_ansi(system, calendar, t, GlyphSet::Unicode));
+        print!("{}", orrery_ansi(system, calendar, t, glyphs));
         Ok(())
     }
 }
