@@ -202,10 +202,13 @@ Tongues](../chronicle/16-the-tongues.md).
 **The tier ladder ahead:** terrain and climate as phenomena sources (earth
 gods from unrest, sea gods from tides); comparative religion and diffusion
 across the full settlement scatter, not just each species' flagship;
-per-caste patron deities; a religious history that revises instead of
-freezing at genesis, once the event ledger exists; and the
-distributional-twin control — a third species carrying the goblins' exact
-perception vector, which should score at chance under the blind-attribution
-rule and thereby prove the rule reads structure rather than an accident of
-generation order — defined by Campaign 15 but requiring a species this
-project has not yet authored to run.
+per-caste patron deities; and a religious history that revises instead of
+freezing at genesis, once the event ledger exists.
+
+The distributional-twin control that this pantheon-building was ultimately
+staked on — a third species carrying the goblins' exact perception vector,
+scoring at chance under the blind-attribution rule and thereby proving the
+rule reads structure rather than an accident of generation order — was
+defined by Campaign 15 and **run** in The Meeting: 500 of 500 twin pairs
+indistinguishable, the year's exit criterion cashed (see
+[Study 009](../laboratory/study-009.md)).

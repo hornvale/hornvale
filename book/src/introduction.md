@@ -148,3 +148,21 @@ phonotactic validity, honorific affixation present in every goblin epithet
 and absent from every kobold one, and a mean cross-world name collision
 rate of 2.79%, against the roughly 1,100-name ceiling — and correspondingly
 routine collisions — the old ten-syllable pool lived under.
+
+**Campaign 18 (The Meeting) closes Year 2 by proving the divergence is the
+vectors and nothing else.** The four prior campaigns each built a layer of
+difference; this one adds almost no machinery and instead **proves, measures,
+and presents** what they built. It gathers the scattered comparative
+calibrations — head-deity domain by lock, ladder stratification, the epithet
+honorific, blind attribution at 0.875 — into one preregistration ledger, and
+it adds the control the year still owed: a **distributional twin**, a third
+people carrying the goblin's exact vectors, run alone so seed and cell and
+phenomena are shared and only the name-salt differs. A vector identical to the
+baseline cannot move a formula built to reduce to identity there, and it does
+not: 500 of 500 twin pairs are structurally indistinguishable, every
+distribution distance zero but for the intended name-length noise — at chance
+where the standard roster separates decisively. That is Year 2's exit
+criterion cashed. One world, two peoples, one sky, and every difference
+between them traceable home to an authored parameter rather than to the dice
+or to which species a world generates second. The capstone puts the two
+peoples side by side on seed 42; the null control proves the year.

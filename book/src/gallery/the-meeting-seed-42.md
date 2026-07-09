@@ -79,14 +79,20 @@ modulated for kobold by three psychology inputs (see
 stratified ladder form — `slave, farmer, artisan, shaman, chief` — the same
 five rungs Year 1 grew. Kobold's status basis is *knowledge*, not rank, and
 that single enumeration makes the rank-gated slave rung structurally
-unreachable no matter how much surplus or scale a warren has; its communal
-sociality caps every ladder at `elders` and never lets it crown a `chief`. So
-Rakrra tops out at `digger, shaper, keeper, elders` — a worker rung, two craft
-rungs, and a council — a ladder that cannot, by the shape of the vector, hold a
-slave at the bottom or a chief at the top. Neither ladder grows the warrior
-rung this seed's low threat leaves unearned; the difference between them is not
-threat but authority, and it recounts to `status-basis` and `sociality` by
-name.
+unreachable no matter how much surplus or scale a warren has. Its other rungs
+are the same ladder goblin grows, wearing kobold's own vocabulary: `digger` is
+the worker rung, `shaper` the artisan, `keeper` the shaman — the priestly rung
+that is precisely what makes the warren's cult *organized* — and `elders` is
+simply what a kobold calls the top rung a goblin calls `chief`, a relabel that
+rides with the species rather than a ceiling its psychology imposes (the
+`structure` function reads a status basis, a threat response, and a time
+horizon, but never sociality). So Rakrra tops out at `digger, shaper, keeper,
+elders` — a worker, an artisan, a priest, and a council — a ladder that cannot,
+by the shape of the vector, hold a slave at the bottom, though its summit is
+named for a council of `elders` rather than a lone `chief`. Neither ladder
+grows the warrior rung this seed's low threat leaves unearned (kobold would
+name it `warden`); the difference between them is not threat but authority, and
+it recounts to `status-basis` by name.
 
 ## Perception — the same sky, weighed by two different eyes
 
@@ -195,7 +201,8 @@ perception, religion, and language, none of them edited between the goblin pass
 and the kobold pass. Two peoples diverge across all three of Year 2's vectors
 at once: they land in different cells because their psychology prices land
 differently, grow ladders that top out at *chief* against *elders* because
-their status basis and sociality differ, crown a sun against a moon because
+their status basis gates the slave rung and each species names the same rungs
+in its own vocabulary, crown a sun against a moon because
 their lenses weigh the same sky differently, and tell those gods' stories in a
 formal honorific voice against a repeating descriptive one because the same
 psychology that built the ladder also tunes the telling. Every one of those

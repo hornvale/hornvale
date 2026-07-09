@@ -45,6 +45,7 @@
 - [Campaign 15: The Eyes](./chronicle/15-the-eyes.md)
 - [Campaign 16: The Tongues](./chronicle/16-the-tongues.md)
 - [Campaign 17: Audible Phonology](./chronicle/17-audible-phonology.md)
+- [Campaign 18: The Meeting](./chronicle/18-the-meeting.md)
 
 # The Gallery
 
@@ -70,6 +71,7 @@
 - [Study 006: The Census of Peoples II: Two Peoples](./laboratory/study-006.md)
 - [Study 007: The Census of Eyes](./laboratory/study-007.md)
 - [Study 008: The Census of Tongues](./laboratory/study-008.md)
+- [Study 009: The Census of the Meeting](./laboratory/study-009.md)
 
 # Reference
 

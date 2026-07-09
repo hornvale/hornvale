@@ -40,4 +40,14 @@ every time. (It was named `census-drift` through Campaign 3b, before the
 land metrics arrived; the Campaign 3c rename is a label change only — the
 same one study, still the CI-checked half of every census.)
 
+A second committed, CI-drift-checked study joined it in The Meeting:
+`census-of-the-meeting` (500 seeds), the year's **null control**. It walks
+two *solo* rosters — `[goblin]` and `[goblin-twin]`, a species carrying the
+goblin's exact vectors — over one shared seed range, and its calibrations
+assert that the twin is structurally indistinguishable from the goblin: at
+chance on blind attribution, within the sampling bound on every distribution.
+It backs [Study 009, the Census of the Meeting](./study-009.md), the Year-2
+capstone, and like `census-lands-drift` it is re-run and drift-checked on
+every build.
+
 {{#include generated/census-lands-drift/census-lands-drift-summary.md}}

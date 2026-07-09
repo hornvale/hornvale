@@ -57,10 +57,13 @@ threshold, `time_horizon` shifts the artisan threshold, and a
 knowledge-based status basis (rather than rank) suppresses the slave rung
 outright regardless of surplus or scale. Every modulation is the identity
 function at the goblin baseline, so this section's formulas and examples
-are unchanged for goblin; kobold's knowledge-based, communal psychology
-makes a slave rung structurally unreachable and caps every kobold ladder at
-`elders` — never `chief` — a fact [Study 006](../laboratory/study-006.md)
-confirms holds without exception across 10,000 worlds. See
+are unchanged for goblin; kobold's knowledge-based status basis makes a slave
+rung structurally unreachable, and every kobold ladder tops out at `elders` —
+the word kobold's vocabulary uses for the very top rung goblin names `chief`,
+a species relabel rather than a lower ceiling (the `structure` function reads
+the status basis, threat response, and time horizon, but never the sociality
+mode) — a fact [Study 006](../laboratory/study-006.md) confirms holds without
+exception across 10,000 worlds. See
 [Species](./species.md) for the vector these dimensions come from and the
 SRD-derived kobold values themselves.
 

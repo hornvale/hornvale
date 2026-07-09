@@ -150,12 +150,14 @@ perception vector, so the chain stops one step short of the eye that did
 the noticing; sky-report prose rendered in each species' own voice, once a
 generated tongue exists to speak it; terrestrial phenomena rich enough that
 a deep-dwelling people could raise an earthy pantheon — the reading set
-aside for the kobold, kept open for a people after it; the
-distributional-twin control — a species carrying the goblins' exact
-perception vector, which should score at chance under the blind-attribution
-rule this campaign's census introduced, proving the rule reads structure
-and not an accident of which species a world generates second — defined
-this campaign but waiting on a third species to run; and, if ever, the
+aside for the kobold, kept open for a people after it; and, if ever, the
 perception tiers this vector deliberately excludes — spectral response,
 hearing, smell, per-individual variation — each real work for a later
 campaign, none a quiet widening of a three-dimensional vector.
+
+The distributional-twin control this vector's blind-attribution rule was
+built to satisfy has since run. The Meeting authored a species carrying the
+goblins' exact perception vector and confirmed it scores at chance — 500 of
+500 twin pairs indistinguishable — proving the rule reads structure, not an
+accident of which species a world generates second (see
+[Study 009](../laboratory/study-009.md)).
