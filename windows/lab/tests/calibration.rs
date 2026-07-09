@@ -17,6 +17,16 @@ static DRIFT: LazyLock<RunResult> = LazyLock::new(|| {
     run(&study).expect("run census-lands-drift study")
 });
 
+/// The 500-seed solo null-control census (spec §4), run ONCE and shared by both
+/// null-control calibrations. A genuinely different population from `DRIFT`
+/// (solo rosters, not the shipped `{goblin, kobold}`), so it is its own
+/// `LazyLock` — not a re-run of `DRIFT`.
+static MEETING: LazyLock<RunResult> = LazyLock::new(|| {
+    let study = load_study(Path::new("../../studies/census-of-the-meeting.study.json"))
+        .expect("load census-of-the-meeting study");
+    run(&study).expect("run census-of-the-meeting study")
+});
+
 /// Map a `flagship-biome` metric's kebab-case name back to culture's coarse
 /// `BiomeClass`, mirroring `hornvale_worldgen::biome_class`'s grouping. A
 /// small duplicate is unavoidable here: the metric reports the biome as a
@@ -551,5 +561,233 @@ fn name_length_distributions_are_measured_and_pinned() {
             (mean - expected_mean).abs() < 1e-6,
             "{species} mean name length drifted: {mean:.10}"
         );
+    }
+}
+
+#[test]
+fn null_control_blind_attribution_is_at_chance() {
+    let result = &*MEETING;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    // Collect (domain, cyclic_share, size) per seed for each solo pin set.
+    let g = collect_sig(
+        result,
+        "goblin-solo",
+        idx("head-deity-domain-goblin"),
+        idx("pantheon-cyclic-share-goblin"),
+        idx("pantheon-size-goblin"),
+    );
+    let t = collect_sig(
+        result,
+        "goblin-twin-solo",
+        idx("head-deity-domain-goblin-twin"),
+        idx("pantheon-cyclic-share-goblin-twin"),
+        idx("pantheon-size-goblin-twin"),
+    );
+    let (mut picks_twin, mut decided, mut indistinguishable, mut pairs) = (0u32, 0u32, 0u32, 0u32);
+    for (seed, gs) in &g {
+        let Some(ts) = t.get(seed) else { continue };
+        pairs += 1;
+        match pick_second([gs, ts]) {
+            Some(1) => {
+                decided += 1;
+                picks_twin += 1;
+            }
+            Some(_) => {
+                decided += 1;
+            }
+            None => {
+                indistinguishable += 1;
+            }
+        }
+    }
+    // Direction (preregistered): decisively NOT separable — most pairs
+    // indistinguishable, and among decided pairs the twin is picked ~half.
+    assert!(pairs > 0, "no attributable solo pairs");
+    assert!(
+        indistinguishable as f64 / pairs as f64 > 0.5,
+        "expected the null control to be mostly indistinguishable, got {indistinguishable}/{pairs}"
+    );
+    if decided > 0 {
+        let rate = picks_twin as f64 / decided as f64;
+        assert!(
+            (rate - 0.5).abs() < 0.2,
+            "twin-pick rate {rate:.3} not at chance"
+        );
+    }
+    // Pinned calibration row (measured 2026-07-09, 500-seed census-of-the-meeting).
+    // The null control is even stronger than the directional floor: EVERY one of
+    // the 500 solo pairs is indistinguishable under the pick_kobold rule. Both
+    // goblin-vectored species land in identical cells, draw the same head-deity
+    // domain and pantheon cyclic-share and size, so no tier of the rule ever
+    // separates them — decided (and thus picks_twin) is exactly zero.
+    assert_eq!(indistinguishable, 500, "indistinguishable count drifted");
+    assert_eq!(decided, 0, "decided count drifted");
+    assert_eq!(picks_twin, 0, "twin-pick count drifted");
+}
+
+#[test]
+fn null_control_distributions_are_within_the_sampling_bound() {
+    let result = &*MEETING;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    // Categorical: total-variation distance; numeric: standardized mean diff.
+    // Bound: the conservative independent-two-sample envelope (spec §4.2). The
+    // two solo builds share seed/cell/phenomena ⇒ POSITIVELY correlated ⇒ true
+    // distances are smaller than independence predicts, so this bound is safe.
+    let cat = |a: &str, b: &str| {
+        tv_distance(
+            text_dist(result, "goblin-solo", idx(a)),
+            text_dist(result, "goblin-twin-solo", idx(b)),
+        )
+    };
+    let num = |a: &str, b: &str| {
+        std_mean_diff(
+            nums(result, "goblin-solo", idx(a)),
+            nums(result, "goblin-twin-solo", idx(b)),
+        )
+    };
+    let head = cat("head-deity-domain-goblin", "head-deity-domain-goblin-twin");
+    let cult = cat("cult-form-goblin", "cult-form-goblin-twin");
+    let size = num("pantheon-size-goblin", "pantheon-size-goblin-twin");
+    let namelen = num("name-length-goblin", "name-length-goblin-twin");
+    // Directional (preregistered): all small — the twin is a goblin.
+    // n≈480 present rows/side; a 3σ two-sample envelope: TVD < ~0.15, |SMD| < ~0.2.
+    assert!(head < 0.15, "head-domain TVD {head:.4} exceeds the bound");
+    assert!(cult < 0.15, "cult-form TVD {cult:.4} exceeds the bound");
+    assert!(
+        size.abs() < 0.2,
+        "pantheon-size SMD {size:.4} exceeds the bound"
+    );
+    assert!(
+        namelen.abs() < 0.2,
+        "name-length SMD {namelen:.4} exceeds the bound"
+    );
+    // Pinned calibration rows (measured 2026-07-09, 500-seed census-of-the-meeting).
+    // Structural indistinguishability is exact: the two solo builds share seed,
+    // cell, and phenomena, so the head-deity domain and cult form distributions
+    // and the pantheon-size mean are byte-identical (TVD = SMD = 0). Only
+    // name-length diverges, and only through name-salted noise — a small SMD well
+    // inside the envelope, the lone structural trace of the two distinct names.
+    assert!((head - 0.0).abs() < 1e-9, "head-domain TVD drifted: {head}");
+    assert!((cult - 0.0).abs() < 1e-9, "cult-form TVD drifted: {cult}");
+    assert!(
+        (size - 0.0).abs() < 1e-9,
+        "pantheon-size SMD drifted: {size}"
+    );
+    assert!(
+        (namelen - -0.118_235_148_756_793_42).abs() < 1e-9,
+        "name-length SMD drifted: {namelen}"
+    );
+}
+
+/// A solo pantheon's pick_kobold-relevant signature.
+struct Sig {
+    domain: String,
+    cyclic_share: f64,
+    size: f64,
+}
+
+/// Per-seed signatures for one pin set (rows where the pantheon exists).
+fn collect_sig(
+    r: &RunResult,
+    pin_set: &str,
+    d: usize,
+    c: usize,
+    s: usize,
+) -> std::collections::BTreeMap<u64, Sig> {
+    let mut out = std::collections::BTreeMap::new();
+    for row in r.rows.iter().filter(|row| row.pin_set == pin_set) {
+        if let (MetricValue::Text(domain), MetricValue::Number(cyclic), MetricValue::Number(size)) =
+            (&row.values[d], &row.values[c], &row.values[s])
+        {
+            out.insert(
+                row.seed,
+                Sig {
+                    domain: domain.clone(),
+                    cyclic_share: *cyclic,
+                    size: *size,
+                },
+            );
+        }
+    }
+    out
+}
+
+/// The pick_kobold rule (spec §4), reimplemented independently: lunar, then
+/// more-cyclic, then larger; None when identical. Returns the index picked.
+fn pick_second(pair: [&Sig; 2]) -> Option<usize> {
+    match (pair[0].domain == "lunar", pair[1].domain == "lunar") {
+        (true, false) => return Some(0),
+        (false, true) => return Some(1),
+        _ => {}
+    }
+    if pair[0].cyclic_share != pair[1].cyclic_share {
+        return Some(if pair[0].cyclic_share > pair[1].cyclic_share {
+            0
+        } else {
+            1
+        });
+    }
+    if pair[0].size != pair[1].size {
+        return Some(if pair[0].size > pair[1].size { 0 } else { 1 });
+    }
+    None
+}
+
+/// Empirical categorical distribution of a Text column over a pin set.
+fn text_dist(r: &RunResult, pin_set: &str, col: usize) -> std::collections::BTreeMap<String, f64> {
+    let mut counts: std::collections::BTreeMap<String, u32> = std::collections::BTreeMap::new();
+    let mut n = 0u32;
+    for row in r.rows.iter().filter(|row| row.pin_set == pin_set) {
+        if let MetricValue::Text(t) = &row.values[col] {
+            *counts.entry(t.clone()).or_default() += 1;
+            n += 1;
+        }
+    }
+    counts
+        .into_iter()
+        .map(|(k, c)| (k, f64::from(c) / f64::from(n.max(1))))
+        .collect()
+}
+
+/// Total-variation distance between two categorical distributions.
+fn tv_distance(
+    a: std::collections::BTreeMap<String, f64>,
+    b: std::collections::BTreeMap<String, f64>,
+) -> f64 {
+    let mut keys: std::collections::BTreeSet<String> = a.keys().cloned().collect();
+    keys.extend(b.keys().cloned());
+    0.5 * keys
+        .iter()
+        .map(|k| (a.get(k).copied().unwrap_or(0.0) - b.get(k).copied().unwrap_or(0.0)).abs())
+        .sum::<f64>()
+}
+
+/// Present numeric values of a column over a pin set.
+fn nums(r: &RunResult, pin_set: &str, col: usize) -> Vec<f64> {
+    r.rows
+        .iter()
+        .filter(|row| row.pin_set == pin_set)
+        .filter_map(|row| {
+            if let MetricValue::Number(n) = row.values[col] {
+                Some(n)
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Standardized mean difference (mean gap in pooled-standard-deviation units).
+fn std_mean_diff(a: Vec<f64>, b: Vec<f64>) -> f64 {
+    let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len().max(1) as f64;
+    let var = |v: &[f64], m: f64| {
+        v.iter().map(|x| (x - m).powi(2)).sum::<f64>() / (v.len().max(1) as f64)
+    };
+    let (ma, mb) = (mean(&a), mean(&b));
+    let pooled = ((var(&a, ma) + var(&b, mb)) / 2.0).sqrt();
+    if pooled == 0.0 {
+        0.0
+    } else {
+        (ma - mb) / pooled
     }
 }
