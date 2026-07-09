@@ -41,4 +41,5 @@ jobs:
           cargo run -p hornvale -- settlement-map --world /tmp/hv-ci-locked.json --out book/src/gallery/settlement-seed-42-locked.png > book/src/gallery/settlement-seed-42-locked.md
           cargo run -p hornvale -- lab run studies/census-lands-drift.study.json
           cargo run -p hornvale -- lab run studies/census-of-the-meeting.study.json
+          cargo run -p hornvale -- lab run studies/census-of-skies.study.json
           git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/
