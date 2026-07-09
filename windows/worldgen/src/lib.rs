@@ -18,6 +18,7 @@ use hornvale_kernel::{
     PerceptionLens, PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime,
     observe,
 };
+use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
 use std::sync::OnceLock;
 
@@ -128,7 +129,8 @@ pub fn register_all(registry: &mut ConceptRegistry) -> Result<(), RegistryError>
     hornvale_settlement::register_concepts(registry)?;
     hornvale_species::register_concepts(registry)?;
     hornvale_culture::register_concepts(registry)?;
-    hornvale_religion::register_concepts(registry)
+    hornvale_religion::register_concepts(registry)?;
+    hornvale_paleoclimate::register_concepts(registry)
 }
 
 /// The shared Geosphere at `GLOBE_LEVEL`: seed-independent, computed once
@@ -304,6 +306,165 @@ pub fn climate_of(world: &World) -> Result<GeneratedClimate, BuildError> {
         regime,
         year_length_std,
     }))
+}
+
+/// The deep-time window (1 Myr) and sampling, standard days. These, the era
+/// count, and the ice step order are save-format contracts (metaplan §9).
+const DEEP_TIME_WINDOW_DAYS: f64 = 1_000_000.0 * 365.25;
+/// Fine ice-integration step, standard days.
+const ICE_STEP_DAYS: f64 = 2_000.0 * 365.25;
+/// Number of coarse climate re-runs across the deep-time window.
+const CLIMATE_ERAS: usize = 25;
+
+/// Rebuild climate for one past era at an overridden sea level and obliquity,
+/// then apply the era's albedo cooling offset to the temperature field.
+/// `present_temperature` is the world's own unforced present-day temperature
+/// (era_day = 0, no albedo offset), one per cell — the anomaly baseline the
+/// glaciation diagnostic is measured against (see the `ice` comment below).
+/// Returns the bare kernel maps paleoclimate consumes.
+fn climate_at_era(
+    world: &World,
+    era_day: f64,
+    sea_level: f64,
+    obliquity_deg: f64,
+    temp_offset_c: f64,
+    present_temperature: &hornvale_kernel::CellMap<f64>,
+) -> Result<EraClimate, BuildError> {
+    let terrain = terrain_of(world)?;
+    let sky = sky_of(world)?;
+    let geo = terrain.geosphere();
+    let elevation = &terrain.globe().elevation;
+    let seafloor =
+        hornvale_kernel::CellMap::from_fn(geo, |cell| seafloor_feature(terrain.boundary_at(cell)));
+    let (insolation, _obliquity, regime, year_length_std) = stellar_inputs(&sky);
+    let climate = GeneratedClimate::generate(&ClimateInputs {
+        geosphere: geo,
+        elevation,
+        sea_level,
+        seafloor: &seafloor,
+        insolation,
+        obliquity_deg,
+        regime,
+        year_length_std,
+    });
+    // Offset temperature (albedo cooling) and diagnose habitability on it.
+    let temperature =
+        hornvale_kernel::CellMap::from_fn(geo, |c| climate.mean_temperature_at(c) + temp_offset_c);
+    let habitable = hornvale_kernel::CellMap::from_fn(geo, |c| {
+        hornvale_climate::is_habitable(
+            *temperature.get(c),
+            climate.moisture_at(c),
+            *elevation.get(c),
+            sea_level,
+        )
+    });
+    // Ice is diagnosed as an anomaly against the world's own present
+    // temperature, not an absolute threshold: a cell counts as glaciated
+    // only if this era reads colder there than that same cell reads today
+    // (era_day = 0, no deep-time offset) by more than the glaciation margin.
+    // This is the same anomaly convention `caloric_summer_index` uses for
+    // obliquity, applied to the spatial diagnostic: it is what makes the
+    // zero-forcing null control hold structurally for any drawn
+    // obliquity/insolation (at era_day = 0 under any forcing, `temperature`
+    // equals `present_temperature` pointwise, so the anomaly is exactly
+    // zero) rather than only for worlds whose baseline climate happens to
+    // sit warmer than a fixed absolute constant.
+    let anomaly =
+        hornvale_kernel::CellMap::from_fn(geo, |c| temperature.get(c) - present_temperature.get(c));
+    let ice = hornvale_paleoclimate::glaciated(geo, elevation, &anomaly, sea_level);
+    let land = geo
+        .cells()
+        .filter(|c| *elevation.get(*c) >= sea_level)
+        .count();
+    let iced = geo.cells().filter(|c| *ice.get(*c)).count();
+    let ice_fraction = if land == 0 {
+        0.0
+    } else {
+        iced as f64 / land as f64
+    };
+    Ok(EraClimate {
+        day: era_day,
+        temperature,
+        habitable,
+        sea_level,
+        ice_fraction,
+    })
+}
+
+/// The deep-time era loop: march the ice sheet on the sky's forcing at fine
+/// steps, re-run climate at ~25 coarse eras, and extract the strata. The
+/// single construction site for `PaleoRecord` and the sole definer of the
+/// era-tick order (a save-format contract).
+pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
+    let sky = sky_of(world)?;
+    let terrain = terrain_of(world)?;
+    let geo = terrain.geosphere();
+    let elevation = terrain.globe().elevation.clone();
+    let present_sea_level = terrain.sea_level();
+
+    // No forcing to read (constant sky) → no deep time; empty record.
+    let Some(system) = sky.system() else {
+        return Ok(hornvale_paleoclimate::extract(
+            geo,
+            &elevation,
+            present_sea_level,
+            &[],
+        ));
+    };
+    let forcing = &system.forcing;
+
+    // The world's own unforced present temperature (era_day = 0, no albedo
+    // offset), one per cell — the anomaly baseline every era's glaciation
+    // diagnostic is measured against (see `climate_at_era`).
+    let present_climate = climate_of(world)?;
+    let present_temperature =
+        hornvale_kernel::CellMap::from_fn(geo, |c| present_climate.mean_temperature_at(c));
+
+    // Fine ice integration: sample the caloric index back through the window.
+    // t = 0 is the present (newest); we look back to −WINDOW. Samples ascend
+    // in absolute day so integration runs oldest → present.
+    let n_steps = (DEEP_TIME_WINDOW_DAYS / ICE_STEP_DAYS).round() as usize;
+    let mut samples: Vec<(f64, f64)> = Vec::with_capacity(n_steps + 1);
+    for k in (0..=n_steps).rev() {
+        let t = -(k as f64) * ICE_STEP_DAYS; // oldest (most negative) first
+        let g = caloric_summer_index(
+            forcing.obliquity_at(t),
+            forcing.obliquity_mean,
+            forcing.eccentricity_at(t),
+            forcing.precession_at(t),
+        );
+        samples.push((t, g));
+    }
+    let history = integrate_ice(&samples);
+
+    // Coarse climate eras: CLIMATE_ERAS days evenly across the window, each
+    // reading the nearest integrated ice state for its offset and sea level.
+    let mut eras: Vec<EraClimate> = Vec::with_capacity(CLIMATE_ERAS);
+    for e in 0..CLIMATE_ERAS {
+        let era_day = -DEEP_TIME_WINDOW_DAYS
+            + (e as f64) * DEEP_TIME_WINDOW_DAYS / (CLIMATE_ERAS as f64 - 1.0);
+        // Nearest ice state by day (samples ascend).
+        let state = history
+            .iter()
+            .min_by(|a, b| (a.day - era_day).abs().total_cmp(&(b.day - era_day).abs()))
+            .expect("history is non-empty");
+        let sea_level = present_sea_level + state.sea_level_change.get();
+        let obliquity_deg = forcing.obliquity_at(era_day);
+        eras.push(climate_at_era(
+            world,
+            era_day,
+            sea_level,
+            obliquity_deg,
+            state.temp_offset_c,
+            &present_temperature,
+        )?);
+    }
+    Ok(hornvale_paleoclimate::extract(
+        geo,
+        &elevation,
+        present_sea_level,
+        &eras,
+    ))
 }
 
 /// Headline biome/habitability lines for the almanac's Land section.
@@ -855,6 +1016,12 @@ pub fn build_world_with_roster(
     for (id, (_, tag)) in ids.iter().zip(placements.iter()) {
         hornvale_species::people(&mut world, *id, species_set[*tag as usize].name)?;
     }
+
+    // Deep time: extract the glacial strata and commit their summary facts on
+    // the world entity, so `recount`/`why` can speak the world's past.
+    let paleo = paleoclimate_of(&world)?;
+    hornvale_paleoclimate::genesis(&mut world, world_entity, shared_geosphere(), &paleo)?;
+
     Ok(world)
 }
 
@@ -1440,6 +1607,59 @@ mod tests {
             assert_eq!(
                 fa, fb,
                 "seed {seed:?}: default-roster build must equal build_world exactly"
+            );
+        }
+    }
+
+    #[test]
+    fn paleoclimate_is_deterministic_and_records_a_glacial_history() {
+        // A generated-sky world has time-varying forcing, so ice cycles.
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let a = paleoclimate_of(&world).unwrap();
+        let b = paleoclimate_of(&world).unwrap();
+        assert_eq!(a.glacial_maximum_day, b.glacial_maximum_day);
+        assert_eq!(a.max_ice_fraction, b.max_ice_fraction);
+        assert!(
+            a.max_ice_fraction > 0.0,
+            "a forced world glaciates at least once"
+        );
+    }
+
+    #[test]
+    fn zero_forcing_world_has_no_glacial_history() {
+        // The forcing pin flattens the Milankovitch triad → flat caloric index →
+        // no ice cycling. The null control. Checked across several seeds: the
+        // caloric index is an anomaly against each world's own mean obliquity
+        // (so it is identically zero under zero forcing regardless of which
+        // obliquity that particular seed drew), and `climate_at_era`'s
+        // glaciation diagnostic is an anomaly against the world's own present
+        // temperature (so a naturally cold present — e.g. a very-low-obliquity
+        // world with permanently cold poles — never reads as "glaciated" on
+        // its own; only a colder-than-present era does).
+        for seed in [42, 7, 123] {
+            let pins = SkyPins {
+                forcing: Some(hornvale_astronomy::ForcingPin::Zero),
+                ..SkyPins::default()
+            };
+            let world = build_world(
+                Seed(seed),
+                &pins,
+                SkyChoice::Generated,
+                &TerrainPins::default(),
+                &SettlementPins::default(),
+            )
+            .unwrap();
+            let rec = paleoclimate_of(&world).unwrap();
+            assert_eq!(
+                rec.max_ice_fraction, 0.0,
+                "zero forcing must not glaciate (seed {seed})"
             );
         }
     }
