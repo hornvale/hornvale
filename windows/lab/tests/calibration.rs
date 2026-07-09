@@ -487,24 +487,134 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
 }
 
 #[test]
-#[ignore = "Task 12 re-pin (re-measurement at The Words re-baseline): this \
-            row pins a MEASURED rate, not a structural property. It pins \
-            the Tongues-era (v1, free-stem) collision counts; Task 9's \
-            glossed names compound over each species' small site-concept \
-            vocabulary, so the measured rate is now genuinely higher \
-            ('glossed compounds shrink the name space' — spec §9's own \
-            documented tradeoff). The campaign plan assigns re-measuring \
-            and re-pinning this row, preregistered directional claim first \
-            (below the Tongues-era rate x2), to Task 12 (Lab preregister + \
-            run) — not a number to hand-edit here without that \
-            preregistration step."]
+fn name_gloss_true_is_100_percent_row_by_row() {
+    // Preregistered (spec §9.3, Study 010 H1): every committed settlement
+    // name-gloss fact composes truthfully from that SAME settlement's own
+    // INDEPENDENTLY re-derived site concepts (biome + presiding
+    // phenomenon). A broken gloss pipeline is falsifiably caught here —
+    // this would read false, not skip silently.
+    let result = &*DRIFT;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let gloss_i = idx("name-gloss-true");
+    let (mut checked, mut absent) = (0u32, 0u32);
+    for row in &result.rows {
+        match row.values[gloss_i] {
+            MetricValue::Flag(v) => {
+                checked += 1;
+                assert!(
+                    v,
+                    "seed {}: a settlement name-gloss is not truthful to its own site facts",
+                    row.seed
+                );
+            }
+            MetricValue::Absent => absent += 1,
+            ref other => panic!("seed {}: name-gloss-true not a flag: {other:?}", row.seed),
+        }
+    }
+    assert!(
+        checked > 0,
+        "no world in the drift census glossed a settlement"
+    );
+    assert_eq!(
+        checked + absent,
+        result.rows.len() as u32,
+        "row count drifted"
+    );
+}
+
+#[test]
+fn lexicon_is_regular_and_exposure_sound_for_both_species() {
+    // Preregistered (spec §9.1/§9.2, Study 010 H2): every Root's recorded
+    // derivation replays exactly through evolve, and exposure
+    // classification is sound (no Root minted for a concept an
+    // INDEPENDENT re-derivation classifies Unknown, every Gap reasoned).
+    // Row-by-row, both species; Absent is a legitimate skip (no Root / no
+    // lexicon entries this world).
+    let result = &*DRIFT;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    for species in ["goblin", "kobold"] {
+        let (reg_i, sound_i) = (
+            idx(&format!("lexicon-regular-{species}")),
+            idx(&format!("exposure-sound-{species}")),
+        );
+        for row in &result.rows {
+            match row.values[reg_i] {
+                MetricValue::Flag(v) => {
+                    assert!(v, "seed {}: {species} lexicon is not regular", row.seed)
+                }
+                MetricValue::Absent => {}
+                ref other => panic!(
+                    "seed {}: lexicon-regular-{species} not a flag: {other:?}",
+                    row.seed
+                ),
+            }
+            match row.values[sound_i] {
+                MetricValue::Flag(v) => assert!(
+                    v,
+                    "seed {}: {species} lexicon is not exposure-sound",
+                    row.seed
+                ),
+                MetricValue::Absent => {}
+                ref other => panic!(
+                    "seed {}: exposure-sound-{species} not a flag: {other:?}",
+                    row.seed
+                ),
+            }
+        }
+    }
+}
+
+#[test]
+fn goblin_hue_depth_exceeds_kobold_hue_depth() {
+    // Preregistered (spec §9.4, Study 010 H3): the shipped roster's
+    // night-vision values predict goblin hue-depth strictly exceeds kobold
+    // hue-depth in every present world — a structural constant of the
+    // authored perception vectors, not a per-seed draw, so the directional
+    // claim and the exact pin below are expected to hold identically at
+    // every seed.
+    let result = &*DRIFT;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let (g_i, k_i) = (idx("hue-depth-goblin"), idx("hue-depth-kobold"));
+    let mut checked = 0u32;
+    for row in &result.rows {
+        if let (MetricValue::Number(g), MetricValue::Number(k)) =
+            (&row.values[g_i], &row.values[k_i])
+        {
+            checked += 1;
+            assert!(
+                g > k,
+                "seed {}: goblin hue-depth {g} does not exceed kobold hue-depth {k}",
+                row.seed
+            );
+            // Pinned: the shipped roster's structural constant.
+            assert_eq!(*g, 4.0, "seed {}: goblin hue-depth drifted", row.seed);
+            assert_eq!(*k, 2.0, "seed {}: kobold hue-depth drifted", row.seed);
+        }
+    }
+    assert!(checked > 0, "no world carried both species' hue-depth");
+}
+
+#[test]
 fn name_collision_rate_is_measured_and_pinned() {
-    // Preregistered (spec §9.2): names are pure per-(seed, species, kind,
-    // salt) draws with no re-draw, so uniqueness is de-facto rather than
-    // enforced (Task 9) — this pins the MEASURED collision rate over the
-    // 500-seed drift study as a calibration row, not an invariant. A
-    // regression that widened or narrowed the drawn name space would move
-    // these counts; a broken collision detector would too.
+    // Preregistered (spec §9.2/§9.5, Study 010 H4): names are pure per-
+    // (seed, species, kind, salt) draws with no re-draw, so uniqueness is
+    // de-facto rather than enforced (Task 9) — this pins the MEASURED
+    // collision rate over the 500-seed drift study as a calibration row,
+    // not an invariant.
+    //
+    // The DIRECTIONAL claim FAILED (reportable per ADR 0016, not adjusted):
+    // Study 010 preregistered "below 2x the Tongues-era pinned rate"
+    // (2.339% x 2 = 4.678%). The re-measured mean is 86.28% — glossed
+    // compounds over each species' small site-concept vocabulary (biome +
+    // one presiding phenomenon, largely constant across a species'
+    // settlements within one world) shrink the name space far more
+    // severely than spec §9's own documented tradeoff anticipated: with
+    // only a handful of distinct (biome, phenomenon) pairs available per
+    // species and up to ~120 settlements drawing from them, most worlds
+    // now see the SAME name minted repeatedly rather than the occasional
+    // collision the free-stem (v1) pool produced. The honest rate is
+    // pinned here exactly as Study 007/008 pin an honest rate that misses
+    // its own floor (0.875 blind attribution) — never loosened to fit.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let rate_i = idx("name-collision-rate");
@@ -527,43 +637,38 @@ fn name_collision_rate_is_measured_and_pinned() {
             ),
         }
     }
-    // Pinned calibration row (measured at the Y2-3 re-baseline, 500-seed
-    // drift study): most worlds draw no colliding names at all, but the
-    // combinatorially large name space is not infinite, so a minority of
-    // worlds show some collision.
-    assert_eq!(zero, 336, "zero-collision world count drifted");
-    assert_eq!(nonzero, 164, "nonzero-collision world count drifted");
+    // Pinned calibration row (re-measured at the Task 12 / Campaign 12
+    // re-baseline, 500-seed drift study, 2026-07-09): most worlds now show
+    // SOME collision — the inverse of the Tongues-era shape.
+    assert_eq!(zero, 2, "zero-collision world count drifted");
+    assert_eq!(nonzero, 498, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.023_389_245_6).abs() < 1e-6,
-        "mean name-collision-rate drifted: {mean:.10}"
+        (mean - 0.862_829_625_681_313).abs() < 1e-6,
+        "mean name-collision-rate drifted: {mean:.15}"
     );
 }
 
 #[test]
-#[ignore = "Task 12 re-pin (re-measurement at The Words re-baseline): this \
-            row pins a MEASURED distribution, not a structural property. It \
-            pins the Tongues-era (v1, free-stem) mean name length per \
-            species; Task 9's glossed names are built by compounding 1-2 \
-            lexicon words (plus repair epenthesis and, for epithets, an \
-            honorific affix) rather than always drawing a single \
-            2-3-syllable stem, so the length distribution has genuinely \
-            shifted. Task 12 (Lab preregister + run) owns re-measuring and \
-            re-pinning this row alongside the collision-rate calibration."]
 fn name_length_distributions_are_measured_and_pinned() {
-    // Preregistered (spec §9.2): mean generated-name length, per species,
-    // pinned over the 500-seed drift study as a calibration row after
-    // measurement — the naming/voice baseline's other half (contrast
-    // `phonotactic_validity_is_true_for_every_generated_name`, which is an
-    // invariant, not a measurement).
+    // Preregistered (spec §9.2, Study 010's H4 companion): mean generated-
+    // name length, per species, pinned over the 500-seed drift study as a
+    // calibration row after measurement — the naming/voice baseline's
+    // other half (contrast `phonotactic_validity_is_true_for_every_
+    // generated_name`, which is an invariant, not a measurement).
+    // Re-measured at the Task 12 / Campaign 12 re-baseline: Task 9's
+    // glossed compounds run shorter on average than the Tongues-era
+    // (v1) free-stem draw (goblin 9.87 -> 6.69, kobold 9.80 -> 6.91) —
+    // consistent with the collision-rate finding above: a smaller,
+    // more-repeated vocabulary of shorter compound words.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     for (species, expected_present, expected_mean) in [
-        ("goblin", 498u32, 9.869_276_105_4),
-        ("kobold", 498u32, 9.799_462_903_6),
+        ("goblin", 498u32, 6.689_645_317_538_036),
+        ("kobold", 498u32, 6.907_515_187_810_932),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -593,7 +698,7 @@ fn name_length_distributions_are_measured_and_pinned() {
         let mean = sum / f64::from(present);
         assert!(
             (mean - expected_mean).abs() < 1e-6,
-            "{species} mean name length drifted: {mean:.10}"
+            "{species} mean name length drifted: {mean:.15}"
         );
     }
 }
@@ -716,18 +821,14 @@ fn null_control_distributions_are_within_the_sampling_bound() {
 }
 
 #[test]
-#[ignore = "Task 12 re-pin (re-measurement at The Words re-baseline): this \
-            row pins a MEASURED value, not a structural property — the \
-            exact name-length SMD between the goblin and goblin-twin solo \
-            censuses (pinned -0.1182 at the Tongues-era measurement, \
-            2026-07-09). Task 9's glossed names shift the underlying \
-            name-length distribution (see \
-            name_length_distributions_are_measured_and_pinned, ignored \
-            alongside this one), so Task 12 (Lab preregister + run) owns \
-            re-measuring and re-pinning it. The directional envelope and \
-            the structural zero-pins this was split from still run, in \
-            null_control_distributions_are_within_the_sampling_bound."]
 fn null_control_name_length_smd_is_pinned() {
+    // Re-measured at the Task 12 / Campaign 12 re-baseline (was -0.118235
+    // at the Tongues-era measurement, 2026-07-09): Task 9's glossed
+    // compounds shifted the underlying name-length distribution (see
+    // `name_length_distributions_are_measured_and_pinned`), so the twin's
+    // SMD against the goblin moves too — still comfortably inside the
+    // ±0.2 sampling-theory bound `null_control_distributions_are_within_
+    // the_sampling_bound` asserts, unaffected by this re-pin.
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let namelen = std_mean_diff(
@@ -735,7 +836,7 @@ fn null_control_name_length_smd_is_pinned() {
         nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
     assert!(
-        (namelen - -0.118_235_148_756_793_42).abs() < 1e-9,
+        (namelen - -0.045_750_720_221_954).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
