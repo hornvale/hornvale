@@ -171,6 +171,16 @@ pub fn registry() -> Vec<Metric> {
             extract: |v| MetricValue::Number(v.system.anchor.obliquity.get()),
         },
         Metric {
+            name: "obliquity-range",
+            doc: "Peak-to-peak obliquity swing over one obliquity period (2× the \
+                   deep-time forcing amplitude, SKY-21); a moonless world keeps the \
+                   full drawn wobble, a moon damps it",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
+            },
+            extract: |v| MetricValue::Number(2.0 * v.system.forcing.obliquity_amp),
+        },
+        Metric {
             name: "moons-admitted",
             doc: "Number of moons in orbit",
             summary: SummaryKind::Categorical,
@@ -1404,8 +1414,8 @@ mod tests {
     }
 
     #[test]
-    fn registry_has_sixty_three_metrics_after_the_meeting() {
-        assert_eq!(registry().len(), 63);
+    fn registry_has_sixty_four_metrics_after_obliquity_range() {
+        assert_eq!(registry().len(), 64);
     }
 
     #[test]

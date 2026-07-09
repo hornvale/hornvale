@@ -10,16 +10,16 @@
 <text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">500</text>
 <text x="91.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="91.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 91.5 252.0)">&lt; 0</text>
-<rect x="132.3" y="80.8" width="60.4" height="155.2" fill="#5b8dd9" rx="2" />
-<text x="162.5" y="76.8" font-size="11" fill="currentColor" text-anchor="middle">388</text>
+<rect x="132.3" y="80.4" width="60.4" height="155.6" fill="#5b8dd9" rx="2" />
+<text x="162.5" y="76.4" font-size="11" fill="currentColor" text-anchor="middle">389</text>
 <text x="162.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 162.5 252.0)">[0, 0.01)</text>
 <text x="233.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="233.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 233.5 252.0)">[0.01, 0.02)</text>
 <rect x="274.3" y="212.8" width="60.4" height="23.2" fill="#5b8dd9" rx="2" />
 <text x="304.5" y="208.8" font-size="11" fill="currentColor" text-anchor="middle">58</text>
 <text x="304.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 304.5 252.0)">[0.02, 0.05)</text>
-<rect x="345.3" y="225.6" width="60.4" height="10.4" fill="#5b8dd9" rx="2" />
-<text x="375.5" y="221.6" font-size="11" fill="currentColor" text-anchor="middle">26</text>
+<rect x="345.3" y="226.0" width="60.4" height="10.0" fill="#5b8dd9" rx="2" />
+<text x="375.5" y="222.0" font-size="11" fill="currentColor" text-anchor="middle">25</text>
 <text x="375.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 375.5 252.0)">[0.05, 0.1)</text>
 <rect x="416.3" y="228.0" width="60.4" height="8.0" fill="#5b8dd9" rx="2" />
 <text x="446.5" y="224.0" font-size="11" fill="currentColor" text-anchor="middle">20</text>

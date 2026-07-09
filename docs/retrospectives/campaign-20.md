@@ -1,78 +1,73 @@
-# Campaign 20 (The Scene Window) — retrospective
+# Campaign 20 (Firm Ground II) — retrospective
 
 **Merged:** 2026-07-09
 
-**Recurring findings.** None of this campaign's own findings restate a
-prior retrospective's by name — the closest cousin is general, not specific:
-proving a refactor moved zero bytes (Campaign 19's synodic-fix ordering
-lesson is a cousin in spirit — verify before you build on top) is by now
-routine discipline here, and it held: the kernel dedup task regenerated both
-pre-existing committed rasters after the move and diffed them byte-for-byte
-against the versions already in the gallery before any downstream code was
-allowed to depend on the moved type. One genuinely new failure mode showed
-up instead, worth watching for recurrence rather than filing as a repeat:
-see the review-package note below.
+**Recurring findings.** The campaign's central miss was a blast-radius
+enumeration that claimed more completeness than it had — and that is now the
+*second* campaign in a row to be caught by exactly this. Campaign 19's plan
+enumerated a defect's ripple and missed a committed study (`census-of-skies`)
+that reported the changed quantity; Campaign 20's plan asserted "no census is
+locked" and "only the `census-lands-drift` SVGs drift," and both were false.
+A blast-radius list is a claim about completeness, and completeness claims are
+the class a fresh reviewer — or, here, the gate itself — catches better than
+the author who wrote the list. Two campaigns running is enough to promote it:
+an enumerated blast radius should get a dedicated second look *before*
+implementation, the way "read the engine before finalizing the plan" already
+does. That older rule, meanwhile, earned its keep again — reading
+`sky_exit_criterion.rs` at plan-writing time is what revealed that the Y2 exit
+criterion (the sun heads every pantheon; moons seat deities) would break under
+the spec's literal momentary culling, and turned the design toward
+ever-visible culling before a line was written.
 
-**Estimate deltas.** No stage-level estimates were made for this campaign,
-so there is nothing to compare against — say so rather than pad.
+**Estimate deltas.** No stage-level estimates were made, so there is nothing
+to compare against — but the one cost no plan could have estimated is worth
+recording: `main` advanced under the worktree three times during execution,
+once with a full parallel campaign (the star chart, which shipped SKY-20's
+synodic moon-phase fix and claimed chronicle 19). Reconciling that mid-flight
+— a five-file conflict resolution composing synodic phase with the genesis
+phase offset, plus the renumber to Campaign 20 — was real work that lived in
+no plan. The `git merge-base` check the metaplan mandates before the artifact
+re-baseline is what surfaced it in time; without that check the re-baseline
+would have regenerated against stale tooling.
 
-**Spec vs. reality.** Four implementation tasks landed against a plan whose
-code was, in three of the four, transcribed close to verbatim from the spec
-and plan documents rather than designed fresh during implementation — the
-kernel index was moved "not rewritten" by explicit instruction, and the
-scene crate's struct, sampling loop, and CLI command all matched the plan's
-own listings on first compile, needing only clippy-driven micro-adjustments
-(a `manual_is_multiple_of` rewrite, a let-chain collapse) that the plan's
-prose had already flagged as toolchain-dependent. Review across all four
-tasks found almost nothing: one substantive fix, in the schema reference
-page, where "ocean flag: true at or below sea level" overstated the actual
-predicate (`elevation < sea_level`, strictly less-than) and was corrected to
-"below sea level." Everything else — field order, error messages, the
-golden fixture's byte content, the CLI's usage text — matched what the plan
-specified. The verbatim-transcription style this campaign leaned on hardest
-of any so far appears to have matured: a plan detailed enough to be copied
-rather than interpreted produces implementations with almost nothing left
-for review to catch, provided (as here) the plan's own tables and formulas
-were themselves checked against the code they claim to describe before the
-plan was approved.
+**Spec vs. reality.** Three plan assumptions the execution had to correct:
 
-**The review package ballooned on a committed artifact, not on code.** The
-task that added `book/src/gallery/scene-tiles-seed-42.json` — a single-line,
-compact JSON document holding five 32,768-entry arrays — produced a review
-diff of roughly 1.6 MB, almost all of it that one generated file's byte
-body, dwarfing the actual code change (five small edits across four files).
-The review package had to be hand-trimmed before it was usable: the array
-bodies elided in favor of a one-line note pointing at the file. This is a
-new problem, not a repeat of the malformed-table or missed-artifact misses
-named in earlier retrospectives — those were about a plan's *completeness*,
-this is about a review tool choking on a committed artifact's *size*. It is
-also not a one-off: this project commits large generated artifacts by
-design (rasters, audio, and now scene JSON), and every one of them will hit
-review the same way the day it's first added or meaningfully changed. Worth
-a standing rule for future large-artifact tasks: a review package generator
-should elide or truncate array/binary bodies of committed generated files by
-default, the way this one had to be trimmed by hand — the file's *presence*
-and its *diff stat* are what review needs to see; its full byte content is
-what the drift check already verifies.
+- **"No census is locked."** `census-lands-drift` is fully unpinned, so ~5% of
+  its 500 seeds draw tidally-locked worlds. Placing the observer therefore
+  hemisphere-culls those worlds' religion, which honestly degraded the Y2
+  blind-attribution metric on the divergence census (0.868 → 0.826; the
+  preregistered floor moved 0.875 → 0.8). This is the *correct* degradation —
+  a locked world's night side is uninhabitable, so every settlement lands
+  day-side and sees a sun-only sky, and both species become genuinely
+  indistinguishable by sky. The Y2 **null control** (spinning, unaffected)
+  stayed byte-intact. The honest lower rate was pinned rather than the design
+  quietly reverted, and the owner accepted it explicitly.
+- **"Re-baseline once, in the Close."** True for the committed book artifacts
+  (checked only by CI's `git diff` step) — false for the golden-pinned
+  *tests*. The census calibrations in `windows/lab/tests/calibration.rs` and
+  the `tongues_identity` fixture run in the per-commit `cargo test --workspace`
+  gate, so a world-changing commit must re-pin (or re-exclude) them *in that
+  commit*; deferring broke the gate mid-Plan-1. Only the book artifacts could
+  wait for the Close.
+- **The spec's momentary day/night culling.** Taken literally, SEQ-5 would cull
+  the sun on a spinning world at night and the moons by day — which breaks the
+  Y2 pantheon result, because that result depends on religion seeing the whole
+  sky at once. A prose spec cannot see that a downstream test rests on the
+  provider's unconditional sun; reading the code did.
 
-**Do differently next time — the golden fixture earned its place.** This
-campaign introduced a pattern not used before: a small, hand-eyeballable
-fixture (eight tiles by sixteen) asserted byte-for-byte against the schema's
-live output in a normal test, deliberately separate from the much larger
-gallery example that CI regenerates and diffs on every build. The two serve
-different jobs and neither subsumes the other. The gallery example is large,
-realistic, and *automatically* kept current — it proves the pipeline still
-produces exactly what it always produced, but nobody reads 32,768 numbers to
-notice a schema change. The golden fixture is small, *deliberately* static
-— its own comment says regenerating it is "the epoch decision point" — and
-a diff against it is something a reviewer can actually read: a field
-reordered, a type changed, a key renamed all show up as a legible four-line
-diff instead of a silent pass. Nothing in this campaign exercised the
-fixture catching a real regression, so the pattern's value is inferred
-rather than demonstrated — but the cost was genuinely small (one ignored
-regeneration test, a ten-line duplicated test helper because integration
-tests can't see the library's `#[cfg(test)]` scaffolding) against a real
-gap the gallery-example check cannot fill on its own. Worth reusing for the
-next schema a window ships, and worth watching, over a campaign or two more,
-for whether it ever actually catches something the drift check would have
-missed.
+**Do differently next time.** When a plan enumerates a re-baseline, split the
+scope by *which gate enforces it*: the per-commit test gate (golden pins,
+identity fixtures — must track reality in the drifting commit) versus the CI
+artifact-diff (committed `book/` files — deferrable to the Close). Writing
+"defer the re-baseline to the Close" without that split is what broke the
+gate. And treat every "there is no X in the census" as the blast-radius
+completeness claim it is: an unpinned census draws the entire pin matrix, so
+verify against the study's actual pins, not intuition. The one thing that went
+right and should be repeated: the two parallel campaigns re-pinned *disjoint*
+metrics (the star chart moved period/month counts, this campaign moved
+name/attribution counts), so the merge composed cleanly — but that was partly
+luck, and a shared metric would have demanded a combined re-measurement no
+single branch had. The general rule: two campaigns editing the same
+golden-pinned file will each measure a world the other hasn't; only their
+disjointness makes the union correct, and that disjointness must be *checked*,
+not assumed.

@@ -292,6 +292,18 @@ mod tests {
                 tide_rel: 1.0,
             }],
             neighbors: vec![],
+            forcing: crate::forcing::OrbitalForcing {
+                obliquity_mean: 0.0,
+                obliquity_amp: 0.0,
+                obliquity_phase: 0.0,
+                ecc_mean: 0.0,
+                ecc_amp: 0.0,
+                ecc_phase: 0.0,
+                precession_phase: 0.0,
+                year_phase_offset: 0.0,
+                day_phase_offset: 0.0,
+                moon_phase_offsets: vec![0.0],
+            },
         }
     }
 
