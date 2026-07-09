@@ -47,6 +47,7 @@
 - [Campaign 17: Audible Phonology](./chronicle/17-audible-phonology.md)
 - [Campaign 18: The Meeting](./chronicle/18-the-meeting.md)
 - [Campaign 19: The Star Chart](./chronicle/19-the-star-chart.md)
+- [Campaign 20: Firm Ground II](./chronicle/20-firm-ground-ii.md)
 
 # The Gallery
 

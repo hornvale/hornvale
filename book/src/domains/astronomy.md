@@ -75,8 +75,8 @@ coincidence.
 
 None of this adds a body to the sky. The forcing drifts the elements the
 domain already holds — the sun, the moons, the neighbors are exactly as
-many as before — and nothing yet reads the deep-time drift: paleoclimate
-consumes it in Campaign 20.
+many as before — and nothing yet reads the deep-time drift: a future
+Deep Time / paleoclimate campaign consumes it.
 
 ## The placed observer (Firm Ground II)
 
