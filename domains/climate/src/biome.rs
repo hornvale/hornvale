@@ -125,6 +125,36 @@ impl Biome {
         &CATALOG
     }
 
+    /// Compile-time tripwire: adding a `Biome` variant fails this match
+    /// until `catalog()` above gains the new entry. Never remove.
+    #[allow(dead_code)]
+    fn catalog_must_grow_with_the_enum(b: Biome) {
+        match b {
+            Biome::Ice
+            | Biome::Tundra
+            | Biome::Taiga
+            | Biome::TemperateGrassland
+            | Biome::Shrubland
+            | Biome::TemperateForest
+            | Biome::TemperateRainforest
+            | Biome::Desert
+            | Biome::Savanna
+            | Biome::TropicalSeasonalForest
+            | Biome::TropicalRainforest
+            | Biome::Alpine
+            | Biome::SeaIce
+            | Biome::CoralReef
+            | Biome::KelpForest
+            | Biome::HydrothermalVent
+            | Biome::HadalTrench
+            | Biome::Upwelling
+            | Biome::Epipelagic
+            | Biome::Mesopelagic
+            | Biome::Bathypelagic
+            | Biome::Abyssal => (),
+        }
+    }
+
     /// The canonical kebab-case name (Lab metrics, CSV, book prose).
     pub fn name(self) -> &'static str {
         match self {

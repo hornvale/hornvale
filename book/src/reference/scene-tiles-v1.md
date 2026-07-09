@@ -22,7 +22,7 @@ incidental):
 | Field | Type | Meaning |
 |---|---|---|
 | `schema` | string | Always the literal `"scene/tiles/v1"` — the version tag a consumer checks before trusting the rest of the document. |
-| `seed` | integer | The world's seed. |
+| `seed` | integer | The world's seed. This is a u64; JavaScript consumers parsing the document with plain `JSON.parse` lose integer precision above 2^53, so use BigInt-aware parsing when the exact seed matters. |
 | `width` | integer | Lattice width in tiles. |
 | `height` | integer | Lattice height in tiles — always `width / 2`. |
 | `sea_level_m` | number | Sea level, in meters, on the same scale as `elevation_m`. |
@@ -31,7 +31,7 @@ incidental):
 | `biome` | array of integer | The tile's biome, as an index into `biome_legend`, one entry per tile. |
 | `biome_legend` | array of string | The full biome catalog, in stable order — `biome`'s values index into this array. |
 | `plate` | array of integer | The tectonic plate id underlying the tile, one entry per tile. |
-| `unrest` | array of number | Tectonic unrest at the tile, one entry per tile. |
+| `unrest` | array of number | Tectonic unrest at the tile, one entry per tile. Dimensionless, in [0, 1]. |
 | `features` | array of object | Named points on the lattice — settlements, described below. |
 
 `elevation_m`, `ocean`, `biome`, `plate`, and `unrest` are the five per-tile

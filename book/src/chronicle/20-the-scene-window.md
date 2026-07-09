@@ -55,7 +55,7 @@ Each layer is its own flat array, one entry per tile, all five walking the
 same grid in the same order — a reader who only wants elevation never has
 to touch biome or plate at all. Biome is stored as a small number rather
 than a name, indexing into a legend of the full biome catalog carried once
-at the top of the document; the legend's order is fixed by the catalog's
+in the document; the legend's order is fixed by the catalog's
 own declared order and only ever grows at the end, so an index means the
 same biome in every scene that will ever be produced, forever. On top of
 the lattice sit the world's settlements as named points — latitude,

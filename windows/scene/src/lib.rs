@@ -104,6 +104,11 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
         hornvale_worldgen::terrain_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
     let climate =
         hornvale_worldgen::climate_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
+    // Two indices, not one: terrain and climate each carry their own
+    // geosphere, and today both happen to share the same cell level, so one
+    // index could in principle serve both. Keeping them separate is
+    // deliberate defensiveness against that ever diverging — behavior is
+    // identical while the two geospheres agree.
     let terrain_index = NearestCellIndex::new(terrain.geosphere());
     let climate_index = NearestCellIndex::new(climate.geosphere());
     let biomes = climate.biome_map();
@@ -132,6 +137,13 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             unrest.push(terrain.unrest_at(t_cell));
         }
     }
+    debug_assert!(
+        elevation_m
+            .iter()
+            .chain(unrest.iter())
+            .all(|v| v.is_finite()),
+        "scene layers must be finite; serde_json would emit null"
+    );
     Ok(TilesScene {
         schema: TILES_SCHEMA.to_string(),
         seed: world.seed.0,
