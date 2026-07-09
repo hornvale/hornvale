@@ -42,6 +42,7 @@ map of the whole documentation set is [`docs/README.md`](../README.md).
   - [The projection layer](#the-projection-layer)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
+  - [The observer has no place — the position-blind sky](#the-observer-has-no-place--the-position-blind-sky)
   - [Sequencing the deep-time stack](#sequencing-the-deep-time-stack)
   - [Intellectual lineage](#intellectual-lineage)
 
@@ -1170,6 +1171,51 @@ Both are about cashing dividends already banked, not proposing new systems.
   trade, and half of real-world toponymy hang on them. Sequencing rivers
   should be decided on Campaign 4's grounds — possibly inside it — not
   deferred as a geological nicety.
+
+---
+
+## The observer has no place — the position-blind sky
+
+*(observation-path fidelity; the spatial sibling of SEQ-4, raw but
+high-confidence — the gap is a fact about the code today, not a hypothesis.)*
+
+Astronomy answers "what would an observer notice?" honestly in one dimension
+and not at all in another. `GeneratedSky::phenomena` reads the observer's
+*time* and returns a sky that varies with it, but it never reads the
+observer's *place*: `ObserverContext.place` is an `EntityId` with no resolved
+position on the globe, so there is nothing for the sky to be culled against.
+Every observer receives the whole heaven at once.
+
+On a spinning world this is a soft error the calendar hides. The neighbour
+stars do gate on darkness — but `is_daylight` is a *global* day–night clock,
+not the observer's longitude, so "it is night" is decided for the planet
+rather than for the watcher, and every longitude shares one noon. Moons are
+emitted unconditionally, present even at midday. On a **tidally-locked** world
+the error turns stark, and it lands exactly where SEQ-1 wants its payoff: the
+fixed sun is delivered to *everyone* as "a sun fixed forever above the day
+side" — including an observer on the permanent night side who could never see
+it — and the neighbour stars are delivered to the day side, under a sun that
+never sets. The terminator-ring culture SEQ-1 imagines hanging its whole
+temporal religion on a motionless sun is, in the current machinery, handed a
+sky that contradicts the very place it stands.
+
+The fix is *not* to give `Phenomenon` a position. A body's coordinates in the
+sky are the observer's relationship to it, not a property the producer should
+carry; the `Venue` label (day-sky / night-sky / ambient) is deliberately
+character, not geometry, and must reveal nothing about which system produced
+the phenomenon. The fix is to give `ObserverContext` a *spatial* component and
+let `GeneratedSky` consult it — the same extension move EXP-3 (shipped)
+already made for the *perceptual* observer, whose species eyes reweight
+salience by venue. EXP-3 answered "who is looking"; this answers "where do
+they stand," and the two compose cleanly: horizon culling first, perceptual
+reweighting second, over whatever survives. It is also the mechanism MAP-2's
+vantage-point almanac quietly assumes ("one location's observable phenomena,
+one hemisphere of sky") and a facet of the observation-path upgrade SEQ-4
+defers — the path that today anchors every generated world at `places[0]` and
+genesis day 0. Sequenced, it belongs wherever a campaign first needs two
+places on one world to see different skies: locked-world religion (SEQ-1), the
+epistemic layer (MAP-2), or a firm-ground observation-path campaign (SEQ-4),
+whichever pulls first.
 
 ---
 
