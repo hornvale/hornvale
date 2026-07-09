@@ -2,6 +2,7 @@
 #![warn(missing_docs)]
 
 mod concepts;
+mod phonology;
 mod repl;
 mod streams;
 
@@ -34,6 +35,7 @@ usage:
   hornvale settlement-map [--world <PATH>] [--out <PPM>] render the settlement map (markdown to stdout)
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
+  hornvale phonology                       dump per-species phonology as markdown
   hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
   hornvale lab list-metrics                list every metric in the lab's registry
 
@@ -69,6 +71,7 @@ fn main() -> ExitCode {
         Some("settlement-map") => cmd_settlement_map(&args),
         Some("concepts") => cmd_concepts(),
         Some("streams") => cmd_streams(),
+        Some("phonology") => cmd_phonology(),
         Some("lab") => cmd_lab(&args),
         Some("help") | None => {
             print!("{}", usage());
@@ -374,6 +377,11 @@ fn cmd_concepts() -> Result<(), String> {
 
 fn cmd_streams() -> Result<(), String> {
     print!("{}", streams::render_streams());
+    Ok(())
+}
+
+fn cmd_phonology() -> Result<(), String> {
+    print!("{}", phonology::render_phonology());
     Ok(())
 }
 

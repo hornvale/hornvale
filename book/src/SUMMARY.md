@@ -24,6 +24,7 @@
   - [Settlement](./domains/settlement.md)
   - [Species](./domains/species.md)
   - [Perception](./domains/perception.md)
+  - [Language](./domains/language.md)
   - [Culture](./domains/culture.md)
   - [Religion](./domains/religion.md)
 
@@ -42,6 +43,7 @@
 - [Campaign Y2-0: Firm Ground](./chronicle/campaign-y2-0.md)
 - [Campaign Y2-1: The Peoples](./chronicle/campaign-y2-1.md)
 - [Campaign 15: The Eyes](./chronicle/15-the-eyes.md)
+- [Campaign 16: The Tongues](./chronicle/16-the-tongues.md)
 
 # The Gallery
 
@@ -65,11 +67,13 @@
 - [Study 005: The Frozen Worlds](./laboratory/study-005.md)
 - [Study 006: The Census of Peoples II: Two Peoples](./laboratory/study-006.md)
 - [Study 007: The Census of Eyes](./laboratory/study-007.md)
+- [Study 008: The Census of Tongues](./laboratory/study-008.md)
 
 # Reference
 
 - [The Concept Registry](./reference/concept-registry.md)
 - [The Stream Manifest](./reference/stream-manifest.md)
+- [Phonology](./reference/phonology.md)
 
 # Open Questions
 

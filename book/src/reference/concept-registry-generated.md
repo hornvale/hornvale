@@ -8,6 +8,10 @@
 | `cell-id` | yes | Geosphere cell id a settlement sits on |
 | `cult-form` | yes | the cult form of a belief (organized or folk) |
 | `day-length-std` | yes | solar day length in standard days, for spinning worlds |
+| `deity-epithet` | yes | a belief's epithet (roman) |
+| `deity-epithet-ipa` | yes | a belief's epithet (IPA transcription) |
+| `deity-name` | yes | a belief's deity name (roman) |
+| `deity-name-ipa` | yes | a belief's deity name (IPA transcription) |
 | `derived-from-phenomenon` | yes | phenomenon kind a belief mythologizes |
 | `genesis-note` | no | a degradation or refusal recorded during sky genesis |
 | `has-caste` | no | a caste present in a settlement |
@@ -30,18 +34,25 @@
 | `population` | yes | population of a settlement |
 | `scenario-pin` | no | an experimenter-supplied pin string conditioning genesis |
 | `sea-level-m` | yes | sea level in meters |
+| `sentiment` | yes | a belief's sentiment (eternal, cyclic, or ambient) |
 | `settlement-pin` | no | a settlement scenario pin, round-trippable |
 | `sky-provider` | yes | which astronomy provider this world uses (constant or generated) |
 | `species-activity-cycle` | yes | when a species is awake: diurnal, nocturnal, crepuscular |
 | `species-deliberation-latency` | yes | decision slowness, 0-1 |
+| `species-exotic-manner` | yes | exotic manner: none, trill, click, ejective |
 | `species-in-group-radius` | yes | how wide 'us' is drawn, 0-1 |
+| `species-labiality` | yes | lip-rounding and jaw-closure, 0-1 |
 | `species-name` | yes | a species entity's name |
 | `species-night-vision` | yes | night-sky acuity, 0-1 |
+| `species-sibilance` | yes | sibilance emphasis, 0-1 |
 | `species-sky-attention` | yes | sky vs. ground attention, 0-1 |
 | `species-sociality-mode` | yes | hierarchic or communal |
 | `species-status-basis` | yes | rank, knowledge, or generosity |
 | `species-threat-response` | yes | flee 0 ↔ stand 1 |
 | `species-time-horizon` | yes | planning depth, 0-1 |
+| `species-voice-loudness` | yes | voice-loudness range, 0-1 |
+| `species-voicing` | yes | voicing emphasis, 0-1 |
+| `species-vowel-space` | yes | vowel-space size, 0-1 |
 | `star-class` | yes | the host star's descriptive spectral class |
 | `subsistence` | yes | a settlement's subsistence mode |
 | `tenet` | yes | the tenet text of a belief |

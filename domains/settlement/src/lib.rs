@@ -41,30 +41,40 @@ pub const SETTLEMENT_PIN: &str = "settlement-pin";
 mod streams {
     /// Root stream label for settlement.
     pub const ROOT: &str = "settlement";
-    /// Per-settlement name generation stream.
-    pub const NAME: &str = "name";
     /// Per-settlement placement draws (population against carrying
     /// capacity).
     pub const PLACEMENT: &str = "placement";
 }
 
-const SYLLABLES: [&str; 10] = [
-    "zag", "gru", "mok", "nar", "bol", "ish", "rak", "ug", "tor", "gna",
-];
-
 /// Every seed-derivation label (or pattern) this crate uses, with docs.
 /// Slash-joined paths document derivation chains; the manifest renders them.
+/// `settlement/name` and `settlement/kobold/name` are retired as live
+/// generation paths (The Tongues moves settlement-name generation to
+/// `hornvale-language`, which owns the real `language/<species>/name/...`
+/// derivation labels, since this domain cannot depend on another domain
+/// crate — spec §7) but stay documented here forever, never renamed (ADR
+/// 0006). No new label is minted here for the move: nothing under
+/// `settlement/*` derives a name any longer, so publishing a phantom
+/// `settlement/name/v2` would only mislead a reader of the manifest.
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     vec![
         ("settlement", "root stream for settlement generation"),
-        ("settlement/name", "per-settlement generated name"),
+        (
+            "settlement/name",
+            "RETIRED (pre-Tongues): per-settlement generated name, goblin stream. \
+             Names now derive under language/<species>/name/settlement. Kept \
+             documented for legacy-save continuity; never renamed.",
+        ),
         (
             "settlement/placement",
             "per-settlement population against carrying capacity",
         ),
         (
             "settlement/kobold/name",
-            "per-settlement generated name, kobold stream (species-qualified; goblin keeps settlement/name)",
+            "RETIRED (pre-Tongues): per-settlement generated name, kobold stream \
+             (species-qualified; goblin kept settlement/name). Names now derive \
+             under language/<species>/name/settlement. Kept documented for \
+             legacy-save continuity; never renamed.",
         ),
         (
             "settlement/kobold/population",
@@ -98,21 +108,6 @@ pub struct VillageInfo {
     pub population: u32,
 }
 
-/// Generate one settlement name deterministically from the world seed and a
-/// per-settlement salt (e.g. the cell id), 2-3 capitalized goblin syllables.
-pub fn generate_name(seed: hornvale_kernel::Seed, salt: u64) -> String {
-    let mut stream = seed
-        .derive(streams::ROOT)
-        .derive(streams::NAME)
-        .derive(&salt.to_string())
-        .stream();
-    let count = stream.range_u32(2, 3);
-    let raw: String = (0..count)
-        .map(|_| *stream.pick(&SYLLABLES).expect("SYLLABLES is non-empty"))
-        .collect();
-    format!("{}{}", raw[..1].to_uppercase(), &raw[1..])
-}
-
 /// Draw a population against a carrying capacity from suitability, seeded per
 /// settlement: `floor + (span x suitability)` jittered by a per-salt draw.
 pub fn draw_population(seed: hornvale_kernel::Seed, salt: u64, suitability: f64) -> u32 {
@@ -124,28 +119,6 @@ pub fn draw_population(seed: hornvale_kernel::Seed, salt: u64, suitability: f64)
     let base = 40.0 + 460.0 * suitability.clamp(0.0, 1.0); // 40..500 by suitability
     let jitter = 0.75 + 0.5 * stream.next_f64(); // x[0.75, 1.25]
     (base * jitter).round() as u32
-}
-
-/// Generate a settlement name for a non-goblin species from its own labeled
-/// stream (`settlement/<species>/name`) and its own syllable pool. Goblin
-/// names keep `generate_name` and the legacy label untouched.
-pub fn generate_species_name(
-    seed: hornvale_kernel::Seed,
-    species: &str,
-    syllables: &[&str],
-    salt: u64,
-) -> String {
-    let mut stream = seed
-        .derive(streams::ROOT)
-        .derive(species)
-        .derive(streams::NAME)
-        .derive(&salt.to_string())
-        .stream();
-    let count = stream.range_u32(2, 3);
-    let raw: String = (0..count)
-        .map(|_| *stream.pick(syllables).expect("syllable pool is non-empty"))
-        .collect();
-    format!("{}{}", raw[..1].to_uppercase(), &raw[1..])
 }
 
 /// Draw a non-goblin settlement's population from its species-qualified
@@ -168,23 +141,35 @@ pub fn draw_species_population(
     (base * jitter).round() as u32
 }
 
+/// Every settlement in the world, in commit order (element 0 is the
+/// flagship — the first `is-settlement` fact, per settlement genesis).
+pub fn all_settlements(world: &World) -> Vec<VillageInfo> {
+    world
+        .ledger
+        .find(IS_SETTLEMENT)
+        .map(|f| f.subject)
+        .map(|id| {
+            let name = world
+                .ledger
+                .text_of(id, hornvale_kernel::NAME)
+                .map(str::to_string)
+                .unwrap_or_else(|| format!("settlement {}", id.0));
+            let population = match world.ledger.value_of(id, POPULATION) {
+                Some(Value::Number(n)) => *n as u32,
+                _ => 0,
+            };
+            VillageInfo {
+                id,
+                name,
+                population,
+            }
+        })
+        .collect()
+}
+
 /// The first settlement in the world, if any.
 pub fn village_info(world: &World) -> Option<VillageInfo> {
-    let id = world.ledger.find(IS_SETTLEMENT).next()?.subject;
-    let name = world
-        .ledger
-        .text_of(id, hornvale_kernel::NAME)
-        .map(str::to_string)
-        .unwrap_or_else(|| format!("settlement {}", id.0));
-    let population = match world.ledger.value_of(id, POPULATION) {
-        Some(Value::Number(n)) => *n as u32,
-        _ => 0,
-    };
-    Some(VillageInfo {
-        id,
-        name,
-        population,
-    })
+    all_settlements(world).into_iter().next()
 }
 
 #[cfg(test)]
@@ -213,7 +198,10 @@ mod tests {
             latitude: 0.0,
             longitude: 0.0,
             biome: "temperate-forest".to_string(),
-            name: generate_name(seed, salt),
+            // Name generation itself now lives in hornvale-language (spec
+            // §7, wired at the composition root); a fixed test name keeps
+            // this crate's own tests independent of that domain.
+            name: "Testville".to_string(),
             population: draw_population(seed, salt, 0.5),
         }
     }
@@ -242,12 +230,6 @@ mod tests {
     }
 
     #[test]
-    fn names_vary_across_seeds() {
-        let names: Vec<String> = (1..=8).map(|s| generate_name(Seed(s), 0)).collect();
-        assert!(names.windows(2).any(|p| p[0] != p[1]));
-    }
-
-    #[test]
     fn populations_vary_with_suitability() {
         let low = draw_population(Seed(3), 0, 0.0);
         let high = draw_population(Seed(3), 0, 1.0);
@@ -261,23 +243,38 @@ mod tests {
     }
 
     #[test]
+    fn all_settlements_lists_every_settlement_flagship_first() {
+        let mut w = world(42);
+        let one = PlacedSettlement {
+            name: "First".to_string(),
+            ..flagship(Seed(42), 0)
+        };
+        let two = PlacedSettlement {
+            cell: 1,
+            name: "Second".to_string(),
+            ..flagship(Seed(42), 1)
+        };
+        let ids = genesis(&mut w, &[one, two]).unwrap();
+        let all = all_settlements(&w);
+        assert_eq!(all.len(), 2);
+        assert_eq!(all[0].id, ids[0]);
+        assert_eq!(all[0].name, "First");
+        assert_eq!(all[1].name, "Second");
+        assert!(all_settlements(&world(1)).is_empty());
+    }
+
+    #[test]
     fn stream_labels_declare_every_derivation() {
         let labels: Vec<&str> = stream_labels().iter().map(|(l, _)| *l).collect();
         for expected in ["settlement", "settlement/name", "settlement/placement"] {
             assert!(labels.contains(&expected), "missing {expected}");
         }
-    }
-
-    #[test]
-    fn species_name_draws_are_disjoint_from_goblin_draws() {
-        // Kobold names come from a different labeled stream AND pool; the
-        // legacy goblin path must be untouched by their existence.
-        let goblin_before = generate_name(Seed(9), 7);
-        let kobold = generate_species_name(Seed(9), "kobold", &["zik", "thur", "kra"], 7);
-        let goblin_after = generate_name(Seed(9), 7);
-        assert_eq!(goblin_before, goblin_after);
-        assert_ne!(kobold, goblin_before);
-        assert!(kobold.chars().next().unwrap().is_uppercase());
+        // The move to hornvale-language mints no phantom settlement/* label:
+        // nothing under settlement/* derives a name any longer.
+        assert!(
+            !labels.contains(&"settlement/name/v2"),
+            "settlement/name/v2 is a phantom label — real name derivation lives in language/*"
+        );
     }
 
     #[test]

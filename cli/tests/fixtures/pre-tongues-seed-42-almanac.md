@@ -130,6 +130,20 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
+In the warren of **Uszuszssk**, an organized priesthood tends its own pantheon:
+
+> the Wheel-Turner departs and returns every 15.99 days; its absences are mourned and its returns feasted. *(who presides)*
+>
+> — derived from the phenomenon *celestial-body*
+
+> the Waning Herald departs and returns every 32.55 days; its absences are mourned and its returns feasted.
+>
+> — derived from the phenomenon *celestial-body*
+
+> the Promised Lamp departs and returns every 0.88 days; its absences are mourned and its returns feasted.
+>
+> — derived from the phenomenon *celestial-body*
+
 ---
 
 *Generated deterministically: this seed always yields this page.*

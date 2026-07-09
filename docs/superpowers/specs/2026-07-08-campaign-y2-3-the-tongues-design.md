@@ -142,10 +142,18 @@ no terrain feature carries a generated name today).
   honorifics; a `Knowledge`/`Generosity` society (kobold) builds descriptive
   compounds without dominance marking. The *shape* of a god's title recounts to
   how its people organize authority — identity at the goblin baseline.
-- **Uniqueness** — in-world collisions resolved by deterministic re-draw within
-  the same labeled stream (advance the draw until the name is unused),
-  byte-identical on pinned and unpinned paths and pin-isolation-tested. Retires
-  the "Bolzag ×3" collisions the metaplan's observable ending names.
+- **Uniqueness** — a name is a pure, single deterministic draw keyed by
+  `(seed, species, kind, salt)`, where `salt` is the entity's own id (a
+  settlement's cell, a belief). There is **no** in-world re-draw and **no**
+  shared "used" set: a re-draw would make a name depend on which *other*
+  settlements a world places, and because species displace one another during
+  the shared spacing pass, that dependence would break pin-isolation (a
+  shared-cell goblin name could re-draw differently pinned vs. unpinned). The
+  phonology name space is combinatorially vast, so cross-world collisions are
+  rare in practice — uniqueness is **de-facto**, measured as a collision-rate
+  calibration (§9), not enforced. This still retires the "Bolzag ×3"
+  collisions of the syllable-pool era: the drawn space is far larger than the
+  ten-syllable pool it replaces.
 - **Views** — every generated name carries a romanization (almanac) and an IPA
   transcription (book / `phonology` verb), per §2.
 
@@ -203,16 +211,25 @@ asserted in CI:
   the entity graph (settlement and belief entity ids unmoved);
 - **phonotactic validity**: every generated name is well-formed for its
   language (a testable property over a census);
-- **uniqueness**: no in-world name collision survives the deterministic re-draw;
+- **de-facto uniqueness**: names are pure per-`(seed, species, kind, salt)`
+  draws, so collisions are not prevented but are rare — a low collision rate is
+  measured as a calibration (§9), not asserted as an invariant;
 - **pin-isolation**: `--species goblin` consumes the same language draws as the
-  unpinned path (the standard pin test, as for sky/terrain/species).
+  unpinned path — and here it holds **by construction**, because a name is a
+  pure function of its own cell and never depends on which other settlements or
+  species a world places (the standard pin test still guards it, as for
+  sky/terrain/species).
 Determinism stays constitutional beneath all of it: same seed + pins →
 byte-identical worlds, almanacs, artifacts.
 
 **Save-format migration (ADR 0006):**
-- Settlement-name generation moves to a new stream label `settlement/name/v2`;
-  the old label is never renamed; the `name` predicate keeps its identity with
-  new content.
+- Settlement-name generation moves out of `settlement/*` entirely: names now
+  derive under `hornvale-language`'s own labels (`language/<species>/name/…`),
+  since a name is drawn by the language engine, not the settlement domain. The
+  old `settlement/name` and `settlement/kobold/name` labels are never renamed —
+  they stay documented as retired — but no phantom `settlement/name/v2` is
+  minted, because nothing under `settlement/*` derives a name any longer. The
+  `name` predicate keeps its identity with new content.
 - New worlds no longer commit a `tenet` text fact — the structured-content
   predicates (§6) are the durable truth. The old `tenet` predicate is never
   renamed; pre-Tongues saves keep loading and `why`-recounting their committed
@@ -221,8 +238,8 @@ byte-identical worlds, almanacs, artifacts.
 - The fixed epithet pools in `domains/religion` (`ETERNAL_EPITHETS`,
   `CYCLIC_EPITHETS`) are **deleted**; epithets come from the language engine,
   wired at the composition root.
-- New labels (`language/<species>/…`, `settlement/name/v2`) are permanent
-  manifest additions; no reordering of existing consumption.
+- New labels (`language/<species>/…`) are permanent manifest additions; no
+  reordering of existing consumption.
 
 **Re-baseline, once:** every committed artifact (almanacs, censuses, reference
 dumps) regenerates with new names and tenets — larger churn than prior
@@ -235,13 +252,22 @@ Preregistered before any census runs (ADR 0016):
 1. **Phonotactic validity** — 100% of generated names well-formed for their
    language, row-by-row over the census (the instrument reproducing its own
    grammar exactly).
-2. **Low pre-redraw collision rate** — the drawn name space is combinatorially
-   large; the fraction of names requiring a uniqueness re-draw is small and
-   pinned as a calibration row (contrast the 10-syllable pool's ~1,100 names).
+2. **Low collision rate (measured)** — names are pure per-`(seed, species,
+   kind, salt)` draws with no re-draw; the drawn name space is combinatorially
+   large, so the fraction of names that collide in-world is small. That
+   fraction is measured and pinned as a calibration row (contrast the
+   10-syllable pool's ~1,100 names) — it is a reported property of the large
+   name space, not a re-draw the engine performs.
 3. **Voice/morphology calibration keyed to status basis** — goblin deity
    epithets carry an honorific affix; kobold epithets never do — asserted
    row-by-row from independent metric columns, like The Eyes' head-domain
-   calibration.
+   calibration. The `epithet-honorific` flag is a **content-derived
+   cross-check**, not a config echo: it reads each committed epithet fact and
+   detects the prepended affix STRUCTURALLY against an independently
+   re-derived honorific-OFF stem (case-folded, the committed epithet must end
+   with the plain stem and be strictly longer). A broken honorific pipeline —
+   a goblin epithet committed without its affix — would match the plain stem
+   and flip the flag to false, so the calibration is genuinely falsifiable.
 Optional anti-reskin echo (defined here, may run in The Meeting): attributing a
 name to its species from phonology alone (the sibilance/labiality signature) —
 the blind-attribution pattern applied to sound. New metrics: per-species

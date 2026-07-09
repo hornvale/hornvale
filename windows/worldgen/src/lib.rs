@@ -437,6 +437,120 @@ pub fn observed_phenomena_as(world: &World, species: &str) -> Result<Vec<Phenome
     ))
 }
 
+/// Map a species' articulation vector onto language's own `Envelope` copy
+/// (spec §7): every scalar dimension is a direct 1:1 carry — both vectors
+/// share the same 0–1 scale and semantics — and `ExoticManner` maps onto
+/// language's own `ExoticSeg` one variant at a time. This is the only place
+/// either vector is ever converted; language never imports species.
+pub fn envelope_of(art: &hornvale_species::ArticulationVector) -> hornvale_language::Envelope {
+    hornvale_language::Envelope {
+        labiality: art.labiality,
+        vowel_space: art.vowel_space,
+        voicing: art.voicing,
+        sibilance: art.sibilance,
+        voice_loudness: art.voice_loudness,
+        exotic: match art.exotic {
+            hornvale_species::ExoticManner::None => hornvale_language::ExoticSeg::None,
+            hornvale_species::ExoticManner::Trill => hornvale_language::ExoticSeg::Trill,
+            hornvale_species::ExoticManner::Click => hornvale_language::ExoticSeg::Click,
+            hornvale_species::ExoticManner::Ejective => hornvale_language::ExoticSeg::Ejective,
+        },
+    }
+}
+
+/// Draw `species`' phonology from this world's seed and its authored
+/// articulation vector — rebuildable from (seed, species, envelope) alone,
+/// the same reconstruction idiom as `terrain_of`/`sky_of`/`climate_of`. The
+/// single construction site for a species' `Phonology`. Panics if `species`
+/// is not in the registry; every caller sources `species` from the registry
+/// itself.
+pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology {
+    let registry = hornvale_species::registry();
+    let def = registry
+        .get(species)
+        .unwrap_or_else(|| panic!("language_of: unknown species '{species}'"));
+    hornvale_language::draw_phonology(&world.seed, species, &envelope_of(&def.articulation))
+}
+
+/// A status basis' contribution to the `formality`/`epithet_density` voice
+/// knobs (spec §7): `Rank` — the goblin baseline — reads as the "high" end;
+/// `Knowledge`/`Generosity` read lower. `Rank`'s value is fixed at exactly
+/// the voice engine's identity value, 0.5, so a Rank-basis species with an
+/// otherwise-baseline psychology nets out to identity by construction.
+fn status_register(status: hornvale_species::StatusBasis) -> f64 {
+    use hornvale_species::StatusBasis;
+    match status {
+        StatusBasis::Rank => 0.5,
+        StatusBasis::Knowledge | StatusBasis::Generosity => 0.2,
+    }
+}
+
+/// A sociality mode's contribution to the `repetition` voice knob (spec
+/// §7): `Communal` reads high (kobold's echoed refrains); `Hierarchic` — the
+/// goblin baseline — sits at the voice engine's identity value, 0.5.
+fn sociality_register(sociality: hornvale_species::Sociality) -> f64 {
+    use hornvale_species::Sociality;
+    match sociality {
+        Sociality::Hierarchic => 0.5,
+        Sociality::Communal => 0.8,
+    }
+}
+
+/// Derive a species' voice knobs from its psychology vector (spec §7):
+/// `formality` blends the status register with deliberation latency;
+/// `repetition` follows sociality alone; `epithet_density` follows the
+/// status register alone. Every field is exactly the identity 0.5 at the
+/// goblin baseline (`Rank`, `Hierarchic`, `deliberation_latency == 0.5`):
+/// `status_register(Rank) == sociality_register(Hierarchic) == 0.5`, so
+/// blending two 0.5s (or reading either directly) always yields 0.5.
+pub fn voice_params(psych: &hornvale_species::PsychVector) -> hornvale_language::VoiceParams {
+    hornvale_language::VoiceParams {
+        formality: (status_register(psych.status_basis) + psych.deliberation_latency) / 2.0,
+        repetition: sociality_register(psych.sociality),
+        epithet_density: status_register(psych.status_basis),
+    }
+}
+
+/// Derive a species' naming morphology from its psychology vector (spec
+/// §7): honorifics are drawn only for a rank-based status basis — the
+/// goblin baseline — matching `voice_params`' epithet-density reading of
+/// the same field.
+pub fn morph_options(psych: &hornvale_species::PsychVector) -> hornvale_language::MorphOptions {
+    hornvale_language::MorphOptions {
+        honorifics: psych.status_basis == hornvale_species::StatusBasis::Rank,
+    }
+}
+
+/// Backs religion's `DeityNamer` trait with a species' language `Namer`.
+/// Each deity name and epithet is a single deterministic draw salted by the
+/// belief's own id — no shared "used" set, no re-draw (names are pure
+/// functions of seed+species+kind+salt, spec §8). Religion never learns
+/// this exists; it only ever sees the `DeityNamer` trait (spec §6's
+/// ignorance discipline).
+struct LanguageDeityNamer<'a, 'b> {
+    namer: &'a hornvale_language::Namer<'b>,
+    morph: hornvale_language::MorphOptions,
+}
+
+impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_> {
+    fn deity(&mut self, salt: u64) -> (String, String) {
+        let g = self
+            .namer
+            .name(hornvale_language::NameKind::Deity, salt, &self.morph);
+        (g.roman, g.ipa)
+    }
+
+    fn epithet(&mut self, salt: u64, _sentiment: hornvale_religion::Sentiment) -> (String, String) {
+        // Sentiment fits the epithet at render time (Task 11's `render_line`
+        // reads it from the belief's own committed `sentiment` fact); the
+        // generated word itself is sentiment-agnostic.
+        let g = self
+            .namer
+            .name(hornvale_language::NameKind::Epithet, salt, &self.morph);
+        (g.roman, g.ipa)
+    }
+}
+
 /// Build a complete world: mint the world entity and record its sky choice
 /// and scenario pins first; run sky genesis for `Generated`; commit the
 /// terrain pins and run tectonic genesis; then assemble per-cell site inputs
@@ -569,42 +683,49 @@ pub fn build_world(
         }
     }
     let placements = hornvale_settlement::place_tagged(&scored, min_sep, floor);
-    let placed: Vec<hornvale_settlement::PlacedSettlement> = placements
+
+    // Each placed species' phonology, drawn once from the world seed and
+    // its authored articulation vector, and a `Namer` built over it. Every
+    // name below — settlement, then deity/epithet — is a single
+    // deterministic draw salted by the entity's own id (the settlement cell,
+    // the belief). No shared "used" set threads through them: names are pure
+    // functions of seed+species+kind+salt, so settlement names are
+    // pin-isolated by construction (spec §8) and cross-world uniqueness is
+    // de-facto (measured as a calibration, spec §9), not enforced.
+    let phonologies: std::collections::BTreeMap<&str, hornvale_language::Phonology> = species_set
         .iter()
-        .map(|(p, tag)| {
-            let def = species_set[*tag as usize];
-            let coord = geo.coord(p.cell);
-            let (name, population) = if def.name == "goblin" {
-                (
-                    hornvale_settlement::generate_name(seed, u64::from(p.cell.0)),
-                    hornvale_settlement::draw_population(seed, u64::from(p.cell.0), p.suitability),
-                )
-            } else {
-                (
-                    hornvale_settlement::generate_species_name(
-                        seed,
-                        def.name,
-                        def.syllables,
-                        u64::from(p.cell.0),
-                    ),
-                    hornvale_settlement::draw_species_population(
-                        seed,
-                        def.name,
-                        u64::from(p.cell.0),
-                        p.suitability,
-                    ),
-                )
-            };
-            hornvale_settlement::PlacedSettlement {
-                cell: p.cell.0,
-                latitude: coord.latitude,
-                longitude: coord.longitude,
-                biome: climate.biome_at(p.cell).name().to_string(),
-                name,
-                population,
-            }
-        })
+        .map(|def| (def.name, language_of(&world, def.name)))
         .collect();
+    let namers: std::collections::BTreeMap<&str, hornvale_language::Namer> = phonologies
+        .iter()
+        .map(|(name, ph)| (*name, hornvale_language::Namer::new(&seed, name, ph)))
+        .collect();
+
+    let mut placed: Vec<hornvale_settlement::PlacedSettlement> =
+        Vec::with_capacity(placements.len());
+    for (p, tag) in &placements {
+        let def = species_set[*tag as usize];
+        let coord = geo.coord(p.cell);
+        let salt = u64::from(p.cell.0);
+        let namer = namers
+            .get(def.name)
+            .expect("a Namer was built for every placed species");
+        let morph = morph_options(&def.psych);
+        let generated = namer.name(hornvale_language::NameKind::Settlement, salt, &morph);
+        let population = if def.name == "goblin" {
+            hornvale_settlement::draw_population(seed, salt, p.suitability)
+        } else {
+            hornvale_settlement::draw_species_population(seed, def.name, salt, p.suitability)
+        };
+        placed.push(hornvale_settlement::PlacedSettlement {
+            cell: p.cell.0,
+            latitude: coord.latitude,
+            longitude: coord.longitude,
+            biome: climate.biome_at(p.cell).name().to_string(),
+            name: generated.roman,
+            population,
+        });
+    }
     let ids = hornvale_settlement::genesis(&mut world, &placed)?;
 
     // Per-species flagship culture and religion.
@@ -651,12 +772,12 @@ pub fn build_world(
             has_priesthood: castes.iter().any(|c| c == def.shaman),
         };
         let seen = observed_phenomena_as(&world, def.name)?;
-        let qualifier = if def.name == "goblin" {
-            None
-        } else {
-            Some(def.name)
-        };
-        hornvale_religion::genesis(&mut world, flagship, &seen, &society, qualifier)?;
+        let namer = namers
+            .get(def.name)
+            .expect("a Namer was built for every placed species");
+        let morph = morph_options(&def.psych);
+        let mut deity_namer = LanguageDeityNamer { namer, morph };
+        hornvale_religion::genesis(&mut world, flagship, &seen, &society, &mut deity_namer)?;
     }
 
     // Species entities AFTER every pre-species subsystem (settlements,
@@ -848,6 +969,132 @@ pub fn genesis_notes(world: &World) -> Result<Vec<String>, BuildError> {
     })
 }
 
+/// Map religion's `Sentiment` onto language's own copy of the same
+/// distinction (spec §6): `domains/language` never imports
+/// `hornvale-religion`, so this conversion lives only here, at the
+/// composition root.
+fn line_sentiment_of(sentiment: hornvale_religion::Sentiment) -> hornvale_language::LineSentiment {
+    match sentiment {
+        hornvale_religion::Sentiment::Eternal => hornvale_language::LineSentiment::Eternal,
+        hornvale_religion::Sentiment::Cyclic => hornvale_language::LineSentiment::Cyclic,
+        hornvale_religion::Sentiment::Ambient => hornvale_language::LineSentiment::Ambient,
+    }
+}
+
+/// Build one belief's `LineContent` (spec §6). Every field but the period
+/// comes straight off the belief's own committed facts; `period_days` is
+/// **not** itself a committed fact (`religion::genesis` never stores one on
+/// the belief), so it is recovered from `phenomenon` — the source
+/// observation at this belief's own position in the species' salience-
+/// ranked list, the exact list `genesis` consumed, in that exact order, to
+/// mint it. `None` (an eternal/ambient tenet, or a phenomenon that's gone
+/// missing) simply renders no period.
+fn line_content_for(
+    belief: &hornvale_religion::Belief,
+    phenomenon: Option<&Phenomenon>,
+) -> hornvale_language::LineContent {
+    hornvale_language::LineContent {
+        deity: belief.deity.clone(),
+        epithet: belief.epithet.clone(),
+        sentiment: line_sentiment_of(belief.sentiment),
+        period_days: phenomenon.and_then(|p| p.period_days),
+        high_god: belief.high_god,
+    }
+}
+
+/// Render every belief in `beliefs` — one community's pantheon, in commit
+/// order — into its tenet, voiced by `voice`. `phenomena` must be the same
+/// species-observed, salience-ranked list `religion::genesis` consumed to
+/// mint these beliefs, so position `i` in each list names the same deity
+/// (see [`line_content_for`]).
+fn tenets_for(
+    beliefs: &[hornvale_religion::Belief],
+    phenomena: &[Phenomenon],
+    voice: &hornvale_language::VoiceParams,
+) -> Vec<String> {
+    beliefs
+        .iter()
+        .enumerate()
+        .map(|(i, b)| hornvale_language::render_line(&line_content_for(b, phenomena.get(i)), voice))
+        .collect()
+}
+
+/// One species-flagship's pantheon, each belief paired with its rendered
+/// tenet: the settlement holding it and the `(Belief, tenet)` pairs, head
+/// first.
+type RenderedPantheon = (
+    hornvale_settlement::VillageInfo,
+    Vec<(hornvale_religion::Belief, String)>,
+);
+
+/// `None` if `species` placed no flagship, or its flagship holds no
+/// beliefs. The single site both [`almanac_context`] and
+/// [`rendered_beliefs`] build a species' voiced pantheon (the
+/// content→render seam, spec §6) through.
+fn rendered_pantheon_of(
+    world: &World,
+    species: &str,
+    def: &hornvale_species::SpeciesDef,
+) -> Result<Option<RenderedPantheon>, BuildError> {
+    let Some(v) = flagship_of(world, species) else {
+        return Ok(None);
+    };
+    let beliefs = hornvale_religion::beliefs_held_by(world, v.id);
+    if beliefs.is_empty() {
+        return Ok(None);
+    }
+    let phenomena = observed_phenomena_as(world, species)?;
+    let voice = voice_params(&def.psych);
+    let tenets = tenets_for(&beliefs, &phenomena, &voice);
+    Ok(Some((v, beliefs.into_iter().zip(tenets).collect())))
+}
+
+/// Render a pre-species save's beliefs (`beliefs_of` — no `peopled-by`
+/// facts exist to recover a species from), as the single anonymous pantheon
+/// they always were: voiced at the goblin baseline (voice's identity value,
+/// since no species is recoverable) with periods recovered from the world's
+/// unlensed phenomena (the pre-species observation path,
+/// `observed_phenomena`). Empty if the world has no beliefs at all. Shared
+/// by [`rendered_beliefs`] and [`almanac_context`]'s legacy fallback.
+fn legacy_rendered_beliefs(
+    world: &World,
+) -> Result<Vec<(hornvale_religion::Belief, String)>, BuildError> {
+    let beliefs = hornvale_religion::beliefs_of(world);
+    if beliefs.is_empty() {
+        return Ok(Vec::new());
+    }
+    let phenomena = observed_phenomena(world, 0.0)?;
+    let voice = hornvale_language::VoiceParams {
+        formality: 0.5,
+        repetition: 0.5,
+        epithet_density: 0.5,
+    };
+    let tenets = tenets_for(&beliefs, &phenomena, &voice);
+    Ok(beliefs.into_iter().zip(tenets).collect())
+}
+
+/// Every belief in the world, each paired with its rendered tenet — grouped
+/// by species-flagship pantheon in registry order (goblin first), each
+/// pantheon's beliefs head first (matching `beliefs_of`/`beliefs_held_by`'s
+/// own ordering). The seam-wiring site the REPL's `beliefs` command renders
+/// through (spec §6, Task 11); the almanac renders the same seam via
+/// [`almanac_context`]'s `PantheonBlock`s. Legacy fallback: see
+/// [`legacy_rendered_beliefs`].
+pub fn rendered_beliefs(
+    world: &World,
+) -> Result<Vec<(hornvale_religion::Belief, String)>, BuildError> {
+    let mut out = Vec::new();
+    for (name, def) in hornvale_species::registry() {
+        if let Some((_, rendered)) = rendered_pantheon_of(world, name, &def)? {
+            out.extend(rendered);
+        }
+    }
+    if out.is_empty() {
+        out = legacy_rendered_beliefs(world)?;
+    }
+    Ok(out)
+}
+
 /// Gather everything the almanac renders, reconstructing the stateless
 /// tier-0 providers.
 pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
@@ -877,31 +1124,34 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         pantheons: {
             let mut blocks = Vec::new();
             for (name, def) in hornvale_species::registry() {
-                if let Some(v) = flagship_of(world, name) {
-                    let beliefs = hornvale_religion::beliefs_held_by(world, v.id);
-                    if !beliefs.is_empty() {
-                        blocks.push(hornvale_almanac::PantheonBlock {
-                            species: name.to_string(),
-                            noun: def.noun.to_string(),
-                            settlement: v.name.clone(),
-                            cult_form: hornvale_religion::cult_form_held_by(world, v.id),
-                            beliefs,
-                        });
-                    }
+                if let Some((v, rendered)) = rendered_pantheon_of(world, name, &def)? {
+                    blocks.push(hornvale_almanac::PantheonBlock {
+                        species: name.to_string(),
+                        noun: def.noun.to_string(),
+                        settlement: v.name.clone(),
+                        cult_form: hornvale_religion::cult_form_held_by(world, v.id),
+                        beliefs: rendered
+                            .into_iter()
+                            .map(|(belief, tenet)| hornvale_almanac::BeliefLine { belief, tenet })
+                            .collect(),
+                    });
                 }
             }
             // Legacy fallback: pre-species saves have beliefs but no
             // peopled-by facts — render them as the single anonymous
-            // pantheon they always were.
+            // pantheon they always were (see `legacy_rendered_beliefs`).
             if blocks.is_empty() {
-                let beliefs = hornvale_religion::beliefs_of(world);
-                if !beliefs.is_empty() {
+                let rendered = legacy_rendered_beliefs(world)?;
+                if !rendered.is_empty() {
                     blocks.push(hornvale_almanac::PantheonBlock {
                         species: String::new(),
                         noun: String::new(),
                         settlement: String::new(),
                         cult_form: hornvale_religion::cult_form_of(world),
-                        beliefs,
+                        beliefs: rendered
+                            .into_iter()
+                            .map(|(belief, tenet)| hornvale_almanac::BeliefLine { belief, tenet })
+                            .collect(),
                     });
                 }
             }
@@ -1493,24 +1743,25 @@ mod tests {
             &SettlementPins::default(),
         )
         .unwrap();
-        let head_tenet = |w: &World| {
+        let head_sentiment = |w: &World| {
             hornvale_religion::beliefs_of(w)
                 .first()
-                .map(|b| b.tenet.clone())
-                .unwrap_or_default()
+                .map(|b| b.sentiment)
         };
         // The head deity's periodicity flips with the sun's rotation regime.
-        assert!(
-            head_tenet(&locked).contains("never"),
+        assert_eq!(
+            head_sentiment(&locked),
+            Some(hornvale_religion::Sentiment::Eternal),
             "locked world: an eternal high god"
         );
-        assert!(
-            head_tenet(&spinning).contains("return") || !head_tenet(&spinning).contains("never"),
-            "spinning world: a cyclic head deity"
+        assert_ne!(
+            head_sentiment(&spinning),
+            Some(hornvale_religion::Sentiment::Eternal),
+            "spinning world: not an eternal head deity"
         );
         assert_ne!(
-            head_tenet(&spinning),
-            head_tenet(&locked),
+            head_sentiment(&spinning),
+            head_sentiment(&locked),
             "the two skies yield different religions"
         );
         // A pantheon, not a single belief.
@@ -1597,5 +1848,48 @@ mod tests {
         .unwrap();
         let t = observation_time(&world, hornvale_species::ActivityCycle::Nocturnal).unwrap();
         assert_eq!(t, 0.0);
+    }
+
+    #[test]
+    fn goblin_voice_params_are_the_baseline() {
+        let reg = hornvale_species::registry();
+        let v = voice_params(&reg["goblin"].psych);
+        assert!((v.formality - 0.5).abs() < 1e-12 && (v.epithet_density - 0.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn seed_42_names_are_non_english_and_de_facto_unique() {
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let names: Vec<String> = hornvale_settlement::all_settlements(&world)
+            .iter()
+            .map(|v| v.name.clone())
+            .collect();
+        assert!(!names.is_empty());
+        // No settlement name is a legacy syllable-pool word (the stopgap
+        // pools are deleted; names now come from the language engine).
+        assert!(
+            names
+                .iter()
+                .all(|n| !["Zag", "Gru", "Bol"].iter().any(|s| n.starts_with(s)))
+        );
+        // Names are pure per-cell draws, so world-wide uniqueness is NOT
+        // guaranteed — it is de-facto, arising from the vast phonology name
+        // space, and is measured as a collision-rate calibration in Task 12.
+        // Seed 42 happens to be collision-free; we assert that empirically
+        // here to catch a gross regression (e.g. every name collapsing to
+        // one string), NOT as a guaranteed invariant.
+        let set: std::collections::BTreeSet<_> = names.iter().collect();
+        assert_eq!(
+            set.len(),
+            names.len(),
+            "seed 42 is de-facto collision-free (empirical, not guaranteed)"
+        );
     }
 }

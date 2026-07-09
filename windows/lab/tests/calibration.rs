@@ -394,3 +394,164 @@ fn blind_attribution_beats_chance_decisively() {
         "mooned blind attribution not perfect: {correct_mooned}/{total_mooned}"
     );
 }
+
+#[test]
+fn phonotactic_validity_is_true_for_every_generated_name() {
+    // Preregistered (ADR 0016, spec §9.2): the instrument must reproduce its
+    // own grammar exactly. Every generated name — settlement, deity,
+    // epithet — must re-validate against its species' own re-derived
+    // phonotactics. If this is ever false the engine is producing names it
+    // calls invalid: this is a STOP-and-report-BLOCKED condition (task
+    // brief), never an assertion to loosen.
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    for species in ["goblin", "kobold"] {
+        let v_i = idx(&format!("phonotactic-validity-{species}"));
+        for row in &result.rows {
+            match &row.values[v_i] {
+                MetricValue::Flag(valid) => assert!(
+                    *valid,
+                    "seed {}: {species} produced a name that fails its own phonotactics — BLOCKED",
+                    row.seed
+                ),
+                MetricValue::Absent => {} // species placed nothing, held no pantheon
+                other => panic!(
+                    "seed {}: phonotactic-validity-{species} not a flag: {other:?}",
+                    row.seed
+                ),
+            }
+        }
+    }
+}
+
+#[test]
+fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
+    // Preregistered (ADR 0016, spec §9.2), directional: goblin's Rank status
+    // basis draws honorific-prefixed epithets (spec §7's morph_options
+    // mapping); kobold's Knowledge status basis does not. Row-by-row, since
+    // Absent (no pantheon this world) is a legitimate skip.
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let (g_i, k_i) = (
+        idx("epithet-honorific-goblin"),
+        idx("epithet-honorific-kobold"),
+    );
+    for row in &result.rows {
+        match &row.values[g_i] {
+            MetricValue::Flag(v) => {
+                assert!(*v, "seed {}: goblin epithet-honorific false", row.seed)
+            }
+            MetricValue::Absent => {}
+            other => panic!(
+                "seed {}: epithet-honorific-goblin not a flag: {other:?}",
+                row.seed
+            ),
+        }
+        match &row.values[k_i] {
+            MetricValue::Flag(v) => {
+                assert!(!*v, "seed {}: kobold epithet-honorific true", row.seed)
+            }
+            MetricValue::Absent => {}
+            other => panic!(
+                "seed {}: epithet-honorific-kobold not a flag: {other:?}",
+                row.seed
+            ),
+        }
+    }
+}
+
+#[test]
+fn name_collision_rate_is_measured_and_pinned() {
+    // Preregistered (spec §9.2): names are pure per-(seed, species, kind,
+    // salt) draws with no re-draw, so uniqueness is de-facto rather than
+    // enforced (Task 9) — this pins the MEASURED collision rate over the
+    // 500-seed drift study as a calibration row, not an invariant. A
+    // regression that widened or narrowed the drawn name space would move
+    // these counts; a broken collision detector would too.
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let rate_i = idx("name-collision-rate");
+    let (mut zero, mut nonzero, mut absent) = (0u32, 0u32, 0u32);
+    let mut sum = 0.0_f64;
+    for row in &result.rows {
+        match row.values[rate_i] {
+            MetricValue::Number(r) if r == 0.0 => {
+                zero += 1;
+                sum += r;
+            }
+            MetricValue::Number(r) => {
+                nonzero += 1;
+                sum += r;
+            }
+            MetricValue::Absent => absent += 1,
+            ref other => panic!(
+                "seed {}: name-collision-rate not a number: {other:?}",
+                row.seed
+            ),
+        }
+    }
+    // Pinned calibration row (measured at the Y2-3 re-baseline, 500-seed
+    // drift study): most worlds draw no colliding names at all, but the
+    // combinatorially large name space is not infinite, so a minority of
+    // worlds show some collision.
+    assert_eq!(zero, 336, "zero-collision world count drifted");
+    assert_eq!(nonzero, 164, "nonzero-collision world count drifted");
+    assert_eq!(absent, 0, "absent name-collision-rate count drifted");
+    let present = zero + nonzero;
+    assert!(present > 0, "no worlds with a measurable collision rate");
+    let mean = sum / f64::from(present);
+    assert!(
+        (mean - 0.023_389_245_6).abs() < 1e-6,
+        "mean name-collision-rate drifted: {mean:.10}"
+    );
+}
+
+#[test]
+fn name_length_distributions_are_measured_and_pinned() {
+    // Preregistered (spec §9.2): mean generated-name length, per species,
+    // pinned over the 500-seed drift study as a calibration row after
+    // measurement — the naming/voice baseline's other half (contrast
+    // `phonotactic_validity_is_true_for_every_generated_name`, which is an
+    // invariant, not a measurement).
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
+    let result = run(&study).unwrap();
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    for (species, expected_present, expected_mean) in [
+        ("goblin", 498u32, 9.869_276_105_4),
+        ("kobold", 498u32, 9.799_462_903_6),
+    ] {
+        let (len_i,) = (idx(&format!("name-length-{species}")),);
+        let (mut present, mut absent) = (0u32, 0u32);
+        let mut sum = 0.0_f64;
+        for row in &result.rows {
+            match row.values[len_i] {
+                MetricValue::Number(n) => {
+                    present += 1;
+                    sum += n;
+                }
+                MetricValue::Absent => absent += 1,
+                ref other => panic!(
+                    "seed {}: name-length-{species} not a number: {other:?}",
+                    row.seed
+                ),
+            }
+        }
+        assert_eq!(
+            present, expected_present,
+            "{species} name-length present-row count drifted"
+        );
+        assert_eq!(
+            present + absent,
+            500,
+            "{species} name-length row count drifted"
+        );
+        let mean = sum / f64::from(present);
+        assert!(
+            (mean - expected_mean).abs() < 1e-6,
+            "{species} mean name length drifted: {mean:.10}"
+        );
+    }
+}

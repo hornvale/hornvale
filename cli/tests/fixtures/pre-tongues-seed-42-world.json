@@ -142,6 +142,11 @@
         "functional": true,
         "doc": "which astronomy provider this world uses (constant or generated)"
       },
+      "species-activity-cycle": {
+        "name": "species-activity-cycle",
+        "functional": true,
+        "doc": "when a species is awake: diurnal, nocturnal, crepuscular"
+      },
       "species-deliberation-latency": {
         "name": "species-deliberation-latency",
         "functional": true,
@@ -156,6 +161,16 @@
         "name": "species-name",
         "functional": true,
         "doc": "a species entity's name"
+      },
+      "species-night-vision": {
+        "name": "species-night-vision",
+        "functional": true,
+        "doc": "night-sky acuity, 0-1"
+      },
+      "species-sky-attention": {
+        "name": "species-sky-attention",
+        "functional": true,
+        "doc": "sky vs. ground attention, 0-1"
       },
       "species-sociality-mode": {
         "name": "species-sociality-mode",
@@ -5384,6 +5399,166 @@
       },
       {
         "subject": 64,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "tenet",
+        "object": {
+          "Text": "the Wheel-Turner departs and returns every 15.99 days; its absences are mourned and its returns feasted."
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "high-god",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "tenet",
+        "object": {
+          "Text": "the Waning Herald departs and returns every 32.55 days; its absences are mourned and its returns feasted."
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "tenet",
+        "object": {
+          "Text": "the Promised Lamp departs and returns every 0.88 days; its absences are mourned and its returns feasted."
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 67,
         "predicate": "species-name",
         "object": {
           "Text": "goblin"
@@ -5393,7 +5568,7 @@
         "provenance": "species"
       },
       {
-        "subject": 64,
+        "subject": 67,
         "predicate": "species-threat-response",
         "object": {
           "Number": 0.5
@@ -5403,7 +5578,7 @@
         "provenance": "species"
       },
       {
-        "subject": 64,
+        "subject": 67,
         "predicate": "species-deliberation-latency",
         "object": {
           "Number": 0.5
@@ -5413,7 +5588,7 @@
         "provenance": "species"
       },
       {
-        "subject": 64,
+        "subject": 67,
         "predicate": "species-in-group-radius",
         "object": {
           "Number": 0.5
@@ -5423,7 +5598,7 @@
         "provenance": "species"
       },
       {
-        "subject": 64,
+        "subject": 67,
         "predicate": "species-time-horizon",
         "object": {
           "Number": 0.5
@@ -5433,7 +5608,7 @@
         "provenance": "species"
       },
       {
-        "subject": 64,
+        "subject": 67,
         "predicate": "species-sociality-mode",
         "object": {
           "Text": "hierarchic"
@@ -5443,7 +5618,7 @@
         "provenance": "species"
       },
       {
-        "subject": 64,
+        "subject": 67,
         "predicate": "species-status-basis",
         "object": {
           "Text": "rank"
@@ -5453,7 +5628,37 @@
         "provenance": "species"
       },
       {
-        "subject": 65,
+        "subject": 67,
+        "predicate": "species-activity-cycle",
+        "object": {
+          "Text": "diurnal"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 67,
+        "predicate": "species-night-vision",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 67,
+        "predicate": "species-sky-attention",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 68,
         "predicate": "species-name",
         "object": {
           "Text": "kobold"
@@ -5463,7 +5668,7 @@
         "provenance": "species"
       },
       {
-        "subject": 65,
+        "subject": 68,
         "predicate": "species-threat-response",
         "object": {
           "Number": 0.8
@@ -5473,7 +5678,7 @@
         "provenance": "species"
       },
       {
-        "subject": 65,
+        "subject": 68,
         "predicate": "species-deliberation-latency",
         "object": {
           "Number": 0.7
@@ -5483,7 +5688,7 @@
         "provenance": "species"
       },
       {
-        "subject": 65,
+        "subject": 68,
         "predicate": "species-in-group-radius",
         "object": {
           "Number": 0.2
@@ -5493,7 +5698,7 @@
         "provenance": "species"
       },
       {
-        "subject": 65,
+        "subject": 68,
         "predicate": "species-time-horizon",
         "object": {
           "Number": 0.8
@@ -5503,7 +5708,7 @@
         "provenance": "species"
       },
       {
-        "subject": 65,
+        "subject": 68,
         "predicate": "species-sociality-mode",
         "object": {
           "Text": "communal"
@@ -5513,10 +5718,40 @@
         "provenance": "species"
       },
       {
-        "subject": 65,
+        "subject": 68,
         "predicate": "species-status-basis",
         "object": {
           "Text": "knowledge"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 68,
+        "predicate": "species-activity-cycle",
+        "object": {
+          "Text": "nocturnal"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 68,
+        "predicate": "species-night-vision",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 68,
+        "predicate": "species-sky-attention",
+        "object": {
+          "Number": 0.8
         },
         "place": null,
         "day": 0.0,
@@ -6113,6 +6348,6 @@
         "provenance": "species"
       }
     ],
-    "next_entity": 65
+    "next_entity": 68
   }
 }

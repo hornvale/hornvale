@@ -14,8 +14,9 @@ ideas at once:
 1. *Candidate generation.* Two or three syllables drawn from a goblin
    syllable pool, capitalized — the direct descendant of the goblin-mutter
    system in the vision book's language chapter, and the most primitive
-   ancestor of the phonaesthetic name generation planned for the language
-   domain.
+   ancestor of the real phonology-driven name generation Campaign Y2-3 (The
+   Tongues) later built (this stage's syllable pool is long retired; see
+   below).
 2. *Refinement, used in anger.* The name is chosen through the kernel's
    consistency engine, which rejects any candidate whose commitment would
    contradict a committed fact. Today, with an empty world, nothing ever
@@ -87,22 +88,38 @@ species scored them — goblin and kobold compete for the same land, and the
 12° spacing rule applies between them exactly as it does within a species.
 A `--species NAME` pin restricts placement to one species (used by the
 superset-contract test to reproduce a goblin-only world); the unpinned
-default places every species the registry holds. Names and populations for
-any non-goblin species draw from their own species-qualified stream labels
-(`settlement/kobold/name`, `settlement/kobold/population`) and their own
-syllable pool, so goblin's placement, naming, and population draws are
-byte-identical to the pre-species code — the species substrate's
+default places every species the registry holds. Population for any
+non-goblin species draws from its own species-qualified stream label
+(`settlement/kobold/population`), so goblin's placement and population
+draws are byte-identical to the pre-species code — the species substrate's
 byte-identity contract, mechanical rather than tuned, described fully in
 [Species](./species.md). The settlement noun itself is species-specific: a
 goblin settlement is a "village," a kobold one a "warren."
 
+**A generated voice, not a syllable pool (Campaign Y2-3, The Tongues).**
+Settlement naming no longer lives in this domain at all. `settlement/name`
+and `settlement/kobold/name` are retired — kept documented forever as
+save-format contracts (ADR 0006) but never drawn from again — because a
+domain crate cannot depend on another domain, and a real name needs a real
+mouth. The composition root now draws every settlement's name from
+`domains/language`'s `Namer`, built over that species' own drawn phonology
+under its authored articulation envelope; settlement only ever receives the
+finished name back and commits it under the same `name` predicate it always
+used. Name generation is pin-isolated by construction — a pure function of
+seed, species, name-kind, and the settlement's own cell salt, with no
+shared "used names" set threading between settlements — so cross-world
+uniqueness is measured as a calibration (collision 2.79% mean at 10k
+worlds, Study 008) rather than enforced by re-draw. See
+[Language](./language.md) for the phonology and naming grammar themselves.
+
 **The model card.**
 
 - **Drawn (from the seed, or pinned):** the placement suitability floor
-  (`--min-suitability`, default 0.25); per-settlement name syllables and
-  population jitter, salted by the settlement's own cell id (so a
-  settlement's identity is independent of how many others happen to be
-  placed around it).
+  (`--min-suitability`, default 0.25); per-settlement population jitter,
+  salted by the settlement's own cell id (so a settlement's identity is
+  independent of how many others happen to be placed around it); a
+  settlement's name, drawn the same way but by `domains/language`'s
+  `Namer`, not by this domain (see above).
 - **Derived (a weighted sum and a greedy scatter, not a simulation):**
   per-cell suitability from freshwater, coast, and temperance minus
   hostility; the placement scatter itself (ranking, spacing, and the
@@ -117,8 +134,10 @@ goblin settlement is a "village," a kobold one a "warren."
   founded, fully formed, at genesis.
 
 Seed 42 under a spinning sky places 59 settlements across both peoples; the
-goblin flagship, **Grumoknar**, holds 359 souls in temperate rainforest,
-and the kobold flagship, **Uszuszssk**, 425 souls in the same biome. The
+goblin flagship, **Fnabnget**, holds 359 souls in temperate rainforest, and
+the kobold flagship, **Rakrra**, 425 souls in the same biome — real,
+phonology-drawn names (Campaign Y2-3, The Tongues), where earlier campaigns'
+editions of this same page named the pair from a syllable pool instead. The
 gallery holds the exit-demo pair: [The Peoples of Seed
 42](../gallery/settlement-seed-42.md) against [its tidally-locked
 twin](../gallery/settlement-seed-42-locked.md), where habitability's
@@ -126,8 +145,10 @@ collapse toward the terminator ring (Campaign 3c's biome map already
 predicted it) thins the same globe to 28 settlements. Chronicle: [4a,
 Placement & Drainage](../chronicle/campaign-4a.md), [Campaign Y2-0, Firm
 Ground](../chronicle/campaign-y2-0.md) for the freshwater fix that re-drew
-this scatter, and [Campaign Y2-1, The Peoples](../chronicle/campaign-y2-1.md)
-for the joint placement that split it into two.
+this scatter, [Campaign Y2-1, The Peoples](../chronicle/campaign-y2-1.md)
+for the joint placement that split it into two, and [Campaign 16, The
+Tongues](../chronicle/16-the-tongues.md) for the generated names
+themselves.
 
 **The tier ladder ahead:** multiple settlements with relationships and
 trade, settlement histories as the fields-and-ledger model of deep time

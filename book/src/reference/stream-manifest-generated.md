@@ -24,22 +24,28 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 *(no seed-derivation streams)*
 
-### hornvale-religion
+### hornvale-language
 
 | Label | Meaning |
 |---|---|
-| `religion` | root stream for religion generation |
-| `religion/epithet` | deity epithet pick |
-| `religion/kobold/epithet` | deity epithet pick (kobold pantheon) |
+| `language/<species>/phonology/inventory` | per-species phoneme inventory draw under the articulation envelope |
+| `language/<species>/phonology/phonotactics` | per-species syllable phonotactic templates (onsets, nuclei, codas) |
+| `language/<species>/name/settlement` | per-settlement name (salted by cell id): a bare stem |
+| `language/<species>/name/deity` | per-deity name (salted by belief id): a bare stem biased toward closed syllables |
+| `language/<species>/name/epithet` | per-deity epithet (salted by belief id): a descriptive root, optionally reduplicated and honorific-prefixed |
+
+### hornvale-religion
+
+*(no seed-derivation streams)*
 
 ### hornvale-settlement
 
 | Label | Meaning |
 |---|---|
 | `settlement` | root stream for settlement generation |
-| `settlement/name` | per-settlement generated name |
+| `settlement/name` | RETIRED (pre-Tongues): per-settlement generated name, goblin stream. Names now derive under language/<species>/name/settlement. Kept documented for legacy-save continuity; never renamed. |
 | `settlement/placement` | per-settlement population against carrying capacity |
-| `settlement/kobold/name` | per-settlement generated name, kobold stream (species-qualified; goblin keeps settlement/name) |
+| `settlement/kobold/name` | RETIRED (pre-Tongues): per-settlement generated name, kobold stream (species-qualified; goblin kept settlement/name). Names now derive under language/<species>/name/settlement. Kept documented for legacy-save continuity; never renamed. |
 | `settlement/kobold/population` | per-settlement population, kobold stream (species-qualified; goblin keeps settlement/placement) |
 
 ### hornvale-species

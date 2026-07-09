@@ -19,85 +19,85 @@ The highest land stands 3919 m above the sea.
 The air organizes into 3 circulation band(s) per hemisphere; 12 land biomes and 9 marine biomes cover the globe.
 Some 12% of the surface is habitable — land with water and a tolerable season.
 
-- **Gnaug** — shrubland
-- **Torish** — shrubland
-- **Gruzag** — shrubland
-- **Rakbolgru** — shrubland
-- **Sskzik** — tropical-rainforest
-- **Torgru** — shrubland
-- **Gnarak** — temperate-forest
-- **Bolgnator** — temperate-forest
-- **Rakrakzag** — shrubland
-- **Vexmir** — savanna
-- **Thurpliusz** — temperate-rainforest
-- **Bolbol** — tropical-rainforest
-- **Thurplissk** — tropical-rainforest
-- **Bolugrak** — tropical-rainforest
-- **Ugnarbol** — temperate-forest
-- **Grunar** — tropical-rainforest
-- **Ziksskusz** — alpine
-- **Mirthur** — tropical-rainforest
-- **Raknar** — taiga
-- **Ugmok** — taiga
-- **Uszmirusz** — temperate-forest
-- **Mirkekdak** — alpine
-- **Zikkrapli** — tropical-rainforest
-- **Vexvex** — tropical-rainforest
-- **Grugruug** — taiga
-- **Thurkramir** — tropical-rainforest
-- **Thurzik** — temperate-grassland
-- **Uszvexmir** — shrubland
-- **Vexplikra** — temperate-grassland
-- **Zikssk** — savanna
-- **Uszssk** — tropical-rainforest
-- **Krakekssk** — alpine
-- **Vexzik** — tropical-rainforest
-- **Thurusz** — tropical-rainforest
-- **Rakgna** — tropical-seasonal-forest
-- **Kekvexmir** — tropical-rainforest
-- **Uszmir** — tropical-rainforest
-- **Uszzikvex** — tropical-rainforest
-- **Krassk** — tropical-rainforest
-- **Kekpliusz** — tropical-rainforest
-- **Bolgna** — taiga
-- **Torish** — taiga
-- **Krazik** — temperate-grassland
-- **Uszzik** — tropical-seasonal-forest
-- **Ishbol** — taiga
-- **Vexvexusz** — tropical-seasonal-forest
-- **Bolgnazag** — taiga
-- **Vexdakssk** — taiga
-- **Sskssk** — tropical-seasonal-forest
+- **Fngatfnebngat** — shrubland
+- **Fnetvngodzfed** — shrubland
+- **Ngakvngatxngod** — shrubland
+- **Zfobngetnak** — shrubland
+- **Xarrog** — tropical-rainforest
+- **Nedsvad** — shrubland
+- **Zvatsveknob** — temperate-forest
+- **Vnedxngab** — temperate-forest
+- **Svetngebzvob** — shrubland
+- **Rogroq** — savanna
+- **Rogrrara** — temperate-rainforest
+- **Vnodngoknek** — tropical-rainforest
+- **Rroqxoq** — tropical-rainforest
+- **Xngodfnokzhvad** — tropical-rainforest
+- **Xngaknatfngok** — temperate-forest
+- **Sfoknotxngok** — tropical-rainforest
+- **Xakxotrra** — alpine
+- **Raxog** — tropical-rainforest
+- **Xnabngatvned** — taiga
+- **Nadzhfekvngak** — taiga
+- **Rrogrog** — temperate-forest
+- **Rragrroq** — alpine
+- **Rotxak** — tropical-rainforest
+- **Ragrrorok** — tropical-rainforest
+- **Fnokfnob** — taiga
+- **Rogxaq** — tropical-rainforest
+- **Rograq** — temperate-grassland
+- **Xaxatxaq** — shrubland
+- **Xorrot** — temperate-grassland
+- **Rotxoqxoq** — savanna
+- **Rrorak** — tropical-rainforest
+- **Xarrogxaq** — alpine
+- **Rrakroxo** — tropical-rainforest
+- **Xorrotrok** — tropical-rainforest
+- **Xnedzhfet** — tropical-seasonal-forest
+- **Rotxoro** — tropical-rainforest
+- **Rroqrrorra** — tropical-rainforest
+- **Rrarok** — tropical-rainforest
+- **Rraqrro** — tropical-rainforest
+- **Rrorraqxo** — tropical-rainforest
+- **Ngedngak** — taiga
+- **Zfekneb** — taiga
+- **Rraqrrot** — temperate-grassland
+- **Ratrrak** — tropical-seasonal-forest
+- **Fngabxnokvngok** — taiga
+- **Roqxaxo** — tropical-seasonal-forest
+- **Zhxakfngatngot** — taiga
+- **Rorag** — taiga
+- **Xaxotrrok** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
 The land holds 49 settlement(s).
-The chief goblin settlement, Gnaug, holds 448 souls amid shrubland.
-The chief kobold settlement, Sskzik, holds 348 souls amid tropical-rainforest.
+The chief goblin settlement, Fngatfnebngat, holds 448 souls amid shrubland.
+The chief kobold settlement, Xarrog, holds 348 souls amid tropical-rainforest.
 
-The goblin village of **Gnaug**, population 448.
+The goblin village of **Fngatfnebngat**, population 448.
 
-Gnaug lives by fishing.
+Fngatfnebngat lives by fishing.
 Its roles, lowest to highest: fisher, chief.
 
-The kobold warren of **Sskzik**, population 348.
+The kobold warren of **Xarrog**, population 348.
 
-Sskzik lives by farming.
+Xarrog lives by farming.
 Its roles, lowest to highest: digger, warden, shaper, keeper, elders.
 
 ## The Gods
 
 The people keep a folk pantheon:
 
-> the Still Crown is a golden sun fixed at zenith; it has never departed and will never blink.
+> Zhvetsxab the Nakngadngab is ever: Zhvetsxab the Nakngadngab watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-In the warren of **Sskzik**, an organized priesthood tends its own pantheon:
+In the warren of **Xarrog**, an organized priesthood tends its own pantheon:
 
-> the Still Crown is a golden sun fixed at zenith; it has never departed and will never blink. *(who presides)*
+> Ratrrotrok Rro is: Ratrrotrok Rro is always watching. That's how it's always been. That's how it's always been. Ratrrotrok is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 

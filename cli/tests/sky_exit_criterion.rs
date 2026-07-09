@@ -97,20 +97,27 @@ fn rotation_flip_flips_the_religion() {
         "Gods sections must differ between rotation modes"
     );
 
-    // Locked contains "never" (eternal template)
+    // Religion emits structured sentiment facts, not inline prose (The
+    // Tongues, spec §6) — the almanac's rendered Gods section no longer
+    // carries "never"/"every"/"returns" template words to assert on, so
+    // this reads the committed `sentiment` fact straight from the saved
+    // world instead: locked skies commit an eternal sentiment, spinning
+    // skies a cyclic one.
+    let has_sentiment = |path: &std::path::Path, tag: &str| {
+        let json = std::fs::read_to_string(path).expect("world.json readable");
+        let world = hornvale_kernel::World::from_json(&json).expect("world.json parses");
+        world
+            .ledger
+            .find("sentiment")
+            .any(|f| matches!(&f.object, hornvale_kernel::Value::Text(t) if t == tag))
+    };
     assert!(
-        locked_gods.contains("never"),
-        "locked rotation must contain 'never' (eternal template)"
+        has_sentiment(&locked_path, "eternal"),
+        "locked rotation must commit an eternal sentiment fact"
     );
-
-    // Normal contains both "every" and "returns" (cyclic template)
     assert!(
-        normal_gods.contains("every"),
-        "normal rotation must contain 'every'"
-    );
-    assert!(
-        normal_gods.contains("returns"),
-        "normal rotation must contain 'returns'"
+        has_sentiment(&normal_path, "cyclic"),
+        "normal rotation must commit a cyclic sentiment fact"
     );
 
     std::fs::remove_dir_all(&dir).unwrap();

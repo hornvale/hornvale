@@ -36,111 +36,111 @@ The highest land stands 3919 m above the sea.
 The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 9 marine biomes cover the globe.
 Some 19% of the surface is habitable — land with water and a tolerable season.
 
-- **Grumoknar** — temperate-rainforest
-- **Narnar** — temperate-rainforest
-- **Bolugrak** — temperate-rainforest
-- **Uszuszssk** — temperate-rainforest
-- **Zikkra** — temperate-rainforest
-- **Zagish** — temperate-forest
-- **Kekzik** — temperate-rainforest
-- **Sskzikzik** — temperate-rainforest
-- **Zikplivex** — temperate-rainforest
-- **Zagtorgna** — temperate-forest
-- **Plikra** — temperate-rainforest
-- **Raktor** — temperate-forest
-- **Kekvexmir** — temperate-rainforest
-- **Dakkra** — tropical-rainforest
-- **Ugrakug** — tropical-rainforest
-- **Kekkra** — tropical-rainforest
-- **Uszmir** — temperate-rainforest
-- **Rakgna** — temperate-forest
-- **Bolmok** — temperate-forest
-- **Rakrakmok** — tropical-rainforest
-- **Torbol** — tropical-rainforest
-- **Ishbolbol** — tropical-rainforest
-- **Gnator** — tropical-rainforest
-- **Ugbol** — tropical-rainforest
-- **Zikmir** — temperate-rainforest
-- **Nartorug** — tropical-rainforest
-- **Rakugnar** — tropical-rainforest
-- **Kekkekmir** — temperate-forest
-- **Rakug** — tropical-rainforest
-- **Uszvexkek** — tropical-rainforest
-- **Pliplivex** — temperate-forest
-- **Bolrak** — tropical-rainforest
-- **Sskdakmir** — temperate-forest
-- **Tortor** — tropical-seasonal-forest
-- **Mokgru** — temperate-forest
-- **Mirthurdak** — temperate-forest
-- **Uszthur** — temperate-forest
-- **Mirpli** — temperate-forest
-- **Thurplizik** — temperate-forest
-- **Uszzik** — temperate-forest
-- **Zikkra** — temperate-forest
-- **Dakvexkra** — temperate-forest
-- **Mirkra** — temperate-forest
-- **Mirkra** — temperate-forest
-- **Vexmir** — tundra
-- **Sskthurusz** — temperate-forest
-- **Ugmokgru** — shrubland
-- **Grutor** — taiga
-- **Thursskvex** — tropical-seasonal-forest
-- **Kekkra** — tropical-seasonal-forest
-- **Mirthurkek** — tropical-seasonal-forest
-- **Grugna** — taiga
-- **Ishgrumok** — taiga
-- **Rakgnabol** — taiga
-- **Keksskpli** — shrubland
-- **Mokgru** — tundra
-- **Zagzag** — tundra
-- **Plimir** — tundra
-- **Dakthur** — tundra
+- **Fnabnget** — temperate-rainforest
+- **Ngakngek** — temperate-rainforest
+- **Xngodfnokzhvad** — temperate-rainforest
+- **Rakrra** — temperate-rainforest
+- **Rorrat** — temperate-rainforest
+- **Vnodfngak** — temperate-forest
+- **Xatrro** — temperate-rainforest
+- **Xokxakrrok** — temperate-rainforest
+- **Rrogxoxak** — temperate-rainforest
+- **Vngeknged** — temperate-forest
+- **Xakxaxag** — temperate-rainforest
+- **Zhfabzfatneb** — temperate-forest
+- **Rotxoro** — temperate-rainforest
+- **Rrarotrak** — tropical-rainforest
+- **Zhxetneb** — tropical-rainforest
+- **Rakxoxo** — tropical-rainforest
+- **Rroqrrorra** — temperate-rainforest
+- **Xnedzhfet** — temperate-forest
+- **Vngatnab** — temperate-forest
+- **Zhfadngak** — tropical-rainforest
+- **Xngobngokfnet** — tropical-rainforest
+- **Xngakvngekzfab** — tropical-rainforest
+- **Zhfetzhvadnak** — tropical-rainforest
+- **Fnodsvedned** — tropical-rainforest
+- **Roqxa** — temperate-rainforest
+- **Fnekzhfadxngod** — tropical-rainforest
+- **Nekzfakfnged** — tropical-rainforest
+- **Rrotrorro** — temperate-forest
+- **Sfatsxatxngob** — tropical-rainforest
+- **Rraxaxot** — tropical-rainforest
+- **Xokrot** — temperate-forest
+- **Ngebxnab** — tropical-rainforest
+- **Raqxoxa** — temperate-forest
+- **Xngekfned** — tropical-seasonal-forest
+- **Fnodnat** — temperate-forest
+- **Rrokxo** — temperate-forest
+- **Xaxagrak** — temperate-forest
+- **Ratxaqrok** — temperate-forest
+- **Xorra** — temperate-forest
+- **Ratrrak** — temperate-forest
+- **Rratrrora** — temperate-forest
+- **Xarraq** — temperate-forest
+- **Rroqxoxoq** — temperate-forest
+- **Xagrora** — temperate-forest
+- **Rogroq** — tundra
+- **Ragra** — temperate-forest
+- **Fngetzfod** — shrubland
+- **Ngodxngabzhxat** — taiga
+- **Xorro** — tropical-seasonal-forest
+- **Xaro** — tropical-seasonal-forest
+- **Rrorrag** — tropical-seasonal-forest
+- **Ngokxngek** — taiga
+- **Ngodxnetnek** — taiga
+- **Vnetnatsfek** — taiga
+- **Rragrotxog** — shrubland
+- **Zfobfngak** — tundra
+- **Zxokzvek** — tundra
+- **Rroxakxo** — tundra
+- **Xoqrograk** — tundra
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
 The land holds 59 settlement(s).
-The chief goblin settlement, Grumoknar, holds 359 souls amid temperate-rainforest.
-The chief kobold settlement, Uszuszssk, holds 425 souls amid temperate-rainforest.
+The chief goblin settlement, Fnabnget, holds 359 souls amid temperate-rainforest.
+The chief kobold settlement, Rakrra, holds 425 souls amid temperate-rainforest.
 
-The goblin village of **Grumoknar**, population 359.
+The goblin village of **Fnabnget**, population 359.
 
-Grumoknar lives by farming.
+Fnabnget lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 
-The kobold warren of **Uszuszssk**, population 425.
+The kobold warren of **Rakrra**, population 425.
 
-Uszuszssk lives by farming.
+Rakrra lives by farming.
 Its roles, lowest to highest: digger, shaper, keeper, elders.
 
 ## The Gods
 
 An organized priesthood tends a pantheon:
 
-> the Wheel-Turner departs and returns every 0.88 days; its absences are mourned and its returns feasted. *(who presides)*
+> Nodvnotngak the Nebsxad returns every 0.88 days. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> the Tidewalker departs and returns every 15.99 days; its absences are mourned and its returns feasted.
+> Sxebzvetfnat the Sxodsfotsfot returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> the Waning Herald departs and returns every 32.55 days; its absences are mourned and its returns feasted.
+> Nokzhfod the Fngeksfadnadnad returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-In the warren of **Uszuszssk**, an organized priesthood tends its own pantheon:
+In the warren of **Rakrra**, an organized priesthood tends its own pantheon:
 
-> the Wheel-Turner departs and returns every 15.99 days; its absences are mourned and its returns feasted. *(who presides)*
+> Rragratxok Ragxoq comes back every 15.99 days. That's how it's always been. That's how it's always been. Rragratxok is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> the Waning Herald departs and returns every 32.55 days; its absences are mourned and its returns feasted.
+> Rraqrrok Roxag comes back every 32.55 days. That's how it's always been. That's how it's always been. Rraqrrok is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> the Promised Lamp departs and returns every 0.88 days; its absences are mourned and its returns feasted.
+> Rrogxat Xo comes back every 0.88 days. That's how it's always been. That's how it's always been. Rrogxat is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 

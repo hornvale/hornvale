@@ -1,0 +1,5 @@
+{ "name": "census-of-tongues",
+  "description": "The Census of Tongues: per-species phonotactic validity, epithet-honorific voice calibration, name-length distribution, and the de-facto name-collision rate over 10,000 worlds — the naming/voice baseline and the Y2-3 calibrations at author-time scale.",
+  "seeds": { "from": 0, "count": 10000 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": "all" }

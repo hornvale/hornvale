@@ -3,6 +3,7 @@
 use hornvale_astronomy::{Calendar, NeighborClass, Rotation, StarSystem};
 use hornvale_climate::GeneratedClimate;
 use hornvale_kernel::{CellId, Seed, Value, World};
+use hornvale_language::{Manner, MorphOptions, NameKind, Namer, Phonology, Segment, romanize};
 use hornvale_religion::beliefs_of;
 use hornvale_terrain::GlobeSummary;
 use hornvale_worldgen::{
@@ -221,19 +222,14 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "belief-kind",
-            doc: "Category of the first belief: 'eternal' if its tenet contains 'never', \
-                   else 'cyclic'; Absent if no beliefs",
+            doc: "The first belief's sentiment tag ('eternal', 'cyclic', or 'ambient'); \
+                   Absent if no beliefs",
             summary: SummaryKind::Categorical,
             extract: |v| {
                 let beliefs = beliefs_of(&v.world);
-                if let Some(first) = beliefs.first() {
-                    if first.tenet.contains("never") {
-                        MetricValue::Text("eternal".to_string())
-                    } else {
-                        MetricValue::Text("cyclic".to_string())
-                    }
-                } else {
-                    MetricValue::Absent
+                match beliefs.first() {
+                    Some(first) => MetricValue::Text(first.sentiment.as_str().to_string()),
+                    None => MetricValue::Absent,
                 }
             },
         },
@@ -550,23 +546,17 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "head-deity-periodicity",
-            doc: "Category of the goblin flagship's head deity (the most salient belief): \
-                   'eternal' if its tenet contains 'never', else 'cyclic'; Absent if no \
-                   goblin beliefs",
+            doc: "The sentiment tag of the goblin flagship's head deity (the most salient \
+                   belief): 'eternal', 'cyclic', or 'ambient'; Absent if no goblin beliefs",
             summary: SummaryKind::Categorical,
             extract: |v| {
                 let Some(info) = flagship_of(&v.world, "goblin") else {
                     return MetricValue::Absent;
                 };
                 let beliefs = hornvale_religion::beliefs_held_by(&v.world, info.id);
-                if let Some(head) = beliefs.first() {
-                    if head.tenet.contains("never") {
-                        MetricValue::Text("eternal".to_string())
-                    } else {
-                        MetricValue::Text("cyclic".to_string())
-                    }
-                } else {
-                    MetricValue::Absent
+                match beliefs.first() {
+                    Some(head) => MetricValue::Text(head.sentiment.as_str().to_string()),
+                    None => MetricValue::Absent,
                 }
             },
         },
@@ -755,6 +745,76 @@ pub fn registry() -> Vec<Metric> {
                 MetricValue::Flag(pick_kobold([&g, &k]) == Some(1))
             },
         },
+        Metric {
+            name: "phonotactic-validity-goblin",
+            doc: "Whether every generated name (settlement, deity, epithet) attributed to \
+                   goblins in this world re-validates against the goblin phonology, \
+                   independently re-derived and re-parsed from the surface string; \
+                   Absent if goblins produced no names",
+            summary: SummaryKind::Flag,
+            extract: |v| phonotactic_validity(v, "goblin"),
+        },
+        Metric {
+            name: "phonotactic-validity-kobold",
+            doc: "Whether every generated name (settlement, deity, epithet) attributed to \
+                   kobolds in this world re-validates against the kobold phonology, \
+                   independently re-derived and re-parsed from the surface string; \
+                   Absent if kobolds produced no names",
+            summary: SummaryKind::Flag,
+            extract: |v| phonotactic_validity(v, "kobold"),
+        },
+        Metric {
+            name: "epithet-honorific-goblin",
+            doc: "Whether every committed goblin deity epithet carries a prepended honorific \
+                   affix — DETECTED from the committed epithet content: the committed word, \
+                   case-folded, must end with the independently re-derived honorific-OFF stem \
+                   and be strictly longer (Rank status basis → honorifics on, spec §7); Absent \
+                   if goblins hold no pantheon",
+            summary: SummaryKind::Flag,
+            extract: |v| epithet_honorific(v, "goblin"),
+        },
+        Metric {
+            name: "epithet-honorific-kobold",
+            doc: "Whether every committed kobold deity epithet carries a prepended honorific \
+                   affix — DETECTED from the committed epithet content (see \
+                   epithet-honorific-goblin); kobold's Knowledge status basis leaves honorifics \
+                   off, so the committed epithet equals the plain stem and this reads false; \
+                   Absent if kobolds hold no pantheon",
+            summary: SummaryKind::Flag,
+            extract: |v| epithet_honorific(v, "kobold"),
+        },
+        Metric {
+            name: "name-length-goblin",
+            doc: "Mean character length of every generated name (settlement, deity, epithet) \
+                   attributed to goblins in this world; Absent if goblins produced no names",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+            },
+            extract: |v| mean_name_length(v, "goblin"),
+        },
+        Metric {
+            name: "name-length-kobold",
+            doc: "Mean character length of every generated name (settlement, deity, epithet) \
+                   attributed to kobolds in this world; Absent if kobolds produced no names",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+            },
+            extract: |v| mean_name_length(v, "kobold"),
+        },
+        Metric {
+            name: "name-collision-rate",
+            doc: "Fraction of this world's settlement + deity names (across every species) \
+                   that duplicate another name in the same world — uniqueness is de-facto, not \
+                   enforced (Task 9), so this MEASURES the collision rate rather than asserting \
+                   zero. Scope: settlement and deity proper nouns only; epithets are \
+                   deliberately EXCLUDED (they are descriptive words expected to repeat by \
+                   design, so they are not collision candidates). Absent if the world has no \
+                   settlement or deity names",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.4],
+            },
+            extract: name_collision_rate,
+        },
     ]
 }
 
@@ -879,6 +939,225 @@ fn species_settlement_count(v: &WorldView, species: &str) -> f64 {
         .find(hornvale_settlement::IS_SETTLEMENT)
         .filter(|f| hornvale_species::species_of(&v.world, f.subject).as_deref() == Some(species))
         .count() as f64
+}
+
+/// Every generated name attributed to `species` in this world: its
+/// settlement names (from the places registry) plus, if it holds a
+/// pantheon, every deity name and epithet its flagship's beliefs carry.
+/// Empty if the species placed nothing and holds no pantheon.
+fn species_generated_names(v: &WorldView, species: &str) -> Vec<String> {
+    let mut names: Vec<String> = hornvale_terrain::places(&v.world)
+        .into_iter()
+        .filter(|p| hornvale_species::species_of(&v.world, p.id).as_deref() == Some(species))
+        .map(|p| p.name)
+        .collect();
+    if let Some(info) = flagship_of(&v.world, species) {
+        for belief in hornvale_religion::beliefs_held_by(&v.world, info.id) {
+            names.push(belief.deity);
+            names.push(belief.epithet);
+        }
+    }
+    names
+}
+
+/// Whether every generated name attributed to `species` in this world
+/// re-validates against `species`' own re-derived phonology; `Absent` if it
+/// produced no names.
+fn phonotactic_validity(v: &WorldView, species: &str) -> MetricValue {
+    let names = species_generated_names(v, species);
+    if names.is_empty() {
+        return MetricValue::Absent;
+    }
+    let ph = hornvale_worldgen::language_of(&v.world, species);
+    MetricValue::Flag(names.iter().all(|n| is_phonotactically_valid(n, &ph)))
+}
+
+/// Whether every committed deity epithet of `species`' flagship pantheon
+/// carries a prepended honorific affix, DETECTED from the committed epithet
+/// content (not read back from the config that drove generation — that would
+/// be tautological). `Absent` if `species` holds no pantheon.
+///
+/// The honorific affix is one syllable drawn AFTER the shared descriptive
+/// stem + reduplication draws and PREPENDED (Task 6). So for a given
+/// `(seed, species, salt)`, re-deriving the epithet with honorifics OFF
+/// yields exactly the stem the committed epithet was built from. The
+/// renderer capitalizes only the first character, and a prepended affix
+/// shifts the stem's first letter off the front (lowercasing it), so the
+/// detection case-folds both: the committed epithet carries the honorific
+/// iff, lowercased, it ends with the lowercased plain stem AND is strictly
+/// longer. The metric is `Flag(true)` iff EVERY committed epithet carries
+/// it (goblin, Rank), `Flag(false)` iff none does (kobold, Knowledge). A
+/// broken honorific pipeline — a goblin epithet committed without its affix
+/// — would equal its plain stem here and flip the flag to false, which the
+/// preregistered calibration then catches.
+fn epithet_honorific(v: &WorldView, species: &str) -> MetricValue {
+    let Some(info) = flagship_of(&v.world, species) else {
+        return MetricValue::Absent;
+    };
+    let beliefs = hornvale_religion::beliefs_held_by(&v.world, info.id);
+    if beliefs.is_empty() {
+        return MetricValue::Absent;
+    }
+    let ph = hornvale_worldgen::language_of(&v.world, species);
+    let namer = Namer::new(&v.world.seed, species, &ph);
+    let carries = |b: &hornvale_religion::Belief| {
+        let plain = namer
+            .name(
+                NameKind::Epithet,
+                b.id.0,
+                &MorphOptions { honorifics: false },
+            )
+            .roman
+            .to_lowercase();
+        let committed = b.epithet.to_lowercase();
+        committed.ends_with(&plain) && committed.chars().count() > plain.chars().count()
+    };
+    MetricValue::Flag(beliefs.iter().all(carries))
+}
+
+/// Mean character length of every generated name attributed to `species` in
+/// this world; `Absent` if it produced no names.
+fn mean_name_length(v: &WorldView, species: &str) -> MetricValue {
+    let names = species_generated_names(v, species);
+    if names.is_empty() {
+        return MetricValue::Absent;
+    }
+    let total: usize = names.iter().map(|n| n.chars().count()).sum();
+    MetricValue::Number(total as f64 / names.len() as f64)
+}
+
+/// Fraction of this world's settlement + deity names (across every species)
+/// that duplicate another name in the same world; `Absent` if there are
+/// none. Uniqueness is de-facto, not enforced (Task 9) — this is a measured
+/// property of the name space, not an assertion of zero collisions.
+fn name_collision_rate(v: &WorldView) -> MetricValue {
+    let mut names: Vec<String> = hornvale_terrain::places(&v.world)
+        .into_iter()
+        .map(|p| p.name)
+        .collect();
+    names.extend(beliefs_of(&v.world).into_iter().map(|b| b.deity));
+    if names.is_empty() {
+        return MetricValue::Absent;
+    }
+    let mut counts: std::collections::BTreeMap<&str, usize> = std::collections::BTreeMap::new();
+    for n in &names {
+        *counts.entry(n.as_str()).or_insert(0) += 1;
+    }
+    let duplicated = names.iter().filter(|n| counts[n.as_str()] > 1).count();
+    MetricValue::Number(duplicated as f64 / names.len() as f64)
+}
+
+/// Whether `name` parses as a legal sequence of syllables under `ph`,
+/// independently of `hornvale_language::naming`'s generation code path: this
+/// walks the SURFACE STRING back into [`Segment`]s and re-checks
+/// phonotactic legality from scratch — every syllable's onset/coda
+/// manner-sequence must match one of `ph.onsets`/`ph.codas` (the very
+/// templates `draw_phonology` drew), its nucleus must be exactly
+/// `ph.nuclei` vowels, and every segment consumed must be a member of
+/// `ph.inventory`. Several romanizations are literal PREFIXES of others
+/// sharing the same manner (`z`/`zh`, `s`/`sh`, `n`/`ng`, `k`/`kx`), so a
+/// single greedy match per slot is unsound (a "z" false-match can swallow
+/// what was really a "zh"); every matcher below returns every reachable
+/// position and `parse_syllables` backtracks over the full cross product of
+/// segment choice and template choice.
+fn is_phonotactically_valid(name: &str, ph: &Phonology) -> bool {
+    let chars: Vec<char> = name.to_lowercase().chars().collect();
+    !chars.is_empty() && parse_syllables(&chars, 0, ph)
+}
+
+/// Recursively consume one syllable at a time from `chars[pos..]`; true iff
+/// the remainder parses as a sequence of legal syllables. The base case
+/// (`pos == chars.len()`) is only reachable after a caller has already
+/// consumed at least one syllable, so an empty name never validates (see
+/// [`is_phonotactically_valid`]'s explicit empty check).
+fn parse_syllables(chars: &[char], pos: usize, ph: &Phonology) -> bool {
+    if pos == chars.len() {
+        return true;
+    }
+    let mut onsets: Vec<&Vec<Manner>> = ph.onsets.iter().collect();
+    onsets.sort();
+    onsets.dedup();
+    let mut codas: Vec<&Vec<Manner>> = ph.codas.iter().collect();
+    codas.sort();
+    codas.dedup();
+    for onset in &onsets {
+        for after_onset in match_manner_run(chars, pos, onset, ph) {
+            for after_nucleus in match_nucleus(chars, after_onset, ph.nuclei, ph) {
+                for coda in &codas {
+                    for after_coda in match_manner_run(chars, after_nucleus, coda, ph) {
+                        if parse_syllables(chars, after_coda, ph) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Every position reachable by consuming a consonant cluster matching
+/// `template` (one inventory consonant of each listed manner, in order)
+/// starting at `chars[pos..]`, trying every same-manner candidate at each
+/// slot (see the module note on prefix ambiguity).
+fn match_manner_run(chars: &[char], pos: usize, template: &[Manner], ph: &Phonology) -> Vec<usize> {
+    let mut positions = vec![pos];
+    for &manner in template {
+        let mut next = Vec::new();
+        for &p in &positions {
+            for seg in ph
+                .inventory
+                .iter()
+                .filter(|s| matches!(s, Segment::Consonant { manner: m, .. } if *m == manner))
+            {
+                let r = romanize(seg);
+                if matches_literal(chars, p, r) {
+                    next.push(p + r.chars().count());
+                }
+            }
+        }
+        next.sort_unstable();
+        next.dedup();
+        if next.is_empty() {
+            return Vec::new();
+        }
+        positions = next;
+    }
+    positions
+}
+
+/// Every position reachable by consuming exactly `count` inventory vowels
+/// from `chars[pos..]`, in sequence.
+fn match_nucleus(chars: &[char], pos: usize, count: usize, ph: &Phonology) -> Vec<usize> {
+    let mut positions = vec![pos];
+    for _ in 0..count {
+        let mut next = Vec::new();
+        for &p in &positions {
+            for seg in ph
+                .inventory
+                .iter()
+                .filter(|s| matches!(s, Segment::Vowel { .. }))
+            {
+                let r = romanize(seg);
+                if matches_literal(chars, p, r) {
+                    next.push(p + r.chars().count());
+                }
+            }
+        }
+        next.sort_unstable();
+        next.dedup();
+        if next.is_empty() {
+            return Vec::new();
+        }
+        positions = next;
+    }
+    positions
+}
+
+/// Whether `s`'s characters literally match `chars` starting at `pos`.
+fn matches_literal(chars: &[char], pos: usize, s: &str) -> bool {
+    let needle: Vec<char> = s.chars().collect();
+    pos + needle.len() <= chars.len() && chars[pos..pos + needle.len()] == needle[..]
 }
 
 /// Render the metrics list as a markdown table, in registry order.
@@ -1053,8 +1332,58 @@ mod tests {
     }
 
     #[test]
-    fn registry_has_fifty_metrics_after_the_eyes() {
-        assert_eq!(registry().len(), 50);
+    fn registry_has_fifty_seven_metrics_after_the_tongues() {
+        assert_eq!(registry().len(), 57);
+    }
+
+    #[test]
+    fn phonotactic_validity_holds_for_every_species_name_at_seed_0() {
+        // Seed 0 caught a real bug during development: a greedy single-match
+        // parser mistook "z" for a false-positive prefix of "zh" (also true
+        // of "s"/"sh", "n"/"ng", "k"/"kx") and rejected genuinely valid
+        // names. Regression coverage for that fix, independent of the
+        // calibration test's full 500-seed study run.
+        let view = WorldView::build(Seed(0), &SkyPins::default()).unwrap();
+        for species in ["goblin", "kobold"] {
+            let ph = hornvale_worldgen::language_of(&view.world, species);
+            for n in species_generated_names(&view, species) {
+                assert!(
+                    is_phonotactically_valid(&n, &ph),
+                    "{species} name {n:?} failed its own phonotactics"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn epithet_honorific_is_detected_from_committed_content_at_seed_42() {
+        // The metric reads the COMMITTED epithet fact and detects the
+        // prepended affix structurally against a re-derived plain stem — not
+        // the config that drove generation. Goblin (Rank) commits
+        // honorific-bearing epithets → true; kobold (Knowledge) commits plain
+        // stems → false.
+        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(
+            epithet_honorific(&view, "goblin"),
+            MetricValue::Flag(true),
+            "goblin committed epithets must carry the honorific affix"
+        );
+        assert_eq!(
+            epithet_honorific(&view, "kobold"),
+            MetricValue::Flag(false),
+            "kobold committed epithets must be plain stems"
+        );
+    }
+
+    #[test]
+    fn phonotactic_validator_rejects_garbage_and_empty_strings() {
+        let view = WorldView::build(Seed(0), &SkyPins::default()).unwrap();
+        let ph = hornvale_worldgen::language_of(&view.world, "goblin");
+        assert!(!is_phonotactically_valid("", &ph));
+        // "qw" (uvular stop q + labial approximant w): q is never a Stop
+        // candidate in this drawn inventory (only p/t/d/g appear, per the
+        // seed-0 debug dump), so this must not parse.
+        assert!(!is_phonotactically_valid("qw", &ph));
     }
 
     #[test]
