@@ -1,4 +1,4 @@
-# Campaign 22: The Orrery
+# Campaign 23: The Orrery
 
 **July 2026 · outcome: complete, merged — the first Hornvale picture that
 moves, and the first that carries a color**

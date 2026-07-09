@@ -1,4 +1,4 @@
-# Campaign 22 (The Orrery) — retrospective
+# Campaign 23 (The Orrery) — retrospective
 
 **Merged:** 2026-07-09
 
@@ -6,7 +6,7 @@
 correctness* — and this is now the second campaign burned by it. Campaign 19's
 retro said it in as many words: the freshness gate "checks that the PNG is
 byte-deterministic, not that it is *correct*," and would have regenerated a
-malformed digit glyph forever. Campaign 22 walked straight into the same trap
+malformed digit glyph forever. Campaign 23 walked straight into the same trap
 one artifact type over: the committed `.cast` recording shipped with bare
 line-feed line endings, which look right printed to a live terminal (the tty
 translates LF→CRLF) but smear on a raw asciinema replay, which needs the full

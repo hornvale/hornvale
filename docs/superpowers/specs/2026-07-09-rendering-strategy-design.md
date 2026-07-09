@@ -74,7 +74,7 @@ follow the existing patterns; nothing here changes shape under this spec.
 (elevation, biome, settlement — 72×24 equirectangular, one `render.rs` per
 domain); their 256×128 raster siblings (P6 PPM today); the First Light 512×512
 BMP; the content-addressed espeak audio clips; and — shipped by The Orrery
-(Campaign 22) — **deterministic terminal-recording animation** (an asciinema
+(Campaign 23) — **deterministic terminal-recording animation** (an asciinema
 `.cast`: a render evaluated over a time range, framed with synthetic timing so
 the recording is byte-reproducible and drift-checked, `serde_json`-only,
 embeddable in the book, transcoded to mp4 only by external tools). Future
