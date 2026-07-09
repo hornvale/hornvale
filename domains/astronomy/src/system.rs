@@ -19,6 +19,8 @@ pub struct StarSystem {
     pub moons: Vec<Moon>,
     /// Notable neighbor stars, brightest first.
     pub neighbors: Vec<Neighbor>,
+    /// Deep-time orbital forcing (Milankovitch triad).
+    pub forcing: crate::forcing::OrbitalForcing,
 }
 
 /// A generated system plus the notes genesis recorded along the way.
@@ -40,12 +42,14 @@ pub fn generate(world_seed: Seed, pins: &SkyPins) -> Result<GenesisOutcome, Gene
     let anchor = generate_anchor(astronomy_seed, &star, pins)?;
     let (moons, notes) = generate_moons(astronomy_seed, &star, &anchor, pins)?;
     let neighbors = generate_neighbors(astronomy_seed, pins);
+    let forcing = crate::forcing::generate_forcing(astronomy_seed, &anchor, pins);
     Ok(GenesisOutcome {
         system: StarSystem {
             star,
             anchor,
             moons,
             neighbors,
+            forcing,
         },
         notes,
     })

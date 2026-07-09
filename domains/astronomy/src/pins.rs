@@ -56,6 +56,8 @@ pub struct SkyPins {
     pub year_local_days: Option<LocalDays>,
     /// Force one showpiece neighbor of this class.
     pub neighbor: Option<NeighborClass>,
+    /// Deep-time orbital forcing; None = drawn.
+    pub forcing: Option<ForcingPin>,
 }
 
 /// Pinnable rotation regimes.
@@ -84,6 +86,14 @@ pub enum NeighborClass {
     RedGiant,
     /// Blazing blue giant.
     BlueGiant,
+}
+
+/// Deep-time orbital-forcing setting. `Zero` is the null control: a circular
+/// orbit with no obliquity drift (all oscillation amplitudes zero).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ForcingPin {
+    /// No forcing: circular orbit, fixed obliquity (the Year-3 null control).
+    Zero,
 }
 
 /// Why sky genesis refused to produce a system.
@@ -264,6 +274,7 @@ mod tests {
         assert!(pins.obliquity.is_none());
         assert!(pins.year_local_days.is_none());
         assert!(pins.neighbor.is_none());
+        assert!(pins.forcing.is_none());
     }
 
     #[test]
@@ -285,6 +296,7 @@ mod tests {
             obliquity: Some(Degrees::new(12.5).unwrap()),
             year_local_days: None,
             neighbor: Some(NeighborClass::BlueGiant),
+            forcing: None,
         };
         let mut rebuilt = SkyPins::default();
         for s in pin_strings(&pins) {
@@ -302,6 +314,7 @@ mod tests {
             obliquity: Some(Degrees::new(0.0).unwrap()),
             year_local_days: Some(LocalDays::new(300.0).unwrap()),
             neighbor: Some(NeighborClass::RedGiant),
+            forcing: None,
         };
         let strings = pin_strings(&pins);
         assert_eq!(strings.len(), 5);

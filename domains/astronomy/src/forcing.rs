@@ -6,6 +6,11 @@
 
 use std::f64::consts::TAU;
 
+use crate::anchor::Anchor;
+use crate::pins::SkyPins;
+use crate::streams;
+use hornvale_kernel::Seed;
+
 /// Obliquity oscillation period, standard days (~41 kyr).
 pub const P_OBLIQUITY: f64 = 41_000.0 * 365.25;
 /// Eccentricity oscillation period, standard days (~100 kyr).
@@ -51,6 +56,32 @@ impl OrbitalForcing {
     /// Precession phase at `t`, radians, wrapping over `P_PRECESSION`.
     pub fn precession_at(&self, t: f64) -> f64 {
         self.precession_phase + TAU * t / P_PRECESSION
+    }
+}
+
+/// Draw the deep-time forcing. ε₀ is the anchor's genesis obliquity; the
+/// oscillation amplitudes/phases and eccentricity are drawn on the `FORCING`
+/// stream in a fixed order (a save-format contract). Amplitudes stay small so
+/// the present sky is barely perturbed; deep time is where they show.
+pub fn generate_forcing(astronomy_seed: Seed, anchor: &Anchor, pins: &SkyPins) -> OrbitalForcing {
+    let mut s = astronomy_seed.derive(streams::FORCING).stream();
+    // Fixed draw order — never reorder.
+    let obliquity_amp_drawn = s.next_f64() * 2.5; // 0–2.5° base wobble
+    let obliquity_phase = s.next_f64() * TAU;
+    let ecc_mean = s.next_f64() * 0.05; // 0–0.05, Earth ~0.017
+    let ecc_amp = s.next_f64() * 0.03;
+    let ecc_phase = s.next_f64() * TAU;
+    let precession_phase = s.next_f64() * TAU;
+    // The forcing pin zeroes the amplitudes AFTER the draws (pin isolation).
+    let zeroed = matches!(pins.forcing, Some(crate::pins::ForcingPin::Zero));
+    OrbitalForcing {
+        obliquity_mean: anchor.obliquity.get(),
+        obliquity_amp: if zeroed { 0.0 } else { obliquity_amp_drawn },
+        obliquity_phase,
+        ecc_mean: if zeroed { 0.0 } else { ecc_mean },
+        ecc_amp: if zeroed { 0.0 } else { ecc_amp },
+        ecc_phase,
+        precession_phase,
     }
 }
 
@@ -109,5 +140,22 @@ mod tests {
         let f = sample();
         let d = f.precession_at(P_PRECESSION) - f.precession_at(0.0);
         assert!((d - TAU).abs() < 1e-9);
+    }
+
+    #[test]
+    fn generate_forcing_is_deterministic_and_anchored() {
+        use crate::anchor::generate_anchor;
+        use crate::pins::SkyPins;
+        use crate::star::generate_star;
+        use hornvale_kernel::Seed;
+        let seed = Seed(42).derive(crate::streams::ROOT);
+        let star = generate_star(seed);
+        let anchor = generate_anchor(seed, &star, &SkyPins::default()).unwrap();
+        let a = generate_forcing(seed, &anchor, &SkyPins::default());
+        let b = generate_forcing(seed, &anchor, &SkyPins::default());
+        assert_eq!(a, b);
+        // ε₀ carries the anchor's genesis obliquity, so obliquity_at(0) matches.
+        assert_eq!(a.obliquity_mean, anchor.obliquity.get());
+        assert_eq!(a.obliquity_at(0.0), anchor.obliquity.get());
     }
 }
