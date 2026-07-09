@@ -38,6 +38,25 @@ phase-cycle strip per moon. [The Night Sky of Seed
 42](../gallery/star-chart-seed-42.md) is the domain's committed gallery
 artifact, regenerated and drift-checked on every build.
 
+**The orrery, and the moving sky in color (The Orrery).** Two renders join
+the chart. The night sky gains a *palette*: each star is tinted by its
+spectral class, hot blue-white through cool red — a choice the renderer owns,
+never the domain (a star stays a "smoldering red" *word* for the almanac while
+the chart chooses its *hue*). And `hornvale orrery` draws the system from
+above — the star at center in its class color, the habitable zone as a dotted
+ring, the world on its orbit at the year's phase, each moon wearing its synodic
+face. The orrery is a pure function of time, so evaluating it across a span is
+an animation: the world orbits, the moons cycle, the deep-time sky drifts. Those
+frames are written to a self-contained **terminal recording** (asciinema
+`.cast`) — deterministic (synthetic frame timing, no wall clock), so it is a
+committed, drift-checked gallery artifact like any picture, produced with only
+the two serialization tools the workspace already allows. [The Orrery of Seed
+42](../gallery/orrery-seed-42.md) plays a year of the system in the book; an
+mp4 for anywhere else is an open-source transcode *outside* the workspace
+(decision 0022 — the sim emits bytes, clients render pixels). These are
+in-process renders (they read the world directly); the interactive, steerable
+view is a later external client reading the situated scene.
+
 ## The moving sky (Firm Ground II)
 
 Everything above draws a single obliquity, a single circular orbit, and a

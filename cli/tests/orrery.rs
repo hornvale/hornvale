@@ -54,5 +54,11 @@ fn orrery_frame_and_cast_are_deterministic() {
     let text = String::from_utf8(first).unwrap();
     let events = text.lines().skip(1).count();
     assert_eq!(events, 5, "0..10 step 2 => 5 frames");
+    // Frames carry CRLF line endings (JSON-escaped as \r\n) so an
+    // asciinema-player replay returns to column 0 each row.
+    assert!(
+        text.contains("\\r\\n"),
+        "cast frames must use CRLF line endings for the raw-terminal replay"
+    );
     std::fs::remove_dir_all(&dir).unwrap();
 }
