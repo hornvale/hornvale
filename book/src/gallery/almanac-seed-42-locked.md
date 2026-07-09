@@ -34,51 +34,51 @@ The highest land stands 3919 m above the sea.
 The air organizes into a single day–night overturning (tidally locked); 10 land biomes and 8 marine biomes cover the globe.
 Some 8% of the surface is habitable — land with water and a tolerable season.
 
-- **Xngatnebned** — temperate-rainforest
-- **Ngakned** — temperate-rainforest
-- **Vngobngobnednadnob** — temperate-forest
-- **Ngebned** — temperate-forest
-- **Raratrrat** — alpine
-- **Rrarra** — temperate-forest
-- **Raxarrog** — temperate-forest
-- **Raxarraxokra** — temperate-forest
-- **Raxarroroq** — temperate-forest
-- **Rraraxarro** — temperate-forest
-- **Rararaxaxo** — tropical-seasonal-forest
-- **Fngobned** — tropical-seasonal-forest
-- **Sfeknadnoknek** — tropical-seasonal-forest
-- **Vngakvngabnoknekned** — tropical-seasonal-forest
-- **Svaknoknekned** — tropical-seasonal-forest
-- **Ngokxnotnednoknek** — tropical-seasonal-forest
-- **Raxarrarroro** — temperate-forest
-- **Xnodnoknekned** — tropical-seasonal-forest
-- **Zxedneknoknekned** — tropical-seasonal-forest
-- **Fneknebnednoknek** — tropical-seasonal-forest
-- **Zhvabned** — tropical-seasonal-forest
-- **Fngatnoknekned** — tropical-seasonal-forest
-- **Raxarararokxa** — tropical-seasonal-forest
-- **Vngeknednoknek** — tropical-seasonal-forest
-- **Rararaxaxa** — tropical-seasonal-forest
-- **Netnoknekned** — tropical-seasonal-forest
-- **Rararra** — tropical-seasonal-forest
-- **Raxaroxo** — tropical-seasonal-forest
+- **Xngatnebvnedned** — temperate-rainforest
+- **Ngakngotned** — temperate-rainforest
+- **Vngobngobxnotnednadnob** — temperate-forest
+- **Ngebxngedned** — temperate-forest
+- **Raratrratrrot** — alpine
+- **Rrarrarro** — temperate-forest
+- **Raxarrogrro** — temperate-forest
+- **Raxarraxokraro** — temperate-forest
+- **Raxarroroqraq** — temperate-forest
+- **Rraraxarroxa** — temperate-forest
+- **Rararaxaxora** — tropical-seasonal-forest
+- **Fngobfngodned** — tropical-seasonal-forest
+- **Sfeknadngednoknek** — tropical-seasonal-forest
+- **Vngakvngabxnednoknekned** — tropical-seasonal-forest
+- **Svakxnadnoknekned** — tropical-seasonal-forest
+- **Ngokxnotsfadnednoknek** — tropical-seasonal-forest
+- **Raxarrarrorora** — temperate-forest
+- **Xnodngeknoknekned** — tropical-seasonal-forest
+- **Zxedneknodnoknekned** — tropical-seasonal-forest
+- **Fneknebzfotnednoknek** — tropical-seasonal-forest
+- **Zhvabnetned** — tropical-seasonal-forest
+- **Fngatzhxodnoknekned** — tropical-seasonal-forest
+- **Raxarararokxarrat** — tropical-seasonal-forest
+- **Vngeksfaknednoknek** — tropical-seasonal-forest
+- **Rararaxaxarrok** — tropical-seasonal-forest
+- **Netzhxednoknekned** — tropical-seasonal-forest
+- **Rararrarrog** — tropical-seasonal-forest
+- **Raxaroxorra** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
 The land holds 28 settlement(s).
-The chief goblin settlement, Xngatnebned, holds 522 souls amid temperate-rainforest.
-The chief kobold settlement, Raratrrat, holds 328 souls amid alpine.
+The chief goblin settlement, Xngatnebvnedned, holds 522 souls amid temperate-rainforest.
+The chief kobold settlement, Raratrratrrot, holds 328 souls amid alpine.
 
-The goblin village of **Xngatnebned**, population 522.
+The goblin village of **Xngatnebvnedned**, population 522.
 
-Xngatnebned lives by farming.
+Xngatnebvnedned lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 
-The kobold warren of **Raratrrat**, population 328.
+The kobold warren of **Raratrratrrot**, population 328.
 
-Raratrrat lives by fishing.
+Raratrratrrot lives by fishing.
 Its roles, lowest to highest: digger, elders.
 
 ## The Gods
@@ -97,7 +97,7 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
-The warren of **Raratrrat** keeps its own folk pantheon:
+The warren of **Raratrratrrot** keeps its own folk pantheon:
 
 > Raxa Rro comes back every 15.99 days. That's how it's always been. That's how it's always been. Raxa is a great one among the gods.
 >

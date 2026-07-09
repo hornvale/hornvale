@@ -178,71 +178,77 @@ pigeonhole principle guarantees collision. Concretely, seed 42's 59
 settlement names collapsed to 26 distinct strings, the most common
 (`Ned`) appearing 9 times.
 
-*The naming-defect fix.* The first measurement was ruled a **defect in the
-naming design against spec §9's low-collision success criterion**, and
-`Namer::glossed_name` was amended for `NameKind::Settlement` only: the
-site-concept compound now also carries a per-salt **drawn stem** (1-2
+*Fix 1: the settlement stem.* The first measurement was ruled a **defect
+in the naming design against spec §9's low-collision success criterion**,
+and `Namer::glossed_name` was amended for `NameKind::Settlement` only:
+the site-concept compound now also carries a per-salt **drawn stem** (1-2
 template syllables from the same `/v2` stream, drawn after the
 site-concept picks, filling the modifier slot opposite the site compound's
 head — real-world toponymy's descriptor + unique element). The stem is a
 proper-name element naming no concept: **glosses are unchanged and stay
 truthful** (H1's row-by-row invariant re-confirmed below), deity and
 epithet names are untouched, and phonotactic repair still applies to the
-whole sequence.
+whole sequence. Re-measured (recorded as history): 500-seed mean
+**10.71%** (57/500 zero-collision), 10k mean **11.00%** (1,345/9,997
+zero-collision); seed 42 restored to 59/59 distinct. An ~8x improvement —
+still above the bound.
 
-*Post-fix measurement (current, pinned).* The full 10k census re-run reads
-a mean in-world collision rate of **11.00%** (mean 0.110004053691488),
-with **1,345 of 9,997 present worlds (13.5%) zero-collision**; seed 42's
-59 settlements now carry 59 distinct names. The 500-seed
-`census-lands-drift` population reads **57 of 500 worlds zero-collision,
-443 nonzero, mean 10.71%** (0.107138846580572), pinned exactly in
-`name_collision_rate_is_measured_and_pinned`. This is an **~8x
-improvement over the defective first measurement, but still above the
-preregistered directional bound** (4.678%): the claim, as stated,
-**remains failed**, and per ADR 0016 the bound is not widened — the
-measured rate is pinned as-is and the failure stands recorded.
+*Fix 2: the stem widened to the Tongues-era range (current, pinned).* The
+residual rate traced to stem entropy: fix 1's unique element drew 1-2
+syllables where the retired Tongues-era settlement stem drew 2-3, and the
+descriptor part adds almost no within-species entropy (few biomes). The
+stem draw was widened to **2-3 syllables** — same stream position, same
+everything else. Re-measured: the full 10k census reads a mean in-world
+collision rate of **4.94%** (mean 0.049392021358371), with **3,327 of
+9,997 present worlds (33.3%) zero-collision**; the 500-seed
+`census-lands-drift` population reads **148 of 500 worlds zero-collision,
+352 nonzero, mean 4.91%** (0.049129710810206), pinned exactly in
+`name_collision_rate_is_measured_and_pinned`. This is a **~17.6x
+improvement over the defective first measurement — and still, narrowly,
+above the preregistered directional bound** (4.678%; the 500-seed mean
+misses it by 0.24 percentage points, about 1.05x the bound): the claim,
+as stated, **remains failed**, and per ADR 0016 the bound is not widened
+— the measured rate is pinned as-is and the failure stands recorded.
 
-The companion name-length distributions move with the fix: at 10k, goblin
-names average **10.56 characters** (mean 10.564079354021732, 9,972
-present, 28 absent) and kobold names **11.01** (mean 11.011578681459451,
-9,977 present, 23 absent) — now *longer* than the Tongues-era free stems
-(9.89 / 9.77), since a settlement name is a site word plus a drawn unique
-stem. The 500-seed calibration pins **10.768460909737524** (goblin) and
-**11.126229787576881** (kobold)
+The companion name-length distributions move with each fix: at 10k,
+goblin names now average **13.65 characters** (mean 13.646295362775010,
+9,972 present, 28 absent) and kobold names **14.13** (mean
+14.127046688324784, 9,977 present, 23 absent) — site word plus a
+2-3-syllable unique stem runs longer than the Tongues-era free stems
+(9.89 / 9.77), the pure compounds (6.51 / 6.82), and fix 1's shorter
+stems (10.56 / 11.01). The 500-seed calibration pins
+**13.811936859785147** (goblin) and **14.236940649335502** (kobold)
 (`name_length_distributions_are_measured_and_pinned`), and the null
 control's own name-length SMD — the goblin vs. goblin-twin gap over
-`census-of-the-meeting` — reads **−0.050617434805643**
-(`null_control_name_length_smd_is_pinned`; it was −0.118235 at the
-Tongues-era measurement and −0.045751 at the pre-fix measurement), still
-comfortably inside the ±0.2 sampling bound
+`census-of-the-meeting` — reads **−0.066905196528**
+(`null_control_name_length_smd_is_pinned`; −0.118235 at the Tongues-era
+measurement, −0.045751 pre-fix, −0.050617 after fix 1), still comfortably
+inside the ±0.2 sampling bound
 `null_control_distributions_are_within_the_sampling_bound` asserts, so the
 null control's own verdict (Study 009) is unaffected by this re-pin.
 
-## Verdict: H1-H3 confirmed exactly; H4 failed, a defect was fixed, and the claim still fails — honestly reported
+## Verdict: H1-H3 confirmed exactly; H4 failed, two fixes later the rate is 4.91% against a 4.678% bound — still failed, honestly reported
 
 H1, H2, and H3 hold with zero exceptions across every present world in
-both the 10,000-seed census (re-confirmed unchanged on the post-fix
-re-run: 9,997/9,997 glosses true, 40,000/40,000 regularity/soundness
-flags, hue-depth 4 vs. 2 at every seed) and the 500-seed CI-guarded
-calibration — the glossing and exposure-soundness invariants Task 10's
-keystone suite already proved at seed 42 hold at population scale, and
-the pack-depth ordering is the structural constant it was derived to be.
+both the 10,000-seed census (re-confirmed unchanged on every re-run:
+9,997/9,997 glosses true, 40,000/40,000 regularity/soundness flags,
+hue-depth 4 vs. 2 at every seed) and the 500-seed CI-guarded calibration
+— the glossing and exposure-soundness invariants Task 10's keystone suite
+already proved at seed 42 hold at population scale, and the pack-depth
+ordering is the structural constant it was derived to be.
 
-H4's story has two honest parts. The first census exposed a genuine
-**naming defect** — pure site-concept compounds gave a species only a
-handful of distinct settlement names against settlement counts that
-regularly exceed a hundred, an 86% collision regime nobody intended — and
-the defect was fixed (the settlement stem above), cutting the measured
-rate by roughly a factor of eight and restoring seed 42 to
-collision-free. But the **preregistered claim itself still fails**: 10.71%
-(500-seed) / 11.00% (10k) remains above the 4.678% bound, because even
-with a unique element drawn per settlement, compounding it against a
-small site-word vocabulary leaves the name space denser than the
-Tongues-era free-stem pool the bound was anchored to. Per ADR 0016, the
-bound is left as originally stated and the failure stands: whether the
-residual rate is acceptable (a low-double-digit share of a world's
-settlements sharing a name with a same-biome sibling reads differently
-than 86% collapse), or whether the stem should widen further (2-3
-syllables, per-settlement phenomenon variation), is a product decision
-for the campaign owner, not a bound to quietly re-tune from inside the
-Lab task that measured it.
+H4's story has three honest chapters: the preregistered bound (< 4.678%);
+the first census exposing a genuine **naming defect** (86.3-86.8% —
+pure site-concept compounds pigeonholed against settlement counts);
+fix 1 (the settlement stem) cutting it to 10.7-11.0%; and fix 2 (the stem
+widened to the Tongues-era 2-3-syllable range) reaching **4.91%
+(500-seed) / 4.94% (10k) — a ~17.6x improvement that still misses the
+bound by about five percent of itself.** Per ADR 0016 the bound stays as
+preregistered and the verdict stays failed; the iteration loop is closed
+by decision, not by silently re-tuning either the bound or the design
+further. Whether 4.678% — an anchor inherited from the Tongues-era
+free-stem pool, twice its measured rate — was even the right bound for a
+glossed-compound regime whose names *deliberately* share meaningful
+descriptors, is the open question this page hands to the campaign owner:
+the number that would answer it is pinned, honest, and one decision away
+from either a ratified revised bound or a third design iteration.

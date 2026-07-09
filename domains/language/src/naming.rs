@@ -249,17 +249,21 @@ impl<'a> Namer<'a> {
             // census measured an ~86% in-world collision rate for pure
             // site-concept compounds, spec §9's low-collision criterion):
             // settlement names compound the site-concept word(s) with a
-            // per-salt DRAWN stem (1-2 template syllables from this same
+            // per-salt DRAWN stem (2-3 template syllables from this same
             // v2 stream, after the site-concept picks — real-world
             // toponymy's descriptor + unique element, "Ice-home-by-the-
-            // ford"). The stem fills the slot OPPOSITE the head: the site
+            // ford"; 2-3 matches the retired Tongues-era settlement stem's
+            // own range, since the descriptor adds almost no within-
+            // species entropy and the 1-2-syllable first cut measurably
+            // under-spread the name space). The stem fills the slot
+            // OPPOSITE the head: the site
             // compound plays the head, the stem the modifier, joined in
             // the lexicon's drawn headedness order. It is a proper-name
             // element naming no concept, so it never enters the gloss —
             // glosses stay truthful compositions of site concepts alone.
             // Deity and Epithet names carry no stem (their name spaces
             // are one-per-belief, not pigeonholed by settlement counts).
-            let stem_syllables = self.draw_syllables(&mut stream, 1, 2, false);
+            let stem_syllables = self.draw_syllables(&mut stream, 2, 3, false);
             let (stem, _) = views_of(&stem_syllables);
             segments = join_by_headedness(lexicon.headedness, stem, segments);
         }
