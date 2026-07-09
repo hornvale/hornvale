@@ -309,6 +309,7 @@ mod tests {
             pin_sets: vec![PinSet {
                 label: "default".to_string(),
                 pins: vec![],
+                roster: None,
             }],
             metrics: MetricSelection::Named(vec!["star-class".to_string()]),
         };

@@ -21,6 +21,10 @@ pub struct PinSet {
     pub label: String,
     /// Pin specifications in "key=value" format (e.g., ["moons=3", "day-hours=24"]).
     pub pins: Vec<String>,
+    /// The species roster this pin set builds with; `None` = the shipped
+    /// `{goblin, kobold}` roster. Resolved by the runner (spec §5).
+    #[serde(default)]
+    pub roster: Option<String>,
 }
 
 /// Metric selection: either "all" metrics or a named subset.
@@ -214,8 +218,8 @@ impl Study {
         }
     }
 
-    /// Parse all pin sets and return label+SkyPins pairs.
-    pub fn pin_sets_parsed(&self) -> Result<Vec<(String, SkyPins)>, StudyError> {
+    /// Parse all pin sets and return label+SkyPins+roster-name triples.
+    pub fn pin_sets_parsed(&self) -> Result<Vec<(String, SkyPins, Option<String>)>, StudyError> {
         let mut result = Vec::new();
         for pin_set in &self.pin_sets {
             let mut pins = SkyPins::default();
@@ -229,7 +233,7 @@ impl Study {
                     });
                 }
             }
-            result.push((pin_set.label.clone(), pins));
+            result.push((pin_set.label.clone(), pins, pin_set.roster.clone()));
         }
         Ok(result)
     }
@@ -566,5 +570,15 @@ mod tests {
         };
         let display_str = format!("{}", err);
         assert_eq!(display_str, "study: test error");
+    }
+
+    #[test]
+    fn pinset_roster_defaults_to_none_for_existing_studies() {
+        let json = r#"{ "name": "x", "description": "d",
+            "seeds": { "from": 0, "count": 1 },
+            "pin_sets": [ { "label": "default", "pins": [] } ],
+            "metrics": "all" }"#;
+        let s: Study = serde_json::from_str(json).unwrap();
+        assert_eq!(s.pin_sets[0].roster, None);
     }
 }

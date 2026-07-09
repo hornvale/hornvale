@@ -3,9 +3,26 @@
 use crate::{Metric, MetricValue, Study, StudyError, WorldView};
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
+use hornvale_species::SpeciesDef;
 use hornvale_worldgen::BuildError;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+/// Resolve a pin set's roster name to a concrete species roster. The closed
+/// set the Lab knows (spec §5): `None`/`"default"` = shipped; the two solo
+/// null-control rosters otherwise. Unknown ⇒ loud `StudyError`.
+fn resolve_roster(name: Option<&str>) -> Result<Vec<SpeciesDef>, StudyError> {
+    match name {
+        None | Some("default") => Ok(hornvale_worldgen::default_roster()),
+        Some("goblin-solo") => Ok(crate::goblin_solo_roster()),
+        Some("goblin-twin-solo") => Ok(crate::goblin_twin_solo_roster()),
+        Some(other) => Err(StudyError {
+            message: format!(
+                "unknown roster '{other}'; known: default, goblin-solo, goblin-twin-solo"
+            ),
+        }),
+    }
+}
 
 /// One world's measurements (or its refusal).
 #[derive(Debug, Clone, PartialEq)]
@@ -49,8 +66,14 @@ pub fn run(study: &Study) -> Result<RunResult, StudyError> {
     // finished first), and the thread count affects only speed. The
     // `parallel_run_matches_sequential` test pins that equivalence.
     let mut rows = Vec::new();
-    for (label, pins) in &pin_sets {
-        rows.extend(run_pin_set(study, label, pins, &metrics)?);
+    for (label, pins, roster) in &pin_sets {
+        rows.extend(run_pin_set(
+            study,
+            label,
+            pins,
+            roster.as_deref(),
+            &metrics,
+        )?);
     }
 
     Ok(RunResult {
@@ -67,11 +90,13 @@ fn build_row(
     study: &Study,
     label: &str,
     pins: &SkyPins,
+    roster: Option<&str>,
     seed_offset: u64,
     metrics: &[Metric],
 ) -> Result<Row, StudyError> {
     let seed_value = study.seeds.from + seed_offset;
-    match WorldView::build(Seed(seed_value), pins) {
+    let roster = resolve_roster(roster)?;
+    match WorldView::build_with_roster(Seed(seed_value), pins, roster) {
         Ok(view) => Ok(Row {
             seed: seed_value,
             pin_set: label.to_string(),
@@ -98,6 +123,7 @@ fn run_pin_set(
     study: &Study,
     label: &str,
     pins: &SkyPins,
+    roster: Option<&str>,
     metrics: &[Metric],
 ) -> Result<Vec<Row>, StudyError> {
     let count = study.seeds.count;
@@ -111,7 +137,7 @@ fn run_pin_set(
 
     if threads == 1 {
         return (0..count)
-            .map(|off| build_row(study, label, pins, off, metrics))
+            .map(|off| build_row(study, label, pins, roster, off, metrics))
             .collect();
     }
 
@@ -131,7 +157,7 @@ fn run_pin_set(
             let hi = ((t + 1) * chunk).min(count);
             handles.push(scope.spawn(move || {
                 (lo..hi)
-                    .map(|off| (off, build_row(study, label, pins, off, metrics)))
+                    .map(|off| (off, build_row(study, label, pins, roster, off, metrics)))
                     .collect::<Vec<_>>()
             }));
         }
@@ -225,9 +251,16 @@ mod tests {
         let pin_sets = study.pin_sets_parsed()?;
         let metric_names: Vec<&'static str> = metrics.iter().map(|m| m.name).collect();
         let mut rows = Vec::new();
-        for (label, pins) in &pin_sets {
+        for (label, pins, roster) in &pin_sets {
             for off in 0..study.seeds.count {
-                rows.push(build_row(study, label, pins, off, &metrics)?);
+                rows.push(build_row(
+                    study,
+                    label,
+                    pins,
+                    roster.as_deref(),
+                    off,
+                    &metrics,
+                )?);
             }
         }
         Ok(RunResult {
@@ -251,10 +284,12 @@ mod tests {
                 PinSet {
                     label: "a".to_string(),
                     pins: vec![],
+                    roster: None,
                 },
                 PinSet {
                     label: "b".to_string(),
                     pins: vec![],
+                    roster: None,
                 },
             ],
             metrics: MetricSelection::Named(vec![
@@ -295,6 +330,7 @@ mod tests {
             pin_sets: vec![PinSet {
                 label: "default".to_string(),
                 pins: vec![],
+                roster: None,
             }],
             metrics: MetricSelection::Named(vec![
                 "star-class".to_string(),
@@ -338,6 +374,7 @@ mod tests {
             pin_sets: vec![PinSet {
                 label: "default".to_string(),
                 pins: vec!["moons=3".to_string()],
+                roster: None,
             }],
             metrics: MetricSelection::All("all".to_string()),
         };
@@ -402,10 +439,12 @@ mod tests {
                 PinSet {
                     label: "a".to_string(),
                     pins: vec![],
+                    roster: None,
                 },
                 PinSet {
                     label: "b".to_string(),
                     pins: vec![],
+                    roster: None,
                 },
             ],
             metrics: MetricSelection::All("all".to_string()),
@@ -466,6 +505,7 @@ mod tests {
             pin_sets: vec![PinSet {
                 label: "default".to_string(),
                 pins: vec![],
+                roster: None,
             }],
             metrics: MetricSelection::All("all".to_string()),
         };
@@ -509,5 +549,46 @@ mod tests {
 
         // Cleanup temp
         let _ = fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn unknown_roster_is_a_loud_error() {
+        let study = Study {
+            name: "t".into(),
+            description: "d".into(),
+            seeds: Seeds { from: 0, count: 1 },
+            pin_sets: vec![PinSet {
+                label: "x".into(),
+                pins: vec![],
+                roster: Some("bogus".into()),
+            }],
+            metrics: MetricSelection::Named(vec!["star-class".into()]),
+        };
+        let err = run(&study).unwrap_err();
+        assert!(
+            err.message.contains("bogus"),
+            "error must name the bad roster: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn goblin_twin_solo_roster_builds_and_populates_twin_metrics() {
+        let study = Study {
+            name: "t".into(),
+            description: "d".into(),
+            seeds: Seeds { from: 42, count: 1 },
+            pin_sets: vec![PinSet {
+                label: "twin".into(),
+                pins: vec![],
+                roster: Some("goblin-twin-solo".into()),
+            }],
+            metrics: MetricSelection::Named(vec!["head-deity-domain-goblin-twin".into()]),
+        };
+        let r = run(&study).unwrap();
+        assert!(
+            matches!(r.rows[0].values[0], MetricValue::Text(_)),
+            "twin metric must populate"
+        );
     }
 }
