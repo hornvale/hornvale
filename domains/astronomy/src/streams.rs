@@ -18,3 +18,5 @@ pub const MOON_COUNT: &str = "moon-count";
 pub const MOONS: &str = "moons";
 /// Neighborhood draws.
 pub const NEIGHBORS: &str = "neighbors";
+/// Per-neighbor celestial position draws (declination, right ascension).
+pub const NEIGHBOR_POSITIONS: &str = "neighbor-positions";

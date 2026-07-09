@@ -18,6 +18,11 @@ pub struct Neighbor {
     pub apparent_brightness: f64,
     /// Human-readable color character.
     pub color: String,
+    /// Declination in degrees from the celestial equator (drawn, −90…90).
+    /// The celestial equator is the anchor's rotational equator (spec §3).
+    pub declination: f64,
+    /// Right ascension in degrees (drawn, 0…360).
+    pub right_ascension: f64,
 }
 
 impl Neighbor {
@@ -36,6 +41,18 @@ pub fn class_luminosity(class: NeighborClass) -> f64 {
         NeighborClass::OrangeGiant => 60.0,
         NeighborClass::RedGiant => 300.0,
         NeighborClass::BlueGiant => 10_000.0,
+    }
+}
+
+/// The prose name of a spectral class, for chart legends.
+pub fn class_name(class: NeighborClass) -> &'static str {
+    match class {
+        NeighborClass::RedDwarf => "red dwarf",
+        NeighborClass::SunLike => "sun-like star",
+        NeighborClass::WhiteDwarf => "white dwarf",
+        NeighborClass::OrangeGiant => "orange giant",
+        NeighborClass::RedGiant => "red giant",
+        NeighborClass::BlueGiant => "blue giant",
     }
 }
 
@@ -65,6 +82,7 @@ fn draw_class(roll: u32) -> NeighborClass {
 /// the first star's class; the rest are drawn.
 pub fn generate_neighbors(astronomy_seed: Seed, pins: &SkyPins) -> Vec<Neighbor> {
     let mut stream = astronomy_seed.derive(streams::NEIGHBORS).stream();
+    let mut positions = astronomy_seed.derive(streams::NEIGHBOR_POSITIONS).stream();
     let count = stream.range_u32(2, 5);
     let mut neighbors: Vec<Neighbor> = (0..count)
         .map(|index| {
@@ -74,11 +92,15 @@ pub fn generate_neighbors(astronomy_seed: Seed, pins: &SkyPins) -> Vec<Neighbor>
                 _ => draw_class(roll),
             };
             let distance = LightYears(4.0 + stream.next_f64() * 76.0);
+            let declination = (positions.next_f64() * 2.0 - 1.0).asin().to_degrees();
+            let right_ascension = positions.next_f64() * 360.0;
             Neighbor {
                 class,
                 distance,
                 apparent_brightness: class_luminosity(class) / (distance.0 * distance.0),
                 color: class_color(class).to_string(),
+                declination,
+                right_ascension,
             }
         })
         .collect();
@@ -128,6 +150,26 @@ mod tests {
         assert_eq!(default_distances, pinned_distances);
 
         assert!(pinned.iter().any(|n| n.class == NeighborClass::BlueGiant));
+    }
+
+    #[test]
+    fn positions_are_on_the_sphere_and_deterministic() {
+        let seed = Seed(7).derive("astronomy");
+        let a = generate_neighbors(seed, &SkyPins::default());
+        let b = generate_neighbors(seed, &SkyPins::default());
+        assert_eq!(a, b);
+        for n in &a {
+            assert!(
+                (-90.0..=90.0).contains(&n.declination),
+                "dec {}",
+                n.declination
+            );
+            assert!(
+                (0.0..360.0).contains(&n.right_ascension),
+                "ra {}",
+                n.right_ascension
+            );
+        }
     }
 
     #[test]
