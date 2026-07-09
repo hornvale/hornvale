@@ -205,3 +205,124 @@ fn all_knowledge_doc_links_resolve() {
         errors.join("\n  ")
     );
 }
+
+/// The set of category prefixes the idea registry actually uses (`EXP`, `MAP`,
+/// `BIO`, …), parsed from the ID column so the book lint auto-adapts when a new
+/// prefix is coined rather than hard-coding a list that rots.
+fn registry_id_prefixes() -> BTreeSet<String> {
+    let registry = read(&repo_root().join("docs/vision/idea-registry.md"));
+    let mut prefixes = BTreeSet::new();
+    for line in registry.lines() {
+        let Some(rest) = line.strip_prefix("| ") else {
+            continue;
+        };
+        let cell = rest.split('|').next().unwrap_or("").trim();
+        if let Some((pre, post)) = cell.split_once('-')
+            && !pre.is_empty()
+            && pre.chars().all(|c| c.is_ascii_uppercase())
+            && post.starts_with(|c: char| c.is_ascii_digit())
+        {
+            prefixes.insert(pre.to_string());
+        }
+    }
+    prefixes
+}
+
+/// The first registry ID (`EXP-3`, `MAP-9a`) appearing in `text` as a whole
+/// token, or `None`. Restricting the scan to known registry prefixes avoids
+/// false positives on prose like `CC-BY-4.0` or `UTF-8`.
+fn find_registry_id(text: &str, prefixes: &BTreeSet<String>) -> Option<String> {
+    let bytes = text.as_bytes();
+    for prefix in prefixes {
+        let pat = format!("{prefix}-");
+        let mut start = 0;
+        while let Some(pos) = text[start..].find(&pat) {
+            let idx = start + pos;
+            let prev_ok = idx == 0 || !bytes[idx - 1].is_ascii_alphanumeric();
+            let after = idx + pat.len();
+            let next_is_digit = bytes.get(after).is_some_and(u8::is_ascii_digit);
+            if prev_ok && next_is_digit {
+                let mut end = after;
+                while end < bytes.len()
+                    && (bytes[end].is_ascii_digit() || bytes[end].is_ascii_lowercase())
+                {
+                    end += 1;
+                }
+                return Some(text[idx..end].to_string());
+            }
+            start = idx + pat.len();
+        }
+    }
+    None
+}
+
+/// Collect every `.md` file under `dir`, recursively.
+fn md_files(dir: &Path, out: &mut Vec<PathBuf>) {
+    for entry in fs::read_dir(dir).unwrap_or_else(|e| panic!("reading {}: {e}", dir.display())) {
+        let path = entry.unwrap().path();
+        if path.is_dir() {
+            md_files(&path, out);
+        } else if path.extension().is_some_and(|e| e == "md") {
+            out.push(path);
+        }
+    }
+}
+
+/// The book is merged reality; the idea registry and frontier essays are the
+/// private end of the pipe and stay out of it (`docs/CLAUDE.md`). This makes
+/// that boundary executable — the recurring failure where a chronicle or
+/// domain chapter cited a registry ID (`EXP-3`) or leaked engineering-process
+/// vocabulary, caught by review twice before. No registry ID may appear
+/// anywhere in the book; a tight set of unambiguous engineering terms may not
+/// appear in the world-prose chapters (chronicle, domain chapters). The set is
+/// deliberately small — `task`/`plan`/`gate`/`commit`/`code review` are
+/// legitimate English and are NOT banned, to avoid false positives; this
+/// guards the clear leaks, not every conceivable slip.
+#[test]
+fn the_book_carries_no_registry_ids_or_process_vocabulary() {
+    let root = repo_root();
+    let prefixes = registry_id_prefixes();
+    let mut md = Vec::new();
+    md_files(&root.join("book/src"), &mut md);
+
+    // Never occur in world-prose; unambiguous engineering terms.
+    const PROSE_ONLY_BANNED: [&str; 5] = [
+        "subagent",
+        "pull request",
+        "merge conflict",
+        "worktree",
+        "git commit",
+    ];
+
+    let mut errors = Vec::new();
+    for path in &md {
+        let text = read(path);
+        let rel = path.strip_prefix(&root).unwrap_or(path);
+        if let Some(id) = find_registry_id(&text, &prefixes) {
+            errors.push(format!(
+                "{}: registry ID `{id}` — the idea registry stays out of the book",
+                rel.display()
+            ));
+        }
+        let in_world_prose =
+            rel.starts_with("book/src/chronicle") || rel.starts_with("book/src/domains");
+        if in_world_prose {
+            let lower = text.to_lowercase();
+            for term in PROSE_ONLY_BANNED {
+                if lower.contains(term) {
+                    errors.push(format!(
+                        "{}: process vocabulary `{term}` in a world-prose chapter",
+                        rel.display()
+                    ));
+                }
+            }
+        }
+    }
+    assert!(
+        errors.is_empty(),
+        "the book leaked idea-registry IDs or engineering-process vocabulary \
+         (the book is merged reality; the registry/frontier are the private end \
+         of the pipe — docs/CLAUDE.md):\n  {}",
+        errors.join("\n  ")
+    );
+}
