@@ -383,10 +383,17 @@ fn cmd_star_chart(args: &[String]) -> Result<(), String> {
     doc.push_str(&hornvale_astronomy::render::chart_ascii(&system.neighbors));
     doc.push_str("```\n\n");
     for (index, n) in system.neighbors.iter().enumerate() {
+        let name = hornvale_astronomy::class_name(n.class);
+        let article = if name.starts_with(['a', 'e', 'i', 'o', 'u']) {
+            "An"
+        } else {
+            "A"
+        };
         doc.push_str(&format!(
-            "{}. A {} — {}, {:.1} light-years away, apparent brightness {:.3}.\n",
+            "{}. {} {} — {}, {:.1} light-years away, apparent brightness {:.3}.\n",
             index + 1,
-            hornvale_astronomy::class_name(n.class),
+            article,
+            name,
             n.color,
             n.distance.get(),
             n.apparent_brightness

@@ -31,7 +31,7 @@ The sun is a yellow dwarf (G).
 
 1. A red giant — smoldering red, 68.2 light-years away, apparent brightness 0.064.
 2. A sun-like star — warm yellow, 4.1 light-years away, apparent brightness 0.058.
-3. A orange giant — deep orange, 39.1 light-years away, apparent brightness 0.039.
+3. An orange giant — deep orange, 39.1 light-years away, apparent brightness 0.039.
 4. A red dwarf — dim red, 57.7 light-years away, apparent brightness 0.000.
 5. A white dwarf — pale white, 67.0 light-years away, apparent brightness 0.000.
 
