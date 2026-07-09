@@ -8,6 +8,8 @@ use crate::moons::Moon;
 use crate::neighborhood::Neighbor;
 use crate::pins::NeighborClass;
 use crate::provider::size_word;
+use crate::system::StarSystem;
+use crate::units::StdDays;
 
 /// ASCII chart width in characters.
 pub const ASCII_WIDTH: usize = 72;
@@ -274,6 +276,91 @@ pub fn star_color(class_name: &str) -> &'static str {
     }
 }
 
+/// Orrery grid width in characters.
+pub const ORRERY_WIDTH: usize = 61;
+/// Orrery grid height in characters (terminal cells read ~2:1 tall, so the
+/// x-axis is scaled ×2 for round orbits).
+pub const ORRERY_HEIGHT: usize = 31;
+
+/// A synodic-phase glyph: `o` new, `)` waxing, `O` full, `(` waning — the
+/// provider's phase-word thresholds.
+fn phase_glyph(phase: f64) -> char {
+    if !(0.125..0.875).contains(&phase) {
+        'o'
+    } else if phase < 0.5 {
+        ')'
+    } else if phase < 0.625 {
+        'O'
+    } else {
+        '('
+    }
+}
+
+/// A top-down ANSI orbital schematic of the system at absolute time `t`
+/// (standard days): the star at center (class-colored), the habitable zone as
+/// a dotted ring, the world on its orbit at the year's phase, and each moon in
+/// a tight ring around the world showing its synodic phase. Deterministic in
+/// `(system, t)`. A schematic, not to scale beyond the orbit-to-grid fit.
+pub fn orrery_ansi(system: &StarSystem, calendar: &Calendar, t: StdDays) -> String {
+    let (w, h) = (ORRERY_WIDTH, ORRERY_HEIGHT);
+    let (cx, cy) = (w as f64 / 2.0, h as f64 / 2.0);
+    let aspect = 2.0; // char cells ~2:1 tall
+    let mut grid: Vec<Vec<(char, &'static str)>> = vec![vec![(' ', ""); w]; h];
+
+    let plot = |grid: &mut Vec<Vec<(char, &'static str)>>,
+                r: f64,
+                theta: f64,
+                ch: char,
+                color: &'static str| {
+        let x = (cx + aspect * r * theta.cos()).round() as isize;
+        let y = (cy + r * theta.sin()).round() as isize;
+        if x >= 0 && (x as usize) < w && y >= 0 && (y as usize) < h {
+            grid[y as usize][x as usize] = (ch, color);
+        }
+    };
+
+    // Scale so the world's orbit sits at 80% of the half-height.
+    let orbit = system.anchor.orbit.get();
+    let scale = ((h as f64 / 2.0 - 1.0) * 0.8) / orbit;
+
+    // Habitable-zone ring (dotted, uncolored).
+    let hz_in = system.star.habitable_zone.inner().get() * scale;
+    let hz_out = system.star.habitable_zone.outer().get() * scale;
+    let mut a = 0.0_f64;
+    while a < std::f64::consts::TAU {
+        plot(&mut grid, hz_in, a, '.', "");
+        plot(&mut grid, hz_out, a, '.', "");
+        a += 0.15;
+    }
+
+    // The star at center.
+    grid[cy as usize][cx as usize] = ('*', star_color(&system.star.class_name));
+
+    // The world on its orbit (green), and its screen position.
+    let theta = std::f64::consts::TAU * calendar.year_phase(t);
+    let world_r = orbit * scale;
+    plot(&mut grid, world_r, theta, 'O', "\u{1b}[38;5;42m");
+    let wx = cx + aspect * world_r * theta.cos();
+    let wy = cy + world_r * theta.sin();
+
+    // Moons: sidereal orbital angle around the world, synodic-phase glyph.
+    for (index, moon) in system.moons.iter().enumerate() {
+        let ma = std::f64::consts::TAU * (t.0 / moon.period.get()).fract();
+        let mr = 2.0 + index as f64;
+        let glyph = calendar
+            .moon_phase(t, index)
+            .map(phase_glyph)
+            .unwrap_or('o');
+        let x = (wx + aspect * mr * ma.cos()).round() as isize;
+        let y = (wy + mr * ma.sin()).round() as isize;
+        if x >= 0 && (x as usize) < w && y >= 0 && (y as usize) < h {
+            grid[y as usize][x as usize] = (glyph, "\u{1b}[38;5;250m");
+        }
+    }
+
+    emit_ansi_grid(&grid)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -466,5 +553,42 @@ mod tests {
         assert!(a.contains("\u{1b}[0m"), "colors must reset");
         // Same 72×24 shape as the ASCII chart: 24 newline-terminated rows.
         assert_eq!(a.matches('\n').count(), ASCII_HEIGHT);
+    }
+
+    #[test]
+    fn orrery_is_deterministic_and_structured() {
+        use crate::calendar::calendar_of;
+        use crate::pins::{MoonsPin, RotationPin, SkyPins};
+        use crate::system::generate;
+        use crate::units::StdDays;
+        use hornvale_kernel::Seed;
+        let system = generate(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                moons: Some(MoonsPin::exact(2).unwrap()),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap()
+        .system;
+        let cal = calendar_of(&system);
+        let t = StdDays::new(10.0).unwrap();
+        let a = orrery_ansi(&system, &cal, t);
+        assert_eq!(
+            a,
+            orrery_ansi(&system, &cal, t),
+            "deterministic in (system, t)"
+        );
+        assert_eq!(a.matches('\n').count(), ORRERY_HEIGHT, "one row per line");
+        assert!(a.contains('*'), "the star sits at center");
+        assert!(a.contains('O'), "the world is drawn");
+        // The world moves: a half-year later the frame differs.
+        let half = StdDays::new(10.0 + system.anchor.year.get() / 2.0).unwrap();
+        assert_ne!(
+            a,
+            orrery_ansi(&system, &cal, half),
+            "the world orbits over time"
+        );
     }
 }
