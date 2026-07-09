@@ -1,0 +1,8 @@
+{ "name": "census-of-the-meeting",
+  "description": "The Census of the Meeting: the solo-roster null control over 500 seeds. Two goblin-vectored species (goblin, goblin-twin) each placed ALONE, landing in identical cells and diverging only through name-salted noise — the population whose distributional indistinguishability and at-chance blind attribution prove Year-2's measured divergence is attributable to the vectors, not stream noise (spec §4).",
+  "seeds": { "from": 0, "count": 500 },
+  "pin_sets": [
+    { "label": "goblin-solo", "pins": [], "roster": "goblin-solo" },
+    { "label": "goblin-twin-solo", "pins": [], "roster": "goblin-twin-solo" }
+  ],
+  "metrics": "all" }
