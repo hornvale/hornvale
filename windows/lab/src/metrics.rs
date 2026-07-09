@@ -1047,21 +1047,26 @@ fn phonotactic_validity(v: &WorldView, species: &str) -> MetricValue {
 /// Whether every committed deity epithet of `species`' flagship pantheon
 /// carries a prepended honorific affix, DETECTED from the committed epithet
 /// content (not read back from the config that drove generation — that would
-/// be tautological). `Absent` if `species` holds no pantheon.
+/// be tautological). `Absent` if `species` holds no pantheon (or, for a
+/// non-default roster, if the species' lexicon cannot be re-derived — the
+/// epithet-honorific columns are only registered for the shipped species).
 ///
-/// The honorific affix is one syllable drawn AFTER the shared descriptive
-/// stem + reduplication draws and PREPENDED (Task 6). So for a given
-/// `(seed, species, salt)`, re-deriving the epithet with honorifics OFF
-/// yields exactly the stem the committed epithet was built from. The
-/// renderer capitalizes only the first character, and a prepended affix
-/// shifts the stem's first letter off the front (lowercasing it), so the
-/// detection case-folds both: the committed epithet carries the honorific
-/// iff, lowercased, it ends with the lowercased plain stem AND is strictly
-/// longer. The metric is `Flag(true)` iff EVERY committed epithet carries
-/// it (goblin, Rank), `Flag(false)` iff none does (kobold, Knowledge). A
-/// broken honorific pipeline — a goblin epithet committed without its affix
-/// — would equal its plain stem here and flip the flag to false, which the
-/// preregistered calibration then catches.
+/// Since The Words (Task 9) an epithet is glossed (`Namer::glossed_name`,
+/// the `/v2` epoch): its draw depends on the belief's own site concepts
+/// (its phenomenon's concept + its sentiment's), so detection re-derives
+/// those exactly as worldgen composed them — the flagship's observed
+/// phenomena in salience order pair 1:1 with its beliefs in commit order
+/// (religion's genesis names members in phenomena order), and
+/// `hornvale_worldgen::deity_site_concepts` maps each pair. The honorific
+/// affix is one template syllable drawn AFTER the site-concept picks and
+/// PREPENDED, so re-deriving the same glossed epithet with honorifics OFF
+/// yields exactly the plain word the committed epithet was built from: the
+/// committed epithet carries the honorific iff, lowercased, it ends with
+/// the lowercased plain word AND is strictly longer. `Flag(true)` iff
+/// EVERY committed epithet carries it (goblin, Rank), `Flag(false)` iff
+/// none does (kobold, Knowledge). A broken honorific pipeline — a goblin
+/// epithet committed without its affix — would equal its plain word here
+/// and flip the flag to false, which the preregistered calibration catches.
 fn epithet_honorific(v: &WorldView, species: &str) -> MetricValue {
     let Some(info) = flagship_of(&v.world, species) else {
         return MetricValue::Absent;
@@ -1070,21 +1075,37 @@ fn epithet_honorific(v: &WorldView, species: &str) -> MetricValue {
     if beliefs.is_empty() {
         return MetricValue::Absent;
     }
+    let Ok(seen) = observed_phenomena_as_in(&v.world, &v.roster, species) else {
+        return MetricValue::Absent;
+    };
+    let Ok(lexicon) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+        return MetricValue::Absent;
+    };
     let ph = language_of_in(&v.world, &v.roster, species);
     let namer = Namer::new(&v.world.seed, species, &ph);
-    let carries = |b: &hornvale_religion::Belief| {
-        let plain = namer
-            .name(
-                NameKind::Epithet,
-                b.id.0,
-                &MorphOptions { honorifics: false },
-            )
-            .roman
-            .to_lowercase();
+    let carries = |(i, b): (usize, &hornvale_religion::Belief)| {
+        let Some(phenomenon) = seen.get(i) else {
+            // More beliefs than observed phenomena would mean the
+            // belief↔phenomenon pairing above is broken; count it as a
+            // failed detection rather than guessing.
+            return false;
+        };
+        let concepts = hornvale_worldgen::deity_site_concepts(phenomenon, b.sentiment);
+        let site = hornvale_language::SiteConcepts {
+            concepts: &concepts,
+        };
+        let (plain, _) = namer.glossed_name(
+            NameKind::Epithet,
+            b.id.0,
+            &MorphOptions { honorifics: false },
+            &site,
+            &lexicon,
+        );
+        let plain = plain.roman.to_lowercase();
         let committed = b.epithet.to_lowercase();
         committed.ends_with(&plain) && committed.chars().count() > plain.chars().count()
     };
-    MetricValue::Flag(beliefs.iter().all(carries))
+    MetricValue::Flag(beliefs.iter().enumerate().all(carries))
 }
 
 /// Mean character length of every generated name attributed to `species` in
@@ -1409,77 +1430,54 @@ mod tests {
     }
 
     #[test]
-    fn phonotactic_validator_still_recognizes_manner_ambiguous_freshly_drawn_stems() {
+    fn phonotactic_validity_holds_for_every_species_name_at_seed_0() {
         // Seed 0 caught a real bug during development: a greedy single-match
         // parser mistook "z" for a false-positive prefix of "zh" (also true
         // of "s"/"sh", "n"/"ng", "k"/"kx") and rejected genuinely valid
         // names. Regression coverage for that fix, independent of the
         // calibration test's full 500-seed study run.
         //
-        // This used to probe seed 0's live COMMITTED names. Since The Words
-        // (Task 9), a committed name is often a *compound* of evolved
-        // lexicon roots (`Namer::glossed_name`, the `/v2` epoch) rather than
-        // always a bare stem freshly drawn from the current phonology's own
-        // onset/nucleus/coda templates — sound change (`evolve`) only
-        // guarantees a root's segments stay within the phoneme inventory,
-        // never that they still satisfy those templates, and joining two
-        // such roots at a boundary compounds that further. So "every
-        // committed name validates" is no longer a guaranteed invariant
-        // (the same documented tradeoff as name collisions, spec §9); Task
-        // 12 re-measures name well-formedness honestly as a calibration
-        // once glossed compounding is fully wired through the Lab. This
-        // keeps the validator-correctness regression alive by probing a
-        // freshly drawn v1-style stem instead (`Namer::name`, still
-        // guaranteed template-conformant by construction — it's exactly
-        // `glossed_name`'s own fallback machinery), which still exercises
-        // real generated content over the real seed-0 phonologies.
+        // Since The Words (Task 9), committed names are glossed compounds
+        // of evolved lexicon roots (`Namer::glossed_name`, the `/v2`
+        // epoch); sound change only guarantees inventory membership, so
+        // `glossed_name` applies deterministic phonotactic repair
+        // (epenthesis, then deletion — see
+        // `hornvale_language::naming`'s repair formula) to keep every
+        // committed name template-conform. This probes the live committed
+        // names, exactly as before the epoch bump.
         let view = WorldView::build(Seed(0), &SkyPins::default()).unwrap();
         for species in ["goblin", "kobold"] {
             let ph = hornvale_worldgen::language_of(&view.world, species);
-            let namer = Namer::new(&view.world.seed, species, &ph);
-            for salt in 0..20u64 {
-                let name = namer.name(
-                    NameKind::Settlement,
-                    salt,
-                    &MorphOptions { honorifics: false },
-                );
+            for n in species_generated_names(&view, species) {
                 assert!(
-                    is_phonotactically_valid(&name.roman, &ph),
-                    "{species} salt {salt} name {:?} failed its own phonotactics",
-                    name.roman
+                    is_phonotactically_valid(&n, &ph),
+                    "{species} name {n:?} failed its own phonotactics"
                 );
             }
         }
     }
 
     #[test]
-    fn epithet_honorific_is_present_for_both_species_at_seed_42() {
-        // Pre-Words (v1), this metric re-derived the "plain" stem by
-        // re-calling `Namer::name` with honorifics off and checking the
-        // committed epithet extended it — a valid structural detection
-        // because a v1 epithet was always drawn from that exact stream.
-        // Since The Words (Task 9), a committed epithet is glossed
-        // (`Namer::glossed_name`, the `/v2` epoch): its stream depends on
-        // the belief's own site concepts (phenomenon + sentiment), which
-        // this metric has no way to re-derive post-hoc from a built world
-        // alone (the phenomenon's disambiguating description — sun vs.
-        // moon vs. star — is never committed, only its `kind`). Comparing
-        // against a re-derived v1 stem no longer means anything, so this
-        // metric's true/false discrimination by honorific status basis is
-        // a v1-only invariant, broken by the epoch bump; restoring it
-        // needs the same site-concept re-derivation Task 10's structural
-        // invariant and Task 12's `name-gloss-true` metric are already
-        // slated to build. Until then, this only checks the metric still
-        // resolves (both species hold a pantheon at seed 42), not a
-        // specific value.
+    fn epithet_honorific_is_detected_from_committed_content_at_seed_42() {
+        // The metric reads the COMMITTED epithet fact and detects the
+        // prepended affix structurally against a re-derived plain word —
+        // not the config that drove generation. Since The Words (Task 9)
+        // the plain word is the belief's honorific-free glossed epithet,
+        // re-derived from the same site concepts worldgen composed (see
+        // `epithet_honorific`'s doc). Goblin (Rank) commits
+        // honorific-bearing epithets → true; kobold (Knowledge) commits
+        // plain glossed words → false.
         let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
-        for species in ["goblin", "kobold"] {
-            assert_ne!(
-                epithet_honorific(&view, species),
-                MetricValue::Absent,
-                "{species} should hold a pantheon with committed epithets at seed 42"
-            );
-        }
+        assert_eq!(
+            epithet_honorific(&view, "goblin"),
+            MetricValue::Flag(true),
+            "goblin committed epithets must carry the honorific affix"
+        );
+        assert_eq!(
+            epithet_honorific(&view, "kobold"),
+            MetricValue::Flag(false),
+            "kobold committed epithets must be plain glossed words"
+        );
     }
 
     #[test]

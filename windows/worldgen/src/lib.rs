@@ -977,8 +977,12 @@ pub fn morph_options(psych: &hornvale_species::PsychVector) -> hornvale_language
 /// the phenomenon it mythologizes (if [`phenomenon_concept`] maps its
 /// kind), plus its felt [`sentiment_concept`] — always present, so a belief
 /// never has zero candidate concepts even when its phenomenon kind has no
-/// mapping yet.
-fn site_concepts_for(
+/// mapping yet. Public because the Lab's `epithet-honorific` metric
+/// re-derives the honorific-free glossed epithet from the same site
+/// concepts to detect the committed prefix structurally, and Task 10's
+/// structural-invariant suite / Task 12's `name-gloss-true` metric re-derive
+/// the same composition to check committed glosses row-by-row.
+pub fn deity_site_concepts(
     phenomenon: &Phenomenon,
     sentiment: hornvale_religion::Sentiment,
 ) -> Vec<&'static str> {
@@ -1029,7 +1033,7 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
             .expect("religion calls deity() once per member phenomenon, in phenomena order");
         self.index += 1;
         let sentiment = hornvale_religion::Sentiment::of(phenomenon);
-        let concepts = site_concepts_for(phenomenon, sentiment);
+        let concepts = deity_site_concepts(phenomenon, sentiment);
         let site = hornvale_language::SiteConcepts {
             concepts: &concepts,
         };
@@ -1057,7 +1061,7 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
             .phenomena
             .get(self.index - 1)
             .expect("deity() always runs before epithet() for the same belief");
-        let concepts = site_concepts_for(phenomenon, sentiment);
+        let concepts = deity_site_concepts(phenomenon, sentiment);
         let site = hornvale_language::SiteConcepts {
             concepts: &concepts,
         };

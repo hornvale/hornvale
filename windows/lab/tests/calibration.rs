@@ -408,28 +408,6 @@ fn blind_attribution_beats_chance_decisively() {
 }
 
 #[test]
-#[ignore = "Blocked pending Task 9 → Task 12 (The Words, spec §9): this \
-            invariant was written when 'generated name' meant exclusively a \
-            bare stem freshly drawn from the current phonology's own onset/\
-            nucleus/coda templates, which is ALWAYS template-conformant by \
-            construction. Task 9 (glossed names, /v2 epoch) adds a second, \
-            intentional source: a name can now compound over evolved \
-            lexicon roots (Namer::glossed_name -> hornvale_language::evolve), \
-            and evolve()'s own codomain guarantee (evolve_lands_in_inventory, \
-            domains/language/src/etymology.rs) is segment-inventory \
-            membership ONLY, never phonotactic-template conformance — \
-            historical sound change legitimately produces words a language's \
-            synchronic phonotactics would no longer admit fresh (real \
-            historical linguistics, and this campaign's own design: 'history \
-            lands on the shipped present' means the segment codomain, not \
-            the template codomain). Confirmed against real seed-0 kobold \
-            output: essentially every glossed name that actually compounds \
-            (not the empty-site fallback, which still passes) now fails this \
-            validator. The assertion itself is deliberately left UNCHANGED \
-            per this test's own 'never loosen' instruction; Task 12 (Lab \
-            preregister + run) is where the campaign plan explicitly assigns \
-            re-measuring name well-formedness as an honest calibration \
-            instead of an unconditional invariant."]
 fn phonotactic_validity_is_true_for_every_generated_name() {
     // Preregistered (ADR 0016, spec §9.2): the instrument must reproduce its
     // own grammar exactly. Every generated name — settlement, deity,
@@ -437,6 +415,16 @@ fn phonotactic_validity_is_true_for_every_generated_name() {
     // phonotactics. If this is ever false the engine is producing names it
     // calls invalid: this is a STOP-and-report-BLOCKED condition (task
     // brief), never an assertion to loosen.
+    //
+    // The Words (Task 9) briefly broke this: glossed names compound evolved
+    // lexicon roots, and sound change guarantees inventory membership, not
+    // template conformance. The resolution keeps the invariant binding
+    // rather than loosening it: `Namer::glossed_name` applies deterministic
+    // phonotactic repair (epenthesis first, deletion second — the
+    // loanword-adaptation move real languages make; the permanent formula
+    // is documented on `repair_phonotactics` in
+    // `domains/language/src/naming.rs`) after compounding, so every
+    // committed name is template-conform again.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     for species in ["goblin", "kobold"] {
@@ -459,24 +447,15 @@ fn phonotactic_validity_is_true_for_every_generated_name() {
 }
 
 #[test]
-#[ignore = "Blocked pending Task 9 → Task 12 (The Words, spec §9): the \
-            epithet-honorific-* metrics detect the prepended affix by \
-            re-deriving a 'plain' stem via Namer::name (v1) and checking the \
-            committed epithet extends it. Task 9 moves committed epithets to \
-            Namer::glossed_name (the /v2 epoch, a distinct stream keyed by \
-            the belief's own site concepts), so the v1 re-derivation no \
-            longer matches — see the analogous fix already applied to \
-            windows/lab/src/metrics.rs's own unit test \
-            (epithet_honorific_is_present_for_both_species_at_seed_42). \
-            Restoring row-by-row true/false discrimination here needs the \
-            same site-concept re-derivation Task 10's structural invariant \
-            and Task 12's name-gloss-true metric are already slated to \
-            build (only Task 12 owns re-pinning this calibration)."]
 fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // Preregistered (ADR 0016, spec §9.2), directional: goblin's Rank status
     // basis draws honorific-prefixed epithets (spec §7's morph_options
     // mapping); kobold's Knowledge status basis does not. Row-by-row, since
-    // Absent (no pantheon this world) is a legitimate skip.
+    // Absent (no pantheon this world) is a legitimate skip. Since The Words
+    // (Task 9) the metric detects the affix against a re-derived
+    // honorific-free GLOSSED epithet (the /v2 epoch), re-composing the
+    // belief's site concepts exactly as worldgen did — see
+    // `epithet_honorific` in windows/lab/src/metrics.rs.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (g_i, k_i) = (
@@ -508,16 +487,14 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
 }
 
 #[test]
-#[ignore = "Blocked pending Task 9 → Task 12 (The Words, spec §9): this pins \
-            the Tongues-era (v1, free-stem) collision rate. Task 9's glossed \
-            names compound over each species' own small site-concept \
-            vocabulary rather than drawing a free stem from the full \
-            phonology name space ('glossed compounds shrink the name \
-            space' — spec §9's own documented tradeoff), so the measured \
-            rate is now far higher (spot-checked: seed 42's zero-collision \
-            settlement count alone dropped well below this row's pinned \
-            336-world count). The campaign plan explicitly assigns \
-            re-measuring and re-pinning this row, directional-claim-first \
+#[ignore = "Task 12 re-pin (re-measurement at The Words re-baseline): this \
+            row pins a MEASURED rate, not a structural property. It pins \
+            the Tongues-era (v1, free-stem) collision counts; Task 9's \
+            glossed names compound over each species' small site-concept \
+            vocabulary, so the measured rate is now genuinely higher \
+            ('glossed compounds shrink the name space' — spec §9's own \
+            documented tradeoff). The campaign plan assigns re-measuring \
+            and re-pinning this row, preregistered directional claim first \
             (below the Tongues-era rate x2), to Task 12 (Lab preregister + \
             run) — not a number to hand-edit here without that \
             preregistration step."]
@@ -567,14 +544,15 @@ fn name_collision_rate_is_measured_and_pinned() {
 }
 
 #[test]
-#[ignore = "Blocked pending Task 9 → Task 12 (The Words, spec §9): this pins \
-            the Tongues-era (v1, free-stem) mean name length per species. \
-            Task 9's glossed names are built by compounding 1-2 lexicon \
-            words (plus, for epithets, an honorific affix) rather than \
-            always drawing a single 2-3-syllable stem, so the length \
-            distribution has genuinely shifted. Task 12 (Lab preregister + \
-            run) owns re-measuring and re-pinning this row alongside the \
-            collision-rate calibration."]
+#[ignore = "Task 12 re-pin (re-measurement at The Words re-baseline): this \
+            row pins a MEASURED distribution, not a structural property. It \
+            pins the Tongues-era (v1, free-stem) mean name length per \
+            species; Task 9's glossed names are built by compounding 1-2 \
+            lexicon words (plus repair epenthesis and, for epithets, an \
+            honorific affix) rather than always drawing a single \
+            2-3-syllable stem, so the length distribution has genuinely \
+            shifted. Task 12 (Lab preregister + run) owns re-measuring and \
+            re-pinning this row alongside the collision-rate calibration."]
 fn name_length_distributions_are_measured_and_pinned() {
     // Preregistered (spec §9.2): mean generated-name length, per species,
     // pinned over the 500-seed drift study as a calibration row after
@@ -686,14 +664,6 @@ fn null_control_blind_attribution_is_at_chance() {
 }
 
 #[test]
-#[ignore = "Blocked pending Task 9 → Task 12 (The Words, spec §9): the \
-            directional sampling-bound assertions in this test (head/cult/ \
-            size/namelen all within their envelopes) still pass. Only the \
-            pinned exact name-length SMD (measured pre-Words) has drifted, \
-            since Task 9's glossed names shift the underlying name-length \
-            distribution (see name_length_distributions_are_measured_and_ \
-            pinned, ignored alongside this one). Task 12 (Lab preregister + \
-            run) owns re-measuring and re-pinning this row."]
 fn null_control_distributions_are_within_the_sampling_bound() {
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
@@ -729,17 +699,40 @@ fn null_control_distributions_are_within_the_sampling_bound() {
         namelen.abs() < 0.2,
         "name-length SMD {namelen:.4} exceeds the bound"
     );
-    // Pinned calibration rows (measured 2026-07-09, 500-seed census-of-the-meeting).
-    // Structural indistinguishability is exact: the two solo builds share seed,
-    // cell, and phenomena, so the head-deity domain and cult form distributions
-    // and the pantheon-size mean are byte-identical (TVD = SMD = 0). Only
-    // name-length diverges, and only through name-salted noise — a small SMD well
-    // inside the envelope, the lone structural trace of the two distinct names.
+    // Pinned STRUCTURAL rows (exact zeroes, not measurements): the two solo
+    // builds share seed, cell, and phenomena, so the head-deity domain and
+    // cult form distributions and the pantheon-size mean are byte-identical
+    // (TVD = SMD = 0) regardless of what names are drawn — naming never
+    // feeds back into pantheon structure. Only name-length diverges (the
+    // lone structural trace of the two distinct names); its exact pinned
+    // SMD is a measurement and lives in the Task-12-owned sibling test
+    // below.
     assert!((head - 0.0).abs() < 1e-9, "head-domain TVD drifted: {head}");
     assert!((cult - 0.0).abs() < 1e-9, "cult-form TVD drifted: {cult}");
     assert!(
         (size - 0.0).abs() < 1e-9,
         "pantheon-size SMD drifted: {size}"
+    );
+}
+
+#[test]
+#[ignore = "Task 12 re-pin (re-measurement at The Words re-baseline): this \
+            row pins a MEASURED value, not a structural property — the \
+            exact name-length SMD between the goblin and goblin-twin solo \
+            censuses (pinned -0.1182 at the Tongues-era measurement, \
+            2026-07-09). Task 9's glossed names shift the underlying \
+            name-length distribution (see \
+            name_length_distributions_are_measured_and_pinned, ignored \
+            alongside this one), so Task 12 (Lab preregister + run) owns \
+            re-measuring and re-pinning it. The directional envelope and \
+            the structural zero-pins this was split from still run, in \
+            null_control_distributions_are_within_the_sampling_bound."]
+fn null_control_name_length_smd_is_pinned() {
+    let result = &*MEETING;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let namelen = std_mean_diff(
+        nums(result, "goblin-solo", idx("name-length-goblin")),
+        nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
     assert!(
         (namelen - -0.118_235_148_756_793_42).abs() < 1e-9,

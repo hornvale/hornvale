@@ -240,7 +240,16 @@ impl<'a> Namer<'a> {
             chosen.push(pool.remove(idx));
         }
 
-        let mut segments = compound_segments(lexicon, &chosen);
+        // Repair AFTER compounding, BEFORE morphology (the permanent order):
+        // evolved roots only guarantee inventory membership, not template
+        // conformance, so the compound is adapted to the synchronic
+        // phonotactics first (see [`repair_phonotactics`] — the spec §8
+        // structural invariant "every name well-formed for its language").
+        // The honorific prefix below is a freshly drawn template syllable —
+        // conformant by construction — so prefixing it onto a repaired word
+        // keeps the whole name conformant. Repair changes sound, never
+        // meaning: the gloss is computed from `chosen` alone.
+        let mut segments = repair_phonotactics(compound_segments(lexicon, &chosen), self.ph);
         if kind == NameKind::Epithet && morph.honorifics {
             let affix = self.draw_syllable(&mut stream, false);
             let mut prefixed: Vec<Segment> = affix.segments().copied().collect();
@@ -426,6 +435,246 @@ pub(crate) fn views_of(syllables: &[Syllable]) -> (Vec<Segment>, GeneratedName) 
         .collect();
     let name = render_views(&segments);
     (segments, name)
+}
+
+/// Consume one exact phonotactic template from `segments` at `pos`: each
+/// slot must be filled by a consonant of exactly that manner, in order.
+/// `Some(position after the template)` on a full match, `None` otherwise.
+/// The segment-level twin of the almanac-side romanization validator's
+/// template matching, shared by [`conforms`] and [`repair_phonotactics`].
+fn match_manner_seq(segments: &[Segment], pos: usize, template: &[Manner]) -> Option<usize> {
+    let mut p = pos;
+    for &required in template {
+        match segments.get(p) {
+            Some(Segment::Consonant { manner, .. }) if *manner == required => p += 1,
+            _ => return None,
+        }
+    }
+    Some(p)
+}
+
+/// Whether `segments` parses as a sequence of syllables under `ph`'s drawn
+/// phonotactic templates: each syllable an onset matching one of
+/// `ph.onsets` exactly (by manner sequence), then exactly `ph.nuclei`
+/// vowels, then a coda matching one of `ph.codas`. A backtracking parse
+/// (every onset/coda split is explored), so any parseable sequence is
+/// accepted; the empty sequence is not a word. This is the invariant
+/// [`repair_phonotactics`] restores and the property the Lab's
+/// romanization-level validator re-checks from the committed string.
+fn conforms(segments: &[Segment], ph: &Phonology) -> bool {
+    fn from(segments: &[Segment], pos: usize, ph: &Phonology) -> bool {
+        if pos == segments.len() {
+            return true;
+        }
+        for onset in &ph.onsets {
+            let Some(after_onset) = match_manner_seq(segments, pos, onset) else {
+                continue;
+            };
+            let after_nucleus = after_onset + ph.nuclei;
+            if after_nucleus > segments.len()
+                || !segments[after_onset..after_nucleus]
+                    .iter()
+                    .all(|s| matches!(s, Segment::Vowel { .. }))
+            {
+                continue;
+            }
+            for coda in &ph.codas {
+                if let Some(after_coda) = match_manner_seq(segments, after_nucleus, coda)
+                    && from(segments, after_coda, ph)
+                {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+    !segments.is_empty() && from(segments, 0, ph)
+}
+
+/// Epenthesis cost per inserted vowel in [`repair_phonotactics`]'s
+/// minimal-edit resyllabification. Strictly cheaper than
+/// [`DELETION_COST`]: insertion is the primary repair, deletion the
+/// second resort. Both constants are part of the permanent repair formula
+/// (changing either reseeds every repaired name in every saved world).
+const EPENTHESIS_COST: u32 = 1;
+
+/// Deletion cost per dropped segment in [`repair_phonotactics`] — the
+/// second resort, for a segment no template can host in its position.
+const DELETION_COST: u32 = 2;
+
+/// One step of a reconstructed repair plan: either this input segment is
+/// dropped, or a syllable starts here using the indexed onset/coda
+/// templates, consuming `vowels` input vowels and inserting `pads`
+/// epenthetic ones.
+enum RepairStep {
+    /// Drop the segment at this position (no template can host it).
+    Delete,
+    /// Emit one syllable starting at this position.
+    Syllable {
+        /// Index into `ph.onsets` of the matched onset template.
+        onset: usize,
+        /// Index into `ph.codas` of the matched coda template.
+        coda: usize,
+        /// How many input vowels the nucleus consumed (≤ `ph.nuclei`).
+        vowels: usize,
+        /// How many epenthetic vowels complete the nucleus
+        /// (`ph.nuclei - vowels`).
+        pads: usize,
+    },
+}
+
+/// **The phonotactic repair rule** (permanent formula, The Words Task 9):
+/// make an arbitrary segment sequence — a compound of evolved lexicon
+/// roots, whose sound changes are only guaranteed to land in the phoneme
+/// *inventory*, never inside the synchronic syllable *templates* — parse
+/// under `ph`'s drawn phonotactics, the way real languages adapt loanwords
+/// and compounds. Pure and deterministic: a function of the segments and
+/// the phonology alone, no stream draws.
+///
+/// 1. **Already-legal input is untouched** ([`conforms`] short-circuit) —
+///    repair of a valid sequence is the identity, which also makes repair
+///    idempotent (its output always conforms).
+/// 2. **Resyllabify with minimal edits.** The sequence is re-parsed into
+///    syllables against the drawn onset/nucleus/coda templates; where a
+///    stretch cannot parse, two edits are available: **epenthesis** —
+///    insert the language's canonical epenthetic vowel (the first vowel in
+///    the drawn inventory's order — deterministic, not drawn) to complete
+///    a nucleus and thereby break an illegal cluster — and **deletion** of
+///    a segment no template can host in its position. Epenthesis costs
+///    [`EPENTHESIS_COST`] per inserted vowel, deletion [`DELETION_COST`]
+///    per dropped segment, so insertion is always preferred where either
+///    would do (deletion is the second resort). The minimal-cost plan is
+///    found by dynamic programming over input positions; ties break
+///    deterministically toward the earlier-listed template pair (onsets
+///    then codas, in their drawn order), with deletion considered last.
+/// 3. **Degenerate-input fallback**: if the minimal plan deletes
+///    everything (an input with no vowel and no template-hostable
+///    consonant — unreachable from real lexicon roots, which always carry
+///    nuclei), emit one minimal legal syllable instead: the first onset
+///    template filled with the first inventory consonant of each required
+///    manner, an all-epenthetic nucleus, and the first coda template
+///    filled the same way. A name is never empty.
+fn repair_phonotactics(segments: Vec<Segment>, ph: &Phonology) -> Vec<Segment> {
+    if conforms(&segments, ph) {
+        return segments;
+    }
+    let Some(epenthetic) = ph
+        .inventory
+        .iter()
+        .find(|s| matches!(s, Segment::Vowel { .. }))
+        .copied()
+    else {
+        // A vowelless inventory cannot host any nucleus; nothing can be
+        // repaired against it. Unreachable for drawn phonologies (the
+        // vowel band always admits at least one vowel) — refuse to edit
+        // rather than destroy the name.
+        return segments;
+    };
+
+    // best[i]: the cheapest way to legalize segments[i..], filled back to
+    // front. best[n] is the implicit empty suffix at cost 0.
+    let n = segments.len();
+    let mut best: Vec<Option<(u32, RepairStep)>> = Vec::with_capacity(n);
+    best.resize_with(n, || None);
+    let cost_at = |best: &[Option<(u32, RepairStep)>], i: usize| -> u32 {
+        if i >= best.len() {
+            0
+        } else {
+            best[i].as_ref().expect("filled back to front").0
+        }
+    };
+    for i in (0..n).rev() {
+        let mut chosen: Option<(u32, RepairStep)> = None;
+        for (onset_idx, onset) in ph.onsets.iter().enumerate() {
+            let Some(after_onset) = match_manner_seq(&segments, i, onset) else {
+                continue;
+            };
+            let available = segments[after_onset.min(n)..]
+                .iter()
+                .take_while(|s| matches!(s, Segment::Vowel { .. }))
+                .count();
+            let vowels = available.min(ph.nuclei);
+            let pads = ph.nuclei - vowels;
+            let after_nucleus = after_onset + vowels;
+            for (coda_idx, coda) in ph.codas.iter().enumerate() {
+                let Some(after_coda) = match_manner_seq(&segments, after_nucleus, coda) else {
+                    continue;
+                };
+                if after_coda == i {
+                    continue; // a syllable must consume at least one segment
+                }
+                let cost = pads as u32 * EPENTHESIS_COST + cost_at(&best, after_coda);
+                if chosen.as_ref().is_none_or(|(c, _)| cost < *c) {
+                    chosen = Some((
+                        cost,
+                        RepairStep::Syllable {
+                            onset: onset_idx,
+                            coda: coda_idx,
+                            vowels,
+                            pads,
+                        },
+                    ));
+                }
+            }
+        }
+        let deletion = DELETION_COST + cost_at(&best, i + 1);
+        if chosen.as_ref().is_none_or(|(c, _)| deletion < *c) {
+            chosen = Some((deletion, RepairStep::Delete));
+        }
+        best[i] = chosen;
+    }
+
+    // Replay the plan front to back.
+    let mut out: Vec<Segment> = Vec::with_capacity(n + ph.nuclei);
+    let mut i = 0;
+    while i < n {
+        match &best[i].as_ref().expect("every position has a plan").1 {
+            RepairStep::Delete => i += 1,
+            RepairStep::Syllable {
+                onset,
+                coda,
+                vowels,
+                pads,
+            } => {
+                let onset_len = ph.onsets[*onset].len();
+                out.extend_from_slice(&segments[i..i + onset_len]);
+                i += onset_len;
+                out.extend_from_slice(&segments[i..i + vowels]);
+                i += vowels;
+                out.extend(std::iter::repeat_n(epenthetic, *pads));
+                let coda_len = ph.codas[*coda].len();
+                out.extend_from_slice(&segments[i..i + coda_len]);
+                i += coda_len;
+            }
+        }
+    }
+    if out.is_empty() {
+        out = minimal_syllable(ph, epenthetic);
+    }
+    out
+}
+
+/// The degenerate-input fallback syllable for [`repair_phonotactics`]:
+/// the first onset template filled with the first inventory consonant of
+/// each required manner, `ph.nuclei` epenthetic vowels, and the first coda
+/// template filled the same way. Deterministic and always legal — every
+/// drawn template's manners come from the inventory's own consonants.
+fn minimal_syllable(ph: &Phonology, epenthetic: Segment) -> Vec<Segment> {
+    let first_of = |required: Manner| {
+        ph.inventory
+            .iter()
+            .find(|s| matches!(s, Segment::Consonant { manner, .. } if *manner == required))
+            .copied()
+    };
+    let mut out = Vec::new();
+    if let Some(onset) = ph.onsets.first() {
+        out.extend(onset.iter().filter_map(|&m| first_of(m)));
+    }
+    out.extend(std::iter::repeat_n(epenthetic, ph.nuclei));
+    if let Some(coda) = ph.codas.first() {
+        out.extend(coda.iter().filter_map(|&m| first_of(m)));
+    }
+    out
 }
 
 /// Whether `lexicon` holds an actual word — a [`LexEntry::Root`] or
@@ -636,6 +885,131 @@ mod tests {
             v1.roman, v2.roman,
             "v2 must draw from a distinct stream than v1, even on the fallback path"
         );
+    }
+
+    /// A hand-built phonology small enough to reason about repair exactly:
+    /// one vowel (a), a voiceless alveolar stop (t), an alveolar nasal (n);
+    /// onsets admit exactly one stop, nuclei are single vowels, codas admit
+    /// one nasal or nothing. So `tan`, `ta`, and `tanta` are legal; a
+    /// doubled stop (`tt`) is an illegal cluster no template can host in
+    /// one syllable, and a nasal can never begin a syllable.
+    fn toy_repair_ph() -> crate::phonology::Phonology {
+        use crate::phoneme::{Backness, Height, Place};
+        let a = Segment::Vowel {
+            height: Height::Low,
+            backness: Backness::Central,
+            rounded: false,
+        };
+        let t = Segment::Consonant {
+            place: Place::Alveolar,
+            manner: Manner::Stop,
+            voiced: false,
+        };
+        let n = Segment::Consonant {
+            place: Place::Alveolar,
+            manner: Manner::Nasal,
+            voiced: true,
+        };
+        crate::phonology::Phonology {
+            inventory: vec![a, t, n],
+            onsets: vec![vec![Manner::Stop]],
+            nuclei: 1,
+            codas: vec![vec![Manner::Nasal], vec![]],
+        }
+    }
+
+    /// The toy phonology's three segments, for building test inputs.
+    fn toy_segments() -> (Segment, Segment, Segment) {
+        let ph = toy_repair_ph();
+        (ph.inventory[0], ph.inventory[1], ph.inventory[2])
+    }
+
+    #[test]
+    fn repair_breaks_an_illegal_seam_cluster_by_epenthesis() {
+        // "tan" + "tta" (an evolved word whose fortition doubled its onset
+        // stop) compound to t-a-n-t-t-a: the tt cluster fits no
+        // coda+onset split ([Stop] is not a coda template; [Stop, Stop] is
+        // not an onset template), so repair must insert the epenthetic
+        // vowel — the first (and only) vowel in inventory order, `a` —
+        // after the stranded stop, yielding tan.ta.ta exactly.
+        let ph = toy_repair_ph();
+        let (a, t, n) = toy_segments();
+        let seam = vec![t, a, n, t, t, a];
+        assert!(!conforms(&seam, &ph), "test premise: the seam is illegal");
+        let repaired = repair_phonotactics(seam, &ph);
+        assert_eq!(
+            repaired,
+            vec![t, a, n, t, a, t, a],
+            "epenthesis must break the tt cluster into tan.ta.ta"
+        );
+        assert!(conforms(&repaired, &ph));
+    }
+
+    #[test]
+    fn repair_of_a_valid_sequence_is_identity_and_repair_is_idempotent() {
+        let ph = toy_repair_ph();
+        let (a, t, n) = toy_segments();
+        // Valid input: repair is the identity.
+        let valid = vec![t, a, n, t, a];
+        assert!(conforms(&valid, &ph), "test premise: tanta is legal");
+        assert_eq!(repair_phonotactics(valid.clone(), &ph), valid);
+        // Idempotence on an invalid input: repairing a repaired sequence
+        // changes nothing (repair output always conforms, so the second
+        // pass takes the identity branch).
+        let seam = vec![t, a, n, t, t, a];
+        let once = repair_phonotactics(seam, &ph);
+        let twice = repair_phonotactics(once.clone(), &ph);
+        assert_eq!(once, twice);
+    }
+
+    #[test]
+    fn repair_deletes_a_segment_no_template_can_host_as_second_resort() {
+        // "tan" + "na" (an evolved word whose cluster-simplify dropped its
+        // onset stop, leaving a bare nasal): the toy phonology's nasal can
+        // never begin a syllable ([Nasal] is not an onset template) and the
+        // trailing vowel then has no onset either — no vowel insertion can
+        // host them, so repair falls to deletion and keeps exactly "tan".
+        let ph = toy_repair_ph();
+        let (a, t, n) = toy_segments();
+        let seam = vec![t, a, n, n, a];
+        assert!(!conforms(&seam, &ph), "test premise: the seam is illegal");
+        let repaired = repair_phonotactics(seam, &ph);
+        assert_eq!(
+            repaired,
+            vec![t, a, n],
+            "deletion (second resort) must drop the unhostable nasal and its \
+             stranded vowel, keeping the legal prefix"
+        );
+        assert!(conforms(&repaired, &ph));
+    }
+
+    #[test]
+    fn repair_makes_real_evolved_compounds_conform() {
+        // The structural invariant repair exists to uphold (spec §8), probed
+        // over REAL drawn machinery rather than the toy phonology: every
+        // 1- and 2-concept compound of evolved lexicon roots, repaired,
+        // parses against the same phonology's drawn templates — across
+        // several seeds, since evolve's template-breaking rules (lenition,
+        // fortition, cluster simplify, final loss) fire seed-dependently.
+        for seed in 0..12u64 {
+            let ph = wordy_ph();
+            let lex = two_word_lexicon(seed);
+            for chosen in [
+                vec!["water"],
+                vec!["fire"],
+                vec!["water", "fire"],
+                vec!["fire", "water"],
+            ] {
+                let raw = compound_segments(&lex, &chosen);
+                assert!(!raw.is_empty(), "roots must produce segments");
+                let repaired = repair_phonotactics(raw, &ph);
+                assert!(
+                    conforms(&repaired, &ph),
+                    "seed {seed}: repaired compound {chosen:?} must parse \
+                     against its own phonotactic templates"
+                );
+            }
+        }
     }
 
     #[test]
