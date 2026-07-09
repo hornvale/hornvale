@@ -219,10 +219,10 @@ pub fn spectral_color(class: NeighborClass) -> &'static str {
 /// The anchor star's color from its human-readable `class_name` (which carries
 /// the spectral letter, e.g. "yellow dwarf (G)"). Falls back to Sun-like.
 pub fn star_color(class_name: &str) -> &'static str {
+    // Spectral letter lives in a trailing (LETTER) suffix; without it, fall back to Sun-like.
     let letter = class_name
-        .rsplit('(')
-        .next()
-        .and_then(|s| s.chars().find(|c| c.is_ascii_alphabetic()))
+        .rsplit_once('(')
+        .and_then(|(_, after)| after.chars().find(|c| c.is_ascii_alphabetic()))
         .unwrap_or('G');
     match letter.to_ascii_uppercase() {
         'O' | 'B' => spectral_color(NeighborClass::BlueGiant),
@@ -395,6 +395,20 @@ mod tests {
         // The anchor star classifies from its class_name letter.
         assert_eq!(
             star_color("yellow dwarf (G)"),
+            spectral_color(NeighborClass::SunLike)
+        );
+        // Real production class_name shapes with the spectral parenthetical.
+        assert_eq!(
+            star_color("orange dwarf (K)"),
+            spectral_color(NeighborClass::OrangeGiant)
+        );
+        assert_eq!(
+            star_color("yellow-white dwarf (F)"),
+            spectral_color(NeighborClass::SunLike)
+        );
+        // No parenthetical → Sun-like fallback (not a misroute off the descriptive word).
+        assert_eq!(
+            star_color("orange dwarf"),
             spectral_color(NeighborClass::SunLike)
         );
     }
