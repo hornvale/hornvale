@@ -101,13 +101,20 @@ see [Language](./language.md)'s bright line. This vocabulary keeps waiting,
 now on a lexicon and a lens for common nouns, not merely a phonology.
 
 **Idle by design; banked for later.** Not every dimension pulls its weight
-yet. Deliberation latency is authored, differs meaningfully between the two
-peoples, and is still consumed by no rule — declared idle in the model card
-rather than force-fitted into a formula that does not need it, because a
-dimension can exist for the contrast it will eventually explain rather than
-for use on a deadline; it remains banked for a future salience or
-negotiation rule, once observers judge each other's decisiveness. Kobold
-nocturnality was banked the same way through this chapter's first campaign,
+the day it is authored. Deliberation latency is authored, differs
+meaningfully between the two peoples, and this chapter's first campaign
+declared it idle — consumed by no rule at all — banked for a future
+salience or negotiation rule, once observers judge each other's
+decisiveness directly; that rule still has not arrived. Campaign Y2-3 (The
+Tongues) spent a first, narrower share of it without waiting for the
+negotiation rule: `domains/language`'s `voice_params` folds deliberation
+latency in, half and half with status basis, to derive the formality voice
+knob (see [Language](./language.md)) — so the dimension is no longer idle
+exactly as first banked, only not yet spent on the decisiveness-facing rule
+it was banked for. A banked dimension can be spent gradually, on more than
+one rule, rather than all at once; the full model card below tracks which
+dimension is spent where. Kobold nocturnality was banked the same way
+through this chapter's first campaign,
 more literally: an activity-cycle dimension had no seat in this closed
 vector, so nocturnality lived only as authored prose with nowhere to run.
 Campaign 15 (The Eyes) spent it: `domains/species` now also holds a closed
@@ -136,8 +143,62 @@ varies goblin-to-goblin rather than only goblin-to-kobold, is real work with
 its own design principles; it does not arrive as a quiet addition to a
 struct that happened to have room.
 
-**The peoples ahead:** deliberation latency, still idle after three
-campaigns' worth of dimensions consuming its neighbors; a lexicon that would
+**The full species model card.** `SpeciesDef` carries three closed vectors
+now — psychology (6), perception (3), articulation (6) — fifteen dimensions
+in all, and every one of them is **authored**. Nothing in this table is
+drawn, fit, or measured; species is data written once by a person reading a
+corpus, the same posture each of the three sub-vector chapters keeps on its
+own. The "consumer" column names the actual formula that reads each
+dimension today, not the formula a dimension was originally authored for —
+the two differ for one row, called out below the table.
+
+| Vector | Dimension | Type | Goblin | Kobold | Consumer |
+|---|---|---|---|---|---|
+| Psychology | Threat response (flee ↔ stand) | authored, scalar `[0,1]` | 0.5 | 0.8 | culture's warrior-rung threshold; settlement's hostility-suitability weight |
+| Psychology | Deliberation latency | authored, scalar `[0,1]` | 0.5 | 0.7 | language's formality voice knob (partial — see below) |
+| Psychology | In-group radius | authored, scalar `[0,1]` | 0.5 | 0.2 | settlement's coast-suitability weight |
+| Psychology | Time horizon | authored, scalar `[0,1]` | 0.5 | 0.8 | culture's artisan-rung threshold; settlement's freshwater-suitability weight |
+| Psychology | Sociality mode | authored, enum | Hierarchic | Communal | language's repetition voice knob |
+| Psychology | Status basis | authored, enum | Rank | Knowledge | culture's slave-rung gate; language's formality/epithet-density knobs and honorific gate |
+| Perception | Activity cycle | authored, enum | Diurnal | Nocturnal | perception's characteristic hour and lens activity factor (Crepuscular idle — see below) |
+| Perception | Night vision | authored, scalar `[0,1]` | 0.5 | 0.9 | perception's night-sky lens weight |
+| Perception | Sky attention | authored, scalar `[0,1]` | 0.5 | 0.8 | perception's day-sky/night-sky/ambient lens weights |
+| Articulation | Labiality | authored, scalar `[0,1]` | 0.5 | 0.1 | language's labial-segment gate (envelope) |
+| Articulation | Vowel-space breadth | authored, scalar `[0,1]` | 0.5 | 0.3 | language's permitted-vowel band (envelope) |
+| Articulation | Voicing | authored, scalar `[0,1]` | 0.5 | 0.6 | language's voiced-segment gate (envelope) |
+| Articulation | Sibilance | authored, scalar `[0,1]` | 0.5 | 0.9 | language's sibilant keep-probability bonus (drawn inventory) |
+| Articulation | Voice loudness | authored, scalar `[0,1]` | 0.5 | 0.2 | language's high-sonority keep-probability penalty and exotic-manner down-weighting (banked to derive from a future body/frailty vector — see [Language](./language.md)) |
+| Articulation | Exotic manner | authored, enum | None | Trill | language's exotic-segment gate (Click/Ejective idle — claimed by neither shipped people) |
+
+Two rows are worth reading carefully rather than at face value. **Deliberation
+latency**'s consumer is a genuine but partial one: Campaign Y2-3 folds it,
+half and half with status basis, into language's formality knob, so the
+dimension is spent on *how a myth is told*, not yet on the decisiveness-
+facing salience or negotiation rule this chapter originally banked it for —
+see "Idle by design; banked for later," above. **Activity cycle**'s
+`Crepuscular` variant is authored into the closed enumeration and its lens
+activity factor (0.7) is authored and ready in `domains/perception`'s
+formula, but no shipped species carries the value that would call it — a
+future crepuscular people is a data change, not a code change, exactly as
+Click and Ejective wait in the articulation vector's own enumeration for a
+species anatomy that claims one.
+
+**No drawn parameter lives on a species.** Every cell in the table above is
+authored; `stream_labels()` in `domains/species` returns an empty vector
+because there is nothing in this domain a seed ever touches. The seeded
+draws that make two peoples sound and settle differently are real, but they
+belong to the domains that consume this vector, not to species itself:
+`domains/language` draws a phoneme inventory and syllable phonotactics
+*under* the articulation envelope above (see [Language](./language.md)'s own
+model card), and `domains/settlement` draws population size under a
+suitability weighting these psychology scalars help compute. A species is
+the fixed point those draws are taken with respect to, never a distribution
+of its own.
+
+**The peoples ahead:** deliberation latency's still-unspent half — the
+salience or negotiation rule that would read a people's decisiveness
+directly, now that language's formality knob has spent only the telling of
+a myth, not the deciding of anything; a lexicon that would
 give this chapter's role vocabulary (`digger`, `chief`, `elders`) a sound of
 its own, the one stopgap Campaign Y2-3 (The Tongues) deliberately left
 standing (it gave names a mouth, not common nouns a meaning); comparative
