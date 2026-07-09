@@ -429,7 +429,7 @@ fn cmd_star_chart(args: &[String]) -> Result<(), String> {
 /// world with no generated sky.
 fn cmd_orrery(args: &[String]) -> Result<(), String> {
     use hornvale_astronomy::StdDays;
-    use hornvale_astronomy::render::{ORRERY_HEIGHT, ORRERY_WIDTH, orrery_ansi};
+    use hornvale_astronomy::render::{GlyphSet, ORRERY_HEIGHT, ORRERY_WIDTH, orrery_ansi};
     let world = load_world(args)?;
     let sky = world_builder::sky_of(&world).map_err(|e| e.to_string())?;
     let Some(system) = sky.system() else {
@@ -472,7 +472,7 @@ fn cmd_orrery(args: &[String]) -> Result<(), String> {
             // cursor and its cooked-mode ONLCR translates LF→CRLF.)
             frames.push(format!(
                 "\u{1b}[?25l\u{1b}[2J\u{1b}[H{}",
-                orrery_ansi(system, calendar, mk(d)?).replace('\n', "\r\n")
+                orrery_ansi(system, calendar, mk(d)?, GlyphSet::Unicode).replace('\n', "\r\n")
             ));
             d += step;
         }
@@ -487,7 +487,7 @@ fn cmd_orrery(args: &[String]) -> Result<(), String> {
         Ok(())
     } else {
         let t = mk(day_arg.parse().map_err(|_| "bad --day")?)?;
-        print!("{}", orrery_ansi(system, calendar, t));
+        print!("{}", orrery_ansi(system, calendar, t, GlyphSet::Unicode));
         Ok(())
     }
 }
