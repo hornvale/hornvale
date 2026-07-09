@@ -8,6 +8,7 @@ pub mod geosphere;
 pub mod ledger;
 pub mod noise;
 pub mod phenomena;
+pub mod png;
 pub mod refine;
 pub mod registry;
 pub mod seed;
