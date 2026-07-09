@@ -459,10 +459,15 @@ fn cmd_orrery(args: &[String]) -> Result<(), String> {
         let mut frames = Vec::new();
         let mut d = a;
         while d < b {
-            // Clear + home, then the frame, so playback redraws in place.
+            // Clear + home, then the frame, so playback redraws in place. The
+            // frame uses CRLF line endings: an asciinema-player replay feeds the
+            // raw bytes through a terminal emulator, where a bare LF moves down
+            // but not to column 0 — so full-width rows would smear. (The
+            // single-frame stdout path needs no CRLF: the tty's cooked-mode
+            // ONLCR translates LF→CRLF for it.)
             frames.push(format!(
                 "\u{1b}[2J\u{1b}[H{}",
-                orrery_ansi(system, calendar, mk(d)?)
+                orrery_ansi(system, calendar, mk(d)?).replace('\n', "\r\n")
             ));
             d += step;
         }
