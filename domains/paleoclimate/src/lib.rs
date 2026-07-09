@@ -8,6 +8,7 @@
 pub mod facts;
 pub mod forcing_index;
 pub mod ice;
+pub mod render;
 pub mod strata;
 pub mod units;
 
