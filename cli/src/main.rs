@@ -31,7 +31,7 @@ usage:
                                             scan seeds for ones satisfying the pins
   hornvale almanac [--world <PATH>]        render the almanac (default: world.json)
   hornvale repl [--world <PATH>]           interrogate a world interactively
-  hornvale map [--world <PATH>] [--out <PPM>] render the elevation map (markdown to stdout)
+  hornvale map [--world <PATH>] [--out <PNG>] render the elevation map (markdown to stdout)
   hornvale biome-map [--world <PATH>] [--out <PPM>] render the biome map (markdown to stdout)
   hornvale settlement-map [--world <PATH>] [--out <PPM>] render the settlement map (markdown to stdout)
   hornvale concepts                        dump the concept registry as markdown
@@ -251,7 +251,7 @@ fn cmd_repl(args: &[String]) -> Result<(), String> {
 }
 
 /// Render the world's elevation map: a markdown page (title, land lines,
-/// ASCII map) to stdout and, with `--out`, the PPM image to disk. Both are
+/// ASCII map) to stdout and, with `--out`, the PNG image to disk. Both are
 /// deterministic; CI drift-checks the committed copies.
 fn cmd_map(args: &[String]) -> Result<(), String> {
     let world = load_world(args)?;
@@ -267,13 +267,13 @@ fn cmd_map(args: &[String]) -> Result<(), String> {
     ));
     doc.push_str("```\n\n");
     if let Some(out) = flag_value(args, "--out") {
-        let ppm = hornvale_terrain::render::elevation_ppm(terrain.geosphere(), terrain.globe());
-        std::fs::write(out, ppm).map_err(|e| format!("writing {out}: {e}"))?;
+        let png = hornvale_terrain::render::elevation_png(terrain.geosphere(), terrain.globe());
+        std::fs::write(out, png).map_err(|e| format!("writing {out}: {e}"))?;
         let name = std::path::Path::new(out)
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or(out);
-        doc.push_str(&format!("Full-color render: [`{name}`](./{name})\n\n"));
+        doc.push_str(&format!("![Full-color render](./{name})\n\n"));
     }
     doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
     print!("{doc}");
