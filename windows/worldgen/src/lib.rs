@@ -99,6 +99,15 @@ impl Sky {
             Sky::Generated(sky) => Some(sky.calendar()),
         }
     }
+
+    /// The generated star system, if this world has one. `None` for the
+    /// tier-0 constant sun. The star-chart command reads this.
+    pub fn system(&self) -> Option<&hornvale_astronomy::StarSystem> {
+        match self {
+            Sky::Constant(_) => None,
+            Sky::Generated(sky) => Some(sky.system()),
+        }
+    }
 }
 
 impl PhenomenaSource for Sky {

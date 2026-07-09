@@ -34,6 +34,7 @@ usage:
   hornvale map [--world <PATH>] [--out <PNG>] render the elevation map (markdown to stdout)
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
   hornvale settlement-map [--world <PATH>] [--out <PNG>] render the settlement map (markdown to stdout)
+  hornvale star-chart [--world <PATH>] [--out <PNG>] render the star chart (markdown to stdout)
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
@@ -71,6 +72,7 @@ fn main() -> ExitCode {
         Some("map") => cmd_map(&args),
         Some("biome-map") => cmd_biome_map(&args),
         Some("settlement-map") => cmd_settlement_map(&args),
+        Some("star-chart") => cmd_star_chart(&args),
         Some("concepts") => cmd_concepts(),
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
@@ -362,6 +364,53 @@ fn cmd_settlement_map(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// Render the world's star chart: a markdown page (title, sun line, ASCII
+/// chart, star legend, moon phase strips) to stdout and, with `--out`, the
+/// planisphere PNG to disk. Both are deterministic; CI drift-checks the
+/// committed copies. Errors on a world with no generated sky.
+fn cmd_star_chart(args: &[String]) -> Result<(), String> {
+    let world = load_world(args)?;
+    let sky = world_builder::sky_of(&world).map_err(|e| e.to_string())?;
+    let Some(system) = sky.system() else {
+        return Err("this world has no generated sky; no chart to draw".to_string());
+    };
+    let calendar = sky
+        .calendar()
+        .expect("a generated sky always has a calendar");
+    let mut doc = format!("# The Night Sky of Seed {}\n\n", world.seed.0);
+    doc.push_str(&format!("The sun is a {}.\n\n", system.star.class_name));
+    doc.push_str("```text\n");
+    doc.push_str(&hornvale_astronomy::render::chart_ascii(&system.neighbors));
+    doc.push_str("```\n\n");
+    for (index, n) in system.neighbors.iter().enumerate() {
+        doc.push_str(&format!(
+            "{}. A {} — {}, {:.1} light-years away, apparent brightness {:.3}.\n",
+            index + 1,
+            hornvale_astronomy::class_name(n.class),
+            n.color,
+            n.distance.get(),
+            n.apparent_brightness
+        ));
+    }
+    doc.push('\n');
+    for line in hornvale_astronomy::render::moon_lines(&system.moons, calendar) {
+        doc.push_str(&format!("{line}\n"));
+    }
+    doc.push('\n');
+    if let Some(out) = flag_value(args, "--out") {
+        let png = hornvale_astronomy::render::chart_png(&system.neighbors);
+        std::fs::write(out, png).map_err(|e| format!("writing {out}: {e}"))?;
+        let name = std::path::Path::new(out)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(out);
+        doc.push_str(&format!("![Full-color render](./{name})\n\n"));
+    }
+    doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
+    print!("{doc}");
+    Ok(())
+}
+
 fn cmd_concepts() -> Result<(), String> {
     // Generated, not constant: the registry is identical either way (every
     // predicate is registered up front), but this exercises the fuller
@@ -614,6 +663,37 @@ mod tests {
     #[test]
     fn usage_mentions_settlement_map() {
         assert!(USAGE.contains("settlement-map"));
+    }
+
+    #[test]
+    fn usage_mentions_star_chart() {
+        assert!(USAGE.contains("star-chart"));
+    }
+
+    #[test]
+    fn star_chart_on_a_constant_sun_world_is_a_loud_error() {
+        use hornvale_kernel::Seed;
+        use world_builder::{SettlementPins, SkyChoice, build_world};
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Constant,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let path = std::env::temp_dir().join(format!(
+            "hornvale-star-chart-test-{}.json",
+            std::process::id()
+        ));
+        world.save(&path).unwrap();
+        let err =
+            cmd_star_chart(&args(&["star-chart", "--world", path.to_str().unwrap()])).unwrap_err();
+        std::fs::remove_file(&path).ok();
+        assert!(
+            err.contains("no generated sky"),
+            "unexpected error text: {err}"
+        );
     }
 
     #[test]
