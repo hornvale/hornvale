@@ -38,6 +38,11 @@ pub const SKY_PROVIDER: &str = "sky-provider";
 /// An experimenter-supplied pin string conditioning genesis, in
 /// `pins::pin_strings` format (non-functional, Text — one per pin).
 pub const SCENARIO_PIN: &str = "scenario-pin";
+/// Mean orbital eccentricity (deep-time forcing) (functional, Number).
+pub const ECCENTRICITY_MEAN: &str = "eccentricity-mean";
+/// Obliquity oscillation amplitude, degrees (moon-coupled) (functional,
+/// Number).
+pub const OBLIQUITY_AMPLITUDE: &str = "obliquity-amplitude";
 
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     Fact {
@@ -107,6 +112,22 @@ pub fn genesis(
             subject,
             MOON_COUNT,
             Value::Number(system.moons.len() as f64),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            ECCENTRICITY_MEAN,
+            Value::Number(system.forcing.ecc_mean),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            OBLIQUITY_AMPLITUDE,
+            Value::Number(system.forcing.obliquity_amp),
         ),
         &world.registry,
     )?;
@@ -192,6 +213,28 @@ mod tests {
         assert!(w.ledger.value_of(subject, STAR_CLASS).is_some());
         assert!(w.ledger.value_of(subject, YEAR_LENGTH_STD).is_some());
         assert!(w.ledger.value_of(subject, OBLIQUITY_DEGREES).is_some());
+    }
+
+    #[test]
+    fn genesis_commits_the_forcing_parameters() {
+        let pins = SkyPins {
+            rotation: Some(RotationPin::Locked),
+            moons: Some(MoonsPin::exact(2).unwrap()),
+            ..SkyPins::default()
+        };
+        let outcome = generate(Seed(1), &pins).unwrap();
+        let mut w = world_with(1);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+
+        assert_eq!(
+            w.ledger.value_of(subject, ECCENTRICITY_MEAN),
+            Some(&Value::Number(outcome.system.forcing.ecc_mean))
+        );
+        assert_eq!(
+            w.ledger.value_of(subject, OBLIQUITY_AMPLITUDE),
+            Some(&Value::Number(outcome.system.forcing.obliquity_amp))
+        );
     }
 
     #[test]

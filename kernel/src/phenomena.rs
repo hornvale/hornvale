@@ -3,6 +3,7 @@
 //! and only this; it never learns what produced a phenomenon.
 
 use crate::field::WorldTime;
+use crate::geosphere::GeoCoord;
 use crate::ledger::EntityId;
 use serde::{Deserialize, Serialize};
 
@@ -84,15 +85,33 @@ pub struct ObserverContext {
     /// The observer's perception lens; `PerceptionLens::identity()` for an
     /// unlensed (instrument's-eye) observation.
     pub lens: PerceptionLens,
+    /// The observer's position on the globe, if placed. `None` is a
+    /// position-blind observation (nowhere in particular) — the sky is not
+    /// culled by horizon. Placed by the composition root from the flagship
+    /// cell (SEQ-4); consumed by providers to cull the visible sky (SEQ-5).
+    pub position: Option<GeoCoord>,
 }
 
 impl ObserverContext {
-    /// An unlensed observation at a place and time (identity lens).
+    /// An unlensed, position-blind observation at a place and time (identity
+    /// lens, no globe position — the sky is not culled by horizon).
     pub fn at(place: EntityId, time: WorldTime) -> Self {
         ObserverContext {
             place,
             time,
             lens: PerceptionLens::identity(),
+            position: None,
+        }
+    }
+
+    /// An unlensed observation from a real place on the globe (identity lens).
+    /// Providers cull the visible sky to this position's hemisphere.
+    pub fn at_position(place: EntityId, time: WorldTime, position: GeoCoord) -> Self {
+        ObserverContext {
+            place,
+            time,
+            lens: PerceptionLens::identity(),
+            position: Some(position),
         }
     }
 }
@@ -243,5 +262,44 @@ mod tests {
         };
         let out = observe(&[&a], &ObserverContext { lens, ..ctx() });
         assert_eq!(out[0].kind, "celestial-body", "kind breaks the 1.0 tie");
+    }
+
+    #[test]
+    fn at_is_position_blind_and_at_position_carries_a_coord() {
+        let blind = ObserverContext::at(EntityId(1), WorldTime { day: 0.0 });
+        assert!(blind.position.is_none());
+        let placed = ObserverContext::at_position(
+            EntityId(1),
+            WorldTime { day: 0.0 },
+            GeoCoord {
+                latitude: 12.0,
+                longitude: -30.0,
+            },
+        );
+        assert_eq!(
+            placed.position,
+            Some(GeoCoord {
+                latitude: 12.0,
+                longitude: -30.0
+            })
+        );
+    }
+
+    #[test]
+    fn observe_ignores_observer_position() {
+        // Aggregation is position-agnostic; culling is the provider's job.
+        let a = FixedSource(vec![ph("breeze", 0.3333), ph("sun", 1.0)]);
+        let blind = observe(&[&a], &ctx());
+        let placed = observe(
+            &[&a],
+            &ObserverContext {
+                position: Some(GeoCoord {
+                    latitude: 1.0,
+                    longitude: 2.0,
+                }),
+                ..ctx()
+            },
+        );
+        assert_eq!(blind, placed);
     }
 }

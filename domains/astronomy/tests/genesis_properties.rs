@@ -2,8 +2,8 @@
 //! seeds and the pin matrix, satisfies the model card's invariants.
 
 use hornvale_astronomy::{
-    Degrees, GenesisError, LocalDays, MoonsPin, NeighborClass, Rotation, RotationPin, SkyPins,
-    generate, hill_radius_mm,
+    Degrees, ForcingPin, GenesisError, LocalDays, MoonsPin, NeighborClass, Rotation, RotationPin,
+    SkyPins, generate, hill_radius_mm,
 };
 use hornvale_kernel::Seed;
 
@@ -153,6 +153,251 @@ fn pin_isolation_holds_at_the_system_level() {
             .iter()
             .any(|n| n.class == NeighborClass::BlueGiant)
     );
+}
+
+#[test]
+fn obliquity_at_zero_matches_the_anchor_drift_anchor_identity() {
+    // The forcing's obliquity element is anchored so that day 0 exactly
+    // recovers genesis' drawn obliquity — a save-format contract for any
+    // consumer (Calendar, paleoclimate) that reads `element_at(0)` as "the
+    // present".
+    for seed in 0..64u64 {
+        let system = generate(Seed(seed), &SkyPins::default())
+            .unwrap_or_else(|e| panic!("seed {seed} failed default genesis: {e}"))
+            .system;
+        assert_eq!(
+            system.forcing.obliquity_at(0.0),
+            system.anchor.obliquity.get(),
+            "seed {seed}: obliquity_at(0) must equal the anchor's genesis obliquity"
+        );
+    }
+}
+
+#[test]
+fn forcing_is_pin_isolated() {
+    // A world built with forcing=zero must consume the SAME draws as the
+    // default — only the forcing amplitudes differ (zeroed). This is
+    // `normal_pin_matches_the_unpinned_draw`'s pattern applied to forcing:
+    // the pin re-affirms/overrides downstream of the draw, it must never
+    // perturb any other stream.
+    for seed in 0..64u64 {
+        let base = generate(Seed(seed), &SkyPins::default())
+            .unwrap_or_else(|e| panic!("seed {seed} failed default genesis: {e}"))
+            .system;
+        let zeroed = generate(
+            Seed(seed),
+            &SkyPins {
+                forcing: Some(ForcingPin::Zero),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap_or_else(|e| panic!("seed {seed} failed zeroed genesis: {e}"))
+        .system;
+        assert_eq!(
+            base.star, zeroed.star,
+            "seed {seed}: star drifted under the pin"
+        );
+        assert_eq!(base.anchor, zeroed.anchor, "seed {seed}: anchor drifted");
+        assert_eq!(base.moons, zeroed.moons, "seed {seed}: moons drifted");
+        assert_eq!(
+            base.neighbors, zeroed.neighbors,
+            "seed {seed}: neighbors drifted"
+        );
+        assert_eq!(
+            base.forcing.obliquity_phase, zeroed.forcing.obliquity_phase,
+            "seed {seed}: obliquity phase must be drawn identically"
+        );
+        assert_eq!(
+            base.forcing.ecc_phase, zeroed.forcing.ecc_phase,
+            "seed {seed}: eccentricity phase must be drawn identically"
+        );
+        assert_eq!(
+            base.forcing.precession_phase, zeroed.forcing.precession_phase,
+            "seed {seed}: precession phase must be drawn identically"
+        );
+        assert_eq!(
+            base.forcing.year_phase_offset, zeroed.forcing.year_phase_offset,
+            "seed {seed}: year phase offset must be drawn identically"
+        );
+        assert_eq!(
+            base.forcing.day_phase_offset, zeroed.forcing.day_phase_offset,
+            "seed {seed}: day phase offset must be drawn identically"
+        );
+        assert_eq!(
+            base.forcing.moon_phase_offsets, zeroed.forcing.moon_phase_offsets,
+            "seed {seed}: moon phase offsets must be drawn identically"
+        );
+        // Only the amplitudes/means differ, and only via the zeroing.
+        assert_eq!(
+            zeroed.forcing.obliquity_amp, 0.0,
+            "seed {seed}: obliquity_amp not zeroed"
+        );
+        assert_eq!(
+            zeroed.forcing.ecc_mean, 0.0,
+            "seed {seed}: ecc_mean not zeroed"
+        );
+        assert_eq!(
+            zeroed.forcing.ecc_amp, 0.0,
+            "seed {seed}: ecc_amp not zeroed"
+        );
+        assert_eq!(
+            base.forcing.obliquity_mean, zeroed.forcing.obliquity_mean,
+            "seed {seed}: obliquity_mean must be untouched by the pin (it mirrors the anchor)"
+        );
+    }
+}
+
+#[test]
+fn forcing_zero_pin_yields_zeroed_amplitudes() {
+    for seed in 0..64u64 {
+        let pins = SkyPins {
+            forcing: Some(ForcingPin::Zero),
+            ..SkyPins::default()
+        };
+        let forcing = generate(Seed(seed), &pins)
+            .unwrap_or_else(|e| panic!("seed {seed} failed zeroed genesis: {e}"))
+            .system
+            .forcing;
+        assert_eq!(forcing.ecc_mean, 0.0, "seed {seed}: ecc_mean not zeroed");
+        assert_eq!(
+            forcing.obliquity_amp, 0.0,
+            "seed {seed}: obliquity_amp not zeroed"
+        );
+        assert_eq!(forcing.ecc_amp, 0.0, "seed {seed}: ecc_amp not zeroed");
+    }
+}
+
+#[test]
+fn equatorial_daylight_is_flat_and_every_latitude_stays_in_range() {
+    use hornvale_astronomy::{StdDays, calendar_of};
+    for seed in 0..64u64 {
+        let system = generate(
+            Seed(seed),
+            &SkyPins {
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap()
+        .system;
+        let cal = calendar_of(&system);
+        let year = system.anchor.year.get();
+        for k in 0..8 {
+            let t = StdDays::new(k as f64 * year / 8.0).unwrap();
+            let equator = cal.daylight_fraction_at(t, 0.0).unwrap();
+            assert!(
+                (equator - 0.5).abs() < 1e-9,
+                "seed {seed}: equator not flat: {equator}"
+            );
+            for lat in [-80.0, -30.0, 30.0, 80.0] {
+                let f = cal.daylight_fraction_at(t, lat).unwrap();
+                assert!(
+                    (0.0..=1.0).contains(&f),
+                    "seed {seed}: daylight {f} out of range at lat {lat}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn a_locked_worlds_hemispheres_cull_the_sky() {
+    use hornvale_astronomy::{GeneratedSky, NIGHT_STAR};
+    use hornvale_kernel::{EntityId, GeoCoord, ObserverContext, PhenomenaSource, Venue, WorldTime};
+    for seed in 0..32u64 {
+        let outcome = generate(
+            Seed(seed),
+            &SkyPins {
+                rotation: Some(RotationPin::Locked),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap();
+        let sky = GeneratedSky::new(outcome);
+        let day = ObserverContext::at_position(
+            EntityId(1),
+            WorldTime { day: 0.0 },
+            GeoCoord {
+                latitude: 5.0,
+                longitude: 0.0,
+            },
+        );
+        let night = ObserverContext::at_position(
+            EntityId(1),
+            WorldTime { day: 0.0 },
+            GeoCoord {
+                latitude: 5.0,
+                longitude: 179.0,
+            },
+        );
+        let day_ph = sky.phenomena(&day);
+        let night_ph = sky.phenomena(&night);
+        assert!(
+            day_ph.iter().any(|p| p.venue == Venue::DaySky),
+            "seed {seed}: day side sees no sun"
+        );
+        assert!(
+            !day_ph.iter().any(|p| p.kind == NIGHT_STAR),
+            "seed {seed}: day side sees stars"
+        );
+        assert!(
+            !night_ph.iter().any(|p| p.venue == Venue::DaySky),
+            "seed {seed}: night side sees the sun"
+        );
+        assert!(
+            night_ph.iter().any(|p| p.kind == NIGHT_STAR),
+            "seed {seed}: night side sees no stars"
+        );
+    }
+}
+
+#[test]
+fn a_spinning_worlds_sky_is_whole_from_any_placed_vantage() {
+    use hornvale_astronomy::{GeneratedSky, NIGHT_STAR};
+    use hornvale_kernel::{EntityId, GeoCoord, ObserverContext, PhenomenaSource, Venue, WorldTime};
+    for seed in 0..32u64 {
+        // A handful of seeds draw an anchor whose Hill radius is too small
+        // to admit two stable, spaced moons within the attempt budget —
+        // a genuine physical unsatisfiability (see
+        // `unsatisfiable_pins_fail_loudly_with_the_physical_reason`), not a
+        // defect in the placed-observer culling under test here. Skip those
+        // seeds rather than asserting on a system that never came to exist.
+        let outcome = match generate(
+            Seed(seed),
+            &SkyPins {
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                moons: Some(MoonsPin::exact(2).unwrap()),
+                ..SkyPins::default()
+            },
+        ) {
+            Ok(outcome) => outcome,
+            Err(GenesisError::UnsatisfiablePin { pin, .. }) if pin == "moons" => continue,
+            Err(e) => panic!("seed {seed}: unexpected genesis failure: {e}"),
+        };
+        let sky = GeneratedSky::new(outcome);
+        let obs = ObserverContext::at_position(
+            EntityId(1),
+            WorldTime { day: 3.5 },
+            GeoCoord {
+                latitude: 55.0,
+                longitude: -120.0,
+            },
+        );
+        let ph = sky.phenomena(&obs);
+        assert!(
+            ph.iter().any(|p| p.venue == Venue::DaySky),
+            "seed {seed}: no sun"
+        );
+        assert!(
+            ph.iter().any(|p| p.kind == NIGHT_STAR),
+            "seed {seed}: no stars (should be whole sky)"
+        );
+        assert_eq!(
+            ph.iter().filter(|p| p.description.contains("moon")).count(),
+            2,
+            "seed {seed}: both moons should be visible on a spinning world"
+        );
+    }
 }
 
 /// The neighbor-class pin must not move any star: positions draw from
