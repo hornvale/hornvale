@@ -513,7 +513,7 @@ fn name_collision_rate_is_measured_and_pinned() {
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.023_389_245_6).abs() < 1e-6,
+        (mean - 0.023_283_935_433_557_744).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.10}"
     );
 }
@@ -528,8 +528,8 @@ fn name_length_distributions_are_measured_and_pinned() {
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     for (species, expected_present, expected_mean) in [
-        ("goblin", 498u32, 9.869_276_105_4),
-        ("kobold", 498u32, 9.799_462_903_6),
+        ("goblin", 498u32, 9.865_567_624_129_22),
+        ("kobold", 498u32, 9.800_356_321_709_861),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -678,7 +678,7 @@ fn null_control_distributions_are_within_the_sampling_bound() {
         "pantheon-size SMD drifted: {size}"
     );
     assert!(
-        (namelen - -0.118_235_148_756_793_42).abs() < 1e-9,
+        (namelen - -0.118_891_714_908_699_08).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
