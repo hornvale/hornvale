@@ -5,6 +5,8 @@
 //! composition root — never a climate or astronomy import).
 #![warn(missing_docs)]
 
+pub mod forcing_index;
 pub mod units;
 
+pub use forcing_index::caloric_summer_index;
 pub use units::{IceVolume, SeaLevelChange, UnitError};
