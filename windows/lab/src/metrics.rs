@@ -228,14 +228,7 @@ pub fn registry() -> Vec<Metric> {
             extract: |v| {
                 let beliefs = beliefs_of(&v.world);
                 match beliefs.first() {
-                    Some(first) => MetricValue::Text(
-                        match first.sentiment {
-                            hornvale_religion::Sentiment::Eternal => "eternal",
-                            hornvale_religion::Sentiment::Cyclic => "cyclic",
-                            hornvale_religion::Sentiment::Ambient => "ambient",
-                        }
-                        .to_string(),
-                    ),
+                    Some(first) => MetricValue::Text(first.sentiment.as_str().to_string()),
                     None => MetricValue::Absent,
                 }
             },
@@ -562,14 +555,7 @@ pub fn registry() -> Vec<Metric> {
                 };
                 let beliefs = hornvale_religion::beliefs_held_by(&v.world, info.id);
                 match beliefs.first() {
-                    Some(head) => MetricValue::Text(
-                        match head.sentiment {
-                            hornvale_religion::Sentiment::Eternal => "eternal",
-                            hornvale_religion::Sentiment::Cyclic => "cyclic",
-                            hornvale_religion::Sentiment::Ambient => "ambient",
-                        }
-                        .to_string(),
-                    ),
+                    Some(head) => MetricValue::Text(head.sentiment.as_str().to_string()),
                     None => MetricValue::Absent,
                 }
             },
