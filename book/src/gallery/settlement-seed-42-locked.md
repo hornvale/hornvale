@@ -31,7 +31,7 @@ The chief kobold settlement, Rokro, holds 328 souls amid alpine.
                                                                         
 ```
 
-Full-color render: [`settlement-seed-42-locked.ppm`](./settlement-seed-42-locked.ppm)
+![Full-color render](./settlement-seed-42-locked.png)
 
 ---
 

@@ -1,4 +1,4 @@
-//! Deterministic biome-map renders: an equirectangular P6 PPM and a 72×24
+//! Deterministic biome-map renders: an equirectangular PNG and a 72×24
 //! ASCII map, recolored from the elevation-map tradition. Same biome field,
 //! same bytes — a changed artifact in review means changed behavior.
 //! Pixel→cell lookup uses a latitude-band index (30 bands of 6°), the same
@@ -7,7 +7,7 @@
 use crate::biome::Biome;
 use hornvale_kernel::{CellId, CellMap, Geosphere};
 
-/// PPM image width in pixels; equirectangular, so height is `MAP_WIDTH / 2`.
+/// Raster image width in pixels; equirectangular, so height is `MAP_WIDTH / 2`.
 pub const MAP_WIDTH: u32 = 256;
 /// ASCII map width in characters.
 pub const ASCII_WIDTH: u32 = 72;
@@ -64,12 +64,13 @@ impl LatBandIndex {
     }
 }
 
-/// Render the biome field as an equirectangular binary P6 PPM. Same field,
-/// same bytes.
-pub fn biome_ppm(geo: &Geosphere, biomes: &CellMap<Biome>) -> Vec<u8> {
+/// Raw RGB pixels of the equirectangular biome map (row-major, top row
+/// first) — also the base image settlement's overlay stamps at the
+/// composition root.
+pub fn biome_pixels(geo: &Geosphere, biomes: &CellMap<Biome>) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
     let index = LatBandIndex::new(geo);
-    let mut out = format!("P6\n{width} {height}\n255\n").into_bytes();
+    let mut out = Vec::with_capacity((width * height * 3) as usize);
     for py in 0..height {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..width {
@@ -79,6 +80,12 @@ pub fn biome_ppm(geo: &Geosphere, biomes: &CellMap<Biome>) -> Vec<u8> {
         }
     }
     out
+}
+
+/// Render the biome field as an equirectangular PNG (decision 0018). Same
+/// field, same bytes.
+pub fn biome_png(geo: &Geosphere, biomes: &CellMap<Biome>) -> Vec<u8> {
+    hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_WIDTH / 2, &biome_pixels(geo, biomes))
 }
 
 /// Render the biome field as a 72×24 ASCII map, one newline per row.
@@ -114,18 +121,23 @@ mod tests {
     }
 
     #[test]
-    fn ppm_is_well_formed_and_byte_deterministic() {
+    fn png_is_well_formed_and_byte_deterministic() {
         let geo = Geosphere::new(4);
         let biomes = checker(&geo);
-        let a = biome_ppm(&geo, &biomes);
-        let b = biome_ppm(&geo, &biomes);
-        assert_eq!(a, b);
-        let header = format!("P6\n{} {}\n255\n", MAP_WIDTH, MAP_WIDTH / 2);
-        assert!(a.starts_with(header.as_bytes()));
-        assert_eq!(
-            a.len(),
-            header.len() + (MAP_WIDTH * (MAP_WIDTH / 2) * 3) as usize
-        );
+        let a = biome_png(&geo, &biomes);
+        assert_eq!(a, biome_png(&geo, &biomes));
+        assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
+        assert_eq!(&a[16..20], &MAP_WIDTH.to_be_bytes());
+        assert_eq!(&a[20..24], &(MAP_WIDTH / 2).to_be_bytes());
+    }
+
+    #[test]
+    fn pixel_buffer_is_exactly_the_raster() {
+        let geo = Geosphere::new(4);
+        let biomes = checker(&geo);
+        let pixels = biome_pixels(&geo, &biomes);
+        assert_eq!(pixels.len(), (MAP_WIDTH * (MAP_WIDTH / 2) * 3) as usize);
+        assert_eq!(pixels, biome_pixels(&geo, &biomes));
     }
 
     #[test]

@@ -1,7 +1,8 @@
 //! Generate the Gallery's "First Light" artifacts for the project book:
-//! a rendering of seed 42's fractal noise field (BMP, dependency-free) and
-//! the mini-genesis world document. Deterministic: reruns produce identical
-//! bytes, so a changed artifact in review means changed behavior.
+//! a rendering of seed 42's fractal noise field (PNG via the kernel's
+//! hand-rolled encoder, decision 0018) and the mini-genesis world document.
+//! Deterministic: reruns produce identical bytes, so a changed artifact in
+//! review means changed behavior.
 //!
 //! This duplicates the mini-genesis from `tests/determinism.rs` on purpose;
 //! both merge into the almanac window in Campaign 1b.
@@ -22,48 +23,31 @@ const OUT_DIR: &str = "book/src/gallery";
 fn main() -> std::io::Result<()> {
     let out = Path::new(OUT_DIR);
     std::fs::create_dir_all(out)?;
-    write_noise_bmp(&out.join("first-light-seed-42.bmp"))?;
+    write_noise_png(&out.join("first-light-seed-42.png"))?;
     std::fs::write(out.join("world-seed-42.md"), render_world_document())?;
     println!("first light artifacts written to {OUT_DIR}");
     Ok(())
 }
 
-/// Render fbm over seed 42's terrain stream as a 24-bit BMP, mapping the
-/// unit interval onto an ink-to-parchment ramp.
-fn write_noise_bmp(path: &Path) -> std::io::Result<()> {
+/// Render fbm over seed 42's terrain stream as a PNG (decision 0018),
+/// mapping the unit interval onto an ink-to-parchment ramp.
+fn write_noise_png(path: &Path) -> std::io::Result<()> {
     let size = IMAGE_SIZE;
-    let row_bytes = size * 3; // 512 * 3 is already a multiple of 4; no padding
-    let pixel_bytes = row_bytes * size;
-    let file_bytes = 14 + 40 + pixel_bytes;
-
-    let mut bmp = Vec::with_capacity(file_bytes as usize);
-    // File header
-    bmp.extend_from_slice(b"BM");
-    bmp.extend_from_slice(&file_bytes.to_le_bytes());
-    bmp.extend_from_slice(&[0; 4]); // reserved
-    bmp.extend_from_slice(&54u32.to_le_bytes()); // pixel data offset
-    // Info header (BITMAPINFOHEADER)
-    bmp.extend_from_slice(&40u32.to_le_bytes());
-    bmp.extend_from_slice(&(size as i32).to_le_bytes());
-    bmp.extend_from_slice(&(size as i32).to_le_bytes()); // positive: bottom-up
-    bmp.extend_from_slice(&1u16.to_le_bytes()); // planes
-    bmp.extend_from_slice(&24u16.to_le_bytes()); // bits per pixel
-    bmp.extend_from_slice(&[0; 24]); // no compression, defaults
-
     let terrain = SEED.derive("terrain");
+    let mut rgb = Vec::with_capacity((size * size * 3) as usize);
     for row in 0..size {
-        // Bottom-up: BMP's first stored row is the image's bottom.
-        let y = f64::from(size - 1 - row);
+        // PNG rows run top-down; the BMP predecessor stored bottom-up with
+        // y = size - 1 - row, so top-down y = row keeps the image identical.
+        let y = f64::from(row);
         for col in 0..size {
             let x = f64::from(col);
             let v = fbm_2d(terrain, x / 64.0, y / 64.0, 5);
             let (r, g, b) = ramp(v);
-            bmp.extend_from_slice(&[b, g, r]); // BMP stores BGR
+            rgb.extend_from_slice(&[r, g, b]);
         }
     }
-
     let mut file = std::fs::File::create(path)?;
-    file.write_all(&bmp)
+    file.write_all(&hornvale_kernel::png::encode_rgb(size, size, &rgb))
 }
 
 /// Linear ramp from deep ink (low) to warm parchment (high).

@@ -30,7 +30,7 @@ The highest land stands 3919 m above the sea.
 ........................................................................
 ```
 
-Full-color render: [`elevation-seed-42.ppm`](./elevation-seed-42.ppm)
+![Full-color render](./elevation-seed-42.png)
 
 ---
 

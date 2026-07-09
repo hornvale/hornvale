@@ -31,7 +31,7 @@ The chief kobold settlement, Rakrra, holds 425 souls amid temperate-rainforest.
                                                                         
 ```
 
-Full-color render: [`settlement-seed-42.ppm`](./settlement-seed-42.ppm)
+![Full-color render](./settlement-seed-42.png)
 
 ---
 

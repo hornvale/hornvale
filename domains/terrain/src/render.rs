@@ -1,15 +1,15 @@
 //! Deterministic map renders in the First Light tradition: an
-//! equirectangular P6 PPM elevation map and an ASCII map for the REPL.
-//! Same globe, same bytes — a changed artifact in review means changed
-//! behavior. Pixel→cell lookup uses a latitude-band index (30 bands of 6°):
-//! the nearest cell center at level ≥ 4 is within ~2.5°, so the pixel's
-//! band plus both neighbors always contains it.
+//! equirectangular PNG elevation map (decision 0018) and an ASCII map for
+//! the REPL. Same globe, same bytes — a changed artifact in review means
+//! changed behavior. Pixel→cell lookup uses a latitude-band index (30 bands
+//! of 6°): the nearest cell center at level ≥ 4 is within ~2.5°, so the
+//! pixel's band plus both neighbors always contains it.
 
 use crate::globe::TectonicGlobe;
 use crate::plates::dot;
 use hornvale_kernel::{CellId, Geosphere};
 
-/// PPM image width in pixels; the image is equirectangular, so height is
+/// Raster image width in pixels; the image is equirectangular, so height is
 /// `MAP_WIDTH / 2`.
 pub const MAP_WIDTH: u32 = 256;
 /// ASCII map width in characters.
@@ -94,13 +94,13 @@ fn color(elevation_m: f64, sea_level_m: f64) -> [u8; 3] {
     }
 }
 
-/// Render the globe as an equirectangular binary P6 PPM: longitude −180 →
-/// 180 across, latitude 90 → −90 down, pixel centers sampled. Same globe,
-/// same bytes.
-pub fn elevation_ppm(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
+/// Raw RGB pixels of the equirectangular elevation map (row-major, top row
+/// first): longitude −180 → 180 across, latitude 90 → −90 down, pixel
+/// centers sampled.
+fn elevation_pixels(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
     let index = LatBandIndex::new(geo);
-    let mut out = format!("P6\n{width} {height}\n255\n").into_bytes();
+    let mut out = Vec::with_capacity((width * height * 3) as usize);
     for py in 0..height {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..width {
@@ -110,6 +110,12 @@ pub fn elevation_ppm(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
         }
     }
     out
+}
+
+/// Render the globe as an equirectangular PNG (decision 0018). Same globe,
+/// same bytes.
+pub fn elevation_png(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
+    hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_WIDTH / 2, &elevation_pixels(geo, globe))
 }
 
 /// Render the globe as a 72×24 ASCII map: '~' ocean, '.' lowland, '+'
@@ -148,20 +154,17 @@ mod tests {
     use hornvale_kernel::{Geosphere, Seed};
 
     #[test]
-    fn ppm_is_well_formed_and_byte_deterministic() {
+    fn png_is_well_formed_and_byte_deterministic() {
         let geo = Geosphere::new(4);
         let globe = generate(Seed(42), &geo, &TerrainPins::default())
             .unwrap()
             .globe;
-        let a = elevation_ppm(&geo, &globe);
-        let b = elevation_ppm(&geo, &globe);
-        assert_eq!(a, b);
-        let header = format!("P6\n{} {}\n255\n", MAP_WIDTH, MAP_WIDTH / 2);
-        assert!(a.starts_with(header.as_bytes()));
-        assert_eq!(
-            a.len(),
-            header.len() + (MAP_WIDTH * (MAP_WIDTH / 2) * 3) as usize
-        );
+        let a = elevation_png(&geo, &globe);
+        assert_eq!(a, elevation_png(&geo, &globe));
+        assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
+        // IHDR width and height, big-endian, at offsets 16 and 20.
+        assert_eq!(&a[16..20], &MAP_WIDTH.to_be_bytes());
+        assert_eq!(&a[20..24], &(MAP_WIDTH / 2).to_be_bytes());
     }
 
     #[test]
