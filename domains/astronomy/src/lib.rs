@@ -20,7 +20,7 @@ pub use calendar::{Calendar, calendar_of};
 pub use moons::{Moon, generate_moons, hill_radius_mm};
 pub use neighborhood::{Neighbor, class_luminosity, generate_neighbors};
 pub use pins::{
-    GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, parse_pin, pin_strings,
+    ForcingPin, GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, parse_pin, pin_strings,
 };
 pub use provider::{GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE};
 pub use star::{Star, generate_star};

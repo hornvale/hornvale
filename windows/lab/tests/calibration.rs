@@ -781,6 +781,49 @@ fn nums(r: &RunResult, pin_set: &str, col: usize) -> Vec<f64> {
         .collect()
 }
 
+#[test]
+fn obliquity_range_is_wider_on_moonless_worlds() {
+    // A moonless world keeps the full drawn obliquity wobble; any moon's
+    // tidal stabilization damps it (SKY-21, generate_forcing's `damping =
+    // 1/(1+stabilization)` term). At equal base draw this is exact — but the
+    // base wobble is itself an independent per-seed draw (`base_wobble`,
+    // 0-2.5°), so a strict per-row claim (every moonless row exceeds every
+    // mooned row) is too strong across a 500-seed population: a moonless
+    // world can draw a small base wobble and a mooned world a large one.
+    // The population-level claim the moon-coupling calibration authorizes
+    // (spec §8, the sixth calibration in the family) is the MEAN comparison:
+    // moonless worlds' mean obliquity-range strictly exceeds mooned worlds'.
+    let result = &*DRIFT;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let (range_i, moons_i) = (idx("obliquity-range"), idx("moons-admitted"));
+    let (mut moonless_sum, mut moonless_n) = (0.0_f64, 0u32);
+    let (mut mooned_sum, mut mooned_n) = (0.0_f64, 0u32);
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        let MetricValue::Number(range) = row.values[range_i] else {
+            panic!("seed {}: obliquity-range not a number", row.seed);
+        };
+        let mooned = matches!(&row.values[moons_i], MetricValue::Text(n) if n != "0");
+        if mooned {
+            mooned_sum += range;
+            mooned_n += 1;
+        } else {
+            moonless_sum += range;
+            moonless_n += 1;
+        }
+    }
+    assert!(moonless_n > 0, "no moonless worlds in the drift study");
+    assert!(mooned_n > 0, "no mooned worlds in the drift study");
+    let moonless_mean = moonless_sum / f64::from(moonless_n);
+    let mooned_mean = mooned_sum / f64::from(mooned_n);
+    assert!(
+        moonless_mean > mooned_mean,
+        "moonless mean obliquity-range {moonless_mean:.4} !> mooned mean {mooned_mean:.4}"
+    );
+}
+
 /// Standardized mean difference (mean gap in pooled-standard-deviation units).
 fn std_mean_diff(a: Vec<f64>, b: Vec<f64>) -> f64 {
     let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len().max(1) as f64;
