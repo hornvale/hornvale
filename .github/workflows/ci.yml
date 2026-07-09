@@ -43,6 +43,7 @@ jobs:
           cargo run -p hornvale -- orrery --world /tmp/hv-ci-sky.json --day 0..365 --step 3 --fps 8 --cast book/src/gallery/orrery-seed-42.cast
           cargo run -p hornvale -- orrery --world /tmp/hv-ci-sky.json --day 0..365 --step 3 --fps 8 --glyphs emoji --cast book/src/gallery/orrery-emoji-seed-42.cast
           cargo run -p hornvale -- scene tiles --world /tmp/hv-ci-sky.json > book/src/gallery/scene-tiles-seed-42.json
+          cargo run -p hornvale -- scene system --world /tmp/hv-ci-sky.json > book/src/gallery/scene-system-seed-42.json
           cargo run -p hornvale -- lab run studies/census-lands-drift.study.json
           cargo run -p hornvale -- lab run studies/census-of-the-meeting.study.json
           cargo run -p hornvale -- lab run studies/census-of-skies.study.json

@@ -38,6 +38,7 @@ usage:
   hornvale orrery [--world <PATH>] [--day <D>] [--glyphs unicode|emoji]   print one orrery frame (ANSI)
   hornvale orrery [--world <PATH>] --day <A..B> [--step <k>] [--fps <f>] [--glyphs unicode|emoji] --cast <OUT>   animate to a .cast
   hornvale scene tiles [--world <PATH>] [--width <N>] emit scene/tiles/v1 JSON to stdout
+  hornvale scene system [--world <PATH>]              emit scene/system/v1 JSON to stdout
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
@@ -589,8 +590,16 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             println!("{}", hornvale_scene::scene_json(&scene));
             Ok(())
         }
-        Some(other) => Err(format!("unknown scene kind '{other}'; known kinds: tiles")),
-        None => Err("scene needs a kind; known kinds: tiles".to_string()),
+        Some("system") => {
+            let world = load_world(args)?;
+            let scene = hornvale_scene::system_scene(&world).map_err(|e| e.to_string())?;
+            println!("{}", hornvale_scene::system_json(&scene));
+            Ok(())
+        }
+        Some(other) => Err(format!(
+            "unknown scene kind '{other}'; known kinds: tiles, system"
+        )),
+        None => Err("scene needs a kind; known kinds: tiles, system".to_string()),
     }
 }
 
@@ -864,5 +873,34 @@ mod tests {
     #[test]
     fn usage_mentions_scene() {
         assert!(usage().contains("scene tiles"));
+    }
+
+    fn test_generated_world() -> World {
+        world_builder::build_world(
+            Seed(42),
+            &Default::default(),
+            world_builder::SkyChoice::Generated,
+            &Default::default(),
+            &Default::default(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn scene_system_emits_the_schema() {
+        let json = hornvale_scene::system_json(
+            &hornvale_scene::system_scene(&test_generated_world()).unwrap(),
+        );
+        assert!(json.contains("\"scene/system/v1\""));
+        assert!(json.contains("\"moons\""));
+    }
+
+    #[test]
+    fn scene_unknown_kind_names_system() {
+        let err = cmd_scene(&args(&["scene", "dioramas"])).unwrap_err();
+        assert!(
+            err.contains("system"),
+            "known kinds must include system: {err}"
+        );
     }
 }
