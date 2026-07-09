@@ -233,6 +233,85 @@ mod tests {
             "moon present"
         );
     }
+
+    /// A degenerate moon (P_sid ≥ Y) is unreachable at genesis — the Hill
+    /// cap keeps P_sid ≤ ~0.15×Y — but `sky_at` must still describe it
+    /// honestly rather than panicking on `Calendar::moon_phase`'s `None`.
+    /// Hand-built the same way `render.rs`'s `system_with_moon` and
+    /// `calendar.rs`'s `calendar_with_moon` construct their degenerate
+    /// fixtures, since genesis itself can never produce one.
+    #[test]
+    fn degenerate_moon_gets_an_honest_night_sky_line_instead_of_a_panic() {
+        use crate::anchor::Anchor;
+        use crate::moons::Moon;
+        use crate::neighborhood::Neighbor;
+        use crate::pins::NeighborClass;
+        use crate::star::Star;
+        use crate::system::{GenesisOutcome, StarSystem};
+        use crate::units::{
+            Au, Degrees, EarthMasses, HabitableZone, LightYears, LunarMasses, Megameters,
+            SolarLuminosities, SolarMasses, StdDays,
+        };
+
+        let system = StarSystem {
+            star: Star {
+                mass: SolarMasses::new(1.0).unwrap(),
+                luminosity: SolarLuminosities::new(1.0).unwrap(),
+                class_name: "yellow dwarf".to_string(),
+                habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
+                    .unwrap(),
+            },
+            anchor: Anchor {
+                mass: EarthMasses::new(1.0).unwrap(),
+                orbit: Au::new(1.0).unwrap(),
+                year: StdDays::new(365.25).unwrap(),
+                rotation: Rotation::Spinning {
+                    day: StdDays::new(1.0).unwrap(),
+                },
+                obliquity: Degrees::new(0.0).unwrap(),
+            },
+            moons: vec![Moon {
+                mass: LunarMasses::new(1.0).unwrap(),
+                distance: Megameters::new(384.4).unwrap(),
+                period: StdDays::new(400.0).unwrap(), // P_sid ≥ Y: degenerate
+                angular_diameter_rel: 1.0,
+                tide_rel: 1.0,
+            }],
+            neighbors: vec![Neighbor {
+                class: NeighborClass::SunLike,
+                distance: LightYears(10.0),
+                apparent_brightness: 1.0,
+                color: "warm yellow".to_string(),
+                declination: 0.0,
+                right_ascension: 0.0,
+            }],
+            forcing: crate::forcing::OrbitalForcing {
+                obliquity_mean: 0.0,
+                obliquity_amp: 0.0,
+                obliquity_phase: 0.0,
+                ecc_mean: 0.0,
+                ecc_amp: 0.0,
+                ecc_phase: 0.0,
+                precession_phase: 0.0,
+                year_phase_offset: 0.0,
+                day_phase_offset: 0.0,
+                moon_phase_offsets: vec![0.0],
+            },
+        };
+        let sky = GeneratedSky::new(GenesisOutcome {
+            system,
+            notes: Vec::new(),
+        });
+        assert!(sky.calendar().moon_phase(StdDays(0.0), 0).is_none());
+        // Local day fraction 0.0 falls outside the centered daylight
+        // window, so this is night — the branch that used to `.unwrap()`.
+        let report = sky.sky_at(WorldTime { day: 0.0 });
+        assert!(
+            report.description.contains("no phase"),
+            "got {}",
+            report.description
+        );
+    }
 }
 
 /// Phenomenon kind for the annual daylight cycle.
@@ -245,7 +324,7 @@ fn round2(x: f64) -> f64 {
 }
 
 /// Which size word describes a moon of this angular diameter (Luna = 1).
-fn size_word(angular: f64) -> &'static str {
+pub(crate) fn size_word(angular: f64) -> &'static str {
     if angular >= 1.2 {
         "vast"
     } else if angular >= 0.7 {
@@ -347,22 +426,30 @@ impl GeneratedSky {
                         .moons
                         .iter()
                         .enumerate()
-                        .map(|(index, moon)| {
-                            let phase = self.calendar.moon_phase(t, index).unwrap();
-                            let phase_word = if !(0.125..0.875).contains(&phase) {
-                                "new"
-                            } else if phase < 0.5 {
-                                "waxing"
-                            } else if phase < 0.625 {
-                                "full"
-                            } else {
-                                "waning"
-                            };
-                            capitalize(&format!(
-                                "the {} moon shows its {} face.",
-                                size_word(moon.angular_diameter_rel),
-                                phase_word
-                            ))
+                        .map(|(index, moon)| match self.calendar.moon_phase(t, index) {
+                            Some(phase) => {
+                                let phase_word = if !(0.125..0.875).contains(&phase) {
+                                    "new"
+                                } else if phase < 0.5 {
+                                    "waxing"
+                                } else if phase < 0.625 {
+                                    "full"
+                                } else {
+                                    "waning"
+                                };
+                                capitalize(&format!(
+                                    "the {} moon shows its {} face.",
+                                    size_word(moon.angular_diameter_rel),
+                                    phase_word
+                                ))
+                            }
+                            // Degenerate: P_sid ≥ Y, unreachable at genesis
+                            // (the Hill cap keeps P_sid ≤ ~0.15×Y) but handled
+                            // honestly rather than panicking.
+                            None => capitalize(&format!(
+                                "the {} moon shows no phase — its orbit outpaces the year.",
+                                size_word(moon.angular_diameter_rel)
+                            )),
                         })
                         .collect();
                     parts.push(format!(

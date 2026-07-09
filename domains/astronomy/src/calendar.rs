@@ -31,6 +31,31 @@ mod tests {
         generate(Seed(42), &pins).unwrap().system
     }
 
+    /// A minimal calendar with one moon at the given sidereal period, in a
+    /// year of the given length (both in standard days) — for exercising
+    /// the sidereal/synodic conversion at exact, hand-checkable values.
+    /// Forcing is zeroed (no tilt, no drift, no phase offset), so the moon's
+    /// illumination phase is a bare synodic cycle with day 0 at phase 0.
+    fn calendar_with_moon(sidereal_days: f64, year_days: f64) -> Calendar {
+        Calendar {
+            day: None,
+            year: StdDays::new(year_days).unwrap(),
+            moon_periods: vec![StdDays::new(sidereal_days).unwrap()],
+            forcing: crate::forcing::OrbitalForcing {
+                obliquity_mean: 0.0,
+                obliquity_amp: 0.0,
+                obliquity_phase: 0.0,
+                ecc_mean: 0.0,
+                ecc_amp: 0.0,
+                ecc_phase: 0.0,
+                precession_phase: 0.0,
+                year_phase_offset: 0.0,
+                day_phase_offset: 0.0,
+                moon_phase_offsets: vec![0.0],
+            },
+        }
+    }
+
     #[test]
     fn local_days_advance_with_absolute_time() {
         let cal = calendar_of(&spinning_system());
@@ -149,19 +174,21 @@ mod tests {
     }
 
     #[test]
-    fn moon_phase_and_months_derive_from_kepler_periods() {
+    fn moon_phase_and_months_derive_from_synodic_periods() {
+        // SKY-20 (synodic illumination cycle) composed with SKY-4 (genesis
+        // phase offset): the phase cycles on the synodic month, and half a
+        // synodic period advances it by 0.5 — the offset shifts where day 0
+        // sits, not the rate, so assert the advance, not the absolute phase.
         let system = spinning_system();
         let cal = calendar_of(&system);
-        let period = system.moons[0].period.get();
+        let synodic = cal.synodic_month(0).unwrap().get();
         let t0 = StdDays::new(0.0).unwrap();
-        let t = StdDays::new(period * 1.5).unwrap();
-        // Half a period advances the phase by 0.5, modulo wraparound — the
-        // offset shifts where day 0 sits but not how fast the phase moves.
+        let t = StdDays::new(synodic * 1.5).unwrap();
         let advance =
             (cal.moon_phase(t, 0).unwrap() - cal.moon_phase(t0, 0).unwrap()).rem_euclid(1.0);
         assert!((advance - 0.5).abs() < 1e-9);
         let months = cal.months_per_year(0).unwrap();
-        assert!((months - cal.year_length().get() / period).abs() < 1e-12);
+        assert!((months - cal.year_length().get() / synodic).abs() < 1e-12);
         assert!(cal.moon_phase(t, 5).is_none());
     }
 
@@ -222,6 +249,34 @@ mod tests {
             cal.daylight_fraction_at(StdDays::new(0.0).unwrap(), 45.0)
                 .is_none()
         );
+    }
+
+    /// Luna-like check: 27.32 d sidereal in a 365.25 d year → 29.53 d synodic.
+    #[test]
+    fn synodic_month_matches_the_luna_check_value() {
+        let cal = calendar_with_moon(27.32, 365.25);
+        let synodic = cal.synodic_month(0).unwrap().0;
+        assert!((synodic - 29.5306).abs() < 0.01, "got {synodic}");
+        assert!((cal.months_per_year(0).unwrap() - 365.25 / synodic).abs() < 1e-12);
+    }
+
+    /// Illumination phase cycles on the synodic period, not the sidereal.
+    /// (Zero phase offset in `calendar_with_moon`, so day 0 sits at phase 0.)
+    #[test]
+    fn moon_phase_cycles_on_the_synodic_period() {
+        let cal = calendar_with_moon(27.32, 365.25);
+        let synodic = cal.synodic_month(0).unwrap().0;
+        assert!((cal.moon_phase(StdDays(synodic * 0.5), 0).unwrap() - 0.5).abs() < 1e-9);
+        assert!(cal.moon_phase(StdDays(synodic), 0).unwrap() < 1e-9);
+    }
+
+    /// A sidereal period at or beyond the year is degenerate: no synodic cycle.
+    #[test]
+    fn synodic_month_guards_the_degenerate_case() {
+        let cal = calendar_with_moon(400.0, 365.25);
+        assert!(cal.synodic_month(0).is_none());
+        assert!(cal.moon_phase(StdDays(1.0), 0).is_none());
+        assert!(cal.months_per_year(0).is_none());
     }
 }
 
@@ -313,20 +368,35 @@ impl Calendar {
         let f = self.daylight_fraction(t)?;
         Some(fraction > (1.0 - f) / 2.0 && fraction < (1.0 + f) / 2.0)
     }
-    /// Phase of moon `index` at `t`, if that moon exists.
+    /// The synodic month of moon `index` — the illumination cycle seen from
+    /// the anchor: `P_syn = P_sid × Y / (Y − P_sid)` (spec §2, fixing
+    /// SKY-20). `None` if the moon doesn't exist or `P_sid ≥ Y` (degenerate:
+    /// the moon never laps the sun).
+    pub fn synodic_month(&self, index: usize) -> Option<StdDays> {
+        let sidereal = self.moon_periods.get(index)?;
+        if sidereal.0 >= self.year.0 {
+            return None;
+        }
+        Some(StdDays(
+            sidereal.0 * self.year.0 / (self.year.0 - sidereal.0),
+        ))
+    }
+    /// Illumination phase of moon `index` at `t` (0 = new, 0.5 = full),
+    /// cycling on the synodic month (SKY-20) and shifted by the genesis phase
+    /// offset (SKY-4) so day 0 is an ordinary day, not a grand alignment.
     pub fn moon_phase(&self, t: StdDays, index: usize) -> Option<f64> {
-        let period = self.moon_periods.get(index)?;
+        let synodic = self.synodic_month(index)?;
         let offset = self
             .forcing
             .moon_phase_offsets
             .get(index)
             .copied()
             .unwrap_or(0.0);
-        Some((t.0 / period.0 + offset).fract())
+        Some((t.0 / synodic.0 + offset).fract())
     }
-    /// How many of moon `index`'s cycles fit in a year.
+    /// How many synodic months of moon `index` fit in a year.
     pub fn months_per_year(&self, index: usize) -> Option<f64> {
-        let period = self.moon_periods.get(index)?;
-        Some(self.year.0 / period.0)
+        let synodic = self.synodic_month(index)?;
+        Some(self.year.0 / synodic.0)
     }
 }

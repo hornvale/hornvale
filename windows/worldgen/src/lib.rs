@@ -100,6 +100,15 @@ impl Sky {
             Sky::Generated(sky) => Some(sky.calendar()),
         }
     }
+
+    /// The generated star system, if this world has one. `None` for the
+    /// tier-0 constant sun. The star-chart command reads this.
+    pub fn system(&self) -> Option<&hornvale_astronomy::StarSystem> {
+        match self {
+            Sky::Constant(_) => None,
+            Sky::Generated(sky) => Some(sky.system()),
+        }
+    }
 }
 
 impl PhenomenaSource for Sky {
@@ -1012,19 +1021,24 @@ pub fn calendar_lines(world: &World) -> Result<Vec<String>, BuildError> {
 
     for (index, moon) in system.moons.iter().enumerate() {
         let ordinal = moon_ordinal(index);
-        let months = calendar
-            .months_per_year(index)
-            .expect("moon index in range");
-        match day_std {
-            Some(day_std) => lines.push(format!(
-                "The {ordinal} moon circles every {:.1} local days — {:.1} months to a year.",
-                moon.period.get() / day_std,
-                months
-            )),
+        // `months_per_year` is `None` only in the degenerate case P_sid ≥ Y,
+        // unreachable at genesis (the Hill cap keeps P_sid ≤ ~0.15×Y) but
+        // handled honestly rather than panicking.
+        match calendar.months_per_year(index) {
+            Some(months) => match day_std {
+                Some(day_std) => lines.push(format!(
+                    "The {ordinal} moon circles every {:.1} local days — {:.1} months to a year.",
+                    moon.period.get() / day_std,
+                    months
+                )),
+                None => lines.push(format!(
+                    "The {ordinal} moon circles every {:.1} standard days — {:.1} months to a year.",
+                    moon.period.get(),
+                    months
+                )),
+            },
             None => lines.push(format!(
-                "The {ordinal} moon circles every {:.1} standard days — {:.1} months to a year.",
-                moon.period.get(),
-                months
+                "The {ordinal} moon circles — no phase cycle, its orbit outpaces the year."
             )),
         }
     }

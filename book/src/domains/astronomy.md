@@ -31,6 +31,13 @@ the seed itself is never a means. The generator's model card (derived vs
 approximated vs drawn) lives in the Campaign 2 spec; chronicles:
 [2a](../chronicle/campaign-2a.md), [2b](../chronicle/campaign-2b.md).
 
+**The star chart.** Every neighbor's position, once drawn, is worth looking
+at rather than only tabulating: `hornvale star-chart` renders the fixed
+sky as a plain-text chart and a full-color planisphere pair, plus a
+phase-cycle strip per moon. [The Night Sky of Seed
+42](../gallery/star-chart-seed-42.md) is the domain's committed gallery
+artifact, regenerated and drift-checked on every build.
+
 ## The model card
 
 Every quantity the generator touches sits in exactly one column — mirrored
@@ -39,10 +46,13 @@ plainly what is physics, what is approximation, and what is dice.
 
 **Derived (real formulas):** stellar luminosity (mass–luminosity, L = M^3.5);
 the habitable zone (0.95√L–1.37√L AU); every orbital period (Kepler III —
-the year from the orbit, each moon's month from its distance); moon angular
-diameters; relative tidal strengths (m/d³, Luna = 1); neighbor apparent
-brightness (inverse square); day/night geometry from rotation, obliquity,
-and season.
+the year from the orbit, each moon's month from its distance); a moon's
+*synodic* month — the illumination cycle an observer actually watches,
+converted from that orbital (sidereal) period against the year length —
+which is what moon phase and the count of months in a year read, never the
+sidereal period itself; moon angular diameters; relative tidal strengths
+(m/d³, Luna = 1); neighbor apparent brightness (inverse square); day/night
+geometry from rotation, obliquity, and season.
 
 **Approximated (declared):** circular orbits; no orbital evolution,
 resonance, or N-body effects; seasonal daylight as a smooth sinusoid in
@@ -52,7 +62,11 @@ derive them).
 
 **Drawn from the seed (or pinned):** star mass; anchor mass and orbital
 distance (within the zone); rotation regime and period; obliquity; moon
-count, masses, and distances; neighborhood size, classes, and distances.
+count, masses, and distances; neighborhood size, classes, distances, and —
+as of the star chart — each neighbor's fixed celestial position (declination
+uniform on the sphere, right ascension uniform around the circle), drawn
+from its own seed stream so every previously generated sky keeps its exact
+class, distance, and brightness while gaining a place to plot.
 
 Promoting a drawn quantity to a derived one is an **epoch bump**, never a
 silent change — saved worlds must keep the skies they were born under.

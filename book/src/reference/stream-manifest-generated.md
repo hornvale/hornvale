@@ -15,6 +15,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/moon-count` | how many moons |
 | `astronomy/moons` | per-moon mass/distance draws (sequential attempts) |
 | `astronomy/neighbors` | notable-neighbor class/distance draws |
+| `astronomy/neighbor-positions` | per-neighbor celestial position draws (declination, right ascension) |
 
 ### hornvale-climate
 

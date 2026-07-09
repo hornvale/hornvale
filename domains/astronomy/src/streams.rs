@@ -22,3 +22,5 @@ pub const NEIGHBORS: &str = "neighbors";
 pub const FORCING: &str = "forcing";
 /// Per-body genesis phase offsets (year, day, and each moon).
 pub const PHASE_OFFSETS: &str = "phase-offsets";
+/// Per-neighbor celestial position draws (declination, right ascension).
+pub const NEIGHBOR_POSITIONS: &str = "neighbor-positions";

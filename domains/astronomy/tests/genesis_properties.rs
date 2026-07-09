@@ -399,3 +399,35 @@ fn a_spinning_worlds_sky_is_whole_from_any_placed_vantage() {
         );
     }
 }
+
+/// The neighbor-class pin must not move any star: positions draw from
+/// their own stream (spec §3), so the pinned and unpinned skies hold the
+/// same position multiset even though one star's class differs.
+#[test]
+fn neighbor_pin_does_not_move_any_star() {
+    let seed = Seed(42);
+    let unpinned = generate(seed, &SkyPins::default()).unwrap();
+    let pinned = generate(
+        seed,
+        &SkyPins {
+            neighbor: Some(NeighborClass::RedGiant),
+            ..SkyPins::default()
+        },
+    )
+    .unwrap();
+    let mut a: Vec<(f64, f64)> = unpinned
+        .system
+        .neighbors
+        .iter()
+        .map(|n| (n.declination, n.right_ascension))
+        .collect();
+    let mut b: Vec<(f64, f64)> = pinned
+        .system
+        .neighbors
+        .iter()
+        .map(|n| (n.declination, n.right_ascension))
+        .collect();
+    a.sort_by(|x, y| x.0.total_cmp(&y.0).then(x.1.total_cmp(&y.1)));
+    b.sort_by(|x, y| x.0.total_cmp(&y.0).then(x.1.total_cmp(&y.1)));
+    assert_eq!(a, b);
+}

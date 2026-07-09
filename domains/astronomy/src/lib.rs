@@ -10,6 +10,7 @@ pub mod moons;
 pub mod neighborhood;
 pub mod pins;
 pub mod provider;
+pub mod render;
 pub mod star;
 pub mod streams;
 pub mod system;
@@ -18,7 +19,7 @@ pub mod units;
 pub use anchor::{Anchor, Rotation, generate_anchor};
 pub use calendar::{Calendar, calendar_of};
 pub use moons::{Moon, generate_moons, hill_radius_mm};
-pub use neighborhood::{Neighbor, class_luminosity, generate_neighbors};
+pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
 pub use pins::{
     ForcingPin, GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, parse_pin, pin_strings,
 };
@@ -58,6 +59,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         ("astronomy/forcing", "deep-time orbital forcing"),
         ("astronomy/phase-offsets", "per-body genesis phase offsets"),
+        (
+            "astronomy/neighbor-positions",
+            "per-neighbor celestial position draws (declination, right ascension)",
+        ),
     ]
 }
 

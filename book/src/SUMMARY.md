@@ -46,12 +46,14 @@
 - [Campaign 16: The Tongues](./chronicle/16-the-tongues.md)
 - [Campaign 17: Audible Phonology](./chronicle/17-audible-phonology.md)
 - [Campaign 18: The Meeting](./chronicle/18-the-meeting.md)
+- [Campaign 19: The Star Chart](./chronicle/19-the-star-chart.md)
 
 # The Gallery
 
 - [First Light (seed 42)](./gallery/first-light.md)
 - [The Almanac of Seed 42](./gallery/almanac.md)
 - [The Sky of Seed 42](./gallery/the-sky.md)
+- [The Night Sky of Seed 42](./gallery/star-chart-seed-42.md)
 - [The Land of Seed 42](./gallery/elevation-seed-42.md)
 - [The Biomes of Seed 42](./gallery/biome-seed-42.md)
 - [The Biomes of Seed 42 (tidally locked)](./gallery/biome-seed-42-locked.md)

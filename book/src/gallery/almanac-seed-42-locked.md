@@ -23,8 +23,8 @@ By night: a smoldering red star that does not wander; a warm yellow star that do
 ## The Calendar
 
 - This world is tidally locked: no local day exists; the year is 368.1 standard days.
-- The first moon circles every 16.0 standard days — 23.0 months to a year.
-- The second moon circles every 32.6 standard days — 11.3 months to a year.
+- The first moon circles every 16.0 standard days — 22.0 months to a year.
+- The second moon circles every 32.6 standard days — 10.3 months to a year.
 
 ## The Land
 
