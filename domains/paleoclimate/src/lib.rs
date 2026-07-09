@@ -6,7 +6,9 @@
 #![warn(missing_docs)]
 
 pub mod forcing_index;
+pub mod ice;
 pub mod units;
 
 pub use forcing_index::caloric_summer_index;
+pub use ice::{IceState, integrate_ice};
 pub use units::{IceVolume, SeaLevelChange, UnitError};
