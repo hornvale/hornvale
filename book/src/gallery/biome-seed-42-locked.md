@@ -30,7 +30,7 @@ Some 8% of the surface is habitable — land with water and a tolerable season.
 *********************tttttttfffffffffffffffffffffff*********************
 ```
 
-Full-color render: [`biome-seed-42-locked.ppm`](./biome-seed-42-locked.ppm)
+![Full-color render](./biome-seed-42-locked.png)
 
 ---
 
