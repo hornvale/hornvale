@@ -48,10 +48,16 @@ export function parseScene(text: string): TilesScene {
   } catch (e) {
     fail(`not JSON: ${e}`);
   }
+  if (typeof doc !== "object" || doc === null || Array.isArray(doc)) {
+    fail("document must be a JSON object");
+  }
   if (doc.schema !== SCHEMA) fail(`schema must be ${SCHEMA}, got ${String(doc.schema)}`);
   const width = doc.width;
   const height = doc.height;
-  if (typeof width !== "number" || typeof height !== "number" || height * 2 !== width) {
+  if (
+    typeof width !== "number" || typeof height !== "number" || height * 2 !== width ||
+    !Number.isInteger(width) || width <= 0 || !Number.isInteger(height) || height <= 0
+  ) {
     fail(`height must be width / 2, got ${String(width)}×${String(height)}`);
   }
   if (typeof doc.seed !== "number") fail("seed must be a number");

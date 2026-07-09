@@ -56,6 +56,19 @@ Deno.test("malformed feature is rejected", () => {
   assertThrows(() => parseScene(JSON.stringify(doc)), SceneFormatError, "feature");
 });
 
+Deno.test("non-object documents are rejected as scene errors", () => {
+  for (const text of ["null", "42", "[]", '"scene"']) {
+    assertThrows(() => parseScene(text), SceneFormatError, "object");
+  }
+});
+
+Deno.test("fractional dimensions are rejected", () => {
+  const doc = validScene();
+  doc.width = 16.5;
+  doc.height = 8.25;
+  assertThrows(() => parseScene(JSON.stringify(doc)), SceneFormatError);
+});
+
 Deno.test("the committed gallery scene parses", async () => {
   const text = await Deno.readTextFile(
     new URL("../../../book/src/gallery/scene-tiles-seed-42.json", import.meta.url),
