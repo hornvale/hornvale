@@ -266,3 +266,136 @@ fn forcing_zero_pin_yields_zeroed_amplitudes() {
         assert_eq!(forcing.ecc_amp, 0.0, "seed {seed}: ecc_amp not zeroed");
     }
 }
+
+#[test]
+fn equatorial_daylight_is_flat_and_every_latitude_stays_in_range() {
+    use hornvale_astronomy::{StdDays, calendar_of};
+    for seed in 0..64u64 {
+        let system = generate(
+            Seed(seed),
+            &SkyPins {
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap()
+        .system;
+        let cal = calendar_of(&system);
+        let year = system.anchor.year.get();
+        for k in 0..8 {
+            let t = StdDays::new(k as f64 * year / 8.0).unwrap();
+            let equator = cal.daylight_fraction_at(t, 0.0).unwrap();
+            assert!(
+                (equator - 0.5).abs() < 1e-9,
+                "seed {seed}: equator not flat: {equator}"
+            );
+            for lat in [-80.0, -30.0, 30.0, 80.0] {
+                let f = cal.daylight_fraction_at(t, lat).unwrap();
+                assert!(
+                    (0.0..=1.0).contains(&f),
+                    "seed {seed}: daylight {f} out of range at lat {lat}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn a_locked_worlds_hemispheres_cull_the_sky() {
+    use hornvale_astronomy::{GeneratedSky, NIGHT_STAR};
+    use hornvale_kernel::{EntityId, GeoCoord, ObserverContext, PhenomenaSource, Venue, WorldTime};
+    for seed in 0..32u64 {
+        let outcome = generate(
+            Seed(seed),
+            &SkyPins {
+                rotation: Some(RotationPin::Locked),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap();
+        let sky = GeneratedSky::new(outcome);
+        let day = ObserverContext::at_position(
+            EntityId(1),
+            WorldTime { day: 0.0 },
+            GeoCoord {
+                latitude: 5.0,
+                longitude: 0.0,
+            },
+        );
+        let night = ObserverContext::at_position(
+            EntityId(1),
+            WorldTime { day: 0.0 },
+            GeoCoord {
+                latitude: 5.0,
+                longitude: 179.0,
+            },
+        );
+        let day_ph = sky.phenomena(&day);
+        let night_ph = sky.phenomena(&night);
+        assert!(
+            day_ph.iter().any(|p| p.venue == Venue::DaySky),
+            "seed {seed}: day side sees no sun"
+        );
+        assert!(
+            !day_ph.iter().any(|p| p.kind == NIGHT_STAR),
+            "seed {seed}: day side sees stars"
+        );
+        assert!(
+            !night_ph.iter().any(|p| p.venue == Venue::DaySky),
+            "seed {seed}: night side sees the sun"
+        );
+        assert!(
+            night_ph.iter().any(|p| p.kind == NIGHT_STAR),
+            "seed {seed}: night side sees no stars"
+        );
+    }
+}
+
+#[test]
+fn a_spinning_worlds_sky_is_whole_from_any_placed_vantage() {
+    use hornvale_astronomy::{GeneratedSky, NIGHT_STAR};
+    use hornvale_kernel::{EntityId, GeoCoord, ObserverContext, PhenomenaSource, Venue, WorldTime};
+    for seed in 0..32u64 {
+        // A handful of seeds draw an anchor whose Hill radius is too small
+        // to admit two stable, spaced moons within the attempt budget —
+        // a genuine physical unsatisfiability (see
+        // `unsatisfiable_pins_fail_loudly_with_the_physical_reason`), not a
+        // defect in the placed-observer culling under test here. Skip those
+        // seeds rather than asserting on a system that never came to exist.
+        let outcome = match generate(
+            Seed(seed),
+            &SkyPins {
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                moons: Some(MoonsPin::exact(2).unwrap()),
+                ..SkyPins::default()
+            },
+        ) {
+            Ok(outcome) => outcome,
+            Err(GenesisError::UnsatisfiablePin { pin, .. }) if pin == "moons" => continue,
+            Err(e) => panic!("seed {seed}: unexpected genesis failure: {e}"),
+        };
+        let sky = GeneratedSky::new(outcome);
+        let obs = ObserverContext::at_position(
+            EntityId(1),
+            WorldTime { day: 3.5 },
+            GeoCoord {
+                latitude: 55.0,
+                longitude: -120.0,
+            },
+        );
+        let ph = sky.phenomena(&obs);
+        assert!(
+            ph.iter().any(|p| p.venue == Venue::DaySky),
+            "seed {seed}: no sun"
+        );
+        assert!(
+            ph.iter().any(|p| p.kind == NIGHT_STAR),
+            "seed {seed}: no stars (should be whole sky)"
+        );
+        assert_eq!(
+            ph.iter().filter(|p| p.description.contains("moon")).count(),
+            2,
+            "seed {seed}: both moons should be visible on a spinning world"
+        );
+    }
+}
