@@ -1,8 +1,8 @@
 //! The phoneme model: `Segment` is an articulatory feature-bundle — the
 //! truth from which every surface form derives. `romanize` (ASCII-ish, for
-//! the almanac) and `ipa` (for the book) are VIEWS over a segment; neither
-//! is ever stored. `sonority` gives the 0–5 rank a later task's loudness
-//! bias and phonotactics depend on.
+//! the almanac), `ipa` (for the book), and `espeak` (espeak-ng mnemonics, for
+//! authored audio) are VIEWS over a segment; neither is ever stored. `sonority`
+//! gives the 0–5 rank a later task's loudness bias and phonotactics depend on.
 //!
 //! The curated inventory below is deliberately practical, not exhaustive of
 //! human phonology: stops p/b t/d k/g q, fricatives f/v x, sibilants
@@ -564,6 +564,48 @@ pub fn ipa(seg: &Segment) -> &'static str {
     }
 }
 
+/// Render a segment as its espeak-ng phoneme mnemonic (Kirshenbaum-style
+/// ASCII), the notation `hornvale voice` feeds espeak-ng's direct phoneme
+/// input to author the book's audio clips.
+///
+/// Verified against espeak-ng 1.52.0, voice `en`. Five segments differ
+/// from their IPA glyph: `ʃ`/`ʒ` → `S`/`Z`, `ŋ` → `N`, and two documented
+/// approximations in the spirit of the romanization digraphs — the click
+/// (voice `en` silently drops Kirshenbaum's `!`) renders as `tS`, and the
+/// ejective as plain `k` (`'` is espeak's stress marker, so `k'` cannot be
+/// written). Every other mnemonic coincides with the IPA glyph, so those
+/// arms delegate to [`ipa`]; the ASCII-guard test keeps that coupling safe.
+pub fn espeak(seg: &Segment) -> &'static str {
+    match seg {
+        Segment::Consonant {
+            place: Place::Postalveolar,
+            manner: Manner::Sibilant,
+            voiced: false,
+        } => "S",
+        Segment::Consonant {
+            place: Place::Postalveolar,
+            manner: Manner::Sibilant,
+            voiced: true,
+        } => "Z",
+        Segment::Consonant {
+            place: Place::Velar,
+            manner: Manner::Nasal,
+            voiced: true,
+        } => "N",
+        Segment::Consonant {
+            place: Place::Glottal,
+            manner: Manner::Click,
+            voiced: false,
+        } => "tS",
+        Segment::Consonant {
+            place: Place::Velar,
+            manner: Manner::Ejective,
+            voiced: false,
+        } => "k",
+        other => ipa(other),
+    }
+}
+
 /// The sonority rank of a segment, 0 (least sonorous) to 5 (most): the
 /// scale a later task's loudness bias and phonotactics depend on. Ranked by
 /// manner alone — place and voicing do not affect sonority.
@@ -661,5 +703,49 @@ mod tests {
             sonority(&trill) > sonority(&sib),
             "the loudness bias depends on this ordering"
         );
+    }
+
+    #[test]
+    fn espeak_is_a_third_distinct_view() {
+        let sh = Segment::Consonant {
+            place: Place::Postalveolar,
+            manner: Manner::Sibilant,
+            voiced: false,
+        };
+        assert_eq!(espeak(&sh), "S");
+        let ng = Segment::Consonant {
+            place: Place::Velar,
+            manner: Manner::Nasal,
+            voiced: true,
+        };
+        assert_eq!(espeak(&ng), "N");
+        let click = Segment::Consonant {
+            place: Place::Glottal,
+            manner: Manner::Click,
+            voiced: false,
+        };
+        assert_eq!(espeak(&click), "tS");
+        let ejective = Segment::Consonant {
+            place: Place::Velar,
+            manner: Manner::Ejective,
+            voiced: false,
+        };
+        assert_eq!(espeak(&ejective), "k");
+    }
+
+    /// espeak-ng direct phoneme input only accepts its ASCII mnemonics, and
+    /// `'` is its stress marker. Guard every canonical segment's mnemonic —
+    /// this is what makes the delegation to `ipa()` for the shared arms safe:
+    /// if an IPA glyph ever drifts non-ASCII, this fails instead of espeak
+    /// silently dropping the phoneme.
+    #[test]
+    fn every_canonical_espeak_mnemonic_is_bare_ascii_alphanumeric() {
+        for seg in canonical_segments() {
+            let m = espeak(&seg);
+            assert!(
+                !m.is_empty() && m.chars().all(|c| c.is_ascii_alphanumeric()),
+                "{seg:?} has espeak mnemonic {m:?}"
+            );
+        }
     }
 }
