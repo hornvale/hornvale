@@ -5,6 +5,10 @@
 //! composition root populates and never imports another domain.
 #![warn(missing_docs)]
 
+/// The etymology engine: proto-roots drawn from a phonology, and a drawn
+/// cascade of sound-change rules (`evolve`, pure and total, Neogrammarian)
+/// that turns a proto-root into its modern form.
+pub mod etymology;
 /// The naming grammars: stems and kind-keyed morphology, a single
 /// deterministic draw per `(seed, species, kind, salt)` (no re-draw), built
 /// from a drawn phonology.
@@ -22,6 +26,9 @@ pub mod phonology;
 /// seam.
 pub mod register;
 
+pub use etymology::{
+    AppliedRule, Cascade, Derivation, RuleKind, SoundRule, draw_cascade, evolve, proto_root,
+};
 pub use naming::{GeneratedName, MorphOptions, NameKind, Namer};
 pub use packs::{
     PackDepths, PackEntry, body_pack, color_pack, compound_recipe, in_ladder, kin_pack,
@@ -64,6 +71,14 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "language/<species>/name/epithet",
             "per-deity epithet (salted by belief id): a descriptive root, optionally reduplicated and honorific-prefixed",
+        ),
+        (
+            "language/<species>/lexicon/root/<concept>",
+            "per-concept proto-root (1-2 syllables, from the phonotactic templates)",
+        ),
+        (
+            "language/<species>/lexicon/cascade",
+            "the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root",
         ),
     ]
 }

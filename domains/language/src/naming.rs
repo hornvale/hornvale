@@ -89,9 +89,11 @@ const REDUPLICATION_CHANCE: f64 = 0.5;
 
 /// One syllable: segments already picked from the phonology's inventory,
 /// grouped by onset/nucleus/coda position so morphology (reduplication,
-/// prefixing) can operate on whole syllables.
+/// prefixing) can operate on whole syllables. `pub(crate)` so etymology's
+/// `proto_root` can hold the value returned by [`Namer::draw_syllables`] and
+/// pass it straight to [`views_of`] without this module exposing its fields.
 #[derive(Clone, Debug)]
-struct Syllable {
+pub(crate) struct Syllable {
     onset: Vec<Segment>,
     nucleus: Vec<Segment>,
     coda: Vec<Segment>,
@@ -167,7 +169,7 @@ impl<'a> Namer<'a> {
                 syllables
             }
         };
-        Self::render(&syllables)
+        views_of(&syllables).1
     }
 
     /// Double a randomly chosen syllable of `syllables` in place, with
@@ -186,7 +188,10 @@ impl<'a> Namer<'a> {
     /// Draw `range_u32(min, max)` syllables in sequence from `stream`.
     /// `weighty` biases each syllable's coda toward a closed (non-empty)
     /// template when one is available (see [`Namer::choose_coda_template`]).
-    fn draw_syllables(
+    /// `pub(crate)` so etymology's `proto_root` draws proto-roots from the
+    /// same stem machinery names use, over its own seed-derivation path,
+    /// rather than duplicating the phonotactic-filling logic.
+    pub(crate) fn draw_syllables(
         &self,
         stream: &mut Stream,
         min: u32,
@@ -277,27 +282,34 @@ impl<'a> Namer<'a> {
             .collect();
         stream.pick(&candidates).copied()
     }
+}
 
-    /// Render a sequence of syllables to all three surface views,
-    /// capitalizing the romanization's first letter (the IPA and espeak
-    /// views keep no case convention).
-    fn render(syllables: &[Syllable]) -> GeneratedName {
-        let mut roman = String::new();
-        let mut ipa_str = String::new();
-        let mut segments: Vec<Segment> = Vec::new();
-        for syllable in syllables {
-            for seg in syllable.segments() {
-                roman.push_str(romanize(seg));
-                ipa_str.push_str(ipa(seg));
-                segments.push(*seg);
-            }
-        }
-        GeneratedName {
-            roman: capitalize_first(&roman),
-            ipa: ipa_str,
-            espeak: espeak_word(&segments),
+/// Flatten `syllables` (onset → nucleus → coda, in sequence) into their
+/// ordered segments and render all three surface views in the same pass:
+/// the single segment→views reduction, so no caller re-derives
+/// romanization/IPA/espeak logic from a segment sequence. `Namer::build_name`
+/// uses the `GeneratedName` half; etymology's `proto_root` (over syllables
+/// drawn from [`Namer::draw_syllables`]) uses the flat `Vec<Segment>` half
+/// as its proto-root, reusing this module's stem machinery without
+/// duplicating the onset/nucleus/coda flattening or the romanization match
+/// arms. `pub(crate)` for that cross-module reuse.
+pub(crate) fn views_of(syllables: &[Syllable]) -> (Vec<Segment>, GeneratedName) {
+    let mut roman = String::new();
+    let mut ipa_str = String::new();
+    let mut segments: Vec<Segment> = Vec::new();
+    for syllable in syllables {
+        for seg in syllable.segments() {
+            roman.push_str(romanize(seg));
+            ipa_str.push_str(ipa(seg));
+            segments.push(*seg);
         }
     }
+    let name = GeneratedName {
+        roman: capitalize_first(&roman),
+        ipa: ipa_str,
+        espeak: espeak_word(&segments),
+    };
+    (segments, name)
 }
 
 /// Capitalize the first character of `s`, leaving the rest untouched.
