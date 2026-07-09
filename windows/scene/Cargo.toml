@@ -7,6 +7,7 @@ description = "Hornvale scene window: deterministic semantic-only scene JSON ove
 
 [dependencies]
 hornvale-kernel = { path = "../../kernel" }
+hornvale-astronomy = { path = "../../domains/astronomy" }
 hornvale-worldgen = { path = "../worldgen" }
 hornvale-terrain = { path = "../../domains/terrain" }
 hornvale-climate = { path = "../../domains/climate" }

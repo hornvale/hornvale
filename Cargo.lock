@@ -108,6 +108,7 @@ dependencies = [
 name = "hornvale-scene"
 version = "0.1.0"
 dependencies = [
+ "hornvale-astronomy",
  "hornvale-climate",
  "hornvale-kernel",
  "hornvale-settlement",

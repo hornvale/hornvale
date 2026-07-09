@@ -4,7 +4,8 @@
 //! features — never how to draw it. Schemas are save-format-class
 //! contracts: additive changes stay in-version, changed meaning mints a
 //! new version alongside. This crate holds the cartographic pole:
-//! `scene/tiles/v1`, the equirectangular tile lattice.
+//! `scene/tiles/v1`, the equirectangular tile lattice; and the orrery pole:
+//! `scene/system/v1`, the star system's orbital elements.
 
 #![warn(missing_docs)]
 
@@ -215,6 +216,119 @@ pub fn scene_json(scene: &TilesScene) -> String {
     serde_json::to_string(scene).expect("a TilesScene always serializes")
 }
 
+/// The schema identifier for the system (orrery) scene kind.
+pub const SYSTEM_SCHEMA: &str = "scene/system/v1";
+
+/// The central star's semantic elements.
+#[derive(Debug, Serialize)]
+pub struct StarElem {
+    /// Descriptive spectral class name (e.g. `"yellow dwarf (G)"`).
+    pub class_name: String,
+    /// Luminosity in solar luminosities.
+    pub luminosity_rel: f64,
+    /// Habitable-zone inner edge, AU.
+    pub hz_inner_au: f64,
+    /// Habitable-zone outer edge, AU.
+    pub hz_outer_au: f64,
+}
+
+/// The anchor world's orbital and rotational elements.
+#[derive(Debug, Serialize)]
+pub struct WorldElem {
+    /// Orbital radius, AU.
+    pub orbit_au: f64,
+    /// Year length, standard days.
+    pub year_days: f64,
+    /// Solar-day length, standard days; `None` when tidally locked (no spin).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub day_length_days: Option<f64>,
+    /// Mean axial obliquity, degrees.
+    pub obliquity_deg: f64,
+    /// Genesis orbital phase offset (turns) so day 0 is an ordinary day.
+    pub year_phase_offset: f64,
+}
+
+/// One moon's orbital elements.
+#[derive(Debug, Serialize)]
+pub struct MoonElem {
+    /// Sidereal orbital period, standard days.
+    pub sidereal_days: f64,
+    /// Genesis synodic-phase offset (turns).
+    pub phase_offset: f64,
+    /// Orbital distance from the world, megameters.
+    pub distance_mm: f64,
+    /// Angular-diameter ratio (the size-word input).
+    pub size_rel: f64,
+}
+
+/// One `scene/system/v1` document: the system's orbital geometry as elements.
+#[derive(Debug, Serialize)]
+pub struct SystemScene {
+    /// Always `scene/system/v1`.
+    pub schema: String,
+    /// The world's seed.
+    pub seed: u64,
+    /// The central star.
+    pub star: StarElem,
+    /// The anchor world.
+    pub world: WorldElem,
+    /// The moons, generation order.
+    pub moons: Vec<MoonElem>,
+}
+
+/// Build the `scene/system/v1` scene for `world`. Errors when the world has no
+/// generated sky (the tier-0 constant sun has no orrery to draw).
+pub fn system_scene(world: &World) -> Result<SystemScene, SceneError> {
+    let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
+    let system = sky
+        .system()
+        .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
+    let anchor = &system.anchor;
+    let day_length_days = match &anchor.rotation {
+        hornvale_astronomy::Rotation::Spinning { day } => Some(day.get()),
+        hornvale_astronomy::Rotation::Locked => None,
+    };
+    let moons = system
+        .moons
+        .iter()
+        .enumerate()
+        .map(|(i, m)| MoonElem {
+            sidereal_days: m.period.get(),
+            phase_offset: system
+                .forcing
+                .moon_phase_offsets
+                .get(i)
+                .copied()
+                .unwrap_or(0.0),
+            distance_mm: m.distance.get(),
+            size_rel: m.angular_diameter_rel,
+        })
+        .collect();
+    Ok(SystemScene {
+        schema: SYSTEM_SCHEMA.to_string(),
+        seed: world.seed.0,
+        star: StarElem {
+            class_name: system.star.class_name.clone(),
+            luminosity_rel: system.star.luminosity.get(),
+            hz_inner_au: system.star.habitable_zone.inner().get(),
+            hz_outer_au: system.star.habitable_zone.outer().get(),
+        },
+        world: WorldElem {
+            orbit_au: anchor.orbit.get(),
+            year_days: anchor.year.get(),
+            day_length_days,
+            obliquity_deg: system.forcing.obliquity_mean,
+            year_phase_offset: system.forcing.year_phase_offset,
+        },
+        moons,
+    })
+}
+
+/// Serialize a `SystemScene` to compact JSON (mirrors [`scene_json`]).
+pub fn system_json(scene: &SystemScene) -> String {
+    serde_json::to_string(scene).expect("a SystemScene always serializes")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -295,5 +409,50 @@ mod tests {
                 "flagship duplicated as a settlement"
             );
         }
+    }
+
+    #[test]
+    fn system_scene_has_the_schema_moons_and_is_deterministic() {
+        use hornvale_kernel::Seed;
+        use hornvale_worldgen::{SkyChoice, build_world};
+        // `gen` is a reserved keyword under this workspace's 2024 edition
+        // (the brief's original name); `gen_world` sidesteps it.
+        let gen_world = || {
+            build_world(
+                Seed(42),
+                &Default::default(),
+                SkyChoice::Generated,
+                &Default::default(),
+                &Default::default(),
+            )
+            .expect("seed 42 builds")
+        };
+        let scene = system_scene(&gen_world()).expect("generated world has a system");
+        assert_eq!(scene.schema, "scene/system/v1");
+        assert_eq!(scene.seed, 42);
+        assert_eq!(scene.moons.len(), 2, "seed 42 has two moons");
+        assert!(scene.world.year_days > 0.0);
+        assert!(scene.world.day_length_days.is_some(), "seed 42 spins");
+        assert!(scene.star.hz_inner_au < scene.star.hz_outer_au);
+        // Byte-identical when serialized: determinism.
+        assert_eq!(
+            system_json(&scene),
+            system_json(&system_scene(&gen_world()).unwrap())
+        );
+    }
+
+    #[test]
+    fn system_scene_errors_on_a_constant_sun() {
+        use hornvale_kernel::Seed;
+        use hornvale_worldgen::{SkyChoice, build_world};
+        let world = build_world(
+            Seed(42),
+            &Default::default(),
+            SkyChoice::Constant,
+            &Default::default(),
+            &Default::default(),
+        )
+        .unwrap();
+        assert!(system_scene(&world).is_err(), "constant sun has no system");
     }
 }
