@@ -423,4 +423,162 @@ mod tests {
         assert_eq!(a, b);
         assert!(!a.is_empty());
     }
+
+    // ---- Per-rule transformation tests: each constructs a single-rule
+    // cascade directly (no drawing), feeds a hand-built proto whose
+    // segments are all in `test_phonology()`'s inventory, and asserts the
+    // exact expected modern sequence.
+
+    use crate::phoneme::{Backness, Place};
+
+    /// A consonant literal, for hand-built protos.
+    fn c(place: Place, manner: Manner, voiced: bool) -> Segment {
+        Segment::Consonant {
+            place,
+            manner,
+            voiced,
+        }
+    }
+
+    /// A vowel literal, for hand-built protos.
+    fn v(height: Height, backness: Backness, rounded: bool) -> Segment {
+        Segment::Vowel {
+            height,
+            backness,
+            rounded,
+        }
+    }
+
+    /// A one-rule cascade, for targeting a single rule's semantics.
+    fn one_rule(kind: RuleKind, param: u32) -> Cascade {
+        Cascade {
+            rules: vec![SoundRule { kind, param }],
+        }
+    }
+
+    #[test]
+    fn fortition_turns_fricatives_into_stops_at_same_place_and_voicing() {
+        let ph = test_phonology();
+        // f-a-v: both fricatives (one voiceless, one voiced) must harden.
+        let proto = vec![
+            c(Place::Labial, Manner::Fricative, false), // f
+            v(Height::Low, Backness::Central, false),   // a
+            c(Place::Labial, Manner::Fricative, true),  // v
+        ];
+        let d = evolve(&proto, &one_rule(RuleKind::Fortition, 0), &ph);
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Labial, Manner::Stop, false), // p: same place, still voiceless
+                v(Height::Low, Backness::Central, false), // a: untouched
+                c(Place::Labial, Manner::Stop, true),  // b: same place, still voiced
+            ]
+        );
+        assert!(d.steps[0].changed);
+    }
+
+    #[test]
+    fn vowel_shift_param_0_raises_one_step_and_high_stays_high() {
+        let ph = test_phonology();
+        // t-e-t-i: e (Mid) raises to i (High); i is already High — identity.
+        let proto = vec![
+            c(Place::Alveolar, Manner::Stop, false), // t
+            v(Height::Mid, Backness::Front, false),  // e
+            c(Place::Alveolar, Manner::Stop, false), // t
+            v(Height::High, Backness::Front, false), // i
+        ];
+        let d = evolve(&proto, &one_rule(RuleKind::VowelShift, 0), &ph);
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Alveolar, Manner::Stop, false), // t: consonants untouched
+                v(Height::High, Backness::Front, false), // i: raised from e
+                c(Place::Alveolar, Manner::Stop, false), // t
+                v(Height::High, Backness::Front, false), // i: High stays High
+            ]
+        );
+        assert!(d.steps[0].changed);
+    }
+
+    #[test]
+    fn vowel_shift_param_1_lowers_one_step() {
+        let ph = test_phonology();
+        // k-i-k-u: i (High Front) lowers to e (Mid Front); u (High Back
+        // rounded) lowers to o (Mid Back rounded).
+        let proto = vec![
+            c(Place::Velar, Manner::Stop, false),    // k
+            v(Height::High, Backness::Front, false), // i
+            c(Place::Velar, Manner::Stop, false),    // k
+            v(Height::High, Backness::Back, true),   // u
+        ];
+        let d = evolve(&proto, &one_rule(RuleKind::VowelShift, 1), &ph);
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Velar, Manner::Stop, false),   // k
+                v(Height::Mid, Backness::Front, false), // e: lowered from i
+                c(Place::Velar, Manner::Stop, false),   // k
+                v(Height::Mid, Backness::Back, true),   // o: lowered from u
+            ]
+        );
+        assert!(d.steps[0].changed);
+    }
+
+    #[test]
+    fn cluster_simplify_drops_the_first_of_a_word_initial_two_consonant_onset() {
+        let ph = test_phonology();
+        // f-t-a: two-consonant word-initial onset drops its first segment.
+        let proto = vec![
+            c(Place::Labial, Manner::Fricative, false), // f
+            c(Place::Alveolar, Manner::Stop, false),    // t
+            v(Height::Low, Backness::Central, false),   // a
+        ];
+        let d = evolve(&proto, &one_rule(RuleKind::ClusterSimplify, 0), &ph);
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Alveolar, Manner::Stop, false), // t: now word-initial
+                v(Height::Low, Backness::Central, false), // a
+            ]
+        );
+        assert!(d.steps[0].changed);
+
+        // t-a: a single-consonant onset is untouched.
+        let simple = vec![
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+        let d = evolve(&simple, &one_rule(RuleKind::ClusterSimplify, 0), &ph);
+        assert_eq!(d.modern, simple);
+        assert!(!d.steps[0].changed);
+    }
+
+    #[test]
+    fn final_loss_drops_a_word_final_consonant_but_not_a_final_vowel() {
+        let ph = test_phonology();
+        // t-a-k: the word-final coda consonant drops.
+        let proto = vec![
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+            c(Place::Velar, Manner::Stop, false),     // k
+        ];
+        let d = evolve(&proto, &one_rule(RuleKind::FinalLoss, 0), &ph);
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Alveolar, Manner::Stop, false),  // t
+                v(Height::Low, Backness::Central, false), // a: now word-final
+            ]
+        );
+        assert!(d.steps[0].changed);
+
+        // t-a: a word-final vowel (an open syllable) is untouched.
+        let open = vec![
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+        let d = evolve(&open, &one_rule(RuleKind::FinalLoss, 0), &ph);
+        assert_eq!(d.modern, open);
+        assert!(!d.steps[0].changed);
+    }
 }
