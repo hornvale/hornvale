@@ -92,10 +92,11 @@ The inventory tables are unchanged (no per-segment audio in this campaign
 A new CLI subcommand:
 
 ```
-hornvale voice --world world.json [--out book/src/audio]
+hornvale voice [--out book/src/audio]
 ```
 
-walks the same species × sample-name set the phonology page renders, and
+walks the same species × sample-name set the phonology page renders (the
+page draws from a fixed reference seed, so no world file is involved), and
 for each formulation whose `<crc32>.mp3` is missing from the output
 directory:
 
