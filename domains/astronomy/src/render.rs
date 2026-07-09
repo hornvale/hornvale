@@ -282,40 +282,123 @@ pub const ORRERY_WIDTH: usize = 61;
 /// x-axis is scaled ×2 for round orbits).
 pub const ORRERY_HEIGHT: usize = 31;
 
-/// A synodic-phase glyph: `○` new, `◐` waxing, `●` full, `◑` waning — the
-/// provider's phase-word thresholds, as single-width Unicode circles.
-fn phase_glyph(phase: f64) -> char {
+/// Which glyphs the orrery draws with. `Unicode` is single-width (the default);
+/// `Emoji` renders every cell as two display columns so emoji align.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GlyphSet {
+    /// Single-width Unicode symbols (`★ ● · ○◐●◑`).
+    Unicode,
+    /// Two-column emoji (`🌞 🌍 🌑🌓🌕🌗`); each cell is two display columns.
+    Emoji,
+}
+
+/// A moon's illumination phase, bucketed to one of four glyphs.
+#[derive(Clone, Copy)]
+enum Phase {
+    /// Near new (dark).
+    New,
+    /// Waxing.
+    Waxing,
+    /// Near full.
+    Full,
+    /// Waning.
+    Waning,
+}
+
+/// Bucket a synodic phase in `[0,1)` — the provider's phase-word thresholds.
+fn phase_bucket(phase: f64) -> Phase {
     if !(0.125..0.875).contains(&phase) {
-        '○'
+        Phase::New
     } else if phase < 0.5 {
-        '◐'
+        Phase::Waxing
     } else if phase < 0.625 {
-        '●'
+        Phase::Full
     } else {
-        '◑'
+        Phase::Waning
     }
+}
+
+/// One orrery cell's semantic content; a `GlyphSet` renders it to a string.
+#[derive(Clone, Copy)]
+enum Cell {
+    /// Nothing here.
+    Empty,
+    /// A habitable-zone ring dot.
+    Ring,
+    /// The central star.
+    Star,
+    /// The world.
+    World,
+    /// A moon at the given phase.
+    Moon(Phase),
+}
+
+impl GlyphSet {
+    /// Display columns per cell: 1 for `Unicode`, 2 for `Emoji`.
+    fn cell_cols(self) -> usize {
+        match self {
+            GlyphSet::Unicode => 1,
+            GlyphSet::Emoji => 2,
+        }
+    }
+
+    /// This glyph set's display string for a cell. Every `Emoji` string is two
+    /// columns wide by design (an emoji, `·`+space, or two spaces); every
+    /// `Unicode` string is one.
+    fn glyph(self, cell: Cell) -> &'static str {
+        match (self, cell) {
+            (GlyphSet::Unicode, Cell::Empty) => " ",
+            (GlyphSet::Unicode, Cell::Ring) => "·",
+            (GlyphSet::Unicode, Cell::Star) => "★",
+            (GlyphSet::Unicode, Cell::World) => "●",
+            (GlyphSet::Unicode, Cell::Moon(Phase::New)) => "○",
+            (GlyphSet::Unicode, Cell::Moon(Phase::Waxing)) => "◐",
+            (GlyphSet::Unicode, Cell::Moon(Phase::Full)) => "●",
+            (GlyphSet::Unicode, Cell::Moon(Phase::Waning)) => "◑",
+            (GlyphSet::Emoji, Cell::Empty) => "  ",
+            (GlyphSet::Emoji, Cell::Ring) => "· ",
+            (GlyphSet::Emoji, Cell::Star) => "🌞",
+            (GlyphSet::Emoji, Cell::World) => "🌍",
+            (GlyphSet::Emoji, Cell::Moon(Phase::New)) => "🌑",
+            (GlyphSet::Emoji, Cell::Moon(Phase::Waxing)) => "🌓",
+            (GlyphSet::Emoji, Cell::Moon(Phase::Full)) => "🌕",
+            (GlyphSet::Emoji, Cell::Moon(Phase::Waning)) => "🌗",
+        }
+    }
+}
+
+/// The display width (columns) of one orrery row in this glyph set:
+/// `ORRERY_WIDTH` for `Unicode`, twice that for `Emoji`.
+pub fn orrery_cols(glyphs: GlyphSet) -> usize {
+    ORRERY_WIDTH * glyphs.cell_cols()
 }
 
 /// A top-down ANSI orbital schematic of the system at absolute time `t`
 /// (standard days): the star at center (class-colored), the habitable zone as
 /// a dotted ring, the world on its orbit at the year's phase, and each moon in
-/// a tight ring around the world showing its synodic phase. Deterministic in
-/// `(system, t)`. A schematic, not to scale beyond the orbit-to-grid fit.
-pub fn orrery_ansi(system: &StarSystem, calendar: &Calendar, t: StdDays) -> String {
+/// a tight ring around the world showing its synodic phase. Drawn with the
+/// given `glyphs`. Deterministic in `(system, t, glyphs)`. A schematic, not to
+/// scale beyond the orbit-to-grid fit.
+pub fn orrery_ansi(
+    system: &StarSystem,
+    calendar: &Calendar,
+    t: StdDays,
+    glyphs: GlyphSet,
+) -> String {
     let (w, h) = (ORRERY_WIDTH, ORRERY_HEIGHT);
     let (cx, cy) = (w as f64 / 2.0, h as f64 / 2.0);
     let aspect = 2.0; // char cells ~2:1 tall
-    let mut grid: Vec<Vec<(char, &'static str)>> = vec![vec![(' ', ""); w]; h];
+    let mut grid: Vec<Vec<(Cell, &'static str)>> = vec![vec![(Cell::Empty, ""); w]; h];
 
-    let plot = |grid: &mut Vec<Vec<(char, &'static str)>>,
+    let plot = |grid: &mut Vec<Vec<(Cell, &'static str)>>,
                 r: f64,
                 theta: f64,
-                ch: char,
+                cell: Cell,
                 color: &'static str| {
         let x = (cx + aspect * r * theta.cos()).round() as isize;
         let y = (cy + r * theta.sin()).round() as isize;
         if x >= 0 && (x as usize) < w && y >= 0 && (y as usize) < h {
-            grid[y as usize][x as usize] = (ch, color);
+            grid[y as usize][x as usize] = (cell, color);
         }
     };
 
@@ -328,37 +411,56 @@ pub fn orrery_ansi(system: &StarSystem, calendar: &Calendar, t: StdDays) -> Stri
     let hz_out = system.star.habitable_zone.outer().get() * scale;
     let mut a = 0.0_f64;
     while a < std::f64::consts::TAU {
-        plot(&mut grid, hz_in, a, '·', "");
-        plot(&mut grid, hz_out, a, '·', "");
+        plot(&mut grid, hz_in, a, Cell::Ring, "");
+        plot(&mut grid, hz_out, a, Cell::Ring, "");
         a += 0.15;
     }
 
     // The star at center.
-    grid[cy as usize][cx as usize] = ('★', star_color(&system.star.class_name));
+    grid[cy as usize][cx as usize] = (Cell::Star, star_color(&system.star.class_name));
 
     // The world on its orbit (green), and its screen position.
     let theta = std::f64::consts::TAU * calendar.year_phase(t);
     let world_r = orbit * scale;
-    plot(&mut grid, world_r, theta, '●', "\u{1b}[38;5;42m");
+    plot(&mut grid, world_r, theta, Cell::World, "\u{1b}[38;5;42m");
     let wx = cx + aspect * world_r * theta.cos();
     let wy = cy + world_r * theta.sin();
 
-    // Moons: sidereal orbital angle around the world, synodic-phase glyph.
+    // Moons: sidereal orbital angle around the world, synodic-phase glyph. A
+    // degenerate moon (no synodic cycle) reads as new; unreachable at genesis
+    // (the Hill cap) and present in no committed artifact.
     for (index, moon) in system.moons.iter().enumerate() {
         let ma = std::f64::consts::TAU * (t.0 / moon.period.get()).fract();
         let mr = 2.0 + index as f64;
-        let glyph = calendar
-            .moon_phase(t, index)
-            .map(phase_glyph)
-            .unwrap_or('o');
+        let cell = Cell::Moon(
+            calendar
+                .moon_phase(t, index)
+                .map(phase_bucket)
+                .unwrap_or(Phase::New),
+        );
         let x = (wx + aspect * mr * ma.cos()).round() as isize;
         let y = (wy + mr * ma.sin()).round() as isize;
         if x >= 0 && (x as usize) < w && y >= 0 && (y as usize) < h {
-            grid[y as usize][x as usize] = (glyph, "\u{1b}[38;5;250m");
+            grid[y as usize][x as usize] = (cell, "\u{1b}[38;5;250m");
         }
     }
 
-    emit_ansi_grid(&grid)
+    // Emit: each cell → its glyph-set string, colored, one row per line.
+    let mut out = String::new();
+    for row in grid {
+        for (cell, color) in row {
+            let s = glyphs.glyph(cell);
+            if color.is_empty() {
+                out.push_str(s);
+            } else {
+                out.push_str(color);
+                out.push_str(s);
+                out.push_str("\u{1b}[0m");
+            }
+        }
+        out.push('\n');
+    }
+    out
 }
 
 #[cfg(test)]
@@ -574,10 +676,10 @@ mod tests {
         .system;
         let cal = calendar_of(&system);
         let t = StdDays::new(10.0).unwrap();
-        let a = orrery_ansi(&system, &cal, t);
+        let a = orrery_ansi(&system, &cal, t, GlyphSet::Unicode);
         assert_eq!(
             a,
-            orrery_ansi(&system, &cal, t),
+            orrery_ansi(&system, &cal, t, GlyphSet::Unicode),
             "deterministic in (system, t)"
         );
         assert_eq!(a.matches('\n').count(), ORRERY_HEIGHT, "one row per line");
@@ -587,8 +689,49 @@ mod tests {
         let half = StdDays::new(10.0 + system.anchor.year.get() / 2.0).unwrap();
         assert_ne!(
             a,
-            orrery_ansi(&system, &cal, half),
+            orrery_ansi(&system, &cal, half, GlyphSet::Unicode),
             "the world orbits over time"
+        );
+    }
+
+    #[test]
+    fn orrery_glyph_sets_have_the_right_row_width_and_symbols() {
+        use crate::calendar::calendar_of;
+        use crate::pins::{MoonsPin, RotationPin, SkyPins};
+        use crate::system::generate;
+        use crate::units::StdDays;
+        use hornvale_kernel::Seed;
+        let system = generate(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                moons: Some(MoonsPin::exact(2).unwrap()),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap()
+        .system;
+        let cal = calendar_of(&system);
+        let t = StdDays::new(10.0).unwrap();
+        assert_eq!(orrery_cols(GlyphSet::Unicode), ORRERY_WIDTH);
+        assert_eq!(orrery_cols(GlyphSet::Emoji), 2 * ORRERY_WIDTH);
+        let emoji = orrery_ansi(&system, &cal, t, GlyphSet::Emoji);
+        // Emoji mode uses only the emoji set — none of the single-width Unicode
+        // symbols leak in (which would break the two-column grid).
+        for sym in ['★', '●', '○', '◐', '◑'] {
+            assert!(
+                !emoji.contains(sym),
+                "unicode symbol {sym} leaked into emoji mode"
+            );
+        }
+        assert!(
+            emoji.contains('🌞') && emoji.contains('🌍'),
+            "emoji star + world present"
+        );
+        assert_eq!(
+            emoji,
+            orrery_ansi(&system, &cal, t, GlyphSet::Emoji),
+            "deterministic"
         );
     }
 }
