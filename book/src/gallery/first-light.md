@@ -15,7 +15,7 @@ statistical substance that terrain, climate, and eventually the tides of
 history will be carved from. No world has interpreted it yet; this is what
 potential looks like before meaning arrives.
 
-![Seed 42's fractal noise field, rendered ink-to-parchment](first-light-seed-42.bmp)
+![Seed 42's fractal noise field, rendered ink-to-parchment](first-light-seed-42.png)
 
 ## The posterior: the world of seed 42
 
