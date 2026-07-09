@@ -177,6 +177,52 @@ mod tests {
             "day 0 is still a grand alignment"
         );
     }
+
+    #[test]
+    fn equatorial_daylight_is_a_flat_half_all_year() {
+        let cal = calendar_of(&spinning_system());
+        let year = cal.year_length().get();
+        for k in 0..24 {
+            let t = StdDays::new(k as f64 * year / 24.0).unwrap();
+            let f = cal.daylight_fraction_at(t, 0.0).unwrap();
+            assert!((f - 0.5).abs() < 1e-9, "equator not flat at t={t:?}: {f}");
+        }
+    }
+
+    #[test]
+    fn high_latitude_reaches_polar_day_and_night() {
+        // A tilted, spinning world with the forcing zeroed (constant obliquity,
+        // no drift): latitude 85° hits polar day near midsummer and polar night
+        // near midwinter. The year-phase offset (Plan 1) shifts where in `t`
+        // the solstices fall, so scan the year for the extremes rather than
+        // assuming they sit at 0.25/0.75 of it.
+        let pins = SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            obliquity: Some(Degrees::new(23.5).unwrap()),
+            forcing: Some(crate::pins::ForcingPin::Zero),
+            ..SkyPins::default()
+        };
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let year = cal.year_length().get();
+        let (mut max, mut min) = (0.0_f64, 1.0_f64);
+        for k in 0..365 {
+            let t = StdDays::new(k as f64 * year / 365.0).unwrap();
+            let f = cal.daylight_fraction_at(t, 85.0).unwrap();
+            max = max.max(f);
+            min = min.min(f);
+        }
+        assert!(max > 0.999, "expected polar day at 85°, got {max}");
+        assert!(min < 0.001, "expected polar night at 85°, got {min}");
+    }
+
+    #[test]
+    fn a_locked_world_has_no_latitude_daylight() {
+        let cal = calendar_of(&locked_system());
+        assert!(
+            cal.daylight_fraction_at(StdDays::new(0.0).unwrap(), 45.0)
+                .is_none()
+        );
+    }
 }
 
 /// A world's cycles, derived once from its star system.
@@ -242,6 +288,24 @@ impl Calendar {
         let tilt_term = (obliquity / 90.0) * 0.5 * (std::f64::consts::TAU * phase).sin();
         let apsidal_term = ecc * 0.5 * (std::f64::consts::TAU * phase).sin();
         Some((0.5 + tilt_term + apsidal_term).clamp(0.0, 1.0))
+    }
+    /// Daylight fraction of the local day at a latitude (SKY-8): the standard
+    /// sunrise equation. ~0.5 flat at the equator, running to 1.0/0.0 (polar
+    /// day/night) toward the poles. Reads the time-varying obliquity, so a
+    /// world's daylight geometry drifts with its axial tilt. `None` on a
+    /// tidally locked world, which has no day/night cycle.
+    pub fn daylight_fraction_at(&self, t: StdDays, latitude: f64) -> Option<f64> {
+        self.day?;
+        // Solar declination: the sub-solar latitude oscillates over the year,
+        // its amplitude the (time-varying) obliquity.
+        let obliquity = self.forcing.obliquity_at(t.0).to_radians();
+        let declination = obliquity * (std::f64::consts::TAU * self.year_phase(t)).sin();
+        let phi = latitude.to_radians();
+        // cos H0 = −tan φ · tan δ; the clamp yields polar day (−1 → H0 = π,
+        // fraction 1) and polar night (1 → H0 = 0, fraction 0) past the polar
+        // circles.
+        let cos_h0 = (-phi.tan() * declination.tan()).clamp(-1.0, 1.0);
+        Some(cos_h0.acos() / std::f64::consts::PI)
     }
     /// Is it daylight at `t`? Daylight is a centered window of the local day.
     pub fn is_daylight(&self, t: StdDays) -> Option<bool> {
