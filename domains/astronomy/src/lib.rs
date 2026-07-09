@@ -117,6 +117,16 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::SCENARIO_PIN,
         false,
         "an experimenter-supplied pin string conditioning genesis",
+    )?;
+    registry.register_predicate(
+        facts::ECCENTRICITY_MEAN,
+        true,
+        "mean orbital eccentricity (deep-time forcing)",
+    )?;
+    registry.register_predicate(
+        facts::OBLIQUITY_AMPLITUDE,
+        true,
+        "obliquity oscillation amplitude, degrees (moon-coupled)",
     )
 }
 
