@@ -5,6 +5,7 @@
 //! approximations; each is deterministic and consistent across metrics.
 
 use hornvale_kernel::{CellMap, Geosphere};
+use std::collections::VecDeque;
 
 /// Half-width of the shelf band around sea level, meters (Earth's
 /// continental shelf lies within ~200 m of the sea surface).
@@ -65,6 +66,93 @@ pub fn shelf_fraction(elevation: &CellMap<f64>, sea_level: f64) -> f64 {
     within as f64 / elevation.len() as f64
 }
 
+/// Ashman's D between the land and ocean elevation populations:
+/// `|mean_land - mean_ocean| / sqrt((var_land + var_ocean) / 2)` with
+/// population variance. Earth's hypsometry is strongly bimodal (high D).
+/// `None` when either population is empty or both are degenerate
+/// (zero variance).
+pub fn hypsometric_bimodality(elevation: &CellMap<f64>, sea_level: f64) -> Option<f64> {
+    let mut land = Vec::new();
+    let mut ocean = Vec::new();
+    for (_, e) in elevation.iter() {
+        if *e >= sea_level {
+            land.push(*e);
+        } else {
+            ocean.push(*e);
+        }
+    }
+    fn stats(values: &[f64]) -> Option<(f64, f64)> {
+        if values.is_empty() {
+            return None;
+        }
+        let n = values.len() as f64;
+        let mean = values.iter().sum::<f64>() / n;
+        let variance = values.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n;
+        Some((mean, variance))
+    }
+    let (mean_land, var_land) = stats(&land)?;
+    let (mean_ocean, var_ocean) = stats(&ocean)?;
+    let denominator = ((var_land + var_ocean) / 2.0).sqrt();
+    if denominator <= f64::EPSILON {
+        return None;
+    }
+    Some((mean_land - mean_ocean).abs() / denominator)
+}
+
+/// Sizes (cell counts) of connected land components, descending. BFS in
+/// ascending cell-id order — fully deterministic. Empty when there is no
+/// land.
+pub fn land_component_sizes(
+    geo: &Geosphere,
+    elevation: &CellMap<f64>,
+    sea_level: f64,
+) -> Vec<usize> {
+    let mut visited = vec![false; geo.cell_count()];
+    let mut sizes = Vec::new();
+    for start in geo.cells() {
+        if visited[start.0 as usize] || *elevation.get(start) < sea_level {
+            continue;
+        }
+        visited[start.0 as usize] = true;
+        let mut queue = VecDeque::from([start]);
+        let mut size = 0usize;
+        while let Some(cell) = queue.pop_front() {
+            size += 1;
+            for &neighbor in geo.neighbors(cell) {
+                if !visited[neighbor.0 as usize] && *elevation.get(neighbor) >= sea_level {
+                    visited[neighbor.0 as usize] = true;
+                    queue.push_back(neighbor);
+                }
+            }
+        }
+        sizes.push(size);
+    }
+    sizes.sort_unstable_by(|a, b| b.cmp(a));
+    sizes
+}
+
+/// Gini coefficient over nonnegative counts (0 = equal, →1 = concentrated):
+/// `G = 2 Σ i·x_i / (n Σ x) − (n+1)/n` over ascending x with 1-based i.
+/// `None` for an empty slice or an all-zero total.
+pub fn gini(counts: &[usize]) -> Option<f64> {
+    if counts.is_empty() {
+        return None;
+    }
+    let total: usize = counts.iter().sum();
+    if total == 0 {
+        return None;
+    }
+    let mut sorted = counts.to_vec();
+    sorted.sort_unstable();
+    let n = sorted.len() as f64;
+    let weighted: f64 = sorted
+        .iter()
+        .enumerate()
+        .map(|(i, x)| (i as f64 + 1.0) * *x as f64)
+        .sum();
+    Some(2.0 * weighted / (n * total as f64) - (n + 1.0) / n)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,5 +210,47 @@ mod tests {
         assert!((0.12..=0.28).contains(&f), "shelf fraction {f}");
         let flat = CellMap::from_fn(&geo, |_| 50.0);
         assert_eq!(shelf_fraction(&flat, 0.0), 1.0);
+    }
+
+    #[test]
+    fn separated_modes_score_higher_than_a_split_unimodal_field() {
+        let geo = Geosphere::new(3);
+        // Earth-like: two tight modes far apart (tiny within-mode spread so
+        // Ashman's denominator is nonzero).
+        let bimodal = CellMap::from_fn(&geo, |c| {
+            let z = geo.position(c)[2];
+            if z >= 0.0 { 400.0 + z } else { -4000.0 + z }
+        });
+        // A single uniform ramp split at sea level.
+        let unimodal = CellMap::from_fn(&geo, |c| 100.0 * geo.position(c)[2]);
+        let d_bi = hypsometric_bimodality(&bimodal, 0.0).expect("bimodal");
+        let d_uni = hypsometric_bimodality(&unimodal, 0.0).expect("unimodal");
+        assert!(d_bi > 10.0 * d_uni, "bimodal {d_bi} vs unimodal {d_uni}");
+        let all_land = CellMap::from_fn(&geo, |_| 100.0);
+        assert_eq!(hypsometric_bimodality(&all_land, 0.0), None);
+    }
+
+    #[test]
+    fn antipodal_caps_are_two_components_sorted_descending() {
+        let geo = Geosphere::new(3);
+        // North cap bigger than south cap.
+        let e = CellMap::from_fn(&geo, |c| {
+            let z = geo.position(c)[2];
+            if z >= 0.5 || z <= -0.8 { 100.0 } else { -100.0 }
+        });
+        let sizes = land_component_sizes(&geo, &e, 0.0);
+        assert_eq!(sizes.len(), 2, "components: {sizes:?}");
+        assert!(sizes[0] > sizes[1]);
+        let ocean = CellMap::from_fn(&geo, |_| -1.0);
+        assert!(land_component_sizes(&geo, &ocean, 0.0).is_empty());
+    }
+
+    #[test]
+    fn gini_is_zero_for_equal_counts_and_high_for_concentration() {
+        assert_eq!(gini(&[5, 5, 5, 5]), Some(0.0));
+        let g = gini(&[0, 0, 0, 10]).expect("nonzero total");
+        assert!((g - 0.75).abs() < 1e-12, "gini {g}");
+        assert_eq!(gini(&[]), None);
+        assert_eq!(gini(&[0, 0]), None);
     }
 }
