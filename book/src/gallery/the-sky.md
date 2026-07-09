@@ -6,12 +6,16 @@ differs is the sun's rotation. When this page first appeared, one village
 stood in both worlds and only its single belief changed: Gruugish worshipped
 the Returning One under a spinning sun, a god who departs and returns and is
 mourned and feasted in turn, and the Unblinking Eye under a locked one, a
-god who has never departed and will never blink. Four campaigns of deepening
-later, the same one-bit difference reaches much further down the page: the
-spinning sky's climate scatters 58 settlements and crowns **Grumoknar**,
-whose priesthood is headed by the Wheel-Turner; the locked sky collapses
-habitability toward the terminator ring, places 27, crowns **Bolugrak**, and
-raises the Still Crown, a head deity that never sets.
+god who has never departed and will never blink. Seven campaigns of
+deepening later, the same one-bit difference reaches much further down the
+page: the spinning sky's climate scatters 59 settlements across both
+peoples and crowns the goblin flagship **Fnabnget**, whose priesthood is
+headed by **Nodvnotngak the Nebsxad**; the locked sky collapses habitability
+toward the terminator ring, places 28, crowns **Xngodfnokzhvad**, and raises
+**Xngeknet the Sxodsxodsxodngod**, a head deity that never sets — both
+names, like every proper noun below, drawn from that people's own generated
+phonology rather than an author's syllable pool (Campaign Y2-3, The
+Tongues).
 
 Compare the two almanacs section by section — the Land's biomes, the People,
 the Gods, the Calendar — and every difference traces back to the one pinned

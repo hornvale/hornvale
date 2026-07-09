@@ -4,22 +4,27 @@
 village, a god, a god's favorite title. Why don't the names sound anything
 alike?
 
-Every proper noun the world has minted so far comes from the same place: a
-short pool of syllables, drawn and capitalized, no mouth behind it. Goblin
-village names are two or three syllables off one pool (`Gruugish`,
-`Grumoknar`); a deity's epithet is picked from one of two fixed English
-lists, six words each, regardless of which species is doing the venerating —
-[Religion](./religion.md)'s own **the Wheel-Turner** and **the Still Crown**
-are both entries off that list, not sounds any particular people's throat
-produced. Kobold gained a body in Campaign Y2-1, and eyes in Campaign 15,
-but never a mouth: its names are drawn from a second syllable pool built by
-copying the first and editing it by hand, which is exactly the kind of
+Before this campaign, every proper noun the world minted came from the same
+place: a short pool of syllables, drawn and capitalized, no mouth behind it.
+Goblin village names were two or three syllables off one pool (`Gruugish`,
+`Grumoknar`); a deity's epithet was picked from one of two fixed English
+lists, six words each, regardless of which species was doing the
+venerating — [Religion](./religion.md)'s own the Wheel-Turner and the Still
+Crown were both entries off that list, not sounds any particular people's
+throat produced. Kobold gained a body in Campaign Y2-1, and eyes in Campaign
+15, but never a mouth: its names were drawn from a second syllable pool
+built by copying the first and editing it by hand, exactly the kind of
 divergence-by-authored-instinct the species and perception vectors were
 built to replace with a formula. Psychology gave the world minds; perception
 gave it eyes; this campaign, the third of Year 2's spine, gives it **mouths**
 — a phonology substrate, `domains/language`, that lets a name's sound be a
 consequence of who is speaking it rather than a pool an author happened to
-seed.
+seed. Every proper noun the world mints now — a settlement, a deity, a
+deity's epithet — is a real generated sound: seed 42's goblin flagship is
+**Fnabnget** (`/fnabŋet/`), whose head god is **Nodvnotngak the Nebsxad**;
+its kobold neighbor is **Rakrra** (`/rakrra/`), whose own head god is
+**Rragratxok Ragxoq**. See [Religion](./religion.md) for how a belief now
+carries that name as committed content rather than a frozen sentence.
 
 **Phonemes are feature-bearing segments; spellings are views.** The
 substrate's internal truth is never a string. A `Segment` is a bundle of
@@ -124,11 +129,12 @@ baseline exactly as culture's caste ladder already is. Every generated name,
 whatever its kind, carries both a romanization and an IPA transcription, the
 same "spellings are views" split the phoneme model itself keeps.
 
-**The content→render seam.** Today, religion builds an English sentence
-inline and commits it whole as a tenet fact — [Religion](./religion.md)'s
-own eternal and cyclic templates are exactly this: prose, assembled once,
-frozen into the ledger as a string. This campaign stops that. Religion
-commits **meaning** instead of prose: a deity's generated name and epithet,
+**The content→render seam.** Before this campaign, religion built an
+English sentence inline and committed it whole as a tenet fact —
+[Religion](./religion.md)'s own eternal and cyclic templates were exactly
+this: prose, assembled once, frozen into the ledger as a string. This
+campaign stops that. Religion commits **meaning** instead of prose: a
+deity's generated name and epithet,
 the phenomenon it mythologizes (already committed), its periodicity
 (eternal, or cyclic with a period), its sentiment (watched, mourned and
 feasted, or feared), and its rank. A renderer living in `domains/language`
@@ -167,6 +173,13 @@ meaningful toponyms, language demographics, and everything that would let a
 name mean something rather than merely sound like something stay explicitly
 out of scope, work for whichever campaign takes up language change and
 contact once the world's peoples start meeting each other.
+
+Reference: [Phonology](../reference/phonology.md), the drift-checked dump
+of each species' inventory, phonotactics, and sample names, regenerated
+from seed 42 by `hornvale phonology`. Laboratory: [Study 008, the Census of
+Tongues](../laboratory/study-008.md), the phonotactic-validity,
+epithet-honorific, and collision-rate calibrations at 10k scale. Chronicle:
+[Campaign 16, The Tongues](../chronicle/16-the-tongues.md).
 
 **The tongues ahead:** a lexicon and a syntax, and the meaning a name could
 carry once those exist; sound-change, etymology, and names as fossils of an

@@ -92,8 +92,13 @@ consequence rides along for free: kobold's knowledge-based status basis
 (below) makes the rank-gated slave rung unreachable, so no kobold ladder
 ever needs a word for it, and every kobold structure tops out at "elders,"
 never "chief" (`domains/culture`'s structure function; see
-[Culture](./culture.md)). These are pre-language stopgaps, English by
-convenience, waiting to be deleted once a generated tongue exists.
+[Culture](./culture.md)). These role words are common nouns, not proper
+nouns, and stay English by convenience even after Campaign Y2-3 (The
+Tongues) gave the world a generated tongue — that campaign gave *names* a
+real sound (a settlement, a deity, a deity's epithet), deliberately drawing
+the line at the lexicon a common noun like "digger" or "chief" would need;
+see [Language](./language.md)'s bright line. This vocabulary keeps waiting,
+now on a lexicon and a lens for common nouns, not merely a phonology.
 
 **Idle by design; banked for later.** Not every dimension pulls its weight
 yet. Deliberation latency is authored, differs meaningfully between the two
@@ -112,7 +117,14 @@ same `SpeciesDef`, and kobold's authored nocturnality finally reaches a
 formula, a species-specific characteristic hour and salience lens that
 crowns the moons and the night sky over the sun. See
 [Perception](./perception.md) for the vector, the lens derivation, and what
-it let religion do with two peoples instead of one.
+it let religion do with two peoples instead of one. Campaign Y2-3 (The
+Tongues) added a third: a closed six-dimension **articulation vector** —
+labiality, vowel-space breadth, voicing contrast, sibilance, voice
+loudness, and an exotic manner a species' anatomy affords — again authored
+at the goblin baseline and read from the same D&D 5E corpus for kobold, and
+again sitting alongside the other two on the same `SpeciesDef`. See
+[Language](./language.md) for the vector itself and what it let every name
+in the world become.
 
 **The ontology-trap posture.** This closedness is a stance, not an
 oversight. The frontier map warns, more than once, against traits that grow
@@ -124,11 +136,13 @@ varies goblin-to-goblin rather than only goblin-to-kobold, is real work with
 its own design principles; it does not arrive as a quiet addition to a
 struct that happened to have room.
 
-**The peoples ahead:** deliberation latency, still idle after two
-campaigns' worth of dimensions consuming its neighbors; a generated tongue
-that deletes this chapter's vocabulary and syllable stopgaps outright;
-comparative religion across more than a pair, once a third people exists to
-make "comparative" mean something beyond two pantheons on one globe; drawn
+**The peoples ahead:** deliberation latency, still idle after three
+campaigns' worth of dimensions consuming its neighbors; a lexicon that would
+give this chapter's role vocabulary (`digger`, `chief`, `elders`) a sound of
+its own, the one stopgap Campaign Y2-3 (The Tongues) deliberately left
+standing (it gave names a mouth, not common nouns a meaning); comparative
+religion across more than a pair, once a third people exists to make
+"comparative" mean something beyond two pantheons on one globe; drawn
 variation, both per-species and eventually per-individual, in place of one
 authored point per people; a physiology this vector does not yet have, so
 habitat affinity and temperance stay shared rather than species-derived;

@@ -126,3 +126,25 @@ heads are always lunar on every world that carries a moon — and measures,
 rather than assumes, what happens on the moonless remainder: the sun
 reclaims most kobold pantheons there, a fact about eternal night-stars and
 finite moons, not a defect in the rule that found it.
+
+**Campaign Y2-3 (The Tongues) gives every name in the world a mouth.** A new
+kernel-only phoneme model and a third closed species vector — six
+articulation dimensions, again authored at the goblin baseline and read
+from the D&D 5E corpus — feed a phonology engine that draws a real inventory
+and real phonotactics per species-culture. Every settlement, deity, and
+deity epithet the world mints is now a generated sound rather than a
+syllable-pool guess or a shared English word list, carrying both a
+romanization and an IPA transcription from the same underlying feature
+bundle. Religion's own tenet fact — assembled English, frozen at genesis —
+is retired; a belief now commits a deity's name, epithet, and sentiment as
+structured content, and a permanent content→render seam, `render_line`,
+turns that content into voiced text at display time, under three knobs
+derived from psychology so a `Rank`-basis people's telling reads formal and
+honorific-dense and a `Knowledge`-basis people's reads repetitive and
+descriptive — the same status-basis split that already shapes each
+people's caste ladder now shaping how each people speaks. A 10,000-seed
+census measures what a vast, per-species name space actually buys: 100%
+phonotactic validity, honorific affixation present in every goblin epithet
+and absent from every kobold one, and a mean cross-world name collision
+rate of 2.79%, against the roughly 1,100-name ceiling — and correspondingly
+routine collisions — the old ten-syllable pool lived under.

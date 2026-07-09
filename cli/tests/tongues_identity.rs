@@ -208,12 +208,15 @@ fn no_generated_name_matches_a_deleted_syllable_pool_word() {
 }
 
 /// (5) Pin-isolation: `--species goblin` produces the same goblin settlement
-/// name as the unpinned world for a cell goblins hold in both — and here it
-/// holds **by construction** (spec §8), not incidentally: a name is a pure
-/// function of `(seed, species, kind, salt)` where `salt` is the settlement's
-/// own cell id, with no re-draw and no shared "used" set threaded through
-/// naming, so pinning which OTHER species place can never perturb it.
-/// Mirrors `species_identity.rs`'s pin-isolation test, specialized to names.
+/// name AND population as the unpinned world for a cell goblins hold in
+/// both — and here the name holds **by construction** (spec §8), not
+/// incidentally: a name is a pure function of `(seed, species, kind, salt)`
+/// where `salt` is the settlement's own cell id, with no re-draw and no
+/// shared "used" set threaded through naming, so pinning which OTHER
+/// species place can never perturb it. Population isolation is the
+/// unchanged pre-Tongues guarantee (settlement's own draw, untouched by
+/// this campaign). Ports `species_identity.rs`'s pin-isolation test
+/// (retired — this is now its only home) and extends it to names.
 #[test]
 fn species_goblin_pin_reproduces_the_same_goblin_settlement_names() {
     let unpinned = default_generated_seed_42();
@@ -279,5 +282,18 @@ fn species_goblin_pin_reproduces_the_same_goblin_settlement_names() {
         "pinning --species goblin shifted the settlement name on a cell \
          goblins hold in both worlds — names must be pin-isolated by \
          construction (spec §8)"
+    );
+
+    let population_of = |world: &World, id: EntityId| -> u32 {
+        match world.ledger.value_of(id, hornvale_settlement::POPULATION) {
+            Some(Value::Number(n)) => *n as u32,
+            other => panic!("settlement {id:?} has no numeric population fact: {other:?}"),
+        }
+    };
+    assert_eq!(
+        population_of(&pinned, pinned_id),
+        population_of(&unpinned, unpinned_id),
+        "pinning --species goblin shifted the population on a cell goblins \
+         hold in both worlds"
     );
 }

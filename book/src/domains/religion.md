@@ -107,6 +107,27 @@ anonymous, unnamed lead, silently losing its species attribution. No
 census seed exercises this path; it is recorded as a debt for whichever
 campaign next touches the renderer.
 
+**Meaning committed, voice rendered (Campaign Y2-3, The Tongues).**
+Religion's own tenet fact — an English sentence, assembled once and frozen
+into the ledger at genesis — is retired; the constant stays defined so
+pre-Tongues saves still carry it and historiography can still recount them,
+but new genesis never commits one. In its place a belief commits
+**content**: a deity's generated name and epithet (`deity-name`,
+`deity-epithet`, each with a roman and an IPA transcription alongside it),
+and a `sentiment` — watched, mourned-and-feasted, or felt through the
+ambient world — derived from the source phenomenon's venue and periodicity
+the same way the eternal/cyclic split always was. Religion asks for a name
+and an epithet through one trait, `DeityNamer`, without knowing what
+produces them; the composition root backs it with `domains/language`'s own
+`Namer`, so a deity's name and title are drawn from its own species'
+phonology rather than an English word list. The almanac and the REPL render
+a tenet's surface at display time, from these committed facts, through
+`render_line` — `domains/language`'s permanent content→render seam — never
+from a frozen sentence again. See [Language](./language.md) for the seam
+itself and the voice knobs (formality, repetition, epithet density) that
+carry a `Rank`-basis society's dominance honorifics and a
+`Knowledge`-basis society's descriptive repetition into the telling.
+
 **Provenance by replay: `why`/`recount`.** Every belief already carried a
 committed `derived-from-phenomenon` record; Campaign 5 gives the world a
 general way to read it back. `windows/historiography::recount(world,
@@ -123,28 +144,41 @@ causal chain across entities. It is the seam the Year-2 event ledger and
 fields-of-history will deepen, not a preview of them.
 
 **The exit demo.** Seed 42's flagship, spinning sky, tends a pantheon headed
-by **the Wheel-Turner**, a cyclic deity whose absences are mourned and
-returns feasted; pin the same seed's sky to tidally locked and the head
-becomes **the Still Crown**, an eternal sun fixed forever above the day
-side — the only line in the pantheon that changes, because a locked world
-still keeps its moons, only loses its seasons and its head deity's cycle.
-The same globe, a different flagship under each sky (since Campaign Y2-0's
-placement fix, the sky moves settlement too), yet two societies alike
-enough to hand religion the same summary — so the theology moved exactly
-where the sky moved and nowhere else. Since Campaign 15, the almanac's
-"The Gods" section is no longer one pantheon but two: the kobold warren
-standing beside each goblin village raises its own pantheon, through its
-own lens, at its own hour, and its head deity is lunar rather than solar
-on both skies — a divergence that tracks *species*, orthogonal to the one
-above that tracks rotation. The full "The Gods" sections for both peoples,
-under both skies, are quoted verbatim in the gallery: [The Gods of Seed
+by **Nodvnotngak the Nebsxad**, a cyclic deity whose absences are mourned
+and returns feasted; pin the same seed's sky to tidally locked and the head
+becomes **Xngeknet the Sxodsxodsxodngod**, an eternal watcher fixed forever
+above the day side — the only line in the pantheon that changes, because a
+locked world still keeps its moons, only loses its seasons and its head
+deity's cycle. The same globe, a different flagship under each sky (since
+Campaign Y2-0's placement fix, the sky moves settlement too), yet two
+societies alike enough to hand religion the same summary — so the theology
+moved exactly where the sky moved and nowhere else. Since Campaign 15, the
+almanac's "The Gods" section is no longer one pantheon but two: the kobold
+warren standing beside each goblin village raises its own pantheon, through
+its own lens, at its own hour, and its head deity is lunar rather than
+solar on both skies (**Rragratxok Ragxoq**, marked highest, under the
+spinning sky; the unranked **Rroqrroq Xoq** leading the locked warren's
+flat, folk pantheon instead) — a divergence that tracks *species*,
+orthogonal to the one above that tracks rotation. Since Campaign Y2-3, every
+one of those names is a real generated sound, drawn from its own species'
+phonology rather than a shared English epithet pool — the goblin telling
+formal and honorific-dense (*"...returns every 0.88 days. So it was, so it
+is."*), the kobold telling repetitive (*"...comes back every 15.99 days.
+That's how it's always been. That's how it's always been."*), the same
+`Rank`-versus-`Knowledge` status-basis split that already shapes each
+people's caste ladder now shaping how each people *tells* its myths. The
+full "The Gods" sections for both peoples, under both skies, are quoted
+verbatim in the gallery: [The Gods of Seed
 42](../gallery/the-gods-seed-42.md).
 
 **The model card.**
 
-- **Drawn:** each deity's epithet, from the same seeded pool tier 0 used
-  (`religion/epithet`), now drawn once per pantheon member rather than
-  once per world, skipping any epithet already used in that pantheon.
+- **Drawn:** each deity's name and epithet, salted by the belief's own id,
+  from the flagship species' own phonology (Campaign Y2-3;
+  `domains/language`'s `Namer` — see [Language](./language.md)) rather than
+  the fixed English pool tier 0 through Campaign 15 used. Religion itself
+  draws nothing from the seed any longer (`stream_labels()` is empty);
+  naming is entirely the `DeityNamer` implementation's business.
 - **Derived:** pantheon membership from the salience floor; verticality
   from strata; cult form from priesthood presence; each tenet from its
   phenomenon's periodicity, exactly as tier 0's two templates already did.
@@ -158,9 +192,12 @@ under both skies, are quoted verbatim in the gallery: [The Gods of Seed
 
 Laboratory: [Study 004, the Census of Faiths](../laboratory/study-004.md)
 (the goblin-flagship baseline); [Study 007, the Census of
-Eyes](../laboratory/study-007.md) (the two-pantheon comparison).
-Chronicle: [Campaign 5, The Gods](../chronicle/campaign-5.md); [Campaign
-15, The Eyes](../chronicle/15-the-eyes.md).
+Eyes](../laboratory/study-007.md) (the two-pantheon comparison); [Study
+008, the Census of Tongues](../laboratory/study-008.md) (the epithet's own
+honorific and collision calibrations). Chronicle: [Campaign 5, The
+Gods](../chronicle/campaign-5.md); [Campaign 15, The
+Eyes](../chronicle/15-the-eyes.md); [Campaign 16, The
+Tongues](../chronicle/16-the-tongues.md).
 
 **The tier ladder ahead:** terrain and climate as phenomena sources (earth
 gods from unrest, sea gods from tides); comparative religion and diffusion

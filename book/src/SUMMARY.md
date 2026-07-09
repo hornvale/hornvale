@@ -43,6 +43,7 @@
 - [Campaign Y2-0: Firm Ground](./chronicle/campaign-y2-0.md)
 - [Campaign Y2-1: The Peoples](./chronicle/campaign-y2-1.md)
 - [Campaign 15: The Eyes](./chronicle/15-the-eyes.md)
+- [Campaign 16: The Tongues](./chronicle/16-the-tongues.md)
 
 # The Gallery
 

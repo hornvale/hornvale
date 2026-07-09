@@ -25,10 +25,11 @@ potential looks like before meaning arrives.
 
 *Two entities, two facts, one belief, and a proof of sameness. Campaign 1b
 delivered the first real almanac — see [The Almanac of Seed 42](almanac.md),
-whose chief settlement today is **Gnaug**, not Bolnar (Campaign 1b's cascade
-first called it *Gruugish*): the mini-genesis here and the real cascade draw
-names from different candidate pools, a permanent and instructive reminder
-that "the same seed" promises the same world only under the same generation
-contracts. The sky that moves and the land with
-shape are Campaigns 2 and 3. This page is preserved as Campaign 1a's
-artifact, exactly as first generated.*
+whose chief settlement today is **Fngatfnebngat**, not Bolnar (Campaign 1b's
+cascade first called it *Gruugish*, and Campaign Y2-3, The Tongues, later
+gave it a real generated name in place of either syllable-pool guess): the
+mini-genesis here and the real cascade draw names from different sources
+entirely, a permanent and instructive reminder that "the same seed" promises
+the same world only under the same generation contracts. The sky that moves
+and the land with shape are Campaigns 2 and 3. This page is preserved as
+Campaign 1a's artifact, exactly as first generated.*
