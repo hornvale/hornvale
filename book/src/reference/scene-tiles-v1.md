@@ -27,7 +27,7 @@ incidental):
 | `height` | integer | Lattice height in tiles — always `width / 2`. |
 | `sea_level_m` | number | Sea level, in meters, on the same scale as `elevation_m`. |
 | `elevation_m` | array of number | Elevation in meters, one entry per tile. |
-| `ocean` | array of boolean | Whether the tile is ocean — `true` where elevation is at or below sea level — one entry per tile. |
+| `ocean` | array of boolean | Whether the tile is ocean — `true` where elevation is below sea level — one entry per tile. |
 | `biome` | array of integer | The tile's biome, as an index into `biome_legend`, one entry per tile. |
 | `biome_legend` | array of string | The full biome catalog, in stable order — `biome`'s values index into this array. |
 | `plate` | array of integer | The tectonic plate id underlying the tile, one entry per tile. |
