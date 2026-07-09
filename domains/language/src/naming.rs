@@ -182,15 +182,18 @@ impl<'a> Namer<'a> {
     /// concepts that actually hold a word in `lexicon` (see
     /// [`SiteConcepts`]), compounds their modern-form segments in
     /// `lexicon`'s drawn [`crate::lexicon::Headedness`] order, and applies
-    /// `kind`'s existing morphology on top — a bare stem for
-    /// [`NameKind::Settlement`]/[`NameKind::Deity`] (compounding over
-    /// already-evolved words has nothing left for the weighty-coda bias to
-    /// act on), or an honorific prefix for [`NameKind::Epithet`] when
-    /// `morph.honorifics` is set (status-basis keying intact; reduplication
-    /// is a v1-only embellishment for freshly drawn stems and has no
-    /// analog here). Returns the name's three views plus the gloss — the
-    /// chosen concepts joined with `"-"` (e.g. `"ice-home"`) — so the gloss
-    /// is always truthfully a subset of `site.concepts`.
+    /// `kind`'s existing morphology on top — an honorific prefix for
+    /// [`NameKind::Epithet`] when `morph.honorifics` is set (status-basis
+    /// keying intact; reduplication is a v1-only embellishment for freshly
+    /// drawn stems and has no analog here). For [`NameKind::Settlement`]
+    /// ONLY, the compound also gains a per-salt drawn **stem** — the
+    /// toponymic unique element (descriptor + unique element, the
+    /// collision fix; see the inline comment) — filling the modifier slot
+    /// opposite the site compound's head slot. Returns the name's three
+    /// views plus the gloss — the chosen concepts joined with `"-"` (e.g.
+    /// `"ice-home"`; the settlement stem names no concept and never enters
+    /// it) — so the gloss is always truthfully a subset of
+    /// `site.concepts`.
     ///
     /// If *no* site concept holds a word, falls back to a bare stem drawn
     /// exactly as [`Namer::build_name`] draws v1 names, but still under
@@ -240,6 +243,26 @@ impl<'a> Namer<'a> {
             chosen.push(pool.remove(idx));
         }
 
+        let mut segments = compound_segments(lexicon, &chosen);
+        if kind == NameKind::Settlement {
+            // The toponymic unique element (the collision fix — Task 12's
+            // census measured an ~86% in-world collision rate for pure
+            // site-concept compounds, spec §9's low-collision criterion):
+            // settlement names compound the site-concept word(s) with a
+            // per-salt DRAWN stem (1-2 template syllables from this same
+            // v2 stream, after the site-concept picks — real-world
+            // toponymy's descriptor + unique element, "Ice-home-by-the-
+            // ford"). The stem fills the slot OPPOSITE the head: the site
+            // compound plays the head, the stem the modifier, joined in
+            // the lexicon's drawn headedness order. It is a proper-name
+            // element naming no concept, so it never enters the gloss —
+            // glosses stay truthful compositions of site concepts alone.
+            // Deity and Epithet names carry no stem (their name spaces
+            // are one-per-belief, not pigeonholed by settlement counts).
+            let stem_syllables = self.draw_syllables(&mut stream, 1, 2, false);
+            let (stem, _) = views_of(&stem_syllables);
+            segments = join_by_headedness(lexicon.headedness, stem, segments);
+        }
         // Repair AFTER compounding, BEFORE morphology (the permanent order):
         // evolved roots only guarantee inventory membership, not template
         // conformance, so the compound is adapted to the synchronic
@@ -249,7 +272,7 @@ impl<'a> Namer<'a> {
         // conformant by construction — so prefixing it onto a repaired word
         // keeps the whole name conformant. Repair changes sound, never
         // meaning: the gloss is computed from `chosen` alone.
-        let mut segments = repair_phonotactics(compound_segments(lexicon, &chosen), self.ph);
+        let mut segments = repair_phonotactics(segments, self.ph);
         if kind == NameKind::Epithet && morph.honorifics {
             let affix = self.draw_syllable(&mut stream, false);
             let mut prefixed: Vec<Segment> = affix.segments().copied().collect();
@@ -985,6 +1008,50 @@ mod tests {
              stranded vowel, keeping the legal prefix"
         );
         assert!(conforms(&repaired, &ph));
+    }
+
+    #[test]
+    fn settlement_names_carry_a_per_salt_stem_beyond_the_site_words() {
+        // The collision fix (Task 12's census exposed an 86% in-world
+        // collision rate): a settlement's glossed name compounds its site
+        // word(s) with a per-salt DRAWN stem — the toponymic descriptor +
+        // unique element pattern — so the same site yields distinct names
+        // across salts. Deity names carry no stem: a single-candidate site
+        // yields exactly the repaired site word.
+        let ph = wordy_ph();
+        let lex = two_word_lexicon(9);
+        let site = SiteConcepts {
+            concepts: &["water"],
+        };
+        let morph = MorphOptions { honorifics: false };
+        let namer = Namer::new(&Seed(9), "test", &ph);
+
+        let plain = render_views(&repair_phonotactics(concept_segments(&lex, "water"), &ph)).roman;
+
+        // Deity: exactly the site word — the stem is Settlement-only.
+        let (deity, deity_gloss) = namer.glossed_name(NameKind::Deity, 3, &morph, &site, &lex);
+        assert_eq!(deity.roman, plain, "a deity name gains no stem element");
+        assert_eq!(deity_gloss, "water");
+
+        // Settlement: distinct names across salts, all glossing to the same
+        // concept — the stem is a proper-name element with no concept.
+        let mut names = std::collections::BTreeSet::new();
+        for salt in 0..12u64 {
+            let (name, gloss) = namer.glossed_name(NameKind::Settlement, salt, &morph, &site, &lex);
+            assert_eq!(
+                gloss, "water",
+                "salt {salt}: the stem must not enter the gloss"
+            );
+            assert_ne!(
+                name.roman, plain,
+                "salt {salt}: a settlement name must carry a stem beyond the site word"
+            );
+            names.insert(name.roman);
+        }
+        assert!(
+            names.len() >= 10,
+            "per-salt stems must spread settlement names across salts, got {names:?}"
+        );
     }
 
     #[test]

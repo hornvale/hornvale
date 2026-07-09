@@ -604,17 +604,18 @@ fn name_collision_rate_is_measured_and_pinned() {
     //
     // The DIRECTIONAL claim FAILED (reportable per ADR 0016, not adjusted):
     // Study 010 preregistered "below 2x the Tongues-era pinned rate"
-    // (2.339% x 2 = 4.678%). The re-measured mean is 86.28% — glossed
-    // compounds over each species' small site-concept vocabulary (biome +
-    // one presiding phenomenon, largely constant across a species'
-    // settlements within one world) shrink the name space far more
-    // severely than spec §9's own documented tradeoff anticipated: with
-    // only a handful of distinct (biome, phenomenon) pairs available per
-    // species and up to ~120 settlements drawing from them, most worlds
-    // now see the SAME name minted repeatedly rather than the occasional
-    // collision the free-stem (v1) pool produced. The honest rate is
-    // pinned here exactly as Study 007/008 pin an honest rate that misses
-    // its own floor (0.875 blind attribution) — never loosened to fit.
+    // (2.339% x 2 = 4.678%). The first measurement read 86.28%: pure
+    // site-concept compounds (biome + one presiding phenomenon, largely
+    // constant across a species' settlements within one world) gave a
+    // species only a handful of distinct names against up to ~120
+    // settlements. The naming-defect fix (the settlement stem — a per-salt
+    // drawn toponymic unique element compounded with the site words,
+    // `Namer::glossed_name`) re-widened the space; the re-measured mean is
+    // 10.71% — an ~8x improvement, but STILL above the preregistered
+    // bound, so H4's verdict remains failed (Study 010 records both
+    // measurements). The honest rate is pinned here exactly as Study
+    // 007/008 pin an honest rate that misses its own floor (0.875 blind
+    // attribution) — never loosened to fit.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let rate_i = idx("name-collision-rate");
@@ -637,17 +638,17 @@ fn name_collision_rate_is_measured_and_pinned() {
             ),
         }
     }
-    // Pinned calibration row (re-measured at the Task 12 / Campaign 12
-    // re-baseline, 500-seed drift study, 2026-07-09): most worlds now show
-    // SOME collision — the inverse of the Tongues-era shape.
-    assert_eq!(zero, 2, "zero-collision world count drifted");
-    assert_eq!(nonzero, 498, "nonzero-collision world count drifted");
+    // Pinned calibration row (re-measured after the settlement-stem
+    // collision fix, 500-seed drift study, 2026-07-09): most worlds still
+    // show some collision, at roughly an eighth of the pre-fix rate.
+    assert_eq!(zero, 57, "zero-collision world count drifted");
+    assert_eq!(nonzero, 443, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.862_829_625_681_313).abs() < 1e-6,
+        (mean - 0.107_138_846_580_572).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -659,16 +660,17 @@ fn name_length_distributions_are_measured_and_pinned() {
     // calibration row after measurement — the naming/voice baseline's
     // other half (contrast `phonotactic_validity_is_true_for_every_
     // generated_name`, which is an invariant, not a measurement).
-    // Re-measured at the Task 12 / Campaign 12 re-baseline: Task 9's
-    // glossed compounds run shorter on average than the Tongues-era
-    // (v1) free-stem draw (goblin 9.87 -> 6.69, kobold 9.80 -> 6.91) —
-    // consistent with the collision-rate finding above: a smaller,
-    // more-repeated vocabulary of shorter compound words.
+    // Re-measured after the settlement-stem collision fix: a glossed
+    // settlement name is now site word(s) + a drawn unique stem, so names
+    // run LONGER than both the pure-compound first measurement (goblin
+    // 6.69, kobold 6.91) and the Tongues-era free-stem draw (9.87 / 9.80)
+    // — consistent with the collision-rate improvement above: a wider,
+    // less-repeated vocabulary of longer compound words.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     for (species, expected_present, expected_mean) in [
-        ("goblin", 498u32, 6.689_645_317_538_036),
-        ("kobold", 498u32, 6.907_515_187_810_932),
+        ("goblin", 498u32, 10.768_460_909_737_524),
+        ("kobold", 498u32, 11.126_229_787_576_88),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -822,9 +824,10 @@ fn null_control_distributions_are_within_the_sampling_bound() {
 
 #[test]
 fn null_control_name_length_smd_is_pinned() {
-    // Re-measured at the Task 12 / Campaign 12 re-baseline (was -0.118235
-    // at the Tongues-era measurement, 2026-07-09): Task 9's glossed
-    // compounds shifted the underlying name-length distribution (see
+    // Re-measured after the settlement-stem collision fix (was -0.118235
+    // at the Tongues-era measurement, -0.045751 at Study 010's first,
+    // pre-fix measurement, both 2026-07-09): each naming re-baseline
+    // shifts the underlying name-length distribution (see
     // `name_length_distributions_are_measured_and_pinned`), so the twin's
     // SMD against the goblin moves too — still comfortably inside the
     // ±0.2 sampling-theory bound `null_control_distributions_are_within_
@@ -836,7 +839,7 @@ fn null_control_name_length_smd_is_pinned() {
         nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
     assert!(
-        (namelen - -0.045_750_720_221_954).abs() < 1e-9,
+        (namelen - -0.050_617_434_805_643).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

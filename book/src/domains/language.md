@@ -396,7 +396,12 @@ it. "Ice-Home" sits in tundra by construction: not because an author
 decided a cold place should sound cold, but because a tundra cell's biome
 concept was among the very facts the draw compounded over, in the order
 that language's own headedness — head-first or head-last, drawn once per
-language and binding on every compound it builds — puts them. A name's
+language and binding on every compound it builds — puts them. A settlement
+name adds one more element the way real toponymy does: alongside its site
+words it carries a drawn stem unique to that settlement — the "-wick" in a
+world of Ice-Homes — a proper-name element that names no concept and so
+never enters the gloss, there because a census showed site words alone
+give a species only a handful of names against a hundred settlements. A name's
 sound already rendered three views of one drawn segment sequence — a
 romanization, an IPA transcription, and an espeak formulation; it now
 renders a fourth, a gloss — the concepts it compounds, and the site facts

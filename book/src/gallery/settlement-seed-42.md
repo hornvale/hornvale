@@ -1,8 +1,8 @@
 # The Peoples of Seed 42
 
 The land holds 59 settlement(s).
-The chief goblin settlement, Fnabnget, holds 359 souls amid temperate-rainforest.
-The chief kobold settlement, Rakrra, holds 425 souls amid temperate-rainforest.
+The chief goblin settlement, Xnebned, holds 359 souls amid temperate-rainforest.
+The chief kobold settlement, Raxaxoxokrro, holds 425 souls amid temperate-rainforest.
 
 ```text
                                                                         
