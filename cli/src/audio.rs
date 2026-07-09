@@ -3,6 +3,98 @@
 //! `hornvale voice` authors any missing clips offline via espeak-ng +
 //! ffmpeg (the only place in the workspace that shells out to either).
 
+use hornvale_kernel::{Seed, World};
+use std::fs;
+use std::path::Path;
+
+/// The pinned espeak-ng voice. Changing it only affects newly authored
+/// clips — existing files are content-addressed and never regenerated.
+const ESPEAK_VOICE: &str = "en";
+/// The pinned espeak-ng speaking rate, words per minute.
+const ESPEAK_SPEED: &str = "130";
+
+/// `hornvale voice [--out DIR]`: author any missing audio clips for the
+/// phonology page's sample names (default out: `book/src/audio`). The
+/// offline authoring step — espeak-ng and ffmpeg run here and nowhere
+/// else; output is committed and CI only ever checks the file *set*.
+pub(crate) fn cmd_voice(args: &[String]) -> Result<(), String> {
+    let out_dir = Path::new(crate::flag_value(args, "--out").unwrap_or("book/src/audio"));
+    fs::create_dir_all(out_dir).map_err(|e| format!("creating {}: {e}", out_dir.display()))?;
+    let world = World::new(Seed(crate::phonology::REFERENCE_SEED));
+    let (mut written, mut kept) = (0u32, 0u32);
+    for (species, def) in hornvale_species::registry() {
+        for (_, name) in crate::phonology::sample_names_for(&world, species, &def) {
+            let path = out_dir.join(audio_filename(&name.espeak));
+            if path.exists() {
+                kept += 1;
+                continue;
+            }
+            record(&name.espeak, &path)?;
+            println!(
+                "wrote {}  ({species} {} {})",
+                path.display(),
+                name.roman,
+                name.espeak
+            );
+            written += 1;
+        }
+    }
+    println!("{written} clip(s) written, {kept} already present");
+    Ok(())
+}
+
+/// Author one clip: espeak-ng renders the formulation to a temporary wav,
+/// ffmpeg encodes it to mp3 at `out`. Fails loudly naming whichever tool
+/// is missing or unhappy.
+fn record(formulation: &str, out: &Path) -> Result<(), String> {
+    let wav = std::env::temp_dir().join(format!("hornvale-voice-{}.wav", std::process::id()));
+    let wav_str = wav.to_str().ok_or("temp dir path is not UTF-8")?;
+    let out_str = out.to_str().ok_or("output path is not UTF-8")?;
+    run(
+        "espeak-ng",
+        &[
+            "-v",
+            ESPEAK_VOICE,
+            "-s",
+            ESPEAK_SPEED,
+            "-w",
+            wav_str,
+            formulation,
+        ],
+    )?;
+    let result = run(
+        "ffmpeg",
+        &[
+            "-y",
+            "-loglevel",
+            "error",
+            "-i",
+            wav_str,
+            "-codec:a",
+            "libmp3lame",
+            "-qscale:a",
+            "4",
+            out_str,
+        ],
+    );
+    let _ = fs::remove_file(&wav);
+    result
+}
+
+/// Run one external authoring tool to completion, inheriting stderr so its
+/// diagnostics reach the operator.
+fn run(tool: &str, args: &[&str]) -> Result<(), String> {
+    let status = std::process::Command::new(tool)
+        .args(args)
+        .status()
+        .map_err(|e| format!("{tool}: {e} (is it installed and on PATH?)"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("{tool} exited with {status}"))
+    }
+}
+
 /// CRC-32/IEEE (the zlib polynomial, reflected, bitwise — no table), the
 /// checksum content-addressing the book's audio clips. Hand-rolled to keep
 /// the serde-only dependency allowlist intact.
