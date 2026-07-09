@@ -42,7 +42,7 @@ pub fn generate(world_seed: Seed, pins: &SkyPins) -> Result<GenesisOutcome, Gene
     let anchor = generate_anchor(astronomy_seed, &star, pins)?;
     let (moons, notes) = generate_moons(astronomy_seed, &star, &anchor, pins)?;
     let neighbors = generate_neighbors(astronomy_seed, pins);
-    let forcing = crate::forcing::generate_forcing(astronomy_seed, &anchor, pins);
+    let forcing = crate::forcing::generate_forcing(astronomy_seed, &anchor, &moons, pins);
     Ok(GenesisOutcome {
         system: StarSystem {
             star,

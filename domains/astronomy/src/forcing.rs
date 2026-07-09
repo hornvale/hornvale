@@ -62,16 +62,28 @@ impl OrbitalForcing {
 /// Draw the deep-time forcing. ε₀ is the anchor's genesis obliquity; the
 /// oscillation amplitudes/phases and eccentricity are drawn on the `FORCING`
 /// stream in a fixed order (a save-format contract). Amplitudes stay small so
-/// the present sky is barely perturbed; deep time is where they show.
-pub fn generate_forcing(astronomy_seed: Seed, anchor: &Anchor, pins: &SkyPins) -> OrbitalForcing {
+/// the present sky is barely perturbed; deep time is where they show. The
+/// obliquity wobble is moon-coupled (SKY-21): a large stabilizing moon damps
+/// it, a moonless world keeps the full drawn amplitude.
+pub fn generate_forcing(
+    astronomy_seed: Seed,
+    anchor: &Anchor,
+    moons: &[crate::moons::Moon],
+    pins: &SkyPins,
+) -> OrbitalForcing {
     let mut s = astronomy_seed.derive(streams::FORCING).stream();
     // Fixed draw order — never reorder.
-    let obliquity_amp_drawn = s.next_f64() * 2.5; // 0–2.5° base wobble
+    let base_wobble = s.next_f64() * 2.5; // 0–2.5° base wobble
     let obliquity_phase = s.next_f64() * TAU;
     let ecc_mean = s.next_f64() * 0.05; // 0–0.05, Earth ~0.017
     let ecc_amp = s.next_f64() * 0.03;
     let ecc_phase = s.next_f64() * TAU;
     let precession_phase = s.next_f64() * TAU;
+    // Moon coupling (SKY-21): total tidal stabilization damps the wobble.
+    let stabilization: f64 = moons.iter().map(|m| m.tide_rel).sum();
+    // Damping in (0,1]: no moon → 1.0 (full wobble); strong tide → small.
+    let damping = 1.0 / (1.0 + stabilization);
+    let obliquity_amp_drawn = base_wobble * damping;
     // The forcing pin zeroes the amplitudes AFTER the draws (pin isolation).
     let zeroed = matches!(pins.forcing, Some(crate::pins::ForcingPin::Zero));
     OrbitalForcing {
@@ -151,11 +163,41 @@ mod tests {
         let seed = Seed(42).derive(crate::streams::ROOT);
         let star = generate_star(seed);
         let anchor = generate_anchor(seed, &star, &SkyPins::default()).unwrap();
-        let a = generate_forcing(seed, &anchor, &SkyPins::default());
-        let b = generate_forcing(seed, &anchor, &SkyPins::default());
+        let a = generate_forcing(seed, &anchor, &[], &SkyPins::default());
+        let b = generate_forcing(seed, &anchor, &[], &SkyPins::default());
         assert_eq!(a, b);
         // ε₀ carries the anchor's genesis obliquity, so obliquity_at(0) matches.
         assert_eq!(a.obliquity_mean, anchor.obliquity.get());
         assert_eq!(a.obliquity_at(0.0), anchor.obliquity.get());
+    }
+
+    #[test]
+    fn a_large_moon_damps_the_obliquity_wobble() {
+        use crate::anchor::generate_anchor;
+        use crate::moons::generate_moons;
+        use crate::pins::{MoonsPin, SkyPins};
+        use crate::star::generate_star;
+        use hornvale_kernel::Seed;
+        let seed = Seed(42).derive(crate::streams::ROOT);
+        let star = generate_star(seed);
+        let anchor = generate_anchor(seed, &star, &SkyPins::default()).unwrap();
+        let mooned = SkyPins {
+            moons: Some(MoonsPin::exact(1).unwrap()),
+            ..SkyPins::default()
+        };
+        let moonless = SkyPins {
+            moons: Some(MoonsPin::exact(0).unwrap()),
+            ..SkyPins::default()
+        };
+        let (mm, _) = generate_moons(seed, &star, &anchor, &mooned).unwrap();
+        let (ml, _) = generate_moons(seed, &star, &anchor, &moonless).unwrap();
+        let f_mooned = generate_forcing(seed, &anchor, &mm, &mooned);
+        let f_moonless = generate_forcing(seed, &anchor, &ml, &moonless);
+        assert!(
+            f_mooned.obliquity_amp < f_moonless.obliquity_amp,
+            "a moon must damp the obliquity amplitude ({} !< {})",
+            f_mooned.obliquity_amp,
+            f_moonless.obliquity_amp
+        );
     }
 }
