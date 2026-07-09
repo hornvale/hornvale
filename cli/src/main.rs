@@ -35,6 +35,8 @@ usage:
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
   hornvale settlement-map [--world <PATH>] [--out <PNG>] render the settlement map (markdown to stdout)
   hornvale star-chart [--world <PATH>] [--out <PNG>] render the star chart (markdown to stdout)
+  hornvale orrery [--world <PATH>] [--day <D>]            print one orrery frame (ANSI)
+  hornvale orrery [--world <PATH>] --day <A..B> [--step <k>] --cast <OUT>   animate to a .cast
   hornvale scene tiles [--world <PATH>] [--width <N>] emit scene/tiles/v1 JSON to stdout
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
@@ -74,6 +76,7 @@ fn main() -> ExitCode {
         Some("biome-map") => cmd_biome_map(&args),
         Some("settlement-map") => cmd_settlement_map(&args),
         Some("star-chart") => cmd_star_chart(&args),
+        Some("orrery") => cmd_orrery(&args),
         Some("scene") => cmd_scene(&args),
         Some("concepts") => cmd_concepts(),
         Some("streams") => cmd_streams(),
@@ -418,6 +421,62 @@ fn cmd_star_chart(args: &[String]) -> Result<(), String> {
     doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
     print!("{doc}");
     Ok(())
+}
+
+/// Render the orrery: one ANSI frame to stdout, or — with `--day A..B --cast
+/// OUT` — a deterministic asciinema-v2 animation of the system over that span
+/// (the moons cycling, the world orbiting, the sky drifting). Errors on a
+/// world with no generated sky.
+fn cmd_orrery(args: &[String]) -> Result<(), String> {
+    use hornvale_astronomy::StdDays;
+    use hornvale_astronomy::render::{ORRERY_HEIGHT, ORRERY_WIDTH, orrery_ansi};
+    let world = load_world(args)?;
+    let sky = world_builder::sky_of(&world).map_err(|e| e.to_string())?;
+    let Some(system) = sky.system() else {
+        return Err("this world has no generated sky; no orrery to draw".to_string());
+    };
+    let calendar = sky
+        .calendar()
+        .expect("a generated sky always has a calendar");
+    let day_arg = flag_value(args, "--day").unwrap_or("0");
+    let mk = |d: f64| StdDays::new(d).map_err(|e| e.to_string());
+
+    if let Some(cast_path) = flag_value(args, "--cast") {
+        let (a, b) = day_arg
+            .split_once("..")
+            .ok_or("--cast needs a --day range, e.g. --day 0..365")?;
+        let (a, b): (f64, f64) = (
+            a.parse().map_err(|_| "bad --day start")?,
+            b.parse().map_err(|_| "bad --day end")?,
+        );
+        let step: f64 = flag_value(args, "--step")
+            .unwrap_or("1")
+            .parse()
+            .map_err(|_| "bad --step")?;
+        if step <= 0.0 || b <= a {
+            return Err("--day A..B must have B>A and --step>0".to_string());
+        }
+        let mut frames = Vec::new();
+        let mut d = a;
+        while d < b {
+            // Clear + home, then the frame, so playback redraws in place.
+            frames.push(format!(
+                "\u{1b}[2J\u{1b}[H{}",
+                orrery_ansi(system, calendar, mk(d)?)
+            ));
+            d += step;
+        }
+        // 25 fps feels smooth; the value is synthetic, only the ratio matters.
+        let cast =
+            hornvale_kernel::asciinema_v2(ORRERY_WIDTH as u16, ORRERY_HEIGHT as u16, 0.04, &frames);
+        std::fs::write(cast_path, cast).map_err(|e| format!("writing {cast_path}: {e}"))?;
+        println!("wrote {} frames to {cast_path}", frames.len());
+        Ok(())
+    } else {
+        let t = mk(day_arg.parse().map_err(|_| "bad --day")?)?;
+        print!("{}", orrery_ansi(system, calendar, t));
+        Ok(())
+    }
 }
 
 fn cmd_concepts() -> Result<(), String> {
