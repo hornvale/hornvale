@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# hooks/pre-commit — a fast, always-on commit gate. Enabled once per clone with:
+#   git config core.hooksPath hooks
+# (shared across worktrees, since they share the common git dir).
+#
+# It is deliberately fast so it never slows the many small commits a campaign
+# makes:
+#   * Rust checks run ONLY when a .rs file is staged — docs-only commits are
+#     instant.
+#   * `cargo fmt --check` always (for staged Rust) — fmt skips are this repo's
+#     single most common review finding (CLAUDE.md).
+#   * On `main` commits with staged Rust, also `cargo clippy -D warnings` so the
+#     mainline never lands code that fails to compile or lint — main commits
+#     (merges, infra) are rare, so the ~minute is affordable there and nowhere
+#     else. The full test suite stays a CI / explicit concern (too slow to gate
+#     every commit).
+#   * A worktree must never sit on `main` — that is the accidental-commit-to-
+#     main footgun a campaign subagent hit once; a linked worktree on `main`
+#     is almost always a wrong-branch mistake, so refuse it.
+#
+# Escape hatch: none by design. CLAUDE.md forbids `--no-verify`; if a check is
+# wrong, fix the check.
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+git_dir="$(cd "$(git rev-parse --git-dir)" && pwd -P)"
+git_common="$(cd "$(git rev-parse --git-common-dir)" && pwd -P)"
+branch="$(git symbolic-ref --short -q HEAD || echo DETACHED)"
+
+# Branch guard: a linked worktree (git_dir != git_common) on `main` is a
+# mistake. The primary checkout on `main` is legitimate (merges, infra).
+if [[ "$git_dir" != "$git_common" && "$branch" == "main" ]]; then
+    echo "pre-commit: refusing to commit to 'main' from a linked worktree —" >&2
+    echo "            you are almost certainly on the wrong branch." >&2
+    exit 1
+fi
+
+# Rust checks only when Rust is actually staged.
+staged_rs="$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.rs$' || true)"
+if [[ -z "$staged_rs" ]]; then
+    exit 0
+fi
+
+echo "pre-commit: cargo fmt --check" >&2
+if ! ( cd "$repo_root" && cargo fmt --check ); then
+    echo "pre-commit: formatting check failed — run 'cargo fmt' and re-stage." >&2
+    exit 1
+fi
+
+if [[ "$branch" == "main" ]]; then
+    echo "pre-commit: cargo clippy (main commit — keeping the mainline green)" >&2
+    if ! ( cd "$repo_root" && cargo clippy --workspace --all-targets -- -D warnings ); then
+        echo "pre-commit: clippy failed — main must stay green." >&2
+        exit 1
+    fi
+fi
