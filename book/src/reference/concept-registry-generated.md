@@ -69,3 +69,45 @@
 | `celestial-body` | a body visible in the sky |
 | `night-star` | a fixed star notable in the night sky |
 | `seasonal-cycle` | the annual daylight cycle |
+
+### Concepts
+
+| Concept | Domain | Kind | Meaning |
+|---|---|---|---|
+| `abyssal` | climate | Terrain | a biome class |
+| `alpine` | climate | Terrain | a biome class |
+| `bathypelagic` | climate | Terrain | a biome class |
+| `coral-reef` | climate | Terrain | a biome class |
+| `desert` | climate | Terrain | a biome class |
+| `epipelagic` | climate | Terrain | a biome class |
+| `goblin-kind` | species | Living | a goblin |
+| `god` | religion | Social | a deity |
+| `hadal-trench` | climate | Terrain | a biome class |
+| `hearth` | settlement | Social | the fire at the center of a home |
+| `home` | settlement | Social | one's dwelling |
+| `hydrothermal-vent` | climate | Terrain | a biome class |
+| `ice` | climate | Substance | frozen water |
+| `kelp-forest` | climate | Terrain | a biome class |
+| `kobold-kind` | species | Living | a kobold |
+| `mesopelagic` | climate | Terrain | a biome class |
+| `moon` | astronomy | Celestial | a moon |
+| `mountain` | terrain | Terrain | high ground |
+| `night` | astronomy | Celestial | the dark half of the day-night cycle |
+| `rain` | climate | Substance | liquid precipitation |
+| `savanna` | climate | Terrain | a biome class |
+| `sea` | terrain | Terrain | a body of salt water |
+| `sea-ice` | climate | Terrain | a biome class |
+| `shrubland` | climate | Terrain | a biome class |
+| `snow` | climate | Substance | frozen precipitation |
+| `spirit` | religion | Social | a lesser or unseen supernatural presence |
+| `star` | astronomy | Celestial | a fixed point of light in the night sky |
+| `stone` | terrain | Substance | rock |
+| `sun` | astronomy | Celestial | the sun |
+| `taiga` | climate | Terrain | a biome class |
+| `temperate-forest` | climate | Terrain | a biome class |
+| `temperate-grassland` | climate | Terrain | a biome class |
+| `temperate-rainforest` | climate | Terrain | a biome class |
+| `tropical-rainforest` | climate | Terrain | a biome class |
+| `tropical-seasonal-forest` | climate | Terrain | a biome class |
+| `tundra` | climate | Terrain | a biome class |
+| `upwelling` | climate | Terrain | a biome class |
