@@ -6,7 +6,7 @@
 use hornvale_kernel::{CellMap, Geosphere};
 
 /// Land colder than this offset temperature is under ice (°C).
-const GLACIATION_THRESHOLD_C: f64 = -8.0;
+const GLACIATION_THRESHOLD_C: f64 = -3.0;
 
 /// One coarse era's climate fields, all bare kernel types, filled by the
 /// composition root after re-running climate at the era's sea level and
