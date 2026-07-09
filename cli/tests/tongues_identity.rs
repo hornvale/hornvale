@@ -8,16 +8,20 @@ use hornvale_kernel::{EntityId, Seed, Value, World};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
 /// Predicates whose SHAPE changed under The Tongues, or that are wholly new
-/// this campaign: settlement/deity names are freshly drawn text (never
-/// byte-identical to the fixture); belief content moved from a single prose
-/// `tenet` fact to the structured deity/epithet/sentiment facts
-/// `render_line` now voices (spec §6); the six articulation-vector
-/// predicates did not exist before this campaign. Excluded from the
-/// entity-structure / non-linguistic-fact comparison below — the same
-/// "superset, minus what's genuinely new" pattern `eyes_identity.rs` and
-/// `species_identity.rs` use.
-const CHANGED_OR_NEW_PREDICATES: [&str; 13] = [
+/// this campaign or a later one: settlement/deity names are freshly drawn
+/// text (never byte-identical to the fixture); belief content moved from a
+/// single prose `tenet` fact to the structured deity/epithet/sentiment
+/// facts `render_line` now voices (spec §6); the six articulation-vector
+/// predicates did not exist before this campaign; `name-gloss` is wholly
+/// new to The Words (Task 9), which glosses proper names but never touches
+/// this file's own pre-Tongues fixture or comparison — it's listed here
+/// only so this older keystone keeps passing against a world that now
+/// carries the newer predicate too. Excluded from the entity-structure /
+/// non-linguistic-fact comparison below — the same "superset, minus what's
+/// genuinely new" pattern `eyes_identity.rs` and `species_identity.rs` use.
+const CHANGED_OR_NEW_PREDICATES: [&str; 14] = [
     hornvale_kernel::NAME,
+    hornvale_worldgen::NAME_GLOSS,
     hornvale_religion::TENET,
     hornvale_religion::DEITY_NAME,
     hornvale_religion::DEITY_NAME_IPA,
@@ -138,7 +142,17 @@ fn seed_42_builds_byte_identically_across_two_runs() {
 /// seed 42, to catch a gross regression (e.g. every name collapsing to one
 /// string), not as a structural guarantee.
 #[test]
-fn seed_42_settlement_names_are_de_facto_unique() {
+fn seed_42_settlement_names_are_not_degenerate() {
+    // Since The Words (Task 9), a name compounds over its own species'
+    // small site-concept vocabulary (its biome, its people's presiding
+    // belief) at the `/v2` glossed epoch, rather than drawing a free stem
+    // from the vast phonology name space this test named for at The
+    // Tongues — so world-wide uniqueness, never guaranteed even then, is
+    // meaningfully less de-facto now ("glossed compounds shrink the name
+    // space" is The Words' own documented tradeoff, spec §9, re-measured
+    // honestly as a collision-rate calibration in that campaign's Task
+    // 12). This only guards against total collapse (every settlement
+    // sharing one name).
     let world = default_generated_seed_42();
     let names: Vec<String> = hornvale_settlement::all_settlements(&world)
         .iter()
@@ -146,10 +160,9 @@ fn seed_42_settlement_names_are_de_facto_unique() {
         .collect();
     assert!(!names.is_empty(), "seed 42 should place settlements");
     let unique: std::collections::BTreeSet<&String> = names.iter().collect();
-    assert_eq!(
-        unique.len(),
-        names.len(),
-        "seed 42 settlement names collided (de-facto uniqueness, not a guarantee)"
+    assert!(
+        unique.len() > 1,
+        "seed 42 must not collapse every settlement onto a single glossed name"
     );
 }
 

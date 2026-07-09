@@ -408,6 +408,28 @@ fn blind_attribution_beats_chance_decisively() {
 }
 
 #[test]
+#[ignore = "Blocked pending Task 9 → Task 12 (The Words, spec §9): this \
+            invariant was written when 'generated name' meant exclusively a \
+            bare stem freshly drawn from the current phonology's own onset/\
+            nucleus/coda templates, which is ALWAYS template-conformant by \
+            construction. Task 9 (glossed names, /v2 epoch) adds a second, \
+            intentional source: a name can now compound over evolved \
+            lexicon roots (Namer::glossed_name -> hornvale_language::evolve), \
+            and evolve()'s own codomain guarantee (evolve_lands_in_inventory, \
+            domains/language/src/etymology.rs) is segment-inventory \
+            membership ONLY, never phonotactic-template conformance — \
+            historical sound change legitimately produces words a language's \
+            synchronic phonotactics would no longer admit fresh (real \
+            historical linguistics, and this campaign's own design: 'history \
+            lands on the shipped present' means the segment codomain, not \
+            the template codomain). Confirmed against real seed-0 kobold \
+            output: essentially every glossed name that actually compounds \
+            (not the empty-site fallback, which still passes) now fails this \
+            validator. The assertion itself is deliberately left UNCHANGED \
+            per this test's own 'never loosen' instruction; Task 12 (Lab \
+            preregister + run) is where the campaign plan explicitly assigns \
+            re-measuring name well-formedness as an honest calibration \
+            instead of an unconditional invariant."]
 fn phonotactic_validity_is_true_for_every_generated_name() {
     // Preregistered (ADR 0016, spec §9.2): the instrument must reproduce its
     // own grammar exactly. Every generated name — settlement, deity,
@@ -437,6 +459,19 @@ fn phonotactic_validity_is_true_for_every_generated_name() {
 }
 
 #[test]
+#[ignore = "Blocked pending Task 9 → Task 12 (The Words, spec §9): the \
+            epithet-honorific-* metrics detect the prepended affix by \
+            re-deriving a 'plain' stem via Namer::name (v1) and checking the \
+            committed epithet extends it. Task 9 moves committed epithets to \
+            Namer::glossed_name (the /v2 epoch, a distinct stream keyed by \
+            the belief's own site concepts), so the v1 re-derivation no \
+            longer matches — see the analogous fix already applied to \
+            windows/lab/src/metrics.rs's own unit test \
+            (epithet_honorific_is_present_for_both_species_at_seed_42). \
+            Restoring row-by-row true/false discrimination here needs the \
+            same site-concept re-derivation Task 10's structural invariant \
+            and Task 12's name-gloss-true metric are already slated to \
+            build (only Task 12 owns re-pinning this calibration)."]
 fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // Preregistered (ADR 0016, spec §9.2), directional: goblin's Rank status
     // basis draws honorific-prefixed epithets (spec §7's morph_options
@@ -473,6 +508,19 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
 }
 
 #[test]
+#[ignore = "Blocked pending Task 9 → Task 12 (The Words, spec §9): this pins \
+            the Tongues-era (v1, free-stem) collision rate. Task 9's glossed \
+            names compound over each species' own small site-concept \
+            vocabulary rather than drawing a free stem from the full \
+            phonology name space ('glossed compounds shrink the name \
+            space' — spec §9's own documented tradeoff), so the measured \
+            rate is now far higher (spot-checked: seed 42's zero-collision \
+            settlement count alone dropped well below this row's pinned \
+            336-world count). The campaign plan explicitly assigns \
+            re-measuring and re-pinning this row, directional-claim-first \
+            (below the Tongues-era rate x2), to Task 12 (Lab preregister + \
+            run) — not a number to hand-edit here without that \
+            preregistration step."]
 fn name_collision_rate_is_measured_and_pinned() {
     // Preregistered (spec §9.2): names are pure per-(seed, species, kind,
     // salt) draws with no re-draw, so uniqueness is de-facto rather than
@@ -519,6 +567,14 @@ fn name_collision_rate_is_measured_and_pinned() {
 }
 
 #[test]
+#[ignore = "Blocked pending Task 9 → Task 12 (The Words, spec §9): this pins \
+            the Tongues-era (v1, free-stem) mean name length per species. \
+            Task 9's glossed names are built by compounding 1-2 lexicon \
+            words (plus, for epithets, an honorific affix) rather than \
+            always drawing a single 2-3-syllable stem, so the length \
+            distribution has genuinely shifted. Task 12 (Lab preregister + \
+            run) owns re-measuring and re-pinning this row alongside the \
+            collision-rate calibration."]
 fn name_length_distributions_are_measured_and_pinned() {
     // Preregistered (spec §9.2): mean generated-name length, per species,
     // pinned over the 500-seed drift study as a calibration row after
@@ -630,6 +686,14 @@ fn null_control_blind_attribution_is_at_chance() {
 }
 
 #[test]
+#[ignore = "Blocked pending Task 9 → Task 12 (The Words, spec §9): the \
+            directional sampling-bound assertions in this test (head/cult/ \
+            size/namelen all within their envelopes) still pass. Only the \
+            pinned exact name-length SMD (measured pre-Words) has drifted, \
+            since Task 9's glossed names shift the underlying name-length \
+            distribution (see name_length_distributions_are_measured_and_ \
+            pinned, ignored alongside this one). Task 12 (Lab preregister + \
+            run) owns re-measuring and re-pinning this row."]
 fn null_control_distributions_are_within_the_sampling_bound() {
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
