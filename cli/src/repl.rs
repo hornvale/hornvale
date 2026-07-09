@@ -21,6 +21,7 @@ commands:
   castes           the settlement's castes
   beliefs          recorded beliefs
   why <id>         recount how an entity came to be (ids from beliefs/places)
+  word <concept>   every species' word for a concept, or its reasoned gap
   phenomena [day] [--as <species>] — salient phenomena, optionally through a species' eyes
   facts <id>       every fact about entity id
   quit             leave
@@ -245,6 +246,19 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                             writeln!(output, "Seen through {species} eyes:")?;
                             write!(output, "{text}")?;
                         }
+                        // A generated proper name carries a `name-gloss`
+                        // fact (Task 9 of The Words) when its site had a
+                        // true story to tell; recount it too.
+                        if let Some(gloss) = world
+                            .ledger
+                            .text_of(EntityId(id), world_builder::NAME_GLOSS)
+                        {
+                            writeln!(
+                                output,
+                                "named for: {gloss} ({})",
+                                site_facts_of(world, gloss)
+                            )?;
+                        }
                     }
                     None => writeln!(output, "nothing is recorded about entity {id}")?,
                 },
@@ -278,6 +292,30 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     Err(e) => writeln!(output, "error: {e}")?,
                 }
             }
+            "word" => match argument {
+                Some(concept) => {
+                    if world.registry.concept(concept).is_none() {
+                        writeln!(output, "unknown concept '{concept}'")?;
+                    } else {
+                        for species in hornvale_species::registry().keys() {
+                            match world_builder::lexicon_of(world, species) {
+                                Ok(lexicon) => match lexicon.entry(concept) {
+                                    Some(entry) => writeln!(
+                                        output,
+                                        "{species}: {}",
+                                        crate::dictionary::word_line(entry)
+                                    )?,
+                                    None => {
+                                        writeln!(output, "{species}: no entry for '{concept}'")?
+                                    }
+                                },
+                                Err(e) => writeln!(output, "{species}: error: {e}")?,
+                            }
+                        }
+                    }
+                }
+                None => writeln!(output, "usage: word <concept>")?,
+            },
             "facts" => {
                 let id = argument.and_then(|a| a.parse::<u64>().ok());
                 match id {
@@ -299,6 +337,30 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
         }
     }
     Ok(())
+}
+
+/// Decompose a `name-gloss` fact's value back into the registered concept
+/// id(s) that produced it — [`hornvale_language::Namer::glossed_name`]
+/// always joins exactly the 1-2 chosen site concepts with `"-"` (see
+/// `naming.rs`), so trying every one- and two-concept join over the
+/// registry recovers them exactly (concept ids may themselves contain a
+/// hyphen, e.g. `coral-reef`, so splitting the gloss on `-` directly would
+/// misparse it). Falls back to echoing the gloss itself when no
+/// combination reproduces it (a save whose registry no longer holds a
+/// concept the gloss once named).
+fn site_facts_of(world: &World, gloss: &str) -> String {
+    let names: Vec<&str> = world.registry.concepts().map(|c| c.name.as_str()).collect();
+    if names.contains(&gloss) {
+        return gloss.to_string();
+    }
+    for &a in &names {
+        for &b in &names {
+            if format!("{a}-{b}") == gloss {
+                return format!("{a}, {b}");
+            }
+        }
+    }
+    gloss.to_string()
 }
 
 fn render_value(value: &Value) -> String {
@@ -515,6 +577,72 @@ mod tests {
         let out = drive_generated("phenomena --as elf\n");
         assert!(out.contains("unknown species 'elf'"));
         assert!(out.contains("goblin"), "the error lists known species");
+    }
+
+    #[test]
+    fn word_reports_every_species_entry_for_a_steeped_concept() {
+        // The universal stratum (Task 5) is Steeped for every species
+        // unconditionally, so "water" always resolves to a root, never a
+        // gap, on both shipped species.
+        let out = drive_generated("word water\n");
+        assert!(out.contains("goblin:"), "missing goblin's entry: {out}");
+        assert!(out.contains("kobold:"), "missing kobold's entry: {out}");
+        assert!(out.contains(" → "), "a root's line needs a derivation");
+    }
+
+    #[test]
+    fn word_with_no_argument_reports_usage() {
+        assert!(drive_generated("word\n").contains("usage: word"));
+    }
+
+    #[test]
+    fn word_with_an_unregistered_concept_is_reported_not_fatal() {
+        let out = drive_generated("word not-a-real-concept\ncalendar\n");
+        assert!(out.contains("unknown concept 'not-a-real-concept'"));
+        assert!(
+            out.contains("year is"),
+            "the REPL must keep running after: {out}"
+        );
+    }
+
+    #[test]
+    fn why_appends_named_for_when_a_name_gloss_fact_exists() {
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &world_builder::SettlementPins::default(),
+        )
+        .unwrap();
+        let glossed_id = world
+            .ledger
+            .find(hornvale_settlement::IS_SETTLEMENT)
+            .find(|f| {
+                world
+                    .ledger
+                    .text_of(f.subject, world_builder::NAME_GLOSS)
+                    .is_some()
+            })
+            .map(|f| f.subject.0)
+            .expect("seed 42 glosses at least one settlement");
+        let gloss = world
+            .ledger
+            .text_of(EntityId(glossed_id), world_builder::NAME_GLOSS)
+            .unwrap()
+            .to_string();
+        let mut out = Vec::new();
+        run(
+            &world,
+            format!("why {glossed_id}\nquit\n").as_bytes(),
+            &mut out,
+        )
+        .unwrap();
+        let out = String::from_utf8(out).unwrap();
+        assert!(
+            out.contains(&format!("named for: {gloss} (")),
+            "missing the name-gloss recount line: {out}"
+        );
     }
 
     #[test]

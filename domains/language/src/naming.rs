@@ -405,8 +405,12 @@ impl<'a> Namer<'a> {
 /// [`Syllable`]s, factored out so a caller that already holds a flat
 /// `Vec<Segment>` (lexicon's roots and recipe compounds, over `evolve`'s
 /// modern forms) reuses the same romanization/IPA/espeak logic instead of
-/// re-deriving it. `pub(crate)` for that cross-module reuse.
-pub(crate) fn render_views(segments: &[Segment]) -> GeneratedName {
+/// re-deriving it. `pub`, not `pub(crate)`: a [`crate::etymology::Derivation`]'s
+/// `proto` field is a bare `Vec<Segment>` too, and the dictionary surface
+/// (Task 11) needs this exact reduction to render a proto-form's roman
+/// spelling — the same view [`crate::lexicon::WordViews`] already gets for
+/// modern forms, so a proto-form's rendering can never drift from it.
+pub fn render_views(segments: &[Segment]) -> GeneratedName {
     let mut roman = String::new();
     let mut ipa_str = String::new();
     for seg in segments {

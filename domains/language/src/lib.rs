@@ -38,7 +38,7 @@ pub use lexicon::{
     ExposureClass, GapReason, Headedness, LexEntry, Lexicon, WordViews, build_lexicon,
     draw_headedness,
 };
-pub use naming::{GeneratedName, MorphOptions, NameKind, Namer, SiteConcepts};
+pub use naming::{GeneratedName, MorphOptions, NameKind, Namer, SiteConcepts, render_views};
 pub use packs::{
     PackDepths, PackEntry, body_pack, color_pack, compound_recipe, in_ladder, kin_pack,
     register_concepts, universal_stratum,
