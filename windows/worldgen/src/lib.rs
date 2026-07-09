@@ -449,6 +449,7 @@ pub fn observed_phenomena_as_in(
             place,
             time: WorldTime { day },
             lens: perception_lens(&def.perception),
+            position: None,
         },
     ))
 }
