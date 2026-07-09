@@ -6,6 +6,7 @@
 use crate::calendar::Calendar;
 use crate::moons::Moon;
 use crate::neighborhood::Neighbor;
+use crate::pins::NeighborClass;
 use crate::provider::size_word;
 
 /// ASCII chart width in characters.
@@ -66,6 +67,136 @@ pub fn moon_lines(moons: &[Moon], calendar: &Calendar) -> Vec<String> {
             ),
         })
         .collect()
+}
+
+/// Raster chart width in pixels.
+pub const MAP_WIDTH: u32 = 256;
+/// Raster chart height in pixels.
+pub const MAP_HEIGHT: u32 = 128;
+
+/// Near-black sky field (spec §4).
+const FIELD: [u8; 3] = [10, 14, 28];
+/// Ring and rim gray-blue.
+const RING: [u8; 3] = [60, 72, 100];
+/// Index-digit label color.
+const LABEL: [u8; 3] = [180, 195, 220];
+/// Disc radius in pixels.
+const DISC_RADIUS: f64 = 56.0;
+/// North-hemisphere disc center (x, y).
+const NORTH_CENTER: (f64, f64) = (64.0, 64.0);
+/// South-hemisphere disc center (x, y).
+const SOUTH_CENTER: (f64, f64) = (192.0, 64.0);
+
+/// 3×5 pixel digit bitmaps for 1–5, one `u8` of 3 bits per row.
+const DIGITS: [[u8; 5]; 5] = [
+    [0b010, 0b110, 0b010, 0b010, 0b111],
+    [0b110, 0b001, 0b010, 0b100, 0b111],
+    [0b111, 0b001, 0b011, 0b001, 0b111],
+    [0b101, 0b101, 0b111, 0b001, 0b001],
+    [0b111, 0b100, 0b110, 0b001, 0b110],
+];
+
+/// Star dot color by spectral class.
+fn class_rgb(class: NeighborClass) -> [u8; 3] {
+    match class {
+        NeighborClass::RedDwarf => [200, 70, 50],
+        NeighborClass::SunLike => [255, 214, 120],
+        NeighborClass::WhiteDwarf => [235, 235, 245],
+        NeighborClass::OrangeGiant => [255, 150, 60],
+        NeighborClass::RedGiant => [255, 90, 70],
+        NeighborClass::BlueGiant => [160, 200, 255],
+    }
+}
+
+/// Write one pixel, ignoring out-of-bounds coordinates.
+fn set_px(pixels: &mut [u8], x: i64, y: i64, color: [u8; 3]) {
+    if x < 0 || y < 0 || x >= i64::from(MAP_WIDTH) || y >= i64::from(MAP_HEIGHT) {
+        return;
+    }
+    let i = (y as usize * MAP_WIDTH as usize + x as usize) * 3;
+    pixels[i..i + 3].copy_from_slice(&color);
+}
+
+/// Solid rim (dec 0) and dashed rings (dec 30, 60) for one disc.
+fn draw_disc(pixels: &mut [u8], center: (f64, f64)) {
+    for y in 0..i64::from(MAP_HEIGHT) {
+        for x in 0..i64::from(MAP_WIDTH) {
+            let (dx, dy) = (x as f64 + 0.5 - center.0, y as f64 + 0.5 - center.1);
+            let d = (dx * dx + dy * dy).sqrt();
+            if (d - DISC_RADIUS).abs() < 0.6 {
+                set_px(pixels, x, y, RING);
+                continue;
+            }
+            for ring in [DISC_RADIUS / 3.0, DISC_RADIUS * 2.0 / 3.0] {
+                if (d - ring).abs() < 0.5 {
+                    let dash = dy.atan2(dx) / std::f64::consts::TAU * 24.0;
+                    if dash.rem_euclid(2.0) < 1.0 {
+                        set_px(pixels, x, y, RING);
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Pixel position of a star on its hemisphere's disc: azimuthal
+/// equidistant, r = (90 − |δ|)/90 × R; north disc counterclockwise,
+/// south clockwise, so RA reads consistently across both.
+fn star_xy(n: &Neighbor) -> (f64, f64) {
+    let north = n.declination >= 0.0;
+    let center = if north { NORTH_CENTER } else { SOUTH_CENTER };
+    let r = (90.0 - n.declination.abs()) / 90.0 * DISC_RADIUS;
+    let theta = n.right_ascension.to_radians();
+    let sy = if north { -theta.sin() } else { theta.sin() };
+    (center.0 + r * theta.cos(), center.1 + r * sy)
+}
+
+/// Filled dot of the given radius.
+fn draw_dot(pixels: &mut [u8], cx: f64, cy: f64, radius: i64, color: [u8; 3]) {
+    let (px, py) = (cx as i64, cy as i64);
+    for y in -radius..=radius {
+        for x in -radius..=radius {
+            if x * x + y * y <= radius * radius {
+                set_px(pixels, px + x, py + y, color);
+            }
+        }
+    }
+}
+
+/// Stamp digit `n` (1–5) with its top-left at (x, y).
+fn draw_digit(pixels: &mut [u8], n: usize, x: i64, y: i64) {
+    let glyph = DIGITS[n - 1];
+    for (row, bits) in glyph.iter().enumerate() {
+        for col in 0..3 {
+            if bits >> (2 - col) & 1 == 1 {
+                set_px(pixels, x + col, y + row as i64, LABEL);
+            }
+        }
+    }
+}
+
+/// Render the fixed night sky as a 256×128 planisphere-pair PNG: north
+/// celestial hemisphere left, south right, dots sized by brightness rank
+/// and colored by class, each tagged with its rank digit (spec §4).
+pub fn chart_png(neighbors: &[Neighbor]) -> Vec<u8> {
+    let mut pixels = Vec::with_capacity((MAP_WIDTH * MAP_HEIGHT * 3) as usize);
+    for _ in 0..MAP_WIDTH * MAP_HEIGHT {
+        pixels.extend_from_slice(&FIELD);
+    }
+    draw_disc(&mut pixels, NORTH_CENTER);
+    draw_disc(&mut pixels, SOUTH_CENTER);
+    // Dimmest first, so the brighter dot and label win any overlap.
+    for (index, n) in neighbors.iter().enumerate().rev() {
+        let (x, y) = star_xy(n);
+        let radius = match index {
+            0 => 3,
+            1 | 2 => 2,
+            _ => 1,
+        };
+        draw_dot(&mut pixels, x, y, radius, class_rgb(n.class));
+        draw_digit(&mut pixels, index + 1, x as i64 + radius + 2, y as i64 - 2);
+    }
+    hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_HEIGHT, &pixels)
 }
 
 #[cfg(test)]
@@ -179,5 +310,15 @@ mod tests {
         let lines = moon_lines(&system.moons, &calendar);
         assert_eq!(lines.len(), 1);
         assert!(lines[0].contains("no phase cycle — its orbit outpaces the year."));
+    }
+
+    #[test]
+    fn png_is_well_formed_and_byte_deterministic() {
+        let stars = vec![star(45.0, 30.0, 3.0), star(-20.0, 200.0, 2.0)];
+        let a = chart_png(&stars);
+        assert_eq!(a, chart_png(&stars));
+        assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
+        assert_eq!(&a[16..20], &MAP_WIDTH.to_be_bytes());
+        assert_eq!(&a[20..24], &MAP_HEIGHT.to_be_bytes());
     }
 }
