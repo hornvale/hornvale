@@ -40,6 +40,7 @@ jobs:
           cargo run -p hornvale -- settlement-map --world /tmp/hv-ci-sky.json --out book/src/gallery/settlement-seed-42.png > book/src/gallery/settlement-seed-42.md
           cargo run -p hornvale -- settlement-map --world /tmp/hv-ci-locked.json --out book/src/gallery/settlement-seed-42-locked.png > book/src/gallery/settlement-seed-42-locked.md
           cargo run -p hornvale -- star-chart --world /tmp/hv-ci-sky.json --out book/src/gallery/star-chart-seed-42.png > book/src/gallery/star-chart-seed-42.md
+          cargo run -p hornvale -- scene tiles --world /tmp/hv-ci-sky.json > book/src/gallery/scene-tiles-seed-42.json
           cargo run -p hornvale -- lab run studies/census-lands-drift.study.json
           cargo run -p hornvale -- lab run studies/census-of-the-meeting.study.json
           cargo run -p hornvale -- lab run studies/census-of-skies.study.json

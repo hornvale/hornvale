@@ -35,6 +35,7 @@ usage:
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
   hornvale settlement-map [--world <PATH>] [--out <PNG>] render the settlement map (markdown to stdout)
   hornvale star-chart [--world <PATH>] [--out <PNG>] render the star chart (markdown to stdout)
+  hornvale scene tiles [--world <PATH>] [--width <N>] emit scene/tiles/v1 JSON to stdout
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
@@ -73,6 +74,7 @@ fn main() -> ExitCode {
         Some("biome-map") => cmd_biome_map(&args),
         Some("settlement-map") => cmd_settlement_map(&args),
         Some("star-chart") => cmd_star_chart(&args),
+        Some("scene") => cmd_scene(&args),
         Some("concepts") => cmd_concepts(),
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
@@ -485,6 +487,28 @@ fn cmd_lab_list_metrics() -> Result<(), String> {
     Ok(())
 }
 
+/// Emit a scene description as JSON on stdout: `scene tiles` renders the
+/// cartographic tile lattice (scene/tiles/v1). Deterministic; CI
+/// drift-checks the committed example scene.
+fn cmd_scene(args: &[String]) -> Result<(), String> {
+    match args.get(1).map(String::as_str) {
+        Some("tiles") => {
+            let world = load_world(args)?;
+            let width = match flag_value(args, "--width") {
+                Some(raw) => raw
+                    .parse::<u32>()
+                    .map_err(|e| format!("--width must be a u32: {e}"))?,
+                None => 256,
+            };
+            let scene = hornvale_scene::tiles_scene(&world, width).map_err(|e| e.to_string())?;
+            println!("{}", hornvale_scene::scene_json(&scene));
+            Ok(())
+        }
+        Some(other) => Err(format!("unknown scene kind '{other}'; known kinds: tiles")),
+        None => Err("scene needs a kind; known kinds: tiles".to_string()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -738,5 +762,22 @@ mod tests {
     #[test]
     fn usage_mentions_min_suitability() {
         assert!(usage().contains("--min-suitability"));
+    }
+
+    #[test]
+    fn scene_with_no_subcommand_is_an_error() {
+        let err = cmd_scene(&args(&["scene"])).unwrap_err();
+        assert!(err.contains("tiles"), "should name the known kinds: {err}");
+    }
+
+    #[test]
+    fn scene_unknown_kind_is_an_error() {
+        let err = cmd_scene(&args(&["scene", "dioramas"])).unwrap_err();
+        assert!(err.contains("tiles"));
+    }
+
+    #[test]
+    fn usage_mentions_scene() {
+        assert!(usage().contains("scene tiles"));
     }
 }
