@@ -1,13 +1,13 @@
 //! Deterministic map renders in the First Light tradition: an
 //! equirectangular PNG elevation map (decision 0018) and an ASCII map for
 //! the REPL. Same globe, same bytes — a changed artifact in review means
-//! changed behavior. Pixel→cell lookup uses a latitude-band index (30 bands
-//! of 6°): the nearest cell center at level ≥ 4 is within ~2.5°, so the
-//! pixel's band plus both neighbors always contains it.
+//! changed behavior. Pixel→cell lookup uses the kernel's
+//! `NearestCellIndex` (a latitude-band index, 30 bands of 6°): the nearest
+//! cell center at level ≥ 4 is within ~2.5°, so the pixel's band plus both
+//! neighbors always contains it.
 
 use crate::globe::TectonicGlobe;
-use crate::plates::dot;
-use hornvale_kernel::{CellId, Geosphere};
+use hornvale_kernel::{Geosphere, NearestCellIndex};
 
 /// Raster image width in pixels; the image is equirectangular, so height is
 /// `MAP_WIDTH / 2`.
@@ -16,55 +16,6 @@ pub const MAP_WIDTH: u32 = 256;
 pub const ASCII_WIDTH: u32 = 72;
 /// ASCII map height in characters (2:1 world on ~2:1-tall glyphs).
 pub const ASCII_HEIGHT: u32 = 24;
-
-/// Latitude bands in the nearest-cell index.
-const BAND_COUNT: usize = 30;
-/// Height of one band, degrees.
-const BAND_DEGREES: f64 = 180.0 / BAND_COUNT as f64;
-
-/// Latitude-band index for pixel→cell lookups: cells bucketed into 30 bands
-/// of 6° (built in ascending cell order, so lookups are deterministic).
-/// Searching the query's band ± 1 always contains the nearest cell center
-/// (which lies within ~2.5° at level 4, ~1.3° at level 5).
-struct LatBandIndex {
-    bands: Vec<Vec<CellId>>,
-}
-
-impl LatBandIndex {
-    /// Bucket every cell of `geo` by latitude.
-    fn new(geo: &Geosphere) -> LatBandIndex {
-        let mut bands = vec![Vec::new(); BAND_COUNT];
-        for cell in geo.cells() {
-            let latitude = geo.coord(cell).latitude;
-            let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
-            bands[band].push(cell);
-        }
-        LatBandIndex { bands }
-    }
-
-    /// The cell nearest a coordinate (degrees), by maximum dot product.
-    /// Inverts the kernel's coord convention: latitude = asin(z),
-    /// longitude = atan2(y, x).
-    fn nearest(&self, geo: &Geosphere, latitude: f64, longitude: f64) -> CellId {
-        let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
-        let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
-        let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
-        let lo = band.saturating_sub(1);
-        let hi = (band + 1).min(BAND_COUNT - 1);
-        let mut best = CellId(0);
-        let mut best_dot = f64::NEG_INFINITY;
-        for cells in &self.bands[lo..=hi] {
-            for &cell in cells {
-                let d = dot(geo.position(cell), target);
-                if d > best_dot {
-                    best_dot = d;
-                    best = cell;
-                }
-            }
-        }
-        best
-    }
-}
 
 /// Color a cell by elevation relative to sea level: ocean blues deepen with
 /// depth; land climbs green → tan → brown → white.
@@ -99,7 +50,7 @@ fn color(elevation_m: f64, sea_level_m: f64) -> [u8; 3] {
 /// centers sampled.
 fn elevation_pixels(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
-    let index = LatBandIndex::new(geo);
+    let index = NearestCellIndex::new(geo);
     let mut out = Vec::with_capacity((width * height * 3) as usize);
     for py in 0..height {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
@@ -121,7 +72,7 @@ pub fn elevation_png(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
 /// Render the globe as a 72×24 ASCII map: '~' ocean, '.' lowland, '+'
 /// hills, '^' mountains, 'A' high peaks. One newline per row.
 pub fn elevation_ascii(geo: &Geosphere, globe: &TectonicGlobe) -> String {
-    let index = LatBandIndex::new(geo);
+    let index = NearestCellIndex::new(geo);
     let mut out = String::with_capacity(((ASCII_WIDTH + 1) * ASCII_HEIGHT) as usize);
     for py in 0..ASCII_HEIGHT {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(ASCII_HEIGHT) * 180.0;
@@ -181,26 +132,5 @@ mod tests {
         assert!(map.contains('~'), "no ocean rendered");
         assert!(map.contains('.'), "no land rendered");
         assert_eq!(elevation_ascii(&geo, &globe), map);
-    }
-
-    #[test]
-    fn band_index_agrees_with_brute_force_nearest() {
-        let geo = Geosphere::new(4);
-        let index = LatBandIndex::new(&geo);
-        for (latitude, longitude) in [(0.0, 0.0), (89.0, 10.0), (-89.0, -170.0), (45.5, 179.5)] {
-            let banded = index.nearest(&geo, latitude, longitude);
-            let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
-            let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
-            let mut best = hornvale_kernel::CellId(0);
-            let mut best_dot = f64::NEG_INFINITY;
-            for cell in geo.cells() {
-                let d = crate::plates::dot(geo.position(cell), target);
-                if d > best_dot {
-                    best_dot = d;
-                    best = cell;
-                }
-            }
-            assert_eq!(banded, best, "at ({latitude}, {longitude})");
-        }
     }
 }

@@ -225,6 +225,61 @@ impl Geosphere {
     }
 }
 
+/// Latitude bands in the nearest-cell index.
+const BAND_COUNT: usize = 30;
+/// Height of one band, degrees.
+const BAND_DEGREES: f64 = 180.0 / BAND_COUNT as f64;
+
+/// Dot product of two unit vectors.
+fn dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+/// Latitude-band index for pixel→cell lookups: cells bucketed into 30
+/// bands of 6° (built in ascending cell order, so lookups are
+/// deterministic). Searching the query's band ± 1 always contains the
+/// nearest cell center at level ≥ 4 (which lies within ~2.5°).
+pub struct NearestCellIndex {
+    /// One bucket of cells per latitude band, north to south.
+    bands: Vec<Vec<CellId>>,
+}
+
+impl NearestCellIndex {
+    /// Bucket every cell of `geo` by latitude.
+    pub fn new(geo: &Geosphere) -> NearestCellIndex {
+        let mut bands = vec![Vec::new(); BAND_COUNT];
+        for cell in geo.cells() {
+            let latitude = geo.coord(cell).latitude;
+            let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
+            bands[band].push(cell);
+        }
+        NearestCellIndex { bands }
+    }
+
+    /// The cell nearest a coordinate (degrees), by maximum dot product.
+    /// Inverts the coord convention: latitude = asin(z), longitude =
+    /// atan2(y, x).
+    pub fn nearest(&self, geo: &Geosphere, latitude: f64, longitude: f64) -> CellId {
+        let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
+        let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+        let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
+        let lo = band.saturating_sub(1);
+        let hi = (band + 1).min(BAND_COUNT - 1);
+        let mut best = CellId(0);
+        let mut best_dot = f64::NEG_INFINITY;
+        for cells in &self.bands[lo..=hi] {
+            for &cell in cells {
+                let d = dot3(geo.position(cell), target);
+                if d > best_dot {
+                    best_dot = d;
+                    best = cell;
+                }
+            }
+        }
+        best
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -363,6 +418,27 @@ mod tests {
             assert_eq!(a.position(id), b.position(id), "position drift at {id:?}");
             assert_eq!(a.neighbors(id), b.neighbors(id), "neighbor drift at {id:?}");
             assert_eq!(a.coord(id), b.coord(id), "coord drift at {id:?}");
+        }
+    }
+
+    #[test]
+    fn nearest_cell_index_agrees_with_brute_force() {
+        let geo = Geosphere::new(4);
+        let index = NearestCellIndex::new(&geo);
+        for (latitude, longitude) in [(0.0, 0.0), (89.0, 10.0), (-89.0, -170.0), (45.5, 179.5)] {
+            let banded = index.nearest(&geo, latitude, longitude);
+            let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
+            let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+            let mut best = CellId(0);
+            let mut best_dot = f64::NEG_INFINITY;
+            for cell in geo.cells() {
+                let d = super::dot3(geo.position(cell), target);
+                if d > best_dot {
+                    best_dot = d;
+                    best = cell;
+                }
+            }
+            assert_eq!(banded, best, "at ({latitude}, {longitude})");
         }
     }
 }

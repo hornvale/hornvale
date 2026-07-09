@@ -1,11 +1,11 @@
 //! Deterministic biome-map renders: an equirectangular PNG and a 72×24
 //! ASCII map, recolored from the elevation-map tradition. Same biome field,
 //! same bytes — a changed artifact in review means changed behavior.
-//! Pixel→cell lookup uses a latitude-band index (30 bands of 6°), the same
-//! projection the elevation renderer uses.
+//! Pixel→cell lookup uses the kernel's `NearestCellIndex` (a latitude-band
+//! index, 30 bands of 6°), the same projection the elevation renderer uses.
 
 use crate::biome::Biome;
-use hornvale_kernel::{CellId, CellMap, Geosphere};
+use hornvale_kernel::{CellMap, Geosphere, NearestCellIndex};
 
 /// Raster image width in pixels; equirectangular, so height is `MAP_WIDTH / 2`.
 pub const MAP_WIDTH: u32 = 256;
@@ -14,62 +14,12 @@ pub const ASCII_WIDTH: u32 = 72;
 /// ASCII map height in characters.
 pub const ASCII_HEIGHT: u32 = 24;
 
-/// Latitude bands in the nearest-cell index.
-const BAND_COUNT: usize = 30;
-/// Height of one band, degrees.
-const BAND_DEGREES: f64 = 180.0 / BAND_COUNT as f64;
-
-/// Dot product.
-fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-}
-
-/// Latitude-band index for pixel→cell lookups (30 bands of 6°, built in
-/// ascending cell order for determinism). Searching the query's band ± 1
-/// always contains the nearest cell center at level ≥ 4.
-struct LatBandIndex {
-    bands: Vec<Vec<CellId>>,
-}
-
-impl LatBandIndex {
-    fn new(geo: &Geosphere) -> LatBandIndex {
-        let mut bands = vec![Vec::new(); BAND_COUNT];
-        for cell in geo.cells() {
-            let latitude = geo.coord(cell).latitude;
-            let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
-            bands[band].push(cell);
-        }
-        LatBandIndex { bands }
-    }
-
-    /// The cell nearest a coordinate (degrees), by maximum dot product.
-    fn nearest(&self, geo: &Geosphere, latitude: f64, longitude: f64) -> CellId {
-        let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
-        let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
-        let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
-        let lo = band.saturating_sub(1);
-        let hi = (band + 1).min(BAND_COUNT - 1);
-        let mut best = CellId(0);
-        let mut best_dot = f64::NEG_INFINITY;
-        for cells in &self.bands[lo..=hi] {
-            for &cell in cells {
-                let d = dot(geo.position(cell), target);
-                if d > best_dot {
-                    best_dot = d;
-                    best = cell;
-                }
-            }
-        }
-        best
-    }
-}
-
 /// Raw RGB pixels of the equirectangular biome map (row-major, top row
 /// first) — also the base image settlement's overlay stamps at the
 /// composition root.
 pub fn biome_pixels(geo: &Geosphere, biomes: &CellMap<Biome>) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
-    let index = LatBandIndex::new(geo);
+    let index = NearestCellIndex::new(geo);
     let mut out = Vec::with_capacity((width * height * 3) as usize);
     for py in 0..height {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
@@ -90,7 +40,7 @@ pub fn biome_png(geo: &Geosphere, biomes: &CellMap<Biome>) -> Vec<u8> {
 
 /// Render the biome field as a 72×24 ASCII map, one newline per row.
 pub fn biome_ascii(geo: &Geosphere, biomes: &CellMap<Biome>) -> String {
-    let index = LatBandIndex::new(geo);
+    let index = NearestCellIndex::new(geo);
     let mut out = String::with_capacity(((ASCII_WIDTH + 1) * ASCII_HEIGHT) as usize);
     for py in 0..ASCII_HEIGHT {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(ASCII_HEIGHT) * 180.0;
