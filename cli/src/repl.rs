@@ -342,25 +342,41 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
 /// Decompose a `name-gloss` fact's value back into the registered concept
 /// id(s) that produced it — [`hornvale_language::Namer::glossed_name`]
 /// always joins exactly the 1-2 chosen site concepts with `"-"` (see
-/// `naming.rs`), so trying every one- and two-concept join over the
-/// registry recovers them exactly (concept ids may themselves contain a
-/// hyphen, e.g. `coral-reef`, so splitting the gloss on `-` directly would
-/// misparse it). Falls back to echoing the gloss itself when no
-/// combination reproduces it (a save whose registry no longer holds a
-/// concept the gloss once named).
+/// `naming.rs`). Concept ids may themselves contain a hyphen, so the gloss
+/// text alone can be ambiguous: today's registry really does hold `sea`,
+/// `ice`, AND `sea-ice`, making the gloss "sea-ice" readable as either the
+/// one biome concept or a sea+ice join. The rule: collect every
+/// interpretation ([`interpretations_of`]) and render the decomposition
+/// only when exactly one exists; zero (a save whose registry no longer
+/// holds a concept the gloss once named) or several (ambiguity) echo the
+/// raw gloss unchanged — a fallback, never a guess.
 fn site_facts_of(world: &World, gloss: &str) -> String {
     let names: Vec<&str> = world.registry.concepts().map(|c| c.name.as_str()).collect();
-    if names.contains(&gloss) {
-        return gloss.to_string();
+    let mut found = interpretations_of(&names, gloss);
+    match found.len() {
+        1 => found.remove(0),
+        _ => gloss.to_string(),
     }
-    for &a in &names {
-        for &b in &names {
+}
+
+/// Every reading of `gloss` as 1-2 registered concept ids: the whole gloss
+/// as one concept (rendered as itself), plus every ordered two-concept pair
+/// whose `"-"`-join reproduces it (rendered `"a, b"`), in `names` order.
+/// [`site_facts_of`] renders a decomposition only when this returns exactly
+/// one entry.
+fn interpretations_of(names: &[&str], gloss: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    if names.contains(&gloss) {
+        found.push(gloss.to_string());
+    }
+    for &a in names {
+        for &b in names {
             if format!("{a}-{b}") == gloss {
-                return format!("{a}, {b}");
+                found.push(format!("{a}, {b}"));
             }
         }
     }
-    gloss.to_string()
+    found
 }
 
 fn render_value(value: &Value) -> String {
@@ -379,18 +395,79 @@ mod tests {
     use hornvale_kernel::Seed;
     use world_builder::{SkyChoice, build_world};
 
-    fn drive(commands: &str) -> String {
-        let world = build_world(
+    fn constant_world() -> World {
+        build_world(
             Seed(42),
             &SkyPins::default(),
             SkyChoice::Constant,
             &hornvale_terrain::TerrainPins::default(),
             &world_builder::SettlementPins::default(),
         )
-        .unwrap();
+        .unwrap()
+    }
+
+    fn drive(commands: &str) -> String {
+        let world = constant_world();
         let mut out = Vec::new();
         run(&world, commands.as_bytes(), &mut out).unwrap();
         String::from_utf8(out).unwrap()
+    }
+
+    #[test]
+    fn site_facts_of_an_ambiguous_gloss_falls_back_to_the_raw_text() {
+        // The triple that makes ambiguity real in today's registry: `sea`
+        // (terrain), `ice` (climate), AND `sea-ice` (the biome) are all
+        // registered, so the gloss "sea-ice" is readable as either the one
+        // biome concept or a sea+ice join. Ambiguity must fall back to the
+        // raw gloss — never a guess between the two readings.
+        let world = constant_world();
+        let names: Vec<&str> = world.registry.concepts().map(|c| c.name.as_str()).collect();
+        for concept in ["sea", "ice", "sea-ice"] {
+            assert!(
+                names.contains(&concept),
+                "precondition: {concept} must be registered for this test to bite"
+            );
+        }
+        assert_eq!(
+            interpretations_of(&names, "sea-ice").len(),
+            2,
+            "sea-ice must be seen as both a whole concept and a sea+ice join"
+        );
+        assert_eq!(
+            site_facts_of(&world, "sea-ice"),
+            "sea-ice",
+            "an ambiguous gloss must echo itself, never guess a decomposition"
+        );
+    }
+
+    #[test]
+    fn site_facts_of_a_unique_join_gloss_names_its_two_concepts() {
+        let world = constant_world();
+        let names: Vec<&str> = world.registry.concepts().map(|c| c.name.as_str()).collect();
+        assert!(
+            !names.contains(&"ice-home"),
+            "precondition: ice-home must not itself be a registered concept"
+        );
+        assert_eq!(site_facts_of(&world, "ice-home"), "ice, home");
+    }
+
+    #[test]
+    fn site_facts_of_a_whole_concept_gloss_echoes_itself_across_the_entire_registry() {
+        // The registry-wide decomposition regression the sea/ice/sea-ice
+        // triple motivates: a gloss that IS a whole registered concept must
+        // never render as a pair — either it is the unique interpretation
+        // (rendered as itself) or it collides with a join (ambiguous →
+        // fallback, also itself). Sweeping every registered concept keeps
+        // this true as the inventory grows.
+        let world = constant_world();
+        for c in world.registry.concepts() {
+            assert_eq!(
+                site_facts_of(&world, &c.name),
+                c.name,
+                "whole-concept gloss {} must echo itself, not decompose",
+                c.name
+            );
+        }
     }
 
     #[test]
