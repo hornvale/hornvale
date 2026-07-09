@@ -127,7 +127,8 @@ pub fn register_all(registry: &mut ConceptRegistry) -> Result<(), RegistryError>
     hornvale_settlement::register_concepts(registry)?;
     hornvale_species::register_concepts(registry)?;
     hornvale_culture::register_concepts(registry)?;
-    hornvale_religion::register_concepts(registry)
+    hornvale_religion::register_concepts(registry)?;
+    hornvale_language::register_concepts(registry)
 }
 
 /// The shared Geosphere at `GLOBE_LEVEL`: seed-independent, computed once

@@ -9,6 +9,10 @@
 /// deterministic draw per `(seed, species, kind, salt)` (no re-draw), built
 /// from a drawn phonology.
 pub mod naming;
+/// The Swadesh packs: authored core vocabulary (the universal stratum,
+/// color, body, and kin packs), Berlin & Kay acquisition ladders, the
+/// closed compound-recipe table, and `register_concepts`.
+pub mod packs;
 /// The phoneme model: segments as articulatory feature-bundles.
 pub mod phoneme;
 /// The phonology engine: per-species inventory and phonotactics drawn
@@ -19,6 +23,10 @@ pub mod phonology;
 pub mod register;
 
 pub use naming::{GeneratedName, MorphOptions, NameKind, Namer};
+pub use packs::{
+    PackDepths, PackEntry, body_pack, color_pack, compound_recipe, in_ladder, kin_pack,
+    register_concepts, universal_stratum,
+};
 pub use phoneme::{
     Backness, Height, Manner, Place, Segment, espeak, espeak_word, ipa, romanize, sonority,
 };
