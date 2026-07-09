@@ -35,14 +35,18 @@ rather than an opaque label. A handful of segments a people's anatomy
 affords but standard IPA does not name cleanly are permitted as **authored
 extensions**, each carrying a defined romanization and a best-effort
 IPA-adjacent notation rather than being forced into the nearest existing
-symbol. Nothing about a segment is ever stored as text: it renders two ways,
+symbol. Nothing about a segment is ever stored as text: it renders three ways,
 on demand, from the same feature bundle — `romanize` for a plain-script
-surface form and `ipa` for a transcription — and a name built from a
-sequence of segments inherits both renderings for free. The almanac reads
-the romanization; the book's phonology page reads the IPA; both are views of
-one underlying truth, never two facts that could drift apart, exactly as
-[Perception](./perception.md)'s venue is a fact about a phenomenon rather
-than a second phenomenon standing in for the first.
+surface form, `ipa` for a transcription, and `espeak` for the espeak-ng
+phoneme mnemonic an offline synthesizer voices (added in Campaign 17,
+[Audible Phonology](../chronicle/17-audible-phonology.md)) — and a name
+built from a sequence of segments inherits all three renderings for free.
+The almanac reads the romanization; the book's phonology page reads the IPA,
+and its audio column plays clips authored from the espeak formulation; all
+three are views of one underlying truth, never separate facts that could
+drift apart, exactly as [Perception](./perception.md)'s venue is a fact
+about a phenomenon rather than a second phenomenon standing in for the
+first.
 
 **The articulation vector, and why it stays closed.** A species' phonology
 is built from an **articulation vector** — the species crate's third closed
@@ -126,8 +130,9 @@ affixes dominance honorifics onto its gods' titles; a `Knowledge`- or
 with no dominance marking anywhere in the title. A god's epithet-shape
 recounts to how its people organize authority, identity at the goblin
 baseline exactly as culture's caste ladder already is. Every generated name,
-whatever its kind, carries both a romanization and an IPA transcription, the
-same "spellings are views" split the phoneme model itself keeps.
+whatever its kind, carries a romanization, an IPA transcription, and an
+espeak formulation, the same "spellings are views" split the phoneme model
+itself keeps.
 
 **The content→render seam.** Before this campaign, religion built an
 English sentence inline and committed it whole as a tenet fact —

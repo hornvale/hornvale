@@ -44,6 +44,7 @@
 - [Campaign Y2-1: The Peoples](./chronicle/campaign-y2-1.md)
 - [Campaign 15: The Eyes](./chronicle/15-the-eyes.md)
 - [Campaign 16: The Tongues](./chronicle/16-the-tongues.md)
+- [Campaign 17: Audible Phonology](./chronicle/17-audible-phonology.md)
 
 # The Gallery
 
