@@ -36,7 +36,7 @@ usage:
   hornvale settlement-map [--world <PATH>] [--out <PNG>] render the settlement map (markdown to stdout)
   hornvale star-chart [--world <PATH>] [--out <PNG>] render the star chart (markdown to stdout)
   hornvale orrery [--world <PATH>] [--day <D>]            print one orrery frame (ANSI)
-  hornvale orrery [--world <PATH>] --day <A..B> [--step <k>] --cast <OUT>   animate to a .cast
+  hornvale orrery [--world <PATH>] --day <A..B> [--step <k>] [--fps <f>] --cast <OUT>   animate to a .cast
   hornvale scene tiles [--world <PATH>] [--width <N>] emit scene/tiles/v1 JSON to stdout
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
@@ -453,8 +453,12 @@ fn cmd_orrery(args: &[String]) -> Result<(), String> {
             .unwrap_or("1")
             .parse()
             .map_err(|_| "bad --step")?;
-        if step <= 0.0 || b <= a {
-            return Err("--day A..B must have B>A and --step>0".to_string());
+        let fps: f64 = flag_value(args, "--fps")
+            .unwrap_or("6")
+            .parse()
+            .map_err(|_| "bad --fps")?;
+        if step <= 0.0 || b <= a || fps <= 0.0 {
+            return Err("--day A..B must have B>A, --step>0, --fps>0".to_string());
         }
         let mut frames = Vec::new();
         let mut d = a;
@@ -471,9 +475,12 @@ fn cmd_orrery(args: &[String]) -> Result<(), String> {
             ));
             d += step;
         }
-        // 25 fps feels smooth; the value is synthetic, only the ratio matters.
+        // Synthetic frame timing: the interval is 1/fps, so --fps sets playback
+        // speed (default 6 fps ≈ a slow, watchable ~12 s for a 73-frame year).
+        // The value is synthetic; only its ratio to real time matters.
+        let dt = 1.0 / fps;
         let cast =
-            hornvale_kernel::asciinema_v2(ORRERY_WIDTH as u16, ORRERY_HEIGHT as u16, 0.04, &frames);
+            hornvale_kernel::asciinema_v2(ORRERY_WIDTH as u16, ORRERY_HEIGHT as u16, dt, &frames);
         std::fs::write(cast_path, cast).map_err(|e| format!("writing {cast_path}: {e}"))?;
         println!("wrote {} frames to {cast_path}", frames.len());
         Ok(())

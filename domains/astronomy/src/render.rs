@@ -282,17 +282,17 @@ pub const ORRERY_WIDTH: usize = 61;
 /// x-axis is scaled ×2 for round orbits).
 pub const ORRERY_HEIGHT: usize = 31;
 
-/// A synodic-phase glyph: `o` new, `)` waxing, `O` full, `(` waning — the
-/// provider's phase-word thresholds.
+/// A synodic-phase glyph: `○` new, `◐` waxing, `●` full, `◑` waning — the
+/// provider's phase-word thresholds, as single-width Unicode circles.
 fn phase_glyph(phase: f64) -> char {
     if !(0.125..0.875).contains(&phase) {
-        'o'
+        '○'
     } else if phase < 0.5 {
-        ')'
+        '◐'
     } else if phase < 0.625 {
-        'O'
+        '●'
     } else {
-        '('
+        '◑'
     }
 }
 
@@ -328,18 +328,18 @@ pub fn orrery_ansi(system: &StarSystem, calendar: &Calendar, t: StdDays) -> Stri
     let hz_out = system.star.habitable_zone.outer().get() * scale;
     let mut a = 0.0_f64;
     while a < std::f64::consts::TAU {
-        plot(&mut grid, hz_in, a, '.', "");
-        plot(&mut grid, hz_out, a, '.', "");
+        plot(&mut grid, hz_in, a, '·', "");
+        plot(&mut grid, hz_out, a, '·', "");
         a += 0.15;
     }
 
     // The star at center.
-    grid[cy as usize][cx as usize] = ('*', star_color(&system.star.class_name));
+    grid[cy as usize][cx as usize] = ('★', star_color(&system.star.class_name));
 
     // The world on its orbit (green), and its screen position.
     let theta = std::f64::consts::TAU * calendar.year_phase(t);
     let world_r = orbit * scale;
-    plot(&mut grid, world_r, theta, 'O', "\u{1b}[38;5;42m");
+    plot(&mut grid, world_r, theta, '●', "\u{1b}[38;5;42m");
     let wx = cx + aspect * world_r * theta.cos();
     let wy = cy + world_r * theta.sin();
 
@@ -581,8 +581,8 @@ mod tests {
             "deterministic in (system, t)"
         );
         assert_eq!(a.matches('\n').count(), ORRERY_HEIGHT, "one row per line");
-        assert!(a.contains('*'), "the star sits at center");
-        assert!(a.contains('O'), "the world is drawn");
+        assert!(a.contains('★'), "the star sits at center");
+        assert!(a.contains('●'), "the world is drawn");
         // The world moves: a half-year later the frame differs.
         let half = StdDays::new(10.0 + system.anchor.year.get() / 2.0).unwrap();
         assert_ne!(

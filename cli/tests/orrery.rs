@@ -25,7 +25,7 @@ fn orrery_frame_and_cast_are_deterministic() {
         .unwrap();
     assert!(one.status.success());
     let frame = String::from_utf8(one.stdout).unwrap();
-    assert!(frame.contains('*'), "frame has the star");
+    assert!(frame.contains('★'), "frame has the star");
 
     // Animated: N frames for 0..10 step 2 => 5 events; deterministic bytes.
     let cast = dir.join("a.cast");
