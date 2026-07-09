@@ -1,8 +1,21 @@
 //! Calibration: at tier 0, belief kind is a pure function of rotation.
 //! The instrument must reproduce known ground truth exactly (spec §2.5).
 use hornvale_culture::{BiomeClass, subsistence};
-use hornvale_lab::{MetricValue, load_study, run};
+use hornvale_lab::{MetricValue, RunResult, load_study, run};
 use std::path::Path;
+use std::sync::LazyLock;
+
+/// The 500-seed drift census, run ONCE and shared by every calibration in this
+/// file. Each test used to re-run the full census independently (~13× the same
+/// worlds); computing it once behind a `LazyLock` is this suite's dominant cost
+/// saving. Determinism makes the sharing sound — the census is a pure function
+/// of the study — and the parallel runner (TOOL-7) builds it across all cores.
+/// Init panics on a load/run error (a test-setup failure, not a calibration).
+static DRIFT: LazyLock<RunResult> = LazyLock::new(|| {
+    let study = load_study(Path::new("../../studies/census-lands-drift.study.json"))
+        .expect("load census-lands-drift study");
+    run(&study).expect("run census-lands-drift study")
+});
 
 /// Map a `flagship-biome` metric's kebab-case name back to culture's coarse
 /// `BiomeClass`, mirroring `hornvale_worldgen::biome_class`'s grouping. A
@@ -28,8 +41,7 @@ fn biome_class_from_name(name: &str) -> BiomeClass {
 
 #[test]
 fn eternal_beliefs_coincide_exactly_with_tidal_locking() {
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (locked_i, belief_i) = (idx("tidally-locked"), idx("belief-kind"));
     for row in &result.rows {
@@ -41,8 +53,7 @@ fn eternal_beliefs_coincide_exactly_with_tidal_locking() {
 
 #[test]
 fn band_count_matches_the_known_function_of_rotation() {
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (day_i, band_i) = (idx("day-length-hours"), idx("band-count"));
     for row in &result.rows {
@@ -78,8 +89,7 @@ fn band_count_matches_the_known_function_of_rotation() {
 
 #[test]
 fn flagship_subsistence_matches_biome_and_coastal_columns() {
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (subsistence_i, biome_i, coastal_i) = (
         idx("flagship-subsistence"),
@@ -115,8 +125,7 @@ fn flagship_subsistence_matches_biome_and_coastal_columns() {
 
 #[test]
 fn pantheon_verticality_matches_stratification() {
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (vert_i, size_i) = (idx("pantheon-verticality"), idx("flagship-structure-size"));
     for row in &result.rows {
@@ -138,8 +147,7 @@ fn pantheon_verticality_matches_stratification() {
 
 #[test]
 fn head_deity_is_eternal_exactly_when_tidally_locked() {
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (head_i, lock_i) = (idx("head-deity-periodicity"), idx("tidally-locked"));
     for row in &result.rows {
@@ -161,8 +169,7 @@ fn head_deity_is_eternal_exactly_when_tidally_locked() {
 
 #[test]
 fn goblin_flagship_coastal_split_is_pinned() {
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let coastal_i = idx("flagship-coastal");
     let (mut coastal, mut inland) = (0u32, 0u32);
@@ -195,8 +202,7 @@ fn goblin_flagship_coastal_split_is_pinned() {
 
 #[test]
 fn kobold_structures_never_enslave_and_top_out_with_elders() {
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (kob_i, gob_i) = (idx("kobold-flagship-roles"), idx("goblin-flagship-roles"));
     for row in &result.rows {
@@ -227,8 +233,7 @@ fn the_slave_rung_is_an_exact_function_of_rank_surplus_and_scale() {
     // Preregistered (spec §9.2): slave ⇔ Rank ∧ surplus > 0.6 ∧ population >
     // 300, checked on goblin rows (Rank) and kobold rows (¬Rank) from
     // independent recomputed columns.
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     for species in ["goblin", "kobold"] {
         let (r_i, s_i, p_i) = (
@@ -261,8 +266,7 @@ fn the_slave_rung_is_an_exact_function_of_rank_surplus_and_scale() {
 fn kobold_flagships_are_less_coastal_than_goblin_flagships() {
     // Preregistered directional hypothesis (spec §9.1); Task 10 pins exact
     // counts after measurement.
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let rate = |col: usize| {
         let (mut t, mut n) = (0u32, 0u32);
@@ -285,8 +289,7 @@ fn kobold_flagships_are_less_coastal_than_goblin_flagships() {
 
 #[test]
 fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (g_i, k_i, moons_i) = (
         idx("head-deity-domain-goblin"),
@@ -339,8 +342,7 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
 
 #[test]
 fn blind_attribution_beats_chance_decisively() {
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (a_i, moons_i) = (idx("blind-attribution-correct"), idx("moons-admitted"));
     let (mut correct, mut total) = (0u32, 0u32);
@@ -403,8 +405,7 @@ fn phonotactic_validity_is_true_for_every_generated_name() {
     // phonotactics. If this is ever false the engine is producing names it
     // calls invalid: this is a STOP-and-report-BLOCKED condition (task
     // brief), never an assertion to loosen.
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     for species in ["goblin", "kobold"] {
         let v_i = idx(&format!("phonotactic-validity-{species}"));
@@ -431,8 +432,7 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // basis draws honorific-prefixed epithets (spec §7's morph_options
     // mapping); kobold's Knowledge status basis does not. Row-by-row, since
     // Absent (no pantheon this world) is a legitimate skip.
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (g_i, k_i) = (
         idx("epithet-honorific-goblin"),
@@ -470,8 +470,7 @@ fn name_collision_rate_is_measured_and_pinned() {
     // 500-seed drift study as a calibration row, not an invariant. A
     // regression that widened or narrowed the drawn name space would move
     // these counts; a broken collision detector would too.
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let rate_i = idx("name-collision-rate");
     let (mut zero, mut nonzero, mut absent) = (0u32, 0u32, 0u32);
@@ -516,8 +515,7 @@ fn name_length_distributions_are_measured_and_pinned() {
     // measurement — the naming/voice baseline's other half (contrast
     // `phonotactic_validity_is_true_for_every_generated_name`, which is an
     // invariant, not a measurement).
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json")).unwrap();
-    let result = run(&study).unwrap();
+    let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     for (species, expected_present, expected_mean) in [
         ("goblin", 498u32, 9.869_276_105_4),
