@@ -44,8 +44,10 @@ spectral class, hot blue-white through cool red — a choice the renderer owns,
 never the domain (a star stays a "smoldering red" *word* for the almanac while
 the chart chooses its *hue*). And `hornvale orrery` draws the system from
 above — the star at center in its class color, the habitable zone as a dotted
-ring, the world on its orbit at the year's phase, each moon wearing its synodic
-face (single-width Unicode by default; with `--glyphs emoji`, a two-column grid
+ring, the world on its orbit at the year's phase, each moon placed where its
+synodic phase puts it — new between world and star, full opposite — so the drawn
+geometry and the lit face it wears never disagree (single-width Unicode by
+default; with `--glyphs emoji`, a two-column grid
 whose moons are the phase emoji `🌑🌓🌕🌗`, an experiment that meets emoji's
 fixed double-width head-on rather than fighting it). The orrery is a pure
 function of time, so evaluating it across a span is an animation: the world

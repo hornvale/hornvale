@@ -293,7 +293,7 @@ pub enum GlyphSet {
 }
 
 /// A moon's illumination phase, bucketed to one of four glyphs.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum Phase {
     /// Near new (dark).
     New,
@@ -315,6 +315,32 @@ fn phase_bucket(phase: f64) -> Phase {
         Phase::Full
     } else {
         Phase::Waning
+    }
+}
+
+/// Where moon `index` is drawn around the world at time `t`, and its phase
+/// glyph — both from the *same* datum so the picture can never lie. The moon's
+/// illumination phase (`Calendar::moon_phase`: SKY-20 synodic × SKY-4 genesis
+/// offset) is the sim's canonical value; the orrery is its lens. A moon's phase
+/// is fixed by the Sun–world–Moon geometry, so the orrery places the moon where
+/// that phase requires — new (phase 0) sits between world and star along the
+/// world→star direction (`world_angle + π`), full (phase ½) sits opposite — and
+/// glyphs it with the same phase. Because both the position and the glyph flow
+/// from one `moon_phase` value, the drawn geometry and the lit face always
+/// agree. A degenerate moon with no synodic cycle has no phase; it falls back to
+/// its bare sidereal position and reads new. Returns `(orbital angle in radians
+/// around the world, phase bucket)`.
+fn moon_placement(
+    calendar: &Calendar,
+    index: usize,
+    moon_period: StdDays,
+    t: StdDays,
+    world_angle: f64,
+) -> (f64, Phase) {
+    use std::f64::consts::{PI, TAU};
+    match calendar.moon_phase(t, index) {
+        Some(phase) => (world_angle + PI + phase * TAU, phase_bucket(phase)),
+        None => (TAU * (t.0 / moon_period.get()).fract(), Phase::New),
     }
 }
 
@@ -430,22 +456,17 @@ pub fn orrery_ansi(
     let wx = cx + aspect * world_r * theta.cos();
     let wy = cy + world_r * theta.sin();
 
-    // Moons: sidereal orbital angle around the world, synodic-phase glyph. A
-    // degenerate moon (no synodic cycle) reads as new; unreachable at genesis
-    // (the Hill cap) and present in no committed artifact.
+    // Moons: placed where their illumination phase requires (see
+    // `moon_placement`), so the drawn geometry and the lit-face glyph agree —
+    // new sits toward the star, full opposite. Position and glyph both flow from
+    // the one canonical `moon_phase` value.
     for (index, moon) in system.moons.iter().enumerate() {
-        let ma = std::f64::consts::TAU * (t.0 / moon.period.get()).fract();
+        let (ma, phase) = moon_placement(calendar, index, moon.period, t, theta);
         let mr = 2.0 + index as f64;
-        let cell = Cell::Moon(
-            calendar
-                .moon_phase(t, index)
-                .map(phase_bucket)
-                .unwrap_or(Phase::New),
-        );
         let x = (wx + aspect * mr * ma.cos()).round() as isize;
         let y = (wy + mr * ma.sin()).round() as isize;
         if x >= 0 && (x as usize) < w && y >= 0 && (y as usize) < h {
-            grid[y as usize][x as usize] = (cell, "\u{1b}[38;5;250m");
+            grid[y as usize][x as usize] = (Cell::Moon(phase), "\u{1b}[38;5;250m");
         }
     }
 
@@ -737,5 +758,56 @@ mod tests {
             orrery_ansi(&system, &cal, t, GlyphSet::Emoji),
             "deterministic"
         );
+    }
+
+    #[test]
+    fn orrery_moon_glyph_matches_its_drawn_position() {
+        // Regression guard for the phase/position decoupling: a moon's glyph must
+        // agree with where it is drawn relative to the star. New means the moon
+        // sits between world and star (cos of its angle from the world→star
+        // direction > 0); full means opposite (cos < 0). Before the fix, position
+        // came from the sidereal clock and the glyph from the synodic clock plus
+        // the genesis offset, so seed 42's moon 0 was glyphed ~half a cycle wrong
+        // — drawn full, glyphed new — on every frame.
+        use crate::calendar::calendar_of;
+        use crate::pins::{MoonsPin, RotationPin, SkyPins};
+        use crate::system::generate;
+        use hornvale_kernel::Seed;
+        use std::f64::consts::{PI, TAU};
+        let system = generate(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                moons: Some(MoonsPin::exact(2).unwrap()),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap()
+        .system;
+        let cal = calendar_of(&system);
+        assert_eq!(system.moons.len(), 2, "the fixture is a two-moon world");
+        for (index, moon) in system.moons.iter().enumerate() {
+            let mut d = 0.0;
+            while d < 400.0 {
+                let t = StdDays::new(d).unwrap();
+                let world_angle = TAU * cal.year_phase(t);
+                let (ma, phase) = moon_placement(&cal, index, moon.period, t, world_angle);
+                // Cosine of the moon's angle measured from the world→star
+                // direction: +1 fully toward the star, −1 fully opposite.
+                let toward_star = (ma - (world_angle + PI)).cos();
+                match phase {
+                    Phase::New => assert!(
+                        toward_star > 0.0,
+                        "moon {index} day {d}: New glyph but drawn away from the star (cos {toward_star})"
+                    ),
+                    Phase::Full => assert!(
+                        toward_star < 0.0,
+                        "moon {index} day {d}: Full glyph but drawn toward the star (cos {toward_star})"
+                    ),
+                    _ => {}
+                }
+                d += 7.0;
+            }
+        }
     }
 }
