@@ -405,14 +405,19 @@ pub fn orrery_ansi(
     // Scale so the world's orbit sits at 80% of the half-height.
     let orbit = system.anchor.orbit.get();
     let scale = ((h as f64 / 2.0 - 1.0) * 0.8) / orbit;
+    let world_r = orbit * scale;
 
-    // Habitable-zone ring (dotted, uncolored).
+    // Faint dotted rings: the habitable zone (two circles) and the world's own
+    // orbit (one), dim so the bodies read against them and the eye can follow
+    // the world along its path. A fine angular step keeps the rings continuous.
+    let faint = "\u{1b}[38;5;240m";
     let hz_in = system.star.habitable_zone.inner().get() * scale;
     let hz_out = system.star.habitable_zone.outer().get() * scale;
     let mut a = 0.0_f64;
     while a < std::f64::consts::TAU {
-        plot(&mut grid, hz_in, a, Cell::Ring, "");
-        plot(&mut grid, hz_out, a, Cell::Ring, "");
+        plot(&mut grid, hz_in, a, Cell::Ring, faint);
+        plot(&mut grid, hz_out, a, Cell::Ring, faint);
+        plot(&mut grid, world_r, a, Cell::Ring, faint);
         a += 0.15;
     }
 
@@ -421,7 +426,6 @@ pub fn orrery_ansi(
 
     // The world on its orbit (green), and its screen position.
     let theta = std::f64::consts::TAU * calendar.year_phase(t);
-    let world_r = orbit * scale;
     plot(&mut grid, world_r, theta, Cell::World, "\u{1b}[38;5;42m");
     let wx = cx + aspect * world_r * theta.cos();
     let wy = cy + world_r * theta.sin();
