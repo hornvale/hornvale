@@ -9,6 +9,7 @@ pub mod moons;
 pub mod neighborhood;
 pub mod pins;
 pub mod provider;
+pub mod render;
 pub mod star;
 pub mod streams;
 pub mod system;

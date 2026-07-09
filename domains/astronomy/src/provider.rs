@@ -154,7 +154,7 @@ fn round2(x: f64) -> f64 {
 }
 
 /// Which size word describes a moon of this angular diameter (Luna = 1).
-fn size_word(angular: f64) -> &'static str {
+pub(crate) fn size_word(angular: f64) -> &'static str {
     if angular >= 1.2 {
         "vast"
     } else if angular >= 0.7 {
