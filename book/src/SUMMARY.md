@@ -80,6 +80,7 @@
 - [Study 007: The Census of Eyes](./laboratory/study-007.md)
 - [Study 008: The Census of Tongues](./laboratory/study-008.md)
 - [Study 009: The Census of the Meeting](./laboratory/study-009.md)
+- [Study 010: The Census of Coasts](./laboratory/study-010.md)
 
 # Reference
 
