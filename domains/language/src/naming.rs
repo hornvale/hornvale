@@ -332,7 +332,7 @@ mod tests {
     }
 
     #[test]
-    fn names_are_deterministic_and_carry_both_views() {
+    fn names_are_deterministic_and_carry_all_three_views() {
         let ph = kobold_ph();
         let n1 = Namer::new(&Seed(1), "kobold", &ph);
         let n2 = Namer::new(&Seed(1), "kobold", &ph);
@@ -346,8 +346,8 @@ mod tests {
             10,
             &MorphOptions { honorifics: false },
         );
-        assert_eq!(a.roman, b.roman);
-        assert!(!a.roman.is_empty() && !a.ipa.is_empty());
+        assert_eq!(a, b);
+        assert!(!a.roman.is_empty() && !a.ipa.is_empty() && !a.espeak.is_empty());
     }
 
     #[test]

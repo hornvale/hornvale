@@ -1,7 +1,7 @@
 //! The phoneme model: `Segment` is an articulatory feature-bundle — the
 //! truth from which every surface form derives. `romanize` (ASCII-ish, for
 //! the almanac), `ipa` (for the book), and `espeak` (espeak-ng mnemonics, for
-//! authored audio) are VIEWS over a segment; neither is ever stored. `sonority`
+//! authored audio) are VIEWS over a segment; none is ever stored. `sonority`
 //! gives the 0–5 rank a later task's loudness bias and phonotactics depend on.
 //!
 //! The curated inventory below is deliberately practical, not exhaustive of
