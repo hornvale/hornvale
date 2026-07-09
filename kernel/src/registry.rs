@@ -18,6 +18,42 @@ pub struct PredicateDef {
     pub doc: String,
 }
 
+/// Broad category a concept belongs to — the coarse sort used when
+/// browsing or cross-referencing the vocabulary.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum ConceptKind {
+    /// A material or stuff (water, iron, cloth).
+    Substance,
+    /// A living organism or class thereof.
+    Living,
+    /// A body or feature of the sky.
+    Celestial,
+    /// A landform or feature of the ground.
+    Terrain,
+    /// A social role, institution, or relation.
+    Social,
+    /// A body part or physiological feature.
+    Body,
+    /// A kinship relation.
+    Kin,
+    /// An abstract property or attribute.
+    Quality,
+}
+
+/// Definition of a named concept: the word-level vocabulary entry
+/// distinct from predicates and phenomenon kinds.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConceptDef {
+    /// Concept name (map key).
+    pub name: String,
+    /// The domain that owns this concept's definition.
+    pub domain: String,
+    /// The broad category this concept belongs to.
+    pub kind: ConceptKind,
+    /// Human-readable description.
+    pub doc: String,
+}
+
 /// Errors from concept registration.
 #[derive(Debug)]
 pub enum RegistryError {
@@ -46,6 +82,9 @@ impl std::error::Error for RegistryError {}
 pub struct ConceptRegistry {
     predicates: BTreeMap<String, PredicateDef>,
     phenomenon_kinds: BTreeMap<String, String>,
+    /// Pre-Words saves have no `concepts` key; default to empty on load.
+    #[serde(default)]
+    concepts: BTreeMap<String, ConceptDef>,
 }
 
 impl ConceptRegistry {
@@ -108,6 +147,42 @@ impl ConceptRegistry {
         self.phenomenon_kinds
             .iter()
             .map(|(k, v)| (k.as_str(), v.as_str()))
+    }
+
+    /// Idempotent for identical definitions; errors on conflict.
+    pub fn register_concept(
+        &mut self,
+        name: &str,
+        domain: &str,
+        kind: ConceptKind,
+        doc: &str,
+    ) -> Result<(), RegistryError> {
+        let def = ConceptDef {
+            name: name.to_string(),
+            domain: domain.to_string(),
+            kind,
+            doc: doc.to_string(),
+        };
+        match self.concepts.get(name) {
+            Some(existing) if *existing == def => Ok(()),
+            Some(_) => Err(RegistryError::ConflictingDefinition {
+                name: name.to_string(),
+            }),
+            None => {
+                self.concepts.insert(name.to_string(), def);
+                Ok(())
+            }
+        }
+    }
+
+    /// Look up a concept definition by name.
+    pub fn concept(&self, name: &str) -> Option<&ConceptDef> {
+        self.concepts.get(name)
+    }
+
+    /// Iterate over registered concepts, in name order.
+    pub fn concepts(&self) -> impl Iterator<Item = &ConceptDef> {
+        self.concepts.values()
     }
 }
 
@@ -197,5 +272,101 @@ mod tests {
             kinds,
             vec![("aurora", "sky lights"), ("wind", "moving air")]
         );
+    }
+
+    #[test]
+    fn registered_concept_is_retrievable() {
+        let mut r = ConceptRegistry::default();
+        r.register_concept(
+            "water",
+            "language",
+            ConceptKind::Substance,
+            "the drinkable liquid",
+        )
+        .unwrap();
+        assert_eq!(r.concept("water").unwrap().kind, ConceptKind::Substance);
+    }
+
+    #[test]
+    fn old_registry_json_without_concepts_still_loads() {
+        // Pre-Words saves serialized a registry with no `concepts` field.
+        let json = r#"{"predicates":{},"phenomenon_kinds":{}}"#;
+        let r: ConceptRegistry = serde_json::from_str(json).unwrap();
+        assert_eq!(r.concepts().count(), 0);
+    }
+
+    #[test]
+    fn unknown_concept_is_none() {
+        let r = ConceptRegistry::default();
+        assert!(r.concept("nope").is_none());
+    }
+
+    #[test]
+    fn identical_concept_reregistration_is_idempotent() {
+        let mut r = ConceptRegistry::default();
+        r.register_concept(
+            "water",
+            "language",
+            ConceptKind::Substance,
+            "the drinkable liquid",
+        )
+        .unwrap();
+        assert!(
+            r.register_concept(
+                "water",
+                "language",
+                ConceptKind::Substance,
+                "the drinkable liquid"
+            )
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn conflicting_concept_reregistration_is_an_error() {
+        let mut r = ConceptRegistry::default();
+        r.register_concept(
+            "water",
+            "language",
+            ConceptKind::Substance,
+            "the drinkable liquid",
+        )
+        .unwrap();
+        let err = r.register_concept(
+            "water",
+            "language",
+            ConceptKind::Living,
+            "the drinkable liquid",
+        );
+        assert!(matches!(
+            err,
+            Err(RegistryError::ConflictingDefinition { .. })
+        ));
+    }
+
+    #[test]
+    fn concepts_iterate_in_name_order() {
+        let mut r = ConceptRegistry::default();
+        r.register_concept("zeta", "language", ConceptKind::Quality, "z")
+            .unwrap();
+        r.register_concept("alpha", "language", ConceptKind::Quality, "a")
+            .unwrap();
+        let names: Vec<&str> = r.concepts().map(|c| c.name.as_str()).collect();
+        assert_eq!(names, vec!["alpha", "zeta"]);
+    }
+
+    #[test]
+    fn concept_registry_serializes_roundtrip() {
+        let mut r = ConceptRegistry::default();
+        r.register_concept(
+            "water",
+            "language",
+            ConceptKind::Substance,
+            "the drinkable liquid",
+        )
+        .unwrap();
+        let json = serde_json::to_string(&r).unwrap();
+        let r2: ConceptRegistry = serde_json::from_str(&json).unwrap();
+        assert_eq!(r2.concept("water").unwrap().kind, ConceptKind::Substance);
     }
 }
