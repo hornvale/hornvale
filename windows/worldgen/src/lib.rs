@@ -409,17 +409,33 @@ pub fn observation_time(
     Ok(0.0) // pathological all-daylight window: fall back deterministically
 }
 
-/// The phenomena a species observes: its characteristic hour, its lens,
-/// the world's first place (spec §5 — the place debt is SEQ-4's).
-pub fn observed_phenomena_as(world: &World, species: &str) -> Result<Vec<Phenomenon>, BuildError> {
-    let registry = hornvale_species::registry();
-    let Some(def) = registry.get(species) else {
-        let known: Vec<&str> = registry.keys().copied().collect();
-        return Err(BuildError::Pins(format!(
-            "unknown species '{species}'; known species: {}",
+/// The shipped species roster — the whole authored registry, in key order.
+/// The default every shipped verb builds with (spec §3).
+pub fn default_roster() -> Vec<hornvale_species::SpeciesDef> {
+    hornvale_species::registry().into_values().collect()
+}
+
+/// Resolve `species` within `roster` or fail loudly.
+fn def_in<'a>(
+    roster: &'a [hornvale_species::SpeciesDef],
+    species: &str,
+) -> Result<&'a hornvale_species::SpeciesDef, BuildError> {
+    roster.iter().find(|d| d.name == species).ok_or_else(|| {
+        let known: Vec<&str> = roster.iter().map(|d| d.name).collect();
+        BuildError::Pins(format!(
+            "unknown species '{species}'; roster: {}",
             known.join(", ")
-        )));
-    };
+        ))
+    })
+}
+
+/// The phenomena a species (resolved within `roster`) observes.
+pub fn observed_phenomena_as_in(
+    world: &World,
+    roster: &[hornvale_species::SpeciesDef],
+    species: &str,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let def = def_in(roster, species)?;
     let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
         return Ok(Vec::new());
     };
@@ -435,6 +451,13 @@ pub fn observed_phenomena_as(world: &World, species: &str) -> Result<Vec<Phenome
             lens: perception_lens(&def.perception),
         },
     ))
+}
+
+/// The phenomena a species observes: its characteristic hour, its lens,
+/// the world's first place (spec §5 — the place debt is SEQ-4's). Resolves
+/// `species` within the shipped default roster.
+pub fn observed_phenomena_as(world: &World, species: &str) -> Result<Vec<Phenomenon>, BuildError> {
+    observed_phenomena_as_in(world, &default_roster(), species)
 }
 
 /// Map a species' articulation vector onto language's own `Envelope` copy
@@ -459,17 +482,24 @@ pub fn envelope_of(art: &hornvale_species::ArticulationVector) -> hornvale_langu
 }
 
 /// Draw `species`' phonology from this world's seed and its authored
-/// articulation vector — rebuildable from (seed, species, envelope) alone,
-/// the same reconstruction idiom as `terrain_of`/`sky_of`/`climate_of`. The
-/// single construction site for a species' `Phonology`. Panics if `species`
-/// is not in the registry; every caller sources `species` from the registry
-/// itself.
-pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology {
-    let registry = hornvale_species::registry();
-    let def = registry
-        .get(species)
-        .unwrap_or_else(|| panic!("language_of: unknown species '{species}'"));
+/// articulation vector, resolving `species` within `roster` — rebuildable
+/// from (seed, species, envelope) alone, the same reconstruction idiom as
+/// `terrain_of`/`sky_of`/`climate_of`. The single construction site for a
+/// species' `Phonology`. Panics if `species` is not in `roster`; every
+/// caller sources `species` from the same roster it passes here.
+pub fn language_of_in(
+    world: &World,
+    roster: &[hornvale_species::SpeciesDef],
+    species: &str,
+) -> hornvale_language::Phonology {
+    let def = def_in(roster, species).unwrap_or_else(|e| panic!("language_of_in: {e}"));
     hornvale_language::draw_phonology(&world.seed, species, &envelope_of(&def.articulation))
+}
+
+/// Draw a species' phonology, resolving `species` within the shipped
+/// default roster.
+pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology {
+    language_of_in(world, &default_roster(), species)
 }
 
 /// A status basis' contribution to the `formality`/`epithet_density` voice
@@ -551,19 +581,21 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_> {
     }
 }
 
-/// Build a complete world: mint the world entity and record its sky choice
-/// and scenario pins first; run sky genesis for `Generated`; commit the
-/// terrain pins and run tectonic genesis; then assemble per-cell site inputs
-/// from terrain and climate, place a spaced scatter of settlements (honoring
-/// the settlement pins' suitability floor), commit each as its own place
-/// entity, and run the culture/religion cascade on the flagship (the
-/// most-suitable settlement, placed first) from its actual environment.
-pub fn build_world(
+/// Build a complete world against a given species `roster`: mint the world
+/// entity and record its sky choice and scenario pins first; run sky
+/// genesis for `Generated`; commit the terrain pins and run tectonic
+/// genesis; then assemble per-cell site inputs from terrain and climate,
+/// place a spaced scatter of settlements (honoring the settlement pins'
+/// suitability floor), commit each as its own place entity, and run the
+/// culture/religion cascade on the flagship (the most-suitable settlement,
+/// placed first) from its actual environment.
+pub fn build_world_with_roster(
     seed: Seed,
     pins: &SkyPins,
     sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
+    roster: &[hornvale_species::SpeciesDef],
 ) -> Result<World, BuildError> {
     let mut world = World::new(seed);
     register_all(&mut world.registry)?;
@@ -655,20 +687,10 @@ pub fn build_world(
     let min_sep = (12.0_f64.to_radians()).cos();
     let floor = settlement_pins.min_suitability.unwrap_or(0.25);
 
-    // Which species this world places: the whole registry, or the pinned one.
-    let all_species = hornvale_species::registry();
+    // Which species this world places: the whole roster, or the pinned one.
     let species_set: Vec<&hornvale_species::SpeciesDef> = match &settlement_pins.species {
-        None => all_species.values().collect(),
-        Some(name) => match all_species.get(name.as_str()) {
-            Some(def) => vec![def],
-            None => {
-                let known: Vec<&str> = all_species.keys().copied().collect();
-                return Err(BuildError::Pins(format!(
-                    "unknown species '{name}'; known species: {}",
-                    known.join(", ")
-                )));
-            }
-        },
+        None => roster.iter().collect(),
+        Some(name) => vec![def_in(roster, name)?],
     };
 
     // Joint greedy across species: every (site × species) pair scored with
@@ -694,7 +716,7 @@ pub fn build_world(
     // de-facto (measured as a calibration, spec §9), not enforced.
     let phonologies: std::collections::BTreeMap<&str, hornvale_language::Phonology> = species_set
         .iter()
-        .map(|def| (def.name, language_of(&world, def.name)))
+        .map(|def| (def.name, language_of_in(&world, roster, def.name)))
         .collect();
     let namers: std::collections::BTreeMap<&str, hornvale_language::Namer> = phonologies
         .iter()
@@ -771,7 +793,7 @@ pub fn build_world(
             strata: castes.len(),
             has_priesthood: castes.iter().any(|c| c == def.shaman),
         };
-        let seen = observed_phenomena_as(&world, def.name)?;
+        let seen = observed_phenomena_as_in(&world, roster, def.name)?;
         let namer = namers
             .get(def.name)
             .expect("a Namer was built for every placed species");
@@ -785,11 +807,29 @@ pub fn build_world(
     // world must mint the exact same ids for pre-C1 entities as pre-species
     // main, so the new, Y2-1-only entities are appended last rather than
     // interleaved. Then the peopled-by link for every settlement.
-    hornvale_species::genesis(&mut world)?;
+    hornvale_species::genesis_in(&mut world, roster)?;
     for (id, (_, tag)) in ids.iter().zip(placements.iter()) {
         hornvale_species::people(&mut world, *id, species_set[*tag as usize].name)?;
     }
     Ok(world)
+}
+
+/// Build a complete world with the shipped species roster.
+pub fn build_world(
+    seed: Seed,
+    pins: &SkyPins,
+    sky: SkyChoice,
+    terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
+) -> Result<World, BuildError> {
+    build_world_with_roster(
+        seed,
+        pins,
+        sky,
+        terrain_pins,
+        settlement_pins,
+        &default_roster(),
+    )
 }
 
 /// The first-placed settlement of `species` (its flagship), if any.
@@ -1270,6 +1310,37 @@ mod tests {
         let a = constant(42).to_json();
         let b = constant(42).to_json();
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn build_world_with_default_roster_matches_build_world_byte_for_byte() {
+        use hornvale_terrain::TerrainPins;
+        let sp = SettlementPins::default();
+        for seed in [Seed(7), Seed(42), Seed(1000)] {
+            let a = build_world(
+                seed,
+                &SkyPins::default(),
+                SkyChoice::Generated,
+                &TerrainPins::default(),
+                &sp,
+            )
+            .unwrap();
+            let b = build_world_with_roster(
+                seed,
+                &SkyPins::default(),
+                SkyChoice::Generated,
+                &TerrainPins::default(),
+                &sp,
+                &default_roster(),
+            )
+            .unwrap();
+            let fa: Vec<_> = a.ledger.iter().collect();
+            let fb: Vec<_> = b.ledger.iter().collect();
+            assert_eq!(
+                fa, fb,
+                "seed {seed:?}: default-roster build must equal build_world exactly"
+            );
+        }
     }
 
     #[test]
