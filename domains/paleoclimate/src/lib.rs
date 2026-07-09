@@ -5,11 +5,13 @@
 //! composition root — never a climate or astronomy import).
 #![warn(missing_docs)]
 
+pub mod facts;
 pub mod forcing_index;
 pub mod ice;
 pub mod strata;
 pub mod units;
 
+pub use facts::{genesis, register_concepts};
 pub use forcing_index::caloric_summer_index;
 pub use ice::{IceState, integrate_ice};
 pub use strata::{EraClimate, PaleoRecord, extract, glaciated};
