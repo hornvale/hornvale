@@ -80,6 +80,7 @@
 - [The Concept Registry](./reference/concept-registry.md)
 - [The Stream Manifest](./reference/stream-manifest.md)
 - [Phonology](./reference/phonology.md)
+- [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
 
 # Open Questions
 
