@@ -93,7 +93,7 @@ const DIGITS: [[u8; 5]; 5] = [
     [0b110, 0b001, 0b010, 0b100, 0b111],
     [0b111, 0b001, 0b011, 0b001, 0b111],
     [0b101, 0b101, 0b111, 0b001, 0b001],
-    [0b111, 0b100, 0b110, 0b001, 0b110],
+    [0b111, 0b100, 0b111, 0b001, 0b111],
 ];
 
 /// Star dot color by spectral class.
@@ -177,7 +177,9 @@ fn draw_digit(pixels: &mut [u8], n: usize, x: i64, y: i64) {
 
 /// Render the fixed night sky as a 256×128 planisphere-pair PNG: north
 /// celestial hemisphere left, south right, dots sized by brightness rank
-/// and colored by class, each tagged with its rank digit (spec §4).
+/// and colored by class, each tagged with its rank digit (spec §4). Assumes
+/// at most five neighbors — the genesis draw's cap — or digit indexing exhausts
+/// the font.
 pub fn chart_png(neighbors: &[Neighbor]) -> Vec<u8> {
     let mut pixels = Vec::with_capacity((MAP_WIDTH * MAP_HEIGHT * 3) as usize);
     for _ in 0..MAP_WIDTH * MAP_HEIGHT {
