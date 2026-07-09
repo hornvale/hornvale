@@ -106,16 +106,45 @@ mod tests {
 
     #[test]
     fn zero_tilt_world_still_has_a_year_from_eccentricity() {
-        // Zero obliquity, but forcing (eccentricity) present → season_phase exists.
-        let pins = SkyPins {
-            rotation: Some(RotationPin::PeriodHours(24.0)),
-            obliquity: Some(Degrees::new(0.0).unwrap()),
-            ..SkyPins::default() // forcing drawn, eccentricity non-zero
+        // SKY-2 isolated: obliquity mean AND wobble amplitude are both zero, so
+        // obliquity_at(t) == 0 for all t; the ONLY seasonal driver is
+        // eccentricity. If the apsidal term were dropped, season_phase would be
+        // None and daylight would be flat — this test would fail.
+        let forcing = crate::forcing::OrbitalForcing {
+            obliquity_mean: 0.0,
+            obliquity_amp: 0.0,
+            obliquity_phase: 0.0,
+            ecc_mean: 0.02,
+            ecc_amp: 0.0,
+            ecc_phase: 0.0,
+            precession_phase: 0.0,
+            year_phase_offset: 0.0,
+            day_phase_offset: 0.0,
+            moon_phase_offsets: Vec::new(),
         };
-        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let cal = Calendar {
+            day: Some(StdDays::new(1.0).unwrap()),
+            year: StdDays::new(365.25).unwrap(),
+            forcing,
+            moon_periods: Vec::new(),
+        };
+        // Obliquity is identically zero, so any season/daylight variation is
+        // purely apsidal (eccentricity-driven).
+        assert_eq!(cal.forcing.obliquity_at(123.0), 0.0);
         assert!(
             cal.season_phase(StdDays::new(50.0).unwrap()).is_some(),
             "eccentricity gives even a zero-tilt world a year (SKY-2)"
+        );
+        // Daylight is not flat across the year: the apsidal term makes it vary.
+        let spring = cal
+            .daylight_fraction(StdDays::new(365.25 * 0.25).unwrap())
+            .unwrap();
+        let autumn = cal
+            .daylight_fraction(StdDays::new(365.25 * 0.75).unwrap())
+            .unwrap();
+        assert!(
+            (spring - autumn).abs() > 1e-6,
+            "apsidal daylight must vary over the year"
         );
     }
 
