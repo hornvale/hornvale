@@ -33,7 +33,7 @@ usage:
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale map [--world <PATH>] [--out <PNG>] render the elevation map (markdown to stdout)
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
-  hornvale settlement-map [--world <PATH>] [--out <PPM>] render the settlement map (markdown to stdout)
+  hornvale settlement-map [--world <PATH>] [--out <PNG>] render the settlement map (markdown to stdout)
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
@@ -325,8 +325,8 @@ fn place_latlon(world: &World, id: hornvale_kernel::EntityId) -> Option<(f64, f6
 }
 
 /// Render the world's settlement map: a markdown page (title, settlement
-/// lines, ASCII overlay) to stdout and, with `--out`, the biome PPM overlaid
-/// with settlement marks to disk. Both are deterministic.
+/// lines, ASCII overlay) to stdout and, with `--out`, the biome raster
+/// overlaid with settlement marks to disk, as PNG. Both are deterministic.
 fn cmd_settlement_map(args: &[String]) -> Result<(), String> {
     let world = load_world(args)?;
     let climate = world_builder::climate_of(&world).map_err(|e| e.to_string())?;
@@ -349,15 +349,13 @@ fn cmd_settlement_map(args: &[String]) -> Result<(), String> {
     if let Some(out) = flag_value(args, "--out") {
         let pixels =
             hornvale_climate::render::biome_pixels(climate.geosphere(), &climate.biome_map());
-        let mut base = b"P6\n256 128\n255\n".to_vec();
-        base.extend_from_slice(&pixels);
-        let ppm = hornvale_settlement::render::overlay_ppm(&base, &sites, flagship);
-        std::fs::write(out, ppm).map_err(|e| format!("writing {out}: {e}"))?;
+        let png = hornvale_settlement::render::overlay_png(&pixels, &sites, flagship);
+        std::fs::write(out, png).map_err(|e| format!("writing {out}: {e}"))?;
         let name = std::path::Path::new(out)
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or(out);
-        doc.push_str(&format!("Full-color render: [`{name}`](./{name})\n\n"));
+        doc.push_str(&format!("![Full-color render](./{name})\n\n"));
     }
     doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
     print!("{doc}");
