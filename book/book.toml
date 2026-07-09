@@ -13,3 +13,5 @@ default-theme = "rust"
 preferred-dark-theme = "coal"
 git-repository-url = "https://github.com/hornvale/hornvale"
 edit-url-template = "https://github.com/hornvale/hornvale/edit/main/book/{path}"
+additional-css = ["theme/asciinema-player.css"]
+additional-js = ["theme/asciinema-player.min.js"]
