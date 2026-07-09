@@ -1,0 +1,5 @@
+{ "name": "census-of-words",
+  "description": "The Census of Words: per-settlement name-gloss truthfulness, per-species lexicon Neogrammarian regularity and exposure soundness, the hue-depth pack-depth baseline, and the name-collision/length distributions re-measured after Task 9's glossed compounds replaced the free-stem naming pool — the etymology/lexicon baseline at author-time scale (Campaign 12, The Words, spec §9).",
+  "seeds": { "from": 0, "count": 10000 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": "all" }
