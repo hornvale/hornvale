@@ -3,10 +3,10 @@
 //! each syllable's onset/nucleus/coda manner-slots are filled by `pick`ing
 //! matching segments FROM the phonology's inventory — this module never
 //! constructs a [`crate::phoneme::Segment`] itself. That carry-forward from
-//! Task 3/5 is load-bearing: `romanize`/`ipa` are exhaustive only over
-//! [`crate::phoneme::canonical_segments`], and `draw_phonology` only ever
-//! admits segments from that set, so a name built purely from `pick`s over
-//! the inventory can never surface the `"?"` fallback glyph.
+//! Task 3/5 is load-bearing: `romanize`/`ipa`/`espeak_word` are exhaustive
+//! only over [`crate::phoneme::canonical_segments`], and `draw_phonology`
+//! only ever admits segments from that set, so a name built purely from
+//! `pick`s over the inventory can never surface the `"?"` fallback glyph.
 //!
 //! Morphology is kind-keyed: a settlement name is a bare stem; a deity name
 //! is a bare stem drawn with a bias toward closed ("weighty") syllables; an
@@ -24,7 +24,7 @@
 //! pin-isolated by construction (a name depends only on its own cell, never
 //! on which other settlements — or species — a world happens to place).
 
-use crate::phoneme::{Manner, Segment, ipa, romanize};
+use crate::phoneme::{Manner, Segment, espeak_word, ipa, romanize};
 use crate::phonology::Phonology;
 use hornvale_kernel::{Seed, Stream};
 
@@ -66,10 +66,11 @@ pub struct MorphOptions {
     pub honorifics: bool,
 }
 
-/// A generated name in its two views: `roman` is what commits as the `name`
-/// fact (the almanac's ASCII-ish spelling); `ipa` is the book's phonetic
-/// rendering. Neither is stored independently of the segments that produced
-/// it — both are views built in the same pass.
+/// A generated name in its three views: `roman` is what commits as the
+/// `name` fact (the almanac's ASCII-ish spelling); `ipa` is the book's
+/// phonetic rendering; `espeak` is the espeak-ng formulation. None are stored
+/// independently of the segments that produced it — all three are views built
+/// in the same pass.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GeneratedName {
     /// The ASCII-ish romanization, capitalized on its first letter. This is
@@ -77,6 +78,9 @@ pub struct GeneratedName {
     pub roman: String,
     /// The IPA rendering, uncapitalized (IPA has no case convention here).
     pub ipa: String,
+    /// The espeak-ng formulation (`[[zv'etnot]]`), the input `hornvale
+    /// voice` hands espeak-ng to author the book's audio clip for this name.
+    pub espeak: String,
 }
 
 /// The chance (per attempt) that a drawn epithet root is reduplicated
@@ -274,21 +278,24 @@ impl<'a> Namer<'a> {
         stream.pick(&candidates).copied()
     }
 
-    /// Render a sequence of syllables to both surface views, capitalizing
-    /// the romanization's first letter (the IPA view keeps no case
-    /// convention).
+    /// Render a sequence of syllables to all three surface views,
+    /// capitalizing the romanization's first letter (the IPA and espeak
+    /// views keep no case convention).
     fn render(syllables: &[Syllable]) -> GeneratedName {
         let mut roman = String::new();
         let mut ipa_str = String::new();
+        let mut segments: Vec<Segment> = Vec::new();
         for syllable in syllables {
             for seg in syllable.segments() {
                 roman.push_str(romanize(seg));
                 ipa_str.push_str(ipa(seg));
+                segments.push(*seg);
             }
         }
         GeneratedName {
             roman: capitalize_first(&roman),
             ipa: ipa_str,
+            espeak: espeak_word(&segments),
         }
     }
 }
@@ -413,6 +420,28 @@ mod tests {
                 "ipa {:?} contains the unrepresentable-segment glyph",
                 g.ipa
             );
+            assert!(
+                !g.espeak.contains('?'),
+                "espeak {:?} contains the unrepresentable-segment glyph",
+                g.espeak
+            );
         }
+    }
+
+    #[test]
+    fn a_generated_name_carries_a_wrapped_stressed_espeak_formulation() {
+        let ph = kobold_ph();
+        let namer = Namer::new(&Seed(1), "kobold", &ph);
+        let name = namer.name(NameKind::Settlement, 0, &MorphOptions { honorifics: false });
+        assert!(
+            name.espeak.starts_with("[[") && name.espeak.ends_with("]]"),
+            "formulation {:?} must be wrapped for espeak direct phoneme input",
+            name.espeak
+        );
+        assert!(
+            name.espeak.contains('\''),
+            "formulation {:?} must carry an explicit stress marker (every name has a vowel)",
+            name.espeak
+        );
     }
 }
