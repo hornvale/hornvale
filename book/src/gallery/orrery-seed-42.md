@@ -6,7 +6,9 @@ always yields this animation.
 
 <div id="orrery"></div>
 <script>
-  AsciinemaPlayer.create('./orrery-seed-42.cast', document.getElementById('orrery'), { loop: true, autoPlay: true, cols: 61, rows: 31 });
+  document.addEventListener('DOMContentLoaded', function () {
+    AsciinemaPlayer.create('./orrery-seed-42.cast', document.getElementById('orrery'), { loop: true, autoPlay: true, cols: 61, rows: 31 });
+  });
 </script>
 
 [Download the .cast](./orrery-seed-42.cast)
