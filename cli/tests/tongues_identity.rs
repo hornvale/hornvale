@@ -12,11 +12,13 @@ use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 /// byte-identical to the fixture); belief content moved from a single prose
 /// `tenet` fact to the structured deity/epithet/sentiment facts
 /// `render_line` now voices (spec §6); the six articulation-vector
-/// predicates did not exist before this campaign. Excluded from the
-/// entity-structure / non-linguistic-fact comparison below — the same
-/// "superset, minus what's genuinely new" pattern `eyes_identity.rs` and
-/// `species_identity.rs` use.
-const CHANGED_OR_NEW_PREDICATES: [&str; 13] = [
+/// predicates did not exist before this campaign; the two orbital-forcing
+/// predicates (mean eccentricity, obliquity oscillation amplitude) are new
+/// in Firm Ground II and were never committed by pre-Tongues genesis.
+/// Excluded from the entity-structure / non-linguistic-fact comparison
+/// below — the same "superset, minus what's genuinely new" pattern
+/// `eyes_identity.rs` and `species_identity.rs` use.
+const CHANGED_OR_NEW_PREDICATES: [&str; 15] = [
     hornvale_kernel::NAME,
     hornvale_religion::TENET,
     hornvale_religion::DEITY_NAME,
@@ -30,6 +32,8 @@ const CHANGED_OR_NEW_PREDICATES: [&str; 13] = [
     hornvale_species::SPECIES_SIBILANCE,
     hornvale_species::SPECIES_VOICE_LOUDNESS,
     hornvale_species::SPECIES_EXOTIC_MANNER,
+    hornvale_astronomy::facts::ECCENTRICITY_MEAN,
+    hornvale_astronomy::facts::OBLIQUITY_AMPLITUDE,
 ];
 
 /// The ledger's facts, restricted to predicates whose shape didn't move
