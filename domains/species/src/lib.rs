@@ -290,13 +290,17 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     }
 }
 
-/// Mint one entity per species (registry order) and commit its authored
-/// vector as facts. Species entities carry facts ONLY under this crate's
-/// predicates — never `name` or any pre-existing predicate (the superset
+/// Mint one entity per species in `roster` (in slice order) and commit its
+/// authored vector as facts — the roster-scoped form of [`genesis`]. Species
+/// entities carry facts ONLY under this crate's predicates (the superset
 /// contract, spec §8, depends on it).
-pub fn genesis(world: &mut World) -> Result<BTreeMap<String, EntityId>, LedgerError> {
+pub fn genesis_in(
+    world: &mut World,
+    roster: &[SpeciesDef],
+) -> Result<BTreeMap<String, EntityId>, LedgerError> {
     let mut ids = BTreeMap::new();
-    for (name, def) in registry() {
+    for def in roster {
+        let name = def.name;
         let id = world.ledger.mint_entity();
         let p = def.psych;
         let sociality = match p.sociality {
@@ -418,6 +422,13 @@ pub fn genesis(world: &mut World) -> Result<BTreeMap<String, EntityId>, LedgerEr
         ids.insert(name.to_string(), id);
     }
     Ok(ids)
+}
+
+/// Mint one entity per shipped species (registry order) and commit its
+/// authored vector as facts.
+pub fn genesis(world: &mut World) -> Result<BTreeMap<String, EntityId>, LedgerError> {
+    let roster: Vec<SpeciesDef> = registry().into_values().collect();
+    genesis_in(world, &roster)
 }
 
 /// Commit the `peopled-by` fact linking a settlement to its species.
@@ -564,6 +575,26 @@ mod tests {
         assert_eq!(w.ledger.text_of(k, SPECIES_EXOTIC_MANNER), Some("trill"));
         assert!(
             matches!(w.ledger.value_of(k, SPECIES_SIBILANCE), Some(Value::Number(n)) if *n > 0.5)
+        );
+    }
+
+    #[test]
+    fn genesis_in_with_registry_slice_matches_genesis_exactly() {
+        let roster: Vec<SpeciesDef> = registry().into_values().collect();
+        let mut a = World::new(Seed(42));
+        register_concepts(&mut a.registry).unwrap();
+        let ids_a = genesis(&mut a).unwrap();
+
+        let mut b = World::new(Seed(42));
+        register_concepts(&mut b.registry).unwrap();
+        let ids_b = genesis_in(&mut b, &roster).unwrap();
+
+        assert_eq!(ids_a, ids_b, "same ids in same order");
+        let fa: Vec<_> = a.ledger.iter().collect();
+        let fb: Vec<_> = b.ledger.iter().collect();
+        assert_eq!(
+            fa, fb,
+            "genesis_in over the registry slice must be byte-identical to genesis"
         );
     }
 }
