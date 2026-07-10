@@ -51,6 +51,7 @@
 - [Campaign 21: The Scene Window](./chronicle/21-the-scene-window.md)
 - [Campaign 22: The Atlas](./chronicle/22-the-atlas.md)
 - [Campaign 23: The Orrery](./chronicle/23-the-orrery.md)
+- [Campaign 25: The Measured Coast](./chronicle/25-the-measured-coast.md)
 
 # The Gallery
 
@@ -80,6 +81,7 @@
 - [Study 007: The Census of Eyes](./laboratory/study-007.md)
 - [Study 008: The Census of Tongues](./laboratory/study-008.md)
 - [Study 009: The Census of the Meeting](./laboratory/study-009.md)
+- [Study 010: The Census of Coasts](./laboratory/study-010.md)
 
 # Reference
 

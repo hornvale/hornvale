@@ -18,16 +18,18 @@ cargo run -p hornvale -- lab run studies/census-of-skies.study.json
 
 ### The author-time census family
 
-Alongside the drift-checked study below, six larger studies walk the same
+Alongside the drift-checked study below, seven larger studies walk the same
 10,000 seeds (0 through 9,999) at author time — run by hand, never reran
 by CI. `census-of-skies` commits its published summary and charts (Study
-001 includes them directly); the other five — `census-of-lands`,
-`census-of-peoples`, `census-of-faiths`, `census-of-eyes` (Study 007's
-two-pantheon baseline, the Campaign Y2-2 addition), and `census-of-tongues`
-(Study 008's naming/voice baseline, the Campaign Y2-3 addition) — are never
-committed as raw output. Each backs one or more chapters in this section;
-regenerating one is a one-line `lab run` and a manual re-read of its
-headline numbers, not a CI obligation.
+001 includes them directly); `census-of-coasts` (Study 010's six
+continental-shape metrics, the Campaign 25 addition) does the same, its
+summary and charts embedded directly in its chapter; the other five —
+`census-of-lands`, `census-of-peoples`, `census-of-faiths`, `census-of-eyes`
+(Study 007's two-pantheon baseline, the Campaign Y2-2 addition), and
+`census-of-tongues` (Study 008's naming/voice baseline, the Campaign Y2-3
+addition) — are never committed as raw output. Each backs one or more
+chapters in this section; regenerating one is a one-line `lab run` and a
+manual re-read of its headline numbers, not a CI obligation.
 
 ### The instrument's self-check
 

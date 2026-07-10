@@ -897,6 +897,118 @@ pub fn registry() -> Vec<Metric> {
                 None => MetricValue::Absent,
             },
         },
+        Metric {
+            name: "shoreline-development",
+            doc: "Shoreline development index: coastline length over the \
+                  circumference of the circle with the land's area (1 = \
+                  maximally compact); Absent without a shoreline",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 6.0],
+            },
+            extract: |v| {
+                let globe = v.terrain.globe();
+                match hornvale_terrain::shape::shoreline_development(
+                    v.terrain.geosphere(),
+                    &globe.elevation,
+                    globe.sea_level,
+                ) {
+                    Some(d) => MetricValue::Number(d),
+                    None => MetricValue::Absent,
+                }
+            },
+        },
+        Metric {
+            name: "hypsometric-bimodality",
+            doc: "Ashman's D between land and ocean elevation populations \
+                  (Earth is strongly bimodal); Absent when a world lacks land \
+                  or ocean",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0],
+            },
+            extract: |v| {
+                let globe = v.terrain.globe();
+                match hornvale_terrain::shape::hypsometric_bimodality(
+                    &globe.elevation,
+                    globe.sea_level,
+                ) {
+                    Some(d) => MetricValue::Number(d),
+                    None => MetricValue::Absent,
+                }
+            },
+        },
+        Metric {
+            name: "shelf-fraction",
+            doc: "Fraction of cells within the shelf band (±200 m) of sea \
+                  level — the populated shelf Earth's hypsometry keeps",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3],
+            },
+            extract: |v| {
+                let globe = v.terrain.globe();
+                MetricValue::Number(hornvale_terrain::shape::shelf_fraction(
+                    &globe.elevation,
+                    globe.sea_level,
+                ))
+            },
+        },
+        Metric {
+            name: "continent-count",
+            doc: "Connected land components",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0],
+            },
+            extract: |v| {
+                let globe = v.terrain.globe();
+                MetricValue::Number(
+                    hornvale_terrain::shape::land_component_sizes(
+                        v.terrain.geosphere(),
+                        &globe.elevation,
+                        globe.sea_level,
+                    )
+                    .len() as f64,
+                )
+            },
+        },
+        Metric {
+            name: "largest-continent-share",
+            doc: "Largest land component's share of all land cells; Absent \
+                  on a landless world",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 0.9],
+            },
+            extract: |v| {
+                let globe = v.terrain.globe();
+                let sizes = hornvale_terrain::shape::land_component_sizes(
+                    v.terrain.geosphere(),
+                    &globe.elevation,
+                    globe.sea_level,
+                );
+                let land: usize = sizes.iter().sum();
+                match sizes.first() {
+                    Some(largest) if land > 0 => MetricValue::Number(*largest as f64 / land as f64),
+                    _ => MetricValue::Absent,
+                }
+            },
+        },
+        Metric {
+            name: "plate-size-gini",
+            doc: "Gini coefficient over plate cell counts (Earth's plate \
+                  sizes are heavy-tailed; uniform Voronoi scores low)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
+            },
+            extract: |v| {
+                let globe = v.terrain.globe();
+                let mut counts = vec![0usize; globe.plates.len()];
+                for (_, plate) in globe.plate_of.iter() {
+                    counts[*plate as usize] += 1;
+                }
+                match hornvale_terrain::shape::gini(&counts) {
+                    Some(g) => MetricValue::Number(g),
+                    None => MetricValue::Absent,
+                }
+            },
+        },
     ]
 }
 
@@ -1414,8 +1526,8 @@ mod tests {
     }
 
     #[test]
-    fn registry_has_sixty_four_metrics_after_obliquity_range() {
-        assert_eq!(registry().len(), 64);
+    fn registry_metric_count_is_pinned() {
+        assert_eq!(registry().len(), 70);
     }
 
     #[test]
@@ -1628,6 +1740,32 @@ mod tests {
         );
         // But names differ (independent stream).
         assert_ne!(gf.name, tf.name, "twin names must differ from goblin's");
+    }
+
+    #[test]
+    fn shape_metrics_are_present_deterministic_and_sane() {
+        let names = [
+            "shoreline-development",
+            "hypsometric-bimodality",
+            "shelf-fraction",
+            "continent-count",
+            "largest-continent-share",
+            "plate-size-gini",
+        ];
+        let registry = registry();
+        let a = WorldView::build(Seed(7), &SkyPins::default()).expect("seed 7");
+        let b = WorldView::build(Seed(7), &SkyPins::default()).expect("seed 7 again");
+        for name in names {
+            let metric = registry
+                .iter()
+                .find(|m| m.name == name)
+                .unwrap_or_else(|| panic!("metric {name} not registered"));
+            let va = (metric.extract)(&a);
+            assert_eq!(va, (metric.extract)(&b), "{name} not deterministic");
+            if let MetricValue::Number(x) = va {
+                assert!(x.is_finite(), "{name} not finite: {x}");
+            }
+        }
     }
 
     #[test]

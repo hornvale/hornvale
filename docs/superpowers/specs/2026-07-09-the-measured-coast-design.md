@@ -26,7 +26,11 @@ Four metric families appended to the lab registry (`windows/lab/src/metrics.rs`)
 **The census.** Following the house pattern (big author-time census + small CI drift variant):
 
 - `studies/census-of-coasts.study.json` — the new metrics over 10,000 seeds, default pins; published to `book/src/laboratory/` like the existing censuses.
-- `studies/census-coasts-drift.study.json` — the same metrics at the drift-study seed count, added to CI's "Artifacts are current" step.
+- Drift coverage of the new metrics needs no new study: the three CI-run
+  studies (`census-lands-drift`, `census-of-the-meeting`, `census-of-skies`)
+  select `"metrics": "all"`, so the new columns are drift-checked from the
+  commit that adds them. (Amended during planning: the originally proposed
+  `census-coasts-drift.study.json` would have double-run identical builds.)
 
 Studies are data, metrics are code (decision 0011). The census tables become the preregistered baseline that Campaigns B and C must move — the target directions (shoreline index up, shelf fraction up, plate Gini up, largest-continent share more dispersed) are recorded in the book's laboratory page prose alongside the baseline numbers.
 
@@ -51,8 +55,8 @@ Studies are data, metrics are code (decision 0011). The census tables become the
 - **Metric correctness on synthetic globes** — a hemisphere-cap landmass must score near the shoreline index's floor; a deliberately crenellated mask must score strictly higher; Ashman's D and shelf fraction pinned on hand-built elevation maps; component count/share on multi-blob masks.
 - **Metric determinism** — same seed → identical metric values across two independent world builds (house property-test style).
 - **Refinement respects the prior** — property test over seeds: every pixel's elevation within the envelope bound of its interpolated prior; every land/ocean flip occurs only where `|interp − sea_level|` is inside the envelope; pixels far from coasts byte-match plain interpolation.
-- **Save-format byte-identity** — world JSON and almanac output byte-identical before/after the render change (asserted in-test, not just by CI drift).
-- **Census drift** — the new drift study joins the CI artifact-freshness gate.
+- **Save-format byte-identity** — world JSON byte-identical before/after the render change, asserted in-test. Almanac output identity follows from world identity (no almanac code changed) and is covered by CI's artifact-drift check, not asserted in-test.
+- **Census drift** — covered by the existing `all`-metric CI studies from the metrics commit onward.
 
 ## 5. Definition of Done
 
@@ -65,4 +69,4 @@ Studies are data, metrics are code (decision 0011). The census tables become the
 
 - **No generator change of any kind** — no crust field, no plate-shape change, no `GLOBE_LEVEL` bump, nothing that alters a drawn value. Those are Campaigns B (Crust) and C (Sculpting), each a deliberate terrain epoch.
 - **No `windows/worldgen` edits.** Part 1 appends to the lab registry; Part 2 is terrain-domain-local. This keeps the campaign disjoint from the in-progress Deep Time branch (Campaign 24); the merge-time check is numbering plus the CI drift list, per the parallel-campaign discipline.
-- **Rift-and-fit fake history** stays on the idea registry, held for judgment against this campaign's metrics after Sculpting.
+- **Rift-and-fit fake history** stays on the idea registry (MAP-21), held for judgment against this campaign's metrics after Sculpting.

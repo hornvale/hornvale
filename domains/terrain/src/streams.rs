@@ -18,3 +18,6 @@ pub const MATURITY: &str = "maturity";
 pub const HOTSPOTS: &str = "hotspots";
 /// Target ocean fraction draw.
 pub const OCEAN_FRACTION: &str = "ocean-fraction";
+/// Render-lens coastline noise. Hash-noise only — never consumed as a
+/// `Stream`; the lens draws nothing (Campaign 25 spec §3).
+pub const COAST_RENDER: &str = "coast-render";
