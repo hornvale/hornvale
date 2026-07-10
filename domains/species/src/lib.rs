@@ -14,38 +14,55 @@ use std::collections::BTreeMap;
 use hornvale_kernel::{ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World};
 
 /// Predicate: a species entity's name (functional, Text).
+/// type-audit: bare-ok(identifier-text)
 pub const SPECIES_NAME: &str = "species-name";
 /// Predicate: how a species answers threat, flee 0 ↔ stand 1 (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const THREAT_RESPONSE: &str = "species-threat-response";
 /// Predicate: how slowly a species decides (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const DELIBERATION_LATENCY: &str = "species-deliberation-latency";
 /// Predicate: how wide a species draws "us" (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const IN_GROUP_RADIUS: &str = "species-in-group-radius";
 /// Predicate: how far ahead a species plans (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const TIME_HORIZON: &str = "species-time-horizon";
 /// Predicate: hierarchic or communal sociality (functional, Text).
+/// type-audit: bare-ok(identifier-text)
 pub const SOCIALITY_MODE: &str = "species-sociality-mode";
 /// Predicate: what earns standing — rank, knowledge, generosity (functional, Text).
+/// type-audit: bare-ok(identifier-text)
 pub const STATUS_BASIS: &str = "species-status-basis";
 /// Predicate: the species that peoples a settlement (functional, Text).
+/// type-audit: bare-ok(identifier-text)
 pub const PEOPLED_BY: &str = "peopled-by";
 /// Predicate: a species' activity cycle — diurnal, nocturnal, crepuscular (functional, Text).
+/// type-audit: bare-ok(identifier-text)
 pub const SPECIES_ACTIVITY_CYCLE: &str = "species-activity-cycle";
 /// Predicate: how well a species sees at night, 0-1 (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const SPECIES_NIGHT_VISION: &str = "species-night-vision";
 /// Predicate: how much of a species' attention the sky claims, 0-1 (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const SPECIES_SKY_ATTENTION: &str = "species-sky-attention";
 /// Predicate: a species' lip-rounding and jaw-closure degree, 0-1 (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const SPECIES_LABIALITY: &str = "species-labiality";
 /// Predicate: a species' vowel-space size, 0-1 (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const SPECIES_VOWEL_SPACE: &str = "species-vowel-space";
 /// Predicate: a species' voicing (voiced vs. voiceless), 0-1 (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const SPECIES_VOICING: &str = "species-voicing";
 /// Predicate: a species' sibilance emphasis, 0-1 (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const SPECIES_SIBILANCE: &str = "species-sibilance";
 /// Predicate: a species' voice-loudness range, 0-1 (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const SPECIES_VOICE_LOUDNESS: &str = "species-voice-loudness";
 /// Predicate: a species' exotic manner — none, trill, click, ejective (functional, Text).
+/// type-audit: bare-ok(identifier-text)
 pub const SPECIES_EXOTIC_MANNER: &str = "species-exotic-manner";
 
 /// How a species organizes authority.
@@ -96,6 +113,7 @@ pub enum ExoticManner {
 /// The closed six-dimension psychology vector (spec §3). Scalars are bare
 /// ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening the vector
 /// requires its own campaign.
+/// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PsychVector {
     /// How a society answers threat: flee 0 ↔ stand 1.
@@ -115,6 +133,7 @@ pub struct PsychVector {
 /// The closed three-dimension perception vector (spec §4). Scalars are bare
 /// ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening the vector
 /// requires its own campaign. Every dimension is authored — nothing drawn.
+/// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PerceptionVector {
     /// When this species observes.
@@ -128,6 +147,7 @@ pub struct PerceptionVector {
 /// The closed six-dimension articulation vector (spec §5). Scalars are bare
 /// ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening the vector
 /// requires its own campaign. Every dimension is authored — nothing drawn.
+/// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ArticulationVector {
     /// Lip-rounding and jaw-closure degree: unrounded 0 ↔ rounded 1.
@@ -146,6 +166,7 @@ pub struct ArticulationVector {
 
 /// One authored species: vector, vocabulary stopgaps (deleted by The
 /// Tongues), and a placeholder syllable pool for names.
+/// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SpeciesDef {
     /// The species name ("goblin", "kobold").
@@ -173,6 +194,7 @@ pub struct SpeciesDef {
 /// The authored species registry, ordered (goblin sorts first). Kobold
 /// values are derived from D&D 5E SRD lore — see the species chapter's
 /// model card for each derivation.
+/// type-audit: bare-ok(identifier-text)
 pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
     let mut reg = BTreeMap::new();
     reg.insert(
@@ -245,6 +267,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
 }
 
 /// Every seed-derivation label this crate uses (none — species are authored).
+/// type-audit: bare-ok(identifier-text)
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     Vec::new()
 }
@@ -294,6 +317,7 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
 /// authored vector as facts — the roster-scoped form of [`genesis`]. Species
 /// entities carry facts ONLY under this crate's predicates (the superset
 /// contract, spec §8, depends on it).
+/// type-audit: bare-ok(identifier-text)
 pub fn genesis_in(
     world: &mut World,
     roster: &[SpeciesDef],
@@ -426,12 +450,14 @@ pub fn genesis_in(
 
 /// Mint one entity per shipped species (registry order) and commit its
 /// authored vector as facts.
+/// type-audit: bare-ok(identifier-text)
 pub fn genesis(world: &mut World) -> Result<BTreeMap<String, EntityId>, LedgerError> {
     let roster: Vec<SpeciesDef> = registry().into_values().collect();
     genesis_in(world, &roster)
 }
 
 /// Commit the `peopled-by` fact linking a settlement to its species.
+/// type-audit: bare-ok(identifier-text)
 pub fn people(world: &mut World, settlement: EntityId, species: &str) -> Result<(), LedgerError> {
     world.ledger.commit(
         fact(settlement, PEOPLED_BY, Value::Text(species.to_string())),
@@ -441,6 +467,7 @@ pub fn people(world: &mut World, settlement: EntityId, species: &str) -> Result<
 }
 
 /// The species a settlement is peopled by, if committed.
+/// type-audit: bare-ok(identifier-text)
 pub fn species_of(world: &World, settlement: EntityId) -> Option<String> {
     match world.ledger.value_of(settlement, PEOPLED_BY) {
         Some(Value::Text(t)) => Some(t.clone()),
@@ -449,6 +476,7 @@ pub fn species_of(world: &World, settlement: EntityId) -> Option<String> {
 }
 
 /// The species entity carrying `name`'s authored vector, if genesis ran.
+/// type-audit: bare-ok(identifier-text)
 pub fn species_entity(world: &World, name: &str) -> Option<EntityId> {
     world
         .ledger
