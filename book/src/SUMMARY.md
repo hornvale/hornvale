@@ -52,6 +52,7 @@
 - [Campaign 22: The Atlas](./chronicle/22-the-atlas.md)
 - [Campaign 23: The Orrery](./chronicle/23-the-orrery.md)
 - [Campaign 25: The Measured Coast](./chronicle/25-the-measured-coast.md)
+- [Campaign 26: The Live Orrery](./chronicle/26-the-live-orrery.md)
 
 # The Gallery
 
