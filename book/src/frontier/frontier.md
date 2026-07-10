@@ -887,6 +887,32 @@ resource space is heterogeneous. This is the placement-stack sibling of
 mechanism that lets a bestiary of a hundred peoples share one world without the
 strong quietly erasing the weak.
 
+The deeper reframe is that the stack optimizes the wrong objective. Asking
+*who is fittest for this cell* and taking the argmax **manufactures**
+monoculture: a stronger people boxes the weaker out not by a tuning accident
+but by the question working as designed. The realistic model asks *how does
+each species get a viable home* — a **clearing** problem, not an optimization —
+and it resolves into four layers, one mechanism each. **Substrate:** enough
+distinct niches to seat the peoples at all, the underworld's vertical strata
+multiplying a flat surface's homes (a world seats no more distinct niches than
+its resource space affords). **Allocation:** the clearing step — a *market*
+where might is a budget, each cell carries an emergent *price* (desirability ×
+contestedness), and every people buys its best affordable bundle so the market
+clears and everyone affords *something* (equivalently a might-ordered draft, or
+largest-first bin-packing); this is the layer that dissolves the boxing-out.
+**Coupling:** a single scalar — might — driving priority up, footprint up, and
+head-count *down* together, so the mighty command the prime ground yet claim
+little of it (one dragon to a massif, kobolds beyond counting). **Maintenance:**
+a diversity pump, because even a cleared allocation drifts back toward exclusion
+— the intermediate-disturbance effect (a catastrophe, or a predator that culls
+the *abundant* dominant) and the storage effect (climate cycles letting
+different peoples win in different eras) keep diversity alive across deep time
+(SEQ-3). The through-line holds at every layer: stop scoring fitness, start
+guaranteeing homes. A minimal down-payment on the whole edifice is a **founder
+floor** — reserve each people its single best habitable cell before competitive
+placement runs — which is the allocation layer at *K = 1*, the smallest change
+that guarantees no people is boxed out to nothing.
+
 ---
 
 ## Technology as capability thresholds
