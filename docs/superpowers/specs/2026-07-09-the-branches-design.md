@@ -55,9 +55,18 @@ cognates **regular**, the family **monophyletic**, and the kobold outgroup
    sound system; it inherits proto-goblinoid and erodes it *the way its mouth
    would*. The articulation vector (The Tongues' closed six-dimension vector)
    stops being an independent generator and becomes the **codomain** the
-   lineage cascade lands on — off-inventory outputs apply as identity, exactly
-   The Words' existing `evolve` constraint, now pointed at a descended
-   present rather than an isolated one.
+   lineage cascade lands on. The cascade's rule *outputs* stay inventory-bound
+   as in The Words (an off-inventory output applies as identity); but an
+   inherited proto segment that no rule moves into the daughter's inventory is
+   **nativized** — merged to the nearest segment the daughter's inventory
+   holds, by articulatory-feature distance. `evolve` thereby gains a stronger
+   postcondition — **the modern form is a subset of the daughter's inventory**
+   — and descent genuinely *loses* ancestral contrasts, the way a real
+   inventory absorbs a sound it no longer keeps. Nativization is pure and
+   draw-free (a function of segments and inventory alone), and it is a no-op
+   wherever the proto inventory already sits inside the daughter's — every
+   self-proto (singleton) lineage, hence kobold and every pre-Branches world,
+   is untouched by it.
 3. **The proto is a language too.** Proto-goblinoid is not a new kind of
    object. It is an ordinary language — an authored ancestral articulation
    vector, a phonology drawn under it, a proto-root per concept — that happens
@@ -142,7 +151,12 @@ changes **only the source of the proto-root**:
   takes the **shared** proto-roots as input rather than drawing its own;
   draws its own cascade (`language/<species>/lexicon/cascade`, unchanged
   labels) and its own present phonology (unchanged); and `evolve`s each
-  shared proto-root through its cascade into its present inventory.
+  shared proto-root through its cascade into its present inventory,
+  **nativizing** any inherited segment the cascade left outside that inventory
+  (a deterministic, draw-free merger to the nearest neighbour by feature
+  distance — see principle §2.2). For a singleton the proto-roots already
+  come from the daughter's own inventory, so nativization never fires and the
+  path is byte-identical to The Words.
 - **Singleton step (kobold):** proto-roots come from its own phonology, its
   own labels — the family-of-one path, byte-identical to The Words.
 
@@ -202,6 +216,10 @@ decorative:
    asserted from ground truth.)
 4. **Determinism and singleton stability:** same seed → identical family;
    kobold output byte-identical to the pre-Branches (post-Words) fixture.
+5. **Inventory closure:** every goblinoid daughter's every modern form is a
+   subset of that daughter's own phonology inventory — the nativization
+   postcondition, asserted family-wide so no word can use a sound the
+   daughter's inventory (and its phonology reference page) does not list.
 
 ## 8. Non-goals (the rest of the arc)
 
@@ -235,6 +253,12 @@ honest — each is a later campaign:
   fixed order independent of daughter count; the singleton (kobold) path must
   consume exactly the draws The Words consumed. Pin-isolation tests extend,
   never change.
+- Nativization consumes no draws — it is a pure function of (segments,
+  inventory) applied after the cascade, so it perturbs no stream and cannot
+  break stream-consumption isolation. It is a no-op on every self-proto
+  lineage, so kobold and every pre-Branches world stay byte-identical;
+  `evolve`'s new postcondition (modern ⊆ inventory) holds trivially for those
+  and is what the §7 inventory-closure battery asserts.
 - `serde` + `serde_json` only; no new crates. `#![warn(missing_docs)]`; a
   one-line doc comment on every public item, field, and variant. `cargo fmt`
   as the final step before every commit.
