@@ -109,8 +109,8 @@ nondeterminism.
 
 ## Deferred, deliberately
 
-This campaign built no consumer of either seam, on purpose. [Deep Time
-(Deep Time)](./deep-time.md) later reads the orbital forcing this
+This campaign built no consumer of either seam, on purpose. [Deep
+Time](./deep-time.md) later reads the orbital forcing this
 ships; the Year-4 epistemic layer still awaits the placed vantage. Also
 untouched: per-body altitude and azimuth (a body stays up-or-down with the
 whole hemisphere, never placed at a point in the sky), twilight, each

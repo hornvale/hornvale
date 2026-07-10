@@ -92,28 +92,33 @@ pub fn genesis(
         ),
         &world.registry,
     )?;
-    if let Some(desc) = representative(geo, &record.shoreline) {
-        world.ledger.commit(
-            fact(
-                subject,
-                FOSSIL_SHORELINE,
-                Value::Text(format!("the sea once reached {desc}")),
-            ),
-            &world.registry,
-        )?;
-    }
-    if let Some(desc) = representative(geo, &record.refugia) {
-        world.ledger.commit(
-            fact(
-                subject,
-                REFUGIUM,
-                Value::Text(format!("life persisted {desc} through the cold")),
-            ),
-            &world.registry,
-        )?;
-    }
-    // The narrative fact only exists if a glacial history happened at all.
+    // The narrative strata facts exist only if a glacial history happened at
+    // all: under the zero-forcing null control the ice never advanced, so no
+    // shoreline moved and no refugium is distinct from the present — committing
+    // any of these would describe a glaciation that never occurred (spec §9).
+    // The two Number summaries above stay unconditional: `max-ice-fraction`
+    // is 0.0 there, which is itself the honest null-control measurement.
     if record.max_ice_fraction > 0.0 {
+        if let Some(desc) = representative(geo, &record.shoreline) {
+            world.ledger.commit(
+                fact(
+                    subject,
+                    FOSSIL_SHORELINE,
+                    Value::Text(format!("the sea once reached {desc}")),
+                ),
+                &world.registry,
+            )?;
+        }
+        if let Some(desc) = representative(geo, &record.refugia) {
+            world.ledger.commit(
+                fact(
+                    subject,
+                    REFUGIUM,
+                    Value::Text(format!("life persisted {desc} through the cold")),
+                ),
+                &world.registry,
+            )?;
+        }
         world.ledger.commit(
             fact(
                 subject,

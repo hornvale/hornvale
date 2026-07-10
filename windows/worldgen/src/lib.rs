@@ -2523,6 +2523,23 @@ mod tests {
                 rec.shoreline, baseline.shoreline,
                 "zero forcing must not widen the shoreline past the present coastline (seed {seed})"
             );
+            // The null control must also be silent at the FACT layer: a world
+            // that never glaciated commits no shoreline, refugium, or
+            // frost-retreat descriptor (spec §9) — only the honest
+            // max-ice-fraction = 0 summary. `build_world` already ran
+            // paleoclimate genesis, so check its committed ledger directly:
+            // `recount`/`why` must not surface a glaciation that never happened.
+            for pred in [
+                hornvale_paleoclimate::facts::FOSSIL_SHORELINE,
+                hornvale_paleoclimate::facts::REFUGIUM,
+                hornvale_paleoclimate::facts::FROST_RETREAT,
+            ] {
+                assert_eq!(
+                    world.ledger.find(pred).count(),
+                    0,
+                    "zero forcing must commit no '{pred}' strata fact (seed {seed})"
+                );
+            }
         }
     }
 
