@@ -305,10 +305,79 @@ pub fn evolve(proto: &[Segment], cascade: &Cascade, ph: &Phonology) -> Derivatio
         });
         current = next;
     }
+    let current = nativize(&current, ph);
     Derivation {
         proto: proto.to_vec(),
         steps,
         modern: current,
+    }
+}
+
+/// Merge each segment not already in `ph.inventory` to the nearest
+/// same-class inventory segment (consonant→consonant, vowel→vowel) by
+/// feature-mismatch count, ties broken by `Segment`'s total order. A segment
+/// with no same-class neighbour in the inventory is left unchanged. Pure and
+/// draw-free: this is how descent absorbs an inherited sound the daughter's
+/// inventory no longer keeps (spec §2.2).
+pub fn nativize(segs: &[Segment], ph: &Phonology) -> Vec<Segment> {
+    segs.iter()
+        .map(|&s| {
+            if ph.inventory.contains(&s) {
+                return s;
+            }
+            ph.inventory
+                .iter()
+                .copied()
+                .filter(|c| same_class(*c, s))
+                .min_by(|a, b| {
+                    feature_distance(*a, s)
+                        .cmp(&feature_distance(*b, s))
+                        .then(a.cmp(b))
+                })
+                .unwrap_or(s)
+        })
+        .collect()
+}
+
+/// Whether two segments are both consonants or both vowels.
+fn same_class(a: Segment, b: Segment) -> bool {
+    matches!(
+        (a, b),
+        (Segment::Consonant { .. }, Segment::Consonant { .. })
+            | (Segment::Vowel { .. }, Segment::Vowel { .. })
+    )
+}
+
+/// Count of differing features between two same-class segments (place,
+/// manner, voicing for consonants; height, backness, rounding for vowels).
+/// Cross-class pairs never reach here (filtered by `same_class`).
+fn feature_distance(a: Segment, b: Segment) -> u8 {
+    match (a, b) {
+        (
+            Segment::Consonant {
+                place: p1,
+                manner: m1,
+                voiced: v1,
+            },
+            Segment::Consonant {
+                place: p2,
+                manner: m2,
+                voiced: v2,
+            },
+        ) => (p1 != p2) as u8 + (m1 != m2) as u8 + (v1 != v2) as u8,
+        (
+            Segment::Vowel {
+                height: h1,
+                backness: b1,
+                rounded: r1,
+            },
+            Segment::Vowel {
+                height: h2,
+                backness: b2,
+                rounded: r2,
+            },
+        ) => (h1 != h2) as u8 + (b1 != b2) as u8 + (r1 != r2) as u8,
+        _ => u8::MAX,
     }
 }
 
@@ -584,5 +653,115 @@ mod tests {
         let d = evolve(&open, &one_rule(RuleKind::FinalLoss, 0), &ph);
         assert_eq!(d.modern, open);
         assert!(!d.steps[0].changed);
+    }
+
+    // ---- Nativization fixtures and tests.
+
+    /// A restrictive phonology whose inventory genuinely lacks the
+    /// postalveolar sibilant ʃ (and its voiced counterpart ʒ), built by
+    /// filtering [`test_phonology`]'s permissive inventory — every other
+    /// consonant (the stops and non-sibilant fricatives) remains.
+    fn restrictive_no_postalveolar() -> Phonology {
+        let mut ph = test_phonology();
+        ph.inventory.retain(|s| {
+            !matches!(
+                s,
+                Segment::Consonant {
+                    place: Place::Postalveolar,
+                    ..
+                }
+            )
+        });
+        ph
+    }
+
+    /// A restrictive phonology whose inventory genuinely lacks the velar
+    /// nasal ŋ, built by filtering [`test_phonology`]'s permissive
+    /// inventory — every other consonant remains.
+    fn restrictive_no_velar_nasal() -> Phonology {
+        let mut ph = test_phonology();
+        ph.inventory.retain(|s| {
+            !matches!(
+                s,
+                Segment::Consonant {
+                    place: Place::Velar,
+                    manner: Manner::Nasal,
+                    ..
+                }
+            )
+        });
+        ph
+    }
+
+    #[test]
+    fn nativize_keeps_in_inventory_segments_untouched() {
+        let ph = test_phonology(); // permissive: every segment in-inventory
+        let word = proto_root(&Seed(1), "test", "water", &ph);
+        assert_eq!(nativize(&word, &ph), word); // no-op when all in-inventory
+    }
+
+    #[test]
+    fn nativize_merges_off_inventory_to_nearest_same_class() {
+        // A restrictive inventory lacking the postalveolar sibilant ʃ; ʃ must
+        // merge to the nearest same-class (consonant) segment present, never to
+        // a vowel.
+        let ph = restrictive_no_postalveolar();
+        assert!(!ph.inventory.contains(&Segment::Consonant {
+            place: Place::Postalveolar,
+            manner: Manner::Sibilant,
+            voiced: false,
+        }));
+        let sh = Segment::Consonant {
+            place: Place::Postalveolar,
+            manner: Manner::Sibilant,
+            voiced: false,
+        };
+        let out = nativize(&[sh], &ph);
+        assert!(ph.inventory.contains(&out[0]));
+        assert!(matches!(out[0], Segment::Consonant { .. }));
+    }
+
+    #[test]
+    fn evolve_output_is_subset_of_inventory_even_from_foreign_proto() {
+        // proto drawn from a permissive inventory, evolved into a restrictive one
+        let proto_ph = test_phonology();
+        let daughter_ph = restrictive_no_postalveolar();
+        let proto = proto_root(&Seed(2), "goblinoid", "water", &proto_ph);
+        let cascade = draw_cascade(&Seed(2), "bugbear");
+        let d = evolve(&proto, &cascade, &daughter_ph);
+        assert!(d.modern.iter().all(|s| daughter_ph.inventory.contains(s)));
+    }
+
+    #[test]
+    fn nativization_is_load_bearing_not_codomain_identity() {
+        // NON-VACUITY GUARD. A nasal is untouched by every rule kind (Lenition
+        // hits voiceless stops, Fortition fricatives, VowelShift vowels,
+        // Cluster/FinalLoss only drop EDGE consonants). Put a MEDIAL nasal the
+        // daughter inventory lacks into a proto word: no rule can move it, so the
+        // ONLY way `modern ⊆ inventory` can hold is nativization actually firing.
+        // Without this guard, the subset test above could pass via plain
+        // codomain-identity and never exercise `nativize` at all.
+        let daughter_ph = restrictive_no_velar_nasal(); // inventory without ŋ
+        let a = Segment::Vowel {
+            height: Height::Low,
+            backness: Backness::Central,
+            rounded: false,
+        };
+        let eng = Segment::Consonant {
+            place: Place::Velar,
+            manner: Manner::Nasal,
+            voiced: true,
+        };
+        assert!(
+            !daughter_ph.inventory.contains(&eng),
+            "ŋ must be off-inventory for this test"
+        );
+        let proto = vec![a, eng, a]; // /aŋa/: the nasal is medial, untouched by all rules
+        let d = evolve(&proto, &draw_cascade(&Seed(5), "bugbear"), &daughter_ph);
+        assert!(d.modern.iter().all(|s| daughter_ph.inventory.contains(s)));
+        assert_ne!(
+            d.modern, proto,
+            "nativization must have replaced the off-inventory ŋ"
+        );
     }
 }
