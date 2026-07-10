@@ -573,9 +573,12 @@ enum RepairStep {
 ///    a nucleus and thereby break an illegal cluster — and **deletion** of
 ///    a segment no template can host in its position. Epenthesis costs
 ///    [`EPENTHESIS_COST`] per inserted vowel, deletion [`DELETION_COST`]
-///    per dropped segment, so insertion is always preferred where either
-///    would do (deletion is the second resort). The minimal-cost plan is
-///    found by dynamic programming over input positions; ties break
+///    per dropped segment, so insertion is preferred one-for-one over
+///    deletion — but the plan is chosen by total cost, not by a per-edit
+///    preference, so a single deletion can still beat a run of three or
+///    more epentheses the same stretch would otherwise need. The
+///    minimal-cost plan is found by dynamic programming over input
+///    positions; ties break
 ///    deterministically toward the earlier-listed template pair (onsets
 ///    then codas, in their drawn order), with deletion considered last.
 /// 3. **Degenerate-input fallback**: if the minimal plan deletes

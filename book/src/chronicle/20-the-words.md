@@ -1,9 +1,9 @@
 # Campaign 20: The Words
 
-**July 2026 · 22 commits · outcome: complete, merged — gives the world a
-concept layer, a per-language lexicon with real history, and a truthful
-gloss on every name it mints; the preregistered collision-rate claim,
-measured twice, still fails, honestly**
+**July 2026 · landed in 25 commits · outcome: complete, merged — gives
+the world a concept layer, a per-language lexicon with real history, and
+a truthful gloss on every name it mints; the preregistered collision-rate
+claim, measured three times, still fails, honestly**
 
 ## What was attempted
 
@@ -29,8 +29,8 @@ design that changes a naming pipeline this deeply invites exactly the
 kind of collision regression a phonology-only campaign would not, the
 plan preregistered a Lab claim about the collision rate before the census
 that would measure it ran (ADR 0016) — a claim this campaign's own
-census went on to fail, twice, and reported as failed rather than
-loosened.
+census went on to fail, three times over, and reported as failed rather
+than loosened.
 
 ## What landed
 
@@ -71,14 +71,18 @@ in parallel.
 
 **Exposure and two gap provenances.** Every (language, concept) pair
 resolves to a root (a concept the species' world saturates), a compound
-(a concept merely adjacent — a transparent joining of roots already
+(a concept merely adjacent *and* backed by an authored recipe — today
+just the sea and the mountain — a transparent joining of roots already
 held), or a gap, and a gap always carries a reason: **experiential**,
 recounting to a ledger fact (no kobold settlement touches coast, so
-kobold has no word for the open sea), or **perceptual**, recounting to a
-vector dimension that overrides exposure entirely (a kobold steeped in a
-blue sky every day of its life still has no word for blue, because pack
-depth is checked first and kobold eyes never carved that far down the
-ladder). A lexicon is allowed to be silent, but never silently.
+kobold has no word for the open sea) or, just as honestly, to the
+authored recipe table itself when an adjacent concept has no entry there
+yet (`coral-reef` reads "no compound recipe for 'coral-reef'" in the
+generated dictionary) — or **perceptual**, recounting to a vector
+dimension that overrides exposure entirely (a kobold steeped in a blue
+sky every day of its life still has no word for blue, because pack depth
+is checked first and kobold eyes never carved that far down the ladder).
+A lexicon is allowed to be silent, but never silently.
 
 **Glossed names.** A settlement's name now draws from its own cell's
 biome, its notable sky, and the phenomenon its presiding belief reveres;
@@ -154,7 +158,7 @@ posture that already excludes per-individual psychology and perception.
 
 [Study 010: The Census of Words](../laboratory/study-010.md) — the five
 preregistered claims, three confirmed exactly at 10k scale, one (the
-collision rate) measured twice and failed honestly both times. [The
+collision rate) measured three times and failed honestly each time. [The
 Language chapter](../domains/language.md) — the concept layer, the
 Swadesh packs, the etymology cascade, exposure, and glossed names, with
 the campaign's own bright line drawn again at the chapter's close. [The

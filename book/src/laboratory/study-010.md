@@ -151,8 +151,9 @@ structural constant, exactly as the shipped-roster derivation predicts,
 never varying by seed. The 500-seed calibration
 (`goblin_hue_depth_exceeds_kobold_hue_depth`) pins both constants.
 
-**H4: the name-collision rate — measured twice; the directional claim
-FAILED both times, first catastrophically, then narrowly.**
+**H4: the name-collision rate — measured three times; the directional
+claim FAILED every time, first catastrophically, then still well above
+bound, then narrowly.**
 
 *First measurement (pure site-concept compounds, recorded as history).* At
 10k, across the 9,997 present worlds, the mean in-world collision rate

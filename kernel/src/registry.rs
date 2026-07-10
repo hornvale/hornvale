@@ -76,8 +76,8 @@ impl std::fmt::Display for RegistryError {
 
 impl std::error::Error for RegistryError {}
 
-/// The growing, reviewed vocabulary: predicates and phenomenon kinds.
-/// BTreeMaps keep serialization order deterministic.
+/// The growing, reviewed vocabulary: predicates, phenomenon kinds, and
+/// concepts. BTreeMaps keep serialization order deterministic.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ConceptRegistry {
     predicates: BTreeMap<String, PredicateDef>,

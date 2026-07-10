@@ -376,16 +376,22 @@ universal stratum, whatever a pack's depth grants it — earns an evolved
 **root**, a proto-form aged through the language's own cascade. A concept
 merely **adjacent** — a biome one cell removed from anywhere the species
 actually lives, the sea for a people that has never touched a coast but
-has stood within sight of one — earns a **compound** instead, a
-transparent joining of roots the species already holds ("big-water" for a
-sea it knows of without having been steeped in). A concept with **no path**
-at all to that species' experience earns neither: a **gap**, and the gap
-always carries a reason, because a lexicon's silence is exactly as
-recountable as its speech. That reason is one of two kinds, and never a
-third. An **experiential** gap recounts to a fact the ledger holds and a
-lexicon consulted: no kobold settlement touches coast, so kobold has no
-word — not even a compound — for the open sea. A **perceptual** gap
-recounts instead to a vector dimension, and it overrides exposure
+has stood within sight of one — earns a **compound** where an authored
+recipe exists to build one from roots the species already holds
+("big-water" for a sea it knows of without having been steeped in); today
+that recipe table holds exactly two entries, the sea and the mountain.
+Adjacency without a recipe — most concepts, `coral-reef` among them — buys
+no compound; it falls through to the same outcome as a concept with **no
+path** at all to that species' experience: a **gap**, and the gap always
+carries a reason, because a lexicon's silence is exactly as recountable
+as its speech. That reason is one of two kinds, and never a third. An
+**experiential** gap recounts to a fact the ledger holds and a lexicon
+consulted — no kobold settlement touches coast, so kobold has no word for
+the open sea — or, honestly, to the authored recipe table itself when an
+adjacent concept simply has no entry there yet: `coral-reef` reads "gap
+(experiential): no compound recipe for 'coral-reef'" in the generated
+dictionary, missing recipe rather than missing exposure. A **perceptual**
+gap recounts instead to a vector dimension, and it overrides exposure
 entirely: pack depth is checked first, so a kobold steeped in a blindingly
 blue sky every day of its life still has no word for blue, because kobold
 eyes are tuned for the dark and the color ladder never reached that far
