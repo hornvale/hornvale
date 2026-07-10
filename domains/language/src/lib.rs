@@ -65,7 +65,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     vec![
         (
             "language/<species>/phonology/inventory",
-            "per-species phoneme inventory draw under the articulation envelope",
+            "per-species phoneme inventory draw under the articulation envelope; for a family's shared proto-language (e.g. goblinoid) a family name occupies the <species> slot — a language with no speakers",
         ),
         (
             "language/<species>/phonology/phonotactics",
@@ -96,8 +96,12 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "the glossed epithet (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the v1 draw above",
         ),
         (
-            "language/<species>/lexicon/root/<concept>",
-            "per-concept proto-root (1-2 syllables, from the phonotactic templates)",
+            "language/<family>/lexicon/root/<concept>",
+            "per-concept proto-root drawn from the family's proto phonology (1-2 syllables, from the phonotactic templates); family == species for a singleton stock",
+        ),
+        (
+            "language/goblin/lexicon/root/<concept>",
+            "(retired at The Branches, superseded by language/goblinoid/lexicon/root/<concept>) pre-Branches per-species goblin proto-root",
         ),
         (
             "language/<species>/lexicon/cascade",

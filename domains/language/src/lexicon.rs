@@ -362,6 +362,29 @@ mod tests {
         }
     }
 
+    /// Pin-isolation (Task 7, spec §3): kobold — the one people outside the
+    /// goblinoid family, a singleton stock — must resolve its proto-root
+    /// through exactly the stream path The Words consumed before this
+    /// campaign's family machinery existed
+    /// (`language/kobold/lexicon/root/<concept>`, `family == species ==
+    /// "kobold"`, `proto_ph == ph`). Calling `build_lexicon` under the
+    /// singleton pattern and calling `proto_root` directly on the same
+    /// literal species/family key must agree byte-for-byte — the family
+    /// parameter Task 6 added must never perturb a stock with no siblings.
+    #[test]
+    fn kobold_singleton_consumes_the_pre_branches_stream_path() {
+        let ph = test_phonology();
+        let ex = one_steeped("water");
+        let lex = build_lexicon(&Seed(5), "kobold", "kobold", &ph, &ph, &ex);
+        let expected_proto = proto_root(&Seed(5), "kobold", "water", &ph);
+        assert_eq!(
+            root_proto(&lex, "water"),
+            expected_proto,
+            "kobold's singleton path must consume exactly the stream The \
+             Words consumed, unperturbed by the family parameter"
+        );
+    }
+
     #[test]
     fn two_daughters_share_a_proto_root_but_differ() {
         // same family + proto_ph, different species (different cascades/ph):
