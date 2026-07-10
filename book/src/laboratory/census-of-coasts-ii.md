@@ -32,7 +32,8 @@ metric                    band              rationale
 ------------------------  ----------------  ----------------------------------------
 shoreline-development     9.51 - 21.95      estimator is resolution-bound; band is
                                              relative to the same-grid interim (1.3x -
-                                             3.0x of the v1@L6 interim median, 7.32)
+                                             3.0x of the v1@L6 interim median, 7.315138,
+                                             displayed as 7.32)
 hypsometric-bimodality    2.0 - 8.0         retain Earth-like separation; above 8
                                             means two delta functions, no shelf
 shelf-fraction            0.08 - 0.22       Earth's true shelf+coastal-plain share;
