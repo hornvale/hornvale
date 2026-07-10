@@ -35,11 +35,12 @@ prose are the *same* 10,000-row run, committed together in one commit.
 **A note on preregistration.** Per ADR 0016, a study commits its expected
 direction before the sweep that could confirm or refute it runs. This
 study's whole purpose is that commitment: four of the five target
-directions below are quoted verbatim from the campaign spec, §2
-(`docs/superpowers/specs/2026-07-09-the-measured-coast-design.md`), written
-and ratified before this census's 10,000-seed run executed; the fifth
-(hypsometric bimodality) is a synthesis consistent with the spec's own
-framing of that metric rather than a literal quote (see below). All five
+directions below are drawn directly from the campaign spec, §2
+(`docs/superpowers/specs/2026-07-09-the-measured-coast-design.md`) (two
+verbatim, two with the metric's full name substituted), written and ratified
+before this census's 10,000-seed run executed; the fifth (hypsometric
+bimodality) is a synthesis consistent with the spec's own framing of that
+metric rather than a literal quote (see below). All five
 are recorded here **before Crust or Sculpting change one line of the
 elevation field** — so that when a later campaign re-runs this same study
 against a new generator, the comparison is a genuine before/after, not a
@@ -176,10 +177,10 @@ producing.
 Ratified before this census ran and recorded here, before any change to the
 elevation field, so the later comparison is honest and not a target quietly
 redrawn to fit whatever Crust and Sculpting produce. Four of the five are
-quoted verbatim from the campaign spec §2; the fifth (bimodality) is this
-chapter's own synthesis, spelled out rather than quoted, of the spec's
-observation that the current generator "is expected to score bimodal but
-shelf-poor":
+drawn directly from the campaign spec §2 (two verbatim, two with the
+metric's full name substituted); the fifth (bimodality) is this chapter's
+own synthesis, spelled out rather than quoted, of the spec's observation
+that the current generator "is expected to score bimodal but shelf-poor":
 
 - **Shoreline development index up** — from the measured 6.06 mean / 6.00
   median baseline. (Read together with the fragmentation note above: a
