@@ -110,7 +110,28 @@ fn evolve_output_is_subset_of_inventory_even_from_foreign_proto() {
     let d = evolve(&proto, &cascade, &daughter_ph);
     assert!(d.modern.iter().all(|s| daughter_ph.inventory.contains(s)));
 }
+
+#[test]
+fn nativization_is_load_bearing_not_codomain_identity() {
+    // NON-VACUITY GUARD. A nasal is untouched by every rule kind (Lenition
+    // hits voiceless stops, Fortition fricatives, VowelShift vowels,
+    // Cluster/FinalLoss only drop EDGE consonants). Put a MEDIAL nasal the
+    // daughter inventory lacks into a proto word: no rule can move it, so the
+    // ONLY way `modern ⊆ inventory` can hold is nativization actually firing.
+    // Without this guard, the subset test above could pass via plain
+    // codomain-identity and never exercise `nativize` at all.
+    let daughter_ph = restrictive_no_velar_nasal(); // inventory without ŋ
+    let a = Segment::Vowel { height: Height::Low, backness: Backness::Central, rounded: false };
+    let eng = Segment::Consonant { place: Place::Velar, manner: Manner::Nasal, voiced: true };
+    assert!(!daughter_ph.inventory.contains(&eng), "ŋ must be off-inventory for this test");
+    let proto = vec![a, eng, a]; // /aŋa/: the nasal is medial, untouched by all rules
+    let d = evolve(&proto, &draw_cascade(&Seed(5), "bugbear"), &daughter_ph);
+    assert!(d.modern.iter().all(|s| daughter_ph.inventory.contains(s)));
+    assert_ne!(d.modern, proto, "nativization must have replaced the off-inventory ŋ");
+}
 ```
+
+(Add a `restrictive_no_velar_nasal()` fixture beside the others — draw a phonology, or filter, so the velar nasal ŋ is absent while at least one other consonant remains.)
 Add a `restrictive_no_postalveolar()` fixture beside `test_phonology()` (draw under an `Envelope` with `sibilance: 0.0` or post-filter the inventory to drop `Postalveolar`).
 - [ ] **Step 2: Run to verify failure.** Run: `cargo test -p hornvale-language nativize -- --nocapture`. Expected: FAIL — `nativize` not found.
 - [ ] **Step 3: Implement `nativize`.**
@@ -346,14 +367,47 @@ git commit -m "feat(species): hobgoblin and bugbear join the goblinoid family; f
 - [ ] **Step 1: Write failing tests.**
 ```rust
 #[test]
-fn goblin_and_hobgoblin_are_cognate() {
+fn goblinoid_daughters_are_cognate_where_both_hold_a_root() {
+    // Whether a daughter is Steeped in a given concept depends on WHERE it is
+    // placed, so do NOT hard-code "water" (a new species may not be placed
+    // near it). Intersect the concepts each daughter actually holds as a Root
+    // and assert cognacy over that set — robust to placement.
     let world = /* new seed-42 world */;
     let g = lexicon_of(&world, "goblin").unwrap();
     let h = lexicon_of(&world, "hobgoblin").unwrap();
-    // a concept both are Steeped in shares an identical proto-root
-    assert_eq!(root_proto(&g, "water"), root_proto(&h, "water"));
-    // ...but present-day forms may differ (different cascades)
+    let shared: Vec<&str> = root_concepts(&g)
+        .into_iter()
+        .filter(|c| root_concepts(&h).contains(c))
+        .collect();
+    assert!(!shared.is_empty(), "goblin and hobgoblin must share ≥1 rooted concept");
+    for c in shared {
+        // same family + proto_ph ⇒ identical proto-root; modern forms may differ
+        assert_eq!(root_proto(&g, c), root_proto(&h, c), "{c}: same family proto-root");
+    }
 }
+
+#[test]
+fn goblinoid_daughters_actually_diverge() {
+    // DIVERGENCE-REALITY GUARD (stemmatics: descent is proven by shared
+    // INNOVATIONS, not a shared ancestor alone). Some concept rooted in all
+    // three daughters must have ≥2 distinct present-day forms — else the
+    // "family" is aliases and L4 would have nothing to reconstruct. Robust
+    // even if two cascades coincide, because the daughters' inventories
+    // differ along the loudness axis and nativization diverges them.
+    let world = /* new seed-42 world */;
+    let lexes: Vec<_> = ["goblin", "hobgoblin", "bugbear"]
+        .iter()
+        .map(|s| lexicon_of(&world, s).unwrap())
+        .collect();
+    assert!(
+        some_shared_concept_has_distinct_forms(&lexes),
+        "the three daughters must not be identical (a degenerate family)"
+    );
+}
+// Helpers (test-local): `root_concepts(&Lexicon) -> Vec<&str>` lists concepts
+// whose entry is a `LexEntry::Root`; `some_shared_concept_has_distinct_forms`
+// finds a concept rooted in every lexicon and returns true iff its `modern`
+// forms are not all equal.
 
 #[test]
 fn every_goblinoid_word_is_in_its_inventory() {
@@ -454,6 +508,7 @@ git commit -m "test(branches): determinism + singleton-mechanism keystone; re-ba
 - [ ] **Step 1: Write a failing CLI/asserting test** that the dictionary output for seed 42 contains a cognate row where goblin/hobgoblin/bugbear forms share a glossed proto-form (`*…`).
 - [ ] **Step 2: Implement** the cognate grouping (group daughters by `def.family`; for each family, render the proto-form once and each daughter's `romanize`/`ipa`) and the proto dump.
 - [ ] **Step 3: Regenerate** both reference pages; add the proto page to `book/src/SUMMARY.md`.
+- [ ] **Step 3b: Unit-golden the shared ancestor.** `draw_phonology` is a hidden hub — it builds the proto inventory AND every daughter inventory, so a future change to it silently re-baselines the whole family through the shared proto (a diamond dependency). The regenerated reference page catches drift at page scale; add a **localized** golden in `windows/worldgen/tests/` asserting `proto_phonology_of(seed42, "goblinoid").inventory` and the seed-42 proto-root table are byte-equal to a committed snapshot, so a change to the ancestor fails loudly at ONE spot with a clear message rather than as an opaque family-wide diff. (Per the re-pin-golden-in-the-drifting-commit rule: this golden lives in the per-commit gate.)
 - [ ] **Step 4: Gate + build book.** Run the full gate and `mdbook build book`.
 - [ ] **Step 5: Commit.**
 ```bash
@@ -469,16 +524,16 @@ git commit -m "feat(cli): dictionary cognate columns + proto-goblinoid reference
 - Regenerate: the study's committed output under `book/src/laboratory/`
 
 **Interfaces:**
-- Produces: metrics proving the four/five §7 properties; a committed study result.
+- Produces: metrics proving the §7 properties plus divergence magnitude and divergence-reality; a committed **seed-swept** study result.
 
-- [ ] **Step 1: Write metrics as failing tests first** (the repo's metrics have unit tests; mirror `lexicon_regular` at `metrics.rs:1441`). Metrics: (1) **regularity family-wide** — a proto-segment in a given environment realizes consistently across all of a daughter's words; (2) **monophyly** — every goblinoid `Root`'s `derivation.proto` matches the family proto-root for that concept; (3) **clean outgroup** — no concept's kobold proto-root equals any goblinoid proto-root; (4) **inventory closure** — every daughter `Root.modern ⊆ inventory`.
+- [ ] **Step 1: Write metrics as failing tests first** (the repo's metrics have unit tests; mirror `lexicon_regular` at `metrics.rs:1441`). Metrics: (1) **regularity family-wide** — a proto-segment in a given environment realizes consistently across all of a daughter's words; (2) **monophyly** — every goblinoid `Root`'s `derivation.proto` matches the family proto-root for that concept; (3) **clean outgroup** — no concept's kobold proto-root equals any goblinoid proto-root; (4) **inventory closure** — every daughter `Root.modern ⊆ inventory`; (5) **divergence magnitude** — the count of distinct proto-contrasts each daughter merges under nativization (proto segments whose nativized modern reflex collapses them onto an existing inventory segment), asserted to follow the **loudness ordering** `bugbear ≥ goblin ≥ hobgoblin` — a quieter people draws a smaller inventory and so nativizes more (this is the emergent loudness→nativization interaction, made a measured finding rather than a silent side effect, and the quantity L4 will build on); (6) **divergence is real** — some concept rooted in all three daughters has ≥2 distinct present-day forms (the family is not aliases; the seed-swept form of the Task 6 guard).
 - [ ] **Step 2: Implement** the metrics; register them (`lab list-metrics` must show them).
-- [ ] **Step 3: Author + run the study.** `cargo run -p hornvale -- lab run studies/branches-family.study.json > book/src/laboratory/<study>.md`.
+- [ ] **Step 3: Author the study as a SEED SWEEP + run it.** `studies/branches-family.study.json` sweeps many seeds (mirror an existing multi-seed study's shape under `studies/`), so regularity / monophyly / clean-outgroup / closure / divergence hold as **all-seed invariants**, not seed-42 facts — a nativization or cognacy edge case that only bites on some seeds is exactly what a single-seed assertion misses. Preregister the divergence-ordering claim (ADR 0016) BEFORE the sweep runs; pin the measured merge counts after, never tuned to pass. Run: `cargo run -p hornvale -- lab run studies/branches-family.study.json > book/src/laboratory/<study>.md`.
 - [ ] **Step 4: Gate.** Full gate + `git diff --exit-code book/src/laboratory/` after a second run (determinism).
 - [ ] **Step 5: Commit.**
 ```bash
 git add windows/lab/src/metrics.rs studies book/src/laboratory
-git commit -m "feat(lab): the family battery — regularity, monophyly, clean outgroup, inventory closure"
+git commit -m "feat(lab): the family battery (seed-swept) — regularity, monophyly, clean outgroup, closure, divergence"
 ```
 
 ### Task 11: Book freshness sweep, chronicle, retrospective, final gate
@@ -507,8 +562,8 @@ git commit -m "docs(book): The Branches chronicle + freshness sweep + retrospect
 
 ## Self-Review
 
-**Spec coverage:** §1 goal → Tasks 5,6,9; §2.1 family/lineage split → Tasks 4,6; §2.2 descent + nativization → Task 3; §2.3 proto-is-a-language → Task 6 (`proto_phonology_of`); §2.4 singleton → Tasks 4,8; §2.5 shipped engine reused → Tasks 3,4 (no rule rewritten); §2.6 regularity → Task 10; §2.7 layering → Task 6 (data in species, wiring in worldgen); §3 proto-goblinoid → Tasks 5 (vector), 6 (phonology), 9 (page); §4 the daughters → Task 5; §5 descent → Tasks 4,6; §6 re-baseline/epoch → Tasks 7,8; §7 success + battery → Tasks 8,9,10; §8 non-goals → respected (no replacement/borrowing/reconstruction task exists); §9 determinism → Tasks 3,7,8. No gaps.
+**Spec coverage:** §1 goal → Tasks 5,6,9; §2.1 family/lineage split → Tasks 4,6; §2.2 descent + nativization → Task 3; §2.3 proto-is-a-language → Task 6 (`proto_phonology_of`); §2.4 singleton → Tasks 4,8; §2.5 shipped engine reused → Tasks 3,4 (no rule rewritten); §2.6 regularity → Task 10; §2.7 layering → Task 6 (data in species, wiring in worldgen); §3 proto-goblinoid → Tasks 5 (vector), 6 (phonology), 9 (page); §4 the daughters → Task 5; §5 descent → Tasks 4,6; §6 re-baseline/epoch → Tasks 7,8; §7 success + battery → Tasks 8,9,10; §8 non-goals → respected (no replacement/borrowing/reconstruction task exists); §9 determinism → Tasks 3,7,8. No gaps. **Robustness passes** (from the ideonomy review, all seed-swept where relevant): a non-vacuity guard so the nativize path is actually exercised (Task 3); a placement-robust cognate test over the intersection of rooted concepts plus a divergence-reality guard (Task 6); divergence-magnitude and divergence-reality metrics as all-seed invariants (Task 10); a localized golden on the shared-ancestor phonology (Task 9, Step 3b).
 
 **Placeholder scan:** authored scalar values are concrete (Task 5); test helpers named where introduced; no "TBD"/"add error handling". The two places that say "grep to confirm" (metrics caller in Task 4, verb registry in Task 9) are locate-then-edit instructions, not deferred design.
 
-**Type consistency:** `build_lexicon(seed, species, family, ph, proto_ph, exposures)` is used identically in Tasks 4, 6, 8; `nativize(&[Segment], &Phonology) -> Vec<Segment>` and `feature_distance`/`same_class` are consistent across Tasks 3 and 6; `family_registry() -> BTreeMap<&'static str, ArticulationVector>` consistent across Tasks 5 and 6.
+**Type consistency:** `build_lexicon(seed, species, family, ph, proto_ph, exposures)` is used identically in Tasks 4, 6, 8; `nativize(&[Segment], &Phonology) -> Vec<Segment>` and `feature_distance`/`same_class` are consistent across Tasks 3 and 6; `family_registry() -> BTreeMap<&'static str, ArticulationVector>` consistent across Tasks 5 and 6. Test-local helpers are named where introduced: `restrictive_no_velar_nasal` (Task 3), `root_concepts` / `some_shared_concept_has_distinct_forms` (Task 6).
