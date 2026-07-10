@@ -6,6 +6,7 @@
 //! scoring and the geometry.
 
 use hornvale_kernel::CellId;
+use std::collections::BTreeSet;
 
 /// The four suitability weights; per-species values are derived at the
 /// composition root from the psychology vector (spec §4).
@@ -86,23 +87,81 @@ fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
+/// The founder pass (MAP-22's allocation layer at K=1): before the
+/// competitive fill, reserve each tag its own single best habitable cell so
+/// no tag can be boxed out to zero by another tag's spacing radius. Iterates
+/// all (tag, tag's-best-remaining-cell) candidates, repeatedly taking the
+/// globally highest-suitability pair — deterministic tie-break on exactly
+/// equal suitability: lower tag index, then lower cell id. Founders bypass
+/// both `floor` (a people below the quality floor everywhere still gets a
+/// flagship) and spacing against each other (spacing among founders would
+/// reintroduce the same boxing-out this pass exists to prevent); the
+/// competitive pass below still spaces later placements against founders.
+fn founder_pass(scored: &[(SiteInput, f64, u32)]) -> (Vec<(Placement, u32)>, BTreeSet<u32>) {
+    let mut founders: Vec<(Placement, u32)> = Vec::new();
+    let mut reserved_cells: BTreeSet<u32> = BTreeSet::new();
+    let mut remaining_tags: BTreeSet<u32> = scored.iter().map(|(_, _, tag)| *tag).collect();
+
+    while !remaining_tags.is_empty() {
+        // Each remaining tag's own best not-yet-reserved cell.
+        let mut candidates: Vec<(f64, u32, u32)> = Vec::new(); // (score, tag, cell id)
+        for &tag in &remaining_tags {
+            let mut own: Vec<&(SiteInput, f64, u32)> = scored
+                .iter()
+                .filter(|(site, _, t)| *t == tag && !reserved_cells.contains(&site.cell.0))
+                .collect();
+            own.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cell.0.cmp(&b.0.cell.0)));
+            if let Some((site, score, _)) = own.first() {
+                candidates.push((*score, tag, site.cell.0));
+            }
+        }
+        if candidates.is_empty() {
+            break; // no habitable cell remains for any remaining tag
+        }
+        candidates.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+        let (score, tag, cell_id) = candidates[0];
+        let site = *scored
+            .iter()
+            .find(|(s, _, t)| *t == tag && s.cell.0 == cell_id)
+            .map(|(s, _, _)| s)
+            .expect("selected candidate site must exist in scored");
+        founders.push((
+            Placement {
+                cell: site.cell,
+                position: site.position,
+                suitability: score,
+            },
+            tag,
+        ));
+        reserved_cells.insert(cell_id);
+        remaining_tags.remove(&tag);
+    }
+
+    (founders, reserved_cells)
+}
+
 /// Place a spaced scatter from pre-scored, tagged sites (tag = species index
-/// at the root). Sort by score descending, ties by ascending cell then
-/// ascending tag; greedily accept sites at least `min_separation_dot`-far
-/// from EVERY already-placed site regardless of tag, at or above `floor`.
+/// at the root). Runs the founder pass first (each tag reserves its own best
+/// cell), then sorts the un-reserved sites by score descending, ties by
+/// ascending cell then ascending tag; greedily accepts sites at least
+/// `min_separation_dot`-far from EVERY already-placed site (founder or
+/// competitive) regardless of tag, at or above `floor`.
 pub fn place_tagged(
     scored: &[(SiteInput, f64, u32)],
     min_separation_dot: f64,
     floor: f64,
 ) -> Vec<(Placement, u32)> {
-    let mut ranked: Vec<&(SiteInput, f64, u32)> =
-        scored.iter().filter(|(_, s, _)| *s >= floor).collect();
+    let (mut placed, reserved_cells) = founder_pass(scored);
+
+    let mut ranked: Vec<&(SiteInput, f64, u32)> = scored
+        .iter()
+        .filter(|(site, s, _)| *s >= floor && !reserved_cells.contains(&site.cell.0))
+        .collect();
     ranked.sort_by(|a, b| {
         b.1.total_cmp(&a.1)
             .then(a.0.cell.0.cmp(&b.0.cell.0))
             .then(a.2.cmp(&b.2))
     });
-    let mut placed: Vec<(Placement, u32)> = Vec::new();
     for (site, score, tag) in ranked {
         let too_close = placed
             .iter()
@@ -243,7 +302,11 @@ mod tests {
     }
 
     #[test]
-    fn tagged_placement_enforces_spacing_across_tags() {
+    fn founder_floor_places_both_tags_despite_close_spacing() {
+        // MAP-22: each tag's own-best cell is a guaranteed founder, so a
+        // weaker tag is no longer boxed out to zero by a stronger tag's
+        // spacing radius. This supersedes the pre-founder-floor behaviour
+        // where only the higher-score site survived the shared spacing pass.
         let close_a = [1.0, 0.0, 0.0];
         let close_b = [0.9998, 0.02, 0.0]; // ~1.1° away
         let a = site(1, close_a, true, 0.9, true, 15.0, 0.0);
@@ -252,9 +315,130 @@ mod tests {
         let placed = place_tagged(&[(a, 0.9, 0), (b, 0.8, 1)], sep, 0.25);
         assert_eq!(
             placed.len(),
-            1,
-            "cross-tag spacing must exclude the close site"
+            2,
+            "each tag reserves its own founder cell regardless of spacing to the other"
         );
-        assert_eq!(placed[0].1, 0, "higher score wins regardless of tag");
+        let tags: Vec<u32> = placed.iter().map(|(_, t)| *t).collect();
+        assert!(tags.contains(&0) && tags.contains(&1));
+    }
+
+    #[test]
+    fn competitive_pass_still_enforces_spacing_across_tags_after_founders() {
+        // Tag 0's founder is `a`. Tag 1's founder is the distant `far_b`
+        // (tag 1's own-best); its second-choice `close_c` is close to `a`
+        // and lower-scoring than `far_b`, so once founders are reserved the
+        // competitive pass must still exclude `close_c` on cross-tag spacing.
+        let a = site(1, [1.0, 0.0, 0.0], true, 0.9, true, 15.0, 0.0);
+        let far_b = site(2, [-1.0, 0.0, 0.0], true, 0.95, true, 15.0, 0.0);
+        let close_c = site(3, [0.9998, 0.02, 0.0], true, 0.5, true, 15.0, 0.0); // ~1.1° from a
+        let sep = (12.0_f64.to_radians()).cos();
+        let placed = place_tagged(
+            &[(a, 0.9, 0), (far_b, 0.95, 1), (close_c, 0.5, 1)],
+            sep,
+            0.25,
+        );
+        let cells: Vec<u32> = placed.iter().map(|(p, _)| p.cell.0).collect();
+        assert!(cells.contains(&1), "tag 0's founder must be placed");
+        assert!(cells.contains(&2), "tag 1's founder (far_b) must be placed");
+        assert!(
+            !cells.contains(&3),
+            "close_c is not a founder and must lose to cross-tag spacing"
+        );
+        assert_eq!(placed.len(), 2);
+    }
+
+    #[test]
+    fn every_tag_gets_at_least_one_placement_when_cells_suffice() {
+        // Four tags, four mutually-close cells (all within the spacing
+        // radius of each other), each cell the sole candidate for exactly
+        // one tag. Without a founder pass the shared spacing radius would
+        // let only the single highest-score site survive, boxing the other
+        // three tags out to zero (MAP-22's pigeonhole). With the founder
+        // pass every tag must appear at least once.
+        let cells = [
+            site(1, [1.0, 0.0, 0.0], true, 0.9, true, 15.0, 0.0), // 0°
+            site(2, [0.9994, 0.0349, 0.0], true, 0.8, true, 15.0, 0.0), // ~2°
+            site(3, [0.9976, 0.0698, 0.0], true, 0.7, true, 15.0, 0.0), // ~4°
+            site(4, [0.9945, 0.1045, 0.0], true, 0.6, true, 15.0, 0.0), // ~6°
+        ];
+        let scored: Vec<(SiteInput, f64, u32)> = cells
+            .iter()
+            .enumerate()
+            .map(|(tag, s)| (*s, suitability(s).unwrap(), tag as u32))
+            .collect();
+        let sep = (12.0_f64.to_radians()).cos();
+        let placed = place_tagged(&scored, sep, 0.25);
+        let tags: std::collections::BTreeSet<u32> = placed.iter().map(|(_, t)| *t).collect();
+        assert_eq!(
+            tags,
+            std::collections::BTreeSet::from([0, 1, 2, 3]),
+            "every tag must be represented when enough habitable cells exist"
+        );
+    }
+
+    #[test]
+    fn founder_pass_resolves_same_cell_collision_by_higher_suitability() {
+        // Tag 0 and tag 1 both score highest at cell 1 (tag 0 higher); tag 1
+        // also has a lower-scoring, distinct fallback cell 2. Tag 0 keeps
+        // cell 1; tag 1 falls back to cell 2.
+        let shared = site(1, [1.0, 0.0, 0.0], true, 0.9, true, 15.0, 0.0);
+        let fallback = site(2, [-1.0, 0.0, 0.0], true, 0.4, true, 15.0, 0.0);
+        let scored = vec![
+            (shared, 0.9, 0u32),
+            (shared, 0.7, 1u32),
+            (fallback, 0.4, 1u32),
+        ];
+        let placed = place_tagged(&scored, (12.0_f64.to_radians()).cos(), 0.25);
+        let by_tag = |t: u32| placed.iter().find(|(_, tag)| *tag == t).unwrap().0.cell.0;
+        assert_eq!(
+            by_tag(0),
+            1,
+            "tag 0 keeps the higher-scoring collision cell"
+        );
+        assert_eq!(by_tag(1), 2, "tag 1 falls back to its next-best cell");
+    }
+
+    #[test]
+    fn founder_pass_breaks_exact_ties_by_lower_tag_then_lower_cell() {
+        // Tag 0 and tag 1 both score exactly 0.7 at the same cell. The tie
+        // is broken by lower tag index: tag 0 keeps the cell, tag 1 falls
+        // back to its distinct second-choice cell.
+        let shared = site(1, [1.0, 0.0, 0.0], true, 0.7, true, 15.0, 0.0);
+        let fallback = site(2, [-1.0, 0.0, 0.0], true, 0.5, true, 15.0, 0.0);
+        let scored = vec![
+            (shared, 0.7, 0u32),
+            (shared, 0.7, 1u32),
+            (fallback, 0.5, 1u32),
+        ];
+        let placed = place_tagged(&scored, (12.0_f64.to_radians()).cos(), 0.25);
+        let by_tag = |t: u32| placed.iter().find(|(_, tag)| *tag == t).unwrap().0.cell.0;
+        assert_eq!(by_tag(0), 1, "lower tag index wins the exact tie");
+        assert_eq!(by_tag(1), 2, "tag 1 falls back after losing the tie");
+    }
+
+    #[test]
+    fn founder_floor_is_deterministic_and_order_independent() {
+        let cells = [
+            site(1, [1.0, 0.0, 0.0], true, 0.9, true, 15.0, 0.0),
+            site(2, [0.9994, 0.0349, 0.0], true, 0.8, true, 15.0, 0.0),
+            site(3, [0.9976, 0.0698, 0.0], true, 0.7, true, 15.0, 0.0),
+            site(4, [0.9945, 0.1045, 0.0], true, 0.6, true, 15.0, 0.0),
+        ];
+        let scored: Vec<(SiteInput, f64, u32)> = cells
+            .iter()
+            .enumerate()
+            .map(|(tag, s)| (*s, suitability(s).unwrap(), tag as u32))
+            .collect();
+        let mut reversed = scored.clone();
+        reversed.reverse();
+        let sep = (12.0_f64.to_radians()).cos();
+        let a = place_tagged(&scored, sep, 0.25);
+        let b = place_tagged(&reversed, sep, 0.25);
+        assert_eq!(a, b, "result must not depend on input ordering");
+        assert_eq!(
+            a,
+            place_tagged(&scored, sep, 0.25),
+            "repeat call must match"
+        );
     }
 }
