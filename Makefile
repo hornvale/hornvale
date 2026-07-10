@@ -1,0 +1,43 @@
+# Hornvale developer task runner (TOOL-14).
+#
+# Encodes the cost-ordered gate CLAUDE.md describes as prose, so the ordering
+# stops being tribal knowledge re-derived each session. `just` is not a repo
+# dependency; this uses `make`, already present everywhere.
+#
+#   make quick        # cheap half: fmt --check + clippy (the pre-commit gate)
+#   make gate         # the full commit gate: fmt + clippy + workspace tests
+#   make rebaseline   # regenerate every committed generated artifact
+#   make install-hooks# point git at scripts/hooks (opt-in; edits local config)
+#
+# Cost-ordered by design: fmt and clippy are cheapest and the most common
+# review finding, so they run first; `--workspace` tests are the final step.
+
+.PHONY: help quick gate fmt fmt-check clippy test rebaseline artifacts install-hooks
+
+help: ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+		| sort \
+		| awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
+
+quick: fmt-check clippy ## Cheap half of the gate (fmt-check + clippy)
+
+gate: fmt-check clippy test ## The full commit gate (fmt + clippy + workspace tests)
+
+fmt: ## Format the workspace in place
+	cargo fmt
+
+fmt-check: ## Verify formatting without writing
+	cargo fmt --check
+
+clippy: ## Lint with warnings denied
+	cargo clippy --workspace --all-targets -- -D warnings
+
+test: ## Run the full workspace test suite
+	cargo test --workspace
+
+rebaseline artifacts: ## Regenerate every committed generated artifact (review the diff, then commit)
+	bash scripts/regenerate-artifacts.sh
+
+install-hooks: ## Point git at scripts/hooks (runs `make quick` pre-commit)
+	git config core.hooksPath scripts/hooks
+	@echo "git hooks path set to scripts/hooks; 'make quick' now runs pre-commit."
