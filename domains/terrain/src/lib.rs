@@ -23,10 +23,12 @@ pub use provider::GeneratedTerrain;
 
 use hornvale_kernel::{ConceptKind, ConceptRegistry, EntityId, RegistryError, World};
 
-/// The fixed subdivision level of the shared Geosphere (10 × 4^5 + 2 =
-/// 10,242 cells). The composition root builds `Geosphere::new(GLOBE_LEVEL)`
-/// once per process; every terrain (and, in Plan 3c, climate) CellMap in a
-/// world is built against that mesh and must only ever be queried with it.
+/// The *default* subdivision level of the shared Geosphere (10 × 4^5 + 2 =
+/// 10,242 cells) — used when `TerrainPins.globe_level` is `None`. The
+/// composition root builds `Geosphere::new(level)` (per-level cached) once
+/// per process per level; every terrain (and, in Plan 3c, climate) CellMap
+/// in a world is built against the mesh its level selected and must only
+/// ever be queried with it.
 /// type-audit: bare-ok(count)
 pub const GLOBE_LEVEL: u32 = 5;
 
