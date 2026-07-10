@@ -63,7 +63,7 @@ mass without amnesia.
 | **What the process taught** | [`retrospectives/`](retrospectives/) | Process lessons, one page per campaign. |
 | **The law** | [`../book/src/constitution.md`](../book/src/constitution.md) | Constitutional; the spec is authoritative. |
 | **The world as it currently is** | [`../book/`](../book/) | Published reality; never lags a merge. |
-| **The wider, non-binding vision** | [`../book/src/frontier/`](../book/src/frontier/) | The Frontier part of the book; `vision/` holds redirect stubs only. |
+| **The wider, non-binding vision** | [`book/src/frontier/`](../book/src/frontier/) | The Frontier part of the book; `vision/` holds redirect stubs only. |
 
 ## The two failure modes this structure defends against
 

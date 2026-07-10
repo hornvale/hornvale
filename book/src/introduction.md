@@ -10,7 +10,7 @@ Frontier**, publishes the project's speculative vision map — ambitions and
 their confidence tags, not the system as built. It is marked as such
 throughout, and it governs nothing.
 
-It is deliberately not the [vision book](https://hornvale.github.io/book/),
+This book is deliberately not the [vision book](https://hornvale.github.io/book/),
 which explains *why* this project exists and what it wants to feel like. Read
 that one first if you want the soul; read this one if you want the machine.
 
