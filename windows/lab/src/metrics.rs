@@ -1246,6 +1246,90 @@ pub fn registry() -> Vec<Metric> {
             },
             extract: |v| homophony_count(v, "kobold"),
         },
+        // --- Lexicon homophony, functional-load restricted + attributed
+        // (the confusable-core count Nathan targets at ~zero, and the
+        // draw-vs-merger split that decides whether family-proto injective
+        // assignment alone suffices). `homophony-count-*` above stays as the
+        // raw, meaning-blind pair count; these refine it. ---
+        Metric {
+            name: "core-homophony-goblin",
+            doc: "Count of goblin homophone pairs where BOTH concepts are core vocabulary \
+                   (universal + body + kin packs) — the functional-load-restricted homophony \
+                   the fix drives to zero; always \u{2264} homophony-count-goblin; Absent if \
+                   goblin minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
+            },
+            extract: |v| core_homophony(v, "goblin"),
+        },
+        Metric {
+            name: "core-homophony-hobgoblin",
+            doc: "Count of hobgoblin homophone pairs where BOTH concepts are core vocabulary \
+                   (universal + body + kin packs); always \u{2264} homophony-count-hobgoblin; \
+                   Absent if hobgoblin minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
+            },
+            extract: |v| core_homophony(v, "hobgoblin"),
+        },
+        Metric {
+            name: "core-homophony-bugbear",
+            doc: "Count of bugbear homophone pairs where BOTH concepts are core vocabulary \
+                   (universal + body + kin packs); always \u{2264} homophony-count-bugbear; \
+                   Absent if bugbear minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
+            },
+            extract: |v| core_homophony(v, "bugbear"),
+        },
+        Metric {
+            name: "core-homophony-kobold",
+            doc: "Count of kobold homophone pairs where BOTH concepts are core vocabulary \
+                   (universal + body + kin packs); always \u{2264} homophony-count-kobold; \
+                   Absent if kobold minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
+            },
+            extract: |v| core_homophony(v, "kobold"),
+        },
+        Metric {
+            name: "homophony-merger-share-goblin",
+            doc: "Fraction of goblin colliding surface forms that are MERGERS (colliding roots \
+                   carry \u{2265}2 distinct proto-forms — the cascade or nativization made the \
+                   collision after the proto) rather than draw-collisions (one shared proto); \
+                   Absent if goblin has no collision (an undefined ratio, never reported as 0)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: |v| homophony_merger_share(v, "goblin"),
+        },
+        Metric {
+            name: "homophony-merger-share-hobgoblin",
+            doc: "Fraction of hobgoblin colliding surface forms that are MERGERS (\u{2265}2 distinct \
+                   proto-forms) rather than draw-collisions; Absent if hobgoblin has no collision",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: |v| homophony_merger_share(v, "hobgoblin"),
+        },
+        Metric {
+            name: "homophony-merger-share-bugbear",
+            doc: "Fraction of bugbear colliding surface forms that are MERGERS (\u{2265}2 distinct \
+                   proto-forms) rather than draw-collisions; Absent if bugbear has no collision",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: |v| homophony_merger_share(v, "bugbear"),
+        },
+        Metric {
+            name: "homophony-merger-share-kobold",
+            doc: "Fraction of kobold colliding surface forms that are MERGERS (\u{2265}2 distinct \
+                   proto-forms) rather than draw-collisions; Absent if kobold has no collision",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: |v| homophony_merger_share(v, "kobold"),
+        },
     ]
 }
 
@@ -2035,6 +2119,129 @@ fn homophony_count(v: &WorldView, species: &str) -> MetricValue {
     MetricValue::Number(pairs as f64)
 }
 
+/// Whether `concept` is **core** vocabulary — high functional load, where
+/// homophony genuinely confuses (Nathan's "near-zero for core" target). Core
+/// is the authored, always-lexicalized Swadesh strata: the universal
+/// stratum, the body pack, and the kin pack. Everything else — the
+/// exposure-gated color ladder (`color_pack`, ranked) and the biome-class
+/// Terrain concepts a culture only names where it settles — is periphery,
+/// where incidental homophony is tolerable. The split is entirely
+/// data-driven (pack membership), never a doc-string heuristic.
+fn is_core_concept(concept: &str) -> bool {
+    hornvale_language::universal_stratum()
+        .iter()
+        .chain(hornvale_language::body_pack())
+        .chain(hornvale_language::kin_pack())
+        .any(|e| e.concept == concept)
+}
+
+/// The homophony breakdown [`classify_homophony`] returns over a set of
+/// rooted words: the confusable-core pair count and the draw-vs-merger
+/// cluster split. Pure data, so the classifier is unit-testable without
+/// building a world.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct HomophonyStats {
+    /// Number of distinct-concept collision PAIRS where BOTH concepts are
+    /// core — the functional-load-restricted homophony the fix must drive to
+    /// zero. `\u{2211} C(core_members, 2)` over every surface form held by more
+    /// than one root.
+    core_pairs: usize,
+    /// Number of surface forms held by more than one root (any collision).
+    collision_clusters: usize,
+    /// Of those, the number that are **mergers**: the colliding roots carry
+    /// \u{2265}2 DISTINCT proto-forms, so the collision was created after the proto
+    /// by the sound-change cascade or nativization — not present at draw
+    /// time. The complement (one shared proto) are draw-collisions. This
+    /// split decides whether family-proto injective assignment alone
+    /// suffices (draw-dominated) or a post-evolution re-merger check is also
+    /// required (merger share material).
+    merger_clusters: usize,
+}
+
+/// Group `(modern_form, proto_form, is_core)` triples by surface form and
+/// tally the core-pair count and the draw-vs-merger cluster split. Pure and
+/// total; generic over the form/proto types so it can be unit-tested with
+/// plain strings and driven from real `Vec<Segment>` forms alike. A form
+/// held by a single root is not a collision and contributes nothing.
+fn classify_homophony<F: Ord, P: Ord>(entries: &[(F, P, bool)]) -> HomophonyStats {
+    let mut by_form: std::collections::BTreeMap<&F, Vec<(&P, bool)>> =
+        std::collections::BTreeMap::new();
+    for (form, proto, core) in entries {
+        by_form.entry(form).or_default().push((proto, *core));
+    }
+    let mut stats = HomophonyStats {
+        core_pairs: 0,
+        collision_clusters: 0,
+        merger_clusters: 0,
+    };
+    for members in by_form.values() {
+        if members.len() < 2 {
+            continue;
+        }
+        stats.collision_clusters += 1;
+        let distinct_protos: std::collections::BTreeSet<&P> =
+            members.iter().map(|(p, _)| *p).collect();
+        if distinct_protos.len() >= 2 {
+            stats.merger_clusters += 1;
+        }
+        let core_members = members.iter().filter(|(_, core)| *core).count();
+        stats.core_pairs += core_members * core_members.saturating_sub(1) / 2;
+    }
+    stats
+}
+
+/// Extract every `species` Root's `(modern, proto, is_core)` triple and
+/// classify it — the shared body under both the `core-homophony-*` and
+/// `homophony-merger-share-*` metrics. `None` if `species` is off-roster or
+/// minted no Root.
+fn homophony_stats(v: &WorldView, species: &str) -> Option<HomophonyStats> {
+    if !in_roster(v, species) {
+        return None;
+    }
+    let lex = hornvale_worldgen::lexicon_of(&v.world, species).ok()?;
+    let mut triples: Vec<(Vec<Segment>, Vec<Segment>, bool)> = Vec::new();
+    for (concept, entry) in lex.entries() {
+        if let LexEntry::Root { derivation, .. } = entry {
+            triples.push((
+                derivation.modern.clone(),
+                derivation.proto.clone(),
+                is_core_concept(concept),
+            ));
+        }
+    }
+    if triples.is_empty() {
+        return None;
+    }
+    Some(classify_homophony(&triples))
+}
+
+/// Count of confusable-core homophone pairs in `species`' lexicon — the
+/// functional-load-restricted homophony the fix targets (both concepts of
+/// the colliding pair are core vocabulary). `Absent` if `species` is
+/// off-roster or minted no Root. Always `\u{2264}` the unrestricted
+/// `homophony-count-{species}`.
+fn core_homophony(v: &WorldView, species: &str) -> MetricValue {
+    match homophony_stats(v, species) {
+        Some(s) => MetricValue::Number(s.core_pairs as f64),
+        None => MetricValue::Absent,
+    }
+}
+
+/// Fraction of `species`' colliding surface forms that are **mergers** (the
+/// colliding roots carry \u{2265}2 distinct proto-forms — the cascade or
+/// nativization created the collision after the proto) rather than
+/// draw-collisions (one shared proto). `Absent` if `species` is off-roster,
+/// minted no Root, or has no collision at all (an undefined ratio, never
+/// reported as 0). Decides whether proto-injective assignment alone suffices.
+fn homophony_merger_share(v: &WorldView, species: &str) -> MetricValue {
+    match homophony_stats(v, species) {
+        Some(s) if s.collision_clusters > 0 => {
+            MetricValue::Number(s.merger_clusters as f64 / s.collision_clusters as f64)
+        }
+        _ => MetricValue::Absent,
+    }
+}
+
 /// Whether `name` parses as a legal sequence of syllables under `ph`,
 /// independently of `hornvale_language::naming`'s generation code path: this
 /// walks the SURFACE STRING back into [`Segment`]s and re-checks
@@ -2331,7 +2538,7 @@ mod tests {
         // inventory-closure-{goblin,hobgoblin,bugbear,kobold},
         // divergence-magnitude-{goblin,hobgoblin,bugbear}, divergence-real,
         // homophony-count-{goblin,hobgoblin,bugbear,kobold}).
-        assert_eq!(registry().len(), 92);
+        assert_eq!(registry().len(), 100);
     }
 
     #[test]
@@ -2695,6 +2902,78 @@ mod tests {
             MetricValue::Flag(true),
             "some concept rooted in all three goblinoid daughters must diverge"
         );
+    }
+
+    #[test]
+    fn classify_homophony_counts_core_pairs_and_splits_draw_from_merger() {
+        // Pure classifier, no world. Forms are plain strings; the third
+        // tuple field is is-core. Four roots:
+        //   noa  <- P1  core   (hand)     \  draw-collision, both core
+        //   noa  <- P1  core   (night)    /  => 1 core pair, cluster = DRAW
+        //   ted  <- P2  core   (green)    \  merger (distinct protos P2,P3),
+        //   ted  <- P3  false  (a color)  /  both? only one core => 0 core pairs
+        //   wo   <- P4  core   (alone)       not a collision
+        let entries = [
+            ("noa", "P1", true),
+            ("noa", "P1", true),
+            ("ted", "P2", true),
+            ("ted", "P3", false),
+            ("wo", "P4", true),
+        ];
+        let s = classify_homophony(&entries);
+        assert_eq!(s.collision_clusters, 2, "noa and ted collide; wo does not");
+        assert_eq!(
+            s.merger_clusters, 1,
+            "ted is a merger (P2 != P3); noa is a draw-collision (shared P1)"
+        );
+        assert_eq!(
+            s.core_pairs, 1,
+            "only noa contributes a core pair; ted has one core member (0 pairs)"
+        );
+    }
+
+    #[test]
+    fn core_homophony_detects_the_reported_hand_many_night_collision_and_is_bounded() {
+        // The bug that opened this campaign: seed 42 goblin roots hand, many,
+        // and night all to *Noa* — three CORE concepts (Body, Quality,
+        // Celestial), so C(3,2) = 3 core pairs from that cluster alone.
+        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let core = match extract(&view, "core-homophony-goblin") {
+            MetricValue::Number(n) => n,
+            other => panic!("core-homophony-goblin not a number: {other:?}"),
+        };
+        assert!(
+            core >= 3.0,
+            "the hand/many/night cluster alone is 3 core pairs; got {core}"
+        );
+        // Functional-load restriction can only ever be a subset of the raw
+        // count, for every daughter.
+        for species in ALL_DAUGHTERS {
+            let (MetricValue::Number(c), MetricValue::Number(total)) = (
+                extract(&view, &format!("core-homophony-{species}")),
+                extract(&view, &format!("homophony-count-{species}")),
+            ) else {
+                continue; // Absent for a daughter with no Root — nothing to bound.
+            };
+            assert!(
+                c <= total,
+                "{species}: core-homophony {c} must not exceed homophony-count {total}"
+            );
+        }
+    }
+
+    #[test]
+    fn homophony_merger_share_is_a_unit_fraction_or_absent_for_every_daughter() {
+        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        for species in ALL_DAUGHTERS {
+            match extract(&view, &format!("homophony-merger-share-{species}")) {
+                MetricValue::Number(f) => {
+                    assert!((0.0..=1.0).contains(&f), "{species}: {f} out of [0,1]")
+                }
+                MetricValue::Absent => {} // no collision → undefined ratio, fine.
+                other => panic!("{species}: merger-share unexpected: {other:?}"),
+            }
+        }
     }
 
     #[test]
