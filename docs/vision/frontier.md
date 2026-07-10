@@ -36,6 +36,7 @@ map of the whole documentation set is [`docs/README.md`](../README.md).
   - [Social structure as orthogonal axes — cashing the substrate](#social-structure-as-orthogonal-axes--cashing-the-substrate)
   - [The biological substrate — body, reproduction, and deep time](#the-biological-substrate--body-reproduction-and-deep-time)
   - [The biosphere — the living substrate](#the-biosphere--the-living-substrate)
+  - [The biogeography of coexistence — how the weak persist](#the-biogeography-of-coexistence--how-the-weak-persist)
   - [Technology as capability thresholds](#technology-as-capability-thresholds)
   - [The underworld — the vertical dimension](#the-underworld--the-vertical-dimension)
   - [The cultural-memory economy — knowledge as a maintained thing](#the-cultural-memory-economy--knowledge-as-a-maintained-thing)
@@ -830,6 +831,59 @@ never from a catalogue.
   activity is genetics, sacredness is the culture vector, three layers meeting
   on a mushroom. **Lab candidate:** across a census, sacred-substance class
   should track subsistence and purity-grid coordinates, never seed noise.
+
+---
+
+## The biogeography of coexistence — how the weak persist
+
+The placement stack asks one question per species per cell — *how suitable is
+this ground?* — and hands each cell to the fittest bidder. For two peoples of
+comparable build that produces a believable patchwork. It does not survive a
+full bestiary. The moment a stronger people is authored — higher on the axes
+that raise suitability — it wins *every* cell, and the weaker vanish from the
+map. This is not a bug in a formula; it is Gause's competitive-exclusion
+principle asserting itself, and it is why a naive world of many species
+collapses to a world of one. A realistic fantasy surface — dragons on the
+peaks, goblins in the valleys, kobolds in the cracks beneath — is *precisely*
+the configuration competitive exclusion forbids. Something has to hold it open.
+
+The reframe is that **might must buy cost and rarity, not ubiquity, and
+weakness must buy abundance and refuge.** The modelling error was pricing
+capability as free. Five mechanisms — composable, and each deterministic —
+hold coexistence open:
+
+- **Carrying cost** — the ecological rubber band. A mightier people needs
+  *more* per head; a cell a dragon starves on is a kobold's paradise.
+  Suitability becomes a match between a cell's yield and a species' *need*, so
+  the mighty are viable in few cells and take few of them: rare by
+  construction, never dominant. This alone dissolves the exclusion. It is the
+  spatial face of the [biosphere](#the-biosphere--the-living-substrate)'s
+  carrying-capacity term.
+- **Niche differentiation** — cells carry a *vector* of resources (water, ore,
+  defensibility, darkness, prey, mana), peoples value them differently, and
+  placement is a matching, not a scalar ranking. Universal dominance would
+  require winning on every facet at once — vanishingly unlikely in a rich
+  resource space (Gause's escape hatch).
+- **The might-ordered draft** — allocation in decreasing order of might: the
+  mighty choose first but claim little, the weak choose last from the abundant
+  remainder. A sort and a greedy pass; scales to hundreds of species.
+- **Refugia and stratification** — the weak persist in the interstices the
+  strong cannot use. The underdark is a vertical stratum no dragon enters
+  ([the underworld](#the-underworld--the-vertical-dimension)); *commensal
+  tenancy* is kobolds sheltering in a dragon's shadow, straight from the lore.
+  A cell is not one tenancy but a stack.
+- **Contingent succession** — the map is the residue of deep-time waves
+  ([sequencing the deep-time stack](#sequencing-the-deep-time-stack)), not a
+  one-shot optimum: incumbency shields first-arrivers, and local extinctions
+  open ground the fast-breeding weak recolonize. The biogeography becomes
+  path-dependent — many valid worlds from one terrain — which is both more
+  realistic and more alive.
+
+The through-line: coexistence is the *default* once might is priced and the
+resource space is heterogeneous. This is the placement-stack sibling of
+[habitat medium](#the-frontier-map) (MAP-11, the surface/underdark stack) — the
+mechanism that lets a bestiary of a hundred peoples share one world without the
+strong quietly erasing the weak.
 
 ---
 
