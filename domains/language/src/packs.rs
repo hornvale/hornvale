@@ -303,13 +303,6 @@ pub fn kin_pack() -> &'static [PackEntry] {
     ]
 }
 
-/// The closed set of concept ids with an authored compound recipe — the
-/// match arms of [`compound_recipe`], kept as one array so the recipe-
-/// closure test can iterate every row without duplicating the list.
-/// Test-only: the only caller is `compound_recipe`'s own test below.
-#[cfg(test)]
-const COMPOUNDABLE: &[&str] = &["sea", "mountain"];
-
 /// The closed authored recipe table for KNOWS-OF compounds: concepts with
 /// no root word of their own in any pack, expressed instead as a
 /// `(modifier, head)` compound of two concept ids that *do* have roots
@@ -322,12 +315,17 @@ const COMPOUNDABLE: &[&str] = &["sea", "mountain"];
 /// dedicated word for it names it "many water". `mountain`, likewise owned
 /// by terrain, is named "many stone".
 pub fn compound_recipe(concept: &str) -> Option<(&'static str, &'static str)> {
-    match concept {
-        "sea" => Some(("many", "water")),
-        "mountain" => Some(("many", "stone")),
-        _ => None,
-    }
+    RECIPES
+        .iter()
+        .find(|(c, _, _)| *c == concept)
+        .map(|(_, modifier, head)| (*modifier, *head))
 }
+
+/// The authored recipe rows behind [`compound_recipe`]:
+/// `(concept, modifier, head)`. One table drives both the lookup and the
+/// recipe-closure test, so a new recipe can never silently escape test
+/// coverage. Closed and tiny; a linear scan is deterministic and cheap.
+const RECIPES: &[(&str, &str, &str)] = &[("sea", "many", "water"), ("mountain", "many", "stone")];
 
 /// Input to [`in_ladder`]: how many acquisition-ladder stages are unlocked,
 /// per ladder in [`color_pack`]. Derivation from a culture's perception
@@ -426,7 +424,7 @@ mod tests {
     fn every_recipe_ingredient_is_a_registered_concept() {
         let mut r = ConceptRegistry::default();
         register_concepts(&mut r).unwrap();
-        for concept in COMPOUNDABLE {
+        for (concept, _, _) in RECIPES {
             let (modifier, head) = compound_recipe(concept)
                 .unwrap_or_else(|| panic!("{concept} should have a recipe"));
             assert!(

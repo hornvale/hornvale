@@ -841,11 +841,10 @@ pub fn exposure_of(
     let terrain = terrain_of(world)?;
     let climate = climate_of(world)?;
     let settled = settled_cells(world, species);
-    let coexisting = if settled.is_empty() {
-        std::collections::BTreeSet::new()
-    } else {
-        placed_species(world)
-    };
+    // `exposure_of_impl` alone owns the "coexisting counts only once the
+    // querying species has settled" rule; the outer gate this replaced was
+    // vestigial belt-and-suspenders from the merge reconciliation.
+    let coexisting = placed_species(world);
     exposure_of_impl(world, def, &settled, &coexisting, &terrain, &climate)
 }
 
@@ -1296,16 +1295,14 @@ pub fn build_world_with_roster(
             .filter(|(_, t)| *t as usize == tag)
             .map(|(p, _)| p.cell)
             .collect();
-        let coexisting_now: std::collections::BTreeSet<String> = if settled_now.is_empty() {
-            std::collections::BTreeSet::new()
-        } else {
-            species_set
-                .iter()
-                .enumerate()
-                .filter(|(i, _)| placements.iter().any(|(_, t)| *t as usize == *i))
-                .map(|(_, d)| d.name.to_string())
-                .collect()
-        };
+        // `exposure_of_impl` alone owns the "coexisting counts only once the
+        // querying species has settled" rule.
+        let coexisting_now: std::collections::BTreeSet<String> = species_set
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| placements.iter().any(|(_, t)| *t as usize == *i))
+            .map(|(_, d)| d.name.to_string())
+            .collect();
         let exposures = exposure_of_impl(
             &world,
             def,

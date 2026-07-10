@@ -56,9 +56,11 @@ pub use register::{LineContent, LineSentiment, VoiceParams, render_line};
 /// other domains' `stream_labels()`. Labels are permanent save-format
 /// contracts (spec §3); regeneration uses epoch suffixes, never renames.
 ///
-/// These are the REAL derivation paths behind every generated proper noun in
-/// the world: the phonology draw (which the composition root reconstructs
-/// per world) and the three name kinds (each a single deterministic draw).
+/// These are the REAL derivation paths behind every generated word and
+/// proper noun in the world: the phonology draw (which the composition root
+/// reconstructs per world), the lexicon draws (per-concept roots, the
+/// sound-change cascade, compound headedness), and the name kinds (each a
+/// single deterministic draw).
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     vec![
         (
