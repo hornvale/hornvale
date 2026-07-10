@@ -9,30 +9,41 @@ use hornvale_kernel::{
 };
 
 /// Predicate marking an entity as a belief.
+/// type-audit: bare-ok(identifier-text)
 pub const IS_BELIEF: &str = "is-belief";
 /// Predicate relating a belief to a community that holds it.
+/// type-audit: bare-ok(identifier-text)
 pub const HELD_BY: &str = "held-by";
 /// Predicate giving a belief's tenet text. Retired: new genesis never
 /// commits this fact (spec §6/§8 — structured content replaces it), but the
 /// constant stays defined because pre-Tongues saves still carry `tenet`
 /// facts and historiography still recounts them.
+/// type-audit: bare-ok(identifier-text)
 pub const TENET: &str = "tenet";
 /// Predicate recording which phenomenon kind a belief mythologizes.
+/// type-audit: bare-ok(identifier-text)
 pub const DERIVED_FROM_PHENOMENON: &str = "derived-from-phenomenon";
 /// Predicate: the presiding deity of a ranked pantheon (functional Flag).
+/// type-audit: bare-ok(identifier-text)
 pub const HIGH_GOD: &str = "high-god";
 /// Predicate: the cult form of a belief — `organized` or `folk` (functional Text).
+/// type-audit: bare-ok(identifier-text)
 pub const CULT_FORM: &str = "cult-form";
 /// Predicate: a belief's deity name, roman transcription (functional Text).
+/// type-audit: bare-ok(identifier-text)
 pub const DEITY_NAME: &str = "deity-name";
 /// Predicate: a belief's deity name, IPA transcription (functional Text).
+/// type-audit: bare-ok(identifier-text)
 pub const DEITY_NAME_IPA: &str = "deity-name-ipa";
 /// Predicate: a belief's epithet, roman transcription (functional Text).
+/// type-audit: bare-ok(identifier-text)
 pub const DEITY_EPITHET: &str = "deity-epithet";
 /// Predicate: a belief's epithet, IPA transcription (functional Text).
+/// type-audit: bare-ok(identifier-text)
 pub const DEITY_EPITHET_IPA: &str = "deity-epithet-ipa";
 /// Predicate: a belief's sentiment — `eternal`, `cyclic`, or `ambient`
 /// (functional Text).
+/// type-audit: bare-ok(identifier-text)
 pub const SENTIMENT: &str = "sentiment";
 
 /// Salience a phenomenon must reach to seat a deity in the pantheon.
@@ -44,6 +55,7 @@ const RANKED_STRATA: usize = 4;
 /// no longer draws from the seed directly — deity and epithet naming (and
 /// the streams behind them) are the `DeityNamer` implementation's business,
 /// which for language-backed names lives in `domains/language`.
+/// type-audit: bare-ok(identifier-text)
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     Vec::new()
 }
@@ -86,6 +98,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
 /// A summary of the flagship society's shape, mapped at the composition root
 /// from its committed castes. Religion consumes this instead of importing
 /// culture (the trace discipline).
+/// type-audit: bare-ok(count: strata), bare-ok(flag: has_priesthood)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SocietySummary {
     /// Number of caste/role strata.
@@ -125,6 +138,7 @@ impl Sentiment {
     }
 
     /// The lowercase tag committed to the ledger's `sentiment` fact.
+    /// type-audit: bare-ok(identifier-text)
     pub fn as_str(self) -> &'static str {
         match self {
             Sentiment::Eternal => "eternal",
@@ -154,12 +168,15 @@ impl Sentiment {
 /// from it without religion knowing anything about streams.
 pub trait DeityNamer {
     /// A deity's name for the belief salted by `salt`.
+    /// type-audit: pending(wave-3: salt), bare-ok(identifier-text: return)
     fn deity(&mut self, salt: u64) -> (String, String);
     /// An epithet for the belief salted by `salt`, fitting `sentiment`.
+    /// type-audit: pending(wave-3: salt), bare-ok(identifier-text: return)
     fn epithet(&mut self, salt: u64, sentiment: Sentiment) -> (String, String);
 }
 
 /// A belief as this domain knows it.
+/// type-audit: bare-ok(identifier-text: deity), bare-ok(identifier-text: epithet), bare-ok(identifier-text: source_kind), bare-ok(flag: high_god)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Belief {
     /// The belief's entity id.
@@ -315,6 +332,7 @@ pub fn beliefs_of(world: &World) -> Vec<Belief> {
 
 /// The cult form shared by the world's pantheon (`organized`/`folk`), read
 /// from the first belief; `None` if there are no beliefs.
+/// type-audit: bare-ok(identifier-text)
 pub fn cult_form_of(world: &World) -> Option<String> {
     let first = world.ledger.find(IS_BELIEF).next()?.subject;
     match world.ledger.value_of(first, CULT_FORM) {
@@ -338,6 +356,7 @@ pub fn beliefs_held_by(world: &World, community: EntityId) -> Vec<Belief> {
 }
 
 /// The cult form of one community's pantheon, from its first belief.
+/// type-audit: bare-ok(identifier-text)
 pub fn cult_form_held_by(world: &World, community: EntityId) -> Option<String> {
     let first = beliefs_held_by(world, community).into_iter().next()?;
     match world.ledger.value_of(first.id, CULT_FORM) {
