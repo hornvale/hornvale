@@ -35,6 +35,7 @@ pub enum BiomeClass {
 
 impl Subsistence {
     /// Kebab-case name (almanac, Lab, CSV).
+    /// type-audit: bare-ok(identifier-text)
     pub fn name(self) -> &'static str {
         match self {
             Subsistence::Farming => "farming",
@@ -44,6 +45,7 @@ impl Subsistence {
         }
     }
     /// The base worker role this subsistence implies.
+    /// type-audit: bare-ok(identifier-text)
     pub fn worker(self) -> &'static str {
         match self {
             Subsistence::Farming => "farmer",
@@ -55,6 +57,7 @@ impl Subsistence {
 }
 
 /// Relative land fertility of a biome class, `[0, 1]`.
+/// type-audit: bare-ok(ratio)
 pub fn fertility(class: BiomeClass) -> f64 {
     match class {
         BiomeClass::Forest => 0.9,
@@ -68,6 +71,7 @@ pub fn fertility(class: BiomeClass) -> f64 {
 /// The subsistence mode for a biome class and coastal access. Forest and
 /// grassland farm regardless of coast; arid herds inland but fishes on the
 /// coast; cold and barren forage inland but fish on the coast.
+/// type-audit: bare-ok(flag)
 pub fn subsistence(class: BiomeClass, coastal: bool) -> Subsistence {
     let inland = match class {
         BiomeClass::Forest | BiomeClass::Grassland => Subsistence::Farming,

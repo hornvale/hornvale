@@ -11,12 +11,15 @@ pub use structure::{EnvSummary, PsychSummary, RoleVocabulary, structure};
 use hornvale_kernel::{ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World};
 
 /// Predicate relating a settlement to a caste present in it.
+/// type-audit: bare-ok(identifier-text)
 pub const HAS_CASTE: &str = "has-caste";
 
 /// Predicate: a settlement's subsistence mode (functional, Text).
+/// type-audit: bare-ok(identifier-text)
 pub const SUBSISTENCE: &str = "subsistence";
 
 /// Every seed-derivation label this crate uses (none yet).
+/// type-audit: bare-ok(identifier-text)
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     Vec::new()
 }
@@ -63,6 +66,7 @@ pub fn genesis(
 }
 
 /// The castes of `settlement`, in commit order.
+/// type-audit: bare-ok(identifier-text)
 pub fn castes_of(world: &World, settlement: EntityId) -> Vec<String> {
     world
         .ledger
@@ -76,6 +80,7 @@ pub fn castes_of(world: &World, settlement: EntityId) -> Vec<String> {
 }
 
 /// The subsistence mode committed for a settlement, if any.
+/// type-audit: bare-ok(identifier-text)
 pub fn subsistence_of(world: &World, settlement: EntityId) -> Option<String> {
     match world.ledger.value_of(settlement, SUBSISTENCE) {
         Some(Value::Text(t)) => Some(t.clone()),
