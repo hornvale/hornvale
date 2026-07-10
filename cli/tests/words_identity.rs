@@ -163,14 +163,15 @@ fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
 /// A settlement's own re-derived site concepts: its committed biome fact
 /// (which is already the concept id — `Biome::concept_name() ==
 /// Biome::name()`, the same kebab-case string settlement genesis commits,
-/// domains/climate/src/biome.rs) plus its species' presiding phenomenon
-/// concept, if any — the same composition `build_world_with_roster` uses
-/// right before drawing the settlement's glossed name (windows/worldgen/src
-/// /lib.rs, `site_concepts = vec![biome_concept]; site_concepts.extend(
-/// presiding)`). `observed_phenomena_as` is safe to call post-build: its own
-/// doc comment guarantees no currently-registered `PhenomenaSource` reads
-/// `place`, so re-deriving from the fully-built world is observationally
-/// identical to the in-progress placement pass's own read.
+/// domains/climate/src/biome.rs) plus the presiding phenomenon concept its
+/// species observes from THIS settlement's own vantage — the settlement's
+/// committed coordinates cull the sky (SEQ-5), the same per-entity
+/// observation `build_world_with_roster` makes at the settlement's cell
+/// right before drawing its glossed name (windows/worldgen/src/lib.rs,
+/// `site_concepts = vec![biome_concept]; site_concepts.extend(presiding)`).
+/// Re-deriving from the fully-built world is observationally identical to
+/// the in-progress placement pass's own read: the pass observes from the
+/// same coordinate the committed entity now carries as its lat/lon facts.
 fn settlement_site_concepts(world: &World, id: EntityId) -> Vec<String> {
     let biome = world
         .ledger
@@ -179,8 +180,13 @@ fn settlement_site_concepts(world: &World, id: EntityId) -> Vec<String> {
         .to_string();
     let species =
         hornvale_species::species_of(world, id).expect("every settlement has a species fact");
-    let phenomena = hornvale_worldgen::observed_phenomena_as(world, &species)
-        .expect("observed_phenomena_as must succeed for a placed species");
+    let phenomena = hornvale_worldgen::observed_phenomena_as_at(
+        world,
+        &hornvale_worldgen::default_roster(),
+        &species,
+        id,
+    )
+    .expect("observed_phenomena_as_at must succeed for a placed species");
     let mut concepts = vec![biome];
     if let Some(concept) = phenomena.first().and_then(phenomenon_concept) {
         concepts.push(concept.to_string());
@@ -207,6 +213,9 @@ fn deity_site_concepts_of(world: &World, id: EntityId) -> Vec<String> {
         .expect("a belief must be among its own held-by community's beliefs");
     let species = hornvale_species::species_of(world, community)
         .expect("a belief's community has a species fact");
+    // Deity naming observes from the world's first place, hemisphere-culled
+    // (SEQ-4/SEQ-5) — the same slice religion's genesis consumed — so the
+    // re-derivation must use exactly that vantage, not a position-free one.
     let phenomena = hornvale_worldgen::observed_phenomena_as(world, &species)
         .expect("observed_phenomena_as must succeed for a placed species");
     let phenomenon = phenomena
@@ -245,8 +254,29 @@ fn candidate_glosses(concepts: &[String]) -> BTreeSet<String> {
 /// world.
 #[test]
 fn names_wellformed_and_glosses_true() {
-    let world = default_generated_seed_42();
+    assert_glosses_true(&default_generated_seed_42(), "seed 42");
+}
 
+/// The Firm-Ground-II merge regression probe: seed 8 is the seed where
+/// hemisphere culling (SEQ-5) first diverged a settlement's own sky from
+/// the position-free stand-in glossed naming originally observed, making a
+/// committed gloss untruthful. Naming now observes settlements from their
+/// own cells and deities from the species' position-free sky; this seed
+/// guards that split.
+#[test]
+fn names_wellformed_and_glosses_true_on_seed_8() {
+    let world = build_world(
+        Seed(8),
+        &hornvale_astronomy::SkyPins::default(),
+        SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &SettlementPins::default(),
+    )
+    .expect("seed 8 must build");
+    assert_glosses_true(&world, "seed 8");
+}
+
+fn assert_glosses_true(world: &World, label: &str) {
     let mut checked_settlements = 0;
     for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
         let id = f.subject;
@@ -254,18 +284,18 @@ fn names_wellformed_and_glosses_true() {
             continue;
         };
         checked_settlements += 1;
-        let concepts = settlement_site_concepts(&world, id);
+        let concepts = settlement_site_concepts(world, id);
         let candidates = candidate_glosses(&concepts);
         assert!(
             candidates.contains(gloss),
-            "settlement {id:?} gloss {gloss:?} is not a truthful composition \
-             of its own re-derived site concepts {concepts:?} (candidates: \
-             {candidates:?})"
+            "{label}: settlement {id:?} gloss {gloss:?} is not a truthful \
+             composition of its own re-derived site concepts {concepts:?} \
+             (candidates: {candidates:?})"
         );
     }
     assert!(
         checked_settlements > 0,
-        "seed 42 should gloss at least one settlement"
+        "{label} should gloss at least one settlement"
     );
 
     let mut checked_deities = 0;
@@ -275,18 +305,18 @@ fn names_wellformed_and_glosses_true() {
             continue;
         };
         checked_deities += 1;
-        let concepts = deity_site_concepts_of(&world, id);
+        let concepts = deity_site_concepts_of(world, id);
         let candidates = candidate_glosses(&concepts);
         assert!(
             candidates.contains(gloss),
-            "deity belief {id:?} gloss {gloss:?} is not a truthful \
+            "{label}: deity belief {id:?} gloss {gloss:?} is not a truthful \
              composition of its own re-derived site concepts {concepts:?} \
              (candidates: {candidates:?})"
         );
     }
     assert!(
         checked_deities > 0,
-        "seed 42 should gloss at least one deity"
+        "{label} should gloss at least one deity"
     );
 }
 

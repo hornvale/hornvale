@@ -15,8 +15,9 @@ use hornvale_climate::{
     UniformClimate,
 };
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Fact, Geosphere, LedgerError, ObserverContext, PerceptionLens,
-    PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime, observe,
+    ConceptRegistry, EntityId, Fact, GeoCoord, Geosphere, LedgerError, ObserverContext,
+    PerceptionLens, PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime,
+    observe,
 };
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
 use std::sync::OnceLock;
@@ -371,17 +372,49 @@ pub fn land_lines(world: &World) -> Result<Vec<String>, BuildError> {
     ])
 }
 
-/// The tier-0/1/2 phenomena sources, observed at the world's first place.
+/// The geographic position of a place, from its committed latitude/longitude
+/// facts (each set from `Geosphere::coord` at genesis — `domains/settlement`).
+/// `None` for a place carrying no such facts (a legacy or non-settlement
+/// place), leaving the observation position-blind — the pre-vantage behavior.
+fn place_coord(world: &World, place: EntityId) -> Option<GeoCoord> {
+    let latitude = match world
+        .ledger
+        .value_of(place, hornvale_settlement::LATITUDE)?
+    {
+        Value::Number(n) => *n,
+        _ => return None,
+    };
+    let longitude = match world
+        .ledger
+        .value_of(place, hornvale_settlement::LONGITUDE)?
+    {
+        Value::Number(n) => *n,
+        _ => return None,
+    };
+    Some(GeoCoord {
+        latitude,
+        longitude,
+    })
+}
+
+/// The tier-0/1/2 phenomena sources, observed from the world's first place —
+/// the flagship (SEQ-4). The vantage's hemisphere culls the sky (SEQ-5).
 pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, BuildError> {
     let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
         return Ok(Vec::new());
     };
+    let position = place_coord(world, place);
     let sky = sky_of(world)?;
     let climate = UniformClimate;
     let sources: [&dyn PhenomenaSource; 2] = [&sky, &climate];
     Ok(observe(
         &sources,
-        &ObserverContext::at(place, WorldTime { day }),
+        &ObserverContext {
+            place,
+            time: WorldTime { day },
+            lens: PerceptionLens::identity(),
+            position,
+        },
     ))
 }
 
@@ -479,23 +512,51 @@ pub fn observed_phenomena_as_in(
     observed_phenomena_at(world, def, place)
 }
 
-/// [`observed_phenomena_as_in`]'s actual observation, factored out so
-/// glossed naming (Task 9) can observe from an already-minted entity (the
-/// world entity, minted before anything else) rather than "the world's
-/// first place": `hornvale_terrain::places` reads the shared `is-place`
-/// predicate, which today only settlements ever commit, so before
-/// `hornvale_settlement::genesis` runs — exactly when glossed settlement/
-/// deity names must be drawn, ahead of the (functional, one-shot) `name`
-/// fact — it finds none and `observed_phenomena_as_in` short-circuits to
-/// an empty `Vec`. No currently-registered `PhenomenaSource` (`Sky`,
-/// `UniformClimate`) actually reads `ObserverContext::place` — only
-/// `time`/`lens` shape the result (the place debt is SEQ-4's, per the
-/// field's own history) — so standing in with any already-minted entity id
-/// is observationally identical to the real "first place," today.
+/// [`observed_phenomena_as_in`]'s actual observation with the entity's
+/// committed coordinates as the vantage: the entity's own hemisphere culls
+/// the sky (SEQ-5). An entity with no committed latitude/longitude (e.g. a
+/// bare stand-in id) observes the whole, un-culled sky.
 fn observed_phenomena_at(
     world: &World,
     def: &hornvale_species::SpeciesDef,
     place: EntityId,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    observed_phenomena_from(world, def, place, place_coord(world, place))
+}
+
+/// The phenomena a species (resolved within `roster`) observes from
+/// `place`'s own committed vantage — its latitude/longitude fact culls the
+/// sky by hemisphere (SEQ-5). This is the per-entity observation glossed
+/// naming is truthful to (spec §9.3: a gloss composes THAT entity's own
+/// site facts), public so the keystone (`cli/tests/words_identity.rs`) and
+/// the lab's `name-gloss-true` metric can re-derive it independently
+/// without importing worldgen's naming internals.
+pub fn observed_phenomena_as_at(
+    world: &World,
+    roster: &[hornvale_species::SpeciesDef],
+    species: &str,
+    place: EntityId,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let def = def_in(roster, species)?;
+    observed_phenomena_at(world, def, place)
+}
+
+/// The observation itself, factored out with an explicit `position` so
+/// glossed settlement naming (Task 9) can observe from the settlement's own
+/// cell coordinate BEFORE the settlement entity exists — names are drawn
+/// ahead of `hornvale_settlement::genesis`'s (functional, one-shot) `name`
+/// fact, when `hornvale_terrain::places` still finds nothing. The vantage's
+/// hemisphere culls the sky (SEQ-5) exactly as it will for the committed
+/// entity. No currently-registered `PhenomenaSource` (`Sky`,
+/// `UniformClimate`) actually reads `ObserverContext::place` — only
+/// `time`/`lens`/`position` shape the result (the place debt is SEQ-4's,
+/// per the field's own history) — so a stand-in entity id carrying the
+/// real coordinate is observationally identical to the committed place.
+fn observed_phenomena_from(
+    world: &World,
+    def: &hornvale_species::SpeciesDef,
+    place: EntityId,
+    position: Option<GeoCoord>,
 ) -> Result<Vec<Phenomenon>, BuildError> {
     let day = observation_time(world, def.perception.activity)?;
     let sky = sky_of(world)?;
@@ -507,6 +568,7 @@ fn observed_phenomena_at(
             place,
             time: WorldTime { day },
             lens: perception_lens(&def.perception),
+            position,
         },
     ))
 }
@@ -1218,21 +1280,15 @@ pub fn build_world_with_roster(
         .map(|(name, ph)| (*name, hornvale_language::Namer::new(&seed, name, ph)))
         .collect();
 
-    // Per-species lexicon and observed phenomena, for glossed naming
-    // (Task 9) below — built from THIS pass's in-memory placement scatter
-    // via `exposure_of_impl` rather than the ledger-backed `exposure_of`:
-    // glossed settlement/deity names are drawn before
-    // `hornvale_settlement::genesis` commits the (functional, one-shot)
-    // `name` fact, and well before `peopled-by` facts exist at all (species
-    // entities mint last — entity-id stability, spec §8 of Y2-1), so
-    // `exposure_of`'s usual ledger reads would see no settlements yet.
-    // `observed_phenomena_as_in` has no such dependency (it only reads
-    // terrain's places and the sky/climate providers, all already
-    // committed), so it's safe to call here exactly as religion calls it
-    // below — computed once per species and reused for both passes.
+    // Per-species lexicon, for glossed naming (Task 9) below — built from
+    // THIS pass's in-memory placement scatter via `exposure_of_impl` rather
+    // than the ledger-backed `exposure_of`: glossed settlement/deity names
+    // are drawn before `hornvale_settlement::genesis` commits the
+    // (functional, one-shot) `name` fact, and well before `peopled-by`
+    // facts exist at all (species entities mint last — entity-id stability,
+    // spec §8 of Y2-1), so `exposure_of`'s usual ledger reads would see no
+    // settlements yet.
     let mut lexicons: std::collections::BTreeMap<&str, hornvale_language::Lexicon> =
-        std::collections::BTreeMap::new();
-    let mut species_phenomena: std::collections::BTreeMap<&str, Vec<Phenomenon>> =
         std::collections::BTreeMap::new();
     for (tag, def) in species_set.iter().enumerate() {
         let settled_now: Vec<hornvale_kernel::CellId> = placements
@@ -1265,7 +1321,6 @@ pub fn build_world_with_roster(
             def.name,
             hornvale_language::build_lexicon(&seed, def.name, ph, &exposures),
         );
-        species_phenomena.insert(def.name, observed_phenomena_at(&world, def, world_entity)?);
     }
 
     let mut placed: Vec<hornvale_settlement::PlacedSettlement> =
@@ -1283,10 +1338,17 @@ pub fn build_world_with_roster(
             .get(def.name)
             .expect("a lexicon was built for every placed species");
         let biome_concept = climate.biome_at(p.cell).concept_name();
-        let presiding = species_phenomena
-            .get(def.name)
-            .and_then(|seen| seen.first())
-            .and_then(phenomenon_concept);
+        // The presiding phenomenon is observed from THIS settlement's own
+        // cell coordinate — its hemisphere culls the sky (SEQ-5), so the
+        // committed gloss is truthful to the sky this settlement actually
+        // lives under (spec §9.3), and per-settlement skies widen the
+        // descriptor space. Still a pure function of the entity's own
+        // (cell, facts): pin-isolated by construction (spec §8). The
+        // settlement entity doesn't exist yet, so `world_entity` stands in
+        // as the (unread) `place` id while the real coordinate does the
+        // culling — see `observed_phenomena_from`.
+        let seen = observed_phenomena_from(&world, def, world_entity, Some(coord))?;
+        let presiding = seen.first().and_then(phenomenon_concept);
         let mut site_concepts: Vec<&str> = vec![biome_concept];
         site_concepts.extend(presiding);
         let site = hornvale_language::SiteConcepts {
@@ -1366,9 +1428,14 @@ pub fn build_world_with_roster(
             strata: castes.len(),
             has_priesthood: castes.iter().any(|c| c == def.shaman),
         };
-        let seen = species_phenomena
-            .get(def.name)
-            .expect("phenomena were computed for every placed species");
+        // Religion (and the deity glosses drawn inside it) observes from
+        // the world's first place — the flagship vantage, its hemisphere
+        // culling the sky (SEQ-4/SEQ-5) — exactly the observation
+        // `religion::genesis` derives its beliefs from, so every deity
+        // name-gloss is truthful to the phenomenon its belief was actually
+        // derived from. Settlements exist by now, so the placed-observer
+        // path is live.
+        let seen = observed_phenomena_as_in(&world, roster, def.name)?;
         let namer = namers
             .get(def.name)
             .expect("a Namer was built for every placed species");
@@ -1380,11 +1447,11 @@ pub fn build_world_with_roster(
             namer,
             morph,
             lexicon,
-            phenomena: seen,
+            phenomena: &seen,
             index: 0,
             glosses: std::collections::BTreeMap::new(),
         };
-        hornvale_religion::genesis(&mut world, flagship, seen, &society, &mut deity_namer)?;
+        hornvale_religion::genesis(&mut world, flagship, &seen, &society, &mut deity_namer)?;
         for (salt, gloss) in &deity_namer.glosses {
             world.ledger.commit(
                 name_gloss_fact(hornvale_kernel::EntityId(*salt), gloss),
@@ -1541,9 +1608,24 @@ pub fn calendar_lines(world: &World) -> Result<Vec<String>, BuildError> {
     }
 
     if day_std.is_some() && system.anchor.obliquity.get() > 0.0 {
-        let half = (system.anchor.obliquity.get() / 90.0) / 2.0;
-        let max = 0.5 + half;
-        let min = 0.5 - half;
+        // The daylight range at the flagship's own latitude (SKY-8) — the
+        // placed observer's sky. The year-phase offset (Plan 1) moves where the
+        // solstices fall in `t`, so scan the year for the extremes. Falls back
+        // to the equator (a flat half) if no vantage resolves.
+        let latitude = hornvale_terrain::places(world)
+            .first()
+            .and_then(|p| place_coord(world, p.id))
+            .map(|c| c.latitude)
+            .unwrap_or(0.0);
+        let year = calendar.year_length().get();
+        let (mut max, mut min) = (0.0_f64, 1.0_f64);
+        for k in 0..365 {
+            let t = hornvale_astronomy::StdDays::new(k as f64 * year / 365.0).unwrap();
+            if let Some(f) = calendar.daylight_fraction_at(t, latitude) {
+                max = max.max(f);
+                min = min.min(f);
+            }
+        }
         lines.push(format!(
             "Daylight swells to {:.0}% at midsummer and shrinks to {:.0}% at midwinter.",
             max * 100.0,
@@ -1824,6 +1906,43 @@ mod tests {
             &SettlementPins::default(),
         )
         .unwrap()
+    }
+
+    #[test]
+    fn the_default_vantage_resolves_to_the_flagship_and_is_deterministic() {
+        let world = generated(42);
+        let place = hornvale_terrain::places(&world).first().unwrap().id;
+        assert!(
+            place_coord(&world, place).is_some(),
+            "the flagship must carry a coord"
+        );
+        let a = observed_phenomena(&world, 0.0).unwrap();
+        let b = observed_phenomena(&world, 0.0).unwrap();
+        assert_eq!(a, b, "the placed observation must be deterministic");
+    }
+
+    #[test]
+    fn a_locked_worlds_pantheon_sees_exactly_one_hemisphere() {
+        // The placed observer made observable: on a locked world the flagship
+        // sees the sun XOR the night sky, never both (the pre-Plan-2 bug).
+        let locked = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(hornvale_astronomy::RotationPin::Locked),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let ph = observed_phenomena(&locked, 0.0).unwrap();
+        let sees_sun = ph.iter().any(|p| p.description.contains("sun"));
+        let sees_night = ph.iter().any(|p| p.kind == hornvale_astronomy::NIGHT_STAR);
+        assert!(
+            sees_sun ^ sees_night,
+            "a locked flagship sees exactly one hemisphere (sun XOR night sky)"
+        );
     }
 
     #[test]

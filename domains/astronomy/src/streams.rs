@@ -18,5 +18,9 @@ pub const MOON_COUNT: &str = "moon-count";
 pub const MOONS: &str = "moons";
 /// Neighborhood draws.
 pub const NEIGHBORS: &str = "neighbors";
+/// Deep-time orbital-forcing draws (eccentricity + obliquity oscillation + precession).
+pub const FORCING: &str = "forcing";
+/// Per-body genesis phase offsets (year, day, and each moon).
+pub const PHASE_OFFSETS: &str = "phase-offsets";
 /// Per-neighbor celestial position draws (declination, right ascension).
 pub const NEIGHBOR_POSITIONS: &str = "neighbor-positions";

@@ -2,7 +2,7 @@
 
 ## The Sky
 
-Night. The vast moon shows its new face. The small, distant moon shows its new face. Above, smoldering red stars keep their stations.
+Night. The vast moon shows its waning face. The small, distant moon shows its waxing face. Above, smoldering red stars keep their stations.
 
 Visible bodies: the sun, moon 1, moon 2.
 
@@ -24,7 +24,7 @@ By night: a smoldering red star that does not wander; a warm yellow star that do
 ## The Calendar
 
 - The year is 418.3 local days (368.1 standard days).
-- Daylight swells to 51% at midsummer and shrinks to 49% at midwinter.
+- Daylight swells to 50% at midsummer and shrinks to 50% at midwinter.
 - The first moon circles every 18.2 local days — 22.0 months to a year.
 - The second moon circles every 37.0 local days — 10.3 months to a year.
 

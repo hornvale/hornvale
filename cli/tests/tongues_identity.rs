@@ -12,14 +12,17 @@ use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 /// text (never byte-identical to the fixture); belief content moved from a
 /// single prose `tenet` fact to the structured deity/epithet/sentiment
 /// facts `render_line` now voices (spec §6); the six articulation-vector
-/// predicates did not exist before this campaign; `name-gloss` is wholly
-/// new to The Words (Task 9), which glosses proper names but never touches
-/// this file's own pre-Tongues fixture or comparison — it's listed here
-/// only so this older keystone keeps passing against a world that now
-/// carries the newer predicate too. Excluded from the entity-structure /
-/// non-linguistic-fact comparison below — the same "superset, minus what's
-/// genuinely new" pattern `eyes_identity.rs` and `species_identity.rs` use.
-const CHANGED_OR_NEW_PREDICATES: [&str; 14] = [
+/// predicates did not exist before this campaign; the two orbital-forcing
+/// predicates (mean eccentricity, obliquity oscillation amplitude) are new
+/// in Firm Ground II and were never committed by pre-Tongues genesis;
+/// `name-gloss` is wholly new to The Words (Task 9), which glosses proper
+/// names but never touches this file's own pre-Tongues fixture or
+/// comparison — it's listed here only so this older keystone keeps passing
+/// against a world that now carries the newer predicate too. Excluded from
+/// the entity-structure / non-linguistic-fact comparison below — the same
+/// "superset, minus what's genuinely new" pattern `eyes_identity.rs` and
+/// `species_identity.rs` use.
+const CHANGED_OR_NEW_PREDICATES: [&str; 16] = [
     hornvale_kernel::NAME,
     hornvale_worldgen::NAME_GLOSS,
     hornvale_religion::TENET,
@@ -34,6 +37,8 @@ const CHANGED_OR_NEW_PREDICATES: [&str; 14] = [
     hornvale_species::SPECIES_SIBILANCE,
     hornvale_species::SPECIES_VOICE_LOUDNESS,
     hornvale_species::SPECIES_EXOTIC_MANNER,
+    hornvale_astronomy::facts::ECCENTRICITY_MEAN,
+    hornvale_astronomy::facts::OBLIQUITY_AMPLITUDE,
 ];
 
 /// The ledger's facts, restricted to predicates whose shape didn't move

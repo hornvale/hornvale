@@ -147,19 +147,23 @@ fields-of-history will deepen, not a preview of them.
 by **Ned the Nabned**, a cyclic deity whose absences are mourned
 and returns feasted; pin the same seed's sky to tidally locked and the head
 becomes **Nedngat the Vngakned**, an eternal watcher fixed forever
-above the day side — the only line in the pantheon that changes, because a
-locked world still keeps its moons, only loses its seasons and its head
-deity's cycle. The same globe, a different flagship under each sky (since
+above the day side — and, since Campaign 20 (Firm Ground II) placed the
+observer on its own ground, the pantheon shrinks around it: a locked
+world's settlements all stand on the day side, the day side sees the sun
+and nothing else, so the moon deities the spinning pantheon keeps never
+form at all. The same globe, a different flagship under each sky (since
 Campaign Y2-0's placement fix, the sky moves settlement too), yet two
 societies alike enough to hand religion the same summary — so the theology
 moved exactly where the sky moved and nowhere else. Since Campaign 15, the
 almanac's "The Gods" section is no longer one pantheon but two: the kobold
 warren standing beside each goblin village raises its own pantheon, through
 its own lens, at its own hour, and its head deity is lunar rather than
-solar on both skies (**Rro Rro**, marked highest, under the
-spinning sky; the unranked **Raxa Rro** leading the locked warren's
-flat, folk pantheon instead) — a divergence that tracks *species*,
-orthogonal to the one above that tracks rotation. Since Campaign Y2-3, every
+solar wherever there is a moon to see (**Rro Rro**, marked highest, under
+the spinning sky) — a divergence that tracks *species*, orthogonal to the
+one above that tracks rotation. On the locked sky the warren's day-side
+vantage holds no moon at all, so its flat, folk pantheon is the lone,
+unranked sun-watcher **Raro Ro** — the species divergence surviving there
+in cult form and voice rather than in domain. Since Campaign Y2-3, every
 one of those names is a real generated sound, drawn from its own species'
 phonology rather than a shared English epithet pool — the goblin telling
 formal and honorific-dense (*"...returns every 0.88 days. So it was, so it
@@ -169,7 +173,7 @@ That's how it's always been. That's how it's always been."*), the same
 people's caste ladder now shaping how each people *tells* its myths. The
 full "The Gods" sections for both peoples, under both skies, are quoted
 verbatim in the gallery: [The Gods of Seed
-42](../gallery/the-gods-seed-42.md). Since Campaign 20 (The Words), a
+42](../gallery/the-gods-seed-42.md). Since Campaign 27 (The Words), a
 deity's name and epithet also carry a truthful **gloss** — the phenomenon
 it mythologizes and the sentiment religion already derived for it,
 committed as a `name-gloss` fact exactly as a settlement's does — so a

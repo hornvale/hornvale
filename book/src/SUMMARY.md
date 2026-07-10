@@ -47,7 +47,13 @@
 - [Campaign 17: Audible Phonology](./chronicle/17-audible-phonology.md)
 - [Campaign 18: The Meeting](./chronicle/18-the-meeting.md)
 - [Campaign 19: The Star Chart](./chronicle/19-the-star-chart.md)
-- [Campaign 20: The Words](./chronicle/20-the-words.md)
+- [Campaign 20: Firm Ground II](./chronicle/20-firm-ground-ii.md)
+- [Campaign 21: The Scene Window](./chronicle/21-the-scene-window.md)
+- [Campaign 22: The Atlas](./chronicle/22-the-atlas.md)
+- [Campaign 23: The Orrery](./chronicle/23-the-orrery.md)
+- [Campaign 25: The Measured Coast](./chronicle/25-the-measured-coast.md)
+- [Campaign 26: The Live Orrery](./chronicle/26-the-live-orrery.md)
+- [Campaign 27: The Words](./chronicle/27-the-words.md)
 
 # The Gallery
 
@@ -55,6 +61,7 @@
 - [The Almanac of Seed 42](./gallery/almanac.md)
 - [The Sky of Seed 42](./gallery/the-sky.md)
 - [The Night Sky of Seed 42](./gallery/star-chart-seed-42.md)
+- [The Orrery of Seed 42](./gallery/orrery-seed-42.md)
 - [The Land of Seed 42](./gallery/elevation-seed-42.md)
 - [The Biomes of Seed 42](./gallery/biome-seed-42.md)
 - [The Biomes of Seed 42 (tidally locked)](./gallery/biome-seed-42-locked.md)
@@ -62,6 +69,7 @@
 - [The Peoples of Seed 42 (tidally locked)](./gallery/settlement-seed-42-locked.md)
 - [The Gods of Seed 42](./gallery/the-gods-seed-42.md)
 - [The Meeting of Seed 42](./gallery/the-meeting-seed-42.md)
+- [The Atlas of Seed 42](./gallery/atlas.md)
 
 # The Laboratory
 
@@ -75,13 +83,15 @@
 - [Study 007: The Census of Eyes](./laboratory/study-007.md)
 - [Study 008: The Census of Tongues](./laboratory/study-008.md)
 - [Study 009: The Census of the Meeting](./laboratory/study-009.md)
-- [Study 010: The Census of Words](./laboratory/study-010.md)
+- [Study 010: The Census of Coasts](./laboratory/study-010.md)
+- [Study 011: The Census of Words](./laboratory/study-011.md)
 
 # Reference
 
 - [The Concept Registry](./reference/concept-registry.md)
 - [The Stream Manifest](./reference/stream-manifest.md)
 - [Phonology](./reference/phonology.md)
+- [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
 - [Dictionary](./reference/dictionary-generated.md)
 
 # Open Questions

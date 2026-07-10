@@ -173,6 +173,16 @@ pub fn registry() -> Vec<Metric> {
             extract: |v| MetricValue::Number(v.system.anchor.obliquity.get()),
         },
         Metric {
+            name: "obliquity-range",
+            doc: "Peak-to-peak obliquity swing over one obliquity period (2× the \
+                   deep-time forcing amplitude, SKY-21); a moonless world keeps the \
+                   full drawn wobble, a moon damps it",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
+            },
+            extract: |v| MetricValue::Number(2.0 * v.system.forcing.obliquity_amp),
+        },
+        Metric {
             name: "moons-admitted",
             doc: "Number of moons in orbit",
             summary: SummaryKind::Categorical,
@@ -956,6 +966,118 @@ pub fn registry() -> Vec<Metric> {
             },
             extract: |v| hue_depth(v, "kobold"),
         },
+        Metric {
+            name: "shoreline-development",
+            doc: "Shoreline development index: coastline length over the \
+                  circumference of the circle with the land's area (1 = \
+                  maximally compact); Absent without a shoreline",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 6.0],
+            },
+            extract: |v| {
+                let globe = v.terrain.globe();
+                match hornvale_terrain::shape::shoreline_development(
+                    v.terrain.geosphere(),
+                    &globe.elevation,
+                    globe.sea_level,
+                ) {
+                    Some(d) => MetricValue::Number(d),
+                    None => MetricValue::Absent,
+                }
+            },
+        },
+        Metric {
+            name: "hypsometric-bimodality",
+            doc: "Ashman's D between land and ocean elevation populations \
+                  (Earth is strongly bimodal); Absent when a world lacks land \
+                  or ocean",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0],
+            },
+            extract: |v| {
+                let globe = v.terrain.globe();
+                match hornvale_terrain::shape::hypsometric_bimodality(
+                    &globe.elevation,
+                    globe.sea_level,
+                ) {
+                    Some(d) => MetricValue::Number(d),
+                    None => MetricValue::Absent,
+                }
+            },
+        },
+        Metric {
+            name: "shelf-fraction",
+            doc: "Fraction of cells within the shelf band (±200 m) of sea \
+                  level — the populated shelf Earth's hypsometry keeps",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3],
+            },
+            extract: |v| {
+                let globe = v.terrain.globe();
+                MetricValue::Number(hornvale_terrain::shape::shelf_fraction(
+                    &globe.elevation,
+                    globe.sea_level,
+                ))
+            },
+        },
+        Metric {
+            name: "continent-count",
+            doc: "Connected land components",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0],
+            },
+            extract: |v| {
+                let globe = v.terrain.globe();
+                MetricValue::Number(
+                    hornvale_terrain::shape::land_component_sizes(
+                        v.terrain.geosphere(),
+                        &globe.elevation,
+                        globe.sea_level,
+                    )
+                    .len() as f64,
+                )
+            },
+        },
+        Metric {
+            name: "largest-continent-share",
+            doc: "Largest land component's share of all land cells; Absent \
+                  on a landless world",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 0.9],
+            },
+            extract: |v| {
+                let globe = v.terrain.globe();
+                let sizes = hornvale_terrain::shape::land_component_sizes(
+                    v.terrain.geosphere(),
+                    &globe.elevation,
+                    globe.sea_level,
+                );
+                let land: usize = sizes.iter().sum();
+                match sizes.first() {
+                    Some(largest) if land > 0 => MetricValue::Number(*largest as f64 / land as f64),
+                    _ => MetricValue::Absent,
+                }
+            },
+        },
+        Metric {
+            name: "plate-size-gini",
+            doc: "Gini coefficient over plate cell counts (Earth's plate \
+                  sizes are heavy-tailed; uniform Voronoi scores low)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
+            },
+            extract: |v| {
+                let globe = v.terrain.globe();
+                let mut counts = vec![0usize; globe.plates.len()];
+                for (_, plate) in globe.plate_of.iter() {
+                    counts[*plate as usize] += 1;
+                }
+                match hornvale_terrain::shape::gini(&counts) {
+                    Some(g) => MetricValue::Number(g),
+                    None => MetricValue::Absent,
+                }
+            },
+        },
     ]
 }
 
@@ -985,6 +1107,8 @@ fn pantheon_sig(v: &WorldView, species: &str) -> Option<PantheonSig> {
     if beliefs.is_empty() {
         return None;
     }
+    // Pantheons derive from the same first-place, hemisphere-culled vantage
+    // religion's genesis observes (SEQ-4/SEQ-5).
     let seen = observed_phenomena_as_in(&v.world, &v.roster, species).ok()?;
     let top = seen.first()?;
     let domain = match top.venue {
@@ -1144,6 +1268,9 @@ fn epithet_honorific(v: &WorldView, species: &str) -> MetricValue {
     if beliefs.is_empty() {
         return MetricValue::Absent;
     }
+    // Religion (and the deity glosses drawn inside it) observes from the
+    // world's first place, hemisphere-culled (SEQ-4/SEQ-5) — re-derive from
+    // exactly that vantage so the check tracks the pipeline's real sky.
     let Ok(seen) = observed_phenomena_as_in(&v.world, &v.roster, species) else {
         return MetricValue::Absent;
     };
@@ -1236,10 +1363,12 @@ fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
 
 /// A settlement's own re-derived site concepts (mirrors
 /// `cli/tests/words_identity.rs`'s `settlement_site_concepts`): its
-/// committed biome fact plus its species' presiding phenomenon concept, if
-/// any. `None` if the settlement is missing a biome/species fact, which
-/// `name_gloss_true` below treats as an unverifiable (failing) row rather
-/// than skipping it silently.
+/// committed biome fact plus the presiding phenomenon concept its species
+/// observes from THIS settlement's own vantage (its committed coordinates
+/// cull the sky — SEQ-5; spec §9.3 defines gloss truthfulness against the
+/// entity's own facts), if any. `None` if the settlement is missing a
+/// biome/species fact, which `name_gloss_true` below treats as an
+/// unverifiable (failing) row rather than skipping it silently.
 fn settlement_site_concepts(v: &WorldView, id: EntityId) -> Option<Vec<String>> {
     let biome = v
         .world
@@ -1247,7 +1376,8 @@ fn settlement_site_concepts(v: &WorldView, id: EntityId) -> Option<Vec<String>> 
         .text_of(id, hornvale_settlement::BIOME)?
         .to_string();
     let species = hornvale_species::species_of(&v.world, id)?;
-    let phenomena = observed_phenomena_as_in(&v.world, &v.roster, &species).ok()?;
+    let phenomena =
+        hornvale_worldgen::observed_phenomena_as_at(&v.world, &v.roster, &species, id).ok()?;
     let mut concepts = vec![biome];
     if let Some(concept) = phenomena.first().and_then(phenomenon_concept) {
         concepts.push(concept.to_string());
@@ -1748,11 +1878,12 @@ mod tests {
     }
 
     #[test]
-    fn registry_has_seventy_metrics_after_the_words() {
-        // 63 after The Meeting, +7 for The Words (Task 12): name-gloss-true,
+    fn registry_metric_count_is_pinned() {
+        // The Meeting's 63, +7 for The Words (Task 12: name-gloss-true,
         // lexicon-regular-{goblin,kobold}, exposure-sound-{goblin,kobold},
-        // hue-depth-{goblin,kobold}.
-        assert_eq!(registry().len(), 70);
+        // hue-depth-{goblin,kobold}), plus the terrain-shape and later
+        // metrics merged from main's campaigns.
+        assert_eq!(registry().len(), 77);
     }
 
     #[test]
@@ -1977,6 +2108,32 @@ mod tests {
         );
         // But names differ (independent stream).
         assert_ne!(gf.name, tf.name, "twin names must differ from goblin's");
+    }
+
+    #[test]
+    fn shape_metrics_are_present_deterministic_and_sane() {
+        let names = [
+            "shoreline-development",
+            "hypsometric-bimodality",
+            "shelf-fraction",
+            "continent-count",
+            "largest-continent-share",
+            "plate-size-gini",
+        ];
+        let registry = registry();
+        let a = WorldView::build(Seed(7), &SkyPins::default()).expect("seed 7");
+        let b = WorldView::build(Seed(7), &SkyPins::default()).expect("seed 7 again");
+        for name in names {
+            let metric = registry
+                .iter()
+                .find(|m| m.name == name)
+                .unwrap_or_else(|| panic!("metric {name} not registered"));
+            let va = (metric.extract)(&a);
+            assert_eq!(va, (metric.extract)(&b), "{name} not deterministic");
+            if let MetricValue::Number(x) = va {
+                assert!(x.is_finite(), "{name} not finite: {x}");
+            }
+        }
     }
 
     #[test]

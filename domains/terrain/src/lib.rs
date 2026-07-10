@@ -12,6 +12,7 @@ pub mod pins;
 pub mod plates;
 pub mod provider;
 pub mod render;
+pub mod shape;
 pub mod streams;
 
 pub use boundaries::{BoundaryKind, CellBoundary};
@@ -58,6 +59,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "hotspot count, positions, and strengths",
         ),
         ("terrain/ocean-fraction", "target ocean fraction draw"),
+        (
+            "terrain/coast-render",
+            "render-lens coastline noise (hash-noise only; no stream draws)",
+        ),
     ]
 }
 
@@ -168,7 +173,7 @@ mod tests {
     #[test]
     fn stream_labels_are_fully_qualified_and_documented() {
         let labels = stream_labels();
-        assert_eq!(labels.len(), 8);
+        assert_eq!(labels.len(), 9);
         assert_eq!(labels[0].0, "terrain");
         for (label, doc) in &labels[1..] {
             assert!(label.starts_with("terrain/"), "unqualified label {label}");

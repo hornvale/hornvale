@@ -13,6 +13,7 @@
 | `deity-name` | yes | a belief's deity name (roman) |
 | `deity-name-ipa` | yes | a belief's deity name (IPA transcription) |
 | `derived-from-phenomenon` | yes | phenomenon kind a belief mythologizes |
+| `eccentricity-mean` | yes | mean orbital eccentricity (deep-time forcing) |
 | `genesis-note` | no | a degradation or refusal recorded during sky genesis |
 | `has-caste` | no | a caste present in a settlement |
 | `held-by` | no | a community holding a belief |
@@ -28,6 +29,7 @@
 | `name` | yes | canonical name of an entity |
 | `name-gloss` | yes | the glossed meaning of an entity's generated name |
 | `notable-neighbor` | no | a notable neighbor star visible in the night sky |
+| `obliquity-amplitude` | yes | obliquity oscillation amplitude, degrees (moon-coupled) |
 | `obliquity-degrees` | yes | axial tilt of the anchor world, in degrees |
 | `ocean-fraction` | yes | fraction of globe cells below sea level |
 | `peopled-by` | yes | the species that peoples a settlement |

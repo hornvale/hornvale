@@ -1,270 +1,221 @@
-# Study 010: The Census of Words
+# Study 010: The Census of Coasts
 
-Campaign 20, The Words, gave every registered concept a home in a
-per-species lexicon (a real proto-root plus a real Neogrammarian
-sound-change history, or a compound over two roots, or a reasoned gap) and
-gave every settlement and deity name a **gloss**: the 1-2 site concepts —
-its own biome, its species' presiding phenomenon — that name is a truthful
-compound of, replacing the free-stem draw Campaign Y2-3 (The Tongues)
-shipped. Spec §9 (`docs/superpowers/specs/2026-07-09-campaign-the-words-
-design.md`, committed `194eb08`) preregisters five Lab claims this study
-exists to measure; this page carries all five, grouped into the four
-falsifiable rows the campaign plan's Task 12 assigns to one Lab pass.
+Ten thousand tier-0 worlds, unpinned — the same seeds 0 through 9,999 every
+prior census walks — measured against six new metrics that quantify
+continental *shape* rather than continental *quantity*. Every earlier
+census counted things (plates, biomes, settlements, names); none asked
+whether a continent's outline looks like Earth's. Campaign 25, The Measured
+Coast, exists to ask exactly that, as the first of a three-campaign
+roadmap: this campaign only measures and improves the *lens* (no terrain
+epoch); **Crust** then rebuilds the elevation field itself (cratons,
+margins, per-cell hypsometry); **Sculpting** layers modulated relief,
+erosion, and hotspot trails on top. Measurement comes first on principle —
+the shape improvements of Crust and Sculpting must be judged against
+preregistered numbers, not vibes, and this study is where those numbers are
+recorded.
 
-**A note on scale and provenance.** This chapter's headline numbers come
-from a 10,000-seed run of `studies/census-of-words.study.json`,
-executed once by hand at author time, in the same arrangement Studies 001,
-002, 003, 006, 007, and 008 use for their own 10,000-seed headline runs. It
-is **not** committed and **not** part of CI. The exact-count calibration
-rows this page pins are measured instead over the two CI-drift-checked
-500-seed populations every prior campaign's calibrations already share:
-`census-lands-drift` (`book/src/laboratory/generated/census-lands-drift/`)
-for every per-world and per-species metric below, and (unchanged by this
-study) `census-of-the-meeting` for the null control's own name-length SMD,
-which this task also re-pins alongside the two Tongues-era rows Task 9's
-glossed compounds moved out from under. Small differences between a number
-quoted here and the 500-seed pinned figure are ordinary 500-vs-10,000-seed
-sampling variance, not drift.
+**A note on scale and provenance.** The headline numbers and every embedded
+chart below come from one 10,000-seed run of
+`studies/census-of-coasts.study.json`, executed once by hand at author
+time, in the same arrangement Studies 001, 002, 006, 007, and 008 use for
+their own 10,000-seed headline runs. It is **not** part of CI —
+`.github/workflows/ci.yml`'s "Artifacts are current" step regenerates only
+`census-lands-drift`, `census-of-the-meeting`, and `census-of-skies`
+(all three select `"metrics": "all"`, so they already carry these six
+columns from Task 4's metrics commit onward). The campaign spec originally
+proposed a fourth CI-drift study, `census-coasts-drift.study.json`, but that
+bullet was found redundant during planning — double-running the same
+six-metric measurement CI already exercises — and is amended out; drift
+coverage of these metrics rides the three existing `all`-metric studies.
+Unlike Study 002's or Study 008's two-population arrangement, there is no
+smaller drift twin whose chart might read a few tenths of a point off this
+chapter's prose: the artifacts embedded below and the numbers quoted in the
+prose are the *same* 10,000-row run, committed together in one commit.
 
-**A note on preregistration.** Per ADR 0016, this page's hypotheses are
-committed **before** the metrics that measure them exist in code, and
-before any census carrying them runs — the two-commit discipline Task 12's
-brief spells out: this preregistration commit alone, then a second commit
-implementing the metrics, running the census, and pinning the results. No
-claim below is adjusted after the fact; a claim that fails is reported as a
-failure, not loosened to pass.
+**A note on preregistration.** Per ADR 0016, a study commits its expected
+direction before the sweep that could confirm or refute it runs. This
+study's whole purpose is that commitment: four of the five target
+directions below are drawn directly from the campaign spec, §2
+(`docs/superpowers/specs/2026-07-09-the-measured-coast-design.md`) (two
+verbatim, two with the metric's full name substituted), written and ratified
+before this census's 10,000-seed run executed; the fifth (hypsometric
+bimodality) is a synthesis consistent with the spec's own framing of that
+metric rather than a literal quote (see below). All five
+are recorded here **before Crust or Sculpting change one line of the
+elevation field** — so that when a later campaign re-runs this same study
+against a new generator, the comparison is a genuine before/after, not a
+target quietly redrawn to fit whatever the new generator happens to
+produce.
 
-## Question
+## The six metrics
 
-Does every committed settlement name-gloss compose truthfully from that
-settlement's own site facts; does each species' lexicon replay its own
-sound-change derivations exactly and never mint a root for a concept it has
-no exposure to; does the goblin's keener daylight/duller night vision give
-it strictly more hue vocabulary than the kobold's; and, now that names are
-drawn as compounds over each species' small site-concept vocabulary rather
-than free 2-3-syllable stems, has the in-world name-collision rate moved —
-and by how much?
+**Shoreline development**, `D = L / (2 √(π A))` — coastline length over the
+circumference of the circle enclosing the same land area, the standard
+limnological compactness index. `L` sums the great-circle length of every
+cell edge whose two cells straddle sea level (approximated on the geodesic
+grid as center distance over `√3`, the regular-hexagon dual); `A` sums land
+cell areas under the equal-area approximation `4π/N`. A single compact
+landmass scores near 1; a fjorded or fractal coast scores several times
+that. `Absent` when a world has no land or no shoreline at all.
 
-## Hypotheses
+**Hypsometric bimodality** — Ashman's `D = |μ_land − μ_ocean| /
+√((σ²_land + σ²_ocean)/2)` between the land and ocean elevation
+populations (population variance). Earth's own hypsometric curve is
+strongly bimodal — continental platform and abyssal ocean floor sit at two
+well-separated elevation bands with little in between. `Absent` when either
+population is empty, or both are degenerate (zero combined variance).
 
-Quoted and paraphrased from spec §9, "The Lab" (preregistered 2026-07-09,
-before any census carrying these metrics ran, per ADR 0016):
+**Shelf fraction** — the share of all cells within ±200 m of sea level (the
+`SHELF_BAND_M` constant, Earth-informed: the order of magnitude of Earth's
+own continental shelf depth). This is bimodality's complement: a world can
+score highly bimodal (land and ocean cleanly separated on average) while
+still holding almost no cells *near* the boundary between them, i.e. no
+populated shelf — the two metrics together distinguish "two modes with a
+graded margin" from "two modes with a cliff."
 
-**H1 (name-gloss truthfulness, exact).** Spec §9.3: "for each named entity,
-the glossed concepts appear among that entity's actual facts, row-by-row; a
-broken gloss pipeline is falsifiably caught." Measured here as
-`name-gloss-true`: **100%** of settlements carrying a committed
-`name-gloss` fact, row-by-row over the census, gloss to a truthful
-composition of their own INDEPENDENTLY re-derived site concepts (biome plus
-presiding phenomenon) — never a concept borrowed from anywhere else in the
-world.
+**Continent count** — the number of connected land components, found by a
+deterministic breadth-first search seeded in ascending cell-id order so the
+count never depends on iteration order. Zero is a valid count (a landless
+world); the metric is never `Absent`.
 
-**H2 (lexicon regularity and exposure soundness, exact, both species).**
-Spec §9.1: "every proto-lexicon entry containing a rule's conditioning
-environment undergoes it; the derivation replay equals the committed modern
-form" (`lexicon-regular`). Spec §9.2: "zero roots for UNKNOWN concepts;
-every gap and every compound recounts to a ledger-fact or vector reason...
-the flag re-derives the exposure class from the ledger independently of the
-lexicon pipeline" (`exposure-sound`). Measured here as two independent
-per-species flag pairs — `lexicon-regular-goblin` / `lexicon-regular-kobold`
-and `exposure-sound-goblin` / `exposure-sound-kobold` — expected **true in
-100% of present cases, for both species**.
+**Largest-continent share** — the largest component's fraction of all land
+cells, from the same component search. `Absent` on a landless world (there
+is no largest component to take a share of).
 
-**H3 (pack-depth calibration, directional, exact ordering).** Spec §9.4:
-"each species' color-ladder depth matches its perception vector's
-derivation." The shipped roster's night-vision values (goblin 0.5, kobold
-0.9) predict, via `pack_depths`' documented derivation, that the goblin's
-hue-ladder depth is **strictly greater than** the kobold's:
-`hue-depth-goblin > hue-depth-kobold`, in every present world (this is a
-structural constant of the roster's authored vectors, not a per-seed draw,
-so the census is expected to confirm it holds identically at every seed).
+**Plate-size Gini** — the Gini coefficient over plate cell counts,
+`G = 2 Σ i·x_i / (n Σx) − (n+1)/n` over ascending counts with 1-based rank
+`i`. 0 is perfect equality; Earth's own plates are famously heavy-tailed
+(seven giants carrying most of the surface, a long tail of microplates),
+which scores high. A first-order Voronoi partition — plates as
+same-sized-on-average cells of a random tessellation — scores low.
+`Absent` only if there are no plates or all plate counts are zero, which
+does not occur in a built world.
 
-**H4 (name-collision rate, directional-only before measurement).** Spec
-§9.5: "glossed compounds shrink the name space versus free stems; the
-calibration row re-pins and confirms the rate stays low." Before this
-census's exact figures are measured, the only claim committed is
-**directional**: `name-collision-rate`'s mean, re-measured over the
-500-seed `census-lands-drift` population, stays **below twice the
-Tongues-era pinned rate** (2.339% × 2 = 4.678% — Study 008's calibration
-row, `windows/lab/tests/calibration.rs::name_collision_rate_is_measured_and
-_pinned`, pinned at the Y2-3 re-baseline). The exact re-measured rate — and
-the parallel re-measurement of `name-length-goblin`/`name-length-kobold`'s
-distributions and the null control's name-length SMD, all three already
-carrying `#[ignore]`d Task-12 markers in `calibration.rs` — is pinned only
-after this census runs, never tuned to clear the bound after the fact.
+## The baseline, at 10,000 seeds
 
-## Analysis plan
+{{#include generated/census-of-coasts/census-of-coasts-summary.md}}
 
-Measure, over the full 10,000-seed `census-of-words` run: `name-gloss-true`
-row-by-row (H1); `lexicon-regular-goblin`/`-kobold` and
-`exposure-sound-goblin`/`-kobold` row-by-row (H2); `hue-depth-goblin` vs.
-`hue-depth-kobold` per seed (H3); and `name-collision-rate`'s distribution
-alongside the per-species `name-length-*` distributions (H4, descriptive at
-10k). Pin the exact 500-seed `census-lands-drift` calibration rows for H1
-through H4 in `windows/lab/tests/calibration.rs`, re-pinning the three rows
-Task 9 left `#[ignore]`d (`name_collision_rate_is_measured_and_pinned`,
-`name_length_distributions_are_measured_and_pinned`,
-`null_control_name_length_smd_is_pinned`) and un-ignoring them once the new
-exact figures are committed.
+Across every one of the six metrics, all 10,000 rows are present — no
+world in the sample lacks land, ocean, a shoreline, or a plate roster. That
+is itself worth noting: unlike the settlement- and pantheon-facing
+censuses, which lose a handful of seeds to zero-habitable-land or
+zero-settlement worlds (Studies 002, 003, 006, 007, and 008 all name the
+same three or so seeds), these are pure-geometry metrics computed directly
+over the derived globe, and every one of the 10,000 tier-0 worlds this
+generator draws has *some* land and *some* ocean to measure.
 
-**Verdict criteria**, fixed before analysis: H1, H2, and H3 are confirmed
-only if their respective flags/ordering hold in **100%** of present cases —
-any exception is a STOP-and-report condition per ADR 0016, not a rate to
-loosen. H4 is confirmed if the re-measured mean collision rate is smaller
-than 4.678% (the preregistered directional bound); the exact figure is then
-pinned as a calibration row regardless of which direction it moved within
-that bound, exactly as Study 008 pinned 2.339% without a floor to clear. A
-verdict of **defect** would mean H1, H2, or H3 failing anywhere in the
-census, or H4's rate meeting or exceeding the directional bound — no such
-case is anticipated, since H1-H3 are structural invariants of the glossing
-and exposure pipeline Task 10's keystone suite already exercises at seed
-42, and H4 only asks that a combinatorially smaller (but still large)
-compound name space stay a small-collision regime, not a collision-free
-one.
+{{#include generated/census-of-coasts/census-of-coasts-default-shoreline-development.svg}}
 
-## Results
+**Shoreline development** is high and tightly one-sided: mean **6.06**,
+median **6.00** (range 1.45–12.47), with 50.1% of worlds at `D ≥ 6` and a
+further 33.5% at `[4, 6)` — 83.6% of worlds sit at four to twelve times a
+compact circle's perimeter-to-area ratio. Read alongside continent count
+below, this is not evidence *against* the near-convex diagnosis; it is the
+aggregate signature *of* it. The metric sums shoreline over a world's
+*entire* land surface against its *total* land area, and a typical world
+fragments into a dozen-plus separate landmasses (median 14, next chart) —
+many individually near-convex polygons combine into a high aggregate index
+the same way scattering one compact disk into a dozen smaller ones inflates
+total perimeter per unit area, without any single piece becoming less
+convex. The instrument is measuring fragmentation compounding compactness,
+not contradicting it.
 
-**H1: name-gloss truthfulness, at 10k — confirmed exactly.** Of the 9,997
-present worlds (3 absent — the same zero-habitable-fraction worlds Studies
-002, 003, 006, 007, and 008 already name: seeds 895, 1009, and 4322 hold
-neither species' settlements), every committed settlement `name-gloss`
-composes truthfully from that SAME settlement's own INDEPENDENTLY
-re-derived site concepts — **`name-gloss-true`: 9,997/9,997 true, zero
-exceptions.** The 500-seed calibration
-(`name_gloss_true_is_100_percent_row_by_row`) reconfirms this at the
-CI-guarded population.
+{{#include generated/census-of-coasts/census-of-coasts-default-hypsometric-bimodality.svg}}
 
-**H2: lexicon regularity and exposure soundness, at 10k — confirmed
-exactly, both species.** Every one of 10,000 present worlds reads
-`lexicon-regular-goblin`, `lexicon-regular-kobold`,
-`exposure-sound-goblin`, and `exposure-sound-kobold` **true — 40,000/40,000
-true across the four columns, zero exceptions.** No Root entry was ever
-minted for a concept an independent, from-the-ledger re-derivation of
-exposure classified outside `Steeped`, and every committed Gap carried a
-non-empty reason. The 500-seed calibration
-(`lexicon_is_regular_and_exposure_sound_for_both_species`) reconfirms this.
+**Hypsometric bimodality** averages **3.63** (median 3.04, range
+0.70–15.83), with the bulk of worlds — 86.2% — landing between 1 and 6.
+This is the one metric where the current generator already matches Earth's
+qualitative shape: elevation is built from two flat plateaus (a +400 m
+continental base and a −4000 m oceanic base, `elevation.rs`) offset by
+plate-boundary contributions, so land and ocean populations separate
+cleanly by construction. The preregistered direction for this metric is
+**retained**, not increased — Crust and Sculpting must not flatten this
+separation while fixing the shelf and shoreline numbers below.
 
-**H3: pack-depth ordering, at 10k — confirmed exactly.** `hue-depth-goblin`
-reads **4** in all 10,000 present worlds; `hue-depth-kobold` reads **2** in
-all 10,000 — the roster's night-vision values (0.5 vs. 0.9) produce a
-structural constant, exactly as the shipped-roster derivation predicts,
-never varying by seed. The 500-seed calibration
-(`goblin_hue_depth_exceeds_kobold_hue_depth`) pins both constants.
+{{#include generated/census-of-coasts/census-of-coasts-default-shelf-fraction.svg}}
 
-**H4: the name-collision rate — measured three times; the directional
-claim FAILED every time, first catastrophically, then still well above
-bound, then narrowly.**
+**Shelf fraction** averages **0.288** (median 0.274), with 42.5% of worlds
+at `≥ 0.3` and a long tail down to near-zero. The band is populated mainly
+by cells inside a plate boundary's decay zone — the graded slope from one
+flat plateau to the other — rather than by a genuine, geologically modeled
+continental margin; Crust's per-cell crust field and margin anatomy is the
+replacement mechanism the target direction anticipates.
 
-*First measurement (pure site-concept compounds, recorded as history).* At
-10k, across the 9,997 present worlds, the mean in-world collision rate
-read **86.77%** (mean 0.867749967402372), with only **13 of 9,997 worlds
-(0.13%) showing zero collisions** — the inverse of the Tongues-era shape,
-where 64.0% of worlds saw zero collisions and the mean sat at 2.79%. The
-500-seed `census-lands-drift` population confirmed the same magnitude:
-**2 of 500 worlds zero-collision, 498 nonzero, mean 86.28%**
-(0.862829625681313). Dramatically above the preregistered directional
-bound (below 4.678%, twice the Tongues-era pinned rate); companion
-name-length means at that measurement: 6.51 / 6.82 characters at 10k
-(6.6896 / 6.9075 at 500 seeds), both markedly *shorter* than the
-Tongues-era free-stem figures (9.89 / 9.77) — a smaller, more-repeated
-vocabulary of shorter compound words. The mechanism: a settlement's
-glossed name was a compound over at most two site concepts — its own
-biome and its species' single, world-wide presiding phenomenon concept
-(near-constant across a species' own settlements within one world, since
-`observed_phenomena_as_in`'s salience order does not vary by settlement) —
-so the distinct `(biome, phenomenon)` pairs available to a species in one
-world numbered well under 20, while a species can place well over 100
-settlements; once settlement count exceeds the distinct-pair count, the
-pigeonhole principle guarantees collision. Concretely, seed 42's 59
-settlement names collapsed to 26 distinct strings, the most common
-(`Ned`) appearing 9 times.
+{{#include generated/census-of-coasts/census-of-coasts-default-continent-count.svg}}
 
-*Fix 1: the settlement stem.* The first measurement was ruled a **defect
-in the naming design against spec §9's low-collision success criterion**,
-and `Namer::glossed_name` was amended for `NameKind::Settlement` only:
-the site-concept compound now also carries a per-salt **drawn stem** (1-2
-template syllables from the same `/v2` stream, drawn after the
-site-concept picks, filling the modifier slot opposite the site compound's
-head — real-world toponymy's descriptor + unique element). The stem is a
-proper-name element naming no concept: **glosses are unchanged and stay
-truthful** (H1's row-by-row invariant re-confirmed below), deity and
-epithet names are untouched, and phonotactic repair still applies to the
-whole sequence. Re-measured (recorded as history): 500-seed mean
-**10.71%** (57/500 zero-collision), 10k mean **11.00%** (1,345/9,997
-zero-collision); seed 42 restored to 59/59 distinct. An ~8x improvement —
-still above the bound.
+**Continent count** averages **15.7** (median 14, range 1–71), with 57.1%
+of worlds carrying 12 or more separate landmasses. A single first-order
+Voronoi plate partition, with one continental flag per plate and only
+locally decaying boundary relief, produces many small disconnected
+fragments as readily as it produces a few large ones — quantity of
+continents is not itself the shape defect this campaign targets, but it is
+the context the shoreline-development number above must be read against.
 
-*Fix 2: the stem widened to the Tongues-era range (current, pinned).* The
-residual rate traced to stem entropy: fix 1's unique element drew 1-2
-syllables where the retired Tongues-era settlement stem drew 2-3, and the
-descriptor part adds almost no within-species entropy (few biomes). The
-stem draw was widened to **2-3 syllables** — same stream position, same
-everything else. Re-measured: the full 10k census reads a mean in-world
-collision rate of **4.94%** (mean 0.049392021358371), with **3,327 of
-9,997 present worlds (33.3%) zero-collision**; the 500-seed
-`census-lands-drift` population reads **148 of 500 worlds zero-collision,
-352 nonzero, mean 4.91%** (0.049129710810206), pinned exactly in
-`name_collision_rate_is_measured_and_pinned`. This is a **~17.6x
-improvement over the defective first measurement — and still, narrowly,
-above the preregistered directional bound** (4.678%; the 500-seed mean
-misses it by 0.23 percentage points, about 1.05x the bound): the claim,
-as stated, **remains failed**, and per ADR 0016 the bound is not widened
-— the measured rate is pinned as-is and the failure stands recorded.
+{{#include generated/census-of-coasts/census-of-coasts-default-largest-continent-share.svg}}
 
-The companion name-length distributions move with each fix: at 10k,
-goblin names now average **13.65 characters** (mean 13.646295362775010,
-9,972 present, 28 absent) and kobold names **14.13** (mean
-14.127046688324784, 9,977 present, 23 absent) — site word plus a
-2-3-syllable unique stem runs longer than the Tongues-era free stems
-(9.89 / 9.77), the pure compounds (6.51 / 6.82), and fix 1's shorter
-stems (10.56 / 11.01). The 500-seed calibration pins
-**13.811936859785147** (goblin) and **14.236940649335502** (kobold)
-(`name_length_distributions_are_measured_and_pinned`), and the null
-control's own name-length SMD — the goblin vs. goblin-twin gap over
-`census-of-the-meeting` — reads **−0.066905196528**
-(`null_control_name_length_smd_is_pinned`; −0.118235 at the Tongues-era
-measurement, −0.045751 pre-fix, −0.050617 after fix 1), still comfortably
-inside the ±0.2 sampling bound
-`null_control_distributions_are_within_the_sampling_bound` asserts, so the
-null control's own verdict (Study 009) is unaffected by this re-pin.
+**Largest-continent share** averages **0.737** (median 0.790), and 37.4%
+of worlds put more than 90% of all land in one component — a single
+dominant landmass is the modal outcome even though the *count* of
+landmasses (above) is usually in the double digits: most worlds hold one
+large supercontinent-scale blob plus a scatter of small islands, rather
+than several comparably sized continents.
 
-## Verdict: H1-H3 confirmed exactly; H4 failed, two fixes later the rate is 4.91% against a 4.678% bound — still failed, honestly reported
+{{#include generated/census-of-coasts/census-of-coasts-default-plate-size-gini.svg}}
 
-H1, H2, and H3 hold with zero exceptions across every present world in
-both the 10,000-seed census (re-confirmed unchanged on every re-run:
-9,997/9,997 glosses true, 40,000/40,000 regularity/soundness flags,
-hue-depth 4 vs. 2 at every seed) and the 500-seed CI-guarded calibration
-— the glossing and exposure-soundness invariants Task 10's keystone suite
-already proved at seed 42 hold at population scale, and the pack-depth
-ordering is the structural constant it was derived to be.
+**Plate-size Gini** averages **0.2612** (median 0.2611), overwhelmingly
+concentrated in `[0.2, 0.3)` — 64.7% of worlds — with 12.3% below (0.3% at
+`[0, 0.1)`, 12.0% at `[0.1, 0.2)`) and 23.1% above (22.4% at `[0.3, 0.4)`,
+0.7% at `[0.4, 0.5)`). This is a tight, low-inequality distribution: exactly what a
+first-order Voronoi tessellation (plates as same-sized-on-average random
+cells) predicts, and the most direct of the six numbers to Crust's
+plate-size work — a heavy-tailed plate-size distribution (a few giants, a
+long microplate tail) is the specific target Crust is charged with
+producing.
 
-H4's story has three honest chapters: the preregistered bound (< 4.678%);
-the first census exposing a genuine **naming defect** (86.3-86.8% —
-pure site-concept compounds pigeonholed against settlement counts);
-fix 1 (the settlement stem) cutting it to 10.7-11.0%; and fix 2 (the stem
-widened to the Tongues-era 2-3-syllable range) reaching **4.91%
-(500-seed) / 4.94% (10k) — a ~17.6x improvement that still misses the
-bound by about five percent of itself.** Per ADR 0016 the bound stays as
-preregistered and the verdict stays failed; the iteration loop is closed
-by decision, not by silently re-tuning either the bound or the design
-further. Whether 4.678% — an anchor inherited from the Tongues-era
-free-stem pool, twice its measured rate — was even the right bound for a
-glossed-compound regime whose names *deliberately* share meaningful
-descriptors, is the open question this page hands to the campaign owner:
-the number that would answer it is pinned, honest, and one decision away
-from either a ratified revised bound or a third design iteration.
+## The preregistered target directions
 
-**Interpretation (decision 0023).** The campaign owner took the decision:
-settlement-name uniqueness is a **reference-time property**, and the
-verdict above is reframed rather than retro-fitted. The bound was
-anchored to a naming regime whose stems meant nothing and therefore drew
-from a flat, collision-free space; a meaningful name *should* concentrate
-probability on the words its site is actually made of — two taiga
-settlements both wanting the ice word is the system telling the truth.
-The pinned 4.91% stands as the calibration baseline of meaningful
-toponymy. Collisions are coincidences the world can honestly recount,
-disambiguated where an actual ambiguity appears — in a rendered
-reference, never in the ledger — and they are expected to fall as the
-world grows denser in per-place facts, without the naming engine
-changing at all. H4's failure and its reframing are both part of the
-record; that is the preregistration discipline working as designed.
+Ratified before this census ran and recorded here, before any change to the
+elevation field, so the later comparison is honest and not a target quietly
+redrawn to fit whatever Crust and Sculpting produce. Four of the five are
+drawn directly from the campaign spec §2 (two verbatim, two with the
+metric's full name substituted); the fifth (bimodality) is this chapter's
+own synthesis, spelled out rather than quoted, of the spec's observation
+that the current generator "is expected to score bimodal but shelf-poor":
+
+- **Shoreline development index up** — from the measured 6.06 mean / 6.00
+  median baseline. (Read together with the fragmentation note above: a
+  future measurement should show the *individual*-continent geometry
+  driving the number up — finer, non-convex coastal detail — not merely a
+  change in how many pieces a world's land breaks into.)
+- **Shelf fraction up** — from the measured 0.288 mean / 0.274 median
+  baseline, moving toward a genuinely modeled continental margin rather
+  than a plate-boundary decay slope standing in for one.
+- **Plate-size Gini up** — from the measured 0.2612 mean / 0.2611 median
+  baseline, toward Earth's heavy-tailed few-giants-plus-microplates
+  distribution and away from near-uniform Voronoi cells.
+- **Hypsometric bimodality retained** (synthesis, not a spec quote) — from
+  the measured 3.63 mean / 3.04 median baseline; this is the one metric the
+  current generator already gets qualitatively right, and Crust/Sculpting
+  must not trade it away while fixing the other four.
+- **Largest-continent share more dispersed** — from the measured 0.737
+  mean / 0.790 median baseline (37.4% of worlds at `≥ 0.9`), toward several
+  comparably sized continents rather than one dominant supercontinent-scale
+  blob plus scattered islands.
+
+## The diagnosis this census quantifies
+
+Every number above is a different face of the same root cause: a
+first-order Voronoi partition with one continental flag per plate produces
+**near-convex, single-scale continents** — the "guitar-pick" shapes the
+continental-rendering brainstorm diagnosed as the generator's abstraction
+made visible. A plate is a Voronoi cell; a continent is one or more whole
+plates; the only relief inside a plate's interior is a boundary
+contribution decaying with graph distance from the edge. There is no
+crust field, no craton, no per-cell margin, and no relief at any scale
+finer than "whole plate" — so shorelines are polygon edges, shelves are
+narrow boundary-decay slivers, plate sizes cluster near a Voronoi tessellation's
+uniform mean, and one plate (or a merged handful) dominates a world's land
+budget as often as not. Crust exists to give a plate an interior; Sculpting
+exists to give that interior relief at more than one scale. This census is
+the number these two campaigns must move, measured honestly, before either
+writes a line of code.

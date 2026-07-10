@@ -9,14 +9,7 @@ Visible bodies: the sun, moon 1, moon 2.
 Salient phenomena, most attention-demanding first:
 
 - [1.00] *celestial-body* — a sun fixed forever above the day side
-- [0.64] *celestial-body* — a vast moon
-- [0.47] *celestial-body* — a small, distant moon
 - [0.15] *ambient* — warm, still, unchanging air
-- [0.11] *night-star* — a smoldering red star that does not wander
-- [0.11] *night-star* — a warm yellow star that does not wander
-- [0.10] *night-star* — a deep orange star that does not wander
-- [0.10] *night-star* — a dim red star that does not wander
-- [0.10] *night-star* — a pale white star that does not wander
 
 By night: a smoldering red star that does not wander; a warm yellow star that does not wander; a deep orange star that does not wander; a dim red star that does not wander; a pale white star that does not wander.
 
@@ -40,28 +33,28 @@ Some 8% of the surface is habitable — land with water and a tolerable season.
 - **Ngebxngedned** — temperate-forest
 - **Raratrratrrot** — alpine
 - **Rrarrarro** — temperate-forest
-- **Raxarrogrro** — temperate-forest
-- **Raxarraxokraro** — temperate-forest
-- **Raxarroroqraq** — temperate-forest
-- **Rraraxarroxa** — temperate-forest
-- **Rararaxaxora** — tropical-seasonal-forest
+- **Rarrogrro** — temperate-forest
+- **Rarraxokraro** — temperate-forest
+- **Rarroroqraq** — temperate-forest
+- **Rrararroxa** — temperate-forest
+- **Rararaxora** — tropical-seasonal-forest
 - **Fngobfngodned** — tropical-seasonal-forest
 - **Sfeknadngednoknek** — tropical-seasonal-forest
 - **Vngakvngabxnednoknekned** — tropical-seasonal-forest
 - **Svakxnadnoknekned** — tropical-seasonal-forest
 - **Ngokxnotsfadnednoknek** — tropical-seasonal-forest
-- **Raxarrarrorora** — temperate-forest
+- **Rarrarrorora** — temperate-forest
 - **Xnodngeknoknekned** — tropical-seasonal-forest
 - **Zxedneknodnoknekned** — tropical-seasonal-forest
 - **Fneknebzfotnednoknek** — tropical-seasonal-forest
 - **Zhvabnetned** — tropical-seasonal-forest
 - **Fngatzhxodnoknekned** — tropical-seasonal-forest
-- **Raxarararokxarrat** — tropical-seasonal-forest
+- **Rarararokxarrat** — tropical-seasonal-forest
 - **Vngeksfaknednoknek** — tropical-seasonal-forest
-- **Rararaxaxarrok** — tropical-seasonal-forest
+- **Rararaxarrok** — tropical-seasonal-forest
 - **Netzhxednoknekned** — tropical-seasonal-forest
 - **Rararrarrog** — tropical-seasonal-forest
-- **Raxaroxorra** — tropical-seasonal-forest
+- **Raroxorra** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -89,25 +82,9 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neb the Fngadneb returns every 15.99 days. So it was, so it is.
->
-> — derived from the phenomenon *celestial-body*
-
-> Neb the Zhfokneb returns every 32.55 days. So it was, so it is.
->
-> — derived from the phenomenon *celestial-body*
-
 The warren of **Raratrratrrot** keeps its own folk pantheon:
 
-> Raxa Rro comes back every 15.99 days. That's how it's always been. That's how it's always been. Raxa is a great one among the gods.
->
-> — derived from the phenomenon *celestial-body*
-
-> Rroraxa Raxa comes back every 32.55 days. That's how it's always been. That's how it's always been. Rroraxa is a great one among the gods.
->
-> — derived from the phenomenon *celestial-body*
-
-> Rora Ro is: Rora Ro is always watching. That's how it's always been. That's how it's always been. Rora is a great one among the gods.
+> Raro Ro is: Raro Ro is always watching. That's how it's always been. That's how it's always been. Raro is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 

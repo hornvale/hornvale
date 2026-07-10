@@ -1,0 +1,13 @@
+{
+  "//": "Reproducible bundle requires Deno 2.9.2 exactly (see decision 0023 and the atlas CI job).",
+  "tasks": {
+    "check": "deno check src/",
+    "test": "deno test --allow-read src/",
+    "build": "deno bundle --platform browser --minify -o ../../book/src/gallery/atlas.js src/main.ts"
+  },
+  "imports": {
+    "@std/assert": "jsr:@std/assert@^1"
+  },
+  "fmt": { "lineWidth": 100 },
+  "lint": { "rules": { "tags": ["recommended"] } }
+}

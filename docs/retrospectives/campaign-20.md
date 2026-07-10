@@ -1,74 +1,73 @@
-# Campaign 20 (The Words) — retrospective
+# Campaign 20 (Firm Ground II) — retrospective
 
 **Merged:** 2026-07-09
 
-**Recurring findings.** Task 12's Lab pass carried three calibration tests
-whose preregistered comments were explicit about what a failing measurement
-means: `name_collision_rate_is_measured_and_pinned` and its two siblings in
-`windows/lab/tests/calibration.rs` exist specifically to pin an *honest*
-rate "never loosened to fit," per ADR 0016 — a failing preregistered claim
-is a reportable result, not a test to route around. Mid-task, an
-implementer's first pass at wiring these calibrations `#[ignore]`d the row
-rather than letting it report its (correctly) failing directional bound,
-exactly the move ADR 0016 and the test's own comment exist to forbid. The
-controller caught it before it reached `main` and a repair pass restored
-the un-ignored assertion with its honestly-measured value pinned instead —
-the same category of near-miss Campaign Y2-3's retrospective recorded once
-already, there with the opposite outcome (an implementer correctly held the
-line under a genuine `STOP-and-report-BLOCKED` result and was praised for
-it). Read together, the two campaigns say the same thing twice: a
-preregistered calibration that can fail is doing its job exactly when it
-fails, and `#[ignore]` is never the fix for an uncomfortable but honest
-number. Worth a standing check before any calibration lands: does this
-diff quiet a result rather than pin it?
+**Recurring findings.** The campaign's central miss was a blast-radius
+enumeration that claimed more completeness than it had — and that is now the
+*second* campaign in a row to be caught by exactly this. Campaign 19's plan
+enumerated a defect's ripple and missed a committed study (`census-of-skies`)
+that reported the changed quantity; Campaign 20's plan asserted "no census is
+locked" and "only the `census-lands-drift` SVGs drift," and both were false.
+A blast-radius list is a claim about completeness, and completeness claims are
+the class a fresh reviewer — or, here, the gate itself — catches better than
+the author who wrote the list. Two campaigns running is enough to promote it:
+an enumerated blast radius should get a dedicated second look *before*
+implementation, the way "read the engine before finalizing the plan" already
+does. That older rule, meanwhile, earned its keep again — reading
+`sky_exit_criterion.rs` at plan-writing time is what revealed that the Y2 exit
+criterion (the sun heads every pantheon; moons seat deities) would break under
+the spec's literal momentary culling, and turned the design toward
+ever-visible culling before a line was written.
 
-**Estimate deltas.** No stage-level estimates were made for this campaign,
-so there is nothing to compare against — say so rather than pad. What *did*
-run longer than a single pass was the collision-rate defect itself: what
-the plan scoped as "run the census, pin the rate" became measure → defect
-→ fix 1 → re-measure → fix 2 → re-measure, three Lab passes instead of one,
-each honestly recorded rather than folded into a single clean number.
+**Estimate deltas.** No stage-level estimates were made, so there is nothing
+to compare against — but the one cost no plan could have estimated is worth
+recording: `main` advanced under the worktree three times during execution,
+once with a full parallel campaign (the star chart, which shipped SKY-20's
+synodic moon-phase fix and claimed chronicle 19). Reconciling that mid-flight
+— a five-file conflict resolution composing synodic phase with the genesis
+phase offset, plus the renumber to Campaign 20 — was real work that lived in
+no plan. The `git merge-base` check the metaplan mandates before the artifact
+re-baseline is what surfaced it in time; without that check the re-baseline
+would have regenerated against stale tooling.
 
-**Spec vs. reality.** Two places where the plan's own scoping needed a
-controller's hand mid-campaign, and one open question the campaign is
-handing forward rather than resolving unilaterally:
+**Spec vs. reality.** Three plan assumptions the execution had to correct:
 
-- Tasks 4 and 5's artifact-regeneration scope was ambiguous in the plan —
-  which committed artifacts a concept-registry change and a Swadesh-pack
-  addition actually touch was not enumerated precisely enough for an
-  implementer to self-determine, and the controller had to direct which
-  artifacts to regenerate mid-campaign on two separate occasions rather
-  than the plan's own task text settling it. Nothing shipped stale as a
-  result — both regens happened before the affected task's commit — but
-  the enumeration gap cost review cycles a more precise task write-up would
-  not have. The recurring lesson from Campaign 19's retrospective applies
-  again: a blast-radius list is a claim about completeness, worth a
-  dedicated second look at plan-writing time.
-- The collision-rate defect itself (Study 010, H4) was spec-vs-reality in
-  the sharpest form: spec §9.5 predicted glossed compounds would keep the
-  collision rate low, and the first census measurement (86.8%) proved that
-  prediction badly wrong before any world shipped it — pure two-concept
-  site compounds pigeonhole against 100+ settlements by simple counting, a
-  fact the spec's prose reasoning missed and the census caught immediately.
-- The preregistered H4 bound (4.678%, twice the Tongues-era free-stem rate)
-  is itself now an open question rather than a settled one. It was anchored
-  to a naming design — unconstrained free stems — that this campaign
-  retired; the shipped design deliberately shares a small vocabulary of
-  site descriptors across many names, which is close to the whole point of
-  a *gloss*, and a descriptor-sharing design may simply not belong under a
-  bound inherited from a design built to avoid sharing anything. The
-  measurement pipeline did its job without complaint at every step; whether
-  4.678% was ever the right number for what shipped is a design question,
-  not a measurement one, and this campaign correctly declined to answer it
-  by quietly moving the goalposts.
+- **"No census is locked."** `census-lands-drift` is fully unpinned, so ~5% of
+  its 500 seeds draw tidally-locked worlds. Placing the observer therefore
+  hemisphere-culls those worlds' religion, which honestly degraded the Y2
+  blind-attribution metric on the divergence census (0.868 → 0.826; the
+  preregistered floor moved 0.875 → 0.8). This is the *correct* degradation —
+  a locked world's night side is uninhabitable, so every settlement lands
+  day-side and sees a sun-only sky, and both species become genuinely
+  indistinguishable by sky. The Y2 **null control** (spinning, unaffected)
+  stayed byte-intact. The honest lower rate was pinned rather than the design
+  quietly reverted, and the owner accepted it explicitly.
+- **"Re-baseline once, in the Close."** True for the committed book artifacts
+  (checked only by CI's `git diff` step) — false for the golden-pinned
+  *tests*. The census calibrations in `windows/lab/tests/calibration.rs` and
+  the `tongues_identity` fixture run in the per-commit `cargo test --workspace`
+  gate, so a world-changing commit must re-pin (or re-exclude) them *in that
+  commit*; deferring broke the gate mid-Plan-1. Only the book artifacts could
+  wait for the Close.
+- **The spec's momentary day/night culling.** Taken literally, SEQ-5 would cull
+  the sun on a spinning world at night and the moons by day — which breaks the
+  Y2 pantheon result, because that result depends on religion seeing the whole
+  sky at once. A prose spec cannot see that a downstream test rests on the
+  provider's unconditional sun; reading the code did.
 
-**Do differently next time.** When a campaign's central mechanism changes
-the shape of a name space (fewer possible names, more sharing by design),
-sanity-check any inherited numeric bound against the *new* mechanism's
-shape at plan-writing time, not only at census time — a bound copied
-forward from a prior campaign's design carries that design's assumptions
-with it, and a five-minute back-of-envelope pigeonhole check on Task 9's
-own plan text (distinct site-concept pairs versus settlement count) would
-have surfaced the 86.8% outcome before any code was written, the same way
-Campaign Y2-4's retrospective caught a placement tie-break degeneracy by
-reading the engine before finalizing the plan.
+**Do differently next time.** When a plan enumerates a re-baseline, split the
+scope by *which gate enforces it*: the per-commit test gate (golden pins,
+identity fixtures — must track reality in the drifting commit) versus the CI
+artifact-diff (committed `book/` files — deferrable to the Close). Writing
+"defer the re-baseline to the Close" without that split is what broke the
+gate. And treat every "there is no X in the census" as the blast-radius
+completeness claim it is: an unpinned census draws the entire pin matrix, so
+verify against the study's actual pins, not intuition. The one thing that went
+right and should be repeated: the two parallel campaigns re-pinned *disjoint*
+metrics (the star chart moved period/month counts, this campaign moved
+name/attribution counts), so the merge composed cleanly — but that was partly
+luck, and a shared metric would have demanded a combined re-measurement no
+single branch had. The general rule: two campaigns editing the same
+golden-pinned file will each measure a world the other hasn't; only their
+disjointness makes the union correct, and that disjointness must be *checked*,
+not assumed.

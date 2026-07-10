@@ -14,7 +14,9 @@ mod tests {
     use super::*;
     use crate::pins::{MoonsPin, RotationPin, SkyPins};
     use crate::system::generate;
-    use hornvale_kernel::{EntityId, ObserverContext, PhenomenaSource, Seed, WorldTime};
+    use hornvale_kernel::{
+        EntityId, GeoCoord, ObserverContext, PhenomenaSource, Seed, Venue, WorldTime,
+    };
 
     fn sky(pins: SkyPins) -> GeneratedSky {
         GeneratedSky::new(generate(Seed(42), &pins).unwrap())
@@ -143,6 +145,95 @@ mod tests {
         );
     }
 
+    #[test]
+    fn a_locked_night_side_vantage_sees_moons_and_stars_but_no_sun() {
+        let s = sky(SkyPins {
+            rotation: Some(RotationPin::Locked),
+            moons: Some(MoonsPin::exact(1).unwrap()),
+            ..SkyPins::default()
+        });
+        let night = ObserverContext::at_position(
+            EntityId(1),
+            WorldTime { day: 0.0 },
+            GeoCoord {
+                latitude: 10.0,
+                longitude: 180.0,
+            },
+        );
+        let ph = s.phenomena(&night);
+        assert!(
+            !ph.iter().any(|p| p.venue == Venue::DaySky),
+            "night side must not see the sun"
+        );
+        assert!(
+            ph.iter().any(|p| p.kind == NIGHT_STAR),
+            "night side sees the stars"
+        );
+        assert!(
+            ph.iter().any(|p| p.description.contains("moon")),
+            "night side sees the moon"
+        );
+    }
+
+    #[test]
+    fn a_locked_day_side_vantage_sees_the_sun_and_no_night_sky() {
+        let s = sky(SkyPins {
+            rotation: Some(RotationPin::Locked),
+            moons: Some(MoonsPin::exact(1).unwrap()),
+            ..SkyPins::default()
+        });
+        let day = ObserverContext::at_position(
+            EntityId(1),
+            WorldTime { day: 0.0 },
+            GeoCoord {
+                latitude: 10.0,
+                longitude: 0.0,
+            },
+        );
+        let ph = s.phenomena(&day);
+        assert!(
+            ph.iter().any(|p| p.venue == Venue::DaySky),
+            "day side sees the sun"
+        );
+        assert!(
+            !ph.iter().any(|p| p.kind == NIGHT_STAR),
+            "day side must not see the stars"
+        );
+        assert!(
+            !ph.iter().any(|p| p.description.contains("moon")),
+            "day side must not see the moon"
+        );
+    }
+
+    #[test]
+    fn a_spinning_placed_observer_sees_the_whole_sky() {
+        // On a spinning world every body rises and sets, so the sky is whole
+        // from any longitude at any hour — nothing is culled.
+        let s = sky(SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            moons: Some(MoonsPin::exact(1).unwrap()),
+            ..SkyPins::default()
+        });
+        let obs = ObserverContext::at_position(
+            EntityId(1),
+            WorldTime { day: 10.5 },
+            GeoCoord {
+                latitude: 40.0,
+                longitude: 25.0,
+            },
+        );
+        let ph = s.phenomena(&obs);
+        assert!(ph.iter().any(|p| p.venue == Venue::DaySky), "sun present");
+        assert!(
+            ph.iter().any(|p| p.kind == NIGHT_STAR),
+            "stars present (whole sky)"
+        );
+        assert!(
+            ph.iter().any(|p| p.description.contains("moon")),
+            "moon present"
+        );
+    }
+
     /// A degenerate moon (P_sid ≥ Y) is unreachable at genesis — the Hill
     /// cap keeps P_sid ≤ ~0.15×Y — but `sky_at` must still describe it
     /// honestly rather than panicking on `Calendar::moon_phase`'s `None`.
@@ -194,6 +285,18 @@ mod tests {
                 declination: 0.0,
                 right_ascension: 0.0,
             }],
+            forcing: crate::forcing::OrbitalForcing {
+                obliquity_mean: 0.0,
+                obliquity_amp: 0.0,
+                obliquity_phase: 0.0,
+                ecc_mean: 0.0,
+                ecc_amp: 0.0,
+                ecc_phase: 0.0,
+                precession_phase: 0.0,
+                year_phase_offset: 0.0,
+                day_phase_offset: 0.0,
+                moon_phase_offsets: vec![0.0],
+            },
         };
         let sky = GeneratedSky::new(GenesisOutcome {
             system,
@@ -368,32 +471,60 @@ impl PhenomenaSource for GeneratedSky {
         let t = self.t(ctx.time);
         let mut out = Vec::new();
 
-        match &self.system.anchor.rotation {
-            Rotation::Spinning { day } => out.push(Phenomenon {
-                kind: CELESTIAL_BODY.to_string(),
-                description: format!("the sun, a {}", self.system.star.class_name),
-                period_days: Some(round2(day.get())),
-                salience: 1.0,
-                venue: Venue::DaySky,
-            }),
-            Rotation::Locked => out.push(Phenomenon {
-                kind: CELESTIAL_BODY.to_string(),
-                description: "a sun fixed forever above the day side".to_string(),
-                period_days: None,
-                salience: 1.0,
-                venue: Venue::DaySky,
-            }),
+        // Ever-visible hemisphere culling (SEQ-5): a placed observer sees only
+        // the bodies that ever rise at their location. On a spinning world the
+        // sky turns, so every body rises and sets from every longitude — the
+        // whole sky is visible. On a tidally locked world the sky is fixed: the
+        // substellar point sits on the prime meridian, so the day hemisphere
+        // (|longitude| < 90°) sees only the sun and the night hemisphere only
+        // the moons and stars. A position-blind observation (`position == None`)
+        // preserves the legacy nowhere-in-particular sky, byte-for-byte: the
+        // sun and moons are always present, the neighbor stars only in darkness.
+        let locked = matches!(self.system.anchor.rotation, Rotation::Locked);
+        let (show_sun, show_moons, show_stars) = match (locked, ctx.position) {
+            (true, Some(coord)) => {
+                let day_side = coord.longitude.abs() < 90.0;
+                (day_side, !day_side, !day_side)
+            }
+            (false, Some(_)) => (true, true, true),
+            (false, None) => (
+                true,
+                true,
+                matches!(self.calendar.is_daylight(t), Some(false)),
+            ),
+            (true, None) => (true, true, true),
+        };
+
+        if show_sun {
+            match &self.system.anchor.rotation {
+                Rotation::Spinning { day } => out.push(Phenomenon {
+                    kind: CELESTIAL_BODY.to_string(),
+                    description: format!("the sun, a {}", self.system.star.class_name),
+                    period_days: Some(round2(day.get())),
+                    salience: 1.0,
+                    venue: Venue::DaySky,
+                }),
+                Rotation::Locked => out.push(Phenomenon {
+                    kind: CELESTIAL_BODY.to_string(),
+                    description: "a sun fixed forever above the day side".to_string(),
+                    period_days: None,
+                    salience: 1.0,
+                    venue: Venue::DaySky,
+                }),
+            }
         }
 
-        for moon in &self.system.moons {
-            let angular = moon.angular_diameter_rel;
-            out.push(Phenomenon {
-                kind: CELESTIAL_BODY.to_string(),
-                description: format!("a {} moon", size_word(angular)),
-                period_days: Some(round2(moon.period.get())),
-                salience: round2(0.35 + 0.35 * angular.min(2.0) / 2.0),
-                venue: Venue::NightSky,
-            });
+        if show_moons {
+            for moon in &self.system.moons {
+                let angular = moon.angular_diameter_rel;
+                out.push(Phenomenon {
+                    kind: CELESTIAL_BODY.to_string(),
+                    description: format!("a {} moon", size_word(angular)),
+                    period_days: Some(round2(moon.period.get())),
+                    salience: round2(0.35 + 0.35 * angular.min(2.0) / 2.0),
+                    venue: Venue::NightSky,
+                });
+            }
         }
 
         let spinning = matches!(self.system.anchor.rotation, Rotation::Spinning { .. });
@@ -407,9 +538,7 @@ impl PhenomenaSource for GeneratedSky {
             });
         }
 
-        let locked = matches!(self.system.anchor.rotation, Rotation::Locked);
-        let is_night = matches!(self.calendar.is_daylight(t), Some(false));
-        if locked || is_night {
+        if show_stars {
             for neighbor in &self.system.neighbors {
                 out.push(Phenomenon {
                     kind: NIGHT_STAR.to_string(),

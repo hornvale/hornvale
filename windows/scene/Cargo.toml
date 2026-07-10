@@ -1,0 +1,16 @@
+[package]
+name = "hornvale-scene"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Hornvale scene window: deterministic semantic-only scene JSON over the query surface."
+
+[dependencies]
+hornvale-kernel = { path = "../../kernel" }
+hornvale-astronomy = { path = "../../domains/astronomy" }
+hornvale-worldgen = { path = "../worldgen" }
+hornvale-terrain = { path = "../../domains/terrain" }
+hornvale-climate = { path = "../../domains/climate" }
+hornvale-settlement = { path = "../../domains/settlement" }
+serde = { workspace = true }
+serde_json = { workspace = true }

@@ -15,6 +15,8 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/moon-count` | how many moons |
 | `astronomy/moons` | per-moon mass/distance draws (sequential attempts) |
 | `astronomy/neighbors` | notable-neighbor class/distance draws |
+| `astronomy/forcing` | deep-time orbital forcing |
+| `astronomy/phase-offsets` | per-body genesis phase offsets |
 | `astronomy/neighbor-positions` | per-neighbor celestial position draws (declination, right ascension) |
 
 ### hornvale-climate
@@ -71,6 +73,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/maturity` | per-plate orogenic maturity draws |
 | `terrain/hotspots` | hotspot count, positions, and strengths |
 | `terrain/ocean-fraction` | target ocean fraction draw |
+| `terrain/coast-render` | render-lens coastline noise (hash-noise only; no stream draws) |
 
 ### hornvale-kernel (internal)
 

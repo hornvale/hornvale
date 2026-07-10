@@ -1,4 +1,4 @@
-# Campaign 20: The Words
+# Campaign 27: The Words
 
 **July 2026 · landed in 25 commits · outcome: complete, merged — gives
 the world a concept layer, a per-language lexicon with real history, and
@@ -96,7 +96,7 @@ the whole graph — glosses, derivations, exposure, pins — holds at seed 42
 before any census runs at scale (Task 10).
 
 **The collision-rate claim, measured, failed, and left failed.** [Study
-010, the Census of Words](../laboratory/study-010.md) preregistered five
+011, the Census of Words](../laboratory/study-011.md) preregistered five
 Lab claims. H1 (name-gloss truthfulness), H2 (lexicon regularity and
 exposure soundness, both species), and H3 (the pack-depth ordering) all
 confirmed exactly, with zero exceptions across 10,000 seeds. H4 — that
@@ -140,6 +140,29 @@ hands to the campaign after this one.
   addition has to be argued for, not folded in because a struct had
   room.
 
+## The merge coda
+
+This campaign closed as Campaign 20 and merged as Campaign 27: while it
+ran, main advanced through six other campaigns — Firm Ground II, the Scene
+Window, the Atlas, the Orrery, the Measured Coast, the Live Orrery — and
+the reconciliation renumbered the chronicle, the study, and the decision
+this campaign minted to the next free slots. One collision was deeper than
+numbering. Firm Ground II stood every observation on its observer's own
+ground — a vantage's hemisphere culls its sky — which exposed a documented
+shortcut in this campaign's glossed naming: the presiding phenomenon
+behind a name was observed from a stand-in entity that stood nowhere. The
+spec's own definition settled it (a gloss is truthful to *that* entity's
+facts): a settlement's name is now drawn from an observation made at the
+settlement's own cell, under its own culled sky, and a deity's gloss rides
+the same placed observation religion derives its beliefs from. Seed 42's
+world identity moved with it (the world-identity fixture regenerated in
+the merge commit, per its own contract), and the per-settlement skies
+widened the descriptor space enough to move the collision-rate baseline
+*down* — the re-pinned figures are in [Study 011](../laboratory/study-011.md)'s
+merge re-baseline note. The structural invariants — every gloss truthful,
+row by row — passed unmodified on the merged code, which is exactly what
+they were frozen to prove.
+
 ## Deferred, deliberately
 
 A syntax that lets two words assemble into a sentence rather than sit
@@ -156,7 +179,7 @@ posture that already excludes per-individual psychology and perception.
 
 ## Artifacts
 
-[Study 010: The Census of Words](../laboratory/study-010.md) — the five
+[Study 011: The Census of Words](../laboratory/study-011.md) — the five
 preregistered claims, three confirmed exactly at 10k scale, one (the
 collision rate) measured three times and failed honestly each time. [The
 Language chapter](../domains/language.md) — the concept layer, the

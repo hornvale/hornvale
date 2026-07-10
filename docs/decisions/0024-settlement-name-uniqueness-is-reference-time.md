@@ -1,8 +1,8 @@
-# 0023. Settlement-name uniqueness is a reference-time property
+# 0024. Settlement-name uniqueness is a reference-time property
 
 **Status:** Accepted (2026-07-09) · **Decider:** Nathan
 
-In the context of Study 010's honestly-failed H4 — the measured settlement
+In the context of Study 011's honestly-failed H4 — the measured settlement
 name-collision rate (4.91%, 500-seed mean, pinned) missing its preregistered
 bound (< 4.678%, twice the free-stem era's rate) after two design fixes had
 already brought it down from a genuine 86% defect — facing the fact that the
@@ -28,7 +28,7 @@ reference-time move keeps the ledger pure and spends disambiguation only
 where an actual ambiguity appears — the same lazy qualification natural
 languages use ("Newcastle upon Tyne", "Springfield, Illinois").
 
-**Consequence.** Study 010's H4 verdict stands as recorded — preregistered
+**Consequence.** Study 011's H4 verdict stands as recorded — preregistered
 bound, three measurements, failed — with this decision reframing rather than
 retro-fitting it; the pinned 4.91% becomes the calibration baseline, and no
 future work "fixes" the collision rate by adding entropy. A render-time
@@ -37,13 +37,13 @@ from site facts, e.g. "Ice-Home (taiga)" / "Ice-Home of the kobolds") is a
 registry vision row, buildable any time — it is a view, so it touches no
 save-format contract. Collision pressure is expected to fall as a natural
 by-product of world density: every future substrate that adds per-place
-facts (fauna, flora, historical events, founders — LANG-5) widens the
+facts (fauna, flora, historical events, founders — LANG-9) widens the
 descriptor space without touching the naming engine, and deep-time sound
 change (MAP-3) will eventually differentiate collided names into distinct
 fossils. The preregistration discipline (ADR 0016) is affirmed, not bent:
 the claim was never tuned; the *decision* supersedes the bound in the open.
 
-**See also.** Study 010 (`book/src/laboratory/study-010.md`); The Words spec
+**See also.** Study 011 (`book/src/laboratory/study-011.md`); The Words spec
 (`docs/superpowers/specs/2026-07-09-campaign-the-words-design.md`) §9;
-decision 0016 (preregistration); registry rows LANG-4 (shipped), LANG-5
+decision 0016 (preregistration); registry rows LANG-4 (shipped), LANG-9
 (descriptor breadth), MAP-3 (sound change).

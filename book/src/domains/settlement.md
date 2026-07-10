@@ -110,11 +110,11 @@ seed, species, name-kind, and the settlement's own cell salt, with no
 shared "used names" set threading between settlements — so cross-world
 uniqueness is measured as a calibration, not enforced by re-draw. The
 Tongues-era free stem calibrated at 2.79% mean collision at 10k worlds
-(Study 008); Campaign 20 (The Words) replaced that free stem with a
+(Study 008); Campaign 27 (The Words) replaced that free stem with a
 name that also glosses truthfully to a settlement's own site facts, which
 narrowed the name space enough to raise the mean to **4.91%** at the
 CI-guarded 500-seed population (4.94% at 10k) — measured, reported, and
-left as a standing open question rather than tuned back down (Study 010).
+left as a standing open question rather than tuned back down (Study 011).
 See [Language](./language.md) for the phonology, the gloss, and the naming
 grammar themselves.
 

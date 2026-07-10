@@ -5,6 +5,7 @@
 pub mod anchor;
 pub mod calendar;
 pub mod facts;
+pub mod forcing;
 pub mod moons;
 pub mod neighborhood;
 pub mod pins;
@@ -20,7 +21,7 @@ pub use calendar::{Calendar, calendar_of};
 pub use moons::{Moon, generate_moons, hill_radius_mm};
 pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
 pub use pins::{
-    GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, parse_pin, pin_strings,
+    ForcingPin, GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, parse_pin, pin_strings,
 };
 pub use provider::{GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE};
 pub use star::{Star, generate_star};
@@ -57,6 +58,8 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "astronomy/neighbors",
             "notable-neighbor class/distance draws",
         ),
+        ("astronomy/forcing", "deep-time orbital forcing"),
+        ("astronomy/phase-offsets", "per-body genesis phase offsets"),
         (
             "astronomy/neighbor-positions",
             "per-neighbor celestial position draws (declination, right ascension)",
@@ -120,6 +123,16 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::SCENARIO_PIN,
         false,
         "an experimenter-supplied pin string conditioning genesis",
+    )?;
+    registry.register_predicate(
+        facts::ECCENTRICITY_MEAN,
+        true,
+        "mean orbital eccentricity (deep-time forcing)",
+    )?;
+    registry.register_predicate(
+        facts::OBLIQUITY_AMPLITUDE,
+        true,
+        "obliquity oscillation amplitude, degrees (moon-coupled)",
     )?;
 
     registry.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")?;

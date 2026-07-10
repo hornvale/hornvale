@@ -122,6 +122,67 @@ impl Biome {
         )
     }
 
+    /// Every biome, in declaration order — the stable legend order for
+    /// `scene/tiles` (scene-protocol spec §2). Appending a variant appends
+    /// a legend entry; never reorder.
+    pub fn catalog() -> &'static [Biome] {
+        const CATALOG: [Biome; 22] = [
+            Biome::Ice,
+            Biome::Tundra,
+            Biome::Taiga,
+            Biome::TemperateGrassland,
+            Biome::Shrubland,
+            Biome::TemperateForest,
+            Biome::TemperateRainforest,
+            Biome::Desert,
+            Biome::Savanna,
+            Biome::TropicalSeasonalForest,
+            Biome::TropicalRainforest,
+            Biome::Alpine,
+            Biome::SeaIce,
+            Biome::CoralReef,
+            Biome::KelpForest,
+            Biome::HydrothermalVent,
+            Biome::HadalTrench,
+            Biome::Upwelling,
+            Biome::Epipelagic,
+            Biome::Mesopelagic,
+            Biome::Bathypelagic,
+            Biome::Abyssal,
+        ];
+        &CATALOG
+    }
+
+    /// Compile-time tripwire: adding a `Biome` variant fails this match
+    /// until `catalog()` above gains the new entry. Never remove.
+    #[allow(dead_code)]
+    fn catalog_must_grow_with_the_enum(b: Biome) {
+        match b {
+            Biome::Ice
+            | Biome::Tundra
+            | Biome::Taiga
+            | Biome::TemperateGrassland
+            | Biome::Shrubland
+            | Biome::TemperateForest
+            | Biome::TemperateRainforest
+            | Biome::Desert
+            | Biome::Savanna
+            | Biome::TropicalSeasonalForest
+            | Biome::TropicalRainforest
+            | Biome::Alpine
+            | Biome::SeaIce
+            | Biome::CoralReef
+            | Biome::KelpForest
+            | Biome::HydrothermalVent
+            | Biome::HadalTrench
+            | Biome::Upwelling
+            | Biome::Epipelagic
+            | Biome::Mesopelagic
+            | Biome::Bathypelagic
+            | Biome::Abyssal => (),
+        }
+    }
+
     /// The canonical kebab-case name (Lab metrics, CSV, book prose).
     pub fn name(self) -> &'static str {
         match self {
@@ -333,6 +394,14 @@ pub fn classify(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn catalog_is_complete_and_distinct() {
+        let catalog = Biome::catalog();
+        assert_eq!(catalog.len(), 22);
+        let names: std::collections::BTreeSet<&str> = catalog.iter().map(|b| b.name()).collect();
+        assert_eq!(names.len(), catalog.len(), "duplicate biome in catalog");
+    }
 
     #[test]
     fn whittaker_hits_known_corners() {

@@ -37,6 +37,26 @@ fn make_world_with(dir: &std::path::Path, seed: u64, extra_args: &[&str]) -> Pat
     path
 }
 
+/// Like `make_world_with`, but writes to a `tag`-suffixed filename so two
+/// worlds sharing a seed (e.g. the same seed under different rotation pins)
+/// don't clobber each other's file when both are read back later.
+fn make_world_tagged(dir: &std::path::Path, seed: u64, tag: &str, extra_args: &[&str]) -> PathBuf {
+    let path = dir.join(format!("world-{seed}-{tag}.json"));
+    let out = bin()
+        .args([
+            "new",
+            "--seed",
+            &seed.to_string(),
+            "--out",
+            path.to_str().unwrap(),
+        ])
+        .args(extra_args)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "new failed: {:?}", out);
+    path
+}
+
 fn almanac_of(path: &std::path::Path) -> String {
     let out = bin()
         .args(["almanac", "--world", path.to_str().unwrap()])
@@ -81,13 +101,26 @@ fn rotation_flip_flips_the_religion() {
     let dir = temp_dir("rotation");
     let seed = 42u64;
 
-    // Generate with --rotation normal
-    let normal_path = make_world_with(&dir, seed, &["--sky", "generated", "--rotation", "normal"]);
+    // Generate with --rotation normal. Tagged filenames (not the bare
+    // seed-keyed `make_world_with` path): both worlds share seed 42, and the
+    // sentiment facts are read back from disk below, so a shared filename
+    // would let the second `new` silently clobber the first world's file.
+    let normal_path = make_world_tagged(
+        &dir,
+        seed,
+        "normal",
+        &["--sky", "generated", "--rotation", "normal"],
+    );
     let normal_almanac = almanac_of(&normal_path);
     let normal_gods = extract_gods_section(&normal_almanac);
 
     // Generate with --rotation locked
-    let locked_path = make_world_with(&dir, seed, &["--sky", "generated", "--rotation", "locked"]);
+    let locked_path = make_world_tagged(
+        &dir,
+        seed,
+        "locked",
+        &["--sky", "generated", "--rotation", "locked"],
+    );
     let locked_almanac = almanac_of(&locked_path);
     let locked_gods = extract_gods_section(&locked_almanac);
 

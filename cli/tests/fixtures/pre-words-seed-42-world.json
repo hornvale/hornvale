@@ -47,6 +47,11 @@
         "functional": true,
         "doc": "phenomenon kind a belief mythologizes"
       },
+      "eccentricity-mean": {
+        "name": "eccentricity-mean",
+        "functional": true,
+        "doc": "mean orbital eccentricity (deep-time forcing)"
+      },
       "genesis-note": {
         "name": "genesis-note",
         "functional": false,
@@ -116,6 +121,11 @@
         "name": "notable-neighbor",
         "functional": false,
         "doc": "a notable neighbor star visible in the night sky"
+      },
+      "obliquity-amplitude": {
+        "name": "obliquity-amplitude",
+        "functional": true,
+        "doc": "obliquity oscillation amplitude, degrees (moon-coupled)"
       },
       "obliquity-degrees": {
         "name": "obliquity-degrees",
@@ -347,6 +357,26 @@
         "predicate": "moon-count",
         "object": {
           "Number": 2.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "eccentricity-mean",
+        "object": {
+          "Number": 0.04116143676389656
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "obliquity-amplitude",
+        "object": {
+          "Number": 0.12690199868208984
         },
         "place": null,
         "day": 0.0,

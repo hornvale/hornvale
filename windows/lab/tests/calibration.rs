@@ -301,10 +301,11 @@ fn kobold_flagships_are_less_coastal_than_goblin_flagships() {
 fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
-    let (g_i, k_i, moons_i) = (
+    let (g_i, k_i, moons_i, locked_i) = (
         idx("head-deity-domain-goblin"),
         idx("head-deity-domain-kobold"),
         idx("moons-admitted"),
+        idx("tidally-locked"),
     );
     let (mut moonless_solar, mut moonless_lunar) = (0u32, 0u32);
     for row in &result.rows {
@@ -315,17 +316,36 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
             assert_eq!(domain, "solar", "seed {}: goblin head not solar", row.seed);
         }
         let mooned = matches!(&row.values[moons_i], MetricValue::Text(n) if n != "0");
-        if mooned && let MetricValue::Text(domain) = &row.values[k_i] {
+        let locked = matches!(&row.values[locked_i], MetricValue::Flag(true));
+        let Some(MetricValue::Text(domain)) = row.values.get(k_i) else {
+            continue;
+        };
+        if locked {
+            // The placed observer (Plan 2 Task 4, SEQ-4/SEQ-5): every
+            // flagship this census ever places on a tidally-locked world
+            // sits on the day side (the night hemisphere never clears the
+            // habitability floor), so the kobold head is solar exactly
+            // like the goblin's — moons or no moons, the night sky is
+            // never in view from where either species actually settled.
+            assert_eq!(
+                domain, "solar",
+                "seed {}: locked-world kobold head not solar",
+                row.seed
+            );
+            continue;
+        }
+        if mooned {
             assert_eq!(
                 domain, "lunar",
                 "seed {}: kobold head not lunar despite a moon",
                 row.seed
             );
-        }
-        if !mooned && let MetricValue::Text(domain) = &row.values[k_i] {
-            // Moonless kobold heads split night-star/sun by star
+        } else {
+            // Spinning, moonless kobold heads split night-star/sun by star
             // brightness — spec §9.2 declines to preregister this split,
             // pinning it as a calibration row after measurement instead.
+            // Locked, moonless worlds are folded into the always-solar
+            // invariant above, not this split.
             match domain.as_str() {
                 "solar" => moonless_solar += 1,
                 "lunar" => moonless_lunar += 1,
@@ -336,12 +356,12 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
             }
         }
     }
-    // Pinned calibration row (measured at the Y2-2 re-baseline, 500-seed
-    // drift study): moonless kobold heads split 62 solar / 10 lunar — the
-    // sun wins most moonless skies, but a bright-enough night-star still
-    // outshines it in a minority of cases.
+    // Pinned calibration row (re-measured for the placed observer, Plan 2
+    // Task 4, 500-seed drift study): among SPINNING moonless worlds, the sun
+    // wins most nights, but a bright-enough night-star still outshines it in
+    // a minority of cases.
     assert_eq!(
-        moonless_solar, 62,
+        moonless_solar, 60,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
@@ -354,23 +374,28 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
 fn blind_attribution_beats_chance_decisively() {
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
-    let (a_i, moons_i) = (idx("blind-attribution-correct"), idx("moons-admitted"));
+    let (a_i, moons_i, locked_i) = (
+        idx("blind-attribution-correct"),
+        idx("moons-admitted"),
+        idx("tidally-locked"),
+    );
     let (mut correct, mut total) = (0u32, 0u32);
     let (mut correct_mooned, mut total_mooned) = (0u32, 0u32);
     for row in &result.rows {
         let mooned = matches!(&row.values[moons_i], MetricValue::Text(n) if n != "0");
+        let locked = matches!(&row.values[locked_i], MetricValue::Flag(true));
         match &row.values[a_i] {
             MetricValue::Flag(true) => {
                 correct += 1;
                 total += 1;
-                if mooned {
+                if mooned && !locked {
                     correct_mooned += 1;
                     total_mooned += 1;
                 }
             }
             MetricValue::Flag(false) => {
                 total += 1;
-                if mooned {
+                if mooned && !locked {
                     total_mooned += 1;
                 }
             }
@@ -383,23 +408,31 @@ fn blind_attribution_beats_chance_decisively() {
     // (2026-07-08, 500-seed drift study) came in at 0.875 (434/496). The
     // miss is entirely the 62 moonless pairs, where the cyclic-share tier
     // inverts because night-stars are eternal (period None) — recorded as a
-    // discovery for Study 007. The spec's directional preregistration
-    // ("well above chance") is satisfied; by owner decision the
-    // preregistered rule stays untouched and the honest measured rate is
-    // pinned. Exact counts are pinned at the re-baseline task.
+    // discovery for Study 007. Re-measured for the placed observer (Plan 2
+    // Task 4, SEQ-4/SEQ-5): a tidally-locked world's habitability floor
+    // keeps every flagship this census places on the day side, so a locked
+    // pair's domains no longer separate goblin from kobold (both solar) —
+    // Rule 1 of `pick_kobold` goes dark for every locked, mooned pair
+    // (measured below), pulling the rate down further. The spec's
+    // directional preregistration ("well above chance") is still satisfied;
+    // by owner decision the preregistered rule stays untouched and the
+    // honest measured rate is pinned. Exact counts are pinned at the
+    // re-baseline task.
     let accuracy = f64::from(correct) / f64::from(total);
     assert!(
-        accuracy >= 0.875,
+        accuracy >= 0.8,
         "blind attribution at {accuracy:.3} — below the pinned floor"
     );
-    // Pinned calibration row (measured at the Y2-2 re-baseline; the drift
-    // study is 500 seeds, so this is an exact count, not a rate):
-    assert_eq!(correct, 434, "blind-attribution count drifted");
+    // Pinned calibration row (re-measured for the placed observer, Plan 2
+    // Task 4; the drift study is 500 seeds, so this is an exact count, not a
+    // rate):
+    assert_eq!(correct, 413, "blind-attribution count drifted");
     assert_eq!(total, 496, "attributable-pair count drifted");
-    // Pinned calibration row, first measured 2026-07-08 — the anti-reskin
-    // claim at the head-domain calibration's own scope: restricted to pairs
-    // on worlds with at least one moon, the fixed rule attributes the
-    // kobold pantheon perfectly.
+    // Pinned calibration row — the anti-reskin claim at the head-domain
+    // calibration's own scope: restricted to SPINNING pairs on worlds with
+    // at least one moon (a tidally-locked pair's domains no longer separate
+    // the two species — see above), the fixed rule attributes the kobold
+    // pantheon perfectly.
     assert!(total_mooned > 0, "no mooned attributable pairs");
     assert_eq!(
         correct_mooned, total_mooned,
@@ -488,7 +521,7 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
 
 #[test]
 fn name_gloss_true_is_100_percent_row_by_row() {
-    // Preregistered (spec §9.3, Study 010 H1): every committed settlement
+    // Preregistered (spec §9.3, Study 011 H1): every committed settlement
     // name-gloss fact composes truthfully from that SAME settlement's own
     // INDEPENDENTLY re-derived site concepts (biome + presiding
     // phenomenon). A broken gloss pipeline is falsifiably caught here —
@@ -524,7 +557,7 @@ fn name_gloss_true_is_100_percent_row_by_row() {
 
 #[test]
 fn lexicon_is_regular_and_exposure_sound_for_both_species() {
-    // Preregistered (spec §9.1/§9.2, Study 010 H2): every Root's recorded
+    // Preregistered (spec §9.1/§9.2, Study 011 H2): every Root's recorded
     // derivation replays exactly through evolve, and exposure
     // classification is sound (no Root minted for a concept an
     // INDEPENDENT re-derivation classifies Unknown, every Gap reasoned).
@@ -566,7 +599,7 @@ fn lexicon_is_regular_and_exposure_sound_for_both_species() {
 
 #[test]
 fn goblin_hue_depth_exceeds_kobold_hue_depth() {
-    // Preregistered (spec §9.4, Study 010 H3): the shipped roster's
+    // Preregistered (spec §9.4, Study 011 H3): the shipped roster's
     // night-vision values predict goblin hue-depth strictly exceeds kobold
     // hue-depth in every present world — a structural constant of the
     // authored perception vectors, not a per-seed draw, so the directional
@@ -596,14 +629,14 @@ fn goblin_hue_depth_exceeds_kobold_hue_depth() {
 
 #[test]
 fn name_collision_rate_is_measured_and_pinned() {
-    // Preregistered (spec §9.2/§9.5, Study 010 H4): names are pure per-
+    // Preregistered (spec §9.2/§9.5, Study 011 H4): names are pure per-
     // (seed, species, kind, salt) draws with no re-draw, so uniqueness is
     // de-facto rather than enforced (Task 9) — this pins the MEASURED
     // collision rate over the 500-seed drift study as a calibration row,
     // not an invariant.
     //
     // The DIRECTIONAL claim FAILED (reportable per ADR 0016, not adjusted):
-    // Study 010 preregistered "below 2x the Tongues-era pinned rate"
+    // Study 011 preregistered "below 2x the Tongues-era pinned rate"
     // (2.339% x 2 = 4.678%). The first measurement read 86.28%: pure
     // site-concept compounds (biome + one presiding phenomenon, largely
     // constant across a species' settlements within one world) gave a
@@ -614,7 +647,7 @@ fn name_collision_rate_is_measured_and_pinned() {
     // (stem widened from 1-2 to 2-3 syllables, the retired Tongues-era
     // stem's own range) reached 4.91% — a ~17.6x improvement over the
     // defect, but STILL (narrowly) above the preregistered bound, so H4's
-    // verdict remains failed (Study 010 records all three measurements;
+    // verdict remains failed (Study 011 records all three measurements;
     // whether 4.678% was the right bound is the campaign owner's call).
     // The honest rate is pinned here exactly as Study 007/008 pin an
     // honest rate that misses its own floor (0.875 blind attribution) —
@@ -641,24 +674,29 @@ fn name_collision_rate_is_measured_and_pinned() {
             ),
         }
     }
-    // Pinned calibration row (re-measured after collision fix 2, 500-seed
-    // drift study, 2026-07-09): about 30% of worlds are now collision-free
-    // and the mean sits at 4.91%.
-    assert_eq!(zero, 148, "zero-collision world count drifted");
-    assert_eq!(nonzero, 352, "nonzero-collision world count drifted");
+    // Pinned calibration row (re-measured after collision fix 2 AND the
+    // merge of main: The Words' glossed compounds set the base rate; main's
+    // placed-observer hemisphere culling, extended to per-settlement
+    // vantages for glossed naming, means each settlement's own culled sky
+    // feeds its presiding concept — re-pinned on the merged code, 500-seed
+    // drift study). The per-settlement skies IMPROVED the rate (pre-merge:
+    // 148 zero / 352 nonzero, mean 4.91%): more distinct presiding
+    // concepts, a wider descriptor space, fewer repeated compounds.
+    assert_eq!(zero, 159, "zero-collision world count drifted");
+    assert_eq!(nonzero, 341, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.049_129_710_810_206).abs() < 1e-6,
+        (mean - 0.047_015_587_357_954).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
 
 #[test]
 fn name_length_distributions_are_measured_and_pinned() {
-    // Preregistered (spec §9.2, Study 010's H4 companion): mean generated-
+    // Preregistered (spec §9.2, Study 011's H4 companion): mean generated-
     // name length, per species, pinned over the 500-seed drift study as a
     // calibration row after measurement — the naming/voice baseline's
     // other half (contrast `phonotactic_validity_is_true_for_every_
@@ -672,9 +710,14 @@ fn name_length_distributions_are_measured_and_pinned() {
     // compound words.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    // Re-measured on the merged code (was goblin 13.8119 / kobold 14.2369
+    // pre-merge): main's placed-observer hemisphere culling, extended to
+    // per-settlement vantages for glossed naming, shifts which presiding
+    // concept each settlement compounds over, moving both means by a
+    // fraction of a character.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 498u32, 13.811_936_859_785_147),
-        ("kobold", 498u32, 14.236_940_649_335_502),
+        ("goblin", 498u32, 13.869_961_501_975_723),
+        ("kobold", 498u32, 14.262_681_953_972_956),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -814,10 +857,11 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // builds share seed, cell, and phenomena, so the head-deity domain and
     // cult form distributions and the pantheon-size mean are byte-identical
     // (TVD = SMD = 0) regardless of what names are drawn — naming never
-    // feeds back into pantheon structure. Only name-length diverges (the
-    // lone structural trace of the two distinct names); its exact pinned
-    // SMD is a measurement and lives in the Task-12-owned sibling test
-    // below.
+    // feeds back into pantheon structure. Exact even after the merge of
+    // main (placed observer, astronomy synodic fix): those shift name salts,
+    // not pantheon structure. Only name-length diverges (the lone structural
+    // trace of the two distinct names); its exact pinned SMD is a measurement
+    // and lives in the Task-12-owned sibling test below.
     assert!((head - 0.0).abs() < 1e-9, "head-domain TVD drifted: {head}");
     assert!((cult - 0.0).abs() < 1e-9, "cult-form TVD drifted: {cult}");
     assert!(
@@ -828,14 +872,15 @@ fn null_control_distributions_are_within_the_sampling_bound() {
 
 #[test]
 fn null_control_name_length_smd_is_pinned() {
-    // Re-measured after collision fix 2 (was -0.118235 at the Tongues-era
-    // measurement, -0.045751 at Study 010's first, pre-fix measurement,
-    // -0.050617 after fix 1, all 2026-07-09): each naming re-baseline
-    // shifts the underlying name-length distribution (see
-    // `name_length_distributions_are_measured_and_pinned`), so the twin's
-    // SMD against the goblin moves too — still comfortably inside the
-    // ±0.2 sampling-theory bound `null_control_distributions_are_within_
-    // the_sampling_bound` asserts, unaffected by this re-pin.
+    // Re-measured on the merged code (was -0.118235 at the Tongues-era
+    // measurement, -0.045751 at Study 011's first, pre-fix measurement,
+    // -0.050617 after fix 1, -0.066905 after fix 2, all 2026-07-09; the
+    // merge added per-settlement culled vantages for glossed naming): each
+    // naming re-baseline shifts the underlying name-length distribution
+    // (see `name_length_distributions_are_measured_and_pinned`), so the
+    // twin's SMD against the goblin moves too — still comfortably inside
+    // the ±0.2 sampling-theory bound `null_control_distributions_are_
+    // within_the_sampling_bound` asserts, unaffected by this re-pin.
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let namelen = std_mean_diff(
@@ -843,7 +888,7 @@ fn null_control_name_length_smd_is_pinned() {
         nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
     assert!(
-        (namelen - -0.066_905_196_528).abs() < 1e-9,
+        (namelen - -0.065_377_251_231_494).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
@@ -944,6 +989,49 @@ fn nums(r: &RunResult, pin_set: &str, col: usize) -> Vec<f64> {
             }
         })
         .collect()
+}
+
+#[test]
+fn obliquity_range_is_wider_on_moonless_worlds() {
+    // A moonless world keeps the full drawn obliquity wobble; any moon's
+    // tidal stabilization damps it (SKY-21, generate_forcing's `damping =
+    // 1/(1+stabilization)` term). At equal base draw this is exact — but the
+    // base wobble is itself an independent per-seed draw (`base_wobble`,
+    // 0-2.5°), so a strict per-row claim (every moonless row exceeds every
+    // mooned row) is too strong across a 500-seed population: a moonless
+    // world can draw a small base wobble and a mooned world a large one.
+    // The population-level claim the moon-coupling calibration authorizes
+    // (spec §8, the sixth calibration in the family) is the MEAN comparison:
+    // moonless worlds' mean obliquity-range strictly exceeds mooned worlds'.
+    let result = &*DRIFT;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let (range_i, moons_i) = (idx("obliquity-range"), idx("moons-admitted"));
+    let (mut moonless_sum, mut moonless_n) = (0.0_f64, 0u32);
+    let (mut mooned_sum, mut mooned_n) = (0.0_f64, 0u32);
+    for row in &result.rows {
+        if row.refusal.is_some() {
+            continue;
+        }
+        let MetricValue::Number(range) = row.values[range_i] else {
+            panic!("seed {}: obliquity-range not a number", row.seed);
+        };
+        let mooned = matches!(&row.values[moons_i], MetricValue::Text(n) if n != "0");
+        if mooned {
+            mooned_sum += range;
+            mooned_n += 1;
+        } else {
+            moonless_sum += range;
+            moonless_n += 1;
+        }
+    }
+    assert!(moonless_n > 0, "no moonless worlds in the drift study");
+    assert!(mooned_n > 0, "no mooned worlds in the drift study");
+    let moonless_mean = moonless_sum / f64::from(moonless_n);
+    let mooned_mean = mooned_sum / f64::from(mooned_n);
+    assert!(
+        moonless_mean > mooned_mean,
+        "moonless mean obliquity-range {moonless_mean:.4} !> mooned mean {mooned_mean:.4}"
+    );
 }
 
 /// Standardized mean difference (mean gap in pooled-standard-deviation units).

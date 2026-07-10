@@ -237,7 +237,7 @@ of an older one; meaningful toponyms, language demographics, and
 everything that would let a name mean something rather than merely sound
 like something stayed explicitly out of scope, work for whichever campaign
 took up language change and contact once the world's peoples started
-meeting each other. Campaign 20, The Words, is that campaign, for the
+meeting each other. Campaign 27, The Words, is that campaign, for the
 lexicon and sound-change half of the line; contact, toponyms, and syntax
 still wait on the other side of it — see "The tongues still ahead," below.
 
@@ -249,7 +249,7 @@ epithet-honorific, and collision-rate calibrations at 10k scale. Chronicle:
 [Campaign 16, The Tongues](../chronicle/16-the-tongues.md); [Campaign 17,
 Audible Phonology](../chronicle/17-audible-phonology.md).
 
-**The tongues still ahead (updated by Campaign 20, The Words — a lexicon
+**The tongues still ahead (updated by Campaign 27, The Words — a lexicon
 and own-line sound-change shipped; see "Meaning arrives," below):** a
 syntax that lets two words assemble into a sentence rather than sit
 together as a single compound noun, and the case, tense, and agreement
@@ -416,7 +416,7 @@ syllables of that language's own phonotactics tacked onto the gloss,
 "Ice-Homenaknot" rather than a one-syllable English suffix like "-wick" —
 a proper-name element that names no concept and so never enters the gloss,
 there because a census showed site words alone give a species only a
-handful of names against a hundred settlements (Study 010; see
+handful of names against a hundred settlements (Study 011; see
 [Settlement](./settlement.md) for the exact collision figures the census
 pinned before and after this stem existed). A name's
 sound already rendered three views of one drawn segment sequence — a

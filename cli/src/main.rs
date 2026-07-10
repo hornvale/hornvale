@@ -36,6 +36,10 @@ usage:
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
   hornvale settlement-map [--world <PATH>] [--out <PNG>] render the settlement map (markdown to stdout)
   hornvale star-chart [--world <PATH>] [--out <PNG>] render the star chart (markdown to stdout)
+  hornvale orrery [--world <PATH>] [--day <D>] [--glyphs unicode|emoji]   print one orrery frame (ANSI)
+  hornvale orrery [--world <PATH>] --day <A..B> [--step <k>] [--fps <f>] [--glyphs unicode|emoji] --cast <OUT>   animate to a .cast
+  hornvale scene tiles [--world <PATH>] [--width <N>] emit scene/tiles/v1 JSON to stdout
+  hornvale scene system [--world <PATH>]              emit scene/system/v1 JSON to stdout
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
@@ -75,6 +79,8 @@ fn main() -> ExitCode {
         Some("biome-map") => cmd_biome_map(&args),
         Some("settlement-map") => cmd_settlement_map(&args),
         Some("star-chart") => cmd_star_chart(&args),
+        Some("orrery") => cmd_orrery(&args),
+        Some("scene") => cmd_scene(&args),
         Some("concepts") => cmd_concepts(),
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
@@ -272,7 +278,11 @@ fn cmd_map(args: &[String]) -> Result<(), String> {
     ));
     doc.push_str("```\n\n");
     if let Some(out) = flag_value(args, "--out") {
-        let png = hornvale_terrain::render::elevation_png(terrain.geosphere(), terrain.globe());
+        let png = hornvale_terrain::render::elevation_png(
+            terrain.geosphere(),
+            terrain.globe(),
+            world.seed,
+        );
         std::fs::write(out, png).map_err(|e| format!("writing {out}: {e}"))?;
         let name = std::path::Path::new(out)
             .file_name()
@@ -421,6 +431,88 @@ fn cmd_star_chart(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// Render the orrery: one ANSI frame to stdout, or — with `--day A..B --cast
+/// OUT` — a deterministic asciinema-v2 animation of the system over that span
+/// (the moons cycling, the world orbiting, the sky drifting). Errors on a
+/// world with no generated sky.
+fn cmd_orrery(args: &[String]) -> Result<(), String> {
+    use hornvale_astronomy::StdDays;
+    use hornvale_astronomy::render::{GlyphSet, ORRERY_HEIGHT, orrery_ansi, orrery_cols};
+    let world = load_world(args)?;
+    let sky = world_builder::sky_of(&world).map_err(|e| e.to_string())?;
+    let Some(system) = sky.system() else {
+        return Err("this world has no generated sky; no orrery to draw".to_string());
+    };
+    let calendar = sky
+        .calendar()
+        .expect("a generated sky always has a calendar");
+    let glyphs = match flag_value(args, "--glyphs").unwrap_or("unicode") {
+        "unicode" => GlyphSet::Unicode,
+        "emoji" => GlyphSet::Emoji,
+        other => {
+            return Err(format!(
+                "unknown --glyphs '{other}'; expected 'unicode' or 'emoji'"
+            ));
+        }
+    };
+    let day_arg = flag_value(args, "--day").unwrap_or("0");
+    let mk = |d: f64| StdDays::new(d).map_err(|e| e.to_string());
+
+    if let Some(cast_path) = flag_value(args, "--cast") {
+        let (a, b) = day_arg
+            .split_once("..")
+            .ok_or("--cast needs a --day range, e.g. --day 0..365")?;
+        let (a, b): (f64, f64) = (
+            a.parse().map_err(|_| "bad --day start")?,
+            b.parse().map_err(|_| "bad --day end")?,
+        );
+        let step: f64 = flag_value(args, "--step")
+            .unwrap_or("1")
+            .parse()
+            .map_err(|_| "bad --step")?;
+        let fps: f64 = flag_value(args, "--fps")
+            .unwrap_or("6")
+            .parse()
+            .map_err(|_| "bad --fps")?;
+        if step <= 0.0 || b <= a || fps <= 0.0 {
+            return Err("--day A..B must have B>A, --step>0, --fps>0".to_string());
+        }
+        let mut frames = Vec::new();
+        let mut d = a;
+        while d < b {
+            // Hide the cursor (`?25l`), clear + home, then the frame, so playback
+            // redraws in place with no cursor block parked below the grid. The
+            // frame uses CRLF line endings: an asciinema-player replay feeds the
+            // raw bytes through a terminal emulator, where a bare LF moves down
+            // but not to column 0 — so full-width rows would smear. (The
+            // single-frame stdout path needs neither: the tty shows its own
+            // cursor and its cooked-mode ONLCR translates LF→CRLF.)
+            frames.push(format!(
+                "\u{1b}[?25l\u{1b}[2J\u{1b}[H{}",
+                orrery_ansi(system, calendar, mk(d)?, glyphs).replace('\n', "\r\n")
+            ));
+            d += step;
+        }
+        // Synthetic frame timing: the interval is 1/fps, so --fps sets playback
+        // speed (default 6 fps ≈ a slow, watchable ~12 s for a 73-frame year).
+        // The value is synthetic; only its ratio to real time matters.
+        let dt = 1.0 / fps;
+        let cast = hornvale_kernel::asciinema_v2(
+            orrery_cols(glyphs) as u16,
+            ORRERY_HEIGHT as u16,
+            dt,
+            &frames,
+        );
+        std::fs::write(cast_path, cast).map_err(|e| format!("writing {cast_path}: {e}"))?;
+        println!("wrote {} frames to {cast_path}", frames.len());
+        Ok(())
+    } else {
+        let t = mk(day_arg.parse().map_err(|_| "bad --day")?)?;
+        print!("{}", orrery_ansi(system, calendar, t, glyphs));
+        Ok(())
+    }
+}
+
 fn cmd_concepts() -> Result<(), String> {
     // Generated, not constant: the registry is identical either way (every
     // predicate is registered up front), but this exercises the fuller
@@ -494,6 +586,37 @@ fn cmd_lab_run(args: &[String]) -> Result<(), String> {
 fn cmd_lab_list_metrics() -> Result<(), String> {
     print!("{}", hornvale_lab::render_metric_list());
     Ok(())
+}
+
+/// Emit a scene description as JSON on stdout: `scene tiles` renders the
+/// cartographic tile lattice (scene/tiles/v1), and `scene system` renders the
+/// system's orbital elements for the orrery (scene/system/v1). Deterministic;
+/// CI drift-checks the committed example scene.
+fn cmd_scene(args: &[String]) -> Result<(), String> {
+    match args.get(1).map(String::as_str) {
+        Some("tiles") => {
+            let world = load_world(args)?;
+            let width = match flag_value(args, "--width") {
+                Some(raw) => raw
+                    .parse::<u32>()
+                    .map_err(|e| format!("--width must be a u32: {e}"))?,
+                None => 256,
+            };
+            let scene = hornvale_scene::tiles_scene(&world, width).map_err(|e| e.to_string())?;
+            println!("{}", hornvale_scene::scene_json(&scene));
+            Ok(())
+        }
+        Some("system") => {
+            let world = load_world(args)?;
+            let scene = hornvale_scene::system_scene(&world).map_err(|e| e.to_string())?;
+            println!("{}", hornvale_scene::system_json(&scene));
+            Ok(())
+        }
+        Some(other) => Err(format!(
+            "unknown scene kind '{other}'; known kinds: tiles, system"
+        )),
+        None => Err("scene needs a kind; known kinds: tiles, system".to_string()),
+    }
 }
 
 #[cfg(test)]
@@ -754,5 +877,51 @@ mod tests {
     #[test]
     fn usage_mentions_dictionary() {
         assert!(USAGE.contains("dictionary"));
+    }
+
+    #[test]
+    fn scene_with_no_subcommand_is_an_error() {
+        let err = cmd_scene(&args(&["scene"])).unwrap_err();
+        assert!(err.contains("tiles"), "should name the known kinds: {err}");
+    }
+
+    #[test]
+    fn scene_unknown_kind_is_an_error() {
+        let err = cmd_scene(&args(&["scene", "dioramas"])).unwrap_err();
+        assert!(err.contains("tiles"));
+    }
+
+    #[test]
+    fn usage_mentions_scene() {
+        assert!(usage().contains("scene tiles"));
+    }
+
+    fn test_generated_world() -> World {
+        world_builder::build_world(
+            Seed(42),
+            &Default::default(),
+            world_builder::SkyChoice::Generated,
+            &Default::default(),
+            &Default::default(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn scene_system_emits_the_schema() {
+        let json = hornvale_scene::system_json(
+            &hornvale_scene::system_scene(&test_generated_world()).unwrap(),
+        );
+        assert!(json.contains("\"scene/system/v1\""));
+        assert!(json.contains("\"moons\""));
+    }
+
+    #[test]
+    fn scene_unknown_kind_names_system() {
+        let err = cmd_scene(&args(&["scene", "dioramas"])).unwrap_err();
+        assert!(
+            err.contains("system"),
+            "known kinds must include system: {err}"
+        );
     }
 }
