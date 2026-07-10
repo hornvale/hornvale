@@ -89,6 +89,7 @@
 | `blue` | language | quality | the color term for blue |
 | `bone` | language | body | the rigid frame of a body |
 | `brown` | language | quality | the color term for brown |
+| `bugbear-kind` | species | living | a bugbear |
 | `child` | language | kin | one's son or daughter |
 | `coral-reef` | climate | terrain | a biome class |
 | `dark` | language | quality | the color term for black/dark hues |
@@ -108,6 +109,7 @@
 | `hadal-trench` | climate | terrain | a biome class |
 | `hand` | language | body | the manipulating limb-end |
 | `hearth` | settlement | social | the fire at the center of a home |
+| `hobgoblin-kind` | species | living | a hobgoblin |
 | `home` | settlement | social | one's dwelling |
 | `hydrothermal-vent` | climate | terrain | a biome class |
 | `ice` | climate | substance | frozen water |

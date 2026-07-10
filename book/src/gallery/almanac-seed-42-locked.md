@@ -27,10 +27,11 @@ The highest land stands 3919 m above the sea.
 The air organizes into a single day–night overturning (tidally locked); 10 land biomes and 8 marine biomes cover the globe.
 Some 8% of the surface is habitable — land with water and a tolerable season.
 
-- **Xngatnebvnedned** — temperate-rainforest
-- **Ngakngotned** — temperate-rainforest
-- **Vngobngobxnotnednadnob** — temperate-forest
-- **Ngebxngedned** — temperate-forest
+- **Xngatnebvned** — temperate-rainforest
+- **Xorogroq** — temperate-rainforest
+- **Ttoemjeo** — temperate-forest
+- **Vngooshshngaosh** — temperate-forest
+- **Ngebxnged** — temperate-forest
 - **Raratrratrrot** — alpine
 - **Rrarrarro** — temperate-forest
 - **Rarrogrro** — temperate-forest
@@ -38,21 +39,21 @@ Some 8% of the surface is habitable — land with water and a tolerable season.
 - **Rarroroqraq** — temperate-forest
 - **Rrararroxa** — temperate-forest
 - **Rararaxora** — tropical-seasonal-forest
-- **Fngobfngodned** — tropical-seasonal-forest
-- **Sfeknadngednoknek** — tropical-seasonal-forest
-- **Vngakvngabxnednoknekned** — tropical-seasonal-forest
-- **Svakxnadnoknekned** — tropical-seasonal-forest
-- **Ngokxnotsfadnednoknek** — tropical-seasonal-forest
+- **Fngobfngod** — tropical-seasonal-forest
+- **Sfeknadnged** — tropical-seasonal-forest
+- **Vngakvngabxned** — tropical-seasonal-forest
+- **Svakxnad** — tropical-seasonal-forest
+- **Ngokxnotsfad** — tropical-seasonal-forest
 - **Rarrarrorora** — temperate-forest
-- **Xnodngeknoknekned** — tropical-seasonal-forest
-- **Zxedneknodnoknekned** — tropical-seasonal-forest
-- **Fneknebzfotnednoknek** — tropical-seasonal-forest
-- **Zhvabnetned** — tropical-seasonal-forest
-- **Fngatzhxodnoknekned** — tropical-seasonal-forest
+- **Xnodngek** — tropical-seasonal-forest
+- **Zxedneknod** — tropical-seasonal-forest
+- **Fneknebzfot** — tropical-seasonal-forest
+- **Zhvabnet** — tropical-seasonal-forest
+- **Fngatzhxod** — tropical-seasonal-forest
 - **Rarararokxarrat** — tropical-seasonal-forest
-- **Vngeksfaknednoknek** — tropical-seasonal-forest
+- **Vngeksfak** — tropical-seasonal-forest
 - **Rararaxarrok** — tropical-seasonal-forest
-- **Netzhxednoknekned** — tropical-seasonal-forest
+- **Netzhxed** — tropical-seasonal-forest
 - **Rararrarrog** — tropical-seasonal-forest
 - **Raroxorra** — tropical-seasonal-forest
 
@@ -64,31 +65,55 @@ The frost retreated: at the glacial maximum (day -243500000), ice advanced over 
 
 ## The People
 
-The land holds 28 settlement(s).
-The chief goblin settlement, Xngatnebvnedned, holds 522 souls amid temperate-rainforest.
-The chief kobold settlement, Raratrratrrot, holds 328 souls amid alpine.
+The land holds 29 settlement(s).
+The chief bugbear settlement, Vngooshshngaosh, holds 406 souls amid temperate-forest.
+The chief goblin settlement, Xngatnebvned, holds 522 souls amid temperate-rainforest.
+The chief hobgoblin settlement, Ttoemjeo, holds 382 souls amid temperate-forest.
+The chief kobold settlement, Xorogroq, holds 404 souls amid temperate-rainforest.
 
-The goblin village of **Xngatnebvnedned**, population 522.
+The bugbear lair of **Vngooshshngaosh**, population 406.
 
-Xngatnebvnedned lives by farming.
+Vngooshshngaosh lives by farming.
+Its roles, lowest to highest: slave, forager, omen-reader, headman.
+
+The goblin village of **Xngatnebvned**, population 522.
+
+Xngatnebvned lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 
-The kobold warren of **Raratrratrrot**, population 328.
+The hobgoblin legion of **Ttoemjeo**, population 382.
 
-Raratrratrrot lives by fishing.
-Its roles, lowest to highest: digger, elders.
+Ttoemjeo lives by farming.
+Its roles, lowest to highest: slave, laborer, smith, augur, warlord.
+
+The kobold warren of **Xorogroq**, population 404.
+
+Xorogroq lives by farming.
+Its roles, lowest to highest: digger, shaper, keeper, elders.
 
 ## The Gods
 
 An organized priesthood tends a pantheon:
 
-> Nedngat the Vngakned is ever: Nedngat the Vngakned watches unceasing. So it was, so it is. *(who presides)*
+> Bvaash the Shngaoshbvaash is: Bvaash the Shngaoshbvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-The warren of **Raratrratrrot** keeps its own folk pantheon:
+In the village of **Xngatnebvned**, an organized priesthood tends its own pantheon:
 
-> Raro Ro is: Raro Ro is always watching. That's how it's always been. That's how it's always been. Raro is a great one among the gods.
+> Neb the Nodneb is ever: Neb the Nodneb watches unceasing. So it was, so it is. *(who presides)*
+>
+> — derived from the phenomenon *celestial-body*
+
+In the legion of **Ttoemjeo**, an organized priesthood tends its own pantheon:
+
+> Fee the Ngjoofee is ever: Fee the Ngjoofee watches unceasing. So it was, so it is. *(who presides)*
+>
+> — derived from the phenomenon *celestial-body*
+
+In the warren of **Xorogroq**, an organized priesthood tends its own pantheon:
+
+> Rora Ra is: Rora Ra is always watching. That's how it's always been. That's how it's always been. Rora is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 

@@ -19,31 +19,32 @@ The highest land stands 3919 m above the sea.
 The air organizes into 3 circulation band(s) per hemisphere; 12 land biomes and 9 marine biomes cover the globe.
 Some 12% of the surface is habitable — land with water and a tolerable season.
 
-- **Ngokzhvabngob** — shrubland
-- **Natxngedngadnedngob** — shrubland
-- **Zxebzxedned** — shrubland
-- **Ngadnotnedngob** — shrubland
+- **Ngokzhvab** — shrubland
 - **Xaxorarrotrrot** — tropical-rainforest
-- **Zxebnedxnotned** — shrubland
-- **Netzhfotnadnob** — temperate-forest
-- **Vnodxngoknednadnob** — temperate-forest
-- **Ngakvngobngob** — shrubland
+- **Kbeagbeatbea** — shrubland
+- **Vngaoshvngoo** — shrubland
+- **Zxebzxed** — shrubland
+- **Zxebnedxnot** — shrubland
+- **Netzhfot** — temperate-forest
+- **Vnodxngok** — temperate-forest
+- **Ngakvngob** — shrubland
 - **Rarakrot** — savanna
 - **Xoraragrrog** — temperate-rainforest
-- **Fngetzxekzhxaknotngokned** — tropical-rainforest
+- **Nokfnet** — shrubland
+- **Fngetzxekzhxak** — tropical-rainforest
 - **Xaxoxakraq** — tropical-rainforest
-- **Xngatnebvnednotngokned** — tropical-rainforest
-- **Ngetzhfebnednadnob** — temperate-forest
-- **Zxedsxodnednotngok** — tropical-rainforest
+- **Xngatnebvned** — tropical-rainforest
+- **Ngetzhfeb** — temperate-forest
+- **Zxedsxod** — tropical-rainforest
 - **Raratrra** — alpine
 - **Raxaxorrarroxo** — tropical-rainforest
-- **Fnetfnebngot** — taiga
-- **Nakfngebngetngot** — taiga
+- **Fnetfneb** — taiga
+- **Nakfngebnget** — taiga
 - **Rraraqxakxog** — temperate-forest
 - **Rarragragra** — alpine
 - **Xaxorogrog** — tropical-rainforest
 - **Raxaxorotxo** — tropical-rainforest
-- **Zhfodfnaksvetned** — taiga
+- **Zhfodfnaksvet** — taiga
 - **Raraxara** — tropical-rainforest
 - **Xokrraxarrorrot** — temperate-grassland
 - **Rararrogxaqxa** — shrubland
@@ -53,19 +54,19 @@ Some 12% of the surface is habitable — land with water and a tolerable season.
 - **Raxaxarro** — alpine
 - **Raxatro** — tropical-rainforest
 - **Xaxorarrakrat** — tropical-rainforest
-- **Zvebnobnednoknek** — tropical-seasonal-forest
+- **Zvebnob** — tropical-seasonal-forest
 - **Xaxoraratro** — tropical-rainforest
 - **Xaxoraxoxaxa** — tropical-rainforest
 - **Raxaxorogro** — tropical-rainforest
 - **Raxaxoxokraro** — tropical-rainforest
 - **Rarrotrogxo** — tropical-rainforest
-- **Xngatnebfngodned** — taiga
-- **Ngadsvokngetngot** — taiga
+- **Xngatnebfngod** — taiga
+- **Ngadsvoknget** — taiga
 - **Raxogxog** — temperate-grassland
 - **Rarararrarra** — tropical-seasonal-forest
-- **Zhfoksfetfngakngot** — taiga
+- **Zhfoksfetfngak** — taiga
 - **Rarraxot** — tropical-seasonal-forest
-- **Zxobnaknedngot** — taiga
+- **Zxobnak** — taiga
 - **Xaxoraratrokxa** — taiga
 - **Rarararaxarag** — tropical-seasonal-forest
 
@@ -73,14 +74,26 @@ Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
-The land holds 49 settlement(s).
-The chief goblin settlement, Ngokzhvabngob, holds 448 souls amid shrubland.
+The land holds 50 settlement(s).
+The chief bugbear settlement, Vngaoshvngoo, holds 288 souls amid shrubland.
+The chief goblin settlement, Ngokzhvab, holds 448 souls amid shrubland.
+The chief hobgoblin settlement, Kbeagbeatbea, holds 292 souls amid shrubland.
 The chief kobold settlement, Xaxorarrotrrot, holds 348 souls amid tropical-rainforest.
 
-The goblin village of **Ngokzhvabngob**, population 448.
+The bugbear lair of **Vngaoshvngoo**, population 288.
 
-Ngokzhvabngob lives by fishing.
+Vngaoshvngoo lives by fishing.
+Its roles, lowest to highest: forager, headman.
+
+The goblin village of **Ngokzhvab**, population 448.
+
+Ngokzhvab lives by fishing.
 Its roles, lowest to highest: fisher, chief.
+
+The hobgoblin legion of **Kbeagbeatbea**, population 292.
+
+Kbeagbeatbea lives by fishing.
+Its roles, lowest to highest: laborer, warlord.
 
 The kobold warren of **Xaxorarrotrrot**, population 348.
 
@@ -91,13 +104,25 @@ Its roles, lowest to highest: digger, warden, shaper, keeper, elders.
 
 The people keep a folk pantheon:
 
-> Nedngat the Ngoknedngat is ever: Nedngat the Ngoknedngat watches unceasing. So it was, so it is.
+> Bvaash the Shngooshbvaash is: Bvaash the Shngooshbvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+>
+> — derived from the phenomenon *celestial-body*
+
+The village of **Ngokzhvab** keeps its own folk pantheon:
+
+> Neb the Zhxebneb is ever: Neb the Zhxebneb watches unceasing. So it was, so it is.
+>
+> — derived from the phenomenon *celestial-body*
+
+The legion of **Kbeagbeatbea** keeps its own folk pantheon:
+
+> Fee the Qtaafee is ever: Fee the Qtaafee watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
 In the warren of **Xaxorarrotrrot**, an organized priesthood tends its own pantheon:
 
-> Ro Ro is: Ro Ro is always watching. That's how it's always been. That's how it's always been. Ro is the highest among the gods. *(who presides)*
+> Ra Ra is: Ra Ra is always watching. That's how it's always been. That's how it's always been. Ra is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
