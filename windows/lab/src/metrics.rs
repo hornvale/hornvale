@@ -16,6 +16,7 @@ use hornvale_worldgen::{
 use hornvale_astronomy::SkyPins;
 
 /// A world and its derived astronomy/calendar/belief context.
+/// type-audit: bare-ok(prose: notes)
 pub struct WorldView {
     /// The world ledger.
     pub world: World,
@@ -78,6 +79,7 @@ impl WorldView {
 }
 
 /// A single-value outcome from a metric extractor.
+/// type-audit: pending(wave-3: Number.0), bare-ok(identifier-text: Text.0), bare-ok(flag: Flag.0)
 #[derive(Clone, Debug, PartialEq)]
 pub enum MetricValue {
     /// A floating-point quantity.
@@ -91,6 +93,7 @@ pub enum MetricValue {
 }
 
 /// The kind of analysis a metric supports, with derived bucket edges.
+/// type-audit: pending(wave-3: Numeric.bucket_edges)
 #[derive(Clone, Debug, PartialEq)]
 pub enum SummaryKind {
     /// Open-ended enumeration of distinct text values.
@@ -105,6 +108,7 @@ pub enum SummaryKind {
 }
 
 /// An analyzable property of a world, with extraction logic.
+/// type-audit: bare-ok(identifier-text: name), bare-ok(prose: doc)
 pub struct Metric {
     /// The metric's canonical name.
     pub name: &'static str,
@@ -1711,6 +1715,7 @@ fn matches_literal(chars: &[char], pos: usize, s: &str) -> bool {
 /// Each row names the metric, its summary kind, its histogram bucket edges
 /// (populated for `SummaryKind::Numeric`; blank for `Categorical`/`Flag`,
 /// which have no buckets), and its one-line doc.
+/// type-audit: bare-ok(artifact: return)
 pub fn render_metric_list() -> String {
     let metrics = registry();
     let mut table = String::from("| Name | Kind | Buckets | Doc |\n");

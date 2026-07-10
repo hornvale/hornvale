@@ -27,16 +27,20 @@ use hornvale_kernel::{ConceptKind, ConceptRegistry, EntityId, RegistryError, Wor
 /// 10,242 cells). The composition root builds `Geosphere::new(GLOBE_LEVEL)`
 /// once per process; every terrain (and, in Plan 3c, climate) CellMap in a
 /// world is built against that mesh and must only ever be queried with it.
+/// type-audit: bare-ok(count)
 pub const GLOBE_LEVEL: u32 = 5;
 
 /// Predicate marking an entity as a traversable place.
+/// type-audit: bare-ok(identifier-text)
 pub const IS_PLACE: &str = "is-place";
 /// Predicate giving a place's biome.
+/// type-audit: bare-ok(identifier-text)
 pub const BIOME: &str = "biome";
 
 /// Every seed-derivation label this crate uses, with docs. All chains hang
 /// off the world seed's "terrain" derivation. Labels are permanent
 /// save-format contracts.
+/// type-audit: bare-ok(identifier-text)
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     vec![
         ("terrain", "root stream for tectonic genesis"),
@@ -109,6 +113,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
 }
 
 /// A place as terrain knows it.
+/// type-audit: bare-ok(identifier-text: name), bare-ok(identifier-text: biome)
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlaceInfo {
     /// The place's entity id.

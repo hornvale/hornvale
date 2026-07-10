@@ -13,10 +13,12 @@ pub struct MoonsPin {
 
 impl MoonsPin {
     /// Exactly `n` moons: loud failure below n.
+    /// type-audit: bare-ok(count)
     pub fn exact(n: u32) -> Result<MoonsPin, GenesisError> {
         MoonsPin::graded(n, 0)
     }
     /// `min` essential plus up to `extra` desired.
+    /// type-audit: bare-ok(count)
     pub fn graded(min: u32, extra: u32) -> Result<MoonsPin, GenesisError> {
         let Some(want) = min.checked_add(extra) else {
             return Err(GenesisError::InvalidPin {
@@ -33,10 +35,12 @@ impl MoonsPin {
         Ok(MoonsPin { min, want })
     }
     /// The essential count.
+    /// type-audit: bare-ok(count)
     pub fn min(&self) -> u32 {
         self.min
     }
     /// The desired count.
+    /// type-audit: bare-ok(count)
     pub fn want(&self) -> u32 {
         self.want
     }
@@ -61,6 +65,7 @@ pub struct SkyPins {
 }
 
 /// Pinnable rotation regimes.
+/// type-audit: pending(wave-1)
 #[derive(Debug, Clone, PartialEq)]
 pub enum RotationPin {
     /// Drawn-length ordinary spin.
@@ -97,6 +102,7 @@ pub enum ForcingPin {
 }
 
 /// Why sky genesis refused to produce a system.
+/// type-audit: bare-ok(identifier-text: InvalidPin.pin), bare-ok(prose: InvalidPin.reason), bare-ok(identifier-text: UnsatisfiablePin.pin), bare-ok(prose: UnsatisfiablePin.reason)
 #[derive(Debug, Clone, PartialEq)]
 pub enum GenesisError {
     /// A pin's value is outside its legal range.
@@ -132,6 +138,7 @@ impl std::error::Error for GenesisError {}
 
 /// Render every pinned field of `pins` as a round-trippable `key=value`
 /// string (spec §8). Unpinned (`None`) fields emit nothing.
+/// type-audit: bare-ok(identifier-text)
 pub fn pin_strings(pins: &SkyPins) -> Vec<String> {
     let mut out = Vec::new();
 
@@ -182,6 +189,7 @@ pub fn pin_strings(pins: &SkyPins) -> Vec<String> {
 /// Parse one `key=value` pin string (as produced by `pin_strings`) into
 /// `pins`, overwriting whichever field it names. Unknown keys or malformed
 /// values are user-facing errors naming the offending key/value.
+/// type-audit: bare-ok(identifier-text: s), bare-ok(prose: return)
 pub fn parse_pin(s: &str, pins: &mut SkyPins) -> Result<(), String> {
     let (key, value) = s
         .split_once('=')

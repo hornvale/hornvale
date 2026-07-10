@@ -13,13 +13,17 @@ use hornvale_kernel::{NearestCellIndex, World};
 use serde::Serialize;
 
 /// The schema identifier this crate emits.
+/// type-audit: bare-ok(identifier-text)
 pub const TILES_SCHEMA: &str = "scene/tiles/v1";
 /// Smallest legal lattice width.
+/// type-audit: bare-ok(count)
 pub const MIN_WIDTH: u32 = 16;
 /// Largest legal lattice width.
+/// type-audit: bare-ok(count)
 pub const MAX_WIDTH: u32 = 1024;
 
 /// Scene construction failed; the reason, loudly (the GenesisError manner).
+/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0)
 #[derive(Debug, Clone, PartialEq)]
 pub enum SceneError {
     /// Width must be even (height is width / 2).
@@ -46,6 +50,7 @@ impl std::fmt::Display for SceneError {
 }
 
 /// A named point on the lattice — settlements today, more kinds later.
+/// type-audit: bare-ok(identifier-text: name), bare-ok(identifier-text: kind), pending(wave-3: latitude), pending(wave-3: longitude)
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct Feature {
     /// The feature's canonical name.
@@ -62,6 +67,7 @@ pub struct Feature {
 /// the JSON key order and is contract — never reorder. Layers are
 /// row-major, top row first: latitude 90→−90 down, longitude −180→180
 /// across, pixel centers.
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest)
 #[derive(Debug, Serialize)]
 pub struct TilesScene {
     /// Always `scene/tiles/v1`.
@@ -93,6 +99,7 @@ pub struct TilesScene {
 /// Build the `scene/tiles/v1` scene for `world` at `width` tiles across
 /// (height is `width / 2`). Deterministic: same world + same width →
 /// the same scene, byte-for-byte once serialized.
+/// type-audit: bare-ok(count: width)
 pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> {
     if !(MIN_WIDTH..=MAX_WIDTH).contains(&width) {
         return Err(SceneError::WidthOutOfRange(width));
@@ -212,14 +219,17 @@ fn place_latlon(world: &World, id: hornvale_kernel::EntityId) -> Option<(f64, f6
 /// Serialize a scene as compact JSON — the wire and artifact form.
 /// Deterministic: struct field order fixes key order; serde_json's float
 /// text is shortest-round-trip.
+/// type-audit: bare-ok(artifact: return)
 pub fn scene_json(scene: &TilesScene) -> String {
     serde_json::to_string(scene).expect("a TilesScene always serializes")
 }
 
 /// The schema identifier for the system (orrery) scene kind.
+/// type-audit: bare-ok(identifier-text)
 pub const SYSTEM_SCHEMA: &str = "scene/system/v1";
 
 /// The central star's semantic elements.
+/// type-audit: bare-ok(identifier-text: class_name), pending(wave-3: luminosity_rel), pending(wave-3: hz_inner_au), pending(wave-3: hz_outer_au)
 #[derive(Debug, Serialize)]
 pub struct StarElem {
     /// Descriptive spectral class name (e.g. `"yellow dwarf (G)"`).
@@ -233,6 +243,7 @@ pub struct StarElem {
 }
 
 /// The anchor world's orbital and rotational elements.
+/// type-audit: pending(wave-3: orbit_au), pending(wave-3: year_days), pending(wave-3: day_length_days), pending(wave-3: obliquity_deg), bare-ok(ratio: year_phase_offset)
 #[derive(Debug, Serialize)]
 pub struct WorldElem {
     /// Orbital radius, AU.
@@ -249,6 +260,7 @@ pub struct WorldElem {
 }
 
 /// One moon's orbital elements.
+/// type-audit: pending(wave-3: sidereal_days), pending(wave-3: distance_mm), bare-ok(ratio: phase_offset), bare-ok(ratio: size_rel)
 #[derive(Debug, Serialize)]
 pub struct MoonElem {
     /// Sidereal orbital period, standard days.
@@ -262,6 +274,7 @@ pub struct MoonElem {
 }
 
 /// One `scene/system/v1` document: the system's orbital geometry as elements.
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed)
 #[derive(Debug, Serialize)]
 pub struct SystemScene {
     /// Always `scene/system/v1`.
@@ -325,6 +338,7 @@ pub fn system_scene(world: &World) -> Result<SystemScene, SceneError> {
 }
 
 /// Serialize a `SystemScene` to compact JSON (mirrors [`scene_json`]).
+/// type-audit: bare-ok(artifact: return)
 pub fn system_json(scene: &SystemScene) -> String {
     serde_json::to_string(scene).expect("a SystemScene always serializes")
 }

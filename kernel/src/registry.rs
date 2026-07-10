@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 /// Definition of a fact predicate. `functional` means a subject may hold
 /// at most one distinct object under this predicate — the contradiction
 /// rule the ledger enforces.
+/// type-audit: bare-ok(identifier-text: name), bare-ok(flag: functional), bare-ok(prose: doc)
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PredicateDef {
     /// Predicate name (map key).
@@ -42,6 +43,7 @@ pub enum ConceptKind {
 
 /// Definition of a named concept: the word-level vocabulary entry
 /// distinct from predicates and phenomenon kinds.
+/// type-audit: bare-ok(identifier-text: name), bare-ok(identifier-text: domain), bare-ok(prose: doc)
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConceptDef {
     /// Concept name (map key).
@@ -55,6 +57,7 @@ pub struct ConceptDef {
 }
 
 /// Errors from concept registration.
+/// type-audit: bare-ok(identifier-text)
 #[derive(Debug)]
 pub enum RegistryError {
     /// A concept was re-registered with a different definition.
@@ -89,6 +92,7 @@ pub struct ConceptRegistry {
 
 impl ConceptRegistry {
     /// Idempotent for identical definitions; errors on conflict.
+    /// type-audit: bare-ok(identifier-text: name), bare-ok(flag: functional), bare-ok(prose: doc)
     pub fn register_predicate(
         &mut self,
         name: &str,
@@ -113,11 +117,13 @@ impl ConceptRegistry {
     }
 
     /// Look up a predicate definition by name.
+    /// type-audit: bare-ok(identifier-text)
     pub fn predicate(&self, name: &str) -> Option<&PredicateDef> {
         self.predicates.get(name)
     }
 
     /// Idempotent for identical docs; errors on conflict.
+    /// type-audit: bare-ok(identifier-text: name), bare-ok(prose: doc)
     pub fn register_phenomenon_kind(&mut self, name: &str, doc: &str) -> Result<(), RegistryError> {
         match self.phenomenon_kinds.get(name) {
             Some(existing) if existing == doc => Ok(()),
@@ -133,6 +139,7 @@ impl ConceptRegistry {
     }
 
     /// Look up a phenomenon kind's doc by name.
+    /// type-audit: bare-ok(identifier-text)
     pub fn phenomenon_kind(&self, name: &str) -> Option<&str> {
         self.phenomenon_kinds.get(name).map(String::as_str)
     }
@@ -150,6 +157,7 @@ impl ConceptRegistry {
     }
 
     /// Idempotent for identical definitions; errors on conflict.
+    /// type-audit: bare-ok(identifier-text: name), bare-ok(identifier-text: domain), bare-ok(prose: doc)
     pub fn register_concept(
         &mut self,
         name: &str,
@@ -176,6 +184,7 @@ impl ConceptRegistry {
     }
 
     /// Look up a concept definition by name.
+    /// type-audit: bare-ok(identifier-text)
     pub fn concept(&self, name: &str) -> Option<&ConceptDef> {
         self.concepts.get(name)
     }

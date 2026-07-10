@@ -194,16 +194,17 @@ whole sequence. Re-measured (recorded as history): 500-seed mean
 zero-collision); seed 42 restored to 59/59 distinct. An ~8x improvement —
 still above the bound.
 
-*Fix 2: the stem widened to the Tongues-era range (current, pinned).* The
+*Fix 2: the stem widened to the Tongues-era range (recorded as history;
+re-pinned at the merge, below).* The
 residual rate traced to stem entropy: fix 1's unique element drew 1-2
 syllables where the retired Tongues-era settlement stem drew 2-3, and the
 descriptor part adds almost no within-species entropy (few biomes). The
 stem draw was widened to **2-3 syllables** — same stream position, same
-everything else. Re-measured: the full 10k census reads a mean in-world
+everything else. Re-measured: the full 10k census read a mean in-world
 collision rate of **4.94%** (mean 0.049392021358371), with **3,327 of
 9,997 present worlds (33.3%) zero-collision**; the 500-seed
-`census-lands-drift` population reads **148 of 500 worlds zero-collision,
-352 nonzero, mean 4.91%** (0.049129710810206), pinned exactly in
+`census-lands-drift` population read **148 of 500 worlds zero-collision,
+352 nonzero, mean 4.91%** (0.049129710810206), pinned at the time in
 `name_collision_rate_is_measured_and_pinned`. This is a **~17.6x
 improvement over the defective first measurement — and still, narrowly,
 above the preregistered directional bound** (4.678%; the 500-seed mean
@@ -211,24 +212,65 @@ misses it by 0.23 percentage points, about 1.05x the bound): the claim,
 as stated, **remains failed**, and per ADR 0016 the bound is not widened
 — the measured rate is pinned as-is and the failure stands recorded.
 
-The companion name-length distributions move with each fix: at 10k,
-goblin names now average **13.65 characters** (mean 13.646295362775010,
+The companion name-length distributions move with each fix: at that
+measurement, at 10k,
+goblin names averaged **13.65 characters** (mean 13.646295362775010,
 9,972 present, 28 absent) and kobold names **14.13** (mean
 14.127046688324784, 9,977 present, 23 absent) — site word plus a
 2-3-syllable unique stem runs longer than the Tongues-era free stems
 (9.89 / 9.77), the pure compounds (6.51 / 6.82), and fix 1's shorter
-stems (10.56 / 11.01). The 500-seed calibration pins
+stems (10.56 / 11.01). The 500-seed calibration pinned
 **13.811936859785147** (goblin) and **14.236940649335502** (kobold)
 (`name_length_distributions_are_measured_and_pinned`), and the null
 control's own name-length SMD — the goblin vs. goblin-twin gap over
-`census-of-the-meeting` — reads **−0.066905196528**
+`census-of-the-meeting` — read **−0.066905196528**
 (`null_control_name_length_smd_is_pinned`; −0.118235 at the Tongues-era
 measurement, −0.045751 pre-fix, −0.050617 after fix 1), still comfortably
 inside the ±0.2 sampling bound
 `null_control_distributions_are_within_the_sampling_bound` asserts, so the
-null control's own verdict (Study 009) is unaffected by this re-pin.
+null control's own verdict (Study 009) is unaffected by any of these
+re-pins.
 
-## Verdict: H1-H3 confirmed exactly; H4 failed, two fixes later the rate is 4.91% against a 4.678% bound — still failed, honestly reported
+## The merge re-baseline
+
+The merge that landed this campaign also landed Firm Ground II's placed
+observers, and the reconciliation extended them into glossed naming: a
+settlement's presiding phenomenon is now observed from the settlement's
+own cell, under its own hemisphere-culled sky, and a deity's gloss rides
+the same placed observation religion derives its beliefs from — the
+spec's own truthfulness definition, applied to the observer as well as
+the facts. Settlement names changed wholesale, so every H4 companion
+figure was re-measured and re-pinned on the merged code; the structural
+invariants (H1-H3) passed unmodified, which is exactly what they were
+frozen to prove.
+
+The per-settlement skies *improved* the collision rate: more distinct
+presiding concepts per world means a wider descriptor space and fewer
+repeated compounds. The 500-seed `census-lands-drift` population now
+reads **159 of 500 worlds zero-collision, 341 nonzero, mean 4.70%**
+(0.047015587357954), pinned in
+`name_collision_rate_is_measured_and_pinned`; the name-length means
+re-pin at **13.869961501975723** (goblin, 498 present) and
+**14.262681953972956** (kobold, 498 present), and the null control's
+name-length SMD at **−0.065377251231494** — still comfortably inside the
+±0.2 sampling bound.
+
+The full 10,000-seed census, re-run on the merged code (2026-07-10,
+under `--release`, after the debug/release byte-identity cross-check
+ratified optimization-level independence), confirms the pins at scale:
+mean in-world collision rate **4.69%** (0.046937772084595), with **3,566
+of 9,997 present worlds (35.7%) zero-collision**; goblin names average
+**13.70 characters** (mean 13.699601964162952, 9,972 present, 28 absent)
+and kobold names **14.19** (mean 14.190698182591724, 9,977 present, 23
+absent). H1 re-confirms at **9,997/9,997 glosses true**, H2 at
+**40,000/40,000 flags true**, H3 at **4 vs. 2 in every present world** —
+zero exceptions, as before. And the honest coda: even improved, the 10k
+mean sits **just above the preregistered 4.678% bound** — by 0.016
+percentage points, about 0.3% of itself. Per ADR 0016 the bound is not
+retuned; H4's verdict as stated remains failed, and decision 0024's
+reframing (below) is where that failure rests.
+
+## Verdict: H1-H3 confirmed exactly; H4 failed, two fixes and a merge re-baseline later the rate is 4.70% against a 4.678% bound — still failed, honestly reported
 
 H1, H2, and H3 hold with zero exceptions across every present world in
 both the 10,000-seed census (re-confirmed unchanged on every re-run:
@@ -238,21 +280,24 @@ hue-depth 4 vs. 2 at every seed) and the 500-seed CI-guarded calibration
 already proved at seed 42 hold at population scale, and the pack-depth
 ordering is the structural constant it was derived to be.
 
-H4's story has three honest chapters: the preregistered bound (< 4.678%);
+H4's story has four honest chapters: the preregistered bound (< 4.678%);
 the first census exposing a genuine **naming defect** (86.3-86.8% —
 pure site-concept compounds pigeonholed against settlement counts);
-fix 1 (the settlement stem) cutting it to 10.7-11.0%; and fix 2 (the stem
-widened to the Tongues-era 2-3-syllable range) reaching **4.91%
-(500-seed) / 4.94% (10k) — a ~17.6x improvement that still misses the
-bound by about five percent of itself.** Per ADR 0016 the bound stays as
+fix 1 (the settlement stem) cutting it to 10.7-11.0%; fix 2 (the stem
+widened to the Tongues-era 2-3-syllable range) reaching 4.91%
+(500-seed) / 4.94% (10k); and the merge re-baseline's per-settlement
+culled skies reaching **4.70% (500-seed) / 4.69% (10k) — a ~18x
+improvement over the defect that still misses the bound, now by less
+than one percent of itself.** Per ADR 0016 the bound stays as
 preregistered and the verdict stays failed; the iteration loop is closed
 by decision, not by silently re-tuning either the bound or the design
 further. Whether 4.678% — an anchor inherited from the Tongues-era
 free-stem pool, twice its measured rate — was even the right bound for a
 glossed-compound regime whose names *deliberately* share meaningful
-descriptors, is the open question this page hands to the campaign owner:
-the number that would answer it is pinned, honest, and one decision away
-from either a ratified revised bound or a third design iteration.
+descriptors, was the open question this page handed to the campaign
+owner: the number that would answer it is pinned, honest, and one
+decision away from either a ratified revised bound or a third design
+iteration.
 
 **Interpretation (decision 0024).** The campaign owner took the decision:
 settlement-name uniqueness is a **reference-time property**, and the
@@ -261,8 +306,9 @@ anchored to a naming regime whose stems meant nothing and therefore drew
 from a flat, collision-free space; a meaningful name *should* concentrate
 probability on the words its site is actually made of — two taiga
 settlements both wanting the ice word is the system telling the truth.
-The pinned 4.91% stands as the calibration baseline of meaningful
-toponymy. Collisions are coincidences the world can honestly recount,
+The pinned rate — 4.91% when the decision was taken, 4.70% since the
+merge re-baseline's per-settlement skies — stands as the calibration
+baseline of meaningful toponymy. Collisions are coincidences the world can honestly recount,
 disambiguated where an actual ambiguity appears — in a rendered
 reference, never in the ledger — and they are expected to fall as the
 world grows denser in per-place facts, without the naming engine

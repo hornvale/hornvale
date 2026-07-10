@@ -52,10 +52,25 @@
         "functional": true,
         "doc": "mean orbital eccentricity (deep-time forcing)"
       },
+      "fossil-shoreline": {
+        "name": "fossil-shoreline",
+        "functional": false,
+        "doc": "a fossil shoreline left by deep-time sea-level change"
+      },
+      "frost-retreat": {
+        "name": "frost-retreat",
+        "functional": false,
+        "doc": "the deep-time record of deglaciation"
+      },
       "genesis-note": {
         "name": "genesis-note",
         "functional": false,
         "doc": "a degradation or refusal recorded during sky genesis"
+      },
+      "glacial-maximum-era": {
+        "name": "glacial-maximum-era",
+        "functional": true,
+        "doc": "standard day of peak ice extent"
       },
       "has-caste": {
         "name": "has-caste",
@@ -101,6 +116,11 @@
         "name": "longitude",
         "functional": true,
         "doc": "settlement longitude, degrees"
+      },
+      "max-ice-fraction": {
+        "name": "max-ice-fraction",
+        "functional": true,
+        "doc": "land fraction under ice at the glacial maximum"
       },
       "moon-count": {
         "name": "moon-count",
@@ -156,6 +176,11 @@
         "name": "population",
         "functional": true,
         "doc": "population of a settlement"
+      },
+      "refugium": {
+        "name": "refugium",
+        "functional": false,
+        "doc": "a place habitable through the glacial maximum"
       },
       "scenario-pin": {
         "name": "scenario-pin",
@@ -9124,6 +9149,56 @@
         "place": null,
         "day": 0.0,
         "provenance": "species"
+      },
+      {
+        "subject": 1,
+        "predicate": "glacial-maximum-era",
+        "object": {
+          "Number": -243500000.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "paleoclimate"
+      },
+      {
+        "subject": 1,
+        "predicate": "max-ice-fraction",
+        "object": {
+          "Number": 0.3727027027027027
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "paleoclimate"
+      },
+      {
+        "subject": 1,
+        "predicate": "fossil-shoreline",
+        "object": {
+          "Text": "the sea once reached near -79°, 110°"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "paleoclimate"
+      },
+      {
+        "subject": 1,
+        "predicate": "refugium",
+        "object": {
+          "Text": "life persisted near -21°, 96° through the cold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "paleoclimate"
+      },
+      {
+        "subject": 1,
+        "predicate": "frost-retreat",
+        "object": {
+          "Text": "the frost retreated"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "paleoclimate"
       }
     ],
     "next_entity": 78

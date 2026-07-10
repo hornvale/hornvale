@@ -27,6 +27,7 @@ pub enum BoundaryKind {
 }
 
 /// A cell's strongest cross-plate contact.
+/// type-audit: bare-ok(ratio: magnitude), bare-ok(index: other_plate)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CellBoundary {
     /// The classified kind of the strongest contact.
@@ -93,6 +94,7 @@ pub fn classify_contact(
 /// Every cell's strongest boundary contact: among neighbors on other
 /// plates, the contact with the greatest magnitude (the first neighbor in
 /// ascending order wins ties, via strict `>`). `None` for plate interiors.
+/// type-audit: bare-ok(index: plate_of)
 pub fn boundary_field(
     geo: &Geosphere,
     plate_of: &CellMap<u32>,
@@ -132,6 +134,7 @@ pub fn boundary_field(
 /// deterministic, O(cells). `None` only for a cell no same-plate boundary
 /// cell can reach (a fragmented plate at coarse resolution, or a plate with
 /// no boundary at all); callers treat that as "no boundary influence".
+/// type-audit: bare-ok(index: plate_of), bare-ok(count: return)
 pub fn boundary_distance(
     geo: &Geosphere,
     plate_of: &CellMap<u32>,

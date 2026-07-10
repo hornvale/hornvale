@@ -118,6 +118,7 @@ pub(crate) fn distribution(kind: &SummaryKind, values: &[&MetricValue]) -> Vec<(
 }
 
 /// Render a study result as a deterministic markdown summary with tables.
+/// type-audit: bare-ok(artifact: return)
 pub fn render_summary(result: &RunResult) -> String {
     let mut output = String::new();
 

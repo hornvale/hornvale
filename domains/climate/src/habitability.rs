@@ -13,6 +13,7 @@ const HABITABLE_MAX_C: f64 = 35.0;
 const HABITABLE_MIN_MOISTURE: f64 = 0.2;
 
 /// Whether a cell could host a vale-like settlement.
+/// type-audit: pending(wave-2: temp_c), bare-ok(ratio: moisture), pending(wave-2: elevation_m), pending(wave-2: sea_level_m), bare-ok(flag: return)
 pub fn is_habitable(temp_c: f64, moisture: f64, elevation_m: f64, sea_level_m: f64) -> bool {
     elevation_m >= sea_level_m
         && (HABITABLE_MIN_C..=HABITABLE_MAX_C).contains(&temp_c)
@@ -20,6 +21,7 @@ pub fn is_habitable(temp_c: f64, moisture: f64, elevation_m: f64, sea_level_m: f
 }
 
 /// The per-cell habitability mask.
+/// type-audit: pending(wave-2: elevation), pending(wave-2: mean_temp), bare-ok(ratio: moisture), pending(wave-2: sea_level), bare-ok(flag: return)
 pub fn habitability_map(
     geo: &Geosphere,
     elevation: &CellMap<f64>,
@@ -38,6 +40,7 @@ pub fn habitability_map(
 }
 
 /// The fraction of cells that are habitable.
+/// type-audit: bare-ok(flag: map), bare-ok(ratio: return)
 pub fn habitable_fraction(map: &CellMap<bool>) -> f64 {
     if map.is_empty() {
         return 0.0;

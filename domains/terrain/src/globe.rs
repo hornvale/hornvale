@@ -10,6 +10,7 @@ use hornvale_kernel::{CellMap, Geosphere, Seed};
 
 /// A generated tectonic globe over the shared Geosphere. Recomputed from
 /// the seed on demand; never serialized.
+/// type-audit: bare-ok(index: plate_of), waiver(elevation-convention: elevation), bare-ok(ratio: unrest), pending(wave-2: sea_level), bare-ok(count: drainage), bare-ok(flag: endorheic)
 #[derive(Debug, Clone, PartialEq)]
 pub struct TectonicGlobe {
     /// Plate index per cell (an index into `plates`).
@@ -35,6 +36,7 @@ pub struct TectonicGlobe {
 }
 
 /// What tectonic genesis produced: the globe plus degradation notes.
+/// type-audit: bare-ok(prose: notes)
 #[derive(Debug, Clone, PartialEq)]
 pub struct GenesisOutcome {
     /// The generated globe.
@@ -102,6 +104,7 @@ pub fn generate(
 }
 
 /// Headline numbers of a globe, for facts and the almanac.
+/// type-audit: bare-ok(count: plate_count), bare-ok(ratio: ocean_fraction), pending(wave-2: sea_level_m), pending(wave-2: highest_elevation_m)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GlobeSummary {
     /// How many plates the globe drew (or was pinned to).

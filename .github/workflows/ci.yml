@@ -41,14 +41,21 @@ jobs:
           cargo run -p hornvale -- biome-map --world /tmp/hv-ci-locked.json --out book/src/gallery/biome-seed-42-locked.png > book/src/gallery/biome-seed-42-locked.md
           cargo run -p hornvale -- settlement-map --world /tmp/hv-ci-sky.json --out book/src/gallery/settlement-seed-42.png > book/src/gallery/settlement-seed-42.md
           cargo run -p hornvale -- settlement-map --world /tmp/hv-ci-locked.json --out book/src/gallery/settlement-seed-42-locked.png > book/src/gallery/settlement-seed-42-locked.md
+          cargo run -p hornvale -- paleo-map --world /tmp/hv-ci-sky.json --out book/src/gallery/paleo-seed-42.png > book/src/gallery/paleo-seed-42.md
           cargo run -p hornvale -- star-chart --world /tmp/hv-ci-sky.json --out book/src/gallery/star-chart-seed-42.png > book/src/gallery/star-chart-seed-42.md
           cargo run -p hornvale -- scene tiles --world /tmp/hv-ci-sky.json > book/src/gallery/scene-tiles-seed-42.json
           cargo run -p hornvale -- scene system --world /tmp/hv-ci-sky.json > book/src/gallery/scene-system-seed-42.json
-          cargo run -p hornvale -- lab run studies/census-lands-drift.study.json
-          cargo run -p hornvale -- lab run studies/census-of-the-meeting.study.json
-          cargo run -p hornvale -- lab run studies/census-of-skies.study.json
+          # Lab censuses run in release; the cross-check ratifies that debug
+          # and release build byte-identical worlds before we trust them.
+          # Only the 500-seed drift family runs here — 10k censuses are
+          # author-time-only (decision ci-checks-500-seed-censuses).
+          cargo test -p hornvale --test release_determinism -- --ignored
+          cargo run --release -p hornvale -- lab run studies/census-lands-drift.study.json
+          cargo run --release -p hornvale -- lab run studies/census-of-the-meeting.study.json
           cargo run -p hornvale-scene --example ephemeris_golden > clients/orrery/testdata/ephemeris-seed-42.json
-          git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ clients/orrery/testdata/
+          cargo run --manifest-path tools/type-audit/Cargo.toml -- check
+          cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
+          git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ clients/orrery/testdata/ docs/audits/
 
   atlas:
     name: Atlas client

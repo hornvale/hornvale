@@ -10,38 +10,51 @@ use crate::system::GenesisOutcome;
 use hornvale_kernel::{EntityId, Fact, LedgerError, Value, World};
 
 /// The host star's descriptive spectral class (functional, Text).
+/// type-audit: bare-ok(identifier-text)
 pub const STAR_CLASS: &str = "star-class";
 /// The anchor world is tidally locked: no local solar day exists
 /// (functional, Flag).
+/// type-audit: bare-ok(identifier-text)
 pub const TIDALLY_LOCKED: &str = "tidally-locked";
 /// Solar day length in standard days, for spinning worlds only
 /// (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const DAY_LENGTH_STD: &str = "day-length-std";
 /// Year length in standard days (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const YEAR_LENGTH_STD: &str = "year-length-std";
 /// Axial tilt of the anchor world, in degrees (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const OBLIQUITY_DEGREES: &str = "obliquity-degrees";
 /// How many moons the anchor world has (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const MOON_COUNT: &str = "moon-count";
 /// Orbital period of a moon, in standard days (non-functional, Number —
 /// one per moon).
+/// type-audit: bare-ok(identifier-text)
 pub const MOON_PERIOD_STD: &str = "moon-period-std";
 /// A notable neighbor star visible in the night sky (non-functional, Text —
 /// one per neighbor).
+/// type-audit: bare-ok(identifier-text)
 pub const NOTABLE_NEIGHBOR: &str = "notable-neighbor";
 /// A degradation or refusal recorded during sky genesis (non-functional,
 /// Text — one per note).
+/// type-audit: bare-ok(identifier-text)
 pub const GENESIS_NOTE: &str = "genesis-note";
 /// Which astronomy provider a world uses: `"constant"` or `"generated"`
 /// (functional, Text).
+/// type-audit: bare-ok(identifier-text)
 pub const SKY_PROVIDER: &str = "sky-provider";
 /// An experimenter-supplied pin string conditioning genesis, in
 /// `pins::pin_strings` format (non-functional, Text — one per pin).
+/// type-audit: bare-ok(identifier-text)
 pub const SCENARIO_PIN: &str = "scenario-pin";
 /// Mean orbital eccentricity (deep-time forcing) (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const ECCENTRICITY_MEAN: &str = "eccentricity-mean";
 /// Obliquity oscillation amplitude, degrees (moon-coupled) (functional,
 /// Number).
+/// type-audit: bare-ok(identifier-text)
 pub const OBLIQUITY_AMPLITUDE: &str = "obliquity-amplitude";
 
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {

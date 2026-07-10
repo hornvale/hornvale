@@ -61,6 +61,7 @@ pub use register::{LineContent, LineSentiment, VoiceParams, render_line};
 /// reconstructs per world), the lexicon draws (per-concept roots, the
 /// sound-change cascade, compound headedness), and the name kinds (each a
 /// single deterministic draw).
+/// type-audit: bare-ok(identifier-text)
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     vec![
         (

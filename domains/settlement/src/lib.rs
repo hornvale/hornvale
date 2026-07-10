@@ -15,34 +15,44 @@ pub use placement::{
 use hornvale_kernel::{ConceptKind, ConceptRegistry, EntityId, RegistryError, Value, World};
 
 /// Predicate marking an entity as a settlement.
+/// type-audit: bare-ok(identifier-text)
 pub const IS_SETTLEMENT: &str = "is-settlement";
 /// Predicate giving a settlement's population.
+/// type-audit: bare-ok(identifier-text)
 pub const POPULATION: &str = "population";
 /// Predicate key marking an entity a traversable place (owned/registered by
 /// terrain; settlement commits facts against the same key for generated
 /// cells).
+/// type-audit: bare-ok(identifier-text)
 pub const IS_PLACE: &str = "is-place";
 /// Predicate key giving a place's biome (shared key; see `IS_PLACE`).
+/// type-audit: bare-ok(identifier-text)
 pub const BIOME: &str = "biome";
 /// Predicate: the Geosphere cell id a settlement sits on (functional,
 /// Number).
+/// type-audit: bare-ok(identifier-text)
 pub const CELL_ID: &str = "cell-id";
 /// Predicate: latitude of a settlement, degrees (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const LATITUDE: &str = "latitude";
 /// Predicate: longitude of a settlement, degrees (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const LONGITUDE: &str = "longitude";
 /// Predicate: one round-trippable settlement scenario pin string per pinned
 /// value (non-functional, Text) — the settlement sibling of terrain's
 /// terrain-pin and sky's scenario-pin.
+/// type-audit: bare-ok(identifier-text)
 pub const SETTLEMENT_PIN: &str = "settlement-pin";
 
 /// Seed-derivation labels used by this crate. Labels are permanent
 /// save-format contracts (spec §3); regeneration uses epoch suffixes.
 mod streams {
     /// Root stream label for settlement.
+    /// type-audit: bare-ok(identifier-text)
     pub const ROOT: &str = "settlement";
     /// Per-settlement placement draws (population against carrying
     /// capacity).
+    /// type-audit: bare-ok(identifier-text)
     pub const PLACEMENT: &str = "placement";
 }
 
@@ -56,6 +66,7 @@ mod streams {
 /// 0006). No new label is minted here for the move: nothing under
 /// `settlement/*` derives a name any longer, so publishing a phantom
 /// `settlement/name/v2` would only mislead a reader of the manifest.
+/// type-audit: bare-ok(identifier-text)
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     vec![
         ("settlement", "root stream for settlement generation"),
@@ -106,6 +117,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
 }
 
 /// A settlement as this domain knows it.
+/// type-audit: bare-ok(identifier-text: name), bare-ok(count: population)
 #[derive(Debug, Clone, PartialEq)]
 pub struct VillageInfo {
     /// The settlement's entity id.
@@ -118,6 +130,7 @@ pub struct VillageInfo {
 
 /// Draw a population against a carrying capacity from suitability, seeded per
 /// settlement: `floor + (span x suitability)` jittered by a per-salt draw.
+/// type-audit: pending(wave-3: salt), bare-ok(ratio: suitability), bare-ok(count: return)
 pub fn draw_population(seed: hornvale_kernel::Seed, salt: u64, suitability: f64) -> u32 {
     let mut stream = seed
         .derive(streams::ROOT)
@@ -132,6 +145,7 @@ pub fn draw_population(seed: hornvale_kernel::Seed, salt: u64, suitability: f64)
 /// Draw a non-goblin settlement's population from its species-qualified
 /// stream (`settlement/<species>/population`), same capacity curve as the
 /// goblin draw.
+/// type-audit: bare-ok(identifier-text: species), pending(wave-3: salt), bare-ok(ratio: suitability), bare-ok(count: return)
 pub fn draw_species_population(
     seed: hornvale_kernel::Seed,
     species: &str,

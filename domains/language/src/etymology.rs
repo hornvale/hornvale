@@ -11,7 +11,7 @@
 //! (onset/nucleus/coda templates filled by picking from the phonology's
 //! inventory), over its own seed-derivation path, via
 //! [`crate::naming::Namer::draw_syllables`] and
-//! [`crate::naming::views_of`] — never constructing a
+//! [`crate::naming::segments_of`] — never constructing a
 //! [`crate::phoneme::Segment`] itself, the same carry-forward invariant
 //! naming relies on to keep the `"?"` fallback glyph unreachable.
 #![warn(missing_docs)]
@@ -46,6 +46,7 @@ pub enum RuleKind {
 /// reads 0 as "raise" and 1 as "lower"; every other kind ignores `param`).
 /// The rule family is this closed enum, nothing extensible — `param` is not
 /// a way to add new rule shapes.
+/// type-audit: pending(wave-3: param)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SoundRule {
     /// Which rule this is.
@@ -66,6 +67,7 @@ pub struct Cascade {
 /// itself, and whether it changed anything (a rule whose conditioning
 /// environment never occurred, or whose every candidate output fell outside
 /// the phonology's inventory, records `changed: false`).
+/// type-audit: bare-ok(flag)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AppliedRule {
     /// The rule that was applied.
@@ -118,6 +120,7 @@ fn draw_rule(stream: &mut Stream) -> SoundRule {
 
 /// Draw a 2–4 rule cascade for `species`, from
 /// `seed.derive("language").derive(species).derive("lexicon").derive("cascade")`.
+/// type-audit: bare-ok(identifier-text)
 pub fn draw_cascade(seed: &Seed, species: &str) -> Cascade {
     let mut stream = seed
         .derive("language")
@@ -137,6 +140,7 @@ const PROTO_ROOT_SYLLABLE_RANGE: (u32, u32) = (1, 2);
 /// `seed.derive("language").derive(species).derive("lexicon").derive("root").derive(concept)`.
 /// 1–2 syllables, filled from `ph`'s phonotactic templates by the same
 /// mechanism [`crate::naming::Namer`] uses to build names.
+/// type-audit: bare-ok(identifier-text)
 pub fn proto_root(seed: &Seed, species: &str, concept: &str, ph: &Phonology) -> Vec<Segment> {
     let mut stream = seed
         .derive("language")
@@ -152,7 +156,7 @@ pub fn proto_root(seed: &Seed, species: &str, concept: &str, ph: &Phonology) -> 
         PROTO_ROOT_SYLLABLE_RANGE.1,
         false,
     );
-    crate::naming::views_of(&syllables).0
+    crate::naming::segments_of(&syllables)
 }
 
 /// Whether `seg` is a consonant (used by the two structural rules, which

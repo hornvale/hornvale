@@ -24,6 +24,7 @@ pub struct StarSystem {
 }
 
 /// A generated system plus the notes genesis recorded along the way.
+/// type-audit: bare-ok(prose)
 #[derive(Debug, Clone, PartialEq)]
 pub struct GenesisOutcome {
     /// The system itself.

@@ -315,8 +315,10 @@ mod tests {
 }
 
 /// Phenomenon kind for the annual daylight cycle.
+/// type-audit: bare-ok(identifier-text)
 pub const SEASONAL_CYCLE: &str = "seasonal-cycle";
 /// Phenomenon kind for notable neighbor stars.
+/// type-audit: bare-ok(identifier-text)
 pub const NIGHT_STAR: &str = "night-star";
 
 fn round2(x: f64) -> f64 {
@@ -370,6 +372,7 @@ impl GeneratedSky {
         &self.calendar
     }
     /// Genesis notes recorded during generation.
+    /// type-audit: bare-ok(prose)
     pub fn notes(&self) -> &[String] {
         &self.notes
     }

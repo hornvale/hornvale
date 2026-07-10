@@ -131,6 +131,7 @@ fn assemble_elevation(
 /// Per-cell elevation in meters: continental/oceanic base, the nearest
 /// same-plate boundary's contribution decayed by graph distance and shaped
 /// by maturity, drawn hotspots, and a strict-ordering micro-epsilon.
+/// type-audit: bare-ok(index: plate_of), bare-ok(count: distances), waiver(elevation-convention: return)
 pub fn generate_elevation(
     terrain_seed: Seed,
     geo: &Geosphere,
@@ -148,6 +149,7 @@ pub fn generate_elevation(
 /// cells strictly below it. The draw is consumed whether pinned or not
 /// (pin isolation). Sort uses `total_cmp` — elevations are finite and
 /// strictly ordered by construction.
+/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: return)
 pub fn derive_sea_level(terrain_seed: Seed, pins: &TerrainPins, elevation: &CellMap<f64>) -> f64 {
     let drawn = 0.5
         + 0.25
@@ -181,6 +183,7 @@ const UNREST_DECAY_CELLS: f64 = 2.0;
 /// closing speed × youth (inverse maturity), decayed by distance to the
 /// nearest same-plate boundary; clamped. Old quiet interiors approach zero.
 /// Nothing consumes it in C3 — it is banked (spec §15).
+/// type-audit: bare-ok(index: plate_of), bare-ok(count: distances), bare-ok(ratio: return)
 pub fn generate_unrest(
     geo: &Geosphere,
     plates: &[Plate],

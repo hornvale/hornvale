@@ -8,15 +8,19 @@ use crate::biome::Biome;
 use hornvale_kernel::{CellMap, Geosphere, NearestCellIndex};
 
 /// Raster image width in pixels; equirectangular, so height is `MAP_WIDTH / 2`.
+/// type-audit: bare-ok(render-internal)
 pub const MAP_WIDTH: u32 = 256;
 /// ASCII map width in characters.
+/// type-audit: bare-ok(render-internal)
 pub const ASCII_WIDTH: u32 = 72;
 /// ASCII map height in characters.
+/// type-audit: bare-ok(render-internal)
 pub const ASCII_HEIGHT: u32 = 24;
 
 /// Raw RGB pixels of the equirectangular biome map (row-major, top row
 /// first) — also the base image settlement's overlay stamps at the
 /// composition root.
+/// type-audit: bare-ok(artifact)
 pub fn biome_pixels(geo: &Geosphere, biomes: &CellMap<Biome>) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
     let index = NearestCellIndex::new(geo);
@@ -34,11 +38,13 @@ pub fn biome_pixels(geo: &Geosphere, biomes: &CellMap<Biome>) -> Vec<u8> {
 
 /// Render the biome field as an equirectangular PNG (decision 0018). Same
 /// field, same bytes.
+/// type-audit: bare-ok(artifact)
 pub fn biome_png(geo: &Geosphere, biomes: &CellMap<Biome>) -> Vec<u8> {
     hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_WIDTH / 2, &biome_pixels(geo, biomes))
 }
 
 /// Render the biome field as a 72×24 ASCII map, one newline per row.
+/// type-audit: bare-ok(artifact)
 pub fn biome_ascii(geo: &Geosphere, biomes: &CellMap<Biome>) -> String {
     let index = NearestCellIndex::new(geo);
     let mut out = String::with_capacity(((ASCII_WIDTH + 1) * ASCII_HEIGHT) as usize);

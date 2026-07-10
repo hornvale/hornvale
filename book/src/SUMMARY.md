@@ -27,6 +27,7 @@
   - [Language](./domains/language.md)
   - [Culture](./domains/culture.md)
   - [Religion](./domains/religion.md)
+  - [Paleoclimate](./domains/paleoclimate.md)
 
 # The Chronicle
 
@@ -51,9 +52,11 @@
 - [Campaign 21: The Scene Window](./chronicle/21-the-scene-window.md)
 - [Campaign 22: The Atlas](./chronicle/22-the-atlas.md)
 - [Campaign 23: The Orrery](./chronicle/23-the-orrery.md)
+- [Deep Time](./chronicle/deep-time.md)
 - [Campaign 25: The Measured Coast](./chronicle/25-the-measured-coast.md)
 - [Campaign 26: The Live Orrery](./chronicle/26-the-live-orrery.md)
 - [Campaign 27: The Words](./chronicle/27-the-words.md)
+- [The Type Audit](./chronicle/the-type-audit.md)
 
 # The Gallery
 
@@ -70,6 +73,7 @@
 - [The Gods of Seed 42](./gallery/the-gods-seed-42.md)
 - [The Meeting of Seed 42](./gallery/the-meeting-seed-42.md)
 - [The Atlas of Seed 42](./gallery/atlas.md)
+- [The Deep Time of Seed 42](./gallery/paleo-seed-42.md)
 
 # The Laboratory
 
@@ -98,3 +102,8 @@
 # Open Questions
 
 - [The Confidence Gradient](./open-questions.md)
+
+# The Frontier
+
+- [The Frontier](./frontier/frontier.md)
+- [The Idea Registry](./frontier/idea-registry.md)

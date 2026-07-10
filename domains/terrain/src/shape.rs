@@ -9,6 +9,7 @@ use std::collections::VecDeque;
 
 /// Half-width of the shelf band around sea level, meters (Earth's
 /// continental shelf lies within ~200 m of the sea surface).
+/// type-audit: pending(wave-2)
 pub const SHELF_BAND_M: f64 = 200.0;
 
 /// Angular distance between two unit vectors, radians.
@@ -25,6 +26,7 @@ fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
 /// between two neighboring cells is approximated as their center distance
 /// over sqrt(3) (the regular-hexagon dual). `None` when the globe has no
 /// land or no shoreline.
+/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: sea_level), bare-ok(ratio: return)
 pub fn shoreline_development(
     geo: &Geosphere,
     elevation: &CellMap<f64>,
@@ -58,6 +60,7 @@ pub fn shoreline_development(
 /// Fraction of all cells within [`SHELF_BAND_M`] of sea level — Earth's
 /// hypsometry keeps a populated shelf here; a cliff-coast generator does
 /// not.
+/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: sea_level), bare-ok(ratio: return)
 pub fn shelf_fraction(elevation: &CellMap<f64>, sea_level: f64) -> f64 {
     let within = elevation
         .iter()
@@ -71,6 +74,7 @@ pub fn shelf_fraction(elevation: &CellMap<f64>, sea_level: f64) -> f64 {
 /// population variance. Earth's hypsometry is strongly bimodal (high D).
 /// `None` when either population is empty or both are degenerate
 /// (zero variance).
+/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: sea_level), bare-ok(ratio: return)
 pub fn hypsometric_bimodality(elevation: &CellMap<f64>, sea_level: f64) -> Option<f64> {
     let mut land = Vec::new();
     let mut ocean = Vec::new();
@@ -102,6 +106,7 @@ pub fn hypsometric_bimodality(elevation: &CellMap<f64>, sea_level: f64) -> Optio
 /// Sizes (cell counts) of connected land components, descending. BFS in
 /// ascending cell-id order — fully deterministic. Empty when there is no
 /// land.
+/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: sea_level), bare-ok(count: return)
 pub fn land_component_sizes(
     geo: &Geosphere,
     elevation: &CellMap<f64>,
@@ -134,6 +139,7 @@ pub fn land_component_sizes(
 /// Gini coefficient over nonnegative counts (0 = equal, →1 = concentrated):
 /// `G = 2 Σ i·x_i / (n Σ x) − (n+1)/n` over ascending x with 1-based i.
 /// `None` for an empty slice or an all-zero total.
+/// type-audit: bare-ok(count: counts), bare-ok(ratio: return)
 pub fn gini(counts: &[usize]) -> Option<f64> {
     if counts.is_empty() {
         return None;

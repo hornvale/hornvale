@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// A location in world space. Units and topology are a terrain-domain
 /// concern; the kernel only requires a metric-ish plane.
+/// type-audit: pending(wave-1)
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Position {
     /// Horizontal coordinate.
@@ -17,6 +18,7 @@ pub struct Position {
 
 /// Simulated time in fractional days since world genesis. There is no
 /// wall-clock time anywhere in Hornvale.
+/// type-audit: pending(wave-1)
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WorldTime {
     /// Fractional days since world genesis.
@@ -45,6 +47,7 @@ impl<T: Clone> Field<T> for ConstantField<T> {
 
 /// A time-invariant fbm noise field in [0, 1). `scale` is the feature
 /// wavelength in world units.
+/// type-audit: bare-ok(count: octaves), pending(wave-1: scale)
 #[derive(Clone, Copy, Debug)]
 pub struct NoiseField {
     /// Seed driving the underlying noise stream.

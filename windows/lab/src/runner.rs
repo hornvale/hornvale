@@ -1,6 +1,6 @@
 //! Deterministic sweep engine: run studies, collect metrics, write results.
 
-use crate::{Metric, MetricValue, Study, StudyError, WorldView};
+use crate::{Metric, MetricValue, Study, StudyError, SummaryKind, WorldView};
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_species::SpeciesDef;
@@ -25,6 +25,7 @@ fn resolve_roster(name: Option<&str>) -> Result<Vec<SpeciesDef>, StudyError> {
 }
 
 /// One world's measurements (or its refusal).
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(identifier-text: pin_set), bare-ok(prose: refusal)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Row {
     /// The random seed used to generate this world.
@@ -38,6 +39,7 @@ pub struct Row {
 }
 
 /// The result of running a complete study.
+/// type-audit: bare-ok(identifier-text: metric_names)
 #[derive(Debug, Clone, PartialEq)]
 pub struct RunResult {
     /// The study that was run.
@@ -187,23 +189,20 @@ fn csv_field(text: &str) -> String {
     }
 }
 
-/// Write a RunResult to CSV.
+/// Render a RunResult as CSV text — the body of `rows.csv`.
 ///
-/// Creates `out_root/<study.name>/` directories and writes `rows.csv` with:
+/// Shared by [`write_csv`] (the ephemeral `lab-out/` copy) and the book
+/// publisher (the committed, drift-checked fixture), so the two are always
+/// byte-identical. The format:
 /// - Header: seed,pin_set,<metric names...>,refusal
-/// - Number values: displayed with default Rust formatting
+/// - Number values: displayed with default Rust formatting (shortest
+///   round-trippable form — [`load_rows`] parses it back exactly)
 /// - Text values: quoted per RFC 4180 when they contain a comma, quote, or
 ///   newline; written verbatim otherwise
 /// - Flag values: "true" or "false"
 /// - Absent values: empty field
-/// - Refusal column: the error message or empty
-///
-/// Returns the path to the written CSV file.
-pub fn write_csv(result: &RunResult, out_root: &Path) -> std::io::Result<PathBuf> {
-    let study_dir = out_root.join(&result.study.name);
-    fs::create_dir_all(&study_dir)?;
-
-    let csv_path = study_dir.join("rows.csv");
+/// - Refusal column: the error message (unquoted) or empty
+pub(crate) fn render_csv(result: &RunResult) -> String {
     let mut csv_content = String::new();
 
     // Write header
@@ -235,14 +234,247 @@ pub fn write_csv(result: &RunResult, out_root: &Path) -> std::io::Result<PathBuf
         csv_content.push('\n');
     }
 
-    fs::write(&csv_path, csv_content)?;
+    csv_content
+}
+
+/// Write a RunResult's `rows.csv` under `out_root/<study.name>/`.
+///
+/// Creates the directory as needed and writes [`render_csv`]'s output.
+/// Returns the path to the written CSV file.
+pub fn write_csv(result: &RunResult, out_root: &Path) -> std::io::Result<PathBuf> {
+    let study_dir = out_root.join(&result.study.name);
+    fs::create_dir_all(&study_dir)?;
+
+    let csv_path = study_dir.join("rows.csv");
+    fs::write(&csv_path, render_csv(result))?;
     Ok(csv_path)
+}
+
+/// Split CSV text into records of fields, honoring RFC 4180 quoting: a `"`
+/// opens a quoted field in which commas and newlines are literal and a doubled
+/// `""` is an escaped quote. The inverse of [`render_csv`]'s field encoding.
+fn parse_csv_records(csv: &str) -> Vec<Vec<String>> {
+    let mut records = Vec::new();
+    let mut record: Vec<String> = Vec::new();
+    let mut field = String::new();
+    let mut in_quotes = false;
+    let mut chars = csv.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if in_quotes {
+            if c == '"' {
+                if chars.peek() == Some(&'"') {
+                    field.push('"');
+                    chars.next();
+                } else {
+                    in_quotes = false;
+                }
+            } else {
+                field.push(c);
+            }
+        } else {
+            match c {
+                '"' => in_quotes = true,
+                ',' => record.push(std::mem::take(&mut field)),
+                '\n' => {
+                    record.push(std::mem::take(&mut field));
+                    records.push(std::mem::take(&mut record));
+                }
+                '\r' => {} // tolerate CRLF
+                other => field.push(other),
+            }
+        }
+    }
+    // A trailing field/record only exists if the text didn't end in a newline;
+    // `render_csv` always terminates the last row, so this is defensive.
+    if !field.is_empty() || !record.is_empty() {
+        record.push(field);
+        records.push(record);
+    }
+    records
+}
+
+/// Reconstruct one `MetricValue` from a CSV field, typed by the owning metric's
+/// kind. An empty field is `Absent`; otherwise Categorical → Text, Flag → Flag,
+/// Numeric → Number. Lossless because the *kind* comes from the study schema,
+/// never guessed from the field's shape.
+fn value_from_field(field: &str, kind: &SummaryKind) -> Result<MetricValue, StudyError> {
+    if field.is_empty() {
+        return Ok(MetricValue::Absent);
+    }
+    Ok(match kind {
+        SummaryKind::Numeric { .. } => {
+            MetricValue::Number(field.parse::<f64>().map_err(|_| StudyError {
+                message: format!("rows.csv: '{field}' is not a number"),
+            })?)
+        }
+        SummaryKind::Flag => match field {
+            "true" => MetricValue::Flag(true),
+            "false" => MetricValue::Flag(false),
+            other => {
+                return Err(StudyError {
+                    message: format!("rows.csv: '{other}' is not a flag"),
+                });
+            }
+        },
+        SummaryKind::Categorical => MetricValue::Text(field.to_string()),
+    })
+}
+
+/// Reconstruct a `RunResult` from `rows.csv` text produced by [`render_csv`].
+///
+/// The schema — metric names, their order, and each metric's kind — comes from
+/// `study`, not the CSV, so `MetricValue` reconstruction is lossless (see
+/// [`value_from_field`]); the CSV supplies only per-seed values. The header is
+/// validated against the study, so a stale or foreign fixture fails loudly
+/// rather than silently mis-parsing. This is how the calibration suite reads
+/// its census without recomputing it — the fixture is regenerated and
+/// drift-checked in CI, so `load_rows(fixture)` equals `run(study)` by
+/// construction.
+/// type-audit: bare-ok(artifact: csv)
+pub fn load_rows(study: &Study, csv: &str) -> Result<RunResult, StudyError> {
+    let metrics = study.selected_metrics()?;
+    let metric_names: Vec<&'static str> = metrics.iter().map(|m| m.name).collect();
+    let n = metric_names.len();
+
+    let mut records = parse_csv_records(csv).into_iter();
+    let header = records.next().ok_or_else(|| StudyError {
+        message: format!("rows.csv for study '{}' is empty", study.name),
+    })?;
+
+    // The header must match the study's schema exactly, or the fixture is stale
+    // or belongs to a different study.
+    let mut expected = Vec::with_capacity(n + 3);
+    expected.push("seed".to_string());
+    expected.push("pin_set".to_string());
+    expected.extend(metric_names.iter().map(|name| name.to_string()));
+    expected.push("refusal".to_string());
+    if header != expected {
+        return Err(StudyError {
+            message: format!(
+                "rows.csv header does not match study '{}' schema:\n  found:    {header:?}\n  expected: {expected:?}",
+                study.name
+            ),
+        });
+    }
+
+    let mut rows = Vec::new();
+    for rec in records {
+        if rec.len() == 1 && rec[0].is_empty() {
+            continue; // tolerate a blank trailing line
+        }
+        if rec.len() < n + 2 {
+            return Err(StudyError {
+                message: format!(
+                    "rows.csv for study '{}': a row has {} fields, need at least {}",
+                    study.name,
+                    rec.len(),
+                    n + 2
+                ),
+            });
+        }
+        let seed = rec[0].parse::<u64>().map_err(|_| StudyError {
+            message: format!(
+                "rows.csv for study '{}': '{}' is not a seed",
+                study.name, rec[0]
+            ),
+        })?;
+        let pin_set = rec[1].clone();
+        let values = metrics
+            .iter()
+            .enumerate()
+            .map(|(i, m)| value_from_field(&rec[2 + i], &m.summary))
+            .collect::<Result<Vec<_>, _>>()?;
+        // The refusal column is written unquoted and may itself contain commas,
+        // so it is whatever remains after the metric columns, rejoined.
+        let refusal_text = rec[2 + n..].join(",");
+        let refusal = (!refusal_text.is_empty()).then_some(refusal_text);
+        rows.push(Row {
+            seed,
+            pin_set,
+            values,
+            refusal,
+        });
+    }
+
+    Ok(RunResult {
+        study: study.clone(),
+        metric_names,
+        rows,
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{MetricSelection, PinSet, Seeds};
+
+    #[test]
+    fn csv_round_trips_all_value_kinds() {
+        // A study selecting one metric of each SummaryKind, so `load_rows` types
+        // every column correctly. The row VALUES below are synthetic — the codec
+        // is agnostic to whether a real world would ever produce them; it must
+        // only invert `render_csv` exactly.
+        let study = Study {
+            name: "codec".to_string(),
+            description: "csv-round-trip".to_string(),
+            seeds: Seeds { from: 0, count: 0 },
+            pin_sets: vec![],
+            metrics: MetricSelection::Named(vec![
+                "star-class".to_string(),       // Categorical -> Text
+                "tidally-locked".to_string(),   // Flag
+                "day-length-hours".to_string(), // Numeric -> Number
+            ]),
+        };
+        let metric_names: Vec<&'static str> = study
+            .selected_metrics()
+            .unwrap()
+            .iter()
+            .map(|m| m.name)
+            .collect();
+        let rows = vec![
+            Row {
+                seed: 7,
+                pin_set: "default".to_string(),
+                values: vec![
+                    MetricValue::Text("G".to_string()),
+                    MetricValue::Flag(true),
+                    MetricValue::Number(23.5),
+                ],
+                refusal: None,
+            },
+            Row {
+                seed: 8,
+                pin_set: "default".to_string(),
+                // A comma- and quote-bearing Text (must be RFC-4180 quoted) and
+                // an Absent numeric.
+                values: vec![
+                    MetricValue::Text("a,b\"c".to_string()),
+                    MetricValue::Flag(false),
+                    MetricValue::Absent,
+                ],
+                refusal: None,
+            },
+            Row {
+                seed: 9,
+                pin_set: "default".to_string(),
+                // A refusal whose message contains a comma (written unquoted),
+                // with all metric columns Absent — exactly how `run` records a
+                // genesis refusal.
+                values: vec![MetricValue::Absent; 3],
+                refusal: Some("genesis refused: too hot, too bright".to_string()),
+            },
+        ];
+        let original = RunResult {
+            study: study.clone(),
+            metric_names,
+            rows,
+        };
+
+        let csv = render_csv(&original);
+        let loaded = load_rows(&study, &csv).expect("load_rows inverts render_csv");
+        assert_eq!(loaded, original);
+    }
 
     /// The reference sequential sweep — the oracle the parallel `run` is
     /// checked against, byte for byte, by `parallel_run_matches_sequential`.

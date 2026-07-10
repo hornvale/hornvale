@@ -6,6 +6,7 @@ use crate::streams;
 use hornvale_kernel::{CellMap, Geosphere, Seed, Stream};
 
 /// A tectonic plate.
+/// type-audit: bare-ok(index: id), bare-ok(ratio: seed_position), bare-ok(flag: continental), bare-ok(ratio: euler_axis), bare-ok(ratio: rate), bare-ok(ratio: maturity)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Plate {
     /// Index into the globe's plate list (equals its position in the Vec).
@@ -162,6 +163,7 @@ fn continental_flags(
 /// Assign each cell to its nearest plate seed: largest dot product =
 /// smallest angular distance on the unit sphere. Ties break to the lower
 /// plate id (strict `>` keeps the first best).
+/// type-audit: bare-ok(index)
 pub fn assign_plates(geo: &Geosphere, plates: &[Plate]) -> CellMap<u32> {
     CellMap::from_fn(geo, |cell| {
         let position = geo.position(cell);
@@ -180,6 +182,7 @@ pub fn assign_plates(geo: &Geosphere, plates: &[Plate]) -> CellMap<u32> {
 
 /// A plate's surface velocity at a unit-sphere position: ω × r, always
 /// tangent to the sphere.
+/// type-audit: bare-ok(ratio)
 pub fn velocity_at(plate: &Plate, position: [f64; 3]) -> [f64; 3] {
     cross(scale(plate.euler_axis, plate.rate), position)
 }

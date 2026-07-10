@@ -12,15 +12,19 @@ use crate::streams;
 use hornvale_kernel::Seed;
 
 /// Obliquity oscillation period, standard days (~41 kyr).
+/// type-audit: pending(wave-1)
 pub const P_OBLIQUITY: f64 = 41_000.0 * 365.25;
 /// Eccentricity oscillation period, standard days (~100 kyr).
+/// type-audit: pending(wave-1)
 pub const P_ECCENTRICITY: f64 = 100_000.0 * 365.25;
 /// Axial-precession period, standard days (~21 kyr).
+/// type-audit: pending(wave-1)
 pub const P_PRECESSION: f64 = 21_000.0 * 365.25;
 
 /// The deep-time forcing of one world: means, amplitudes, and phases for the
 /// Milankovitch triad. All fields are set at genesis; the `*_at` methods are
 /// pure functions of absolute standard days.
+/// type-audit: pending(wave-1: obliquity_mean), pending(wave-1: obliquity_amp), pending(wave-1: obliquity_phase), bare-ok(ratio: ecc_mean), bare-ok(ratio: ecc_amp), pending(wave-1: ecc_phase), pending(wave-1: precession_phase), bare-ok(ratio: year_phase_offset), bare-ok(ratio: day_phase_offset), bare-ok(ratio: moon_phase_offsets)
 #[derive(Debug, Clone, PartialEq)]
 pub struct OrbitalForcing {
     /// Mean obliquity, degrees (equals the anchor's genesis obliquity ε₀).
@@ -51,6 +55,7 @@ pub struct OrbitalForcing {
 impl OrbitalForcing {
     /// Obliquity at absolute time `t` (standard days), anchored so
     /// `obliquity_at(0.0) == obliquity_mean` exactly.
+    /// type-audit: pending(wave-1)
     pub fn obliquity_at(&self, t: f64) -> f64 {
         self.obliquity_mean
             + self.obliquity_amp
@@ -59,10 +64,12 @@ impl OrbitalForcing {
     }
     /// Eccentricity at `t`; a genuinely new element, so `eccentricity_at(0.0)`
     /// is `ecc_mean + ecc_amp*sin(ecc_phase)` (the present gains eccentricity).
+    /// type-audit: pending(wave-1: t), bare-ok(ratio: return)
     pub fn eccentricity_at(&self, t: f64) -> f64 {
         (self.ecc_mean + self.ecc_amp * (TAU * t / P_ECCENTRICITY + self.ecc_phase).sin()).max(0.0)
     }
     /// Precession phase at `t`, radians, wrapping over `P_PRECESSION`.
+    /// type-audit: pending(wave-1)
     pub fn precession_at(&self, t: f64) -> f64 {
         self.precession_phase + TAU * t / P_PRECESSION
     }

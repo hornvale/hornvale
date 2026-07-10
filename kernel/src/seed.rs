@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 /// A deterministic seed. The world seed is the root; everything else is
 /// derived from it by labeled paths, so adding a new consumer never
 /// perturbs existing streams.
+/// type-audit: bare-ok(constructor-edge)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Seed(pub u64);
 
@@ -23,6 +24,7 @@ impl Seed {
     /// Derive a child seed for `label`. FNV-1a over the label, mixed with
     /// the parent, then scrambled. Stable forever: changing this breaks
     /// every saved world.
+    /// type-audit: bare-ok(identifier-text)
     pub fn derive(&self, label: &str) -> Seed {
         let mut h = FNV_OFFSET ^ self.0;
         for byte in label.as_bytes() {
@@ -46,16 +48,19 @@ pub struct Stream {
 
 impl Stream {
     /// Next raw 64-bit value from the stream.
+    /// type-audit: bare-ok(constructor-edge)
     pub fn next_u64(&mut self) -> u64 {
         splitmix64(&mut self.state)
     }
 
     /// Uniform in [0, 1), using the top 53 bits.
+    /// type-audit: bare-ok(ratio)
     pub fn next_f64(&mut self) -> f64 {
         (self.next_u64() >> 11) as f64 / (1u64 << 53) as f64
     }
 
     /// Uniform in [lo, hi], inclusive. Panics if lo > hi.
+    /// type-audit: bare-ok(count)
     pub fn range_u32(&mut self, lo: u32, hi: u32) -> u32 {
         assert!(lo <= hi, "range_u32: lo > hi");
         let span = u64::from(hi - lo) + 1;

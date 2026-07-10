@@ -37,10 +37,12 @@ use hornvale_kernel::{
 };
 
 /// Phenomenon kind for bodies visible in the sky.
+/// type-audit: bare-ok(identifier-text)
 pub const CELESTIAL_BODY: &str = "celestial-body";
 
 /// Every seed-derivation label this crate uses, with docs. All chains hang
 /// off the world seed's "astronomy" derivation.
+/// type-audit: bare-ok(identifier-text)
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     vec![
         ("astronomy", "root stream for sky genesis"),
@@ -155,6 +157,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
 pub struct ConstantSun;
 
 /// What the sky looks like at a given moment.
+/// type-audit: bare-ok(prose: description), bare-ok(identifier-text: bodies)
 #[derive(Debug, Clone, PartialEq)]
 pub struct SkyReport {
     /// Human-readable description of the sky.

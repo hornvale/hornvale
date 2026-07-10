@@ -40,6 +40,7 @@ pub enum ExposureClass {
 /// depth 3 from night-vision 0.8" for an unacquired color term), or, when
 /// [`build_lexicon`] itself falls back a `KnowsOf` compound to a gap,
 /// composed here from the missing recipe or component.
+/// type-audit: bare-ok(prose)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GapReason {
     /// A gap rooted in lived experience — the culture never encountered the
@@ -68,6 +69,7 @@ const HEADEDNESS_OPTIONS: [Headedness; 2] = [Headedness::HeadFirst, Headedness::
 
 /// Draw a species' compound-joining order, from
 /// `seed.derive("language").derive(species).derive("lexicon").derive("headedness")`.
+/// type-audit: bare-ok(identifier-text)
 pub fn draw_headedness(seed: &Seed, species: &str) -> Headedness {
     let mut stream = seed
         .derive("language")
@@ -86,6 +88,7 @@ pub fn draw_headedness(seed: &Seed, species: &str) -> Headedness {
 /// no caller re-derives romanization/IPA/espeak logic: `roman` is the
 /// almanac's ASCII-ish spelling, `ipa` is the book's phonetic rendering,
 /// `espeak` is the espeak-ng formulation.
+/// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WordViews {
     /// The ASCII-ish romanization, capitalized on its first letter.
@@ -98,6 +101,7 @@ pub struct WordViews {
 
 /// One concept's lexicon entry: a bare root, a recipe compound of two other
 /// roots, or a reasoned gap.
+/// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum LexEntry {
     /// A concept with its own proto-root, evolved to its modern form.
@@ -129,6 +133,7 @@ pub enum LexEntry {
 /// [`LexEntry`], keyed by concept id, plus the drawn [`Headedness`]
 /// compounds were assembled under. Built once by [`build_lexicon`]; a
 /// [`BTreeMap`] keeps both lookup and iteration order deterministic.
+/// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Lexicon {
     /// The species this lexicon was built for.
@@ -141,6 +146,7 @@ pub struct Lexicon {
 
 impl Lexicon {
     /// The entry for `concept`, if this lexicon has one.
+    /// type-audit: bare-ok(identifier-text)
     pub fn entry(&self, concept: &str) -> Option<&LexEntry> {
         self.entries.get(concept)
     }
@@ -227,6 +233,7 @@ fn compound_entry(
 /// a component isn't held as a root), and passes every `Unknown` concept's
 /// carried reason straight through to a [`LexEntry::Gap`]. Pure and total:
 /// same inputs always produce an identical [`Lexicon`].
+/// type-audit: bare-ok(identifier-text)
 pub fn build_lexicon(
     seed: &Seed,
     species: &str,

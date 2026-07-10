@@ -4,6 +4,7 @@
 
 /// The scenario pins for tectonic genesis. Every field: `None` = drawn from
 /// the seed; `Some` = supplied by the experimenter and conditioned on.
+/// type-audit: bare-ok(count: plates), bare-ok(ratio: ocean_fraction), bare-ok(flag: supercontinent)
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct TerrainPins {
     /// Plate count (legal 2–64); drawn 8–40 when `None`.
@@ -16,6 +17,7 @@ pub struct TerrainPins {
 }
 
 /// Why tectonic genesis refused to produce a globe.
+/// type-audit: bare-ok(identifier-text: InvalidPin.pin), bare-ok(prose: InvalidPin.reason), bare-ok(identifier-text: UnsatisfiablePin.pin), bare-ok(prose: UnsatisfiablePin.reason)
 #[derive(Debug, Clone, PartialEq)]
 pub enum GenesisError {
     /// A pin's value is outside its legal range.
@@ -74,6 +76,7 @@ pub(crate) fn validate(pins: &TerrainPins) -> Result<(), GenesisError> {
 
 /// Render every pinned field as a round-trippable `key=value` string.
 /// Unpinned (`None`) fields emit nothing.
+/// type-audit: bare-ok(identifier-text)
 pub fn pin_strings(pins: &TerrainPins) -> Vec<String> {
     let mut out = Vec::new();
     if let Some(n) = pins.plates {
@@ -91,6 +94,7 @@ pub fn pin_strings(pins: &TerrainPins) -> Vec<String> {
 /// Parse one `key=value` pin string (as produced by `pin_strings`) into
 /// `pins`, overwriting whichever field it names. Unknown keys or malformed
 /// values are user-facing errors naming the offending key/value.
+/// type-audit: bare-ok(identifier-text: s), bare-ok(prose: return)
 pub fn parse_pin(s: &str, pins: &mut TerrainPins) -> Result<(), String> {
     let (key, value) = s
         .split_once('=')

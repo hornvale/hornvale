@@ -30,6 +30,7 @@ pub enum ExoticSeg {
 /// language's own copy of the dimensions — populated by the composition
 /// root from the species `ArticulationVector`, never read from
 /// `hornvale-species` directly (language is kernel-only).
+/// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Envelope {
     /// Capacity to form labial (lip) sounds. Below [`LABIALITY_THRESHOLD`],
@@ -60,6 +61,7 @@ pub struct Envelope {
 /// phonotactics as manner-slot templates. A template is filled from the
 /// inventory at name time (a later task), not here — this struct stores
 /// only the shape.
+/// type-audit: bare-ok(count: nuclei)
 #[derive(Clone, Debug, PartialEq)]
 pub struct Phonology {
     /// The drawn segment inventory, a subset of
@@ -185,6 +187,7 @@ fn exotic_manner(manner: Manner) -> Option<ExoticSeg> {
 /// The envelope filter: whether `seg` is producible at all by a species
 /// with this `Envelope`. Does not weight likelihood — see
 /// [`draw_phonology`] for the probabilistic keep step.
+/// type-audit: bare-ok(flag)
 pub fn permits(env: &Envelope, seg: &Segment) -> bool {
     match seg {
         Segment::Consonant {
@@ -329,6 +332,7 @@ fn draw_phonotactics(
 /// `seed.derive("language").derive(species).derive("phonology")`, split
 /// into an `"inventory"` sub-stream and a `"phonotactics"` sub-stream so
 /// adding a new draw to one never perturbs the other.
+/// type-audit: bare-ok(identifier-text: species)
 pub fn draw_phonology(seed: &Seed, species: &str, env: &Envelope) -> Phonology {
     let phonology_seed = seed.derive("language").derive(species).derive("phonology");
 

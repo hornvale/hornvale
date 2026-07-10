@@ -41,6 +41,10 @@ An idea moves left to right; the store that owns it changes as it matures.
   retrospectives/*   decisions/*   (process lessons ·· settled choices, cross-cutting)
 ```
 
+(The registry and frontier live in the book — `book/src/frontier/`, the
+published Frontier part — since decision
+`the-frontier-is-published-in-the-book`; the pipeline itself is unchanged.)
+
 The registry entry never dies — as an idea drains rightward, its **row flips
 status and its pointer follows** (`elaborated` → `spec'd` → `shipped`). The
 elaboration relocates; the breadcrumb stays. That is how the frontier sheds
@@ -50,8 +54,8 @@ mass without amnesia.
 
 | You are looking for… | Go to | Notes |
 |----------------------|-------|-------|
-| **Is this idea already thought of? decided against?** | [`vision/idea-registry.md`](vision/idea-registry.md) | The retrieval surface. Check here *first*, always. |
-| **The argument behind a speculative idea** | [`vision/frontier.md`](vision/frontier.md) | Non-binding essays, confidence-tagged. Governs nothing. |
+| **Is this idea already thought of? decided against?** | [`book/src/frontier/idea-registry.md`](../book/src/frontier/idea-registry.md) | The retrieval surface. Check here *first*, always. |
+| **The argument behind a speculative idea** | [`book/src/frontier/frontier.md`](../book/src/frontier/frontier.md) | Non-binding essays, confidence-tagged. Governs nothing. |
 | **A settled choice — "why is it this way?"** | [`decisions/`](decisions/) | Ratified, grep-able, supersede-don't-edit. Do not relitigate. |
 | **The binding design for a campaign** | [`superpowers/specs/`](superpowers/specs/) | One spec per campaign; binds over the frontier. |
 | **The execution plan for a campaign** | [`superpowers/plans/`](superpowers/plans/) | Staged, with success criteria and tests. |
@@ -59,7 +63,7 @@ mass without amnesia.
 | **What the process taught** | [`retrospectives/`](retrospectives/) | Process lessons, one page per campaign. |
 | **The law** | [`../book/src/constitution.md`](../book/src/constitution.md) | Constitutional; the spec is authoritative. |
 | **The world as it currently is** | [`../book/`](../book/) | Published reality; never lags a merge. |
-| **The wider, non-binding vision** | [`vision/`](vision/) | The frontier and its registry live here. |
+| **The wider, non-binding vision** | [`book/src/frontier/`](../book/src/frontier/) | The Frontier part of the book; `vision/` holds redirect stubs only. |
 
 ## The two failure modes this structure defends against
 
@@ -78,11 +82,13 @@ mass without amnesia.
 - **Decisions** are numbered `NNNN-kebab.md`, never edited once `Accepted`,
   superseded by new records. See [`decisions/README.md`](decisions/README.md).
 - **Registry IDs** are permanent category-prefixed handles; status flips,
-  IDs do not. See [`vision/idea-registry.md`](vision/idea-registry.md).
+  IDs do not. See
+  [`book/src/frontier/idea-registry.md`](../book/src/frontier/idea-registry.md).
 - **The frontier drains into specs**, not into sibling frontier files; it is
   a holding pen, not an archive.
-- **`docs/` is the private end of the pipe; `book/` is the public end.** The
-  frontier and registry deliberately stay out of the book — the book is
-  merged reality only.
+- **The book's merged-reality contract is per-part.** The frontier and
+  registry are published as the book's marked Frontier part (decision
+  `the-frontier-is-published-in-the-book`); every other part of the book is
+  merged reality. Specs, plans, and decisions stay in `docs/`.
 - **Definition of Done** for a merged campaign includes a chronicle entry, a
   book freshness sweep, and a retrospective (decisions 0013, 0020).

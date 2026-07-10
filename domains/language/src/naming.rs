@@ -73,6 +73,7 @@ impl NameKind {
 /// basis. Plain data — this crate is kernel-only and never imports
 /// `hornvale-species`; the mapping (e.g. `Rank` → `honorifics: true`) lives
 /// upstream.
+/// type-audit: bare-ok(flag)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MorphOptions {
     /// Whether epithets are prefixed with a drawn honorific affix. Bare
@@ -90,6 +91,7 @@ pub struct MorphOptions {
 /// [`crate::lexicon::LexEntry::Compound`] word in the supplied lexicon — to
 /// compound; a concept listed here with no word (a
 /// [`crate::lexicon::LexEntry::Gap`], or simply absent) is never picked.
+/// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Copy, Debug)]
 pub struct SiteConcepts<'a> {
     /// The candidate concept ids, in no particular priority order.
@@ -101,6 +103,7 @@ pub struct SiteConcepts<'a> {
 /// phonetic rendering; `espeak` is the espeak-ng formulation. None are stored
 /// independently of the segments that produced it — all three are views built
 /// in the same pass.
+/// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GeneratedName {
     /// The ASCII-ish romanization, capitalized on its first letter. This is
@@ -121,7 +124,8 @@ const REDUPLICATION_CHANCE: f64 = 0.5;
 /// grouped by onset/nucleus/coda position so morphology (reduplication,
 /// prefixing) can operate on whole syllables. `pub(crate)` so etymology's
 /// `proto_root` can hold the value returned by [`Namer::draw_syllables`] and
-/// pass it straight to [`views_of`] without this module exposing its fields.
+/// pass it straight to [`segments_of`] without this module exposing its
+/// fields.
 #[derive(Clone, Debug)]
 pub(crate) struct Syllable {
     onset: Vec<Segment>,
@@ -148,6 +152,7 @@ pub struct Namer<'a> {
 
 impl<'a> Namer<'a> {
     /// Start a namer for `species` under `ph`, rooted at `seed`.
+    /// type-audit: bare-ok(identifier-text: species)
     pub fn new(seed: &Seed, species: &str, ph: &'a Phonology) -> Namer<'a> {
         Namer {
             seed: *seed,
@@ -163,6 +168,7 @@ impl<'a> Namer<'a> {
     /// any other name (see the module docs — this is what makes settlement
     /// names pin-isolated by construction). Uniqueness across a world's
     /// names is de-facto, not guaranteed.
+    /// type-audit: pending(wave-3: salt)
     pub fn name(&self, kind: NameKind, salt: u64, morph: &MorphOptions) -> GeneratedName {
         let mut stream = self
             .seed
@@ -201,6 +207,7 @@ impl<'a> Namer<'a> {
     /// `(seed, species, kind, v2, salt)` function, distinct from `name`'s
     /// v1 output, with an empty gloss (no true story to tell — callers
     /// should skip the `name-gloss` fact when the gloss is empty).
+    /// type-audit: pending(wave-3: salt), bare-ok(identifier-text: return)
     pub fn glossed_name(
         &self,
         kind: NameKind,
@@ -264,7 +271,7 @@ impl<'a> Namer<'a> {
             // Deity and Epithet names carry no stem (their name spaces
             // are one-per-belief, not pigeonholed by settlement counts).
             let stem_syllables = self.draw_syllables(&mut stream, 2, 3, false);
-            let (stem, _) = views_of(&stem_syllables);
+            let stem = segments_of(&stem_syllables);
             segments = join_by_headedness(lexicon.headedness, stem, segments);
         }
         // Repair AFTER compounding, BEFORE morphology (the permanent order):
@@ -452,18 +459,28 @@ pub fn render_views(segments: &[Segment]) -> GeneratedName {
 }
 
 /// Flatten `syllables` (onset → nucleus → coda, in sequence) into their
-/// ordered segments and render all three surface views via
-/// [`render_views`]. `Namer::build_name` uses the `GeneratedName` half;
-/// etymology's `proto_root` (over syllables drawn from
-/// [`Namer::draw_syllables`]) uses the flat `Vec<Segment>` half as its
-/// proto-root, reusing this module's stem machinery without duplicating the
-/// onset/nucleus/coda flattening or the romanization match arms.
-/// `pub(crate)` for that cross-module reuse.
-pub(crate) fn views_of(syllables: &[Syllable]) -> (Vec<Segment>, GeneratedName) {
-    let segments: Vec<Segment> = syllables
+/// ordered segments, without rendering any surface view — the draw-free,
+/// string-free half of [`views_of`]. For callers that need only the
+/// segments: etymology's `proto_root` (one call per species × concept) and
+/// `glossed_name`'s settlement stem, which would otherwise build and
+/// discard three rendered strings per draw. Rendering is a pure function of
+/// the segments ([`render_views`]), so which half a caller takes can never
+/// change what was drawn. `pub(crate)` for the cross-module reuse — the
+/// carry-forward invariant stands: no caller constructs a [`Segment`]
+/// outside this module's machinery.
+pub(crate) fn segments_of(syllables: &[Syllable]) -> Vec<Segment> {
+    syllables
         .iter()
         .flat_map(|syllable| syllable.segments().copied())
-        .collect();
+        .collect()
+}
+
+/// Flatten `syllables` via [`segments_of`] and render all three surface
+/// views via [`render_views`]. `Namer::build_name` uses the
+/// `GeneratedName` half; callers that would discard it use [`segments_of`]
+/// directly. `pub(crate)` for that cross-module reuse.
+pub(crate) fn views_of(syllables: &[Syllable]) -> (Vec<Segment>, GeneratedName) {
+    let segments = segments_of(syllables);
     let name = render_views(&segments);
     (segments, name)
 }

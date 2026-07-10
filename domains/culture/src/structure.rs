@@ -7,6 +7,7 @@
 use crate::subsistence::Subsistence;
 
 /// The environmental pressures that shape a settlement's structure.
+/// type-audit: bare-ok(ratio: surplus), bare-ok(count: population), bare-ok(ratio: threat)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EnvSummary {
     /// The settlement's subsistence mode.
@@ -21,6 +22,7 @@ pub struct EnvSummary {
 
 /// Role words a species uses for the rungs (pre-language stopgap; The
 /// Tongues deletes this). `worker_override: None` = the subsistence word.
+/// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Debug, PartialEq)]
 pub struct RoleVocabulary {
     /// Worker-rung override ("digger"); `None` = subsistence worker word.
@@ -51,6 +53,7 @@ impl Default for RoleVocabulary {
 /// assembled at the composition root from the species domain (culture never
 /// imports species). `Default` is the goblin baseline: every modulation
 /// below is the identity function at it.
+/// type-audit: bare-ok(ratio: threat_response), bare-ok(ratio: time_horizon), bare-ok(flag: communal), bare-ok(flag: rank_status)
 #[derive(Clone, Debug, PartialEq)]
 pub struct PsychSummary {
     /// Flee 0 ↔ stand 1; 0.5 baseline.
@@ -80,6 +83,7 @@ impl Default for PsychSummary {
 /// The ordered role list (lowest → highest) a settlement grows, from its
 /// environment modulated by its people's psychology (spec §5). Every
 /// modulation is identity at the goblin baseline.
+/// type-audit: bare-ok(identifier-text)
 pub fn structure(env: &EnvSummary, psych: &PsychSummary) -> Vec<String> {
     let invest = 1.5 - psych.time_horizon; // 1.0 at baseline
     let mut roles: Vec<String> = Vec::new();

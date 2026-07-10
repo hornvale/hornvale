@@ -17,6 +17,7 @@ use std::collections::BTreeMap;
 /// registered concept, so this stays exhaustive as the concept inventory
 /// grows). Errors when `world` can't rebuild a species' phonology or
 /// exposure (the same failure modes [`world_builder::lexicon_of`] surfaces).
+/// type-audit: bare-ok(artifact: return)
 pub fn render_dictionary(world: &World) -> Result<String, String> {
     let mut doc = String::new();
     doc.push_str(

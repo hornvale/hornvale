@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 /// The core name predicate, registered by `World::new` for every world.
+/// type-audit: bare-ok(identifier-text)
 pub const NAME: &str = "name";
 
 /// A world is a seed plus everything ever observed about it.
@@ -39,11 +40,13 @@ impl World {
 
     /// Deterministic pretty JSON. This string is the save format and the
     /// determinism-test currency: same world → same bytes.
+    /// type-audit: bare-ok(artifact)
     pub fn to_json(&self) -> String {
         serde_json::to_string_pretty(self).expect("World serialization cannot fail")
     }
 
     /// Deserialize a world from JSON.
+    /// type-audit: bare-ok(artifact)
     pub fn from_json(json: &str) -> Result<World, serde_json::Error> {
         use serde::de::Error as _;
         let world: World = serde_json::from_str(json)?;

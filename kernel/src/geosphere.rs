@@ -8,10 +8,12 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Identifier for a cell — an index into the mesh's vertices.
+/// type-audit: bare-ok(index)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CellId(pub u32);
 
 /// A geographic coordinate in degrees.
+/// type-audit: pending(wave-1)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct GeoCoord {
     /// Latitude in degrees, `[-90, 90]` (north positive).
@@ -55,11 +57,13 @@ impl<T> CellMap<T> {
     }
 
     /// The number of cells.
+    /// type-audit: bare-ok(count)
     pub fn len(&self) -> usize {
         self.values.len()
     }
 
     /// Whether the map is empty.
+    /// type-audit: bare-ok(flag)
     pub fn is_empty(&self) -> bool {
         self.values.is_empty()
     }
@@ -177,6 +181,7 @@ fn build_neighbors(cell_count: usize, faces: &[[u32; 3]]) -> Vec<Vec<CellId>> {
 impl Geosphere {
     /// Build an icosphere subdivided `level` times. (Task 1 handles the base;
     /// Task 2 adds subdivision for `level > 0`.)
+    /// type-audit: bare-ok(count)
     pub fn new(level: u32) -> Geosphere {
         let (mut positions, mut faces) = base_icosahedron();
         for _ in 0..level {
@@ -191,11 +196,13 @@ impl Geosphere {
     }
 
     /// The subdivision level.
+    /// type-audit: bare-ok(count)
     pub fn level(&self) -> u32 {
         self.level
     }
 
     /// The number of cells.
+    /// type-audit: bare-ok(count)
     pub fn cell_count(&self) -> usize {
         self.positions.len()
     }
@@ -206,6 +213,7 @@ impl Geosphere {
     }
 
     /// The unit-sphere position of a cell.
+    /// type-audit: pending(wave-1)
     pub fn position(&self, id: CellId) -> [f64; 3] {
         self.positions[id.0 as usize]
     }
@@ -259,6 +267,7 @@ impl NearestCellIndex {
     /// The cell nearest a coordinate (degrees), by maximum dot product.
     /// Inverts the coord convention: latitude = asin(z), longitude =
     /// atan2(y, x).
+    /// type-audit: pending(wave-1)
     pub fn nearest(&self, geo: &Geosphere, latitude: f64, longitude: f64) -> CellId {
         let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
         let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];

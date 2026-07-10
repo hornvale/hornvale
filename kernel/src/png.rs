@@ -85,6 +85,7 @@ fn zlib_stored(raw: &[u8]) -> Vec<u8> {
 /// IEND), stored deflate, filter 0 on every row. Panics unless
 /// `rgb.len() == width * height * 3` and both dimensions are nonzero — a
 /// caller bug, not an input condition.
+/// type-audit: bare-ok(render-internal: width), bare-ok(render-internal: height), bare-ok(render-internal: rgb), bare-ok(artifact: return)
 pub fn encode_rgb(width: u32, height: u32, rgb: &[u8]) -> Vec<u8> {
     assert!(width > 0 && height > 0, "encode_rgb: zero dimension");
     assert_eq!(

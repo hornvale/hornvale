@@ -10,6 +10,7 @@ use hornvale_kernel::{CellId, Geosphere};
 /// The rotation regime a climate is built under (climate-owned mirror of the
 /// astronomy rotation; mapped at the composition root so climate imports no
 /// domain).
+/// type-audit: pending(wave-2)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RotationRegime {
     /// Ordinary spin with a solar day of this many standard days.
@@ -25,6 +26,7 @@ pub enum RotationRegime {
 /// locked; otherwise a step function of the solar day in hours (fast spin →
 /// more, narrower bands). Earth's 24 h day yields exactly 3 (the
 /// calibration point, spec §10).
+/// type-audit: bare-ok(count)
 pub fn band_count_for(regime: &RotationRegime) -> Option<u32> {
     match regime {
         RotationRegime::Locked => None,
@@ -44,6 +46,7 @@ pub fn band_count_for(regime: &RotationRegime) -> Option<u32> {
 }
 
 /// Which band a latitude falls in, `0` at the equator, increasing poleward.
+/// type-audit: bare-ok(count: bands), pending(wave-2: latitude_deg), bare-ok(index: return)
 pub fn band_index(latitude_deg: f64, bands: u32) -> u32 {
     let width = 90.0 / f64::from(bands);
     ((latitude_deg.abs() / width) as u32).min(bands - 1)
@@ -51,6 +54,7 @@ pub fn band_index(latitude_deg: f64, bands: u32) -> u32 {
 
 /// Rising (wet) bands are the even-indexed ones (equatorial, and every other
 /// belt poleward); odd bands are sinking (dry) horse-latitude/polar belts.
+/// type-audit: bare-ok(index: band), bare-ok(flag: return)
 pub fn is_rising_band(band: u32) -> bool {
     band.is_multiple_of(2)
 }
@@ -67,6 +71,7 @@ fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
 /// The unit eastward tangent at a cell: `normalize(ẑ × position)`. Zero at
 /// the poles, where east is undefined (their bands carry no rain-shadow
 /// tracing). Coordinate convention: latitude = asin(z), longitude = atan2(y, x).
+/// type-audit: bare-ok(ratio)
 pub fn wind_east_tangent(geo: &Geosphere, cell: CellId) -> [f64; 3] {
     let east = cross([0.0, 0.0, 1.0], geo.position(cell));
     let len = (east[0] * east[0] + east[1] * east[1] + east[2] * east[2]).sqrt();
@@ -81,6 +86,7 @@ pub fn wind_east_tangent(geo: &Geosphere, cell: CellId) -> [f64; 3] {
 /// band. Even (rising) bands blow easterly (`-east`, e.g. equatorial trades);
 /// odd (sinking) bands blow westerly (`+east`, e.g. mid-latitude westerlies).
 /// Zero at the poles.
+/// type-audit: bare-ok(count: bands), bare-ok(ratio: return)
 pub fn prevailing_wind(geo: &Geosphere, cell: CellId, bands: u32) -> [f64; 3] {
     let east = wind_east_tangent(geo, cell);
     let band = band_index(geo.coord(cell).latitude, bands);

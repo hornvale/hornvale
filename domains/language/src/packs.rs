@@ -21,6 +21,7 @@ use hornvale_kernel::{ConceptKind, ConceptRegistry, RegistryError};
 /// and its rank on whichever acquisition ladder it belongs to (0 for
 /// entries outside any ladder — always in the lexicon once the pack is
 /// registered).
+/// type-audit: bare-ok(identifier-text: concept), bare-ok(prose: doc), bare-ok(count: ladder_rank)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PackEntry {
     /// The concept id (the registry key, and the compound-recipe key).
@@ -314,6 +315,7 @@ pub fn kin_pack() -> &'static [PackEntry] {
 /// owned by terrain as a distinct concept from `water`; a culture without a
 /// dedicated word for it names it "many water". `mountain`, likewise owned
 /// by terrain, is named "many stone".
+/// type-audit: bare-ok(identifier-text)
 pub fn compound_recipe(concept: &str) -> Option<(&'static str, &'static str)> {
     RECIPES
         .iter()
@@ -330,6 +332,7 @@ const RECIPES: &[(&str, &str, &str)] = &[("sea", "many", "water"), ("mountain", 
 /// Input to [`in_ladder`]: how many acquisition-ladder stages are unlocked,
 /// per ladder in [`color_pack`]. Derivation from a culture's perception
 /// vector lives in worldgen (Task 8) — this struct is just the input shape.
+/// type-audit: bare-ok(count)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct PackDepths {
     /// Hue-ladder depth: dark/light (1) through brown (5).
@@ -343,6 +346,7 @@ pub struct PackDepths {
 /// are always in. Ranked entries from [`color_pack`]'s luminance ladder
 /// (gloom/shadow/starlit) gate against [`PackDepths::luminance`]; every
 /// other ranked entry (the hue ladder) gates against [`PackDepths::hue`].
+/// type-audit: bare-ok(flag)
 pub fn in_ladder(entry: &PackEntry, depths: &PackDepths) -> bool {
     if entry.ladder_rank == 0 {
         return true;

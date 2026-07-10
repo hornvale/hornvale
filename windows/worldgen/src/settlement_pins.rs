@@ -6,6 +6,7 @@
 
 /// The scenario pins for settlement placement. `None` = drawn default;
 /// `Some` = supplied by the experimenter and conditioned on.
+/// type-audit: bare-ok(ratio: min_suitability), bare-ok(identifier-text: species)
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SettlementPins {
     /// Minimum suitability required to place a settlement (legal `[0, 1]`);
@@ -19,6 +20,7 @@ pub struct SettlementPins {
 impl SettlementPins {
     /// Render every pinned field as a round-trippable `key=value` string.
     /// Unpinned (`None`) fields emit nothing.
+    /// type-audit: bare-ok(identifier-text)
     pub fn pin_strings(&self) -> Vec<String> {
         let mut out = Vec::new();
         if let Some(f) = self.min_suitability {
@@ -35,6 +37,7 @@ impl SettlementPins {
 /// `SettlementPins::pin_strings`) into `pins`, overwriting whichever field it
 /// names. Unknown keys or malformed values are user-facing errors naming the
 /// offending key/value.
+/// type-audit: bare-ok(identifier-text: s), bare-ok(prose: return)
 pub fn parse_pin(s: &str, pins: &mut SettlementPins) -> Result<(), String> {
     let (key, value) = s
         .split_once('=')

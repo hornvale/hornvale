@@ -9,6 +9,7 @@ use crate::units::{LunarMasses, Megameters, StdDays};
 use hornvale_kernel::Seed;
 
 /// A moon of the anchor world. Mass and distance drawn; the rest derived.
+/// type-audit: bare-ok(ratio)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Moon {
     /// Mass in lunar masses (drawn, 0.05–2.5).
@@ -24,6 +25,7 @@ pub struct Moon {
 }
 
 /// The anchor's Hill radius in Mm (model card formula).
+/// type-audit: pending(wave-1)
 pub fn hill_radius_mm(star: &Star, anchor: &Anchor) -> f64 {
     anchor.orbit.0 * (anchor.mass.0 * 3.003e-6 / (3.0 * star.mass.0)).powf(1.0 / 3.0) * 1.496e5
 }
@@ -44,6 +46,7 @@ fn derive_moon(mass: f64, distance: f64, anchor: &Anchor) -> Moon {
 /// Generate the moons: count drawn or pinned; each admitted only past the
 /// stability inequalities, with a bounded redraw budget. Returns moons and
 /// notes about any degradation that occurred.
+/// type-audit: bare-ok(prose)
 pub fn generate_moons(
     astronomy_seed: Seed,
     star: &Star,

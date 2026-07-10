@@ -13,6 +13,7 @@ use hornvale_kernel::{CellId, CellMap, Geosphere};
 
 /// The inputs the composition root supplies to build a climate (all bare
 /// kernel types or climate-owned types — no terrain/astronomy imports).
+/// type-audit: pending(wave-2)
 pub struct ClimateInputs<'a> {
     /// The shared globe mesh.
     pub geosphere: &'a Geosphere,
@@ -141,6 +142,7 @@ impl GeneratedClimate {
         &self.geosphere
     }
     /// Circulation bands per hemisphere; `None` when tidally locked.
+    /// type-audit: bare-ok(count)
     pub fn band_count(&self) -> Option<u32> {
         self.band_count
     }
@@ -149,10 +151,12 @@ impl GeneratedClimate {
         self.regime
     }
     /// Annual-mean temperature at a cell, °C.
+    /// type-audit: pending(wave-2)
     pub fn mean_temperature_at(&self, cell: CellId) -> f64 {
         *self.mean_temp.get(cell)
     }
     /// Temperature at a cell on a given day, °C (mean plus the seasonal term).
+    /// type-audit: pending(wave-2)
     pub fn temperature_at(&self, cell: CellId, day: f64) -> f64 {
         temperature_at(
             &self.mean_temp,
@@ -167,6 +171,7 @@ impl GeneratedClimate {
         )
     }
     /// Moisture at a cell, `[0, 1]`.
+    /// type-audit: bare-ok(ratio)
     pub fn moisture_at(&self, cell: CellId) -> f64 {
         *self.moisture.get(cell)
     }
@@ -179,16 +184,19 @@ impl GeneratedClimate {
         self.biome.clone()
     }
     /// The per-cell habitability mask.
+    /// type-audit: bare-ok(flag)
     pub fn habitability(&self) -> &CellMap<bool> {
         &self.habitability
     }
     /// The fraction of cells that are habitable.
+    /// type-audit: bare-ok(ratio)
     pub fn habitable_fraction(&self) -> f64 {
         habitability::habitable_fraction(&self.habitability)
     }
 }
 
 /// Headline numbers of a climate, for the almanac and the Lab.
+/// type-audit: bare-ok(count: band_count), bare-ok(ratio: habitable_fraction), bare-ok(count: land_biome_count), bare-ok(count: marine_biome_count)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ClimateSummary {
     /// Circulation bands per hemisphere (`None` when locked).
