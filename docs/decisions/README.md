@@ -63,3 +63,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0021](0021-no-alignment-axis.md) | No alignment axis; species are not moral types | Accepted |
 | [0022](0022-sim-emits-data-clients-render.md) | Sim emits data, clients render | Accepted |
 | [0023](0023-in-repo-clients-carry-their-own-toolchains.md) | In-repo clients carry their own toolchains | Accepted |
+| [`…parser-libraries`](non-workspace-dev-tools-may-use-parser-libraries.md) | Non-workspace dev tools may use parser libraries | Accepted |
+| [`the-bare-ok-rubric`](the-bare-ok-rubric.md) | The bare-ok rubric for primitives at API boundaries | Accepted |

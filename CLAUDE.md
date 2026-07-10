@@ -36,6 +36,13 @@ cargo run -p hornvale -- streams         # stream manifest (book reference page)
 cargo run -p hornvale -- lab run studies/census-drift.study.json
 cargo run -p hornvale -- lab list-metrics
 
+# The type audit — a standalone tool OUTSIDE the workspace (decisions
+# `non-workspace-dev-tools-may-use-parser-libraries` / `the-bare-ok-rubric`);
+# check is default-deny (any untagged pub-boundary primitive fails), report
+# regenerates the committed audit report:
+cargo run --manifest-path tools/type-audit/Cargo.toml -- check
+cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
+
 # Generated-artifact freshness: CI regenerates every committed artifact
 # (three seed-42 almanacs, the elevation map, registry/manifest dumps, lab
 # studies) and fails on drift. The authoritative command list is the
@@ -122,7 +129,12 @@ contradicts, lower ("coarse constrains fine").
   hand-rolled newtypes with validating constructors and named conversions
   (`Au`, `Mm`, `LightYears`, `SolarMasses`, `StdDays`, `LocalDays`, …);
   dimensionless ratios stay bare `f64`. No dimensional-analysis crates.
-  Rationale and scope: Campaign 2 spec, design principle 5.
+  Rationale and scope: Campaign 2 spec, design principle 5. Enforced by
+  `tools/type-audit/` (decisions
+  `non-workspace-dev-tools-may-use-parser-libraries` / `the-bare-ok-rubric`):
+  every primitive at a `pub`
+  boundary carries a `type-audit:` verdict tag (`bare-ok(<class>)` /
+  `waiver(<reason>)` / `pending(wave-N)`), drift-checked in CI.
 - **Ratified decisions live in `docs/decisions/`** — the decision log is the
   durable, grep-able home for settled choices (do not relitigate without new
   information; supersede, never edit). Consult it before reopening an
