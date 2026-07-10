@@ -51,6 +51,7 @@
 - [Campaign 21: The Scene Window](./chronicle/21-the-scene-window.md)
 - [Campaign 22: The Atlas](./chronicle/22-the-atlas.md)
 - [Campaign 23: The Orrery](./chronicle/23-the-orrery.md)
+- [Campaign 25: The Measured Coast](./chronicle/25-the-measured-coast.md)
 
 # The Gallery
 

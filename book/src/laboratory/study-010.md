@@ -34,14 +34,17 @@ prose are the *same* 10,000-row run, committed together in one commit.
 
 **A note on preregistration.** Per ADR 0016, a study commits its expected
 direction before the sweep that could confirm or refute it runs. This
-study's whole purpose is that commitment: the five target directions below
-are quoted from the campaign spec, §2
+study's whole purpose is that commitment: four of the five target
+directions below are quoted verbatim from the campaign spec, §2
 (`docs/superpowers/specs/2026-07-09-the-measured-coast-design.md`), written
-and ratified before this census's 10,000-seed run executed, and recorded
-here **before Crust or Sculpting change one line of the elevation field** —
-so that when a later campaign re-runs this same study against a new
-generator, the comparison is a genuine before/after, not a target quietly
-redrawn to fit whatever the new generator happens to produce.
+and ratified before this census's 10,000-seed run executed; the fifth
+(hypsometric bimodality) is a synthesis consistent with the spec's own
+framing of that metric rather than a literal quote (see below). All five
+are recorded here **before Crust or Sculpting change one line of the
+elevation field** — so that when a later campaign re-runs this same study
+against a new generator, the comparison is a genuine before/after, not a
+target quietly redrawn to fit whatever the new generator happens to
+produce.
 
 ## The six metrics
 
@@ -170,10 +173,13 @@ producing.
 
 ## The preregistered target directions
 
-Quoted from the campaign spec §2, ratified before this census ran and
-recorded here, before any change to the elevation field, so the later
-comparison is honest and not a target quietly redrawn to fit whatever
-Crust and Sculpting produce:
+Ratified before this census ran and recorded here, before any change to the
+elevation field, so the later comparison is honest and not a target quietly
+redrawn to fit whatever Crust and Sculpting produce. Four of the five are
+quoted verbatim from the campaign spec §2; the fifth (bimodality) is this
+chapter's own synthesis, spelled out rather than quoted, of the spec's
+observation that the current generator "is expected to score bimodal but
+shelf-poor":
 
 - **Shoreline development index up** — from the measured 6.06 mean / 6.00
   median baseline. (Read together with the fragmentation note above: a
@@ -186,10 +192,10 @@ Crust and Sculpting produce:
 - **Plate-size Gini up** — from the measured 0.2612 mean / 0.2611 median
   baseline, toward Earth's heavy-tailed few-giants-plus-microplates
   distribution and away from near-uniform Voronoi cells.
-- **Hypsometric bimodality retained** — from the measured 3.63 mean / 3.04
-  median baseline; this is the one metric the current generator already
-  gets qualitatively right, and Crust/Sculpting must not trade it away
-  while fixing the other four.
+- **Hypsometric bimodality retained** (synthesis, not a spec quote) — from
+  the measured 3.63 mean / 3.04 median baseline; this is the one metric the
+  current generator already gets qualitatively right, and Crust/Sculpting
+  must not trade it away while fixing the other four.
 - **Largest-continent share more dispersed** — from the measured 0.737
   mean / 0.790 median baseline (37.4% of worlds at `≥ 0.9`), toward several
   comparably sized continents rather than one dominant supercontinent-scale

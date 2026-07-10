@@ -26,7 +26,11 @@ Four metric families appended to the lab registry (`windows/lab/src/metrics.rs`)
 **The census.** Following the house pattern (big author-time census + small CI drift variant):
 
 - `studies/census-of-coasts.study.json` — the new metrics over 10,000 seeds, default pins; published to `book/src/laboratory/` like the existing censuses.
-- `studies/census-coasts-drift.study.json` — the same metrics at the drift-study seed count, added to CI's "Artifacts are current" step.
+- Drift coverage of the new metrics needs no new study: the three CI-run
+  studies (`census-lands-drift`, `census-of-the-meeting`, `census-of-skies`)
+  select `"metrics": "all"`, so the new columns are drift-checked from the
+  commit that adds them. (Amended during planning: the originally proposed
+  `census-coasts-drift.study.json` would have double-run identical builds.)
 
 Studies are data, metrics are code (decision 0011). The census tables become the preregistered baseline that Campaigns B and C must move — the target directions (shoreline index up, shelf fraction up, plate Gini up, largest-continent share more dispersed) are recorded in the book's laboratory page prose alongside the baseline numbers.
 
@@ -52,7 +56,7 @@ Studies are data, metrics are code (decision 0011). The census tables become the
 - **Metric determinism** — same seed → identical metric values across two independent world builds (house property-test style).
 - **Refinement respects the prior** — property test over seeds: every pixel's elevation within the envelope bound of its interpolated prior; every land/ocean flip occurs only where `|interp − sea_level|` is inside the envelope; pixels far from coasts byte-match plain interpolation.
 - **Save-format byte-identity** — world JSON and almanac output byte-identical before/after the render change (asserted in-test, not just by CI drift).
-- **Census drift** — the new drift study joins the CI artifact-freshness gate.
+- **Census drift** — covered by the existing `all`-metric CI studies from the metrics commit onward.
 
 ## 5. Definition of Done
 
