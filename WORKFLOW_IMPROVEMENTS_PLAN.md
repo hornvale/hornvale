@@ -63,9 +63,40 @@ Self-tested with inline good/bad samples.
 sanctioned); the bad-sample unit tests prove rejection.
 **Status**: Complete
 
-## Stage 2+ (later passes)
+## Stage 2: The fixture spine + review surface (this pass)
 
-Grouped by dependency. TOOL-16 and TOOL-20 build on TOOL-15's shared spine.
+**Goal**: the two rows that build on TOOL-15's regeneration spine (TOOL-16,
+TOOL-20) plus the review-surface companion (TOOL-19). Plan:
+`docs/superpowers/plans/2026-07-10-workflow-improvements-stage-2.md`.
+
+### 2a. TOOL-16 — the fixture-staleness probe
+**Deliverable**: `windows/lab/tests/fixture_staleness.rs` — regenerate the
+first 3 seeds of each committed census live and compare (quantize-
+canonicalized) against the committed `rows.csv`; fail with the `make
+rebaseline` instruction. Also repairs `census_fixture_matches_live_run`,
+which compared full-precision live rows to quantized fixture rows (broken
+silently by the quantization epoch; CI never runs it).
+**Status**: In Progress
+
+### 2b. TOOL-20 — the golden-master accept harness
+**Deliverable**: `hornvale_kernel::golden` (`assert_golden`/`check_golden`,
+`REBASELINE=1` to accept) replacing the ad-hoc comparisons in
+`cli/tests/lens_purity.rs`, `windows/scene/tests/golden.rs`, and
+`windows/worldgen/tests/proto_goblinoid_golden.rs`; `make
+rebaseline-goldens`. `scripts/freeze-fixture.sh` narrows to historical pins
+(the `pre-*` fixtures are frozen history, never rebaselined) — a scoped
+deviation from the registry row's "replace freeze-fixture.sh".
+**Status**: Not Started
+
+### 2c. TOOL-19 — the human-readable lab regression view
+**Deliverable**: `hornvale lab diff <STUDY> <OLD_CSV> <NEW_CSV>` rendering
+which metric moved and by how much (distribution deltas + numeric mean
+shift); `make lab-diff STUDY=<name>` diffs the working tree against HEAD.
+**Status**: Not Started
+
+## Stage 3+ (later passes)
+
 TOOL-17/22/23 are CI-topology changes. PROC-7/8/9 are new drift-checks
-(host: `docs_consistency`). TOOL-18/19 and PROC-10 are standalone.
+(host: `docs_consistency`). TOOL-18 and PROC-10 are standalone. TOOL-15's
+exclude-glob relocation remains a follow-up.
 **Status**: Not Started
