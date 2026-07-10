@@ -605,6 +605,20 @@ pub fn biome_lines(world: &World) -> Result<Vec<String>, BuildError> {
     ])
 }
 
+/// The deep-time headline lines for the almanac; empty when the world has no
+/// glacial past.
+pub fn deep_time_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    let record = paleoclimate_of(world)?;
+    if record.max_ice_fraction <= 0.0 {
+        return Ok(Vec::new());
+    }
+    Ok(vec![format!(
+        "The frost retreated: at the glacial maximum (day {:.0}), ice advanced over {:.0}% of the land.",
+        record.glacial_maximum_day,
+        record.max_ice_fraction * 100.0
+    )])
+}
+
 /// The land's headline lines for the almanac: plates and ocean coverage,
 /// then the highest land above the sea.
 pub fn land_lines(world: &World) -> Result<Vec<String>, BuildError> {
@@ -1509,6 +1523,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         places: hornvale_terrain::places(world),
         land_lines: land_lines(world)?,
         biome_lines: biome_lines(world)?,
+        deep_time_lines: deep_time_lines(world)?,
         peoples,
         pantheons: {
             let mut blocks = Vec::new();
