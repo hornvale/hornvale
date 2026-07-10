@@ -7,7 +7,10 @@ use crate::units::TempAnomaly;
 use hornvale_kernel::{CellMap, Geosphere};
 
 /// Land colder than this, relative to the world's present, is under ice
-/// (°C anomaly).
+/// (°C anomaly). Set below half of `ice::ALBEDO_GAIN_C` (6.0), the maximum
+/// reachable albedo-cooling swing, so eras with only partial ice cover can
+/// still cross it; a zero-forcing world produces an exact-zero anomaly
+/// everywhere, so the null control never depends on where this threshold sits.
 const GLACIATION_THRESHOLD_C: f64 = -3.0;
 
 /// One coarse era's climate fields, all bare kernel types, filled by the
@@ -37,9 +40,11 @@ pub struct EraClimate {
 /// Takes a per-cell [`TempAnomaly`], not an absolute temperature (decision
 /// 0008): an earlier version of this function accepted a bare
 /// `CellMap<f64>` that callers twice passed an absolute reading where an
-/// anomaly was meant, silently glaciating the wrong worlds. The
-/// [`TempAnomaly`] type can only be constructed by subtracting two
-/// [`crate::units::Celsius`] values, so that mistake no longer compiles.
+/// anomaly was meant, silently glaciating the wrong worlds. `TempAnomaly`'s
+/// constructor is `pub(crate)`, so outside this crate the type can only be
+/// obtained by subtracting two [`crate::units::Celsius`] values — external
+/// callers cannot fabricate one from a bare reading, so that mistake can no
+/// longer be made past the crate boundary.
 pub fn glaciated(
     geo: &Geosphere,
     elevation: &CellMap<f64>,

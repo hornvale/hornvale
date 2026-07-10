@@ -318,36 +318,56 @@ const ICE_STEP_DAYS: f64 = 2_000.0 * 365.25;
 /// Number of coarse climate re-runs across the deep-time window.
 const CLIMATE_ERAS: usize = 25;
 
+/// The era-loop invariants: everything about the world that does not vary
+/// across the ~25 coarse climate re-runs `paleoclimate_of` performs. Built
+/// exactly once by `paleoclimate_of` and threaded through `climate_at_era`
+/// for every era, so the loop no longer pays for a full terrain + sky
+/// regeneration on each of its ~25 iterations (a review finding: the old
+/// per-era `terrain_of`/`sky_of` calls, plus one more pair inside the
+/// present-temperature `climate_of` call, added up to ~27 full
+/// regenerations per `paleoclimate_of`, when only sea level, obliquity, and
+/// the albedo temperature offset actually vary by era).
+struct EraContext<'a> {
+    /// The shared geosphere (terrain's, reused for climate's grid).
+    geo: &'a Geosphere,
+    /// Present relief; elevation does not change across eras.
+    elevation: &'a hornvale_kernel::CellMap<f64>,
+    /// Seafloor feature per cell, derived once from terrain's boundaries.
+    seafloor: &'a hornvale_kernel::CellMap<SeafloorFeature>,
+    /// Insolation relative to Earth, from the world's sky (constant per world).
+    insolation: f64,
+    /// The world's rotation regime (constant per world).
+    regime: RotationRegime,
+    /// The calendar year length, standard days (constant per world).
+    year_length_std: f64,
+    /// The world's own unforced present-day temperature (day 0, no albedo
+    /// offset), one per cell — the anomaly baseline every era's glaciation
+    /// diagnostic is measured against (see the `ice` comment below).
+    present_temperature: &'a hornvale_kernel::CellMap<f64>,
+}
+
 /// Rebuild climate for one past era at an overridden sea level and obliquity,
 /// then apply the era's albedo cooling offset to the temperature field.
-/// `present_temperature` is the world's own unforced present-day temperature
-/// (era_day = 0, no albedo offset), one per cell — the anomaly baseline the
-/// glaciation diagnostic is measured against (see the `ice` comment below).
+/// `ctx` carries everything that does not vary by era (see [`EraContext`]).
 /// Returns the bare kernel maps paleoclimate consumes.
 fn climate_at_era(
-    world: &World,
+    ctx: &EraContext,
     era_day: f64,
     sea_level: f64,
     obliquity_deg: f64,
     temp_offset_c: f64,
-    present_temperature: &hornvale_kernel::CellMap<f64>,
-) -> Result<EraClimate, BuildError> {
-    let terrain = terrain_of(world)?;
-    let sky = sky_of(world)?;
-    let geo = terrain.geosphere();
-    let elevation = &terrain.globe().elevation;
-    let seafloor =
-        hornvale_kernel::CellMap::from_fn(geo, |cell| seafloor_feature(terrain.boundary_at(cell)));
-    let (insolation, _obliquity, regime, year_length_std) = stellar_inputs(&sky);
+) -> EraClimate {
+    let geo = ctx.geo;
+    let elevation = ctx.elevation;
     let climate = GeneratedClimate::generate(&ClimateInputs {
         geosphere: geo,
         elevation,
         sea_level,
-        seafloor: &seafloor,
-        insolation,
+        seafloor: ctx.seafloor,
+        insolation: ctx.insolation,
         obliquity_deg,
-        regime,
-        year_length_std,
+        regime: ctx.regime,
+        year_length_std: ctx.year_length_std,
     });
     // Offset temperature (albedo cooling) and diagnose habitability on it.
     let temperature =
@@ -378,7 +398,8 @@ fn climate_at_era(
     // 0008).
     let anomaly = hornvale_kernel::CellMap::from_fn(geo, |c| {
         let era_abs = Celsius::new(*temperature.get(c)).expect("temperature is finite");
-        let present_abs = Celsius::new(*present_temperature.get(c)).expect("temperature is finite");
+        let present_abs =
+            Celsius::new(*ctx.present_temperature.get(c)).expect("temperature is finite");
         era_abs - present_abs
     });
     // This same `ice` mask is both summarized into `ice_fraction` below and
@@ -397,13 +418,13 @@ fn climate_at_era(
     } else {
         iced as f64 / land as f64
     };
-    Ok(EraClimate {
+    EraClimate {
         day: era_day,
         ice,
         habitable,
         sea_level,
         ice_fraction,
-    })
+    }
 }
 
 /// The deep-time era loop: march the ice sheet on the sky's forcing at fine
@@ -411,6 +432,8 @@ fn climate_at_era(
 /// single construction site for `PaleoRecord` and the sole definer of the
 /// era-tick order (a save-format contract).
 pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
+    // Build the era-loop invariants exactly once (terrain, sky, and every
+    // scalar/field derived from them) — see `EraContext`.
     let sky = sky_of(world)?;
     let terrain = terrain_of(world)?;
     let geo = terrain.geosphere();
@@ -428,12 +451,40 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
     };
     let forcing = &system.forcing;
 
+    let seafloor =
+        hornvale_kernel::CellMap::from_fn(geo, |cell| seafloor_feature(terrain.boundary_at(cell)));
+    let (insolation, obliquity_deg, regime, year_length_std) = stellar_inputs(&sky);
+
     // The world's own unforced present temperature (era_day = 0, no albedo
     // offset), one per cell — the anomaly baseline every era's glaciation
-    // diagnostic is measured against (see `climate_at_era`).
-    let present_climate = climate_of(world)?;
+    // diagnostic is measured against (see `climate_at_era`). Built directly
+    // from the invariants above rather than via `climate_of(world)` (which
+    // would re-derive terrain and sky a second time): `obliquity_at(0.0) ==
+    // obliquity_mean` exactly (astronomy's forcing contract), the same value
+    // `stellar_inputs` returns, so this reproduces `climate_of`'s present
+    // reading byte-for-byte with no extra regeneration.
+    let present_climate = GeneratedClimate::generate(&ClimateInputs {
+        geosphere: geo,
+        elevation: &elevation,
+        sea_level: present_sea_level,
+        seafloor: &seafloor,
+        insolation,
+        obliquity_deg,
+        regime,
+        year_length_std,
+    });
     let present_temperature =
         hornvale_kernel::CellMap::from_fn(geo, |c| present_climate.mean_temperature_at(c));
+
+    let ctx = EraContext {
+        geo,
+        elevation: &elevation,
+        seafloor: &seafloor,
+        insolation,
+        regime,
+        year_length_std,
+        present_temperature: &present_temperature,
+    };
 
     // Fine ice integration: sample the caloric index back through the window.
     // t = 0 is the present (newest); we look back to −WINDOW. Samples ascend
@@ -464,15 +515,14 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
             .min_by(|a, b| (a.day - era_day).abs().total_cmp(&(b.day - era_day).abs()))
             .expect("history is non-empty");
         let sea_level = present_sea_level + state.sea_level_change.get();
-        let obliquity_deg = forcing.obliquity_at(era_day);
+        let era_obliquity_deg = forcing.obliquity_at(era_day);
         eras.push(climate_at_era(
-            world,
+            &ctx,
             era_day,
             sea_level,
-            obliquity_deg,
+            era_obliquity_deg,
             state.temp_offset_c,
-            &present_temperature,
-        )?);
+        ));
     }
     Ok(hornvale_paleoclimate::extract(
         geo,

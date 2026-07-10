@@ -114,7 +114,16 @@ pub struct TempAnomaly(f64);
 
 impl TempAnomaly {
     /// Validating constructor: finite (sign and magnitude unconstrained).
-    pub fn new(value: f64) -> Result<Self, UnitError> {
+    ///
+    /// `pub(crate)` and `cfg(test)`, not `pub`: the whole point of this type
+    /// is that an anomaly can ONLY be produced by [`Celsius`] subtraction
+    /// (see that `Sub` impl). If this constructor were public, any external
+    /// caller could fabricate a `TempAnomaly` from a bare `f64` and bypass
+    /// that guarantee entirely. Its only callers are this crate's own unit
+    /// tests (`strata.rs`), so it is gated to test builds — a non-test build
+    /// has no legitimate caller at all, only [`Celsius`] subtraction.
+    #[cfg(test)]
+    pub(crate) fn new(value: f64) -> Result<Self, UnitError> {
         if !value.is_finite() {
             return Err(UnitError {
                 unit: "temperature anomaly",
