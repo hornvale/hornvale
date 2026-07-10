@@ -1,6 +1,7 @@
 //! Walking a parsed file for primitives at `pub` boundaries.
 
 use crate::primitives::contains_tracked_primitive;
+use quote::ToTokens;
 use syn::spanned::Spanned;
 
 /// One audited primitive-bearing position on an item.
@@ -58,14 +59,39 @@ pub fn positions_in_file(file: &syn::File) -> Vec<AuditItem> {
 fn collect_items(syn_items: &[syn::Item], out: &mut Vec<AuditItem>) {
     for item in syn_items {
         match item {
-            syn::Item::Fn(f) if is_bare_pub(&f.vis) => {
-                push_fn(&f.sig, &f.attrs, out);
+            syn::Item::Fn(f) if is_bare_pub(&f.vis) => push_fn(&f.sig, &f.attrs, out),
+            syn::Item::Struct(s) if is_bare_pub(&s.vis) => push_struct(s, out),
+            syn::Item::Enum(e) if is_bare_pub(&e.vis) => push_enum(e, out),
+            syn::Item::Const(c) if is_bare_pub(&c.vis) => {
+                push_type_item(&c.ident, &c.ty, &c.attrs, out)
             }
-            syn::Item::Struct(s) if is_bare_pub(&s.vis) => {
-                push_struct(s, out);
+            syn::Item::Static(s) if is_bare_pub(&s.vis) => {
+                push_type_item(&s.ident, &s.ty, &s.attrs, out)
             }
-            // Enums, const/static, type aliases, traits, inherent impls, and
-            // nested modules are handled in Task 4.
+            syn::Item::Type(t) if is_bare_pub(&t.vis) => {
+                push_type_item(&t.ident, &t.ty, &t.attrs, out)
+            }
+            syn::Item::Trait(t) if is_bare_pub(&t.vis) => {
+                for ti in &t.items {
+                    if let syn::TraitItem::Fn(m) = ti {
+                        push_fn(&m.sig, &m.attrs, out);
+                    }
+                }
+            }
+            syn::Item::Impl(i) if i.trait_.is_none() => {
+                for ii in &i.items {
+                    if let syn::ImplItem::Fn(m) = ii
+                        && is_bare_pub(&m.vis)
+                    {
+                        push_fn(&m.sig, &m.attrs, out);
+                    }
+                }
+            }
+            syn::Item::Mod(m) if !has_cfg_test(&m.attrs) => {
+                if let Some((_, items)) = &m.content {
+                    collect_items(items, out);
+                }
+            }
             _ => {}
         }
     }
@@ -127,6 +153,58 @@ fn push_struct(s: &syn::ItemStruct, out: &mut Vec<AuditItem>) {
             positions,
         });
     }
+}
+
+fn push_enum(e: &syn::ItemEnum, out: &mut Vec<AuditItem>) {
+    let mut positions = Vec::new();
+    for variant in &e.variants {
+        for (idx, field) in variant.fields.iter().enumerate() {
+            if contains_tracked_primitive(&field.ty) {
+                let base = field
+                    .ident
+                    .as_ref()
+                    .map(|i| i.to_string())
+                    .unwrap_or_else(|| idx.to_string());
+                positions.push(Position {
+                    name: format!("{}.{}", variant.ident, base),
+                    line: field.ty.span().start().line,
+                });
+            }
+        }
+    }
+    if !positions.is_empty() {
+        out.push(AuditItem {
+            name: e.ident.to_string(),
+            doc: doc_text(&e.attrs),
+            line: e.ident.span().start().line,
+            positions,
+        });
+    }
+}
+
+fn push_type_item(
+    ident: &syn::Ident,
+    ty: &syn::Type,
+    attrs: &[syn::Attribute],
+    out: &mut Vec<AuditItem>,
+) {
+    if contains_tracked_primitive(ty) {
+        out.push(AuditItem {
+            name: ident.to_string(),
+            doc: doc_text(attrs),
+            line: ident.span().start().line,
+            positions: vec![Position {
+                name: ident.to_string(),
+                line: ty.span().start().line,
+            }],
+        });
+    }
+}
+
+fn has_cfg_test(attrs: &[syn::Attribute]) -> bool {
+    attrs
+        .iter()
+        .any(|a| a.path().is_ident("cfg") && a.to_token_stream().to_string().contains("test"))
 }
 
 fn pat_name(pat: &syn::Pat) -> String {
@@ -193,5 +271,84 @@ mod tests {
         );
         let items = positions_in_file(&f);
         assert_eq!(items[0].positions[0].name, "0");
+    }
+
+    #[test]
+    fn extracts_enum_variant_fields() {
+        let f = file(
+            r#"
+            /// A rotation.
+            pub enum Rotation {
+                /// Spinning with a day length.
+                Spinning { day: f64 },
+                /// Tidally locked.
+                Locked,
+            }
+        "#,
+        );
+        let items = positions_in_file(&f);
+        assert_eq!(items.len(), 1);
+        // Variant-scoped names ("Variant.field") disambiguate same-named
+        // fields across variants — see push_enum and the task's naming rule.
+        assert_eq!(items[0].positions[0].name, "Spinning.day");
+    }
+
+    #[test]
+    fn extracts_const_static_and_type_alias() {
+        let f = file(
+            r#"
+            /// A label.
+            pub const SEED_LABEL: &str = "x";
+            /// An alias that launders a primitive.
+            pub type Meters = f64;
+        "#,
+        );
+        let items = positions_in_file(&f);
+        let names: Vec<_> = items.iter().map(|i| i.name.as_str()).collect();
+        assert!(names.contains(&"SEED_LABEL"));
+        assert!(names.contains(&"Meters"));
+    }
+
+    #[test]
+    fn audits_trait_defs_and_inherent_impls_but_not_trait_impls() {
+        let f = file(
+            r#"
+            /// A provider.
+            pub trait Provider {
+                /// Sample at a coordinate.
+                fn sample(&self, x: f64) -> f64;
+            }
+            pub struct P;
+            impl P {
+                /// Inherent, audited.
+                pub fn scale(&self, k: f64) -> f64 { k }
+            }
+            impl Provider for P {
+                fn sample(&self, x: f64) -> f64 { x } // trait impl — NOT audited
+            }
+        "#,
+        );
+        let items = positions_in_file(&f);
+        let names: Vec<_> = items.iter().map(|i| i.name.as_str()).collect();
+        assert!(names.contains(&"sample")); // trait def
+        assert!(names.contains(&"scale")); // inherent impl
+        assert_eq!(names.iter().filter(|n| **n == "sample").count(), 1); // impl not double-counted
+    }
+
+    #[test]
+    fn skips_cfg_test_modules() {
+        let f = file(
+            r#"
+            /// Real.
+            pub fn real(x: f64) -> f64 { x }
+            #[cfg(test)]
+            mod tests {
+                pub fn helper(y: f64) -> f64 { y }
+            }
+        "#,
+        );
+        let items = positions_in_file(&f);
+        let names: Vec<_> = items.iter().map(|i| i.name.as_str()).collect();
+        assert_eq!(names, vec!["real"]);
     }
 }
