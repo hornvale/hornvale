@@ -27,9 +27,9 @@ fn remove_stale_artifacts(dir: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-/// Write `{study.name}-summary.md` and every `{stem}.svg` chart for a run
-/// result into `base_dir/{study.name}/`, creating that subdirectory as
-/// needed.
+/// Write `{study.name}-summary.md`, the full `rows.csv` table, and every
+/// `{stem}.svg` chart for a run result into `base_dir/{study.name}/`, creating
+/// that subdirectory as needed.
 ///
 /// Each study owns its subdirectory outright: study names are unconstrained
 /// kebab-case, so a shared flat directory can't be cleaned by filename
@@ -51,6 +51,14 @@ pub fn publish(result: &RunResult, base_dir: &Path) -> std::io::Result<Vec<PathB
     let summary_path = study_dir.join(format!("{}-summary.md", result.study.name));
     fs::write(&summary_path, render_summary(result))?;
     written.push(summary_path);
+
+    // The full per-seed table, committed alongside the summary so downstream
+    // consumers (the calibration suite) can load the census instead of
+    // recomputing it. Regenerated and drift-checked in CI like every other
+    // artifact here.
+    let rows_path = study_dir.join("rows.csv");
+    fs::write(&rows_path, crate::runner::render_csv(result))?;
+    written.push(rows_path);
 
     for (stem, svg) in charts_for(result) {
         let chart_path = study_dir.join(format!("{}.svg", stem));
@@ -118,8 +126,8 @@ mod tests {
 
         let written = publish(&result, &dir).expect("publish should succeed");
 
-        // 1 summary + 2 metrics * 1 pin set = 3 files.
-        assert_eq!(written.len(), 3);
+        // 1 summary + 1 rows.csv + 2 metrics * 1 pin set = 4 files.
+        assert_eq!(written.len(), 4);
 
         let mut sorted_expected = written.clone();
         sorted_expected.sort();
@@ -130,6 +138,10 @@ mod tests {
         let summary_path = study_dir.join("publish-study-summary.md");
         assert!(written.contains(&summary_path));
         assert!(summary_path.exists());
+
+        let rows_path = study_dir.join("rows.csv");
+        assert!(written.contains(&rows_path));
+        assert!(rows_path.exists());
 
         let chart1 = study_dir.join("publish-study-default-star-class.svg");
         let chart2 = study_dir.join("publish-study-default-moons-admitted.svg");

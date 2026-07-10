@@ -5,7 +5,12 @@ multiscalar world simulation observed through text. It describes the system
 *as it actually exists* — its principles, its architecture, what each campaign
 of work built, and what remains open.
 
-It is deliberately not the [vision book](https://hornvale.github.io/book/),
+One part is explicitly exempt from that claim: the closing part, **The
+Frontier**, publishes the project's speculative vision map — ambitions and
+their confidence tags, not the system as built. It is marked as such
+throughout, and it governs nothing.
+
+This book is deliberately not the [vision book](https://hornvale.github.io/book/),
 which explains *why* this project exists and what it wants to feel like. Read
 that one first if you want the soul; read this one if you want the machine.
 

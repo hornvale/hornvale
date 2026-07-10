@@ -8,7 +8,8 @@ knowledge architecture from drifting.
 ## The one habit that matters: registry-first
 
 Before you propose a new idea, reopen an old one, or argue an architectural
-or process question, **grep [`vision/idea-registry.md`](vision/idea-registry.md)**.
+or process question, **grep
+[`book/src/frontier/idea-registry.md`](../book/src/frontier/idea-registry.md)**.
 It is the scannable index of every speculative idea the project holds.
 
 - A row marked `rejected` or `ratified (NNNN)` is a **closed question**.
@@ -16,34 +17,21 @@ It is the scannable index of every speculative idea the project holds.
   or drop it. The rejected-rows table exists precisely so good ideas that
   were considered and set aside are not re-proposed from scratch.
 - A row marked `elaborated` already has an essay in
-  [`vision/frontier.md`](vision/frontier.md); extend that, don't restart it.
+  [`book/src/frontier/frontier.md`](../book/src/frontier/frontier.md);
+  extend that, don't restart it.
 - If an idea genuinely isn't there, it is new — add a one-line row (see
   below) before the conversation ends. Capturing beats elaborating; a `raw`
   stub is a success. A lost idea is gone.
 
-## The registry and the frontier are two halves of one thing
+## The registry and the frontier moved into the book
 
-The **frontier** holds the *essays* — the interconnected argument, why the
-project stays one file (splitting it was considered and rejected: `REJ-3`).
-The **registry** holds the *index* — one greppable line per idea. Editing one
-usually means touching the other:
-
-- **New idea** → add a registry row (permanent category-prefixed ID, status,
-  confidence, pointer). Elaborating it later → flip the row to `elaborated`
-  and point at the new frontier section.
-- **New frontier `## ` section** → add a bullet to the frontier's `## Contents`
-  ToC, and (usually) a registry row pointing at it.
-- **Renamed frontier heading** → its anchor changes, so fix the ToC bullet
-  and every registry row that links to it.
-- **Idea drains into a spec** → flip the row's status (`spec'd` / `shipped`)
-  and repoint **Where** at the spec. The elaboration relocates; the
-  breadcrumb stays. This is how the frontier sheds mass without amnesia —
-  never delete a row.
-- **A vision idea becomes a decision** → cross-link the decision from the
-  row (`ratified (NNNN)`); do not restate the decision's content here.
-
-IDs are permanent. A superseded idea keeps its ID and flips its status; new
-ideas take the next free number in their category; never renumber.
+The frontier essays and the idea registry live at `book/src/frontier/` —
+the book's one clearly-marked speculative part (decision
+`the-frontier-is-published-in-the-book`). Their editing discipline (IDs are
+permanent, ToC completeness, status flips, link conventions) lives beside
+them in [`book/src/frontier/CLAUDE.md`](../book/src/frontier/CLAUDE.md).
+The old `docs/vision/` paths hold redirect stubs so historical links
+resolve; do not add new content under `docs/vision/`.
 
 ## The drift-check enforces the above
 
@@ -69,9 +57,13 @@ deliberately and say why, exactly as with any other invariant.)
 
 ## Boundaries
 
-- **`docs/` is the private end of the pipe; `book/` is the public end.** The
-  frontier and registry deliberately stay out of the book — the book is
-  merged reality only. Do not surface speculative material into `book/`.
+- **The book's merged-reality contract is per-part.** The frontier and
+  registry are published as the book's clearly-marked Frontier part
+  (decision `the-frontier-is-published-in-the-book`); every other part of
+  the book describes merged reality — do not surface speculative material
+  anywhere else in `book/`, and do not cite registry IDs outside
+  `book/src/frontier/` (the drift-check enforces this). Specs, plans, and
+  decisions stay in `docs/`.
 - **Decisions are append-only.** Never edit a ratified decision's substance;
   supersede it with a new record. See
   [`decisions/README.md`](decisions/README.md).
