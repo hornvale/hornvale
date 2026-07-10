@@ -82,72 +82,72 @@
 
 | Concept | Domain | Kind | Meaning |
 |---|---|---|---|
-| `abyssal` | climate | Terrain | a biome class |
-| `alpine` | climate | Terrain | a biome class |
-| `bathypelagic` | climate | Terrain | a biome class |
-| `blood` | language | Body | the circulating fluid of a body |
-| `blue` | language | Quality | the color term for blue |
-| `bone` | language | Body | the rigid frame of a body |
-| `brown` | language | Quality | the color term for brown |
-| `child` | language | Kin | one's son or daughter |
-| `coral-reef` | climate | Terrain | a biome class |
-| `dark` | language | Quality | the color term for black/dark hues |
-| `day` | language | Celestial | the light half of the day-night cycle |
-| `desert` | climate | Terrain | a biome class |
-| `die` | language | Quality | to cease living |
-| `earth` | language | Terrain | the ground underfoot |
-| `eat` | language | Quality | to consume food |
-| `epipelagic` | climate | Terrain | a biome class |
-| `eye` | language | Body | the organ of sight |
-| `fire` | language | Substance | flame and heat |
-| `foot` | language | Body | the walking limb-end |
-| `gloom` | language | Quality | the deepest, starless dark |
-| `goblin-kind` | species | Living | a goblin |
-| `god` | religion | Social | a deity |
-| `green` | language | Quality | the color term for green |
-| `hadal-trench` | climate | Terrain | a biome class |
-| `hand` | language | Body | the manipulating limb-end |
-| `hearth` | settlement | Social | the fire at the center of a home |
-| `home` | settlement | Social | one's dwelling |
-| `hydrothermal-vent` | climate | Terrain | a biome class |
-| `ice` | climate | Substance | frozen water |
-| `kelp-forest` | climate | Terrain | a biome class |
-| `kobold-kind` | species | Living | a kobold |
-| `light` | language | Quality | the color term for white/light hues |
-| `many` | language | Quality | an indefinitely large count |
-| `mesopelagic` | climate | Terrain | a biome class |
-| `moon` | astronomy | Celestial | a moon |
-| `mountain` | terrain | Terrain | high ground |
-| `mouth` | language | Body | the organ of eating and speech |
-| `name` | language | Social | a word that identifies one who bears it |
-| `night` | astronomy | Celestial | the dark half of the day-night cycle |
-| `one` | language | Quality | the cardinal number 1 |
-| `parent` | language | Kin | one's father or mother |
-| `rain` | climate | Substance | liquid precipitation |
-| `red` | language | Quality | the color term for red |
-| `savanna` | climate | Terrain | a biome class |
-| `sea` | terrain | Terrain | a body of salt water |
-| `sea-ice` | climate | Terrain | a biome class |
-| `shadow` | language | Quality | cast dark, distinct from open gloom |
-| `shrubland` | climate | Terrain | a biome class |
-| `sibling` | language | Kin | one's brother or sister |
-| `sleep` | language | Quality | to rest unconscious |
-| `snow` | climate | Substance | frozen precipitation |
-| `spirit` | religion | Social | a lesser or unseen supernatural presence |
-| `star` | astronomy | Celestial | a fixed point of light in the night sky |
-| `starlit` | language | Quality | dark faintly lit by stars |
-| `stone` | terrain | Substance | rock |
-| `sun` | astronomy | Celestial | the sun |
-| `taiga` | climate | Terrain | a biome class |
-| `temperate-forest` | climate | Terrain | a biome class |
-| `temperate-grassland` | climate | Terrain | a biome class |
-| `temperate-rainforest` | climate | Terrain | a biome class |
-| `tree` | language | Living | a woody plant |
-| `tropical-rainforest` | climate | Terrain | a biome class |
-| `tropical-seasonal-forest` | climate | Terrain | a biome class |
-| `tundra` | climate | Terrain | a biome class |
-| `two` | language | Quality | the cardinal number 2 |
-| `upwelling` | climate | Terrain | a biome class |
-| `water` | language | Substance | the drinkable liquid |
-| `wind` | language | Substance | moving air |
-| `yellow` | language | Quality | the color term for yellow |
+| `abyssal` | climate | terrain | a biome class |
+| `alpine` | climate | terrain | a biome class |
+| `bathypelagic` | climate | terrain | a biome class |
+| `blood` | language | body | the circulating fluid of a body |
+| `blue` | language | quality | the color term for blue |
+| `bone` | language | body | the rigid frame of a body |
+| `brown` | language | quality | the color term for brown |
+| `child` | language | kin | one's son or daughter |
+| `coral-reef` | climate | terrain | a biome class |
+| `dark` | language | quality | the color term for black/dark hues |
+| `day` | language | celestial | the light half of the day-night cycle |
+| `desert` | climate | terrain | a biome class |
+| `die` | language | quality | to cease living |
+| `earth` | language | terrain | the ground underfoot |
+| `eat` | language | quality | to consume food |
+| `epipelagic` | climate | terrain | a biome class |
+| `eye` | language | body | the organ of sight |
+| `fire` | language | substance | flame and heat |
+| `foot` | language | body | the walking limb-end |
+| `gloom` | language | quality | the deepest, starless dark |
+| `goblin-kind` | species | living | a goblin |
+| `god` | religion | social | a deity |
+| `green` | language | quality | the color term for green |
+| `hadal-trench` | climate | terrain | a biome class |
+| `hand` | language | body | the manipulating limb-end |
+| `hearth` | settlement | social | the fire at the center of a home |
+| `home` | settlement | social | one's dwelling |
+| `hydrothermal-vent` | climate | terrain | a biome class |
+| `ice` | climate | substance | frozen water |
+| `kelp-forest` | climate | terrain | a biome class |
+| `kobold-kind` | species | living | a kobold |
+| `light` | language | quality | the color term for white/light hues |
+| `many` | language | quality | an indefinitely large count |
+| `mesopelagic` | climate | terrain | a biome class |
+| `moon` | astronomy | celestial | a moon |
+| `mountain` | terrain | terrain | high ground |
+| `mouth` | language | body | the organ of eating and speech |
+| `name` | language | social | a word that identifies one who bears it |
+| `night` | astronomy | celestial | the dark half of the day-night cycle |
+| `one` | language | quality | the cardinal number 1 |
+| `parent` | language | kin | one's father or mother |
+| `rain` | climate | substance | liquid precipitation |
+| `red` | language | quality | the color term for red |
+| `savanna` | climate | terrain | a biome class |
+| `sea` | terrain | terrain | a body of salt water |
+| `sea-ice` | climate | terrain | a biome class |
+| `shadow` | language | quality | cast dark, distinct from open gloom |
+| `shrubland` | climate | terrain | a biome class |
+| `sibling` | language | kin | one's brother or sister |
+| `sleep` | language | quality | to rest unconscious |
+| `snow` | climate | substance | frozen precipitation |
+| `spirit` | religion | social | a lesser or unseen supernatural presence |
+| `star` | astronomy | celestial | a fixed point of light in the night sky |
+| `starlit` | language | quality | dark faintly lit by stars |
+| `stone` | terrain | substance | rock |
+| `sun` | astronomy | celestial | the sun |
+| `taiga` | climate | terrain | a biome class |
+| `temperate-forest` | climate | terrain | a biome class |
+| `temperate-grassland` | climate | terrain | a biome class |
+| `temperate-rainforest` | climate | terrain | a biome class |
+| `tree` | language | living | a woody plant |
+| `tropical-rainforest` | climate | terrain | a biome class |
+| `tropical-seasonal-forest` | climate | terrain | a biome class |
+| `tundra` | climate | terrain | a biome class |
+| `two` | language | quality | the cardinal number 2 |
+| `upwelling` | climate | terrain | a biome class |
+| `water` | language | substance | the drinkable liquid |
+| `wind` | language | substance | moving air |
+| `yellow` | language | quality | the color term for yellow |

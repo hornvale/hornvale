@@ -110,3 +110,54 @@ fn exposure_of_is_pure_across_two_calls() {
     let b = exposure_of(&w, "goblin").unwrap();
     assert_eq!(a, b, "same world+species must yield identical exposure");
 }
+
+/// A species the world never placed still gets a total, well-reasoned
+/// exposure map: build a goblin-only world (species pin) and query the
+/// UNPLACED kobold. Every registered concept classifies exactly once; the
+/// experiential core (universal stratum) is Steeped regardless of
+/// settlement; geography-derived and coexistence-derived concepts fall to
+/// reasoned gaps. Guards the zero-settlement path the seed-42 default
+/// world never exercises.
+#[test]
+fn an_unplaced_species_still_gets_a_total_reasoned_exposure_map() {
+    let w = build_world(
+        hornvale_kernel::Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &SettlementPins {
+            species: Some("goblin".to_string()),
+            ..SettlementPins::default()
+        },
+    )
+    .unwrap();
+
+    let exposures = exposure_of(&w, "kobold").unwrap();
+    assert_eq!(
+        exposures.len(),
+        w.registry.concepts().count(),
+        "every registered concept must classify exactly once for an unplaced species"
+    );
+    assert!(
+        matches!(
+            exposures.get("water"),
+            Some(hornvale_language::ExposureClass::Steeped)
+        ),
+        "the universal stratum is experience every embodied species has, settled or not"
+    );
+    for (concept, class) in &exposures {
+        if let hornvale_language::ExposureClass::Unknown { reason } = class {
+            let text = match reason {
+                hornvale_language::GapReason::Experiential(s) => s,
+                hornvale_language::GapReason::Perceptual(s) => s,
+            };
+            assert!(
+                !text.is_empty(),
+                "unplaced-species gap for '{concept}' must carry a reason"
+            );
+        }
+    }
+    // The lexicon still assembles over that map without panicking.
+    let lex = lexicon_of(&w, "kobold").unwrap();
+    assert_eq!(lex.entries().count(), exposures.len());
+}

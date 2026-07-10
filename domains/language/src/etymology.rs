@@ -321,7 +321,11 @@ mod tests {
     /// contain every consonant [`evolve`]'s tests exercise across the
     /// Lenition/Fortition/codomain paths: the six oral stops (p/b, t/d,
     /// k/g) and the three non-sibilant fricatives (f/v, x), alongside every
-    /// canonical vowel (always kept under a full `vowel_space`).
+    /// canonical vowel (always kept under a full `vowel_space`). NOTE: the
+    /// fixed seed is coupled to `draw_phonology`'s stream-consumption
+    /// order — if that draw algorithm ever changes, this inventory changes
+    /// and the seed must be re-searched (these tests will fail loudly, not
+    /// silently).
     fn test_phonology() -> Phonology {
         draw_phonology(
             &Seed(37),
