@@ -75,8 +75,11 @@ cognates **regular**, the family **monophyletic**, and the kobold outgroup
 4. **The family generalizes; a singleton reproduces today.** "Family" is the
    general case; a family of one is the degenerate case. Kobold is a family of
    one: its proto *is* itself, so its proto-roots draw from its own phonology
-   under its own labels — **byte-identical to The Words**. The mechanism has
-   one shape; kobold is that shape with a single member.
+   under its own labels, and its `build_lexicon` is **byte-identical to The
+   Words for identical exposures** — the singleton *mechanism* is unchanged.
+   (Kobold's *world-integrated* output still shifts, because the world itself
+   gains two peoples — see §6.) The mechanism has one shape; kobold is that
+   shape with a single member.
 5. **History lands on the shipped engine.** The cascade family, the `evolve`
    core, the lexicon assembly (`build_lexicon`, compounds, gaps, headedness),
    and the three surface views are all reused **unchanged**. This campaign
@@ -170,12 +173,18 @@ points at a shared ancestor.
 Headedness (compound modifier-head order) stays drawn per species — daughters
 may legitimately differ in it, a real typological axis, left to vary.
 
-## 6. The re-baseline (goblin's vocabulary, epoch discipline)
+## 6. The re-baseline (world-wide, epoch discipline)
 
 Because goblin's proto-roots now descend from proto-goblinoid rather than
 being drawn from goblin's own phonology, **goblin's present-day vocabulary and
-every proper name built over it change.** This is a deliberate regeneration,
-governed by the project's epoch discipline (never a silent rename):
+every proper name built over it change.** But the blast radius is wider than
+goblin: two further peoples join the world — hobgoblin and bugbear are now
+placed, named, and worshipped — so the seed-42 world re-baselines **world-wide**.
+Settlement placement draws over a larger roster; the concept layer gains
+endonym/exonym concepts for the new peoples, so *every* language (kobold
+included) grows entries for them; and coexistence-derived exposures shift
+accordingly. This is a deliberate regeneration, governed by the project's
+epoch discipline (never a silent rename):
 
 - Goblin's lexicon root draws move under the family:
   `language/goblin/lexicon/root/<concept>` is **retired**, replaced by the
@@ -188,8 +197,13 @@ governed by the project's epoch discipline (never a silent rename):
   always holds and is tested. The committed seed-42 galleries and the
   dictionary regenerate; the drift check re-pins them **in this campaign's
   commits**, not deferred (re-baseline discipline).
-- Kobold's labels and outputs are **unchanged** and asserted so — the
-  singleton path is the byte-stability keystone.
+- Kobold's per-species *draw paths* are unchanged — its phonology and cascade
+  derive under the same `language/kobold/...` labels, and its `build_lexicon`
+  is byte-identical **given identical exposures**. That unit-level invariant
+  (the singleton mechanism) is the byte-stability keystone — *not* kobold's
+  world output, which shifts with the world. It is asserted as a unit test
+  (fixed exposures → identical lexicon); world-level correctness is asserted
+  as **determinism** (same seed + same roster → identical world).
 
 ## 7. Success shape and the Lab battery
 
@@ -214,8 +228,12 @@ decorative:
    goblinoid; kobold's derivations descend from its own isolated proto. (This
    is the property L4's blind reconstruction must later recover — here it is
    asserted from ground truth.)
-4. **Determinism and singleton stability:** same seed → identical family;
-   kobold output byte-identical to the pre-Branches (post-Words) fixture.
+4. **Determinism and singleton stability:** same seed + same roster →
+   identical world (determinism, always); and kobold's `build_lexicon` is
+   byte-identical to The Words **given identical exposures** (the singleton
+   mechanism, a unit test). The seed-42 *world* re-baselines fully — it gains
+   two peoples — and is re-pinned in this campaign's commits, not held
+   byte-stable against the pre-Branches fixture.
 5. **Inventory closure:** every goblinoid daughter's every modern form is a
    subset of that daughter's own phonology inventory — the nativization
    postcondition, asserted family-wide so no word can use a sound the
@@ -256,9 +274,10 @@ honest — each is a later campaign:
 - Nativization consumes no draws — it is a pure function of (segments,
   inventory) applied after the cascade, so it perturbs no stream and cannot
   break stream-consumption isolation. It is a no-op on every self-proto
-  lineage, so kobold and every pre-Branches world stay byte-identical;
-  `evolve`'s new postcondition (modern ⊆ inventory) holds trivially for those
-  and is what the §7 inventory-closure battery asserts.
+  lineage — *nativization itself* changes nothing for kobold or any
+  pre-Branches world (their world outputs still re-baseline, for the separate
+  reasons in §6); `evolve`'s new postcondition (modern ⊆ inventory) holds
+  trivially for those and is what the §7 inventory-closure battery asserts.
 - `serde` + `serde_json` only; no new crates. `#![warn(missing_docs)]`; a
   one-line doc comment on every public item, field, and variant. `cargo fmt`
   as the final step before every commit.
