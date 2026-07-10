@@ -325,6 +325,7 @@ derived/approximated/drawn card each deficit extends.
 | PROC-2 | Campaigns write a one-page retrospective at merge                        | ratified (0020) | —    | [decision 0020](../decisions/0020-campaigns-write-retrospectives.md) |
 | PROC-3 | This idea registry — a thin retrieval layer over the frontier essays     | shipped         | —    | this file                                                            |
 | PROC-4 | The docs map (`docs/README.md`) — the doc-of-docs and knowledge pipeline | shipped         | —    | [docs/README.md](../README.md)                                       |
+| PROC-5 | The Confidence Gradient is a re-scored map, not frozen — `book/src/open-questions.md` re-axised onto checkability/autonomy (a bet's confidence = whether the world can score itself on it, self-scorable via the Lab vs taste-gated); re-scored in the DoD freshness sweep when a campaign resolves a bet, and CI link-checks the chapter so its evidence pointers can't rot silently | ratified        | —    | [decision](../decisions/the-confidence-gradient-is-re-scored-not-frozen.md) |
 
 ---
 

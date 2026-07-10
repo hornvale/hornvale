@@ -206,6 +206,24 @@ fn all_knowledge_doc_links_resolve() {
     );
 }
 
+#[test]
+fn the_confidence_gradient_links_resolve() {
+    // The Confidence Gradient (`book/src/open-questions.md`) is a re-scored map,
+    // not a generated artifact — nothing regenerates it, so a renamed chronicle
+    // or gallery target would rot its evidence pointers silently. Link-check it
+    // so at least that failure is loud (decision
+    // `the-confidence-gradient-is-re-scored-not-frozen`; DoD prompts the
+    // re-scoring itself, which no test can prove).
+    let mut errors = Vec::new();
+    check_links(&repo_root().join("book/src/open-questions.md"), &mut errors);
+    assert!(
+        errors.is_empty(),
+        "broken links in the Confidence Gradient (re-score the chapter, don't \
+         edit the check):\n  {}",
+        errors.join("\n  ")
+    );
+}
+
 /// The set of category prefixes the idea registry actually uses (`EXP`, `MAP`,
 /// `BIO`, …), parsed from the ID column so the book lint auto-adapts when a new
 /// prefix is coined rather than hard-coding a list that rots.
