@@ -4,6 +4,7 @@
 #![warn(missing_docs)]
 
 pub mod boundaries;
+pub mod crust;
 pub mod drainage;
 pub mod elevation;
 pub mod facts;
