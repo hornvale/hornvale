@@ -363,22 +363,22 @@ struct EraContext<'a> {
     regime: RotationRegime,
     /// The calendar year length, standard days (constant per world).
     year_length_std: f64,
-    /// The world's own unforced present-day temperature (day 0, no albedo
-    /// offset), one per cell, absolute — the field every era's offset is
-    /// added to (see the `ice` comment in `climate_at_era`).
-    present_temperature: &'a hornvale_kernel::CellMap<Celsius>,
     /// The world's own present-day ice mask (diagnosed from
-    /// `present_temperature` against [`FREEZE_C`], no albedo offset) — the
-    /// baseline every era's advance is measured against.
+    /// `paleoclimate_of`'s present-temperature field against [`FREEZE_C`],
+    /// no albedo offset) — the baseline every era's advance is measured
+    /// against. `climate_at_era` no longer needs the present-temperature
+    /// field itself (each era rebuilds its own from that era's climate —
+    /// see that function), only this diagnosed mask.
     present_ice: &'a hornvale_kernel::CellMap<bool>,
     /// The absolute snowline threshold ([`FREEZE_C`], wrapped once).
     freeze: Celsius,
 }
 
 /// Rebuild climate for one past era at an overridden sea level and obliquity,
-/// then apply the era's albedo cooling offset to the world's present
-/// temperature field. `ctx` carries everything that does not vary by era
-/// (see [`EraContext`]). Returns the bare kernel maps paleoclimate consumes.
+/// then apply the era's albedo cooling offset on top of THAT era's own mean
+/// temperature field (which already carries the sea-level lapse term).
+/// `ctx` carries everything that does not vary by era (see [`EraContext`]).
+/// Returns the bare kernel maps paleoclimate consumes.
 fn climate_at_era(
     ctx: &EraContext,
     era_day: f64,
@@ -388,11 +388,14 @@ fn climate_at_era(
 ) -> EraClimate {
     let geo = ctx.geo;
     let elevation = ctx.elevation;
-    // Re-run climate at this era's sea level/obliquity for moisture (and any
-    // other per-era field habitability needs); domains/climate's mean
-    // temperature field is present-invariant (it does not vary with
-    // obliquity), so it is not the source of this era's temperature — see
-    // below.
+    // Re-run climate at this era's sea level/obliquity: needed both for
+    // moisture/habitability below AND for this era's own mean-temperature
+    // field, which is NOT present-invariant — `hornvale_climate`'s
+    // `mean_temperature_at` includes a lapse term keyed to `sea_level`
+    // (relief measured relative to a lowered sea reads colder), so an era at
+    // a different sea level than the present has a genuinely different mean
+    // field even before the albedo offset is added. (Obliquity does not
+    // affect the mean field, only the seasonal-swell/moisture terms.)
     let climate = GeneratedClimate::generate(&ClimateInputs {
         geosphere: geo,
         elevation,
@@ -403,15 +406,16 @@ fn climate_at_era(
         regime: ctx.regime,
         year_length_std: ctx.year_length_std,
     });
-    // This era's absolute temperature: the world's present field plus this
+    // This era's absolute temperature: THIS era's own mean field (built with
+    // this era's sea level, above — captures the lapse term) plus this
     // era's albedo-cooling offset, via `Celsius`'s `Add` impl (the sole
     // production path for combining the two, together with `Sub` —
-    // decision 0008). Equivalent to a full per-era regeneration since the
-    // mean field is present-invariant, but expressed this way so the
-    // dependency on the offset — the only thing that actually varies this
-    // field by era — is explicit.
-    let era_temperature =
-        hornvale_kernel::CellMap::from_fn(geo, |c| *ctx.present_temperature.get(c) + temp_offset);
+    // decision 0008). `ctx.present_temperature` is deliberately NOT used
+    // here; it stays only as the baseline `ctx.present_ice` is diagnosed
+    // against for the `advance` mask below.
+    let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
+        Celsius::new(climate.mean_temperature_at(c)).expect("temperature is finite") + temp_offset
+    });
     let habitable = hornvale_kernel::CellMap::from_fn(geo, |c| {
         hornvale_climate::is_habitable(
             era_temperature.get(c).get(),
@@ -426,9 +430,13 @@ fn climate_at_era(
     // nothing flip. What strata preserve is the ADVANCE beyond what is
     // already iced at present — `era_ice` minus `ctx.present_ice` — not the
     // raw mask: this is what keeps the zero-forcing null control exact
-    // regardless of how cold a world's present poles already run (zero
-    // offset ⇒ `era_temperature` equals `present_temperature` pointwise ⇒
-    // `era_ice` equals `present_ice` pointwise ⇒ zero advance everywhere).
+    // regardless of how cold a world's present poles already run. Under zero
+    // forcing the ice integrator never leaves its dead band, so volume stays
+    // 0 every era: the offset is 0 AND sea level is unchanged (V=0), so this
+    // era's climate (built above from `sea_level`) is byte-identical to
+    // `paleoclimate_of`'s present climate ⇒ `era_temperature` equals
+    // `ctx.present_temperature` pointwise ⇒ `era_ice` equals
+    // `ctx.present_ice` pointwise ⇒ zero advance everywhere.
     let era_ice =
         hornvale_paleoclimate::glaciated(geo, elevation, &era_temperature, ctx.freeze, sea_level);
     let advance =
@@ -527,7 +535,6 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
         insolation,
         regime,
         year_length_std,
-        present_temperature: &present_temperature,
         present_ice: &present_ice,
         freeze,
     };
@@ -1753,21 +1760,32 @@ mod tests {
         // no ice cycling. The null control. Checked across several seeds: the
         // caloric index is an anomaly against each world's own mean obliquity
         // (so it is identically zero under zero forcing regardless of which
-        // obliquity that particular seed drew), and `climate_at_era`'s
-        // glaciation diagnostic is an anomaly against the world's own present
-        // temperature (so a naturally cold present — e.g. a very-low-obliquity
-        // world with permanently cold poles — never reads as "glaciated" on
-        // its own; only a colder-than-present era does).
+        // obliquity that particular seed drew), so the ice integrator never
+        // leaves its dead band and volume stays 0 every era — zero albedo
+        // offset AND sea level parked at the present stand throughout.
+        //
+        // `climate_at_era`'s glaciation diagnostic is an ABSOLUTE snowline
+        // (`era_temperature < FREEZE_C`), not an anomaly — see that
+        // function. What strata preserve is the ADVANCE beyond what is
+        // already iced at present (`era_ice && !present_ice`), so a
+        // naturally cold present — e.g. a very-low-obliquity world with
+        // permanently cold poles, which reads as `present_ice` on its own —
+        // is excluded from the envelope/`ice_fraction` regardless; only a
+        // colder-than-present era's ADDITIONAL ice counts. Under zero
+        // forcing every era's climate is byte-identical to the present
+        // (zero offset, unchanged sea level ⇒ `climate_at_era`'s per-era
+        // climate reproduces `paleoclimate_of`'s present climate exactly),
+        // so `era_ice` equals `present_ice` pointwise and `advance` is empty
+        // in every era — the null control holds regardless of how cold any
+        // given seed's present poles happen to run.
         //
         // Every assertion here must hold for the same reason: zero forcing
-        // means zero ice volume every era (the caloric index never leaves
-        // the ice integrator's dead band once its amplitudes are zeroed), so
-        // eustatic sea level never moves off the present stand and the
-        // temperature anomaly is exactly zero everywhere. That zero anomaly
-        // is what `climate_at_era` diagnoses into each era's `ice` mask, and
-        // `strata::extract`'s envelope is the OR-union of exactly those
-        // masks — so if `max_ice_fraction` is 0, the envelope is
-        // structurally forced to be empty too. Asserting only
+        // means zero ice volume every era, so eustatic sea level never moves
+        // off the present stand and every era's advance mask is empty. That
+        // empty `advance` is what `climate_at_era` stores on each `ice`
+        // field, and `strata::extract`'s envelope is the OR-union of
+        // exactly those masks — so if `max_ice_fraction` is 0, the envelope
+        // is structurally forced to be empty too. Asserting only
         // `max_ice_fraction` (as this test used to) does not exercise that
         // link: before the `EraClimate.ice` field existed, the envelope was
         // built from the *absolute* offset temperature via `glaciated`, and
