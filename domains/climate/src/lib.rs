@@ -19,9 +19,11 @@ use hornvale_kernel::{
 };
 
 /// Phenomenon kind for pervasive atmospheric conditions.
+/// type-audit: bare-ok(identifier-text)
 pub const AMBIENT: &str = "ambient";
 
 /// Every seed-derivation label this crate uses (none yet).
+/// type-audit: bare-ok(identifier-text)
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     Vec::new()
 }
@@ -35,6 +37,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
 pub struct UniformClimate;
 
 /// Local climate conditions.
+/// type-audit: pending(wave-2: temperature_c), bare-ok(prose: description)
 #[derive(Debug, Clone, PartialEq)]
 pub struct ClimateReport {
     /// Air temperature in degrees Celsius.

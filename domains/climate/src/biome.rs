@@ -69,6 +69,7 @@ pub enum Biome {
 
 /// The tree line in meters at a latitude: 4000 m at the equator, falling
 /// 40 m per degree, floored at 0.
+/// type-audit: pending(wave-2)
 pub fn tree_line_m(latitude_deg: f64) -> f64 {
     (4000.0 - 40.0 * latitude_deg.abs()).max(0.0)
 }
@@ -78,6 +79,7 @@ const ICE_C: f64 = -20.0;
 
 impl Biome {
     /// True for the marine variants.
+    /// type-audit: bare-ok(flag)
     pub fn is_marine(self) -> bool {
         matches!(
             self,
@@ -156,6 +158,7 @@ impl Biome {
     }
 
     /// The canonical kebab-case name (Lab metrics, CSV, book prose).
+    /// type-audit: bare-ok(identifier-text)
     pub fn name(self) -> &'static str {
         match self {
             Biome::Ice => "ice",
@@ -184,6 +187,7 @@ impl Biome {
     }
 
     /// A single ASCII glyph for the REPL biome map.
+    /// type-audit: bare-ok(artifact)
     pub fn glyph(self) -> char {
         match self {
             Biome::Ice | Biome::SeaIce => '*',
@@ -211,6 +215,7 @@ impl Biome {
     }
 
     /// An RGB color for the PNG biome map.
+    /// type-audit: bare-ok(artifact)
     pub fn color(self) -> [u8; 3] {
         match self {
             Biome::Ice => [235, 235, 245],
@@ -241,6 +246,7 @@ impl Biome {
 
 /// Classify a land cell. Specials first (ice below `ICE_C`, alpine above the
 /// tree line), then a Whittaker lookup on (annual-mean temperature, moisture).
+/// type-audit: pending(wave-2: temp_c), bare-ok(ratio: moisture), pending(wave-2: elevation_m), pending(wave-2: sea_level_m), pending(wave-2: latitude_deg)
 pub fn classify_land(
     temp_c: f64,
     moisture: f64,
@@ -297,6 +303,7 @@ const SEA_ICE_C: f64 = -2.0;
 
 /// Classify a marine cell by depth, surface temperature, seafloor feature,
 /// and upwelling, in precedence order (see the task's interface note).
+/// type-audit: pending(wave-2: depth_m), pending(wave-2: sst_c), bare-ok(flag: upwelling)
 pub fn classify_marine(
     depth_m: f64,
     sst_c: f64,
@@ -338,6 +345,7 @@ pub fn classify_marine(
 
 /// Classify any cell: marine when below sea level (depth = sea_level − elev),
 /// otherwise land. `sst_c` is the surface temperature used for marine cells.
+/// type-audit: pending(wave-2: temp_c), bare-ok(ratio: moisture), pending(wave-2: sst_c), pending(wave-2: elevation_m), pending(wave-2: sea_level_m), pending(wave-2: latitude_deg), bare-ok(flag: upwelling)
 #[allow(clippy::too_many_arguments)]
 pub fn classify(
     temp_c: f64,

@@ -17,6 +17,7 @@ const SUBSTELLAR: [f64; 3] = [1.0, 0.0, 0.0];
 
 /// Continentality: `1.0` fully inland, dropping toward `0.2` as a cell gains
 /// ocean neighbors. Damps the seasonal swing (the sea is a thermal buffer).
+/// type-audit: pending(wave-2: elevation), pending(wave-2: sea_level), bare-ok(ratio: return)
 pub fn continentality(
     geo: &Geosphere,
     elevation: &CellMap<f64>,
@@ -38,6 +39,7 @@ pub fn continentality(
 /// Annual-mean temperature per cell, °C. Spinning: an insolation baseline
 /// (equator warm, poles cold) minus lapse-rate cooling above sea level.
 /// Locked: a substellar cosine, hottest at `+x` and floored on the night side.
+/// type-audit: pending(wave-2)
 pub fn mean_temperature(
     geo: &Geosphere,
     elevation: &CellMap<f64>,
@@ -76,6 +78,7 @@ pub fn mean_temperature(
 
 /// The seasonal half-swing in °C at a cell: proportional to obliquity and to
 /// continentality (coastal cells swing less). Zero when obliquity is zero.
+/// type-audit: pending(wave-2)
 pub fn seasonal_amplitude(
     geo: &Geosphere,
     elevation: &CellMap<f64>,
@@ -90,6 +93,7 @@ pub fn seasonal_amplitude(
 /// Temperature at a cell on a given day: the annual mean plus a
 /// hemisphere-signed seasonal sinusoid on the year phase. Locked worlds have
 /// no seasonal term (no year phase organizes their fixed day/night).
+/// type-audit: pending(wave-2)
 #[allow(clippy::too_many_arguments)]
 pub fn temperature_at(
     mean: &CellMap<f64>,
