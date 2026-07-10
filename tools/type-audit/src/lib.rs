@@ -5,6 +5,7 @@
 pub mod args;
 pub mod extract;
 pub mod primitives;
+pub mod tag;
 
 use args::{Command, parse_args};
 
