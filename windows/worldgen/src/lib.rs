@@ -345,11 +345,7 @@ const FREEZE_C: f64 = -10.0;
 /// across the ~25 coarse climate re-runs `paleoclimate_of` performs. Built
 /// exactly once by `paleoclimate_of` and threaded through `climate_at_era`
 /// for every era, so the loop no longer pays for a full terrain + sky
-/// regeneration on each of its ~25 iterations (a review finding: the old
-/// per-era `terrain_of`/`sky_of` calls, plus one more pair inside the
-/// present-temperature `climate_of` call, added up to ~27 full
-/// regenerations per `paleoclimate_of`, when only sea level, obliquity, and
-/// the albedo temperature offset actually vary by era).
+/// regeneration on each of its ~25 iterations.
 struct EraContext<'a> {
     /// The shared geosphere (terrain's, reused for climate's grid).
     geo: &'a Geosphere,
@@ -366,63 +362,62 @@ struct EraContext<'a> {
     /// The world's own present-day ice mask (diagnosed from
     /// `paleoclimate_of`'s present-temperature field against [`FREEZE_C`],
     /// no albedo offset) — the baseline every era's advance is measured
-    /// against. `climate_at_era` no longer needs the present-temperature
-    /// field itself (each era rebuilds its own from that era's climate —
-    /// see that function), only this diagnosed mask.
+    /// against.
     present_ice: &'a hornvale_kernel::CellMap<bool>,
     /// The absolute snowline threshold ([`FREEZE_C`], wrapped once).
     freeze: Celsius,
 }
 
-/// Rebuild climate for one past era at an overridden sea level and obliquity,
-/// then apply the era's albedo cooling offset on top of THAT era's own mean
-/// temperature field (which already carries the sea-level lapse term).
-/// `ctx` carries everything that does not vary by era (see [`EraContext`]).
-/// Returns the bare kernel maps paleoclimate consumes.
-fn climate_at_era(
-    ctx: &EraContext,
-    era_day: f64,
+/// This era's raw inputs, carried alongside its cheaply-diagnosed
+/// [`EraClimate`] so the one era that turns out to be the glacial maximum
+/// can be re-visited afterward for a full climate rebuild (see
+/// `glacial_maximum_habitable`).
+struct EraInputs {
+    /// Absolute standard day of the era.
+    day: f64,
+    /// This era's sea level (metres): present + eustatic change.
     sea_level: f64,
+    /// This era's obliquity, degrees, from the sky's forcing.
     obliquity_deg: f64,
+    /// This era's albedo-cooling offset from the integrated ice history.
     temp_offset: hornvale_paleoclimate::TempAnomaly,
-) -> EraClimate {
+}
+
+/// Diagnose one past era's ice-ADVANCE mask without paying for a full
+/// climate rebuild: `hornvale_climate::mean_temperature`'s field is a
+/// latitude/insolation baseline (era-invariant here — obliquity and
+/// insolation do not vary by era) minus a lapse term keyed to `sea_level`,
+/// so an era's mean temperature differs from another only through that
+/// term. Calling `hornvale_climate::temperature::mean_temperature` directly
+/// — the exact function `GeneratedClimate::generate` calls internally to
+/// build its own mean-temperature field — reproduces that field
+/// bit-for-bit while skipping the moisture/biome/habitability work
+/// `GeneratedClimate::generate` also does, none of which the ice mask
+/// needs (a review finding: the old per-era loop paid for a full climate
+/// rebuild — moisture field, biome classification, habitability map,
+/// ~25 times over — purely to read its mean-temperature field back out).
+/// `ctx` carries everything that does not vary by era (see [`EraContext`]).
+/// The returned `EraClimate.habitable` is a placeholder (`strata::extract`
+/// only ever reads the glacial-maximum era's, filled in afterward by
+/// `glacial_maximum_habitable` — see `paleoclimate_of`).
+fn climate_at_era(ctx: &EraContext, inputs: &EraInputs) -> EraClimate {
     let geo = ctx.geo;
     let elevation = ctx.elevation;
-    // Re-run climate at this era's sea level/obliquity: needed both for
-    // moisture/habitability below AND for this era's own mean-temperature
-    // field, which is NOT present-invariant — `hornvale_climate`'s
-    // `mean_temperature_at` includes a lapse term keyed to `sea_level`
-    // (relief measured relative to a lowered sea reads colder), so an era at
-    // a different sea level than the present has a genuinely different mean
-    // field even before the albedo offset is added. (Obliquity does not
-    // affect the mean field, only the seasonal-swell/moisture terms.)
-    let climate = GeneratedClimate::generate(&ClimateInputs {
-        geosphere: geo,
+    let sea_level = inputs.sea_level;
+    let mean_temp = hornvale_climate::temperature::mean_temperature(
+        geo,
         elevation,
         sea_level,
-        seafloor: ctx.seafloor,
-        insolation: ctx.insolation,
-        obliquity_deg,
-        regime: ctx.regime,
-        year_length_std: ctx.year_length_std,
-    });
+        ctx.insolation,
+        &ctx.regime,
+    );
     // This era's absolute temperature: THIS era's own mean field (built with
     // this era's sea level, above — captures the lapse term) plus this
     // era's albedo-cooling offset, via `Celsius`'s `Add` impl (the sole
     // production path for combining the two, together with `Sub` —
-    // decision 0008). `ctx.present_temperature` is deliberately NOT used
-    // here; it stays only as the baseline `ctx.present_ice` is diagnosed
-    // against for the `advance` mask below.
+    // decision 0008).
     let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
-        Celsius::new(climate.mean_temperature_at(c)).expect("temperature is finite") + temp_offset
-    });
-    let habitable = hornvale_kernel::CellMap::from_fn(geo, |c| {
-        hornvale_climate::is_habitable(
-            era_temperature.get(c).get(),
-            climate.moisture_at(c),
-            *elevation.get(c),
-            sea_level,
-        )
+        Celsius::new(*mean_temp.get(c)).expect("temperature is finite") + inputs.temp_offset
     });
     // Ice is diagnosed against an ABSOLUTE snowline (`ctx.freeze`), not an
     // anomaly, so the same global cooling offset produces a spatially
@@ -432,11 +427,11 @@ fn climate_at_era(
     // raw mask: this is what keeps the zero-forcing null control exact
     // regardless of how cold a world's present poles already run. Under zero
     // forcing the ice integrator never leaves its dead band, so volume stays
-    // 0 every era: the offset is 0 AND sea level is unchanged (V=0), so this
-    // era's climate (built above from `sea_level`) is byte-identical to
-    // `paleoclimate_of`'s present climate ⇒ `era_temperature` equals
-    // `ctx.present_temperature` pointwise ⇒ `era_ice` equals
-    // `ctx.present_ice` pointwise ⇒ zero advance everywhere.
+    // 0 every era: the offset is 0 AND sea level is unchanged, so this
+    // era's mean field (built above from `sea_level`) is byte-identical to
+    // the present's ⇒ `era_temperature` equals the present reading
+    // pointwise ⇒ `era_ice` equals `ctx.present_ice` pointwise ⇒ zero
+    // advance everywhere.
     let era_ice =
         hornvale_paleoclimate::glaciated(geo, elevation, &era_temperature, ctx.freeze, sea_level);
     let advance =
@@ -457,12 +452,52 @@ fn climate_at_era(
         advanced as f64 / land as f64
     };
     EraClimate {
-        day: era_day,
+        day: inputs.day,
         ice: advance,
-        habitable,
+        // Placeholder — see the doc comment above. Filled in for the
+        // glacial-maximum era only, by `glacial_maximum_habitable`.
+        habitable: hornvale_kernel::CellMap::from_fn(geo, |_| false),
         sea_level,
         ice_fraction,
     }
+}
+
+/// The one full climate rebuild the era loop still pays for: refugia
+/// (habitability through the glacial maximum) needs moisture, which the
+/// cheap per-era diagnostic above deliberately does not compute. Reproduces
+/// the pre-refactor per-era habitable computation byte-for-byte for the
+/// single era this is called on. `ctx` carries the era-invariant inputs
+/// (see [`EraContext`]); `inputs` is this one era's own sea level,
+/// obliquity, and albedo offset (see [`EraInputs`]).
+fn glacial_maximum_habitable(
+    ctx: &EraContext,
+    inputs: &EraInputs,
+) -> hornvale_kernel::CellMap<bool> {
+    let geo = ctx.geo;
+    let elevation = ctx.elevation;
+    let sea_level = inputs.sea_level;
+    let climate = GeneratedClimate::generate(&ClimateInputs {
+        geosphere: geo,
+        elevation,
+        sea_level,
+        seafloor: ctx.seafloor,
+        insolation: ctx.insolation,
+        obliquity_deg: inputs.obliquity_deg,
+        regime: ctx.regime,
+        year_length_std: ctx.year_length_std,
+    });
+    let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
+        Celsius::new(climate.mean_temperature_at(c)).expect("temperature is finite")
+            + inputs.temp_offset
+    });
+    hornvale_kernel::CellMap::from_fn(geo, |c| {
+        hornvale_climate::is_habitable(
+            era_temperature.get(c).get(),
+            climate.moisture_at(c),
+            *elevation.get(c),
+            sea_level,
+        )
+    })
 }
 
 /// The deep-time era loop: march the ice sheet on the sky's forcing at fine
@@ -491,29 +526,35 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
 
     let seafloor =
         hornvale_kernel::CellMap::from_fn(geo, |cell| seafloor_feature(terrain.boundary_at(cell)));
-    let (insolation, obliquity_deg, regime, year_length_std) = stellar_inputs(&sky);
+    // `mean_temperature` (used just below, for the present, and inside
+    // `climate_at_era` for every other era) does not read obliquity at all
+    // — only the seasonal-swing/moisture terms do, and neither the ice
+    // diagnostic nor the present-temperature baseline needs those — so the
+    // world's mean obliquity is unused here; `glacial_maximum_habitable`
+    // reads each era's own obliquity from its `EraInputs` instead.
+    let (insolation, _obliquity_deg, regime, year_length_std) = stellar_inputs(&sky);
 
     // The world's own unforced present temperature (era_day = 0, no albedo
     // offset), one per cell, absolute — the field every era's offset is
     // added to, and (via `present_ice` below) the baseline every era's
-    // advance is measured against (see `climate_at_era`). Built directly
-    // from the invariants above rather than via `climate_of(world)` (which
-    // would re-derive terrain and sky a second time): `obliquity_at(0.0) ==
-    // obliquity_mean` exactly (astronomy's forcing contract), the same value
-    // `stellar_inputs` returns, so this reproduces `climate_of`'s present
-    // reading byte-for-byte with no extra regeneration.
-    let present_climate = GeneratedClimate::generate(&ClimateInputs {
-        geosphere: geo,
-        elevation: &elevation,
-        sea_level: present_sea_level,
-        seafloor: &seafloor,
+    // advance is measured against (see `climate_at_era`). Read directly off
+    // `hornvale_climate::temperature::mean_temperature` — the same function
+    // a full `GeneratedClimate::generate` call would use internally to
+    // build its own mean-temperature field — rather than paying for a full
+    // climate rebuild (moisture, biome, habitability) purely to read that
+    // field back out: `obliquity_at(0.0) == obliquity_mean` exactly
+    // (astronomy's forcing contract), the same value `stellar_inputs`
+    // returns, so this reproduces `climate_of`'s present reading
+    // byte-for-byte with no full regeneration at all.
+    let present_mean_temp = hornvale_climate::temperature::mean_temperature(
+        geo,
+        &elevation,
+        present_sea_level,
         insolation,
-        obliquity_deg,
-        regime,
-        year_length_std,
-    });
+        &regime,
+    );
     let present_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
-        Celsius::new(present_climate.mean_temperature_at(c)).expect("temperature is finite")
+        Celsius::new(*present_mean_temp.get(c)).expect("temperature is finite")
     });
     let freeze = Celsius::new(FREEZE_C).expect("FREEZE_C is finite");
     // The world's own present-day ice mask — no albedo offset, so this is
@@ -558,7 +599,11 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
 
     // Coarse climate eras: CLIMATE_ERAS days evenly across the window, each
     // reading the nearest integrated ice state for its offset and sea level.
-    let mut eras: Vec<EraClimate> = Vec::with_capacity(CLIMATE_ERAS);
+    // The cheap ice-only diagnostic (`climate_at_era`) needs no full climate
+    // rebuild, so every era's raw inputs are kept alongside its result —
+    // once the glacial maximum is known (below), that ONE era gets a full
+    // rebuild to fill in its habitable field for refugia.
+    let mut era_inputs: Vec<EraInputs> = Vec::with_capacity(CLIMATE_ERAS);
     for e in 0..CLIMATE_ERAS {
         let era_day = -DEEP_TIME_WINDOW_DAYS
             + (e as f64) * DEEP_TIME_WINDOW_DAYS / (CLIMATE_ERAS as f64 - 1.0);
@@ -567,16 +612,32 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
             .iter()
             .min_by(|a, b| (a.day - era_day).abs().total_cmp(&(b.day - era_day).abs()))
             .expect("history is non-empty");
-        let sea_level = present_sea_level + state.sea_level_change.get();
-        let era_obliquity_deg = forcing.obliquity_at(era_day);
-        eras.push(climate_at_era(
-            &ctx,
-            era_day,
-            sea_level,
-            era_obliquity_deg,
-            state.temp_offset,
-        ));
+        era_inputs.push(EraInputs {
+            day: era_day,
+            sea_level: present_sea_level + state.sea_level_change.get(),
+            obliquity_deg: forcing.obliquity_at(era_day),
+            temp_offset: state.temp_offset,
+        });
     }
+    let mut eras: Vec<EraClimate> = era_inputs
+        .iter()
+        .map(|inputs| climate_at_era(&ctx, inputs))
+        .collect();
+
+    // The glacial maximum: the SAME peak-selection comparator
+    // `strata::extract` uses below (greatest ice fraction, ties → earliest
+    // day), so the era refined here is exactly the one `extract` will read
+    // `habitable` from for refugia. Every other era's placeholder habitable
+    // field is never read.
+    if let Some(peak_idx) = (0..eras.len()).max_by(|&i, &j| {
+        eras[i]
+            .ice_fraction
+            .total_cmp(&eras[j].ice_fraction)
+            .then(eras[j].day.total_cmp(&eras[i].day))
+    }) {
+        eras[peak_idx].habitable = glacial_maximum_habitable(&ctx, &era_inputs[peak_idx]);
+    }
+
     Ok(hornvale_paleoclimate::extract(
         geo,
         &elevation,
