@@ -21,7 +21,7 @@ pub use pins::{GenesisError, TerrainPins, parse_pin, pin_strings};
 pub use plates::Plate;
 pub use provider::GeneratedTerrain;
 
-use hornvale_kernel::{ConceptRegistry, EntityId, RegistryError, World};
+use hornvale_kernel::{ConceptKind, ConceptRegistry, EntityId, RegistryError, World};
 
 /// The fixed subdivision level of the shared Geosphere (10 × 4^5 + 2 =
 /// 10,242 cells). The composition root builds `Geosphere::new(GLOBE_LEVEL)`
@@ -96,6 +96,15 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::TERRAIN_NOTE,
         false,
         "a note recorded during tectonic genesis",
+    )?;
+
+    registry.register_concept("stone", "terrain", ConceptKind::Substance, "rock")?;
+    registry.register_concept("mountain", "terrain", ConceptKind::Terrain, "high ground")?;
+    registry.register_concept(
+        "sea",
+        "terrain",
+        ConceptKind::Terrain,
+        "a body of salt water",
     )
 }
 
@@ -143,6 +152,22 @@ mod tests {
         register_concepts(&mut r).unwrap();
         assert!(r.predicate(IS_PLACE).is_some());
         assert!(r.predicate(BIOME).is_some());
+    }
+
+    #[test]
+    fn concepts_registered() {
+        let mut r = ConceptRegistry::default();
+        register_concepts(&mut r).unwrap();
+        let stone = r.concept("stone").unwrap();
+        assert_eq!(stone.domain, "terrain");
+        assert_eq!(stone.kind, ConceptKind::Substance);
+        for name in ["mountain", "sea"] {
+            let c = r
+                .concept(name)
+                .unwrap_or_else(|| panic!("missing concept {name}"));
+            assert_eq!(c.domain, "terrain");
+            assert_eq!(c.kind, ConceptKind::Terrain);
+        }
     }
 
     #[test]

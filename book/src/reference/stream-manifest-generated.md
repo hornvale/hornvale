@@ -33,9 +33,15 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 |---|---|
 | `language/<species>/phonology/inventory` | per-species phoneme inventory draw under the articulation envelope |
 | `language/<species>/phonology/phonotactics` | per-species syllable phonotactic templates (onsets, nuclei, codas) |
-| `language/<species>/name/settlement` | per-settlement name (salted by cell id): a bare stem |
-| `language/<species>/name/deity` | per-deity name (salted by belief id): a bare stem biased toward closed syllables |
-| `language/<species>/name/epithet` | per-deity epithet (salted by belief id): a descriptive root, optionally reduplicated and honorific-prefixed |
+| `language/<species>/name/settlement` | (retired at The Words, superseded by name/settlement/v2) per-settlement name (salted by cell id): a bare stem |
+| `language/<species>/name/deity` | (retired at The Words, superseded by name/deity/v2) per-deity name (salted by belief id): a bare stem biased toward closed syllables |
+| `language/<species>/name/epithet` | (retired at The Words, superseded by name/epithet/v2) per-deity epithet (salted by belief id): a descriptive root, optionally reduplicated and honorific-prefixed |
+| `language/<species>/name/settlement/v2` | the glossed settlement name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above |
+| `language/<species>/name/deity/v2` | the glossed deity name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above |
+| `language/<species>/name/epithet/v2` | the glossed epithet (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the v1 draw above |
+| `language/<species>/lexicon/root/<concept>` | per-concept proto-root (1-2 syllables, from the phonotactic templates) |
+| `language/<species>/lexicon/cascade` | the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root |
+| `language/<species>/lexicon/headedness` | the species' drawn compound-joining order (HeadFirst/HeadLast), gating LexEntry::Compound component order |
 
 ### hornvale-religion
 

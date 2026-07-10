@@ -25,7 +25,7 @@ potential looks like before meaning arrives.
 
 *Two entities, two facts, one belief, and a proof of sameness. Campaign 1b
 delivered the first real almanac — see [The Almanac of Seed 42](almanac.md),
-whose chief settlement today is **Fngatfnebngat**, not Bolnar (Campaign 1b's
+whose chief settlement today is **Ngokzhvabngob**, not Bolnar (Campaign 1b's
 cascade first called it *Gruugish*, and Campaign Y2-3, The Tongues, later
 gave it a real generated name in place of either syllable-pool guess): the
 mini-genesis here and the real cascade draw names from different sources

@@ -34,6 +34,8 @@ jobs:
           cargo run -p hornvale -- concepts > book/src/reference/concept-registry-generated.md
           cargo run -p hornvale -- streams > book/src/reference/stream-manifest-generated.md
           cargo run -p hornvale -- phonology > book/src/reference/phonology.md
+          cargo run -q -p hornvale -- new --seed 42 --out /tmp/hv-words.json
+          cargo run -q -p hornvale -- dictionary --world /tmp/hv-words.json > book/src/reference/dictionary-generated.md
           cargo run -p hornvale -- map --world /tmp/hv-ci-sky.json --out book/src/gallery/elevation-seed-42.png > book/src/gallery/elevation-seed-42.md
           cargo run -p hornvale -- biome-map --world /tmp/hv-ci-sky.json --out book/src/gallery/biome-seed-42.png > book/src/gallery/biome-seed-42.md
           cargo run -p hornvale -- biome-map --world /tmp/hv-ci-locked.json --out book/src/gallery/biome-seed-42-locked.png > book/src/gallery/biome-seed-42-locked.md

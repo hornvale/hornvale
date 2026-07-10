@@ -601,13 +601,13 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | < 2 | 0 | 0.0% |
 | [2, 3) | 0 | 0.0% |
 | [3, 4) | 0 | 0.0% |
-| [4, 5) | 1 | 0.2% |
-| [5, 6) | 11 | 2.2% |
-| [6, 7) | 46 | 9.2% |
-| [7, 8) | 58 | 11.6% |
-| [8, 9) | 78 | 15.6% |
-| [9, 10) | 73 | 14.6% |
-| >= 10 | 233 | 46.6% |
+| [4, 5) | 0 | 0.0% |
+| [5, 6) | 0 | 0.0% |
+| [6, 7) | 4 | 0.8% |
+| [7, 8) | 10 | 2.0% |
+| [8, 9) | 18 | 3.6% |
+| [9, 10) | 30 | 6.0% |
+| >= 10 | 438 | 87.6% |
 
 ### name-length-kobold — goblin-solo
 
@@ -630,12 +630,12 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | value | count | share |
 |---|---|---|
 | < 0 | 0 | 0.0% |
-| [0, 0.01) | 379 | 75.8% |
-| [0.01, 0.02) | 2 | 0.4% |
-| [0.02, 0.05) | 57 | 11.4% |
-| [0.05, 0.1) | 41 | 8.2% |
-| [0.1, 0.2) | 16 | 3.2% |
-| [0.2, 0.4) | 3 | 0.6% |
+| [0, 0.01) | 214 | 42.8% |
+| [0.01, 0.02) | 5 | 1.0% |
+| [0.02, 0.05) | 171 | 34.2% |
+| [0.05, 0.1) | 78 | 15.6% |
+| [0.1, 0.2) | 21 | 4.2% |
+| [0.2, 0.4) | 9 | 1.8% |
 | >= 0.4 | 2 | 0.4% |
 
 ### head-deity-domain-goblin-twin — goblin-solo
@@ -703,6 +703,66 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | [0.6, 0.8) | 0 | 0.0% |
 | [0.8, 1) | 0 | 0.0% |
 | >= 1 | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### name-gloss-true — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 500 | 100.0% |
+| false | 0 | 0.0% |
+
+### lexicon-regular-goblin — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 500 | 100.0% |
+| false | 0 | 0.0% |
+
+### lexicon-regular-kobold — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### exposure-sound-goblin — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 500 | 100.0% |
+| false | 0 | 0.0% |
+
+### exposure-sound-kobold — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### hue-depth-goblin — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| < 2 | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 4) | 0 | 0.0% |
+| [4, 5) | 500 | 100.0% |
+| [5, 6) | 0 | 0.0% |
+| >= 6 | 0 | 0.0% |
+
+### hue-depth-kobold — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| < 2 | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 4) | 0 | 0.0% |
+| [4, 5) | 0 | 0.0% |
+| [5, 6) | 0 | 0.0% |
+| >= 6 | 0 | 0.0% |
 | absent | 500 | 100.0% |
 
 ### shoreline-development — goblin-solo
@@ -1401,13 +1461,13 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | value | count | share |
 |---|---|---|
 | < 0 | 0 | 0.0% |
-| [0, 0.01) | 389 | 77.8% |
-| [0.01, 0.02) | 0 | 0.0% |
-| [0.02, 0.05) | 58 | 11.6% |
-| [0.05, 0.1) | 25 | 5.0% |
-| [0.1, 0.2) | 20 | 4.0% |
-| [0.2, 0.4) | 5 | 1.0% |
-| >= 0.4 | 3 | 0.6% |
+| [0, 0.01) | 219 | 43.8% |
+| [0.01, 0.02) | 4 | 0.8% |
+| [0.02, 0.05) | 152 | 30.4% |
+| [0.05, 0.1) | 88 | 17.6% |
+| [0.1, 0.2) | 29 | 5.8% |
+| [0.2, 0.4) | 7 | 1.4% |
+| >= 0.4 | 1 | 0.2% |
 
 ### head-deity-domain-goblin-twin — goblin-twin-solo
 
@@ -1442,13 +1502,13 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | < 2 | 0 | 0.0% |
 | [2, 3) | 0 | 0.0% |
 | [3, 4) | 0 | 0.0% |
-| [4, 5) | 1 | 0.2% |
-| [5, 6) | 15 | 3.0% |
-| [6, 7) | 31 | 6.2% |
-| [7, 8) | 40 | 8.0% |
-| [8, 9) | 83 | 16.6% |
-| [9, 10) | 82 | 16.4% |
-| >= 10 | 248 | 49.6% |
+| [4, 5) | 0 | 0.0% |
+| [5, 6) | 0 | 0.0% |
+| [6, 7) | 1 | 0.2% |
+| [7, 8) | 10 | 2.0% |
+| [8, 9) | 18 | 3.6% |
+| [9, 10) | 29 | 5.8% |
+| >= 10 | 442 | 88.4% |
 
 ### pantheon-cyclic-share-goblin — goblin-twin-solo
 
@@ -1474,6 +1534,69 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | [0.6, 0.8) | 53 | 10.6% |
 | [0.8, 1) | 16 | 3.2% |
 | >= 1 | 400 | 80.0% |
+
+### name-gloss-true — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 500 | 100.0% |
+| false | 0 | 0.0% |
+
+### lexicon-regular-goblin — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### lexicon-regular-kobold — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### exposure-sound-goblin — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### exposure-sound-kobold — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### hue-depth-goblin — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| < 2 | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 4) | 0 | 0.0% |
+| [4, 5) | 0 | 0.0% |
+| [5, 6) | 0 | 0.0% |
+| >= 6 | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### hue-depth-kobold — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| < 2 | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 4) | 0 | 0.0% |
+| [4, 5) | 0 | 0.0% |
+| [5, 6) | 0 | 0.0% |
+| >= 6 | 0 | 0.0% |
+| absent | 500 | 100.0% |
 
 ### shoreline-development — goblin-twin-solo
 

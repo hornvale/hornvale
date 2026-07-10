@@ -53,6 +53,7 @@
 - [Campaign 23: The Orrery](./chronicle/23-the-orrery.md)
 - [Campaign 25: The Measured Coast](./chronicle/25-the-measured-coast.md)
 - [Campaign 26: The Live Orrery](./chronicle/26-the-live-orrery.md)
+- [Campaign 27: The Words](./chronicle/27-the-words.md)
 
 # The Gallery
 
@@ -83,6 +84,7 @@
 - [Study 008: The Census of Tongues](./laboratory/study-008.md)
 - [Study 009: The Census of the Meeting](./laboratory/study-009.md)
 - [Study 010: The Census of Coasts](./laboratory/study-010.md)
+- [Study 011: The Census of Words](./laboratory/study-011.md)
 
 # Reference
 
@@ -90,6 +92,7 @@
 - [The Stream Manifest](./reference/stream-manifest.md)
 - [Phonology](./reference/phonology.md)
 - [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
+- [Dictionary](./reference/dictionary-generated.md)
 
 # Open Questions
 

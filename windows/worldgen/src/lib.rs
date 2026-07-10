@@ -7,11 +7,12 @@
 
 use hornvale_almanac::AlmanacContext;
 use hornvale_astronomy::{
-    ConstantSun, GeneratedSky, GenesisError, SkyPins, SkyReport, facts, generate, parse_pin,
-    pin_strings,
+    CELESTIAL_BODY, ConstantSun, GeneratedSky, GenesisError, NIGHT_STAR, SEASONAL_CYCLE, SkyPins,
+    SkyReport, facts, generate, parse_pin, pin_strings,
 };
 use hornvale_climate::{
-    ClimateInputs, ClimateReport, GeneratedClimate, RotationRegime, SeafloorFeature, UniformClimate,
+    AMBIENT, ClimateInputs, ClimateReport, GeneratedClimate, RotationRegime, SeafloorFeature,
+    UniformClimate,
 };
 use hornvale_kernel::{
     ConceptRegistry, EntityId, Fact, GeoCoord, Geosphere, LedgerError, ObserverContext,
@@ -120,7 +121,13 @@ impl PhenomenaSource for Sky {
     }
 }
 
-/// Register every domain's concepts.
+/// Predicate: the glossed meaning of an entity's generated name (functional
+/// Text) — the composition root's own predicate (Task 9 of The Words),
+/// since it names a fact about the *pairing* of a generated name with the
+/// site facts it compounds over, which no single domain crate owns.
+pub const NAME_GLOSS: &str = "name-gloss";
+
+/// Register every domain's concepts, plus the composition root's own.
 pub fn register_all(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     hornvale_astronomy::register_concepts(registry)?;
     hornvale_climate::register_concepts(registry)?;
@@ -128,7 +135,14 @@ pub fn register_all(registry: &mut ConceptRegistry) -> Result<(), RegistryError>
     hornvale_settlement::register_concepts(registry)?;
     hornvale_species::register_concepts(registry)?;
     hornvale_culture::register_concepts(registry)?;
-    hornvale_religion::register_concepts(registry)
+    hornvale_religion::register_concepts(registry)?;
+    hornvale_language::register_concepts(registry)?;
+    registry.register_predicate(
+        NAME_GLOSS,
+        true,
+        "the glossed meaning of an entity's generated name",
+    )?;
+    Ok(())
 }
 
 /// The shared Geosphere at `GLOBE_LEVEL`: seed-independent, computed once
@@ -147,6 +161,20 @@ fn scenario_fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
         place: None,
         day: Some(0.0),
         provenance: "scenario".to_string(),
+    }
+}
+
+/// A `name-gloss` fact for `subject` — the composition root's own
+/// predicate (see [`NAME_GLOSS`]), so its provenance is `"worldgen"`
+/// rather than any one domain's tag.
+fn name_gloss_fact(subject: EntityId, gloss: &str) -> Fact {
+    Fact {
+        subject,
+        predicate: NAME_GLOSS.to_string(),
+        object: Value::Text(gloss.to_string()),
+        place: None,
+        day: Some(0.0),
+        provenance: "worldgen".to_string(),
     }
 }
 
@@ -481,8 +509,56 @@ pub fn observed_phenomena_as_in(
     let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
         return Ok(Vec::new());
     };
+    observed_phenomena_at(world, def, place)
+}
+
+/// [`observed_phenomena_as_in`]'s actual observation with the entity's
+/// committed coordinates as the vantage: the entity's own hemisphere culls
+/// the sky (SEQ-5). An entity with no committed latitude/longitude (e.g. a
+/// bare stand-in id) observes the whole, un-culled sky.
+fn observed_phenomena_at(
+    world: &World,
+    def: &hornvale_species::SpeciesDef,
+    place: EntityId,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    observed_phenomena_from(world, def, place, place_coord(world, place))
+}
+
+/// The phenomena a species (resolved within `roster`) observes from
+/// `place`'s own committed vantage — its latitude/longitude fact culls the
+/// sky by hemisphere (SEQ-5). This is the per-entity observation glossed
+/// naming is truthful to (spec §9.3: a gloss composes THAT entity's own
+/// site facts), public so the keystone (`cli/tests/words_identity.rs`) and
+/// the lab's `name-gloss-true` metric can re-derive it independently
+/// without importing worldgen's naming internals.
+pub fn observed_phenomena_as_at(
+    world: &World,
+    roster: &[hornvale_species::SpeciesDef],
+    species: &str,
+    place: EntityId,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let def = def_in(roster, species)?;
+    observed_phenomena_at(world, def, place)
+}
+
+/// The observation itself, factored out with an explicit `position` so
+/// glossed settlement naming (Task 9) can observe from the settlement's own
+/// cell coordinate BEFORE the settlement entity exists — names are drawn
+/// ahead of `hornvale_settlement::genesis`'s (functional, one-shot) `name`
+/// fact, when `hornvale_terrain::places` still finds nothing. The vantage's
+/// hemisphere culls the sky (SEQ-5) exactly as it will for the committed
+/// entity. No currently-registered `PhenomenaSource` (`Sky`,
+/// `UniformClimate`) actually reads `ObserverContext::place` — only
+/// `time`/`lens`/`position` shape the result (the place debt is SEQ-4's,
+/// per the field's own history) — so a stand-in entity id carrying the
+/// real coordinate is observationally identical to the committed place.
+fn observed_phenomena_from(
+    world: &World,
+    def: &hornvale_species::SpeciesDef,
+    place: EntityId,
+    position: Option<GeoCoord>,
+) -> Result<Vec<Phenomenon>, BuildError> {
     let day = observation_time(world, def.perception.activity)?;
-    let position = place_coord(world, place);
     let sky = sky_of(world)?;
     let climate = UniformClimate;
     let sources: [&dyn PhenomenaSource; 2] = [&sky, &climate];
@@ -495,6 +571,57 @@ pub fn observed_phenomena_as_in(
             position,
         },
     ))
+}
+
+/// The concept a phenomenon kind glosses to, for glossed naming (Task 9):
+/// `celestial-body` disambiguates by its description text into whichever
+/// body it actually is (astronomy's only two `celestial-body` producers —
+/// `ConstantSun` and `GeneratedSky`'s sun/moon phenomena — describe
+/// themselves with "sun"/"moon"; "star" is included for forward
+/// compatibility even though no current producer emits it under this kind,
+/// since neighbor stars are their own `night-star` kind instead);
+/// `seasonal-cycle` glosses to `day` (the closest registered concept to
+/// "the annual daylight cycle" — there is no dedicated `season` concept);
+/// `night-star` glosses directly to `star`; climate's `ambient` glosses to
+/// `wind` (the moving-air referent behind its one, always-present
+/// phenomenon). Any other/future kind has no mapping yet (`None`) rather
+/// than guessing. A composition-root judgment call, not a spec table —
+/// adjustable here without touching the language engine.
+fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
+    match phenomenon.kind.as_str() {
+        CELESTIAL_BODY => {
+            if phenomenon.description.contains("moon") {
+                Some("moon")
+            } else if phenomenon.description.contains("star") {
+                Some("star")
+            } else {
+                Some("sun")
+            }
+        }
+        SEASONAL_CYCLE => Some("day"),
+        NIGHT_STAR => Some("star"),
+        AMBIENT => Some("wind"),
+        _ => None,
+    }
+}
+
+/// The quality concept a belief's [`hornvale_religion::Sentiment`] glosses
+/// to, for glossed deity/epithet naming (Task 9): `Eternal` (always
+/// watched, never absent) reads as `light`; `Cyclic` (departs and returns)
+/// reads as `shadow` (cast and receding, the pack's transient dark);
+/// `Ambient` (felt through the world rather than watched) reads as `gloom`
+/// (the pack's deepest, most pervasive dark) — deliberately distinct from
+/// [`phenomenon_concept`]'s own `AMBIENT`-kind mapping (`wind`), so a
+/// phenomenon that is itself `Ambient`-venued doesn't gloss to the same
+/// word twice. A composition-root judgment call (no such table exists in
+/// the registry or spec), chosen from the language engine's already-
+/// registered quality vocabulary rather than adding new concepts for it.
+fn sentiment_concept(sentiment: hornvale_religion::Sentiment) -> &'static str {
+    match sentiment {
+        hornvale_religion::Sentiment::Eternal => "light",
+        hornvale_religion::Sentiment::Cyclic => "shadow",
+        hornvale_religion::Sentiment::Ambient => "gloom",
+    }
 }
 
 /// The phenomena a species observes: its characteristic hour, its lens,
@@ -546,6 +673,319 @@ pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology
     language_of_in(world, &default_roster(), species)
 }
 
+/// Map a species' perception vector onto the color pack's two acquisition
+/// ladders (spec §7 model card, authored verbatim — implement exactly, do
+/// not "improve"): `hue` runs 2 (dark/light only) through 5 (every hue
+/// through brown) as night vision runs from owl-eyed to blind — a species
+/// that sees well in the dark has spent less of its evolutionary history
+/// straining at daylight hue distinctions. `luminance` is a coarse
+/// two-step switch: a species with keen night vision (`night_vision >
+/// 0.6`) has lexicalized the full gloom/shadow/starlit ladder (3); every
+/// other species has only the coarsest term (1). At the goblin baseline
+/// (`night_vision == 0.5`), `hue == 4` (blue lexicalized, brown not) and
+/// `luminance == 1`; the kobold roster value (`night_vision == 0.9`) gives
+/// `hue == 2` (blue *not* lexicalized — kobolds stop before blue) and
+/// `luminance == 3`.
+pub fn pack_depths(p: &hornvale_species::PerceptionVector) -> hornvale_language::PackDepths {
+    let hue = 2 + ((1.0 - p.night_vision) * 3.0).round() as u8;
+    let luminance = if p.night_vision > 0.6 { 3 } else { 1 };
+    hornvale_language::PackDepths { hue, luminance }
+}
+
+/// The luminance-ladder concept ids within `color_pack` (mirrors the
+/// private `LUMINANCE_CONCEPTS` list documented on
+/// `hornvale_language::in_ladder`) — needed here only to word a Perceptual
+/// gap's reason with the ladder it was actually excluded from; the
+/// exclusion test itself always goes through `in_ladder`.
+const LUMINANCE_CONCEPTS: &[&str] = &["gloom", "shadow", "starlit"];
+
+/// Word a color-pack entry's Perceptual gap: which ladder excluded it, at
+/// what rank, against what depth, from what night-vision value.
+fn perceptual_reason(
+    entry: &hornvale_language::PackEntry,
+    depths: &hornvale_language::PackDepths,
+    night_vision: f64,
+) -> String {
+    let (ladder, depth) = if LUMINANCE_CONCEPTS.contains(&entry.concept) {
+        ("luminance", depths.luminance)
+    } else {
+        ("hue", depths.hue)
+    };
+    format!(
+        "{ladder} rank {} exceeds depth {depth} from night-vision {night_vision}",
+        entry.ladder_rank
+    )
+}
+
+/// Whether `name` is one of climate's registered biome concepts (used to
+/// word Unknown biome concepts with the brief's "no settlement in or
+/// beside <biome>" phrasing rather than the generic fallback).
+fn is_biome_concept(name: &str) -> bool {
+    hornvale_climate::biome::ALL
+        .iter()
+        .any(|b| b.concept_name() == name)
+}
+
+/// Word an Unknown concept's Experiential gap: biome concepts (and `sea`,
+/// which shares their geographic character though it is terrain's own
+/// concept) read as a missing settlement; everything else reads as a
+/// missing exposure for the species.
+fn experiential_reason(species: &str, name: &str) -> String {
+    if is_biome_concept(name) || name == "sea" {
+        format!("no settlement in or beside {name}")
+    } else {
+        format!("{species} has no exposure to '{name}'")
+    }
+}
+
+/// Every species placed in this world, in name order: the distinct
+/// `peopled-by` objects across every committed settlement.
+fn placed_species(world: &World) -> std::collections::BTreeSet<String> {
+    world
+        .ledger
+        .find(hornvale_species::PEOPLED_BY)
+        .filter_map(|f| match &f.object {
+            Value::Text(s) => Some(s.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The Geosphere cells a species has settled: every committed settlement
+/// `peopled-by` this species, read back by its `cell-id` fact.
+fn settled_cells(world: &World, species: &str) -> Vec<hornvale_kernel::CellId> {
+    world
+        .ledger
+        .find(hornvale_settlement::IS_SETTLEMENT)
+        .filter(|f| hornvale_species::species_of(world, f.subject).as_deref() == Some(species))
+        .filter_map(|f| {
+            match world
+                .ledger
+                .value_of(f.subject, hornvale_settlement::CELL_ID)
+            {
+                Some(Value::Number(n)) => Some(hornvale_kernel::CellId(*n as u32)),
+                _ => None,
+            }
+        })
+        .collect()
+}
+
+/// Whether some cell within `max_hops` of `start` (inclusive of `start`
+/// itself) satisfies `pred` — the "lies within N cells" proximity test
+/// `exposure_of` uses for `sea`. A plain breadth-first walk over the
+/// Geosphere's adjacency; `max_hops` is small (2) so this is cheap per
+/// settled cell.
+fn within_hops(
+    geo: &Geosphere,
+    start: hornvale_kernel::CellId,
+    max_hops: u32,
+    pred: impl Fn(hornvale_kernel::CellId) -> bool,
+) -> bool {
+    use std::collections::BTreeSet;
+    if pred(start) {
+        return true;
+    }
+    let mut visited: BTreeSet<hornvale_kernel::CellId> = BTreeSet::new();
+    visited.insert(start);
+    let mut frontier = vec![start];
+    for _ in 0..max_hops {
+        let mut next = Vec::new();
+        for cell in &frontier {
+            for &n in geo.neighbors(*cell) {
+                if visited.insert(n) {
+                    if pred(n) {
+                        return true;
+                    }
+                    next.push(n);
+                }
+            }
+        }
+        frontier = next;
+    }
+    false
+}
+
+/// Classify every concept in the world's registry for `species`'s culture
+/// (spec §7): `Steeped` concepts get their own root word, `KnowsOf`
+/// concepts are named as compounds, and `Unknown` concepts get a
+/// recountable reason. Exactly one class per registered concept — the
+/// map's keys are always exactly `world.registry.concepts()`'s names.
+///
+/// - **Steeped**: the universal stratum (always — water, fire, sun, one's
+///   own name, and so on, `hornvale_language::universal_stratum`); every
+///   body-pack and kin-pack entry (always in ladder — unranked); every
+///   color-pack entry within the species' `pack_depths`; the biome of
+///   every cell the species has settled; the species' own living-kind
+///   concept (`"<species>-kind"` — a people always knows itself); and, once
+///   the species has settled anywhere, the living kind of every species
+///   placed in this world (coexistence in one shared world is exposure —
+///   spec §3's free endonym/exonym) plus its own domestic and religious
+///   social concepts (`home`, `hearth`, `god`, `spirit`).
+/// - **KnowsOf**: the biome of every cell adjacent to a settled cell (that
+///   isn't already `Steeped` from the species' own settlements); and
+///   `sea`, if any settled cell lies within two cells of a below-sea-level
+///   (ocean) cell.
+/// - **Unknown**: every other registered concept — most visibly a
+///   color-pack entry excluded by ladder depth (`GapReason::Perceptual`)
+///   and a biome/`sea` concept the species neither settled nor neighbors
+///   (`GapReason::Experiential`, "no settlement in or beside `<biome>`");
+///   every remaining leftover concept (an unplaced species' living-kind,
+///   or a social/geographic concept the species hasn't settled to reach)
+///   gets a generic but still recountable `GapReason::Experiential`.
+pub fn exposure_of(
+    world: &World,
+    species: &str,
+) -> Result<std::collections::BTreeMap<String, hornvale_language::ExposureClass>, BuildError> {
+    let roster = default_roster();
+    let def = def_in(&roster, species)?;
+    let terrain = terrain_of(world)?;
+    let climate = climate_of(world)?;
+    let settled = settled_cells(world, species);
+    let coexisting = if settled.is_empty() {
+        std::collections::BTreeSet::new()
+    } else {
+        placed_species(world)
+    };
+    exposure_of_impl(world, def, &settled, &coexisting, &terrain, &climate)
+}
+
+/// [`exposure_of`]'s classification rules (spec §7), factored out so
+/// glossed naming (Task 9) can classify a species' exposure from the
+/// scatter *this build pass is about to place* rather than from committed
+/// facts: glossed settlement/deity names are drawn before
+/// `hornvale_settlement::genesis` commits anything (the settlement's own
+/// `name` fact is functional — it can only be committed once, with its
+/// final value — and before `peopled-by` facts exist at all (species
+/// entities mint last, entity-id stability, spec §8 of Y2-1)), so the
+/// ledger-backed `settled_cells`/`placed_species` this species' own
+/// `exposure_of` normally reads would see nothing yet. `settled` and
+/// `coexisting` carry exactly what those two ledger reads would have
+/// produced, sourced one step earlier from the in-memory placement scatter
+/// instead; every other rule is identical to `exposure_of`'s doc comment.
+fn exposure_of_impl(
+    world: &World,
+    def: &hornvale_species::SpeciesDef,
+    settled: &[hornvale_kernel::CellId],
+    coexisting: &std::collections::BTreeSet<String>,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<std::collections::BTreeMap<String, hornvale_language::ExposureClass>, BuildError> {
+    use hornvale_language::{
+        ExposureClass, GapReason, body_pack, color_pack, in_ladder, kin_pack, universal_stratum,
+    };
+
+    let species = def.name;
+    let depths = pack_depths(&def.perception);
+    let geo = shared_geosphere();
+
+    let mut classes: std::collections::BTreeMap<String, ExposureClass> =
+        std::collections::BTreeMap::new();
+
+    // Steeped: the universal stratum, unconditionally.
+    for entry in universal_stratum() {
+        classes.insert(entry.concept.to_string(), ExposureClass::Steeped);
+    }
+
+    // Steeped/Unknown: the two ladder-gated packs plus the two unranked
+    // (always-in) packs.
+    for entry in color_pack().iter().chain(body_pack()).chain(kin_pack()) {
+        let class = if in_ladder(entry, &depths) {
+            ExposureClass::Steeped
+        } else {
+            ExposureClass::Unknown {
+                reason: GapReason::Perceptual(perceptual_reason(
+                    entry,
+                    &depths,
+                    def.perception.night_vision,
+                )),
+            }
+        };
+        classes.insert(entry.concept.to_string(), class);
+    }
+
+    // Steeped: the biome of every settled cell.
+    for &cell in settled {
+        let name = climate.biome_at(cell).concept_name().to_string();
+        classes.insert(name, ExposureClass::Steeped);
+    }
+
+    // Steeped: the species' own living kind (a people always knows itself),
+    // and — once this species has settled anywhere — the living kind of
+    // every species placed in this world, plus its own domestic/religious
+    // social concepts. Coexistence in one shared world is exposure (spec
+    // §3: each language holds its own words for goblin-kind and kobold-kind,
+    // so endonym and exonym fall out free): the peoples' settlements are
+    // placed by one shared spacing pass; they know each other. Refining
+    // this to contact-graded exposure (distance, trade routes) waits for a
+    // contact ledger. Kinds of species NOT placed in this world are left
+    // to the closing Unknown loop — the placed set is read from the
+    // ledger's `peopled-by` facts, never hardcoded to the roster.
+    let own_kind = format!("{species}-kind");
+    if world.registry.concept(&own_kind).is_some() {
+        classes.insert(own_kind, ExposureClass::Steeped);
+    }
+    if !settled.is_empty() {
+        for placed in coexisting {
+            let kind = format!("{placed}-kind");
+            if world.registry.concept(&kind).is_some() {
+                classes.insert(kind, ExposureClass::Steeped);
+            }
+        }
+        for concept in ["home", "hearth", "god", "spirit"] {
+            if world.registry.concept(concept).is_some() {
+                classes.insert(concept.to_string(), ExposureClass::Steeped);
+            }
+        }
+    }
+
+    // KnowsOf: the biome of every cell adjacent to a settled cell, unless
+    // it is already Steeped (the species' own settled biome wins).
+    for &cell in settled {
+        for &n in geo.neighbors(cell) {
+            let name = climate.biome_at(n).concept_name().to_string();
+            classes.entry(name).or_insert(ExposureClass::KnowsOf);
+        }
+    }
+
+    // KnowsOf: sea, if any settled cell lies within two cells of ocean.
+    if world.registry.concept("sea").is_some() {
+        let near_sea = settled
+            .iter()
+            .any(|&cell| within_hops(geo, cell, 2, |c| terrain.is_ocean(c)));
+        if near_sea {
+            classes
+                .entry("sea".to_string())
+                .or_insert(ExposureClass::KnowsOf);
+        }
+    }
+
+    // Unknown: every remaining registered concept.
+    for concept in world.registry.concepts() {
+        classes
+            .entry(concept.name.clone())
+            .or_insert_with(|| ExposureClass::Unknown {
+                reason: GapReason::Experiential(experiential_reason(species, &concept.name)),
+            });
+    }
+
+    Ok(classes)
+}
+
+/// Build a species' full lexicon in one call — the re-derivation path
+/// surfaces use (nothing about a lexicon is persisted): draw its phonology
+/// (`language_of`), classify every concept's exposure (`exposure_of`), and
+/// assemble the two into a `Lexicon` (`hornvale_language::build_lexicon`).
+pub fn lexicon_of(world: &World, species: &str) -> Result<hornvale_language::Lexicon, BuildError> {
+    let ph = language_of(world, species);
+    let exposures = exposure_of(world, species)?;
+    Ok(hornvale_language::build_lexicon(
+        &world.seed,
+        species,
+        &ph,
+        &exposures,
+    ))
+}
+
 /// A status basis' contribution to the `formality`/`epithet_density` voice
 /// knobs (spec §7): `Rank` — the goblin baseline — reads as the "high" end;
 /// `Knowledge`/`Generosity` read lower. `Rank`'s value is fixed at exactly
@@ -595,32 +1035,105 @@ pub fn morph_options(psych: &hornvale_species::PsychVector) -> hornvale_language
     }
 }
 
-/// Backs religion's `DeityNamer` trait with a species' language `Namer`.
-/// Each deity name and epithet is a single deterministic draw salted by the
-/// belief's own id — no shared "used" set, no re-draw (names are pure
-/// functions of seed+species+kind+salt, spec §8). Religion never learns
-/// this exists; it only ever sees the `DeityNamer` trait (spec §6's
-/// ignorance discipline).
-struct LanguageDeityNamer<'a, 'b> {
-    namer: &'a hornvale_language::Namer<'b>,
-    morph: hornvale_language::MorphOptions,
+/// The 1-2 site concepts a belief's glossed deity/epithet name draws over:
+/// the phenomenon it mythologizes (if [`phenomenon_concept`] maps its
+/// kind), plus its felt [`sentiment_concept`] — always present, so a belief
+/// never has zero candidate concepts even when its phenomenon kind has no
+/// mapping yet. Public because the Lab's `epithet-honorific` metric
+/// re-derives the honorific-free glossed epithet from the same site
+/// concepts to detect the committed prefix structurally, and Task 10's
+/// structural-invariant suite / Task 12's `name-gloss-true` metric re-derive
+/// the same composition to check committed glosses row-by-row.
+pub fn deity_site_concepts(
+    phenomenon: &Phenomenon,
+    sentiment: hornvale_religion::Sentiment,
+) -> Vec<&'static str> {
+    let mut concepts = Vec::with_capacity(2);
+    if let Some(concept) = phenomenon_concept(phenomenon) {
+        concepts.push(concept);
+    }
+    concepts.push(sentiment_concept(sentiment));
+    concepts
 }
 
-impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_> {
+/// Backs religion's `DeityNamer` trait with a species' language `Namer`, at
+/// the `/v2` glossed epoch. Each deity name and epithet is a single
+/// deterministic draw salted by the belief's own id — no shared "used" set,
+/// no re-draw (names are pure functions of seed+species+kind+salt, spec
+/// §8). Religion never learns this exists; it only ever sees the
+/// `DeityNamer` trait (spec §6's ignorance discipline) — in particular it
+/// never passes the phenomenon a belief mythologizes into `deity`/
+/// `epithet`, so this struct tracks it independently: `phenomena` is
+/// exactly the salience-descending slice worldgen also hands
+/// `hornvale_religion::genesis`, whose own doc comment guarantees
+/// `deity(salt)` then `epithet(salt, sentiment)` are called once per member
+/// phenomenon, in that phenomenon's order — and a member is always
+/// `phenomena`'s own prefix (`members == &phenomena[..take]`), so `index`
+/// (advanced only by `deity`) always names the phenomenon backing the
+/// belief currently being named.
+struct LanguageDeityNamer<'a, 'b, 'c> {
+    namer: &'a hornvale_language::Namer<'b>,
+    morph: hornvale_language::MorphOptions,
+    lexicon: &'c hornvale_language::Lexicon,
+    phenomena: &'c [Phenomenon],
+    /// How many phenomena `deity()` has consumed so far; `epithet()` reuses
+    /// `phenomena[index - 1]` without advancing it further.
+    index: usize,
+    /// Every named belief's non-empty gloss, keyed by its minted entity id
+    /// (`salt`). `hornvale_religion::genesis` only ever sees this namer as
+    /// `&mut dyn DeityNamer` — never the ledger — so it can't commit
+    /// `name-gloss` facts itself; the composition root reads this map back
+    /// once `genesis` returns and commits them there instead.
+    glosses: std::collections::BTreeMap<u64, String>,
+}
+
+impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
     fn deity(&mut self, salt: u64) -> (String, String) {
-        let g = self
-            .namer
-            .name(hornvale_language::NameKind::Deity, salt, &self.morph);
+        let phenomenon = self
+            .phenomena
+            .get(self.index)
+            .expect("religion calls deity() once per member phenomenon, in phenomena order");
+        self.index += 1;
+        let sentiment = hornvale_religion::Sentiment::of(phenomenon);
+        let concepts = deity_site_concepts(phenomenon, sentiment);
+        let site = hornvale_language::SiteConcepts {
+            concepts: &concepts,
+        };
+        let (g, gloss) = self.namer.glossed_name(
+            hornvale_language::NameKind::Deity,
+            salt,
+            &self.morph,
+            &site,
+            self.lexicon,
+        );
+        if !gloss.is_empty() {
+            self.glosses.insert(salt, gloss);
+        }
         (g.roman, g.ipa)
     }
 
-    fn epithet(&mut self, salt: u64, _sentiment: hornvale_religion::Sentiment) -> (String, String) {
+    fn epithet(&mut self, salt: u64, sentiment: hornvale_religion::Sentiment) -> (String, String) {
         // Sentiment fits the epithet at render time (Task 11's `render_line`
         // reads it from the belief's own committed `sentiment` fact); the
-        // generated word itself is sentiment-agnostic.
-        let g = self
-            .namer
-            .name(hornvale_language::NameKind::Epithet, salt, &self.morph);
+        // generated word itself is glossed like any other name, over the
+        // same phenomenon `deity()` just named for this same belief — only
+        // the deity's own gloss is committed as a `name-gloss` fact (see
+        // `glosses`), so the epithet's gloss is computed and discarded.
+        let phenomenon = self
+            .phenomena
+            .get(self.index - 1)
+            .expect("deity() always runs before epithet() for the same belief");
+        let concepts = deity_site_concepts(phenomenon, sentiment);
+        let site = hornvale_language::SiteConcepts {
+            concepts: &concepts,
+        };
+        let (g, _gloss) = self.namer.glossed_name(
+            hornvale_language::NameKind::Epithet,
+            salt,
+            &self.morph,
+            &site,
+            self.lexicon,
+        );
         (g.roman, g.ipa)
     }
 }
@@ -767,8 +1280,52 @@ pub fn build_world_with_roster(
         .map(|(name, ph)| (*name, hornvale_language::Namer::new(&seed, name, ph)))
         .collect();
 
+    // Per-species lexicon, for glossed naming (Task 9) below — built from
+    // THIS pass's in-memory placement scatter via `exposure_of_impl` rather
+    // than the ledger-backed `exposure_of`: glossed settlement/deity names
+    // are drawn before `hornvale_settlement::genesis` commits the
+    // (functional, one-shot) `name` fact, and well before `peopled-by`
+    // facts exist at all (species entities mint last — entity-id stability,
+    // spec §8 of Y2-1), so `exposure_of`'s usual ledger reads would see no
+    // settlements yet.
+    let mut lexicons: std::collections::BTreeMap<&str, hornvale_language::Lexicon> =
+        std::collections::BTreeMap::new();
+    for (tag, def) in species_set.iter().enumerate() {
+        let settled_now: Vec<hornvale_kernel::CellId> = placements
+            .iter()
+            .filter(|(_, t)| *t as usize == tag)
+            .map(|(p, _)| p.cell)
+            .collect();
+        let coexisting_now: std::collections::BTreeSet<String> = if settled_now.is_empty() {
+            std::collections::BTreeSet::new()
+        } else {
+            species_set
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| placements.iter().any(|(_, t)| *t as usize == *i))
+                .map(|(_, d)| d.name.to_string())
+                .collect()
+        };
+        let exposures = exposure_of_impl(
+            &world,
+            def,
+            &settled_now,
+            &coexisting_now,
+            &terrain,
+            &climate,
+        )?;
+        let ph = phonologies
+            .get(def.name)
+            .expect("a phonology was built for every placed species");
+        lexicons.insert(
+            def.name,
+            hornvale_language::build_lexicon(&seed, def.name, ph, &exposures),
+        );
+    }
+
     let mut placed: Vec<hornvale_settlement::PlacedSettlement> =
         Vec::with_capacity(placements.len());
+    let mut glosses: Vec<String> = Vec::with_capacity(placements.len());
     for (p, tag) in &placements {
         let def = species_set[*tag as usize];
         let coord = geo.coord(p.cell);
@@ -777,7 +1334,33 @@ pub fn build_world_with_roster(
             .get(def.name)
             .expect("a Namer was built for every placed species");
         let morph = morph_options(&def.psych);
-        let generated = namer.name(hornvale_language::NameKind::Settlement, salt, &morph);
+        let lexicon = lexicons
+            .get(def.name)
+            .expect("a lexicon was built for every placed species");
+        let biome_concept = climate.biome_at(p.cell).concept_name();
+        // The presiding phenomenon is observed from THIS settlement's own
+        // cell coordinate — its hemisphere culls the sky (SEQ-5), so the
+        // committed gloss is truthful to the sky this settlement actually
+        // lives under (spec §9.3), and per-settlement skies widen the
+        // descriptor space. Still a pure function of the entity's own
+        // (cell, facts): pin-isolated by construction (spec §8). The
+        // settlement entity doesn't exist yet, so `world_entity` stands in
+        // as the (unread) `place` id while the real coordinate does the
+        // culling — see `observed_phenomena_from`.
+        let seen = observed_phenomena_from(&world, def, world_entity, Some(coord))?;
+        let presiding = seen.first().and_then(phenomenon_concept);
+        let mut site_concepts: Vec<&str> = vec![biome_concept];
+        site_concepts.extend(presiding);
+        let site = hornvale_language::SiteConcepts {
+            concepts: &site_concepts,
+        };
+        let (generated, gloss) = namer.glossed_name(
+            hornvale_language::NameKind::Settlement,
+            salt,
+            &morph,
+            &site,
+            lexicon,
+        );
         let population = if def.name == "goblin" {
             hornvale_settlement::draw_population(seed, salt, p.suitability)
         } else {
@@ -791,8 +1374,16 @@ pub fn build_world_with_roster(
             name: generated.roman,
             population,
         });
+        glosses.push(gloss);
     }
     let ids = hornvale_settlement::genesis(&mut world, &placed)?;
+    for (id, gloss) in ids.iter().zip(glosses.iter()) {
+        if !gloss.is_empty() {
+            world
+                .ledger
+                .commit(name_gloss_fact(*id, gloss), &world.registry)?;
+        }
+    }
 
     // Per-species flagship culture and religion.
     for (tag, def) in species_set.iter().enumerate() {
@@ -837,13 +1428,36 @@ pub fn build_world_with_roster(
             strata: castes.len(),
             has_priesthood: castes.iter().any(|c| c == def.shaman),
         };
+        // Religion (and the deity glosses drawn inside it) observes from
+        // the world's first place — the flagship vantage, its hemisphere
+        // culling the sky (SEQ-4/SEQ-5) — exactly the observation
+        // `religion::genesis` derives its beliefs from, so every deity
+        // name-gloss is truthful to the phenomenon its belief was actually
+        // derived from. Settlements exist by now, so the placed-observer
+        // path is live.
         let seen = observed_phenomena_as_in(&world, roster, def.name)?;
         let namer = namers
             .get(def.name)
             .expect("a Namer was built for every placed species");
         let morph = morph_options(&def.psych);
-        let mut deity_namer = LanguageDeityNamer { namer, morph };
+        let lexicon = lexicons
+            .get(def.name)
+            .expect("a lexicon was built for every placed species");
+        let mut deity_namer = LanguageDeityNamer {
+            namer,
+            morph,
+            lexicon,
+            phenomena: &seen,
+            index: 0,
+            glosses: std::collections::BTreeMap::new(),
+        };
         hornvale_religion::genesis(&mut world, flagship, &seen, &society, &mut deity_namer)?;
+        for (salt, gloss) in &deity_namer.glosses {
+            world.ledger.commit(
+                name_gloss_fact(hornvale_kernel::EntityId(*salt), gloss),
+                &world.registry,
+            )?;
+        }
     }
 
     // Species entities AFTER every pre-species subsystem (settlements,
@@ -2030,7 +2644,7 @@ mod tests {
     }
 
     #[test]
-    fn seed_42_names_are_non_english_and_de_facto_unique() {
+    fn seed_42_names_are_non_english_and_not_degenerate() {
         let world = build_world(
             Seed(42),
             &SkyPins::default(),
@@ -2051,17 +2665,95 @@ mod tests {
                 .iter()
                 .all(|n| !["Zag", "Gru", "Bol"].iter().any(|s| n.starts_with(s)))
         );
-        // Names are pure per-cell draws, so world-wide uniqueness is NOT
-        // guaranteed — it is de-facto, arising from the vast phonology name
-        // space, and is measured as a collision-rate calibration in Task 12.
-        // Seed 42 happens to be collision-free; we assert that empirically
-        // here to catch a gross regression (e.g. every name collapsing to
-        // one string), NOT as a guaranteed invariant.
+        // At the /v2 glossed epoch a name compounds over its own species'
+        // small site-concept vocabulary (its biome, its people's presiding
+        // belief) rather than drawing a free stem from the vast phonology
+        // name space, so world-wide uniqueness — never guaranteed even at
+        // v1 — is meaningfully less de-facto now: "glossed compounds
+        // shrink the name space" is this campaign's own documented
+        // tradeoff (spec §9), re-measured honestly as a collision-rate
+        // calibration in Task 12. This only guards against total collapse
+        // (every settlement sharing one name), not a specific rate.
         let set: std::collections::BTreeSet<_> = names.iter().collect();
-        assert_eq!(
-            set.len(),
-            names.len(),
-            "seed 42 is de-facto collision-free (empirical, not guaranteed)"
+        assert!(
+            set.len() > 1,
+            "seed 42 must not collapse every settlement onto a single glossed name"
         );
+    }
+
+    #[test]
+    fn name_gloss_predicate_is_registered_functional() {
+        let mut registry = hornvale_kernel::ConceptRegistry::default();
+        register_all(&mut registry).unwrap();
+        let def = registry
+            .predicate(NAME_GLOSS)
+            .expect("name-gloss must be registered");
+        assert!(def.functional, "an entity has exactly one glossed meaning");
+    }
+
+    #[test]
+    fn settlements_and_deities_gain_name_gloss_facts_when_a_gloss_exists() {
+        let world = generated(42);
+        let settlement_glossed = world
+            .ledger
+            .find(hornvale_settlement::IS_SETTLEMENT)
+            .any(|f| world.ledger.text_of(f.subject, NAME_GLOSS).is_some());
+        let deity_glossed = world
+            .ledger
+            .find(hornvale_religion::IS_BELIEF)
+            .any(|f| world.ledger.text_of(f.subject, NAME_GLOSS).is_some());
+        assert!(
+            settlement_glossed,
+            "seed 42 should gloss at least one settlement (the sun is a Steeped concept for \
+             every shipped species, so a presiding-belief gloss is near-universal)"
+        );
+        assert!(deity_glossed, "seed 42 should gloss at least one deity");
+    }
+
+    #[test]
+    fn a_settlement_name_gloss_is_truthful_to_its_own_site_facts() {
+        // Every settlement carrying a `name-gloss` fact must gloss to
+        // concepts drawn only from its own site: its own biome, or one of
+        // the phenomenon concepts a presiding belief can map to.
+        let world = generated(42);
+        let plausible_phenomenon_concepts = ["sun", "moon", "star", "day", "wind"];
+        let mut checked_any = false;
+        for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
+            let id = f.subject;
+            let Some(gloss) = world.ledger.text_of(id, NAME_GLOSS) else {
+                continue;
+            };
+            checked_any = true;
+            let biome = world
+                .ledger
+                .text_of(id, hornvale_settlement::BIOME)
+                .expect("every settlement has a biome");
+            let mut remainder = gloss.to_string();
+            remainder = remainder.replace(biome, "");
+            for concept in plausible_phenomenon_concepts {
+                remainder = remainder.replace(concept, "");
+            }
+            assert!(
+                remainder.chars().all(|c| c == '-'),
+                "gloss {gloss:?} for settlement biome {biome:?} names a concept outside its \
+                 own site facts"
+            );
+        }
+        assert!(checked_any, "seed 42 should gloss at least one settlement");
+    }
+
+    #[test]
+    fn glossed_names_are_stable_across_two_builds() {
+        let a = generated(42);
+        let b = generated(42);
+        let names_a: Vec<String> = hornvale_settlement::all_settlements(&a)
+            .iter()
+            .map(|v| v.name.clone())
+            .collect();
+        let names_b: Vec<String> = hornvale_settlement::all_settlements(&b)
+            .iter()
+            .map(|v| v.name.clone())
+            .collect();
+        assert_eq!(names_a, names_b);
     }
 }

@@ -13,7 +13,7 @@ honest (seawater is not freshwater; see [Campaign Y2-0's
 chronicle](../chronicle/campaign-y2-0.md)) re-scored every settlement site
 on the globe, moving the spinning world's flagship outright and re-weighing
 the locked world's where it stood. So the spinning world crowns
-**Fnabnget** and the locked world crowns **Xngodfnokzhvad**, two different
+**Xnebsvobned** and the locked world crowns **Xngatnebvnedned**, two different
 villages, at two different scales, on two different corners of the same
 globe — and this page now says so, because the divergence is itself the
 finding, not a regression to apologize for. Astronomy was always going to
@@ -33,31 +33,42 @@ and Campaign 4a's settlement scatter first measured), and — at the very top of
 god. Everywhere the sky does not reach, the two villages converge in
 *kind*: both happen to net out in temperate-rainforest and farm it, both
 grow the identical five-rung ladder (slave, farmer, artisan, shaman,
-chief), both raise an organized priesthood, and both venerate two minor
-deities at the same two periods, 15.99 and 32.55 days — the same moons,
-differently named. The one axis that moves is exactly the axis astronomy
-controls: the head deity's sentiment. That is a stronger demonstration of
-the enrichment thesis than the old, coincidental "same village" framing ever
-was — divergence tracks the sky precisely, in both directions.
+chief), and both raise an organized priesthood. What moves is exactly what
+astronomy controls — the head deity's sentiment, and, since Campaign 20
+(Firm Ground II) stood every observation on its observer's own ground, the
+pantheon's very membership: the spinning flagship venerates two minor
+deities at 15.99 and 32.55 days, the two moons, while the locked flagship
+stands on the day side, the day side sees the sun and nothing else, and
+its pantheon is the lone watcher that sun earns. That is a stronger
+demonstration of the enrichment thesis than the old, coincidental "same
+village" framing ever was — divergence tracks the sky precisely, in both
+directions.
 
-One honesty check on that convergence, sharpened rather than dulled by
-Campaign Y2-3: the minor deities' *periods* are structural — a moon's
-orbital period is rotation-blind, so whichever deity mythologizes it always
-reports 15.99 or 32.55 days, in every world seed 42 generates. Their
-*names* are not, and the difference is worth naming explicitly, because an
-earlier edition of this page got it wrong: before Campaign Y2-3, both
-skies' second and third deities carried the exact same epithets, **the
-Tidewalker** and **the Waning Herald**, and this page called that sameness
-"structural." It never was. A deity's name is now salted by its own
-freshly minted entity id, which shifts the moment anything upstream places
-a different flagship — exactly what the sky pin does — so the spinning
-sky's 15.99-day deity is **Sxebzvetfnat the Sxodsfotsfot** and the locked
-sky's is **Vngodnetzhfod the Vnodxngetzhxed**: different sounds, the same
-moon. What is genuinely structural survives Y2-3 untouched — the
-phenomenon, the period, the sentiment it earns. What only looked
-structural — two worlds' gods sharing a name — never was; it was an
-artifact of a six-word shared pool small enough that a collision was closer
-to expected than notable. The subsistence-and-structure convergence a
+One honesty check, sharpened twice since this page first made it: the
+minor deities' *periods* are structural — a moon's orbital period is
+rotation-blind — but their *names* are not, and the difference is worth
+naming explicitly, because an earlier edition of this page got it wrong:
+before Campaign Y2-3, both skies' second and third deities carried the
+exact same epithets, **the Tidewalker** and **the Waning Herald**, and
+this page called that sameness "structural." It never was. A deity's name
+is salted by its own freshly minted entity id, which shifts the moment
+anything upstream places a different flagship — exactly what the sky pin
+does. And since Campaign 20 (Firm Ground II) the sky pin does something
+stronger than rename a deity: it decides whether a moon deity exists at
+all. A locked world's habitable cells are its day side, the day side never
+shows its settlements the moons, so the 15.99- and 32.55-day deities this
+page once quoted under the locked sky are gone — the moons still orbit,
+but no one religion listens to ever sees them. They live under the
+spinning sky only, where the same first moon is **Neb the Xngodneb** to
+the goblin priesthood and **Rro Rro**, crowned head, to the warren beside
+it: different sounds, the same moon. What is genuinely structural — the
+phenomenon, the period, the sentiment it earns — survives wherever the
+phenomenon is actually observed. What only looked structural — two
+worlds' gods sharing a name, a pantheon whose membership ignored where
+its people stood — never was; the shared name was an artifact of a
+six-word pool small enough that a collision was closer to expected than
+notable, and the observer-blind pantheon was an observation made from
+nowhere. The subsistence-and-structure convergence a
 paragraph up is not structural in even that qualified sense; it is what
 *this* seed happens to produce, because both flagships this time land in
 the same biome class. A different seed can and does break it — seed 7,
@@ -69,39 +80,40 @@ caste ladder holds still long enough to make the head-deity contrast the
 whole story.
 
 Since Campaign Y2-1, a kobold warren stands beside each goblin village in
-the quoted excerpts below — **Rakrra** under the spinning sky, **Rokro**
+the quoted excerpts below — **Raxaxoxokrrorat** under the spinning sky, **Raratrratrrot**
 under the locked one. Since Campaign 15 (The Eyes), that warren raises a
 pantheon of its own: religion now runs once per species-flagship, each
 through that species' own perception lens and at its own characteristic
 hour, so the almanac's single "The Gods" section holds two blocks per
 world, not one. The comparison this page was built to make — the same sky,
-read two different ways — now runs on two axes at once: pin the rotation
-and the goblin head changes while the kobold head does not; hold the
-rotation fixed and read the *other* pantheon on the same page, and the head
-changes from solar to lunar while the sky itself does not move at all. Two
-independent divergences, on one globe, from one seed. That two-pantheon demo is
+read two different ways — now runs on two axes at once: hold the rotation
+fixed and read the *other* pantheon on the same page, and the head changes
+from solar to lunar while the sky itself does not move at all; pin the
+rotation and the goblin head's sentiment flips while the kobold warren,
+its day-side hemisphere holding no moon to crown, keeps a lone solar
+spirit instead. Two divergences, on one globe, from one seed. That two-pantheon demo is
 where Year 2's spine begins; the page it grew into — the same seed with the sky
 held *fixed* and the two peoples traced apart across all three of Year 2's
 vectors at once — is [The Meeting of Seed 42](./the-meeting-seed-42.md), this
 gallery's Year-2 capstone.
 
-## Spinning: Nodvnotngak the Nebsxad presides
+## Spinning: Ned the Nabned presides
 
 Quoted verbatim from the committed [`almanac-seed-42-sky.md`](./almanac-seed-42-sky.md):
 
 ```text
 The land holds 59 settlement(s).
-The chief goblin settlement, Fnabnget, holds 359 souls amid temperate-rainforest.
-The chief kobold settlement, Rakrra, holds 425 souls amid temperate-rainforest.
+The chief goblin settlement, Xnebsvobned, holds 359 souls amid temperate-rainforest.
+The chief kobold settlement, Raxaxoxokrrorat, holds 425 souls amid temperate-rainforest.
 
-The goblin village of **Fnabnget**, population 359.
+The goblin village of **Xnebsvobned**, population 359.
 
-Fnabnget lives by farming.
+Xnebsvobned lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 
-The kobold warren of **Rakrra**, population 425.
+The kobold warren of **Raxaxoxokrrorat**, population 425.
 
-Rakrra lives by farming.
+Raxaxoxokrrorat lives by farming.
 Its roles, lowest to highest: digger, shaper, keeper, elders.
 ```
 
@@ -112,29 +124,29 @@ The "The Gods" section of the same almanac:
 
 An organized priesthood tends a pantheon:
 
-> Nodvnotngak the Nebsxad returns every 0.88 days. So it was, so it is. *(who presides)*
+> Ned the Nabned returns every 0.88 days. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Sxebzvetfnat the Sxodsfotsfot returns every 15.99 days. So it was, so it is.
+> Neb the Xngodneb returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Nokzhfod the Fngeksfadnadnad returns every 32.55 days. So it was, so it is.
+> Neb the Xnobneb returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-In the warren of **Rakrra**, an organized priesthood tends its own pantheon:
+In the warren of **Raxaxoxokrrorat**, an organized priesthood tends its own pantheon:
 
-> Rragratxok Ragxoq comes back every 15.99 days. That's how it's always been. That's how it's always been. Rragratxok is the highest among the gods. *(who presides)*
+> Rro Rro comes back every 15.99 days. That's how it's always been. That's how it's always been. Rro is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Rraqrrok Roxag comes back every 32.55 days. That's how it's always been. That's how it's always been. Rraqrrok is a great one among the gods.
+> Raxa Raxarro comes back every 32.55 days. That's how it's always been. That's how it's always been. Raxa is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Rrogxat Xo comes back every 0.88 days. That's how it's always been. That's how it's always been. Rrogxat is a great one among the gods.
+> Rarro Rrora comes back every 0.88 days. That's how it's always been. That's how it's always been. Rarro is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 ```
@@ -143,48 +155,48 @@ A spinning world's sun rises and sets, so the phenomenon religion observes
 is periodic, and the eternal-vs-cyclic split (tier 0's original
 distinction, unchanged since Campaign 1b, now carried as a committed
 `sentiment` fact rather than baked into a template string) mints a cyclic
-head deity: **Nodvnotngak the Nebsxad**, mourned in its absence and
+head deity: **Ned the Nabned**, mourned in its absence and
 feasted on its return — read in the goblin voice Campaign Y2-3 gives a
 `Rank`-basis people, formal and honorific-dense (*"So it was, so it is"*),
 exactly like the two lesser cyclic deities beneath it.
 
 Read past the goblin block and the same page holds a second head deity,
-**Rragratxok Ragxoq**, presiding over Rakrra instead of Fnabnget, over a
+**Rro Rro**, presiding over Raxaxoxokrrorat instead of Xnebsvobned, over a
 15.99-day period instead of a 0.88-day one. That period is the first
-moon's, not the sun's: Rakrra's pantheon is headed by a moon, because a
+moon's, not the sun's: Raxaxoxokrrorat's pantheon is headed by a moon, because a
 kobold's lens weighs the night sky at `1.82` against a goblin's `1.0` day
 sky, and a vast moon at raw salience 0.64 clears that weighted bar before
 the sun, raw salience 1.00 but scaled by a kobold's `0.52` day-sky factor,
 ever gets the chance. The sun still makes the kobold pantheon — as
-**Rrogxat Xo**, third and least salient — it is simply outweighed, not
+**Rarro Rrora**, third and least salient — it is simply outweighed, not
 unseen. Every belief in both blocks is a **derived** phenomenon (the
 provenance line reads *celestial-body* either way); what changed between
 the two pantheons is not what exists in the sky, only which pair of eyes
 was doing the noticing — and, since Campaign Y2-3, which mouth is doing the
-telling: Rakrra's telling repeats its refrain (*"That's how it's always
+telling: Raxaxoxokrrorat's telling repeats its refrain (*"That's how it's always
 been"*) twice per line and names its head deity's rank in words
-(*"is the highest among the gods"*) where Fnabnget's telling never repeats
+(*"is the highest among the gods"*) where Xnebsvobned's telling never repeats
 and marks rank only with the `*(who presides)*` annotation, the same
 `Rank`-versus-`Knowledge` status-basis split that already shapes each
 people's caste ladder now shaping how each people speaks.
 
-## Tidally locked: Xngeknet the Sxodsxodsxodngod presides
+## Tidally locked: Nedngat the Vngakned presides
 
 Quoted verbatim from the committed [`almanac-seed-42-locked.md`](./almanac-seed-42-locked.md):
 
 ```text
 The land holds 28 settlement(s).
-The chief goblin settlement, Xngodfnokzhvad, holds 522 souls amid temperate-rainforest.
-The chief kobold settlement, Rokro, holds 328 souls amid alpine.
+The chief goblin settlement, Xngatnebvnedned, holds 522 souls amid temperate-rainforest.
+The chief kobold settlement, Raratrratrrot, holds 328 souls amid alpine.
 
-The goblin village of **Xngodfnokzhvad**, population 522.
+The goblin village of **Xngatnebvnedned**, population 522.
 
-Xngodfnokzhvad lives by farming.
+Xngatnebvnedned lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 
-The kobold warren of **Rokro**, population 328.
+The kobold warren of **Raratrratrrot**, population 328.
 
-Rokro lives by fishing.
+Raratrratrrot lives by fishing.
 Its roles, lowest to highest: digger, elders.
 ```
 
@@ -195,65 +207,55 @@ The "The Gods" section of the same almanac:
 
 An organized priesthood tends a pantheon:
 
-> Xngeknet the Sxodsxodsxodngod is ever: Xngeknet the Sxodsxodsxodngod watches unceasing. So it was, so it is. *(who presides)*
+> Nedngat the Vngakned is ever: Nedngat the Vngakned watches unceasing. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Vngodnetzhfod the Vnodxngetzhxed returns every 15.99 days. So it was, so it is.
->
-> — derived from the phenomenon *celestial-body*
+The warren of **Raratrratrrot** keeps its own folk pantheon:
 
-> Natxnok the Nadfngok returns every 32.55 days. So it was, so it is.
->
-> — derived from the phenomenon *celestial-body*
-
-The warren of **Rokro** keeps its own folk pantheon:
-
-> Rroqrroq Xoq comes back every 15.99 days. That's how it's always been. That's how it's always been. Rroqrroq is a great one among the gods.
->
-> — derived from the phenomenon *celestial-body*
-
-> Ragrrotrok Rrakrrarra comes back every 32.55 days. That's how it's always been. That's how it's always been. Ragrrotrok is a great one among the gods.
->
-> — derived from the phenomenon *celestial-body*
-
-> Xokxok Xoxo is: Xokxok Xoxo is always watching. That's how it's always been. That's how it's always been. Xokxok is a great one among the gods.
+> Raro Ro is: Raro Ro is always watching. That's how it's always been. That's how it's always been. Raro is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 ```
 
-Rokro's pantheon carries no `*(who presides)*` mark at all — its role
+Raratrratrrot's pantheon carries no `*(who presides)*` mark at all — its role
 ladder is just two rungs, digger and elders, with no keeper caste to tend
 an organized cult and not enough strata to crown a ranked pantheon either,
-so every one of its three spirits stands co-equal, the same **folk** cult a
-lean goblin camp would keep. The list order still tells the story the mark
-would have: **Rroqrroq Xoq**, the same first moon Rakrra's pantheon
-crowned, leads it, ahead of the sun's own **Xokxok Xoxo**. A kobold's lens
-does not care whether the sun it is discounting happens to be rising and
-setting or fixed forever above the day side — the `0.52` day-sky factor
-applies to either shape of sun, so the lock pin that retunes the *goblin*
-head deity's sentiment (cyclic to eternal) leaves the *kobold* head
-unmoved: lunar under both skies, because the moons themselves never
-stopped moving when the sun did.
+so its worship is the same flat **folk** cult a lean goblin camp would
+keep — and here it is a folk cult of exactly one spirit. A kobold's lens
+still discounts the day sky at `0.52`, but a discount only reorders a
+list; it cannot conjure a moon the warren's own hemisphere never shows it.
+Under the spinning sky that lens crowned a moon over the sun; on the
+locked day side the ever-burning sun is the only celestial phenomenon
+there is to notice, so the warren's lone spirit is **Raro Ro**, the
+watcher that is always watching — the kobold head moves from lunar to
+solar not because its eyes changed but because its sky did. (Before the
+placed observer — Campaign 20, Firm Ground II — this page showed the
+locked warren a three-spirit pantheon led by the same first moon as its
+spinning cousin. That pantheon was observed from nowhere in particular;
+the fix that gave every observation a vantage took the moons with it.)
 
 Pin the same seed's rotation to tidally locked and the sun stops setting.
 The identical eternal-vs-cyclic split, fed the identical phenomenon slot
 with a different periodicity, mints an eternal head deity instead:
-**Xngeknet the Sxodsxodsxodngod**, a watcher fixed forever above the day
+**Nedngat the Vngakned**, a watcher fixed forever above the day
 side — the frontier's alien-religion note (a terminator culture's theology
 hanging on an unmoving sun), cashed, and, in the goblin voice, repeated
 once for emphasis in its own line before the shared refrain closes it
-(*"Xngeknet the Sxodsxodsxodngod is ever: Xngeknet the Sxodsxodsxodngod
+(*"Nedngat the Vngakned is ever: Nedngat the Vngakned
 watches unceasing"*). There is no seasonal deity in this pantheon at all,
 because a tidally locked world has no seasons to mythologize — a
-phenomenon that never existed cannot fail to clear the pantheon floor.
+phenomenon that never existed cannot fail to clear the pantheon floor —
+and no moon deities either, for the day-side reason above: a phenomenon
+no observer of this flagship ever sees is, to its religion, a phenomenon
+that never existed.
 
 ## What this pair proves
 
 Nothing about religion's code changed between these two worlds, and nothing
 about settlement's or culture's code changed either. The same placement
 suitability formula, reading the same corrected freshwater field, sent
-Fnabnget and Xngodfnokzhvad to different cells because the two skies'
+Xnebsvobned and Xngatnebvnedned to different cells because the two skies'
 climates disagreed about where the best cell was; the same
 `hornvale-culture` functions, reading each flagship's own environment,
 happened to agree on farming and the five-rung ladder; and the same
@@ -280,12 +282,16 @@ and language, reading only that flagship's own species and the freshly
 minted belief's own id, gave the result a name and a voice neither
 religion nor settlement had to know anything about.
 
-**The kobold pantheon adds a second axis to the same proof, orthogonal to
-the first.** Rotation moves the *goblin* head deity's sentiment, cyclic to
-eternal, while leaving the sky's members and the kobold head untouched;
-species moves the *kobold* head deity's domain, solar to lunar, while
-leaving the rotation-driven sentiment swap on the goblin side untouched.
-Ask Rakrra's Rragratxok Ragxoq and Fnabnget's Nodvnotngak the Nebsxad the
+**The kobold pantheon adds a second axis to the same proof — cleanly
+orthogonal on the spinning sky.** There, species alone moves the head
+deity's domain, solar to lunar: one sky, two lenses, two heads. Pin the
+rotation and both axes act at once: the goblin head's sentiment flips
+cyclic to eternal, and the day side's one-body sky takes the kobold's
+moon away entirely, collapsing both pantheons onto the same lone sun —
+which the goblin priesthood tends as a ranked cult with a presiding mark
+and the warren keeps as a single unranked folk spirit, the species split
+now audible in cult form and voice rather than in domain.
+Ask Raxaxoxokrrorat's Rro Rro and Xnebsvobned's Ned the Nabned the
 same `why`, and `recount` gives back the same predicate vocabulary —
 `derived-from-phenomenon`, a period, a cult form — cited against two
 different phenomena, because religion still does not know, and does not

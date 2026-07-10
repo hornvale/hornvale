@@ -12,7 +12,7 @@ pub use placement::{
     suitability_weighted,
 };
 
-use hornvale_kernel::{ConceptRegistry, EntityId, RegistryError, Value, World};
+use hornvale_kernel::{ConceptKind, ConceptRegistry, EntityId, RegistryError, Value, World};
 
 /// Predicate marking an entity as a settlement.
 pub const IS_SETTLEMENT: &str = "is-settlement";
@@ -94,6 +94,14 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         SETTLEMENT_PIN,
         false,
         "a settlement scenario pin, round-trippable",
+    )?;
+
+    registry.register_concept("home", "settlement", ConceptKind::Social, "one's dwelling")?;
+    registry.register_concept(
+        "hearth",
+        "settlement",
+        ConceptKind::Social,
+        "the fire at the center of a home",
     )
 }
 
@@ -294,6 +302,19 @@ mod tests {
         let labels: Vec<&str> = stream_labels().iter().map(|(l, _)| *l).collect();
         for expected in ["settlement/kobold/name", "settlement/kobold/population"] {
             assert!(labels.contains(&expected), "missing {expected}");
+        }
+    }
+
+    #[test]
+    fn concepts_registered() {
+        let mut r = ConceptRegistry::default();
+        register_concepts(&mut r).unwrap();
+        for name in ["home", "hearth"] {
+            let c = r
+                .concept(name)
+                .unwrap_or_else(|| panic!("missing concept {name}"));
+            assert_eq!(c.domain, "settlement");
+            assert_eq!(c.kind, ConceptKind::Social);
         }
     }
 }

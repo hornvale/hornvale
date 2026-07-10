@@ -3,6 +3,7 @@
 
 mod audio;
 mod concepts;
+mod dictionary;
 mod phonology;
 mod repl;
 mod streams;
@@ -42,6 +43,7 @@ usage:
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
+  hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
   hornvale voice [--out <DIR>]             author missing phonology audio clips (espeak-ng + ffmpeg; default out: book/src/audio)
   hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
   hornvale lab list-metrics                list every metric in the lab's registry
@@ -82,6 +84,7 @@ fn main() -> ExitCode {
         Some("concepts") => cmd_concepts(),
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
+        Some("dictionary") => cmd_dictionary(&args),
         Some("voice") => audio::cmd_voice(&args),
         Some("lab") => cmd_lab(&args),
         Some("help") | None => {
@@ -536,6 +539,14 @@ fn cmd_phonology() -> Result<(), String> {
     Ok(())
 }
 
+/// Dump the loaded world's per-species dictionary as markdown (default
+/// world: world.json, like `almanac`).
+fn cmd_dictionary(args: &[String]) -> Result<(), String> {
+    let world = load_world(args)?;
+    print!("{}", dictionary::render_dictionary(&world)?);
+    Ok(())
+}
+
 /// Dispatch `lab` subcommands: `run <PATH>` and `list-metrics`.
 fn cmd_lab(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
@@ -861,6 +872,11 @@ mod tests {
     #[test]
     fn usage_mentions_min_suitability() {
         assert!(usage().contains("--min-suitability"));
+    }
+
+    #[test]
+    fn usage_mentions_dictionary() {
+        assert!(USAGE.contains("dictionary"));
     }
 
     #[test]

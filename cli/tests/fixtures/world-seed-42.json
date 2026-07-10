@@ -117,6 +117,11 @@
         "functional": true,
         "doc": "canonical name of an entity"
       },
+      "name-gloss": {
+        "name": "name-gloss",
+        "functional": true,
+        "doc": "the glossed meaning of an entity's generated name"
+      },
       "notable-neighbor": {
         "name": "notable-neighbor",
         "functional": false,
@@ -298,6 +303,422 @@
       "celestial-body": "a body visible in the sky",
       "night-star": "a fixed star notable in the night sky",
       "seasonal-cycle": "the annual daylight cycle"
+    },
+    "concepts": {
+      "abyssal": {
+        "name": "abyssal",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "alpine": {
+        "name": "alpine",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "bathypelagic": {
+        "name": "bathypelagic",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "blood": {
+        "name": "blood",
+        "domain": "language",
+        "kind": "Body",
+        "doc": "the circulating fluid of a body"
+      },
+      "blue": {
+        "name": "blue",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "the color term for blue"
+      },
+      "bone": {
+        "name": "bone",
+        "domain": "language",
+        "kind": "Body",
+        "doc": "the rigid frame of a body"
+      },
+      "brown": {
+        "name": "brown",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "the color term for brown"
+      },
+      "child": {
+        "name": "child",
+        "domain": "language",
+        "kind": "Kin",
+        "doc": "one's son or daughter"
+      },
+      "coral-reef": {
+        "name": "coral-reef",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "dark": {
+        "name": "dark",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "the color term for black/dark hues"
+      },
+      "day": {
+        "name": "day",
+        "domain": "language",
+        "kind": "Celestial",
+        "doc": "the light half of the day-night cycle"
+      },
+      "desert": {
+        "name": "desert",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "die": {
+        "name": "die",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "to cease living"
+      },
+      "earth": {
+        "name": "earth",
+        "domain": "language",
+        "kind": "Terrain",
+        "doc": "the ground underfoot"
+      },
+      "eat": {
+        "name": "eat",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "to consume food"
+      },
+      "epipelagic": {
+        "name": "epipelagic",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "eye": {
+        "name": "eye",
+        "domain": "language",
+        "kind": "Body",
+        "doc": "the organ of sight"
+      },
+      "fire": {
+        "name": "fire",
+        "domain": "language",
+        "kind": "Substance",
+        "doc": "flame and heat"
+      },
+      "foot": {
+        "name": "foot",
+        "domain": "language",
+        "kind": "Body",
+        "doc": "the walking limb-end"
+      },
+      "gloom": {
+        "name": "gloom",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "the deepest, starless dark"
+      },
+      "goblin-kind": {
+        "name": "goblin-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a goblin"
+      },
+      "god": {
+        "name": "god",
+        "domain": "religion",
+        "kind": "Social",
+        "doc": "a deity"
+      },
+      "green": {
+        "name": "green",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "the color term for green"
+      },
+      "hadal-trench": {
+        "name": "hadal-trench",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "hand": {
+        "name": "hand",
+        "domain": "language",
+        "kind": "Body",
+        "doc": "the manipulating limb-end"
+      },
+      "hearth": {
+        "name": "hearth",
+        "domain": "settlement",
+        "kind": "Social",
+        "doc": "the fire at the center of a home"
+      },
+      "home": {
+        "name": "home",
+        "domain": "settlement",
+        "kind": "Social",
+        "doc": "one's dwelling"
+      },
+      "hydrothermal-vent": {
+        "name": "hydrothermal-vent",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "ice": {
+        "name": "ice",
+        "domain": "climate",
+        "kind": "Substance",
+        "doc": "frozen water"
+      },
+      "kelp-forest": {
+        "name": "kelp-forest",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "kobold-kind": {
+        "name": "kobold-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a kobold"
+      },
+      "light": {
+        "name": "light",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "the color term for white/light hues"
+      },
+      "many": {
+        "name": "many",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "an indefinitely large count"
+      },
+      "mesopelagic": {
+        "name": "mesopelagic",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "moon": {
+        "name": "moon",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "a moon"
+      },
+      "mountain": {
+        "name": "mountain",
+        "domain": "terrain",
+        "kind": "Terrain",
+        "doc": "high ground"
+      },
+      "mouth": {
+        "name": "mouth",
+        "domain": "language",
+        "kind": "Body",
+        "doc": "the organ of eating and speech"
+      },
+      "name": {
+        "name": "name",
+        "domain": "language",
+        "kind": "Social",
+        "doc": "a word that identifies one who bears it"
+      },
+      "night": {
+        "name": "night",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "the dark half of the day-night cycle"
+      },
+      "one": {
+        "name": "one",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "the cardinal number 1"
+      },
+      "parent": {
+        "name": "parent",
+        "domain": "language",
+        "kind": "Kin",
+        "doc": "one's father or mother"
+      },
+      "rain": {
+        "name": "rain",
+        "domain": "climate",
+        "kind": "Substance",
+        "doc": "liquid precipitation"
+      },
+      "red": {
+        "name": "red",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "the color term for red"
+      },
+      "savanna": {
+        "name": "savanna",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "sea": {
+        "name": "sea",
+        "domain": "terrain",
+        "kind": "Terrain",
+        "doc": "a body of salt water"
+      },
+      "sea-ice": {
+        "name": "sea-ice",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "shadow": {
+        "name": "shadow",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "cast dark, distinct from open gloom"
+      },
+      "shrubland": {
+        "name": "shrubland",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "sibling": {
+        "name": "sibling",
+        "domain": "language",
+        "kind": "Kin",
+        "doc": "one's brother or sister"
+      },
+      "sleep": {
+        "name": "sleep",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "to rest unconscious"
+      },
+      "snow": {
+        "name": "snow",
+        "domain": "climate",
+        "kind": "Substance",
+        "doc": "frozen precipitation"
+      },
+      "spirit": {
+        "name": "spirit",
+        "domain": "religion",
+        "kind": "Social",
+        "doc": "a lesser or unseen supernatural presence"
+      },
+      "star": {
+        "name": "star",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "a fixed point of light in the night sky"
+      },
+      "starlit": {
+        "name": "starlit",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "dark faintly lit by stars"
+      },
+      "stone": {
+        "name": "stone",
+        "domain": "terrain",
+        "kind": "Substance",
+        "doc": "rock"
+      },
+      "sun": {
+        "name": "sun",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "the sun"
+      },
+      "taiga": {
+        "name": "taiga",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "temperate-forest": {
+        "name": "temperate-forest",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "temperate-grassland": {
+        "name": "temperate-grassland",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "temperate-rainforest": {
+        "name": "temperate-rainforest",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "tree": {
+        "name": "tree",
+        "domain": "language",
+        "kind": "Living",
+        "doc": "a woody plant"
+      },
+      "tropical-rainforest": {
+        "name": "tropical-rainforest",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "tropical-seasonal-forest": {
+        "name": "tropical-seasonal-forest",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "tundra": {
+        "name": "tundra",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "two": {
+        "name": "two",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "the cardinal number 2"
+      },
+      "upwelling": {
+        "name": "upwelling",
+        "domain": "climate",
+        "kind": "Terrain",
+        "doc": "a biome class"
+      },
+      "water": {
+        "name": "water",
+        "domain": "language",
+        "kind": "Substance",
+        "doc": "the drinkable liquid"
+      },
+      "wind": {
+        "name": "wind",
+        "domain": "language",
+        "kind": "Substance",
+        "doc": "moving air"
+      },
+      "yellow": {
+        "name": "yellow",
+        "domain": "language",
+        "kind": "Quality",
+        "doc": "the color term for yellow"
+      }
     }
   },
   "ledger": {
@@ -496,7 +917,7 @@
         "subject": 2,
         "predicate": "name",
         "object": {
-          "Text": "Fnabnget"
+          "Text": "Xnebsvobned"
         },
         "place": 2,
         "day": 0.0,
@@ -576,7 +997,7 @@
         "subject": 3,
         "predicate": "name",
         "object": {
-          "Text": "Ngakngek"
+          "Text": "Fnadnetned"
         },
         "place": 3,
         "day": 0.0,
@@ -656,7 +1077,7 @@
         "subject": 4,
         "predicate": "name",
         "object": {
-          "Text": "Xngodfnokzhvad"
+          "Text": "Xngatnebvnedned"
         },
         "place": 4,
         "day": 0.0,
@@ -736,7 +1157,7 @@
         "subject": 5,
         "predicate": "name",
         "object": {
-          "Text": "Rakrra"
+          "Text": "Raxaxoxokrrorat"
         },
         "place": 5,
         "day": 0.0,
@@ -816,7 +1237,7 @@
         "subject": 6,
         "predicate": "name",
         "object": {
-          "Text": "Rorrat"
+          "Text": "Xoxoxoq"
         },
         "place": 6,
         "day": 0.0,
@@ -896,7 +1317,7 @@
         "subject": 7,
         "predicate": "name",
         "object": {
-          "Text": "Vnodfngak"
+          "Text": "Nobnebnadnob"
         },
         "place": 7,
         "day": 0.0,
@@ -976,7 +1397,7 @@
         "subject": 8,
         "predicate": "name",
         "object": {
-          "Text": "Xatrro"
+          "Text": "Raxarorrat"
         },
         "place": 8,
         "day": 0.0,
@@ -1056,7 +1477,7 @@
         "subject": 9,
         "predicate": "name",
         "object": {
-          "Text": "Xokxakrrok"
+          "Text": "Xoraxaratrratrra"
         },
         "place": 9,
         "day": 0.0,
@@ -1136,7 +1557,7 @@
         "subject": 10,
         "predicate": "name",
         "object": {
-          "Text": "Rrogxoxak"
+          "Text": "Xorokroxa"
         },
         "place": 10,
         "day": 0.0,
@@ -1216,7 +1637,7 @@
         "subject": 11,
         "predicate": "name",
         "object": {
-          "Text": "Vngeknged"
+          "Text": "Sfebxnodngotnednadnob"
         },
         "place": 11,
         "day": 0.0,
@@ -1296,7 +1717,7 @@
         "subject": 12,
         "predicate": "name",
         "object": {
-          "Text": "Xakxaxag"
+          "Text": "Raxaxoxaxoq"
         },
         "place": 12,
         "day": 0.0,
@@ -1376,7 +1797,7 @@
         "subject": 13,
         "predicate": "name",
         "object": {
-          "Text": "Zhfabzfatneb"
+          "Text": "Vnatzhxoksvotned"
         },
         "place": 13,
         "day": 0.0,
@@ -1456,7 +1877,7 @@
         "subject": 14,
         "predicate": "name",
         "object": {
-          "Text": "Rotxoro"
+          "Text": "Xoraxaratro"
         },
         "place": 14,
         "day": 0.0,
@@ -1536,7 +1957,7 @@
         "subject": 15,
         "predicate": "name",
         "object": {
-          "Text": "Rrarotrak"
+          "Text": "Raxaxaxorragrorog"
         },
         "place": 15,
         "day": 0.0,
@@ -1616,7 +2037,7 @@
         "subject": 16,
         "predicate": "name",
         "object": {
-          "Text": "Zhxetneb"
+          "Text": "Xngokzhvabvngetnednotngok"
         },
         "place": 16,
         "day": 0.0,
@@ -1696,7 +2117,7 @@
         "subject": 17,
         "predicate": "name",
         "object": {
-          "Text": "Rakxoxo"
+          "Text": "Xaxoraxaxotxora"
         },
         "place": 17,
         "day": 0.0,
@@ -1776,7 +2197,7 @@
         "subject": 18,
         "predicate": "name",
         "object": {
-          "Text": "Rroqrrorra"
+          "Text": "Xoraxaxoxaxa"
         },
         "place": 18,
         "day": 0.0,
@@ -1856,7 +2277,7 @@
         "subject": 19,
         "predicate": "name",
         "object": {
-          "Text": "Xnedzhfet"
+          "Text": "Zvebnobnednadnob"
         },
         "place": 19,
         "day": 0.0,
@@ -1936,7 +2357,7 @@
         "subject": 20,
         "predicate": "name",
         "object": {
-          "Text": "Vngatnab"
+          "Text": "Zxakngaknadnob"
         },
         "place": 20,
         "day": 0.0,
@@ -2016,7 +2437,7 @@
         "subject": 21,
         "predicate": "name",
         "object": {
-          "Text": "Zhfadngak"
+          "Text": "Fnotxnebzhvoknednotngok"
         },
         "place": 21,
         "day": 0.0,
@@ -2096,7 +2517,7 @@
         "subject": 22,
         "predicate": "name",
         "object": {
-          "Text": "Xngobngokfnet"
+          "Text": "Zxedzhfebxnodned"
         },
         "place": 22,
         "day": 0.0,
@@ -2176,7 +2597,7 @@
         "subject": 23,
         "predicate": "name",
         "object": {
-          "Text": "Xngakvngekzfab"
+          "Text": "Zhxotxngaknotngokned"
         },
         "place": 23,
         "day": 0.0,
@@ -2256,7 +2677,7 @@
         "subject": 24,
         "predicate": "name",
         "object": {
-          "Text": "Zhfetzhvadnak"
+          "Text": "Vngobngobxnotnednotngok"
         },
         "place": 24,
         "day": 0.0,
@@ -2336,7 +2757,7 @@
         "subject": 25,
         "predicate": "name",
         "object": {
-          "Text": "Fnodsvedned"
+          "Text": "Sfobsxatnotngok"
         },
         "place": 25,
         "day": 0.0,
@@ -2416,7 +2837,7 @@
         "subject": 26,
         "predicate": "name",
         "object": {
-          "Text": "Roqxa"
+          "Text": "Raxaxatro"
         },
         "place": 26,
         "day": 0.0,
@@ -2496,7 +2917,7 @@
         "subject": 27,
         "predicate": "name",
         "object": {
-          "Text": "Fnekzhfadxngod"
+          "Text": "Netngobnotngok"
         },
         "place": 27,
         "day": 0.0,
@@ -2576,7 +2997,7 @@
         "subject": 28,
         "predicate": "name",
         "object": {
-          "Text": "Nekzfakfnged"
+          "Text": "Nadnednaknotngokned"
         },
         "place": 28,
         "day": 0.0,
@@ -2656,7 +3077,7 @@
         "subject": 29,
         "predicate": "name",
         "object": {
-          "Text": "Rrotrorro"
+          "Text": "Rraraxaxokrraqrrot"
         },
         "place": 29,
         "day": 0.0,
@@ -2736,7 +3157,7 @@
         "subject": 30,
         "predicate": "name",
         "object": {
-          "Text": "Sfatsxatxngob"
+          "Text": "Ngedzfadned"
         },
         "place": 30,
         "day": 0.0,
@@ -2816,7 +3237,7 @@
         "subject": 31,
         "predicate": "name",
         "object": {
-          "Text": "Rraxaxot"
+          "Text": "Xaxoxokrrag"
         },
         "place": 31,
         "day": 0.0,
@@ -2896,7 +3317,7 @@
         "subject": 32,
         "predicate": "name",
         "object": {
-          "Text": "Xokrot"
+          "Text": "Raxarraxo"
         },
         "place": 32,
         "day": 0.0,
@@ -2976,7 +3397,7 @@
         "subject": 33,
         "predicate": "name",
         "object": {
-          "Text": "Ngebxnab"
+          "Text": "Vnedxngedzhvedned"
         },
         "place": 33,
         "day": 0.0,
@@ -3056,7 +3477,7 @@
         "subject": 34,
         "predicate": "name",
         "object": {
-          "Text": "Raqxoxa"
+          "Text": "Raxarrarotxo"
         },
         "place": 34,
         "day": 0.0,
@@ -3136,7 +3557,7 @@
         "subject": 35,
         "predicate": "name",
         "object": {
-          "Text": "Xngekfned"
+          "Text": "Ngebzveksxetnoknek"
         },
         "place": 35,
         "day": 0.0,
@@ -3216,7 +3637,7 @@
         "subject": 36,
         "predicate": "name",
         "object": {
-          "Text": "Fnodnat"
+          "Text": "Vnabnebzfadnadnobned"
         },
         "place": 36,
         "day": 0.0,
@@ -3296,7 +3717,7 @@
         "subject": 37,
         "predicate": "name",
         "object": {
-          "Text": "Rrokxo"
+          "Text": "Raxarrograkxo"
         },
         "place": 37,
         "day": 0.0,
@@ -3376,7 +3797,7 @@
         "subject": 38,
         "predicate": "name",
         "object": {
-          "Text": "Xaxagrak"
+          "Text": "Rraxatra"
         },
         "place": 38,
         "day": 0.0,
@@ -3456,7 +3877,7 @@
         "subject": 39,
         "predicate": "name",
         "object": {
-          "Text": "Ratxaqrok"
+          "Text": "Raxarrorra"
         },
         "place": 39,
         "day": 0.0,
@@ -3536,7 +3957,7 @@
         "subject": 40,
         "predicate": "name",
         "object": {
-          "Text": "Xorra"
+          "Text": "Raxarrarrarroxaq"
         },
         "place": 40,
         "day": 0.0,
@@ -3616,7 +4037,7 @@
         "subject": 41,
         "predicate": "name",
         "object": {
-          "Text": "Ratrrak"
+          "Text": "Rraraxarrarra"
         },
         "place": 41,
         "day": 0.0,
@@ -3696,7 +4117,7 @@
         "subject": 42,
         "predicate": "name",
         "object": {
-          "Text": "Rratrrora"
+          "Text": "Rrarragxoq"
         },
         "place": 42,
         "day": 0.0,
@@ -3776,7 +4197,7 @@
         "subject": 43,
         "predicate": "name",
         "object": {
-          "Text": "Xarraq"
+          "Text": "Raxaxarrarrog"
         },
         "place": 43,
         "day": 0.0,
@@ -3856,7 +4277,7 @@
         "subject": 44,
         "predicate": "name",
         "object": {
-          "Text": "Rroqxoxoq"
+          "Text": "Rraraxaxaqrrorra"
         },
         "place": 44,
         "day": 0.0,
@@ -3936,7 +4357,7 @@
         "subject": 45,
         "predicate": "name",
         "object": {
-          "Text": "Xagrora"
+          "Text": "Rraraxarotxotrro"
         },
         "place": 45,
         "day": 0.0,
@@ -4016,7 +4437,7 @@
         "subject": 46,
         "predicate": "name",
         "object": {
-          "Text": "Rogroq"
+          "Text": "Raxarakrot"
         },
         "place": 46,
         "day": 0.0,
@@ -4096,7 +4517,7 @@
         "subject": 47,
         "predicate": "name",
         "object": {
-          "Text": "Ragra"
+          "Text": "Rrarrogra"
         },
         "place": 47,
         "day": 0.0,
@@ -4176,7 +4597,7 @@
         "subject": 48,
         "predicate": "name",
         "object": {
-          "Text": "Fngetzfod"
+          "Text": "Zxakzxakzhxobngobned"
         },
         "place": 48,
         "day": 0.0,
@@ -4256,7 +4677,7 @@
         "subject": 49,
         "predicate": "name",
         "object": {
-          "Text": "Ngodxngabzhxat"
+          "Text": "Zxetnaknedngot"
         },
         "place": 49,
         "day": 0.0,
@@ -4336,7 +4757,7 @@
         "subject": 50,
         "predicate": "name",
         "object": {
-          "Text": "Xorro"
+          "Text": "Raxarararatrotxa"
         },
         "place": 50,
         "day": 0.0,
@@ -4416,7 +4837,7 @@
         "subject": 51,
         "predicate": "name",
         "object": {
-          "Text": "Xaro"
+          "Text": "Raxarraxoxat"
         },
         "place": 51,
         "day": 0.0,
@@ -4496,7 +4917,7 @@
         "subject": 52,
         "predicate": "name",
         "object": {
-          "Text": "Rrorrag"
+          "Text": "Rararaxarrorraqxo"
         },
         "place": 52,
         "day": 0.0,
@@ -4576,7 +4997,7 @@
         "subject": 53,
         "predicate": "name",
         "object": {
-          "Text": "Ngokxngek"
+          "Text": "Zhxakzhfobxngodngotned"
         },
         "place": 53,
         "day": 0.0,
@@ -4656,7 +5077,7 @@
         "subject": 54,
         "predicate": "name",
         "object": {
-          "Text": "Ngodxnetnek"
+          "Text": "Vngebxngatned"
         },
         "place": 54,
         "day": 0.0,
@@ -4736,7 +5157,7 @@
         "subject": 55,
         "predicate": "name",
         "object": {
-          "Text": "Vnetnatsfek"
+          "Text": "Ngodvngobngotned"
         },
         "place": 55,
         "day": 0.0,
@@ -4816,7 +5237,7 @@
         "subject": 56,
         "predicate": "name",
         "object": {
-          "Text": "Rragrotxog"
+          "Text": "Raraxarraxot"
         },
         "place": 56,
         "day": 0.0,
@@ -4896,7 +5317,7 @@
         "subject": 57,
         "predicate": "name",
         "object": {
-          "Text": "Zfobfngak"
+          "Text": "Vngokvnatned"
         },
         "place": 57,
         "day": 0.0,
@@ -4976,7 +5397,7 @@
         "subject": 58,
         "predicate": "name",
         "object": {
-          "Text": "Zxokzvek"
+          "Text": "Zfatzfodngok"
         },
         "place": 58,
         "day": 0.0,
@@ -5056,7 +5477,7 @@
         "subject": 59,
         "predicate": "name",
         "object": {
-          "Text": "Rroxakxo"
+          "Text": "Xoxarraratrroq"
         },
         "place": 59,
         "day": 0.0,
@@ -5136,7 +5557,7 @@
         "subject": 60,
         "predicate": "name",
         "object": {
-          "Text": "Xoqrograk"
+          "Text": "Raxarragrraxot"
         },
         "place": 60,
         "day": 0.0,
@@ -5214,6 +5635,596 @@
       },
       {
         "subject": 2,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun-temperate-rainforest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 3,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun-temperate-rainforest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 4,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "temperate-rainforest-sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 5,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "temperate-rainforest-moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 6,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "temperate-rainforest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 7,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 8,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 9,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon-temperate-rainforest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 10,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "temperate-rainforest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 11,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun-temperate-forest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 12,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "temperate-rainforest-moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 13,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 14,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon-temperate-rainforest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 15,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "tropical-rainforest-moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 16,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun-tropical-rainforest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 17,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon-tropical-rainforest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 18,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon-temperate-rainforest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 19,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun-temperate-forest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 20,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 21,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun-tropical-rainforest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 22,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 23,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "tropical-rainforest-sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 24,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun-tropical-rainforest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 25,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 26,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 27,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 28,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "tropical-rainforest-sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 29,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon-temperate-forest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 30,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 31,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "tropical-rainforest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 32,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 33,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 34,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "temperate-forest-moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 35,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "tropical-seasonal-forest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 36,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "temperate-forest-sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 37,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 38,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 39,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 40,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "temperate-forest-moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 41,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon-temperate-forest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 42,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 43,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 44,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon-temperate-forest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 45,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon-temperate-forest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 46,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 47,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "temperate-forest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 48,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "shrubland-sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 49,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun-taiga"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 50,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "tropical-seasonal-forest-moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 51,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 52,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon-tropical-seasonal-forest"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 53,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "taiga-sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 54,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 55,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "taiga-sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 56,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon-shrubland"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 57,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 58,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "tundra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 59,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "tundra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 60,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 2,
         "predicate": "subsistence",
         "object": {
           "Text": "farming"
@@ -5286,7 +6297,7 @@
         "subject": 61,
         "predicate": "deity-name",
         "object": {
-          "Text": "Nodvnotngak"
+          "Text": "Ned"
         },
         "place": null,
         "day": 0.0,
@@ -5296,7 +6307,7 @@
         "subject": 61,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "nodvnotŋak"
+          "Text": "ned"
         },
         "place": null,
         "day": 0.0,
@@ -5306,7 +6317,7 @@
         "subject": 61,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Nebsxad"
+          "Text": "Nabned"
         },
         "place": null,
         "day": 0.0,
@@ -5316,7 +6327,7 @@
         "subject": 61,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "nebsxad"
+          "Text": "nabned"
         },
         "place": null,
         "day": 0.0,
@@ -5386,7 +6397,7 @@
         "subject": 62,
         "predicate": "deity-name",
         "object": {
-          "Text": "Sxebzvetfnat"
+          "Text": "Neb"
         },
         "place": null,
         "day": 0.0,
@@ -5396,7 +6407,7 @@
         "subject": 62,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "sxebzvetfnat"
+          "Text": "neb"
         },
         "place": null,
         "day": 0.0,
@@ -5406,7 +6417,7 @@
         "subject": 62,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Sxodsfotsfot"
+          "Text": "Xngodneb"
         },
         "place": null,
         "day": 0.0,
@@ -5416,7 +6427,7 @@
         "subject": 62,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "sxodsfotsfot"
+          "Text": "xŋodneb"
         },
         "place": null,
         "day": 0.0,
@@ -5476,7 +6487,7 @@
         "subject": 63,
         "predicate": "deity-name",
         "object": {
-          "Text": "Nokzhfod"
+          "Text": "Neb"
         },
         "place": null,
         "day": 0.0,
@@ -5486,7 +6497,7 @@
         "subject": 63,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "nokʒfod"
+          "Text": "neb"
         },
         "place": null,
         "day": 0.0,
@@ -5496,7 +6507,7 @@
         "subject": 63,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Fngeksfadnadnad"
+          "Text": "Xnobneb"
         },
         "place": null,
         "day": 0.0,
@@ -5506,7 +6517,7 @@
         "subject": 63,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "fŋeksfadnadnad"
+          "Text": "xnobneb"
         },
         "place": null,
         "day": 0.0,
@@ -5551,6 +6562,36 @@
         "place": null,
         "day": 0.0,
         "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 62,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 63,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
       },
       {
         "subject": 5,
@@ -5616,7 +6657,7 @@
         "subject": 64,
         "predicate": "deity-name",
         "object": {
-          "Text": "Rragratxok"
+          "Text": "Rro"
         },
         "place": null,
         "day": 0.0,
@@ -5626,7 +6667,7 @@
         "subject": 64,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "rragratxok"
+          "Text": "rro"
         },
         "place": null,
         "day": 0.0,
@@ -5636,7 +6677,7 @@
         "subject": 64,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Ragxoq"
+          "Text": "Rro"
         },
         "place": null,
         "day": 0.0,
@@ -5646,7 +6687,7 @@
         "subject": 64,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "ragxoq"
+          "Text": "rro"
         },
         "place": null,
         "day": 0.0,
@@ -5716,7 +6757,7 @@
         "subject": 65,
         "predicate": "deity-name",
         "object": {
-          "Text": "Rraqrrok"
+          "Text": "Raxa"
         },
         "place": null,
         "day": 0.0,
@@ -5726,7 +6767,7 @@
         "subject": 65,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "rraqrrok"
+          "Text": "raxa"
         },
         "place": null,
         "day": 0.0,
@@ -5736,7 +6777,7 @@
         "subject": 65,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Roxag"
+          "Text": "Raxarro"
         },
         "place": null,
         "day": 0.0,
@@ -5746,7 +6787,7 @@
         "subject": 65,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "roxag"
+          "Text": "raxarro"
         },
         "place": null,
         "day": 0.0,
@@ -5806,7 +6847,7 @@
         "subject": 66,
         "predicate": "deity-name",
         "object": {
-          "Text": "Rrogxat"
+          "Text": "Rarro"
         },
         "place": null,
         "day": 0.0,
@@ -5816,7 +6857,7 @@
         "subject": 66,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "rrogxat"
+          "Text": "rarro"
         },
         "place": null,
         "day": 0.0,
@@ -5826,7 +6867,7 @@
         "subject": 66,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Xo"
+          "Text": "Rrora"
         },
         "place": null,
         "day": 0.0,
@@ -5836,7 +6877,7 @@
         "subject": 66,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "xo"
+          "Text": "rrora"
         },
         "place": null,
         "day": 0.0,
@@ -5881,6 +6922,36 @@
         "place": null,
         "day": 0.0,
         "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "shadow"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 65,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 66,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "shadow-sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
       },
       {
         "subject": 67,

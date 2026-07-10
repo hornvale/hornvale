@@ -108,9 +108,15 @@ finished name back and commits it under the same `name` predicate it always
 used. Name generation is pin-isolated by construction — a pure function of
 seed, species, name-kind, and the settlement's own cell salt, with no
 shared "used names" set threading between settlements — so cross-world
-uniqueness is measured as a calibration (collision 2.79% mean at 10k
-worlds, Study 008) rather than enforced by re-draw. See
-[Language](./language.md) for the phonology and naming grammar themselves.
+uniqueness is measured as a calibration, not enforced by re-draw. The
+Tongues-era free stem calibrated at 2.79% mean collision at 10k worlds
+(Study 008); Campaign 27 (The Words) replaced that free stem with a
+name that also glosses truthfully to a settlement's own site facts, which
+narrowed the name space enough to raise the mean to **4.91%** at the
+CI-guarded 500-seed population (4.94% at 10k) — measured, reported, and
+left as a standing open question rather than tuned back down (Study 011).
+See [Language](./language.md) for the phonology, the gloss, and the naming
+grammar themselves.
 
 **The model card.**
 
@@ -134,8 +140,8 @@ worlds, Study 008) rather than enforced by re-draw. See
   founded, fully formed, at genesis.
 
 Seed 42 under a spinning sky places 59 settlements across both peoples; the
-goblin flagship, **Fnabnget**, holds 359 souls in temperate rainforest, and
-the kobold flagship, **Rakrra**, 425 souls in the same biome — real,
+goblin flagship, **Xnebsvobned**, holds 359 souls in temperate rainforest, and
+the kobold flagship, **Raxaxoxokrrorat**, 425 souls in the same biome — real,
 phonology-drawn names (Campaign Y2-3, The Tongues), where earlier campaigns'
 editions of this same page named the pair from a syllable pool instead. The
 gallery holds the exit-demo pair: [The Peoples of Seed

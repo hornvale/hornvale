@@ -11,7 +11,9 @@
 
 use std::collections::BTreeMap;
 
-use hornvale_kernel::{ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World};
+use hornvale_kernel::{
+    ConceptKind, ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World,
+};
 
 /// Predicate: a species entity's name (functional, Text).
 pub const SPECIES_NAME: &str = "species-name";
@@ -276,6 +278,9 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         true,
         "exotic manner: none, trill, click, ejective",
     )?;
+
+    registry.register_concept("goblin-kind", "species", ConceptKind::Living, "a goblin")?;
+    registry.register_concept("kobold-kind", "species", ConceptKind::Living, "a kobold")?;
     Ok(())
 }
 
@@ -461,6 +466,19 @@ pub fn species_entity(world: &World, name: &str) -> Option<EntityId> {
 mod tests {
     use super::*;
     use hornvale_kernel::Seed;
+
+    #[test]
+    fn concepts_registered() {
+        let mut r = ConceptRegistry::default();
+        register_concepts(&mut r).unwrap();
+        for name in ["goblin-kind", "kobold-kind"] {
+            let c = r
+                .concept(name)
+                .unwrap_or_else(|| panic!("missing concept {name}"));
+            assert_eq!(c.domain, "species");
+            assert_eq!(c.kind, ConceptKind::Living);
+        }
+    }
 
     #[test]
     fn goblin_is_the_baseline_vector() {
