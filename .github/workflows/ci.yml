@@ -73,3 +73,27 @@ jobs:
         run: |
           deno task build
           git diff --exit-code ../../book/src/gallery/atlas.js
+
+  orrery:
+    name: Orrery client
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/orrery
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.2"
+      - name: Format
+        run: deno fmt --check
+      - name: Lint
+        run: deno lint
+      - name: Typecheck
+        run: deno task check
+      - name: Test
+        run: deno task test
+      - name: Bundle is current (freshness check)
+        run: |
+          deno task build
+          git diff --exit-code ../../book/src/gallery/orrery.js
