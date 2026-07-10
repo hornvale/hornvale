@@ -87,14 +87,19 @@ crate's boundary.
 
 **Derived:** the orbital elements feeding the caloric-summer index
 (obliquity, eccentricity, precession) come from astronomy's forcing,
-unmodified; the caloric-summer index itself and the eustatic sea-level
-change are closed-form functions of ice volume and the orbital elements —
-no free parameters beyond the constants below.
+unmodified. The causal chain is closed-form at every step, with disjoint
+inputs — orbital elements → caloric-summer index → ice volume → both the
+albedo cooling offset and the eustatic sea-level fall (the index depends only
+on the orbital elements, the sea-level change only on ice volume) — and no
+randomness anywhere (see *Drawn*, below). The index and the couplings do
+carry authored sensitivity coefficients, declared next.
 
-**Approximated — tuned, and disclosed as such.** Every constant in the ice
-model (the growth and melt thresholds on the caloric index, the growth and
-melt rates, the eustatic coefficient) and the diagnostic's freezing
-threshold are calibrated effective parameters, not physical measurements.
+**Approximated — tuned, and disclosed as such.** Every constant is a
+calibrated effective parameter, not a physical measurement: the
+caloric-summer index's own sensitivity coefficients (`K_OBLIQUITY` = 1.0 and
+`K_PRECESSION` = 40.0, weighting axial tilt against climatic precession), the
+ice model's growth and melt thresholds on that index, its growth and melt
+rates, the eustatic coefficient, and the diagnostic's freezing threshold.
 Two are worth naming plainly: `FREEZE_C` (−10 °C, the absolute snowline)
 and `ALBEDO_GAIN_C` (42 °C, the full-ice cooling offset) were tuned
 together against a handful of generated skies until a typical world's

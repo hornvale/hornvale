@@ -52,7 +52,7 @@
 - [Campaign 21: The Scene Window](./chronicle/21-the-scene-window.md)
 - [Campaign 22: The Atlas](./chronicle/22-the-atlas.md)
 - [Campaign 23: The Orrery](./chronicle/23-the-orrery.md)
-- [Deep Time (24)](./chronicle/24-deep-time.md)
+- [Campaign 24: Deep Time](./chronicle/24-deep-time.md)
 
 # The Gallery
 
