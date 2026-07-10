@@ -240,13 +240,19 @@ mod tests {
         let subject = w.ledger.mint_entity();
         genesis(&mut w, subject, &outcome).unwrap();
 
+        // The ledger quantizes numeric objects on commit, so the stored value
+        // is the canonical form of the raw forcing parameter.
         assert_eq!(
             w.ledger.value_of(subject, ECCENTRICITY_MEAN),
-            Some(&Value::Number(outcome.system.forcing.ecc_mean))
+            Some(&Value::Number(hornvale_kernel::quantize(
+                outcome.system.forcing.ecc_mean
+            )))
         );
         assert_eq!(
             w.ledger.value_of(subject, OBLIQUITY_AMPLITUDE),
-            Some(&Value::Number(outcome.system.forcing.obliquity_amp))
+            Some(&Value::Number(hornvale_kernel::quantize(
+                outcome.system.forcing.obliquity_amp
+            )))
         );
     }
 
