@@ -51,14 +51,64 @@ fn biome_class_from_name(name: &str) -> BiomeClass {
 
 #[test]
 fn eternal_beliefs_coincide_exactly_with_tidal_locking() {
+    // `belief-kind` is the sentiment of `beliefs_of(&world).first()` — the
+    // FIRST belief minted anywhere in the ledger, across every species, not
+    // a particular species' head deity. Which species commits first is an
+    // artifact of `hornvale_species::registry()`'s `BTreeMap` (alphabetical)
+    // iteration order in the composition root's per-species religion loop:
+    // pre-Branches, with only `{goblin, kobold}` registered, "goblin" sorts
+    // first and ALWAYS commits first, and goblin's head deity is always
+    // solar (a separately preregistered invariant — see
+    // `goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar`)
+    // — a solar head's periodicity is an exact function of rotation (locked
+    // ⇒ aperiodic sun ⇒ eternal; spinning ⇒ periodic sun ⇒ cyclic), so
+    // "belief-kind coincides exactly with tidal locking" held as a
+    // consequence.
+    //
+    // The Branches: `registry()` now holds four peoples, and "bugbear"
+    // sorts alphabetically FIRST. The founder floor (Task 6d) guarantees
+    // bugbear a flagship on every seed, so bugbear's pantheon now commits
+    // first on every world — and bugbear's head-deity selection is not
+    // domain-restricted to the sun the way goblin's is: on a SPINNING world
+    // it can still pick an aperiodic night-star as its most salient
+    // phenomenon (night-stars have no orbital period around this world,
+    // hence `Sentiment::Eternal`, regardless of rotation — the same
+    // mechanism `blind_attribution_beats_chance_decisively`'s doc comment
+    // already names). This is a genuine behavioural finding, not a bug:
+    // measured over the 500-seed drift study, the `locked ⇒ eternal`
+    // direction still holds with ZERO exceptions (23/23 locked worlds), but
+    // the converse (`spinning ⇒ ¬eternal`) now fails on 9/477 spinning
+    // worlds (seeds 49, 140, 143, 220, 223, 234, 236, 363, 447) — bugbear's
+    // night-star-headed pantheon on an otherwise-ordinary spinning world.
+    // Per ADR 0016 this is pinned as an honest measured exception count,
+    // not forced, inverted, or silently dropped.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (locked_i, belief_i) = (idx("tidally-locked"), idx("belief-kind"));
+    let (mut locked_n, mut spinning_eternal_exceptions) = (0u32, 0u32);
     for row in &result.rows {
         let locked = matches!(row.values[locked_i], MetricValue::Flag(true));
         let eternal = matches!(&row.values[belief_i], MetricValue::Text(t) if t == "eternal");
-        assert_eq!(locked, eternal, "seed {}: calibration violated", row.seed);
+        if locked {
+            locked_n += 1;
+            assert!(
+                eternal,
+                "seed {}: a tidally-locked world's first-minted belief is not eternal",
+                row.seed
+            );
+        } else if eternal {
+            spinning_eternal_exceptions += 1;
+        }
     }
+    assert!(locked_n > 0, "no tidally-locked worlds in the drift study");
+    // Pinned calibration row (re-measured for the four-people world, Task
+    // 6b-2, 500-seed drift study): the exact count of spinning worlds whose
+    // first-minted belief is nonetheless eternal (a night-star-headed
+    // bugbear pantheon, per the mechanism above).
+    assert_eq!(
+        spinning_eternal_exceptions, 9,
+        "spinning-yet-eternal exception count drifted"
+    );
 }
 
 #[test]
@@ -200,14 +250,20 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // specifically (religion's community, spec §6), not just whichever
     // species' settlement happened to place first. Under joint-greedy
     // placement the two seeds that used to report an inland goblin flagship
-    // (172 and 257) instead lose that site to a higher-scoring kobold
-    // placement — both are total-kobold-exclusion worlds where goblins
-    // place nothing at all, so `flagship-coastal` reports `Absent` for
-    // them, independently verified. Coastal is unchanged at 498; inland
-    // drops from 2 to 0 (renamed from
-    // `flagships_are_sometimes_inland_and_sometimes_coastal`, now false).
+    // (172 and 257) briefly lost that site to a higher-scoring kobold
+    // placement — both were total-kobold-exclusion worlds where goblins
+    // placed nothing at all, so `flagship-coastal` reported `Absent` for
+    // them at that (pre-Branches) measurement.
+    //
+    // The Branches (Task 6d): the founder floor reserves every people its
+    // best habitable cell before competitive placement, so goblins now
+    // place a flagship on every one of the 500 seeds — no more total-
+    // exclusion worlds, no more `Absent` rows. Seeds 172 and 257 are back to
+    // inland goblin flagships (independently verified against the final
+    // four-people world). Re-measured 2026-07: coastal unchanged at 498,
+    // inland restored to 2 (498 + 2 = 500, no `Absent`).
     assert_eq!(coastal, 498, "coastal flagship count drifted");
-    assert_eq!(inland, 0, "inland flagship count drifted");
+    assert_eq!(inland, 2, "inland flagship count drifted");
 }
 
 #[test]
@@ -423,11 +479,16 @@ fn blind_attribution_beats_chance_decisively() {
         accuracy >= 0.8,
         "blind attribution at {accuracy:.3} — below the pinned floor"
     );
-    // Pinned calibration row (re-measured for the placed observer, Plan 2
-    // Task 4; the drift study is 500 seeds, so this is an exact count, not a
-    // rate):
-    assert_eq!(correct, 413, "blind-attribution count drifted");
-    assert_eq!(total, 496, "attributable-pair count drifted");
+    // Pinned calibration row (re-measured for the four-people world, Task
+    // 6b-2; the drift study is 500 seeds, so this is an exact count, not a
+    // rate). The founder floor (Task 6d) guarantees every people a
+    // flagship, so 3 seeds that used to be total-kobold- or
+    // total-goblin-exclusion worlds (no attributable pair) now place both
+    // species — total rises from 496 to 499. Accuracy is essentially
+    // unchanged (413/496 = 0.833 -> 416/499 = 0.834), still decisively
+    // above chance:
+    assert_eq!(correct, 416, "blind-attribution count drifted");
+    assert_eq!(total, 499, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -679,17 +740,23 @@ fn name_collision_rate_is_measured_and_pinned() {
     // placed-observer hemisphere culling, extended to per-settlement
     // vantages for glossed naming, means each settlement's own culled sky
     // feeds its presiding concept — re-pinned on the merged code, 500-seed
-    // drift study). The per-settlement skies IMPROVED the rate (pre-merge:
-    // 148 zero / 352 nonzero, mean 4.91%): more distinct presiding
-    // concepts, a wider descriptor space, fewer repeated compounds.
-    assert_eq!(zero, 159, "zero-collision world count drifted");
-    assert_eq!(nonzero, 341, "nonzero-collision world count drifted");
+    // drift study; pre-Branches: 159 zero / 341 nonzero, mean 4.70%).
+    //
+    // The Branches (Task 6b-2): re-measured against the final four-people
+    // world. The founder floor (Task 6d) and the four-species niche vectors
+    // (Task 6c/6d) reshape which cells goblin/kobold win and how many
+    // settlements they each field per world, which reshuffles per-world
+    // site-concept reuse; the net effect is FEWER zero-collision worlds
+    // (159 -> 40) and a higher mean collision rate. The honest measured
+    // rate is pinned exactly as before, never loosened to fit.
+    assert_eq!(zero, 40, "zero-collision world count drifted");
+    assert_eq!(nonzero, 460, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.047_015_587_357_954).abs() < 1e-6,
+        (mean - 0.128_455_986_622_179).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -715,9 +782,16 @@ fn name_length_distributions_are_measured_and_pinned() {
     // per-settlement vantages for glossed naming, shifts which presiding
     // concept each settlement compounds over, moving both means by a
     // fraction of a character.
+    //
+    // The Branches (Task 6b-2): re-measured against the final four-people
+    // world (was goblin 498 present / 13.869961501975723 mean, kobold 498 /
+    // 14.262681953972956 pre-Branches). The founder floor (Task 6d) and the
+    // four-species niche vectors change which cells goblin/kobold win and
+    // how many settlements each fields per world; goblin is now present on
+    // every seed (the founder floor's own guarantee), kobold on all but 1.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 498u32, 13.869_961_501_975_723),
-        ("kobold", 498u32, 14.262_681_953_972_956),
+        ("goblin", 500u32, 10.500_053_705_528_86),
+        ("kobold", 499u32, 14.237_543_579_153_998),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -881,6 +955,14 @@ fn null_control_name_length_smd_is_pinned() {
     // twin's SMD against the goblin moves too — still comfortably inside
     // the ±0.2 sampling-theory bound `null_control_distributions_are_
     // within_the_sampling_bound` asserts, unaffected by this re-pin.
+    //
+    // The Branches (Task 6b-2): re-measured again (was -0.065377 pre-
+    // Branches). Neither pin set (`goblin-solo`/`goblin-twin-solo`) touches
+    // hobgoblin or bugbear directly, but goblin's naming now draws from the
+    // shared proto-goblinoid lexicon (Task 3/4/6), which shifts the exact
+    // stream draws feeding each settlement's glossed name even in a solo
+    // build — moving the SMD by a fraction of its own scale, still well
+    // inside the sampling bound above.
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let namelen = std_mean_diff(
@@ -888,7 +970,7 @@ fn null_control_name_length_smd_is_pinned() {
         nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
     assert!(
-        (namelen - -0.065_377_251_231_494).abs() < 1e-9,
+        (namelen - -0.068_569_499_085_015).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

@@ -20,15 +20,15 @@
 <text x="304.5" y="229.8" font-size="11" fill="currentColor" text-anchor="middle">108</text>
 <text x="304.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 304.5 252.0)">[0.4, 0.6)</text>
 <rect x="345.3" y="219.3" width="60.4" height="16.7" fill="#5b8dd9" rx="2" />
-<text x="375.5" y="215.3" font-size="11" fill="currentColor" text-anchor="middle">834</text>
+<text x="375.5" y="215.3" font-size="11" fill="currentColor" text-anchor="middle">835</text>
 <text x="375.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 375.5 252.0)">[0.6, 0.8)</text>
 <rect x="416.3" y="228.7" width="60.4" height="7.3" fill="#5b8dd9" rx="2" />
-<text x="446.5" y="224.7" font-size="11" fill="currentColor" text-anchor="middle">364</text>
+<text x="446.5" y="224.7" font-size="11" fill="currentColor" text-anchor="middle">365</text>
 <text x="446.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 446.5 252.0)">[0.8, 1)</text>
-<rect x="487.3" y="72.0" width="60.4" height="164.0" fill="#5b8dd9" rx="2" />
-<text x="517.5" y="68.0" font-size="11" fill="currentColor" text-anchor="middle">8201</text>
+<rect x="487.3" y="71.6" width="60.4" height="164.4" fill="#5b8dd9" rx="2" />
+<text x="517.5" y="67.6" font-size="11" fill="currentColor" text-anchor="middle">8221</text>
 <text x="517.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 517.5 252.0)">&gt;= 1</text>
-<rect x="558.3" y="235.4" width="60.4" height="0.6" fill="#5b8dd9" rx="2" />
-<text x="588.5" y="231.4" font-size="11" fill="currentColor" text-anchor="middle">28</text>
+<rect x="558.3" y="235.9" width="60.4" height="0.1" fill="#5b8dd9" rx="2" />
+<text x="588.5" y="231.9" font-size="11" fill="currentColor" text-anchor="middle">6</text>
 <text x="588.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 588.5 252.0)">absent</text>
 </svg>

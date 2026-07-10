@@ -8,25 +8,22 @@
 <text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">375</text>
 <line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
 <text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">500</text>
-<text x="91.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
-<text x="91.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">&lt; 1</text>
-<text x="162.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
-<text x="162.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[1, 2)</text>
-<rect x="203.3" y="194.8" width="60.4" height="41.2" fill="#5b8dd9" rx="2" />
-<text x="233.5" y="190.8" font-size="11" fill="currentColor" text-anchor="middle">103</text>
-<text x="233.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[2, 3)</text>
-<rect x="274.3" y="224.0" width="60.4" height="12.0" fill="#5b8dd9" rx="2" />
-<text x="304.5" y="220.0" font-size="11" fill="currentColor" text-anchor="middle">30</text>
-<text x="304.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[3, 4)</text>
-<rect x="345.3" y="225.6" width="60.4" height="10.4" fill="#5b8dd9" rx="2" />
-<text x="375.5" y="221.6" font-size="11" fill="currentColor" text-anchor="middle">26</text>
-<text x="375.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[4, 5)</text>
-<rect x="416.3" y="100.4" width="60.4" height="135.6" fill="#5b8dd9" rx="2" />
-<text x="446.5" y="96.4" font-size="11" fill="currentColor" text-anchor="middle">339</text>
-<text x="446.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[5, 6)</text>
-<text x="517.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
-<text x="517.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">&gt;= 6</text>
-<rect x="558.3" y="235.2" width="60.4" height="0.8" fill="#5b8dd9" rx="2" />
-<text x="588.5" y="231.2" font-size="11" fill="currentColor" text-anchor="middle">2</text>
-<text x="588.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">absent</text>
+<text x="96.6" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
+<text x="96.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">&lt; 1</text>
+<text x="177.7" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
+<text x="177.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[1, 2)</text>
+<rect x="224.4" y="202.0" width="69.0" height="34.0" fill="#5b8dd9" rx="2" />
+<text x="258.9" y="198.0" font-size="11" fill="currentColor" text-anchor="middle">85</text>
+<text x="258.9" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[2, 3)</text>
+<rect x="305.5" y="226.4" width="69.0" height="9.6" fill="#5b8dd9" rx="2" />
+<text x="340.0" y="222.4" font-size="11" fill="currentColor" text-anchor="middle">24</text>
+<text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[3, 4)</text>
+<rect x="386.7" y="226.0" width="69.0" height="10.0" fill="#5b8dd9" rx="2" />
+<text x="421.1" y="222.0" font-size="11" fill="currentColor" text-anchor="middle">25</text>
+<text x="421.1" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[4, 5)</text>
+<rect x="467.8" y="89.6" width="69.0" height="146.4" fill="#5b8dd9" rx="2" />
+<text x="502.3" y="85.6" font-size="11" fill="currentColor" text-anchor="middle">366</text>
+<text x="502.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[5, 6)</text>
+<text x="583.4" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
+<text x="583.4" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">&gt;= 6</text>
 </svg>
