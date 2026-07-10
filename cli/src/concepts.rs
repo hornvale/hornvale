@@ -22,6 +22,19 @@ pub fn render_concepts(registry: &ConceptRegistry) -> String {
     if !any {
         doc.push_str("| *(none registered)* | |\n");
     }
+    doc.push_str("\n### Concepts\n\n");
+    doc.push_str("| Concept | Domain | Kind | Meaning |\n|---|---|---|---|\n");
+    let mut any_concepts = false;
+    for c in registry.concepts() {
+        any_concepts = true;
+        doc.push_str(&format!(
+            "| `{}` | {} | {:?} | {} |\n",
+            c.name, c.domain, c.kind, c.doc
+        ));
+    }
+    if !any_concepts {
+        doc.push_str("| *(none registered)* | | | |\n");
+    }
     doc
 }
 
@@ -46,6 +59,9 @@ mod tests {
             "| `tenet` |",
             "`celestial-body`",
             "`ambient`",
+            "### Concepts",
+            "| `sun` | astronomy | Celestial |",
+            "| `god` | religion | Social |",
         ] {
             assert!(doc.contains(expected), "missing: {expected}");
         }

@@ -70,12 +70,38 @@ N`, `--ocean-fraction F`, `--supercontinent`. They persist as scenario
 facts and obey the same stream-consumption isolation every pin does — a
 re-affirming pin reproduces a byte-identical globe. Nothing about the
 globe is serialized; a world re-derives it from the seed through eight
-labeled streams, permanent save-format contracts in the manifest.
+labeled streams, permanent save-format contracts in the manifest. (The
+manifest's ninth terrain label, `terrain/coast-render`, is the render
+lens's hash-noise — it draws no genesis stream and does not touch the
+globe.)
 
-The gallery holds the artifact: [The Land of Seed
+**Measuring the shape (Campaign 25, The Measured Coast).** A first-order
+Voronoi partition with one continental flag per plate draws near-convex,
+single-scale continents — the "guitar-pick" shapes a continental-rendering
+brainstorm diagnosed as the generator's abstraction made visible. Before
+any change to the elevation field, `shape.rs` measures that shape: shoreline
+development (coastline length over a compact circle's perimeter, the
+limnological standard), hypsometric bimodality and shelf fraction (Ashman's
+D between land and ocean elevations, plus the share of cells near sea
+level), connected-component count and largest-component share, and the Gini
+coefficient over plate cell counts. [Study 010, the Census of
+Coasts](../laboratory/study-010.md) walks all six over 10,000 seeds and
+records the preregistered baseline that **Crust** and **Sculpting** — the
+two terrain epochs this campaign deliberately does not attempt — must move.
+
+**A sharper lens on the same globe.** The elevation map's pixel pass used
+to take a single nearest cell's value, so a coastline was a chain of
+~220 km cell silhouettes. It now interpolates over the nearest cells and
+adds bounded, seeded coastal displacement that fades to nothing away from
+sea level — coarse-constrains-fine applied literally at the lens: the cell
+elevation is still the prior, the pixel stays within its envelope, and nothing
+about the world (no `Stream`, no fact, no byte of `world.json`) changes. The
+gallery holds the artifact: [The Land of Seed
 42](../gallery/elevation-seed-42.md), a hand-rolled elevation map (PNG and
-ASCII; decision 0018), drift-checked in CI like every other committed
-artifact. Chronicle: [3b, the tectonic globe](../chronicle/campaign-3b.md).
+ASCII; decision 0018), now rendered at 1024×512 and drift-checked in CI like
+every other committed artifact. Chronicle: [3b, the tectonic
+globe](../chronicle/campaign-3b.md); [25, the measured
+coast](../chronicle/25-the-measured-coast.md).
 
 **The tier ladder ahead:** place names that feel authored rather than
 generated, and eventually the region-graph refinement that gives a

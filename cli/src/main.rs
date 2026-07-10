@@ -3,6 +3,7 @@
 
 mod audio;
 mod concepts;
+mod dictionary;
 mod phonology;
 mod repl;
 mod streams;
@@ -39,9 +40,11 @@ usage:
   hornvale orrery [--world <PATH>] [--day <D>] [--glyphs unicode|emoji]   print one orrery frame (ANSI)
   hornvale orrery [--world <PATH>] --day <A..B> [--step <k>] [--fps <f>] [--glyphs unicode|emoji] --cast <OUT>   animate to a .cast
   hornvale scene tiles [--world <PATH>] [--width <N>] emit scene/tiles/v1 JSON to stdout
+  hornvale scene system [--world <PATH>]              emit scene/system/v1 JSON to stdout
   hornvale concepts                        dump the concept registry as markdown
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
+  hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
   hornvale voice [--out <DIR>]             author missing phonology audio clips (espeak-ng + ffmpeg; default out: book/src/audio)
   hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
   hornvale lab list-metrics                list every metric in the lab's registry
@@ -83,6 +86,7 @@ fn main() -> ExitCode {
         Some("concepts") => cmd_concepts(),
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
+        Some("dictionary") => cmd_dictionary(&args),
         Some("voice") => audio::cmd_voice(&args),
         Some("lab") => cmd_lab(&args),
         Some("help") | None => {
@@ -276,7 +280,11 @@ fn cmd_map(args: &[String]) -> Result<(), String> {
     ));
     doc.push_str("```\n\n");
     if let Some(out) = flag_value(args, "--out") {
-        let png = hornvale_terrain::render::elevation_png(terrain.geosphere(), terrain.globe());
+        let png = hornvale_terrain::render::elevation_png(
+            terrain.geosphere(),
+            terrain.globe(),
+            world.seed,
+        );
         std::fs::write(out, png).map_err(|e| format!("writing {out}: {e}"))?;
         let name = std::path::Path::new(out)
             .file_name()
@@ -567,6 +575,14 @@ fn cmd_phonology() -> Result<(), String> {
     Ok(())
 }
 
+/// Dump the loaded world's per-species dictionary as markdown (default
+/// world: world.json, like `almanac`).
+fn cmd_dictionary(args: &[String]) -> Result<(), String> {
+    let world = load_world(args)?;
+    print!("{}", dictionary::render_dictionary(&world)?);
+    Ok(())
+}
+
 /// Dispatch `lab` subcommands: `run <PATH>` and `list-metrics`.
 fn cmd_lab(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
@@ -609,8 +625,9 @@ fn cmd_lab_list_metrics() -> Result<(), String> {
 }
 
 /// Emit a scene description as JSON on stdout: `scene tiles` renders the
-/// cartographic tile lattice (scene/tiles/v1). Deterministic; CI
-/// drift-checks the committed example scene.
+/// cartographic tile lattice (scene/tiles/v1), and `scene system` renders the
+/// system's orbital elements for the orrery (scene/system/v1). Deterministic;
+/// CI drift-checks the committed example scene.
 fn cmd_scene(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("tiles") => {
@@ -625,8 +642,16 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             println!("{}", hornvale_scene::scene_json(&scene));
             Ok(())
         }
-        Some(other) => Err(format!("unknown scene kind '{other}'; known kinds: tiles")),
-        None => Err("scene needs a kind; known kinds: tiles".to_string()),
+        Some("system") => {
+            let world = load_world(args)?;
+            let scene = hornvale_scene::system_scene(&world).map_err(|e| e.to_string())?;
+            println!("{}", hornvale_scene::system_json(&scene));
+            Ok(())
+        }
+        Some(other) => Err(format!(
+            "unknown scene kind '{other}'; known kinds: tiles, system"
+        )),
+        None => Err("scene needs a kind; known kinds: tiles, system".to_string()),
     }
 }
 
@@ -891,6 +916,11 @@ mod tests {
     }
 
     #[test]
+    fn usage_mentions_dictionary() {
+        assert!(USAGE.contains("dictionary"));
+    }
+
+    #[test]
     fn scene_with_no_subcommand_is_an_error() {
         let err = cmd_scene(&args(&["scene"])).unwrap_err();
         assert!(err.contains("tiles"), "should name the known kinds: {err}");
@@ -905,5 +935,34 @@ mod tests {
     #[test]
     fn usage_mentions_scene() {
         assert!(usage().contains("scene tiles"));
+    }
+
+    fn test_generated_world() -> World {
+        world_builder::build_world(
+            Seed(42),
+            &Default::default(),
+            world_builder::SkyChoice::Generated,
+            &Default::default(),
+            &Default::default(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn scene_system_emits_the_schema() {
+        let json = hornvale_scene::system_json(
+            &hornvale_scene::system_scene(&test_generated_world()).unwrap(),
+        );
+        assert!(json.contains("\"scene/system/v1\""));
+        assert!(json.contains("\"moons\""));
+    }
+
+    #[test]
+    fn scene_unknown_kind_names_system() {
+        let err = cmd_scene(&args(&["scene", "dioramas"])).unwrap_err();
+        assert!(
+            err.contains("system"),
+            "known kinds must include system: {err}"
+        );
     }
 }

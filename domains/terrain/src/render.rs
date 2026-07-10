@@ -1,21 +1,117 @@
 //! Deterministic map renders in the First Light tradition: an
 //! equirectangular PNG elevation map (decision 0018) and an ASCII map for
-//! the REPL. Same globe, same bytes — a changed artifact in review means
-//! changed behavior. Pixel→cell lookup uses the kernel's
+//! the REPL. Same globe, same seed, same bytes — a changed artifact in
+//! review means changed behavior. Pixel→cell lookup uses the kernel's
 //! `NearestCellIndex` (a latitude-band index, 30 bands of 6°): the nearest
 //! cell center at level ≥ 4 is within ~2.5°, so the pixel's band plus both
 //! neighbors always contains it.
 
 use crate::globe::TectonicGlobe;
-use hornvale_kernel::{Geosphere, NearestCellIndex};
+use crate::streams;
+use hornvale_kernel::{Geosphere, NearestCellIndex, Seed, noise};
 
 /// Raster image width in pixels; the image is equirectangular, so height is
-/// `MAP_WIDTH / 2`.
-pub const MAP_WIDTH: u32 = 256;
+/// `MAP_WIDTH / 2`. 1024×512; pixel ≈ 0.35°, fine enough to show the
+/// refined coastline.
+pub const MAP_WIDTH: u32 = 1024;
 /// ASCII map width in characters.
 pub const ASCII_WIDTH: u32 = 72;
 /// ASCII map height in characters (2:1 world on ~2:1-tall glyphs).
 pub const ASCII_HEIGHT: u32 = 24;
+
+/// Peak coastal displacement, meters. Bounds |refined − interpolated|.
+const COAST_AMP_M: f64 = 150.0;
+/// Gaussian envelope width, meters: displacement fades as the interpolated
+/// elevation leaves sea level and is exactly zero beyond three widths.
+const COAST_ENVELOPE_M: f64 = 300.0;
+/// Base spatial frequency of the coastline noise over unit-sphere
+/// coordinates (features ~1/24 rad ≈ 2.4° at the base octave).
+const COAST_FREQ: f64 = 24.0;
+/// fBm octaves for the coastline noise (base 2.4° down to ~0.15°).
+const COAST_OCTAVES: u32 = 5;
+
+/// Unit vector for a latitude/longitude in degrees (inverse of the
+/// kernel's `Geosphere::coord` convention).
+fn direction(latitude: f64, longitude: f64) -> [f64; 3] {
+    let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
+    [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()]
+}
+
+/// Seam-free coastline noise in [−1, 1) at a unit-sphere position: the
+/// mean of three orthogonal 2D fBm slices, recentred. Stateless hash-noise
+/// under `terrain/coast-render` — no `Stream` is ever consumed.
+fn coast_noise(noise_seed: Seed, p: [f64; 3]) -> f64 {
+    let slices = [
+        (noise_seed.derive("slice-0"), p[0], p[1]),
+        (noise_seed.derive("slice-1"), p[1], p[2]),
+        (noise_seed.derive("slice-2"), p[2], p[0]),
+    ];
+    let mean = slices
+        .iter()
+        .map(|(s, a, b)| noise::fbm_2d(*s, COAST_FREQ * a, COAST_FREQ * b, COAST_OCTAVES))
+        .sum::<f64>()
+        / 3.0;
+    2.0 * mean - 1.0
+}
+
+/// Gaussian-weighted elevation over the nearest cell and its neighbors —
+/// the refinement's prior, a convex combination of nearby cell values.
+/// The weight width is half the nearest cell's mean neighbor spacing, so
+/// candidates entering or leaving the set as the nearest cell flips carry
+/// negligible weight (no visible seams).
+fn interpolated_elevation(
+    geo: &Geosphere,
+    index: &NearestCellIndex,
+    globe: &TectonicGlobe,
+    latitude: f64,
+    longitude: f64,
+) -> f64 {
+    let p = direction(latitude, longitude);
+    let nearest = index.nearest(geo, latitude, longitude);
+    let neighbors = geo.neighbors(nearest);
+    let spacing = neighbors
+        .iter()
+        .map(|&n| angle(geo.position(nearest), geo.position(n)))
+        .sum::<f64>()
+        / neighbors.len() as f64;
+    let sigma = spacing / 2.0;
+    let mut weighted = 0.0;
+    let mut total = 0.0;
+    for cell in std::iter::once(nearest).chain(neighbors.iter().copied()) {
+        let theta = angle(p, geo.position(cell));
+        let weight = (-(theta * theta) / (sigma * sigma)).exp();
+        weighted += weight * *globe.elevation.get(cell);
+        total += weight;
+    }
+    weighted / total
+}
+
+/// Angular distance between two unit vectors, radians.
+fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
+    (a[0] * b[0] + a[1] * b[1] + a[2] * b[2])
+        .clamp(-1.0, 1.0)
+        .acos()
+}
+
+/// The refined per-pixel elevation: the interpolated prior plus bounded
+/// coastal displacement (coarse constrains fine, applied at the lens —
+/// spec §3). Identical to the prior beyond three envelope widths.
+fn refined_elevation(
+    geo: &Geosphere,
+    index: &NearestCellIndex,
+    globe: &TectonicGlobe,
+    noise_seed: Seed,
+    latitude: f64,
+    longitude: f64,
+) -> f64 {
+    let interp = interpolated_elevation(geo, index, globe, latitude, longitude);
+    let d = (interp - globe.sea_level) / COAST_ENVELOPE_M;
+    if d.abs() > 3.0 {
+        return interp;
+    }
+    let envelope = (-d * d).exp();
+    interp + COAST_AMP_M * envelope * coast_noise(noise_seed, direction(latitude, longitude))
+}
 
 /// Color a cell by elevation relative to sea level: ocean blues deepen with
 /// depth; land climbs green → tan → brown → white.
@@ -47,26 +143,34 @@ fn color(elevation_m: f64, sea_level_m: f64) -> [u8; 3] {
 
 /// Raw RGB pixels of the equirectangular elevation map (row-major, top row
 /// first): longitude −180 → 180 across, latitude 90 → −90 down, pixel
-/// centers sampled.
-fn elevation_pixels(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
+/// centers sampled. Pixels are coastal-noise-refined from the world seed,
+/// not raw cell values — see `refined_elevation`.
+fn elevation_pixels(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
     let index = NearestCellIndex::new(geo);
+    let noise_seed = world_seed
+        .derive(streams::ROOT)
+        .derive(streams::COAST_RENDER);
     let mut out = Vec::with_capacity((width * height * 3) as usize);
     for py in 0..height {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..width {
             let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-            let cell = index.nearest(geo, latitude, longitude);
-            out.extend_from_slice(&color(*globe.elevation.get(cell), globe.sea_level));
+            let elevation = refined_elevation(geo, &index, globe, noise_seed, latitude, longitude);
+            out.extend_from_slice(&color(elevation, globe.sea_level));
         }
     }
     out
 }
 
 /// Render the globe as an equirectangular PNG (decision 0018). Same globe,
-/// same bytes.
-pub fn elevation_png(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
-    hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_WIDTH / 2, &elevation_pixels(geo, globe))
+/// same seed, same bytes.
+pub fn elevation_png(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) -> Vec<u8> {
+    hornvale_kernel::png::encode_rgb(
+        MAP_WIDTH,
+        MAP_WIDTH / 2,
+        &elevation_pixels(geo, globe, world_seed),
+    )
 }
 
 /// Render the globe as a 72×24 ASCII map: '~' ocean, '.' lowland, '+'
@@ -110,8 +214,8 @@ mod tests {
         let globe = generate(Seed(42), &geo, &TerrainPins::default())
             .unwrap()
             .globe;
-        let a = elevation_png(&geo, &globe);
-        assert_eq!(a, elevation_png(&geo, &globe));
+        let a = elevation_png(&geo, &globe, Seed(42));
+        assert_eq!(a, elevation_png(&geo, &globe, Seed(42)));
         assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
         // IHDR width and height, big-endian, at offsets 16 and 20.
         assert_eq!(&a[16..20], &MAP_WIDTH.to_be_bytes());
@@ -132,5 +236,63 @@ mod tests {
         assert!(map.contains('~'), "no ocean rendered");
         assert!(map.contains('.'), "no land rendered");
         assert_eq!(elevation_ascii(&geo, &globe), map);
+    }
+
+    #[test]
+    fn refinement_respects_the_prior() {
+        for seed in [7u64, 42, 99] {
+            let geo = Geosphere::new(4);
+            let globe = generate(Seed(seed), &geo, &TerrainPins::default())
+                .unwrap()
+                .globe;
+            let index = NearestCellIndex::new(&geo);
+            let noise_seed = Seed(seed)
+                .derive(crate::streams::ROOT)
+                .derive(crate::streams::COAST_RENDER);
+            let (width, height) = (128u32, 64u32);
+            for py in 0..height {
+                let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
+                for px in 0..width {
+                    let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
+                    let interp = interpolated_elevation(&geo, &index, &globe, latitude, longitude);
+                    let refined =
+                        refined_elevation(&geo, &index, &globe, noise_seed, latitude, longitude);
+                    // Bounded displacement, always.
+                    assert!((refined - interp).abs() <= COAST_AMP_M + 1e-9);
+                    // Exactly the prior away from the coast.
+                    if (interp - globe.sea_level).abs() > 3.0 * COAST_ENVELOPE_M {
+                        assert_eq!(refined, interp);
+                    }
+                    // A land/ocean flip only happens inside the displacement band.
+                    let flipped = (refined >= globe.sea_level) != (interp >= globe.sea_level);
+                    if flipped {
+                        assert!((interp - globe.sea_level).abs() <= COAST_AMP_M + 1e-9);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn interpolation_stays_within_the_candidate_envelope() {
+        let geo = Geosphere::new(4);
+        let globe = generate(Seed(7), &geo, &TerrainPins::default())
+            .unwrap()
+            .globe;
+        let index = NearestCellIndex::new(&geo);
+        for (latitude, longitude) in [(0.0, 0.0), (45.5, -120.25), (-67.0, 13.0), (89.0, 179.0)] {
+            let interp = interpolated_elevation(&geo, &index, &globe, latitude, longitude);
+            let nearest = index.nearest(&geo, latitude, longitude);
+            let mut lo = *globe.elevation.get(nearest);
+            let mut hi = lo;
+            for &n in geo.neighbors(nearest) {
+                lo = lo.min(*globe.elevation.get(n));
+                hi = hi.max(*globe.elevation.get(n));
+            }
+            assert!(
+                (lo..=hi).contains(&interp),
+                "interp {interp} outside [{lo}, {hi}]"
+            );
+        }
     }
 }

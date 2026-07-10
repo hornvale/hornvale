@@ -9,10 +9,10 @@ mourned and feasted in turn, and the Unblinking Eye under a locked one, a
 god who has never departed and will never blink. Seven campaigns of
 deepening later, the same one-bit difference reaches much further down the
 page: the spinning sky's climate scatters 59 settlements across both
-peoples and crowns the goblin flagship **Fnabnget**, whose priesthood is
-headed by **Nodvnotngak the Nebsxad**; the locked sky collapses habitability
-toward the terminator ring, places 28, crowns **Xngodfnokzhvad**, and raises
-**Xngeknet the Sxodsxodsxodngod**, a head deity that never sets — both
+peoples and crowns the goblin flagship **Xnebsvobned**, whose priesthood is
+headed by **Ned the Nabned**; the locked sky collapses habitability
+toward the terminator ring, places 28, crowns **Xngatnebvnedned**, and raises
+**Nedngat the Vngakned**, a head deity that never sets — both
 names, like every proper noun below, drawn from that people's own generated
 phonology rather than an author's syllable pool (Campaign Y2-3, The
 Tongues).

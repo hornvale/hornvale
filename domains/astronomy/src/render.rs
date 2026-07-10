@@ -292,29 +292,62 @@ pub enum GlyphSet {
     Emoji,
 }
 
-/// A moon's illumination phase, bucketed to one of four glyphs.
-#[derive(Clone, Copy)]
-enum Phase {
+/// A moon's drawn face: new, full, or a half-moon lit on the named side. The
+/// lit side is chosen from the on-screen direction to the star, so the bright
+/// limb always faces the light — never a fixed left/right guess.
+#[derive(Clone, Copy, Debug)]
+enum MoonFace {
     /// Near new (dark).
     New,
-    /// Waxing.
-    Waxing,
+    /// Half-lit, bright limb on the left (star is to the moon's left).
+    LitLeft,
     /// Near full.
     Full,
-    /// Waning.
-    Waning,
+    /// Half-lit, bright limb on the right (star is to the moon's right).
+    LitRight,
 }
 
-/// Bucket a synodic phase in `[0,1)` — the provider's phase-word thresholds.
-fn phase_bucket(phase: f64) -> Phase {
+/// A moon's face from its illumination phase and which way the star lies on
+/// screen. Near new and near full read as themselves (a round disc has no lit
+/// *side*); every partial phase becomes a half-moon whose bright limb faces the
+/// star — `star_on_left` selects [`MoonFace::LitLeft`], else
+/// [`MoonFace::LitRight`]. The phase thresholds are the provider's phase-word
+/// bands; only the *orientation* comes from geometry, so waxing and waning at
+/// the same screen position read identically (they are lit on the same side).
+fn moon_face(phase: f64, star_on_left: bool) -> MoonFace {
     if !(0.125..0.875).contains(&phase) {
-        Phase::New
-    } else if phase < 0.5 {
-        Phase::Waxing
-    } else if phase < 0.625 {
-        Phase::Full
+        MoonFace::New
+    } else if (0.5..0.625).contains(&phase) {
+        MoonFace::Full
+    } else if star_on_left {
+        MoonFace::LitLeft
     } else {
-        Phase::Waning
+        MoonFace::LitRight
+    }
+}
+
+/// Where moon `index` is drawn around the world at time `t`, and its
+/// illumination phase — the sim's canonical datum (`Calendar::moon_phase`:
+/// SKY-20 synodic × SKY-4 genesis offset), which the orrery is merely the lens
+/// for. A moon's phase is fixed by the Sun–world–Moon geometry, so the orrery
+/// places the moon where that phase requires — new (phase 0) sits between world
+/// and star along the world→star direction (`world_angle + π`), full (phase ½)
+/// sits opposite — so the drawn *position* and the phase always agree. The
+/// caller then turns that same phase into a face oriented toward the star (see
+/// [`moon_face`]). A degenerate moon with no synodic cycle has no phase (`None`);
+/// it falls back to its bare sidereal position and reads new. Returns
+/// `(orbital angle in radians around the world, phase in [0,1) or None)`.
+fn moon_placement(
+    calendar: &Calendar,
+    index: usize,
+    moon_period: StdDays,
+    t: StdDays,
+    world_angle: f64,
+) -> (f64, Option<f64>) {
+    use std::f64::consts::{PI, TAU};
+    match calendar.moon_phase(t, index) {
+        Some(phase) => (world_angle + PI + phase * TAU, Some(phase)),
+        None => (TAU * (t.0 / moon_period.get()).fract(), None),
     }
 }
 
@@ -329,8 +362,8 @@ enum Cell {
     Star,
     /// The world.
     World,
-    /// A moon at the given phase.
-    Moon(Phase),
+    /// A moon showing the given face.
+    Moon(MoonFace),
 }
 
 impl GlyphSet {
@@ -351,18 +384,20 @@ impl GlyphSet {
             (GlyphSet::Unicode, Cell::Ring) => "·",
             (GlyphSet::Unicode, Cell::Star) => "★",
             (GlyphSet::Unicode, Cell::World) => "●",
-            (GlyphSet::Unicode, Cell::Moon(Phase::New)) => "○",
-            (GlyphSet::Unicode, Cell::Moon(Phase::Waxing)) => "◐",
-            (GlyphSet::Unicode, Cell::Moon(Phase::Full)) => "●",
-            (GlyphSet::Unicode, Cell::Moon(Phase::Waning)) => "◑",
+            (GlyphSet::Unicode, Cell::Moon(MoonFace::New)) => "○",
+            (GlyphSet::Unicode, Cell::Moon(MoonFace::LitLeft)) => "◐",
+            (GlyphSet::Unicode, Cell::Moon(MoonFace::Full)) => "●",
+            (GlyphSet::Unicode, Cell::Moon(MoonFace::LitRight)) => "◑",
             (GlyphSet::Emoji, Cell::Empty) => "  ",
             (GlyphSet::Emoji, Cell::Ring) => "· ",
             (GlyphSet::Emoji, Cell::Star) => "🌞",
             (GlyphSet::Emoji, Cell::World) => "🌍",
-            (GlyphSet::Emoji, Cell::Moon(Phase::New)) => "🌑",
-            (GlyphSet::Emoji, Cell::Moon(Phase::Waxing)) => "🌓",
-            (GlyphSet::Emoji, Cell::Moon(Phase::Full)) => "🌕",
-            (GlyphSet::Emoji, Cell::Moon(Phase::Waning)) => "🌗",
+            (GlyphSet::Emoji, Cell::Moon(MoonFace::New)) => "🌑",
+            // 🌗 last-quarter is lit on the left; 🌓 first-quarter on the right —
+            // keyed on the lit side, so emoji and Unicode never disagree.
+            (GlyphSet::Emoji, Cell::Moon(MoonFace::LitLeft)) => "🌗",
+            (GlyphSet::Emoji, Cell::Moon(MoonFace::Full)) => "🌕",
+            (GlyphSet::Emoji, Cell::Moon(MoonFace::LitRight)) => "🌓",
         }
     }
 }
@@ -430,22 +465,25 @@ pub fn orrery_ansi(
     let wx = cx + aspect * world_r * theta.cos();
     let wy = cy + world_r * theta.sin();
 
-    // Moons: sidereal orbital angle around the world, synodic-phase glyph. A
-    // degenerate moon (no synodic cycle) reads as new; unreachable at genesis
-    // (the Hill cap) and present in no committed artifact.
+    // Moons: placed where their illumination phase requires (see
+    // `moon_placement`), so new sits toward the star and full opposite; then the
+    // half-moon face is oriented so its bright limb faces the star on screen (the
+    // star sits at center `cx`, so it is to the moon's left exactly when the moon
+    // is drawn right of center). Position and face both flow from the one
+    // canonical `moon_phase` value, and the lit limb always faces the light.
     for (index, moon) in system.moons.iter().enumerate() {
-        let ma = std::f64::consts::TAU * (t.0 / moon.period.get()).fract();
+        let (ma, phase) = moon_placement(calendar, index, moon.period, t, theta);
         let mr = 2.0 + index as f64;
-        let cell = Cell::Moon(
-            calendar
-                .moon_phase(t, index)
-                .map(phase_bucket)
-                .unwrap_or(Phase::New),
-        );
-        let x = (wx + aspect * mr * ma.cos()).round() as isize;
-        let y = (wy + mr * ma.sin()).round() as isize;
+        let mx = wx + aspect * mr * ma.cos();
+        let my = wy + mr * ma.sin();
+        let face = match phase {
+            Some(p) => moon_face(p, cx < mx),
+            None => MoonFace::New,
+        };
+        let x = mx.round() as isize;
+        let y = my.round() as isize;
         if x >= 0 && (x as usize) < w && y >= 0 && (y as usize) < h {
-            grid[y as usize][x as usize] = (cell, "\u{1b}[38;5;250m");
+            grid[y as usize][x as usize] = (Cell::Moon(face), "\u{1b}[38;5;250m");
         }
     }
 
@@ -737,5 +775,96 @@ mod tests {
             orrery_ansi(&system, &cal, t, GlyphSet::Emoji),
             "deterministic"
         );
+    }
+
+    #[test]
+    fn moon_face_maps_phase_and_star_side() {
+        // New and full ignore the star side (a round disc has no lit side).
+        assert!(matches!(moon_face(0.02, true), MoonFace::New));
+        assert!(matches!(moon_face(0.95, false), MoonFace::New));
+        assert!(matches!(moon_face(0.55, true), MoonFace::Full));
+        // A partial phase is a half-moon lit toward the star.
+        assert!(matches!(moon_face(0.25, true), MoonFace::LitLeft));
+        assert!(matches!(moon_face(0.25, false), MoonFace::LitRight));
+        assert!(matches!(moon_face(0.75, true), MoonFace::LitLeft));
+        assert!(matches!(moon_face(0.75, false), MoonFace::LitRight));
+    }
+
+    #[test]
+    fn orrery_moon_face_agrees_with_its_drawn_position() {
+        // Two coupled invariants on the real seed-42 two-moon world, checked the
+        // way the render computes positions. (1) Placement: a near-new moon is
+        // drawn toward the star, a near-full moon opposite — guarding the earlier
+        // phase/position decoupling (moon 0 was once glyphed ~half a cycle wrong).
+        // (2) Orientation: a half-moon's bright limb faces the star on screen —
+        // LitLeft only when the moon is drawn right of center (star to its left),
+        // LitRight only when left of center. Before the fix the lit side came from
+        // the waxing/waning bucket and ignored the star's screen direction.
+        use crate::calendar::calendar_of;
+        use crate::pins::{MoonsPin, RotationPin, SkyPins};
+        use crate::system::generate;
+        use hornvale_kernel::Seed;
+        use std::f64::consts::{PI, TAU};
+        let system = generate(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                moons: Some(MoonsPin::exact(2).unwrap()),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap()
+        .system;
+        let cal = calendar_of(&system);
+        assert_eq!(system.moons.len(), 2, "the fixture is a two-moon world");
+        // The render's screen geometry, replicated exactly.
+        let (w, h) = (ORRERY_WIDTH as f64, ORRERY_HEIGHT as f64);
+        let cx = w / 2.0;
+        let aspect = 2.0;
+        let orbit = system.anchor.orbit.get();
+        let scale = ((h / 2.0 - 1.0) * 0.8) / orbit;
+        let world_r = orbit * scale;
+        for (index, moon) in system.moons.iter().enumerate() {
+            let mut d = 0.0;
+            while d < 400.0 {
+                let t = StdDays::new(d).unwrap();
+                let theta = TAU * cal.year_phase(t);
+                let wx = cx + aspect * world_r * theta.cos();
+                let (ma, phase) = moon_placement(&cal, index, moon.period, t, theta);
+                let mx = wx + aspect * (2.0 + index as f64) * ma.cos();
+                // (1) placement: near-new toward star, near-full opposite.
+                let toward_star = (ma - (theta + PI)).cos();
+                if let Some(p) = phase {
+                    if !(0.125..0.875).contains(&p) {
+                        assert!(
+                            toward_star > 0.0,
+                            "moon {index} day {d}: new but drawn away from the star"
+                        );
+                    } else if (0.5..0.625).contains(&p) {
+                        assert!(
+                            toward_star < 0.0,
+                            "moon {index} day {d}: full but drawn toward the star"
+                        );
+                    }
+                }
+                // (2) orientation: the lit limb faces the star (center) on screen.
+                let face = match phase {
+                    Some(p) => moon_face(p, cx < mx),
+                    None => MoonFace::New,
+                };
+                match face {
+                    MoonFace::LitLeft => assert!(
+                        cx < mx,
+                        "moon {index} day {d}: lit on the left but the star is not to its left (mx {mx:.2}, cx {cx})"
+                    ),
+                    MoonFace::LitRight => assert!(
+                        cx > mx,
+                        "moon {index} day {d}: lit on the right but the star is not to its right (mx {mx:.2}, cx {cx})"
+                    ),
+                    _ => {}
+                }
+                d += 7.0;
+            }
+        }
     }
 }

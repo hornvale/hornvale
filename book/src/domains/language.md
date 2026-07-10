@@ -21,9 +21,9 @@ gave it eyes; this campaign, the third of Year 2's spine, gives it **mouths**
 consequence of who is speaking it rather than a pool an author happened to
 seed. Every proper noun the world mints now — a settlement, a deity, a
 deity's epithet — is a real generated sound: seed 42's goblin flagship is
-**Fnabnget** (`/fnabŋet/`), whose head god is **Nodvnotngak the Nebsxad**;
-its kobold neighbor is **Rakrra** (`/rakrra/`), whose own head god is
-**Rragratxok Ragxoq**. See [Religion](./religion.md) for how a belief now
+**Xnebsvobned** (`/xnebsvobned/`), whose head god is **Ned the Nabned**;
+its kobold neighbor is **Raxaxoxokrrorat** (`/raxaxoxokrrorat/`), whose own
+head god is **Rro Rro**. See [Religion](./religion.md) for how a belief now
 carries that name as committed content rather than a frozen sentence.
 
 **Phonemes are feature-bearing segments; spellings are views.** The
@@ -227,15 +227,19 @@ domain builds *from* that envelope sorts into the same four kinds
   body/frailty vector exists to read (see the vector table's rationale,
   above).
 
-**The bright line.** A generated name has shape and voice — a mouth-feel
-recountable to a dimension, a sound built from a real inventory and real
-phonotactics — and nothing more. It has no gloss, no etymology, no meaning
-a player could look up. This campaign builds no lexicon and no syntax; it
-authors no sound-change and ages no name into a fossil of an older one;
-meaningful toponyms, language demographics, and everything that would let a
-name mean something rather than merely sound like something stay explicitly
-out of scope, work for whichever campaign takes up language change and
-contact once the world's peoples start meeting each other.
+**The bright line (as Campaign 16, The Tongues, drew it — since stepped
+over; see "Meaning arrives," below).** A generated name had shape and
+voice — a mouth-feel recountable to a dimension, a sound built from a real
+inventory and real phonotactics — and nothing more. It had no gloss, no
+etymology, no meaning a player could look up. The Tongues built no lexicon
+and no syntax; it authored no sound-change and aged no name into a fossil
+of an older one; meaningful toponyms, language demographics, and
+everything that would let a name mean something rather than merely sound
+like something stayed explicitly out of scope, work for whichever campaign
+took up language change and contact once the world's peoples started
+meeting each other. Campaign 27, The Words, is that campaign, for the
+lexicon and sound-change half of the line; contact, toponyms, and syntax
+still wait on the other side of it — see "The tongues still ahead," below.
 
 Reference: [Phonology](../reference/phonology.md), the drift-checked dump
 of each species' inventory, phonotactics, and sample names, regenerated
@@ -245,16 +249,192 @@ epithet-honorific, and collision-rate calibrations at 10k scale. Chronicle:
 [Campaign 16, The Tongues](../chronicle/16-the-tongues.md); [Campaign 17,
 Audible Phonology](../chronicle/17-audible-phonology.md).
 
-**The tongues ahead:** a lexicon and a syntax, and the meaning a name could
-carry once those exist; sound-change, etymology, and names as fossils of an
-older tongue, which want deep time under them before they mean anything;
-meaningful toponyms, built once terrain features are worth naming;
-pidgin, creole, and language-shift dynamics, which need two peoples who
-have actually met; the oral-formulaic grammar that reoccupies the render
-seam this campaign ships; a paralinguistic layer for mating and alarm
-calls, a different kind of sound than speech entirely; music and the other
-media a fuller expressive engine would eventually carry; per-individual
-idiolect, which the closed-vector posture excludes exactly as it excludes
+**The tongues still ahead (updated by Campaign 27, The Words — a lexicon
+and own-line sound-change shipped; see "Meaning arrives," below):** a
+syntax that lets two words assemble into a sentence rather than sit
+together as a single compound noun, and the case, tense, and agreement
+machinery it would carry; pidgin, creole, and language-shift dynamics,
+which need two peoples who have actually met — The Words draws its own
+bright line in front of exactly this, deliberately (see its closing
+paragraph, below); meaningful toponyms, built once terrain features are
+worth naming; the oral-formulaic grammar that reoccupies the render seam
+Campaign 16 shipped; a paralinguistic layer for mating and alarm calls, a
+different kind of sound than speech entirely; music and the other media a
+fuller expressive engine would eventually carry; per-individual idiolect,
+which the closed-vector posture excludes exactly as it excludes
 per-individual psychology and perception; and the articulation vector's own
 voice-loudness dimension, banked to be derived from a body/frailty vector
 this project has not yet authored.
+
+**Meaning arrives.** The chapter above ends on a promise: a lexicon, and the
+meaning a name could carry, once something exists to say what a word is
+*about*. It exists now. A mouth already had shape and voice; this is the
+turn where a sound starts meaning something — carefully, and only exactly
+as much as it is allowed to.
+
+**Concepts are promises.** The kernel's concept registry — until now the
+home of every registered predicate and phenomenon kind, the vocabulary a
+fact or an observation is allowed to use — grows a second table. A
+`ConceptDef` sits beside a `PredicateDef`: a kebab-case id (`water`, `moon`,
+`goblin-kind`), the domain that owns it, a one-line English gloss, and a
+kind drawn from a small closed set — substance, living, celestial, terrain,
+social, body, kin, quality. Registering a concept is not registering a word
+for it; a species may hold the concept `blue` and still have no word that
+names it, exactly as a settlement may exist without yet having a name. What
+registration asserts is narrower and load-bearing anyway: that the sim
+represents this thing, or has deliberately authored it, closely enough that
+a lexicon, a fact, or a player's question could someday resolve against it.
+A concept nobody registered is not merely nameless — it is not yet a
+promise the sim has made. Each domain registers the concepts it already
+owns, at construction, the same discipline it already keeps for predicates:
+astronomy contributes the sun, the moon, the stars, the night; climate
+contributes snow, rain, ice, and one concept per biome it already
+generates; terrain contributes stone, mountain, the sea; settlement
+contributes home and hearth; religion contributes god and spirit; species
+contributes the peoples themselves, goblin-kind and kobold-kind — which
+means an endonym and an exonym now fall out of the same mechanism that
+gives a kobold a word for stone, rather than needing a mechanism of their
+own. Language owns the rest: the shared core described below. The inventory
+stays closed under the same ontology-trap posture every closed vector in
+this book already keeps — widening it is a campaign's decision, never an
+incidental edit made in passing while building something else.
+
+**The Swadesh core as packs.** A single universal word-list — the kind
+historical linguists call a Swadesh list, a fixed roster of concepts every
+human language is assumed to lexicalize — would be a lie the moment two
+species perceive different worlds, and this book has already spent a
+chapter proving they do. A flat "starting vocabulary" is a claim that every
+species carves the same distinctions out of experience; [Perception](./perception.md)
+exists precisely because that claim is false between a goblin and a kobold.
+The shared core is therefore not one list but a set of small **packs**,
+each authored and closed — enough to seed a lexicon, not an aspiration to
+completeness. A **universal stratum** holds what these two species
+actually share by being embodied, terrestrial, mortal, and social: water,
+stone, sun, night, fire, eat, sleep, die, the basic kin terms — small and
+defensible rather than universal in name only. A **color pack** carries the Berlin &
+Kay ladder — the anthropological finding that a language's color
+vocabulary grows in a fixed implicational order, dark/light before red,
+red before green-or-yellow, green-or-yellow before blue, and so on — and a
+species descends that ladder only as far as its own eyes carved the
+distinctions. Kobold's night vision sits far above goblin's baseline, so
+its hue ladder halts one rung short of blue: it holds words for dark,
+light, red, and green-or-yellow, and stops. What a species does not spend
+descending the hue ladder it spends instead on a second, orthogonal
+**luminance ladder** — more words for kinds of dark rather than more words
+for kinds of color — and a night-tuned people extends exactly that ladder
+further than a day-tuned one does. The two ladders trade off by
+construction, not by author's whim: a kobold's gap at blue and its
+abundance of words for gloom, shadow, and starlit dark are the same fact,
+read twice. Recountable, the way every gap in this system must be: kobolds
+have no word for blue, because kobold eyes are tuned for the dark. A
+**body pack** ought to key to a body plan the way the color pack keys to a
+perception vector, but no body vector yet exists for it to read — so the
+pack ships now as a shared humanoid core (eye, mouth, hand, foot, blood,
+bone), model-carded as an authored placeholder standing in for a formula
+not yet written, the same posture voice-loudness took above: unchanged on
+the day a body vector exists to re-key it. A **kin pack**, similarly
+minimal today, is banked the same way against the social-structure axes a
+kinship system would eventually want to read.
+
+**Own-line descent.** Every word this campaign mints for a language starts
+as a **proto-root**: a drawn form, one or two syllables built from that
+language's own phonotactic templates — the identical stem machinery that
+already builds a settlement's name or a god's — one proto-root per concept
+that language actually lexicalizes. A proto-root is not itself heard by
+anyone; it ages. Each language draws its own ordered **sound-change
+cascade**, two to four rules from a small closed family — lenition, a
+voiceless stop turning voiced; fortition, a fricative hardening to a stop;
+a vowel shift, raised or lowered a step; cluster simplification, a
+two-consonant onset losing its first member; final-segment loss, a
+word-final consonant dropped — and applies that cascade to every proto-root
+in turn to reach the modern form actually spoken today. Regularity is not
+a hope here but an invariant a computer can check: this is the
+**Neogrammarian hypothesis**, the nineteenth-century claim that sound laws
+tolerate no exceptions, restated as a property the world enforces rather
+than merely asserts — a rule fires on every proto-root whose environment
+it matches, or on none, and replaying the cascade over a recorded
+proto-form must reproduce the recorded modern form exactly, every time.
+The cascade's target is fixed and deliberate: it lands only on the
+phonology this world already shipped a mouth for, never widening or
+retuning the inventory a name already draws from. A rule that would
+produce a segment outside that inventory applies as the identity function
+instead, changing nothing, rather than quietly inventing a new sound no
+one's anatomy was ever authored to make. This is the honest shape of the
+whole exercise: history is *new data behind the same present*, not a
+rewrite of it. Every language gets its own proto-tongue and its own
+cascade, run once, independently — own-line descent, no shared ancestor
+between goblin and kobold, no tree drawn behind the two lines this campaign
+grows in parallel.
+
+**Exposure and the two gap provenances.** A species does not deserve a
+word for everything its ancestors could theoretically have named; it
+deserves a word for what its world actually put in front of it. Every
+(language, concept) pair resolves to exactly one of three outcomes. A
+concept the species' world **saturates** — its settled biomes and
+whatever those biomes hold, its own sky, its own social kinds, the
+universal stratum, whatever a pack's depth grants it — earns an evolved
+**root**, a proto-form aged through the language's own cascade. A concept
+merely **adjacent** — a biome one cell removed from anywhere the species
+actually lives, the sea for a people that has never touched a coast but
+has stood within sight of one — earns a **compound** where an authored
+recipe exists to build one from roots the species already holds
+("big-water" for a sea it knows of without having been steeped in); today
+that recipe table holds exactly two entries, the sea and the mountain.
+Adjacency without a recipe — most concepts, `coral-reef` among them — buys
+no compound; it falls through to the same outcome as a concept with **no
+path** at all to that species' experience: a **gap**, and the gap always
+carries a reason, because a lexicon's silence is exactly as recountable
+as its speech. That reason is one of two kinds, and never a third. An
+**experiential** gap recounts to a fact the ledger holds and a lexicon
+consulted — no kobold settlement touches coast, so kobold has no word for
+the open sea — or, honestly, to the authored recipe table itself when an
+adjacent concept simply has no entry there yet: `coral-reef` reads "gap
+(experiential): no compound recipe for 'coral-reef'" in the generated
+dictionary, missing recipe rather than missing exposure. A **perceptual**
+gap recounts instead to a vector dimension, and it overrides exposure
+entirely: pack depth is checked first, so a kobold steeped in a blindingly
+blue sky every day of its life still has no word for blue, because kobold
+eyes are tuned for the dark and the color ladder never reached that far
+down regardless of how thoroughly the world exposed the color. Two
+provenances, never a shrug: a lexicon is allowed to be silent, but never
+silently.
+
+**Glossed names.** A proper name has always been a real sound; it now also
+carries a real meaning, and that meaning is never invented for the
+occasion — it compounds the entity's own committed facts. A settlement's
+name draws from its own cell's biome, its notable sky, and the phenomenon
+its presiding belief reveres; a deity's name and its epithet draw from the
+phenomenon it mythologizes and the sentiment religion already derived for
+it. "Ice-Home" sits in tundra by construction: not because an author
+decided a cold place should sound cold, but because a tundra cell's biome
+concept was among the very facts the draw compounded over, in the order
+that language's own headedness — head-first or head-last, drawn once per
+language and binding on every compound it builds — puts them. A settlement
+name adds one more element the way real toponymy does: alongside its site
+words it carries a drawn stem unique to that settlement — two or three
+syllables of that language's own phonotactics tacked onto the gloss,
+"Ice-Homenaknot" rather than a one-syllable English suffix like "-wick" —
+a proper-name element that names no concept and so never enters the gloss,
+there because a census showed site words alone give a species only a
+handful of names against a hundred settlements (Study 011; see
+[Settlement](./settlement.md) for the exact collision figures the census
+pinned before and after this stem existed). A name's
+sound already rendered three views of one drawn segment sequence — a
+romanization, an IPA transcription, and an espeak formulation; it now
+renders a fourth, a gloss — the concepts it compounds, and the site facts
+that earned each one — the same "spellings are views" discipline restated
+once more, never a second fact standing beside the first that could
+someday drift from it.
+
+This campaign draws its own bright line, a step further out than the one
+above but still short of a living tongue. No word crosses from one
+people's mouth into another's: no borrowing, no loanword, no calque, and
+therefore still no tree behind goblin and kobold — two lines of own-line
+descent running the same machinery in parallel, never meeting. Grammar
+grows by exactly one parameter, compound headedness, and stops there: no
+case, no tense, no agreement, nothing that lets two words assemble into a
+sentence rather than sit together as a single compound noun. And a word
+still carries no sense beyond its gloss — no frames, no figurative
+reach, no second meaning a listener could be misled by. A name finally has
+a story behind its sound. It does not yet have a grammar to tell that
+story in, or a second people's ear to carry it to.

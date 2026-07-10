@@ -448,6 +448,16 @@ fn phonotactic_validity_is_true_for_every_generated_name() {
     // phonotactics. If this is ever false the engine is producing names it
     // calls invalid: this is a STOP-and-report-BLOCKED condition (task
     // brief), never an assertion to loosen.
+    //
+    // The Words (Task 9) briefly broke this: glossed names compound evolved
+    // lexicon roots, and sound change guarantees inventory membership, not
+    // template conformance. The resolution keeps the invariant binding
+    // rather than loosening it: `Namer::glossed_name` applies deterministic
+    // phonotactic repair (epenthesis first, deletion second — the
+    // loanword-adaptation move real languages make; the permanent formula
+    // is documented on `repair_phonotactics` in
+    // `domains/language/src/naming.rs`) after compounding, so every
+    // committed name is template-conform again.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     for species in ["goblin", "kobold"] {
@@ -474,7 +484,11 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
     // Preregistered (ADR 0016, spec §9.2), directional: goblin's Rank status
     // basis draws honorific-prefixed epithets (spec §7's morph_options
     // mapping); kobold's Knowledge status basis does not. Row-by-row, since
-    // Absent (no pantheon this world) is a legitimate skip.
+    // Absent (no pantheon this world) is a legitimate skip. Since The Words
+    // (Task 9) the metric detects the affix against a re-derived
+    // honorific-free GLOSSED epithet (the /v2 epoch), re-composing the
+    // belief's site concepts exactly as worldgen did — see
+    // `epithet_honorific` in windows/lab/src/metrics.rs.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (g_i, k_i) = (
@@ -506,13 +520,138 @@ fn epithet_honorific_is_true_for_goblin_and_false_for_kobold() {
 }
 
 #[test]
+fn name_gloss_true_is_100_percent_row_by_row() {
+    // Preregistered (spec §9.3, Study 011 H1): every committed settlement
+    // name-gloss fact composes truthfully from that SAME settlement's own
+    // INDEPENDENTLY re-derived site concepts (biome + presiding
+    // phenomenon). A broken gloss pipeline is falsifiably caught here —
+    // this would read false, not skip silently.
+    let result = &*DRIFT;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let gloss_i = idx("name-gloss-true");
+    let (mut checked, mut absent) = (0u32, 0u32);
+    for row in &result.rows {
+        match row.values[gloss_i] {
+            MetricValue::Flag(v) => {
+                checked += 1;
+                assert!(
+                    v,
+                    "seed {}: a settlement name-gloss is not truthful to its own site facts",
+                    row.seed
+                );
+            }
+            MetricValue::Absent => absent += 1,
+            ref other => panic!("seed {}: name-gloss-true not a flag: {other:?}", row.seed),
+        }
+    }
+    assert!(
+        checked > 0,
+        "no world in the drift census glossed a settlement"
+    );
+    assert_eq!(
+        checked + absent,
+        result.rows.len() as u32,
+        "row count drifted"
+    );
+}
+
+#[test]
+fn lexicon_is_regular_and_exposure_sound_for_both_species() {
+    // Preregistered (spec §9.1/§9.2, Study 011 H2): every Root's recorded
+    // derivation replays exactly through evolve, and exposure
+    // classification is sound (no Root minted for a concept an
+    // INDEPENDENT re-derivation classifies Unknown, every Gap reasoned).
+    // Row-by-row, both species; Absent is a legitimate skip (no Root / no
+    // lexicon entries this world).
+    let result = &*DRIFT;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    for species in ["goblin", "kobold"] {
+        let (reg_i, sound_i) = (
+            idx(&format!("lexicon-regular-{species}")),
+            idx(&format!("exposure-sound-{species}")),
+        );
+        for row in &result.rows {
+            match row.values[reg_i] {
+                MetricValue::Flag(v) => {
+                    assert!(v, "seed {}: {species} lexicon is not regular", row.seed)
+                }
+                MetricValue::Absent => {}
+                ref other => panic!(
+                    "seed {}: lexicon-regular-{species} not a flag: {other:?}",
+                    row.seed
+                ),
+            }
+            match row.values[sound_i] {
+                MetricValue::Flag(v) => assert!(
+                    v,
+                    "seed {}: {species} lexicon is not exposure-sound",
+                    row.seed
+                ),
+                MetricValue::Absent => {}
+                ref other => panic!(
+                    "seed {}: exposure-sound-{species} not a flag: {other:?}",
+                    row.seed
+                ),
+            }
+        }
+    }
+}
+
+#[test]
+fn goblin_hue_depth_exceeds_kobold_hue_depth() {
+    // Preregistered (spec §9.4, Study 011 H3): the shipped roster's
+    // night-vision values predict goblin hue-depth strictly exceeds kobold
+    // hue-depth in every present world — a structural constant of the
+    // authored perception vectors, not a per-seed draw, so the directional
+    // claim and the exact pin below are expected to hold identically at
+    // every seed.
+    let result = &*DRIFT;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let (g_i, k_i) = (idx("hue-depth-goblin"), idx("hue-depth-kobold"));
+    let mut checked = 0u32;
+    for row in &result.rows {
+        if let (MetricValue::Number(g), MetricValue::Number(k)) =
+            (&row.values[g_i], &row.values[k_i])
+        {
+            checked += 1;
+            assert!(
+                g > k,
+                "seed {}: goblin hue-depth {g} does not exceed kobold hue-depth {k}",
+                row.seed
+            );
+            // Pinned: the shipped roster's structural constant.
+            assert_eq!(*g, 4.0, "seed {}: goblin hue-depth drifted", row.seed);
+            assert_eq!(*k, 2.0, "seed {}: kobold hue-depth drifted", row.seed);
+        }
+    }
+    assert!(checked > 0, "no world carried both species' hue-depth");
+}
+
+#[test]
 fn name_collision_rate_is_measured_and_pinned() {
-    // Preregistered (spec §9.2): names are pure per-(seed, species, kind,
-    // salt) draws with no re-draw, so uniqueness is de-facto rather than
-    // enforced (Task 9) — this pins the MEASURED collision rate over the
-    // 500-seed drift study as a calibration row, not an invariant. A
-    // regression that widened or narrowed the drawn name space would move
-    // these counts; a broken collision detector would too.
+    // Preregistered (spec §9.2/§9.5, Study 011 H4): names are pure per-
+    // (seed, species, kind, salt) draws with no re-draw, so uniqueness is
+    // de-facto rather than enforced (Task 9) — this pins the MEASURED
+    // collision rate over the 500-seed drift study as a calibration row,
+    // not an invariant.
+    //
+    // The DIRECTIONAL claim FAILED (reportable per ADR 0016, not adjusted):
+    // Study 011 preregistered "below 2x the Tongues-era pinned rate"
+    // (2.339% x 2 = 4.678%). The first measurement read 86.28%: pure
+    // site-concept compounds (biome + one presiding phenomenon, largely
+    // constant across a species' settlements within one world) gave a
+    // species only a handful of distinct names against up to ~120
+    // settlements. Fix 1 (the settlement stem — a per-salt drawn toponymic
+    // unique element compounded with the site words,
+    // `Namer::glossed_name`) re-widened the space to a 10.71% mean; fix 2
+    // (stem widened from 1-2 to 2-3 syllables, the retired Tongues-era
+    // stem's own range) reached 4.91% — a ~17.6x improvement over the
+    // defect, but STILL (narrowly) above the preregistered bound, so H4's
+    // verdict remains failed (Study 011 records all three measurements;
+    // whether 4.678% was the right bound is the campaign owner's call).
+    // The honest rate is pinned here exactly as Study 007/008 pin an
+    // honest rate that misses its own floor (0.875 blind attribution) —
+    // never loosened to fit.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let rate_i = idx("name-collision-rate");
@@ -535,41 +674,50 @@ fn name_collision_rate_is_measured_and_pinned() {
             ),
         }
     }
-    // Pinned calibration row (re-measured for the placed observer, Plan 2
-    // Task 4, 500-seed drift study): most worlds draw no colliding names at
-    // all, but the combinatorially large name space is not infinite, so a
-    // minority of worlds show some collision. Hemisphere culling can change
-    // a locked-world flagship's committed belief count, which shifts the
-    // entity-id salts every deity name downstream draws from — moving this
-    // count by one world versus the pre-Plan-2 baseline.
-    assert_eq!(zero, 337, "zero-collision world count drifted");
-    assert_eq!(nonzero, 163, "nonzero-collision world count drifted");
+    // Pinned calibration row (re-measured after collision fix 2 AND the
+    // merge of main: The Words' glossed compounds set the base rate; main's
+    // placed-observer hemisphere culling, extended to per-settlement
+    // vantages for glossed naming, means each settlement's own culled sky
+    // feeds its presiding concept — re-pinned on the merged code, 500-seed
+    // drift study). The per-settlement skies IMPROVED the rate (pre-merge:
+    // 148 zero / 352 nonzero, mean 4.91%): more distinct presiding
+    // concepts, a wider descriptor space, fewer repeated compounds.
+    assert_eq!(zero, 159, "zero-collision world count drifted");
+    assert_eq!(nonzero, 341, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.023_350_930_218_792).abs() < 1e-6,
-        "mean name-collision-rate drifted: {mean:.10}"
+        (mean - 0.047_015_587_357_954).abs() < 1e-6,
+        "mean name-collision-rate drifted: {mean:.15}"
     );
 }
 
 #[test]
 fn name_length_distributions_are_measured_and_pinned() {
-    // Preregistered (spec §9.2): mean generated-name length, per species,
-    // pinned over the 500-seed drift study as a calibration row after
-    // measurement — the naming/voice baseline's other half (contrast
-    // `phonotactic_validity_is_true_for_every_generated_name`, which is an
-    // invariant, not a measurement).
+    // Preregistered (spec §9.2, Study 011's H4 companion): mean generated-
+    // name length, per species, pinned over the 500-seed drift study as a
+    // calibration row after measurement — the naming/voice baseline's
+    // other half (contrast `phonotactic_validity_is_true_for_every_
+    // generated_name`, which is an invariant, not a measurement).
+    // Re-measured after collision fix 2: a glossed settlement name is now
+    // site word(s) + a drawn 2-3-syllable unique stem, so names run LONGER
+    // than the pure-compound first measurement (goblin 6.69, kobold 6.91),
+    // the fix-1 1-2-syllable stems (10.77 / 11.13), and the Tongues-era
+    // free-stem draw (9.87 / 9.80) — consistent with the collision-rate
+    // improvement above: a wider, less-repeated vocabulary of longer
+    // compound words.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
-    // Re-measured for the placed observer (Plan 2 Task 4, 500-seed drift
-    // study): hemisphere culling shifts entity-id salts on locked worlds
-    // (see `name_collision_rate_is_measured_and_pinned`), moving both means
-    // by a fraction of a character.
+    // Re-measured on the merged code (was goblin 13.8119 / kobold 14.2369
+    // pre-merge): main's placed-observer hemisphere culling, extended to
+    // per-settlement vantages for glossed naming, shifts which presiding
+    // concept each settlement compounds over, moving both means by a
+    // fraction of a character.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 498u32, 9.864_912_538_395_386),
-        ("kobold", 498u32, 9.798_737_988_299_532),
+        ("goblin", 498u32, 13.869_961_501_975_723),
+        ("kobold", 498u32, 14.262_681_953_972_956),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -599,7 +747,7 @@ fn name_length_distributions_are_measured_and_pinned() {
         let mean = sum / f64::from(present);
         assert!(
             (mean - expected_mean).abs() < 1e-6,
-            "{species} mean name length drifted: {mean:.10}"
+            "{species} mean name length drifted: {mean:.15}"
         );
     }
 }
@@ -705,21 +853,42 @@ fn null_control_distributions_are_within_the_sampling_bound() {
         namelen.abs() < 0.2,
         "name-length SMD {namelen:.4} exceeds the bound"
     );
-    // Pinned calibration rows (re-measured for the placed observer, Plan 2
-    // Task 4, 500-seed census-of-the-meeting). Structural indistinguishability
-    // is exact: the two solo builds share seed, cell, and phenomena, so the
-    // head-deity domain and cult form distributions and the pantheon-size mean
-    // are byte-identical (TVD = SMD = 0). Only name-length diverges, and only
-    // through name-salted noise — a small SMD well inside the envelope, the
-    // lone structural trace of the two distinct names.
+    // Pinned STRUCTURAL rows (exact zeroes, not measurements): the two solo
+    // builds share seed, cell, and phenomena, so the head-deity domain and
+    // cult form distributions and the pantheon-size mean are byte-identical
+    // (TVD = SMD = 0) regardless of what names are drawn — naming never
+    // feeds back into pantheon structure. Exact even after the merge of
+    // main (placed observer, astronomy synodic fix): those shift name salts,
+    // not pantheon structure. Only name-length diverges (the lone structural
+    // trace of the two distinct names); its exact pinned SMD is a measurement
+    // and lives in the Task-12-owned sibling test below.
     assert!((head - 0.0).abs() < 1e-9, "head-domain TVD drifted: {head}");
     assert!((cult - 0.0).abs() < 1e-9, "cult-form TVD drifted: {cult}");
     assert!(
         (size - 0.0).abs() < 1e-9,
         "pantheon-size SMD drifted: {size}"
     );
+}
+
+#[test]
+fn null_control_name_length_smd_is_pinned() {
+    // Re-measured on the merged code (was -0.118235 at the Tongues-era
+    // measurement, -0.045751 at Study 011's first, pre-fix measurement,
+    // -0.050617 after fix 1, -0.066905 after fix 2, all 2026-07-09; the
+    // merge added per-settlement culled vantages for glossed naming): each
+    // naming re-baseline shifts the underlying name-length distribution
+    // (see `name_length_distributions_are_measured_and_pinned`), so the
+    // twin's SMD against the goblin moves too — still comfortably inside
+    // the ±0.2 sampling-theory bound `null_control_distributions_are_
+    // within_the_sampling_bound` asserts, unaffected by this re-pin.
+    let result = &*MEETING;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let namelen = std_mean_diff(
+        nums(result, "goblin-solo", idx("name-length-goblin")),
+        nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
+    );
     assert!(
-        (namelen - -0.117_831_514_930_104_99).abs() < 1e-9,
+        (namelen - -0.065_377_251_231_494).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
