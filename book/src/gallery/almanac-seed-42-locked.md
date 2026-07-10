@@ -58,6 +58,10 @@ Some 8% of the surface is habitable — land with water and a tolerable season.
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
+## Deep Time
+
+The frost retreated: at the glacial maximum (day -243500000), ice advanced over 24% of the land.
+
 ## The People
 
 The land holds 28 settlement(s).

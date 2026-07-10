@@ -39,6 +39,7 @@ jobs:
           cargo run -p hornvale -- biome-map --world /tmp/hv-ci-locked.json --out book/src/gallery/biome-seed-42-locked.png > book/src/gallery/biome-seed-42-locked.md
           cargo run -p hornvale -- settlement-map --world /tmp/hv-ci-sky.json --out book/src/gallery/settlement-seed-42.png > book/src/gallery/settlement-seed-42.md
           cargo run -p hornvale -- settlement-map --world /tmp/hv-ci-locked.json --out book/src/gallery/settlement-seed-42-locked.png > book/src/gallery/settlement-seed-42-locked.md
+          cargo run -p hornvale -- paleo-map --world /tmp/hv-ci-sky.json --out book/src/gallery/paleo-seed-42.png > book/src/gallery/paleo-seed-42.md
           cargo run -p hornvale -- star-chart --world /tmp/hv-ci-sky.json --out book/src/gallery/star-chart-seed-42.png > book/src/gallery/star-chart-seed-42.md
           cargo run -p hornvale -- orrery --world /tmp/hv-ci-sky.json --day 0..365 --step 3 --fps 8 --cast book/src/gallery/orrery-seed-42.cast
           cargo run -p hornvale -- orrery --world /tmp/hv-ci-sky.json --day 0..365 --step 3 --fps 8 --glyphs emoji --cast book/src/gallery/orrery-emoji-seed-42.cast
