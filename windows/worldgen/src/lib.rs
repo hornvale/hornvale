@@ -371,6 +371,11 @@ fn climate_at_era(
     // sit warmer than a fixed absolute constant.
     let anomaly =
         hornvale_kernel::CellMap::from_fn(geo, |c| temperature.get(c) - present_temperature.get(c));
+    // This same `ice` mask is both summarized into `ice_fraction` below and
+    // stored on the returned `EraClimate` unchanged, so `strata::extract`'s
+    // envelope (an OR-union of every era's `ice` field) can never disagree
+    // with `ice_fraction` about which cells this era glaciated — one mask,
+    // two consumers.
     let ice = hornvale_paleoclimate::glaciated(geo, elevation, &anomaly, sea_level);
     let land = geo
         .cells()
@@ -384,7 +389,7 @@ fn climate_at_era(
     };
     Ok(EraClimate {
         day: era_day,
-        temperature,
+        ice,
         habitable,
         sea_level,
         ice_fraction,
@@ -1630,6 +1635,10 @@ mod tests {
             a.max_ice_fraction > 0.0,
             "a forced world glaciates at least once"
         );
+        assert!(
+            a.envelope.iter().any(|(_, &b)| b),
+            "a forced world's ice-extent envelope is non-empty"
+        );
     }
 
     #[test]
@@ -1643,6 +1652,33 @@ mod tests {
         // temperature (so a naturally cold present — e.g. a very-low-obliquity
         // world with permanently cold poles — never reads as "glaciated" on
         // its own; only a colder-than-present era does).
+        //
+        // Every assertion here must hold for the same reason: zero forcing
+        // means zero ice volume every era (the caloric index never leaves
+        // the ice integrator's dead band once its amplitudes are zeroed), so
+        // eustatic sea level never moves off the present stand and the
+        // temperature anomaly is exactly zero everywhere. That zero anomaly
+        // is what `climate_at_era` diagnoses into each era's `ice` mask, and
+        // `strata::extract`'s envelope is the OR-union of exactly those
+        // masks — so if `max_ice_fraction` is 0, the envelope is
+        // structurally forced to be empty too. Asserting only
+        // `max_ice_fraction` (as this test used to) does not exercise that
+        // link: before the `EraClimate.ice` field existed, the envelope was
+        // built from the *absolute* offset temperature via `glaciated`, and
+        // a world whose poles sit naturally below the threshold produced a
+        // non-empty envelope even though `max_ice_fraction` read 0.0.
+        //
+        // The shoreline is checked against a baseline record, not against
+        // zero: `derive_sea_level` (terrain/src/elevation.rs) places sea
+        // level at the exact elevation of one grid cell (a quantile pick),
+        // so that cell always sits inside `extract`'s inclusive
+        // `[min_sea, max_sea]` band even when every era's sea level equals
+        // the present stand — that is the ordinary present coastline, not a
+        // symptom of migration, and would appear with or without any deep
+        // time at all. The correct null-control invariant is that zero
+        // forcing produces the *same* shoreline as no deep-time eras
+        // whatsoever (sea level parked at the present stand throughout), not
+        // a literally empty one.
         for seed in [42, 7, 123] {
             let pins = SkyPins {
                 forcing: Some(hornvale_astronomy::ForcingPin::Zero),
@@ -1660,6 +1696,22 @@ mod tests {
             assert_eq!(
                 rec.max_ice_fraction, 0.0,
                 "zero forcing must not glaciate (seed {seed})"
+            );
+            assert_eq!(
+                rec.envelope.iter().filter(|&(_, &b)| b).count(),
+                0,
+                "zero forcing must leave an empty ice-extent envelope (seed {seed})"
+            );
+            let terrain = terrain_of(&world).unwrap();
+            let baseline = hornvale_paleoclimate::extract(
+                terrain.geosphere(),
+                &terrain.globe().elevation,
+                terrain.sea_level(),
+                &[],
+            );
+            assert_eq!(
+                rec.shoreline, baseline.shoreline,
+                "zero forcing must not widen the shoreline past the present coastline (seed {seed})"
             );
         }
     }

@@ -15,8 +15,11 @@ const GLACIATION_THRESHOLD_C: f64 = -3.0;
 pub struct EraClimate {
     /// Absolute standard day of the era.
     pub day: f64,
-    /// Offset annual-mean temperature per cell (°C), cooling already applied.
-    pub temperature: CellMap<f64>,
+    /// This era's precomputed diagnostic ice mask (land under ice). The
+    /// single source of truth: `ice_fraction` and the envelope in `extract`
+    /// both derive from this same mask, so they cannot disagree with each
+    /// other about which cells are glaciated.
+    pub ice: CellMap<bool>,
     /// Habitability per cell under this era's offset climate.
     pub habitable: CellMap<bool>,
     /// Sea level this era (metres): present + eustatic change.
@@ -54,7 +57,11 @@ pub struct PaleoRecord {
     pub max_ice_fraction: f64,
 }
 
-/// Extract strata from the era series over the present relief.
+/// Extract strata from the era series over the present relief. The
+/// ice-extent envelope is the OR-union of each era's precomputed `ice` mask
+/// — it never re-diagnoses glaciation from temperature, so it cannot
+/// disagree with the era's own `ice_fraction` (both derive from the same
+/// mask, computed once by the composition root).
 pub fn extract(
     geo: &Geosphere,
     elevation: &CellMap<f64>,
@@ -74,13 +81,12 @@ pub fn extract(
         (min_sea..=max_sea).contains(&elev)
     });
 
-    // Ice-extent envelope: OR of every era's diagnostic ice mask.
+    // Ice-extent envelope: OR of every era's precomputed diagnostic ice mask.
     let mut envelope = CellMap::from_fn(geo, |_| false);
     for e in eras {
-        let mask = glaciated(geo, elevation, &e.temperature, e.sea_level);
         envelope = CellMap::from_fn(geo, |cell| {
             let had = *envelope.get(cell);
-            had || *mask.get(cell)
+            had || *e.ice.get(cell)
         });
     }
 
@@ -110,13 +116,13 @@ mod tests {
     use super::*;
     use hornvale_kernel::Geosphere;
 
-    fn era(geo: &Geosphere, day: f64, temp: f64, sea: f64, ice: f64) -> EraClimate {
+    fn era(geo: &Geosphere, day: f64, ice_all: bool, sea: f64, ice_fraction: f64) -> EraClimate {
         EraClimate {
             day,
-            temperature: CellMap::from_fn(geo, |_| temp),
+            ice: CellMap::from_fn(geo, |_| ice_all),
             habitable: CellMap::from_fn(geo, |c| geo.coord(c).latitude.abs() < 45.0),
             sea_level: sea,
-            ice_fraction: ice,
+            ice_fraction,
         }
     }
 
@@ -125,8 +131,8 @@ mod tests {
         let geo = Geosphere::new(3);
         let elev = CellMap::from_fn(&geo, |_| 100.0); // all land
         let eras = vec![
-            era(&geo, 0.0, 5.0, 0.0, 0.0),     // warm: no ice
-            era(&geo, 1.0, -20.0, -50.0, 0.9), // cold: all ice
+            era(&geo, 0.0, false, 0.0, 0.0),  // warm: no ice
+            era(&geo, 1.0, true, -50.0, 0.9), // cold: all ice
         ];
         let rec = extract(&geo, &elev, 0.0, &eras);
         assert!(
@@ -142,7 +148,7 @@ mod tests {
         let geo = Geosphere::new(3);
         // Elevation ramps with latitude so some cells fall in the band.
         let elev = CellMap::from_fn(&geo, |c| geo.coord(c).latitude);
-        let eras = vec![era(&geo, 0.0, 5.0, -30.0, 0.0)];
+        let eras = vec![era(&geo, 0.0, false, -30.0, 0.0)];
         let rec = extract(&geo, &elev, 0.0, &eras); // band = [-30, 0]
         let any = rec.shoreline.iter().any(|(_, &b)| b);
         assert!(any, "some cells must lie in the [-30,0] sea band");

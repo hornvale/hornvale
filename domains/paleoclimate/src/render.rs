@@ -88,13 +88,7 @@ mod tests {
         let elev = CellMap::from_fn(geo, |_| 100.0);
         let eras = vec![EraClimate {
             day: 0.0,
-            temperature: CellMap::from_fn(geo, |c| {
-                if geo.coord(c).latitude.abs() > 60.0 {
-                    -20.0
-                } else {
-                    10.0
-                }
-            }),
+            ice: CellMap::from_fn(geo, |c| geo.coord(c).latitude.abs() > 60.0),
             habitable: CellMap::from_fn(geo, |c| geo.coord(c).latitude.abs() < 30.0),
             sea_level: -40.0,
             ice_fraction: 0.3,
