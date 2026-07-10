@@ -54,4 +54,11 @@ It backs [Study 009, the Census of the Meeting](./study-009.md), the Year-2
 capstone, and like `census-lands-drift` it is re-run and drift-checked on
 every build.
 
+Between commits, a cheap always-on probe (`windows/lab/tests/fixture_staleness.rs`)
+regenerates each census's first three seeds live on every `cargo test` and
+compares them against the committed rows — so a worldgen change that moves
+the census fails locally with the regeneration instruction (`make
+rebaseline`) instead of surfacing an hour later in CI's full
+regenerate-and-diff.
+
 {{#include generated/census-lands-drift/census-lands-drift-summary.md}}

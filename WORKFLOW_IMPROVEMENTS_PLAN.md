@@ -76,7 +76,7 @@ canonicalized) against the committed `rows.csv`; fail with the `make
 rebaseline` instruction. Also repairs `census_fixture_matches_live_run`,
 which compared full-precision live rows to quantized fixture rows (broken
 silently by the quantization epoch; CI never runs it).
-**Status**: In Progress
+**Status**: Complete
 
 ### 2b. TOOL-20 — the golden-master accept harness
 **Deliverable**: `hornvale_kernel::golden` (`assert_golden`/`check_golden`,
@@ -86,7 +86,7 @@ silently by the quantization epoch; CI never runs it).
 rebaseline-goldens`. `scripts/freeze-fixture.sh` narrows to historical pins
 (the `pre-*` fixtures are frozen history, never rebaselined) — a scoped
 deviation from the registry row's "replace freeze-fixture.sh".
-**Status**: Not Started
+**Status**: In Progress
 
 ### 2c. TOOL-19 — the human-readable lab regression view
 **Deliverable**: `hornvale lab diff <STUDY> <OLD_CSV> <NEW_CSV>` rendering
