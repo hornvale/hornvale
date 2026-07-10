@@ -7,8 +7,10 @@ that sequencing decisions are informed and hard-won thinking is not
 re-derived from scratch a year later. When any item here becomes real work
 it earns a proper spec in `docs/superpowers/specs/`, and that spec — never
 this map — is what binds. Where this document and a spec disagree, the spec
-wins by definition. The public book (`book/`) describes only merged reality;
-this file is the opposite end of the pipe, and stays out of the book.
+wins by definition. This chapter and the [idea registry](idea-registry.md)
+form The Frontier — the book's one clearly-marked speculative part. Every
+other part of the book describes merged reality; nothing in this part
+governs any of it.
 
 Treat every idea below as a hypothesis with a confidence tag, not a promise.
 The discipline that governs the code governs this document too: an idea
@@ -21,7 +23,7 @@ scannable *registry* — every idea as one line with a stable ID, a status
 (including the rejected ones), and a pointer to where it is discussed — see
 [`idea-registry.md`](idea-registry.md). Consult the registry before
 proposing or reopening anything; consult these essays to understand it. The
-map of the whole documentation set is [`docs/README.md`](../README.md).
+map of the whole documentation set is [`docs/README.md`](https://github.com/hornvale/hornvale/blob/main/docs/README.md).
 
 ## Contents
 

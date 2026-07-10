@@ -101,3 +101,8 @@
 # Open Questions
 
 - [The Confidence Gradient](./open-questions.md)
+
+# The Frontier
+
+- [The Frontier](./frontier/frontier.md)
+- [The Idea Registry](./frontier/idea-registry.md)

@@ -1,8 +1,9 @@
 //! Drift checks binding the knowledge architecture together: the idea
-//! registry, the frontier essays, and the docs map must not silently
-//! diverge. Enforces that every cross-link resolves, every frontier section
-//! is indexed in the Contents ToC, and registry IDs stay unique. The
-//! architecture these checks defend is described in `docs/README.md` and
+//! registry and frontier essays (published as the book's Frontier part),
+//! and the docs map must not silently diverge. Enforces that every
+//! cross-link resolves, every frontier section is indexed in the Contents
+//! ToC, and registry IDs stay unique. The architecture these checks defend
+//! is described in `docs/README.md` and
 //! `docs/CLAUDE.md`; this file makes the discipline executable, the same way
 //! `architecture.rs` makes the layering rules executable.
 
@@ -79,25 +80,35 @@ fn link_urls(content: &str) -> Vec<String> {
     out
 }
 
+/// Links into this repo written as GitHub blob URLs (the published frontier
+/// part links to decisions and specs, which live outside the book) are
+/// mapped back to repo-relative paths and validated like relative links.
+const REPO_BLOB_PREFIX: &str = "https://github.com/hornvale/hornvale/blob/main/";
+
 /// Validate every link in `file`, pushing a message per broken one into
 /// `errors`. A link resolves if its path exists (relative to the file's
-/// directory; an empty path means the file itself), and, when it carries a
-/// `#fragment` into a Markdown file, if that fragment names a real heading.
+/// directory; an empty path means the file itself; a `REPO_BLOB_PREFIX` URL
+/// is relative to the repo root), and, when it carries a `#fragment` into a
+/// Markdown file, if that fragment names a real heading.
 fn check_links(file: &Path, errors: &mut Vec<String>) {
     let content = read(file);
     let dir = file.parent().expect("doc file should have a parent");
     for url in link_urls(&content) {
-        if url.starts_with("http://") || url.starts_with("https://") {
+        let (rel, base) = if let Some(repo_rel) = url.strip_prefix(REPO_BLOB_PREFIX) {
+            (repo_rel.to_string(), repo_root())
+        } else if url.starts_with("http://") || url.starts_with("https://") {
             continue;
-        }
-        let (path_part, fragment) = match url.split_once('#') {
-            Some((p, f)) => (p, Some(f)),
-            None => (url.as_str(), None),
+        } else {
+            (url.clone(), dir.to_path_buf())
+        };
+        let (path_part, fragment) = match rel.split_once('#') {
+            Some((p, f)) => (p, Some(f.to_string())),
+            None => (rel.as_str(), None),
         };
         let target = if path_part.is_empty() {
             file.to_path_buf()
         } else {
-            dir.join(path_part)
+            base.join(path_part)
         };
         if !target.exists() {
             errors.push(format!(
@@ -108,7 +119,7 @@ fn check_links(file: &Path, errors: &mut Vec<String>) {
         }
         if let Some(fragment) = fragment
             && target.extension().and_then(|e| e.to_str()) == Some("md")
-            && !anchors(&read(&target)).contains(fragment)
+            && !anchors(&read(&target)).contains(&fragment)
         {
             errors.push(format!(
                 "{}: link `{url}` names an anchor that no heading produces",
@@ -134,7 +145,7 @@ fn toc_anchor_targets(frontier: &str) -> BTreeSet<String> {
 
 #[test]
 fn every_frontier_section_is_listed_in_the_contents() {
-    let frontier = read(&repo_root().join("docs/vision/frontier.md"));
+    let frontier = read(&repo_root().join("book/src/frontier/frontier.md"));
     let toc = toc_anchor_targets(&frontier);
     let mut missing = Vec::new();
     for (level, text) in headings(&frontier) {
@@ -156,7 +167,7 @@ fn every_frontier_section_is_listed_in_the_contents() {
 
 #[test]
 fn registry_ids_are_unique() {
-    let registry = read(&repo_root().join("docs/vision/idea-registry.md"));
+    let registry = read(&repo_root().join("book/src/frontier/idea-registry.md"));
     let mut seen = BTreeSet::new();
     let mut dupes = Vec::new();
     for line in registry.lines() {
@@ -194,8 +205,8 @@ fn all_knowledge_doc_links_resolve() {
     let mut errors = Vec::new();
     for rel in [
         "docs/README.md",
-        "docs/vision/frontier.md",
-        "docs/vision/idea-registry.md",
+        "book/src/frontier/frontier.md",
+        "book/src/frontier/idea-registry.md",
     ] {
         check_links(&root.join(rel), &mut errors);
     }
@@ -228,7 +239,7 @@ fn the_confidence_gradient_links_resolve() {
 /// `BIO`, …), parsed from the ID column so the book lint auto-adapts when a new
 /// prefix is coined rather than hard-coding a list that rots.
 fn registry_id_prefixes() -> BTreeSet<String> {
-    let registry = read(&repo_root().join("docs/vision/idea-registry.md"));
+    let registry = read(&repo_root().join("book/src/frontier/idea-registry.md"));
     let mut prefixes = BTreeSet::new();
     for line in registry.lines() {
         let Some(rest) = line.strip_prefix("| ") else {
@@ -286,16 +297,18 @@ fn md_files(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-/// The book is merged reality; the idea registry and frontier essays are the
-/// private end of the pipe and stay out of it (`docs/CLAUDE.md`). This makes
-/// that boundary executable — the recurring failure where a chronicle or
-/// domain chapter cited a registry ID (`EXP-3`) or leaked engineering-process
-/// vocabulary, caught by review twice before. No registry ID may appear
-/// anywhere in the book; a tight set of unambiguous engineering terms may not
-/// appear in the world-prose chapters (chronicle, domain chapters). The set is
-/// deliberately small — `task`/`plan`/`gate`/`commit`/`code review` are
-/// legitimate English and are NOT banned, to avoid false positives; this
-/// guards the clear leaks, not every conceivable slip.
+/// The merged-reality parts of the book must not cite the idea registry:
+/// The Frontier part is the registry's published home (decision
+/// `the-frontier-is-published-in-the-book`), and every other part describes
+/// merged reality — the recurring failure where a chronicle or domain
+/// chapter cited a registry ID (`EXP-3`) or leaked engineering-process
+/// vocabulary was caught by review twice before this check existed.
+/// No registry ID may appear anywhere in the book; a tight set of
+/// unambiguous engineering terms may not appear in the world-prose chapters
+/// (chronicle, domain chapters). The set is deliberately small —
+/// `task`/`plan`/`gate`/`commit`/`code review` are legitimate English and
+/// are NOT banned, to avoid false positives; this guards the clear leaks,
+/// not every conceivable slip.
 #[test]
 fn the_book_carries_no_registry_ids_or_process_vocabulary() {
     let root = repo_root();
@@ -316,9 +329,11 @@ fn the_book_carries_no_registry_ids_or_process_vocabulary() {
     for path in &md {
         let text = read(path);
         let rel = path.strip_prefix(&root).unwrap_or(path);
-        if let Some(id) = find_registry_id(&text, &prefixes) {
+        // The Frontier part IS the registry; the ban guards everything else.
+        let in_frontier_part = rel.starts_with("book/src/frontier");
+        if !in_frontier_part && let Some(id) = find_registry_id(&text, &prefixes) {
             errors.push(format!(
-                "{}: registry ID `{id}` — the idea registry stays out of the book",
+                "{}: registry ID `{id}` — only The Frontier part may cite the registry",
                 rel.display()
             ));
         }
@@ -338,9 +353,9 @@ fn the_book_carries_no_registry_ids_or_process_vocabulary() {
     }
     assert!(
         errors.is_empty(),
-        "the book leaked idea-registry IDs or engineering-process vocabulary \
-         (the book is merged reality; the registry/frontier are the private end \
-         of the pipe — docs/CLAUDE.md):\n  {}",
+        "a merged-reality part of the book cited the idea registry or leaked \
+         engineering-process vocabulary (only the marked Frontier part is \
+         speculative — docs/CLAUDE.md):\n  {}",
         errors.join("\n  ")
     );
 }
