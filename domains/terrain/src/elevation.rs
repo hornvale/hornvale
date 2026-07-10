@@ -15,8 +15,9 @@ const CONTINENT_BASE_M: f64 = 400.0;
 /// Abyssal oceanic base elevation, meters.
 const OCEAN_BASE_M: f64 = -4000.0;
 /// Per-cell-id micro-relief, meters. Breaks every elevation tie so the
-/// sea-level percentile is exact; at 10,242 cells the total spread is
-/// ~0.01 m — physically invisible, a declared approximation.
+/// sea-level percentile is exact; at 40,962 cells (the canonical level-6
+/// grid) the total spread is ~0.04 m — physically invisible, a declared
+/// approximation.
 const CELL_EPSILON_M: f64 = 1e-6;
 /// Maximum possible closing speed (two rate-1.0 plates head-on); boundary
 /// magnitudes are normalized against it.

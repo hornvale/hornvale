@@ -56,7 +56,7 @@ const TERRAIN_FLAGS: &str = "\
   [--plates N]                             pin the plate count (2-64)
   [--ocean-fraction F]                     pin the target ocean fraction (0.05-0.95)
   [--supercontinent true|false]            cluster the continents into one landmass
-  [--globe-level N]                        pin the canonical grid level (4-7; default 5)
+  [--globe-level N]                        pin the canonical grid level (4-7; default 6)
 ";
 
 const SETTLEMENT_FLAGS: &str = "\

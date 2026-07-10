@@ -89,6 +89,7 @@
 - [Study 009: The Census of the Meeting](./laboratory/study-009.md)
 - [Study 010: The Census of Coasts](./laboratory/study-010.md)
 - [Study 011: The Census of Words](./laboratory/study-011.md)
+- [The Census of Coasts II](./laboratory/census-of-coasts-ii.md)
 
 # Reference
 

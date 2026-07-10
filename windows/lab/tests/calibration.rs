@@ -206,7 +206,12 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // them, independently verified. Coastal is unchanged at 498; inland
     // drops from 2 to 0 (renamed from
     // `flagships_are_sometimes_inland_and_sometimes_coastal`, now false).
-    assert_eq!(coastal, 498, "coastal flagship count drifted");
+    //
+    // Crust epoch (GLOBE_LEVEL 5→6, Task 3): the finer grid resolves two
+    // more goblin flagships coastal that the coarser level-5 grid placed
+    // inland (or the reverse — either way, a genuine terrain-driven shift,
+    // not a regression); re-pinned on the 500-seed drift study at level 6.
+    assert_eq!(coastal, 500, "coastal flagship count drifted");
     assert_eq!(inland, 0, "inland flagship count drifted");
 }
 
@@ -425,9 +430,11 @@ fn blind_attribution_beats_chance_decisively() {
     );
     // Pinned calibration row (re-measured for the placed observer, Plan 2
     // Task 4; the drift study is 500 seeds, so this is an exact count, not a
-    // rate):
-    assert_eq!(correct, 413, "blind-attribution count drifted");
-    assert_eq!(total, 496, "attributable-pair count drifted");
+    // rate). Re-pinned again under the Crust epoch (GLOBE_LEVEL 5→6, Task
+    // 3): the finer grid resolves one more attributable pair and one more
+    // correct call among them.
+    assert_eq!(correct, 414, "blind-attribution count drifted");
+    assert_eq!(total, 497, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -682,14 +689,20 @@ fn name_collision_rate_is_measured_and_pinned() {
     // drift study). The per-settlement skies IMPROVED the rate (pre-merge:
     // 148 zero / 352 nonzero, mean 4.91%): more distinct presiding
     // concepts, a wider descriptor space, fewer repeated compounds.
-    assert_eq!(zero, 159, "zero-collision world count drifted");
-    assert_eq!(nonzero, 341, "nonzero-collision world count drifted");
+    //
+    // Crust epoch (GLOBE_LEVEL 5→6, Task 3): the finer grid widens the
+    // presiding-phenomenon vantage further (more distinct cells, more
+    // distinct sky vantages per settlement), IMPROVING the rate again —
+    // re-pinned on the 500-seed drift study at level 6 (was 159 zero / 341
+    // nonzero, mean 4.7016%).
+    assert_eq!(zero, 175, "zero-collision world count drifted");
+    assert_eq!(nonzero, 325, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.047_015_587_357_954).abs() < 1e-6,
+        (mean - 0.039_416_726_089_889).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -715,9 +728,14 @@ fn name_length_distributions_are_measured_and_pinned() {
     // per-settlement vantages for glossed naming, shifts which presiding
     // concept each settlement compounds over, moving both means by a
     // fraction of a character.
+    //
+    // Crust epoch (GLOBE_LEVEL 5→6, Task 3): the finer grid changes which
+    // cells settlements land on and their presiding concepts, shifting both
+    // present-row counts and means again (was goblin 498/13.869962, kobold
+    // 498/14.262682); re-pinned on the 500-seed drift study at level 6.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 498u32, 13.869_961_501_975_723),
-        ("kobold", 498u32, 14.262_681_953_972_956),
+        ("goblin", 500u32, 14.084_995_773_065_062),
+        ("kobold", 497u32, 14.173_050_585_108_962),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -881,6 +899,10 @@ fn null_control_name_length_smd_is_pinned() {
     // twin's SMD against the goblin moves too — still comfortably inside
     // the ±0.2 sampling-theory bound `null_control_distributions_are_
     // within_the_sampling_bound` asserts, unaffected by this re-pin.
+    //
+    // Crust epoch (GLOBE_LEVEL 5→6, Task 3): re-pinned again on the merged
+    // code at level 6 (was -0.065377251231494); still comfortably inside
+    // the same bound.
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let namelen = std_mean_diff(
@@ -888,7 +910,7 @@ fn null_control_name_length_smd_is_pinned() {
         nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
     assert!(
-        (namelen - -0.065_377_251_231_494).abs() < 1e-9,
+        (namelen - -0.061_817_423_175_291).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

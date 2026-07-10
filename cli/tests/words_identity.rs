@@ -34,7 +34,14 @@ use std::collections::BTreeSet;
 /// five paleoclimate predicates are also excluded here: they are wholly new
 /// in Deep Time (merged alongside The Words) and land as summary
 /// facts on the world entity that the pre-Words fixture cannot carry.
-const CHANGED_OR_NEW_PREDICATES: [&str; 11] = [
+/// `terrain-pin` is excluded for a different reason: the pre-Words fixture
+/// predates the Crust epoch's `--globe-level` pin entirely (it was built
+/// when level 5 was simply the unpinned default), so this file's comparison
+/// world must pin `globe-level=5` to keep comparing like-for-like terrain
+/// (see `entity_graph_unchanged`) — that pin mints a `terrain-pin` ledger
+/// fact the unpinned fixture never recorded, an artifact of how this test
+/// reconstructs the old default, not a genuine divergence.
+const CHANGED_OR_NEW_PREDICATES: [&str; 12] = [
     hornvale_kernel::NAME,
     hornvale_worldgen::NAME_GLOSS,
     hornvale_religion::DEITY_NAME,
@@ -46,6 +53,7 @@ const CHANGED_OR_NEW_PREDICATES: [&str; 11] = [
     hornvale_paleoclimate::facts::FOSSIL_SHORELINE,
     hornvale_paleoclimate::facts::REFUGIUM,
     hornvale_paleoclimate::facts::FROST_RETREAT,
+    hornvale_terrain::facts::TERRAIN_PIN,
 ];
 
 /// The ledger's facts, restricted to predicates whose shape didn't move
@@ -104,7 +112,22 @@ fn entity_graph_unchanged() {
         serde_json::from_str(include_str!("fixtures/pre-words-seed-42-world.json"))
             .expect("fixture parses");
 
-    let world = default_generated_seed_42();
+    // The fixture froze a level-5 world (Crust's `--globe-level` pin did not
+    // exist yet); pin the same level here so this keystone keeps comparing
+    // like-for-like terrain rather than confounding the naming-layer
+    // invariant it checks with the unrelated Crust terrain epoch (spec §5,
+    // §9 — a `GLOBE_LEVEL` bump is deliberately a different world).
+    let world = build_world(
+        Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins {
+            globe_level: Some(5),
+            ..Default::default()
+        },
+        &SettlementPins::default(),
+    )
+    .unwrap();
     // Round-trip through the save format, exactly as `hornvale new`/
     // `almanac` do and as the predecessor keystone compares (serde_json's
     // float round-trip quirk).

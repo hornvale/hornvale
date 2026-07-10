@@ -8,19 +8,28 @@
 <text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">375</text>
 <line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
 <text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">500</text>
-<rect x="64.5" y="226.0" width="96.6" height="10.0" fill="#5b8dd9" rx="2" />
-<text x="112.8" y="222.0" font-size="11" fill="currentColor" text-anchor="middle">25</text>
-<text x="112.8" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 112.8 252.0)">farmer,artisan,shaman,chief</text>
-<rect x="178.1" y="230.8" width="96.6" height="5.2" fill="#5b8dd9" rx="2" />
-<text x="226.4" y="226.8" font-size="11" fill="currentColor" text-anchor="middle">13</text>
-<text x="226.4" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 226.4 252.0)">farmer,chief</text>
-<rect x="291.7" y="226.4" width="96.6" height="9.6" fill="#5b8dd9" rx="2" />
-<text x="340.0" y="222.4" font-size="11" fill="currentColor" text-anchor="middle">24</text>
-<text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 340.0 252.0)">farmer,shaman,chief</text>
-<rect x="405.3" y="207.6" width="96.6" height="28.4" fill="#5b8dd9" rx="2" />
-<text x="453.6" y="203.6" font-size="11" fill="currentColor" text-anchor="middle">71</text>
-<text x="453.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 453.6 252.0)">fisher,chief</text>
-<rect x="518.9" y="89.2" width="96.6" height="146.8" fill="#5b8dd9" rx="2" />
-<text x="567.2" y="85.2" font-size="11" fill="currentColor" text-anchor="middle">367</text>
-<text x="567.2" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 567.2 252.0)">slave,farmer,artisan,shaman,chief</text>
+<rect x="61.3" y="230.8" width="60.4" height="5.2" fill="#5b8dd9" rx="2" />
+<text x="91.5" y="226.8" font-size="11" fill="currentColor" text-anchor="middle">13</text>
+<text x="91.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 91.5 252.0)">farmer,artisan,shaman,chief</text>
+<rect x="132.3" y="228.8" width="60.4" height="7.2" fill="#5b8dd9" rx="2" />
+<text x="162.5" y="224.8" font-size="11" fill="currentColor" text-anchor="middle">18</text>
+<text x="162.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 162.5 252.0)">farmer,chief</text>
+<rect x="203.3" y="220.0" width="60.4" height="16.0" fill="#5b8dd9" rx="2" />
+<text x="233.5" y="216.0" font-size="11" fill="currentColor" text-anchor="middle">40</text>
+<text x="233.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 233.5 252.0)">farmer,shaman,chief</text>
+<rect x="274.3" y="205.6" width="60.4" height="30.4" fill="#5b8dd9" rx="2" />
+<text x="304.5" y="201.6" font-size="11" fill="currentColor" text-anchor="middle">76</text>
+<text x="304.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 304.5 252.0)">fisher,chief</text>
+<rect x="345.3" y="235.2" width="60.4" height="0.8" fill="#5b8dd9" rx="2" />
+<text x="375.5" y="231.2" font-size="11" fill="currentColor" text-anchor="middle">2</text>
+<text x="375.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 375.5 252.0)">forager,chief</text>
+<rect x="416.3" y="235.6" width="60.4" height="0.4" fill="#5b8dd9" rx="2" />
+<text x="446.5" y="231.6" font-size="11" fill="currentColor" text-anchor="middle">1</text>
+<text x="446.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 446.5 252.0)">herder,chief</text>
+<rect x="487.3" y="96.4" width="60.4" height="139.6" fill="#5b8dd9" rx="2" />
+<text x="517.5" y="92.4" font-size="11" fill="currentColor" text-anchor="middle">349</text>
+<text x="517.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 517.5 252.0)">slave,farmer,artisan,shaman,chief</text>
+<rect x="558.3" y="235.6" width="60.4" height="0.4" fill="#5b8dd9" rx="2" />
+<text x="588.5" y="231.6" font-size="11" fill="currentColor" text-anchor="middle">1</text>
+<text x="588.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 588.5 252.0)">slave,farmer,warrior,artisan,shaman,chief</text>
 </svg>

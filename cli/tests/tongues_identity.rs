@@ -20,10 +20,18 @@ use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 /// new to The Words (Task 9), which glosses proper names but never touches
 /// this file's own pre-Tongues fixture or comparison — it's listed here only
 /// so this older keystone keeps passing against a world that now carries the
-/// newer predicate too. Excluded from the entity-structure / non-linguistic-
-/// fact comparison below — the same "superset, minus what's genuinely new"
-/// pattern `eyes_identity.rs` and `species_identity.rs` use.
-const CHANGED_OR_NEW_PREDICATES: [&str; 21] = [
+/// newer predicate too. `terrain-pin` is excluded for a different reason:
+/// the pre-Tongues fixture predates the Crust epoch's `--globe-level` pin
+/// entirely (it was built when level 5 was simply the unpinned default), so
+/// this file's comparison world must pin `globe-level=5` to keep comparing
+/// like-for-like terrain (see `entity_structure_and_non_linguistic_facts_
+/// match_the_pre_tongues_fixture`) — that pin mints a `terrain-pin` ledger
+/// fact the unpinned fixture never recorded, an artifact of how this test
+/// reconstructs the old default, not a genuine divergence. Excluded from the
+/// entity-structure / non-linguistic-fact comparison below — the same
+/// "superset, minus what's genuinely new" pattern `eyes_identity.rs` and
+/// `species_identity.rs` use.
+const CHANGED_OR_NEW_PREDICATES: [&str; 22] = [
     hornvale_kernel::NAME,
     hornvale_worldgen::NAME_GLOSS,
     hornvale_religion::TENET,
@@ -45,6 +53,7 @@ const CHANGED_OR_NEW_PREDICATES: [&str; 21] = [
     hornvale_paleoclimate::facts::FOSSIL_SHORELINE,
     hornvale_paleoclimate::facts::REFUGIUM,
     hornvale_paleoclimate::facts::FROST_RETREAT,
+    hornvale_terrain::facts::TERRAIN_PIN,
 ];
 
 /// The ledger's facts, restricted to predicates whose shape didn't move
@@ -103,7 +112,22 @@ fn entity_structure_and_non_linguistic_facts_match_the_pre_tongues_fixture() {
         serde_json::from_str(include_str!("fixtures/pre-tongues-seed-42-world.json"))
             .expect("fixture parses");
 
-    let world = default_generated_seed_42();
+    // The fixture froze a level-5 world (Crust's `--globe-level` pin did not
+    // exist yet); pin the same level here so this keystone keeps comparing
+    // like-for-like terrain rather than confounding the naming-layer
+    // invariant it checks with the unrelated Crust terrain epoch (spec §5,
+    // §9 — a `GLOBE_LEVEL` bump is deliberately a different world).
+    let world = build_world(
+        Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins {
+            globe_level: Some(5),
+            ..Default::default()
+        },
+        &SettlementPins::default(),
+    )
+    .unwrap();
     // Round-trip through the save format, exactly as `hornvale new`/`almanac`
     // do and as `eyes_identity.rs`/`species_identity.rs` compare (serde_json's
     // float round-trip quirk — see their comments for the full rationale).
