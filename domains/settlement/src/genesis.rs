@@ -7,6 +7,7 @@ use hornvale_kernel::{EntityId, Fact, LedgerError, Value, World};
 
 /// The fully-resolved per-cell data the composition root hands to genesis
 /// (placement geometry plus the name/biome/population the root drew or read).
+/// type-audit: pending(wave-3: cell), pending(wave-3: latitude), pending(wave-3: longitude), bare-ok(identifier-text: biome), bare-ok(identifier-text: name), bare-ok(count: population)
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlacedSettlement {
     /// The Geosphere cell id this settlement sits on.

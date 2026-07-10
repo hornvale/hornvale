@@ -9,6 +9,7 @@ use hornvale_kernel::CellId;
 
 /// The four suitability weights; per-species values are derived at the
 /// composition root from the psychology vector (spec §4).
+/// type-audit: bare-ok(ratio)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SuitabilityWeights {
     /// Weight on freshwater availability.
@@ -31,6 +32,7 @@ pub const BASELINE_WEIGHTS: SuitabilityWeights = SuitabilityWeights {
 
 /// The bare per-cell inputs the composition root assembles from terrain and
 /// climate. Settlement never imports those domains; it sees only this.
+/// type-audit: bare-ok(ratio: position), bare-ok(flag: habitable), bare-ok(ratio: freshwater), bare-ok(flag: coastal), pending(wave-3: temperature_c), bare-ok(ratio: hostility)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SiteInput {
     /// The cell this site sits on.
@@ -50,6 +52,7 @@ pub struct SiteInput {
 }
 
 /// A placed settlement's cell, position, and the suitability that earned it.
+/// type-audit: bare-ok(ratio)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Placement {
     /// The settlement's cell.
@@ -61,6 +64,7 @@ pub struct Placement {
 }
 
 /// Suitability under explicit weights; `None` if uninhabitable.
+/// type-audit: bare-ok(ratio)
 pub fn suitability_weighted(site: &SiteInput, w: &SuitabilityWeights) -> Option<f64> {
     if !site.habitable {
         return None;
@@ -77,6 +81,7 @@ pub fn suitability_weighted(site: &SiteInput, w: &SuitabilityWeights) -> Option<
 /// Score a site's suitability for settlement in `[0, 1]`; `None` if the cell
 /// is uninhabitable. Watered, coastal, temperate, calm cells score high;
 /// dry, inland, extreme, hostile cells score low.
+/// type-audit: bare-ok(ratio)
 pub fn suitability(site: &SiteInput) -> Option<f64> {
     suitability_weighted(site, &BASELINE_WEIGHTS)
 }
@@ -90,6 +95,7 @@ fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
 /// at the root). Sort by score descending, ties by ascending cell then
 /// ascending tag; greedily accept sites at least `min_separation_dot`-far
 /// from EVERY already-placed site regardless of tag, at or above `floor`.
+/// type-audit: bare-ok(ratio: min_separation_dot), bare-ok(ratio: floor), bare-ok(index: scored), bare-ok(index: return)
 pub fn place_tagged(
     scored: &[(SiteInput, f64, u32)],
     min_separation_dot: f64,
@@ -124,6 +130,7 @@ pub fn place_tagged(
 
 /// Place a spaced scatter under baseline weights (the original single-people
 /// path) — a tag-0 wrapper over `place_tagged`.
+/// type-audit: bare-ok(ratio)
 pub fn place(sites: &[SiteInput], min_separation_dot: f64, floor: f64) -> Vec<Placement> {
     let scored: Vec<(SiteInput, f64, u32)> = sites
         .iter()

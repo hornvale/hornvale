@@ -9,12 +9,16 @@
 //! −180→180 across, latitude 90→−90 down.
 
 /// ASCII overlay width in characters.
+/// type-audit: bare-ok(render-internal)
 pub const ASCII_WIDTH: usize = 72;
 /// ASCII overlay height in characters.
+/// type-audit: bare-ok(render-internal)
 pub const ASCII_HEIGHT: usize = 24;
 /// Raster overlay width in pixels; matches `hornvale_climate::render::MAP_WIDTH`.
+/// type-audit: bare-ok(render-internal)
 pub const MAP_WIDTH: usize = 256;
 /// Raster overlay height in pixels; `MAP_WIDTH / 2`.
+/// type-audit: bare-ok(render-internal)
 pub const MAP_HEIGHT: usize = 128;
 
 /// Equirectangular pixel coordinates for a (latitude, longitude) pair,
@@ -28,6 +32,7 @@ fn pixel_for(latitude: f64, longitude: f64, width: usize, height: usize) -> (usi
 /// Render a fixed 72×24 lon/lat grid of spaces, stamping `o` at each site and
 /// `@` at the flagship (stamped last, so it wins any overlap). One newline
 /// per row.
+/// type-audit: pending(wave-3: sites), pending(wave-3: flagship), bare-ok(artifact: return)
 pub fn settlement_ascii(sites: &[(f64, f64)], flagship: Option<(f64, f64)>) -> String {
     let mut grid = vec![vec![' '; ASCII_WIDTH]; ASCII_HEIGHT];
     for &(lat, lon) in sites {
@@ -71,6 +76,7 @@ fn overlay_pixels(base: &[u8], sites: &[(f64, f64)], flagship: Option<(f64, f64)
 /// Stamp settlement marks onto `base` (raw 256×128 RGB, e.g.
 /// `hornvale_climate::render::biome_pixels`) and encode as a PNG
 /// (decision 0018).
+/// type-audit: bare-ok(artifact: base), pending(wave-3: sites), pending(wave-3: flagship), bare-ok(artifact: return)
 pub fn overlay_png(base: &[u8], sites: &[(f64, f64)], flagship: Option<(f64, f64)>) -> Vec<u8> {
     hornvale_kernel::png::encode_rgb(
         MAP_WIDTH as u32,
