@@ -13,10 +13,13 @@ use hornvale_kernel::{Geosphere, NearestCellIndex, Seed, noise};
 /// Raster image width in pixels; the image is equirectangular, so height is
 /// `MAP_WIDTH / 2`. 1024×512; pixel ≈ 0.35°, fine enough to show the
 /// refined coastline.
+/// type-audit: bare-ok(render-internal)
 pub const MAP_WIDTH: u32 = 1024;
 /// ASCII map width in characters.
+/// type-audit: bare-ok(render-internal)
 pub const ASCII_WIDTH: u32 = 72;
 /// ASCII map height in characters (2:1 world on ~2:1-tall glyphs).
+/// type-audit: bare-ok(render-internal)
 pub const ASCII_HEIGHT: u32 = 24;
 
 /// Peak coastal displacement, meters. Bounds |refined − interpolated|.
@@ -165,6 +168,7 @@ fn elevation_pixels(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) ->
 
 /// Render the globe as an equirectangular PNG (decision 0018). Same globe,
 /// same seed, same bytes.
+/// type-audit: bare-ok(artifact)
 pub fn elevation_png(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) -> Vec<u8> {
     hornvale_kernel::png::encode_rgb(
         MAP_WIDTH,
@@ -175,6 +179,7 @@ pub fn elevation_png(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) -
 
 /// Render the globe as a 72×24 ASCII map: '~' ocean, '.' lowland, '+'
 /// hills, '^' mountains, 'A' high peaks. One newline per row.
+/// type-audit: bare-ok(artifact)
 pub fn elevation_ascii(geo: &Geosphere, globe: &TectonicGlobe) -> String {
     let index = NearestCellIndex::new(geo);
     let mut out = String::with_capacity(((ASCII_WIDTH + 1) * ASCII_HEIGHT) as usize);

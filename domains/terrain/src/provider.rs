@@ -43,31 +43,37 @@ impl GeneratedTerrain {
     }
 
     /// Degradation notes recorded at genesis.
+    /// type-audit: bare-ok(prose)
     pub fn notes(&self) -> &[String] {
         &self.notes
     }
 
     /// Elevation at a cell, meters.
+    /// type-audit: waiver(elevation-convention)
     pub fn elevation_at(&self, id: CellId) -> f64 {
         *self.globe.elevation.get(id)
     }
 
     /// Unrest at a cell, in [0, 1].
+    /// type-audit: bare-ok(ratio)
     pub fn unrest_at(&self, id: CellId) -> f64 {
         *self.globe.unrest.get(id)
     }
 
     /// The plate a cell belongs to.
+    /// type-audit: bare-ok(index)
     pub fn plate_of(&self, id: CellId) -> u32 {
         *self.globe.plate_of.get(id)
     }
 
     /// Sea level, meters.
+    /// type-audit: pending(wave-2)
     pub fn sea_level(&self) -> f64 {
         self.globe.sea_level
     }
 
     /// Whether a cell lies strictly below sea level.
+    /// type-audit: bare-ok(flag)
     pub fn is_ocean(&self, id: CellId) -> bool {
         self.elevation_at(id) < self.globe.sea_level
     }
@@ -81,6 +87,7 @@ impl GeneratedTerrain {
     /// product with the coordinate's unit vector; ties break to the lower
     /// cell id. Inverts the kernel's coord convention — latitude = asin(z),
     /// longitude = atan2(y, x) — so `nearest_cell(coord(c))` returns `c`.
+    /// type-audit: pending(wave-2: latitude), pending(wave-2: longitude)
     pub fn nearest_cell(&self, latitude: f64, longitude: f64) -> CellId {
         let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
         let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
@@ -97,11 +104,13 @@ impl GeneratedTerrain {
     }
 
     /// Flow-accumulation drainage at a cell (upstream land-cell count; 0 on ocean).
+    /// type-audit: bare-ok(count)
     pub fn drainage_at(&self, id: CellId) -> f64 {
         *self.globe.drainage.get(id)
     }
 
     /// Whether a cell is an endorheic (interior-draining) land cell.
+    /// type-audit: bare-ok(flag)
     pub fn is_endorheic(&self, id: CellId) -> bool {
         *self.globe.endorheic.get(id)
     }

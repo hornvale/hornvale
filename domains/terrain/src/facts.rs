@@ -5,17 +5,23 @@ use crate::globe::{GenesisOutcome, summarize};
 use hornvale_kernel::{EntityId, Fact, LedgerError, Value, World};
 
 /// Predicate: how many plates the globe has (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const PLATE_COUNT: &str = "plate-count";
 /// Predicate: achieved ocean fraction (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const OCEAN_FRACTION: &str = "ocean-fraction";
 /// Predicate: sea level in meters (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const SEA_LEVEL_M: &str = "sea-level-m";
 /// Predicate: highest cell elevation in meters (functional, Number).
+/// type-audit: bare-ok(identifier-text)
 pub const HIGHEST_ELEVATION_M: &str = "highest-elevation-m";
 /// Predicate: one round-trippable terrain pin string per pinned value
 /// (non-functional, Text) — the terrain sibling of astronomy's scenario-pin.
+/// type-audit: bare-ok(identifier-text)
 pub const TERRAIN_PIN: &str = "terrain-pin";
 /// Predicate: a note recorded during tectonic genesis (non-functional, Text).
+/// type-audit: bare-ok(identifier-text)
 pub const TERRAIN_NOTE: &str = "terrain-note";
 
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
