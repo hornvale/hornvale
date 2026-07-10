@@ -1,29 +1,19 @@
 # The Orrery of Seed 42
 
-A year in the life of seed 42's system: the world circling its star, the moons
-turning through their synodic phases. Generated deterministically — this seed
-always yields this animation.
+The seed-42 system, computed live in your browser from the data the simulation
+emitted — [`scene-system-seed-42.json`](./scene-system-seed-42.json) (the orbital
+elements) and [`scene-tiles-seed-42.json`](./scene-tiles-seed-42.json) (the real
+terrain). The star is drawn from its class, the moons show their true phase, and
+the world is its own globe — its actual continents, spinning at its day rate,
+tilted at its obliquity, with the day/night line sweeping across.
 
-### Single-width Unicode
+<div id="orrery-holder">
+  <canvas id="orrery-canvas" width="640" height="640" style="max-width:100%"></canvas>
+  <div id="orrery-controls" style="font-family:monospace;margin-top:.5em"></div>
+</div>
 
-<div id="orrery"></div>
-
-### Emoji (experimental — needs an emoji-capable, two-column font)
-
-The same schematic on a two-column-per-cell grid, its moons the phase emoji
-`🌑🌓🌕🌗`. Emoji are unconditionally double-width, so the grid is built for it;
-whether it aligns depends on the player's font.
-
-<div id="orrery-emoji"></div>
-<script>
-  document.addEventListener('DOMContentLoaded', function () {
-    AsciinemaPlayer.create('./orrery-seed-42.cast', document.getElementById('orrery'), { loop: true, autoPlay: true, cols: 61, rows: 31 });
-    AsciinemaPlayer.create('./orrery-emoji-seed-42.cast', document.getElementById('orrery-emoji'), { loop: true, autoPlay: true, cols: 122, rows: 31 });
-  });
-</script>
-
-[Download the Unicode .cast](./orrery-seed-42.cast) · [Download the emoji .cast](./orrery-emoji-seed-42.cast)
+<script type="module" src="./orrery.js"></script>
 
 ---
 
-*Generated deterministically: this seed always yields this animation.*
+*Generated deterministically: this seed always yields this system.*
