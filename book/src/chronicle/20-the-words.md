@@ -108,7 +108,7 @@ proper-name stem alongside the site-concept compound (down to
 the residual rate traced to stem entropy (down to 4.91% at the
 CI-guarded 500-seed population, 4.94% at 10k — a ~17.6x improvement over
 the first measurement). The bound stood at 4.678% throughout. The final
-figure misses it by 0.24 percentage points. Per ADR 0016, the bound was
+figure misses it by 0.23 percentage points. Per ADR 0016, the bound was
 not widened to let the claim pass; the measured rate is pinned as-is and
 H4 is recorded as failed. Whether the bound itself — inherited from a
 free-stem era this campaign's own design retired — was ever the right

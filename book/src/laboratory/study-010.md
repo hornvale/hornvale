@@ -206,7 +206,7 @@ collision rate of **4.94%** (mean 0.049392021358371), with **3,327 of
 `name_collision_rate_is_measured_and_pinned`. This is a **~17.6x
 improvement over the defective first measurement — and still, narrowly,
 above the preregistered directional bound** (4.678%; the 500-seed mean
-misses it by 0.24 percentage points, about 1.05x the bound): the claim,
+misses it by 0.23 percentage points, about 1.05x the bound): the claim,
 as stated, **remains failed**, and per ADR 0016 the bound is not widened
 — the measured rate is pinned as-is and the failure stands recorded.
 
