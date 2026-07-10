@@ -55,11 +55,12 @@ directly) and can still write its frames to a synthetic-timed `.cast`
 recording for offline viewing.
 
 The book's gallery has moved past that static playback. [The Orrery of Seed
-42](../gallery/orrery-seed-42.md) is now the workspace's first *situated-scene*
-client (decision 0022 — the sim emits bytes, clients render pixels): a
-dependency-free browser page (`clients/orrery/`) that fetches two committed
-documents — `scene/system/v1` (the orbital elements) and `scene/tiles/v1` (the
-world's real terrain) — and computes the animation itself, live, from an
+42](../gallery/orrery-seed-42.md) is now a live browser client, standing
+beside the atlas in the same posture (decision 0022 — the sim emits bytes,
+clients render pixels): a dependency-free browser page (`clients/orrery/`)
+that fetches two committed documents — `scene/system/v1` (the orbital
+elements) and `scene/tiles/v1` (the world's real terrain) — and computes
+the animation itself, live, from an
 ephemeris pinned against `hornvale orrery`'s own phases. The star glows in its
 tint; each moon's phase and lit limb agree with the terminal render; and the
 world is drawn as its own spinning globe, textured with the generated
