@@ -30,15 +30,25 @@
 //!    hobgoblin and bugbear species entities: the new peoples this
 //!    campaign exists to add are really there.
 //! 5. `goblin_names_are_rebaselined_not_frozen` — goblin's committed
-//!    settlement names DIFFER from the pre-Branches fixture's (frozen at
-//!    Task 2, back when only goblin and kobold competed for cells) —
-//!    proof the re-derivation actually happened, not a no-op merge.
+//!    settlement names are non-empty AND DIFFER from the pre-Branches
+//!    fixture's (frozen at Task 2, back when only goblin and kobold
+//!    competed for cells) — proof the re-derivation actually happened, not
+//!    a no-op merge, and (since the founder floor, MAP-22 K=1) proof
+//!    goblin still places real settlements in the shared four-people
+//!    world rather than being boxed out to zero.
 //! 6. `every_goblinoid_words_root_is_in_its_own_daughters_inventory` — the
 //!    family-consistency guard (Task 6, mirrored here from
 //!    `windows/worldgen/src/lib.rs`'s own
 //!    `every_goblinoid_word_is_in_its_inventory`): every goblinoid
 //!    daughter's every `Root` lexicon entry's evolved/nativized form draws
 //!    only from that daughter's own phonology inventory, never a cousin's.
+//! 7. `hobgoblin_and_bugbear_each_hold_at_least_one_committed_settlement_name`
+//!    — the founder floor's world-level guarantee (settlement's
+//!    founder-reservation pass, MAP-22 allocation-at-K=1): every placed
+//!    people, however weak its suitability score against its
+//!    competitors, wins at least one cell and therefore commits at least
+//!    one settlement name. Pinned here as an invariant of the shipped
+//!    world, not merely of the algorithm's unit tests.
 
 use hornvale_kernel::{Seed, Value, World};
 use hornvale_language::LexEntry;
@@ -160,13 +170,16 @@ fn hobgoblin_and_bugbear_are_present() {
     );
 }
 
-/// (5) Goblin re-baselined: goblin's committed settlement names DIFFER
-/// from the pre-Branches fixture's (frozen at Task 2, when only goblin
-/// and kobold competed for cells) — proving the re-derivation actually
-/// happened world-wide, not that this file forgot to check. This is the
-/// one comparison this keystone makes against the OLD, two-peoples
-/// world, and it is deliberately an inequality: "goblin structure
-/// unchanged" would be false.
+/// (5) Goblin re-baselined: goblin's committed settlement names are
+/// non-empty AND DIFFER from the pre-Branches fixture's (frozen at Task
+/// 2, when only goblin and kobold competed for cells) — proving both
+/// that the re-derivation actually happened world-wide (not a no-op
+/// merge) and that, since the founder floor (settlement's
+/// founder-reservation pass, MAP-22 K=1), goblin still places real
+/// settlements in the shared four-people world rather than being boxed
+/// out to zero by a stronger competitor. This is the one comparison this
+/// keystone makes against the OLD, two-peoples world, and the inequality
+/// is deliberate: "goblin structure unchanged" would be false.
 #[test]
 fn goblin_names_are_rebaselined_not_frozen() {
     let fixture: World =
@@ -181,32 +194,40 @@ fn goblin_names_are_rebaselined_not_frozen() {
         !fixture_names.is_empty(),
         "the pre-Branches fixture should place at least one goblin settlement"
     );
-    // NOTE (findings for a follow-up task, not silently smoothed over
-    // here): under the current `species_weights` formula
-    // (windows/worldgen/src/lib.rs) hobgoblin's psychology-derived
-    // suitability weights are at least as favorable as goblin's on every
-    // terrain axis (freshwater, coast, hostility-tolerance), so hobgoblin
-    // weakly Pareto-dominates goblin at every cell; combined with the
-    // shared joint-greedy placement pass (position-only spacing, tag-
-    // agnostic), this means goblin wins ZERO cells against hobgoblin in
-    // any unpinned world — confirmed across seeds 0..50 with no exception,
-    // not a seed-42 coincidence. `world_names` below is therefore the
-    // empty list. This still truthfully proves the re-derivation happened
-    // (an empty list is not the fixture's non-empty one) — in fact in the
-    // starkest possible form — but this test deliberately does NOT assert
-    // `!world_names.is_empty()`, unlike the fixture check above: that
-    // would currently be false, and pinning it to true would hide a real
-    // placement-dominance finding rather than surface it.
+    assert!(
+        !world_names.is_empty(),
+        "goblin must still place at least one settlement in the current \
+         four-people world — a stronger competitor's suitability score \
+         must never box a placed people out to zero"
+    );
     assert_ne!(
         world_names, fixture_names,
         "goblin's committed settlement names must differ from the \
          pre-Branches fixture — adding hobgoblin and bugbear to the same \
-         placement pass shifts which cells goblin wins world-wide (down to \
-         zero, at this seed, under the current psychology-vector-derived \
-         suitability weights), so its own names re-derive too; \
-         byte-identity here would mean The Branches never actually \
-         touched placement"
+         placement pass shifts which cells goblin wins world-wide, so its \
+         own names re-derive too; byte-identity here would mean The \
+         Branches never actually touched placement"
     );
+}
+
+/// (7) Founder-floor world invariant: hobgoblin and bugbear — the two
+/// peoples weakest under the current suitability-scoring formula — each
+/// still hold at least one committed settlement name in the shared,
+/// unpinned seed-42 world. This is the founder floor's guarantee
+/// (settlement's founder-reservation pass, MAP-22 allocation-at-K=1)
+/// pinned as a fact about the shipped world, not merely about the
+/// algorithm's own unit tests (`domains/settlement/src/placement.rs`).
+#[test]
+fn hobgoblin_and_bugbear_each_hold_at_least_one_committed_settlement_name() {
+    let world = default_generated_seed_42();
+    for species in ["hobgoblin", "bugbear"] {
+        let names = settlement_names_of_species(&world, species);
+        assert!(
+            !names.is_empty(),
+            "{species} must hold at least one committed settlement name \
+             under the founder floor; got none"
+        );
+    }
 }
 
 /// (6) Family inventory-closure: every goblinoid daughter's every `Root`
