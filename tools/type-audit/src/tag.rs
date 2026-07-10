@@ -8,6 +8,9 @@ pub const BARE_OK_CLASSES: &[&str] = &[
     "constructor-edge",
     "envelope",
     "identifier-text",
+    "prose",
+    "artifact",
+    "diagnostic-value",
     "render-internal",
     "flag",
 ];
@@ -169,5 +172,19 @@ mod tests {
         assert!(parse_tag("type-audit: frobnicate(x)").is_err()); // unknown verdict
         assert!(parse_tag("type-audit: pending(wave-x)").is_err()); // non-numeric wave
         assert!(parse_tag("type-audit: bare-ok(count)\ntype-audit: waiver(y)").is_err()); // two lines
+    }
+
+    #[test]
+    fn parses_ratified_campaign27_classes() {
+        for class in ["prose", "artifact", "diagnostic-value"] {
+            let got = parse_tag(&format!("type-audit: bare-ok({class})")).unwrap();
+            assert_eq!(
+                got,
+                vec![Verdict::BareOk {
+                    class: class.to_string(),
+                    position: None
+                }]
+            );
+        }
     }
 }
