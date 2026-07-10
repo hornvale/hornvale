@@ -831,7 +831,7 @@ mod tests {
         let mut exposures = BTreeMap::new();
         exposures.insert("water".to_string(), ExposureClass::Steeped);
         exposures.insert("fire".to_string(), ExposureClass::Steeped);
-        build_lexicon(&Seed(seed), "test", &ph, &exposures)
+        build_lexicon(&Seed(seed), "test", "test", &ph, &ph, &exposures)
     }
 
     /// An empty lexicon (no concepts at all) — every site concept
@@ -839,7 +839,7 @@ mod tests {
     /// branch.
     fn empty_lexicon(seed: u64) -> Lexicon {
         let ph = wordy_ph();
-        build_lexicon(&Seed(seed), "test", &ph, &BTreeMap::new())
+        build_lexicon(&Seed(seed), "test", "test", &ph, &ph, &BTreeMap::new())
     }
 
     #[test]

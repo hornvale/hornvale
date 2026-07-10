@@ -977,9 +977,14 @@ fn exposure_of_impl(
 pub fn lexicon_of(world: &World, species: &str) -> Result<hornvale_language::Lexicon, BuildError> {
     let ph = language_of(world, species);
     let exposures = exposure_of(world, species)?;
+    // Singleton shim (Task 4): family == species and proto_ph == ph until
+    // Task 6 resolves real family membership; this reproduces the pre-family
+    // draw exactly.
     Ok(hornvale_language::build_lexicon(
         &world.seed,
         species,
+        species,
+        &ph,
         &ph,
         &exposures,
     ))
@@ -1316,7 +1321,10 @@ pub fn build_world_with_roster(
             .expect("a phonology was built for every placed species");
         lexicons.insert(
             def.name,
-            hornvale_language::build_lexicon(&seed, def.name, ph, &exposures),
+            // Singleton shim (Task 4): family == species and proto_ph == ph
+            // until Task 6 resolves real family membership; this reproduces
+            // the pre-family draw exactly.
+            hornvale_language::build_lexicon(&seed, def.name, def.name, ph, ph, &exposures),
         );
     }
 
