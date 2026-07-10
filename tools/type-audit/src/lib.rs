@@ -3,6 +3,7 @@
 #![warn(missing_docs)]
 
 pub mod args;
+pub mod audit;
 pub mod extract;
 pub mod primitives;
 pub mod tag;
