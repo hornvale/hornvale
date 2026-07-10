@@ -68,3 +68,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0026](0026-slugs-not-numbers.md) | Slugs, not numbers (the last numbered decision) | Accepted |
 | [`…parser-libraries`](non-workspace-dev-tools-may-use-parser-libraries.md) | Non-workspace dev tools may use parser libraries | Accepted |
 | [`the-bare-ok-rubric`](the-bare-ok-rubric.md) | The bare-ok rubric for primitives at API boundaries | Accepted |
+| [`ci-checks-500-seed-censuses`](ci-checks-500-seed-censuses.md) | CI checks 500-seed censuses; 10k runs are author-time | Accepted |

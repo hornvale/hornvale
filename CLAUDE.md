@@ -33,7 +33,7 @@ cargo run -p hornvale -- almanac --world world.json
 cargo run -p hornvale -- map --world world.json --out elevation.ppm
 cargo run -p hornvale -- concepts        # registry dump (book reference page)
 cargo run -p hornvale -- streams         # stream manifest (book reference page)
-cargo run -p hornvale -- lab run studies/census-drift.study.json
+cargo run -p hornvale -- lab run studies/census-lands-drift.study.json
 cargo run -p hornvale -- lab list-metrics
 
 # The type audit — a standalone tool OUTSIDE the workspace (decisions
@@ -50,7 +50,7 @@ cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/ty
 cargo run -p hornvale-kernel --example first_light
 cargo run -p hornvale -- new --seed 42 --out /tmp/hv.json
 cargo run -p hornvale -- almanac --world /tmp/hv.json > book/src/gallery/almanac-seed-42-sky.md
-cargo run -p hornvale -- lab run studies/census-drift.study.json
+cargo run -p hornvale -- lab run studies/census-lands-drift.study.json
 git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/
 
 # The project book:
