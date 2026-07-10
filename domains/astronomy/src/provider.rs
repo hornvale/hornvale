@@ -372,7 +372,7 @@ impl GeneratedSky {
         &self.calendar
     }
     /// Genesis notes recorded during generation.
-    /// type-audit: bare-ok(identifier-text)
+    /// type-audit: bare-ok(prose)
     pub fn notes(&self) -> &[String] {
         &self.notes
     }

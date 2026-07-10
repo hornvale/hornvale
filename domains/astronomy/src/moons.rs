@@ -46,7 +46,7 @@ fn derive_moon(mass: f64, distance: f64, anchor: &Anchor) -> Moon {
 /// Generate the moons: count drawn or pinned; each admitted only past the
 /// stability inequalities, with a bounded redraw budget. Returns moons and
 /// notes about any degradation that occurred.
-/// type-audit: bare-ok(identifier-text)
+/// type-audit: bare-ok(prose)
 pub fn generate_moons(
     astronomy_seed: Seed,
     star: &Star,

@@ -141,7 +141,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
 pub struct ConstantSun;
 
 /// What the sky looks like at a given moment.
-/// type-audit: bare-ok(identifier-text)
+/// type-audit: bare-ok(prose: description), bare-ok(identifier-text: bodies)
 #[derive(Debug, Clone, PartialEq)]
 pub struct SkyReport {
     /// Human-readable description of the sky.

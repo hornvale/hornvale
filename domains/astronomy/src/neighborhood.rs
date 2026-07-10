@@ -28,7 +28,7 @@ pub struct Neighbor {
 
 impl Neighbor {
     /// The normative night-sky description of this star.
-    /// type-audit: bare-ok(identifier-text)
+    /// type-audit: bare-ok(prose)
     pub fn night_description(&self) -> String {
         format!("a {} star that does not wander", self.color)
     }

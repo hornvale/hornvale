@@ -102,7 +102,7 @@ pub enum ForcingPin {
 }
 
 /// Why sky genesis refused to produce a system.
-/// type-audit: bare-ok(identifier-text)
+/// type-audit: bare-ok(identifier-text: InvalidPin.pin), bare-ok(prose: InvalidPin.reason), bare-ok(identifier-text: UnsatisfiablePin.pin), bare-ok(prose: UnsatisfiablePin.reason)
 #[derive(Debug, Clone, PartialEq)]
 pub enum GenesisError {
     /// A pin's value is outside its legal range.
@@ -189,7 +189,7 @@ pub fn pin_strings(pins: &SkyPins) -> Vec<String> {
 /// Parse one `key=value` pin string (as produced by `pin_strings`) into
 /// `pins`, overwriting whichever field it names. Unknown keys or malformed
 /// values are user-facing errors naming the offending key/value.
-/// type-audit: bare-ok(identifier-text)
+/// type-audit: bare-ok(identifier-text: s), bare-ok(prose: return)
 pub fn parse_pin(s: &str, pins: &mut SkyPins) -> Result<(), String> {
     let (key, value) = s
         .split_once('=')
