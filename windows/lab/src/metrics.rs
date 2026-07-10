@@ -1604,7 +1604,7 @@ fn name_gloss_true(v: &WorldView) -> MetricValue {
 /// Whether every `species` lexicon `Root` entry's recorded sound-change
 /// derivation replays byte-identically through `evolve` (Neogrammarian
 /// regularity, spec §9.1) — the per-species aggregate of
-/// `cli/tests/words_identity.rs`'s `derivations_replay`. `Absent` if
+/// `cli/tests/branches_coverage.rs`'s `derivations_replay`. `Absent` if
 /// `species` is not in this world's roster or its lexicon minted no `Root`.
 fn lexicon_regular(v: &WorldView, species: &str) -> MetricValue {
     if !v.roster.iter().any(|d| d.name == species) {
@@ -1930,7 +1930,12 @@ fn inventory_closure(v: &WorldView, species: &str) -> MetricValue {
 /// `species` is expected to be a goblinoid daughter (a singleton family
 /// like kobold draws its own proto directly from its own inventory, so this
 /// is always 0 there — not a meaningful measurement, though not excluded by
-/// this function). `Absent` if `species` minted no Root.
+/// this function). This is a PROXY — "how many proto contrasts this
+/// daughter's inventory cannot hold," probed by re-nativizing each raw
+/// proto segment in isolation — not a literal count of the substitutions
+/// `evolve` performed on the surface forms (a cascade rule may change or
+/// delete a segment before word-level nativization ever sees it). `Absent`
+/// if `species` minted no Root.
 fn divergence_magnitude(v: &WorldView, species: &str) -> MetricValue {
     if !in_roster(v, species) {
         return MetricValue::Absent;

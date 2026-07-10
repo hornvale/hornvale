@@ -151,6 +151,12 @@ fn founder_pass(scored: &[(SiteInput, f64, u32)]) -> (Vec<(Placement, u32)>, BTr
 /// ascending cell then ascending tag; greedily accepts sites at least
 /// `min_separation_dot`-far from EVERY already-placed site (founder or
 /// competitive) regardless of tag, at or above `floor`.
+///
+/// Note the founder pass changes what `floor` (the `--min-suitability` pin)
+/// means: because every tag's founder cell is reserved before the floor
+/// applies, a high floor caps a tag at its single founder settlement but can
+/// never drive a placed tag to zero — unlike the pre-founder behaviour,
+/// where a floor above a tag's best score emptied that tag entirely.
 /// type-audit: bare-ok(ratio: min_separation_dot), bare-ok(ratio: floor), bare-ok(index: scored), bare-ok(index: return)
 pub fn place_tagged(
     scored: &[(SiteInput, f64, u32)],

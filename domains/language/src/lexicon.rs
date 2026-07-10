@@ -393,9 +393,13 @@ mod tests {
     }
 
     #[test]
-    fn two_daughters_share_a_proto_root_but_differ() {
+    fn two_daughters_share_a_proto_root() {
         // same family + proto_ph, different species (different cascades/ph):
-        // cognates — same proto, related-but-distinct modern forms.
+        // cognates share their proto exactly. That their MODERN forms also
+        // diverge is real but seed-fragile per concept, so it is asserted
+        // world-level instead (worldgen's
+        // `goblinoid_daughters_actually_diverge`, the Lab `divergence_real`
+        // metric), never here.
         let proto_ph = test_phonology();
         let gob_ph = daughter_ph("goblin");
         let hob_ph = daughter_ph("hobgoblin");
@@ -407,7 +411,7 @@ mod tests {
     }
 
     /// Pin-isolation (Task 7, spec §3), the other direction from
-    /// [`two_daughters_share_a_proto_root_but_differ`]: the proto-root draw
+    /// [`two_daughters_share_a_proto_root`]: the proto-root draw
     /// inside `build_lexicon` must be keyed on `family`, never on
     /// `species`. Same `species`, same `proto_ph`, two different `family`
     /// labels — a regression that called `proto_root(seed, species, ...)`

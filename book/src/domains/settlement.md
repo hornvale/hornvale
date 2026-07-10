@@ -66,7 +66,11 @@ about.
 the placement floor and is persisted as a round-trippable
 `settlement-pin` scenario fact for inspection, though — unlike terrain and
 sky pins — settlements are never *reconstructed* from it: once placed, a
-settlement is its own committed fact, not a re-derived field. Choosing which
+settlement is its own committed fact, not a re-derived field. Since the
+founder pass (The Branches), the floor no longer binds absolutely: each
+placed species' single best cell is reserved *before* the floor applies, so
+a high `--min-suitability` caps a species at its one founder settlement but
+can never drive a placed species to zero. Choosing which
 placed site becomes the flagship is not yet pinnable (deferred, spec §9);
 the flagship is always the suitability argmax.
 

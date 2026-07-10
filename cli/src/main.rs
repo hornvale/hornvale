@@ -61,7 +61,9 @@ const TERRAIN_FLAGS: &str = "\
 ";
 
 const SETTLEMENT_FLAGS: &str = "\
-  [--min-suitability F]                    pin the settlement placement floor (0-1)
+  [--min-suitability F]                    pin the settlement placement floor (0-1); each species' single
+                                           best (founder) cell bypasses it, so no floor drops a placed
+                                           species below one settlement
   --species <NAME>  place only this species (default: all known species)
 ";
 
