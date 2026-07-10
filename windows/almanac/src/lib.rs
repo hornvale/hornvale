@@ -11,6 +11,7 @@ use hornvale_terrain::PlaceInfo;
 /// One species' flagship settlement, rendered as its own block under The
 /// People. Replaces the old single `village`/`culture_lines` pair now that
 /// worlds hold more than one species.
+/// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: noun), bare-ok(identifier-text: name), bare-ok(count: population), bare-ok(prose: culture_lines)
 pub struct PeopleBlock {
     /// The species name ("goblin", "kobold").
     pub species: String,
@@ -31,6 +32,7 @@ pub struct PeopleBlock {
 /// psychology vector, then calls `hornvale_language::render_line`; the
 /// almanac only ever displays the resulting string, never the structured
 /// fields directly.
+/// type-audit: bare-ok(prose: tenet)
 pub struct BeliefLine {
     /// The belief's structured content (deity, epithet, sentiment, rank).
     pub belief: Belief,
@@ -40,6 +42,7 @@ pub struct BeliefLine {
 
 /// One community's pantheon, ready to render: the species and settlement
 /// it belongs to, its cult form, and its beliefs in salience order.
+/// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: noun), bare-ok(identifier-text: settlement), bare-ok(identifier-text: cult_form)
 pub struct PantheonBlock {
     /// The species name ("goblin", "kobold"); empty for legacy saves that
     /// predate species facts.
@@ -56,6 +59,7 @@ pub struct PantheonBlock {
 }
 
 /// Everything the almanac needs, gathered by the composition root.
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines)
 pub struct AlmanacContext {
     /// The world seed, for the title.
     pub seed: u64,
@@ -91,6 +95,7 @@ pub struct AlmanacContext {
 
 /// Render the one-page world document as markdown. Deterministic: same
 /// context, same bytes.
+/// type-audit: bare-ok(artifact: return)
 pub fn render(ctx: &AlmanacContext) -> String {
     let mut doc = String::new();
     doc.push_str(&format!("# The Almanac of Seed {}\n\n", ctx.seed));
