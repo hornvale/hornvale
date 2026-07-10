@@ -11,7 +11,7 @@
 //! (onset/nucleus/coda templates filled by picking from the phonology's
 //! inventory), over its own seed-derivation path, via
 //! [`crate::naming::Namer::draw_syllables`] and
-//! [`crate::naming::views_of`] — never constructing a
+//! [`crate::naming::segments_of`] — never constructing a
 //! [`crate::phoneme::Segment`] itself, the same carry-forward invariant
 //! naming relies on to keep the `"?"` fallback glyph unreachable.
 #![warn(missing_docs)]
@@ -156,7 +156,7 @@ pub fn proto_root(seed: &Seed, species: &str, concept: &str, ph: &Phonology) -> 
         PROTO_ROOT_SYLLABLE_RANGE.1,
         false,
     );
-    crate::naming::views_of(&syllables).0
+    crate::naming::segments_of(&syllables)
 }
 
 /// Whether `seg` is a consonant (used by the two structural rules, which
