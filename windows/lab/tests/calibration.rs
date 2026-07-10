@@ -1003,6 +1003,14 @@ fn null_control_name_length_smd_is_pinned() {
     // stream draws feeding each settlement's glossed name even in a solo
     // build — moving the SMD by a fraction of its own scale, still well
     // inside the sampling bound above.
+    //
+    // Quantization epoch (2026-07-10): re-measured again (was
+    // -0.068569499085015 pre-quantize). `census-of-the-meeting`'s fixture
+    // was regenerated under `kernel/src/quantize.rs` (floats canonicalized
+    // at the ledger-commit boundary), nudging the settlement lat/long that
+    // feeds culled-vantage naming by sub-quantum amounts — moving this SMD
+    // by ~1e-8, an order of magnitude below every prior re-pin here and
+    // still comfortably inside the sampling bound above.
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let namelen = std_mean_diff(
@@ -1010,7 +1018,7 @@ fn null_control_name_length_smd_is_pinned() {
         nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
     assert!(
-        (namelen - -0.068_569_499_085_015).abs() < 1e-9,
+        (namelen - -0.068_569_489_200_608).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
