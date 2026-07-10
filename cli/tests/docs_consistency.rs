@@ -175,18 +175,25 @@ fn registry_ids_are_unique() {
             continue;
         };
         let cell = rest.split('|').next().unwrap_or("").trim();
-        // An ID is a category prefix, a hyphen, a number, and an optional
-        // sub-letter: MAP-9, MAP-9a, LANG-1. Anything else is a header or
-        // separator cell.
+        // An ID is a category prefix, a hyphen, and either a number with an
+        // optional sub-letter (MAP-9, MAP-9a, LANG-1 — the frozen numbered
+        // era) or a lowercase slug (SKY-eclipse-seasons — decision
+        // `0026-slugs-not-numbers`). Anything else is a header or separator
+        // cell.
         let looks_like_id = cell.split_once('-').is_some_and(|(pre, post)| {
-            !pre.is_empty()
-                && pre.chars().all(|c| c.is_ascii_uppercase())
-                && !post.is_empty()
+            let numbered = post.starts_with(|c: char| c.is_ascii_digit())
                 && post
                     .trim_end_matches(|c: char| c.is_ascii_lowercase())
                     .chars()
-                    .all(|c| c.is_ascii_digit())
-                && post.starts_with(|c: char| c.is_ascii_digit())
+                    .all(|c| c.is_ascii_digit());
+            let slug = post.starts_with(|c: char| c.is_ascii_lowercase())
+                && post
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+            !pre.is_empty()
+                && pre.chars().all(|c| c.is_ascii_uppercase())
+                && !post.is_empty()
+                && (numbered || slug)
         });
         if looks_like_id && !seen.insert(cell.to_string()) {
             dupes.push(cell.to_string());
