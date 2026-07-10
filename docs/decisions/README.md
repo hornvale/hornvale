@@ -65,3 +65,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0023](0023-in-repo-clients-carry-their-own-toolchains.md) | In-repo clients carry their own toolchains | Accepted |
 | [0024](0024-settlement-name-uniqueness-is-reference-time.md) | Settlement-name uniqueness is a reference-time property | Accepted |
 | [0025](0025-one-concept-name-one-owner.md) | One concept name, one owner | Accepted |
+| [0026](0026-slugs-not-numbers.md) | Slugs, not numbers (the last numbered decision) | Accepted |
