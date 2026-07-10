@@ -501,9 +501,14 @@ mod tests {
         let out = drive("village\ncastes\nbeliefs\nquit\n");
         assert!(out.contains("population"));
         // Castes are emergent now (Campaign 4b): every settlement grows at
-        // least a worker and a chief (`structure`'s invariant), but which
-        // higher roles appear depends on its actual environment.
-        assert!(out.contains("chief"));
+        // least a worker and a top rung (`structure`'s invariant), but
+        // which higher roles appear depends on its actual environment.
+        // Since The Branches, seed 42's constant-sky flagship is hobgoblin
+        // (its psychology-derived suitability weights beat goblin's and
+        // bugbear's on every terrain axis under the joint placement pass —
+        // see `cli/tests/branches_identity.rs`), so the top rung reported
+        // here is hobgoblin's own word, "warlord", not goblin's "chief".
+        assert!(out.contains("warlord"));
         assert!(out.contains("1."));
     }
 
@@ -733,8 +738,12 @@ mod tests {
             .and_then(|s| s.parse().ok())
             .expect("beliefs lists at least one id");
         let recounted = drive_generated(&format!("why {first_id}\n"));
+        // Since The Branches, hobgoblin (not goblin) wins seed 42's
+        // generated-sky flagship (see `village_and_castes_and_beliefs_report`
+        // above and `cli/tests/branches_identity.rs`), so hobgoblin's
+        // pantheon is committed first and its beliefs list first.
         assert!(
-            recounted.contains("Seen through goblin eyes:"),
+            recounted.contains("Seen through hobgoblin eyes:"),
             "the species hop is missing: {recounted}"
         );
         assert!(recounted.contains("night-sky acuity"));

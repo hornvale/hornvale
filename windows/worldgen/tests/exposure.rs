@@ -5,9 +5,19 @@
 use hornvale_language::{ExposureClass, GapReason, LexEntry};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world, exposure_of, lexicon_of};
 
-/// The same seed-42, generated-sky, default-pins world the existing
-/// two-species integration tests (`species_worlds.rs`) build — both goblin
-/// and kobold place settlements on it.
+/// The seed-42, generated-sky, default-pins (full four-people roster)
+/// world `species_worlds.rs` builds. Since The Branches, the roster's
+/// joint-greedy placement pass is won only by hobgoblin and kobold at this
+/// seed: hobgoblin's psychology-derived suitability weights are at least
+/// as favorable as goblin's on every terrain axis (freshwater, coast,
+/// hostility-tolerance), so goblin never wins a cell against it here.
+/// `goblin_lexicon_has_a_root_for_water_the_universal_concept` and
+/// `kobold_blue_is_a_perceptual_gap_and_goblin_blue_is_not` below still
+/// query goblin directly — both concepts they check classify identically
+/// whether or not goblin ever settles (the universal stratum and the
+/// perception-ladder packs are placement-independent) — but the
+/// coexistence test below, which needs two species that actually share
+/// this world, uses hobgoblin and kobold instead.
 fn world() -> hornvale_kernel::World {
     build_world(
         hornvale_kernel::Seed(42),
@@ -58,14 +68,18 @@ fn each_placed_species_holds_a_root_for_every_placed_species_kind() {
     // Spec §3: "each language will hold its own words for goblin-kind and
     // kobold-kind — endonym and exonym fall out free." Coexistence in one
     // shared world is exposure: both peoples place, so each is Steeped in
-    // the other's kind and each lexicon roots both.
+    // the other's kind and each lexicon roots both. Ported to hobgoblin and
+    // kobold — the two species that actually place at seed 42 under the
+    // four-people roster (see `world()`'s doc comment); the mechanism under
+    // test (placed species root each other's kind-word) is unchanged, only
+    // which placed species exercises it.
     let w = world();
-    let goblin = lexicon_of(&w, "goblin").unwrap();
+    let hobgoblin = lexicon_of(&w, "hobgoblin").unwrap();
     let kobold = lexicon_of(&w, "kobold").unwrap();
 
     let mut romans = Vec::new();
-    for (lex, species) in [(&goblin, "goblin"), (&kobold, "kobold")] {
-        for concept in ["goblin-kind", "kobold-kind"] {
+    for (lex, species) in [(&hobgoblin, "hobgoblin"), (&kobold, "kobold")] {
+        for concept in ["hobgoblin-kind", "kobold-kind"] {
             match lex.entry(concept) {
                 Some(LexEntry::Root { views, .. }) => romans.push(views.roman.clone()),
                 other => panic!("{species}'s '{concept}' should be a Root, got {other:?}"),
@@ -76,11 +90,11 @@ fn each_placed_species_holds_a_root_for_every_placed_species_kind() {
     // draws its word for either kind from its own phonology.
     assert_ne!(
         romans[0], romans[2],
-        "goblin and kobold words for goblin-kind should differ"
+        "hobgoblin and kobold words for hobgoblin-kind should differ"
     );
     assert_ne!(
         romans[1], romans[3],
-        "goblin and kobold words for kobold-kind should differ"
+        "hobgoblin and kobold words for kobold-kind should differ"
     );
 }
 

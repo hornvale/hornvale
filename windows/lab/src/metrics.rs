@@ -1921,14 +1921,21 @@ mod tests {
         // not the config that drove generation. Since The Words (Task 9)
         // the plain word is the belief's honorific-free glossed epithet,
         // re-derived from the same site concepts worldgen composed (see
-        // `epithet_honorific`'s doc). Goblin (Rank) commits
-        // honorific-bearing epithets → true; kobold (Knowledge) commits
-        // plain glossed words → false.
+        // `epithet_honorific`'s doc). Rank-status species commit
+        // honorific-bearing epithets → true; Knowledge-status species
+        // commit plain glossed words → false. Since The Branches, goblin
+        // (Rank) no longer places a flagship at seed 42 — hobgoblin's
+        // psychology-derived suitability weights beat goblin's on every
+        // terrain axis under the joint placement pass (see
+        // `cli/tests/branches_identity.rs`) — so hobgoblin (also
+        // Rank-status, per `hornvale_species::registry`) stands in as the
+        // placed Rank-status species this seed actually commits epithets
+        // for; kobold (Knowledge) is unaffected.
         let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
         assert_eq!(
-            epithet_honorific(&view, "goblin"),
+            epithet_honorific(&view, "hobgoblin"),
             MetricValue::Flag(true),
-            "goblin committed epithets must carry the honorific affix"
+            "hobgoblin committed epithets must carry the honorific affix"
         );
         assert_eq!(
             epithet_honorific(&view, "kobold"),
@@ -1973,10 +1980,20 @@ mod tests {
         let m = |name: &str| (reg.iter().find(|m| m.name == name).unwrap().extract)(&view);
         assert!(matches!(m("settlement-count"), MetricValue::Number(n) if n > 0.0));
         assert!(matches!(m("mean-population"), MetricValue::Number(n) if n > 0.0));
-        assert!(matches!(m("flagship-subsistence"), MetricValue::Text(_)));
-        assert!(matches!(m("flagship-biome"), MetricValue::Text(_)));
-        assert!(matches!(m("flagship-coastal"), MetricValue::Flag(_)));
-        assert!(matches!(m("flagship-structure-size"), MetricValue::Number(n) if n >= 1.0));
+        // The four `flagship-*` metrics are documented as specifically the
+        // GOBLIN flagship's data (see their own doc comments above). Since
+        // The Branches, goblin no longer places a flagship at seed 42 under
+        // the four-people roster — hobgoblin's psychology-derived
+        // suitability weights beat goblin's on every terrain axis (see
+        // `cli/tests/branches_identity.rs`) — so these metrics correctly,
+        // truthfully extract `Absent`, exactly the branch their own doc
+        // comments already document for "no goblin flagship". This is not
+        // a broken extraction: it is what these goblin-specific metrics
+        // must report about a world where goblin holds no settlement.
+        assert_eq!(m("flagship-subsistence"), MetricValue::Absent);
+        assert_eq!(m("flagship-biome"), MetricValue::Absent);
+        assert_eq!(m("flagship-coastal"), MetricValue::Absent);
+        assert_eq!(m("flagship-structure-size"), MetricValue::Absent);
         assert!(
             matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
         );

@@ -1,8 +1,12 @@
 //! World-identity guard: the seed-42 default world's JSON is a committed
-//! fixture. If this test fails, world identity drifted — that is a terrain
-//! or sky epoch and must be deliberate: regenerate the fixture in the same
-//! commit and record why in the chronicle. Campaign 25 (The Measured
-//! Coast) is contractually lens-only; under it this test must never fail.
+//! fixture. If this test fails, world identity drifted — that is a
+//! terrain or sky epoch, OR a species-roster change (a new/changed
+//! `hornvale_species::registry` entry re-baselines settlement placement,
+//! exposure, and every generated name world-wide — The Branches is the
+//! precedent, spec §6), and must be deliberate: regenerate the fixture in
+//! the same commit and record why in the chronicle. Campaign 25 (The
+//! Measured Coast) is contractually lens-only; under it this test must
+//! never fail.
 
 use hornvale_kernel::Seed;
 use hornvale_worldgen::{SkyChoice, build_world_with_roster, default_roster};

@@ -2474,9 +2474,34 @@ mod tests {
             threat,
         };
 
+        // The Branches (4-species roster): the globally most-suitable cell
+        // is no longer necessarily goblin's — at seed 42 hobgoblin's
+        // psychology-derived suitability weights win the flagship, so the
+        // recomputed structure must use THAT species' own psychology and
+        // role vocabulary (the same construction `build_world_with_roster`
+        // performs per-flagship), not the goblin-baseline
+        // `PsychSummary::default()` a two-species world could get away
+        // with.
+        let flagship_species = hornvale_species::species_of(&world, village.id)
+            .expect("the flagship settlement has a species fact");
+        let def = hornvale_species::registry()[flagship_species.as_str()];
+        let psych = hornvale_culture::PsychSummary {
+            threat_response: def.psych.threat_response,
+            time_horizon: def.psych.time_horizon,
+            communal: def.psych.sociality == hornvale_species::Sociality::Communal,
+            rank_status: def.psych.status_basis == hornvale_species::StatusBasis::Rank,
+            vocabulary: hornvale_culture::RoleVocabulary {
+                worker_override: def.worker_override.map(str::to_string),
+                warrior: def.warrior.to_string(),
+                artisan: def.artisan.to_string(),
+                shaman: def.shaman.to_string(),
+                top: def.top.to_string(),
+            },
+        };
+
         assert_eq!(
             hornvale_culture::castes_of(&world, village.id),
-            hornvale_culture::structure(&env, &hornvale_culture::PsychSummary::default())
+            hornvale_culture::structure(&env, &psych)
         );
         assert_eq!(
             hornvale_culture::subsistence_of(&world, village.id).as_deref(),
