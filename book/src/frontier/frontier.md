@@ -45,6 +45,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [Prophecy and the shape of time](#prophecy-and-the-shape-of-time)
   - [The projection layer](#the-projection-layer)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
+  - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
   - [The observer has no place — the position-blind sky](#the-observer-has-no-place--the-position-blind-sky)
   - [Sequencing the deep-time stack](#sequencing-the-deep-time-stack)
@@ -1383,6 +1384,82 @@ genesis day 0. Sequenced, it belongs wherever a campaign first needs two
 places on one world to see different skies: locked-world religion (SEQ-1), the
 epistemic layer (MAP-2), or a firm-ground observation-path campaign (SEQ-4),
 whichever pulls first.
+
+---
+
+## The domain map — which capabilities want their own crate
+
+The frontier holds ~150 ideas; the architecture holds nine domains. Those
+are different populations. A *domain* is a specific object — a crate that
+depends on the kernel and nothing else, speaks only through facts,
+phenomena, and fields, and can be added without editing any sibling
+(they meet only at the `worldgen` composition root). Most registry rows are
+*features*: a field, a phenomenon, a formula that belongs inside a domain
+that already exists or will. A minority are latent *crates* — capabilities
+whose natural home is a new kernel-only domain rather than a feature of an
+old one. This section reads the nine existing domains as a decomposition and
+asks which capabilities want to become their own crate. It generates no new
+ideas; it re-sorts the ones already captured by where they should *live*.
+
+Read the nine along three axes — is the subject **alive, mechanical, or
+abstract** (animacy); is it **externally driven or self-driven** (autonomy);
+does it **accumulate, oscillate, or decay** over time (direction) — and the
+same three gaps open every time.
+
+**The living middle is nearly empty.** The domains cluster at two poles:
+mechanical/physical (astronomy, terrain, climate, paleoclimate) and
+abstract/informational (language, culture, religion, settlement). The *alive*
+middle is one thin crate, `species`, which is an authored taxonomy of
+psychology vectors, not a living substrate. There is no vegetation, no fauna,
+no ecology, no population-as-field, no disease. This is the largest and most
+obviously warranted cluster, and it is already the next build on the roadmap.
+
+**Nothing is self-driven yet.** Every current domain is driven from outside —
+by physics, or by a one-shot genesis pass. The self-driven and co-driven end
+— institutions, markets, polities that run *themselves* over historical time
+and feed back — does not exist as domains; everything social is compressed
+into coarse `culture`, `settlement`, and `religion`. As the sim climbs the
+scale ladder these want to split out.
+
+**There is no decay engine.** The world only accretes: tectonics accumulate,
+cycles oscillate, genesis commits facts forever. Nothing systematically
+*erodes* at the cultural scale. The cultural-memory economy is designed to be
+exactly that engine — upkeep cost, the floating gap, forgetting — and it is
+entirely unbuilt. A world that only accumulates reads as a museum, not a
+history; giving the world a decay direction is a first-class goal, not a late
+refinement.
+
+The decomposition that follows from those gaps, priority-ordered by leverage
+× readiness rather than by difficulty, is enumerated in the registry's DOM
+category. The near-term core fills the empty living middle — a **biosphere**
+(vegetation and fungal cover as fields, fauna on the fast–slow axis), the
+**ecology** that prices coexistence over it, a **demography** extracted from
+settlement (population as a field, settlements as condensations), and a
+**hydrology** split from terrain's drainage (rivers as people-infrastructure,
+not land-refinement). Two are promotions of things wrongly embedded today: a
+**psychology** crate lifting the per-species vector out of `species`, where
+the whole social stack silently reads it, and a **memory** crate that *is*
+the decay engine. The self-driven social layer arrives later —
+**technology** as capability thresholds (never a tech tree), an **economy**
+of exchange and clearing, an **epistemics** second ledger (the scholar's
+knowledge, provenance-tagged — a change to what "a world" *is*, so it earns a
+spec well before code), a **perception** crate supplying the observer model
+the text lens already needs, and eventually a **polity**. Two genuinely new
+physical crates sit beside terrain: a **lithosphere** (rock, ore, karst — the
+mineral and vertical layer) and **geohazards** (earthquake, eruption,
+tsunami as episodic phenomena — the negative pole of the sky's benign
+spectacle). The speculative tier stays behind one gate: a single
+**metaphysics** crate selecting the rule-system, with the undead and
+prophecy families as its outputs, never a sprawl of sibling crates.
+
+Two disciplines hold the map honest, and they are the same ones that govern
+the code. A feature is not a crate: soil, weather-as-sampled-instance,
+calendrics, law, and kinship are fields or data structures inside existing
+domains, and giving each a crate fragments the layering without buying any
+isolation. And no domain is scheduled — the decomposition constrains *what
+splits from what*, not *when*; each crate still earns its spec only when a
+campaign pulls for it, and until then it is a line in the registry, not a
+directory under `domains/`.
 
 ---
 
