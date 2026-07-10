@@ -6,6 +6,7 @@ pub mod args;
 pub mod audit;
 pub mod extract;
 pub mod primitives;
+pub mod report;
 pub mod tag;
 pub mod walk;
 
@@ -42,10 +43,16 @@ pub fn run(args: &[String]) -> i32 {
                 2
             }
         },
-        Ok(Command::Report) => {
-            // Wired to the report generator in Task 8.
-            0
-        }
+        Ok(Command::Report) => match walk::scan(&[]) {
+            Ok(crates) => {
+                print!("{}", report::render_report(&crates));
+                0
+            }
+            Err(e) => {
+                eprintln!("scan error: {e}");
+                2
+            }
+        },
         Err(msg) => {
             eprintln!("{msg}");
             2
