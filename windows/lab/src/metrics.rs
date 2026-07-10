@@ -1526,7 +1526,7 @@ mod tests {
     }
 
     #[test]
-    fn registry_has_sixty_four_metrics_after_obliquity_range() {
+    fn registry_metric_count_is_pinned() {
         assert_eq!(registry().len(), 70);
     }
 

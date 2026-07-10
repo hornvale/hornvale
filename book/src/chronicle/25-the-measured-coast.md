@@ -38,8 +38,9 @@ between land and ocean elevation populations, and the share of cells within
 count never depends on iteration order), and the Gini coefficient over
 plate cell counts. Each is a pure function over narrow inputs, tested
 against hand-built synthetic globes — a hemisphere cap at the shoreline
-index's floor, a deliberately crenellated mask scoring higher, hand-pinned
-elevation maps for Ashman's D — before it ever touched a generated world.
+index's floor, a deliberately crenellated mask scoring higher, synthetic
+elevation maps whose orderings the tests pin for Ashman's D — before it
+ever touched a generated world.
 
 **The Census of Coasts.** [Study 010](../laboratory/study-010.md) walks all
 six metrics over the same 10,000 seeds every prior census has walked, and
@@ -96,8 +97,9 @@ on a reviewer noticing a stray drawn value in a diff.
 - **A metric is worth writing down even when you already suspect the
   answer.** The near-convex diagnosis was reached by eye, from a brainstorm
   looking at rendered maps. Measuring it turned "yeah, it looks like
-  guitar picks" into six numbers with confidence intervals — and one of
-  them, hypsometric bimodality, turned out to already be *right*, a finding
+  guitar picks" into six numbers with means, medians, ranges, and
+  histograms over 10,000 seeds — and one of them, hypsometric bimodality,
+  turned out to already be *right*, a finding
   the eye alone had not separately registered. A future campaign can now be
   judged against a baseline instead of a memory of what things used to look
   like.

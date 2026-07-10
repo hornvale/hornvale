@@ -70,7 +70,10 @@ N`, `--ocean-fraction F`, `--supercontinent`. They persist as scenario
 facts and obey the same stream-consumption isolation every pin does — a
 re-affirming pin reproduces a byte-identical globe. Nothing about the
 globe is serialized; a world re-derives it from the seed through eight
-labeled streams, permanent save-format contracts in the manifest.
+labeled streams, permanent save-format contracts in the manifest. (The
+manifest's ninth terrain label, `terrain/coast-render`, is the render
+lens's hash-noise — it draws no genesis stream and does not touch the
+globe.)
 
 **Measuring the shape (Campaign 25, The Measured Coast).** A first-order
 Voronoi partition with one continental flag per plate draws near-convex,

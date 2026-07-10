@@ -1,7 +1,7 @@
 //! Deterministic map renders in the First Light tradition: an
 //! equirectangular PNG elevation map (decision 0018) and an ASCII map for
-//! the REPL. Same globe, same bytes — a changed artifact in review means
-//! changed behavior. Pixel→cell lookup uses the kernel's
+//! the REPL. Same globe, same seed, same bytes — a changed artifact in
+//! review means changed behavior. Pixel→cell lookup uses the kernel's
 //! `NearestCellIndex` (a latitude-band index, 30 bands of 6°): the nearest
 //! cell center at level ≥ 4 is within ~2.5°, so the pixel's band plus both
 //! neighbors always contains it.
@@ -143,7 +143,8 @@ fn color(elevation_m: f64, sea_level_m: f64) -> [u8; 3] {
 
 /// Raw RGB pixels of the equirectangular elevation map (row-major, top row
 /// first): longitude −180 → 180 across, latitude 90 → −90 down, pixel
-/// centers sampled.
+/// centers sampled. Pixels are coastal-noise-refined from the world seed,
+/// not raw cell values — see `refined_elevation`.
 fn elevation_pixels(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
     let index = NearestCellIndex::new(geo);
@@ -163,7 +164,7 @@ fn elevation_pixels(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) ->
 }
 
 /// Render the globe as an equirectangular PNG (decision 0018). Same globe,
-/// same bytes.
+/// same seed, same bytes.
 pub fn elevation_png(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) -> Vec<u8> {
     hornvale_kernel::png::encode_rgb(
         MAP_WIDTH,
@@ -239,32 +240,34 @@ mod tests {
 
     #[test]
     fn refinement_respects_the_prior() {
-        let geo = Geosphere::new(4);
-        let globe = generate(Seed(42), &geo, &TerrainPins::default())
-            .unwrap()
-            .globe;
-        let index = NearestCellIndex::new(&geo);
-        let noise_seed = Seed(42)
-            .derive(crate::streams::ROOT)
-            .derive(crate::streams::COAST_RENDER);
-        let (width, height) = (128u32, 64u32);
-        for py in 0..height {
-            let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
-            for px in 0..width {
-                let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-                let interp = interpolated_elevation(&geo, &index, &globe, latitude, longitude);
-                let refined =
-                    refined_elevation(&geo, &index, &globe, noise_seed, latitude, longitude);
-                // Bounded displacement, always.
-                assert!((refined - interp).abs() <= COAST_AMP_M + 1e-9);
-                // Exactly the prior away from the coast.
-                if (interp - globe.sea_level).abs() > 3.0 * COAST_ENVELOPE_M {
-                    assert_eq!(refined, interp);
-                }
-                // A land/ocean flip only happens inside the displacement band.
-                let flipped = (refined >= globe.sea_level) != (interp >= globe.sea_level);
-                if flipped {
-                    assert!((interp - globe.sea_level).abs() <= COAST_AMP_M + 1e-9);
+        for seed in [7u64, 42, 99] {
+            let geo = Geosphere::new(4);
+            let globe = generate(Seed(seed), &geo, &TerrainPins::default())
+                .unwrap()
+                .globe;
+            let index = NearestCellIndex::new(&geo);
+            let noise_seed = Seed(seed)
+                .derive(crate::streams::ROOT)
+                .derive(crate::streams::COAST_RENDER);
+            let (width, height) = (128u32, 64u32);
+            for py in 0..height {
+                let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
+                for px in 0..width {
+                    let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
+                    let interp = interpolated_elevation(&geo, &index, &globe, latitude, longitude);
+                    let refined =
+                        refined_elevation(&geo, &index, &globe, noise_seed, latitude, longitude);
+                    // Bounded displacement, always.
+                    assert!((refined - interp).abs() <= COAST_AMP_M + 1e-9);
+                    // Exactly the prior away from the coast.
+                    if (interp - globe.sea_level).abs() > 3.0 * COAST_ENVELOPE_M {
+                        assert_eq!(refined, interp);
+                    }
+                    // A land/ocean flip only happens inside the displacement band.
+                    let flipped = (refined >= globe.sea_level) != (interp >= globe.sea_level);
+                    if flipped {
+                        assert!((interp - globe.sea_level).abs() <= COAST_AMP_M + 1e-9);
+                    }
                 }
             }
         }
