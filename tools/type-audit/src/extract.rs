@@ -1,7 +1,6 @@
 //! Walking a parsed file for primitives at `pub` boundaries.
 
 use crate::primitives::contains_tracked_primitive;
-use quote::ToTokens;
 use syn::spanned::Spanned;
 
 /// One audited primitive-bearing position on an item.
@@ -202,9 +201,12 @@ fn push_type_item(
 }
 
 fn has_cfg_test(attrs: &[syn::Attribute]) -> bool {
-    attrs
-        .iter()
-        .any(|a| a.path().is_ident("cfg") && a.to_token_stream().to_string().contains("test"))
+    attrs.iter().any(|a| {
+        a.path().is_ident("cfg")
+            && a.parse_args::<syn::Meta>()
+                .map(|m| matches!(m, syn::Meta::Path(p) if p.is_ident("test")))
+                .unwrap_or(false)
+    })
 }
 
 fn pat_name(pat: &syn::Pat) -> String {
@@ -350,5 +352,23 @@ mod tests {
         let items = positions_in_file(&f);
         let names: Vec<_> = items.iter().map(|i| i.name.as_str()).collect();
         assert_eq!(names, vec!["real"]);
+    }
+
+    #[test]
+    fn recurses_into_plain_nested_modules() {
+        let f = file(
+            r#"
+            /// Outer.
+            pub fn outer(x: f64) -> f64 { x }
+            pub mod inner {
+                /// Inner, audited via recursion.
+                pub fn deep(y: f64) -> f64 { y }
+            }
+        "#,
+        );
+        let items = positions_in_file(&f);
+        let names: Vec<_> = items.iter().map(|i| i.name.as_str()).collect();
+        assert!(names.contains(&"outer"));
+        assert!(names.contains(&"deep"));
     }
 }
