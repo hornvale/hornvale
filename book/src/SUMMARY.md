@@ -57,6 +57,7 @@
 - [Campaign 26: The Live Orrery](./chronicle/26-the-live-orrery.md)
 - [Campaign 27: The Words](./chronicle/27-the-words.md)
 - [The Type Audit](./chronicle/the-type-audit.md)
+- [The Branches](./chronicle/the-branches.md)
 
 # The Gallery
 
