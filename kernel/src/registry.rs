@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 /// Definition of a fact predicate. `functional` means a subject may hold
 /// at most one distinct object under this predicate — the contradiction
 /// rule the ledger enforces.
-/// type-audit: bare-ok(identifier-text: name), bare-ok(flag: functional), bare-ok(identifier-text: doc)
+/// type-audit: bare-ok(identifier-text: name), bare-ok(flag: functional), bare-ok(prose: doc)
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PredicateDef {
     /// Predicate name (map key).
@@ -52,7 +52,7 @@ pub struct ConceptRegistry {
 
 impl ConceptRegistry {
     /// Idempotent for identical definitions; errors on conflict.
-    /// type-audit: bare-ok(identifier-text: name), bare-ok(flag: functional), bare-ok(identifier-text: doc)
+    /// type-audit: bare-ok(identifier-text: name), bare-ok(flag: functional), bare-ok(prose: doc)
     pub fn register_predicate(
         &mut self,
         name: &str,
@@ -83,7 +83,7 @@ impl ConceptRegistry {
     }
 
     /// Idempotent for identical docs; errors on conflict.
-    /// type-audit: bare-ok(identifier-text)
+    /// type-audit: bare-ok(identifier-text: name), bare-ok(prose: doc)
     pub fn register_phenomenon_kind(&mut self, name: &str, doc: &str) -> Result<(), RegistryError> {
         match self.phenomenon_kinds.get(name) {
             Some(existing) if existing == doc => Ok(()),

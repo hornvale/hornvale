@@ -23,7 +23,7 @@ pub enum Venue {
 /// Something an observer would notice. `kind` must be registered in the
 /// concept registry by the producing domain. Consumers must not branch on
 /// the producing system — only on kind, period, character, salience.
-/// type-audit: bare-ok(identifier-text: kind), bare-ok(identifier-text: description), pending(wave-1: period_days), bare-ok(ratio: salience)
+/// type-audit: bare-ok(identifier-text: kind), bare-ok(prose: description), pending(wave-1: period_days), bare-ok(ratio: salience)
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Phenomenon {
     /// Registered phenomenon kind (concept-registry key).

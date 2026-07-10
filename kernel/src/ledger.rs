@@ -28,7 +28,7 @@ pub enum Value {
 
 /// The dumb envelope (spec §3.1.6): subject, predicate, object, place,
 /// time, provenance. Semantics live in the concept registry.
-/// type-audit: bare-ok(envelope: predicate), waiver(decision-0014: day), bare-ok(envelope: provenance)
+/// type-audit: bare-ok(envelope: predicate), waiver(decision-0014: day), bare-ok(prose: provenance)
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Fact {
     /// The entity this fact is about.
