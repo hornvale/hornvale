@@ -144,9 +144,9 @@ causal chain across entities. It is the seam the Year-2 event ledger and
 fields-of-history will deepen, not a preview of them.
 
 **The exit demo.** Seed 42's flagship, spinning sky, tends a pantheon headed
-by **Ned the Nabned**, a cyclic deity whose absences are mourned
+by **Neb the Ngobneb**, a cyclic deity whose absences are mourned
 and returns feasted; pin the same seed's sky to tidally locked and the head
-becomes **Nedngat the Vngakned**, an eternal watcher fixed forever
+becomes **Neb the Nodneb**, an eternal watcher fixed forever
 above the day side — and, since Campaign 20 (Firm Ground II) placed the
 observer on its own ground, the pantheon shrinks around it: a locked
 world's settlements all stand on the day side, the day side sees the sun
@@ -158,16 +158,22 @@ moved exactly where the sky moved and nowhere else. Since Campaign 15, the
 almanac's "The Gods" section is no longer one pantheon but two: the kobold
 warren standing beside each goblin village raises its own pantheon, through
 its own lens, at its own hour, and its head deity is lunar rather than
-solar wherever there is a moon to see (**Rro Rro**, marked highest, under
+solar wherever there is a moon to see (**Raxarro Rro**, marked highest, under
 the spinning sky) — a divergence that tracks *species*, orthogonal to the
 one above that tracks rotation. On the locked sky the warren's day-side
-vantage holds no moon at all, so its flat, folk pantheon is the lone,
-unranked sun-watcher **Raro Ro** — the species divergence surviving there
-in cult form and voice rather than in domain. Since Campaign Y2-3, every
-one of those names is a real generated sound, drawn from its own species'
-phonology rather than a shared English epithet pool — the goblin telling
-formal and honorific-dense (*"...returns every 0.88 days. So it was, so it
-is."*), the kobold telling repetitive (*"...comes back every 15.99 days.
+vantage holds no moon at all, so it too collapses to a single sun-watcher,
+**Rora Ra** — domain converges on the locked sky (both peoples watch the
+one body left), and today's seed 42 happens to place both flagships large
+enough to raise an organized cult either way, so the species split that
+survives there is voice alone, not cult form: cult form is a settlement's
+own earned property (whether its role ladder grows a priestly rung), not a
+species constant, and [The Branches](../chronicle/the-branches.md)'s
+founder floor moved the kobold flagship to a bigger cell than the one this
+page described before two more peoples joined the roster. Since Campaign
+Y2-3, every one of those names is a real generated sound, drawn from its
+own species' phonology rather than a shared English epithet pool — the
+goblin telling formal and honorific-dense (*"...returns every 0.88 days. So
+it was, so it is."*), the kobold telling repetitive (*"...comes back every 15.99 days.
 That's how it's always been. That's how it's always been."*), the same
 `Rank`-versus-`Knowledge` status-basis split that already shapes each
 people's caste ladder now shaping how each people *tells* its myths. The

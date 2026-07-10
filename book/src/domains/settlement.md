@@ -139,16 +139,18 @@ grammar themselves.
   Campaign 4b's successor); no settlement history — every settlement is
   founded, fully formed, at genesis.
 
-Seed 42 under a spinning sky places 59 settlements across both peoples; the
-goblin flagship, **Xnebsvobned**, holds 359 souls in temperate rainforest, and
-the kobold flagship, **Raxaxoxokrrorat**, 425 souls in the same biome — real,
-phonology-drawn names (Campaign Y2-3, The Tongues), where earlier campaigns'
-editions of this same page named the pair from a syllable pool instead. The
-gallery holds the exit-demo pair: [The Peoples of Seed
+Seed 42 under a spinning sky places 61 settlements across all four peoples
+(goblin, hobgoblin, bugbear, and kobold, since [The Branches](../chronicle/the-branches.md)
+gave the goblinoids two new members); the goblin flagship, **Xnebsvob**,
+holds 359 souls in temperate rainforest, and the kobold flagship,
+**Raxaxokroxog**, 522 souls in the same biome — real, phonology-drawn names
+(Campaign Y2-3, The Tongues), where earlier campaigns' editions of this same
+page named the pair from a syllable pool instead. The gallery holds the
+exit-demo pair: [The Peoples of Seed
 42](../gallery/settlement-seed-42.md) against [its tidally-locked
 twin](../gallery/settlement-seed-42-locked.md), where habitability's
 collapse toward the terminator ring (Campaign 3c's biome map already
-predicted it) thins the same globe to 28 settlements. Chronicle: [4a,
+predicted it) thins the same globe to 29 settlements. Chronicle: [4a,
 Placement & Drainage](../chronicle/campaign-4a.md), [Campaign Y2-0, Firm
 Ground](../chronicle/campaign-y2-0.md) for the freshwater fix that re-drew
 this scatter, [Campaign Y2-1, The Peoples](../chronicle/campaign-y2-1.md)

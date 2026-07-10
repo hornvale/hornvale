@@ -21,10 +21,14 @@ gave it eyes; this campaign, the third of Year 2's spine, gives it **mouths**
 consequence of who is speaking it rather than a pool an author happened to
 seed. Every proper noun the world mints now — a settlement, a deity, a
 deity's epithet — is a real generated sound: seed 42's goblin flagship is
-**Xnebsvobned** (`/xnebsvobned/`), whose head god is **Ned the Nabned**;
-its kobold neighbor is **Raxaxoxokrrorat** (`/raxaxoxokrrorat/`), whose own
-head god is **Rro Rro**. See [Religion](./religion.md) for how a belief now
-carries that name as committed content rather than a frozen sentence.
+**Xnebsvob** (`/xnebsvob/`), whose head god is **Neb the Ngobneb**;
+its kobold neighbor is **Raxaxokroxog** (`/raxaxokroxog/`), whose own
+head god is **Raxarro Rro**. (These are the names the world renders today;
+[The Branches](../chronicle/the-branches.md) re-baselined every one of them
+when goblin joined a language family — see "The first family," below, for
+why a proper name is not held byte-stable across that kind of change.) See
+[Religion](./religion.md) for how a belief now carries that name as
+committed content rather than a frozen sentence.
 
 **Phonemes are feature-bearing segments; spellings are views.** The
 substrate's internal truth is never a string. A `Segment` is a bundle of
@@ -513,30 +517,53 @@ mechanism is untouched.
 model card already made it load-bearing once, biasing the phonology
 engine's inventory draw and down-weighting any exotic manner by how loud a
 species is willing to be — a kobold can trill, the model card says, but its
-names hiss. This campaign gives the same dimension a second job: it biases
-the *direction* a lineage's cascade erodes its inheritance toward. Hobgoblin
-sits loud, authored at roughly 0.8, a martial, disciplined, commanding
-people built as a diurnal legion society; its cascade favors fortition,
-full voicing, and clear onsets — inherited sounds sharpen rather than wear
-down descending this line. Goblin holds the family's baseline, its vector
-unchanged from every earlier chapter's 0.5 identity point — the
-least-drifted anatomy in the family, but no less a genuine descendant for
-it, because its vocabulary now descends the same shared proto-root every
-other daughter does rather than being drawn fresh from its own phonology
-(see "The re-baseline," below). Bugbear sits quiet, authored at roughly
-0.3, a large, hairy, stealthy ambush predator; its cascade favors lenition
-and gutturalization — high voicing, low sibilance — inherited sounds soften
-and darken descending this line. Three points on one dimension, one shared
-ancestor, three audibly different present-day tongues: the family's
-phonological spread is not an author's ear at work but the same
-voice-loudness axis this world already shipped, now read twice — once by
-the inventory draw it always biased, once by the cascade descent adds. Each
-daughter also carries its own authored psychology and perception vectors,
-taken from the same SRD-lore method kobold's did, because a species is a
-whole people and needs all three; those two vectors sit outside this
-cascade entirely and never touch a lineage's descent, exactly as culture
-and perception have never touched a language's phonology envelope before
-now.
+names hiss. It would be tidy if this campaign gave the dimension a second,
+symmetrical job — biasing *which* cascade rules a lineage draws, fortition
+for the loud and lenition for the quiet — and an early pass through this
+chapter said exactly that. It is not what the code does. `draw_cascade`
+picks each lineage's two-to-four rules from one closed, uniformly-weighted
+set — lenition, fortition, a vowel shift, cluster simplification,
+final-segment loss — with no term for loudness or any other vector
+anywhere in the draw; a hobgoblin cascade is exactly as likely to come up
+lenition-heavy as a bugbear's is to come up fortition-heavy. Loudness's
+second job runs through the inventory it already shapes, not through rule
+selection. It bites twice, both times downstream of the same drawn
+inventory: first as the cascade's existing codomain constraint — a rule's
+proposed output only lands when that segment already sits in the daughter's
+own inventory, so a lineage whose loudness-shaped inventory is sparse
+rejects more of its cascade's proposed changes back to identity than a
+lineage whose inventory is rich; second as nativization's target — whatever
+inherited proto segment the cascade leaves untouched and the daughter's
+inventory still does not hold gets merged, draw-free, to the nearest
+segment that inventory does hold. A quiet lineage's descent is therefore
+dominated less by its own cascade's rule-by-rule sound changes and more by
+this closing nativization pass, because its inventory has less room to
+receive what the cascade proposes. Hobgoblin sits loud, authored at
+roughly 0.8, a martial, disciplined, commanding people built as a diurnal
+legion society, and draws a comparatively rich inventory that admits more
+of whatever cascade it happens to draw. Goblin holds the family's
+baseline, its vector unchanged from every earlier chapter's 0.5 identity
+point — the family's middle case, but no less a genuine descendant for it,
+because its vocabulary now descends the same shared proto-root every other
+daughter does rather than being drawn fresh from its own phonology (see
+"The re-baseline," below). Bugbear sits quiet, authored at roughly 0.3, a
+large, hairy, stealthy ambush predator, and draws a sparser inventory that
+leaves more of proto-goblinoid's phonemic space for nativization to
+collapse. Measured over the thousand-seed family battery, bugbear's
+descent nativizes noticeably more inherited segments than hobgoblin's on
+average — a real, measured gap, driven by inventory size feeding a fixed
+codomain-and-merger mechanism, not by a cascade quietly favoring one
+direction of sound change. The gap holds in aggregate over the sweep, not
+on every single seed: with two independent draws (a cascade, an inventory)
+feeding a chain of per-segment decisions, a quiet lineage can still land a
+rich inventory on a given seed and out-diverge a loud one that draws
+poorly, so the ordering is a population-level tendency, not a per-world
+guarantee. Each daughter also carries its own authored psychology and
+perception vectors, taken from the same SRD-lore method kobold's did,
+because a species is a whole people and needs all three; those two vectors
+sit outside this mechanism entirely and never touch a lineage's descent,
+exactly as culture and perception have never touched a language's
+phonology envelope before now.
 
 **Kobold, the outgroup.** A family needs a control, and kobold is it.
 Kobold shares no ancestor with the goblinoids: it is a **family of one**,
