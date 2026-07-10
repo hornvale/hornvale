@@ -10,8 +10,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct EntityId(pub u64);
 
-/// A fact's object. Number equality is bitwise-exact f64 equality —
-/// acceptable because all values are deterministic (tier-0 contract).
+/// A fact's object. `Number` values are quantized to a platform-stable
+/// canonical form at commit (see the `quantize` module), so bitwise-exact
+/// f64 equality is meaningful across platforms — the ledger's serialized
+/// bytes are identical on macOS and Linux for the same seed.
 /// type-audit: bare-ok(envelope)
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Value {
@@ -142,7 +144,21 @@ impl Ledger {
     /// Commit a fact. Ok(true) = appended; Ok(false) = identical fact
     /// already present (idempotent no-op).
     /// type-audit: bare-ok(flag)
-    pub fn commit(&mut self, fact: Fact, registry: &ConceptRegistry) -> Result<bool, LedgerError> {
+    pub fn commit(
+        &mut self,
+        mut fact: Fact,
+        registry: &ConceptRegistry,
+    ) -> Result<bool, LedgerError> {
+        // Canonicalize numeric objects and days to a platform-stable form
+        // *before* the idempotency and contradiction checks, so dedup compares
+        // canonical values (see the `quantize` module: last-ULP libm divergence
+        // between platforms otherwise reaches the serialized ledger and breaks
+        // cross-platform byte-identity). Integer-valued facts (cell ids,
+        // populations, counts) are unaffected — they quantize to themselves.
+        if let Value::Number(n) = fact.object {
+            fact.object = Value::Number(crate::quantize::quantize(n));
+        }
+        fact.day = fact.day.map(crate::quantize::quantize);
         self.check(&fact, registry)?;
         if self.facts.contains(&fact) {
             return Ok(false);
@@ -381,6 +397,35 @@ mod tests {
             l.commit(f, &r),
             Err(LedgerError::NonFiniteNumber { .. })
         ));
+    }
+
+    #[test]
+    fn committed_numbers_and_days_are_quantized() {
+        use crate::quantize::quantize;
+        let r = registry();
+        let mut l = Ledger::default();
+        let e = l.mint_entity();
+        let raw = 210.2242156495795_f64;
+        l.commit(
+            Fact {
+                subject: e,
+                predicate: "name".to_string(),
+                object: Value::Number(raw),
+                place: None,
+                day: Some(raw),
+                provenance: "test".to_string(),
+            },
+            &r,
+        )
+        .unwrap();
+        let stored = l.iter().next().unwrap();
+        assert_eq!(stored.object, Value::Number(quantize(raw)));
+        assert_eq!(stored.day, Some(quantize(raw)));
+        assert_ne!(
+            stored.object,
+            Value::Number(raw),
+            "raw value must not survive"
+        );
     }
 
     #[test]

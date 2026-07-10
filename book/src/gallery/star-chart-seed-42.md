@@ -40,6 +40,8 @@ Moon 2 (small, distant): `oo))))))OO((((oo` — one cycle every 35.7 standard da
 
 ![Full-color render](./star-chart-seed-42.png)
 
+> Rendered view — this raster's exact bytes are platform-local (pixel colors depend on the host math library) and are not cross-platform byte-checked; the page above is deterministic.
+
 ---
 
 *Generated deterministically: this seed always yields this page.*

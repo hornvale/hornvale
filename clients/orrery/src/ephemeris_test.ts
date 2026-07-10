@@ -9,11 +9,21 @@ const golden = JSON.parse(
   await Deno.readTextFile("./testdata/ephemeris-seed-42.json"),
 ) as { samples: { t: number; world_phase: number; rotation_phase: number; moons: number[] }[] };
 
+// The published elements (scene-system) and the golden phases are quantized
+// to 8 significant digits for cross-platform byte-identity. Reproducing a
+// phase divides elapsed time by a period (rotation: t/day_length ≈ 409× at
+// t=360 for seed 42; moons: t/synodic ≈ 20×), which amplifies the elements'
+// ~1e-8 quantization granularity into a ~1e-6 phase discrepancy. So this
+// cross-language check reproduces the physics to a quantization-aware
+// tolerance, not to full float precision — a real formula divergence is off
+// by orders of magnitude more and is still caught.
+const PHASE_TOLERANCE = 1e-5;
+
 Deno.test("ephemeris reproduces the Rust golden phases", () => {
   for (const row of golden.samples) {
-    assertAlmostEquals(worldPhase(sys, row.t), row.world_phase, 1e-9);
-    assertAlmostEquals(rotationPhase(sys, row.t), row.rotation_phase, 1e-9);
-    row.moons.forEach((p, i) => assertAlmostEquals(moonPhase(sys, i, row.t), p, 1e-9));
+    assertAlmostEquals(worldPhase(sys, row.t), row.world_phase, PHASE_TOLERANCE);
+    assertAlmostEquals(rotationPhase(sys, row.t), row.rotation_phase, PHASE_TOLERANCE);
+    row.moons.forEach((p, i) => assertAlmostEquals(moonPhase(sys, i, row.t), p, PHASE_TOLERANCE));
   }
 });
 

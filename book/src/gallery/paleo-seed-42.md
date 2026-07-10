@@ -33,6 +33,8 @@ Legend: `#` ice envelope, `*` refugium, `~` fossil shoreline.
 
 ![Full-color render](./paleo-seed-42.png)
 
+> Rendered view — this raster's exact bytes are platform-local (pixel colors depend on the host math library) and are not cross-platform byte-checked; the page above is deterministic.
+
 ---
 
 *Generated deterministically: this seed always yields this page.*

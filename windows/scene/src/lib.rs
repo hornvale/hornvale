@@ -58,8 +58,10 @@ pub struct Feature {
     /// What kind of point this is: `"settlement"` or `"flagship"`.
     pub kind: String,
     /// Degrees north.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub latitude: f64,
     /// Degrees east.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub longitude: f64,
 }
 
@@ -79,8 +81,10 @@ pub struct TilesScene {
     /// Lattice height in tiles (always `width / 2`).
     pub height: u32,
     /// Sea level in meters.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub sea_level_m: f64,
     /// Elevation in meters per tile.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
     pub elevation_m: Vec<f64>,
     /// Whether each tile is ocean (sea level baked in).
     pub ocean: Vec<bool>,
@@ -91,6 +95,7 @@ pub struct TilesScene {
     /// Tectonic plate id per tile.
     pub plate: Vec<u32>,
     /// Tectonic unrest per tile.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
     pub unrest: Vec<f64>,
     /// Named points: settlements, the flagship last.
     pub features: Vec<Feature>,
@@ -235,10 +240,13 @@ pub struct StarElem {
     /// Descriptive spectral class name (e.g. `"yellow dwarf (G)"`).
     pub class_name: String,
     /// Luminosity in solar luminosities.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub luminosity_rel: f64,
     /// Habitable-zone inner edge, AU.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub hz_inner_au: f64,
     /// Habitable-zone outer edge, AU.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub hz_outer_au: f64,
 }
 
@@ -247,15 +255,22 @@ pub struct StarElem {
 #[derive(Debug, Serialize)]
 pub struct WorldElem {
     /// Orbital radius, AU.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub orbit_au: f64,
     /// Year length, standard days.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub year_days: f64,
     /// Solar-day length, standard days; `None` when tidally locked (no spin).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "hornvale_kernel::quantize::quantize_serde::opt_f64_field"
+    )]
     pub day_length_days: Option<f64>,
     /// Mean axial obliquity, degrees.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub obliquity_deg: f64,
     /// Genesis orbital phase offset (turns) so day 0 is an ordinary day.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub year_phase_offset: f64,
 }
 
@@ -264,12 +279,16 @@ pub struct WorldElem {
 #[derive(Debug, Serialize)]
 pub struct MoonElem {
     /// Sidereal orbital period, standard days.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub sidereal_days: f64,
     /// Genesis synodic-phase offset (turns).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub phase_offset: f64,
     /// Orbital distance from the world, megameters.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub distance_mm: f64,
     /// Angular-diameter ratio (the size-word input).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub size_rel: f64,
 }
 
@@ -361,6 +380,31 @@ mod tests {
             &Default::default(),
         )
         .expect("seed 1 builds")
+    }
+
+    /// Significant digits in a JSON number token (sign, leading zeros, the
+    /// decimal point, and trailing zeros stripped). A cheap proxy for
+    /// "quantized": raw libm-derived floats carry 15–16.
+    fn significant_digits(token: &str) -> usize {
+        let t = token.trim_start_matches('-').replace('.', "");
+        let t = t.trim_start_matches('0');
+        let t = t.trim_end_matches('0');
+        t.len()
+    }
+
+    #[test]
+    fn serialized_tiles_carry_no_more_than_eight_significant_digits() {
+        let json = scene_json(&tiles_scene(&world(), 32).unwrap());
+        // Split into candidate number tokens and check each.
+        for token in json.split(|c: char| !(c.is_ascii_digit() || c == '.' || c == '-')) {
+            if token.is_empty() || !token.contains('.') {
+                continue;
+            }
+            assert!(
+                significant_digits(token) <= 8,
+                "un-quantized float in scene JSON: {token}"
+            );
+        }
     }
 
     #[test]

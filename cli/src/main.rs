@@ -269,6 +269,18 @@ fn cmd_repl(args: &[String]) -> Result<(), String> {
 /// Render the world's elevation map: a markdown page (title, land lines,
 /// ASCII map) to stdout and, with `--out`, the PNG image to disk. Both are
 /// deterministic; CI drift-checks the committed copies.
+/// Appended after every emitted map/chart PNG reference. The raster's exact
+/// bytes are a *platform-local render*: pixel colors come from per-cell
+/// classifications (biome, ocean) thresholded on transcendental-derived
+/// floats, which the host math library computes to the last ULP differently
+/// on different platforms. So the PNGs are not cross-platform byte-checked
+/// (see the determinism decision on quantization); the markdown page's text
+/// and ASCII map above remain deterministic. Canonical numeric state
+/// (world.json, censuses, ephemeris) stays byte-identical everywhere.
+const PLATFORM_LOCAL_RENDER_NOTE: &str = "> Rendered view — this raster's exact bytes are platform-local (pixel colors \
+depend on the host math library) and are not cross-platform byte-checked; the \
+page above is deterministic.\n\n";
+
 fn cmd_map(args: &[String]) -> Result<(), String> {
     let world = load_world(args)?;
     let terrain = world_builder::terrain_of(&world).map_err(|e| e.to_string())?;
@@ -294,6 +306,7 @@ fn cmd_map(args: &[String]) -> Result<(), String> {
             .and_then(|n| n.to_str())
             .unwrap_or(out);
         doc.push_str(&format!("![Full-color render](./{name})\n\n"));
+        doc.push_str(PLATFORM_LOCAL_RENDER_NOTE);
     }
     doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
     print!("{doc}");
@@ -324,6 +337,7 @@ fn cmd_biome_map(args: &[String]) -> Result<(), String> {
             .and_then(|n| n.to_str())
             .unwrap_or(out);
         doc.push_str(&format!("![Full-color render](./{name})\n\n"));
+        doc.push_str(PLATFORM_LOCAL_RENDER_NOTE);
     }
     doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
     print!("{doc}");
@@ -358,6 +372,7 @@ fn cmd_paleo_map(args: &[String]) -> Result<(), String> {
             .and_then(|n| n.to_str())
             .unwrap_or(out);
         doc.push_str(&format!("![Full-color render](./{name})\n\n"));
+        doc.push_str(PLATFORM_LOCAL_RENDER_NOTE);
     }
     doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
     print!("{doc}");
@@ -410,6 +425,7 @@ fn cmd_settlement_map(args: &[String]) -> Result<(), String> {
             .and_then(|n| n.to_str())
             .unwrap_or(out);
         doc.push_str(&format!("![Full-color render](./{name})\n\n"));
+        doc.push_str(PLATFORM_LOCAL_RENDER_NOTE);
     }
     doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
     print!("{doc}");
@@ -464,6 +480,7 @@ fn cmd_star_chart(args: &[String]) -> Result<(), String> {
             .and_then(|n| n.to_str())
             .unwrap_or(out);
         doc.push_str(&format!("![Full-color render](./{name})\n\n"));
+        doc.push_str(PLATFORM_LOCAL_RENDER_NOTE);
     }
     doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
     print!("{doc}");

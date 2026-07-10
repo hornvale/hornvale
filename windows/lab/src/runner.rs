@@ -195,8 +195,9 @@ fn csv_field(text: &str) -> String {
 /// publisher (the committed, drift-checked fixture), so the two are always
 /// byte-identical. The format:
 /// - Header: seed,pin_set,<metric names...>,refusal
-/// - Number values: displayed with default Rust formatting (shortest
-///   round-trippable form — [`load_rows`] parses it back exactly)
+/// - Number values: quantized to the kernel's platform-stable canonical
+///   form (8 significant digits), then displayed with default Rust
+///   formatting — [`load_rows`] parses the emitted text back exactly
 /// - Text values: quoted per RFC 4180 when they contain a comma, quote, or
 ///   newline; written verbatim otherwise
 /// - Flag values: "true" or "false"
@@ -219,7 +220,13 @@ pub(crate) fn render_csv(result: &RunResult) -> String {
         for value in &row.values {
             csv_content.push(',');
             match value {
-                MetricValue::Number(n) => csv_content.push_str(&format!("{}", n)),
+                // Quantize to the platform-stable canonical form (see the
+                // kernel `quantize` module): full-precision metric values
+                // otherwise carry last-ULP libm divergence into the committed
+                // census fixture and break the cross-platform drift check.
+                MetricValue::Number(n) => {
+                    csv_content.push_str(&format!("{}", hornvale_kernel::quantize(*n)))
+                }
                 MetricValue::Text(t) => csv_content.push_str(&csv_field(t)),
                 MetricValue::Flag(f) => csv_content.push_str(if *f { "true" } else { "false" }),
                 MetricValue::Absent => {
@@ -474,6 +481,44 @@ mod tests {
         let csv = render_csv(&original);
         let loaded = load_rows(&study, &csv).expect("load_rows inverts render_csv");
         assert_eq!(loaded, original);
+    }
+
+    #[test]
+    fn csv_numbers_are_quantized_for_cross_platform_stability() {
+        // Full-precision metric values carry last-ULP libm divergence between
+        // platforms; render_csv must emit the platform-stable quantized form.
+        let study = Study {
+            name: "q".to_string(),
+            description: "quantize".to_string(),
+            seeds: Seeds { from: 0, count: 0 },
+            pin_sets: vec![],
+            metrics: MetricSelection::Named(vec!["day-length-hours".to_string()]),
+        };
+        let raw = 39.46846507151197_f64;
+        let original = RunResult {
+            study: study.clone(),
+            metric_names: study
+                .selected_metrics()
+                .unwrap()
+                .iter()
+                .map(|m| m.name)
+                .collect(),
+            rows: vec![Row {
+                seed: 0,
+                pin_set: "default".to_string(),
+                values: vec![MetricValue::Number(raw)],
+                refusal: None,
+            }],
+        };
+        let csv = render_csv(&original);
+        assert!(
+            csv.contains(&hornvale_kernel::quantize(raw).to_string()),
+            "csv must contain the quantized value"
+        );
+        assert!(
+            !csv.contains(&raw.to_string()),
+            "csv must not contain the raw full-precision value"
+        );
     }
 
     /// The reference sequential sweep — the oracle the parallel `run` is

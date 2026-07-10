@@ -98,17 +98,25 @@ mod tests {
             world.ledger.value_of(subject, PLATE_COUNT),
             Some(&Value::Number(f64::from(summary.plate_count)))
         );
+        // The ledger quantizes numeric objects on commit, so each stored value
+        // is the canonical form of the raw summary statistic.
         assert_eq!(
             world.ledger.value_of(subject, OCEAN_FRACTION),
-            Some(&Value::Number(summary.ocean_fraction))
+            Some(&Value::Number(hornvale_kernel::quantize(
+                summary.ocean_fraction
+            )))
         );
         assert_eq!(
             world.ledger.value_of(subject, SEA_LEVEL_M),
-            Some(&Value::Number(summary.sea_level_m))
+            Some(&Value::Number(hornvale_kernel::quantize(
+                summary.sea_level_m
+            )))
         );
         assert_eq!(
             world.ledger.value_of(subject, HIGHEST_ELEVATION_M),
-            Some(&Value::Number(summary.highest_elevation_m))
+            Some(&Value::Number(hornvale_kernel::quantize(
+                summary.highest_elevation_m
+            )))
         );
     }
 

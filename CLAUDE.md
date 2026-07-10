@@ -102,6 +102,19 @@ contradicts, lower ("coarse constrains fine").
 
 - Same seed + same pins → byte-identical worlds, almanacs, and artifacts.
   Tests assert this; CI's drift check enforces it on committed artifacts.
+- **Cross-platform byte-identity via quantization** (decision
+  `serialized-floats-are-quantized-for-cross-platform-determinism`): `f64`
+  transcendentals route to the platform libm (Apple's vs glibc's), which
+  differ in the last ULP, so serialized floats are quantized to 8
+  significant digits (`hornvale_kernel::quantize`, libm-free) at every
+  serialization boundary — `Ledger::commit`, the lab `render_csv`, and the
+  scene/ephemeris JSON. Quantization is at the emit boundary **only**, never
+  in the compute path (the noise fields, sculpting, and orbital mechanics
+  run at full precision). **Lorenz guard-rail:** a lossy save is safe only
+  because reload re-derives from the lossless seed — never seed a chaotic
+  forward-integrator from quantized ledger floats; resumption re-derives
+  from the seed, and any chaotic checkpoint needs its own full-precision
+  format.
 - **No wall-clock time anywhere**. Time is `WorldTime { day: f64 }` —
   absolute standard days.
 - No `HashMap`/`HashSet` — `BTreeMap`/`BTreeSet`/`Vec` only. Float sorting

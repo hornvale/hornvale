@@ -35,6 +35,8 @@ The chief kobold settlement, Xorogroq, holds 404 souls amid temperate-rainforest
 
 ![Full-color render](./settlement-seed-42-locked.png)
 
+> Rendered view — this raster's exact bytes are platform-local (pixel colors depend on the host math library) and are not cross-platform byte-checked; the page above is deterministic.
+
 ---
 
 *Generated deterministically: this seed always yields this page.*
