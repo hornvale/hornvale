@@ -772,7 +772,7 @@
         "subject": 1,
         "predicate": "day-length-std",
         "object": {
-          "Number": 0.8798799803519574
+          "Number": 0.87987998
         },
         "place": null,
         "day": 0.0,
@@ -782,7 +782,7 @@
         "subject": 1,
         "predicate": "year-length-std",
         "object": {
-          "Number": 368.05357093462703
+          "Number": 368.05357
         },
         "place": null,
         "day": 0.0,
@@ -792,7 +792,7 @@
         "subject": 1,
         "predicate": "obliquity-degrees",
         "object": {
-          "Number": 0.9593056670606165
+          "Number": 0.95930567
         },
         "place": null,
         "day": 0.0,
@@ -812,7 +812,7 @@
         "subject": 1,
         "predicate": "eccentricity-mean",
         "object": {
-          "Number": 0.04116143676389656
+          "Number": 0.041161437
         },
         "place": null,
         "day": 0.0,
@@ -822,7 +822,7 @@
         "subject": 1,
         "predicate": "obliquity-amplitude",
         "object": {
-          "Number": 0.12690199868208984
+          "Number": 0.126902
         },
         "place": null,
         "day": 0.0,
@@ -832,7 +832,7 @@
         "subject": 1,
         "predicate": "moon-period-std",
         "object": {
-          "Number": 15.993805342676167
+          "Number": 15.993805
         },
         "place": null,
         "day": 0.0,
@@ -842,7 +842,7 @@
         "subject": 1,
         "predicate": "moon-period-std",
         "object": {
-          "Number": 32.55499951908771
+          "Number": 32.555
         },
         "place": null,
         "day": 0.0,
@@ -912,7 +912,7 @@
         "subject": 1,
         "predicate": "ocean-fraction",
         "object": {
-          "Number": 0.7324741261472368
+          "Number": 0.73247413
         },
         "place": null,
         "day": 0.0,
@@ -922,7 +922,7 @@
         "subject": 1,
         "predicate": "sea-level-m",
         "object": {
-          "Number": 409.0054089516639
+          "Number": 409.00541
         },
         "place": null,
         "day": 0.0,
@@ -932,7 +932,7 @@
         "subject": 1,
         "predicate": "highest-elevation-m",
         "object": {
-          "Number": 4328.497184910964
+          "Number": 4328.4972
         },
         "place": null,
         "day": 0.0,
@@ -1002,7 +1002,7 @@
         "subject": 2,
         "predicate": "latitude",
         "object": {
-          "Number": -23.502371327110584
+          "Number": -23.502371
         },
         "place": 2,
         "day": 0.0,
@@ -1012,7 +1012,7 @@
         "subject": 2,
         "predicate": "longitude",
         "object": {
-          "Number": 146.0873629471159
+          "Number": 146.08736
         },
         "place": 2,
         "day": 0.0,
@@ -1082,7 +1082,7 @@
         "subject": 3,
         "predicate": "latitude",
         "object": {
-          "Number": 22.21586468804764
+          "Number": 22.215865
         },
         "place": 3,
         "day": 0.0,
@@ -1092,7 +1092,7 @@
         "subject": 3,
         "predicate": "longitude",
         "object": {
-          "Number": -10.214355301392398
+          "Number": -10.214355
         },
         "place": 3,
         "day": 0.0,
@@ -1162,7 +1162,7 @@
         "subject": 4,
         "predicate": "latitude",
         "object": {
-          "Number": -23.553615682934776
+          "Number": -23.553616
         },
         "place": 4,
         "day": 0.0,
@@ -1172,7 +1172,7 @@
         "subject": 4,
         "predicate": "longitude",
         "object": {
-          "Number": 84.84757676561699
+          "Number": 84.847577
         },
         "place": 4,
         "day": 0.0,
@@ -1242,7 +1242,7 @@
         "subject": 5,
         "predicate": "latitude",
         "object": {
-          "Number": -20.1599769278465
+          "Number": -20.159977
         },
         "place": 5,
         "day": 0.0,
@@ -1252,7 +1252,7 @@
         "subject": 5,
         "predicate": "longitude",
         "object": {
-          "Number": 169.86862275327974
+          "Number": 169.86862
         },
         "place": 5,
         "day": 0.0,
@@ -1322,7 +1322,7 @@
         "subject": 6,
         "predicate": "latitude",
         "object": {
-          "Number": 17.02699696412
+          "Number": 17.026997
         },
         "place": 6,
         "day": 0.0,
@@ -1332,7 +1332,7 @@
         "subject": 6,
         "predicate": "longitude",
         "object": {
-          "Number": 66.10676274603495
+          "Number": 66.106763
         },
         "place": 6,
         "day": 0.0,
@@ -1402,7 +1402,7 @@
         "subject": 7,
         "predicate": "latitude",
         "object": {
-          "Number": 21.24567236215713
+          "Number": 21.245672
         },
         "place": 7,
         "day": 0.0,
@@ -1412,7 +1412,7 @@
         "subject": 7,
         "predicate": "longitude",
         "object": {
-          "Number": 146.12318482446048
+          "Number": 146.12318
         },
         "place": 7,
         "day": 0.0,
@@ -1482,7 +1482,7 @@
         "subject": 8,
         "predicate": "latitude",
         "object": {
-          "Number": 8.164366757257802
+          "Number": 8.1643668
         },
         "place": 8,
         "day": 0.0,
@@ -1492,7 +1492,7 @@
         "subject": 8,
         "predicate": "longitude",
         "object": {
-          "Number": 158.45432471028363
+          "Number": 158.45432
         },
         "place": 8,
         "day": 0.0,
@@ -1562,7 +1562,7 @@
         "subject": 9,
         "predicate": "latitude",
         "object": {
-          "Number": 9.55999480637511
+          "Number": 9.5599948
         },
         "place": 9,
         "day": 0.0,
@@ -1572,7 +1572,7 @@
         "subject": 9,
         "predicate": "longitude",
         "object": {
-          "Number": 104.14797593663339
+          "Number": 104.14798
         },
         "place": 9,
         "day": 0.0,
@@ -1642,7 +1642,7 @@
         "subject": 10,
         "predicate": "latitude",
         "object": {
-          "Number": -11.250000000000002
+          "Number": -11.25
         },
         "place": 10,
         "day": 0.0,
@@ -1652,7 +1652,7 @@
         "subject": 10,
         "predicate": "longitude",
         "object": {
-          "Number": -31.71747441146101
+          "Number": -31.717474
         },
         "place": 10,
         "day": 0.0,
@@ -1722,7 +1722,7 @@
         "subject": 11,
         "predicate": "latitude",
         "object": {
-          "Number": 17.462420029540223
+          "Number": 17.46242
         },
         "place": 11,
         "day": 0.0,
@@ -1732,7 +1732,7 @@
         "subject": 11,
         "predicate": "longitude",
         "object": {
-          "Number": -93.6936584812188
+          "Number": -93.693658
         },
         "place": 11,
         "day": 0.0,
@@ -1802,7 +1802,7 @@
         "subject": 12,
         "predicate": "latitude",
         "object": {
-          "Number": -7.0122776569309355
+          "Number": -7.0122777
         },
         "place": 12,
         "day": 0.0,
@@ -1812,7 +1812,7 @@
         "subject": 12,
         "predicate": "longitude",
         "object": {
-          "Number": 164.54956291367418
+          "Number": 164.54956
         },
         "place": 12,
         "day": 0.0,
@@ -1882,7 +1882,7 @@
         "subject": 13,
         "predicate": "latitude",
         "object": {
-          "Number": 20.050501136718882
+          "Number": 20.050501
         },
         "place": 13,
         "day": 0.0,
@@ -1892,7 +1892,7 @@
         "subject": 13,
         "predicate": "longitude",
         "object": {
-          "Number": -28.12783237205863
+          "Number": -28.127832
         },
         "place": 13,
         "day": 0.0,
@@ -1962,7 +1962,7 @@
         "subject": 14,
         "predicate": "latitude",
         "object": {
-          "Number": 19.579571911276428
+          "Number": 19.579572
         },
         "place": 14,
         "day": 0.0,
@@ -1972,7 +1972,7 @@
         "subject": 14,
         "predicate": "longitude",
         "object": {
-          "Number": 119.35539173220852
+          "Number": 119.35539
         },
         "place": 14,
         "day": 0.0,
@@ -2042,7 +2042,7 @@
         "subject": 15,
         "predicate": "latitude",
         "object": {
-          "Number": 1.9136048438561617
+          "Number": 1.9136048
         },
         "place": 15,
         "day": 0.0,
@@ -2052,7 +2052,7 @@
         "subject": 15,
         "predicate": "longitude",
         "object": {
-          "Number": 93.16789001916773
+          "Number": 93.16789
         },
         "place": 15,
         "day": 0.0,
@@ -2122,7 +2122,7 @@
         "subject": 16,
         "predicate": "latitude",
         "object": {
-          "Number": -13.338988558851433
+          "Number": -13.338989
         },
         "place": 16,
         "day": 0.0,
@@ -2132,7 +2132,7 @@
         "subject": 16,
         "predicate": "longitude",
         "object": {
-          "Number": -68.9275773304838
+          "Number": -68.927577
         },
         "place": 16,
         "day": 0.0,
@@ -2202,7 +2202,7 @@
         "subject": 17,
         "predicate": "latitude",
         "object": {
-          "Number": 3.7874354571590123
+          "Number": 3.7874355
         },
         "place": 17,
         "day": 0.0,
@@ -2212,7 +2212,7 @@
         "subject": 17,
         "predicate": "longitude",
         "object": {
-          "Number": 69.49895238864995
+          "Number": 69.498952
         },
         "place": 17,
         "day": 0.0,
@@ -2282,7 +2282,7 @@
         "subject": 18,
         "predicate": "latitude",
         "object": {
-          "Number": -13.378668995958813
+          "Number": -13.378669
         },
         "place": 18,
         "day": 0.0,
@@ -2292,7 +2292,7 @@
         "subject": 18,
         "predicate": "longitude",
         "object": {
-          "Number": 71.03699015878657
+          "Number": 71.03699
         },
         "place": 18,
         "day": 0.0,
@@ -2362,7 +2362,7 @@
         "subject": 19,
         "predicate": "latitude",
         "object": {
-          "Number": 24.384971326213584
+          "Number": 24.384971
         },
         "place": 19,
         "day": 0.0,
@@ -2372,7 +2372,7 @@
         "subject": 19,
         "predicate": "longitude",
         "object": {
-          "Number": 132.8226604366843
+          "Number": 132.82266
         },
         "place": 19,
         "day": 0.0,
@@ -2442,7 +2442,7 @@
         "subject": 20,
         "predicate": "latitude",
         "object": {
-          "Number": 15.09754062262958
+          "Number": 15.097541
         },
         "place": 20,
         "day": 0.0,
@@ -2452,7 +2452,7 @@
         "subject": 20,
         "predicate": "longitude",
         "object": {
-          "Number": 1.9768345310273459
+          "Number": 1.9768345
         },
         "place": 20,
         "day": 0.0,
@@ -2522,7 +2522,7 @@
         "subject": 21,
         "predicate": "latitude",
         "object": {
-          "Number": -10.34574283220534
+          "Number": -10.345743
         },
         "place": 21,
         "day": 0.0,
@@ -2532,7 +2532,7 @@
         "subject": 21,
         "predicate": "longitude",
         "object": {
-          "Number": 139.71023518209074
+          "Number": 139.71024
         },
         "place": 21,
         "day": 0.0,
@@ -2602,7 +2602,7 @@
         "subject": 22,
         "predicate": "latitude",
         "object": {
-          "Number": 11.395722542196214
+          "Number": 11.395723
         },
         "place": 22,
         "day": 0.0,
@@ -2612,7 +2612,7 @@
         "subject": 22,
         "predicate": "longitude",
         "object": {
-          "Number": 15.603584876639715
+          "Number": 15.603585
         },
         "place": 22,
         "day": 0.0,
@@ -2682,7 +2682,7 @@
         "subject": 23,
         "predicate": "latitude",
         "object": {
-          "Number": -1.8857132715533125
+          "Number": -1.8857133
         },
         "place": 23,
         "day": 0.0,
@@ -2692,7 +2692,7 @@
         "subject": 23,
         "predicate": "longitude",
         "object": {
-          "Number": 119.12018577617177
+          "Number": 119.12019
         },
         "place": 23,
         "day": 0.0,
@@ -2762,7 +2762,7 @@
         "subject": 24,
         "predicate": "latitude",
         "object": {
-          "Number": -11.515966704019254
+          "Number": -11.515967
         },
         "place": 24,
         "day": 0.0,
@@ -2772,7 +2772,7 @@
         "subject": 24,
         "predicate": "longitude",
         "object": {
-          "Number": 85.19615917865326
+          "Number": 85.196159
         },
         "place": 24,
         "day": 0.0,
@@ -2842,7 +2842,7 @@
         "subject": 25,
         "predicate": "latitude",
         "object": {
-          "Number": 10.223082137956482
+          "Number": 10.223082
         },
         "place": 25,
         "day": 0.0,
@@ -2852,7 +2852,7 @@
         "subject": 25,
         "predicate": "longitude",
         "object": {
-          "Number": 29.671857548541112
+          "Number": 29.671858
         },
         "place": 25,
         "day": 0.0,
@@ -2922,7 +2922,7 @@
         "subject": 26,
         "predicate": "latitude",
         "object": {
-          "Number": -5.7366010446711115
+          "Number": -5.736601
         },
         "place": 26,
         "day": 0.0,
@@ -2932,7 +2932,7 @@
         "subject": 26,
         "predicate": "longitude",
         "object": {
-          "Number": -95.55847723680819
+          "Number": -95.558477
         },
         "place": 26,
         "day": 0.0,
@@ -3002,7 +3002,7 @@
         "subject": 27,
         "predicate": "latitude",
         "object": {
-          "Number": 4.621501613475574
+          "Number": 4.6215016
         },
         "place": 27,
         "day": 0.0,
@@ -3012,7 +3012,7 @@
         "subject": 27,
         "predicate": "longitude",
         "object": {
-          "Number": 134.66070327825318
+          "Number": 134.6607
         },
         "place": 27,
         "day": 0.0,
@@ -3082,7 +3082,7 @@
         "subject": 28,
         "predicate": "latitude",
         "object": {
-          "Number": -2.3255043189194233
+          "Number": -2.3255043
         },
         "place": 28,
         "day": 0.0,
@@ -3092,7 +3092,7 @@
         "subject": 28,
         "predicate": "longitude",
         "object": {
-          "Number": -51.85338020058564
+          "Number": -51.85338
         },
         "place": 28,
         "day": 0.0,
@@ -3162,7 +3162,7 @@
         "subject": 29,
         "predicate": "latitude",
         "object": {
-          "Number": 22.983739852540882
+          "Number": 22.98374
         },
         "place": 29,
         "day": 0.0,
@@ -3172,7 +3172,7 @@
         "subject": 29,
         "predicate": "longitude",
         "object": {
-          "Number": 22.565779948880138
+          "Number": 22.56578
         },
         "place": 29,
         "day": 0.0,
@@ -3242,7 +3242,7 @@
         "subject": 30,
         "predicate": "latitude",
         "object": {
-          "Number": 8.105581853946937
+          "Number": 8.1055819
         },
         "place": 30,
         "day": 0.0,
@@ -3252,7 +3252,7 @@
         "subject": 30,
         "predicate": "longitude",
         "object": {
-          "Number": 43.61212601672358
+          "Number": 43.612126
         },
         "place": 30,
         "day": 0.0,
@@ -3322,7 +3322,7 @@
         "subject": 31,
         "predicate": "latitude",
         "object": {
-          "Number": 6.993729562561996
+          "Number": 6.9937296
         },
         "place": 31,
         "day": 0.0,
@@ -3332,7 +3332,7 @@
         "subject": 31,
         "predicate": "longitude",
         "object": {
-          "Number": -23.588263756365375
+          "Number": -23.588264
         },
         "place": 31,
         "day": 0.0,
@@ -3402,7 +3402,7 @@
         "subject": 32,
         "predicate": "latitude",
         "object": {
-          "Number": 23.162710160154766
+          "Number": 23.16271
         },
         "place": 32,
         "day": 0.0,
@@ -3412,7 +3412,7 @@
         "subject": 32,
         "predicate": "longitude",
         "object": {
-          "Number": 38.28455072139304
+          "Number": 38.284551
         },
         "place": 32,
         "day": 0.0,
@@ -3482,7 +3482,7 @@
         "subject": 33,
         "predicate": "latitude",
         "object": {
-          "Number": -3.435592921728038
+          "Number": -3.4355929
         },
         "place": 33,
         "day": 0.0,
@@ -3492,7 +3492,7 @@
         "subject": 33,
         "predicate": "longitude",
         "object": {
-          "Number": 150.30102997643996
+          "Number": 150.30103
         },
         "place": 33,
         "day": 0.0,
@@ -3562,7 +3562,7 @@
         "subject": 34,
         "predicate": "latitude",
         "object": {
-          "Number": 17.531702374680066
+          "Number": 17.531702
         },
         "place": 34,
         "day": 0.0,
@@ -3572,7 +3572,7 @@
         "subject": 34,
         "predicate": "longitude",
         "object": {
-          "Number": -43.426036606656844
+          "Number": -43.426037
         },
         "place": 34,
         "day": 0.0,
@@ -3642,7 +3642,7 @@
         "subject": 35,
         "predicate": "latitude",
         "object": {
-          "Number": 6.113249806291626
+          "Number": 6.1132498
         },
         "place": 35,
         "day": 0.0,
@@ -3652,7 +3652,7 @@
         "subject": 35,
         "predicate": "longitude",
         "object": {
-          "Number": 56.28823569723753
+          "Number": 56.288236
         },
         "place": 35,
         "day": 0.0,
@@ -3722,7 +3722,7 @@
         "subject": 36,
         "predicate": "latitude",
         "object": {
-          "Number": -24.097206364288894
+          "Number": -24.097206
         },
         "place": 36,
         "day": 0.0,
@@ -3732,7 +3732,7 @@
         "subject": 36,
         "predicate": "longitude",
         "object": {
-          "Number": -57.81467208224929
+          "Number": -57.814672
         },
         "place": 36,
         "day": 0.0,
@@ -3802,7 +3802,7 @@
         "subject": 37,
         "predicate": "latitude",
         "object": {
-          "Number": 20.772859011505687
+          "Number": 20.772859
         },
         "place": 37,
         "day": 0.0,
@@ -3812,7 +3812,7 @@
         "subject": 37,
         "predicate": "longitude",
         "object": {
-          "Number": 52.52241562342213
+          "Number": 52.522416
         },
         "place": 37,
         "day": 0.0,
@@ -3882,7 +3882,7 @@
         "subject": 38,
         "predicate": "latitude",
         "object": {
-          "Number": -17.489289603145643
+          "Number": -17.48929
         },
         "place": 38,
         "day": 0.0,
@@ -3892,7 +3892,7 @@
         "subject": 38,
         "predicate": "longitude",
         "object": {
-          "Number": -88.7582867962038
+          "Number": -88.758287
         },
         "place": 38,
         "day": 0.0,
@@ -3962,7 +3962,7 @@
         "subject": 39,
         "predicate": "latitude",
         "object": {
-          "Number": 9.532983565984527
+          "Number": 9.5329836
         },
         "place": 39,
         "day": 0.0,
@@ -3972,7 +3972,7 @@
         "subject": 39,
         "predicate": "longitude",
         "object": {
-          "Number": -71.64683819668028
+          "Number": -71.646838
         },
         "place": 39,
         "day": 0.0,
@@ -4042,7 +4042,7 @@
         "subject": 40,
         "predicate": "latitude",
         "object": {
-          "Number": 13.723032816197948
+          "Number": 13.723033
         },
         "place": 40,
         "day": 0.0,
@@ -4052,7 +4052,7 @@
         "subject": 40,
         "predicate": "longitude",
         "object": {
-          "Number": -58.73308433875728
+          "Number": -58.733084
         },
         "place": 40,
         "day": 0.0,
@@ -4122,7 +4122,7 @@
         "subject": 41,
         "predicate": "latitude",
         "object": {
-          "Number": 26.979963167890705
+          "Number": 26.979963
         },
         "place": 41,
         "day": 0.0,
@@ -4132,7 +4132,7 @@
         "subject": 41,
         "predicate": "longitude",
         "object": {
-          "Number": 8.489080171305755
+          "Number": 8.4890802
         },
         "place": 41,
         "day": 0.0,
@@ -4202,7 +4202,7 @@
         "subject": 42,
         "predicate": "latitude",
         "object": {
-          "Number": -26.28693204677916
+          "Number": -26.286932
         },
         "place": 42,
         "day": 0.0,
@@ -4212,7 +4212,7 @@
         "subject": 42,
         "predicate": "longitude",
         "object": {
-          "Number": 67.51804525427592
+          "Number": 67.518045
         },
         "place": 42,
         "day": 0.0,
@@ -4282,7 +4282,7 @@
         "subject": 43,
         "predicate": "latitude",
         "object": {
-          "Number": 3.828227537611713
+          "Number": 3.8282275
         },
         "place": 43,
         "day": 0.0,
@@ -4292,7 +4292,7 @@
         "subject": 43,
         "predicate": "longitude",
         "object": {
-          "Number": -85.63948234694308
+          "Number": -85.639482
         },
         "place": 43,
         "day": 0.0,
@@ -4362,7 +4362,7 @@
         "subject": 44,
         "predicate": "latitude",
         "object": {
-          "Number": 23.40224890406364
+          "Number": 23.402249
         },
         "place": 44,
         "day": 0.0,
@@ -4372,7 +4372,7 @@
         "subject": 44,
         "predicate": "longitude",
         "object": {
-          "Number": -82.37582159005515
+          "Number": -82.375822
         },
         "place": 44,
         "day": 0.0,
@@ -4442,7 +4442,7 @@
         "subject": 45,
         "predicate": "latitude",
         "object": {
-          "Number": -14.018635498714644
+          "Number": -14.018635
         },
         "place": 45,
         "day": 0.0,
@@ -4452,7 +4452,7 @@
         "subject": 45,
         "predicate": "longitude",
         "object": {
-          "Number": -48.558208279724326
+          "Number": -48.558208
         },
         "place": 45,
         "day": 0.0,
@@ -4522,7 +4522,7 @@
         "subject": 46,
         "predicate": "latitude",
         "object": {
-          "Number": 35.53009070782003
+          "Number": 35.530091
         },
         "place": 46,
         "day": 0.0,
@@ -4532,7 +4532,7 @@
         "subject": 46,
         "predicate": "longitude",
         "object": {
-          "Number": -71.69858337765088
+          "Number": -71.698583
         },
         "place": 46,
         "day": 0.0,
@@ -4602,7 +4602,7 @@
         "subject": 47,
         "predicate": "latitude",
         "object": {
-          "Number": -24.56000817310325
+          "Number": -24.560008
         },
         "place": 47,
         "day": 0.0,
@@ -4612,7 +4612,7 @@
         "subject": 47,
         "predicate": "longitude",
         "object": {
-          "Number": -73.59432848890023
+          "Number": -73.594328
         },
         "place": 47,
         "day": 0.0,
@@ -4682,7 +4682,7 @@
         "subject": 48,
         "predicate": "latitude",
         "object": {
-          "Number": -30.73609028115227
+          "Number": -30.73609
         },
         "place": 48,
         "day": 0.0,
@@ -4692,7 +4692,7 @@
         "subject": 48,
         "predicate": "longitude",
         "object": {
-          "Number": 160.1189849652554
+          "Number": 160.11898
         },
         "place": 48,
         "day": 0.0,
@@ -4762,7 +4762,7 @@
         "subject": 49,
         "predicate": "latitude",
         "object": {
-          "Number": 29.640255231923266
+          "Number": 29.640255
         },
         "place": 49,
         "day": 0.0,
@@ -4772,7 +4772,7 @@
         "subject": 49,
         "predicate": "longitude",
         "object": {
-          "Number": -93.95359832397693
+          "Number": -93.953598
         },
         "place": 49,
         "day": 0.0,
@@ -4842,7 +4842,7 @@
         "subject": 50,
         "predicate": "latitude",
         "object": {
-          "Number": -7.657806953803067
+          "Number": -7.657807
         },
         "place": 50,
         "day": 0.0,
@@ -4852,7 +4852,7 @@
         "subject": 50,
         "predicate": "longitude",
         "object": {
-          "Number": -81.20424427877053
+          "Number": -81.204244
         },
         "place": 50,
         "day": 0.0,
@@ -4922,7 +4922,7 @@
         "subject": 51,
         "predicate": "latitude",
         "object": {
-          "Number": -1.887411302070772
+          "Number": -1.8874113
         },
         "place": 51,
         "day": 0.0,
@@ -4932,7 +4932,7 @@
         "subject": 51,
         "predicate": "longitude",
         "object": {
-          "Number": -64.85310177603176
+          "Number": -64.853102
         },
         "place": 51,
         "day": 0.0,
@@ -5002,7 +5002,7 @@
         "subject": 52,
         "predicate": "latitude",
         "object": {
-          "Number": 4.646100966637388
+          "Number": 4.646101
         },
         "place": 52,
         "day": 0.0,
@@ -5012,7 +5012,7 @@
         "subject": 52,
         "predicate": "longitude",
         "object": {
-          "Number": -41.90597459613899
+          "Number": -41.905975
         },
         "place": 52,
         "day": 0.0,
@@ -5082,7 +5082,7 @@
         "subject": 53,
         "predicate": "latitude",
         "object": {
-          "Number": 30.77342681417602
+          "Number": 30.773427
         },
         "place": 53,
         "day": 0.0,
@@ -5092,7 +5092,7 @@
         "subject": 53,
         "predicate": "longitude",
         "object": {
-          "Number": 62.34548203906075
+          "Number": 62.345482
         },
         "place": 53,
         "day": 0.0,
@@ -5172,7 +5172,7 @@
         "subject": 54,
         "predicate": "longitude",
         "object": {
-          "Number": 148.282525588539
+          "Number": 148.28253
         },
         "place": 54,
         "day": 0.0,
@@ -5242,7 +5242,7 @@
         "subject": 55,
         "predicate": "latitude",
         "object": {
-          "Number": -31.964703932672272
+          "Number": -31.964704
         },
         "place": 55,
         "day": 0.0,
@@ -5252,7 +5252,7 @@
         "subject": 55,
         "predicate": "longitude",
         "object": {
-          "Number": 174.1698583515145
+          "Number": 174.16986
         },
         "place": 55,
         "day": 0.0,
@@ -5322,7 +5322,7 @@
         "subject": 56,
         "predicate": "latitude",
         "object": {
-          "Number": 22.644412834561724
+          "Number": 22.644413
         },
         "place": 56,
         "day": 0.0,
@@ -5332,7 +5332,7 @@
         "subject": 56,
         "predicate": "longitude",
         "object": {
-          "Number": -68.27809230850458
+          "Number": -68.278092
         },
         "place": 56,
         "day": 0.0,
@@ -5402,7 +5402,7 @@
         "subject": 57,
         "predicate": "latitude",
         "object": {
-          "Number": 37.15806555037892
+          "Number": 37.158066
         },
         "place": 57,
         "day": 0.0,
@@ -5412,7 +5412,7 @@
         "subject": 57,
         "predicate": "longitude",
         "object": {
-          "Number": -34.2460427941681
+          "Number": -34.246043
         },
         "place": 57,
         "day": 0.0,
@@ -5482,7 +5482,7 @@
         "subject": 58,
         "predicate": "latitude",
         "object": {
-          "Number": 33.955221797684956
+          "Number": 33.955222
         },
         "place": 58,
         "day": 0.0,
@@ -5492,7 +5492,7 @@
         "subject": 58,
         "predicate": "longitude",
         "object": {
-          "Number": -17.312109261625412
+          "Number": -17.312109
         },
         "place": 58,
         "day": 0.0,
@@ -5562,7 +5562,7 @@
         "subject": 59,
         "predicate": "latitude",
         "object": {
-          "Number": 26.632067552866125
+          "Number": 26.632068
         },
         "place": 59,
         "day": 0.0,
@@ -5572,7 +5572,7 @@
         "subject": 59,
         "predicate": "longitude",
         "object": {
-          "Number": -54.2313790283787
+          "Number": -54.231379
         },
         "place": 59,
         "day": 0.0,
@@ -5652,7 +5652,7 @@
         "subject": 60,
         "predicate": "longitude",
         "object": {
-          "Number": 31.717474411461016
+          "Number": 31.717474
         },
         "place": 60,
         "day": 0.0,
@@ -7902,7 +7902,7 @@
         "subject": 1,
         "predicate": "max-ice-fraction",
         "object": {
-          "Number": 0.3727027027027027
+          "Number": 0.3727027
         },
         "place": null,
         "day": 0.0,
