@@ -1,6 +1,6 @@
 # Study 010: The Census of Words
 
-Campaign 12, The Words, gave every registered concept a home in a
+Campaign 20, The Words, gave every registered concept a home in a
 per-species lexicon (a real proto-root plus a real Neogrammarian
 sound-change history, or a compound over two roots, or a reasoned gap) and
 gave every settlement and deity name a **gloss**: the 1-2 site concepts —

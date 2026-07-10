@@ -25,7 +25,7 @@ by CI. `census-of-skies` commits its published summary and charts (Study
 `census-of-peoples`, `census-of-faiths`, `census-of-eyes` (Study 007's
 two-pantheon baseline, the Campaign Y2-2 addition), `census-of-tongues`
 (Study 008's naming/voice baseline, the Campaign Y2-3 addition), and
-`census-of-words` (Study 010's lexicon/etymology baseline, the Campaign 12
+`census-of-words` (Study 010's lexicon/etymology baseline, the Campaign 20
 addition) — are never committed as raw output. Each backs one or more
 chapters in this section; regenerating one is a one-line `lab run` and a
 manual re-read of its headline numbers, not a CI obligation.

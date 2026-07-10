@@ -35,21 +35,21 @@ The two flagships, quoted verbatim from the committed
 [`almanac-seed-42-sky.md`](./almanac-seed-42-sky.md):
 
 ```text
-The chief goblin settlement, Fnabnget, holds 359 souls amid temperate-rainforest.
-The chief kobold settlement, Rakrra, holds 425 souls amid temperate-rainforest.
+The chief goblin settlement, Xnebsvobned, holds 359 souls amid temperate-rainforest.
+The chief kobold settlement, Raxaxoxokrrorat, holds 425 souls amid temperate-rainforest.
 
-The goblin village of **Fnabnget**, population 359.
+The goblin village of **Xnebsvobned**, population 359.
 
-Fnabnget lives by farming.
+Xnebsvobned lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 
-The kobold warren of **Rakrra**, population 425.
+The kobold warren of **Raxaxoxokrrorat**, population 425.
 
-Rakrra lives by farming.
+Raxaxoxokrrorat lives by farming.
 Its roles, lowest to highest: digger, shaper, keeper, elders.
 ```
 
-**Fnabnget** and **Rakrra** are not the same site read twice; they are two
+**Xnebsvobned** and **Raxaxoxokrrorat** are not the same site read twice; they are two
 different cells on the same globe, and the psychology vector chose each one.
 Settlement scores every habitable cell for a species by a weighted sum whose
 weights are read off that species' vector rather than fixed once for the world
@@ -57,7 +57,7 @@ weights are read off that species' vector rather than fixed once for the world
 time_horizon)`, `coast = 0.20 × (2 × in_group_radius)`, and a hostility penalty
 `0.50 × (1.5 − threat_response)`, with temperance unweighted at 0.35. At the
 goblin baseline those expressions collapse to the plain constants 0.45, 0.20,
-and 0.50 — the pre-species weighting exactly — so Fnabnget lands where a
+and 0.50 — the pre-species weighting exactly — so Xnebsvobned lands where a
 goblin's world always placed its flagship. Kobold's authored numbers bend the
 same three terms in three directions at once: a time horizon of 0.8 raises the
 freshwater weight to `0.585`, an in-group radius of 0.2 cuts the coast bonus
@@ -66,7 +66,7 @@ response of 0.8 softens the hostility penalty from 0.50 to `0.35` (a people
 entrenched behind its own traps discounts a hostile cell less than a people
 that would flee it). Every `(cell, species)` pair is scored once, into one
 combined ranked list, and each species' single global argmax becomes its
-flagship — so Fnabnget and Rakrra land where they do because a goblin and a
+flagship — so Xnebsvobned and Raxaxoxokrrorat land where they do because a goblin and a
 kobold, offered the same globe, do not agree on what the best cell *is*. That
 they both net out in temperate-rainforest is this seed's coincidence, not the
 vector's doing; the cells themselves differ, and so do the populations, 359
@@ -86,7 +86,7 @@ that is precisely what makes the warren's cult *organized* — and `elders` is
 simply what a kobold calls the top rung a goblin calls `chief`, a relabel that
 rides with the species rather than a ceiling its psychology imposes (the
 `structure` function reads a status basis, a threat response, and a time
-horizon, but never sociality). So Rakrra tops out at `digger, shaper, keeper,
+horizon, but never sociality). So Raxaxoxokrrorat tops out at `digger, shaper, keeper,
 elders` — a worker, an artisan, a priest, and a council — a ladder that cannot,
 by the shape of the vector, hold a slave at the bottom, though its summit is
 named for a council of `elders` rather than a lone `chief`. Neither ladder
@@ -102,15 +102,15 @@ goblin block:
 ```text
 An organized priesthood tends a pantheon:
 
-> Nodvnotngak the Nebsxad returns every 0.88 days. So it was, so it is. *(who presides)*
+> Ned the Nabned returns every 0.88 days. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Sxebzvetfnat the Sxodsfotsfot returns every 15.99 days. So it was, so it is.
+> Neb the Xngodneb returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Nokzhfod the Fngeksfadnadnad returns every 32.55 days. So it was, so it is.
+> Neb the Xnobneb returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 ```
@@ -118,17 +118,17 @@ An organized priesthood tends a pantheon:
 and the kobold block, on the same globe, under the same sky:
 
 ```text
-In the warren of **Rakrra**, an organized priesthood tends its own pantheon:
+In the warren of **Raxaxoxokrrorat**, an organized priesthood tends its own pantheon:
 
-> Rragratxok Ragxoq comes back every 15.99 days. That's how it's always been. That's how it's always been. Rragratxok is the highest among the gods. *(who presides)*
+> Rro Rro comes back every 15.99 days. That's how it's always been. That's how it's always been. Rro is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Rraqrrok Roxag comes back every 32.55 days. That's how it's always been. That's how it's always been. Rraqrrok is a great one among the gods.
+> Raxa Raxarro comes back every 32.55 days. That's how it's always been. That's how it's always been. Raxa is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Rrogxat Xo comes back every 0.88 days. That's how it's always been. That's how it's always been. Rrogxat is a great one among the gods.
+> Rarro Rrora comes back every 0.88 days. That's how it's always been. That's how it's always been. Rarro is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 ```
@@ -136,7 +136,7 @@ In the warren of **Rakrra**, an organized priesthood tends its own pantheon:
 The goblin pantheon is headed by a 0.88-day deity — the sun, whose period is a
 single rotation; the kobold pantheon is headed by a 15.99-day one — the first
 moon. The sky itself never moved: the sun still leads the kobold list too, as
-**Rrogxat Xo**, third and least, on the identical 0.88-day period. What changed
+**Rarro Rrora**, third and least, on the identical 0.88-day period. What changed
 is only which pair of eyes did the ranking, and that recounts to the perception
 vector (see [Perception](../domains/perception.md)). A species' lens is three
 multiplicative weights built from three authored dimensions — activity cycle,
@@ -164,17 +164,18 @@ The divergence in those two blocks is not only *which* body heads each
 pantheon. It is every syllable, and it is the grammar of the telling — and
 both recount to the third vector, articulation (see
 [Language](../domains/language.md)). Read the names first. The goblin head is
-**Nodvnotngak the Nebsxad**; the kobold head is **Rragratxok Ragxoq**. The
+**Ned the Nabned**; the kobold head is **Rro Rro**. The
 sounds themselves are drawn from each species' own phonology under its authored
 articulation envelope: kobold's sibilance sits at 0.9 and its anatomy affords a
-trill, so a warren's names hiss and roll (`Rakrra`, `Rragratxok`, the doubled
-`rr`), where goblin's cluster around `fn` and `ng` (`Fnabnget`, `Nodvnotngak`)
-and never trill. But the sharper tell is the *shape* of the title, which keys
+trill, so a warren's names hiss and roll (`Raxaxoxokrrorat`, `Rro`, the doubled
+`rr`), where goblin's anatomy affords no exotic manner at all, so its names
+(`Xnebsvobned`, `Ned`) never trill or double a consonant that way. But the
+sharper tell is the *shape* of the title, which keys
 not to the mouth but back to psychology's status basis. A rank-basis people
-affixes a dominance honorific onto its gods' epithets — goblin's *the Nebsxad*,
+affixes a dominance honorific onto its gods' epithets — goblin's *the Nabned*,
 a bound honorific title stacked onto the stem — while a knowledge-basis people
 builds a plain descriptive compound with no dominance marking anywhere in it:
-kobold's *Ragxoq* carries no honorific article, no title, just a second stem.
+kobold's *Rro* carries no honorific article, no title, just a second stem.
 The god's name recounts to how its people organize authority, exactly as the
 caste ladder does.
 
@@ -186,7 +187,7 @@ and its presiding god's rank marked only by the terse `*(who presides)*`
 annotation. Kobold, communal and knowledge-basis, renders repetitive and
 descriptive: it echoes its refrain twice a line — *"That's how it's always
 been. That's how it's always been."* — and it *names* its head deity's rank in
-plain words, *"Rragratxok is the highest among the gods,"* where the goblin
+plain words, *"Rro is the highest among the gods,"* where the goblin
 telling would never spell it out. The formality and the stacked honorifics
 trace to `status-basis`, the same dimension that already decided who stands
 where on the ladder and how a god's title is shaped; the doubled refrain

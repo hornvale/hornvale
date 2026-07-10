@@ -21,9 +21,9 @@ gave it eyes; this campaign, the third of Year 2's spine, gives it **mouths**
 consequence of who is speaking it rather than a pool an author happened to
 seed. Every proper noun the world mints now — a settlement, a deity, a
 deity's epithet — is a real generated sound: seed 42's goblin flagship is
-**Fnabnget** (`/fnabŋet/`), whose head god is **Nodvnotngak the Nebsxad**;
-its kobold neighbor is **Rakrra** (`/rakrra/`), whose own head god is
-**Rragratxok Ragxoq**. See [Religion](./religion.md) for how a belief now
+**Xnebsvobned** (`/xnebsvobned/`), whose head god is **Ned the Nabned**;
+its kobold neighbor is **Raxaxoxokrrorat** (`/raxaxoxokrrorat/`), whose own
+head god is **Rro Rro**. See [Religion](./religion.md) for how a belief now
 carries that name as committed content rather than a frozen sentence.
 
 **Phonemes are feature-bearing segments; spellings are views.** The
@@ -227,15 +227,19 @@ domain builds *from* that envelope sorts into the same four kinds
   body/frailty vector exists to read (see the vector table's rationale,
   above).
 
-**The bright line.** A generated name has shape and voice — a mouth-feel
-recountable to a dimension, a sound built from a real inventory and real
-phonotactics — and nothing more. It has no gloss, no etymology, no meaning
-a player could look up. This campaign builds no lexicon and no syntax; it
-authors no sound-change and ages no name into a fossil of an older one;
-meaningful toponyms, language demographics, and everything that would let a
-name mean something rather than merely sound like something stay explicitly
-out of scope, work for whichever campaign takes up language change and
-contact once the world's peoples start meeting each other.
+**The bright line (as Campaign 16, The Tongues, drew it — since stepped
+over; see "Meaning arrives," below).** A generated name had shape and
+voice — a mouth-feel recountable to a dimension, a sound built from a real
+inventory and real phonotactics — and nothing more. It had no gloss, no
+etymology, no meaning a player could look up. The Tongues built no lexicon
+and no syntax; it authored no sound-change and aged no name into a fossil
+of an older one; meaningful toponyms, language demographics, and
+everything that would let a name mean something rather than merely sound
+like something stayed explicitly out of scope, work for whichever campaign
+took up language change and contact once the world's peoples started
+meeting each other. Campaign 20, The Words, is that campaign, for the
+lexicon and sound-change half of the line; contact, toponyms, and syntax
+still wait on the other side of it — see "The tongues still ahead," below.
 
 Reference: [Phonology](../reference/phonology.md), the drift-checked dump
 of each species' inventory, phonotactics, and sample names, regenerated
@@ -245,16 +249,19 @@ epithet-honorific, and collision-rate calibrations at 10k scale. Chronicle:
 [Campaign 16, The Tongues](../chronicle/16-the-tongues.md); [Campaign 17,
 Audible Phonology](../chronicle/17-audible-phonology.md).
 
-**The tongues ahead:** a lexicon and a syntax, and the meaning a name could
-carry once those exist; sound-change, etymology, and names as fossils of an
-older tongue, which want deep time under them before they mean anything;
-meaningful toponyms, built once terrain features are worth naming;
-pidgin, creole, and language-shift dynamics, which need two peoples who
-have actually met; the oral-formulaic grammar that reoccupies the render
-seam this campaign ships; a paralinguistic layer for mating and alarm
-calls, a different kind of sound than speech entirely; music and the other
-media a fuller expressive engine would eventually carry; per-individual
-idiolect, which the closed-vector posture excludes exactly as it excludes
+**The tongues still ahead (updated by Campaign 20, The Words — a lexicon
+and own-line sound-change shipped; see "Meaning arrives," below):** a
+syntax that lets two words assemble into a sentence rather than sit
+together as a single compound noun, and the case, tense, and agreement
+machinery it would carry; pidgin, creole, and language-shift dynamics,
+which need two peoples who have actually met — The Words draws its own
+bright line in front of exactly this, deliberately (see its closing
+paragraph, below); meaningful toponyms, built once terrain features are
+worth naming; the oral-formulaic grammar that reoccupies the render seam
+Campaign 16 shipped; a paralinguistic layer for mating and alarm calls, a
+different kind of sound than speech entirely; music and the other media a
+fuller expressive engine would eventually carry; per-individual idiolect,
+which the closed-vector posture excludes exactly as it excludes
 per-individual psychology and perception; and the articulation vector's own
 voice-loudness dimension, banked to be derived from a body/frailty vector
 this project has not yet authored.
@@ -398,10 +405,14 @@ concept was among the very facts the draw compounded over, in the order
 that language's own headedness — head-first or head-last, drawn once per
 language and binding on every compound it builds — puts them. A settlement
 name adds one more element the way real toponymy does: alongside its site
-words it carries a drawn stem unique to that settlement — the "-wick" in a
-world of Ice-Homes — a proper-name element that names no concept and so
-never enters the gloss, there because a census showed site words alone
-give a species only a handful of names against a hundred settlements. A name's
+words it carries a drawn stem unique to that settlement — two or three
+syllables of that language's own phonotactics tacked onto the gloss,
+"Ice-Homenaknot" rather than a one-syllable English suffix like "-wick" —
+a proper-name element that names no concept and so never enters the gloss,
+there because a census showed site words alone give a species only a
+handful of names against a hundred settlements (Study 010; see
+[Settlement](./settlement.md) for the exact collision figures the census
+pinned before and after this stem existed). A name's
 sound already rendered three views of one drawn segment sequence — a
 romanization, an IPA transcription, and an espeak formulation; it now
 renders a fourth, a gloss — the concepts it compounds, and the site facts
