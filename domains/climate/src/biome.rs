@@ -67,6 +67,34 @@ pub enum Biome {
     Abyssal,
 }
 
+/// Every biome variant, in declaration order — the single source of truth
+/// for anything that must enumerate all biomes (name-uniqueness tests,
+/// concept registration) rather than hand-listing them twice.
+pub const ALL: &[Biome] = &[
+    Biome::Ice,
+    Biome::Tundra,
+    Biome::Taiga,
+    Biome::TemperateGrassland,
+    Biome::Shrubland,
+    Biome::TemperateForest,
+    Biome::TemperateRainforest,
+    Biome::Desert,
+    Biome::Savanna,
+    Biome::TropicalSeasonalForest,
+    Biome::TropicalRainforest,
+    Biome::Alpine,
+    Biome::SeaIce,
+    Biome::CoralReef,
+    Biome::KelpForest,
+    Biome::HydrothermalVent,
+    Biome::HadalTrench,
+    Biome::Upwelling,
+    Biome::Epipelagic,
+    Biome::Mesopelagic,
+    Biome::Bathypelagic,
+    Biome::Abyssal,
+];
+
 /// The tree line in meters at a latitude: 4000 m at the equator, falling
 /// 40 m per degree, floored at 0.
 /// type-audit: pending(wave-2)
@@ -184,6 +212,14 @@ impl Biome {
             Biome::Bathypelagic => "bathypelagic",
             Biome::Abyssal => "abyssal",
         }
+    }
+
+    /// The concept-registry name for this biome (kebab-case; same string as
+    /// [`Biome::name`], named separately so concept registration reads as
+    /// its own concern rather than reaching into rendering).
+    /// type-audit: bare-ok(identifier-text)
+    pub fn concept_name(self) -> &'static str {
+        self.name()
     }
 
     /// A single ASCII glyph for the REPL biome map.
@@ -403,31 +439,7 @@ mod tests {
 
     #[test]
     fn names_are_kebab_and_unique() {
-        let all = [
-            Biome::Ice,
-            Biome::Tundra,
-            Biome::Taiga,
-            Biome::TemperateGrassland,
-            Biome::Shrubland,
-            Biome::TemperateForest,
-            Biome::TemperateRainforest,
-            Biome::Desert,
-            Biome::Savanna,
-            Biome::TropicalSeasonalForest,
-            Biome::TropicalRainforest,
-            Biome::Alpine,
-            Biome::SeaIce,
-            Biome::CoralReef,
-            Biome::KelpForest,
-            Biome::HydrothermalVent,
-            Biome::HadalTrench,
-            Biome::Upwelling,
-            Biome::Epipelagic,
-            Biome::Mesopelagic,
-            Biome::Bathypelagic,
-            Biome::Abyssal,
-        ];
-        let mut names: Vec<&str> = all.iter().map(|b| b.name()).collect();
+        let mut names: Vec<&str> = ALL.iter().map(|b| b.name()).collect();
         for n in &names {
             assert!(
                 n.chars().all(|c| c.is_ascii_lowercase() || c == '-'),

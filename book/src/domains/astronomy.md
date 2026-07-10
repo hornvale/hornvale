@@ -106,8 +106,9 @@ coincidence.
 
 None of this adds a body to the sky. The forcing drifts the elements the
 domain already holds — the sun, the moons, the neighbors are exactly as
-many as before — and nothing yet reads the deep-time drift: a future
-Deep Time / paleoclimate campaign consumes it.
+many as before — and the [paleoclimate domain](./paleoclimate.md) is the
+first consumer of the deep-time drift: it re-runs climate across a million
+years of that same forcing and reads a glacial history out of it.
 
 ## The placed observer (Firm Ground II)
 

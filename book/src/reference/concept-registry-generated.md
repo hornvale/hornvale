@@ -14,7 +14,10 @@
 | `deity-name-ipa` | yes | a belief's deity name (IPA transcription) |
 | `derived-from-phenomenon` | yes | phenomenon kind a belief mythologizes |
 | `eccentricity-mean` | yes | mean orbital eccentricity (deep-time forcing) |
+| `fossil-shoreline` | no | a fossil shoreline left by deep-time sea-level change |
+| `frost-retreat` | no | the deep-time record of deglaciation |
 | `genesis-note` | no | a degradation or refusal recorded during sky genesis |
+| `glacial-maximum-era` | yes | standard day of peak ice extent |
 | `has-caste` | no | a caste present in a settlement |
 | `held-by` | no | a community holding a belief |
 | `high-god` | yes | the presiding deity of a ranked pantheon |
@@ -24,9 +27,11 @@
 | `is-settlement` | yes | subject is a settlement |
 | `latitude` | yes | settlement latitude, degrees |
 | `longitude` | yes | settlement longitude, degrees |
+| `max-ice-fraction` | yes | land fraction under ice at the glacial maximum |
 | `moon-count` | yes | how many moons the anchor world has |
 | `moon-period-std` | no | orbital period of a moon, in standard days |
 | `name` | yes | canonical name of an entity |
+| `name-gloss` | yes | the glossed meaning of an entity's generated name |
 | `notable-neighbor` | no | a notable neighbor star visible in the night sky |
 | `obliquity-amplitude` | yes | obliquity oscillation amplitude, degrees (moon-coupled) |
 | `obliquity-degrees` | yes | axial tilt of the anchor world, in degrees |
@@ -34,6 +39,7 @@
 | `peopled-by` | yes | the species that peoples a settlement |
 | `plate-count` | yes | how many tectonic plates the globe has |
 | `population` | yes | population of a settlement |
+| `refugium` | no | a place habitable through the glacial maximum |
 | `scenario-pin` | no | an experimenter-supplied pin string conditioning genesis |
 | `sea-level-m` | yes | sea level in meters |
 | `sentiment` | yes | a belief's sentiment (eternal, cyclic, or ambient) |
@@ -71,3 +77,77 @@
 | `celestial-body` | a body visible in the sky |
 | `night-star` | a fixed star notable in the night sky |
 | `seasonal-cycle` | the annual daylight cycle |
+
+### Concepts
+
+| Concept | Domain | Kind | Meaning |
+|---|---|---|---|
+| `abyssal` | climate | terrain | a biome class |
+| `alpine` | climate | terrain | a biome class |
+| `bathypelagic` | climate | terrain | a biome class |
+| `blood` | language | body | the circulating fluid of a body |
+| `blue` | language | quality | the color term for blue |
+| `bone` | language | body | the rigid frame of a body |
+| `brown` | language | quality | the color term for brown |
+| `child` | language | kin | one's son or daughter |
+| `coral-reef` | climate | terrain | a biome class |
+| `dark` | language | quality | the color term for black/dark hues |
+| `day` | language | celestial | the light half of the day-night cycle |
+| `desert` | climate | terrain | a biome class |
+| `die` | language | quality | to cease living |
+| `earth` | language | terrain | the ground underfoot |
+| `eat` | language | quality | to consume food |
+| `epipelagic` | climate | terrain | a biome class |
+| `eye` | language | body | the organ of sight |
+| `fire` | language | substance | flame and heat |
+| `foot` | language | body | the walking limb-end |
+| `gloom` | language | quality | the deepest, starless dark |
+| `goblin-kind` | species | living | a goblin |
+| `god` | religion | social | a deity |
+| `green` | language | quality | the color term for green |
+| `hadal-trench` | climate | terrain | a biome class |
+| `hand` | language | body | the manipulating limb-end |
+| `hearth` | settlement | social | the fire at the center of a home |
+| `home` | settlement | social | one's dwelling |
+| `hydrothermal-vent` | climate | terrain | a biome class |
+| `ice` | climate | substance | frozen water |
+| `kelp-forest` | climate | terrain | a biome class |
+| `kobold-kind` | species | living | a kobold |
+| `light` | language | quality | the color term for white/light hues |
+| `many` | language | quality | an indefinitely large count |
+| `mesopelagic` | climate | terrain | a biome class |
+| `moon` | astronomy | celestial | a moon |
+| `mountain` | terrain | terrain | high ground |
+| `mouth` | language | body | the organ of eating and speech |
+| `name` | language | social | a word that identifies one who bears it |
+| `night` | astronomy | celestial | the dark half of the day-night cycle |
+| `one` | language | quality | the cardinal number 1 |
+| `parent` | language | kin | one's father or mother |
+| `rain` | climate | substance | liquid precipitation |
+| `red` | language | quality | the color term for red |
+| `savanna` | climate | terrain | a biome class |
+| `sea` | terrain | terrain | a body of salt water |
+| `sea-ice` | climate | terrain | a biome class |
+| `shadow` | language | quality | cast dark, distinct from open gloom |
+| `shrubland` | climate | terrain | a biome class |
+| `sibling` | language | kin | one's brother or sister |
+| `sleep` | language | quality | to rest unconscious |
+| `snow` | climate | substance | frozen precipitation |
+| `spirit` | religion | social | a lesser or unseen supernatural presence |
+| `star` | astronomy | celestial | a fixed point of light in the night sky |
+| `starlit` | language | quality | dark faintly lit by stars |
+| `stone` | terrain | substance | rock |
+| `sun` | astronomy | celestial | the sun |
+| `taiga` | climate | terrain | a biome class |
+| `temperate-forest` | climate | terrain | a biome class |
+| `temperate-grassland` | climate | terrain | a biome class |
+| `temperate-rainforest` | climate | terrain | a biome class |
+| `tree` | language | living | a woody plant |
+| `tropical-rainforest` | climate | terrain | a biome class |
+| `tropical-seasonal-forest` | climate | terrain | a biome class |
+| `tundra` | climate | terrain | a biome class |
+| `two` | language | quality | the cardinal number 2 |
+| `upwelling` | climate | terrain | a biome class |
+| `water` | language | substance | the drinkable liquid |
+| `wind` | language | substance | moving air |
+| `yellow` | language | quality | the color term for yellow |

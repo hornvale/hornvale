@@ -63,5 +63,8 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0021](0021-no-alignment-axis.md) | No alignment axis; species are not moral types | Accepted |
 | [0022](0022-sim-emits-data-clients-render.md) | Sim emits data, clients render | Accepted |
 | [0023](0023-in-repo-clients-carry-their-own-toolchains.md) | In-repo clients carry their own toolchains | Accepted |
+| [0024](0024-settlement-name-uniqueness-is-reference-time.md) | Settlement-name uniqueness is a reference-time property | Accepted |
+| [0025](0025-one-concept-name-one-owner.md) | One concept name, one owner | Accepted |
+| [0026](0026-slugs-not-numbers.md) | Slugs, not numbers (the last numbered decision) | Accepted |
 | [`…parser-libraries`](non-workspace-dev-tools-may-use-parser-libraries.md) | Non-workspace dev tools may use parser libraries | Accepted |
 | [`the-bare-ok-rubric`](the-bare-ok-rubric.md) | The bare-ok rubric for primitives at API boundaries | Accepted |

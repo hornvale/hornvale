@@ -34,11 +34,13 @@ jobs:
           cargo run -p hornvale -- concepts > book/src/reference/concept-registry-generated.md
           cargo run -p hornvale -- streams > book/src/reference/stream-manifest-generated.md
           cargo run -p hornvale -- phonology > book/src/reference/phonology.md
+          cargo run -p hornvale -- dictionary --world /tmp/hv-ci-sky.json > book/src/reference/dictionary-generated.md
           cargo run -p hornvale -- map --world /tmp/hv-ci-sky.json --out book/src/gallery/elevation-seed-42.png > book/src/gallery/elevation-seed-42.md
           cargo run -p hornvale -- biome-map --world /tmp/hv-ci-sky.json --out book/src/gallery/biome-seed-42.png > book/src/gallery/biome-seed-42.md
           cargo run -p hornvale -- biome-map --world /tmp/hv-ci-locked.json --out book/src/gallery/biome-seed-42-locked.png > book/src/gallery/biome-seed-42-locked.md
           cargo run -p hornvale -- settlement-map --world /tmp/hv-ci-sky.json --out book/src/gallery/settlement-seed-42.png > book/src/gallery/settlement-seed-42.md
           cargo run -p hornvale -- settlement-map --world /tmp/hv-ci-locked.json --out book/src/gallery/settlement-seed-42-locked.png > book/src/gallery/settlement-seed-42-locked.md
+          cargo run -p hornvale -- paleo-map --world /tmp/hv-ci-sky.json --out book/src/gallery/paleo-seed-42.png > book/src/gallery/paleo-seed-42.md
           cargo run -p hornvale -- star-chart --world /tmp/hv-ci-sky.json --out book/src/gallery/star-chart-seed-42.png > book/src/gallery/star-chart-seed-42.md
           cargo run -p hornvale -- scene tiles --world /tmp/hv-ci-sky.json > book/src/gallery/scene-tiles-seed-42.json
           cargo run -p hornvale -- scene system --world /tmp/hv-ci-sky.json > book/src/gallery/scene-system-seed-42.json

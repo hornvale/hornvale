@@ -15,7 +15,8 @@ pub use habitability::{habitable_fraction, is_habitable};
 pub use provider::{ClimateInputs, ClimateSummary, GeneratedClimate, summarize};
 
 use hornvale_kernel::{
-    ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, Position, RegistryError, Venue,
+    ConceptKind, ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, Position,
+    RegistryError, Venue,
 };
 
 /// Phenomenon kind for pervasive atmospheric conditions.
@@ -30,7 +31,34 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 
 /// Register climate's contribution to the concept registry.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
-    registry.register_phenomenon_kind(AMBIENT, "a pervasive atmospheric condition")
+    registry.register_phenomenon_kind(AMBIENT, "a pervasive atmospheric condition")?;
+
+    registry.register_concept(
+        "snow",
+        "climate",
+        ConceptKind::Substance,
+        "frozen precipitation",
+    )?;
+    registry.register_concept(
+        "rain",
+        "climate",
+        ConceptKind::Substance,
+        "liquid precipitation",
+    )?;
+    registry.register_concept("ice", "climate", ConceptKind::Substance, "frozen water")?;
+
+    for b in biome::ALL {
+        let name = b.concept_name();
+        // Biome::Ice's kebab name is "ice", identical to the substance
+        // concept above — the same word covers frozen water and the biome
+        // it forms, so the substance registration (already Substance-kinded)
+        // stands and the biome loop skips it rather than conflicting.
+        if registry.concept(name).is_some() {
+            continue;
+        }
+        registry.register_concept(name, "climate", ConceptKind::Terrain, "a biome class")?;
+    }
+    Ok(())
 }
 
 /// Tier-0 climate: the same mild air everywhere.
@@ -98,5 +126,33 @@ mod tests {
         register_concepts(&mut r).unwrap();
         register_concepts(&mut r).unwrap();
         assert!(r.phenomenon_kind(AMBIENT).is_some());
+    }
+
+    #[test]
+    fn concepts_registered() {
+        let mut r = ConceptRegistry::default();
+        register_concepts(&mut r).unwrap();
+        for name in ["snow", "rain", "ice"] {
+            let c = r
+                .concept(name)
+                .unwrap_or_else(|| panic!("missing concept {name}"));
+            assert_eq!(c.domain, "climate");
+            assert_eq!(c.kind, ConceptKind::Substance);
+        }
+        for b in biome::ALL {
+            let name = b.concept_name();
+            let c = r
+                .concept(name)
+                .unwrap_or_else(|| panic!("missing biome concept {name}"));
+            assert_eq!(c.domain, "climate");
+            // "ice" the biome shares its word with "ice" the substance
+            // (registered above as Substance); every other biome is Terrain.
+            let expected_kind = if name == "ice" {
+                ConceptKind::Substance
+            } else {
+                ConceptKind::Terrain
+            };
+            assert_eq!(c.kind, expected_kind);
+        }
     }
 }

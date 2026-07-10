@@ -23,7 +23,38 @@ pub fn render_concepts(registry: &ConceptRegistry) -> String {
     if !any {
         doc.push_str("| *(none registered)* | |\n");
     }
+    doc.push_str("\n### Concepts\n\n");
+    doc.push_str("| Concept | Domain | Kind | Meaning |\n|---|---|---|---|\n");
+    let mut any_concepts = false;
+    for c in registry.concepts() {
+        any_concepts = true;
+        doc.push_str(&format!(
+            "| `{}` | {} | {} | {} |\n",
+            c.name,
+            c.domain,
+            kind_kebab(c.kind),
+            c.doc
+        ));
+    }
+    if !any_concepts {
+        doc.push_str("| *(none registered)* | | | |\n");
+    }
     doc
+}
+
+/// A `ConceptKind`'s kebab-case rendering, matching the generated page's
+/// convention for every other identifier column.
+fn kind_kebab(kind: hornvale_kernel::ConceptKind) -> &'static str {
+    match kind {
+        hornvale_kernel::ConceptKind::Substance => "substance",
+        hornvale_kernel::ConceptKind::Living => "living",
+        hornvale_kernel::ConceptKind::Celestial => "celestial",
+        hornvale_kernel::ConceptKind::Terrain => "terrain",
+        hornvale_kernel::ConceptKind::Social => "social",
+        hornvale_kernel::ConceptKind::Body => "body",
+        hornvale_kernel::ConceptKind::Kin => "kin",
+        hornvale_kernel::ConceptKind::Quality => "quality",
+    }
 }
 
 #[cfg(test)]
@@ -47,6 +78,9 @@ mod tests {
             "| `tenet` |",
             "`celestial-body`",
             "`ambient`",
+            "### Concepts",
+            "| `sun` | astronomy | celestial |",
+            "| `god` | religion | social |",
         ] {
             assert!(doc.contains(expected), "missing: {expected}");
         }

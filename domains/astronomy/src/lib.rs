@@ -32,7 +32,8 @@ pub use units::{
 };
 
 use hornvale_kernel::{
-    ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, RegistryError, Venue, WorldTime,
+    ConceptKind, ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, RegistryError,
+    Venue, WorldTime,
 };
 
 /// Phenomenon kind for bodies visible in the sky.
@@ -134,6 +135,21 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::OBLIQUITY_AMPLITUDE,
         true,
         "obliquity oscillation amplitude, degrees (moon-coupled)",
+    )?;
+
+    registry.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")?;
+    registry.register_concept("moon", "astronomy", ConceptKind::Celestial, "a moon")?;
+    registry.register_concept(
+        "star",
+        "astronomy",
+        ConceptKind::Celestial,
+        "a fixed point of light in the night sky",
+    )?;
+    registry.register_concept(
+        "night",
+        "astronomy",
+        ConceptKind::Celestial,
+        "the dark half of the day-night cycle",
     )
 }
 
@@ -209,5 +225,18 @@ mod tests {
         register_concepts(&mut r).unwrap();
         register_concepts(&mut r).unwrap();
         assert!(r.phenomenon_kind(CELESTIAL_BODY).is_some());
+    }
+
+    #[test]
+    fn concepts_registered() {
+        let mut r = ConceptRegistry::default();
+        register_concepts(&mut r).unwrap();
+        for name in ["sun", "moon", "star", "night"] {
+            let c = r
+                .concept(name)
+                .unwrap_or_else(|| panic!("missing concept {name}"));
+            assert_eq!(c.domain, "astronomy");
+            assert_eq!(c.kind, ConceptKind::Celestial);
+        }
     }
 }

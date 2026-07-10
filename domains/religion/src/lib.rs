@@ -5,7 +5,8 @@
 #![warn(missing_docs)]
 
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Fact, LedgerError, Phenomenon, RegistryError, Value, Venue, World,
+    ConceptKind, ConceptRegistry, EntityId, Fact, LedgerError, Phenomenon, RegistryError, Value,
+    Venue, World,
 };
 
 /// Predicate marking an entity as a belief.
@@ -92,6 +93,14 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         SENTIMENT,
         true,
         "a belief's sentiment (eternal, cyclic, or ambient)",
+    )?;
+
+    registry.register_concept("god", "religion", ConceptKind::Social, "a deity")?;
+    registry.register_concept(
+        "spirit",
+        "religion",
+        ConceptKind::Social,
+        "a lesser or unseen supernatural presence",
     )
 }
 
@@ -425,6 +434,19 @@ mod tests {
         SocietySummary {
             strata: 5,
             has_priesthood: true,
+        }
+    }
+
+    #[test]
+    fn concepts_registered() {
+        let mut r = ConceptRegistry::default();
+        register_concepts(&mut r).unwrap();
+        for name in ["god", "spirit"] {
+            let c = r
+                .concept(name)
+                .unwrap_or_else(|| panic!("missing concept {name}"));
+            assert_eq!(c.domain, "religion");
+            assert_eq!(c.kind, ConceptKind::Social);
         }
     }
 

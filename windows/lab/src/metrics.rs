@@ -2,8 +2,10 @@
 
 use hornvale_astronomy::{Calendar, NeighborClass, Rotation, StarSystem};
 use hornvale_climate::GeneratedClimate;
-use hornvale_kernel::{CellId, Seed, Value, World};
-use hornvale_language::{Manner, MorphOptions, NameKind, Namer, Phonology, Segment, romanize};
+use hornvale_kernel::{CellId, EntityId, Phenomenon, Seed, Value, World};
+use hornvale_language::{
+    GapReason, LexEntry, Manner, MorphOptions, NameKind, Namer, Phonology, Segment, romanize,
+};
 use hornvale_religion::beliefs_of;
 use hornvale_terrain::GlobeSummary;
 use hornvale_worldgen::{
@@ -901,6 +903,73 @@ pub fn registry() -> Vec<Metric> {
                 None => MetricValue::Absent,
             },
         },
+        // --- The Words (Task 12): name-gloss truthfulness, lexicon
+        // regularity, exposure soundness, and the pack-depth baseline
+        // (spec §9). ---
+        Metric {
+            name: "name-gloss-true",
+            doc: "Whether every committed settlement name-gloss fact in this world is a \
+                   truthful composition of that SAME settlement's own re-derived site \
+                   concepts (biome + presiding phenomenon), independently re-derived here \
+                   rather than read back from worldgen's own composition; Absent if no \
+                   settlement in this world carries a gloss",
+            summary: SummaryKind::Flag,
+            extract: name_gloss_true,
+        },
+        Metric {
+            name: "lexicon-regular-goblin",
+            doc: "Whether every goblin lexicon Root entry's recorded sound-change \
+                   derivation replays byte-identically through evolve (Neogrammarian \
+                   regularity, spec §9.1); Absent if the goblin lexicon minted no Root",
+            summary: SummaryKind::Flag,
+            extract: |v| lexicon_regular(v, "goblin"),
+        },
+        Metric {
+            name: "lexicon-regular-kobold",
+            doc: "Whether every kobold lexicon Root entry's recorded sound-change \
+                   derivation replays byte-identically through evolve (Neogrammarian \
+                   regularity, spec §9.1); Absent if the kobold lexicon minted no Root",
+            summary: SummaryKind::Flag,
+            extract: |v| lexicon_regular(v, "kobold"),
+        },
+        Metric {
+            name: "exposure-sound-goblin",
+            doc: "Whether the goblin lexicon is exposure-sound: no concept an INDEPENDENT \
+                   re-derivation of exposure classifies Unknown ever backs a Root entry, and \
+                   every committed Gap carries a non-empty reason (spec §9.2); Absent if the \
+                   goblin lexicon has no entries",
+            summary: SummaryKind::Flag,
+            extract: |v| exposure_sound(v, "goblin"),
+        },
+        Metric {
+            name: "exposure-sound-kobold",
+            doc: "Whether the kobold lexicon is exposure-sound: no concept an INDEPENDENT \
+                   re-derivation of exposure classifies Unknown ever backs a Root entry, and \
+                   every committed Gap carries a non-empty reason (spec §9.2); Absent if the \
+                   kobold lexicon has no entries",
+            summary: SummaryKind::Flag,
+            extract: |v| exposure_sound(v, "kobold"),
+        },
+        Metric {
+            name: "hue-depth-goblin",
+            doc: "The goblin hue-ladder acquisition depth (2-5) derived from its perception \
+                   vector's night-vision (spec §7's pack-depth model card); Absent if goblin \
+                   is not in this world's roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0],
+            },
+            extract: |v| hue_depth(v, "goblin"),
+        },
+        Metric {
+            name: "hue-depth-kobold",
+            doc: "The kobold hue-ladder acquisition depth (2-5) derived from its perception \
+                   vector's night-vision (spec §7's pack-depth model card); Absent if kobold \
+                   is not in this world's roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0],
+            },
+            extract: |v| hue_depth(v, "kobold"),
+        },
         Metric {
             name: "shoreline-development",
             doc: "Shoreline development index: coastline length over the \
@@ -1042,6 +1111,8 @@ fn pantheon_sig(v: &WorldView, species: &str) -> Option<PantheonSig> {
     if beliefs.is_empty() {
         return None;
     }
+    // Pantheons derive from the same first-place, hemisphere-culled vantage
+    // religion's genesis observes (SEQ-4/SEQ-5).
     let seen = observed_phenomena_as_in(&v.world, &v.roster, species).ok()?;
     let top = seen.first()?;
     let domain = match top.venue {
@@ -1173,21 +1244,26 @@ fn phonotactic_validity(v: &WorldView, species: &str) -> MetricValue {
 /// Whether every committed deity epithet of `species`' flagship pantheon
 /// carries a prepended honorific affix, DETECTED from the committed epithet
 /// content (not read back from the config that drove generation — that would
-/// be tautological). `Absent` if `species` holds no pantheon.
+/// be tautological). `Absent` if `species` holds no pantheon (or, for a
+/// non-default roster, if the species' lexicon cannot be re-derived — the
+/// epithet-honorific columns are only registered for the shipped species).
 ///
-/// The honorific affix is one syllable drawn AFTER the shared descriptive
-/// stem + reduplication draws and PREPENDED (Task 6). So for a given
-/// `(seed, species, salt)`, re-deriving the epithet with honorifics OFF
-/// yields exactly the stem the committed epithet was built from. The
-/// renderer capitalizes only the first character, and a prepended affix
-/// shifts the stem's first letter off the front (lowercasing it), so the
-/// detection case-folds both: the committed epithet carries the honorific
-/// iff, lowercased, it ends with the lowercased plain stem AND is strictly
-/// longer. The metric is `Flag(true)` iff EVERY committed epithet carries
-/// it (goblin, Rank), `Flag(false)` iff none does (kobold, Knowledge). A
-/// broken honorific pipeline — a goblin epithet committed without its affix
-/// — would equal its plain stem here and flip the flag to false, which the
-/// preregistered calibration then catches.
+/// Since The Words (Task 9) an epithet is glossed (`Namer::glossed_name`,
+/// the `/v2` epoch): its draw depends on the belief's own site concepts
+/// (its phenomenon's concept + its sentiment's), so detection re-derives
+/// those exactly as worldgen composed them — the flagship's observed
+/// phenomena in salience order pair 1:1 with its beliefs in commit order
+/// (religion's genesis names members in phenomena order), and
+/// `hornvale_worldgen::deity_site_concepts` maps each pair. The honorific
+/// affix is one template syllable drawn AFTER the site-concept picks and
+/// PREPENDED, so re-deriving the same glossed epithet with honorifics OFF
+/// yields exactly the plain word the committed epithet was built from: the
+/// committed epithet carries the honorific iff, lowercased, it ends with
+/// the lowercased plain word AND is strictly longer. `Flag(true)` iff
+/// EVERY committed epithet carries it (goblin, Rank), `Flag(false)` iff
+/// none does (kobold, Knowledge). A broken honorific pipeline — a goblin
+/// epithet committed without its affix — would equal its plain word here
+/// and flip the flag to false, which the preregistered calibration catches.
 fn epithet_honorific(v: &WorldView, species: &str) -> MetricValue {
     let Some(info) = flagship_of(&v.world, species) else {
         return MetricValue::Absent;
@@ -1196,21 +1272,40 @@ fn epithet_honorific(v: &WorldView, species: &str) -> MetricValue {
     if beliefs.is_empty() {
         return MetricValue::Absent;
     }
+    // Religion (and the deity glosses drawn inside it) observes from the
+    // world's first place, hemisphere-culled (SEQ-4/SEQ-5) — re-derive from
+    // exactly that vantage so the check tracks the pipeline's real sky.
+    let Ok(seen) = observed_phenomena_as_in(&v.world, &v.roster, species) else {
+        return MetricValue::Absent;
+    };
+    let Ok(lexicon) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+        return MetricValue::Absent;
+    };
     let ph = language_of_in(&v.world, &v.roster, species);
     let namer = Namer::new(&v.world.seed, species, &ph);
-    let carries = |b: &hornvale_religion::Belief| {
-        let plain = namer
-            .name(
-                NameKind::Epithet,
-                b.id.0,
-                &MorphOptions { honorifics: false },
-            )
-            .roman
-            .to_lowercase();
+    let carries = |(i, b): (usize, &hornvale_religion::Belief)| {
+        let Some(phenomenon) = seen.get(i) else {
+            // More beliefs than observed phenomena would mean the
+            // belief↔phenomenon pairing above is broken; count it as a
+            // failed detection rather than guessing.
+            return false;
+        };
+        let concepts = hornvale_worldgen::deity_site_concepts(phenomenon, b.sentiment);
+        let site = hornvale_language::SiteConcepts {
+            concepts: &concepts,
+        };
+        let (plain, _) = namer.glossed_name(
+            NameKind::Epithet,
+            b.id.0,
+            &MorphOptions { honorifics: false },
+            &site,
+            &lexicon,
+        );
+        let plain = plain.roman.to_lowercase();
         let committed = b.epithet.to_lowercase();
         committed.ends_with(&plain) && committed.chars().count() > plain.chars().count()
     };
-    MetricValue::Flag(beliefs.iter().all(carries))
+    MetricValue::Flag(beliefs.iter().enumerate().all(carries))
 }
 
 /// Mean character length of every generated name attributed to `species` in
@@ -1243,6 +1338,263 @@ fn name_collision_rate(v: &WorldView) -> MetricValue {
     }
     let duplicated = names.iter().filter(|n| counts[n.as_str()] > 1).count();
     MetricValue::Number(duplicated as f64 / names.len() as f64)
+}
+
+/// The concept a phenomenon kind glosses to (spec §9.3) — mirrors
+/// worldgen's own private `phenomenon_concept` and the independent copy in
+/// `cli/tests/words_identity.rs`'s `phenomenon_concept`. Deliberately
+/// duplicated rather than imported: this is a composition-root judgment
+/// call, not a save-format contract, so re-deriving it here from the same
+/// public phenomenon-kind constants is what makes `name-gloss-true` a real
+/// cross-check rather than an echo of worldgen's own private mapping.
+fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
+    match phenomenon.kind.as_str() {
+        hornvale_astronomy::CELESTIAL_BODY => {
+            if phenomenon.description.contains("moon") {
+                Some("moon")
+            } else if phenomenon.description.contains("star") {
+                Some("star")
+            } else {
+                Some("sun")
+            }
+        }
+        hornvale_astronomy::SEASONAL_CYCLE => Some("day"),
+        hornvale_astronomy::NIGHT_STAR => Some("star"),
+        hornvale_climate::AMBIENT => Some("wind"),
+        _ => None,
+    }
+}
+
+/// A settlement's own re-derived site concepts (mirrors
+/// `cli/tests/words_identity.rs`'s `settlement_site_concepts`): its
+/// committed biome fact plus the presiding phenomenon concept its species
+/// observes from THIS settlement's own vantage (its committed coordinates
+/// cull the sky — SEQ-5; spec §9.3 defines gloss truthfulness against the
+/// entity's own facts), if any. `None` if the settlement is missing a
+/// biome/species fact, which `name_gloss_true` below treats as an
+/// unverifiable (failing) row rather than skipping it silently.
+fn settlement_site_concepts(v: &WorldView, id: EntityId) -> Option<Vec<String>> {
+    let biome = v
+        .world
+        .ledger
+        .text_of(id, hornvale_settlement::BIOME)?
+        .to_string();
+    let species = hornvale_species::species_of(&v.world, id)?;
+    let phenomena =
+        hornvale_worldgen::observed_phenomena_as_at(&v.world, &v.roster, &species, id).ok()?;
+    let mut concepts = vec![biome];
+    if let Some(concept) = phenomena.first().and_then(phenomenon_concept) {
+        concepts.push(concept.to_string());
+    }
+    Some(concepts)
+}
+
+/// Every gloss composition `Namer::glossed_name` could truthfully produce
+/// from `concepts` (mirrors `cli/tests/words_identity.rs`'s
+/// `candidate_glosses`): each concept alone, plus every ordered pair joined
+/// with `"-"`.
+fn candidate_glosses(concepts: &[String]) -> std::collections::BTreeSet<String> {
+    let mut set = std::collections::BTreeSet::new();
+    for c in concepts {
+        set.insert(c.clone());
+    }
+    for i in 0..concepts.len() {
+        for j in 0..concepts.len() {
+            if i != j {
+                set.insert(format!("{}-{}", concepts[i], concepts[j]));
+            }
+        }
+    }
+    set
+}
+
+/// Whether every committed settlement `name-gloss` fact in this world is a
+/// truthful composition of that SAME settlement's own re-derived site
+/// concepts (spec §9.3) — the per-world aggregate of
+/// `cli/tests/words_identity.rs`'s `names_wellformed_and_glosses_true`
+/// settlement half, re-implemented independently here (never calling
+/// worldgen's internal name-drawing code, only its committed `NAME_GLOSS`
+/// fact and this module's own re-derivation of the site concepts that fact
+/// should be true to). `Absent` if no settlement in this world carries a
+/// gloss.
+fn name_gloss_true(v: &WorldView) -> MetricValue {
+    let mut checked = false;
+    let mut all_true = true;
+    for f in v.world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
+        let id = f.subject;
+        let Some(gloss) = v.world.ledger.text_of(id, hornvale_worldgen::NAME_GLOSS) else {
+            continue;
+        };
+        checked = true;
+        match settlement_site_concepts(v, id) {
+            Some(concepts) if candidate_glosses(&concepts).contains(gloss) => {}
+            _ => all_true = false,
+        }
+    }
+    if !checked {
+        return MetricValue::Absent;
+    }
+    MetricValue::Flag(all_true)
+}
+
+/// Whether every `species` lexicon `Root` entry's recorded sound-change
+/// derivation replays byte-identically through `evolve` (Neogrammarian
+/// regularity, spec §9.1) — the per-species aggregate of
+/// `cli/tests/words_identity.rs`'s `derivations_replay`. `Absent` if
+/// `species` is not in this world's roster or its lexicon minted no `Root`.
+fn lexicon_regular(v: &WorldView, species: &str) -> MetricValue {
+    if !v.roster.iter().any(|d| d.name == species) {
+        return MetricValue::Absent;
+    }
+    let ph = language_of_in(&v.world, &v.roster, species);
+    let cascade = hornvale_language::draw_cascade(&v.world.seed, species);
+    let Ok(lex) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+        return MetricValue::Absent;
+    };
+    let mut any = false;
+    let mut regular = true;
+    for (_, entry) in lex.entries() {
+        if let LexEntry::Root { derivation, .. } = entry {
+            any = true;
+            let replayed = hornvale_language::evolve(&derivation.proto, &cascade, &ph);
+            if replayed.modern != derivation.modern {
+                regular = false;
+            }
+        }
+    }
+    if !any {
+        return MetricValue::Absent;
+    }
+    MetricValue::Flag(regular)
+}
+
+/// The concepts an INDEPENDENT re-derivation of `species`' exposure would
+/// classify `Steeped` — duplicating `exposure_of`'s own Steeped rules
+/// (`windows/worldgen/src/lib.rs`) directly from ledger/roster/terrain/
+/// climate data rather than calling `exposure_of` itself (spec §9.2: "the
+/// flag re-derives the exposure class from the ledger independently of the
+/// lexicon pipeline" — calling `exposure_of` would be the config-echo trap
+/// `epithet_honorific`'s doc comment already names for a different metric).
+/// Sufficient for `exposure_sound`'s "no Root at Unknown" check:
+/// `build_lexicon` only ever mints a `Root` from a `Steeped` classification
+/// (`KnowsOf`/`Unknown` both fall through to `Compound`/`Gap`), so the
+/// KnowsOf-via-neighbor and sea-proximity rules `exposure_of` also carries
+/// are irrelevant to this specific soundness check and are not reproduced
+/// here. `None` if `species` is not in this world's roster.
+fn independently_steeped_concepts(
+    v: &WorldView,
+    species: &str,
+) -> Option<std::collections::BTreeSet<String>> {
+    let def = v.roster.iter().find(|d| d.name == species)?;
+    let depths = hornvale_worldgen::pack_depths(&def.perception);
+    let mut steeped: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+
+    for entry in hornvale_language::universal_stratum() {
+        steeped.insert(entry.concept.to_string());
+    }
+    for entry in hornvale_language::color_pack()
+        .iter()
+        .chain(hornvale_language::body_pack())
+        .chain(hornvale_language::kin_pack())
+    {
+        if hornvale_language::in_ladder(entry, &depths) {
+            steeped.insert(entry.concept.to_string());
+        }
+    }
+
+    let settled: Vec<CellId> = hornvale_terrain::places(&v.world)
+        .into_iter()
+        .filter(|p| hornvale_species::species_of(&v.world, p.id).as_deref() == Some(species))
+        .filter_map(
+            |p| match v.world.ledger.value_of(p.id, hornvale_settlement::CELL_ID) {
+                Some(Value::Number(n)) => Some(CellId(*n as u32)),
+                _ => None,
+            },
+        )
+        .collect();
+    for &cell in &settled {
+        steeped.insert(v.climate.biome_at(cell).concept_name().to_string());
+    }
+
+    let own_kind = format!("{species}-kind");
+    if v.world.registry.concept(&own_kind).is_some() {
+        steeped.insert(own_kind);
+    }
+    if !settled.is_empty() {
+        let coexisting: std::collections::BTreeSet<String> = v
+            .world
+            .ledger
+            .find(hornvale_species::PEOPLED_BY)
+            .filter_map(|f| match &f.object {
+                Value::Text(s) => Some(s.clone()),
+                _ => None,
+            })
+            .collect();
+        for placed in &coexisting {
+            let kind = format!("{placed}-kind");
+            if v.world.registry.concept(&kind).is_some() {
+                steeped.insert(kind);
+            }
+        }
+        for concept in ["home", "hearth", "god", "spirit"] {
+            if v.world.registry.concept(concept).is_some() {
+                steeped.insert(concept.to_string());
+            }
+        }
+    }
+    Some(steeped)
+}
+
+/// Whether `species`' lexicon is exposure-sound (spec §9.2): no concept the
+/// independent re-derivation above classifies outside `Steeped` ever backs
+/// a `Root` entry, and every committed `Gap` carries a non-empty reason.
+/// `Absent` if `species` is not in this world's roster or its lexicon has
+/// no entries.
+fn exposure_sound(v: &WorldView, species: &str) -> MetricValue {
+    let Some(steeped) = independently_steeped_concepts(v, species) else {
+        return MetricValue::Absent;
+    };
+    let Ok(lex) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+        return MetricValue::Absent;
+    };
+    let mut any = false;
+    let mut sound = true;
+    for (concept, entry) in lex.entries() {
+        any = true;
+        match entry {
+            LexEntry::Root { .. } => {
+                if !steeped.contains(concept) {
+                    sound = false;
+                }
+            }
+            LexEntry::Gap { reason } => {
+                let text = match reason {
+                    GapReason::Experiential(s) => s,
+                    GapReason::Perceptual(s) => s,
+                };
+                if text.is_empty() {
+                    sound = false;
+                }
+            }
+            LexEntry::Compound { .. } => {}
+        }
+    }
+    if !any {
+        return MetricValue::Absent;
+    }
+    MetricValue::Flag(sound)
+}
+
+/// `species`' hue-ladder acquisition depth (spec §7's pack-depth model
+/// card), read straight from `pack_depths` over the roster's own
+/// perception vector. `Absent` if `species` is not in this world's roster.
+fn hue_depth(v: &WorldView, species: &str) -> MetricValue {
+    match v.roster.iter().find(|d| d.name == species) {
+        Some(def) => MetricValue::Number(f64::from(
+            hornvale_worldgen::pack_depths(&def.perception).hue,
+        )),
+        None => MetricValue::Absent,
+    }
 }
 
 /// Whether `name` parses as a legal sequence of syllables under `ph`,
@@ -1532,7 +1884,11 @@ mod tests {
 
     #[test]
     fn registry_metric_count_is_pinned() {
-        assert_eq!(registry().len(), 70);
+        // The Meeting's 63, +7 for The Words (Task 12: name-gloss-true,
+        // lexicon-regular-{goblin,kobold}, exposure-sound-{goblin,kobold},
+        // hue-depth-{goblin,kobold}), plus the terrain-shape and later
+        // metrics merged from main's campaigns.
+        assert_eq!(registry().len(), 77);
     }
 
     #[test]
@@ -1542,6 +1898,15 @@ mod tests {
         // of "s"/"sh", "n"/"ng", "k"/"kx") and rejected genuinely valid
         // names. Regression coverage for that fix, independent of the
         // calibration test's full 500-seed study run.
+        //
+        // Since The Words (Task 9), committed names are glossed compounds
+        // of evolved lexicon roots (`Namer::glossed_name`, the `/v2`
+        // epoch); sound change only guarantees inventory membership, so
+        // `glossed_name` applies deterministic phonotactic repair
+        // (epenthesis, then deletion — see
+        // `hornvale_language::naming`'s repair formula) to keep every
+        // committed name template-conform. This probes the live committed
+        // names, exactly as before the epoch bump.
         let view = WorldView::build(Seed(0), &SkyPins::default()).unwrap();
         for species in ["goblin", "kobold"] {
             let ph = hornvale_worldgen::language_of(&view.world, species);
@@ -1557,10 +1922,13 @@ mod tests {
     #[test]
     fn epithet_honorific_is_detected_from_committed_content_at_seed_42() {
         // The metric reads the COMMITTED epithet fact and detects the
-        // prepended affix structurally against a re-derived plain stem — not
-        // the config that drove generation. Goblin (Rank) commits
-        // honorific-bearing epithets → true; kobold (Knowledge) commits plain
-        // stems → false.
+        // prepended affix structurally against a re-derived plain word —
+        // not the config that drove generation. Since The Words (Task 9)
+        // the plain word is the belief's honorific-free glossed epithet,
+        // re-derived from the same site concepts worldgen composed (see
+        // `epithet_honorific`'s doc). Goblin (Rank) commits
+        // honorific-bearing epithets → true; kobold (Knowledge) commits
+        // plain glossed words → false.
         let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
         assert_eq!(
             epithet_honorific(&view, "goblin"),
@@ -1570,7 +1938,7 @@ mod tests {
         assert_eq!(
             epithet_honorific(&view, "kobold"),
             MetricValue::Flag(false),
-            "kobold committed epithets must be plain stems"
+            "kobold committed epithets must be plain glossed words"
         );
     }
 

@@ -59,7 +59,7 @@ pub struct PantheonBlock {
 }
 
 /// Everything the almanac needs, gathered by the composition root.
-/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines)
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines)
 pub struct AlmanacContext {
     /// The world seed, for the title.
     pub seed: u64,
@@ -75,6 +75,9 @@ pub struct AlmanacContext {
     pub land_lines: Vec<String>,
     /// The globe's biome/habitability headline lines, from the composition root.
     pub biome_lines: Vec<String>,
+    /// Deep-time headline lines (the glacial history); empty for worlds with
+    /// no glacial past (constant sky, or zero forcing).
+    pub deep_time_lines: Vec<String>,
     /// The world's cycles, reader-facing; empty for constant-sky worlds.
     pub calendar_lines: Vec<String>,
     /// The night sky as a sentence; `None` for constant-sky worlds.
@@ -164,6 +167,14 @@ pub fn render(ctx: &AlmanacContext) -> String {
             "\n{} ({:.0}°C)\n\n",
             ctx.climate.description, ctx.climate.temperature_c
         ));
+    }
+
+    if !ctx.deep_time_lines.is_empty() {
+        doc.push_str("## Deep Time\n\n");
+        for line in &ctx.deep_time_lines {
+            doc.push_str(&format!("{line}\n"));
+        }
+        doc.push('\n');
     }
 
     doc.push_str("## The People\n\n");
@@ -275,6 +286,10 @@ mod tests {
                 "The globe breaks into 23 plates; the sea claims 63% of its surface.".to_string(),
             ],
             biome_lines: vec![],
+            deep_time_lines: vec![
+                "The frost retreated; ice advanced over 30% of the land at its greatest."
+                    .to_string(),
+            ],
             peoples: vec![PeopleBlock {
                 species: "goblin".to_string(),
                 noun: "village".to_string(),
@@ -318,6 +333,7 @@ mod tests {
             "23 plates",
             "the Vale",
             "temperate forest",
+            "## Deep Time",
             "## The People",
             "Bolnar",
             "60",
@@ -334,6 +350,15 @@ mod tests {
     #[test]
     fn render_is_deterministic() {
         assert_eq!(render(&sample_context()), render(&sample_context()));
+    }
+
+    #[test]
+    fn deep_time_section_renders_when_present_and_is_skipped_when_empty() {
+        let mut ctx = sample_context();
+        ctx.deep_time_lines = vec!["The frost retreated.".to_string()];
+        assert!(render(&ctx).contains("## Deep Time"));
+        ctx.deep_time_lines = vec![];
+        assert!(!render(&ctx).contains("## Deep Time"));
     }
 
     #[test]
