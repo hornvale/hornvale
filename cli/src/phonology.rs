@@ -19,6 +19,7 @@ pub(crate) const SETTLEMENT_SAMPLES: u64 = 3;
 /// reference section. Deterministic: a pure function of the reference seed
 /// plus the (fixed, committed) species and language crates — no world
 /// genesis beyond the bare seed is involved, so this never fails.
+/// type-audit: bare-ok(artifact: return)
 pub fn render_phonology() -> String {
     let world = World::new(Seed(REFERENCE_SEED));
     let mut doc = String::new();

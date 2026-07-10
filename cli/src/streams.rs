@@ -2,6 +2,7 @@
 
 /// Render every registered crate's stream labels as the book's generated
 /// reference page. Labels are permanent save-format contracts.
+/// type-audit: bare-ok(artifact: return)
 pub fn render_streams() -> String {
     let sources: [(&str, Vec<(&'static str, &'static str)>); 8] = [
         ("hornvale-astronomy", hornvale_astronomy::stream_labels()),

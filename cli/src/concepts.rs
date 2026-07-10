@@ -3,6 +3,7 @@
 use hornvale_kernel::ConceptRegistry;
 
 /// Render the registry as markdown for the book's reference section.
+/// type-audit: bare-ok(artifact: return)
 pub fn render_concepts(registry: &ConceptRegistry) -> String {
     let mut doc = String::new();
     doc.push_str("<!-- GENERATED FILE — do not edit. Regenerate with `hornvale concepts`. -->\n\n");
