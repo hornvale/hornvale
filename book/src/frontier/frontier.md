@@ -1452,6 +1452,29 @@ spectacle). The speculative tier stays behind one gate: a single
 **metaphysics** crate selecting the rule-system, with the undead and
 prophecy families as its outputs, never a sprawl of sibling crates.
 
+Four later additions come not from the three gaps but from reading the map
+for **broken symmetries** — places where it holds an input without its
+output, or a decay without its twin. `perception` supplies the observer's
+senses, but nothing produces what is sensed: an **aesthetics** crate is the
+output twin, the generative engine behind the whole expressive-culture
+cluster (one seeded grammar across text, image, music, and built space) and
+a structural sibling of `language`, a per-culture generative grammar behind a
+render seam. `memory` is the *cultural* decay engine, but the world has no
+*physical* one: a **taphonomy** crate owns preservation and its bias — what
+survives, what is buried, the settlement that becomes a tell and the body
+that becomes a fossil — the evidence substrate `epistemics` must infer over,
+and the physical sibling of the memory economy. `epidemiology` spreads
+disease through bodies; its informational twin, a **transmission** crate,
+would carry traits, rumours, and innovations through minds (the diffusion
+dynamics myth-phylogenetics and the language-contact layer both assume but
+none owns) — the weakest of the four, and possibly a shared field rather than
+a crate. And subsistence, homeless between `culture`, biosphere, technology,
+and genetics, wants an **agroecology** crate for the one thing none of them
+owns: the people-managed ecosystem itself — domestication, artificial
+selection, and the carrying-capacity lift — niche construction read as a
+coupled system. As with every row above, none is scheduled; each is a line in
+the registry until a campaign pulls for it.
+
 Two disciplines hold the map honest, and they are the same ones that govern
 the code. A feature is not a crate: soil, weather-as-sampled-instance,
 calendrics, law, and kinship are fields or data structures inside existing
