@@ -4,7 +4,7 @@
 
 /// The scenario pins for tectonic genesis. Every field: `None` = drawn from
 /// the seed; `Some` = supplied by the experimenter and conditioned on.
-/// type-audit: bare-ok(count: plates), bare-ok(ratio: ocean_fraction), bare-ok(flag: supercontinent), bare-ok(count: globe_level)
+/// type-audit: bare-ok(count: plates), bare-ok(ratio: ocean_fraction), bare-ok(flag: supercontinent), bare-ok(count: globe_level), bare-ok(count: continents)
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct TerrainPins {
     /// Plate count (legal 2–64); drawn 8–40 when `None`.
@@ -18,6 +18,11 @@ pub struct TerrainPins {
     /// `GLOBE_LEVEL` when `None`. Part of world identity: the same seed at
     /// a different level is deliberately a different world (spec §5).
     pub globe_level: Option<u32>,
+    /// Craton count (legal 1–16); drawn 3–11 (budget-scaled) when `None`.
+    /// CLI parsing arrives in a later task; the field and its validation
+    /// exist now so a directly-constructed out-of-range pin can't slip
+    /// through.
+    pub continents: Option<u32>,
 }
 
 /// Why tectonic genesis refused to produce a globe.
@@ -81,6 +86,14 @@ pub(crate) fn validate(pins: &TerrainPins) -> Result<(), GenesisError> {
         return Err(GenesisError::InvalidPin {
             pin: "globe-level".to_string(),
             reason: format!("globe level {level} outside legal 4-7"),
+        });
+    }
+    if let Some(n) = pins.continents
+        && !(1..=16).contains(&n)
+    {
+        return Err(GenesisError::InvalidPin {
+            pin: "continents".to_string(),
+            reason: format!("craton count {n} outside legal 1-16"),
         });
     }
     Ok(())
@@ -165,6 +178,7 @@ mod tests {
             ocean_fraction: Some(0.65),
             supercontinent: Some(true),
             globe_level: Some(6),
+            continents: None,
         };
         let mut rebuilt = TerrainPins::default();
         for s in pin_strings(&pins) {

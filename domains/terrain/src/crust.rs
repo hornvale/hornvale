@@ -3,7 +3,9 @@
 //! so any grid at any level samples the same underlying world and
 //! coarse-constrains-fine is exact.
 
+use crate::pins::TerrainPins;
 use crate::plates::dot;
+use crate::streams;
 use hornvale_kernel::{Seed, noise};
 
 /// Continental crust thickness in kilometers.
@@ -88,9 +90,133 @@ pub(crate) fn lobed_envelope(seed: Seed, center: [f64; 3], p: [f64; 3], radius_r
     (1.0 - x * x).powi(2)
 }
 
+/// Thin oceanic floor thickness, km.
+/// type-audit: pending(wave-2)
+pub const OCEANIC_KM: f64 = 7.0;
+/// Crust at or above this thickness is continental, km.
+/// type-audit: pending(wave-2)
+pub const CONTINENTAL_THRESHOLD_KM: f64 = 20.0;
+/// Drawn craton peak thickness range, km.
+const PEAK_MIN_KM: f64 = 30.0;
+/// Upper end of the drawn peak range, km.
+const PEAK_MAX_KM: f64 = 45.0;
+
+/// A craton: a drawn nucleus of continental crust (Crust spec §2).
+/// type-audit: bare-ok(index: id), bare-ok(ratio: center), pending(wave-2: radius_rad), bare-ok(ratio: age)
+#[derive(Debug, Clone, PartialEq)]
+pub struct Craton {
+    /// Index into the drawn craton list.
+    pub id: u32,
+    /// Center on the unit sphere.
+    pub center: [f64; 3],
+    /// Nominal angular radius, radians; the lobed rim varies around it.
+    pub radius_rad: f64,
+    /// Age in [0, 1]: 0 young, 1 ancient (worn, low, quiet).
+    pub age: f64,
+}
+
+/// Draw the craton set: budget (one draw), count (one draw, budget-scaled),
+/// then per-craton center (two), radius (one), age (one) — mirroring
+/// `generate_plates`' pinned-count convention exactly: a pinned count
+/// (`--continents`, Task 7) drives the per-craton loop directly, so a
+/// pinned count larger than the drawn one consumes the same additional
+/// draws the drawn path would have, and a pinned count smaller consumes
+/// fewer — never skipping the budget or count draws themselves (pin
+/// isolation).
+pub fn draw_cratons(terrain_seed: Seed, pins: &TerrainPins) -> Vec<Craton> {
+    let mut stream = terrain_seed.derive(streams::CRATONS).stream();
+    let budget = 0.15 + 0.25 * stream.next_f64();
+    let drawn_count = 3 + (budget * 20.0).round() as u32; // 3..=11 over the budget range
+    let count = pins.continents.unwrap_or(drawn_count);
+    (0..count)
+        .map(|i| {
+            let center = crate::plates::unit_vector(&mut stream);
+            let radius_rad = 0.10 + 0.35 * stream.next_f64();
+            let age = stream.next_f64();
+            Craton {
+                id: i,
+                center,
+                radius_rad,
+                age,
+            }
+        })
+        .collect()
+}
+
+/// The crust fields: stateless functions of position over the drawn
+/// craton set (Crust spec §2). Pure — the `Field` contract.
+pub struct CrustField {
+    /// Noise seed for the lobing kernels (per-craton derivations inside).
+    seed: Seed,
+    /// The drawn cratons.
+    cratons: Vec<Craton>,
+}
+
+impl CrustField {
+    /// Assemble the field over a drawn craton set.
+    pub fn new(terrain_seed: Seed, cratons: Vec<Craton>) -> CrustField {
+        CrustField {
+            seed: terrain_seed.derive(streams::CRATONS).derive("lobing"),
+            cratons,
+        }
+    }
+
+    /// Envelope and winning craton at a position.
+    fn strongest(&self, p: [f64; 3]) -> Option<(f64, &Craton)> {
+        self.cratons
+            .iter()
+            .map(|c| {
+                let seed = self.seed.derive(&format!("craton-{}", c.id));
+                (lobed_envelope(seed, c.center, p, c.radius_rad), c)
+            })
+            .max_by(|(a, ca), (b, cb)| a.total_cmp(b).then(cb.id.cmp(&ca.id)))
+    }
+
+    /// Crust thickness at a unit-sphere position, km.
+    /// type-audit: bare-ok(ratio: p)
+    pub fn thickness_at(&self, p: [f64; 3]) -> CrustKm {
+        let t = match self.strongest(p) {
+            None => OCEANIC_KM,
+            Some((envelope, c)) => {
+                let peak = PEAK_MIN_KM + (PEAK_MAX_KM - PEAK_MIN_KM) * (1.0 - c.age);
+                OCEANIC_KM + (peak - OCEANIC_KM) * envelope
+            }
+        };
+        CrustKm::new(t).expect("kernel keeps thickness in range")
+    }
+
+    /// Age of the winning craton at a position (oceanic floor: young, 0).
+    /// type-audit: bare-ok(ratio)
+    pub fn age_at(&self, p: [f64; 3]) -> f64 {
+        match self.strongest(p) {
+            Some((envelope, c)) if envelope > 0.0 => c.age,
+            _ => 0.0,
+        }
+    }
+
+    /// Continental iff thickness clears the threshold.
+    /// type-audit: bare-ok(ratio: p), bare-ok(flag: return)
+    pub fn continental_at(&self, p: [f64; 3]) -> bool {
+        self.thickness_at(p).get() >= CONTINENTAL_THRESHOLD_KM
+    }
+}
+
+impl hornvale_kernel::Field<f64> for CrustField {
+    /// Thickness in km; `Position.x` = longitude degrees, `Position.y` =
+    /// latitude degrees (terrain's declared interpretation, spec §2);
+    /// crust is static — time is ignored.
+    fn sample(&self, pos: hornvale_kernel::Position, _time: hornvale_kernel::WorldTime) -> f64 {
+        let (lat, lon) = (pos.y.to_radians(), pos.x.to_radians());
+        let p = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+        self.thickness_at(p).get()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::streams;
+    use hornvale_kernel::{Geosphere, NearestCellIndex};
 
     #[test]
     fn crust_km_validates() {
@@ -153,5 +279,84 @@ mod tests {
                 max - min
             );
         }
+    }
+
+    #[test]
+    fn craton_draws_are_sequential_and_in_range() {
+        for seed in 0..16u64 {
+            let cratons = draw_cratons(Seed(seed).derive(streams::ROOT), &TerrainPins::default());
+            assert!(
+                (3..=11).contains(&cratons.len()),
+                "seed {seed}: {}",
+                cratons.len()
+            );
+            for (i, c) in cratons.iter().enumerate() {
+                assert_eq!(c.id, i as u32);
+                assert!((crate::plates::norm(c.center) - 1.0).abs() < 1e-12);
+                assert!(
+                    (0.10..=0.45).contains(&c.radius_rad),
+                    "radius {}",
+                    c.radius_rad
+                );
+                assert!((0.0..=1.0).contains(&c.age));
+            }
+        }
+    }
+
+    #[test]
+    fn crust_field_is_pure_and_bounded() {
+        let seed = Seed(42).derive(streams::ROOT);
+        let field = CrustField::new(seed, draw_cratons(seed, &TerrainPins::default()));
+        let p = [0.6, -0.48, 0.64];
+        let p = crate::plates::normalize(p);
+        assert_eq!(field.thickness_at(p), field.thickness_at(p));
+        let t = field.thickness_at(p).get();
+        assert!((OCEANIC_KM..=60.0).contains(&t));
+        assert!((0.0..=1.0).contains(&field.age_at(p)));
+        assert_eq!(field.continental_at(p), t >= CONTINENTAL_THRESHOLD_KM);
+    }
+
+    #[test]
+    fn crust_field_agrees_at_vertices_shared_across_levels() {
+        // Icosphere levels nest: every level-4 vertex is a level-5 vertex.
+        let seed = Seed(7).derive(streams::ROOT);
+        let field = CrustField::new(seed, draw_cratons(seed, &TerrainPins::default()));
+        let coarse = Geosphere::new(4);
+        let fine = Geosphere::new(5);
+        let index = NearestCellIndex::new(&fine);
+        let mut shared = 0;
+        for cell in coarse.cells() {
+            let p = coarse.position(cell);
+            let c = coarse.coord(cell);
+            let twin = index.nearest(&fine, c.latitude, c.longitude);
+            let q = fine.position(twin);
+            if crate::plates::dot(p, q) > 1.0 - 1e-12 {
+                shared += 1;
+                assert_eq!(
+                    field.thickness_at(p).get(),
+                    field.thickness_at(q).get(),
+                    "field disagrees at a shared vertex"
+                );
+            }
+        }
+        assert!(
+            shared > coarse.cell_count() / 2,
+            "nesting assumption broken: {shared}"
+        );
+    }
+
+    #[test]
+    fn kernel_field_sampling_matches_direct_evaluation() {
+        let seed = Seed(42).derive(streams::ROOT);
+        let field = CrustField::new(seed, draw_cratons(seed, &TerrainPins::default()));
+        let pos = hornvale_kernel::Position {
+            x: -120.25,
+            y: 45.5,
+        };
+        let time = hornvale_kernel::WorldTime { day: 3.0 };
+        let (lat, lon) = (45.5f64.to_radians(), (-120.25f64).to_radians());
+        let p = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+        use hornvale_kernel::Field;
+        assert_eq!(field.sample(pos, time), field.thickness_at(p).get());
     }
 }

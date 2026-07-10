@@ -30,3 +30,8 @@ pub const OCEAN_FRACTION: &str = "ocean-fraction";
 /// `Stream`; the lens draws nothing (Campaign 25 spec §3).
 /// type-audit: bare-ok(identifier-text)
 pub const COAST_RENDER: &str = "coast-render";
+/// Craton draws: continental-area budget, craton count, then per-craton
+/// center (two draws), radius, age — sequential. Draw counts are a
+/// save-format contract.
+/// type-audit: bare-ok(identifier-text)
+pub const CRATONS: &str = "cratons";

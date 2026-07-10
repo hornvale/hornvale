@@ -74,6 +74,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/hotspots` | hotspot count, positions, and strengths |
 | `terrain/ocean-fraction` | target ocean fraction draw |
 | `terrain/coast-render` | render-lens coastline noise (hash-noise only; no stream draws) |
+| `terrain/cratons` | continental budget, craton count, then per-craton center/radius/age |
 
 ### hornvale-kernel (internal)
 

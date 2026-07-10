@@ -73,6 +73,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "terrain/coast-render",
             "render-lens coastline noise (hash-noise only; no stream draws)",
         ),
+        (
+            "terrain/cratons",
+            "continental budget, craton count, then per-craton center/radius/age",
+        ),
     ]
 }
 
@@ -184,7 +188,7 @@ mod tests {
     #[test]
     fn stream_labels_are_fully_qualified_and_documented() {
         let labels = stream_labels();
-        assert_eq!(labels.len(), 9);
+        assert_eq!(labels.len(), 10);
         assert_eq!(labels[0].0, "terrain");
         for (label, doc) in &labels[1..] {
             assert!(label.starts_with("terrain/"), "unqualified label {label}");
