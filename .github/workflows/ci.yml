@@ -46,7 +46,9 @@ jobs:
           cargo run -p hornvale -- lab run studies/census-of-the-meeting.study.json
           cargo run -p hornvale -- lab run studies/census-of-skies.study.json
           cargo run -p hornvale-scene --example ephemeris_golden > clients/orrery/testdata/ephemeris-seed-42.json
-          git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ clients/orrery/testdata/
+          cargo run --manifest-path tools/type-audit/Cargo.toml -- check
+          cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
+          git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ clients/orrery/testdata/ docs/audits/
 
   atlas:
     name: Atlas client
