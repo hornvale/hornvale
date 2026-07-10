@@ -18,7 +18,9 @@ use hornvale_kernel::{
     PerceptionLens, PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime,
     observe,
 };
-use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
+use hornvale_paleoclimate::{
+    Celsius, EraClimate, PaleoRecord, caloric_summer_index, integrate_ice,
+};
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
 use std::sync::OnceLock;
 
@@ -368,9 +370,17 @@ fn climate_at_era(
     // obliquity/insolation (at era_day = 0 under any forcing, `temperature`
     // equals `present_temperature` pointwise, so the anomaly is exactly
     // zero) rather than only for worlds whose baseline climate happens to
-    // sit warmer than a fixed absolute constant.
-    let anomaly =
-        hornvale_kernel::CellMap::from_fn(geo, |c| temperature.get(c) - present_temperature.get(c));
+    // sit warmer than a fixed absolute constant. `temperature` and
+    // `present_temperature` are wrapped as `Celsius` (an absolute reading)
+    // purely to produce the anomaly via subtraction; the resulting
+    // `TempAnomaly` is the only type `glaciated` accepts, so this boundary
+    // cannot again be crossed with an absolute value by mistake (decision
+    // 0008).
+    let anomaly = hornvale_kernel::CellMap::from_fn(geo, |c| {
+        let era_abs = Celsius::new(*temperature.get(c)).expect("temperature is finite");
+        let present_abs = Celsius::new(*present_temperature.get(c)).expect("temperature is finite");
+        era_abs - present_abs
+    });
     // This same `ice` mask is both summarized into `ice_fraction` below and
     // stored on the returned `EraClimate` unchanged, so `strata::extract`'s
     // envelope (an OR-union of every era's `ice` field) can never disagree

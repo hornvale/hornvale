@@ -3,9 +3,11 @@
 //! composition root. The full fields live here on the non-serialized
 //! `PaleoRecord`; only summaries become facts (see `facts`).
 
+use crate::units::TempAnomaly;
 use hornvale_kernel::{CellMap, Geosphere};
 
-/// Land colder than this offset temperature is under ice (°C).
+/// Land colder than this, relative to the world's present, is under ice
+/// (°C anomaly).
 const GLACIATION_THRESHOLD_C: f64 = -3.0;
 
 /// One coarse era's climate fields, all bare kernel types, filled by the
@@ -29,16 +31,24 @@ pub struct EraClimate {
 }
 
 /// The diagnostic ice mask for one era: land (elevation ≥ that era's sea level)
-/// whose offset temperature is below the glaciation threshold.
+/// whose temperature anomaly against the world's present is below the
+/// glaciation threshold.
+///
+/// Takes a per-cell [`TempAnomaly`], not an absolute temperature (decision
+/// 0008): an earlier version of this function accepted a bare
+/// `CellMap<f64>` that callers twice passed an absolute reading where an
+/// anomaly was meant, silently glaciating the wrong worlds. The
+/// [`TempAnomaly`] type can only be constructed by subtracting two
+/// [`crate::units::Celsius`] values, so that mistake no longer compiles.
 pub fn glaciated(
     geo: &Geosphere,
     elevation: &CellMap<f64>,
-    temperature: &CellMap<f64>,
+    anomaly: &CellMap<TempAnomaly>,
     sea_level: f64,
 ) -> CellMap<bool> {
     CellMap::from_fn(geo, |cell| {
         let elev = *elevation.get(cell);
-        elev >= sea_level && *temperature.get(cell) < GLACIATION_THRESHOLD_C
+        elev >= sea_level && anomaly.get(cell).get() < GLACIATION_THRESHOLD_C
     })
 }
 
@@ -114,7 +124,44 @@ pub fn extract(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::units::TempAnomaly;
     use hornvale_kernel::Geosphere;
+
+    #[test]
+    fn glaciated_ices_land_with_a_strongly_negative_anomaly() {
+        let geo = Geosphere::new(3);
+        let elevation = CellMap::from_fn(&geo, |_| 100.0); // all land
+        let anomaly = CellMap::from_fn(&geo, |_| TempAnomaly::new(-10.0).unwrap());
+        let ice = glaciated(&geo, &elevation, &anomaly, 0.0);
+        assert!(
+            ice.iter().all(|(_, &b)| b),
+            "a strongly-negative anomaly must ice every land cell"
+        );
+    }
+
+    #[test]
+    fn glaciated_leaves_land_bare_with_a_positive_anomaly() {
+        let geo = Geosphere::new(3);
+        let elevation = CellMap::from_fn(&geo, |_| 100.0); // all land
+        let anomaly = CellMap::from_fn(&geo, |_| TempAnomaly::new(2.0).unwrap());
+        let ice = glaciated(&geo, &elevation, &anomaly, 0.0);
+        assert!(
+            ice.iter().all(|(_, &b)| !b),
+            "a positive anomaly must not ice any cell"
+        );
+    }
+
+    #[test]
+    fn glaciated_never_ices_ocean_regardless_of_anomaly() {
+        let geo = Geosphere::new(3);
+        let elevation = CellMap::from_fn(&geo, |_| -100.0); // all ocean
+        let anomaly = CellMap::from_fn(&geo, |_| TempAnomaly::new(-10.0).unwrap());
+        let ice = glaciated(&geo, &elevation, &anomaly, 0.0);
+        assert!(
+            ice.iter().all(|(_, &b)| !b),
+            "ocean cells are never marked as glaciated land"
+        );
+    }
 
     fn era(geo: &Geosphere, day: f64, ice_all: bool, sea: f64, ice_fraction: f64) -> EraClimate {
         EraClimate {
