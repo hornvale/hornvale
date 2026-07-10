@@ -28,13 +28,12 @@ export function starTint(className: string): [number, number, number] {
     case "B":
       return [170, 200, 255];
     case "A":
-    case "F":
       return [245, 245, 255];
     case "K":
       return [255, 180, 90];
     case "M":
       return [230, 110, 80];
     default:
-      return [255, 214, 120]; // G / unknown
+      return [255, 214, 120]; // F / G / unknown
   }
 }

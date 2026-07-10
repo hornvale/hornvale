@@ -14,3 +14,7 @@ Deno.test("star tint is total and hot≠cool", () => {
   assertEquals(g.length, 3);
   assert(g[0] + g[1] > m[1] + m[2] || g[2] > m[2], "distinct by class");
 });
+
+Deno.test("F-type stars are warm, matching the sim's star_color (F groups with G)", () => {
+  assertEquals(starTint("yellow-white dwarf (F)"), starTint("yellow dwarf (G)"));
+});
