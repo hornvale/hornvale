@@ -1,0 +1,16 @@
+p /p/
+t /t/
+d /d/
+k /k/
+g /g/
+q /q/
+v /v/
+x /x/
+s /s/
+z /z/
+zh /ʒ/
+n /n/
+j /j/
+e /e/
+a /a/
+o /o/

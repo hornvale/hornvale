@@ -5,6 +5,7 @@ mod audio;
 mod concepts;
 mod dictionary;
 mod phonology;
+mod proto;
 mod repl;
 mod streams;
 
@@ -44,6 +45,7 @@ usage:
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
+  hornvale proto                           dump proto-goblinoid's inventory/phonotactics/proto-root table as markdown
   hornvale voice [--out <DIR>]             author missing phonology audio clips (espeak-ng + ffmpeg; default out: book/src/audio)
   hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
   hornvale lab list-metrics                list every metric in the lab's registry
@@ -85,6 +87,7 @@ fn main() -> ExitCode {
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
         Some("dictionary") => cmd_dictionary(&args),
+        Some("proto") => cmd_proto(),
         Some("voice") => audio::cmd_voice(&args),
         Some("lab") => cmd_lab(&args),
         Some("help") | None => {
@@ -547,6 +550,14 @@ fn cmd_dictionary(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// Dump proto-goblinoid's reference page (inventory, phonotactics, and
+/// proto-root table) — a pure function of the reference seed, so unlike
+/// `dictionary` this takes no `--world`.
+fn cmd_proto() -> Result<(), String> {
+    print!("{}", proto::render_proto()?);
+    Ok(())
+}
+
 /// Dispatch `lab` subcommands: `run <PATH>` and `list-metrics`.
 fn cmd_lab(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
@@ -877,6 +888,11 @@ mod tests {
     #[test]
     fn usage_mentions_dictionary() {
         assert!(USAGE.contains("dictionary"));
+    }
+
+    #[test]
+    fn usage_mentions_proto() {
+        assert!(USAGE.contains("proto"));
     }
 
     #[test]

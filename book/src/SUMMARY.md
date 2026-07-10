@@ -93,6 +93,7 @@
 - [Phonology](./reference/phonology.md)
 - [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
 - [Dictionary](./reference/dictionary-generated.md)
+- [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
 
 # Open Questions
 

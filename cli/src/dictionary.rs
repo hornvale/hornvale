@@ -8,8 +8,9 @@
 #![warn(missing_docs)]
 
 use hornvale_kernel::World;
-use hornvale_language::{GapReason, LexEntry, render_views};
+use hornvale_language::{GapReason, LexEntry, Lexicon, render_views};
 use hornvale_worldgen as world_builder;
+use std::collections::BTreeMap;
 
 /// Render every registered species' dictionary as markdown for the book's
 /// reference section, over `world`'s own generated lexicon (one row per
@@ -31,8 +32,14 @@ pub fn render_dictionary(world: &World) -> Result<String, String> {
          the same world can differ in which rows are roots, compounds, or gaps.\n\n",
     );
 
+    let mut lexicons: BTreeMap<&str, Lexicon> = BTreeMap::new();
     for (species, _def) in hornvale_species::registry() {
         let lexicon = world_builder::lexicon_of(world, species).map_err(|e| e.to_string())?;
+        lexicons.insert(species, lexicon);
+    }
+
+    for (species, _def) in hornvale_species::registry() {
+        let lexicon = &lexicons[species];
 
         doc.push_str(&format!("## {}\n\n", capitalize(species)));
         doc.push_str(
@@ -51,7 +58,109 @@ pub fn render_dictionary(world: &World) -> Result<String, String> {
         }
         doc.push('\n');
     }
+
+    doc.push_str(&render_cognates(world, &lexicons));
     Ok(doc)
+}
+
+/// The "## Cognates" section: for every family shared by more than one
+/// registered species ([`hornvale_species::family_registry`]'s entries —
+/// currently just goblinoid), one table per family of every concept rooted
+/// (spec §3–4, `LexEntry::Root`) in *all* of that family's daughters —
+/// their shared proto-form (identical across daughters by construction,
+/// since `build_lexicon` draws it once at the family level) beside each
+/// daughter's own evolved reflex. A concept a species has forgotten, or
+/// never inherited as a root (a gap or compound instead), is silently
+/// excluded rather than padded — every surviving row is a genuine,
+/// three-way-attested cognate set. Kobold belongs to its own singleton
+/// family (absent from `family_registry`, spec §3) and so never enters
+/// this loop: excluded by construction, not filtered out, so it can never
+/// render here as a false cognate.
+fn render_cognates(world: &World, lexicons: &BTreeMap<&str, Lexicon>) -> String {
+    let mut doc = String::new();
+    doc.push_str("## Cognates\n\n");
+    doc.push_str(
+        "A family's daughters share one proto-root per concept, drawn once at the family \
+         level and evolved through each daughter's own sound-change cascade (spec §3–4): the \
+         same ancestral word, nativized three different ways. Below, every concept rooted in \
+         *all* of a family's daughters, glossed `*proto → daughter / daughter / daughter` — \
+         only concepts every daughter still has a root for, so every row is attested, not \
+         padded. A singleton family (e.g. kobold) has no cognates and is not listed here; see \
+         its own section above instead.\n\n",
+    );
+
+    let registry = hornvale_species::registry();
+    for family in hornvale_species::family_registry().keys() {
+        let daughters: Vec<&str> = registry
+            .iter()
+            .filter(|(_, def)| def.family == *family)
+            .map(|(name, _)| *name)
+            .collect();
+        if daughters.len() < 2 {
+            // A family entry with fewer than two daughters can't happen
+            // today (family_registry only holds multi-member families) but
+            // is guarded rather than assumed, so a future authoring slip
+            // fails safe (no section) instead of rendering a one-column
+            // "cognate" table.
+            continue;
+        }
+
+        doc.push_str(&format!("### {}\n\n", capitalize(family)));
+        doc.push_str("| Concept | Gloss | Proto |");
+        for daughter in &daughters {
+            doc.push_str(&format!(" {} |", capitalize(daughter)));
+        }
+        doc.push_str(" Descent |\n|---|---|---|");
+        doc.push_str(&"---|".repeat(daughters.len() + 1));
+        doc.push('\n');
+
+        let first = &lexicons[daughters[0]];
+        for (concept, entry) in first.entries() {
+            let LexEntry::Root {
+                derivation: proto_derivation,
+                ..
+            } = entry
+            else {
+                continue;
+            };
+            let mut daughter_forms = Vec::with_capacity(daughters.len());
+            let mut all_rooted = true;
+            for daughter in &daughters {
+                match lexicons[daughter].entry(concept) {
+                    Some(LexEntry::Root { views, .. }) => daughter_forms.push(views.clone()),
+                    _ => {
+                        all_rooted = false;
+                        break;
+                    }
+                }
+            }
+            if !all_rooted {
+                continue;
+            }
+
+            let gloss = world
+                .registry
+                .concept(concept)
+                .map(|c| c.doc.as_str())
+                .unwrap_or("—");
+            let proto = render_views(&proto_derivation.proto);
+            doc.push_str(&format!(
+                "| `{concept}` | {gloss} | *{} /{}/ |",
+                proto.roman, proto.ipa
+            ));
+            for views in &daughter_forms {
+                doc.push_str(&format!(" {} /{}/ |", views.roman, views.ipa));
+            }
+            let descent = daughter_forms
+                .iter()
+                .map(|v| v.roman.as_str())
+                .collect::<Vec<_>>()
+                .join(" / ");
+            doc.push_str(&format!(" *{} → {descent} |\n", proto.roman));
+        }
+        doc.push('\n');
+    }
+    doc
 }
 
 /// The four trailing columns (word, IPA, proto, derivation) of one concept's
@@ -222,6 +331,54 @@ mod tests {
         assert_eq!(
             render_dictionary(&world).unwrap(),
             render_dictionary(&world).unwrap()
+        );
+    }
+
+    /// The cognate section: a goblinoid concept rooted in all three
+    /// daughters must render one row carrying the glossed proto-form (a
+    /// `*`-marked reconstruction, spec §3) beside every daughter's modern
+    /// reflex — the family made visible. Kobold is the unrelated outgroup
+    /// (its own singleton family, spec §3): it must never appear inside the
+    /// goblinoid cognate table as a false cognate.
+    #[test]
+    fn cognate_rows_share_a_glossed_proto_form_across_the_goblinoid_daughters() {
+        let world = reference_world();
+        let doc = render_dictionary(&world).unwrap();
+        assert!(doc.contains("## Cognates"), "missing a Cognates section");
+        assert!(
+            doc.contains("### Goblinoid"),
+            "missing the goblinoid family subsection"
+        );
+
+        let goblin = world_builder::lexicon_of(&world, "goblin").unwrap();
+        let hobgoblin = world_builder::lexicon_of(&world, "hobgoblin").unwrap();
+        let bugbear = world_builder::lexicon_of(&world, "bugbear").unwrap();
+        let shared_root = goblin
+            .entries()
+            .find(|(concept, entry)| {
+                matches!(entry, LexEntry::Root { .. })
+                    && matches!(hobgoblin.entry(concept), Some(LexEntry::Root { .. }))
+                    && matches!(bugbear.entry(concept), Some(LexEntry::Root { .. }))
+            })
+            .map(|(concept, _)| concept.to_string())
+            .expect("seed 42 should share at least one root across all three goblinoid daughters");
+
+        let cognates = doc
+            .split("## Cognates")
+            .nth(1)
+            .expect("a Cognates section body");
+        assert!(
+            cognates.contains(&format!("`{shared_root}`")),
+            "missing cognate row for {shared_root}"
+        );
+        assert!(
+            cognates.contains('*'),
+            "cognate rows should mark the proto-form as a reconstruction"
+        );
+        assert!(
+            !cognates.contains("Kobold") && !cognates.contains("### Kobold"),
+            "kobold is a singleton family (unrelated outgroup) — it must never appear as a \
+             false cognate in the goblinoid table"
         );
     }
 
