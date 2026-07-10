@@ -73,6 +73,7 @@ pub enum Backness {
 
 /// A segment: an articulatory feature-bundle, the truth from which every
 /// surface form (romanization, IPA) derives as a view.
+/// type-audit: bare-ok(flag)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Segment {
     /// A consonant: place, manner, and voicing.
@@ -265,6 +266,7 @@ pub(crate) fn canonical_segments() -> Vec<Segment> {
 /// (its glottalic release has no Latin letter), and `ts` for the glottal
 /// click (there is no ASCII click glyph; `ts` approximates its sharp
 /// release).
+/// type-audit: bare-ok(identifier-text)
 pub fn romanize(seg: &Segment) -> &'static str {
     match seg {
         Segment::Consonant {
@@ -417,6 +419,7 @@ pub fn romanize(seg: &Segment) -> &'static str {
 /// Exhaustive over the curated inventory (see module docs). `kʼ` (the
 /// ejective) and `ǃ` (the click) are the only multi-codepoint/non-Latin
 /// glyphs; every other mapping is a single standard IPA letter.
+/// type-audit: bare-ok(identifier-text)
 pub fn ipa(seg: &Segment) -> &'static str {
     match seg {
         Segment::Consonant {
@@ -575,6 +578,7 @@ pub fn ipa(seg: &Segment) -> &'static str {
 /// ejective as plain `k` (`'` is espeak's stress marker, so `k'` cannot be
 /// written). Every other mnemonic coincides with the IPA glyph, so those
 /// arms delegate to [`ipa`]; the ASCII-guard test keeps that coupling safe.
+/// type-audit: bare-ok(identifier-text)
 pub fn espeak(seg: &Segment) -> &'static str {
     match seg {
         Segment::Consonant {
@@ -610,6 +614,7 @@ pub fn espeak(seg: &Segment) -> &'static str {
 /// in order, a `'` stress marker before the first vowel (explicit stress
 /// keeps the formulation self-contained rather than leaning on espeak's
 /// automatic assignment), wrapped in `[[…]]` for direct phoneme input.
+/// type-audit: bare-ok(identifier-text)
 pub fn espeak_word(segments: &[Segment]) -> String {
     let mut body = String::new();
     let mut stressed = false;
@@ -629,6 +634,7 @@ pub fn espeak_word(segments: &[Segment]) -> String {
 ///
 /// `Stop`/`Ejective`/`Click` 0 < `Fricative`/`Sibilant` 1 < `Nasal` 2 <
 /// `Trill` 3 < `Approximant` 4 < `Vowel` 5.
+/// type-audit: bare-ok(count)
 pub fn sonority(seg: &Segment) -> u8 {
     match seg {
         Segment::Consonant {

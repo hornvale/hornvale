@@ -35,6 +35,7 @@ pub use register::{LineContent, LineSentiment, VoiceParams, render_line};
 /// These are the REAL derivation paths behind every generated proper noun in
 /// the world: the phonology draw (which the composition root reconstructs
 /// per world) and the three name kinds (each a single deterministic draw).
+/// type-audit: bare-ok(identifier-text)
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     vec![
         (

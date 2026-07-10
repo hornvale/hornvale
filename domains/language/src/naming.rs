@@ -59,6 +59,7 @@ impl NameKind {
 /// basis. Plain data — this crate is kernel-only and never imports
 /// `hornvale-species`; the mapping (e.g. `Rank` → `honorifics: true`) lives
 /// upstream.
+/// type-audit: bare-ok(flag)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MorphOptions {
     /// Whether epithets are prefixed with a drawn honorific affix. Bare
@@ -71,6 +72,7 @@ pub struct MorphOptions {
 /// phonetic rendering; `espeak` is the espeak-ng formulation. None are stored
 /// independently of the segments that produced it — all three are views built
 /// in the same pass.
+/// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GeneratedName {
     /// The ASCII-ish romanization, capitalized on its first letter. This is
@@ -116,6 +118,7 @@ pub struct Namer<'a> {
 
 impl<'a> Namer<'a> {
     /// Start a namer for `species` under `ph`, rooted at `seed`.
+    /// type-audit: bare-ok(identifier-text: species)
     pub fn new(seed: &Seed, species: &str, ph: &'a Phonology) -> Namer<'a> {
         Namer {
             seed: *seed,
@@ -131,6 +134,7 @@ impl<'a> Namer<'a> {
     /// any other name (see the module docs — this is what makes settlement
     /// names pin-isolated by construction). Uniqueness across a world's
     /// names is de-facto, not guaranteed.
+    /// type-audit: pending(wave-3: salt)
     pub fn name(&self, kind: NameKind, salt: u64, morph: &MorphOptions) -> GeneratedName {
         let mut stream = self
             .seed

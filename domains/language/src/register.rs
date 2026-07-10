@@ -16,6 +16,7 @@
 /// vector. Every field lives in `[0, 1]`; `0.5` on every field is the goblin
 /// baseline (identity — a goblin-voiced line is what v1's templates default
 /// to).
+/// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct VoiceParams {
     /// Archaic vs. plain connectives: low picks plain, everyday phrasing;
@@ -45,6 +46,7 @@ pub enum LineSentiment {
 /// The structured meaning of a tenet, as the composition root assembles it
 /// from a belief's committed facts. `render_line` reads only these fields —
 /// never a pre-rendered string.
+/// type-audit: bare-ok(identifier-text: deity), bare-ok(identifier-text: epithet), pending(wave-3: period_days), bare-ok(flag: high_god)
 #[derive(Clone, Debug, PartialEq)]
 pub struct LineContent {
     /// The deity's generated name.
@@ -147,6 +149,7 @@ fn refrain(content: &LineContent, voice: &VoiceParams) -> String {
 /// templates from `content`'s structured fields under the three knobs; a
 /// future generative grammar fills the same signature without callers
 /// changing.
+/// type-audit: bare-ok(prose)
 pub fn render_line(content: &LineContent, voice: &VoiceParams) -> String {
     let mut line = core_proposition(content, voice);
     line.push_str(&refrain(content, voice));
