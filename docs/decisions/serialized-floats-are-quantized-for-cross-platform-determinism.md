@@ -44,6 +44,31 @@ float precision — it still catches any real formula divergence (off by
 orders of magnitude more) but cannot demand more precision than the
 published, quantized elements carry.
 
+## Rendered per-cell views are platform-local (not cross-platform checked)
+
+Quantization makes serialized *floats* byte-identical, but it cannot make a
+*categorical* decision identical when that decision thresholds a full-
+precision libm value: a biome (`biome_at` on temperature) or ocean
+(`elevation >= sea_level`) classification flips across platforms whenever a
+cell sits within a last-ULP hair of a threshold, and with thousands of cells
+at least one does. This surfaces only in the two artifacts that encode
+per-cell classification — the PNG maps and `scene-tiles.json` — as a changed
+biome index or pixel color.
+
+These are **rendered views, not canonical state** (a world is a seed plus a
+ledger; the maps are derived presentations). So they are **excluded from the
+cross-platform byte-drift check** (`git diff --exit-code` pathspec excludes
+`book/src/gallery/*.png` and `scene-tiles.json`); their byte-identity is
+platform-local. The canonical numeric artifacts — `world.json`, the
+censuses, the ephemeris, `scene-system.json` — remain strictly checked and
+*are* byte-identical everywhere, so any real worldgen change still surfaces
+loudly there. The trade-off accepted: CI no longer catches drift confined to
+those ~8 image/tile files. Each map's `.md` sidecar carries a one-line note
+recording that its raster is a platform-local render. (The only way to close
+this gap entirely is a portable/vendored `libm` so the classifications
+themselves become bit-identical — considered, deferred: it needs a
+no-new-deps override and re-derives every committed value.)
+
 ## The Lorenz guard-rail (load-bearing)
 
 A lossy save format is safe here **only because reload re-derives providers
