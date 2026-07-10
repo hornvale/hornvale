@@ -168,7 +168,8 @@ pub fn boundary_distance(
 mod tests {
     use super::*;
     use crate::plates::{Plate, assign_plates};
-    use hornvale_kernel::Geosphere;
+    use crate::streams;
+    use hornvale_kernel::{Geosphere, Seed};
 
     /// Two continental hemisphere plates spinning against each other:
     /// convergent where y < 0, divergent where y > 0, transform near x = ±1.
@@ -181,6 +182,7 @@ mod tests {
                 euler_axis: [1.0, 0.0, 0.0],
                 rate: 1.0,
                 maturity,
+                weight: 1.0,
             },
             Plate {
                 id: 1,
@@ -189,6 +191,7 @@ mod tests {
                 euler_axis: [-1.0, 0.0, 0.0],
                 rate: 1.0,
                 maturity,
+                weight: 1.0,
             },
         ]
     }
@@ -197,7 +200,7 @@ mod tests {
     fn hemisphere_plates_produce_an_equatorial_boundary_of_every_regime() {
         let geo = Geosphere::new(2);
         let plates = hemisphere_plates(0.5);
-        let plate_of = assign_plates(&geo, &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
         let boundaries = boundary_field(&geo, &plate_of, &plates);
         assert!(boundaries.iter().any(|(_, c)| c.is_some()));
         for (cell, contact) in boundaries.iter() {
@@ -221,7 +224,7 @@ mod tests {
     fn classification_agrees_from_both_sides() {
         let geo = Geosphere::new(2);
         let plates = hemisphere_plates(0.5);
-        let plate_of = assign_plates(&geo, &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
         for a in geo.cells() {
             for &b in geo.neighbors(a) {
                 let (pa, pb) = (*plate_of.get(a), *plate_of.get(b));
@@ -240,7 +243,7 @@ mod tests {
     fn distances_start_at_zero_attribute_a_source_and_grow_by_at_most_one() {
         let geo = Geosphere::new(2);
         let plates = hemisphere_plates(0.5);
-        let plate_of = assign_plates(&geo, &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
         let boundaries = boundary_field(&geo, &plate_of, &plates);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);
         for (cell, entry) in distances.iter() {

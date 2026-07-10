@@ -58,7 +58,7 @@ pub fn generate(
     pins::validate(pins)?;
     let terrain_seed = world_seed.derive(streams::ROOT);
     let plate_list = plates::generate_plates(terrain_seed, pins);
-    let plate_of = plates::assign_plates(geosphere, &plate_list);
+    let plate_of = plates::assign_plates(geosphere, terrain_seed, &plate_list);
     let boundary_map = boundaries::boundary_field(geosphere, &plate_of, &plate_list);
     let distances = boundaries::boundary_distance(geosphere, &plate_of, &boundary_map);
     let elevation_map = elevation::generate_elevation(

@@ -128,7 +128,7 @@ fn boundary_classification_agrees_from_both_sides_across_seeds() {
     for seed in 0..16u64 {
         let terrain_seed = Seed(seed).derive(streams::ROOT);
         let plates = generate_plates(terrain_seed, &TerrainPins::default());
-        let plate_of = assign_plates(&geo, &plates);
+        let plate_of = assign_plates(&geo, terrain_seed, &plates);
         for a in geo.cells() {
             for &b in geo.neighbors(a) {
                 let (pa, pb) = (*plate_of.get(a), *plate_of.get(b));
@@ -166,7 +166,7 @@ fn convergent_boundaries_stand_above_continental_interiors_on_average() {
         let terrain_seed = Seed(seed).derive(streams::ROOT);
         let pins = TerrainPins::default();
         let plates = generate_plates(terrain_seed, &pins);
-        let plate_of = assign_plates(&geo, &plates);
+        let plate_of = assign_plates(&geo, terrain_seed, &plates);
         let boundaries = boundary_field(&geo, &plate_of, &plates);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);
         let globe = generate(Seed(seed), &geo, &pins).unwrap().globe;

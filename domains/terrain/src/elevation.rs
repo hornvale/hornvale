@@ -227,6 +227,7 @@ mod tests {
                 euler_axis: [1.0, 0.0, 0.0],
                 rate: 1.0,
                 maturity,
+                weight: 1.0,
             },
             Plate {
                 id: 1,
@@ -235,6 +236,7 @@ mod tests {
                 euler_axis: [-1.0, 0.0, 0.0],
                 rate: 1.0,
                 maturity,
+                weight: 1.0,
             },
         ]
     }
@@ -243,7 +245,7 @@ mod tests {
     fn collision_uplift_towers_over_the_interior_and_decays_inland() {
         let geo = Geosphere::new(3);
         let plates = hemisphere_plates(0.0);
-        let plate_of = assign_plates(&geo, &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
         let boundaries = boundary_field(&geo, &plate_of, &plates);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);
         let elevation = assemble_elevation(&geo, &plates, &plate_of, &boundaries, &distances, &[]);
@@ -280,7 +282,7 @@ mod tests {
         for seed in [1u64, 7, 42] {
             let terrain_seed = Seed(seed).derive(streams::ROOT);
             let plates = generate_plates(terrain_seed, &pins);
-            let plate_of = assign_plates(&geo, &plates);
+            let plate_of = assign_plates(&geo, terrain_seed, &plates);
             let boundaries = boundary_field(&geo, &plate_of, &plates);
             let distances = boundary_distance(&geo, &plate_of, &boundaries);
             let elevation = generate_elevation(
@@ -305,7 +307,7 @@ mod tests {
     fn unrest_is_high_on_young_convergent_boundaries_and_dies_inland() {
         let geo = Geosphere::new(3);
         let plates = hemisphere_plates(0.0);
-        let plate_of = assign_plates(&geo, &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
         let boundaries = boundary_field(&geo, &plate_of, &plates);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);
         let unrest = generate_unrest(&geo, &plates, &plate_of, &boundaries, &distances);
@@ -338,7 +340,7 @@ mod tests {
         let geo = Geosphere::new(3);
         let young = hemisphere_plates(0.0);
         let old = hemisphere_plates(1.0);
-        let plate_of = assign_plates(&geo, &young);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &young);
         let boundaries = boundary_field(&geo, &plate_of, &young);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);
         let unrest_young = generate_unrest(&geo, &young, &plate_of, &boundaries, &distances);

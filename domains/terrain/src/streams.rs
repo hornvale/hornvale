@@ -35,3 +35,9 @@ pub const COAST_RENDER: &str = "coast-render";
 /// save-format contract.
 /// type-audit: bare-ok(identifier-text)
 pub const CRATONS: &str = "cratons";
+/// Per-plate Voronoi weight draws (heavy-tailed; one per plate).
+/// type-audit: bare-ok(identifier-text)
+pub const PLATE_WEIGHTS: &str = "plate-weights";
+/// Plate-edge noise. Hash-noise only — never consumed as a `Stream`.
+/// type-audit: bare-ok(identifier-text)
+pub const PLATE_EDGE: &str = "plate-edge";

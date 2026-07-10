@@ -6,7 +6,7 @@ use crate::streams;
 use hornvale_kernel::{CellMap, Geosphere, Seed, Stream};
 
 /// A tectonic plate.
-/// type-audit: bare-ok(index: id), bare-ok(ratio: seed_position), bare-ok(flag: continental), bare-ok(ratio: euler_axis), bare-ok(ratio: rate), bare-ok(ratio: maturity)
+/// type-audit: bare-ok(index: id), bare-ok(ratio: seed_position), bare-ok(flag: continental), bare-ok(ratio: euler_axis), bare-ok(ratio: rate), bare-ok(ratio: maturity), bare-ok(ratio: weight)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Plate {
     /// Index into the globe's plate list (equals its position in the Vec).
@@ -22,6 +22,8 @@ pub struct Plate {
     /// Orogenic maturity in [0, 1]: 0 = young (sharp, high, restless),
     /// 1 = old (worn, low, quiet).
     pub maturity: f64,
+    /// Voronoi weight; larger = larger region.
+    pub weight: f64,
 }
 
 /// Dot product.
@@ -109,6 +111,14 @@ pub fn generate_plates(terrain_seed: Seed, pins: &TerrainPins) -> Vec<Plate> {
     let mut maturity_stream = terrain_seed.derive(streams::MATURITY).stream();
     let maturities: Vec<f64> = (0..count).map(|_| maturity_stream.next_f64()).collect();
 
+    /// Heavy-tail shape: weight = 1 / (1 - TAIL * u), u uniform — range
+    /// [1, 20], median ~1.9, a few giants per world.
+    const WEIGHT_TAIL: f64 = 0.95;
+    let mut weight_stream = terrain_seed.derive(streams::PLATE_WEIGHTS).stream();
+    let weights: Vec<f64> = (0..count)
+        .map(|_| 1.0 / (1.0 - WEIGHT_TAIL * weight_stream.next_f64()))
+        .collect();
+
     (0..count)
         .map(|i| {
             let i = i as usize;
@@ -119,6 +129,7 @@ pub fn generate_plates(terrain_seed: Seed, pins: &TerrainPins) -> Vec<Plate> {
                 euler_axis: motions[i].0,
                 rate: motions[i].1,
                 maturity: maturities[i],
+                weight: weights[i],
             }
         })
         .collect()
@@ -160,19 +171,29 @@ fn continental_flags(
     flags
 }
 
-/// Assign each cell to its nearest plate seed: largest dot product =
-/// smallest angular distance on the unit sphere. Ties break to the lower
-/// plate id (strict `>` keeps the first best).
+/// Edge-noise amplitude, radians (~3.4 degrees: boundaries wander a cell
+/// or two without tearing plates apart).
+const EDGE_AMP: f64 = 0.06;
+
+/// Assign each cell to a plate by weighted, edge-noised angular distance:
+/// score = (angle + noise) / weight, smallest wins, ties to the lower
+/// plate id. Noise is stateless per-plate hash-noise (`plate-edge`) — no
+/// draws, so any grid level samples the same boundaries.
 /// type-audit: bare-ok(index)
-pub fn assign_plates(geo: &Geosphere, plates: &[Plate]) -> CellMap<u32> {
+pub fn assign_plates(geo: &Geosphere, terrain_seed: Seed, plates: &[Plate]) -> CellMap<u32> {
+    let edge_root = terrain_seed.derive(crate::streams::PLATE_EDGE);
     CellMap::from_fn(geo, |cell| {
         let position = geo.position(cell);
         let mut best = 0u32;
-        let mut best_dot = f64::NEG_INFINITY;
+        let mut best_score = f64::INFINITY;
         for plate in plates {
-            let d = dot(position, plate.seed_position);
-            if d > best_dot {
-                best_dot = d;
+            let angle = dot(position, plate.seed_position).clamp(-1.0, 1.0).acos();
+            let noise_seed = edge_root.derive(&format!("plate-{}", plate.id));
+            let noise =
+                EDGE_AMP * (2.0 * crate::crust::sphere_fbm01(noise_seed, position, 8.0, 4) - 1.0);
+            let score = (angle + noise).max(0.0) / plate.weight;
+            if score < best_score {
+                best_score = score;
                 best = plate.id;
             }
         }
@@ -220,8 +241,9 @@ mod tests {
     #[test]
     fn every_cell_joins_exactly_one_plate() {
         let geo = Geosphere::new(2);
-        let plates = generate_plates(Seed(42).derive(streams::ROOT), &TerrainPins::default());
-        let assignment = assign_plates(&geo, &plates);
+        let terrain_seed = Seed(42).derive(streams::ROOT);
+        let plates = generate_plates(terrain_seed, &TerrainPins::default());
+        let assignment = assign_plates(&geo, terrain_seed, &plates);
         assert_eq!(assignment.len(), geo.cell_count());
         for (_, plate) in assignment.iter() {
             assert!((*plate as usize) < plates.len());
@@ -238,6 +260,88 @@ mod tests {
                 assert!(dot(velocity_at(plate, p), p).abs() < 1e-12);
             }
         }
+    }
+
+    #[test]
+    fn plate_weights_are_heavy_tailed_and_regions_concentrate() {
+        let geo = Geosphere::new(4);
+        let mut ginis = Vec::new();
+        for seed in 0..12u64 {
+            let plates = generate_plates(Seed(seed).derive(streams::ROOT), &TerrainPins::default());
+            for p in &plates {
+                assert!((1.0..=20.0).contains(&p.weight), "weight {}", p.weight);
+            }
+            let assignment = assign_plates(&geo, Seed(seed).derive(streams::ROOT), &plates);
+            let mut counts = vec![0usize; plates.len()];
+            for (_, plate) in assignment.iter() {
+                counts[*plate as usize] += 1;
+            }
+            ginis.push(crate::shape::gini(&counts).expect("nonzero cells"));
+        }
+        let median = {
+            let mut g = ginis.clone();
+            g.sort_by(|a, b| a.total_cmp(b));
+            g[g.len() / 2]
+        };
+        assert!(
+            median > 0.35,
+            "plate sizes not heavy-tailed: median gini {median}"
+        );
+    }
+
+    /// Two equal-weight antipodal plates, weight 1.0 each, at the poles.
+    fn two_test_plates() -> Vec<Plate> {
+        vec![
+            Plate {
+                id: 0,
+                seed_position: [0.0, 0.0, 1.0],
+                continental: true,
+                euler_axis: [1.0, 0.0, 0.0],
+                rate: 1.0,
+                maturity: 0.5,
+                weight: 1.0,
+            },
+            Plate {
+                id: 1,
+                seed_position: [0.0, 0.0, -1.0],
+                continental: true,
+                euler_axis: [1.0, 0.0, 0.0],
+                rate: 1.0,
+                maturity: 0.5,
+                weight: 1.0,
+            },
+        ]
+    }
+
+    #[test]
+    fn plate_edges_wander_off_the_great_circle() {
+        // Two equal-weight antipodal plates: the unweighted boundary is the
+        // equator; with edge noise, boundary-adjacent cells must appear at
+        // varied latitudes.
+        let geo = Geosphere::new(4);
+        let plates = two_test_plates();
+        let assignment = assign_plates(&geo, Seed(42).derive(streams::ROOT), &plates);
+        let mut boundary_lats = Vec::new();
+        for cell in geo.cells() {
+            let mine = *assignment.get(cell);
+            if geo
+                .neighbors(cell)
+                .iter()
+                .any(|n| *assignment.get(*n) != mine)
+            {
+                boundary_lats.push(geo.coord(cell).latitude);
+            }
+        }
+        let (lo, hi) = boundary_lats
+            .iter()
+            .fold((f64::INFINITY, f64::NEG_INFINITY), |(a, b), v| {
+                (a.min(*v), b.max(*v))
+            });
+        assert!(
+            hi - lo > 5.0,
+            "boundary hugs the equator: spread {} deg",
+            hi - lo
+        );
     }
 
     #[test]

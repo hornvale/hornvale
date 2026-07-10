@@ -77,6 +77,14 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "terrain/cratons",
             "continental budget, craton count, then per-craton center/radius/age",
         ),
+        (
+            "terrain/plate-weights",
+            "per-plate heavy-tailed Voronoi weight draws",
+        ),
+        (
+            "terrain/plate-edge",
+            "plate-edge noise (hash-noise only; no stream draws)",
+        ),
     ]
 }
 
@@ -188,7 +196,7 @@ mod tests {
     #[test]
     fn stream_labels_are_fully_qualified_and_documented() {
         let labels = stream_labels();
-        assert_eq!(labels.len(), 10);
+        assert_eq!(labels.len(), 12);
         assert_eq!(labels[0].0, "terrain");
         for (label, doc) in &labels[1..] {
             assert!(label.starts_with("terrain/"), "unqualified label {label}");
