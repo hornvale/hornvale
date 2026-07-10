@@ -285,3 +285,15 @@ honest — each is a later campaign:
   sweep of the language chapter (which The Words also touches — sequence the
   prose so The Branches appends, not contradicts), and a one-page
   retrospective.
+- **Founder-floor placement down-payment (MAP-22, allocation-at-K=1).**
+  Growing the roster to four competing peoples means a stronger people's
+  suitability score and spacing radius can box a weaker one out to zero
+  settlements in the shared joint-greedy placement pass. L1 ships a small,
+  deterministic founder pass ahead of that competitive fill: each people
+  reserves its own single best habitable cell before spacing runs, so
+  every placed people is guaranteed at least one flagship
+  (`domains/settlement/src/placement.rs`). This is allocation, not scoring
+  — it does not touch `species_weights`/the suitability formula — and it
+  is a down-payment, not full placement balance: complete allocation
+  fairness across the roster is out of scope here and belongs to a later
+  MAP-22 task.
