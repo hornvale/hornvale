@@ -21,6 +21,7 @@ fn render_value(value: &Value) -> String {
 /// `name` fact if present), then one bullet per fact — the predicate's
 /// registry doc (falling back to the predicate key), the rendered value, and
 /// the system that asserted it. `None` if nothing is recorded about `entity`.
+/// type-audit: bare-ok(artifact: return)
 pub fn recount(world: &World, entity: EntityId) -> Option<String> {
     let facts: Vec<&hornvale_kernel::Fact> = world.ledger.facts_about(entity).collect();
     if facts.is_empty() {
