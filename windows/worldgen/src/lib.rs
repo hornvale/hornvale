@@ -2475,12 +2475,12 @@ mod tests {
         };
 
         // The Branches (4-species roster): the globally most-suitable cell
-        // is no longer necessarily goblin's — at seed 42 hobgoblin's
-        // psychology-derived suitability weights win the flagship, so the
-        // recomputed structure must use THAT species' own psychology and
-        // role vocabulary (the same construction `build_world_with_roster`
-        // performs per-flagship), not the goblin-baseline
-        // `PsychSummary::default()` a two-species world could get away
+        // is not necessarily goblin's a priori (at seed 42, under the
+        // current world, it happens to be), so the recomputed structure
+        // must use the flagship's OWN species' psychology and role
+        // vocabulary (the same construction `build_world_with_roster`
+        // performs per-flagship), not a fixed goblin-baseline
+        // `PsychSummary::default()` a single-species world could get away
         // with.
         let flagship_species = hornvale_species::species_of(&world, village.id)
             .expect("the flagship settlement has a species fact");

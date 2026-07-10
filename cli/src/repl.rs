@@ -503,12 +503,10 @@ mod tests {
         // Castes are emergent now (Campaign 4b): every settlement grows at
         // least a worker and a top rung (`structure`'s invariant), but
         // which higher roles appear depends on its actual environment.
-        // Since The Branches, seed 42's constant-sky flagship is hobgoblin
-        // (its psychology-derived suitability weights beat goblin's and
-        // bugbear's on every terrain axis under the joint placement pass —
-        // see `cli/tests/branches_identity.rs`), so the top rung reported
-        // here is hobgoblin's own word, "warlord", not goblin's "chief".
-        assert!(out.contains("warlord"));
+        // Seed 42's constant-sky flagship (entity 2, village Ngokzhvab) is
+        // peopled by goblin, so the top rung reported here is goblin's own
+        // word, "chief".
+        assert!(out.contains("chief"));
         assert!(out.contains("1."));
     }
 
@@ -738,12 +736,16 @@ mod tests {
             .and_then(|s| s.parse().ok())
             .expect("beliefs lists at least one id");
         let recounted = drive_generated(&format!("why {first_id}\n"));
-        // Since The Branches, hobgoblin (not goblin) wins seed 42's
-        // generated-sky flagship (see `village_and_castes_and_beliefs_report`
-        // above and `cli/tests/branches_identity.rs`), so hobgoblin's
-        // pantheon is committed first and its beliefs list first.
+        // `default_roster()` walks `hornvale_species::registry()` (a
+        // `BTreeMap`) in alphabetical order, and worldgen commits each
+        // species' pantheon in that same roster order — so the pantheon
+        // committed first, and thus first in `beliefs`' listing, is
+        // whichever placed species sorts first alphabetically. At seed 42
+        // that is bugbear (goblin, hobgoblin, and kobold all also place,
+        // but sort after it), so its pantheon's holding community
+        // (entity 5, Shngooshkvaoshgvoa) is who this recount hops to.
         assert!(
-            recounted.contains("Seen through hobgoblin eyes:"),
+            recounted.contains("Seen through bugbear eyes:"),
             "the species hop is missing: {recounted}"
         );
         assert!(recounted.contains("night-sky acuity"));

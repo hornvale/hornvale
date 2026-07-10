@@ -1,8 +1,15 @@
 //! Species worlds under the four-people (goblinoid + kobold) roster: the
-//! peoples that actually coexist in the unpinned default world place their
-//! own flagships, each with its own culture and religion; every registry
-//! people places a flagship when given exclusive placement via its own
-//! species pin; an unknown species pin fails loudly.
+//! founder floor (settlement's founder-reservation pass, MAP-22
+//! allocation-at-K=1) guarantees every placed people its own single best
+//! cell before the joint-greedy competitive pass runs, so the unpinned
+//! default world's shared placement is won by ALL FOUR peoples at seed
+//! 42 -- goblin and kobold each also win many additional cells on their
+//! own suitability, hobgoblin and bugbear win exactly the one cell the
+//! founder floor reserves for them (verified against actual `peopled-by`
+//! counts: goblin 26, kobold 33, hobgoblin 1, bugbear 1, out of 61
+//! settlements). Also: every registry people, given exclusive placement
+//! via its own species pin, places its own flagship; an unknown species
+//! pin fails loudly.
 use hornvale_worldgen::{BuildError, SettlementPins, SkyChoice, build_world, flagship_of};
 
 fn pins(species: Option<&str>) -> SettlementPins {
@@ -12,24 +19,12 @@ fn pins(species: Option<&str>) -> SettlementPins {
     }
 }
 
-/// Since The Branches, the unpinned (default, four-people) roster's shared
-/// joint-greedy placement pass is won only by hobgoblin and kobold at seed
-/// 42, not by all four peoples: hobgoblin's psychology-derived suitability
-/// weights (`hornvale_worldgen::species_weights`, over the authored
-/// `hornvale_species::registry` psychology vectors) are at least as
-/// favorable as goblin's and bugbear's on every terrain axis —
-/// freshwater, coast, and hostility-tolerance — under the current
-/// authoring, so hobgoblin weakly Pareto-dominates both at every cell and
-/// wins every contested placement; confirmed across many seeds, not a
-/// seed-42 coincidence, and not something this test suite can paper over
-/// by widening its species list. This test therefore checks the two
-/// peoples that actually coexist in today's shared world (goblin+kobold,
-/// pre-Branches); `every_registry_people_can_flagship_when_pinned_alone`
-/// below is the honest generalization to all four peoples — each CAN
-/// carry a flagship, verified the one way that's currently true: given
-/// exclusive placement, not shared coexistence.
+/// The unpinned (default, four-people) roster's shared joint-greedy
+/// placement pass, now guarded by the founder floor: every one of the
+/// four peoples carries its own flagship -- a distinct settlement entity
+/// with its own committed culture and its own pantheon.
 #[test]
-fn default_worlds_carry_their_coexisting_peoples_with_their_own_flagships() {
+fn default_world_carries_all_four_peoples_with_their_own_flagships() {
     let world = build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
@@ -38,36 +33,41 @@ fn default_worlds_carry_their_coexisting_peoples_with_their_own_flagships() {
         &pins(None),
     )
     .unwrap();
-    let hobgoblin = flagship_of(&world, "hobgoblin").expect("hobgoblin flagship");
-    let kobold = flagship_of(&world, "kobold").expect("kobold flagship");
-    assert_ne!(hobgoblin.id, kobold.id);
-    // Both flagships carry committed culture.
-    assert!(hornvale_culture::subsistence_of(&world, hobgoblin.id).is_some());
-    assert!(hornvale_culture::subsistence_of(&world, kobold.id).is_some());
+    let mut flagship_ids = std::collections::BTreeSet::new();
+    for species in ["goblin", "hobgoblin", "bugbear", "kobold"] {
+        let flagship = flagship_of(&world, species).unwrap_or_else(|| {
+            panic!("{species} must place its own flagship under the founder floor")
+        });
+        assert!(
+            flagship_ids.insert(flagship.id),
+            "{species}'s flagship entity id must be distinct from every other people's"
+        );
+        assert!(
+            hornvale_culture::subsistence_of(&world, flagship.id).is_some(),
+            "{species}'s flagship must carry committed culture"
+        );
+        assert!(
+            !hornvale_religion::beliefs_held_by(&world, flagship.id).is_empty(),
+            "{species}'s flagship must hold its own pantheon"
+        );
+    }
+    // Kobold's specific caste-ladder shape (top rung "elders", no "slave")
+    // -- preserved from the pre-Branches two-species test as a structural
+    // regression guard on its role vocabulary.
+    let kobold = flagship_of(&world, "kobold").unwrap();
     let kobold_castes = hornvale_culture::castes_of(&world, kobold.id);
     assert_eq!(kobold_castes.last().map(String::as_str), Some("elders"));
     assert!(!kobold_castes.contains(&"slave".to_string()));
-    // Religion runs on every species-flagship (spec §5): both peoples hold
-    // their own pantheon.
-    let hobgoblin_beliefs = hornvale_religion::beliefs_held_by(&world, hobgoblin.id);
-    let kobold_beliefs = hornvale_religion::beliefs_held_by(&world, kobold.id);
-    assert!(
-        !hobgoblin_beliefs.is_empty(),
-        "the hobgoblin flagship must hold its own pantheon"
-    );
-    assert!(
-        !kobold_beliefs.is_empty(),
-        "the kobold flagship must hold its own pantheon"
-    );
 }
 
 /// Every registry people, given EXCLUSIVE placement via its own species
 /// pin (no competing psychology-derived suitability score to lose
-/// against), places its own flagship with committed culture and its own
-/// pantheon. The honest generalization of the old two-species
-/// "both peoples flagship" test to today's four peoples: see the doc
-/// comment above for why the default (unpinned, shared) world cannot
-/// currently make this same claim for goblin or bugbear.
+/// against, and no founder floor needed since there is no competition to
+/// guard against), places its own flagship with committed culture and
+/// its own pantheon. A second, independent path to the same claim the
+/// coexistence test above already establishes for the shared default
+/// world -- this one isolates each species' own registry entry from the
+/// placement dynamics entirely.
 #[test]
 fn every_registry_people_can_flagship_when_pinned_alone() {
     for species in ["goblin", "hobgoblin", "bugbear", "kobold"] {

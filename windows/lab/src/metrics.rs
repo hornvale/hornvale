@@ -1923,14 +1923,13 @@ mod tests {
         // re-derived from the same site concepts worldgen composed (see
         // `epithet_honorific`'s doc). Rank-status species commit
         // honorific-bearing epithets → true; Knowledge-status species
-        // commit plain glossed words → false. Since The Branches, goblin
-        // (Rank) no longer places a flagship at seed 42 — hobgoblin's
-        // psychology-derived suitability weights beat goblin's on every
-        // terrain axis under the joint placement pass (see
-        // `cli/tests/branches_identity.rs`) — so hobgoblin (also
-        // Rank-status, per `hornvale_species::registry`) stands in as the
-        // placed Rank-status species this seed actually commits epithets
-        // for; kobold (Knowledge) is unaffected.
+        // commit plain glossed words → false. Since The Branches, all
+        // four peoples place a flagship at seed 42 (the founder floor,
+        // MAP-22 K=1); hobgoblin is Rank-status (per
+        // `hornvale_species::registry`) and placed, so it commits
+        // honorific-bearing epithets — this metric is per-species and
+        // does not depend on which OTHER Rank-status people (goblin) also
+        // places. kobold (Knowledge) is unaffected.
         let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
         assert_eq!(
             epithet_honorific(&view, "hobgoblin"),
@@ -1982,18 +1981,21 @@ mod tests {
         assert!(matches!(m("mean-population"), MetricValue::Number(n) if n > 0.0));
         // The four `flagship-*` metrics are documented as specifically the
         // GOBLIN flagship's data (see their own doc comments above). Since
-        // The Branches, goblin no longer places a flagship at seed 42 under
-        // the four-people roster — hobgoblin's psychology-derived
-        // suitability weights beat goblin's on every terrain axis (see
-        // `cli/tests/branches_identity.rs`) — so these metrics correctly,
-        // truthfully extract `Absent`, exactly the branch their own doc
-        // comments already document for "no goblin flagship". This is not
-        // a broken extraction: it is what these goblin-specific metrics
-        // must report about a world where goblin holds no settlement.
-        assert_eq!(m("flagship-subsistence"), MetricValue::Absent);
-        assert_eq!(m("flagship-biome"), MetricValue::Absent);
-        assert_eq!(m("flagship-coastal"), MetricValue::Absent);
-        assert_eq!(m("flagship-structure-size"), MetricValue::Absent);
+        // the founder floor (settlement's founder-reservation pass, MAP-22
+        // K=1), goblin places its own flagship again at seed 42 — Xnebsvob,
+        // farming, temperate-rainforest, coastal, a 5-caste structure
+        // (slave, farmer, artisan, shaman, chief; see `almanac`'s seed-42
+        // output and `cli/tests/branches_identity.rs`).
+        assert_eq!(
+            m("flagship-subsistence"),
+            MetricValue::Text("farming".to_string())
+        );
+        assert_eq!(
+            m("flagship-biome"),
+            MetricValue::Text("temperate-rainforest".to_string())
+        );
+        assert_eq!(m("flagship-coastal"), MetricValue::Flag(true));
+        assert_eq!(m("flagship-structure-size"), MetricValue::Number(5.0));
         assert!(
             matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
         );
