@@ -8,6 +8,7 @@ use crate::units::LightYears;
 use hornvale_kernel::Seed;
 
 /// A notable neighbor star, visible in the night sky.
+/// type-audit: bare-ok(ratio: apparent_brightness), bare-ok(identifier-text: color), pending(wave-1: declination), pending(wave-1: right_ascension)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Neighbor {
     /// Spectral class (drawn or pinned).
@@ -27,12 +28,14 @@ pub struct Neighbor {
 
 impl Neighbor {
     /// The normative night-sky description of this star.
+    /// type-audit: bare-ok(identifier-text)
     pub fn night_description(&self) -> String {
         format!("a {} star that does not wander", self.color)
     }
 }
 
 /// Luminosity of a spectral class in solar units (model card).
+/// type-audit: pending(wave-1)
 pub fn class_luminosity(class: NeighborClass) -> f64 {
     match class {
         NeighborClass::RedDwarf => 0.02,
@@ -45,6 +48,7 @@ pub fn class_luminosity(class: NeighborClass) -> f64 {
 }
 
 /// The prose name of a spectral class, for chart legends.
+/// type-audit: bare-ok(identifier-text)
 pub fn class_name(class: NeighborClass) -> &'static str {
     match class {
         NeighborClass::RedDwarf => "red dwarf",

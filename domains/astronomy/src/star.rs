@@ -6,6 +6,7 @@ use crate::units::{Au, HabitableZone, SolarLuminosities, SolarMasses};
 use hornvale_kernel::Seed;
 
 /// A main-sequence star: mass drawn, everything else derived.
+/// type-audit: bare-ok(identifier-text)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Star {
     /// Mass in solar masses (drawn, 0.6–1.4).

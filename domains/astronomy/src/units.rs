@@ -5,6 +5,7 @@
 use std::fmt;
 
 /// Why a quantity constructor refused a value.
+/// type-audit: bare-ok(identifier-text: unit), bare-ok(constructor-edge: value), bare-ok(identifier-text: reason)
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnitError {
     /// Human name of the unit ("solar masses").
@@ -149,6 +150,7 @@ pub struct Degrees(pub(crate) f64);
 
 impl Degrees {
     /// Validating constructor: finite, 0 <= v < 360.
+    /// type-audit: bare-ok(constructor-edge)
     pub fn new(value: f64) -> Result<Self, UnitError> {
         if !value.is_finite() {
             return Err(UnitError {
@@ -167,6 +169,7 @@ impl Degrees {
         Ok(Self(value))
     }
     /// The raw value.
+    /// type-audit: bare-ok(constructor-edge)
     pub fn get(self) -> f64 {
         self.0
     }
@@ -207,6 +210,7 @@ impl HabitableZone {
         Au((self.inner.0 + self.outer.0) / 2.0)
     }
     /// Whether `orbit` lies within `[inner, outer]`.
+    /// type-audit: bare-ok(flag)
     pub fn contains(self, orbit: Au) -> bool {
         (self.inner.0..=self.outer.0).contains(&orbit.0)
     }
@@ -214,6 +218,7 @@ impl HabitableZone {
 
 impl StdDays {
     /// A duration given in standard hours.
+    /// type-audit: bare-ok(constructor-edge)
     pub fn from_hours(hours: f64) -> Result<StdDays, UnitError> {
         StdDays::new(hours / 24.0)
     }

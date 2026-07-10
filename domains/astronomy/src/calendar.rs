@@ -313,6 +313,7 @@ impl Calendar {
         self.year
     }
     /// Local day index and fraction at absolute time `t`.
+    /// type-audit: bare-ok(ratio)
     pub fn local_day(&self, t: StdDays) -> Option<(u64, f64)> {
         let day = self.day?;
         let local = t.0 / day.0;
@@ -320,10 +321,12 @@ impl Calendar {
         Some((local as u64, fraction))
     }
     /// Fraction of the year elapsed at `t`.
+    /// type-audit: bare-ok(ratio)
     pub fn year_phase(&self, t: StdDays) -> f64 {
         (t.0 / self.year.0 + self.forcing.year_phase_offset).fract()
     }
     /// Seasonal phase; present when either driver (tilt or eccentricity) acts.
+    /// type-audit: bare-ok(ratio)
     pub fn season_phase(&self, t: StdDays) -> Option<f64> {
         let obliquity = self.forcing.obliquity_at(t.0);
         let ecc = self.forcing.eccentricity_at(t.0);
@@ -335,6 +338,7 @@ impl Calendar {
     /// Daylight fraction: the tilt sinusoid (time-varying obliquity) plus a
     /// smaller apsidal term from eccentricity (a tilt-independent driver).
     /// Absent on a tidally locked world.
+    /// type-audit: bare-ok(ratio)
     pub fn daylight_fraction(&self, t: StdDays) -> Option<f64> {
         self.day?;
         let obliquity = self.forcing.obliquity_at(t.0);
@@ -349,6 +353,7 @@ impl Calendar {
     /// day/night) toward the poles. Reads the time-varying obliquity, so a
     /// world's daylight geometry drifts with its axial tilt. `None` on a
     /// tidally locked world, which has no day/night cycle.
+    /// type-audit: pending(wave-1: latitude), bare-ok(ratio: return)
     pub fn daylight_fraction_at(&self, t: StdDays, latitude: f64) -> Option<f64> {
         self.day?;
         // Solar declination: the sub-solar latitude oscillates over the year,
@@ -363,6 +368,7 @@ impl Calendar {
         Some(cos_h0.acos() / std::f64::consts::PI)
     }
     /// Is it daylight at `t`? Daylight is a centered window of the local day.
+    /// type-audit: bare-ok(flag)
     pub fn is_daylight(&self, t: StdDays) -> Option<bool> {
         let fraction = self.local_day(t)?.1;
         let f = self.daylight_fraction(t)?;
@@ -372,6 +378,7 @@ impl Calendar {
     /// the anchor: `P_syn = P_sid × Y / (Y − P_sid)` (spec §2, fixing
     /// SKY-20). `None` if the moon doesn't exist or `P_sid ≥ Y` (degenerate:
     /// the moon never laps the sun).
+    /// type-audit: bare-ok(index)
     pub fn synodic_month(&self, index: usize) -> Option<StdDays> {
         let sidereal = self.moon_periods.get(index)?;
         if sidereal.0 >= self.year.0 {
@@ -384,6 +391,7 @@ impl Calendar {
     /// Illumination phase of moon `index` at `t` (0 = new, 0.5 = full),
     /// cycling on the synodic month (SKY-20) and shifted by the genesis phase
     /// offset (SKY-4) so day 0 is an ordinary day, not a grand alignment.
+    /// type-audit: bare-ok(index: index), bare-ok(ratio: return)
     pub fn moon_phase(&self, t: StdDays, index: usize) -> Option<f64> {
         let synodic = self.synodic_month(index)?;
         let offset = self
@@ -395,6 +403,7 @@ impl Calendar {
         Some((t.0 / synodic.0 + offset).fract())
     }
     /// How many synodic months of moon `index` fit in a year.
+    /// type-audit: bare-ok(index: index), bare-ok(ratio: return)
     pub fn months_per_year(&self, index: usize) -> Option<f64> {
         let synodic = self.synodic_month(index)?;
         Some(self.year.0 / synodic.0)
