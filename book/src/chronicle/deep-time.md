@@ -1,4 +1,4 @@
-# Campaign 24: Deep Time
+# Deep Time
 
 Two campaigns ago the sky learned to drift: its tilt wanders on a slow
 sinusoid, its orbit breathes in and out of a circle, and its axis wheels

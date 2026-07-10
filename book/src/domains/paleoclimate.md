@@ -148,4 +148,4 @@ them, and because this tier draws no randomness of its own, a spatial tier
 can slot in later with no new save-format stream contracts and no consumer
 changes required.
 
-Chronicle: [Campaign 24, Deep Time](../chronicle/24-deep-time.md).
+Chronicle: [Deep Time](../chronicle/deep-time.md).

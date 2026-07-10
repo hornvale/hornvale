@@ -32,7 +32,7 @@ use std::collections::BTreeSet;
 /// about the world it names. Same "superset, minus what's genuinely new"
 /// pattern `tongues_identity.rs` (its own predecessor keystone) uses. The
 /// five paleoclimate predicates are also excluded here: they are wholly new
-/// in Deep Time (Campaign 24, merged alongside The Words) and land as summary
+/// in Deep Time (merged alongside The Words) and land as summary
 /// facts on the world entity that the pre-Words fixture cannot carry.
 const CHANGED_OR_NEW_PREDICATES: [&str; 11] = [
     hornvale_kernel::NAME,

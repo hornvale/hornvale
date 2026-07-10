@@ -15,7 +15,7 @@ use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 /// predicates did not exist before this campaign; the two orbital-forcing
 /// predicates (mean eccentricity, obliquity oscillation amplitude) are new
 /// in Firm Ground II and were never committed by pre-Tongues genesis; the
-/// five paleoclimate predicates are new in Deep Time (Campaign 24) and were
+/// five paleoclimate predicates are new in Deep Time and were
 /// likewise never committed by pre-Tongues genesis; `name-gloss` is wholly
 /// new to The Words (Task 9), which glosses proper names but never touches
 /// this file's own pre-Tongues fixture or comparison — it's listed here only

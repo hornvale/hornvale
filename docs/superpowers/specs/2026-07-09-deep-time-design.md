@@ -1,4 +1,4 @@
-# Campaign 24: Deep Time — Design
+# Deep Time — Design
 
 **Date:** 2026-07-09
 **Status:** Approved (brainstorming session)

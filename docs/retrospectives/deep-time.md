@@ -1,4 +1,4 @@
-# Campaign 24 (Deep Time) — retrospective
+# Deep Time — retrospective
 
 **Merged:** 2026-07-09
 
