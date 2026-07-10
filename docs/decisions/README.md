@@ -62,3 +62,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0020](0020-campaigns-write-retrospectives.md) | Campaigns write retrospectives | Accepted |
 | [0021](0021-no-alignment-axis.md) | No alignment axis; species are not moral types | Accepted |
 | [0022](0022-sim-emits-data-clients-render.md) | Sim emits data, clients render | Accepted |
+| [0023](0023-settlement-name-uniqueness-is-reference-time.md) | Settlement-name uniqueness is a reference-time property | Accepted |

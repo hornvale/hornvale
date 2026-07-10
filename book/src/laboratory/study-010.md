@@ -252,3 +252,18 @@ glossed-compound regime whose names *deliberately* share meaningful
 descriptors, is the open question this page hands to the campaign owner:
 the number that would answer it is pinned, honest, and one decision away
 from either a ratified revised bound or a third design iteration.
+
+**Interpretation (decision 0023).** The campaign owner took the decision:
+settlement-name uniqueness is a **reference-time property**, and the
+verdict above is reframed rather than retro-fitted. The bound was
+anchored to a naming regime whose stems meant nothing and therefore drew
+from a flat, collision-free space; a meaningful name *should* concentrate
+probability on the words its site is actually made of — two taiga
+settlements both wanting the ice word is the system telling the truth.
+The pinned 4.91% stands as the calibration baseline of meaningful
+toponymy. Collisions are coincidences the world can honestly recount,
+disambiguated where an actual ambiguity appears — in a rendered
+reference, never in the ledger — and they are expected to fall as the
+world grows denser in per-place facts, without the naming engine
+changing at all. H4's failure and its reframing are both part of the
+record; that is the preregistration discipline working as designed.
