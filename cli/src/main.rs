@@ -34,6 +34,7 @@ usage:
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale map [--world <PATH>] [--out <PNG>] render the elevation map (markdown to stdout)
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
+  hornvale paleo-map [--world <PATH>] [--out <PNG>] render the deep-time strata map (markdown to stdout)
   hornvale settlement-map [--world <PATH>] [--out <PNG>] render the settlement map (markdown to stdout)
   hornvale star-chart [--world <PATH>] [--out <PNG>] render the star chart (markdown to stdout)
   hornvale orrery [--world <PATH>] [--day <D>] [--glyphs unicode|emoji]   print one orrery frame (ANSI)
@@ -77,6 +78,7 @@ fn main() -> ExitCode {
         Some("repl") => cmd_repl(&args),
         Some("map") => cmd_map(&args),
         Some("biome-map") => cmd_biome_map(&args),
+        Some("paleo-map") => cmd_paleo_map(&args),
         Some("settlement-map") => cmd_settlement_map(&args),
         Some("star-chart") => cmd_star_chart(&args),
         Some("orrery") => cmd_orrery(&args),
@@ -313,6 +315,40 @@ fn cmd_biome_map(args: &[String]) -> Result<(), String> {
     doc.push_str("```\n\n");
     if let Some(out) = flag_value(args, "--out") {
         let png = hornvale_climate::render::biome_png(climate.geosphere(), &climate.biome_map());
+        std::fs::write(out, png).map_err(|e| format!("writing {out}: {e}"))?;
+        let name = std::path::Path::new(out)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(out);
+        doc.push_str(&format!("![Full-color render](./{name})\n\n"));
+    }
+    doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
+    print!("{doc}");
+    Ok(())
+}
+
+/// Render the world's deep-time strata: a markdown page (title, deep-time
+/// lines, ASCII strata map) to stdout and, with `--out`, the PNG to disk. Both
+/// deterministic; CI drift-checks the committed copies.
+fn cmd_paleo_map(args: &[String]) -> Result<(), String> {
+    let world = load_world(args)?;
+    let terrain = world_builder::terrain_of(&world).map_err(|e| e.to_string())?;
+    let record = world_builder::paleoclimate_of(&world).map_err(|e| e.to_string())?;
+    let mut doc = format!("# The Deep Time of Seed {}\n\n", world.seed.0);
+    doc.push_str(&format!(
+        "Glacial maximum at day {:.0}; {:.0}% of the land lay under ice.\n\n",
+        record.glacial_maximum_day,
+        record.max_ice_fraction * 100.0
+    ));
+    doc.push_str("Legend: `#` ice envelope, `*` refugium, `~` fossil shoreline.\n\n");
+    doc.push_str("```text\n");
+    doc.push_str(&hornvale_paleoclimate::render::paleo_ascii(
+        terrain.geosphere(),
+        &record,
+    ));
+    doc.push_str("```\n\n");
+    if let Some(out) = flag_value(args, "--out") {
+        let png = hornvale_paleoclimate::render::paleo_png(terrain.geosphere(), &record);
         std::fs::write(out, png).map_err(|e| format!("writing {out}: {e}"))?;
         let name = std::path::Path::new(out)
             .file_name()
@@ -804,6 +840,11 @@ mod tests {
     #[test]
     fn usage_mentions_settlement_map() {
         assert!(USAGE.contains("settlement-map"));
+    }
+
+    #[test]
+    fn usage_mentions_paleo_map() {
+        assert!(USAGE.contains("paleo-map"));
     }
 
     #[test]

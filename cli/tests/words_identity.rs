@@ -30,14 +30,22 @@ use std::collections::BTreeSet;
 /// Everything else — entity ids, every other fact — must be byte-identical
 /// to the fixture: The Words changes what a name IS, never anything else
 /// about the world it names. Same "superset, minus what's genuinely new"
-/// pattern `tongues_identity.rs` (its own predecessor keystone) uses.
-const CHANGED_OR_NEW_PREDICATES: [&str; 6] = [
+/// pattern `tongues_identity.rs` (its own predecessor keystone) uses. The
+/// five paleoclimate predicates are also excluded here: they are wholly new
+/// in Deep Time (merged alongside The Words) and land as summary
+/// facts on the world entity that the pre-Words fixture cannot carry.
+const CHANGED_OR_NEW_PREDICATES: [&str; 11] = [
     hornvale_kernel::NAME,
     hornvale_worldgen::NAME_GLOSS,
     hornvale_religion::DEITY_NAME,
     hornvale_religion::DEITY_NAME_IPA,
     hornvale_religion::DEITY_EPITHET,
     hornvale_religion::DEITY_EPITHET_IPA,
+    hornvale_paleoclimate::facts::GLACIAL_MAXIMUM_ERA,
+    hornvale_paleoclimate::facts::MAX_ICE_FRACTION,
+    hornvale_paleoclimate::facts::FOSSIL_SHORELINE,
+    hornvale_paleoclimate::facts::REFUGIUM,
+    hornvale_paleoclimate::facts::FROST_RETREAT,
 ];
 
 /// The ledger's facts, restricted to predicates whose shape didn't move

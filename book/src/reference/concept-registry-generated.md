@@ -14,7 +14,10 @@
 | `deity-name-ipa` | yes | a belief's deity name (IPA transcription) |
 | `derived-from-phenomenon` | yes | phenomenon kind a belief mythologizes |
 | `eccentricity-mean` | yes | mean orbital eccentricity (deep-time forcing) |
+| `fossil-shoreline` | no | a fossil shoreline left by deep-time sea-level change |
+| `frost-retreat` | no | the deep-time record of deglaciation |
 | `genesis-note` | no | a degradation or refusal recorded during sky genesis |
+| `glacial-maximum-era` | yes | standard day of peak ice extent |
 | `has-caste` | no | a caste present in a settlement |
 | `held-by` | no | a community holding a belief |
 | `high-god` | yes | the presiding deity of a ranked pantheon |
@@ -24,6 +27,7 @@
 | `is-settlement` | yes | subject is a settlement |
 | `latitude` | yes | settlement latitude, degrees |
 | `longitude` | yes | settlement longitude, degrees |
+| `max-ice-fraction` | yes | land fraction under ice at the glacial maximum |
 | `moon-count` | yes | how many moons the anchor world has |
 | `moon-period-std` | no | orbital period of a moon, in standard days |
 | `name` | yes | canonical name of an entity |
@@ -35,6 +39,7 @@
 | `peopled-by` | yes | the species that peoples a settlement |
 | `plate-count` | yes | how many tectonic plates the globe has |
 | `population` | yes | population of a settlement |
+| `refugium` | no | a place habitable through the glacial maximum |
 | `scenario-pin` | no | an experimenter-supplied pin string conditioning genesis |
 | `sea-level-m` | yes | sea level in meters |
 | `sentiment` | yes | a belief's sentiment (eternal, cyclic, or ambient) |
