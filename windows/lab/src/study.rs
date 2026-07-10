@@ -6,6 +6,7 @@ use std::fs;
 use std::path::Path;
 
 /// Random number generator initialization: starting seed and count of worlds to generate.
+/// type-audit: bare-ok(constructor-edge: from), bare-ok(count: count)
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 pub struct Seeds {
     /// The starting seed value.
@@ -15,6 +16,7 @@ pub struct Seeds {
 }
 
 /// A named set of sky pins applied to all worlds in a study.
+/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: pins), bare-ok(identifier-text: roster)
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 pub struct PinSet {
     /// The label identifying this pin set (e.g., "default", "locked").
@@ -28,6 +30,7 @@ pub struct PinSet {
 }
 
 /// Metric selection: either "all" metrics or a named subset.
+/// type-audit: bare-ok(identifier-text: All.0), bare-ok(identifier-text: Named.0)
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 #[serde(untagged)]
 pub enum MetricSelection {
@@ -38,6 +41,7 @@ pub enum MetricSelection {
 }
 
 /// A batch study specification: worlds, pin sets, and metrics.
+/// type-audit: bare-ok(identifier-text: name), bare-ok(prose: description)
 #[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 pub struct Study {
     /// The study identifier (lowercase, digits, hyphens only; non-empty).
@@ -53,6 +57,7 @@ pub struct Study {
 }
 
 /// A loud error from study loading or validation.
+/// type-audit: bare-ok(prose: message)
 #[derive(Debug, Clone, PartialEq)]
 pub struct StudyError {
     /// The error message, including the offending value when applicable.
@@ -219,6 +224,7 @@ impl Study {
     }
 
     /// Parse all pin sets and return label+SkyPins+roster-name triples.
+    /// type-audit: bare-ok(identifier-text: return)
     pub fn pin_sets_parsed(&self) -> Result<Vec<(String, SkyPins, Option<String>)>, StudyError> {
         let mut result = Vec::new();
         for pin_set in &self.pin_sets {

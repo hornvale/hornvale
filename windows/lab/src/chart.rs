@@ -59,6 +59,7 @@ fn xml_escape(text: &str) -> String {
 }
 
 /// Render a single-series bar chart as a deterministic SVG string.
+/// type-audit: bare-ok(identifier-text: title), bare-ok(identifier-text: x_labels), bare-ok(count: counts), bare-ok(artifact: return)
 pub fn bar_chart_svg(title: &str, x_labels: &[String], counts: &[u64]) -> String {
     let mut svg = String::new();
 
@@ -151,6 +152,7 @@ pub fn bar_chart_svg(title: &str, x_labels: &[String], counts: &[u64]) -> String
 ///
 /// Returns `(file_stem, svg)` pairs where `file_stem` is
 /// `"{study.name}-{pinset_label}-{metric_name}"`.
+/// type-audit: bare-ok(artifact: return)
 pub fn charts_for(result: &RunResult) -> Vec<(String, String)> {
     let mut charts = Vec::new();
 

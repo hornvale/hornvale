@@ -25,6 +25,7 @@ fn resolve_roster(name: Option<&str>) -> Result<Vec<SpeciesDef>, StudyError> {
 }
 
 /// One world's measurements (or its refusal).
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(identifier-text: pin_set), bare-ok(prose: refusal)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Row {
     /// The random seed used to generate this world.
@@ -38,6 +39,7 @@ pub struct Row {
 }
 
 /// The result of running a complete study.
+/// type-audit: bare-ok(identifier-text: metric_names)
 #[derive(Debug, Clone, PartialEq)]
 pub struct RunResult {
     /// The study that was run.
