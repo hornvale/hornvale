@@ -17,6 +17,19 @@ cargo test --workspace
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
 
+# Iterate cost-ordered — the full gate is the FINAL step, not every check:
+#   1. fmt + clippy first (cheapest, and the most common review finding).
+#   2. Scope tests to what changed: `cargo test -p <crate>` / `--test <name>`.
+#      `--workspace` belongs at the pre-commit gate, not each intermediate run.
+#   3. Run ONCE, inspect many — never re-run the suite to grep a second line.
+#      Trust the exit code (non-zero = failure); `--no-fail-fast` for the whole
+#      failure list in one pass:
+cargo test --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file freely
+#   The ~145s calibration census (windows/lab) loads a drift-checked fixture
+#   (book/src/laboratory/generated/*/rows.csv), so it is cheap UNLESS you
+#   changed worldgen — after a worldgen change, regenerate the artifacts
+#   (below) so the fixture and calibration reflect it.
+
 # Single test / single crate / the property batteries:
 cargo test -p hornvale-kernel text_of
 cargo test -p hornvale-astronomy --test genesis_properties

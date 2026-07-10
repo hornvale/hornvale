@@ -1,31 +1,71 @@
 //! Calibration: at tier 0, belief kind is a pure function of rotation.
 //! The instrument must reproduce known ground truth exactly (spec §2.5).
 use hornvale_culture::{BiomeClass, subsistence};
-use hornvale_lab::{MetricValue, RunResult, load_study, run};
+use hornvale_lab::{MetricValue, RunResult, load_rows, load_study, run};
 use std::path::Path;
 use std::sync::LazyLock;
 
-/// The 500-seed drift census, run ONCE and shared by every calibration in this
-/// file. Each test used to re-run the full census independently (~13× the same
-/// worlds); computing it once behind a `LazyLock` is this suite's dominant cost
-/// saving. Determinism makes the sharing sound — the census is a pure function
-/// of the study — and the parallel runner (TOOL-7) builds it across all cores.
-/// Init panics on a load/run error (a test-setup failure, not a calibration).
+/// Load a census from its committed `rows.csv` fixture rather than recomputing
+/// it. The fixture is published by `lab run` and regenerated + drift-checked in
+/// CI (the "Artifacts are current" step), so `load_rows(fixture)` equals
+/// `run(&study)` by construction — the `census_fixture_matches_live_run` guard
+/// below pins that equality directly. This is what keeps the ~145s census off
+/// every local `cargo test`; before this the suite recomputed it behind a
+/// `LazyLock` (TOOL-7). Init panics on a load error (a test-setup failure, not
+/// a calibration).
+fn load_census(study_path: &str, rows_path: &str) -> RunResult {
+    let study = load_study(Path::new(study_path)).expect("load study");
+    let csv = std::fs::read_to_string(rows_path).expect("read census fixture");
+    load_rows(&study, &csv).expect("reconstruct census from fixture")
+}
+
+/// The 500-seed drift census, loaded ONCE and shared by every calibration in
+/// this file (the shipped `{goblin, kobold}` roster).
 static DRIFT: LazyLock<RunResult> = LazyLock::new(|| {
-    let study = load_study(Path::new("../../studies/census-lands-drift.study.json"))
-        .expect("load census-lands-drift study");
-    run(&study).expect("run census-lands-drift study")
+    load_census(
+        "../../studies/census-lands-drift.study.json",
+        "../../book/src/laboratory/generated/census-lands-drift/rows.csv",
+    )
 });
 
-/// The 500-seed solo null-control census (spec §4), run ONCE and shared by both
-/// null-control calibrations. A genuinely different population from `DRIFT`
-/// (solo rosters, not the shipped `{goblin, kobold}`), so it is its own
-/// `LazyLock` — not a re-run of `DRIFT`.
+/// The 500-seed solo null-control census (spec §4), loaded ONCE and shared by
+/// both null-control calibrations. A genuinely different population from
+/// `DRIFT` (solo rosters), so it is its own fixture.
 static MEETING: LazyLock<RunResult> = LazyLock::new(|| {
-    let study = load_study(Path::new("../../studies/census-of-the-meeting.study.json"))
-        .expect("load census-of-the-meeting study");
-    run(&study).expect("run census-of-the-meeting study")
+    load_census(
+        "../../studies/census-of-the-meeting.study.json",
+        "../../book/src/laboratory/generated/census-of-the-meeting/rows.csv",
+    )
 });
+
+/// Guard — ignored by default because it pays the full census (~145s): the
+/// committed fixtures reconstruct *exactly* what a live `run` produces, so
+/// every other test in this file may trust the fixture. Run it explicitly
+/// after regenerating the fixtures, or in CI:
+/// `cargo test -p hornvale-lab --test calibration -- --ignored`.
+#[test]
+#[ignore = "runs the full ~145s census; fixtures are drift-checked in CI"]
+fn census_fixture_matches_live_run() {
+    for (study_path, rows_path) in [
+        (
+            "../../studies/census-lands-drift.study.json",
+            "../../book/src/laboratory/generated/census-lands-drift/rows.csv",
+        ),
+        (
+            "../../studies/census-of-the-meeting.study.json",
+            "../../book/src/laboratory/generated/census-of-the-meeting/rows.csv",
+        ),
+    ] {
+        let study = load_study(Path::new(study_path)).expect("load study");
+        let live = run(&study).expect("run study");
+        let csv = std::fs::read_to_string(rows_path).expect("read census fixture");
+        let loaded = load_rows(&study, &csv).expect("reconstruct census from fixture");
+        assert_eq!(
+            loaded, live,
+            "fixture {rows_path} diverged from a live run — regenerate it with `lab run`"
+        );
+    }
+}
 
 /// Map a `flagship-biome` metric's kebab-case name back to culture's coarse
 /// `BiomeClass`, mirroring `hornvale_worldgen::biome_class`'s grouping. A
