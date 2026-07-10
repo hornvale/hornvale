@@ -399,6 +399,29 @@ mod tests {
         assert_eq!(gp, hp, "same family+proto_ph ⇒ identical proto-root");
     }
 
+    /// Pin-isolation (Task 7, spec §3), the other direction from
+    /// [`two_daughters_share_a_proto_root_but_differ`]: the proto-root draw
+    /// inside `build_lexicon` must be keyed on `family`, never on
+    /// `species`. Same `species`, same `proto_ph`, two different `family`
+    /// labels — a regression that called `proto_root(seed, species, ...)`
+    /// instead of `proto_root(seed, family, ...)` would consume the
+    /// identical `language/goblin/lexicon/root/water` stream for both
+    /// calls below and land on an identical proto, failing this assertion.
+    #[test]
+    fn proto_root_is_keyed_by_family_not_species() {
+        let ph = test_phonology();
+        let proto_ph = test_phonology();
+        let ex = one_steeped("water");
+        let a = build_lexicon(&Seed(3), "goblin", "goblinoid", &ph, &proto_ph, &ex);
+        let b = build_lexicon(&Seed(3), "goblin", "hobgoblinoid", &ph, &proto_ph, &ex);
+        assert_ne!(
+            root_proto(&a, "water"),
+            root_proto(&b, "water"),
+            "different family labels must draw different proto-roots, even \
+             when species is identical"
+        );
+    }
+
     #[test]
     fn every_input_concept_yields_exactly_one_entry() {
         let ph = test_phonology();

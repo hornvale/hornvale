@@ -497,25 +497,6 @@ mod tests {
         assert!(!a.is_empty());
     }
 
-    /// Pin-isolation (Task 7, spec §3): `proto_root`'s `species` parameter
-    /// is really a `family` key once `lexicon::build_lexicon` calls it
-    /// (`language/<family>/lexicon/root/<concept>`) — every daughter
-    /// species sharing a family reads this same stream for a given
-    /// concept. That draw must be a pure function of `(seed, family,
-    /// concept, proto_ph)` alone: reading it once (as if for a lone
-    /// daughter) or reading it again (as if a second daughter had already
-    /// consumed it) must land on the identical stream position and yield
-    /// the identical segments — the family's proto-root can never depend on
-    /// how many daughters exist or the order they're built in.
-    #[test]
-    fn family_proto_root_is_independent_of_daughter_count() {
-        let ph = test_phonology();
-        let a = proto_root(&Seed(9), "goblinoid", "water", &ph);
-        let b = proto_root(&Seed(9), "goblinoid", "water", &ph); // second reader
-        assert_eq!(a, b);
-        assert!(!a.is_empty());
-    }
-
     // ---- Per-rule transformation tests: each constructs a single-rule
     // cascade directly (no drawing), feeds a hand-built proto whose
     // segments are all in `test_phonology()`'s inventory, and asserts the
