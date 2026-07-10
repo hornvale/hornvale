@@ -30,6 +30,7 @@ pub(crate) const FAMILY: &str = "goblinoid";
 /// committed) family-registry envelope, and the concept registry
 /// [`world_builder::register_all`] builds fresh — no terrain/settlement
 /// genesis is involved, so this never fails.
+/// type-audit: bare-ok(artifact: return)
 pub fn render_proto() -> Result<String, String> {
     let mut world = World::new(Seed(REFERENCE_SEED));
     world_builder::register_all(&mut world.registry).map_err(|e| e.to_string())?;

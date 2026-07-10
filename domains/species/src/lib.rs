@@ -345,6 +345,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
 /// Proto ancestral articulation vectors, keyed by family, for families with
 /// more than one member (a singleton's proto is itself and is absent here).
 /// Each is a distinct point equal to no daughter's vector (spec §3).
+/// type-audit: bare-ok(identifier-text)
 pub fn family_registry() -> BTreeMap<&'static str, ArticulationVector> {
     let mut m = BTreeMap::new();
     m.insert(

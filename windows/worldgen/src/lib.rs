@@ -1046,6 +1046,7 @@ pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology
 /// daughters. Panics if `family` is not in `family_registry` (a singleton
 /// family has no entry there and never reaches this function — see
 /// `lexicon_of`'s resolution).
+/// type-audit: bare-ok(identifier-text: family)
 pub fn proto_phonology_of(world: &World, family: &str) -> hornvale_language::Phonology {
     hornvale_language::draw_phonology(
         &world.seed,
