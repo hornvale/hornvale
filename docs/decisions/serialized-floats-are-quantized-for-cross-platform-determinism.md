@@ -33,6 +33,17 @@ cross-platform identity — a value landing within sub-quantum distance of a
 rounding boundary can still flip, which the same CI drift checks catch and
 which is resolved by re-pinning, exactly like any golden's lifecycle.
 
+**Downstream consumers must use quantization-aware tolerances.** A consumer
+that *reproduces* a quantity from quantized elements (the orrery's
+`ephemeris.ts` recomputes orbital phases from the published `scene-system`
+elements) sees the 8-digit granularity **amplified** by any division: a
+rotation phase is `t/day_length`, so at `t = 360` and `day_length ≈ 0.88`
+the ~1e-8 element granularity becomes a ~1e-6 phase discrepancy. Such a
+cross-language reproduction check therefore asserts to ~1e-5, not to full
+float precision — it still catches any real formula divergence (off by
+orders of magnitude more) but cannot demand more precision than the
+published, quantized elements carry.
+
 ## The Lorenz guard-rail (load-bearing)
 
 A lossy save format is safe here **only because reload re-derives providers

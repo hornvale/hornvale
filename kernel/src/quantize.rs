@@ -22,6 +22,7 @@
 /// precision than a text sim observes — and quantization touches only
 /// serialized outputs, never the compute path, so the digit count has zero
 /// effect on simulation fidelity. Save-format constant.
+/// type-audit: bare-ok(count)
 pub const QUANTIZE_SIG_DIGITS: u32 = 8;
 
 /// Round `x` to [`QUANTIZE_SIG_DIGITS`] significant digits, deterministically
