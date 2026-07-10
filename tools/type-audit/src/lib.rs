@@ -3,6 +3,7 @@
 #![warn(missing_docs)]
 
 pub mod args;
+pub mod primitives;
 
 use args::{Command, parse_args};
 
