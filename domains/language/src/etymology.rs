@@ -159,6 +159,121 @@ pub fn proto_root(seed: &Seed, species: &str, concept: &str, ph: &Phonology) -> 
     crate::naming::segments_of(&syllables)
 }
 
+/// The epoch suffix for the injective proto-root assignment. The Words drew
+/// each root independently at `language/<family>/lexicon/root/<concept>`;
+/// this campaign retires that path for a collision-resolved assignment at
+/// `language/<family>/lexicon/root/v2/<concept>` (deliberate regeneration
+/// uses an epoch suffix, never a rename — the save-format contract).
+const ROOT_EPOCH: &str = "v2";
+
+/// Assign a distinct proto-root to every concept in `concepts` under
+/// `family`'s proto-phonology `proto_ph` — the injective, collision-resolved
+/// replacement for per-concept [`proto_root`] drawing (the homophony fix,
+/// draw side). Deterministic open-addressing: each concept draws a candidate
+/// root at epoch `root/v2`, and on collision re-draws from a probe-keyed
+/// sub-stream (double hashing — colliders scatter rather than cluster), the
+/// root lengthening only once a same-length probe budget is exhausted. Core
+/// concepts (the authored Swadesh strata) are assigned first, so they win the
+/// short forms, and a core root additionally rejects any candidate that is a
+/// minimal pair of an already-placed core root (uniqueness is not enough for
+/// a reader — the forms must be audibly distinct). Assignment ranges over the
+/// WHOLE concept universe passed in, never a per-world subset, so a concept's
+/// form never depends on which other concepts a given world exposed.
+pub fn assign_proto_roots(
+    seed: &Seed,
+    family: &str,
+    proto_ph: &Phonology,
+    concepts: &[&str],
+) -> std::collections::BTreeMap<String, Vec<Segment>> {
+    // Core-first, then concept-id. Core concepts (the Swadesh strata) are
+    // assigned before periphery so they win the short forms (length ∝
+    // rarity), and the id tiebreak keeps the order stable — a concept added
+    // to the universe later slots in without reshuffling the words already
+    // assigned ahead of it.
+    let core_rank = |concept: &&str| u8::from(!crate::packs::is_core_concept(concept));
+    let mut ordered: Vec<&str> = concepts.to_vec();
+    ordered.sort_by(|a, b| core_rank(a).cmp(&core_rank(b)).then_with(|| a.cmp(b)));
+
+    let mut used: std::collections::BTreeSet<Vec<Segment>> = std::collections::BTreeSet::new();
+    // Placed core roots, kept for the minimal-pair guard: a core candidate is
+    // rejected not only when its form is already taken but when it is a
+    // minimal pair of any core root already placed (periphery roots need only
+    // be unequal — incidental near-homophony there is tolerable).
+    let mut core_forms: Vec<Vec<Segment>> = Vec::new();
+    let mut assigned: std::collections::BTreeMap<String, Vec<Segment>> =
+        std::collections::BTreeMap::new();
+    for concept in ordered {
+        let core = crate::packs::is_core_concept(concept);
+        let mut probe = 0u32;
+        let form = loop {
+            let candidate = draw_candidate(seed, family, concept, proto_ph, probe);
+            let taken = used.contains(&candidate);
+            let too_close = core
+                && core_forms
+                    .iter()
+                    .any(|placed| is_minimal_pair(placed, &candidate));
+            if !taken && !too_close {
+                break candidate;
+            }
+            probe += 1;
+        };
+        used.insert(form.clone());
+        if core {
+            core_forms.push(form.clone());
+        }
+        assigned.insert(concept.to_string(), form);
+    }
+    assigned
+}
+
+/// Whether `a` and `b` are a **minimal pair** — equal length, differing in
+/// exactly one segment (one substitution). Such forms are formally distinct
+/// yet read as near-homophones (Noa / Noe / Noo), so the assignment holds
+/// core roots apart by this distance, not mere inequality. Different lengths
+/// or two-plus differences are not minimal pairs.
+fn is_minimal_pair(a: &[Segment], b: &[Segment]) -> bool {
+    a.len() == b.len() && a.iter().zip(b).filter(|(x, y)| x != y).count() == 1
+}
+
+/// The number of same-length probes tried before the candidate root is
+/// lengthened by one syllable — the open-addressing "table resize" that keeps
+/// assignment terminating even in a phonology whose base space is smaller
+/// than the concept universe.
+const PROBE_BUDGET: u32 = 8;
+
+/// Draw one candidate proto-root for `concept` at probe index `probe`. Probe
+/// 0 draws from the base epoch path (the common, no-collision case);
+/// higher probes draw from a probe-keyed sub-stream (double hashing — each
+/// probe scatters independently rather than perturbing the last). Every
+/// `PROBE_BUDGET` probes the candidate lengthens by one syllable, so a
+/// cramped phonology still resolves all collisions.
+fn draw_candidate(
+    seed: &Seed,
+    family: &str,
+    concept: &str,
+    ph: &Phonology,
+    probe: u32,
+) -> Vec<Segment> {
+    let tier = probe / PROBE_BUDGET;
+    let min = PROTO_ROOT_SYLLABLE_RANGE.0 + tier;
+    let max = PROTO_ROOT_SYLLABLE_RANGE.1 + tier;
+    let base = seed
+        .derive("language")
+        .derive(family)
+        .derive("lexicon")
+        .derive("root")
+        .derive(ROOT_EPOCH)
+        .derive(concept);
+    let mut stream = if probe == 0 {
+        base.stream()
+    } else {
+        base.derive("probe").derive(&probe.to_string()).stream()
+    };
+    let namer = Namer::new(seed, family, ph);
+    let syllables = namer.draw_syllables(&mut stream, min, max, false);
+    crate::naming::segments_of(&syllables)
+}
+
 /// Whether `seg` is a consonant (used by the two structural rules, which
 /// condition on consonant-hood rather than a specific place/manner).
 fn is_consonant(seg: Segment) -> bool {
@@ -501,12 +616,197 @@ mod tests {
         assert!(!a.is_empty());
     }
 
+    use crate::phoneme::{Backness, Place};
+
+    /// A deliberately cramped phonology: two stops (t, k), one nasal (n), two
+    /// vowels (a, e), single-vowel nuclei, an optional nasal coda. Its base
+    /// space is small enough that ~12 independent 1-2 syllable draws WOULD
+    /// collide (the birthday-paradox failure the assignment fixes), while
+    /// still admitting enough distinct forms to resolve them without
+    /// lengthening — so injectivity here exercises collision-probing, not
+    /// growth.
+    fn cramped_phonology() -> Phonology {
+        Phonology {
+            inventory: vec![
+                c(Place::Alveolar, Manner::Stop, false),  // t
+                c(Place::Velar, Manner::Stop, false),     // k
+                c(Place::Alveolar, Manner::Nasal, true),  // n
+                v(Height::Low, Backness::Central, false), // a
+                v(Height::Mid, Backness::Front, false),   // e
+            ],
+            onsets: vec![vec![Manner::Stop]],
+            nuclei: 1,
+            codas: vec![vec![Manner::Nasal], vec![]],
+        }
+    }
+
+    #[test]
+    fn assign_proto_roots_is_injective_where_independent_draws_would_collide() {
+        // The core guarantee: over a cramped phonology where per-concept
+        // draws collide, every concept still gets a DISTINCT proto-root.
+        let ph = cramped_phonology();
+        let concepts = [
+            "c00", "c01", "c02", "c03", "c04", "c05", "c06", "c07", "c08", "c09", "c10", "c11",
+        ];
+        let assigned = assign_proto_roots(&Seed(1), "fam", &ph, &concepts);
+        assert_eq!(assigned.len(), concepts.len(), "one form per concept");
+        let forms: std::collections::BTreeSet<&Vec<Segment>> = assigned.values().collect();
+        assert_eq!(
+            forms.len(),
+            concepts.len(),
+            "assignment must be injective: a distinct form per concept"
+        );
+    }
+
+    /// A phonology so tiny its base 1-2 syllable space cannot hold many
+    /// concepts: one stop (t), one nasal (n), one vowel (a), optional nasal
+    /// coda. Monosyllables: ta, tan (2); the base space saturates almost
+    /// immediately, forcing the assignment to lengthen roots to stay
+    /// injective.
+    fn minuscule_phonology() -> Phonology {
+        Phonology {
+            inventory: vec![
+                c(Place::Alveolar, Manner::Stop, false),  // t
+                c(Place::Alveolar, Manner::Nasal, true),  // n
+                v(Height::Low, Backness::Central, false), // a
+            ],
+            onsets: vec![vec![Manner::Stop]],
+            nuclei: 1,
+            codas: vec![vec![Manner::Nasal], vec![]],
+        }
+    }
+
+    #[test]
+    fn assign_proto_roots_lengthens_to_stay_injective_when_the_base_space_saturates() {
+        let ph = minuscule_phonology();
+        let concepts: Vec<String> = (0..16).map(|i| format!("c{i:02}")).collect();
+        let refs: Vec<&str> = concepts.iter().map(|s| s.as_str()).collect();
+        let assigned = assign_proto_roots(&Seed(2), "fam", &ph, &refs);
+        let forms: std::collections::BTreeSet<&Vec<Segment>> = assigned.values().collect();
+        assert_eq!(forms.len(), refs.len(), "still injective under saturation");
+        // Non-vacuity: growth must actually have fired — a base draw is at
+        // most PROTO_ROOT_SYLLABLE_RANGE.1 syllables, and in this 2-form
+        // space 16 concepts cannot fit without longer roots. A rough segment
+        // bound (>= 5) can only come from a 3+ syllable root here.
+        let longest = assigned.values().map(|f| f.len()).max().unwrap();
+        assert!(
+            longest >= 5,
+            "saturation must force lengthening beyond the base tier; longest was {longest} segments"
+        );
+    }
+
+    #[test]
+    fn is_minimal_pair_flags_exactly_one_substitution() {
+        let t = c(Place::Alveolar, Manner::Stop, false);
+        let n = c(Place::Alveolar, Manner::Nasal, true);
+        let a = v(Height::Low, Backness::Central, false);
+        let e = v(Height::Mid, Backness::Front, false);
+        // ta vs te: one vowel substitution → minimal pair.
+        assert!(is_minimal_pair(&[t, a], &[t, e]));
+        // ta vs na: one consonant substitution → minimal pair.
+        assert!(is_minimal_pair(&[t, a], &[n, a]));
+        // ta vs ta: identical (zero differences) → not a minimal pair.
+        assert!(!is_minimal_pair(&[t, a], &[t, a]));
+        // ta vs tan: different lengths → not a minimal pair.
+        assert!(!is_minimal_pair(&[t, a], &[t, a, n]));
+        // ta vs ne: two substitutions → not a minimal pair.
+        assert!(!is_minimal_pair(&[t, a], &[n, e]));
+    }
+
+    #[test]
+    fn assign_proto_roots_places_core_concepts_first_so_they_win_the_short_forms() {
+        // "water" is core (universal stratum) but sorts LAST here; the
+        // "aaN" fillers are periphery and sort first. Under a saturating
+        // phonology, whoever is assigned first gets the short base forms.
+        // Core-first ordering must give the core concept a form no longer
+        // than any periphery word — even though its id sorts last.
+        let ph = minuscule_phonology();
+        let mut concepts = vec!["water"];
+        let fillers: Vec<String> = (0..6).map(|i| format!("aa{i}")).collect();
+        concepts.extend(fillers.iter().map(|s| s.as_str()));
+        let assigned = assign_proto_roots(&Seed(3), "fam", &ph, &concepts);
+
+        let core_len = assigned["water"].len();
+        let max_periph = fillers.iter().map(|f| assigned[f].len()).max().unwrap();
+        assert!(
+            core_len <= max_periph,
+            "core 'water' ({core_len} segs) must be no longer than the longest \
+             periphery word ({max_periph} segs) — core is assigned first"
+        );
+    }
+
+    /// Fourteen real core concepts (universal stratum, body pack) — enough
+    /// to saturate a cramped phonology and force same-length neighbours.
+    fn core_concept_batch() -> Vec<&'static str> {
+        vec![
+            "water", "night", "day", "fire", "eat", "sleep", "die", "one", "two", "many", "hand",
+            "foot", "eye", "mouth",
+        ]
+    }
+
+    #[test]
+    fn assign_proto_roots_holds_core_roots_apart_by_more_than_a_minimal_pair() {
+        // Core vocabulary must be audibly distinct, not merely unequal: no two
+        // core roots may be a minimal pair (Noa/Noe). Checked over a cramped
+        // phonology that forces same-length neighbours, across several seeds.
+        let ph = cramped_phonology();
+        let concepts = core_concept_batch();
+        for seed in 0..8u64 {
+            let assigned = assign_proto_roots(&Seed(seed), "fam", &ph, &concepts);
+            let forms: Vec<&Vec<Segment>> = assigned.values().collect();
+            for i in 0..forms.len() {
+                for j in (i + 1)..forms.len() {
+                    assert!(
+                        !is_minimal_pair(forms[i], forms[j]),
+                        "seed {seed}: core roots {:?} and {:?} are a minimal pair",
+                        forms[i],
+                        forms[j]
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn assign_proto_roots_is_insertion_stable_for_earlier_sorting_concepts() {
+        // A concept's assignment depends only on the concepts sorted at or
+        // before it (core-first, then id). So adding a later-sorting concept
+        // to the universe leaves every earlier assignment byte-identical —
+        // the registry can grow without reshuffling committed vocabulary
+        // (the property a global minimal-perfect-hash recompute would break).
+        let ph = cramped_phonology();
+        let mut base = core_concept_batch();
+        base.push("aa0");
+        base.push("aa1");
+        let before = assign_proto_roots(&Seed(4), "fam", &ph, &base);
+
+        // "zzz-late" is non-core (sorts after every core concept) and its id
+        // sorts after "aa1" — so it lands strictly last.
+        let mut grown = base.clone();
+        grown.push("zzz-late");
+        let after = assign_proto_roots(&Seed(4), "fam", &ph, &grown);
+
+        for concept in &base {
+            assert_eq!(
+                before[*concept], after[*concept],
+                "{concept} must keep its form when a later-sorting concept is added"
+            );
+        }
+    }
+
+    #[test]
+    fn assign_proto_roots_is_deterministic() {
+        let ph = cramped_phonology();
+        let concepts = ["water", "night", "hand", "many", "c00", "c01", "c02"];
+        let a = assign_proto_roots(&Seed(7), "fam", &ph, &concepts);
+        let b = assign_proto_roots(&Seed(7), "fam", &ph, &concepts);
+        assert_eq!(a, b, "same inputs must yield an identical assignment");
+    }
+
     // ---- Per-rule transformation tests: each constructs a single-rule
     // cascade directly (no drawing), feeds a hand-built proto whose
     // segments are all in `test_phonology()`'s inventory, and asserts the
     // exact expected modern sequence.
-
-    use crate::phoneme::{Backness, Place};
 
     /// A consonant literal, for hand-built protos.
     fn c(place: Place, manner: Manner, voiced: bool) -> Segment {

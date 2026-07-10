@@ -40,8 +40,8 @@ pub use lexicon::{
 };
 pub use naming::{GeneratedName, MorphOptions, NameKind, Namer, SiteConcepts, render_views};
 pub use packs::{
-    PackDepths, PackEntry, body_pack, color_pack, compound_recipe, in_ladder, kin_pack,
-    register_concepts, universal_stratum,
+    PackDepths, PackEntry, body_pack, color_pack, compound_recipe, in_ladder, is_core_concept,
+    kin_pack, register_concepts, universal_stratum,
 };
 pub use phoneme::{
     Backness, Height, Manner, Place, Segment, espeak, espeak_word, ipa, romanize, sonority,
