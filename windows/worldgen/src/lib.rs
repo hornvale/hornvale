@@ -25,6 +25,7 @@ pub mod settlement_pins;
 pub use settlement_pins::SettlementPins;
 
 /// Errors from building a world.
+/// type-audit: bare-ok(prose: Pins.0)
 #[derive(Debug)]
 pub enum BuildError {
     /// A concept registration conflicted.
@@ -307,6 +308,7 @@ pub fn climate_of(world: &World) -> Result<GeneratedClimate, BuildError> {
 }
 
 /// Headline biome/habitability lines for the almanac's Land section.
+/// type-audit: bare-ok(prose: return)
 pub fn biome_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let climate = climate_of(world)?;
     let summary = hornvale_climate::summarize(&climate);
@@ -328,6 +330,7 @@ pub fn biome_lines(world: &World) -> Result<Vec<String>, BuildError> {
 
 /// The land's headline lines for the almanac: plates and ocean coverage,
 /// then the highest land above the sea.
+/// type-audit: bare-ok(prose: return)
 pub fn land_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let terrain = terrain_of(world)?;
     let summary = hornvale_terrain::summarize(terrain.globe());
@@ -371,6 +374,7 @@ fn place_coord(world: &World, place: EntityId) -> Option<GeoCoord> {
 
 /// The tier-0/1/2 phenomena sources, observed from the world's first place —
 /// the flagship (SEQ-4). The vantage's hemisphere culls the sky (SEQ-5).
+/// type-audit: pending(wave-3: day)
 pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, BuildError> {
     let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
         return Ok(Vec::new());
@@ -414,6 +418,7 @@ pub fn perception_lens(p: &hornvale_species::PerceptionVector) -> PerceptionLens
 /// Crepuscular at the first light/dark boundary the same scan finds.
 /// Worlds without a day/night cycle (constant sun, tidal lock) observe at
 /// day 0.0 regardless.
+/// type-audit: pending(wave-3: return)
 pub fn observation_time(
     world: &World,
     activity: hornvale_species::ActivityCycle,
@@ -472,6 +477,7 @@ fn def_in<'a>(
 }
 
 /// The phenomena a species (resolved within `roster`) observes.
+/// type-audit: bare-ok(identifier-text: species)
 pub fn observed_phenomena_as_in(
     world: &World,
     roster: &[hornvale_species::SpeciesDef],
@@ -500,6 +506,7 @@ pub fn observed_phenomena_as_in(
 /// The phenomena a species observes: its characteristic hour, its lens,
 /// the world's first place (spec §5 — the place debt is SEQ-4's). Resolves
 /// `species` within the shipped default roster.
+/// type-audit: bare-ok(identifier-text: species)
 pub fn observed_phenomena_as(world: &World, species: &str) -> Result<Vec<Phenomenon>, BuildError> {
     observed_phenomena_as_in(world, &default_roster(), species)
 }
@@ -531,6 +538,7 @@ pub fn envelope_of(art: &hornvale_species::ArticulationVector) -> hornvale_langu
 /// `terrain_of`/`sky_of`/`climate_of`. The single construction site for a
 /// species' `Phonology`. Panics if `species` is not in `roster`; every
 /// caller sources `species` from the same roster it passes here.
+/// type-audit: bare-ok(identifier-text: species)
 pub fn language_of_in(
     world: &World,
     roster: &[hornvale_species::SpeciesDef],
@@ -542,6 +550,7 @@ pub fn language_of_in(
 
 /// Draw a species' phonology, resolving `species` within the shipped
 /// default roster.
+/// type-audit: bare-ok(identifier-text: species)
 pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology {
     language_of_in(world, &default_roster(), species)
 }
@@ -877,6 +886,7 @@ pub fn build_world(
 }
 
 /// The first-placed settlement of `species` (its flagship), if any.
+/// type-audit: bare-ok(identifier-text: species)
 pub fn flagship_of(world: &World, species: &str) -> Option<hornvale_settlement::VillageInfo> {
     let id = world
         .ledger
@@ -904,6 +914,7 @@ pub fn flagship_of(world: &World, species: &str) -> Option<hornvale_settlement::
 /// (registry order, goblin first). A world with exactly one such species
 /// keeps the legacy unprefixed wording — byte-stable for goblin-only worlds;
 /// two-or-more-species worlds prefix each chief line with its species.
+/// type-audit: bare-ok(prose: return)
 pub fn settlement_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let places = hornvale_terrain::places(world);
     let mut lines = vec![format!("The land holds {} settlement(s).", places.len())];
@@ -939,6 +950,7 @@ pub fn settlement_lines(world: &World) -> Result<Vec<String>, BuildError> {
 /// Headline culture lines for the almanac's People section: the flagship's
 /// subsistence mode, then a one-line summary of its emergent role structure.
 /// Empty when the flagship has no committed culture yet.
+/// type-audit: bare-ok(prose: return)
 pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo) -> Vec<String> {
     let Some(subsistence) = hornvale_culture::subsistence_of(world, flagship.id) else {
         return Vec::new();
@@ -971,6 +983,7 @@ fn moon_ordinal(index: usize) -> &'static str {
 /// swell of daylight (if the world has axial tilt), and one line per moon.
 /// Empty for constant-sky worlds, which have no generated calendar to
 /// describe.
+/// type-audit: bare-ok(prose: return)
 pub fn calendar_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let sky = sky_of(world)?;
     let Sky::Generated(sky) = &sky else {
@@ -1049,6 +1062,7 @@ pub fn calendar_lines(world: &World) -> Result<Vec<String>, BuildError> {
 /// The night sky as a single sentence naming its notable neighbor stars,
 /// brightest first. `None` for constant-sky worlds, which have no
 /// neighborhood to describe.
+/// type-audit: bare-ok(prose: return)
 pub fn night_sky_line(world: &World) -> Result<Option<String>, BuildError> {
     let sky = sky_of(world)?;
     let Sky::Generated(sky) = &sky else {
@@ -1065,6 +1079,7 @@ pub fn night_sky_line(world: &World) -> Result<Option<String>, BuildError> {
 
 /// Notes recorded during sky genesis. Empty for constant-sky worlds, which
 /// are never generated.
+/// type-audit: bare-ok(prose: return)
 pub fn genesis_notes(world: &World) -> Result<Vec<String>, BuildError> {
     let sky = sky_of(world)?;
     Ok(match &sky {
@@ -1184,6 +1199,7 @@ fn legacy_rendered_beliefs(
 /// through (spec §6, Task 11); the almanac renders the same seam via
 /// [`almanac_context`]'s `PantheonBlock`s. Legacy fallback: see
 /// [`legacy_rendered_beliefs`].
+/// type-audit: bare-ok(prose: return)
 pub fn rendered_beliefs(
     world: &World,
 ) -> Result<Vec<(hornvale_religion::Belief, String)>, BuildError> {
