@@ -26,7 +26,7 @@ const PHASE_STRIP: &str = "oo))))))OO((((oo";
 /// Render the fixed night sky as a 72×24 equirectangular ASCII chart.
 /// Stars plot as their 1-based brightness-rank digit; on a collision the
 /// brighter star's digit wins. The celestial equator is a dashed line.
-/// type-audit: bare-ok(render-internal)
+/// type-audit: bare-ok(artifact)
 pub fn chart_ascii(neighbors: &[Neighbor]) -> String {
     let mut grid = vec![vec![' '; ASCII_WIDTH]; ASCII_HEIGHT];
     let equator = ASCII_HEIGHT / 2;
@@ -54,7 +54,7 @@ pub fn chart_ascii(neighbors: &[Neighbor]) -> String {
 /// The fixed night sky as a 72×24 ANSI chart: each star its brightness-rank
 /// digit, tinted by spectral class; the celestial equator dashed. The colored
 /// sibling of [`chart_ascii`]; same layout, same determinism.
-/// type-audit: bare-ok(render-internal)
+/// type-audit: bare-ok(artifact)
 pub fn chart_ansi(neighbors: &[Neighbor]) -> String {
     let mut grid: Vec<Vec<(char, &'static str)>> = vec![vec![(' ', ""); ASCII_WIDTH]; ASCII_HEIGHT];
     let equator = ASCII_HEIGHT / 2;
@@ -95,7 +95,7 @@ fn emit_ansi_grid(grid: &[Vec<(char, &'static str)>]) -> String {
 /// One timeless phase-cycle line per moon: the strip, the moon's size
 /// word, and its synodic month. Skips (with an honest note) a moon whose
 /// synodic cycle is degenerate.
-/// type-audit: bare-ok(render-internal)
+/// type-audit: bare-ok(artifact)
 pub fn moon_lines(moons: &[Moon], calendar: &Calendar) -> Vec<String> {
     moons
         .iter()
@@ -230,7 +230,7 @@ fn draw_digit(pixels: &mut [u8], n: usize, x: i64, y: i64) {
 /// and colored by class, each tagged with its rank digit (spec §4). Assumes
 /// at most five neighbors — the genesis draw's cap — or digit indexing exhausts
 /// the font.
-/// type-audit: bare-ok(render-internal)
+/// type-audit: bare-ok(artifact)
 pub fn chart_png(neighbors: &[Neighbor]) -> Vec<u8> {
     let mut pixels = Vec::with_capacity((MAP_WIDTH * MAP_HEIGHT * 3) as usize);
     for _ in 0..MAP_WIDTH * MAP_HEIGHT {
@@ -255,7 +255,7 @@ pub fn chart_png(neighbors: &[Neighbor]) -> Vec<u8> {
 /// A star's terminal color from its spectral class — a **render** decision
 /// (paint), not domain data: hot O/B blue-white through cool M red. 256-color
 /// SGR escape; pair with a `\x1b[0m` reset. Total over `NeighborClass`.
-/// type-audit: bare-ok(render-internal)
+/// type-audit: bare-ok(artifact)
 pub fn spectral_color(class: NeighborClass) -> &'static str {
     match class {
         NeighborClass::BlueGiant => "\u{1b}[38;5;39m", // blue-white
@@ -269,7 +269,7 @@ pub fn spectral_color(class: NeighborClass) -> &'static str {
 
 /// The anchor star's color from its human-readable `class_name` (which carries
 /// the spectral letter, e.g. "yellow dwarf (G)"). Falls back to Sun-like.
-/// type-audit: bare-ok(identifier-text: class_name), bare-ok(render-internal: return)
+/// type-audit: bare-ok(identifier-text: class_name), bare-ok(artifact: return)
 pub fn star_color(class_name: &str) -> &'static str {
     // Spectral letter lives in a trailing (LETTER) suffix; without it, fall back to Sun-like.
     let letter = class_name
@@ -427,7 +427,7 @@ pub fn orrery_cols(glyphs: GlyphSet) -> usize {
 /// a tight ring around the world showing its synodic phase. Drawn with the
 /// given `glyphs`. Deterministic in `(system, t, glyphs)`. A schematic, not to
 /// scale beyond the orbit-to-grid fit.
-/// type-audit: bare-ok(render-internal)
+/// type-audit: bare-ok(artifact)
 pub fn orrery_ansi(
     system: &StarSystem,
     calendar: &Calendar,

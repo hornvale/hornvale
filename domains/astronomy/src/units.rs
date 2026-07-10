@@ -5,7 +5,7 @@
 use std::fmt;
 
 /// Why a quantity constructor refused a value.
-/// type-audit: bare-ok(identifier-text: unit), bare-ok(constructor-edge: value), bare-ok(identifier-text: reason)
+/// type-audit: bare-ok(identifier-text: unit), bare-ok(diagnostic-value: value), bare-ok(identifier-text: reason)
 #[derive(Debug, Clone, PartialEq)]
 pub struct UnitError {
     /// Human name of the unit ("solar masses").
