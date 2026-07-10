@@ -315,6 +315,27 @@ fn proto_goblinoid_vector_equals_no_daughter() {
         assert_ne!(proto, r[d].articulation, "proto must differ from {d}");
     }
 }
+
+#[test]
+fn every_multi_member_family_has_a_proto() {
+    // CONSISTENCY GUARD (matters as more families are added). A species'
+    // `family` field points into `family_registry` by name; a lookup MISS
+    // falls through to the singleton path, so a typo'd or forgotten family
+    // would silently demote a would-be family member to an isolated language
+    // with no cognates. Assert every family shared by ≥2 species has a proto
+    // entry — the miss can then never be silent.
+    let r = registry();
+    let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
+    for def in r.values() {
+        *counts.entry(def.family).or_default() += 1;
+    }
+    let fams = family_registry();
+    for (family, n) in counts {
+        if n >= 2 {
+            assert!(fams.contains_key(family), "family {family} has {n} members but no proto vector");
+        }
+    }
+}
 ```
 - [ ] **Step 2: Run to verify failure.** Run: `cargo test -p hornvale-species registry_has_the_goblinoid_triad`. Expected: FAIL — field/species/fn missing.
 - [ ] **Step 3: Implement.** Add `pub family: &'static str` to `SpeciesDef`; set `family: "goblinoid"` on goblin, `family: "kobold"` on kobold. Insert the two species (values authored from SRD lore; scalars pinned here, reviewable):
@@ -526,7 +547,7 @@ git commit -m "feat(cli): dictionary cognate columns + proto-goblinoid reference
 **Interfaces:**
 - Produces: metrics proving the §7 properties plus divergence magnitude and divergence-reality; a committed **seed-swept** study result.
 
-- [ ] **Step 1: Write metrics as failing tests first** (the repo's metrics have unit tests; mirror `lexicon_regular` at `metrics.rs:1441`). Metrics: (1) **regularity family-wide** — a proto-segment in a given environment realizes consistently across all of a daughter's words; (2) **monophyly** — every goblinoid `Root`'s `derivation.proto` matches the family proto-root for that concept; (3) **clean outgroup** — no concept's kobold proto-root equals any goblinoid proto-root; (4) **inventory closure** — every daughter `Root.modern ⊆ inventory`; (5) **divergence magnitude** — the count of distinct proto-contrasts each daughter merges under nativization (proto segments whose nativized modern reflex collapses them onto an existing inventory segment), asserted to follow the **loudness ordering** `bugbear ≥ goblin ≥ hobgoblin` — a quieter people draws a smaller inventory and so nativizes more (this is the emergent loudness→nativization interaction, made a measured finding rather than a silent side effect, and the quantity L4 will build on); (6) **divergence is real** — some concept rooted in all three daughters has ≥2 distinct present-day forms (the family is not aliases; the seed-swept form of the Task 6 guard).
+- [ ] **Step 1: Write metrics as failing tests first** (the repo's metrics have unit tests; mirror `lexicon_regular` at `metrics.rs:1441`). Metrics: (1) **regularity family-wide** — a proto-segment in a given environment realizes consistently across all of a daughter's words; (2) **monophyly** — every goblinoid `Root`'s `derivation.proto` matches the family proto-root for that concept; (3) **clean outgroup** — no concept's kobold proto-root equals any goblinoid proto-root; (4) **inventory closure** — every daughter `Root.modern ⊆ inventory`; (5) **divergence magnitude** — the count of distinct proto-contrasts each daughter merges under nativization (proto segments whose nativized modern reflex collapses them onto an existing inventory segment), asserted to follow the **loudness ordering** `bugbear ≥ goblin ≥ hobgoblin` — a quieter people draws a smaller inventory and so nativizes more (this is the emergent loudness→nativization interaction, made a measured finding rather than a silent side effect, and the quantity L4 will build on); (6) **divergence is real** — some concept rooted in all three daughters has ≥2 distinct present-day forms (the family is not aliases; the seed-swept form of the Task 6 guard); (7) **merger-induced homophony** — per daughter, the count of distinct-concept pairs whose `Root.modern` forms coincide (two proto-roots collapsed onto one form by nativization), reported per daughter and expected highest for the smallest-inventory people (bugbear). This is an *observation*, not a pass/fail invariant — homophony is legal and realistic — but it is the exact confound L4's reconstruction will fight (homophones read as one word), so L1 banks the measurement now.
 - [ ] **Step 2: Implement** the metrics; register them (`lab list-metrics` must show them).
 - [ ] **Step 3: Author the study as a SEED SWEEP + run it.** `studies/branches-family.study.json` sweeps many seeds (mirror an existing multi-seed study's shape under `studies/`), so regularity / monophyly / clean-outgroup / closure / divergence hold as **all-seed invariants**, not seed-42 facts — a nativization or cognacy edge case that only bites on some seeds is exactly what a single-seed assertion misses. Preregister the divergence-ordering claim (ADR 0016) BEFORE the sweep runs; pin the measured merge counts after, never tuned to pass. Run: `cargo run -p hornvale -- lab run studies/branches-family.study.json > book/src/laboratory/<study>.md`.
 - [ ] **Step 4: Gate.** Full gate + `git diff --exit-code book/src/laboratory/` after a second run (determinism).
@@ -562,7 +583,7 @@ git commit -m "docs(book): The Branches chronicle + freshness sweep + retrospect
 
 ## Self-Review
 
-**Spec coverage:** §1 goal → Tasks 5,6,9; §2.1 family/lineage split → Tasks 4,6; §2.2 descent + nativization → Task 3; §2.3 proto-is-a-language → Task 6 (`proto_phonology_of`); §2.4 singleton → Tasks 4,8; §2.5 shipped engine reused → Tasks 3,4 (no rule rewritten); §2.6 regularity → Task 10; §2.7 layering → Task 6 (data in species, wiring in worldgen); §3 proto-goblinoid → Tasks 5 (vector), 6 (phonology), 9 (page); §4 the daughters → Task 5; §5 descent → Tasks 4,6; §6 re-baseline/epoch → Tasks 7,8; §7 success + battery → Tasks 8,9,10; §8 non-goals → respected (no replacement/borrowing/reconstruction task exists); §9 determinism → Tasks 3,7,8. No gaps. **Robustness passes** (from the ideonomy review, all seed-swept where relevant): a non-vacuity guard so the nativize path is actually exercised (Task 3); a placement-robust cognate test over the intersection of rooted concepts plus a divergence-reality guard (Task 6); divergence-magnitude and divergence-reality metrics as all-seed invariants (Task 10); a localized golden on the shared-ancestor phonology (Task 9, Step 3b).
+**Spec coverage:** §1 goal → Tasks 5,6,9; §2.1 family/lineage split → Tasks 4,6; §2.2 descent + nativization → Task 3; §2.3 proto-is-a-language → Task 6 (`proto_phonology_of`); §2.4 singleton → Tasks 4,8; §2.5 shipped engine reused → Tasks 3,4 (no rule rewritten); §2.6 regularity → Task 10; §2.7 layering → Task 6 (data in species, wiring in worldgen); §3 proto-goblinoid → Tasks 5 (vector), 6 (phonology), 9 (page); §4 the daughters → Task 5; §5 descent → Tasks 4,6; §6 re-baseline/epoch → Tasks 7,8; §7 success + battery → Tasks 8,9,10; §8 non-goals → respected (no replacement/borrowing/reconstruction task exists); §9 determinism → Tasks 3,7,8. No gaps. **Robustness passes** (from the ideonomy review, all seed-swept where relevant): a non-vacuity guard so the nativize path is actually exercised (Task 3); a placement-robust cognate test over the intersection of rooted concepts plus a divergence-reality guard (Task 6); divergence-magnitude and divergence-reality metrics as all-seed invariants (Task 10); a localized golden on the shared-ancestor phonology (Task 9, Step 3b); a family-membership consistency guard so a mistyped `family` can't silently demote a member to a singleton (Task 5); and a merger-induced-homophony observation banking L4's key confound (Task 10, metric 7).
 
 **Placeholder scan:** authored scalar values are concrete (Task 5); test helpers named where introduced; no "TBD"/"add error handling". The two places that say "grep to confirm" (metrics caller in Task 4, verb registry in Task 9) are locate-then-edit instructions, not deferred design.
 
