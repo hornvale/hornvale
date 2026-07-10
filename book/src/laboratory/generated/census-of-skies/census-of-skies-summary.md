@@ -884,3 +884,150 @@ Seeds 0..10000 × 1 pin set(s); 10000 rows; 0 refusals.
 | [0.5, 0.6) | 0 | 0.0% |
 | >= 0.6 | 0 | 0.0% |
 
+### lexicon-regular-family — default
+
+| value | count | share |
+|---|---|---|
+| true | 10000 | 100.0% |
+| false | 0 | 0.0% |
+
+### monophyly-goblinoid — default
+
+| value | count | share |
+|---|---|---|
+| true | 10000 | 100.0% |
+| false | 0 | 0.0% |
+
+### clean-outgroup-kobold — default
+
+| value | count | share |
+|---|---|---|
+| true | 9954 | 99.5% |
+| false | 46 | 0.5% |
+
+### inventory-closure-goblin — default
+
+| value | count | share |
+|---|---|---|
+| true | 10000 | 100.0% |
+| false | 0 | 0.0% |
+
+### inventory-closure-hobgoblin — default
+
+| value | count | share |
+|---|---|---|
+| true | 10000 | 100.0% |
+| false | 0 | 0.0% |
+
+### inventory-closure-bugbear — default
+
+| value | count | share |
+|---|---|---|
+| true | 10000 | 100.0% |
+| false | 0 | 0.0% |
+
+### inventory-closure-kobold — default
+
+| value | count | share |
+|---|---|---|
+| true | 10000 | 100.0% |
+| false | 0 | 0.0% |
+
+### divergence-magnitude-goblin — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 460 | 4.6% |
+| [1, 2) | 1575 | 15.8% |
+| [2, 3) | 2286 | 22.9% |
+| [3, 4) | 2280 | 22.8% |
+| [4, 6) | 2679 | 26.8% |
+| [6, 8) | 631 | 6.3% |
+| >= 8 | 89 | 0.9% |
+
+### divergence-magnitude-hobgoblin — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 815 | 8.2% |
+| [1, 2) | 2108 | 21.1% |
+| [2, 3) | 2548 | 25.5% |
+| [3, 4) | 2054 | 20.5% |
+| [4, 6) | 2061 | 20.6% |
+| [6, 8) | 380 | 3.8% |
+| >= 8 | 34 | 0.3% |
+
+### divergence-magnitude-bugbear — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 250 | 2.5% |
+| [2, 3) | 1036 | 10.4% |
+| [3, 4) | 1982 | 19.8% |
+| [4, 6) | 4184 | 41.8% |
+| [6, 8) | 2027 | 20.3% |
+| >= 8 | 521 | 5.2% |
+
+### divergence-real — default
+
+| value | count | share |
+|---|---|---|
+| true | 10000 | 100.0% |
+| false | 0 | 0.0% |
+
+### homophony-count-goblin — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 238 | 2.4% |
+| [1, 2) | 425 | 4.2% |
+| [2, 3) | 615 | 6.2% |
+| [3, 5) | 1200 | 12.0% |
+| [5, 8) | 1543 | 15.4% |
+| [8, 12) | 1570 | 15.7% |
+| >= 12 | 4409 | 44.1% |
+
+### homophony-count-hobgoblin — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 348 | 3.5% |
+| [1, 2) | 675 | 6.8% |
+| [2, 3) | 778 | 7.8% |
+| [3, 5) | 1460 | 14.6% |
+| [5, 8) | 1788 | 17.9% |
+| [8, 12) | 1519 | 15.2% |
+| >= 12 | 3432 | 34.3% |
+
+### homophony-count-bugbear — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 37 | 0.4% |
+| [1, 2) | 95 | 0.9% |
+| [2, 3) | 195 | 1.9% |
+| [3, 5) | 459 | 4.6% |
+| [5, 8) | 849 | 8.5% |
+| [8, 12) | 1166 | 11.7% |
+| >= 12 | 7199 | 72.0% |
+
+### homophony-count-kobold — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 91 | 0.9% |
+| [1, 2) | 206 | 2.1% |
+| [2, 3) | 273 | 2.7% |
+| [3, 5) | 669 | 6.7% |
+| [5, 8) | 1085 | 10.8% |
+| [8, 12) | 1290 | 12.9% |
+| >= 12 | 6386 | 63.9% |
+

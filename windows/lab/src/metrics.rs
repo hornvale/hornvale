@@ -1082,6 +1082,170 @@ pub fn registry() -> Vec<Metric> {
                 }
             },
         },
+        // --- The Branches (Task 10): the family battery, seed-swept —
+        // regularity, monophyly, clean outgroup, inventory closure,
+        // divergence magnitude/reality, and merger-induced homophony over
+        // the goblinoid family (goblin, hobgoblin, bugbear) against the
+        // kobold outgroup (spec §7's family model). ---
+        Metric {
+            name: "lexicon-regular-family",
+            doc: "Whether every daughter's lexicon (goblin, hobgoblin, bugbear, kobold) \
+                   is Neogrammarian-regular: every Root's recorded derivation replays \
+                   byte-identically through evolve, checked for EVERY daughter in this \
+                   world's roster (spec §9.1, generalized family-wide); Absent if no \
+                   daughter minted a Root",
+            summary: SummaryKind::Flag,
+            extract: lexicon_regular_family,
+        },
+        Metric {
+            name: "monophyly-goblinoid",
+            doc: "Whether every goblinoid daughter's (goblin, hobgoblin, bugbear) Root \
+                   derivation.proto matches an INDEPENDENT re-draw of the shared \
+                   \"goblinoid\" family proto-root for that concept (spec §3: cognates \
+                   share a proto ancestor) — never reading the family proto back from a \
+                   sibling's own recorded derivation; Absent if no goblinoid daughter \
+                   minted a Root",
+            summary: SummaryKind::Flag,
+            extract: monophyly_goblinoid,
+        },
+        Metric {
+            name: "clean-outgroup-kobold",
+            doc: "Whether kobold — the family with no siblings — never coincides with the \
+                   goblinoid family: for every concept kobold holds as a Root, its \
+                   recorded proto-root differs from an INDEPENDENT re-draw of the \
+                   \"goblinoid\" family proto-root for that same concept (spec §3's clean \
+                   outgroup); Absent if kobold minted no Root",
+            summary: SummaryKind::Flag,
+            extract: clean_outgroup_kobold,
+        },
+        Metric {
+            name: "inventory-closure-goblin",
+            doc: "Whether every goblin lexicon Root's modern form draws only segments in \
+                   goblin's own drawn inventory (spec §2.2's nativization contract); \
+                   Absent if goblin minted no Root",
+            summary: SummaryKind::Flag,
+            extract: |v| inventory_closure(v, "goblin"),
+        },
+        Metric {
+            name: "inventory-closure-hobgoblin",
+            doc: "Whether every hobgoblin lexicon Root's modern form draws only segments \
+                   in hobgoblin's own drawn inventory (spec §2.2's nativization \
+                   contract); Absent if hobgoblin minted no Root",
+            summary: SummaryKind::Flag,
+            extract: |v| inventory_closure(v, "hobgoblin"),
+        },
+        Metric {
+            name: "inventory-closure-bugbear",
+            doc: "Whether every bugbear lexicon Root's modern form draws only segments in \
+                   bugbear's own drawn inventory (spec §2.2's nativization contract); \
+                   Absent if bugbear minted no Root",
+            summary: SummaryKind::Flag,
+            extract: |v| inventory_closure(v, "bugbear"),
+        },
+        Metric {
+            name: "inventory-closure-kobold",
+            doc: "Whether every kobold lexicon Root's modern form draws only segments in \
+                   kobold's own drawn inventory (spec §2.2's nativization contract); \
+                   Absent if kobold minted no Root",
+            summary: SummaryKind::Flag,
+            extract: |v| inventory_closure(v, "kobold"),
+        },
+        Metric {
+            name: "divergence-magnitude-goblin",
+            doc: "Count of DISTINCT proto segments (drawn from the shared goblinoid \
+                   family proto-phonology) appearing in goblin's own Root proto-roots \
+                   that nativize.rs collapses onto an existing goblin inventory segment \
+                   (i.e. absent from goblin's own inventory) — the measured cost of \
+                   goblin's nativization under the loudness-drawn inventory (spec §3); \
+                   Absent if goblin minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0],
+            },
+            extract: |v| divergence_magnitude(v, "goblin"),
+        },
+        Metric {
+            name: "divergence-magnitude-hobgoblin",
+            doc: "Count of DISTINCT proto segments (drawn from the shared goblinoid \
+                   family proto-phonology) appearing in hobgoblin's own Root proto-roots \
+                   that nativize.rs collapses onto an existing hobgoblin inventory \
+                   segment (i.e. absent from hobgoblin's own inventory) — the measured \
+                   cost of hobgoblin's nativization under the loudness-drawn inventory \
+                   (spec §3); Absent if hobgoblin minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0],
+            },
+            extract: |v| divergence_magnitude(v, "hobgoblin"),
+        },
+        Metric {
+            name: "divergence-magnitude-bugbear",
+            doc: "Count of DISTINCT proto segments (drawn from the shared goblinoid \
+                   family proto-phonology) appearing in bugbear's own Root proto-roots \
+                   that nativize.rs collapses onto an existing bugbear inventory segment \
+                   (i.e. absent from bugbear's own inventory) — the measured cost of \
+                   bugbear's nativization under the loudness-drawn inventory (spec §3); \
+                   Absent if bugbear minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0],
+            },
+            extract: |v| divergence_magnitude(v, "bugbear"),
+        },
+        Metric {
+            name: "divergence-real",
+            doc: "Whether some concept rooted in ALL THREE goblinoid daughters (goblin, \
+                   hobgoblin, bugbear) has \u{2265}2 distinct present-day forms — the \
+                   seed-swept stemmatics guard (spec §3): descent is proven by shared \
+                   INNOVATIONS, not a shared ancestor alone, so a degenerate family whose \
+                   daughters are silent aliases of one another must read false; Absent if \
+                   no concept is rooted in all three",
+            summary: SummaryKind::Flag,
+            extract: divergence_real,
+        },
+        Metric {
+            name: "homophony-count-goblin",
+            doc: "Count of distinct-concept pairs whose goblin Root.modern forms \
+                   coincide (two proto-roots merged onto one surface form) — an \
+                   observation, not a pass/fail invariant: homophony is legal and \
+                   realistic, and this banks the confound L4's reconstruction will fight \
+                   (homophones read as one word); Absent if goblin minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
+            },
+            extract: |v| homophony_count(v, "goblin"),
+        },
+        Metric {
+            name: "homophony-count-hobgoblin",
+            doc: "Count of distinct-concept pairs whose hobgoblin Root.modern forms \
+                   coincide (two proto-roots merged onto one surface form) — an \
+                   observation, not a pass/fail invariant; Absent if hobgoblin minted no \
+                   Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
+            },
+            extract: |v| homophony_count(v, "hobgoblin"),
+        },
+        Metric {
+            name: "homophony-count-bugbear",
+            doc: "Count of distinct-concept pairs whose bugbear Root.modern forms \
+                   coincide (two proto-roots merged onto one surface form) — an \
+                   observation, not a pass/fail invariant; expected highest among the \
+                   goblinoid daughters, bugbear drawing the smallest family inventory; \
+                   Absent if bugbear minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
+            },
+            extract: |v| homophony_count(v, "bugbear"),
+        },
+        Metric {
+            name: "homophony-count-kobold",
+            doc: "Count of distinct-concept pairs whose kobold Root.modern forms \
+                   coincide (two proto-roots landed on one surface form) — an \
+                   observation, not a pass/fail invariant, banked for the clean-outgroup \
+                   comparison; Absent if kobold minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
+            },
+            extract: |v| homophony_count(v, "kobold"),
+        },
     ]
 }
 
@@ -1597,6 +1761,275 @@ fn hue_depth(v: &WorldView, species: &str) -> MetricValue {
     }
 }
 
+// --- The Branches (Task 10): the family battery. ---
+
+/// The daughters whose lexicons draw from a shared goblinoid family proto
+/// phonology (spec §3): goblin, hobgoblin, bugbear.
+const GOBLINOID_DAUGHTERS: [&str; 3] = ["goblin", "hobgoblin", "bugbear"];
+
+/// Every daughter this world's roster carries a lexicon for, goblinoid
+/// family and the kobold outgroup alike — the population `lexicon-regular-
+/// family` and `inventory-closure-*`/`homophony-count-*` range over.
+const ALL_DAUGHTERS: [&str; 4] = ["goblin", "hobgoblin", "bugbear", "kobold"];
+
+/// Whether `species` is a member of THIS view's own roster (not the global
+/// species registry) — every family-battery function below must check this
+/// before calling `language_of_in` (which panics on a species outside
+/// `v.roster`) or before treating a `lexicon_of` result as meaningful: a
+/// study pin set may build with a non-default roster (e.g.
+/// `census-of-the-meeting`'s solo `[goblin]`/`[goblin-twin]` rosters), and
+/// `lexicon_of` alone would silently keep resolving hobgoblin/bugbear/
+/// kobold against the GLOBAL default roster even when they were never part
+/// of this particular world.
+fn in_roster(v: &WorldView, species: &str) -> bool {
+    v.roster.iter().any(|d| d.name == species)
+}
+
+/// Whether every daughter in [`ALL_DAUGHTERS`] is lexicon-regular
+/// ([`lexicon_regular`]), ANDed together — the family-wide generalization
+/// of the single-species `lexicon-regular-{goblin,kobold}` metrics (spec
+/// §9.1). `Absent` if no daughter in this world's roster minted a Root
+/// (every daughter `Absent`).
+fn lexicon_regular_family(v: &WorldView) -> MetricValue {
+    let mut any = false;
+    let mut regular = true;
+    for species in ALL_DAUGHTERS {
+        match lexicon_regular(v, species) {
+            MetricValue::Flag(f) => {
+                any = true;
+                if !f {
+                    regular = false;
+                }
+            }
+            MetricValue::Absent => {}
+            other => panic!("lexicon_regular({species}) returned non-flag {other:?}"),
+        }
+    }
+    if !any {
+        return MetricValue::Absent;
+    }
+    MetricValue::Flag(regular)
+}
+
+/// The concepts `lex` holds as a bare [`LexEntry::Root`] (mirrors
+/// `windows/worldgen/src/lib.rs`'s test-only `root_concepts` helper,
+/// re-implemented here since that one is private to worldgen's own test
+/// module).
+fn root_concepts(lex: &hornvale_language::Lexicon) -> Vec<&str> {
+    lex.entries()
+        .filter(|(_, e)| matches!(e, LexEntry::Root { .. }))
+        .map(|(c, _)| c)
+        .collect()
+}
+
+/// Whether every goblinoid daughter's Root `derivation.proto` matches an
+/// INDEPENDENT re-draw of the "goblinoid" family proto-root for that same
+/// concept (spec §3 monophyly: every daughter's rooted vocabulary traces to
+/// the one family ancestor). Draws the family proto-phonology once via
+/// [`hornvale_worldgen::proto_phonology_of`] and calls
+/// [`hornvale_language::proto_root`] directly — never reads a proto back
+/// from any daughter's own recorded [`Derivation`], which would only prove
+/// self-consistency, not shared ancestry. `Absent` if no goblinoid daughter
+/// in this world's roster minted a Root.
+fn monophyly_goblinoid(v: &WorldView) -> MetricValue {
+    let proto_ph = hornvale_worldgen::proto_phonology_of(&v.world, "goblinoid");
+    let mut any = false;
+    let mut monophyletic = true;
+    for species in GOBLINOID_DAUGHTERS {
+        if !in_roster(v, species) {
+            continue;
+        }
+        let Ok(lex) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+            continue;
+        };
+        for (concept, entry) in lex.entries() {
+            if let LexEntry::Root { derivation, .. } = entry {
+                any = true;
+                let expected =
+                    hornvale_language::proto_root(&v.world.seed, "goblinoid", concept, &proto_ph);
+                if derivation.proto != expected {
+                    monophyletic = false;
+                }
+            }
+        }
+    }
+    if !any {
+        return MetricValue::Absent;
+    }
+    MetricValue::Flag(monophyletic)
+}
+
+/// Whether kobold — the singleton family with no siblings — never
+/// coincides with the goblinoid family: for every concept kobold holds as a
+/// Root, its recorded proto-root must differ from an INDEPENDENT re-draw of
+/// the "goblinoid" family proto-root for that same concept (spec §3's clean
+/// outgroup). `Absent` if kobold minted no Root.
+fn clean_outgroup_kobold(v: &WorldView) -> MetricValue {
+    if !in_roster(v, "kobold") {
+        return MetricValue::Absent;
+    }
+    let Ok(kobold_lex) = hornvale_worldgen::lexicon_of(&v.world, "kobold") else {
+        return MetricValue::Absent;
+    };
+    let proto_ph = hornvale_worldgen::proto_phonology_of(&v.world, "goblinoid");
+    let mut any = false;
+    let mut clean = true;
+    for (concept, entry) in kobold_lex.entries() {
+        if let LexEntry::Root { derivation, .. } = entry {
+            any = true;
+            let goblinoid_proto =
+                hornvale_language::proto_root(&v.world.seed, "goblinoid", concept, &proto_ph);
+            if derivation.proto == goblinoid_proto {
+                clean = false;
+            }
+        }
+    }
+    if !any {
+        return MetricValue::Absent;
+    }
+    MetricValue::Flag(clean)
+}
+
+/// Whether `species`' every lexicon Root's modern form draws only segments
+/// present in its own drawn inventory (spec §2.2's nativization contract —
+/// the per-daughter aggregate of `windows/worldgen/src/lib.rs`'s test-only
+/// `every_goblinoid_word_is_in_its_inventory`, generalized to include the
+/// kobold outgroup). `Absent` if `species` minted no Root.
+fn inventory_closure(v: &WorldView, species: &str) -> MetricValue {
+    if !in_roster(v, species) {
+        return MetricValue::Absent;
+    }
+    let ph = language_of_in(&v.world, &v.roster, species);
+    let Ok(lex) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+        return MetricValue::Absent;
+    };
+    let mut any = false;
+    let mut closed = true;
+    for (_, entry) in lex.entries() {
+        if let LexEntry::Root { derivation, .. } = entry {
+            any = true;
+            if !derivation.modern.iter().all(|s| ph.inventory.contains(s)) {
+                closed = false;
+            }
+        }
+    }
+    if !any {
+        return MetricValue::Absent;
+    }
+    MetricValue::Flag(closed)
+}
+
+/// Count of DISTINCT proto segments — drawn from the shared goblinoid
+/// family proto-phonology — appearing in `species`' own Root proto-roots
+/// that [`hornvale_language::etymology::nativize`] collapses onto an
+/// existing `species` inventory segment (i.e. a proto segment absent from
+/// `species`' own drawn inventory): the measured count of proto-contrasts
+/// this daughter's nativization merges away (spec §3's divergence
+/// magnitude — the loudness-drawn inventory decides how much of the shared
+/// ancestor's phonemic space a daughter keeps distinct versus collapses).
+/// `species` is expected to be a goblinoid daughter (a singleton family
+/// like kobold draws its own proto directly from its own inventory, so this
+/// is always 0 there — not a meaningful measurement, though not excluded by
+/// this function). `Absent` if `species` minted no Root.
+fn divergence_magnitude(v: &WorldView, species: &str) -> MetricValue {
+    if !in_roster(v, species) {
+        return MetricValue::Absent;
+    }
+    let ph = language_of_in(&v.world, &v.roster, species);
+    let Ok(lex) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+        return MetricValue::Absent;
+    };
+    let mut any = false;
+    let mut merged: std::collections::BTreeSet<Segment> = std::collections::BTreeSet::new();
+    for (_, entry) in lex.entries() {
+        if let LexEntry::Root { derivation, .. } = entry {
+            any = true;
+            for &seg in &derivation.proto {
+                let nativized = hornvale_language::etymology::nativize(&[seg], &ph);
+                if nativized[0] != seg {
+                    merged.insert(seg);
+                }
+            }
+        }
+    }
+    if !any {
+        return MetricValue::Absent;
+    }
+    MetricValue::Number(merged.len() as f64)
+}
+
+/// Whether some concept rooted in ALL THREE goblinoid daughters has \u{2265}2
+/// distinct present-day forms (spec §3's divergence-reality guard,
+/// generalized from `windows/worldgen/src/lib.rs`'s test-only
+/// `goblinoid_daughters_actually_diverge` to every seed): stemmatics proves
+/// descent by shared INNOVATIONS, not a shared ancestor alone, so a
+/// degenerate family whose daughters are silent aliases of one another must
+/// read false here. Compares recorded `derivation.modern` segment
+/// sequences directly (not romanized views) to avoid any rendering-layer
+/// false negative. `Absent` if no concept is rooted in all three daughters.
+fn divergence_real(v: &WorldView) -> MetricValue {
+    if !GOBLINOID_DAUGHTERS.iter().all(|s| in_roster(v, s)) {
+        return MetricValue::Absent;
+    }
+    let lexes: Vec<hornvale_language::Lexicon> = GOBLINOID_DAUGHTERS
+        .iter()
+        .filter_map(|s| hornvale_worldgen::lexicon_of(&v.world, s).ok())
+        .collect();
+    if lexes.len() < GOBLINOID_DAUGHTERS.len() {
+        return MetricValue::Absent;
+    }
+    let Some((first, rest)) = lexes.split_first() else {
+        return MetricValue::Absent;
+    };
+    let shared: Vec<&str> = root_concepts(first)
+        .into_iter()
+        .filter(|c| rest.iter().all(|lex| root_concepts(lex).contains(c)))
+        .collect();
+    if shared.is_empty() {
+        return MetricValue::Absent;
+    }
+    let diverges = shared.iter().any(|c| {
+        let forms: Vec<&[Segment]> = lexes
+            .iter()
+            .map(|lex| match lex.entry(c) {
+                Some(LexEntry::Root { derivation, .. }) => derivation.modern.as_slice(),
+                _ => unreachable!("{c} confirmed rooted in every daughter above"),
+            })
+            .collect();
+        !forms.windows(2).all(|w| w[0] == w[1])
+    });
+    MetricValue::Flag(diverges)
+}
+
+/// Count of distinct-concept pairs whose `species` Root `derivation.modern`
+/// forms coincide (spec §3's merger-induced homophony: two proto-roots
+/// collapsed onto one surface form by nativization) — an OBSERVATION, not a
+/// pass/fail invariant; homophony is legal and realistic. Groups every Root
+/// entry by its exact modern segment sequence and sums \u{2211} C(group_size, 2)
+/// over every group larger than one. `Absent` if `species` minted no Root.
+fn homophony_count(v: &WorldView, species: &str) -> MetricValue {
+    if !in_roster(v, species) {
+        return MetricValue::Absent;
+    }
+    let Ok(lex) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+        return MetricValue::Absent;
+    };
+    let mut by_form: std::collections::BTreeMap<Vec<Segment>, usize> =
+        std::collections::BTreeMap::new();
+    let mut any = false;
+    for (_, entry) in lex.entries() {
+        if let LexEntry::Root { derivation, .. } = entry {
+            any = true;
+            *by_form.entry(derivation.modern.clone()).or_insert(0) += 1;
+        }
+    }
+    if !any {
+        return MetricValue::Absent;
+    }
+    let pairs: usize = by_form.values().map(|&n| n * n.saturating_sub(1) / 2).sum();
+    MetricValue::Number(pairs as f64)
+}
+
 /// Whether `name` parses as a legal sequence of syllables under `ph`,
 /// independently of `hornvale_language::naming`'s generation code path: this
 /// walks the SURFACE STRING back into [`Segment`]s and re-checks
@@ -1887,8 +2320,13 @@ mod tests {
         // The Meeting's 63, +7 for The Words (Task 12: name-gloss-true,
         // lexicon-regular-{goblin,kobold}, exposure-sound-{goblin,kobold},
         // hue-depth-{goblin,kobold}), plus the terrain-shape and later
-        // metrics merged from main's campaigns.
-        assert_eq!(registry().len(), 77);
+        // metrics merged from main's campaigns (77), +15 for The Branches
+        // (Task 10, the family battery: lexicon-regular-family,
+        // monophyly-goblinoid, clean-outgroup-kobold,
+        // inventory-closure-{goblin,hobgoblin,bugbear,kobold},
+        // divergence-magnitude-{goblin,hobgoblin,bugbear}, divergence-real,
+        // homophony-count-{goblin,hobgoblin,bugbear,kobold}).
+        assert_eq!(registry().len(), 92);
     }
 
     #[test]
@@ -2174,5 +2612,147 @@ mod tests {
         assert!(!ph.inventory.is_empty(), "twin phonology must draw");
         // And it placed a flagship peopled by the twin's name.
         assert!(flagship_of(&view.world, "goblin-twin").is_some());
+    }
+
+    // ---- The Branches (Task 10): the family battery. ----
+
+    /// Look up a registered metric by name and extract it — a small
+    /// convenience shared by the family-battery tests below, mirroring the
+    /// `m` closures the older per-metric tests already build inline.
+    fn extract(view: &WorldView, name: &str) -> MetricValue {
+        let reg = registry();
+        (reg.iter()
+            .find(|m| m.name == name)
+            .unwrap_or_else(|| panic!("metric {name} not registered"))
+            .extract)(view)
+    }
+
+    #[test]
+    fn lexicon_regular_family_holds_at_seed_42() {
+        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(
+            extract(&view, "lexicon-regular-family"),
+            MetricValue::Flag(true),
+            "every daughter's lexicon must replay regularly at seed 42"
+        );
+    }
+
+    #[test]
+    fn monophyly_goblinoid_holds_at_seed_42() {
+        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(
+            extract(&view, "monophyly-goblinoid"),
+            MetricValue::Flag(true),
+            "every goblinoid daughter's Root proto must match the family proto-root"
+        );
+    }
+
+    #[test]
+    fn clean_outgroup_kobold_holds_at_seed_42() {
+        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(
+            extract(&view, "clean-outgroup-kobold"),
+            MetricValue::Flag(true),
+            "kobold's proto-roots must never coincide with the goblinoid family's"
+        );
+    }
+
+    #[test]
+    fn inventory_closure_holds_for_every_daughter_at_seed_42() {
+        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        for species in ALL_DAUGHTERS {
+            assert_eq!(
+                extract(&view, &format!("inventory-closure-{species}")),
+                MetricValue::Flag(true),
+                "{species}: every Root modern form must draw only its own inventory"
+            );
+        }
+    }
+
+    #[test]
+    fn divergence_magnitude_is_a_nonnegative_number_for_every_goblinoid_daughter_at_seed_42() {
+        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        for species in GOBLINOID_DAUGHTERS {
+            match extract(&view, &format!("divergence-magnitude-{species}")) {
+                MetricValue::Number(n) => assert!(n >= 0.0, "{species}: {n} must be >= 0"),
+                other => panic!("{species}: divergence-magnitude not a number: {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn divergence_real_holds_at_seed_42() {
+        // Seed-42 form of the Task 6 guard (`goblinoid_daughters_actually_diverge`
+        // in `windows/worldgen/src/lib.rs`): the family is not aliases.
+        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert_eq!(
+            extract(&view, "divergence-real"),
+            MetricValue::Flag(true),
+            "some concept rooted in all three goblinoid daughters must diverge"
+        );
+    }
+
+    #[test]
+    fn homophony_count_is_a_nonnegative_number_for_every_daughter_at_seed_42() {
+        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        for species in ALL_DAUGHTERS {
+            match extract(&view, &format!("homophony-count-{species}")) {
+                MetricValue::Number(n) => assert!(n >= 0.0, "{species}: {n} must be >= 0"),
+                other => panic!("{species}: homophony-count not a number: {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn family_battery_metrics_are_deterministic_across_two_builds() {
+        let names = [
+            "lexicon-regular-family",
+            "monophyly-goblinoid",
+            "clean-outgroup-kobold",
+            "inventory-closure-goblin",
+            "inventory-closure-hobgoblin",
+            "inventory-closure-bugbear",
+            "inventory-closure-kobold",
+            "divergence-magnitude-goblin",
+            "divergence-magnitude-hobgoblin",
+            "divergence-magnitude-bugbear",
+            "divergence-real",
+            "homophony-count-goblin",
+            "homophony-count-hobgoblin",
+            "homophony-count-bugbear",
+            "homophony-count-kobold",
+        ];
+        let a = WorldView::build(Seed(11), &SkyPins::default()).expect("seed 11");
+        let b = WorldView::build(Seed(11), &SkyPins::default()).expect("seed 11 again");
+        for name in names {
+            assert_eq!(
+                extract(&a, name),
+                extract(&b, name),
+                "{name} not deterministic"
+            );
+        }
+    }
+
+    #[test]
+    fn divergence_magnitude_and_inventory_closure_use_the_species_own_phonology_not_the_family_proto()
+     {
+        // NON-VACUITY GUARD: `divergence_magnitude` must count segments
+        // against the DAUGHTER's own inventory, not the family proto's —
+        // else it would always read 0 (every proto segment trivially "in
+        // inventory" against itself). At seed 42 the goblinoid family
+        // draws a real proto/daughter phonology split (Task 6/7's
+        // family-vs-species stream keying), so at least one daughter must
+        // show nonzero divergence, or this metric is measuring nothing.
+        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let any_nonzero = GOBLINOID_DAUGHTERS.iter().any(|species| {
+            matches!(
+                extract(&view, &format!("divergence-magnitude-{species}")),
+                MetricValue::Number(n) if n > 0.0
+            )
+        });
+        assert!(
+            any_nonzero,
+            "at least one goblinoid daughter must show nonzero divergence magnitude at seed 42"
+        );
     }
 }

@@ -842,6 +842,163 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | [0.5, 0.6) | 0 | 0.0% |
 | >= 0.6 | 0 | 0.0% |
 
+### lexicon-regular-family — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 500 | 100.0% |
+| false | 0 | 0.0% |
+
+### monophyly-goblinoid — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 500 | 100.0% |
+| false | 0 | 0.0% |
+
+### clean-outgroup-kobold — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### inventory-closure-goblin — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 500 | 100.0% |
+| false | 0 | 0.0% |
+
+### inventory-closure-hobgoblin — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### inventory-closure-bugbear — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### inventory-closure-kobold — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### divergence-magnitude-goblin — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 14 | 2.8% |
+| [1, 2) | 81 | 16.2% |
+| [2, 3) | 105 | 21.0% |
+| [3, 4) | 115 | 23.0% |
+| [4, 6) | 156 | 31.2% |
+| [6, 8) | 26 | 5.2% |
+| >= 8 | 3 | 0.6% |
+
+### divergence-magnitude-hobgoblin — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 4) | 0 | 0.0% |
+| [4, 6) | 0 | 0.0% |
+| [6, 8) | 0 | 0.0% |
+| >= 8 | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### divergence-magnitude-bugbear — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 4) | 0 | 0.0% |
+| [4, 6) | 0 | 0.0% |
+| [6, 8) | 0 | 0.0% |
+| >= 8 | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### divergence-real — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### homophony-count-goblin — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 18 | 3.6% |
+| [1, 2) | 27 | 5.4% |
+| [2, 3) | 33 | 6.6% |
+| [3, 5) | 65 | 13.0% |
+| [5, 8) | 68 | 13.6% |
+| [8, 12) | 88 | 17.6% |
+| >= 12 | 201 | 40.2% |
+
+### homophony-count-hobgoblin — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 5) | 0 | 0.0% |
+| [5, 8) | 0 | 0.0% |
+| [8, 12) | 0 | 0.0% |
+| >= 12 | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### homophony-count-bugbear — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 5) | 0 | 0.0% |
+| [5, 8) | 0 | 0.0% |
+| [8, 12) | 0 | 0.0% |
+| >= 12 | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### homophony-count-kobold — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 5) | 0 | 0.0% |
+| [5, 8) | 0 | 0.0% |
+| [8, 12) | 0 | 0.0% |
+| >= 12 | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
 ### star-class — goblin-twin-solo
 
 | value | count | share |
@@ -1674,4 +1831,166 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | [0.4, 0.5) | 1 | 0.2% |
 | [0.5, 0.6) | 0 | 0.0% |
 | >= 0.6 | 0 | 0.0% |
+
+### lexicon-regular-family — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### monophyly-goblinoid — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### clean-outgroup-kobold — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### inventory-closure-goblin — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### inventory-closure-hobgoblin — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### inventory-closure-bugbear — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### inventory-closure-kobold — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### divergence-magnitude-goblin — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 4) | 0 | 0.0% |
+| [4, 6) | 0 | 0.0% |
+| [6, 8) | 0 | 0.0% |
+| >= 8 | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### divergence-magnitude-hobgoblin — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 4) | 0 | 0.0% |
+| [4, 6) | 0 | 0.0% |
+| [6, 8) | 0 | 0.0% |
+| >= 8 | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### divergence-magnitude-bugbear — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 4) | 0 | 0.0% |
+| [4, 6) | 0 | 0.0% |
+| [6, 8) | 0 | 0.0% |
+| >= 8 | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### divergence-real — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| true | 0 | 0.0% |
+| false | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### homophony-count-goblin — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 5) | 0 | 0.0% |
+| [5, 8) | 0 | 0.0% |
+| [8, 12) | 0 | 0.0% |
+| >= 12 | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### homophony-count-hobgoblin — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 5) | 0 | 0.0% |
+| [5, 8) | 0 | 0.0% |
+| [8, 12) | 0 | 0.0% |
+| >= 12 | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### homophony-count-bugbear — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 5) | 0 | 0.0% |
+| [5, 8) | 0 | 0.0% |
+| [8, 12) | 0 | 0.0% |
+| >= 12 | 0 | 0.0% |
+| absent | 500 | 100.0% |
+
+### homophony-count-kobold — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 1) | 0 | 0.0% |
+| [1, 2) | 0 | 0.0% |
+| [2, 3) | 0 | 0.0% |
+| [3, 5) | 0 | 0.0% |
+| [5, 8) | 0 | 0.0% |
+| [8, 12) | 0 | 0.0% |
+| >= 12 | 0 | 0.0% |
+| absent | 500 | 100.0% |
 
