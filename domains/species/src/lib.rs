@@ -258,8 +258,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
             psych: PsychVector {
                 threat_response: 0.7,
                 deliberation_latency: 0.6,
-                in_group_radius: 0.6,
-                time_horizon: 0.7,
+                in_group_radius: 0.3,
+                time_horizon: 0.5,
                 sociality: Sociality::Hierarchic,
                 status_basis: StatusBasis::Rank,
             },
@@ -290,7 +290,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
             family: "goblinoid",
             noun: "lair",
             psych: PsychVector {
-                threat_response: 0.7,
+                threat_response: 0.8,
                 deliberation_latency: 0.4,
                 in_group_radius: 0.3,
                 time_horizon: 0.3,
