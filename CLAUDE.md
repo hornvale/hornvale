@@ -119,8 +119,8 @@ contradicts, lower ("coarse constrains fine").
 - **Models author, dice roll** (Constitution ratified constraint): no ML
   model ever runs in the sim core. Runtime generation is deterministic and
   seeded; models are offline authoring tools whose output is committed and
-  drift-checked. See `docs/vision/frontier.md` for the wider (non-binding)
-  vision map.
+  drift-checked. See `book/src/frontier/frontier.md` (the book's Frontier
+  part) for the wider (non-binding) vision map.
 - Every crate sets `#![warn(missing_docs)]`; every public item, field, and
   variant gets a one-line doc comment.
 - Rust edition 2024. Run `cargo fmt` as the final step before every commit —
@@ -144,9 +144,10 @@ contradicts, lower ("coarse constrains fine").
   studies are data, metrics are code (0011).
 - **The documentation map is `docs/README.md`** — what knowledge lives where
   and how an idea flows from first mention to merged reality. For speculative
-  directions, `docs/vision/idea-registry.md` is the scannable index (check it
-  before proposing or reopening any idea; a `rejected`/`ratified` row is a
-  closed question), and `docs/vision/frontier.md` holds the essays behind it.
+  directions, `book/src/frontier/idea-registry.md` is the scannable index
+  (check it before proposing or reopening any idea; a `rejected`/`ratified`
+  row is a closed question), and `book/src/frontier/frontier.md` holds the
+  essays behind it — both published as the book's marked Frontier part.
 
 ## Process
 
