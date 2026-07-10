@@ -27,6 +27,7 @@
   - [Language](./domains/language.md)
   - [Culture](./domains/culture.md)
   - [Religion](./domains/religion.md)
+  - [Paleoclimate](./domains/paleoclimate.md)
 
 # The Chronicle
 
@@ -51,6 +52,7 @@
 - [Campaign 21: The Scene Window](./chronicle/21-the-scene-window.md)
 - [Campaign 22: The Atlas](./chronicle/22-the-atlas.md)
 - [Campaign 23: The Orrery](./chronicle/23-the-orrery.md)
+- [Deep Time (24)](./chronicle/24-deep-time.md)
 
 # The Gallery
 
@@ -67,6 +69,7 @@
 - [The Gods of Seed 42](./gallery/the-gods-seed-42.md)
 - [The Meeting of Seed 42](./gallery/the-meeting-seed-42.md)
 - [The Atlas of Seed 42](./gallery/atlas.md)
+- [The Deep Time of Seed 42](./gallery/paleo-seed-42.md)
 
 # The Laboratory
 
