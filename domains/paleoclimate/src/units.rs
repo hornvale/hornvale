@@ -96,13 +96,26 @@ impl Celsius {
 
 impl std::ops::Sub for Celsius {
     type Output = TempAnomaly;
-    /// The key safety property: a [`TempAnomaly`] can only ever be produced
-    /// by subtracting two [`Celsius`] readings. There is no other
-    /// constructor that turns an absolute temperature into an anomaly, so
-    /// it is impossible to accidentally hand an absolute reading to code
-    /// that expects a difference from present (decision 0008).
+    /// One of the two production paths that produce a [`TempAnomaly`] (the
+    /// other is [`TempAnomaly::from_offset_c`]): subtracting two [`Celsius`]
+    /// readings. There is no other constructor that turns an absolute
+    /// temperature into an anomaly, so it is impossible to accidentally hand
+    /// an absolute reading to code that expects a difference from present
+    /// (decision 0008).
     fn sub(self, rhs: Celsius) -> TempAnomaly {
         TempAnomaly(self.0 - rhs.0)
+    }
+}
+
+impl std::ops::Add<TempAnomaly> for Celsius {
+    type Output = Celsius;
+    /// Apply a computed offset (e.g. the ice sheet's albedo-cooling ΔT) to
+    /// an absolute reading: `present + offset = era_temp`. The counterpart
+    /// to [`Sub`](std::ops::Sub): together they are the sole production
+    /// paths across the `Celsius`/`TempAnomaly` boundary (decision 0008,
+    /// extended for the ice-advance model).
+    fn add(self, rhs: TempAnomaly) -> Celsius {
+        Celsius(self.0 + rhs.0)
     }
 }
 
@@ -132,6 +145,18 @@ impl TempAnomaly {
             });
         }
         Ok(Self(value))
+    }
+    /// The other production path (see the [`Sub`](std::ops::Sub) impl on
+    /// [`Celsius`]): builds a `TempAnomaly` directly from a computed ΔT,
+    /// rather than from a difference of two readings. `pub(crate)`, not
+    /// `pub` — the same external-fabrication guarantee applies, so this
+    /// is only callable from within the paleoclimate crate. Its sole
+    /// caller is `ice::temp_offset`, which expresses the ice sheet's
+    /// albedo-cooling feedback as an anomaly (a computed offset, never a
+    /// reading of anything).
+    pub(crate) fn from_offset_c(value: f64) -> Self {
+        debug_assert!(value.is_finite(), "albedo offset must be finite");
+        Self(value)
     }
     /// The raw degrees Celsius, relative to present.
     pub fn get(self) -> f64 {
@@ -176,6 +201,27 @@ mod tests {
         let present = Celsius::new(14.0).unwrap();
         let anomaly = era - present;
         assert_eq!(anomaly.get(), -4.0);
+    }
+
+    #[test]
+    fn celsius_addition_applies_an_offset() {
+        let present = Celsius::new(14.0).unwrap();
+        let offset = TempAnomaly::new(-6.0).unwrap();
+        assert_eq!((present + offset).get(), 8.0);
+    }
+
+    #[test]
+    fn addition_and_subtraction_round_trip() {
+        let present = Celsius::new(14.0).unwrap();
+        let era = Celsius::new(8.0).unwrap();
+        let offset = era - present;
+        assert_eq!((present + offset).get(), era.get());
+    }
+
+    #[test]
+    fn temp_anomaly_from_offset_c_matches_raw_value() {
+        let offset = TempAnomaly::from_offset_c(-3.5);
+        assert_eq!(offset.get(), -3.5);
     }
 
     #[test]
