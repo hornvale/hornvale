@@ -19,6 +19,7 @@ fn smoothstep(t: f64) -> f64 {
 }
 
 /// Bilinear value noise in [0, 1). Random access: cost is O(1) per sample.
+/// type-audit: pending(wave-1: x), pending(wave-1: y), bare-ok(ratio: return)
 pub fn value_noise_2d(seed: Seed, x: f64, y: f64) -> f64 {
     let x0 = x.floor();
     let y0 = y.floor();
@@ -38,6 +39,7 @@ pub fn value_noise_2d(seed: Seed, x: f64, y: f64) -> f64 {
 /// Gain 0.5, lacunarity 2.0. Octave 0 uses the seed directly so that
 /// one-octave fbm equals plain value noise. Panics if octaves == 0.
 /// Internally derives per-octave streams labeled "octave-{n}" (n ≥ 1).
+/// type-audit: pending(wave-1: x), pending(wave-1: y), bare-ok(count: octaves), bare-ok(ratio: return)
 pub fn fbm_2d(seed: Seed, x: f64, y: f64, octaves: u32) -> f64 {
     assert!(octaves > 0, "fbm_2d: octaves must be >= 1");
     let mut sum = 0.0;

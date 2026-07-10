@@ -10,6 +10,7 @@ use crate::seed::Stream;
 /// accepted by the ledger. Starts at a seeded offset and scans in order,
 /// so the choice is uniform when unconstrained and consistent when
 /// constrained. Returns None if no candidate survives.
+/// type-audit: bare-ok(index)
 pub fn choose_consistent<T>(
     stream: &mut Stream,
     ledger: &Ledger,

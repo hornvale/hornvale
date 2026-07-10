@@ -18,6 +18,7 @@ struct Event(f64, &'static str, String);
 /// Each frame string is emitted verbatim as terminal output — callers include
 /// any screen-clear so playback redraws frame by frame. Deterministic: no
 /// wall-clock, fixed header key order, `serde_json` escaping.
+/// type-audit: bare-ok(render-internal)
 pub fn asciinema_v2(width: u16, height: u16, dt: f64, frames: &[String]) -> String {
     // Header with fixed key order (no wall-clock `timestamp`, for determinism).
     let mut out = format!(r#"{{"version": 2, "width": {width}, "height": {height}}}"#);

@@ -23,6 +23,7 @@ pub enum Venue {
 /// Something an observer would notice. `kind` must be registered in the
 /// concept registry by the producing domain. Consumers must not branch on
 /// the producing system — only on kind, period, character, salience.
+/// type-audit: bare-ok(identifier-text: kind), bare-ok(identifier-text: description), pending(wave-1: period_days), bare-ok(ratio: salience)
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Phenomenon {
     /// Registered phenomenon kind (concept-registry key).
@@ -40,6 +41,7 @@ pub struct Phenomenon {
 /// Multiplicative per-venue salience weights: how much attention an
 /// observer's eyes give each venue. The identity lens is a byte-level
 /// no-op in `observe` — it triggers no arithmetic at all.
+/// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PerceptionLens {
     /// Weight for `Venue::DaySky` phenomena.
@@ -61,6 +63,7 @@ impl PerceptionLens {
     }
 
     /// Whether this lens is exactly the identity (bitwise 1.0 weights).
+    /// type-audit: bare-ok(flag)
     pub fn is_identity(&self) -> bool {
         self.day_sky == 1.0 && self.night_sky == 1.0 && self.ambient == 1.0
     }

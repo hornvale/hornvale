@@ -6,11 +6,13 @@ use crate::registry::ConceptRegistry;
 use serde::{Deserialize, Serialize};
 
 /// Opaque entity handle. Minted by the ledger, never reused.
+/// type-audit: bare-ok(constructor-edge)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct EntityId(pub u64);
 
 /// A fact's object. Number equality is bitwise-exact f64 equality —
 /// acceptable because all values are deterministic (tier-0 contract).
+/// type-audit: bare-ok(envelope)
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Value {
     /// A reference to another entity.
@@ -26,6 +28,7 @@ pub enum Value {
 
 /// The dumb envelope (spec §3.1.6): subject, predicate, object, place,
 /// time, provenance. Semantics live in the concept registry.
+/// type-audit: bare-ok(envelope: predicate), waiver(decision-0014: day), bare-ok(envelope: provenance)
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Fact {
     /// The entity this fact is about.
@@ -43,6 +46,7 @@ pub struct Fact {
 }
 
 /// Ledger validation error.
+/// type-audit: bare-ok(identifier-text)
 #[derive(Debug)]
 pub enum LedgerError {
     /// The predicate is not registered in the concept registry.
@@ -137,6 +141,7 @@ impl Ledger {
 
     /// Commit a fact. Ok(true) = appended; Ok(false) = identical fact
     /// already present (idempotent no-op).
+    /// type-audit: bare-ok(flag)
     pub fn commit(&mut self, fact: Fact, registry: &ConceptRegistry) -> Result<bool, LedgerError> {
         self.check(&fact, registry)?;
         if self.facts.contains(&fact) {
@@ -152,6 +157,7 @@ impl Ledger {
     }
 
     /// All facts with this predicate.
+    /// type-audit: bare-ok(identifier-text)
     pub fn find(&self, predicate: &str) -> impl Iterator<Item = &Fact> {
         let predicate = predicate.to_string();
         self.facts.iter().filter(move |f| f.predicate == predicate)
@@ -159,6 +165,7 @@ impl Ledger {
 
     /// First object for (subject, predicate). For functional predicates
     /// this is the unique value.
+    /// type-audit: bare-ok(identifier-text)
     pub fn value_of(&self, subject: EntityId, predicate: &str) -> Option<&Value> {
         self.facts
             .iter()
@@ -167,6 +174,7 @@ impl Ledger {
     }
 
     /// The text value of (subject, predicate), if present and textual.
+    /// type-audit: bare-ok(identifier-text: predicate), bare-ok(envelope: return)
     pub fn text_of(&self, subject: EntityId, predicate: &str) -> Option<&str> {
         match self.value_of(subject, predicate) {
             Some(Value::Text(t)) => Some(t.as_str()),
@@ -175,17 +183,20 @@ impl Ledger {
     }
 
     /// Number of facts in the ledger.
+    /// type-audit: bare-ok(count)
     pub fn len(&self) -> usize {
         self.facts.len()
     }
 
     /// True if the ledger is empty.
+    /// type-audit: bare-ok(flag)
     pub fn is_empty(&self) -> bool {
         self.facts.is_empty()
     }
 
     /// The maximum entity id referenced by any fact (subjects, `Value::Entity`
     /// objects, and `place` fields), or 0 if the ledger is empty.
+    /// type-audit: pending(wave-1)
     pub fn max_entity_id(&self) -> u64 {
         self.facts
             .iter()
@@ -203,6 +214,7 @@ impl Ledger {
 
     /// Valid when no future mint can collide with an entity id already
     /// referenced in a fact.
+    /// type-audit: bare-ok(flag)
     pub fn minting_is_valid(&self) -> bool {
         self.next_entity >= self.max_entity_id()
     }
