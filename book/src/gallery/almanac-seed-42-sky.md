@@ -10,7 +10,10 @@ Salient phenomena, most attention-demanding first:
 
 - [1.00] *celestial-body* — the sun, a yellow dwarf (G)
 - [0.64] *celestial-body* — a vast moon
+- [0.50] *tide* — the tide, rising and falling under the vast moon
 - [0.47] *celestial-body* — a small, distant moon
+- [0.29] *tide* — the tide, rising and falling under the small, distant moon
+- [0.19] *tide* — spring and neap: the tides swell and slacken as the moons align and part
 - [0.15] *ambient* — warm, still, unchanging air
 - [0.11] *night-star* — a smoldering red star that does not wander
 - [0.11] *night-star* — a warm yellow star that does not wander
@@ -140,41 +143,65 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bvaash the Vngaashbvaash comes back every 32.55 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Dvaashbvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+>
+> — derived from the phenomenon *tide*
+
+> Bvaash the Vngaoshbvaash comes back every 32.55 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bvaash the Vngaoshbvaash comes back every 0.88 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Shngooshbvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+>
+> — derived from the phenomenon *tide*
+
+> Bvaash the Dvaashbvaash comes back every 0.88 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
 In the village of **Xnebsvob**, an organized priesthood tends its own pantheon:
 
-> Neb the Ngobneb returns every 0.88 days. So it was, so it is. *(who presides)*
+> Neb the Netneb returns every 0.88 days. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neb the Zhfobneb returns every 15.99 days. So it was, so it is.
+> Neb the Nobneb returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neb the Netneb returns every 32.55 days. So it was, so it is.
+> Neb the Fnakneb is felt, not counted. So it was, so it is.
+>
+> — derived from the phenomenon *tide*
+
+> Neb the Xngebneb returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
+
+> Neb the Zhxabneb is felt, not counted. So it was, so it is.
+>
+> — derived from the phenomenon *tide*
 
 In the legion of **Ngjoavoo**, an organized priesthood tends its own pantheon:
 
-> Fee the Mjoafee returns every 0.88 days. So it was, so it is. *(who presides)*
+> Fee the Xeefee returns every 0.88 days. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Fee the Njoefee returns every 15.99 days. So it was, so it is.
+> Fee the Xaefee returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Fee the Mjaafee returns every 32.55 days. So it was, so it is.
+> Fee the Xeefee returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
+
+> Fee the Ktoefee is felt, not counted. So it was, so it is.
+>
+> — derived from the phenomenon *tide*
+
+> Fee the Tqaefee is felt, not counted. So it was, so it is.
+>
+> — derived from the phenomenon *tide*
 
 In the warren of **Raxaxokroxog**, an organized priesthood tends its own pantheon:
 
@@ -182,13 +209,17 @@ In the warren of **Raxaxokroxog**, an organized priesthood tends its own pantheo
 >
 > — derived from the phenomenon *celestial-body*
 
-> Rro Rroraxa comes back every 32.55 days. That's how it's always been. That's how it's always been. Rro is a great one among the gods.
+> Raxarro Raxa comes back every 32.55 days. That's how it's always been. That's how it's always been. Raxarro is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Ra Rro comes back every 0.88 days. That's how it's always been. That's how it's always been. Ra is a great one among the gods.
+> Ra Rarro comes back every 0.88 days. That's how it's always been. That's how it's always been. Ra is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
+
+> Xotro Xotro is felt more than seen. That's how it's always been. That's how it's always been. Xotro is a great one among the gods.
+>
+> — derived from the phenomenon *tide*
 
 ---
 

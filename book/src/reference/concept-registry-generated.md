@@ -30,6 +30,7 @@
 | `max-ice-fraction` | yes | land fraction under ice at the glacial maximum |
 | `moon-count` | yes | how many moons the anchor world has |
 | `moon-period-std` | no | orbital period of a moon, in standard days |
+| `moon-tide-rel` | no | tidal strength of a moon, relative to Luna on Earth |
 | `name` | yes | canonical name of an entity |
 | `name-gloss` | yes | the glossed meaning of an entity's generated name |
 | `notable-neighbor` | no | a notable neighbor star visible in the night sky |
@@ -77,6 +78,7 @@
 | `celestial-body` | a body visible in the sky |
 | `night-star` | a fixed star notable in the night sky |
 | `seasonal-cycle` | the annual daylight cycle |
+| `tide` | the rise and fall of the waters under the moons |
 
 ### Concepts
 

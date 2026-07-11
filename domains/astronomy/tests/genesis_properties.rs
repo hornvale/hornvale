@@ -353,7 +353,7 @@ fn a_locked_worlds_hemispheres_cull_the_sky() {
 
 #[test]
 fn a_spinning_worlds_sky_is_whole_from_any_placed_vantage() {
-    use hornvale_astronomy::{GeneratedSky, NIGHT_STAR};
+    use hornvale_astronomy::{CELESTIAL_BODY, GeneratedSky, NIGHT_STAR};
     use hornvale_kernel::{EntityId, GeoCoord, ObserverContext, PhenomenaSource, Venue, WorldTime};
     for seed in 0..32u64 {
         // A handful of seeds draw an anchor whose Hill radius is too small
@@ -393,7 +393,9 @@ fn a_spinning_worlds_sky_is_whole_from_any_placed_vantage() {
             "seed {seed}: no stars (should be whole sky)"
         );
         assert_eq!(
-            ph.iter().filter(|p| p.description.contains("moon")).count(),
+            ph.iter()
+                .filter(|p| p.kind == CELESTIAL_BODY && p.description.contains("moon"))
+                .count(),
             2,
             "seed {seed}: both moons should be visible on a spinning world"
         );

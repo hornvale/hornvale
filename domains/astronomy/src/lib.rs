@@ -23,7 +23,7 @@ pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbor
 pub use pins::{
     ForcingPin, GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, parse_pin, pin_strings,
 };
-pub use provider::{GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE};
+pub use provider::{GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE, TIDE};
 pub use star::{Star, generate_star};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
@@ -74,6 +74,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_phenomenon_kind(CELESTIAL_BODY, "a body visible in the sky")?;
     registry.register_phenomenon_kind(SEASONAL_CYCLE, "the annual daylight cycle")?;
     registry.register_phenomenon_kind(NIGHT_STAR, "a fixed star notable in the night sky")?;
+    registry.register_phenomenon_kind(TIDE, "the rise and fall of the waters under the moons")?;
 
     registry.register_predicate(
         facts::STAR_CLASS,
@@ -105,6 +106,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::MOON_PERIOD_STD,
         false,
         "orbital period of a moon, in standard days",
+    )?;
+    registry.register_predicate(
+        facts::MOON_TIDE_REL,
+        false,
+        "tidal strength of a moon, relative to Luna on Earth",
     )?;
     registry.register_predicate(
         facts::NOTABLE_NEIGHBOR,

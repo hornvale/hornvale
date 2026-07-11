@@ -9,6 +9,9 @@ Visible bodies: the sun, moon 1, moon 2.
 Salient phenomena, most attention-demanding first:
 
 - [1.00] *celestial-body* — a sun fixed forever above the day side
+- [0.50] *tide* — the tide, rising and falling under the vast moon
+- [0.29] *tide* — the tide, rising and falling under the small, distant moon
+- [0.19] *tide* — spring and neap: the tides swell and slacken as the moons align and part
 - [0.15] *ambient* — warm, still, unchanging air
 
 By night: a smoldering red star that does not wander; a warm yellow star that does not wander; a deep orange star that does not wander; a dim red star that does not wander; a pale white star that does not wander.
@@ -30,7 +33,7 @@ Some 8% of the surface is habitable — land with water and a tolerable season.
 - **Xngatnebvned** — temperate-rainforest
 - **Xorogroq** — temperate-rainforest
 - **Ttoemjeo** — temperate-forest
-- **Vngooshshngaosh** — temperate-forest
+- **Shngaoshngaash** — temperate-forest
 - **Ngebxnged** — temperate-forest
 - **Raratrratrrot** — alpine
 - **Rrarrarro** — temperate-forest
@@ -66,14 +69,14 @@ The frost retreated: at the glacial maximum (day -243500000), ice advanced over 
 ## The People
 
 The land holds 29 settlement(s).
-The chief bugbear settlement, Vngooshshngaosh, holds 406 souls amid temperate-forest.
+The chief bugbear settlement, Shngaoshngaash, holds 406 souls amid temperate-forest.
 The chief goblin settlement, Xngatnebvned, holds 522 souls amid temperate-rainforest.
 The chief hobgoblin settlement, Ttoemjeo, holds 382 souls amid temperate-forest.
 The chief kobold settlement, Xorogroq, holds 404 souls amid temperate-rainforest.
 
-The bugbear lair of **Vngooshshngaosh**, population 406.
+The bugbear lair of **Shngaoshngaash**, population 406.
 
-Vngooshshngaosh lives by farming.
+Shngaoshngaash lives by farming.
 Its roles, lowest to highest: slave, forager, omen-reader, headman.
 
 The goblin village of **Xngatnebvned**, population 522.
@@ -95,27 +98,55 @@ Its roles, lowest to highest: digger, shaper, keeper, elders.
 
 An organized priesthood tends a pantheon:
 
-> Bvaash the Shngaoshbvaash is: Bvaash the Shngaoshbvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is the highest among the gods. *(who presides)*
+> Bvaash the Tvaabvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is the highest among the gods. *(who presides)*
+>
+> — derived from the phenomenon *tide*
+
+> Bvaash the Shngaabvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+>
+> — derived from the phenomenon *tide*
+
+> Bvaash the Kvooshbvaash is: Bvaash the Kvooshbvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
 In the village of **Xngatnebvned**, an organized priesthood tends its own pantheon:
 
-> Neb the Nodneb is ever: Neb the Nodneb watches unceasing. So it was, so it is. *(who presides)*
+> Neb the Svedneb is ever: Neb the Svedneb watches unceasing. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
+
+> Neb the Sfekneb is felt, not counted. So it was, so it is.
+>
+> — derived from the phenomenon *tide*
+
+> Neb the Zfetneb is felt, not counted. So it was, so it is.
+>
+> — derived from the phenomenon *tide*
 
 In the legion of **Ttoemjeo**, an organized priesthood tends its own pantheon:
 
-> Fee the Ngjoofee is ever: Fee the Ngjoofee watches unceasing. So it was, so it is. *(who presides)*
+> Fee the Vaefee is ever: Fee the Vaefee watches unceasing. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
+
+> Fee the Qqaofee is felt, not counted. So it was, so it is.
+>
+> — derived from the phenomenon *tide*
+
+> Fee the Vaafee is felt, not counted. So it was, so it is.
+>
+> — derived from the phenomenon *tide*
 
 In the warren of **Xorogroq**, an organized priesthood tends its own pantheon:
 
-> Rora Ra is: Rora Ra is always watching. That's how it's always been. That's how it's always been. Rora is the highest among the gods. *(who presides)*
+> Rora Rora is: Rora Rora is always watching. That's how it's always been. That's how it's always been. Rora is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
+
+> Xotro Xotro is felt more than seen. That's how it's always been. That's how it's always been. Xotro is a great one among the gods.
+>
+> — derived from the phenomenon *tide*
 
 ---
 

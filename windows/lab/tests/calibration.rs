@@ -99,7 +99,7 @@ fn biome_class_from_name(name: &str) -> BiomeClass {
 }
 
 #[test]
-fn eternal_beliefs_coincide_exactly_with_tidal_locking() {
+fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // `belief-kind` is the sentiment of `beliefs_of(&world).first()` — the
     // FIRST belief minted anywhere in the ledger, across every species, not
     // a particular species' head deity. Which species commits first is an
@@ -131,29 +131,53 @@ fn eternal_beliefs_coincide_exactly_with_tidal_locking() {
     // night-star-headed pantheon on an otherwise-ordinary spinning world.
     // Per ADR 0016 this is pinned as an honest measured exception count,
     // not forced, inverted, or silently dropped.
+    //
+    // SKY-5 (surfaced tides) then weakened `locked ⇒ eternal` itself,
+    // honestly: a locked world's most salient phenomenon is now usually the
+    // felt tide (`Venue::Ambient` ⇒ `Sentiment::Ambient`), not the
+    // motionless sun — SEQ-1's "locked-world religion hangs on moons,
+    // weather, and tides" made real. What survives exactly is the direction
+    // that matters: a frozen sky never yields a CYCLIC first belief (the
+    // tide is ambient however periodic its swell; sun and stars are
+    // eternal; only a rising-and-setting body could read cyclic, and a
+    // locked world offers none). Measured over the 500-seed drift study:
+    // 23 locked worlds = 19 tide-headed (ambient) + 4 sun-headed (eternal)
+    // + 0 cyclic, pinned per ADR 0016.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (locked_i, belief_i) = (idx("tidally-locked"), idx("belief-kind"));
-    let (mut locked_n, mut spinning_eternal_exceptions) = (0u32, 0u32);
+    let (mut locked_eternal, mut locked_ambient, mut spinning_eternal_exceptions) =
+        (0u32, 0u32, 0u32);
     for row in &result.rows {
         let locked = matches!(row.values[locked_i], MetricValue::Flag(true));
-        let eternal = matches!(&row.values[belief_i], MetricValue::Text(t) if t == "eternal");
+        let kind = match &row.values[belief_i] {
+            MetricValue::Text(t) => t.as_str(),
+            other => panic!("seed {}: belief-kind not text: {other:?}", row.seed),
+        };
         if locked {
-            locked_n += 1;
-            assert!(
-                eternal,
-                "seed {}: a tidally-locked world's first-minted belief is not eternal",
-                row.seed
-            );
-        } else if eternal {
+            match kind {
+                "eternal" => locked_eternal += 1,
+                "ambient" => locked_ambient += 1,
+                other => panic!(
+                    "seed {}: a tidally-locked world's first-minted belief is {other} — \
+                     a frozen sky must never head a cyclic pantheon",
+                    row.seed
+                ),
+            }
+        } else if kind == "eternal" {
             spinning_eternal_exceptions += 1;
         }
     }
-    assert!(locked_n > 0, "no tidally-locked worlds in the drift study");
+    assert_eq!(
+        (locked_eternal, locked_ambient),
+        (4, 19),
+        "locked-world head-belief split (eternal, ambient) drifted"
+    );
     // Pinned calibration row (re-measured for the four-people world, Task
-    // 6b-2, 500-seed drift study): the exact count of spinning worlds whose
-    // first-minted belief is nonetheless eternal (a night-star-headed
-    // bugbear pantheon, per the mechanism above).
+    // 6b-2, 500-seed drift study; unchanged by SKY-5 — the same nine seeds):
+    // the exact count of spinning worlds whose first-minted belief is
+    // nonetheless eternal (a night-star-headed bugbear pantheon, per the
+    // mechanism above).
     assert_eq!(
         spinning_eternal_exceptions, 9,
         "spinning-yet-eternal exception count drifted"
@@ -798,14 +822,22 @@ fn name_collision_rate_is_measured_and_pinned() {
     // site-concept reuse; the net effect is FEWER zero-collision worlds
     // (159 -> 40) and a higher mean collision rate. The honest measured
     // rate is pinned exactly as before, never loosened to fit.
-    assert_eq!(zero, 40, "zero-collision world count drifted");
-    assert_eq!(nonzero, 460, "nonzero-collision world count drifted");
+    //
+    // SKY-5 (surfaced tides): re-measured again (was 40 zero / 460 nonzero,
+    // mean 12.85%). Tide phenomena roughly double the deities most worlds
+    // mint, and every extra deity name draws from the same per-culture
+    // lexicon the settlements name from — more draws, more reuse, fewer
+    // zero-collision worlds (40 -> 17) and a higher mean rate (12.85% ->
+    // 18.99%). An honest cost of the richer pantheon, pinned not loosened;
+    // the homophony campaign owns the name-space pressure question.
+    assert_eq!(zero, 17, "zero-collision world count drifted");
+    assert_eq!(nonzero, 483, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.128_455_986_622_179).abs() < 1e-6,
+        (mean - 0.189_881_493_296).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -838,9 +870,15 @@ fn name_length_distributions_are_measured_and_pinned() {
     // four-species niche vectors change which cells goblin/kobold win and
     // how many settlements each fields per world; goblin is now present on
     // every seed (the founder floor's own guarantee), kobold on all but 1.
+    //
+    // SKY-5 (surfaced tides): re-measured (was goblin 500 present /
+    // 10.500053705528860, kobold 499 / 14.237543579153998). The larger
+    // pantheons shift every later entity id and thus every name salt, and
+    // the extra deity names deplete/reshuffle each culture's lexicon before
+    // settlements draw — both means move by a fraction of a character.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 500u32, 10.500_053_705_528_86),
-        ("kobold", 499u32, 14.237_543_579_153_998),
+        ("goblin", 500u32, 10.121_233_471_800_009),
+        ("kobold", 499u32, 13.803_980_966_533_068),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1022,12 +1060,17 @@ fn null_control_name_length_smd_is_pinned() {
     // still comfortably inside the sampling bound above.
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    // SKY-5 (surfaced tides, 2026-07-10): re-measured (was
+    // -0.068569489200608). The tide deities enlarge both solo pantheons
+    // identically (structure stays TVD/SMD = 0 above), but the extra name
+    // draws shift the salts feeding both sides' settlement names — the SMD
+    // moves by ~0.003, still comfortably inside the ±0.2 sampling bound.
     let namelen = std_mean_diff(
         nums(result, "goblin-solo", idx("name-length-goblin")),
         nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
     assert!(
-        (namelen - -0.068_569_489_200_608).abs() < 1e-9,
+        (namelen - -0.071_893_940_746_130).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

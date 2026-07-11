@@ -2481,16 +2481,26 @@ mod tests {
     }
 
     #[test]
-    fn locked_world_belief_kind_is_eternal() {
+    fn locked_world_first_belief_is_the_ambient_tide() {
+        // SEQ-1 realized by SKY-5: a locked world's sky is frozen, so for
+        // seed 42's low-sky-attention first observer the felt tide
+        // (Venue::Ambient) out-ranks the motionless sun — the pantheon's
+        // head is the tide, and its sentiment reads ambient (it used to be
+        // the eternal fixed sun before tides were surfaced).
         let pins = SkyPins {
             rotation: Some(hornvale_astronomy::pins::RotationPin::Locked),
             ..SkyPins::default()
         };
         let view = WorldView::build(Seed(42), &pins).unwrap();
+        let first = beliefs_of(&view.world)
+            .into_iter()
+            .next()
+            .expect("locked world has beliefs");
+        assert_eq!(first.source_kind, "tide");
         let metrics = registry();
         let belief = metrics.iter().find(|m| m.name == "belief-kind").unwrap();
         let value = (belief.extract)(&view);
-        assert_eq!(value, MetricValue::Text("eternal".to_string()));
+        assert_eq!(value, MetricValue::Text("ambient".to_string()));
     }
 
     #[test]

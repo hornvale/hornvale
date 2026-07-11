@@ -66,7 +66,7 @@ mod tests {
         let seen = s.phenomena(&ctx(0.0));
         let moons: Vec<_> = seen
             .iter()
-            .filter(|p| p.description.contains("moon"))
+            .filter(|p| p.kind == CELESTIAL_BODY && p.description.contains("moon"))
             .collect();
         assert_eq!(moons.len(), 2);
         for m in &moons {
@@ -200,8 +200,9 @@ mod tests {
             "day side must not see the stars"
         );
         assert!(
-            !ph.iter().any(|p| p.description.contains("moon")),
-            "day side must not see the moon"
+            !ph.iter()
+                .any(|p| p.kind == CELESTIAL_BODY && p.description.contains("moon")),
+            "day side must not see the moon (though its tide is still felt)"
         );
     }
 
@@ -388,6 +389,87 @@ mod tests {
 
     use crate::neighborhood::Neighbor;
 
+    fn moon_with_period(sidereal_days: f64) -> crate::moons::Moon {
+        crate::moons::Moon {
+            period: crate::units::StdDays::new(sidereal_days).unwrap(),
+            ..luna_like()
+        }
+    }
+
+    /// SKY-5: the tide is felt, not watched — every moon raises an Ambient
+    /// tide phenomenon whose period is half the moon's transit interval
+    /// (the bulge is axial: two highs per pass).
+    #[test]
+    fn every_moon_raises_a_tide_phenomenon_with_the_transit_beat_period() {
+        let s = bare_sky(
+            0.0,
+            vec![luna_like()],
+            vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
+        );
+        let ph = s.phenomena(&ctx(0.0));
+        let tide = ph.iter().find(|p| p.kind == TIDE).expect("tide phenomenon");
+        // Day 1.0, sidereal month 27.32: the moon transits every
+        // 1/(1 − 1/27.32) ≈ 1.0380 d; the felt period is half that.
+        assert_eq!(tide.period_days, Some(0.52));
+        assert_eq!(tide.venue, Venue::Ambient);
+        assert!(tide.salience > 0.0 && tide.salience < 1.0);
+    }
+
+    /// SKY-5 × SEQ-1: a tidally locked world still feels its tides — from
+    /// both hemispheres (Ambient, not culled with the night sky).
+    #[test]
+    fn locked_worlds_feel_the_tide_on_both_hemispheres() {
+        let s = sky(SkyPins {
+            rotation: Some(RotationPin::Locked),
+            moons: Some(MoonsPin::exact(1).unwrap()),
+            ..SkyPins::default()
+        });
+        assert!(s.phenomena(&ctx(0.0)).iter().any(|p| p.kind == TIDE));
+        let day_side = ObserverContext::at_position(
+            EntityId(1),
+            WorldTime { day: 0.0 },
+            GeoCoord {
+                latitude: 10.0,
+                longitude: 0.0,
+            },
+        );
+        assert!(s.phenomena(&day_side).iter().any(|p| p.kind == TIDE));
+    }
+
+    /// SKY-5: with two moons the combined tide swells and slackens on the
+    /// alignment beat — half the moons' mutual synodic period, since
+    /// alignment and opposition both reinforce the axial bulges.
+    #[test]
+    fn two_moons_beat_spring_and_neap() {
+        let s = bare_sky(
+            0.0,
+            vec![moon_with_period(13.0), moon_with_period(27.32)],
+            vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
+        );
+        let ph = s.phenomena(&ctx(0.0));
+        let beat = ph
+            .iter()
+            .find(|p| p.kind == TIDE && p.description.contains("spring"))
+            .expect("spring/neap beat phenomenon");
+        // 0.5 / (1/13 − 1/27.32) ≈ 12.40 standard days.
+        assert_eq!(beat.period_days, Some(12.4));
+        assert_eq!(beat.venue, Venue::Ambient);
+    }
+
+    /// SKY-5: one moon gives one tide and no beat — spring/neap needs a
+    /// second tidal source.
+    #[test]
+    fn one_moon_worlds_have_no_spring_neap_beat() {
+        let s = bare_sky(
+            0.0,
+            vec![luna_like()],
+            vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
+        );
+        let ph = s.phenomena(&ctx(0.0));
+        assert_eq!(ph.iter().filter(|p| p.kind == TIDE).count(), 1);
+        assert!(!ph.iter().any(|p| p.description.contains("spring")));
+    }
+
     /// SKY-14: the full window is centered on phase 0.5 (it used to start
     /// there), and the vocabulary runs crescent/quarter/gibbous, not just
     /// waxing/waning.
@@ -489,6 +571,9 @@ pub const SEASONAL_CYCLE: &str = "seasonal-cycle";
 /// Phenomenon kind for notable neighbor stars.
 /// type-audit: bare-ok(identifier-text)
 pub const NIGHT_STAR: &str = "night-star";
+/// Phenomenon kind for the tides the moons raise (SKY-5).
+/// type-audit: bare-ok(identifier-text)
+pub const TIDE: &str = "tide";
 
 fn round2(x: f64) -> f64 {
     (x * 100.0).round() / 100.0
@@ -745,6 +830,57 @@ impl PhenomenaSource for GeneratedSky {
                     period_days: Some(round2(moon.period.get())),
                     salience: round2(0.35 + 0.35 * angular.min(2.0) / 2.0),
                     venue: Venue::NightSky,
+                });
+            }
+        }
+
+        // SKY-5: tides are felt, not watched — Ambient, never culled by
+        // hemisphere or daylight. The bulge is axial (two highs per pass),
+        // so each moon's felt period is half its transit interval relative
+        // to the surface: the local day for a spinning world, the year for
+        // a locked one (which turns once per orbit).
+        let surface_rotation = match self.system.anchor.rotation {
+            Rotation::Spinning { day } => day.get(),
+            Rotation::Locked => self.system.anchor.year.get(),
+        };
+        for moon in &self.system.moons {
+            let rate = (1.0 / surface_rotation - 1.0 / moon.period.get()).abs();
+            out.push(Phenomenon {
+                kind: TIDE.to_string(),
+                description: format!(
+                    "the tide, rising and falling under the {} moon",
+                    size_word(moon.angular_diameter_rel)
+                ),
+                // A moon synchronous with the surface holds a motionless
+                // bulge: a tide with no period.
+                period_days: (rate > 0.0).then(|| round2(0.5 / rate)),
+                salience: round2(0.25 + 0.25 * moon.tide_rel.min(2.0) / 2.0),
+                venue: Venue::Ambient,
+            });
+        }
+        if self.system.moons.len() >= 2 {
+            // Spring/neap: the combined tide swells when the two strongest
+            // sources align OR oppose (both reinforce an axial bulge), so
+            // the beat runs at half their mutual synodic period. Moons sort
+            // by tide strength, ties broken by distance — deterministic.
+            let mut by_tide: Vec<&crate::moons::Moon> = self.system.moons.iter().collect();
+            by_tide.sort_by(|a, b| {
+                b.tide_rel
+                    .total_cmp(&a.tide_rel)
+                    .then(a.distance.get().total_cmp(&b.distance.get()))
+            });
+            let (first, second) = (by_tide[0], by_tide[1]);
+            let beat_rate = (1.0 / first.period.get() - 1.0 / second.period.get()).abs();
+            if beat_rate > 0.0 {
+                out.push(Phenomenon {
+                    kind: TIDE.to_string(),
+                    description: "spring and neap: the tides swell and slacken as the moons \
+                                  align and part"
+                        .to_string(),
+                    period_days: Some(round2(0.5 / beat_rate)),
+                    // The weaker source sets the modulation depth.
+                    salience: round2(0.15 + 0.25 * second.tide_rel.min(2.0) / 2.0),
+                    venue: Venue::Ambient,
                 });
             }
         }

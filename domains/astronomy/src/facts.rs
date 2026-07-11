@@ -33,6 +33,10 @@ pub const MOON_COUNT: &str = "moon-count";
 /// one per moon).
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_PERIOD_STD: &str = "moon-period-std";
+/// Tidal strength of a moon relative to Luna-on-Earth (non-functional,
+/// Number — one per moon; SKY-5).
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_TIDE_REL: &str = "moon-tide-rel";
 /// A notable neighbor star visible in the night sky (non-functional, Text —
 /// one per neighbor).
 /// type-audit: bare-ok(identifier-text)
@@ -148,6 +152,10 @@ pub fn genesis(
     for moon in &system.moons {
         world.ledger.commit(
             fact(subject, MOON_PERIOD_STD, Value::Number(moon.period.get())),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(subject, MOON_TIDE_REL, Value::Number(moon.tide_rel)),
             &world.registry,
         )?;
     }
@@ -280,6 +288,38 @@ mod tests {
             .collect();
         assert_eq!(notes.len(), 1);
         assert!(notes[0].contains("was sought"));
+    }
+
+    /// SKY-5: the tide is computed at genesis and must reach the ledger —
+    /// one moon-tide-rel fact per moon, quantized on commit like every
+    /// numeric object.
+    #[test]
+    fn genesis_commits_one_tide_fact_per_moon() {
+        let pins = SkyPins {
+            moons: Some(MoonsPin::exact(2).unwrap()),
+            ..SkyPins::default()
+        };
+        let outcome = generate(Seed(1), &pins).unwrap();
+        let mut w = world_with(1);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+
+        let tides: Vec<f64> = w
+            .ledger
+            .facts_about(subject)
+            .filter(|f| f.predicate == MOON_TIDE_REL)
+            .filter_map(|f| match f.object {
+                Value::Number(n) => Some(n),
+                _ => None,
+            })
+            .collect();
+        let expected: Vec<f64> = outcome
+            .system
+            .moons
+            .iter()
+            .map(|m| hornvale_kernel::quantize(m.tide_rel))
+            .collect();
+        assert_eq!(tides, expected);
     }
 
     #[test]

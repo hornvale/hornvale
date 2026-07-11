@@ -3107,11 +3107,14 @@ mod tests {
                 .first()
                 .map(|b| b.sentiment)
         };
-        // The head deity's periodicity flips with the sun's rotation regime.
+        // The head deity reorganizes with the sun's rotation regime. Since
+        // SKY-5 the locked head is the felt tide (Ambient): on a frozen sky
+        // the low-sky-attention first observer ranks the swelling water
+        // above the motionless sun — SEQ-1's locked-world religion.
         assert_eq!(
             head_sentiment(&locked),
-            Some(hornvale_religion::Sentiment::Eternal),
-            "locked world: an eternal high god"
+            Some(hornvale_religion::Sentiment::Ambient),
+            "locked world: the tide heads the pantheon"
         );
         assert_ne!(
             head_sentiment(&spinning),
