@@ -9,6 +9,8 @@ Visible bodies: the sun, moon 1, moon 2.
 Salient phenomena, most attention-demanding first:
 
 - [1.00] *celestial-body* — a sun fixed forever above the day side
+- [0.90] *eclipse* — an eclipse: the vast moon devours the sun whole
+- [0.75] *eclipse* — an eclipse: the small, distant moon leaves a burning ring of the sun
 - [0.50] *tide* — the tide, rising and falling under the vast moon
 - [0.29] *tide* — the tide, rising and falling under the small, distant moon
 - [0.19] *tide* — spring and neap: the tides swell and slacken as the moons align and part
@@ -110,39 +112,67 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
+> Bvaash the Shngaoshbvaash comes back every 71.11 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+>
+> — derived from the phenomenon *eclipse*
+
 In the village of **Xngatnebvned**, an organized priesthood tends its own pantheon:
 
-> Neb the Svedneb is ever: Neb the Svedneb watches unceasing. So it was, so it is. *(who presides)*
+> Neb the Nekneb is ever: Neb the Nekneb watches unceasing. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neb the Sfekneb is felt, not counted. So it was, so it is.
+> Zhxakzhvet the Notzfetzfet returns every 71.11 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Fngodvnob the Zxabxngodnak returns every 269.79 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Neb the Nebneb is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Neb the Zfetneb is felt, not counted. So it was, so it is.
+> Neb the Vnakneb is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
 In the legion of **Ttoemjeo**, an organized priesthood tends its own pantheon:
 
-> Fee the Vaefee is ever: Fee the Vaefee watches unceasing. So it was, so it is. *(who presides)*
+> Fee the Njeefee is ever: Fee the Njeefee watches unceasing. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Fee the Qqaofee is felt, not counted. So it was, so it is.
+> Kqaoxaenjea the Bkoaxeaxeangjea returns every 71.11 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Mjoekbeeqqoo the Faaxeexee returns every 269.79 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Fee the Ngjeefee is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Fee the Vaafee is felt, not counted. So it was, so it is.
+> Fee the Ngjeafee is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
 In the warren of **Xotrorogroq**, an organized priesthood tends its own pantheon:
 
-> Xaxorogxa Xaxorogxa is: Xaxorogxa Xaxorogxa is always watching. That's how it's always been. That's how it's always been. Xaxorogxa is the highest among the gods. *(who presides)*
+> Xaxorogxa Xaxo is: Xaxorogxa Xaxo is always watching. That's how it's always been. That's how it's always been. Xaxorogxa is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
+
+> Xogrra Xogrra comes back every 71.11 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
+>
+> — derived from the phenomenon *eclipse*
+
+> Xogrra Xogrra comes back every 269.79 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
+>
+> — derived from the phenomenon *eclipse*
 
 > Rara Rara is felt more than seen. That's how it's always been. That's how it's always been. Rara is a great one among the gods.
 >

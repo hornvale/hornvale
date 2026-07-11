@@ -29,6 +29,7 @@
 | `longitude` | yes | settlement longitude, degrees |
 | `max-ice-fraction` | yes | land fraction under ice at the glacial maximum |
 | `moon-count` | yes | how many moons the anchor world has |
+| `moon-inclination-degrees` | no | orbital inclination of a moon to the anchor's orbital plane, in degrees |
 | `moon-period-std` | no | orbital period of a moon, in standard days |
 | `moon-tide-rel` | no | tidal strength of a moon, relative to Luna on Earth |
 | `name` | yes | canonical name of an entity |
@@ -78,6 +79,7 @@
 |---|---|
 | `ambient` | a pervasive atmospheric condition |
 | `celestial-body` | a body visible in the sky |
+| `eclipse` | a moon crossing the face of the sun |
 | `night-star` | a fixed star notable in the night sky |
 | `seasonal-cycle` | the annual daylight cycle |
 | `tide` | the rise and fall of the waters under the moons |

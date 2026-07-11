@@ -831,14 +831,20 @@ fn name_collision_rate_is_measured_and_pinned() {
     // zero-collision worlds and a higher mean rate. An honest cost of the
     // richer pantheon plus the reseed, pinned not loosened; the homophony
     // campaign owns the name-space pressure question.
-    assert_eq!(zero, 19, "zero-collision world count drifted");
-    assert_eq!(nonzero, 481, "nonzero-collision world count drifted");
+    //
+    // SKY-6 (eclipses, 2026-07-11): re-measured (was 19 zero / 481 nonzero,
+    // mean 18.25%). Eclipse phenomena add one more deity per eclipsing moon
+    // to most pantheons — one more name draw per culture from the same
+    // lexicons, nudging the rate again (19 -> 18 zero, mean 18.25% ->
+    // 19.61%). Same mechanism as SKY-5's re-pin above.
+    assert_eq!(zero, 18, "zero-collision world count drifted");
+    assert_eq!(nonzero, 482, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.182_512_148_104).abs() < 1e-6,
+        (mean - 0.196_082_051_624).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -876,9 +882,14 @@ fn name_length_distributions_are_measured_and_pinned() {
     // the larger tide-god pantheons together shift every name salt and reshuffle
     // each culture's lexicon before settlements draw. Both means re-pinned on the
     // merged code; present counts unchanged (goblin every seed, kobold all but 1).
+    //
+    // SKY-6 (eclipses, 2026-07-11): re-measured (was goblin 500 /
+    // 10.6127954144, kobold 499 / 15.597634151903808) — one more deity
+    // name draw per eclipsing moon shifts every later name salt, same
+    // mechanism as the SKY-5 re-pin.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 500u32, 10.612_795_414_4),
-        ("kobold", 499u32, 15.597_634_151_903_808),
+        ("goblin", 500u32, 10.682_474_087_799_985),
+        ("kobold", 499u32, 14.863_276_759_719_446),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1073,8 +1084,13 @@ fn null_control_name_length_smd_is_pinned() {
     // cascade reseed and the larger tide-god pantheons together shift each solo
     // build's glossed-name draws; the SMD stays well inside the sampling bound
     // above. Shipped peoples are atonal, so the tone tier itself moves nothing.
+    //
+    // SKY-6 (eclipses, 2026-07-11): re-measured (was -0.07295943144971684);
+    // the eclipse deity's extra name draw shifts both solo builds' salts
+    // identically in structure, nudging the SMD by ~0.002 — still well
+    // inside the ±0.2 sampling bound.
     assert!(
-        (namelen - -0.072_959_431_449_716_84).abs() < 1e-9,
+        (namelen - -0.074_702_367_393_079).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

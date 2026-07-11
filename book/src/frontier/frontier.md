@@ -33,6 +33,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The frontier map](#the-frontier-map)
   - [The unification thesis](#the-unification-thesis)
   - [The expressive-culture cluster](#the-expressive-culture-cluster)
+  - [The channel-capacity frontier — enriching a constrained phonology](#the-channel-capacity-frontier--enriching-a-constrained-phonology)
   - [The species-psychology substrate — the layer beneath the cluster](#the-species-psychology-substrate--the-layer-beneath-the-cluster)
   - [Ideonomic cognition — novel thought as seeded combinatorics](#ideonomic-cognition--novel-thought-as-seeded-combinatorics)
   - [Social structure as orthogonal axes — cashing the substrate](#social-structure-as-orthogonal-axes--cashing-the-substrate)
@@ -444,6 +445,115 @@ even if it ships with only one medium lit.
   almost incidental. **Lab candidate:** unarmed martial lineages should
   concentrate in disarmed subordinate populations, not among the armed and
   free.
+
+---
+
+## The channel-capacity frontier — enriching a constrained phonology
+
+*(Directly downstream of shipped reality; verification is strong — every idea
+here is a Lab-measurable capacity or collision count.)*
+
+The homophony campaign (The Words → The Branches → the phonology epoch) closed on
+a hard guarantee: no two *core* concepts share a word in any daughter, on any
+seed, reached by a merger-aware proto-assignment
+([decision](https://github.com/hornvale/hornvale/blob/main/docs/decisions/the-proto-assignment-is-merger-aware.md)).
+But that guarantee was won on a rich humanoid inventory. Strip the inventory down
+to a stereotyped species — a Yuan-Ti with few labials and a wall of sibilants —
+and the same pressure returns with force. The right frame is not phonology but
+**information theory: a low-capacity channel must carry more messages than its
+raw symbol count allows.** Every real language's answer to a small alphabet is
+one of a handful of channel-engineering moves — add orthogonal dimensions to
+each symbol, lengthen the codewords, use a product code, add error-correcting
+redundancy, lean on the decoder's context, or allocate short codes to frequent
+messages — and each maps to a concrete linguistic mechanism the system could
+grow. Channel capacity today is `onsets × nuclei × codas × tones`; the frontier
+is every further factor, and every way to fight *after* a collision rather than
+only before it.
+
+The interventions sort into a **defense-in-depth** over the life of a contrast.
+A distinction is born distinct at assignment; a lossy cascade rule threatens it;
+it either merges or is rescued. Three layers guard three transitions. **Prevent**
+(generation time): choose forms that will not merge. **Transphonologize**
+(diachronic): a lost segmental feature is caught by a suprasegmental tier before
+the merger completes — tonogenesis, already shipped, is the first instance of a
+general move. **Tolerate** (speak time): even identical forms are pulled apart by
+a second channel — the only layer that models the *listener*, the frontier the
+confusable-vs-free metric opened. The scarce, high-value work is in the second
+and third layers; the first is already best-served.
+
+**Layer 1 — new orthogonal tiers (transphonologize; body-plan capacities that
+multiply the channel).** Each is a `tonality`-style anatomy-derived scalar, and
+several are natural tonogenesis-siblings — a lost feature reborn on a *new* tier
+rather than pitch. **LANG-12** phonation register (modal/breathy/creaky — a lost
+voicing contrast transphonologized to voice quality; a serpent's hiss reads
+breathy). **LANG-13** vowel length (the cheapest clean multiplier of the nucleus
+factor). **LANG-14** nasalization (a lost nasal coda reborn as a nasal vowel —
+the historically real path tonogenesis currently dumps into the Low bucket).
+**LANG-15** contour tones (unbank the rising/falling dimension over the level
+tones). **LANG-16** secondary articulation — palatalization, labialization, and
+especially **pharyngealization** — the single best lever for a narrow inventory,
+because it *colors* the few consonants a species has (`tˤ`) rather than demanding
+new places of articulation. **LANG-17** gemination / fortis-lenis. **LANG-18**
+contrastive stress or pitch-accent *placement* (today stress is fixed on the
+first vowel; letting its position distinguish words multiplies capacity by
+syllable count and renders fully in espeak).
+
+**Layer 2 — structural word-formation (product codes; the big multipliers from a
+small alphabet).** **LANG-19** root-and-pattern (templatic) morphology — the
+killer feature for a stereotyped species: a consonantal **root** crossed with a
+vocalic/prosodic **template**, exactly how Arabic builds a vast lexicon from ~28
+consonants, so a Yuan-Ti's six sibilants over a three-consonant root yield
+thousands of distinct words. An authored typology dimension (templatic vs
+concatenative). **LANG-20** ablaut/apophony (a fixed vowel-melody alternation
+inflects one root into several forms with no new segments). **LANG-21**
+diphthong/rich-nucleus capacity (extend the flat 1–2 nucleus count to real
+glides). **LANG-22** productive derivational affixation, infixes included — so a
+derived concept is an affixed form, not a colliding compound.
+
+**Layer 3 — redundancy and side-information (tolerate: disambiguate even when the
+forms collide).** **LANG-23** noun classifiers / class markers — the
+codon-degeneracy move made structural: a classifier keyed to the semantic domain
+rides along, so two same-domain homophones separate by classifier; it is the
+confusability tag *made audible*, a direct structural attack on the costly kind
+of collision. **LANG-24** agreement/concord (redundant class marking on
+modifiers catches a collision on the head — parity). **LANG-25** register /
+honorific stratification (plain/honorific/taboo strata give a concept distinct
+forms and are themselves a disambiguating channel). **LANG-26** a modeled context
+for the confusability metric — upgrade confusable-vs-free from pack-domain to a
+seeded co-occurrence model, so two homophones count as confusable only if they
+actually appear in the same discourse, not merely the same Swadesh pack.
+
+**Layer 4 — generation-time guards (prevent; how the assignment spends its
+capacity).** **LANG-27** functional-load-weighted length (Zipf/Menzerath — make
+core-root length inversely proportional to frequency, so the merger-aware
+lengthening spends its ~3% where it buys the most distinction). **LANG-28**
+confusability-weighted minimal-pair spacing (today's rejection is edit-distance 1;
+make the required distance perceptual and load-weighted, so a high-load pair, or
+two perceptually-close sibilant clusters for a Yuan-Ti, is spaced further).
+**LANG-29** a per-domain homophony budget (generalize "zero core" to a tunable
+budget of tolerated collisions per domain, spent on the lowest-load pairs first —
+Huffman, not a hard core/periphery line). **LANG-30** cross-tier capacity-floor
+accounting (extend the floor's `onsets × nuclei × codas × tones` product to every
+tier above, so a few-place species provably clears the floor through the tiers
+its body plan affords, and the metric reports which tier carried it).
+
+**Layer 5 — enrichment (character, and a soft guard).** **LANG-31** sound
+symbolism / phonaesthemes and an ideophone stratum — a seeded map from semantic
+features to sound features (bouba/kiki; sibilant → small/sharp for a serpent), so
+related concepts *cluster* phonetically on purpose. Beyond flavour it is a mild
+anti-arbitrariness that aids the listener — meanings that sound related are less
+cross-confusable — and it gives a stereotyped species genuine character.
+
+Two constraints bound the whole frontier. **The espeak ceiling** is the real
+limit on the richest multipliers: phonation, secondary articulation, and contour
+tone are IPA-native but espeak-weak, so each ships as an honest audio limit the
+way tone-espeak already does — rendered in the romanization and the IPA, silent
+in the clip. And **everything stays a body-plan-derived capacity, not a free
+knob**: the point is that a Yuan-Ti is rescued not by growing places it has no
+anatomy for, but by *coloring* the few it has (LANG-16), *permuting* them
+templatically (LANG-19), *spacing* them perceptually (LANG-28), and *proving* the
+capacity floor is met through those tiers (LANG-30) — that quartet is the
+narrow-inventory answer, and the one to build first.
 
 ---
 
