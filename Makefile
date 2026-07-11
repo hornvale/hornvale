@@ -12,7 +12,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens install-hooks
+.PHONY: help quick gate fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff install-hooks
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -42,6 +42,14 @@ rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), 
 	REBASELINE=1 cargo test -q -p hornvale --test lens_purity
 	REBASELINE=1 cargo test -q -p hornvale-scene --test golden
 	REBASELINE=1 cargo test -q -p hornvale-worldgen --test proto_goblinoid_golden
+
+lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STUDY=census-lands-drift)
+	@test -n "$(STUDY)" || { echo "usage: make lab-diff STUDY=<study-name>"; exit 2; }
+	@old="$$(mktemp)"; \
+	git show HEAD:book/src/laboratory/generated/$(STUDY)/rows.csv > "$$old"; \
+	cargo run -q -p hornvale -- lab diff studies/$(STUDY).study.json "$$old" \
+	    book/src/laboratory/generated/$(STUDY)/rows.csv; \
+	status=$$?; rm -f "$$old"; exit $$status
 
 install-hooks: ## Point git at scripts/hooks (runs `make quick` pre-commit)
 	git config core.hooksPath scripts/hooks

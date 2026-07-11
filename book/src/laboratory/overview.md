@@ -61,4 +61,9 @@ the census fails locally with the regeneration instruction (`make
 rebaseline`) instead of surfacing an hour later in CI's full
 regenerate-and-diff.
 
+When a census *does* move, the reviewable surface is `make lab-diff
+STUDY=<name>` (wrapping `hornvale lab diff`): a per-metric report of which
+distribution moved and by how much — count deltas per value bucket and the
+numeric mean shift — rather than a raw CSV diff.
+
 {{#include generated/census-lands-drift/census-lands-drift-summary.md}}

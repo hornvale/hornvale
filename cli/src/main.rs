@@ -49,6 +49,7 @@ usage:
   hornvale proto                           dump proto-goblinoid's inventory/phonotactics/proto-root table as markdown
   hornvale voice [--out <DIR>]             author missing phonology audio clips (espeak-ng + ffmpeg; default out: book/src/audio)
   hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
+  hornvale lab diff <STUDY> <OLD_CSV> <NEW_CSV>  report which census metrics moved between two rows.csv snapshots
   hornvale lab list-metrics                list every metric in the lab's registry
 
 sky flags (shared by new and scout):
@@ -613,14 +614,16 @@ fn cmd_proto() -> Result<(), String> {
     Ok(())
 }
 
-/// Dispatch `lab` subcommands: `run <PATH>` and `list-metrics`.
+/// Dispatch `lab` subcommands: `run <PATH>`, `diff <STUDY> <OLD_CSV> <NEW_CSV>`,
+/// and `list-metrics`.
 fn cmd_lab(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("run") => cmd_lab_run(args),
+        Some("diff") => cmd_lab_diff(args),
         Some("list-metrics") => cmd_lab_list_metrics(),
         Some(other) => Err(format!("lab: unknown subcommand '{other}'\n{}", usage())),
         None => Err(format!(
-            "lab: requires a subcommand (run <PATH>|list-metrics)\n{}",
+            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|list-metrics)\n{}",
             usage()
         )),
     }
@@ -645,6 +648,30 @@ fn cmd_lab_run(args: &[String]) -> Result<(), String> {
         result.rows.len(),
         refusals,
         written.len() - 1
+    );
+    Ok(())
+}
+
+/// Diff two `rows.csv` snapshots of one study: which metric moved, and by
+/// how much. Old/new are paths to CSV files (typically `git show
+/// HEAD:<...>/rows.csv` output vs the working tree's copy — `make lab-diff
+/// STUDY=<name>` wraps exactly that).
+fn cmd_lab_diff(args: &[String]) -> Result<(), String> {
+    let (Some(study_path), Some(old_path), Some(new_path)) =
+        (args.get(2), args.get(3), args.get(4))
+    else {
+        return Err(format!(
+            "lab diff requires <STUDY> <OLD_CSV> <NEW_CSV>\n{}",
+            usage()
+        ));
+    };
+    let study =
+        hornvale_lab::load_study(std::path::Path::new(study_path)).map_err(|e| e.to_string())?;
+    let old_csv = std::fs::read_to_string(old_path).map_err(|e| format!("read {old_path}: {e}"))?;
+    let new_csv = std::fs::read_to_string(new_path).map_err(|e| format!("read {new_path}: {e}"))?;
+    print!(
+        "{}",
+        hornvale_lab::render_diff(&study, &old_csv, &new_csv).map_err(|e| e.to_string())?
     );
     Ok(())
 }
@@ -859,6 +886,7 @@ mod tests {
     #[test]
     fn usage_mentions_lab() {
         assert!(USAGE.contains("lab run"));
+        assert!(USAGE.contains("lab diff"));
         assert!(USAGE.contains("list-metrics"));
     }
 

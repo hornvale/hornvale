@@ -92,7 +92,7 @@ deviation from the registry row's "replace freeze-fixture.sh".
 **Deliverable**: `hornvale lab diff <STUDY> <OLD_CSV> <NEW_CSV>` rendering
 which metric moved and by how much (distribution deltas + numeric mean
 shift); `make lab-diff STUDY=<name>` diffs the working tree against HEAD.
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 3+ (later passes)
 
