@@ -24,7 +24,7 @@ pub use pins::{
     ForcingPin, GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, SpinPin, parse_pin,
     pin_strings,
 };
-pub use provider::{GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE, TIDE};
+pub use provider::{ECLIPSE, GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE, TIDE};
 pub use star::{Star, generate_star};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
@@ -71,6 +71,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "astronomy/spin-direction",
             "spin-direction draw: prograde or retrograde",
         ),
+        (
+            "astronomy/moon-inclinations",
+            "per-moon orbital-inclination draws",
+        ),
     ]
 }
 
@@ -80,6 +84,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_phenomenon_kind(SEASONAL_CYCLE, "the annual daylight cycle")?;
     registry.register_phenomenon_kind(NIGHT_STAR, "a fixed star notable in the night sky")?;
     registry.register_phenomenon_kind(TIDE, "the rise and fall of the waters under the moons")?;
+    registry.register_phenomenon_kind(ECLIPSE, "a moon crossing the face of the sun")?;
 
     registry.register_predicate(
         facts::STAR_CLASS,
@@ -121,6 +126,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::RETROGRADE_SPIN,
         true,
         "the anchor world spins backward: the sun rises in the west",
+    )?;
+    registry.register_predicate(
+        facts::MOON_INCLINATION_DEGREES,
+        false,
+        "orbital inclination of a moon to the anchor's orbital plane, in degrees",
     )?;
     registry.register_predicate(
         facts::NOTABLE_NEIGHBOR,

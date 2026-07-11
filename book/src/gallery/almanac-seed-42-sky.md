@@ -9,6 +9,8 @@ Visible bodies: the sun, moon 1, moon 2.
 Salient phenomena, most attention-demanding first:
 
 - [1.00] *celestial-body* — the sun, a yellow dwarf (G)
+- [0.90] *eclipse* — an eclipse: the vast moon devours the sun whole
+- [0.75] *eclipse* — an eclipse: the small, distant moon leaves a burning ring of the sun
 - [0.64] *celestial-body* — a vast moon
 - [0.50] *tide* — the tide, rising and falling under the vast moon
 - [0.47] *celestial-body* — a small, distant moon
@@ -159,63 +161,91 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
+> Bvaash the Kvoashbvaash comes back every 71.11 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+>
+> — derived from the phenomenon *eclipse*
+
 In the village of **Xnebsvob**, an organized priesthood tends its own pantheon:
 
-> Neb the Netneb returns every 0.88 days. So it was, so it is. *(who presides)*
+> Neb the Nobneb returns every 0.88 days. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neb the Nobneb returns every 15.99 days. So it was, so it is.
+> Fngakfnot the Nokfnakned returns every 71.11 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Sxabfngekvnob the Vnebxngebxngeb returns every 269.79 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Neb the Zhxabneb returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neb the Fnakneb is felt, not counted. So it was, so it is.
+> Neb the Sfokneb is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Neb the Xngebneb returns every 32.55 days. So it was, so it is.
+> Neb the Svatneb returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neb the Zhxabneb is felt, not counted. So it was, so it is.
+> Neb the Zhfabneb is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
 In the legion of **Ngjoavoo**, an organized priesthood tends its own pantheon:
 
-> Fee the Xeefee returns every 0.88 days. So it was, so it is. *(who presides)*
+> Fee the Ktoefee returns every 0.88 days. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Fee the Xaefee returns every 15.99 days. So it was, so it is.
+> Ngjoagboaveo the Ktoetqae returns every 71.11 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Tboektoovoo the Ngjaaqgeoqgeo returns every 269.79 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Fee the Xoefee returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Fee the Xeefee returns every 32.55 days. So it was, so it is.
+> Fee the Ktaofee returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Fee the Ktoefee is felt, not counted. So it was, so it is.
+> Fee the Qkaofee is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Fee the Tqaefee is felt, not counted. So it was, so it is.
+> Fee the Xoofee is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
 In the warren of **Roqrraxokroxog**, an organized priesthood tends its own pantheon:
 
-> Roqrraxogrra Xogrra comes back every 15.99 days. That's how it's always been. That's how it's always been. Roqrraxogrra is the highest among the gods. *(who presides)*
+> Xogrra Roqrra comes back every 15.99 days. That's how it's always been. That's how it's always been. Xogrra is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Roqrraxogrra Roqrra comes back every 32.55 days. That's how it's always been. That's how it's always been. Roqrraxogrra is a great one among the gods.
+> Roqrraxogrra Roqrraxogrra comes back every 32.55 days. That's how it's always been. That's how it's always been. Roqrraxogrra is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Rogxa Rogxaxogrra comes back every 0.88 days. That's how it's always been. That's how it's always been. Rogxa is a great one among the gods.
+> Xogrrarogxa Rogxaxogrra comes back every 0.88 days. That's how it's always been. That's how it's always been. Xogrrarogxa is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
+
+> Xogrra Xogrra comes back every 71.11 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
+>
+> — derived from the phenomenon *eclipse*
+
+> Xogrra Xogrra comes back every 269.79 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
+>
+> — derived from the phenomenon *eclipse*
 
 > Rara Rara is felt more than seen. That's how it's always been. That's how it's always been. Rara is a great one among the gods.
 >
