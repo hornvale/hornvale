@@ -6,6 +6,7 @@
 pub mod cast;
 pub mod field;
 pub mod geosphere;
+pub mod golden;
 pub mod ledger;
 pub mod noise;
 pub mod phenomena;

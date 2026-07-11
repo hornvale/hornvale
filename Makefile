@@ -12,7 +12,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate fmt fmt-check clippy test rebaseline artifacts install-hooks
+.PHONY: help quick gate fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens install-hooks
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -37,6 +37,11 @@ test: ## Run the full workspace test suite
 
 rebaseline artifacts: ## Regenerate every committed generated artifact (review the diff, then commit)
 	bash scripts/regenerate-artifacts.sh
+
+rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), then review the diff
+	REBASELINE=1 cargo test -q -p hornvale --test lens_purity
+	REBASELINE=1 cargo test -q -p hornvale-scene --test golden
+	REBASELINE=1 cargo test -q -p hornvale-worldgen --test proto_goblinoid_golden
 
 install-hooks: ## Point git at scripts/hooks (runs `make quick` pre-commit)
 	git config core.hooksPath scripts/hooks

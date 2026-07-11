@@ -86,13 +86,13 @@ silently by the quantization epoch; CI never runs it).
 rebaseline-goldens`. `scripts/freeze-fixture.sh` narrows to historical pins
 (the `pre-*` fixtures are frozen history, never rebaselined) — a scoped
 deviation from the registry row's "replace freeze-fixture.sh".
-**Status**: In Progress
+**Status**: Complete
 
 ### 2c. TOOL-19 — the human-readable lab regression view
 **Deliverable**: `hornvale lab diff <STUDY> <OLD_CSV> <NEW_CSV>` rendering
 which metric moved and by how much (distribution deltas + numeric mean
 shift); `make lab-diff STUDY=<name>` diffs the working tree against HEAD.
-**Status**: Not Started
+**Status**: In Progress
 
 ## Stage 3+ (later passes)
 

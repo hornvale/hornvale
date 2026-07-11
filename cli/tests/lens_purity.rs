@@ -4,9 +4,10 @@
 //! `hornvale_species::registry` entry re-baselines settlement placement,
 //! exposure, and every generated name world-wide — The Branches is the
 //! precedent, spec §6), and must be deliberate: regenerate the fixture in
-//! the same commit and record why in the chronicle. Campaign 25 (The
-//! Measured Coast) is contractually lens-only; under it this test must
-//! never fail.
+//! the same commit (`REBASELINE=1 cargo test -p hornvale --test
+//! lens_purity`, or `make rebaseline-goldens`) and record why in the
+//! chronicle. Campaign 25 (The Measured Coast) is contractually lens-only;
+//! under it this test must never fail.
 
 use hornvale_kernel::Seed;
 use hornvale_worldgen::{SkyChoice, build_world_with_roster, default_roster};
@@ -22,10 +23,12 @@ fn seed_42_world_json_matches_the_committed_fixture() {
         &default_roster(),
     )
     .expect("seed 42 builds");
-    let fixture = include_str!("fixtures/world-seed-42.json");
-    assert_eq!(
-        world.to_json(),
-        fixture,
-        "world identity drifted from the committed fixture — see this file's module doc"
+    hornvale_kernel::golden::assert_golden(
+        std::path::Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/world-seed-42.json"
+        )),
+        &world.to_json(),
+        "world identity drifted from the committed fixture — see this file's module doc",
     );
 }
