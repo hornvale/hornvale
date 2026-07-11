@@ -217,7 +217,22 @@ Tone marks in all three views; espeak tone approximation; the audio pipeline.
 Chronicle; re-score the relevant open-question; decisions (functional-load
 definition, injective assignment, tonogenesis-as-merger-repair, capacity
 floor); retrospective; final homophony + expressiveness re-measure.
-**Status**: Not Started
+**Status**: ✅ COMPLETE.
+  ✅ Chronicle: `book/src/chronicle/the-rising-tone.md` (registered in
+     SUMMARY.md) — the epoch narrative at book altitude.
+  ✅ Decisions: `tonogenesis-is-a-regular-conditioned-merger-repair.md` and
+     `the-capacity-floor-is-reached-by-tone-not-segments.md` (+ index rows).
+  ✅ Retrospective: `docs/retrospectives/the-rising-tone.md` (process lessons —
+     the reseed-in-one-commit sequencing, compiler-guided field refactor,
+     re-pin-from-CSV, the test-only tonal roster call).
+  ✅ Book freshness sweep: Language chapter updated (7-dimension articulation
+     vector, the tonality row, the tone/tonogenesis/capacity paragraph, tone as
+     a vowel feature). Confidence-Gradient re-score: NONE — no open-questions
+     bet was moved by this epoch; the honest no-change recorded (per the
+     re-scored-not-frozen decision). No frontier idea-registry entry (tone was
+     spec-level design, now merged reality).
+  ✅ Re-merged main (Workflow Improvements PROC-8/9/10 etc.); shared CI censuses
+     refrozen byte-stable. mdbook builds clean, docs_consistency green.
 
 *(Given the scope, this expansion likely warrants a short spec in
 `docs/superpowers/specs/` before Stage 3 — the phoneme-model change touches

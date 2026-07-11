@@ -33,9 +33,14 @@ committed content rather than a frozen sentence.
 **Phonemes are feature-bearing segments; spellings are views.** The
 substrate's internal truth is never a string. A `Segment` is a bundle of
 articulatory features — for a consonant, place, manner, and voicing; for a
-vowel, height, backness, and rounding — the same move the species and
-perception vectors already made, an authored point in a small feature space
-rather than an opaque label. A handful of segments a people's anatomy
+vowel, height, backness, rounding, and, since the phonology epoch ([The Rising
+Tone](../chronicle/the-rising-tone.md)), a suprasegmental **tone** — the same
+move the species and perception vectors already made, an authored point in a
+small feature space rather than an opaque label. Tone is orthogonal to the
+segmental features: it lives on the syllable nucleus, so most peoples carry a
+single neutral tone with no contrast and render exactly as they did before the
+tier existed, while a tone-capable people draws high and low as a second,
+pitched channel over the same consonants and vowels. A handful of segments a people's anatomy
 affords but standard IPA does not name cleanly are permitted as **authored
 extensions**, each carrying a defined romanization and a best-effort
 IPA-adjacent notation rather than being forced into the nearest existing
@@ -57,20 +62,24 @@ is built from an **articulation vector** — the species crate's third closed
 vector, after the six-dimension psychology vector and the three-dimension
 perception vector, authored per species with goblin sitting at every
 scalar's 0.5 and every enumeration's goblin variant, the identity-at-baseline
-discipline both earlier vectors already keep. Six dimensions, no more: each
-one a named capacity the phonology engine intersects with whatever it draws,
-so that any difference between two peoples' sounds recounts to a dimension
-by name rather than to an author's ear. Widening this vector — a seventh
-dimension, a per-individual variation within a species — is real design work
-belonging to a campaign willing to weigh it, the same posture the species
-and perception vectors were built under and the same warning the frontier
-map keeps repeating: nothing here grows without someone choosing to grow it.
+discipline both earlier vectors already keep. Seven dimensions: each one a
+named capacity the phonology engine intersects with whatever it draws, so that
+any difference between two peoples' sounds recounts to a dimension by name
+rather than to an author's ear. The seventh, **tonality**, was the phonology
+epoch's own deliberate widening — the warning the earlier draft of this
+paragraph kept ("widening this vector is real design work belonging to a
+campaign willing to weigh it") discharged by a campaign that weighed it: tone is
+a capacity a body plan affords, so it earns a dimension rather than a hidden
+constant. The shipped humanoids sit at zero on it (atonal); the value earns its
+keep when the bestiary grows a serpent or a bird. Widening the vector further
+stays what it was — real design work belonging to a campaign willing to weigh
+it, nothing here growing without someone choosing to grow it.
 
 **The model card.** Every dimension below is **authored**, for both
 peoples — nothing in this table is drawn or fit, the same posture the
 species and perception model cards keep. Kobold's column continues the
 project's authoring method: a translation, by hand, of a reptilian,
-draconic-kin people's anatomy into six numbers a formula can read.
+draconic-kin people's anatomy into seven numbers a formula can read.
 
 | Dimension | Type | Goblin (baseline) | Kobold | Rationale (kobold) |
 |---|---|---|---|---|
@@ -79,6 +88,7 @@ draconic-kin people's anatomy into six numbers a formula can read.
 | Voicing contrast | scalar `[0,1]` | 0.5 | 0.6 | — |
 | Sibilance | scalar `[0,1]` | 0.5 | 0.9 | the draconic hiss — sibilant-rich |
 | Voice loudness | scalar `[0,1]` | 0.5 | 0.2 | small, frail, and stealthy — a dampable phonology |
+| Tonality | scalar `[0,1]` | 0.0 | 0.0 | atonal — the shipped humanoids carry no pitch contrast; tone is for the future bestiary |
 | Exotic manner (none, trill, click, or ejective) | enum | None | Trill | a signature resonant manner the anatomy affords |
 
 Voice loudness carries a second life beyond its row. The species crate does
@@ -112,6 +122,30 @@ phonotactics** — onset, nucleus, and coda templates with a drawn complexity
 Same seed, same labels, same language, every time: the phonology engine is
 pure and deterministic end to end, drawing nothing that the envelope did not
 first permit.
+
+**Tone: a second channel, and how a lost sound becomes pitch.** Tonality maps
+to a drawn **tone inventory** — one tone for an atonal people (the neutral
+default, no contrast), a contrastive high and low for a tone-capable one — over
+its own labeled stream, isolated so that adding it leaves an atonal people's
+draw byte-for-byte unchanged. Tone matters twice over. It is a dimension of
+*capacity*: the number of distinguishable syllables a language can form is its
+onsets times its nuclei times its codas times its tones, and the engine
+guarantees a floor on that product reachable through pitch — so a few-place
+people meets the bar by drawing tones rather than by growing consonants it has
+no anatomy for, keeping its character. And it is the endpoint of a sound change
+that is diachronically real: **tonogenesis**. When a merging rule drops a
+consonant — a two-consonant onset simplifying, a final coda falling — the
+voicing it carried is not simply lost; it is reborn as a tone on the neighbouring
+vowel, a dropped voiced consonant lowering the pitch and a voiceless one raising
+it, exactly as tone arose in Chinese and Vietnamese. This is a *regular*
+conditioned change, applied wherever its environment occurs rather than hunted
+word by word, so two roots a merger would have collapsed stay distinct precisely
+when they differed in the sound the merger destroyed — the segmental contrast
+transposed into pitch rather than erased. Cognate descent is untouched, because
+the rule reads the derivation's own history and never the shared proto. The
+shipped peoples are atonal, so tonogenesis is inert for them and their words
+change only through the epoch's reseed; the mechanism waits, complete, for the
+first tone-capable people the world admits.
 
 **Naming grammars, and the status-basis keying.** Three kinds of name this
 substrate generates — settlement names, deity names, deity epithets, place
