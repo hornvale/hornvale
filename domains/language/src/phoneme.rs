@@ -654,6 +654,7 @@ pub fn ipa(seg: &Segment) -> &'static str {
 /// macron (ā) — or the empty string for `Tone::Neutral`, which renders bare.
 /// A view over the segment, never stored; a word-level renderer
 /// ([`crate::naming::render_views`]) appends it right after the vowel it tones.
+/// type-audit: bare-ok(identifier-text)
 pub fn tone_mark_roman(tone: Tone) -> &'static str {
     match tone {
         Tone::Neutral => "",
@@ -666,6 +667,7 @@ pub fn tone_mark_roman(tone: Tone) -> &'static str {
 /// The IPA mark a `tone` appends to its vowel (spec §6): a Chao tone letter —
 /// High `˥`, Mid `˧`, Low `˩` — or the empty string for `Tone::Neutral`. A
 /// view, appended after the vowel by the word-level renderer.
+/// type-audit: bare-ok(identifier-text)
 pub fn tone_mark_ipa(tone: Tone) -> &'static str {
     match tone {
         Tone::Neutral => "",
