@@ -1,6 +1,7 @@
 //! Hornvale laboratory: batch studies over generated worlds.
 #![warn(missing_docs)]
 
+pub mod blackbox;
 pub mod chart;
 pub mod diff;
 mod metrics;
@@ -10,6 +11,7 @@ pub mod runner;
 pub mod study;
 pub mod summary;
 
+pub use blackbox::record_failure;
 pub use chart::{bar_chart_svg, charts_for};
 pub use diff::{render_diff, render_diff_results};
 pub use metrics::{Metric, MetricValue, SummaryKind, WorldView, registry, render_metric_list};

@@ -20,7 +20,9 @@
 //! window slips past this probe and is caught there.
 
 use hornvale_kernel::{Seed, quantize};
-use hornvale_lab::{MetricValue, Row, RunResult, Study, canonical_row, load_rows, load_study, run};
+use hornvale_lab::{
+    MetricValue, Row, RunResult, Study, canonical_row, load_rows, load_study, record_failure, run,
+};
 use std::path::Path;
 
 /// Seeds probed per census from the fixed head: seeds 0–2 — cheap enough
@@ -87,16 +89,23 @@ fn assert_fixture_fresh(live: &RunResult, fixture: &RunResult, study_path: &str,
                     row.seed, row.pin_set
                 )
             });
-        assert_eq!(
-            *pinned,
-            canonical_row(row),
-            "worldgen changed but the census fixture {rows_path} was not regenerated (seed {} \
-             / pin set '{}' differs). Run `make rebaseline` (or `cargo run --release -p \
-             hornvale -- lab run {study_path}`), review the diff, and commit it WITH the \
-             change that moved it (decision calibration-loads-the-census-fixture).",
-            row.seed,
-            row.pin_set
-        );
+        let canon = canonical_row(row);
+        if *pinned != canon {
+            // Best-effort: a failure to record the black-box world must never
+            // mask this mismatch. On success it names the recorded world; on
+            // an io failure it degrades to the plain message.
+            let recording_note = match record_failure(&live.study, row.seed, &row.pin_set) {
+                Ok(path) => format!(" Failing world recorded at {}.", path.display()),
+                Err(_) => String::new(),
+            };
+            panic!(
+                "worldgen changed but the census fixture {rows_path} was not regenerated (seed {} \
+                 / pin set '{}' differs). Run `make rebaseline` (or `cargo run --release -p \
+                 hornvale -- lab run {study_path}`), review the diff, and commit it WITH the \
+                 change that moved it (decision calibration-loads-the-census-fixture).{recording_note}",
+                row.seed, row.pin_set
+            );
+        }
     }
 }
 

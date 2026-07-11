@@ -11,7 +11,11 @@ use std::path::{Path, PathBuf};
 /// Resolve a pin set's roster name to a concrete species roster. The closed
 /// set the Lab knows (spec §5): `None`/`"default"` = shipped; the two solo
 /// null-control rosters otherwise. Unknown ⇒ loud `StudyError`.
-fn resolve_roster(name: Option<&str>) -> Result<Vec<SpeciesDef>, StudyError> {
+///
+/// `pub(crate)` (not private) so [`crate::blackbox::record_failure`] can
+/// resolve a pin set's roster exactly as the runner does, instead of
+/// duplicating this match.
+pub(crate) fn resolve_roster(name: Option<&str>) -> Result<Vec<SpeciesDef>, StudyError> {
     match name {
         None | Some("default") => Ok(hornvale_worldgen::default_roster()),
         Some("goblin-solo") => Ok(crate::goblin_solo_roster()),

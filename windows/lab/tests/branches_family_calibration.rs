@@ -2,7 +2,9 @@
 //! the 1,000-seed `branches-family` study and pinned per ADR 0016 —
 //! directions preregistered before the sweep ran (see each test's doc
 //! comment), exact measured values pinned after, never tuned to pass.
-use hornvale_lab::{MetricValue, RunResult, canonical_row, load_rows, load_study, run};
+use hornvale_lab::{
+    MetricValue, RunResult, canonical_row, load_rows, load_study, record_failure, run,
+};
 use std::path::Path;
 use std::sync::LazyLock;
 
@@ -101,10 +103,22 @@ fn lexicon_regular_family_holds_on_every_swept_seed() {
     let rows = flags(col("lexicon-regular-family"));
     assert_eq!(rows.len(), 1000, "every swept seed must report a flag");
     let failures: Vec<u64> = rows.iter().filter(|(_, v)| !v).map(|(s, _)| *s).collect();
-    assert!(
-        failures.is_empty(),
-        "lexicon-regular-family failed on seeds {failures:?}"
-    );
+    if let Some(&first_failure) = failures.first() {
+        // Best-effort black-box: record the first failing seed's world so a
+        // developer gets it on disk, not just a seed number. An io failure
+        // here must never mask the real assertion failure below.
+        let pin_set = BRANCHES
+            .rows
+            .iter()
+            .find(|r| r.seed == first_failure)
+            .map(|r| r.pin_set.as_str())
+            .unwrap_or("default");
+        let recording_note = match record_failure(&BRANCHES.study, first_failure, pin_set) {
+            Ok(path) => format!(" Failing world recorded at {}.", path.display()),
+            Err(_) => String::new(),
+        };
+        panic!("lexicon-regular-family failed on seeds {failures:?}.{recording_note}");
+    }
 }
 
 #[test]
