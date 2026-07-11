@@ -94,6 +94,23 @@ which metric moved and by how much (distribution deltas + numeric mean
 shift); `make lab-diff STUDY=<name>` diffs the working tree against HEAD.
 **Status**: Complete
 
+### Stage 2 deferred follow-ups (from the final whole-branch review)
+
+Small, non-blocking; fold into a later pass:
+- Timing-accuracy sweep for the "~145s" census lore: a debug-profile run of
+  the ignored guard measured ~450s. Touches the `#[ignore]` reason string
+  in `windows/lab/tests/calibration.rs`, the sanctioned sample in
+  `preregistration_guard.rs`, and CLAUDE.md; do as one coordinated edit
+  with a release-vs-debug note.
+- Add the `calibration-loads-the-census-fixture` decision cite to the
+  probe's missing-row panic (it carries only the `make rebaseline` fix).
+- Extract the duplicated quantize-canonicalize helper (in
+  `fixture_staleness.rs` and `calibration.rs`) into `hornvale_lab`.
+- Add a diff.rs test isolating mean-only movement (values shift within one
+  histogram bucket: distribution unchanged, mean line still rendered).
+- `make lab-diff`: fail fast with the real cause when
+  `git show HEAD:...rows.csv` fails (typo'd STUDY / brand-new study).
+
 ## Stage 3+ (later passes)
 
 TOOL-17/22/23 are CI-topology changes. PROC-7/8/9 are new drift-checks
