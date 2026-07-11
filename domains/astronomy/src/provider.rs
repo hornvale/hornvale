@@ -398,6 +398,33 @@ mod tests {
         }
     }
 
+    /// SKY-17: daylight carries the star's color — a K star's light is
+    /// warm and dim, an F star's harsh and blue-edged, a G star's golden —
+    /// and twilight takes the matching hue.
+    #[test]
+    fn daylight_and_twilight_carry_the_stars_color() {
+        assert!(daylight_words("orange dwarf (K)").contains("amber"));
+        assert!(daylight_words("yellow dwarf (G)").contains("golden"));
+        assert!(daylight_words("yellow-white dwarf (F)").contains("blue"));
+        assert!(twilight_words("orange dwarf (K)").contains("amber"));
+        assert!(twilight_words("yellow dwarf (G)").contains("gold"));
+        assert!(twilight_words("yellow-white dwarf (F)").contains("blue"));
+
+        // Through the report: the bare test sky is a G — golden noon,
+        // gold-glowing twilight.
+        let s = bare_sky(
+            0.0,
+            Vec::new(),
+            vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
+        );
+        let noon = s.sky_at(WorldTime { day: 10.5 }).description;
+        assert!(noon.contains("The light is golden."), "got {noon}");
+        let dusk = s.sky_at(WorldTime { day: 10.78 }).description;
+        assert!(dusk.contains("The horizon glows gold."), "got {dusk}");
+        let night = s.sky_at(WorldTime { day: 10.1 }).description;
+        assert!(!night.contains("horizon"), "night takes no hue: {night}");
+    }
+
     /// SKY-5: the tide is felt, not watched — every moon raises an Ambient
     /// tide phenomenon whose period is half the moon's transit interval
     /// (the bulge is axial: two highs per pass).
@@ -632,6 +659,32 @@ fn round2(x: f64) -> f64 {
 /// the dark still reads as twilight rather than night (SKY-7).
 const TWILIGHT_MARGIN: f64 = 0.05;
 
+/// The quality of a star's daylight from its spectral class (SKY-17):
+/// a cooler star pours warmer, dimmer light; a hotter one a harsher
+/// white. Keyed on the class letter the star's name already carries
+/// (`star.rs` — K, G or F on the shipped mass range).
+fn daylight_words(class_name: &str) -> &'static str {
+    if class_name.contains("(K)") {
+        "The light is amber and heavy, warmer than it is bright."
+    } else if class_name.contains("(F)") {
+        "The light is hard and white, edged with blue."
+    } else {
+        "The light is golden."
+    }
+}
+
+/// The twilight hue from the star's spectral class (SKY-17) — the same
+/// key as [`daylight_words`], seen at the horizon.
+fn twilight_words(class_name: &str) -> &'static str {
+    if class_name.contains("(K)") {
+        "The horizon smolders amber."
+    } else if class_name.contains("(F)") {
+        "The horizon shines pale blue-white."
+    } else {
+        "The horizon glows gold."
+    }
+}
+
 /// The eight-word moon-phase vocabulary, one word per eighth of the synodic
 /// cycle (SKY-14), indexed by [`phase_eighth`].
 const PHASE_WORDS: [&str; 8] = [
@@ -795,8 +848,12 @@ impl GeneratedSky {
                     } else {
                         "sinks toward evening"
                     };
-                    let mut description =
-                        format!("The sun, a {}, {}.", self.system.star.class_name, arc_words);
+                    let mut description = format!(
+                        "The sun, a {}, {}. {}",
+                        self.system.star.class_name,
+                        arc_words,
+                        daylight_words(&self.system.star.class_name)
+                    );
                     if *retrograde {
                         description.push_str(" Here it rises in the west and sets in the east.");
                     }
@@ -837,9 +894,14 @@ impl GeneratedSky {
                     // daylight window, the dark is twilight, not night.
                     let twilight =
                         fraction > dawn - TWILIGHT_MARGIN && fraction < dusk + TWILIGHT_MARGIN;
-                    let dark_word = if twilight { "Twilight." } else { "Night." };
+                    // SKY-17: twilight takes the star's hue at the horizon.
+                    let dark_words = if twilight {
+                        format!("Twilight. {}", twilight_words(&self.system.star.class_name))
+                    } else {
+                        "Night.".to_string()
+                    };
                     SkyReport {
-                        description: format!("{} {}", dark_word, parts.join(" ")),
+                        description: format!("{} {}", dark_words, parts.join(" ")),
                         bodies,
                     }
                 }
