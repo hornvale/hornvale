@@ -1,7 +1,7 @@
 //! Calibration: at tier 0, belief kind is a pure function of rotation.
 //! The instrument must reproduce known ground truth exactly (spec §2.5).
 use hornvale_culture::{BiomeClass, subsistence};
-use hornvale_lab::{MetricValue, RunResult, load_rows, load_study, run};
+use hornvale_lab::{MetricValue, Row, RunResult, load_rows, load_study, run};
 use std::path::Path;
 use std::sync::LazyLock;
 
@@ -58,6 +58,34 @@ fn census_fixture_matches_live_run() {
     ] {
         let study = load_study(Path::new(study_path)).expect("load study");
         let live = run(&study).expect("run study");
+        // Canonicalize live Numbers before comparing: the fixture's floats
+        // passed the quantizing serialization boundary (`render_csv`), the
+        // live run's have not. Without this the guard fails on every
+        // numeric metric's last ULPs — a false alarm the quantization
+        // epoch introduced.
+        let live = RunResult {
+            study: live.study.clone(),
+            metric_names: live.metric_names.clone(),
+            rows: live
+                .rows
+                .iter()
+                .map(|row| Row {
+                    seed: row.seed,
+                    pin_set: row.pin_set.clone(),
+                    values: row
+                        .values
+                        .iter()
+                        .map(|v| match v {
+                            MetricValue::Number(n) => {
+                                MetricValue::Number(hornvale_kernel::quantize(*n))
+                            }
+                            other => other.clone(),
+                        })
+                        .collect(),
+                    refusal: row.refusal.clone(),
+                })
+                .collect(),
+        };
         let csv = std::fs::read_to_string(rows_path).expect("read census fixture");
         let loaded = load_rows(&study, &csv).expect("reconstruct census from fixture");
         assert_eq!(

@@ -1,17 +1,18 @@
-# Empty table: type-audit is a deliberately out-of-workspace dev tool
-# (decision `non-workspace-dev-tools-may-use-parser-libraries`). Declaring it
-# its own workspace root keeps `--manifest-path` builds standalone even when
-# the repo is checked out as a git worktree nested inside the parent tree
-# (e.g. `.claude/worktrees/*`), where the parent Cargo.toml's `exclude` path
-# no longer matches.
-[workspace]
-
 [package]
 name = "type-audit"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
 publish = false
+
+# Empty table: this package is deliberately outside the main workspace
+# (decision `non-workspace-dev-tools-may-use-parser-libraries`). An empty
+# [workspace] here (not just the main Cargo.toml's `exclude`) stops cargo's
+# ancestor search at this manifest unconditionally — without it, a checkout
+# nested under another Cargo workspace (e.g. a worktree under
+# `.claude/worktrees/` inside the main repo tree) makes cargo walk past this
+# package's own workspace root and mistakenly bind to the outer one.
+[workspace]
 
 [lib]
 name = "type_audit"

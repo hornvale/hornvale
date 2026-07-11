@@ -65,26 +65,32 @@ fn render_root_table_snapshot(world: &World) -> String {
 #[test]
 fn proto_goblinoid_inventory_matches_the_committed_snapshot() {
     let world = reference_world();
-    assert_eq!(
-        render_inventory_snapshot(&world),
-        include_str!("fixtures/proto-goblinoid-inventory-seed-42.txt"),
+    hornvale_kernel::golden::assert_golden(
+        std::path::Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/proto-goblinoid-inventory-seed-42.txt"
+        )),
+        &render_inventory_snapshot(&world),
         "proto-goblinoid's inventory drifted from the committed snapshot — see this file's \
          module doc: every daughter (goblin/hobgoblin/bugbear) nativizes from this exact \
          inventory, so this is the shared-ancestor diamond dependency moving. If deliberate, \
-         regenerate the fixture in this commit and record why in the chronicle."
+         regenerate the fixture in this commit and record why in the chronicle.",
     );
 }
 
 #[test]
 fn proto_goblinoid_root_table_matches_the_committed_snapshot() {
     let world = reference_world();
-    assert_eq!(
-        render_root_table_snapshot(&world),
-        include_str!("fixtures/proto-goblinoid-root-table-seed-42.txt"),
+    hornvale_kernel::golden::assert_golden(
+        std::path::Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/proto-goblinoid-root-table-seed-42.txt"
+        )),
+        &render_root_table_snapshot(&world),
         "proto-goblinoid's proto-root table drifted from the committed snapshot — see this \
          file's module doc: every daughter's cognate forms are evolved from these exact \
          proto-roots, so this is the shared-ancestor diamond dependency moving. If deliberate, \
-         regenerate the fixture in this commit and record why in the chronicle."
+         regenerate the fixture in this commit and record why in the chronicle.",
     );
 }
 
