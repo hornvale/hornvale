@@ -70,11 +70,18 @@ while IFS= read -r path; do
             add_pkg "hornvale"
             explain+=("$path -> $crate + hornvale-worldgen + all windows + hornvale (cli)")
             ;;
-        windows/worldgen/*)
-            add_pkg "hornvale-worldgen"
+        windows/worldgen/* | windows/almanac/*)
+            # hornvale-worldgen (the composition root) depends on
+            # hornvale-almanac (it renders almanac views) — see
+            # windows/worldgen/Cargo.toml — so an almanac change must run
+            # worldgen's tests and worldgen's own dependents
+            # (hornvale-lab, hornvale-scene). Almanac is the only window
+            # with an incoming edge today; if another window ever gains
+            # one, give it the same treatment (the dependency rules live
+            # in cli/tests/architecture.rs).
             for w in "${windows_list[@]}"; do add_pkg "$w"; done
             add_pkg "hornvale"
-            explain+=("$path -> hornvale-worldgen + all windows + hornvale (cli)")
+            explain+=("$path -> all windows + hornvale (cli)")
             ;;
         windows/*/*)
             window="${path#windows/}"
