@@ -282,6 +282,11 @@
         "functional": true,
         "doc": "planning depth, 0-1"
       },
+      "species-tonality": {
+        "name": "species-tonality",
+        "functional": true,
+        "doc": "tonal propensity, 0 atonal ↔ 1 tonal"
+      },
       "species-voice-loudness": {
         "name": "species-voice-loudness",
         "functional": true,
@@ -1065,7 +1070,7 @@
         "subject": 3,
         "predicate": "name",
         "object": {
-          "Text": "Raxaxokroxog"
+          "Text": "Xaroxokroxog"
         },
         "place": 3,
         "day": 0.0,
@@ -1385,7 +1390,7 @@
         "subject": 7,
         "predicate": "name",
         "object": {
-          "Text": "Raxaxoxokrrorat"
+          "Text": "Xarorotraxokrrorat"
         },
         "place": 7,
         "day": 0.0,
@@ -1465,7 +1470,7 @@
         "subject": 8,
         "predicate": "name",
         "object": {
-          "Text": "Xoxoxoq"
+          "Text": "Rotraxoxoq"
         },
         "place": 8,
         "day": 0.0,
@@ -1625,7 +1630,7 @@
         "subject": 10,
         "predicate": "name",
         "object": {
-          "Text": "Raxarorrat"
+          "Text": "Xarororrat"
         },
         "place": 10,
         "day": 0.0,
@@ -1705,7 +1710,7 @@
         "subject": 11,
         "predicate": "name",
         "object": {
-          "Text": "Xoraxaratrratrra"
+          "Text": "Rotraxaroratrratrra"
         },
         "place": 11,
         "day": 0.0,
@@ -1785,7 +1790,7 @@
         "subject": 12,
         "predicate": "name",
         "object": {
-          "Text": "Xorokroxa"
+          "Text": "Rotrarokroxa"
         },
         "place": 12,
         "day": 0.0,
@@ -1945,7 +1950,7 @@
         "subject": 14,
         "predicate": "name",
         "object": {
-          "Text": "Raxaxoxaxoq"
+          "Text": "Xarorotraxaxoq"
         },
         "place": 14,
         "day": 0.0,
@@ -2105,7 +2110,7 @@
         "subject": 16,
         "predicate": "name",
         "object": {
-          "Text": "Xoraxaratro"
+          "Text": "Rotraxaroratro"
         },
         "place": 16,
         "day": 0.0,
@@ -2185,7 +2190,7 @@
         "subject": 17,
         "predicate": "name",
         "object": {
-          "Text": "Raxaxaxorragrorog"
+          "Text": "Xarororragrorog"
         },
         "place": 17,
         "day": 0.0,
@@ -2345,7 +2350,7 @@
         "subject": 19,
         "predicate": "name",
         "object": {
-          "Text": "Xaxoraxaxotxora"
+          "Text": "Roxaroxotxora"
         },
         "place": 19,
         "day": 0.0,
@@ -2425,7 +2430,7 @@
         "subject": 20,
         "predicate": "name",
         "object": {
-          "Text": "Xoraxaxoxaxa"
+          "Text": "Rotraxaroxoxaxa"
         },
         "place": 20,
         "day": 0.0,
@@ -3065,7 +3070,7 @@
         "subject": 28,
         "predicate": "name",
         "object": {
-          "Text": "Raxaxatro"
+          "Text": "Xaroxatro"
         },
         "place": 28,
         "day": 0.0,
@@ -3305,7 +3310,7 @@
         "subject": 31,
         "predicate": "name",
         "object": {
-          "Text": "Rraraxaxokrraqrrot"
+          "Text": "Rakraxaroxokrraqrrot"
         },
         "place": 31,
         "day": 0.0,
@@ -3465,7 +3470,7 @@
         "subject": 33,
         "predicate": "name",
         "object": {
-          "Text": "Xaxoxokrrag"
+          "Text": "Roxokrrag"
         },
         "place": 33,
         "day": 0.0,
@@ -3545,7 +3550,7 @@
         "subject": 34,
         "predicate": "name",
         "object": {
-          "Text": "Raxarraxo"
+          "Text": "Xarorraxo"
         },
         "place": 34,
         "day": 0.0,
@@ -3705,7 +3710,7 @@
         "subject": 36,
         "predicate": "name",
         "object": {
-          "Text": "Raxarrarotxo"
+          "Text": "Xarorakrarotxo"
         },
         "place": 36,
         "day": 0.0,
@@ -3945,7 +3950,7 @@
         "subject": 39,
         "predicate": "name",
         "object": {
-          "Text": "Raxarrograkxo"
+          "Text": "Xarorrograkxo"
         },
         "place": 39,
         "day": 0.0,
@@ -4025,7 +4030,7 @@
         "subject": 40,
         "predicate": "name",
         "object": {
-          "Text": "Rraxatra"
+          "Text": "Rakraxatra"
         },
         "place": 40,
         "day": 0.0,
@@ -4105,7 +4110,7 @@
         "subject": 41,
         "predicate": "name",
         "object": {
-          "Text": "Raxarrorra"
+          "Text": "Xarorrorra"
         },
         "place": 41,
         "day": 0.0,
@@ -4185,7 +4190,7 @@
         "subject": 42,
         "predicate": "name",
         "object": {
-          "Text": "Raxarrarrarroxaq"
+          "Text": "Xarorakrarrarroxaq"
         },
         "place": 42,
         "day": 0.0,
@@ -4265,7 +4270,7 @@
         "subject": 43,
         "predicate": "name",
         "object": {
-          "Text": "Rraraxarrarra"
+          "Text": "Rakraxarorrarra"
         },
         "place": 43,
         "day": 0.0,
@@ -4345,7 +4350,7 @@
         "subject": 44,
         "predicate": "name",
         "object": {
-          "Text": "Rrarragxoq"
+          "Text": "Rakrarragxoq"
         },
         "place": 44,
         "day": 0.0,
@@ -4425,7 +4430,7 @@
         "subject": 45,
         "predicate": "name",
         "object": {
-          "Text": "Raxaxarrarrog"
+          "Text": "Xaroxarrarrog"
         },
         "place": 45,
         "day": 0.0,
@@ -4505,7 +4510,7 @@
         "subject": 46,
         "predicate": "name",
         "object": {
-          "Text": "Rraraxaxaqrrorra"
+          "Text": "Rakraxaroxaqrrorra"
         },
         "place": 46,
         "day": 0.0,
@@ -4585,7 +4590,7 @@
         "subject": 47,
         "predicate": "name",
         "object": {
-          "Text": "Rraraxarotxotrro"
+          "Text": "Rakraxarorotxotrro"
         },
         "place": 47,
         "day": 0.0,
@@ -4665,7 +4670,7 @@
         "subject": 48,
         "predicate": "name",
         "object": {
-          "Text": "Raxarakrot"
+          "Text": "Xarorakrot"
         },
         "place": 48,
         "day": 0.0,
@@ -4745,7 +4750,7 @@
         "subject": 49,
         "predicate": "name",
         "object": {
-          "Text": "Rrarrogra"
+          "Text": "Rakrarrogra"
         },
         "place": 49,
         "day": 0.0,
@@ -4905,7 +4910,7 @@
         "subject": 51,
         "predicate": "name",
         "object": {
-          "Text": "Raxarararatrotxa"
+          "Text": "Xarorarroratrotxa"
         },
         "place": 51,
         "day": 0.0,
@@ -4985,7 +4990,7 @@
         "subject": 52,
         "predicate": "name",
         "object": {
-          "Text": "Raxarraxoxat"
+          "Text": "Xarorraxoxat"
         },
         "place": 52,
         "day": 0.0,
@@ -5065,7 +5070,7 @@
         "subject": 53,
         "predicate": "name",
         "object": {
-          "Text": "Rararaxarrorraqxo"
+          "Text": "Rarroxarorrorraqxo"
         },
         "place": 53,
         "day": 0.0,
@@ -5385,7 +5390,7 @@
         "subject": 57,
         "predicate": "name",
         "object": {
-          "Text": "Raraxarraxot"
+          "Text": "Raraxarorraxot"
         },
         "place": 57,
         "day": 0.0,
@@ -5705,7 +5710,7 @@
         "subject": 61,
         "predicate": "name",
         "object": {
-          "Text": "Xoxarraratrroq"
+          "Text": "Rorrarraratrroq"
         },
         "place": 61,
         "day": 0.0,
@@ -5785,7 +5790,7 @@
         "subject": 62,
         "predicate": "name",
         "object": {
-          "Text": "Raxarragrraxot"
+          "Text": "Xarorragrraxot"
         },
         "place": 62,
         "day": 0.0,
@@ -8235,7 +8240,7 @@
         "subject": 78,
         "predicate": "deity-name",
         "object": {
-          "Text": "Raxarro"
+          "Text": "Xaroxokxa"
         },
         "place": null,
         "day": 0.0,
@@ -8245,7 +8250,7 @@
         "subject": 78,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "raxarro"
+          "Text": "xaroxokxa"
         },
         "place": null,
         "day": 0.0,
@@ -8255,7 +8260,7 @@
         "subject": 78,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Rro"
+          "Text": "Xokxa"
         },
         "place": null,
         "day": 0.0,
@@ -8265,7 +8270,7 @@
         "subject": 78,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "rro"
+          "Text": "xokxa"
         },
         "place": null,
         "day": 0.0,
@@ -8335,7 +8340,7 @@
         "subject": 79,
         "predicate": "deity-name",
         "object": {
-          "Text": "Raxarro"
+          "Text": "Xaroxokxa"
         },
         "place": null,
         "day": 0.0,
@@ -8345,7 +8350,7 @@
         "subject": 79,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "raxarro"
+          "Text": "xaroxokxa"
         },
         "place": null,
         "day": 0.0,
@@ -8355,7 +8360,7 @@
         "subject": 79,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Raxa"
+          "Text": "Xaro"
         },
         "place": null,
         "day": 0.0,
@@ -8365,7 +8370,7 @@
         "subject": 79,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "raxa"
+          "Text": "xaro"
         },
         "place": null,
         "day": 0.0,
@@ -8425,7 +8430,7 @@
         "subject": 80,
         "predicate": "deity-name",
         "object": {
-          "Text": "Ra"
+          "Text": "Xatrro"
         },
         "place": null,
         "day": 0.0,
@@ -8435,7 +8440,7 @@
         "subject": 80,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "ra"
+          "Text": "xatrro"
         },
         "place": null,
         "day": 0.0,
@@ -8445,7 +8450,7 @@
         "subject": 80,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Rarro"
+          "Text": "Xatrroxokxa"
         },
         "place": null,
         "day": 0.0,
@@ -8455,7 +8460,7 @@
         "subject": 80,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "rarro"
+          "Text": "xatrroxokxa"
         },
         "place": null,
         "day": 0.0,
@@ -8515,7 +8520,7 @@
         "subject": 81,
         "predicate": "deity-name",
         "object": {
-          "Text": "Xotro"
+          "Text": "Rora"
         },
         "place": null,
         "day": 0.0,
@@ -8525,7 +8530,7 @@
         "subject": 81,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "xotro"
+          "Text": "rora"
         },
         "place": null,
         "day": 0.0,
@@ -8535,7 +8540,7 @@
         "subject": 81,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Xotro"
+          "Text": "Rora"
         },
         "place": null,
         "day": 0.0,
@@ -8545,7 +8550,7 @@
         "subject": 81,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "xotro"
+          "Text": "rora"
         },
         "place": null,
         "day": 0.0,
@@ -8783,6 +8788,16 @@
       },
       {
         "subject": 82,
+        "predicate": "species-tonality",
+        "object": {
+          "Number": 0.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 82,
         "predicate": "species-exotic-manner",
         "object": {
           "Text": "none"
@@ -8936,6 +8951,16 @@
         "predicate": "species-voice-loudness",
         "object": {
           "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 83,
+        "predicate": "species-tonality",
+        "object": {
+          "Number": 0.0
         },
         "place": null,
         "day": 0.0,
@@ -9103,6 +9128,16 @@
       },
       {
         "subject": 84,
+        "predicate": "species-tonality",
+        "object": {
+          "Number": 0.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 84,
         "predicate": "species-exotic-manner",
         "object": {
           "Text": "none"
@@ -9256,6 +9291,16 @@
         "predicate": "species-voice-loudness",
         "object": {
           "Number": 0.2
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 85,
+        "predicate": "species-tonality",
+        "object": {
+          "Number": 0.0
         },
         "place": null,
         "day": 0.0,

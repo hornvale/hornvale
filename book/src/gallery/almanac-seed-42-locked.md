@@ -31,34 +31,34 @@ The air organizes into a single day–night overturning (tidally locked); 10 lan
 Some 8% of the surface is habitable — land with water and a tolerable season.
 
 - **Xngatnebvned** — temperate-rainforest
-- **Xorogroq** — temperate-rainforest
+- **Rotrarogroq** — temperate-rainforest
 - **Ttoemjeo** — temperate-forest
 - **Shngaoshngaash** — temperate-forest
 - **Ngebxnged** — temperate-forest
-- **Raratrratrrot** — alpine
-- **Rrarrarro** — temperate-forest
-- **Rarrogrro** — temperate-forest
-- **Rarraxokraro** — temperate-forest
-- **Rarroroqraq** — temperate-forest
-- **Rrararroxa** — temperate-forest
-- **Rararaxora** — tropical-seasonal-forest
+- **Rogrraratrratrrot** — alpine
+- **Rakrarrarro** — temperate-forest
+- **Xatrrorrogrro** — temperate-forest
+- **Xatrrorakraxokraro** — temperate-forest
+- **Xatrrorroroqraq** — temperate-forest
+- **Rakraxatrrorroxa** — temperate-forest
+- **Rarroxatrroxora** — tropical-seasonal-forest
 - **Fngobfngod** — tropical-seasonal-forest
 - **Sfeknadnged** — tropical-seasonal-forest
 - **Vngakvngabxned** — tropical-seasonal-forest
 - **Svakxnad** — tropical-seasonal-forest
 - **Ngokxnotsfad** — tropical-seasonal-forest
-- **Rarrarrorora** — temperate-forest
+- **Xatrrorakrarrorora** — temperate-forest
 - **Xnodngek** — tropical-seasonal-forest
 - **Zxedneknod** — tropical-seasonal-forest
 - **Fneknebzfot** — tropical-seasonal-forest
 - **Zhvabnet** — tropical-seasonal-forest
 - **Fngatzhxod** — tropical-seasonal-forest
-- **Rarararokxarrat** — tropical-seasonal-forest
+- **Xatrrorarrorokxarrat** — tropical-seasonal-forest
 - **Vngeksfak** — tropical-seasonal-forest
-- **Rararaxarrok** — tropical-seasonal-forest
+- **Rarroxatrroxarrok** — tropical-seasonal-forest
 - **Netzhxed** — tropical-seasonal-forest
-- **Rararrarrog** — tropical-seasonal-forest
-- **Raroxorra** — tropical-seasonal-forest
+- **Rarrorrarrog** — tropical-seasonal-forest
+- **Xatrroroxorra** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -72,7 +72,7 @@ The land holds 29 settlement(s).
 The chief bugbear settlement, Shngaoshngaash, holds 406 souls amid temperate-forest.
 The chief goblin settlement, Xngatnebvned, holds 522 souls amid temperate-rainforest.
 The chief hobgoblin settlement, Ttoemjeo, holds 382 souls amid temperate-forest.
-The chief kobold settlement, Xorogroq, holds 404 souls amid temperate-rainforest.
+The chief kobold settlement, Rotrarogroq, holds 404 souls amid temperate-rainforest.
 
 The bugbear lair of **Shngaoshngaash**, population 406.
 
@@ -89,9 +89,9 @@ The hobgoblin legion of **Ttoemjeo**, population 382.
 Ttoemjeo lives by farming.
 Its roles, lowest to highest: slave, laborer, smith, augur, warlord.
 
-The kobold warren of **Xorogroq**, population 404.
+The kobold warren of **Rotrarogroq**, population 404.
 
-Xorogroq lives by farming.
+Rotrarogroq lives by farming.
 Its roles, lowest to highest: digger, shaper, keeper, elders.
 
 ## The Gods
@@ -138,13 +138,13 @@ In the legion of **Ttoemjeo**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the warren of **Xorogroq**, an organized priesthood tends its own pantheon:
+In the warren of **Rotrarogroq**, an organized priesthood tends its own pantheon:
 
-> Rora Rora is: Rora Rora is always watching. That's how it's always been. That's how it's always been. Rora is the highest among the gods. *(who presides)*
+> Rorroxatrro Rorroxatrro is: Rorroxatrro Rorroxatrro is always watching. That's how it's always been. That's how it's always been. Rorroxatrro is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Xotro Xotro is felt more than seen. That's how it's always been. That's how it's always been. Xotro is a great one among the gods.
+> Rora Rora is felt more than seen. That's how it's always been. That's how it's always been. Rora is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
