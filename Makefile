@@ -7,12 +7,14 @@
 #   make quick        # cheap half: fmt --check + clippy (the pre-commit gate)
 #   make gate         # the full commit gate: fmt + clippy + workspace tests
 #   make rebaseline   # regenerate every committed generated artifact
+#   make rebaseline-goldens # accept drifted byte-golden test fixtures
+#   make lab-diff STUDY=<name> # report which census metrics moved vs HEAD
 #   make install-hooks# point git at scripts/hooks (opt-in; edits local config)
 #
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate fmt fmt-check clippy test rebaseline artifacts install-hooks
+.PHONY: help quick gate fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff install-hooks
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -37,6 +39,19 @@ test: ## Run the full workspace test suite
 
 rebaseline artifacts: ## Regenerate every committed generated artifact (review the diff, then commit)
 	bash scripts/regenerate-artifacts.sh
+
+rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), then review the diff
+	REBASELINE=1 cargo test -q -p hornvale --test lens_purity
+	REBASELINE=1 cargo test -q -p hornvale-scene --test golden
+	REBASELINE=1 cargo test -q -p hornvale-worldgen --test proto_goblinoid_golden
+
+lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STUDY=census-lands-drift)
+	@test -n "$(STUDY)" || { echo "usage: make lab-diff STUDY=<study-name>"; exit 2; }
+	@old="$$(mktemp)"; \
+	git show HEAD:book/src/laboratory/generated/$(STUDY)/rows.csv > "$$old"; \
+	cargo run -q -p hornvale -- lab diff studies/$(STUDY).study.json "$$old" \
+	    book/src/laboratory/generated/$(STUDY)/rows.csv; \
+	status=$$?; rm -f "$$old"; exit $$status
 
 install-hooks: ## Point git at scripts/hooks (runs `make quick` pre-commit)
 	git config core.hooksPath scripts/hooks

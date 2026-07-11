@@ -5,6 +5,15 @@ edition = "2024"
 license = "MIT"
 publish = false
 
+# Empty table: this package is deliberately outside the main workspace
+# (decision `non-workspace-dev-tools-may-use-parser-libraries`). An empty
+# [workspace] here (not just the main Cargo.toml's `exclude`) stops cargo's
+# ancestor search at this manifest unconditionally — without it, a checkout
+# nested under another Cargo workspace (e.g. a worktree under
+# `.claude/worktrees/` inside the main repo tree) makes cargo walk past this
+# package's own workspace root and mistakenly bind to the outer one.
+[workspace]
+
 [lib]
 name = "type_audit"
 path = "src/lib.rs"

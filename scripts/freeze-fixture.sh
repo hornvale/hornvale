@@ -23,10 +23,16 @@
 # dest here; for those the dest and the --out path are the same file and this
 # script's stdout capture is a harmless empty overwrite — prefer using it for
 # stdout-producing subcommands (almanac, phonology, concepts, streams, map).
+#
+# Scope (TOOL-20): living byte-goldens (world-seed-42.json, the scene tiles
+# pin, the proto-goblinoid snapshots) are accepted via REBASELINE=1 — see
+# `make rebaseline-goldens` and kernel/src/golden.rs. This script remains
+# for freezing *historical* pins (the pre-<campaign> fixtures), whose bytes
+# must never track current code and so must never grow an accept path.
 set -euo pipefail
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || $# -lt 3 ]]; then
-    sed -n '2,28p' "$0"
+    sed -n '2,31p' "$0"
     exit 2
 fi
 
