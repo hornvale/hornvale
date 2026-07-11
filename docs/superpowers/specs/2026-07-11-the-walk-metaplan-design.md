@@ -79,17 +79,44 @@ the player once the spine exists, not a distant separate axis.
 long-lived dragon must be the *same* agent abstraction — only the vectors differ.
 The dragon is the standing stress case.
 
-### 3.2 One ledger, two vantages (knowledge = projection)
+### 3.2 One event ledger; belief is a derived view (not a second source of truth)
 
-There is a single ledger of ground-truth happenings. **What an agent knows is a
-filtered projection of it** through that agent's perception and reach — not a
-separate belief store. Coarse-constrains-fine then holds for knowledge *for
-free*: an agent's knowledge is structurally a subset of truth, unable to
-contradict it. False belief is modeled as a **lossy / noised projection** (rumor,
-fog, propaganda are gaps in the projection), not as an independent ledger.
+There is a single ledger of ground-truth happenings. **What an agent knows and
+believes is *derived* from it** — never a rival store of truth. Three mechanisms,
+arriving in tiers:
 
-This **supersedes MAP-2's "provenance-tagged second ledger"** framing: one
-ledger, projected, rather than two ledgers kept manually consistent.
+- **Projection** (perception): what an agent has observed is a lossy, spoofable
+  projection of the events in reach. This alone gives *ignorance* — the fog —
+  knowledge as a subset of truth, so coarse-constrains-fine holds for free.
+- **Inference** (belief): what an agent *concludes* from its perceived events.
+  This is where **false belief** lives — not a stored falsehood, but inference
+  over truthfully-perceived (and possibly *deceptive*) events. A rumor is a *true
+  event* (someone really said it); believing it is inference over the perceived
+  utterance. This is the *inference program*, frontier UNI-1.
+- **Belief-events** (the causeless cases — innate prior, dream, charm, authorial
+  injection) are first-class events in the *same* ledger, so even these carry
+  provenance.
+
+Belief may be **materialized as a per-agent cache** for performance, but the cache
+is always reconstructible from the ledger — derivation memoized, not a second
+source of truth (per §3.4: belief is re-derivable, hence derived).
+
+**Deception falls out of this, not out of a second ledger.** Every trick — lie,
+illusion, disguise, forged evidence, charm — plants a *real* event or object in
+ground truth; the victim perceives it truthfully (spoofable perception) and infers
+a falsehood (credulous inference). Two payoffs a stored-belief model forgoes: (1)
+**provenance** — `why does the guard think you're a priest?` → "he saw you in
+priest robes on day 412"; (2) **automatic invalidation** — drop the disguise and
+his belief corrects on next look with no bookkeeping, and one illusion-event fools
+a whole crowd in O(1) where a stored model would write and later hunt down N
+beliefs.
+
+This **supersedes MAP-2's "provenance-tagged second ledger"** framing: one ledger,
+belief derived — provenance is the *causal chain*, not a tag. **Tiering:** the
+walkable frozen slice (Milestone 1) needs only pure projection (no one lies in a
+frozen, single-agent world); the inference tier (UNI-1) and belief-events arrive
+with the social/deception features in Milestone 2, so the architecture costs
+nothing early.
 
 ### 3.3 Surprise is epistemic, not stochastic
 
@@ -219,11 +246,12 @@ in its own lane, in its own worktree, landing independently.
      `possess` returns *something* end-to-end on day one.
      (Mirrors Campaign 1: tier-0 of every domain first.)
 
-  A - Knowledge  projection tiers -> subset test -> false-belief=lossy   [cheap]
-  B - Sight      vantage query -> focalizer -> registers/anti-repetition [cheap]  <- room-scale-variety
-  C - Space      local-space model -> go/move -> examine     [wg-read, then cheap] <- crust
+  A - Knowledge  projection tiers -> subset test   (the fog: ignorance only) [cheap]
+  B - Sight      vantage query -> focalizer -> registers/anti-repetition     [cheap]  <- room-scale-variety
+  C - Space      local-space model -> go/move -> examine       [wg-read, then cheap] <- crust
         === MILESTONE 1: walkable frozen slice = Seam + A + B + C ===
-  D - Time       event ledger -> confabulation -> liveness/NPCs -> re-drop
+  D - Time+mind  event ledger -> confabulation -> liveness/NPCs -> re-drop
+                 -> inference/belief tier (UNI-1): rumor, lies, deception
                  [event ledger is kernel/determinism-sensitive; rest cheap]
         === MILESTONE 2: living world = + D ===
 ```
@@ -310,14 +338,20 @@ they are named here, not frozen here.
 ## 10. Frontier bookkeeping
 
 - **MAP-2** (epistemic layer) — **refined**: "provenance-tagged *second* ledger" →
-  "one ledger, two vantages (projection)" per §3.2. Update the row; land in I.
+  one event ledger with belief *derived* by projection + inference (§3.2);
+  provenance is the causal chain, not a tag. Land projection in I; the inference
+  tier in Milestone 2.
+- **UNI-1** (the inference program) — **scheduled**: it is the belief tier of §3.2
+  (turning perceived events into possibly-false belief), landing with Milestone
+  2's social/deception features. Update the row from frontier to spec'd-for-M2.
 - **MAP-20** (runtime-vs-knowledge boundary) — **resolved / spec'd** by §3.4's
   reversibility rule. Flip `raw` → `spec'd`, pointing at this document.
 - **MAP-15** (the delimited event-game), **TOOL-2** (player-facing ethnography) —
   **absorbed** into VI (Drama).
 - **DOM-3** (ecology crate) — noted as a side-branch; unchanged status.
 - **New decisions to record** in `docs/decisions/`: (a) the PC is a promoted seeded
-  agent, no authored opening; (b) one ledger, two vantages; (c) surprise is
+  agent, no authored opening; (b) one event ledger — belief is a derived view
+  (projection + inference), never a second source of truth; (c) surprise is
   epistemic, not stochastic. (The seam boundary rule is recorded via MAP-20's
   resolution.)
 
