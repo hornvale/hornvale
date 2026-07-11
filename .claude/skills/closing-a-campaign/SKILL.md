@@ -18,7 +18,10 @@ not done until every one is checked or explicitly N/A.
 1. **Preflight the integration.** From the campaign branch: `make
    preflight`. On NO-GO: merge main INTO the branch, re-run the full gate
    there, re-run the preflight. Repeat every time main moves — parallel
-   sessions are the norm here, not the exception.
+   sessions are the norm here, not the exception. If this preflight is the
+   branch's first meeting with main since the campaign began, the
+   stage-boundary absorption cadence (CLAUDE.md Process) was missed —
+   record that in the retrospective.
 
 2. **DoD artifacts, on the branch, before merging:**
    - **Chronicle entry** — `book/src/chronicle/<slug>.md`, name-only
