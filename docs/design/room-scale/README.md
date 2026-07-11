@@ -18,6 +18,17 @@ small enclosed space to a small patch of wilderness distinct from its neighbors.
   Includes the build order, a confidence/value registry of all 60, and the open
   questions. **This supersedes the cycles as the working technical artifact.**
 
+## Keystone design
+
+- **[p2-subdivision-design.md](p2-subdivision-design.md)** — first-pass design for
+  **P2**, the deterministic hierarchical subdivision that defines what a "room"
+  is and gates every other primitive. Grounded in `kernel/src/geosphere.rs`: rooms
+  are deeper triangles of the same icosphere, addressed by `(base face + child
+  path)`, so adjacency stays inside one continuous mesh and the pentagon problem
+  is confined to 12 known points. Includes the addressing scheme, lazy geometry,
+  the neighbor-walk crux, integer-only seeding (a cross-platform determinism
+  decision), constitutional fit, and a validation plan.
+
 ## The ideation cycles (raw material behind the synthesis)
 
 - **[cycle-01-ideonomy.md](cycle-01-ideonomy.md)** — 20 core mechanisms: the
@@ -38,7 +49,10 @@ different ideational moves rather than one default routine.
 
 ## Status of the keystone
 
-The synthesis recommends specifying **P2 (deterministic hierarchical
-subdivision)** first — it defines what a "room" even is and gates every other
-primitive. Its hard sub-problem is neighbor adjacency across icosphere cell
-seams (see synthesis §6).
+**P2 has a first-pass design** ([p2-subdivision-design.md](p2-subdivision-design.md)).
+The former hard sub-problem — neighbor adjacency across cell seams — is largely
+dissolved by treating rooms as deeper triangles of the *same* icosphere (one
+continuous mesh, never independent per-cell grids). The remaining first-order
+risk is the integer-only triangle-quadtree neighbor walk; the recommended next
+step is a throwaway kernel spike of that walk, validated against a fully-built
+`Geosphere::new(7)` as the oracle.
