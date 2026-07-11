@@ -60,6 +60,7 @@
 - [Common Ground](./chronicle/common-ground.md)
 - [The Branches](./chronicle/the-branches.md)
 - [The Rising Tone](./chronicle/the-rising-tone.md)
+- [The Fast Gate](./chronicle/the-fast-gate.md)
 
 # The Gallery
 

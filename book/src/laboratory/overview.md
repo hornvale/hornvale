@@ -63,8 +63,10 @@ off every local `cargo test`, and it is re-run and drift-checked on every
 build like the other two.
 
 Between commits, a cheap always-on probe (`windows/lab/tests/fixture_staleness.rs`)
-regenerates each census's first three seeds live on every `cargo test` and
-compares them against the committed rows — so a worldgen change that moves
+regenerates each census's first three seeds — plus a rotating three-seed
+window whose position derives from the committed fixture's own bytes, so
+successive regenerations sweep different slices of the seed range — live on
+every `cargo test` and compares them against the committed rows — so a worldgen change that moves
 the census fails locally with the regeneration instruction (`make
 rebaseline`) instead of surfacing an hour later in CI's full
 regenerate-and-diff.

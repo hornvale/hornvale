@@ -1,5 +1,9 @@
 # Test-system quick wins — implementation plan
 
+> **Status: COMPLETE (2026-07-11).** All five tasks landed and reviewed;
+> chronicle entry `book/src/chronicle/the-fast-gate.md`, retrospective
+> `docs/retrospectives/the-fast-gate.md`.
+
 Five small improvements from the test-system ideonomy batch (recorded in the
 idea registry, this branch), ordered by leverage. Each task is independent,
 lands as its own commit on `test-system-ideas`, and flips its registry row
