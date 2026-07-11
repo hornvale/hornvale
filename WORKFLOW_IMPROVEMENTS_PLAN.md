@@ -63,11 +63,11 @@ Self-tested with inline good/bad samples.
 sanctioned); the bad-sample unit tests prove rejection.
 **Status**: Complete
 
-## Stage 2: The fixture spine + review surface (this pass)
+## Stage 2: The fixture spine + review surface
 
 **Goal**: the two rows that build on TOOL-15's regeneration spine (TOOL-16,
 TOOL-20) plus the review-surface companion (TOOL-19). Plan:
-`docs/superpowers/plans/2026-07-10-workflow-improvements-stage-2.md`.
+`docs/superpowers/plans/2026-07-10-workflow-improvements-stage-2.md`. All three landed; see the plan file for details.
 
 ### 2a. TOOL-16 — the fixture-staleness probe
 **Deliverable**: `windows/lab/tests/fixture_staleness.rs` — regenerate the
