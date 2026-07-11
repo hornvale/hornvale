@@ -128,7 +128,8 @@ pub trait PhenomenaSource {
 
 /// Aggregate all sources, sorted by salience descending. Ties break by
 /// kind then description so output order never depends on source order
-/// alone being stable — determinism is constitutional.
+/// alone being stable — determinism is constitutional, and every sort
+/// carries a deterministic tie-break (decision 0005).
 pub fn observe(sources: &[&dyn PhenomenaSource], ctx: &ObserverContext) -> Vec<Phenomenon> {
     let mut all: Vec<Phenomenon> = sources.iter().flat_map(|s| s.phenomena(ctx)).collect();
     if !ctx.lens.is_identity() {
