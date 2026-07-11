@@ -200,17 +200,18 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
 /// Observation, not a pass/fail invariant (spec §3's merger-induced
 /// homophony — the L4 confound banked, per the task brief, NOT asserted as
 /// a claim to hold): expected highest among the goblinoid daughters for
-/// bugbear (smallest family inventory). Re-measured over 1,000 seeds AFTER
-/// the injective proto-root assignment (epoch `root/v2`, the homophony
-/// campaign): mean homophone-pair count goblin 4.043, hobgoblin 2.622,
-/// bugbear 12.194, kobold 3.937 — every daughter fell sharply from the
-/// pre-assignment counts (goblin 15.056, bugbear 28.606) because the
-/// assignment eliminates every draw-collision, and bugbear stays highest
-/// among the goblinoid daughters as expected (smallest family inventory
-/// nativizes the most proto-contrasts back together). What remains is now
-/// entirely merger-induced (distinct protos re-merged by the cascade or
-/// nativization — see `homophony-merger-share-*`, which reads 1.0 wherever a
-/// collision survives), the residual the post-evolution check targets.
+/// bugbear (smallest family inventory). Re-measured over 1,000 seeds after the
+/// **phonology epoch** re-baseline (tonogenesis appended to the drawn cascade
+/// family, reseeding every derivation): mean homophone-pair count goblin 3.618,
+/// hobgoblin 2.479, bugbear 11.234, kobold 3.024 — every daughter fell from the
+/// prior injective-assignment counts (goblin 4.043, bugbear 12.194) as the
+/// reseeded cascades happen to merge fewer forms; the shipped peoples stay
+/// atonal, so tonogenesis is inert for them and the drop is purely the reseed,
+/// not tone. Bugbear stays highest among the goblinoid daughters as expected
+/// (smallest family inventory nativizes the most proto-contrasts back
+/// together). What remains is merger-induced (distinct protos re-merged by the
+/// cascade or nativization — see `homophony-merger-share-*`), the residual the
+/// atonal-tail accounting (`confusable-homophony-*`) now measures.
 #[test]
 fn homophony_count_is_measured_and_pinned() {
     let goblin = numbers(col("homophony-count-goblin"));
@@ -232,10 +233,10 @@ fn homophony_count_is_measured_and_pinned() {
         mean(&bugbear),
         mean(&kobold),
     );
-    assert!((mg - 4.043).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 2.622).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 12.194).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 3.937).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mg - 3.618).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 2.479).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 11.234).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 3.024).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

@@ -817,6 +817,7 @@ mod tests {
                 voicing: 0.6,
                 sibilance: 0.9,
                 voice_loudness: 0.2,
+                tonality: 0.0,
                 exotic: ExoticSeg::Trill,
             },
         )
@@ -834,6 +835,7 @@ mod tests {
                 voicing: 1.0,
                 sibilance: 1.0,
                 voice_loudness: 1.0,
+                tonality: 0.0,
                 exotic: ExoticSeg::None,
             },
         )

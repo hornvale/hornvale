@@ -33,28 +33,28 @@ Some 8% of the surface is habitable — land with water and a tolerable season.
 - **Vngooshshngaosh** — temperate-forest
 - **Ngebxnged** — temperate-forest
 - **Rogrraratrratrrot** — alpine
-- **Rrakrarrarro** — temperate-forest
+- **Rakrarrarro** — temperate-forest
 - **Xatrrorrogrro** — temperate-forest
-- **Xatrrorrakraxokraro** — temperate-forest
+- **Xatrrorakraxokraro** — temperate-forest
 - **Xatrrorroroqraq** — temperate-forest
-- **Rrakraxatrrorroxa** — temperate-forest
-- **Rrarroxatrroxora** — tropical-seasonal-forest
+- **Rakraxatrrorroxa** — temperate-forest
+- **Rarroxatrroxora** — tropical-seasonal-forest
 - **Fngobfngod** — tropical-seasonal-forest
 - **Sfeknadnged** — tropical-seasonal-forest
 - **Vngakvngabxned** — tropical-seasonal-forest
 - **Svakxnad** — tropical-seasonal-forest
 - **Ngokxnotsfad** — tropical-seasonal-forest
-- **Xatrrorrakrarrorora** — temperate-forest
+- **Xatrrorakrarrorora** — temperate-forest
 - **Xnodngek** — tropical-seasonal-forest
 - **Zxedneknod** — tropical-seasonal-forest
 - **Fneknebzfot** — tropical-seasonal-forest
 - **Zhvabnet** — tropical-seasonal-forest
 - **Fngatzhxod** — tropical-seasonal-forest
-- **Xatrrorrarrorokxarrat** — tropical-seasonal-forest
+- **Xatrrorarrorokxarrat** — tropical-seasonal-forest
 - **Vngeksfak** — tropical-seasonal-forest
-- **Rrarroxatrroxarrok** — tropical-seasonal-forest
+- **Rarroxatrroxarrok** — tropical-seasonal-forest
 - **Netzhxed** — tropical-seasonal-forest
-- **Rrarrorrarrog** — tropical-seasonal-forest
+- **Rarrorrarrog** — tropical-seasonal-forest
 - **Xatrroroxorra** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
@@ -113,7 +113,7 @@ In the legion of **Ttoemjeo**, an organized priesthood tends its own pantheon:
 
 In the warren of **Rotrarogroq**, an organized priesthood tends its own pantheon:
 
-> Rrorroxatrro Xatrro is: Rrorroxatrro Xatrro is always watching. That's how it's always been. That's how it's always been. Rrorroxatrro is the highest among the gods. *(who presides)*
+> Rorroxatrro Xatrro is: Rorroxatrro Xatrro is always watching. That's how it's always been. That's how it's always been. Rorroxatrro is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 

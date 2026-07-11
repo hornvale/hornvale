@@ -1006,6 +1006,7 @@ pub fn envelope_of(art: &hornvale_species::ArticulationVector) -> hornvale_langu
         voicing: art.voicing,
         sibilance: art.sibilance,
         voice_loudness: art.voice_loudness,
+        tonality: art.tonality,
         exotic: match art.exotic {
             hornvale_species::ExoticManner::None => hornvale_language::ExoticSeg::None,
             hornvale_species::ExoticManner::Trill => hornvale_language::ExoticSeg::Trill,

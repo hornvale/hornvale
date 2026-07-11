@@ -45,9 +45,12 @@ pub use packs::{
     kin_pack, register_concepts, universal_stratum,
 };
 pub use phoneme::{
-    Backness, Height, Manner, Place, Segment, espeak, espeak_word, ipa, romanize, sonority,
+    Backness, Height, Manner, Place, Segment, Tone, espeak, espeak_word, ipa, romanize, sonority,
 };
-pub use phonology::{Envelope, ExoticSeg, Phonology, draw_phonology, permits};
+pub use phonology::{
+    Envelope, ExoticSeg, Phonology, distinguishable_capacity, draw_phonology, permits,
+    tone_inventory,
+};
 pub use register::{LineContent, LineSentiment, VoiceParams, render_line};
 
 /// Every seed-derivation label (or pattern) this crate uses, with docs.
@@ -72,6 +75,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "language/<species>/phonology/phonotactics",
             "per-species syllable phonotactic templates (onsets, nuclei, codas)",
+        ),
+        (
+            "language/<species>/phonology/tones",
+            "the phonology epoch's tone-inventory draw: which contrastive level tone (High/Low) joins Neutral for a partly-tonal species (tonality → 2 tones); atonal (1) and fully tonal (3) draw nothing here",
         ),
         (
             "language/<species>/name/settlement",

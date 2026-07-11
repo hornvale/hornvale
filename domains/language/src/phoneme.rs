@@ -139,7 +139,7 @@ pub(crate) fn canonical_segments() -> Vec<Segment> {
     use Height::*;
     use Manner::*;
     use Place::*;
-    vec![
+    let mut segments = vec![
         // Stops.
         Segment::Consonant {
             place: Labial,
@@ -294,7 +294,40 @@ pub(crate) fn canonical_segments() -> Vec<Segment> {
             rounded: true,
             tone: Tone::Neutral,
         }, // u
-    ]
+    ];
+    // The toned vowel variants (spec §3: the curated set grows by the tone
+    // dimension). Only High and Low are offered — `Tone::Mid` is banked, so no
+    // rule writes it and the inventory draw never admits it. The `Neutral`
+    // block above stays first (so an atonal draw, which keeps only Neutral
+    // vowels, is byte-identical to the pre-tone set); the toned variants are
+    // appended in a fixed tone-major order. `draw_phonology` admits a toned
+    // variant only when the species' `tonality` put its tone in the drawn tone
+    // inventory, so `romanize`/`ipa` — which ignore tone and render the base
+    // glyph — never surface a `"?"` for any of them.
+    let qualities: Vec<Segment> = segments
+        .iter()
+        .copied()
+        .filter(|s| matches!(s, Segment::Vowel { .. }))
+        .collect();
+    for tone in [Tone::High, Tone::Low] {
+        for q in &qualities {
+            if let Segment::Vowel {
+                height,
+                backness,
+                rounded,
+                ..
+            } = *q
+            {
+                segments.push(Segment::Vowel {
+                    height,
+                    backness,
+                    rounded,
+                    tone,
+                });
+            }
+        }
+    }
+    segments
 }
 
 /// Render a segment as an ASCII-ish romanization, for the almanac.

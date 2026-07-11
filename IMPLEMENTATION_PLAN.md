@@ -164,7 +164,37 @@ conditioned outcome of the merging rules for tone-capable languages; verify
 ## Stage 4: Body-plan tone capacity + channel-capacity floor
 `tonality` scalar in the articulation vector (yuan-ti/dragon/bird propensities
 authored); a minimum-distinguishable-syllable floor met via segments OR tone;
-re-measure homophony with the Stage-1 instrument. **Status**: Not Started
+re-measure homophony with the Stage-1 instrument.
+**Status**: ✅ COMPLETE (the epoch re-baseline commit).
+  ✅ `tonality: f64` added to `ArticulationVector` (7th dim) + `species-tonality`
+     predicate/fact; shipped peoples authored 0.0 (atonal). Carried into
+     language's `Envelope` via `envelope_of`.
+  ✅ `canonical_segments` grows by the tone dimension (High/Low variants; Mid
+     banked); `vowel_permitted` made tone-agnostic; `draw_phonology` draws a
+     tone inventory over an isolated `phonology/tones` leg and admits toned
+     vowels tone-aware — atonal draw byte-identical, tone leg isolated (tests).
+  ✅ Capacity floor: `distinguishable_capacity` (pub) + `ensure_capacity_floor`
+     widens a tone-capable species by PITCH to `CAPACITY_FLOOR=24`; atonal
+     species never widened (their floor is `MIN_CONSONANTS`, their tail
+     accepted, spec Q3). `Tonogenesis` appended to `RULE_KINDS` — the reseed.
+  ✅ Lab instrument: `confusable-homophony-{4 daughters}` (same-domain subset of
+     core, the Q3 measurement), `tone-count-{goblin,kobold}`,
+     `distinguishable-capacity-{goblin,bugbear,kobold}`; classifier refactored
+     to carry `Option<domain>`. Test-only `serpent_tonal_solo_roster` exercises
+     tone-count=3 and the floor (spec §11) WITHOUT shipping a tonal people —
+     shipped census stays the atonal baseline (tone-count 1). **Roster note for
+     Nathan:** the tone-capable species is a Lab control (like `goblin-twin`),
+     not added to the default world roster; §11's "test species in the roster"
+     is met by that control, not the census.
+  ✅ Epoch re-baseline (ADR 0016, in THIS commit): all artifacts regenerated
+     (almanacs, dictionary, concepts/streams dumps, 2 CI censuses,
+     branches-family, world.json fixture, scene/proto/lens goldens, type-audit
+     report); calibration pins re-pinned to honest measured values — homophony
+     means fell (goblin 4.043→3.618, bugbear 12.194→11.234; the reseed, not
+     tone — shipped stay atonal), name-length/collision re-pinned. Divergence
+     means/rates unchanged (aggregate-stable). Measured: confusable ≈ half of
+     core (bugbear core 2.82 / confusable 1.34), so most of the atonal tail is
+     FREE cross-domain homophony — Q3 accounting made concrete.
 
 ## Stage 5: Render + audio — tone across roman / IPA / espeak
 Tone marks in all three views; espeak tone approximation; the audio pipeline.

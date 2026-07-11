@@ -1,6 +1,6 @@
 //! Species, tier 1: authored species definitions — a closed six-dimension
 //! psychology vector, a closed three-dimension perception vector, a closed
-//! six-dimension articulation vector, and vocabulary stopgaps. Species are
+//! seven-dimension articulation vector, and vocabulary stopgaps. Species are
 //! data; the social grammar stays code (spec §2). Goblin is the baseline:
 //! scalars 0.5, default enum variants; every downstream modulation is the
 //! identity function at this vector. Placeholder name syllables (the
@@ -66,6 +66,9 @@ pub const SPECIES_VOICE_LOUDNESS: &str = "species-voice-loudness";
 /// Predicate: a species' exotic manner — none, trill, click, ejective (functional, Text).
 /// type-audit: bare-ok(identifier-text)
 pub const SPECIES_EXOTIC_MANNER: &str = "species-exotic-manner";
+/// Predicate: a species' tonal propensity, 0 atonal ↔ 1 fully tonal (functional, Number).
+/// type-audit: bare-ok(identifier-text)
+pub const SPECIES_TONALITY: &str = "species-tonality";
 
 /// How a species organizes authority.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -146,9 +149,11 @@ pub struct PerceptionVector {
     pub sky_attention: f64,
 }
 
-/// The closed six-dimension articulation vector (spec §5). Scalars are bare
-/// ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening the vector
-/// requires its own campaign. Every dimension is authored — nothing drawn.
+/// The closed seven-dimension articulation vector (spec §5, extended by the
+/// phonology epoch with `tonality`). Scalars are bare ratios in `[0, 1]` with
+/// 0.5 ≡ the goblin baseline (tonality 0.0 ≡ atonal, the humanoid default);
+/// widening the vector requires its own campaign. Every dimension is
+/// authored — nothing drawn.
 /// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ArticulationVector {
@@ -162,6 +167,12 @@ pub struct ArticulationVector {
     pub sibilance: f64,
     /// Voice-loudness range: quiet 0 ↔ loud 1.
     pub voice_loudness: f64,
+    /// Tonal propensity, authored from body plan: atonal 0 (humanoid default)
+    /// ↔ fully tonal 1. Maps to a tone-inventory size in `draw_phonology`
+    /// (1 = atonal Neutral-only, 2–3 tone-capable) and makes tonogenesis
+    /// effective. The shipped humanoids stay 0.0; the value earns its keep as
+    /// the bestiary grows (serpentine, avian).
+    pub tonality: f64,
     /// Exotic manner of articulation.
     pub exotic: ExoticManner,
 }
@@ -228,6 +239,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 voicing: 0.5,
                 sibilance: 0.5,
                 voice_loudness: 0.5,
+                tonality: 0.0,
                 exotic: ExoticManner::None,
             },
             worker_override: None,
@@ -262,6 +274,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 voicing: 0.6,
                 sibilance: 0.9,
                 voice_loudness: 0.2,
+                tonality: 0.0,
                 exotic: ExoticManner::Trill,
             },
             worker_override: Some("digger"),
@@ -296,6 +309,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 voicing: 0.6,
                 sibilance: 0.4,
                 voice_loudness: 0.8,
+                tonality: 0.0,
                 exotic: ExoticManner::None,
             },
             worker_override: Some("laborer"),
@@ -330,6 +344,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 voicing: 0.7,
                 sibilance: 0.2,
                 voice_loudness: 0.3,
+                tonality: 0.0,
                 exotic: ExoticManner::None,
             },
             worker_override: Some("forager"),
@@ -356,6 +371,7 @@ pub fn family_registry() -> BTreeMap<&'static str, ArticulationVector> {
             voicing: 0.55,
             sibilance: 0.45,
             voice_loudness: 0.55,
+            tonality: 0.0,
             exotic: ExoticManner::None,
         },
     );
@@ -394,6 +410,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         SPECIES_EXOTIC_MANNER,
         true,
         "exotic manner: none, trill, click, ejective",
+    )?;
+    registry.register_predicate(
+        SPECIES_TONALITY,
+        true,
+        "tonal propensity, 0 atonal ↔ 1 tonal",
     )?;
 
     registry.register_concept("goblin-kind", "species", ConceptKind::Living, "a goblin")?;
@@ -542,6 +563,14 @@ pub fn genesis_in(
                 id,
                 SPECIES_VOICE_LOUDNESS,
                 Value::Number(def.articulation.voice_loudness),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                id,
+                SPECIES_TONALITY,
+                Value::Number(def.articulation.tonality),
             ),
             &world.registry,
         )?;

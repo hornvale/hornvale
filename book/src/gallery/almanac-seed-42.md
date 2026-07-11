@@ -40,15 +40,15 @@ Some 12% of the surface is habitable — land with water and a tolerable season.
 - **Xatrrororrarroxo** — tropical-rainforest
 - **Fnetfneb** — taiga
 - **Nakfngebnget** — taiga
-- **Rrakraraqxakxog** — temperate-forest
+- **Rakraraqxakxog** — temperate-forest
 - **Xatrrorragragra** — alpine
 - **Rorogrog** — tropical-rainforest
 - **Xatrrororotxo** — tropical-rainforest
 - **Zhfodfnaksvet** — taiga
 - **Xatrroraxara** — tropical-rainforest
-- **Rrakroxarrorrot** — temperate-grassland
+- **Rakroxarrorrot** — temperate-grassland
 - **Xatrrorararrogxaqxa** — shrubland
-- **Rrakrorraxaq** — temperate-grassland
+- **Rakrorraxaq** — temperate-grassland
 - **Xatrrorotxoragrro** — savanna
 - **Xatrroraxokrak** — tropical-rainforest
 - **Xatrroxaxarro** — alpine
@@ -63,12 +63,12 @@ Some 12% of the surface is habitable — land with water and a tolerable season.
 - **Xngatnebfngod** — taiga
 - **Ngadsvoknget** — taiga
 - **Xatrroxogxog** — temperate-grassland
-- **Rrarroxatrrorrarra** — tropical-seasonal-forest
+- **Rarroxatrrorrarra** — tropical-seasonal-forest
 - **Zhfoksfetfngak** — taiga
 - **Xatrrorraxot** — tropical-seasonal-forest
 - **Zxobnak** — taiga
-- **Rraraxatrroratrokxa** — taiga
-- **Xatrrorrarroraxarag** — tropical-seasonal-forest
+- **Raraxatrroratrokxa** — taiga
+- **Xatrrorarroraxarag** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 

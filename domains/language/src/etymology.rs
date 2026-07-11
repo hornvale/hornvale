@@ -104,20 +104,21 @@ pub struct Derivation {
     pub modern: Vec<Segment>,
 }
 
-/// The closed, canonically ordered list of rule kinds [`draw_cascade`]
-/// draws from. [`RuleKind::Tonogenesis`] is deliberately **absent**: adding a
-/// kind here changes the `pick` distribution and reseeds every cascade in
-/// every saved world (a save-format contract), so tonogenesis enters the
-/// drawn family only at the phonology epoch's single re-baseline, alongside
-/// the tone-inventory draw that makes it effective. Until then it is reachable
-/// only via a hand-built cascade (its unit tests), leaving shipped worlds
-/// byte-identical.
-const RULE_KINDS: [RuleKind; 5] = [
+/// The closed, canonically ordered list of rule kinds [`draw_cascade`] draws
+/// from. [`RuleKind::Tonogenesis`] is the phonology epoch's addition, appended
+/// last: it is drawn like any other rule (uniformly, one `param` consumed), and
+/// its effect is gated by the codomain constraint — a tone-capable language's
+/// inventory admits the toned vowel and the split takes; an atonal language's
+/// does not, so it applies as identity. Adding it here reseeds every cascade in
+/// every world (a save-format contract): the deliberate epoch bump, carried by
+/// the campaign's full artifact + calibration re-baseline.
+const RULE_KINDS: [RuleKind; 6] = [
     RuleKind::Lenition,
     RuleKind::Fortition,
     RuleKind::VowelShift,
     RuleKind::ClusterSimplify,
     RuleKind::FinalLoss,
+    RuleKind::Tonogenesis,
 ];
 
 /// The `param` range every drawn rule consumes, regardless of kind (only
@@ -670,6 +671,7 @@ mod tests {
                 voicing: 1.0,
                 sibilance: 1.0,
                 voice_loudness: 1.0,
+                tonality: 0.0,
                 exotic: ExoticSeg::None,
             },
         )

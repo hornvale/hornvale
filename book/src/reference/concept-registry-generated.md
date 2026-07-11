@@ -58,6 +58,7 @@
 | `species-status-basis` | yes | rank, knowledge, or generosity |
 | `species-threat-response` | yes | flee 0 ↔ stand 1 |
 | `species-time-horizon` | yes | planning depth, 0-1 |
+| `species-tonality` | yes | tonal propensity, 0 atonal ↔ 1 tonal |
 | `species-voice-loudness` | yes | voice-loudness range, 0-1 |
 | `species-voicing` | yes | voicing emphasis, 0-1 |
 | `species-vowel-space` | yes | vowel-space size, 0-1 |

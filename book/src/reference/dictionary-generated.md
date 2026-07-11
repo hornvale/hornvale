@@ -244,32 +244,32 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `bone` | the rigid frame of a body | Xa | /xa/ | Xat | Xat → finalloss → Xa |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | Roro | /roro/ | Rorog | Rorog → finalloss → Roro |
-| `child` | one's son or daughter | Rra | /rra/ | Rrak | Rrak → finalloss → Rra |
+| `child` | one's son or daughter | Ra | /ra/ | Rrak | Rrak → finalloss → clustersimplify → Ra |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
 | `dark` | the color term for black/dark hues | Rora | /rora/ | Rora | Rora → no change → Rora |
-| `day` | the light half of the day-night cycle | Rrogra | /rrogra/ | Rrograk | Rrograk → finalloss → Rrogra |
+| `day` | the light half of the day-night cycle | Rogra | /rogra/ | Rrograk | Rrograk → finalloss → clustersimplify → Rogra |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `die` | to cease living | Xo | /xo/ | Xo | Xo → no change → Xo |
-| `earth` | the ground underfoot | Rra | /rra/ | Rra | Rra → no change → Rra |
+| `earth` | the ground underfoot | Ra | /ra/ | Rra | Rra → clustersimplify → Ra |
 | `eat` | to consume food | Xoqrro | /xoqrro/ | Xoqrrok | Xoqrrok → finalloss → Xoqrro |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
-| `eye` | the organ of sight | Rrotrro | /rrotrro/ | Rrotrro | Rrotrro → no change → Rrotrro |
+| `eye` | the organ of sight | Rotrro | /rotrro/ | Rrotrro | Rrotrro → clustersimplify → Rotrro |
 | `fire` | flame and heat | Xaqro | /xaqro/ | Xaqrot | Xaqrot → finalloss → Xaqro |
-| `foot` | the walking limb-end | Rragra | /rragra/ | Rragra | Rragra → no change → Rragra |
+| `foot` | the walking limb-end | Ragra | /ragra/ | Rragra | Rragra → clustersimplify → Ragra |
 | `gloom` | the deepest, starless dark | Rora | /rora/ | Rorak | Rorak → finalloss → Rora |
-| `goblin-kind` | a goblin | Rroro | /rroro/ | Rroro | Rroro → no change → Rroro |
+| `goblin-kind` | a goblin | Roro | /roro/ | Rroro | Rroro → clustersimplify → Roro |
 | `god` | a deity | Xogxo | /xogxo/ | Xogxo | Xogxo → no change → Xogxo |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no compound recipe for 'hadal-trench' |
 | `hand` | the manipulating limb-end | Ra | /ra/ | Ra | Ra → no change → Ra |
 | `hearth` | the fire at the center of a home | Xa | /xa/ | Xa | Xa → no change → Xa |
 | `hobgoblin-kind` | a hobgoblin | Ro | /ro/ | Ro | Ro → no change → Ro |
-| `home` | one's dwelling | Rrogrro | /rrogrro/ | Rrogrro | Rrogrro → no change → Rrogrro |
+| `home` | one's dwelling | Rogrro | /rogrro/ | Rrogrro | Rrogrro → clustersimplify → Rogrro |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no compound recipe for 'hydrothermal-vent' |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'kelp-forest' |
-| `kobold-kind` | a kobold | Rragxa | /rragxa/ | Rragxa | Rragxa → no change → Rragxa |
-| `light` | the color term for white/light hues | Rrorro | /rrorro/ | Rrorrok | Rrorrok → finalloss → Rrorro |
+| `kobold-kind` | a kobold | Ragxa | /ragxa/ | Rragxa | Rragxa → clustersimplify → Ragxa |
+| `light` | the color term for white/light hues | Rorro | /rorro/ | Rrorrok | Rrorrok → finalloss → clustersimplify → Rorro |
 | `many` | an indefinitely large count | Rakro | /rakro/ | Rakro | Rakro → no change → Rakro |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
 | `moon` | a moon | Xaro | /xaro/ | Xaro | Xaro → no change → Xaro |
@@ -286,23 +286,23 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Xokxa | /xokxa/ | Xokxa | Xokxa → no change → Xokxa |
 | `shrubland` | a biome class | Rara | /rara/ | Rarat | Rarat → finalloss → Rara |
-| `sibling` | one's brother or sister | Rratxo | /rratxo/ | Rratxo | Rratxo → no change → Rratxo |
+| `sibling` | one's brother or sister | Ratxo | /ratxo/ | Rratxo | Rratxo → clustersimplify → Ratxo |
 | `sleep` | to rest unconscious | Rarra | /rarra/ | Rarraq | Rarraq → finalloss → Rarra |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): kobold has no exposure to 'snow' |
 | `spirit` | a lesser or unseen supernatural presence | Raqra | /raqra/ | Raqraq | Raqraq → finalloss → Raqra |
-| `star` | a fixed point of light in the night sky | Rro | /rro/ | Rrot | Rrot → finalloss → Rro |
+| `star` | a fixed point of light in the night sky | Ro | /ro/ | Rrot | Rrot → finalloss → clustersimplify → Ro |
 | `starlit` | dark faintly lit by stars | Xakrra | /xakrra/ | Xakrra | Xakrra → no change → Xakrra |
 | `stone` | rock | Raqxa | /raqxa/ | Raqxa | Raqxa → no change → Raqxa |
 | `sun` | the sun | Xatrro | /xatrro/ | Xatrro | Xatrro → no change → Xatrro |
 | `taiga` | a biome class | — | — | — | gap (experiential): no compound recipe for 'taiga' |
-| `temperate-forest` | a biome class | Rrakra | /rrakra/ | Rrakrag | Rrakrag → finalloss → Rrakra |
+| `temperate-forest` | a biome class | Rakra | /rakra/ | Rrakrag | Rrakrag → finalloss → clustersimplify → Rakra |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-grassland' |
 | `temperate-rainforest` | a biome class | Rotra | /rotra/ | Rotrag | Rotrag → finalloss → Rotra |
 | `tree` | a woody plant | Xo | /xo/ | Xog | Xog → finalloss → Xo |
 | `tropical-rainforest` | a biome class | Ro | /ro/ | Roq | Roq → finalloss → Ro |
-| `tropical-seasonal-forest` | a biome class | Rrarro | /rrarro/ | Rrarroq | Rrarroq → finalloss → Rrarro |
-| `tundra` | a biome class | Rrorra | /rrorra/ | Rrorra | Rrorra → no change → Rrorra |
-| `two` | the cardinal number 2 | Rrarro | /rrarro/ | Rrarro | Rrarro → no change → Rrarro |
+| `tropical-seasonal-forest` | a biome class | Rarro | /rarro/ | Rrarroq | Rrarroq → finalloss → clustersimplify → Rarro |
+| `tundra` | a biome class | Rorra | /rorra/ | Rrorra | Rrorra → clustersimplify → Rorra |
+| `two` | the cardinal number 2 | Rarro | /rarro/ | Rrarro | Rrarro → clustersimplify → Rarro |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
 | `water` | the drinkable liquid | Ratrra | /ratrra/ | Ratrra | Ratrra → no change → Ratrra |
 | `wind` | moving air | Raqxa | /raqxa/ | Raqxag | Raqxag → finalloss → Raqxa |

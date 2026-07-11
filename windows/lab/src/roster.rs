@@ -19,3 +19,23 @@ pub fn goblin_twin_solo_roster() -> Vec<SpeciesDef> {
         ..goblin
     }]
 }
+
+/// A test-only **tone-capable** species, placed alone: a goblin clone renamed
+/// `serpent` with `tonality = 1.0` and a compressed vowel space (a few-place
+/// serpentine profile). It never ships — like the twin, it exists only to
+/// exercise the phonology epoch's tonal path in Lab tests (tone-count > 1, the
+/// capacity floor met by pitch). The shipped peoples stay atonal by authoring
+/// (spec §9); tone is for the future bestiary.
+pub fn serpent_tonal_solo_roster() -> Vec<SpeciesDef> {
+    let goblin = hornvale_species::registry()["goblin"];
+    vec![SpeciesDef {
+        name: "serpent",
+        family: "serpent",
+        articulation: hornvale_species::ArticulationVector {
+            tonality: 1.0,
+            vowel_space: 0.3,
+            ..goblin.articulation
+        },
+        ..goblin
+    }]
+}

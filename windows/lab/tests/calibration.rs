@@ -818,14 +818,19 @@ fn name_collision_rate_is_measured_and_pinned() {
     // (159 -> 40); the root/v2 injective assignment then makes the site-concept
     // words themselves more distinct, nudging it back up to 42 zero-collision
     // worlds and a slightly lower mean rate. Pinned exactly as measured.
-    assert_eq!(zero, 42, "zero-collision world count drifted");
-    assert_eq!(nonzero, 458, "nonzero-collision world count drifted");
+    // The phonology epoch re-baseline: tonogenesis appended to the drawn
+    // cascade reseeds every lexicon root, so the glossed site words shift and
+    // per-world site-concept reuse reshuffles slightly (42 -> 40 zero-collision
+    // worlds). The shipped peoples stay atonal, so this is the cascade reseed,
+    // not tone. Pinned exactly as measured.
+    assert_eq!(zero, 40, "zero-collision world count drifted");
+    assert_eq!(nonzero, 460, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.121_983_170_798).abs() < 1e-6,
+        (mean - 0.120_748_549).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -858,9 +863,13 @@ fn name_length_distributions_are_measured_and_pinned() {
     // four-species niche vectors change which cells goblin/kobold win and
     // how many settlements each fields per world; goblin is now present on
     // every seed (the founder floor's own guarantee), kobold on all but 1.
+    // Phonology-epoch re-baseline (tonogenesis in the cascade reseeds the
+    // lexicon; shipped peoples stay atonal so this is the reseed, not tone):
+    // goblin 10.7589 -> 10.8957, kobold 15.4541 -> 16.1242, present counts
+    // unchanged (goblin every seed, kobold all but 1).
     for (species, expected_present, expected_mean) in [
-        ("goblin", 500u32, 10.758_884_597_6),
-        ("kobold", 499u32, 15.454_121_625_450_9),
+        ("goblin", 500u32, 10.895_718_234_6),
+        ("kobold", 499u32, 16.124_183_564_529_06),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1046,8 +1055,12 @@ fn null_control_name_length_smd_is_pinned() {
         nums(result, "goblin-solo", idx("name-length-goblin")),
         nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
+    // Phonology epoch (2026-07-10): re-measured after tonogenesis joined the
+    // drawn cascade (was -0.089_563_445_788_977). The reseed shifts each solo
+    // build's glossed-name draws; the SMD stays well inside the sampling bound
+    // above. Shipped peoples are atonal, so this is the reseed, not tone.
     assert!(
-        (namelen - -0.089_563_445_788_977).abs() < 1e-9,
+        (namelen - -0.061_141_759_430_230_945).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
