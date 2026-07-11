@@ -45,6 +45,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The cultural-memory economy — knowledge as a maintained thing](#the-cultural-memory-economy--knowledge-as-a-maintained-thing)
   - [Prophecy and the shape of time](#prophecy-and-the-shape-of-time)
   - [The projection layer](#the-projection-layer)
+  - [The immune model of belief — deception as discrimination failure](#the-immune-model-of-belief--deception-as-discrimination-failure)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
@@ -1395,6 +1396,134 @@ its cheapest instance already exists in miniature: the revenant (UNI-11), where
 the latent state is *already a ledger fact* (a buried injustice) and the
 projection is nearly mechanical. That is where to prototype the principle before
 trusting it with anything softer.
+
+---
+
+## The immune model of belief — deception as discrimination failure
+
+*(High confidence that the analogy is structural rather than decorative;
+medium on calibration; low on the general inference engine that would make it
+buildable. Like the projection layer, this is a governing framing for the
+belief tier of UNI-1 and the epistemic layer (MAP-2), not a domain. Design fuel
+for the-walk metaplan's Milestone-2 inference tier, captured before it is lost.)*
+
+**The claim.** An agent's belief is not a stored fact but the output of a
+*discrimination*: reading signals that can be spoofed, and sorting the world into
+true and false, friend and foe, real and illusion. That is exactly what an
+adaptive immune system does — self/non-self discrimination over molecular signals
+under adversarial pressure — and evolution has spent a billion years finding its
+failure modes. So the immune system is not a metaphor for the inference program
+(UNI-1); it is a fully worked *instance* of it, and its entire canon of
+mechanisms and pathologies re-instantiates, nearly one-for-one, as the epistemics
+of a world where players lie, cast illusions, wear disguises, forge evidence, and
+charm.
+
+**Deception needs no second ledger — the matrix verdict.** Every deceptive act is
+a *real event* in the one ground-truth ledger: the lie was spoken, the illusion
+cast, the disguise worn, the forgery made. The victim perceives it truthfully —
+perception is lossy and *spoofable* — and then *infers* a falsehood. Molecular
+mimicry, a pathogen coating itself in host proteins, is a disguise: a real
+molecular event inducing the misclassification "self." So the false belief is
+always *derived*, never stored, and it carries real provenance — the causal
+chain, not a tag ("the guard thinks you a priest because he saw the robes on day
+412"). This is the mechanism under the-walk metaplan's §3.2: one event ledger,
+belief a derived view.
+
+**The real knob is a threshold, and it fails on both sides.** The immune system's
+central parameter is a discrimination threshold — how much foreignness triggers a
+response. Set it too low and pathogens pass as self: the *credulous* agent
+believes lies, illusions, forgeries. Set it too high and the system attacks the
+body itself — *autoimmunity*: the *paranoid* agent rejects true testimony and
+real evidence, reads conspiracy into the genuine. This reframes the inference
+program from "compute what the agent believes" into a signal-detection problem —
+a threshold trading false-positives against false-negatives — and it makes the
+gullible NPC and the paranoid NPC *one mechanism at two settings*, not two
+authored types. Culture and species set the resting threshold; evidence, charm,
+and prior exposure move it; it is derived per agent over the ledger, never set by
+hand per character.
+
+Then the canon, each mechanism a design move brought back:
+
+- **Central tolerance** (the immune system is trained during development not to
+  attack self) → the unquestioned priors a culture and species take for granted.
+  **The best lies hide in tolerance:** you cannot detect what you never think to
+  question, so deception is *culturally relative* — a lie that sails past a
+  trusting goblin is caught by a wary drow, because their trained tolerances
+  differ. This threads deception into the psychology substrate and the
+  commonsense ruleset (MAP-19/20).
+- **Immunological memory** (re-exposure triggers a faster, stronger response) →
+  learned skepticism: an agent fooled once recognises the trick faster, and
+  belief-update carries hysteresis. Derived from the prior-exposure event.
+- **Antigenic variation** (pathogens change their surface faster than memory can
+  track) → the deception *arms race*: a disguise has a **detection half-life**,
+  decaying as observers accumulate evidence unless refreshed or varied; the
+  durable deceiver shifts cues faster than the population updates. Deceiver and
+  detector coevolve.
+- **Immunosuppression** (some pathogens attack the immune response itself) →
+  **charm as inference-suppression**, cleanly distinct from illusion: illusion
+  spoofs the *perception*; charm lowers the *skepticism threshold* so the target
+  cannot doubt. Two magic types from one distinction.
+- **Vaccination** (a weakened antigen primes future defence) → **epistemic
+  inoculation / prebunking**: forewarn an agent of a deception type and it
+  resists — a native counter-deception system, itself derived from the
+  warning-event.
+- **Adjuvants** (nonspecific boosters of response) → the amplifiers that make a
+  lie stick: fear, authority, repetition. Belief strength is a function of the
+  stimulus *and* its emotional and source properties, all readable off the event.
+- **Herd immunity** → deception resistance is a *population* property: enough
+  agents seeing through a lie and it cannot spread. **Belief is contagion** —
+  rumour propagation is an SIR epidemic (susceptible = credulous, infected =
+  believing, recovered = inoculated-skeptic) with a reproduction number, the very
+  math already gestured at for the pan-species plague curve (TOOL-11). This links
+  the individual belief layer to the faction and tides-of-empire scale: a
+  well-placed truth is herd immunity; a lie has an R0.
+
+**The pathologies are the richest part** — where the immune canon predicts
+social-epistemic disease:
+
+- **Cancer** — a self-cell that turns hostile yet evades detection *because it
+  presents as self*, inside tolerance. This is the **traitor, the mole, the
+  sleeper**: the insider threat is undetectable not through a good disguise but
+  because it sits inside unquestioned trust. Betrayal is the deception that needs
+  no disguise.
+- **Cytokine storm** — a runaway overreaction that kills the host → the **witch
+  hunt, the moral panic, mass hysteria**: a population-scale collapse of the
+  skepticism threshold in which a people begins attacking its own. Social
+  autoimmunity — the mechanistic underside of persecution concentrating at
+  aligned cleavages (MAP-9b).
+- **Immune privilege** (the eye, the brain — sites the immune system does not
+  patrol) → **taboo and the sacred cow**: topics, institutions, or persons that
+  escape scrutiny entirely. Deception thrives in immune-privileged zones; the con
+  cloaked in the sacred is never checked.
+- **The hygiene hypothesis** (too little early exposure yields a miscalibrated,
+  overreacting immune system) → **naive populations are fragile**: a people never
+  lied to is *more* gullible and more prone to panic when finally deceived, not
+  less. Innocence is an epistemic vulnerability.
+- **Immune exhaustion** (chronic antigen wears out the response) → **the firehose
+  of falsehood**: sustained, high-volume lying exhausts scrutiny until the
+  population stops checking at all — deception by fatigue, not by any single
+  convincing lie.
+- **Allergy** (overreaction to a harmless antigen) → **misdirected outrage**:
+  vigilance spent attacking the benign while the real threat walks past.
+
+**What keeps it honest** is the racecraft discipline the projection layer carries:
+the threshold and its movements must be *derived* — from the species perception
+vector, the culture's trained tolerances, the memory economy's scarce attention
+(you scrutinise selectively because vigilance has upkeep, MEM-1), and the events
+actually perceived — never authored as "this NPC is gullible." The instant one
+writes a per-character credulity constant, the model collapses into the lookup
+table decision 0021 forecloses. Done right, the Lab payoff is sharp: does a
+population's deception-resistance track its exposure history and cultural
+tolerances rather than an author's hand, and does a rumour's spread obey a
+computable R0?
+
+**Sequencing.** Not its own domain — a mode of the inference program (UNI-1) and
+the epistemic layer (MAP-2), landing with the-walk metaplan's Milestone-2
+inference tier, atop the projection (perception) tier that ships first. Its
+cheapest instance is a single lie believed by a single guard — a real utterance, a
+credulous threshold, a derived false belief with provenance — long before any
+pathology is trusted. The population-scale mechanisms (contagion, herd immunity,
+moral panic) wait on the faction layer and the plague-curve machinery they share.
 
 ---
 
