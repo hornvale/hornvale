@@ -1,7 +1,7 @@
 //! Calibration: at tier 0, belief kind is a pure function of rotation.
 //! The instrument must reproduce known ground truth exactly (spec §2.5).
 use hornvale_culture::{BiomeClass, subsistence};
-use hornvale_lab::{MetricValue, Row, RunResult, load_rows, load_study, run};
+use hornvale_lab::{MetricValue, RunResult, canonical_row, load_rows, load_study, run};
 use std::path::Path;
 use std::sync::LazyLock;
 
@@ -9,10 +9,10 @@ use std::sync::LazyLock;
 /// it. The fixture is published by `lab run` and regenerated + drift-checked in
 /// CI (the "Artifacts are current" step), so `load_rows(fixture)` equals
 /// `run(&study)` by construction — the `census_fixture_matches_live_run` guard
-/// below pins that equality directly. This is what keeps the ~145s census off
-/// every local `cargo test`; before this the suite recomputed it behind a
-/// `LazyLock` (TOOL-7). Init panics on a load error (a test-setup failure, not
-/// a calibration).
+/// below pins that equality directly. This is what keeps the ~450s (debug)
+/// census off every local `cargo test`; before this the suite recomputed it
+/// behind a `LazyLock` (TOOL-7). Init panics on a load error (a test-setup
+/// failure, not a calibration).
 fn load_census(study_path: &str, rows_path: &str) -> RunResult {
     let study = load_study(Path::new(study_path)).expect("load study");
     let csv = std::fs::read_to_string(rows_path).expect("read census fixture");
@@ -38,13 +38,14 @@ static MEETING: LazyLock<RunResult> = LazyLock::new(|| {
     )
 });
 
-/// Guard — ignored by default because it pays the full census (~145s): the
-/// committed fixtures reconstruct *exactly* what a live `run` produces, so
-/// every other test in this file may trust the fixture. Run it explicitly
-/// after regenerating the fixtures, or in CI:
+/// Guard — ignored by default because it pays the full census (~450s under
+/// the test profile; release regeneration via make rebaseline is much
+/// faster): the committed fixtures reconstruct *exactly* what a live `run`
+/// produces, so every other test in this file may trust the fixture. Run it
+/// explicitly after regenerating the fixtures, or in CI:
 /// `cargo test -p hornvale-lab --test calibration -- --ignored`.
 #[test]
-#[ignore = "runs the full ~145s census; fixtures are drift-checked in CI"]
+#[ignore = "runs the full ~450s (debug) census; fixtures are drift-checked in CI"]
 fn census_fixture_matches_live_run() {
     for (study_path, rows_path) in [
         (
@@ -60,31 +61,11 @@ fn census_fixture_matches_live_run() {
         let live = run(&study).expect("run study");
         // Canonicalize live Numbers before comparing: the fixture's floats
         // passed the quantizing serialization boundary (`render_csv`), the
-        // live run's have not. Without this the guard fails on every
-        // numeric metric's last ULPs — a false alarm the quantization
-        // epoch introduced.
+        // live run's have not (shared helper: `hornvale_lab::canonical_row`).
         let live = RunResult {
             study: live.study.clone(),
             metric_names: live.metric_names.clone(),
-            rows: live
-                .rows
-                .iter()
-                .map(|row| Row {
-                    seed: row.seed,
-                    pin_set: row.pin_set.clone(),
-                    values: row
-                        .values
-                        .iter()
-                        .map(|v| match v {
-                            MetricValue::Number(n) => {
-                                MetricValue::Number(hornvale_kernel::quantize(*n))
-                            }
-                            other => other.clone(),
-                        })
-                        .collect(),
-                    refusal: row.refusal.clone(),
-                })
-                .collect(),
+            rows: live.rows.iter().map(canonical_row).collect(),
         };
         let csv = std::fs::read_to_string(rows_path).expect("read census fixture");
         let loaded = load_rows(&study, &csv).expect("reconstruct census from fixture");

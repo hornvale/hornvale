@@ -9,12 +9,13 @@
 #   make rebaseline   # regenerate every committed generated artifact
 #   make rebaseline-goldens # accept drifted byte-golden test fixtures
 #   make lab-diff STUDY=<name> # report which census metrics moved vs HEAD
+#   make doctor       # print the repo self-map (orientation for a fresh session)
 #   make install-hooks# point git at scripts/hooks (opt-in; edits local config)
 #
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff install-hooks
+.PHONY: help quick gate fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff doctor install-hooks
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -44,14 +45,22 @@ rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), 
 	REBASELINE=1 cargo test -q -p hornvale --test lens_purity
 	REBASELINE=1 cargo test -q -p hornvale-scene --test golden
 	REBASELINE=1 cargo test -q -p hornvale-worldgen --test proto_goblinoid_golden
+	REBASELINE=1 cargo test -q -p hornvale --test architecture
 
 lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STUDY=census-lands-drift)
 	@test -n "$(STUDY)" || { echo "usage: make lab-diff STUDY=<study-name>"; exit 2; }
 	@old="$$(mktemp)"; \
-	git show HEAD:book/src/laboratory/generated/$(STUDY)/rows.csv > "$$old"; \
+	if ! git show HEAD:book/src/laboratory/generated/$(STUDY)/rows.csv > "$$old" 2>/dev/null; then \
+	    rm -f "$$old"; \
+	    echo "lab-diff: no committed rows.csv for study '$(STUDY)' at HEAD (check the name under book/src/laboratory/generated/)"; \
+	    exit 2; \
+	fi; \
 	cargo run -q -p hornvale -- lab diff studies/$(STUDY).study.json "$$old" \
 	    book/src/laboratory/generated/$(STUDY)/rows.csv; \
 	status=$$?; rm -f "$$old"; exit $$status
+
+doctor: ## Print the repo self-map (orientation for a fresh session)
+	@bash scripts/doctor.sh
 
 install-hooks: ## Point git at scripts/hooks (runs `make quick` pre-commit)
 	git config core.hooksPath scripts/hooks

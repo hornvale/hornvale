@@ -25,7 +25,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 #      Trust the exit code (non-zero = failure); `--no-fail-fast` for the whole
 #      failure list in one pass:
 cargo test --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file freely
-#   The ~145s calibration census (windows/lab) loads a drift-checked fixture
+#   The calibration census (windows/lab; ~450s live in debug) loads a drift-checked fixture
 #   (book/src/laboratory/generated/*/rows.csv), so it is cheap UNLESS you
 #   changed worldgen — after a worldgen change, regenerate the artifacts
 #   (below) so the fixture and calibration reflect it.

@@ -10,7 +10,7 @@
 //! This guard turns that standing question — "does this diff quiet a result
 //! rather than pin it?" — into a mechanical, default-deny check over the lab's
 //! calibration test files. An `#[ignore]` is permitted ONLY when its reason
-//! string is *sanctioned*: it names a cost (the ~145s census is the one
+//! string is *sanctioned*: it names a cost (the ~450s census is the one
 //! legitimate case today) or cites a decision/ADR. A bare `#[ignore]`, or one
 //! whose reason is a result-quieting excuse ("flaky", "failing", "TODO"),
 //! matches no sanctioned class and fails the guard.
@@ -143,8 +143,9 @@ fn calibration_files_carry_no_unsanctioned_ignores() {
 
 #[test]
 fn the_census_cost_ignore_is_sanctioned() {
-    // The one legitimate ignore in the tree today: skipping the ~145s census.
-    let sample = r#"#[ignore = "runs the full ~145s census; fixtures are drift-checked in CI"]"#;
+    // The one legitimate ignore in the tree today: skipping the ~450s census.
+    let sample =
+        r#"#[ignore = "runs the full ~450s (debug) census; fixtures are drift-checked in CI"]"#;
     assert!(violations_in("sample.rs", sample).is_empty());
 }
 
