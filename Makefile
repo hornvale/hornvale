@@ -6,6 +6,7 @@
 #
 #   make quick        # cheap half: fmt --check + clippy (the pre-commit gate)
 #   make gate         # the full commit gate: fmt + clippy + workspace tests
+#   make gate-fast    # ITERATION ONLY: scope fmt/clippy/test to changed crates (make gate still gates commits)
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
 #   make rebaseline   # regenerate every committed generated artifact
 #   make rebaseline-goldens # accept drifted byte-golden test fixtures
@@ -17,7 +18,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks
+.PHONY: help quick gate gate-fast prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -27,6 +28,9 @@ help: ## Show this help
 quick: fmt-check clippy ## Cheap half of the gate (fmt-check + clippy)
 
 gate: fmt-check clippy test ## The full commit gate (fmt + clippy + workspace tests)
+
+gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)
+	@bash scripts/gate-fast.sh
 
 fmt: ## Format the workspace in place
 	cargo fmt
