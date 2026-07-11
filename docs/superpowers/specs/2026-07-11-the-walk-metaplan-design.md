@@ -221,6 +221,47 @@ axis to a single Agent.** v1's cell is fixed: **Agent scope, seeded vessel,
 re-drop on death.** Lineage/Culture rows are optional branches; the Reload column
 is rejected by §3.1.
 
+### 5.1 The possession state-machine and the four bindings
+
+Drawing the lifecycle of *control* — the locus that moves between vessels — pins
+down what "someone walks in it" commits us to, and decomposes the primitive
+usefully.
+
+**Control is immortal; only vessels die.** The state-machine (statistical →
+elaborated NPC → possessed → dead → {re-dropped, ghost, legend}) has *no absorbing
+state for control*: as long as re-drop exists there is no "game over," only "you
+are someone else now." Mortality is a property of vessels, not of the player. The
+one **forbidden transition** is death → the *same* vessel (reload / save-scum) —
+exactly §3.1's rejected Reload column, now expressed as the single banned edge.
+
+**Possession decomposes into four independent bindings**, and their combinations
+are ready-made play modes:
+
+- **perceive** — see through the vessel's senses (→ the Vantage-query + Focalizer interfaces)
+- **control** — drive its actions (→ the verb loop)
+- **know** — inherit its projected knowledge (→ the Projection interface)
+- **identify** — whether "you" are the vessel or the rider (→ the Agent's identity)
+
+Full possession binds all four; *amnesia* is perceive+control without know (a body
+whose memories aren't yours); *scrying* is perceive alone; *divine command* is
+control alone; *charm* is perceive+know+identify with control contested. The four
+bindings are precisely Chunk 0's four interfaces (§9) seen from the player's side —
+a useful cross-check that the Seam was cut correctly.
+
+**Altered states reuse the dials, not new systems.** Dreaming, madness, charm, and
+transformation are the possessed state with the projection + inference + control
+settings moved: dreaming replaces perception with a generated sub-world; madness
+corrupts inference (belief-autoimmunity, §3.2); charm overrides control;
+transformation swaps the perception vector. Nearly free, and unified with the
+belief machinery.
+
+**Two independent knobs set the game's feel:** *scope* (agent / lineage / culture,
+above) and the *longevity of control in a vessel* (fluid body-hopping ↔ sticky
+one-life). Together they span a 2-D space of very different games from one engine;
+v1 fixes both at their simplest — a single agent, one life until re-drop. The
+diegetic reading of this machine (control as a reincarnating soul) is captured as
+frontier UNI-18 and held under §3.5's defer-the-framing decision.
+
 ## 6. Exit criteria
 
 - **Milestone 1 — the walkable (frozen) slice.** `hornvale possess --seed N`
