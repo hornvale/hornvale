@@ -63,6 +63,30 @@ cells it must replace were themselves inflating the number. Changing a
 preregistered target is permitted only in the open, which is what this note
 is.
 
+## Supersession note: continent-count
+
+Recorded openly, per the preregistration discipline (Task 9 iteration 3,
+before that iteration's census was run): `continent-count`'s original
+definition — every connected land component, no matter how small — fails
+Earth itself, not just Crust's terrain. Earth's oceans hold hundreds of
+thousands of named islands, yet "continent-count" in the everyday and
+geological sense is 6–8. An unfloored count is not measuring continents; it
+is measuring fragmentation, and the preregistered 3–12 band was written
+with the everyday sense in mind (Study 010's v1@L5 baseline of 14 never
+exposed the gap, because that generator's smoother margins rarely produced
+sub-5-cell fringe). `continent-count` therefore gains a size floor: only
+components at least 0.5% of the world's total land cells count, calibrated
+against Earth (Greenland is ~1.4% of Earth's land and qualifies; Iceland at
+~0.07% does not). The band itself does not move (still 3–12, still Earth's
+6–8 major landmasses) — only what counts as a countable landmass does. This
+decision was made against the v1@L6 interim world, which predates the
+fragmentation this task's iterations diagnosed, so the floor is calibrated
+against Earth, not reverse-engineered from a number the team wanted to see.
+A new metric, `landmass-count`, is appended to the registry with the old
+unfloored semantics and reported alongside `continent-count` forever, so
+every historical and future `continent-count` reading keeps its raw,
+un-floored twin for comparison.
+
 ## v2@L6 verdicts (iteration 2, the committed generator)
 
 | metric | v2@L6 median | band | verdict |

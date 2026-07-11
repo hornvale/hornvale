@@ -1026,20 +1026,25 @@ pub fn registry() -> Vec<Metric> {
         },
         Metric {
             name: "continent-count",
-            doc: "Connected land components",
+            doc: "Connected land components at least 0.5% of the world's \
+                  total land cells (Task 9 iteration 3's size floor, \
+                  Earth-calibrated: Greenland is ~1.4% of Earth's land and \
+                  qualifies, Iceland ~0.07% does not) — the unfloored \
+                  fringe of sub-floor fragments is preserved separately by \
+                  landmass-count",
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0],
             },
             extract: |v| {
                 let globe = v.terrain.globe();
-                MetricValue::Number(
-                    hornvale_terrain::shape::land_component_sizes(
-                        v.terrain.geosphere(),
-                        &globe.elevation,
-                        globe.sea_level,
-                    )
-                    .len() as f64,
-                )
+                let sizes = hornvale_terrain::shape::land_component_sizes(
+                    v.terrain.geosphere(),
+                    &globe.elevation,
+                    globe.sea_level,
+                );
+                let land: usize = sizes.iter().sum();
+                let floor = 0.005 * land as f64;
+                MetricValue::Number(sizes.iter().filter(|&&s| s as f64 >= floor).count() as f64)
             },
         },
         Metric {
@@ -1080,6 +1085,26 @@ pub fn registry() -> Vec<Metric> {
                     Some(g) => MetricValue::Number(g),
                     None => MetricValue::Absent,
                 }
+            },
+        },
+        Metric {
+            name: "landmass-count",
+            doc: "Every connected land component regardless of size — the \
+                  unfloored companion continent-count superseded away \
+                  from; reported alongside forever",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0],
+            },
+            extract: |v| {
+                let globe = v.terrain.globe();
+                MetricValue::Number(
+                    hornvale_terrain::shape::land_component_sizes(
+                        v.terrain.geosphere(),
+                        &globe.elevation,
+                        globe.sea_level,
+                    )
+                    .len() as f64,
+                )
             },
         },
     ]
@@ -1887,8 +1912,10 @@ mod tests {
         // The Meeting's 63, +7 for The Words (Task 12: name-gloss-true,
         // lexicon-regular-{goblin,kobold}, exposure-sound-{goblin,kobold},
         // hue-depth-{goblin,kobold}), plus the terrain-shape and later
-        // metrics merged from main's campaigns.
-        assert_eq!(registry().len(), 77);
+        // metrics merged from main's campaigns, +1 for landmass-count
+        // (Crust Task 9 iteration 3: continent-count gained a size floor,
+        // and this unfloored companion preserves the old series).
+        assert_eq!(registry().len(), 78);
     }
 
     #[test]
@@ -2124,6 +2151,7 @@ mod tests {
             "continent-count",
             "largest-continent-share",
             "plate-size-gini",
+            "landmass-count",
         ];
         let registry = registry();
         let a = WorldView::build(Seed(7), &SkyPins::default()).expect("seed 7");
