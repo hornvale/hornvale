@@ -128,6 +128,15 @@ fn slerp(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
     if omega < 1e-9 {
         return a;
     }
+    // Near-antipodal (omega ≈ π) destabilizes 1/sin(omega) exactly as
+    // near-zero destabilizes the great-circle direction itself — there the
+    // arc is degenerate (a and b coincide); here it is degenerate the other
+    // way (infinitely many great circles pass through antipodal points, so
+    // no direction is privileged). Same fallback as the omega≈0 guard
+    // above: leave `a` in place rather than divide by a near-zero sine.
+    if omega > std::f64::consts::PI - 1e-9 {
+        return a;
+    }
     let (sa, sb) = (
         ((1.0 - t) * omega).sin() / omega.sin(),
         (t * omega).sin() / omega.sin(),

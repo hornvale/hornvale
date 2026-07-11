@@ -56,10 +56,6 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "per-plate seed positions on the sphere",
         ),
         (
-            "terrain/plate-kind",
-            "continental fraction and per-plate continental rolls",
-        ),
-        (
             "terrain/plate-motion",
             "per-plate Euler pole axis and rate draws",
         ),
@@ -196,7 +192,7 @@ mod tests {
     #[test]
     fn stream_labels_are_fully_qualified_and_documented() {
         let labels = stream_labels();
-        assert_eq!(labels.len(), 12);
+        assert_eq!(labels.len(), 11);
         assert_eq!(labels[0].0, "terrain");
         for (label, doc) in &labels[1..] {
             assert!(label.starts_with("terrain/"), "unqualified label {label}");

@@ -8,7 +8,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 
 | Concept | Gloss | Word | IPA | Proto | Derivation |
 |---|---|---|---|---|---|
-| `abyssal` | a biome class | — | — | — | gap (experiential): no compound recipe for 'abyssal' |
+| `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `blood` | the circulating fluid of a body | Nebngot | /nebŋot/ | Nebngot | Nebngot → no change → Nebngot |
@@ -41,7 +41,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kobold-kind` | a kobold | Beb | /beb/ | Zveb | Zveb → fortition → clustersimplify → Beb |
 | `light` | the color term for white/light hues | Ngat | /ŋat/ | Xngat | Xngat → fortition → clustersimplify → Ngat |
 | `many` | an indefinitely large count | Nak | /nak/ | Nak | Nak → no change → Nak |
-| `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
+| `mesopelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'mesopelagic' |
 | `moon` | a moon | Fok | /fok/ | Zhfok | Zhfok → clustersimplify → Fok |
 | `mountain` | high ground | — | — | — | gap (experiential): goblin has no exposure to 'mountain' |
 | `mouth` | the organ of eating and speech | Ngab | /ŋab/ | Ngab | Ngab → no change → Ngab |
@@ -51,11 +51,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `parent` | one's father or mother | Nebskot | /nebskot/ | Xnebsxot | Xnebsxot → fortition → clustersimplify → Nebskot |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): goblin has no exposure to 'rain' |
 | `red` | the color term for red | Ngebnad | /ŋebnad/ | Xngebnad | Xngebnad → fortition → clustersimplify → Ngebnad |
-| `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
+| `savanna` | a biome class | — | — | — | gap (experiential): no compound recipe for 'savanna' |
 | `sea` | a body of salt water | Naknged | /nakŋed/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no compound recipe for 'sea-ice' |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.5 |
-| `shrubland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'shrubland' |
+| `shrubland` | a biome class | Ngobzhkek | /ŋobʒkek/ | Vngobzhxek | Vngobzhxek → fortition → clustersimplify → Ngobzhkek |
 | `sibling` | one's brother or sister | Notknet | /notknet/ | Notxnet | Notxnet → fortition → Notknet |
 | `sleep` | to rest unconscious | Nod | /nod/ | Nod | Nod → no change → Nod |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): goblin has no exposure to 'snow' |
@@ -70,7 +70,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-rainforest` | a biome class | Bab | /bab/ | Zvab | Zvab → fortition → clustersimplify → Bab |
 | `tree` | a woody plant | Ngot | /ŋot/ | Ngot | Ngot → no change → Ngot |
 | `tropical-rainforest` | a biome class | Notngok | /notŋok/ | Notngok | Notngok → no change → Notngok |
-| `tropical-seasonal-forest` | a biome class | Noknek | /noknek/ | Xnoknek | Xnoknek → fortition → clustersimplify → Noknek |
+| `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-seasonal-forest' |
 | `tundra` | a biome class | Ngok | /ŋok/ | Xngok | Xngok → fortition → clustersimplify → Ngok |
 | `two` | the cardinal number 2 | Ngakskeb | /ŋakskeb/ | Ngaksxeb | Ngaksxeb → fortition → Ngakskeb |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
@@ -82,7 +82,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 
 | Concept | Gloss | Word | IPA | Proto | Derivation |
 |---|---|---|---|---|---|
-| `abyssal` | a biome class | — | — | — | gap (experiential): no compound recipe for 'abyssal' |
+| `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `blood` | the circulating fluid of a body | Rro | /rro/ | Rrok | Rrok → finalloss → Rro |
@@ -90,14 +90,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `bone` | the rigid frame of a body | Ra | /ra/ | Rat | Rat → finalloss → Ra |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `child` | one's son or daughter | Ragxo | /ragxo/ | Ragxog | Ragxog → finalloss → Ragxo |
-| `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
+| `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `dark` | the color term for black/dark hues | Ro | /ro/ | Ro | Ro → no change → Ro |
 | `day` | the light half of the day-night cycle | Rra | /rra/ | Rrag | Rrag → finalloss → Rra |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `die` | to cease living | Rro | /rro/ | Rro | Rro → no change → Rro |
 | `earth` | the ground underfoot | Rotra | /rotra/ | Rotra | Rotra → no change → Rotra |
 | `eat` | to consume food | Raqrra | /raqrra/ | Raqrra | Raqrra → no change → Raqrra |
-| `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
+| `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
 | `eye` | the organ of sight | Roqrra | /roqrra/ | Roqrra | Roqrra → no change → Roqrra |
 | `fire` | flame and heat | Rra | /rra/ | Rra | Rra → no change → Rra |
 | `foot` | the walking limb-end | Raxa | /raxa/ | Raxa | Raxa → no change → Raxa |
@@ -105,17 +105,17 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `goblin-kind` | a goblin | Xaro | /xaro/ | Xarok | Xarok → finalloss → Xaro |
 | `god` | a deity | Xa | /xa/ | Xak | Xak → finalloss → Xa |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
-| `hadal-trench` | a biome class | — | — | — | gap (experiential): no compound recipe for 'hadal-trench' |
+| `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hand` | the manipulating limb-end | Xo | /xo/ | Xog | Xog → finalloss → Xo |
 | `hearth` | the fire at the center of a home | Ra | /ra/ | Rak | Rak → finalloss → Ra |
 | `home` | one's dwelling | Ra | /ra/ | Rak | Rak → finalloss → Ra |
-| `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no compound recipe for 'hydrothermal-vent' |
+| `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
 | `kobold-kind` | a kobold | Xarra | /xarra/ | Xarrat | Xarrat → finalloss → Xarra |
 | `light` | the color term for white/light hues | Ro | /ro/ | Ro | Ro → no change → Ro |
 | `many` | an indefinitely large count | Ra | /ra/ | Ra | Ra → no change → Ra |
-| `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
+| `mesopelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'mesopelagic' |
 | `moon` | a moon | Raxa | /raxa/ | Raxa | Raxa → no change → Raxa |
 | `mountain` | high ground | — | — | — | gap (experiential): kobold has no exposure to 'mountain' |
 | `mouth` | the organ of eating and speech | Xotrro | /xotrro/ | Xotrrog | Xotrrog → finalloss → Xotrro |
@@ -125,11 +125,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `parent` | one's father or mother | Rro | /rro/ | Rroq | Rroq → finalloss → Rro |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): kobold has no exposure to 'rain' |
 | `red` | the color term for red | Rrora | /rrora/ | Rrorak | Rrorak → finalloss → Rrora |
-| `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
+| `savanna` | a biome class | — | — | — | gap (experiential): no compound recipe for 'savanna' |
 | `sea` | a body of salt water | Xatrrara | /xatrrara/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Rro | /rro/ | Rro | Rro → no change → Rro |
-| `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
+| `shrubland` | a biome class | Ra | /ra/ | Ra | Ra → no change → Ra |
 | `sibling` | one's brother or sister | Rro | /rro/ | Rro | Rro → no change → Rro |
 | `sleep` | to rest unconscious | Rro | /rro/ | Rrok | Rrok → finalloss → Rro |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): kobold has no exposure to 'snow' |
@@ -140,12 +140,12 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sun` | the sun | Ra | /ra/ | Ra | Ra → no change → Ra |
 | `taiga` | a biome class | Xaxo | /xaxo/ | Xaxot | Xaxot → finalloss → Xaxo |
 | `temperate-forest` | a biome class | Rra | /rra/ | Rra | Rra → no change → Rra |
-| `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
+| `temperate-grassland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-grassland' |
 | `temperate-rainforest` | a biome class | Xo | /xo/ | Xo | Xo → no change → Xo |
 | `tree` | a woody plant | Xoro | /xoro/ | Xoro | Xoro → no change → Xoro |
 | `tropical-rainforest` | a biome class | Xaxo | /xaxo/ | Xaxok | Xaxok → finalloss → Xaxo |
-| `tropical-seasonal-forest` | a biome class | Rara | /rara/ | Rara | Rara → no change → Rara |
-| `tundra` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tundra' |
+| `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-seasonal-forest' |
+| `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `two` | the cardinal number 2 | Rakra | /rakra/ | Rakraq | Rakraq → finalloss → Rakra |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
 | `water` | the drinkable liquid | Xatrra | /xatrra/ | Xatrraq | Xatrraq → finalloss → Xatrra |

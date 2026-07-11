@@ -1,7 +1,7 @@
 # The Biomes of Seed 42
 
-The air organizes into 3 circulation band(s) per hemisphere; 10 land biomes and 10 marine biomes cover the globe.
-Some 19% of the surface is habitable — land with water and a tolerable season.
+The air organizes into 3 circulation band(s) per hemisphere; 12 land biomes and 8 marine biomes cover the globe.
+Some 15% of the surface is habitable — land with water and a tolerable season.
 
 ```text
 ************************************************************************
@@ -9,21 +9,21 @@ Some 19% of the surface is habitable — land with water and a tolerable season.
 ************************************************************************
 ************************************************************************
 ************************************************************************
-*******************************************t,,,,tt**********************
-*  *** **   * v * v*   *   ** ***  **  *t,,**t,,,,, *,,*   *   ** ***  *
-              _  t                    ,,,kkkkk,,,kt  ,,,,t              
-                _                   ffff~~~~~ftff~ffffffffff            
-     __                            ffffF~~~~~ffffffffff~=~=ff           
-                     fffwwwf      fwwwwoooooowwwwwooooooooowwwv         
-                   wwwwwwwww:#   wwwwWowwwwwwwwooooooooooooowww         
-                  Fwwoooooow::  wwwwWooWwwwwwwwwoooooooooooowwww        
-                  wwooooooowf;ffwwwowwwwwwf  fwwwooooooooooooooww       
-                  fff~~~~fffff;ffff~=fffffffffffff~~~~~~~~~~~ffffF      
-                  vffffffffff~~ffftff    fffff~~~~~~~~~~=fffffffff      
-                   t,,,v__vv,kkt        kkttk,kkkkkkkkkkkk,,,,,,,,,v    
-*  *** **   *   *v *   *   **t,**  **,,,,t,,,kkk*kkk*kk*kkk*,,k,,,,,*  *
-*****************************,,,,,**t,,,,*,,,,*****************,,,,,,t**
-**************************t,,,,,,,,,***,,,,,,*******************,,,,,,t*
+*************t,,,,,************************t,,,tt,**********************
+*kk***k**kkk*,,,,t,*kkk*kkk**k***kk**k-*t,k,,,,k,,,,,,,*-kk*kkk**k***kk*
+kkkkkkkkkkkkk=tk-t_-kkkkkkkkkkkkkkkk--,,kt,,,,,^^kk--,kkktkkkkkkkkkkkkkk
+~~~~~~~~~~~~~~-_f_-~~~~~~~~~~~~~~~-=ftt~~~ft,^^*^tF~~~~~~~~v~~~~~~~~~~~~
+~~~~fff~~~~=~~~-~~~~~fffffff~~~~~--f"t~~~~f;"^^^^^ttfF~~~~~~~~~~~~~~~~~~
+ooooowoooooooofoooowf------_fwoo-=woooooooooo"f"ttffoooooooooowooooooooo
+oooooooooow:;ttfwow-ooooooooWfwo-woooooooooooo:ffooooooooooooowwoooooooo
+oooooooooow=tttffwwoooooooooo-w-woooooooowwwwoooWoooooooooooooowwooooooo
+oooooooooooooffowwwoooooooooww-Wooooooooowfo-woooooooooooooooooowwoooooo
+~~~~~~~~~~=ffff~fff~~~~~~~~~ff=f~~~~~==f~~fffff~~~~~~~~~~~~ffff~fff~~~~~
+~~~~~~~~~~~~~~~~~fff~~~~fff~~~=fffff=~~~=f;f=~~~~~~~~~~~~~~~~f~~=fff~~~~
+kkkkkkkkkkkkkkktk,,,,,,,,,,,,tk,,kk--=--,,^^^,,,tkkkkkkkkkkkkkkkkk,,,kkk
+*kk***,,*kkk*kkk*tk,,tttk,,**t,,,kk**,k,,t**^,,,,,,,*kk*kkk*kkk**kt,,,k*
+*******,*************t*******t*,,,,,tt,t****,***,,,,,,*************t,,,*
+,**t*,****************,***,,*******t,t************t,,,,,************t,,,
 ************************************************************************
 ************************************************************************
 ************************************************************************

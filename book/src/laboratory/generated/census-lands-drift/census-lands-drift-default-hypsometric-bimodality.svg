@@ -1,31 +1,27 @@
 <svg viewBox="0 0 640 300" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif, system-ui, sans-serif">
 <text x="56" y="20" font-size="13" font-weight="600" fill="currentColor">hypsometric-bimodality — default</text>
 <line x1="56.0" y1="186.0" x2="624.0" y2="186.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
-<text x="50" y="186.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">50</text>
+<text x="50" y="186.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">125</text>
 <line x1="56.0" y1="136.0" x2="624.0" y2="136.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
-<text x="50" y="136.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">100</text>
+<text x="50" y="136.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">250</text>
 <line x1="56.0" y1="86.0" x2="624.0" y2="86.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
-<text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">150</text>
+<text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">375</text>
 <line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
-<text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">200</text>
+<text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">500</text>
 <text x="96.6" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="96.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">&lt; 0</text>
-<rect x="143.2" y="133.0" width="69.0" height="103.0" fill="#5b8dd9" rx="2" />
-<text x="177.7" y="129.0" font-size="11" fill="currentColor" text-anchor="middle">103</text>
+<rect x="143.2" y="169.2" width="69.0" height="66.8" fill="#5b8dd9" rx="2" />
+<text x="177.7" y="165.2" font-size="11" fill="currentColor" text-anchor="middle">167</text>
 <text x="177.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[0, 1)</text>
-<rect x="224.4" y="67.0" width="69.0" height="169.0" fill="#5b8dd9" rx="2" />
-<text x="258.9" y="63.0" font-size="11" fill="currentColor" text-anchor="middle">169</text>
+<rect x="224.4" y="102.8" width="69.0" height="133.2" fill="#5b8dd9" rx="2" />
+<text x="258.9" y="98.8" font-size="11" fill="currentColor" text-anchor="middle">333</text>
 <text x="258.9" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[1, 2)</text>
-<rect x="305.5" y="127.0" width="69.0" height="109.0" fill="#5b8dd9" rx="2" />
-<text x="340.0" y="123.0" font-size="11" fill="currentColor" text-anchor="middle">109</text>
+<text x="340.0" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[2, 3)</text>
-<rect x="386.7" y="183.0" width="69.0" height="53.0" fill="#5b8dd9" rx="2" />
-<text x="421.1" y="179.0" font-size="11" fill="currentColor" text-anchor="middle">53</text>
+<text x="421.1" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="421.1" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[3, 4)</text>
-<rect x="467.8" y="204.0" width="69.0" height="32.0" fill="#5b8dd9" rx="2" />
-<text x="502.3" y="200.0" font-size="11" fill="currentColor" text-anchor="middle">32</text>
+<text x="502.3" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="502.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[4, 6)</text>
-<rect x="548.9" y="202.0" width="69.0" height="34.0" fill="#5b8dd9" rx="2" />
-<text x="583.4" y="198.0" font-size="11" fill="currentColor" text-anchor="middle">34</text>
+<text x="583.4" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="583.4" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">&gt;= 6</text>
 </svg>

@@ -14,93 +14,109 @@ Salient phenomena, most attention-demanding first:
 ## The Land
 
 The globe breaks into 16 plates; the sea claims 73% of its surface.
-The highest land stands 2510 m above the sea.
+The highest land stands 6753 m above the sea.
 
-The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 10 marine biomes cover the globe.
-Some 11% of the surface is habitable — land with water and a tolerable season.
+The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 8 marine biomes cover the globe.
+Some 13% of the surface is habitable — land with water and a tolerable season.
 
-- **Ngadxnokzvabnadnob** — temperate-forest
-- **Raxoxakrro** — temperate-rainforest
-- **Zhxakfnebngodned** — temperate-forest
-- **Nokfngebned** — shrubland
-- **Fngatnokxnodnedngob** — shrubland
-- **Zhfakvnokvnetngobned** — shrubland
-- **Zfotnobzfobned** — savanna
-- **Sfotzhvobned** — shrubland
-- **Svodxngekned** — temperate-forest
-- **Ngaksvadnedngob** — shrubland
-- **Zhvatxngobned** — temperate-forest
-- **Ngoksfadned** — temperate-forest
-- **Xoxaraxoraroq** — tundra
-- **Vneknakngebned** — shrubland
-- **Natfnobngatnadnobned** — temperate-forest
-- **Nokxngobzfatngobned** — shrubland
-- **Vngebvngoknotngokned** — tropical-rainforest
-- **Nekxngakxnabnednotngok** — tropical-rainforest
-- **Rarakrroq** — tropical-rainforest
-- **Fnadsvoknotngokned** — tropical-rainforest
-- **Ngokxngobnednotngok** — tropical-rainforest
-- **Fngetngobsfebnotngokned** — tropical-rainforest
-- **Fngaknodfngaknotngok** — tropical-rainforest
-- **Ngokvngatnednadnob** — temperate-forest
-- **Naksvatned** — shrubland
-- **Nodxnabfngoknedngot** — taiga
-- **Rarararrogroxok** — tropical-seasonal-forest
-- **Svobsvobned** — taiga
-- **Raxaxorroqrakrroq** — tropical-rainforest
-- **Natngadned** — tropical-rainforest
-- **Naksvodngedned** — taiga
-- **Xaxoraragxog** — tropical-rainforest
-- **Rarararaxa** — tropical-seasonal-forest
-- **Zvobngabzxeknednoknek** — tropical-seasonal-forest
-- **Zhxekngodnebnoknek** — tropical-seasonal-forest
-- **Xngedsxotned** — taiga
-- **Nakngabfnotned** — savanna
-- **Zhxoksvotngob** — shrubland
-- **Xaxoraxokrotra** — tropical-rainforest
-- **Sfetzfabnedngot** — taiga
-- **Rarararara** — tropical-seasonal-forest
-- **Xaxoxarrat** — tropical-rainforest
-- **Rarrarorroq** — temperate-forest
-- **Xaxoraroqxo** — tropical-rainforest
-- **Rarararroqrrok** — tropical-seasonal-forest
-- **Rarararaqrra** — tropical-seasonal-forest
-- **Zvabsxobzhfednedngob** — shrubland
-- **Raxaxoxaqrakxa** — tropical-rainforest
-- **Raxograq** — tropical-seasonal-forest
-- **Rarokrrotroq** — tropical-rainforest
-- **Raxaxoxagrro** — tropical-rainforest
-- **Rarrarorrot** — savanna
+- **Vnadvnednadnob** — temperate-forest
+- **Sfetzxaknednadnob** — temperate-forest
+- **Zxetfneknoknekned** — tropical-seasonal-forest
+- **Ngobvnobnedngob** — shrubland
+- **Fngedxnebnadnobned** — temperate-forest
+- **Zhvekngokvnetnadnob** — temperate-forest
+- **Vngaksvebsfebnadnob** — temperate-forest
+- **Rararraroxag** — alpine
+- **Zxobxnabned** — temperate-forest
+- **Sxobnednadngob** — shrubland
+- **Zvodngadngobned** — shrubland
+- **Zhfedfnetnadnobned** — temperate-forest
+- **Zhxatvnebnadnob** — temperate-forest
+- **Raxoqrragrag** — alpine
+- **Nokxnetnedngob** — shrubland
+- **Notvnodned** — shrubland
+- **Fnebnedfneknedngob** — shrubland
+- **Rarrarroqxaq** — temperate-forest
+- **Nobnadngob** — shrubland
+- **Ngatzhxadzhxekngobned** — shrubland
+- **Raraxoxaxaq** — alpine
+- **Rarogrogxa** — temperate-forest
+- **Xnabngodvngekned** — temperate-forest
+- **Raxakro** — tropical-rainforest
+- **Rarraroxatxo** — temperate-forest
+- **Ngaksxedngobned** — shrubland
+- **Ngekfnadnedngob** — shrubland
+- **Svobfnodvnobned** — taiga
+- **Vnadngakngobned** — shrubland
+- **Raxaxoragrrarro** — tropical-rainforest
+- **Sxodfngodnotngok** — tropical-rainforest
+- **Notzhvetvnodngot** — taiga
+- **Nadngatnotngokned** — tropical-rainforest
+- **Vngobzvatzvotned** — tropical-rainforest
+- **Vnebngaknedngot** — taiga
+- **Vnatsfadnedngot** — taiga
+- **Ngabngotvnaknednotngok** — tropical-rainforest
+- **Ngabzfetnedngot** — taiga
+- **Xnebfnekzvebngot** — taiga
+- **Ngokngatnotngokned** — tropical-rainforest
+- **Xngadxnodngatned** — taiga
+- **Rarroxoxog** — alpine
+- **Nekxnedzveknednotngok** — tropical-rainforest
+- **Natsvabxngetnotngokned** — tropical-rainforest
+- **Zfekzhvedfnobnotngok** — tropical-rainforest
+- **Fngodngebngoknednotngok** — tropical-rainforest
+- **Zhxatvngodngotned** — taiga
+- **Zhvakzhvabnobnedngot** — taiga
+- **Sfedvnakned** — savanna
+- **Vngotvngetngot** — taiga
+- **Fnokxnetnoknekned** — tropical-seasonal-forest
+- **Zxabzfednedngot** — taiga
+- **Xngabsxatned** — taiga
+- **Nakvngatned** — savanna
+- **Nedngekxngabnednotngok** — tropical-rainforest
+- **Ngobvnobzhfakned** — tropical-seasonal-forest
+- **Fnodzhvadxngakned** — savanna
+- **Sfebzhfeksvebned** — taiga
+- **Rarrokrroxog** — tropical-rainforest
+- **Raxaxorrogrraq** — tropical-rainforest
+- **Rarrorraqra** — tropical-seasonal-forest
+- **Vnabsvedngakned** — savanna
+- **Raxaxa** — shrubland
+- **Rararaxoxoxo** — tropical-seasonal-forest
+- **Rararaxarrak** — tropical-seasonal-forest
+- **Raraxaxag** — tropical-seasonal-forest
+- **Rararaxokroro** — tropical-seasonal-forest
+- **Rarararroro** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
-The land holds 52 settlement(s).
-The chief goblin settlement, Ngadxnokzvabnadnob, holds 415 souls amid temperate-forest.
-The chief kobold settlement, Raxoxakrro, holds 360 souls amid temperate-rainforest.
+The land holds 68 settlement(s).
+The chief goblin settlement, Vnadvnednadnob, holds 421 souls amid temperate-forest.
+The chief kobold settlement, Rararraroxag, holds 361 souls amid alpine.
 
-The goblin village of **Ngadxnokzvabnadnob**, population 415.
+The goblin village of **Vnadvnednadnob**, population 421.
 
-Ngadxnokzvabnadnob lives by farming.
+Vnadvnednadnob lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 
-The kobold warren of **Raxoxakrro**, population 360.
+The kobold warren of **Rararraroxag**, population 361.
 
-Raxoxakrro lives by farming.
-Its roles, lowest to highest: digger, warden, shaper, keeper, elders.
+Rararraroxag lives by foraging.
+Its roles, lowest to highest: digger, elders.
 
 ## The Gods
 
 An organized priesthood tends a pantheon:
 
-> Ned the Nabned is ever: Ned the Nabned watches unceasing. So it was, so it is.
+> Ngat the Vngebngatned is ever: Ngat the Vngebngatned watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-In the warren of **Raxoxakrro**, an organized priesthood tends its own pantheon:
+The warren of **Rararraroxag** keeps its own folk pantheon:
 
-> Ra Ra is: Ra Ra is always watching. That's how it's always been. That's how it's always been. Ra is the highest among the gods. *(who presides)*
+> Raro Raro is: Raro Raro is always watching. That's how it's always been. That's how it's always been. Raro is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 

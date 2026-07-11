@@ -1,6 +1,9 @@
 //! Seed-derivation stream labels for tectonic genesis. Labels are permanent
 //! save-format contracts; deliberate regeneration uses an epoch suffix
 //! (`terrain/plate-count/v2`), never a rename.
+//!
+//! Retired labels (never reuse, never redraw): "plate-kind" (epoch v2 —
+//! superseded by "cratons"; Crust spec §9).
 
 /// Root stream: every terrain chain hangs off `world_seed.derive(ROOT)`.
 /// type-audit: bare-ok(identifier-text)
@@ -11,9 +14,6 @@ pub const PLATE_COUNT: &str = "plate-count";
 /// Per-plate seed-position draws (two `next_f64` per plate, sequential).
 /// type-audit: bare-ok(identifier-text)
 pub const PLATE_SEEDS: &str = "plate-seeds";
-/// Continental-fraction draw, then one continental roll per plate.
-/// type-audit: bare-ok(identifier-text)
-pub const PLATE_KIND: &str = "plate-kind";
 /// Per-plate Euler pole draws (axis then rate, sequential).
 /// type-audit: bare-ok(identifier-text)
 pub const PLATE_MOTION: &str = "plate-motion";

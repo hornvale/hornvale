@@ -411,8 +411,13 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // weighted, edge-noised Voronoi assignment moves which cells settlements
     // land on, shifting one moonless-spinning world's kobold flagship across
     // the night-star/sun brightness split.
+    //
+    // Crust epoch (Task 8, 2026-07-10: isostatic elevation over drawn
+    // cratons; plate-kind retired): every world's landmass transforms and
+    // every settlement cell moves — re-pinned on the 500-seed drift study
+    // (was 59 solar / 10 lunar).
     assert_eq!(
-        moonless_solar, 59,
+        moonless_solar, 60,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
@@ -484,8 +489,15 @@ fn blind_attribution_beats_chance_decisively() {
     // re-pinned again on the 500-seed drift study (was 414/497) — the
     // weighted, edge-noised Voronoi assignment resolves one more correct
     // call among the same attributable-pair count.
-    assert_eq!(correct, 415, "blind-attribution count drifted");
-    assert_eq!(total, 497, "attributable-pair count drifted");
+    //
+    // Crust epoch (Task 8, 2026-07-10: isostatic elevation over drawn
+    // cratons; plate-kind retired): re-pinned on the 500-seed drift study
+    // (was 415/497) — the transformed landmasses make every world's pair
+    // attributable (three worlds that previously placed no attributable
+    // pair now do), with two more correct calls; accuracy 0.834, still
+    // above the pinned 0.8 floor.
+    assert_eq!(correct, 417, "blind-attribution count drifted");
+    assert_eq!(total, 500, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -754,14 +766,21 @@ fn name_collision_rate_is_measured_and_pinned() {
     // range (was 175 zero / 325 nonzero, mean 3.9417%): the noisy edges
     // apparently narrow the vantage diversity for some worlds even though
     // the grid itself did not change.
-    assert_eq!(zero, 159, "zero-collision world count drifted");
-    assert_eq!(nonzero, 341, "nonzero-collision world count drifted");
+    //
+    // Crust epoch (Task 8, 2026-07-10: isostatic elevation over drawn
+    // cratons; plate-kind retired): re-pinned on the 500-seed drift study
+    // (was 159 zero / 341 nonzero, mean 3.7525%) — the transformed
+    // landmasses move every settlement and its presiding phenomenon,
+    // IMPROVING the rate (3.1042%): craton-shaped coasts spread
+    // settlements across more distinct sky vantages.
+    assert_eq!(zero, 166, "zero-collision world count drifted");
+    assert_eq!(nonzero, 334, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.037_524_858_156_516).abs() < 1e-6,
+        (mean - 0.031_042_391_227_307).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -798,9 +817,16 @@ fn name_length_distributions_are_measured_and_pinned() {
     // kobold 497/14.173051) — present-row counts hold, but the weighted,
     // edge-noised Voronoi assignment moves which presiding concept each
     // settlement compounds over, shifting both means.
+    //
+    // Crust epoch (Task 8, 2026-07-10: isostatic elevation over drawn
+    // cratons; plate-kind retired): re-pinned on the 500-seed drift study
+    // (was goblin 500/14.481806236373808, kobold 497/13.709415332150503) —
+    // the transformed landmasses relocate every settlement; kobolds now
+    // place in all 500 worlds (the three total-exclusion worlds gained a
+    // kobold-viable site), and both means shift.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 500u32, 14.481_806_236_373_808),
-        ("kobold", 497u32, 13.709_415_332_150_503),
+        ("goblin", 500u32, 14.847_929_675_008_448),
+        ("kobold", 500u32, 13.574_836_542_341_416),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -974,6 +1000,11 @@ fn null_control_name_length_smd_is_pinned() {
     // Voronoi assignment shifts the underlying name-length distribution
     // again (see `name_length_distributions_are_measured_and_pinned`);
     // still comfortably inside the same ±0.2 bound.
+    //
+    // Crust epoch (Task 8, 2026-07-10: isostatic elevation over drawn
+    // cratons; plate-kind retired): re-pinned again (was
+    // -0.078885075229913) — the transformed landmasses shift the
+    // name-length distribution once more; still inside the same bound.
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let namelen = std_mean_diff(
@@ -981,7 +1012,7 @@ fn null_control_name_length_smd_is_pinned() {
         nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
     assert!(
-        (namelen - -0.078_885_075_229_913).abs() < 1e-9,
+        (namelen - -0.064_112_415_249_032).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

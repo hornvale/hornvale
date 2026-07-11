@@ -1,34 +1,34 @@
 # The Peoples of Seed 42
 
-The land holds 26 settlement(s).
-The chief goblin settlement, Sxobngetngotned, holds 410 souls amid temperate-rainforest.
-The chief kobold settlement, Rarograq, holds 333 souls amid temperate-forest.
+The land holds 38 settlement(s).
+The chief goblin settlement, Xngebnebned, holds 439 souls amid temperate-rainforest.
+The chief kobold settlement, Xorogxoqxag, holds 473 souls amid temperate-rainforest.
 
 ```text
+                                            o                           
+                     o          o                                       
+                                           o       o                    
+                    o      o                                            
                                                                         
-                                                                        
-                                                                        
-                                                                        
-                                                                        
-                                                o   o                   
+                   o                               o                    
+                                                o                       
+                  o                             o   @                   
+                                              o                         
+                    o  o                       o  o o                   
                   o                                                     
-                                              o  o  o                   
-                                                   o                    
-                                                                        
-                     o                            o  o                  
-                   o                                                    
-                     o                                                  
+                                                 o                      
                   o                                                     
-                    o                            o                      
                                                                         
+                  o                                                     
                    o  o                                                 
-                                         o   o                          
+                                                  o                     
+                   o   o                  o   o                         
+                                                 o  o                   
+                     o                                                  
+                         o                         o                    
                                                                         
-                         o                                              
-                                       o                                
-                    o        o               o                          
-                                                @                       
-                        o                                               
+                     o               o           o                      
+                                                                        
 ```
 
 ![Full-color render](./settlement-seed-42-locked.png)
