@@ -292,7 +292,7 @@ pub struct Calendar {
 /// Derive the calendar from a generated system.
 pub fn calendar_of(system: &StarSystem) -> Calendar {
     let day = match system.anchor.rotation {
-        Rotation::Spinning { day } => Some(day),
+        Rotation::Spinning { day, .. } => Some(day),
         Rotation::Locked => None,
     };
     Calendar {
