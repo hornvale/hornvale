@@ -136,7 +136,30 @@ languages as a byproduct. This is a new epoch beyond `root/v2`.
 Add `Tone` to the segment/syllable model (per-nucleus); make it a regular
 conditioned outcome of the merging rules for tone-capable languages; verify
 `lexicon-regular` still holds (the split is regular) and cognates intact.
-**Status**: Not Started
+**Status**: ✅ COMPLETE (byte-identical for shipped worlds; NO re-baseline).
+  ✅ §10 decisions confirmed with Nathan (after an ideonomy exploration of
+     Q2/Q3): Q1 tone on `Segment::Vowel.tone`; Q2 voicing-conditioned split,
+     both `ClusterSimplify`+`FinalLoss` feed one map, voiced→Low/voiceless→
+     High, tone on the stranded nucleus (first vowel onset-drop, last coda-
+     drop), nasal codas in the voiced/Low bucket, `Mid` banked; Q3 accept the
+     atonal tail + a Stage-4 confusable-vs-free homophony metric; Q4 full
+     epoch + re-baseline.
+  ✅ `Tone {Neutral,High,Mid,Low}` enum (Neutral first = Ord minimum);
+     `Segment::Vowel.tone` added as the LAST field (Ord tie-break locked by
+     `tone_is_the_last_ord_key_of_a_vowel`). ~46 vowel literals threaded
+     `Tone::Neutral`; `vowel_shift` carries tone through a quality shift;
+     `feature_distance`/renderers ignore tone (Stage 5 renders marks).
+  ✅ `RuleKind::Tonogenesis` + `apply_tonogenesis`: reads the pending merger's
+     dropped-consonant voicing (threaded through `evolve`, NO stream draw),
+     writes the tone on the stranded nucleus subject to the codomain
+     constraint. 7 tests incl. reconstructability
+     (`tonogenesis_preserves_a_contrast_two_roots_would_otherwise_lose_to_a_
+     merger`) and atonal inertness. NOT added to `RULE_KINDS` yet — that (and
+     the tone-inventory draw) lands in Stage 4's single re-baseline, so
+     shipped cascades stay byte-identical here.
+  ✅ Full gate green: workspace 796 tests / 0 failed, fmt, clippy -D warnings,
+     type-audit check. No artifact drift (every golden/byte-identity test
+     passed unchanged).
 
 ## Stage 4: Body-plan tone capacity + channel-capacity floor
 `tonality` scalar in the articulation vector (yuan-ti/dragon/bird propensities

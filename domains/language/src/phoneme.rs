@@ -71,6 +71,34 @@ pub enum Backness {
     Back,
 }
 
+/// A syllable nucleus's pitch — the suprasegmental tier, orthogonal to the
+/// segmental place/manner/height inventory (spec §2.1). `Neutral` is the
+/// atonal default: it carries no contrast and renders bare, so every vowel
+/// bearing it reproduces the pre-tone output exactly. A tone-capable language
+/// draws its inventory from the level tones. `Neutral` is declared first so
+/// it is the `Ord` minimum — the tone key sorts an atonal (all-`Neutral`)
+/// world identically to a world with no tone dimension at all.
+///
+/// `Mid` is authored but **banked**: the tonogenesis rule (spec §4) conditions
+/// on a single binary feature (the dropped segment's voicing → `High`/`Low`),
+/// so `Mid` awaits a future three-way conditioning source (aspiration, a
+/// three-register voicing split) and is never written by this epoch's rule.
+/// type-audit: bare-ok(flag)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Tone {
+    /// The atonal default: no pitch contrast, renders bare. Every daughter's
+    /// vowels carry this unless its drawn tone inventory admits a contrast.
+    Neutral,
+    /// A high level tone (˥). Written by tonogenesis when the merger dropped a
+    /// voiceless segment.
+    High,
+    /// A mid level tone (˧). Banked — no rule writes it this epoch.
+    Mid,
+    /// A low level tone (˩). Written by tonogenesis when the merger dropped a
+    /// voiced segment (nasals, being voiced, fall in this bucket).
+    Low,
+}
+
 /// A segment: an articulatory feature-bundle, the truth from which every
 /// surface form (romanization, IPA) derives as a view.
 /// type-audit: bare-ok(flag)
@@ -85,7 +113,10 @@ pub enum Segment {
         /// Whether the vocal folds vibrate.
         voiced: bool,
     },
-    /// A vowel: height, backness, and lip rounding.
+    /// A vowel: height, backness, lip rounding, and its suprasegmental tone.
+    /// `tone` is the LAST field so it is the last `Ord` key — the stable
+    /// tie-break the determinism contract depends on (an all-`Tone::Neutral`
+    /// world sorts identically to a pre-tone one).
     Vowel {
         /// How open the mouth is.
         height: Height,
@@ -93,6 +124,9 @@ pub enum Segment {
         backness: Backness,
         /// Whether the lips are rounded.
         rounded: bool,
+        /// The nucleus's suprasegmental pitch (`Tone::Neutral` for an atonal
+        /// language).
+        tone: Tone,
     },
 }
 
@@ -234,26 +268,31 @@ pub(crate) fn canonical_segments() -> Vec<Segment> {
             height: High,
             backness: Front,
             rounded: false,
+            tone: Tone::Neutral,
         }, // i
         Segment::Vowel {
             height: Mid,
             backness: Front,
             rounded: false,
+            tone: Tone::Neutral,
         }, // e
         Segment::Vowel {
             height: Low,
             backness: Central,
             rounded: false,
+            tone: Tone::Neutral,
         }, // a
         Segment::Vowel {
             height: Mid,
             backness: Back,
             rounded: true,
+            tone: Tone::Neutral,
         }, // o
         Segment::Vowel {
             height: High,
             backness: Back,
             rounded: true,
+            tone: Tone::Neutral,
         }, // u
     ]
 }
@@ -388,26 +427,31 @@ pub fn romanize(seg: &Segment) -> &'static str {
             height: Height::High,
             backness: Backness::Front,
             rounded: false,
+            ..
         } => "i",
         Segment::Vowel {
             height: Height::Mid,
             backness: Backness::Front,
             rounded: false,
+            ..
         } => "e",
         Segment::Vowel {
             height: Height::Low,
             backness: Backness::Central,
             rounded: false,
+            ..
         } => "a",
         Segment::Vowel {
             height: Height::Mid,
             backness: Backness::Back,
             rounded: true,
+            ..
         } => "o",
         Segment::Vowel {
             height: Height::High,
             backness: Backness::Back,
             rounded: true,
+            ..
         } => "u",
         // Outside the curated inventory: no romanization is authored.
         _ => "?",
@@ -541,26 +585,31 @@ pub fn ipa(seg: &Segment) -> &'static str {
             height: Height::High,
             backness: Backness::Front,
             rounded: false,
+            ..
         } => "i",
         Segment::Vowel {
             height: Height::Mid,
             backness: Backness::Front,
             rounded: false,
+            ..
         } => "e",
         Segment::Vowel {
             height: Height::Low,
             backness: Backness::Central,
             rounded: false,
+            ..
         } => "a",
         Segment::Vowel {
             height: Height::Mid,
             backness: Backness::Back,
             rounded: true,
+            ..
         } => "o",
         Segment::Vowel {
             height: Height::High,
             backness: Backness::Back,
             rounded: true,
+            ..
         } => "u",
         // Outside the curated inventory: no IPA glyph is authored.
         _ => "?",
@@ -696,6 +745,37 @@ mod tests {
     }
 
     #[test]
+    fn tone_is_the_last_ord_key_of_a_vowel() {
+        // Determinism (spec §8): `tone` is the final `Ord` key, so an
+        // all-`Neutral` world sorts exactly as a pre-tone one, toned variants
+        // of one vowel order among themselves by tone, and any difference in
+        // vowel QUALITY is decided before tone is ever consulted — the stable
+        // tie-break `nativize` relies on.
+        let a = |tone| Segment::Vowel {
+            height: Height::Low,
+            backness: Backness::Central,
+            rounded: false,
+            tone,
+        };
+        // Same quality: tones order in their declared sequence.
+        assert!(a(Tone::Neutral) < a(Tone::High));
+        assert!(a(Tone::High) < a(Tone::Mid));
+        assert!(a(Tone::Mid) < a(Tone::Low));
+        // Quality dominates tone: a High-height vowel with the maximal tone
+        // still sorts before a Low-height vowel with the minimal tone.
+        let i_low_tone = Segment::Vowel {
+            height: Height::High,
+            backness: Backness::Front,
+            rounded: false,
+            tone: Tone::Low,
+        };
+        assert!(
+            i_low_tone < a(Tone::Neutral),
+            "a difference in height must decide before tone is consulted"
+        );
+    }
+
+    #[test]
     fn sonority_orders_stop_below_vowel() {
         let stop = Segment::Consonant {
             place: Place::Velar,
@@ -706,6 +786,7 @@ mod tests {
             height: Height::Low,
             backness: Backness::Central,
             rounded: false,
+            tone: Tone::Neutral,
         };
         assert!(sonority(&stop) < sonority(&vowel));
     }
@@ -794,6 +875,7 @@ mod tests {
                 height: Mid,
                 backness: Front,
                 rounded: false,
+                tone: Tone::Neutral,
             },
             Segment::Consonant {
                 place: Alveolar,
@@ -809,6 +891,7 @@ mod tests {
                 height: Mid,
                 backness: Back,
                 rounded: true,
+                tone: Tone::Neutral,
             },
             Segment::Consonant {
                 place: Alveolar,

@@ -945,11 +945,12 @@ mod tests {
     /// doubled stop (`tt`) is an illegal cluster no template can host in
     /// one syllable, and a nasal can never begin a syllable.
     fn toy_repair_ph() -> crate::phonology::Phonology {
-        use crate::phoneme::{Backness, Height, Place};
+        use crate::phoneme::{Backness, Height, Place, Tone};
         let a = Segment::Vowel {
             height: Height::Low,
             backness: Backness::Central,
             rounded: false,
+            tone: Tone::Neutral,
         };
         let t = Segment::Consonant {
             place: Place::Alveolar,

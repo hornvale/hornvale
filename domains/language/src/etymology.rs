@@ -17,7 +17,7 @@
 #![warn(missing_docs)]
 
 use crate::naming::Namer;
-use crate::phoneme::{Height, Manner, Segment};
+use crate::phoneme::{Height, Manner, Segment, Tone};
 use crate::phonology::Phonology;
 use hornvale_kernel::{Seed, Stream};
 
@@ -39,6 +39,20 @@ pub enum RuleKind {
     ClusterSimplify,
     /// A word-final coda consonant drops.
     FinalLoss,
+    /// **Tonogenesis** (spec §4): the voicing of the consonant a prior
+    /// merging rule ([`RuleKind::ClusterSimplify`] or [`RuleKind::FinalLoss`])
+    /// dropped is reborn as a tone on the stranded nucleus — voiced-loss →
+    /// [`crate::phoneme::Tone::Low`], voiceless-loss →
+    /// [`crate::phoneme::Tone::High`] (the attested direction; nasals, being
+    /// voiced, fall in the Low bucket). It is a *regular conditioned* change,
+    /// not a homophony patch: it fires on every syllable whose onset/coda a
+    /// merger removed, collision or not. Subject to the same codomain
+    /// constraint as every rule — the toned vowel takes only if it is in the
+    /// phonology's inventory, so an atonal language (Neutral-only vowels) sees
+    /// it as identity. Reads the derivation's own step history (the dropped
+    /// voicing), never a stream draw, so it stays a pure function of
+    /// `(proto, cascade, ph)`.
+    Tonogenesis,
 }
 
 /// One drawn sound rule: its kind, and `param` selecting the kind's drawn
@@ -91,7 +105,13 @@ pub struct Derivation {
 }
 
 /// The closed, canonically ordered list of rule kinds [`draw_cascade`]
-/// draws from.
+/// draws from. [`RuleKind::Tonogenesis`] is deliberately **absent**: adding a
+/// kind here changes the `pick` distribution and reseeds every cascade in
+/// every saved world (a save-format contract), so tonogenesis enters the
+/// drawn family only at the phonology epoch's single re-baseline, alongside
+/// the tone-inventory draw that makes it effective. Until then it is reachable
+/// only via a hand-built cascade (its unit tests), leaving shipped worlds
+/// byte-identical.
 const RULE_KINDS: [RuleKind; 5] = [
     RuleKind::Lenition,
     RuleKind::Fortition,
@@ -325,6 +345,7 @@ fn vowel_shift(seg: Segment, param: u32) -> Segment {
             height,
             backness,
             rounded,
+            tone,
         } => {
             let height = match (param, height) {
                 (0, Height::Low) => Height::Mid,
@@ -333,10 +354,13 @@ fn vowel_shift(seg: Segment, param: u32) -> Segment {
                 (1, Height::Mid) => Height::Low,
                 (_, unchanged) => unchanged,
             };
+            // Tone is a separate tier: a quality shift carries the nucleus's
+            // tone through unchanged (spec §3, carry-forward).
             Segment::Vowel {
                 height,
                 backness,
                 rounded,
+                tone,
             }
         }
         other => other,
@@ -398,14 +422,108 @@ fn apply_final_loss(segs: &[Segment]) -> (Vec<Segment>, bool) {
     }
 }
 
-/// Dispatch one rule's application to a whole word under `ph`.
-fn apply_rule(segs: &[Segment], rule: &SoundRule, ph: &Phonology) -> (Vec<Segment>, bool) {
+/// Which nucleus a merger stranded — the tone-bearing unit tonogenesis
+/// writes to. A dropped onset (`ClusterSimplify`) strands the word's first
+/// vowel; a dropped coda (`FinalLoss`) strands its last.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ToneLocus {
+    /// The word's first vowel (an onset was dropped before it).
+    First,
+    /// The word's last vowel (a coda was dropped after it).
+    Last,
+}
+
+/// The tonogenetic conditioning a merger records for a later
+/// [`RuleKind::Tonogenesis`] step: which nucleus was stranded, and whether
+/// the dropped consonant was voiced (→ Low) or voiceless (→ High). Derived
+/// entirely from the derivation's own history, never a stream draw.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ToneConditioning {
+    /// The stranded nucleus.
+    locus: ToneLocus,
+    /// The dropped consonant's voicing.
+    dropped_voiced: bool,
+}
+
+/// The voicing of a dropped segment (always a consonant — the two structural
+/// mergers only ever drop consonants; the `false` fallback is unreachable and
+/// exists only to keep this total).
+fn dropped_voicing(seg: Segment) -> bool {
+    match seg {
+        Segment::Consonant { voiced, .. } => voiced,
+        Segment::Vowel { .. } => false,
+    }
+}
+
+/// Tonogenesis's total function on a whole word (spec §4): given the
+/// conditioning a prior merger recorded, write the corresponding tone
+/// (voiced-loss → [`Tone::Low`], voiceless-loss → [`Tone::High`]) onto the
+/// stranded nucleus. Applies only when a merger is pending AND the resulting
+/// toned vowel is in `ph.inventory` (the codomain constraint that keeps an
+/// atonal language a no-op). Pure — the pending conditioning is a function of
+/// the derivation so far, not of any draw.
+fn apply_tonogenesis(
+    segs: &[Segment],
+    pending: &Option<ToneConditioning>,
+    ph: &Phonology,
+) -> (Vec<Segment>, bool) {
+    let Some(cond) = pending else {
+        return (segs.to_vec(), false);
+    };
+    let tone = if cond.dropped_voiced {
+        Tone::Low
+    } else {
+        Tone::High
+    };
+    let target = match cond.locus {
+        ToneLocus::First => segs.iter().position(|s| matches!(s, Segment::Vowel { .. })),
+        ToneLocus::Last => segs
+            .iter()
+            .rposition(|s| matches!(s, Segment::Vowel { .. })),
+    };
+    let Some(i) = target else {
+        return (segs.to_vec(), false);
+    };
+    let Segment::Vowel {
+        height,
+        backness,
+        rounded,
+        ..
+    } = segs[i]
+    else {
+        return (segs.to_vec(), false);
+    };
+    let toned = Segment::Vowel {
+        height,
+        backness,
+        rounded,
+        tone,
+    };
+    if toned != segs[i] && ph.inventory.contains(&toned) {
+        let mut out = segs.to_vec();
+        out[i] = toned;
+        (out, true)
+    } else {
+        (segs.to_vec(), false)
+    }
+}
+
+/// Dispatch one rule's application to a whole word under `ph`. `pending`
+/// carries the tonogenetic conditioning a prior merger recorded (consumed
+/// only by [`RuleKind::Tonogenesis`]).
+fn apply_rule(
+    segs: &[Segment],
+    rule: &SoundRule,
+    ph: &Phonology,
+    pending: &Option<ToneConditioning>,
+) -> (Vec<Segment>, bool) {
     match rule.kind {
         RuleKind::Lenition => apply_segment_rule(segs, ph, lenition),
         RuleKind::Fortition => apply_segment_rule(segs, ph, fortition),
         RuleKind::VowelShift => apply_segment_rule(segs, ph, |s| vowel_shift(s, rule.param)),
         RuleKind::ClusterSimplify => apply_cluster_simplify(segs),
         RuleKind::FinalLoss => apply_final_loss(segs),
+        RuleKind::Tonogenesis => apply_tonogenesis(segs, pending, ph),
     }
 }
 
@@ -417,8 +535,33 @@ fn apply_rule(segs: &[Segment], rule: &SoundRule, ph: &Phonology) -> (Vec<Segmen
 pub fn evolve(proto: &[Segment], cascade: &Cascade, ph: &Phonology) -> Derivation {
     let mut current = proto.to_vec();
     let mut steps = Vec::with_capacity(cascade.rules.len());
+    // The most recent merger's tonogenetic conditioning, recorded from the
+    // pre-drop word and consumed by a later `Tonogenesis` step. Threading it
+    // through the derivation (never a stream draw) is what keeps tonogenesis a
+    // pure, replayable function of `(proto, cascade, ph)`.
+    let mut pending: Option<ToneConditioning> = None;
     for rule in &cascade.rules {
-        let (next, changed) = apply_rule(&current, rule, ph);
+        let (next, changed) = apply_rule(&current, rule, ph, &pending);
+        // Update the pending conditioning from `current` (the word *before*
+        // this rule dropped anything): a fired merger records its dropped
+        // consonant's voicing and stranded locus; a tonogenesis step consumes
+        // whatever was pending; every other rule leaves it intact.
+        match rule.kind {
+            RuleKind::ClusterSimplify if changed => {
+                pending = Some(ToneConditioning {
+                    locus: ToneLocus::First,
+                    dropped_voiced: dropped_voicing(current[0]),
+                });
+            }
+            RuleKind::FinalLoss if changed => {
+                pending = Some(ToneConditioning {
+                    locus: ToneLocus::Last,
+                    dropped_voiced: dropped_voicing(current[current.len() - 1]),
+                });
+            }
+            RuleKind::Tonogenesis => pending = None,
+            _ => {}
+        }
         steps.push(AppliedRule {
             rule: *rule,
             changed,
@@ -490,11 +633,13 @@ fn feature_distance(a: Segment, b: Segment) -> u8 {
                 height: h1,
                 backness: b1,
                 rounded: r1,
+                ..
             },
             Segment::Vowel {
                 height: h2,
                 backness: b2,
                 rounded: r2,
+                ..
             },
         ) => (h1 != h2) as u8 + (b1 != b2) as u8 + (r1 != r2) as u8,
         _ => u8::MAX,
@@ -553,6 +698,7 @@ mod tests {
                 height: Height::Low,
                 backness: Backness::Central,
                 rounded: false,
+                tone: Tone::Neutral,
             }, // a
             Segment::Consonant {
                 place: Place::Velar,
@@ -818,12 +964,24 @@ mod tests {
         }
     }
 
-    /// A vowel literal, for hand-built protos.
+    /// A vowel literal (atonal), for hand-built protos.
     fn v(height: Height, backness: Backness, rounded: bool) -> Segment {
         Segment::Vowel {
             height,
             backness,
             rounded,
+            tone: Tone::Neutral,
+        }
+    }
+
+    /// A toned vowel literal, for hand-built protos and tone-capable test
+    /// inventories exercising tonogenesis.
+    fn vt(height: Height, backness: Backness, rounded: bool, tone: Tone) -> Segment {
+        Segment::Vowel {
+            height,
+            backness,
+            rounded,
+            tone,
         }
     }
 
@@ -960,6 +1118,256 @@ mod tests {
         assert!(!d.steps[0].changed);
     }
 
+    // ---- Tonogenesis (Stage 3): a lost segmental contrast reborn as pitch.
+
+    /// A deliberately hand-built **tone-capable** phonology: the stops and
+    /// nasal the tonogenesis tests need, plus the low central vowel `a` in
+    /// all three relevant tones (Neutral, High, Low) IN the inventory — so a
+    /// tone the rule writes lands in the codomain and actually takes. (An
+    /// atonal inventory holds only the Neutral vowel; `test_phonology()` is
+    /// such a case, exercised by [`tonogenesis_is_inert_in_an_atonal_language`].)
+    fn tonal_phonology() -> Phonology {
+        Phonology {
+            inventory: vec![
+                c(Place::Labial, Manner::Stop, true),     // b (voiced)
+                c(Place::Labial, Manner::Stop, false),    // p (voiceless)
+                c(Place::Alveolar, Manner::Stop, false),  // t
+                c(Place::Alveolar, Manner::Stop, true),   // d (voiced)
+                c(Place::Velar, Manner::Stop, false),     // k
+                c(Place::Alveolar, Manner::Nasal, true),  // n (voiced)
+                v(Height::Low, Backness::Central, false), // a  (Neutral)
+                vt(Height::Low, Backness::Central, false, Tone::High), // á
+                vt(Height::Low, Backness::Central, false, Tone::Low), // à
+            ],
+            onsets: vec![vec![Manner::Stop]],
+            nuclei: 1,
+            codas: vec![vec![Manner::Nasal], vec![Manner::Stop], vec![]],
+        }
+    }
+
+    /// The tonogenesis cascade the tests drive: the merging rule, then the
+    /// split. Tonogenesis reads what the prior merger dropped.
+    fn merge_then_tonogenize(merger: RuleKind) -> Cascade {
+        Cascade {
+            rules: vec![
+                SoundRule {
+                    kind: merger,
+                    param: 0,
+                },
+                SoundRule {
+                    kind: RuleKind::Tonogenesis,
+                    param: 0,
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn tonogenesis_writes_high_for_a_dropped_voiceless_onset_low_for_a_voiced_one() {
+        let ph = tonal_phonology();
+        // p-t-a: ClusterSimplify drops the voiceless p; the stranded first
+        // nucleus takes High.
+        let voiceless = vec![
+            c(Place::Labial, Manner::Stop, false),    // p (voiceless)
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+        let d = evolve(
+            &voiceless,
+            &merge_then_tonogenize(RuleKind::ClusterSimplify),
+            &ph,
+        );
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Alveolar, Manner::Stop, false),               // t
+                vt(Height::Low, Backness::Central, false, Tone::High), // á
+            ],
+            "a dropped voiceless onset must raise the stranded nucleus to High"
+        );
+        assert!(d.steps[1].changed, "the tonogenesis step must fire");
+
+        // b-t-a: ClusterSimplify drops the voiced b; the nucleus takes Low.
+        let voiced = vec![
+            c(Place::Labial, Manner::Stop, true),     // b (voiced)
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+        let d = evolve(
+            &voiced,
+            &merge_then_tonogenize(RuleKind::ClusterSimplify),
+            &ph,
+        );
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Alveolar, Manner::Stop, false),              // t
+                vt(Height::Low, Backness::Central, false, Tone::Low), // à
+            ],
+            "a dropped voiced onset must lower the stranded nucleus to Low"
+        );
+    }
+
+    #[test]
+    fn tonogenesis_from_final_loss_tones_the_last_nucleus() {
+        let ph = tonal_phonology();
+        // t-a-d: FinalLoss drops the voiced coda d; the last nucleus → Low.
+        let voiced_coda = vec![
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+            c(Place::Alveolar, Manner::Stop, true),   // d (voiced)
+        ];
+        let d = evolve(
+            &voiced_coda,
+            &merge_then_tonogenize(RuleKind::FinalLoss),
+            &ph,
+        );
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Alveolar, Manner::Stop, false),              // t
+                vt(Height::Low, Backness::Central, false, Tone::Low), // à
+            ],
+        );
+
+        // t-a-k: FinalLoss drops the voiceless coda k; the last nucleus → High.
+        let voiceless_coda = vec![
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+            c(Place::Velar, Manner::Stop, false),     // k (voiceless)
+        ];
+        let d = evolve(
+            &voiceless_coda,
+            &merge_then_tonogenize(RuleKind::FinalLoss),
+            &ph,
+        );
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Alveolar, Manner::Stop, false),               // t
+                vt(Height::Low, Backness::Central, false, Tone::High), // á
+            ],
+        );
+    }
+
+    #[test]
+    fn a_dropped_nasal_coda_falls_in_the_voiced_low_bucket() {
+        // Nasals are voiced, so a lost nasal coda tonogenizes to Low — no
+        // special case (the §Q2 decision: nasal codas join the voiced bucket).
+        let ph = tonal_phonology();
+        let nasal_coda = vec![
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+            c(Place::Alveolar, Manner::Nasal, true),  // n (voiced)
+        ];
+        let d = evolve(
+            &nasal_coda,
+            &merge_then_tonogenize(RuleKind::FinalLoss),
+            &ph,
+        );
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Alveolar, Manner::Stop, false),              // t
+                vt(Height::Low, Backness::Central, false, Tone::Low), // à
+            ],
+        );
+    }
+
+    #[test]
+    fn tonogenesis_preserves_a_contrast_two_roots_would_otherwise_lose_to_a_merger() {
+        // The load-bearing invariant (spec §2.2): two roots differing ONLY in
+        // the onset the merger destroys stay distinct IFF they differed in the
+        // tonogenetic conditioning feature. b-t-a and p-t-a both cluster-
+        // simplify to t-a — a merger — but tonogenesis splits them by pitch.
+        let ph = tonal_phonology();
+        let voiced = vec![
+            c(Place::Labial, Manner::Stop, true),     // b
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+        let voiceless = vec![
+            c(Place::Labial, Manner::Stop, false),    // p
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+
+        // Without tonogenesis, the merger collapses them onto one form.
+        let merge_only = one_rule(RuleKind::ClusterSimplify, 0);
+        assert_eq!(
+            evolve(&voiced, &merge_only, &ph).modern,
+            evolve(&voiceless, &merge_only, &ph).modern,
+            "test premise: the bare merger homophones the two roots"
+        );
+
+        // With tonogenesis, the lost voicing contrast survives as pitch.
+        let cascade = merge_then_tonogenize(RuleKind::ClusterSimplify);
+        assert_ne!(
+            evolve(&voiced, &cascade, &ph).modern,
+            evolve(&voiceless, &cascade, &ph).modern,
+            "tonogenesis must rescue the contrast the merger destroyed"
+        );
+    }
+
+    #[test]
+    fn tonogenesis_is_inert_in_an_atonal_language() {
+        // The codomain constraint keeps atonal species byte-identical: their
+        // inventory holds only the Neutral vowel, so the toned output is
+        // off-inventory and tonogenesis applies as identity. `test_phonology`
+        // is atonal (every vowel Neutral).
+        let ph = test_phonology();
+        let proto = vec![
+            c(Place::Labial, Manner::Stop, true),     // b
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+        let with_tono = evolve(
+            &proto,
+            &merge_then_tonogenize(RuleKind::ClusterSimplify),
+            &ph,
+        );
+        let without = evolve(&proto, &one_rule(RuleKind::ClusterSimplify, 0), &ph);
+        assert_eq!(
+            with_tono.modern, without.modern,
+            "in an atonal inventory tonogenesis must be a no-op (byte-identity)"
+        );
+        assert!(
+            !with_tono.steps[1].changed,
+            "the tonogenesis step must record changed=false when inert"
+        );
+    }
+
+    #[test]
+    fn tonogenesis_is_pure_and_replayable() {
+        // evolve is pure: replaying the recorded proto+cascade reproduces the
+        // modern form exactly, tone and all.
+        let ph = tonal_phonology();
+        let proto = vec![
+            c(Place::Labial, Manner::Stop, true),     // b
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+        let cascade = merge_then_tonogenize(RuleKind::ClusterSimplify);
+        let d = evolve(&proto, &cascade, &ph);
+        let replay = evolve(&d.proto, &cascade, &ph);
+        assert_eq!(d.modern, replay.modern);
+    }
+
+    #[test]
+    fn tonogenesis_without_a_prior_merger_is_identity() {
+        // Tonogenesis reads a prior merger's dropped feature; with none, it
+        // has nothing to write and is the identity.
+        let ph = tonal_phonology();
+        let proto = vec![
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+        let cascade = one_rule(RuleKind::Tonogenesis, 0);
+        let d = evolve(&proto, &cascade, &ph);
+        assert_eq!(d.modern, proto, "no prior merger ⇒ no tone written");
+        assert!(!d.steps[0].changed);
+    }
+
     // ---- Nativization fixtures and tests.
 
     /// A restrictive phonology whose inventory genuinely lacks the
@@ -1051,6 +1459,7 @@ mod tests {
             height: Height::Low,
             backness: Backness::Central,
             rounded: false,
+            tone: Tone::Neutral,
         };
         let eng = Segment::Consonant {
             place: Place::Velar,

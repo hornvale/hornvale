@@ -122,6 +122,7 @@ fn segment_label(seg: &Segment) -> String {
             height,
             backness,
             rounded,
+            ..
         } => format!(
             "{height:?}/{backness:?}/{}",
             if *rounded { "rounded" } else { "unrounded" }
@@ -147,6 +148,7 @@ fn feature_description(seg: &Segment) -> String {
             height,
             backness,
             rounded,
+            ..
         } => format!(
             "{} {} {}vowel",
             lower(height),

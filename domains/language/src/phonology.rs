@@ -7,7 +7,7 @@
 //! `romanize`/`ipa` are exhaustive only over that curated set, so an
 //! off-menu feature combination would surface as `"?"` in every later name.
 
-use crate::phoneme::{Manner, Place, Segment, canonical_segments, sonority};
+use crate::phoneme::{Manner, Place, Segment, Tone, canonical_segments, sonority};
 use hornvale_kernel::{Seed, Stream};
 
 /// An exotic manner of articulation a species may or may not be capable of.
@@ -121,26 +121,31 @@ fn vowel_order() -> [Segment; 5] {
             height: High,
             backness: Front,
             rounded: false,
+            tone: Tone::Neutral,
         }, // i
         Segment::Vowel {
             height: Mid,
             backness: Front,
             rounded: false,
+            tone: Tone::Neutral,
         }, // e
         Segment::Vowel {
             height: Low,
             backness: Central,
             rounded: false,
+            tone: Tone::Neutral,
         }, // a
         Segment::Vowel {
             height: Mid,
             backness: Back,
             rounded: true,
+            tone: Tone::Neutral,
         }, // o
         Segment::Vowel {
             height: High,
             backness: Back,
             rounded: true,
+            tone: Tone::Neutral,
         }, // u
     ]
 }
