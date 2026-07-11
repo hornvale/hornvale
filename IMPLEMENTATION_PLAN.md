@@ -198,7 +198,20 @@ re-measure homophony with the Stage-1 instrument.
 
 ## Stage 5: Render + audio — tone across roman / IPA / espeak
 Tone marks in all three views; espeak tone approximation; the audio pipeline.
-**Status**: Not Started
+**Status**: ✅ COMPLETE (drift-free — shipped peoples are atonal).
+  ✅ `tone_mark_roman` (combining acute/macron/grave), `tone_mark_ipa` (Chao
+     tone letters ˥˧˩), `tone_of` in `phoneme.rs`; `render_views` (the shared
+     name+lexicon reducer) appends the mark after each vowel's glyph. Neutral
+     renders bare, so atonal output is byte-identical (verified: regen of
+     dictionary/almanac/phonology produced no diff).
+  ✅ espeak stays tone-blind by design — lexical tone is espeak-weak, a known
+     audio limit (spec §9); the segmental formulation stands. So the audio bank
+     is unchanged: its sample names are bare stems (drawn from phonology, NOT
+     evolved through the cascade), so neither the reseed nor tone touches them;
+     `audio_artifacts` set-check green, `phonology.md` did not drift.
+  ✅ Tests: tone marks render for High/Low, empty for Neutral; a toned word's
+     roman/IPA differ from Neutral while its espeak matches (the documented
+     limit). Full language suite 81 green.
 
 ## Stage 6: Close — book, decisions, retro, re-measure
 Chronicle; re-score the relevant open-question; decisions (functional-load

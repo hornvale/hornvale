@@ -46,6 +46,7 @@ pub use packs::{
 };
 pub use phoneme::{
     Backness, Height, Manner, Place, Segment, Tone, espeak, espeak_word, ipa, romanize, sonority,
+    tone_mark_ipa, tone_mark_roman, tone_of,
 };
 pub use phonology::{
     Envelope, ExoticSeg, Phonology, distinguishable_capacity, draw_phonology, permits,

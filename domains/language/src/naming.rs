@@ -38,7 +38,9 @@
 //! is entirely the composition root's business, never this module's.
 
 use crate::lexicon::{Headedness, LexEntry, Lexicon};
-use crate::phoneme::{Manner, Segment, espeak_word, ipa, romanize};
+use crate::phoneme::{
+    Manner, Segment, espeak_word, ipa, romanize, tone_mark_ipa, tone_mark_roman, tone_of,
+};
 use crate::phonology::Phonology;
 use hornvale_kernel::{Seed, Stream};
 
@@ -448,8 +450,16 @@ pub fn render_views(segments: &[Segment]) -> GeneratedName {
     let mut roman = String::new();
     let mut ipa_str = String::new();
     for seg in segments {
+        // Segment quality first, then its tone mark (spec §6): a combining
+        // diacritic on the roman vowel, a Chao tone letter after the IPA
+        // vowel. Both are empty for `Tone::Neutral`, so an atonal word renders
+        // exactly as before the tone tier. espeak stays tone-blind — lexical
+        // tone is espeak-weak, a known audio limit (spec §9), so the segmental
+        // formulation stands and the pitch is simply not voiced.
         roman.push_str(romanize(seg));
+        roman.push_str(tone_mark_roman(tone_of(seg)));
         ipa_str.push_str(ipa(seg));
+        ipa_str.push_str(tone_mark_ipa(tone_of(seg)));
     }
     GeneratedName {
         roman: capitalize_first(&roman),
@@ -859,6 +869,41 @@ mod tests {
     fn empty_lexicon(seed: u64) -> Lexicon {
         let ph = wordy_ph();
         build_lexicon(&Seed(seed), "test", "test", &ph, &ph, &BTreeMap::new())
+    }
+
+    #[test]
+    fn render_views_marks_tone_on_the_vowel_and_leaves_neutral_bare() {
+        use crate::phoneme::{Backness, Height, Place, Tone};
+        let t = Segment::Consonant {
+            place: Place::Alveolar,
+            manner: Manner::Stop,
+            voiced: false,
+        };
+        let a = |tone| Segment::Vowel {
+            height: Height::Low,
+            backness: Backness::Central,
+            rounded: false,
+            tone,
+        };
+        // Atonal (Neutral) word renders exactly as the pre-tone views: "ta".
+        let neutral = render_views(&[t, a(Tone::Neutral)]);
+        assert_eq!(neutral.roman, "Ta");
+        assert_eq!(neutral.ipa, "ta");
+        // A High-toned nucleus gains an acute (roman) and ˥ (IPA); a Low one a
+        // grave and ˩. The consonant is untouched.
+        let high = render_views(&[t, a(Tone::High)]);
+        assert_eq!(high.roman, "Ta\u{0301}");
+        assert_eq!(high.ipa, "ta˥");
+        let low = render_views(&[t, a(Tone::Low)]);
+        assert_eq!(low.ipa, "ta˩");
+        // Distinct tones make distinct surface strings — tonogenesis's repair
+        // is visible, not just structural.
+        assert_ne!(high.roman, low.roman);
+        assert_ne!(high.roman, neutral.roman);
+        // espeak stays tone-blind (the documented audio limit): all three share
+        // the same segmental formulation.
+        assert_eq!(high.espeak, neutral.espeak);
+        assert_eq!(low.espeak, neutral.espeak);
     }
 
     #[test]

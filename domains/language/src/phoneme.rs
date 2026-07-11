@@ -649,6 +649,41 @@ pub fn ipa(seg: &Segment) -> &'static str {
     }
 }
 
+/// The romanization mark a `tone` appends to its vowel's glyph (spec §6): a
+/// trailing combining diacritic — High an acute (á), Low a grave (à), Mid a
+/// macron (ā) — or the empty string for `Tone::Neutral`, which renders bare.
+/// A view over the segment, never stored; a word-level renderer
+/// ([`crate::naming::render_views`]) appends it right after the vowel it tones.
+pub fn tone_mark_roman(tone: Tone) -> &'static str {
+    match tone {
+        Tone::Neutral => "",
+        Tone::High => "\u{0301}", // combining acute accent
+        Tone::Mid => "\u{0304}",  // combining macron
+        Tone::Low => "\u{0300}",  // combining grave accent
+    }
+}
+
+/// The IPA mark a `tone` appends to its vowel (spec §6): a Chao tone letter —
+/// High `˥`, Mid `˧`, Low `˩` — or the empty string for `Tone::Neutral`. A
+/// view, appended after the vowel by the word-level renderer.
+pub fn tone_mark_ipa(tone: Tone) -> &'static str {
+    match tone {
+        Tone::Neutral => "",
+        Tone::High => "˥",
+        Tone::Mid => "˧",
+        Tone::Low => "˩",
+    }
+}
+
+/// The tone borne by `seg` if it is a vowel, else `Tone::Neutral` — the hook a
+/// word-level renderer uses to decide whether to append a tone mark.
+pub fn tone_of(seg: &Segment) -> Tone {
+    match seg {
+        Segment::Vowel { tone, .. } => *tone,
+        Segment::Consonant { .. } => Tone::Neutral,
+    }
+}
+
 /// Render a segment as its espeak-ng phoneme mnemonic (Kirshenbaum-style
 /// ASCII), the notation `hornvale voice` feeds espeak-ng's direct phoneme
 /// input to author the book's audio clips.
@@ -806,6 +841,33 @@ mod tests {
             i_low_tone < a(Tone::Neutral),
             "a difference in height must decide before tone is consulted"
         );
+    }
+
+    #[test]
+    fn tone_marks_render_for_toned_vowels_and_are_empty_for_neutral() {
+        // Neutral renders bare (byte-identity with the pre-tone views); the
+        // contrastive tones render their mark. Mid is banked but still has an
+        // authored mark for a future rule.
+        assert_eq!(tone_mark_roman(Tone::Neutral), "");
+        assert_eq!(tone_mark_ipa(Tone::Neutral), "");
+        assert_eq!(tone_mark_roman(Tone::High), "\u{0301}");
+        assert_eq!(tone_mark_ipa(Tone::High), "˥");
+        assert_eq!(tone_mark_roman(Tone::Low), "\u{0300}");
+        assert_eq!(tone_mark_ipa(Tone::Low), "˩");
+        // `tone_of` reads a vowel's tone and is Neutral for any consonant.
+        let a_high = Segment::Vowel {
+            height: Height::Low,
+            backness: Backness::Central,
+            rounded: false,
+            tone: Tone::High,
+        };
+        assert_eq!(tone_of(&a_high), Tone::High);
+        let t = Segment::Consonant {
+            place: Place::Alveolar,
+            manner: Manner::Stop,
+            voiced: false,
+        };
+        assert_eq!(tone_of(&t), Tone::Neutral);
     }
 
     #[test]
