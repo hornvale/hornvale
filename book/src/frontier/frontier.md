@@ -1593,6 +1593,14 @@ conversion, purism, and immigration at once.
   not to purge all non-self, but to tell symbiont from pathogen — which is the
   danger model's harm-not-foreignness rule once more.
 
+**Further correspondences** are illustrative rather than model-changing, but worth
+the archive: the complement cascade (an amplifying signal chain) is
+belief-amplification — outrage recruiting outrage; inflammation is the visible
+*social friction* that scrutiny costs; immune senescence, an ageing system that
+discriminates worse, is cultural ossification (CUL-17) — a people grown unable to
+recognise new threats or to update; and graft-versus-host disease is the convert
+or immigrant who, once admitted, turns on the host.
+
 **What keeps it honest** is the derive-don't-author discipline the whole book
 carries: each scale's threshold is derived from *that scale's own self* — the
 body's markers, the mind's priors, the culture's tradition and orthodoxy, the
