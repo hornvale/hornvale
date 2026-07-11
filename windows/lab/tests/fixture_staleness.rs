@@ -1,26 +1,55 @@
-//! Always-on staleness probe for the committed census fixtures (TOOL-16).
+//! Always-on staleness probe for the committed census fixtures (TOOL-16,
+//! TOOL-drift-scan-probes).
 //!
 //! Decision `calibration-loads-the-census-fixture` accepted one cost
 //! knowingly: a developer who changes worldgen and runs only `cargo test`
 //! sees calibration pass against the stale fixture until CI's artifact
 //! drift check catches it. This probe closes most of that gap for a few
 //! seconds' cost: it regenerates each census's first [`PROBE_SEEDS`] seeds
-//! live and compares them, canonicalized, against the committed rows — so
-//! a worldgen change that moves the census fails HERE, with the
-//! regeneration instruction, not in CI an hour later.
+//! live, PLUS a rotating [`WINDOW_SEEDS`]-seed window (see
+//! [`window_start`]), and compares both against the committed rows,
+//! canonicalized — so a worldgen change that moves the census fails HERE,
+//! with the regeneration instruction, not in CI an hour later. The window's
+//! position is a pure function of the committed fixture bytes, so
+//! successive fixture regenerations sweep different slices of seed space
+//! instead of always re-checking the same six seeds.
 //!
 //! Not a replacement for the full ignored guard
 //! (`census_fixture_matches_live_run`) or CI's regenerate-and-diff: a
-//! change that only moves seeds ≥ [`PROBE_SEEDS`] slips past this probe
-//! and is caught there.
+//! change that only moves seeds outside the fixed head and the current
+//! window slips past this probe and is caught there.
 
-use hornvale_kernel::quantize;
+use hornvale_kernel::{Seed, quantize};
 use hornvale_lab::{MetricValue, Row, RunResult, Study, canonical_row, load_rows, load_study, run};
 use std::path::Path;
 
-/// Seeds probed per census: 3 seeds × (1 + 2) pin sets ≈ 9 worlds ≈ a
-/// couple of seconds — cheap enough for every workspace test run.
+/// Seeds probed per census from the fixed head: seeds 0–2 — cheap enough
+/// for every workspace test run.
 const PROBE_SEEDS: u64 = 3;
+
+/// Width of the rotating window: 3 seeds, mirroring [`PROBE_SEEDS`].
+const WINDOW_SEEDS: u64 = 3;
+
+/// The smallest study span the rotating window still fits in: the fixed
+/// head (seeds `0..3`) plus a 3-seed window need at least 3 seeds of
+/// margin at each end, so `[3, span - 3]` must be non-empty.
+const MIN_SPAN_FOR_WINDOW: u64 = 7;
+
+/// Derive the rotating window's start seed as a pure function of the
+/// committed fixture bytes: `Seed` derivation over the CSV content, then a
+/// bounded draw over `[3, span - 3]`. Never git state, wall clock, or env
+/// — the same fixture bytes always produce the same window, and only
+/// regenerating the fixture moves it. Returns `None` when `span` is too
+/// small to hold a fixed block, a moving block, and the required margin
+/// (design constraint: fall back to the fixed window only).
+fn window_start(csv: &str, span: u64) -> Option<u64> {
+    if span < MIN_SPAN_FOR_WINDOW {
+        return None;
+    }
+    let mut stream = Seed(0).derive(csv).stream();
+    let hi = u32::try_from(span - 3).expect("census spans fit in u32");
+    Some(u64::from(stream.range_u32(3, hi)))
+}
 
 /// The committed, CI-drift-checked censuses (decisions
 /// `ci-checks-500-seed-censuses` and `calibration-loads-the-census-fixture`):
@@ -77,10 +106,19 @@ fn census_fixtures_match_a_probe_of_live_seeds() {
         let study = load_study(Path::new(study_path)).expect("load study");
         let csv = std::fs::read_to_string(rows_path).expect("read census fixture");
         let fixture = load_rows(&study, &csv).expect("reconstruct census from fixture");
+
         let mut mini = study.clone();
         mini.seeds.count = mini.seeds.count.min(PROBE_SEEDS);
         let live = run(&mini).expect("probe census");
         assert_fixture_fresh(&live, &fixture, study_path, rows_path);
+
+        if let Some(start) = window_start(&csv, study.seeds.count) {
+            let mut window = study.clone();
+            window.seeds.from = start;
+            window.seeds.count = WINDOW_SEEDS;
+            let live_window = run(&window).expect("probe rotating window");
+            assert_fixture_fresh(&live_window, &fixture, study_path, rows_path);
+        }
     }
 }
 
@@ -155,4 +193,49 @@ fn a_missing_fixture_row_is_reported_as_truncated() {
         .downcast_ref::<String>()
         .expect("panic payload is a String");
     assert!(msg.contains("stale or truncated"), "got: {msg}");
+}
+
+// The rotating window's own self-tests (PROC-6 pattern: prove the
+// mechanism — determinism, bounds, movement — not just that today's
+// fixtures happen to pass).
+
+#[test]
+fn window_start_is_deterministic_for_fixed_bytes() {
+    let csv = "seed,value\n0,1\n1,2\n";
+    assert_eq!(window_start(csv, 500), window_start(csv, 500));
+}
+
+#[test]
+fn window_start_is_in_bounds_for_a_representative_span() {
+    let span = 1000;
+    let start =
+        window_start("some committed fixture bytes", span).expect("span >= 7 must yield a window");
+    assert!(
+        (3..=span - 3).contains(&start),
+        "window start {start} out of [3, {}]",
+        span - 3
+    );
+}
+
+#[test]
+fn window_start_is_in_bounds_at_the_span_seven_boundary() {
+    // span 7 is the smallest span the design constraint still guarantees a
+    // window for: [3, span - 3] must be non-empty.
+    let start = window_start("boundary-bytes", 7).expect("span == 7 must still yield a window");
+    assert!((3..=4).contains(&start), "got {start}");
+}
+
+#[test]
+fn window_start_moves_when_the_bytes_change() {
+    let span = 500;
+    let a = window_start("fixture-content-v1", span).expect("window");
+    let b = window_start("fixture-content-v2", span).expect("window");
+    assert_ne!(a, b, "changing the fixture bytes must move the window");
+}
+
+#[test]
+fn window_start_falls_back_to_none_below_span_seven() {
+    assert_eq!(window_start("anything", 6), None);
+    assert_eq!(window_start("anything", 0), None);
+    assert_eq!(window_start("anything", 1), None);
 }
