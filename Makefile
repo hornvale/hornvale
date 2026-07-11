@@ -7,6 +7,8 @@
 #   make quick        # cheap half: fmt --check + clippy (the pre-commit gate)
 #   make gate         # the full commit gate: fmt + clippy + workspace tests
 #   make rebaseline   # regenerate every committed generated artifact
+#   make rebaseline-goldens # accept drifted byte-golden test fixtures
+#   make lab-diff STUDY=<name> # report which census metrics moved vs HEAD
 #   make install-hooks# point git at scripts/hooks (opt-in; edits local config)
 #
 # Cost-ordered by design: fmt and clippy are cheapest and the most common

@@ -32,7 +32,7 @@
 set -euo pipefail
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" || $# -lt 3 ]]; then
-    sed -n '2,28p' "$0"
+    sed -n '2,31p' "$0"
     exit 2
 fi
 
