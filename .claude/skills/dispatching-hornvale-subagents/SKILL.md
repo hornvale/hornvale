@@ -42,6 +42,26 @@ twice even when the prohibition was explicit. The fix is aviation's:
    files, partial artifact regens) before running the suite — one orphaned
    census test turned a 90-second suite into 12+ minutes.
 
+## Worktree prewarm and the timeout budget
+
+Fresh worktrees have an empty `target/`, and cargo keys workspace-crate
+artifacts to the absolute source path — nothing carries over from the main
+checkout. Measured solo on the M1 Max (2026-07-11): cold dev build 16 s,
+`make gate` ~4.5 min (dominated by test *runtime*, not compilation),
+`make rebaseline` ~2.5 min (cold release build + two 500-seed censuses +
+type-audit). The compiles are cheap; **parallel campaign sessions
+contending for the same 10 cores are the multiplier** that pushes a gate
+past a timeout. So:
+
+- Immediately after `git worktree add`, start `make prewarm` in the
+  worktree **in the background of the controller session** (not the
+  subagent's) — it warms the dev, release, and type-audit caches while
+  spec-reading and preamble assembly happen, trimming the compile edges.
+- Gate/census/rebaseline commands must pass an explicit Bash
+  `timeout: 3600000` (see preamble item 2); repo settings set default 20
+  min / ceiling 60 min. The timeout, not the prewarm, is the real guard
+  when several sessions run at once.
+
 ## Red flags (controller-side tells)
 
 | Tell in the reply | Reality |
