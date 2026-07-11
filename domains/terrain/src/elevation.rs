@@ -149,9 +149,16 @@ pub fn generate_elevation(
 /// level at the elevation percentile that puts exactly that fraction of
 /// cells strictly below it. The draw is consumed whether pinned or not
 /// (pin isolation). Sort uses `total_cmp` — elevations are finite and
-/// strictly ordered by construction.
-/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: return)
-pub fn derive_sea_level(terrain_seed: Seed, pins: &TerrainPins, elevation: &CellMap<f64>) -> f64 {
+/// strictly ordered by construction. `notes` receives a metering entry
+/// when `ocean_fraction` is pinned (Task 7's metering convention: `pinned
+/// <name> <value> (seed draws <drawn>)`, the value formatted `{:.2}`).
+/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: return), bare-ok(prose: notes)
+pub fn derive_sea_level(
+    terrain_seed: Seed,
+    pins: &TerrainPins,
+    elevation: &CellMap<f64>,
+    notes: &mut Vec<String>,
+) -> f64 {
     let drawn = 0.5
         + 0.25
             * terrain_seed
@@ -159,6 +166,9 @@ pub fn derive_sea_level(terrain_seed: Seed, pins: &TerrainPins, elevation: &Cell
                 .stream()
                 .next_f64();
     let target = pins.ocean_fraction.unwrap_or(drawn);
+    if let Some(f) = pins.ocean_fraction {
+        notes.push(format!("pinned ocean-fraction {f:.2} (seed draws {drawn})"));
+    }
     let mut sorted: Vec<f64> = elevation.iter().map(|(_, e)| *e).collect();
     sorted.sort_by(|a, b| a.total_cmp(b));
     let index = ((target * sorted.len() as f64) as usize).min(sorted.len() - 1);
@@ -281,7 +291,7 @@ mod tests {
         };
         for seed in [1u64, 7, 42] {
             let terrain_seed = Seed(seed).derive(streams::ROOT);
-            let plates = generate_plates(terrain_seed, &pins);
+            let plates = generate_plates(terrain_seed, &pins, &mut Vec::new());
             let plate_of = assign_plates(&geo, terrain_seed, &plates);
             let boundaries = boundary_field(&geo, &plate_of, &plates);
             let distances = boundary_distance(&geo, &plate_of, &boundaries);
@@ -293,7 +303,7 @@ mod tests {
                 &boundaries,
                 &distances,
             );
-            let sea = derive_sea_level(terrain_seed, &pins, &elevation);
+            let sea = derive_sea_level(terrain_seed, &pins, &elevation, &mut Vec::new());
             let below = elevation.iter().filter(|(_, e)| **e < sea).count();
             let achieved = below as f64 / elevation.len() as f64;
             assert!(

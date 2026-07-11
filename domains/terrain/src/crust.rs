@@ -115,6 +115,30 @@ pub struct Craton {
     pub age: f64,
 }
 
+/// How far each non-anchor craton slides toward craton 0 when
+/// `--supercontinent` clusters them: 0 leaves it in place, 1 collapses it
+/// onto the anchor exactly.
+const CLUSTER_PULL: f64 = 0.75;
+
+/// Spherical interpolation from `a` toward `b` by `t` in [0, 1]: the
+/// great-circle analogue of a linear blend, so a slid center stays on the
+/// unit sphere exactly rather than needing a post-hoc renormalize-to-taste.
+fn slerp(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
+    let omega = crate::plates::dot(a, b).clamp(-1.0, 1.0).acos();
+    if omega < 1e-9 {
+        return a;
+    }
+    let (sa, sb) = (
+        ((1.0 - t) * omega).sin() / omega.sin(),
+        (t * omega).sin() / omega.sin(),
+    );
+    crate::plates::normalize([
+        sa * a[0] + sb * b[0],
+        sa * a[1] + sb * b[1],
+        sa * a[2] + sb * b[2],
+    ])
+}
+
 /// Draw the craton set: budget (one draw), count (one draw, budget-scaled),
 /// then per-craton center (two), radius (one), age (one) — mirroring
 /// `generate_plates`' pinned-count convention exactly: a pinned count
@@ -122,13 +146,25 @@ pub struct Craton {
 /// pinned count larger than the drawn one consumes the same additional
 /// draws the drawn path would have, and a pinned count smaller consumes
 /// fewer — never skipping the budget or count draws themselves (pin
-/// isolation).
-pub fn draw_cratons(terrain_seed: Seed, pins: &TerrainPins) -> Vec<Craton> {
+/// isolation). `notes` receives a metering entry when `continents` is
+/// pinned (Task 7's metering convention: `pinned <name> <value> (seed draws
+/// <drawn>)`). `--supercontinent` is applied last, after every position is
+/// drawn: it clusters cratons 1.. toward craton 0 by `slerp`, so the pin
+/// perturbs positions but never the draw sequence (pin isolation again).
+/// type-audit: bare-ok(prose: notes)
+pub fn draw_cratons(
+    terrain_seed: Seed,
+    pins: &TerrainPins,
+    notes: &mut Vec<String>,
+) -> Vec<Craton> {
     let mut stream = terrain_seed.derive(streams::CRATONS).stream();
     let budget = 0.15 + 0.25 * stream.next_f64();
-    let drawn_count = 3 + (budget * 20.0).round() as u32; // 3..=11 over the budget range
+    let drawn_count = 3 + (budget * 20.0).round() as u32; // 6..=11 over the budget range
     let count = pins.continents.unwrap_or(drawn_count);
-    (0..count)
+    if let Some(n) = pins.continents {
+        notes.push(format!("pinned continents {n} (seed draws {drawn_count})"));
+    }
+    let mut cratons: Vec<Craton> = (0..count)
         .map(|i| {
             let center = crate::plates::unit_vector(&mut stream);
             let radius_rad = 0.10 + 0.35 * stream.next_f64();
@@ -140,7 +176,14 @@ pub fn draw_cratons(terrain_seed: Seed, pins: &TerrainPins) -> Vec<Craton> {
                 age,
             }
         })
-        .collect()
+        .collect();
+    if pins.supercontinent == Some(true) && cratons.len() > 1 {
+        let anchor = cratons[0].center;
+        for craton in cratons.iter_mut().skip(1) {
+            craton.center = slerp(craton.center, anchor, CLUSTER_PULL);
+        }
+    }
+    cratons
 }
 
 /// The crust fields: stateless functions of position over the drawn
@@ -284,9 +327,13 @@ mod tests {
     #[test]
     fn craton_draws_are_sequential_and_in_range() {
         for seed in 0..16u64 {
-            let cratons = draw_cratons(Seed(seed).derive(streams::ROOT), &TerrainPins::default());
+            let cratons = draw_cratons(
+                Seed(seed).derive(streams::ROOT),
+                &TerrainPins::default(),
+                &mut Vec::new(),
+            );
             assert!(
-                (3..=11).contains(&cratons.len()),
+                (6..=11).contains(&cratons.len()),
                 "seed {seed}: {}",
                 cratons.len()
             );
@@ -304,9 +351,69 @@ mod tests {
     }
 
     #[test]
+    fn continents_pin_overrides_without_perturbing_shared_cratons() {
+        let seed = Seed(42).derive(streams::ROOT);
+        let drawn = draw_cratons(seed, &TerrainPins::default(), &mut Vec::new());
+        let pinned = draw_cratons(
+            seed,
+            &TerrainPins {
+                continents: Some(5),
+                ..TerrainPins::default()
+            },
+            &mut Vec::new(),
+        );
+        assert_eq!(pinned.len(), 5);
+        for (a, b) in drawn.iter().zip(&pinned) {
+            assert_eq!(a, b, "shared-prefix craton {} perturbed", a.id);
+        }
+    }
+
+    #[test]
+    fn supercontinent_clusters_cratons_without_new_draws() {
+        let seed = Seed(42).derive(streams::ROOT);
+        let scattered = draw_cratons(seed, &TerrainPins::default(), &mut Vec::new());
+        let clustered = draw_cratons(
+            seed,
+            &TerrainPins {
+                supercontinent: Some(true),
+                ..TerrainPins::default()
+            },
+            &mut Vec::new(),
+        );
+        assert_eq!(scattered.len(), clustered.len());
+        let center = scattered[0].center;
+        for (s, c) in scattered.iter().zip(&clustered) {
+            assert_eq!(s.radius_rad, c.radius_rad);
+            assert_eq!(s.age, c.age);
+            if s.id == 0 {
+                assert_eq!(s.center, c.center);
+            } else {
+                // Every clustered center is strictly closer to craton 0.
+                assert!(
+                    crate::plates::dot(c.center, center)
+                        > crate::plates::dot(s.center, center) - 1e-12
+                );
+            }
+        }
+        // Some(false) re-affirms scattered byte-identically.
+        let reaffirmed = draw_cratons(
+            seed,
+            &TerrainPins {
+                supercontinent: Some(false),
+                ..TerrainPins::default()
+            },
+            &mut Vec::new(),
+        );
+        assert_eq!(scattered, reaffirmed);
+    }
+
+    #[test]
     fn crust_field_is_pure_and_bounded() {
         let seed = Seed(42).derive(streams::ROOT);
-        let field = CrustField::new(seed, draw_cratons(seed, &TerrainPins::default()));
+        let field = CrustField::new(
+            seed,
+            draw_cratons(seed, &TerrainPins::default(), &mut Vec::new()),
+        );
         let p = [0.6, -0.48, 0.64];
         let p = crate::plates::normalize(p);
         assert_eq!(field.thickness_at(p), field.thickness_at(p));
@@ -320,7 +427,10 @@ mod tests {
     fn crust_field_agrees_at_vertices_shared_across_levels() {
         // Icosphere levels nest: every level-4 vertex is a level-5 vertex.
         let seed = Seed(7).derive(streams::ROOT);
-        let field = CrustField::new(seed, draw_cratons(seed, &TerrainPins::default()));
+        let field = CrustField::new(
+            seed,
+            draw_cratons(seed, &TerrainPins::default(), &mut Vec::new()),
+        );
         let coarse = Geosphere::new(4);
         let fine = Geosphere::new(5);
         let index = NearestCellIndex::new(&fine);
@@ -348,7 +458,10 @@ mod tests {
     #[test]
     fn kernel_field_sampling_matches_direct_evaluation() {
         let seed = Seed(42).derive(streams::ROOT);
-        let field = CrustField::new(seed, draw_cratons(seed, &TerrainPins::default()));
+        let field = CrustField::new(
+            seed,
+            draw_cratons(seed, &TerrainPins::default(), &mut Vec::new()),
+        );
         let pos = hornvale_kernel::Position {
             x: -120.25,
             y: 45.5,

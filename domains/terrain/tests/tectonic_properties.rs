@@ -11,16 +11,22 @@ fn pin_isolation_holds_at_the_globe_level() {
     let geo = Geosphere::new(4);
     let default = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
 
-    // Re-affirming the drawn plate count is byte-identical.
+    // Re-affirming the drawn plate count leaves the globe byte-identical
+    // (the notes gain a metering entry — Task 7 — since the pin is `Some`
+    // regardless of whether its value matches the drawn one; metering is
+    // pin-only, not value-only, by design).
     let summary = summarize(&default.globe);
     let pins = TerrainPins {
         plates: Some(summary.plate_count),
         ..TerrainPins::default()
     };
-    assert_eq!(generate(Seed(42), &geo, &pins).unwrap(), default);
+    assert_eq!(
+        generate(Seed(42), &geo, &pins).unwrap().globe,
+        default.globe
+    );
 
     // Re-affirming the drawn ocean fraction (recovered by replaying its
-    // labeled stream) is byte-identical.
+    // labeled stream) leaves the globe byte-identical, same caveat.
     let drawn = 0.5
         + 0.25
             * Seed(42)
@@ -32,7 +38,10 @@ fn pin_isolation_holds_at_the_globe_level() {
         ocean_fraction: Some(drawn),
         ..TerrainPins::default()
     };
-    assert_eq!(generate(Seed(42), &geo, &pins).unwrap(), default);
+    assert_eq!(
+        generate(Seed(42), &geo, &pins).unwrap().globe,
+        default.globe
+    );
 
     // supercontinent=false re-affirms the drawn scattered layout.
     let pins = TerrainPins {
@@ -127,7 +136,7 @@ fn boundary_classification_agrees_from_both_sides_across_seeds() {
     let geo = Geosphere::new(3);
     for seed in 0..16u64 {
         let terrain_seed = Seed(seed).derive(streams::ROOT);
-        let plates = generate_plates(terrain_seed, &TerrainPins::default());
+        let plates = generate_plates(terrain_seed, &TerrainPins::default(), &mut Vec::new());
         let plate_of = assign_plates(&geo, terrain_seed, &plates);
         for a in geo.cells() {
             for &b in geo.neighbors(a) {
@@ -165,7 +174,7 @@ fn convergent_boundaries_stand_above_continental_interiors_on_average() {
     for seed in 0..16u64 {
         let terrain_seed = Seed(seed).derive(streams::ROOT);
         let pins = TerrainPins::default();
-        let plates = generate_plates(terrain_seed, &pins);
+        let plates = generate_plates(terrain_seed, &pins, &mut Vec::new());
         let plate_of = assign_plates(&geo, terrain_seed, &plates);
         let boundaries = boundary_field(&geo, &plate_of, &plates);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);

@@ -5,7 +5,7 @@ use crate::boundaries::{self, CellBoundary};
 use crate::pins::{self, GenesisError, TerrainPins};
 use crate::plates::Plate;
 use crate::streams;
-use crate::{elevation, plates};
+use crate::{crust, elevation, plates};
 use hornvale_kernel::{CellMap, Geosphere, Seed};
 
 /// A generated tectonic globe over the shared Geosphere. Recomputed from
@@ -57,7 +57,12 @@ pub fn generate(
 ) -> Result<GenesisOutcome, GenesisError> {
     pins::validate(pins)?;
     let terrain_seed = world_seed.derive(streams::ROOT);
-    let plate_list = plates::generate_plates(terrain_seed, pins);
+    let mut notes = Vec::new();
+    let plate_list = plates::generate_plates(terrain_seed, pins, &mut notes);
+    // Cratons aren't yet consumed by elevation (Task 8, isostatic epoch);
+    // drawn here so `--continents` is metered and the stream is consumed
+    // identically whether or not a later task reads the result.
+    let _cratons = crust::draw_cratons(terrain_seed, pins, &mut notes);
     let plate_of = plates::assign_plates(geosphere, terrain_seed, &plate_list);
     let boundary_map = boundaries::boundary_field(geosphere, &plate_of, &plate_list);
     let distances = boundaries::boundary_distance(geosphere, &plate_of, &boundary_map);
@@ -69,13 +74,12 @@ pub fn generate(
         &boundary_map,
         &distances,
     );
-    let sea_level = elevation::derive_sea_level(terrain_seed, pins, &elevation_map);
+    let sea_level = elevation::derive_sea_level(terrain_seed, pins, &elevation_map, &mut notes);
     let unrest =
         elevation::generate_unrest(geosphere, &plate_list, &plate_of, &boundary_map, &distances);
     let (drainage, endorheic) =
         crate::drainage::drainage_field(geosphere, &elevation_map, sea_level);
 
-    let mut notes = Vec::new();
     let mut populated = vec![false; plate_list.len()];
     for (_, plate) in plate_of.iter() {
         populated[*plate as usize] = true;
@@ -194,5 +198,33 @@ mod tests {
         )
         .unwrap_err();
         assert!(matches!(err, GenesisError::InvalidPin { .. }));
+    }
+
+    #[test]
+    fn pinned_values_are_metered_in_the_notes() {
+        let geo = Geosphere::new(3);
+        let pins = TerrainPins {
+            plates: Some(12),
+            ocean_fraction: Some(0.80),
+            ..TerrainPins::default()
+        };
+        let outcome = generate(Seed(42), &geo, &pins).expect("genesis");
+        let metered: Vec<&String> = outcome
+            .notes
+            .iter()
+            .filter(|n| n.starts_with("pinned "))
+            .collect();
+        assert!(
+            metered
+                .iter()
+                .any(|n| n.starts_with("pinned plates 12 (seed draws "))
+        );
+        assert!(
+            metered
+                .iter()
+                .any(|n| n.starts_with("pinned ocean-fraction 0.80 (seed draws "))
+        );
+        let unpinned = generate(Seed(42), &geo, &TerrainPins::default()).expect("genesis");
+        assert!(!unpinned.notes.iter().any(|n| n.starts_with("pinned ")));
     }
 }

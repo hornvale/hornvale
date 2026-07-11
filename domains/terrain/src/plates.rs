@@ -78,13 +78,23 @@ const PLATE_COUNT_MAX: u32 = 40;
 /// Generate the plate list: count, seed positions, continental flags,
 /// Euler-pole motions, and maturities, each sub-step from its own labeled
 /// stream. Pins override drawn values but never skip a draw (pin
-/// isolation). Assumes `pins` already validated.
-pub fn generate_plates(terrain_seed: Seed, pins: &TerrainPins) -> Vec<Plate> {
+/// isolation). Assumes `pins` already validated. `notes` receives a
+/// metering entry when `plates` is pinned (Task 7's metering convention:
+/// `pinned <name> <value> (seed draws <drawn>)`).
+/// type-audit: bare-ok(prose: notes)
+pub fn generate_plates(
+    terrain_seed: Seed,
+    pins: &TerrainPins,
+    notes: &mut Vec<String>,
+) -> Vec<Plate> {
     let drawn_count = terrain_seed
         .derive(streams::PLATE_COUNT)
         .stream()
         .range_u32(PLATE_COUNT_MIN, PLATE_COUNT_MAX);
     let count = pins.plates.unwrap_or(drawn_count);
+    if let Some(n) = pins.plates {
+        notes.push(format!("pinned plates {n} (seed draws {drawn_count})"));
+    }
 
     let mut seed_stream = terrain_seed.derive(streams::PLATE_SEEDS).stream();
     let positions: Vec<[f64; 3]> = (0..count).map(|_| unit_vector(&mut seed_stream)).collect();
@@ -92,12 +102,9 @@ pub fn generate_plates(terrain_seed: Seed, pins: &TerrainPins) -> Vec<Plate> {
     let mut kind_stream = terrain_seed.derive(streams::PLATE_KIND).stream();
     let continental_fraction = 0.25 + 0.25 * kind_stream.next_f64();
     let rolls: Vec<f64> = (0..count).map(|_| kind_stream.next_f64()).collect();
-    let continental = continental_flags(
-        &positions,
-        &rolls,
-        continental_fraction,
-        pins.supercontinent,
-    );
+    // `supercontinent` now clusters cratons only (crust.rs, Task 7); plates
+    // never see it, so `continental_flags` always takes its scattered path.
+    let continental = continental_flags(&positions, &rolls, continental_fraction, None);
 
     let mut motion_stream = terrain_seed.derive(streams::PLATE_MOTION).stream();
     let motions: Vec<([f64; 3], f64)> = (0..count)
@@ -140,7 +147,11 @@ pub fn generate_plates(terrain_seed: Seed, pins: &TerrainPins) -> Vec<Plate> {
 /// (`Some(true)`): the same expected number of continental plates, but
 /// clustered around the plate with the lowest roll — nearest seed positions
 /// win. Both paths consume identical draws, so the pin never perturbs the
-/// stream (pin isolation).
+/// stream (pin isolation). As of Task 7, `--supercontinent` clusters
+/// cratons instead (`crust.rs`), so `generate_plates` always calls this
+/// with `None`; the clustering branch is dead until its full retirement
+/// (Task 8) — kept, not deleted, so that retirement is a clean removal
+/// rather than a rewrite.
 fn continental_flags(
     positions: &[[f64; 3]],
     rolls: &[f64],
@@ -218,7 +229,11 @@ mod tests {
     #[test]
     fn plate_count_stays_in_the_drawn_range_and_pins_override() {
         for seed in 0..32u64 {
-            let plates = generate_plates(Seed(seed).derive(streams::ROOT), &TerrainPins::default());
+            let plates = generate_plates(
+                Seed(seed).derive(streams::ROOT),
+                &TerrainPins::default(),
+                &mut Vec::new(),
+            );
             assert!((8..=40).contains(&(plates.len() as u32)), "seed {seed}");
             for (i, p) in plates.iter().enumerate() {
                 assert_eq!(p.id, i as u32);
@@ -233,7 +248,7 @@ mod tests {
             ..TerrainPins::default()
         };
         assert_eq!(
-            generate_plates(Seed(42).derive(streams::ROOT), &pins).len(),
+            generate_plates(Seed(42).derive(streams::ROOT), &pins, &mut Vec::new()).len(),
             12
         );
     }
@@ -242,7 +257,7 @@ mod tests {
     fn every_cell_joins_exactly_one_plate() {
         let geo = Geosphere::new(2);
         let terrain_seed = Seed(42).derive(streams::ROOT);
-        let plates = generate_plates(terrain_seed, &TerrainPins::default());
+        let plates = generate_plates(terrain_seed, &TerrainPins::default(), &mut Vec::new());
         let assignment = assign_plates(&geo, terrain_seed, &plates);
         assert_eq!(assignment.len(), geo.cell_count());
         for (_, plate) in assignment.iter() {
@@ -253,7 +268,11 @@ mod tests {
     #[test]
     fn velocities_are_tangent_to_the_sphere() {
         let geo = Geosphere::new(2);
-        let plates = generate_plates(Seed(7).derive(streams::ROOT), &TerrainPins::default());
+        let plates = generate_plates(
+            Seed(7).derive(streams::ROOT),
+            &TerrainPins::default(),
+            &mut Vec::new(),
+        );
         for cell in geo.cells() {
             let p = geo.position(cell);
             for plate in &plates {
@@ -267,7 +286,11 @@ mod tests {
         let geo = Geosphere::new(4);
         let mut ginis = Vec::new();
         for seed in 0..12u64 {
-            let plates = generate_plates(Seed(seed).derive(streams::ROOT), &TerrainPins::default());
+            let plates = generate_plates(
+                Seed(seed).derive(streams::ROOT),
+                &TerrainPins::default(),
+                &mut Vec::new(),
+            );
             for p in &plates {
                 assert!((1.0..=20.0).contains(&p.weight), "weight {}", p.weight);
             }
@@ -345,31 +368,29 @@ mod tests {
     }
 
     #[test]
-    fn supercontinent_clusters_without_perturbing_the_draws() {
+    fn supercontinent_no_longer_touches_plates() {
+        // Task 7: `--supercontinent` clusters cratons (crust.rs), not
+        // plates. Scattered and "clustered" plate lists are now
+        // byte-identical — the pin has exactly one meaning.
         let seed = Seed(42).derive(streams::ROOT);
-        let scattered = generate_plates(seed, &TerrainPins::default());
+        let scattered = generate_plates(seed, &TerrainPins::default(), &mut Vec::new());
         let clustered = generate_plates(
             seed,
             &TerrainPins {
                 supercontinent: Some(true),
                 ..TerrainPins::default()
             },
+            &mut Vec::new(),
         );
-        assert_eq!(scattered.len(), clustered.len());
-        for (a, b) in scattered.iter().zip(&clustered) {
-            assert_eq!(a.seed_position, b.seed_position);
-            assert_eq!(a.euler_axis, b.euler_axis);
-            assert_eq!(a.rate, b.rate);
-            assert_eq!(a.maturity, b.maturity);
-        }
-        assert!(clustered.iter().filter(|p| p.continental).count() >= 1);
-        // Explicitly re-affirming the scattered layout is byte-identical.
+        assert_eq!(scattered, clustered);
+        // Explicitly re-affirming the scattered layout is byte-identical too.
         let reaffirmed = generate_plates(
             seed,
             &TerrainPins {
                 supercontinent: Some(false),
                 ..TerrainPins::default()
             },
+            &mut Vec::new(),
         );
         assert_eq!(scattered, reaffirmed);
     }
