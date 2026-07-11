@@ -54,6 +54,14 @@ It backs [Study 009, the Census of the Meeting](./study-009.md), the Year-2
 capstone, and like `census-lands-drift` it is re-run and drift-checked on
 every build.
 
+The Branches added a third: `branches-family` (1,000 seeds), the family
+battery behind the goblinoid phylogeny — Neogrammarian regularity,
+monophyly, inventory closure, real divergence, the loudness ordering, and
+the homophony ledger. Its calibration suite loads the committed rows the
+same way the census calibrations do, keeping a roughly 200-second sweep
+off every local `cargo test`, and it is re-run and drift-checked on every
+build like the other two.
+
 Between commits, a cheap always-on probe (`windows/lab/tests/fixture_staleness.rs`)
 regenerates each census's first three seeds live on every `cargo test` and
 compares them against the committed rows — so a worldgen change that moves

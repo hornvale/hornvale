@@ -41,6 +41,10 @@ pub const MOON_TIDE_REL: &str = "moon-tide-rel";
 /// Flag — committed only when true, like tidally-locked; SKY-22).
 /// type-audit: bare-ok(identifier-text)
 pub const RETROGRADE_SPIN: &str = "retrograde-spin";
+/// Orbital inclination of a moon to the anchor's orbital plane, in degrees
+/// (non-functional, Number — one per moon; SKY-6).
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_INCLINATION_DEGREES: &str = "moon-inclination-degrees";
 /// A notable neighbor star visible in the night sky (non-functional, Text —
 /// one per neighbor).
 /// type-audit: bare-ok(identifier-text)
@@ -166,6 +170,14 @@ pub fn genesis(
         )?;
         world.ledger.commit(
             fact(subject, MOON_TIDE_REL, Value::Number(moon.tide_rel)),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                subject,
+                MOON_INCLINATION_DEGREES,
+                Value::Number(moon.inclination_deg),
+            ),
             &world.registry,
         )?;
     }
@@ -330,6 +342,37 @@ mod tests {
             .map(|m| hornvale_kernel::quantize(m.tide_rel))
             .collect();
         assert_eq!(tides, expected);
+    }
+
+    /// SKY-6: each moon's node geometry reaches the ledger — one
+    /// inclination fact per moon, quantized on commit.
+    #[test]
+    fn genesis_commits_one_inclination_fact_per_moon() {
+        let pins = SkyPins {
+            moons: Some(MoonsPin::exact(2).unwrap()),
+            ..SkyPins::default()
+        };
+        let outcome = generate(Seed(1), &pins).unwrap();
+        let mut w = world_with(1);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+
+        let inclinations: Vec<f64> = w
+            .ledger
+            .facts_about(subject)
+            .filter(|f| f.predicate == MOON_INCLINATION_DEGREES)
+            .filter_map(|f| match f.object {
+                Value::Number(n) => Some(n),
+                _ => None,
+            })
+            .collect();
+        let expected: Vec<f64> = outcome
+            .system
+            .moons
+            .iter()
+            .map(|m| hornvale_kernel::quantize(m.inclination_deg))
+            .collect();
+        assert_eq!(inclinations, expected);
     }
 
     /// SKY-22: a backward-spinning world says so in the ledger; an ordinary

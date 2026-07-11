@@ -19,6 +19,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/phase-offsets` | per-body genesis phase offsets |
 | `astronomy/neighbor-positions` | per-neighbor celestial position draws (declination, right ascension) |
 | `astronomy/spin-direction` | spin-direction draw: prograde or retrograde |
+| `astronomy/moon-inclinations` | per-moon orbital-inclination draws |
 
 ### hornvale-climate
 

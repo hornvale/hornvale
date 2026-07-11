@@ -632,6 +632,7 @@ mod tests {
                 period: StdDays::new(sidereal_days).unwrap(),
                 angular_diameter_rel: 1.0,
                 tide_rel: 1.0,
+                inclination_deg: 5.14,
             }],
             neighbors: vec![],
             forcing: crate::forcing::OrbitalForcing {

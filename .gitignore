@@ -31,6 +31,8 @@ book/src/laboratory/generated/census-of-eyes/
 book/src/laboratory/generated/census-of-tongues/
 book/src/laboratory/generated/census-of-words/
 
-# Claude Code: project skills are committed; local settings and worktrees are not
+# Claude Code: project skills and shared settings (Bash timeout budget) are
+# committed; personal settings.local.json and worktrees are not
 .claude/*
 !.claude/skills/
+!.claude/settings.json

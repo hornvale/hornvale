@@ -2,18 +2,57 @@
 //! the 1,000-seed `branches-family` study and pinned per ADR 0016 —
 //! directions preregistered before the sweep ran (see each test's doc
 //! comment), exact measured values pinned after, never tuned to pass.
-use hornvale_lab::{MetricValue, RunResult, load_study, run};
+use hornvale_lab::{MetricValue, RunResult, canonical_row, load_rows, load_study, run};
 use std::path::Path;
 use std::sync::LazyLock;
 
-/// The 1,000-seed family-battery census, run ONCE and shared by every
-/// calibration in this file (mirrors `calibration.rs`'s `DRIFT`). Init
-/// panics on a load/run error (a test-setup failure, not a calibration).
+/// The 1,000-seed family-battery census, loaded ONCE from its committed
+/// `rows.csv` fixture and shared by every calibration in this file (mirrors
+/// `calibration.rs`'s `DRIFT`/`MEETING` per decision
+/// `calibration-loads-the-census-fixture`). The fixture is published by
+/// `lab run` and regenerated + drift-checked in CI's "Artifacts are current"
+/// step; `branches_fixture_matches_live_run` below pins fixture == live.
+/// Loading instead of recomputing keeps the ~209s (debug) sweep off every
+/// local `cargo test`. Init panics on a load error (a test-setup failure,
+/// not a calibration).
 static BRANCHES: LazyLock<RunResult> = LazyLock::new(|| {
     let study = load_study(Path::new("../../studies/branches-family.study.json"))
         .expect("load branches-family study");
-    run(&study).expect("run branches-family study")
+    let csv =
+        std::fs::read_to_string("../../book/src/laboratory/generated/branches-family/rows.csv")
+            .expect("read branches-family fixture");
+    load_rows(&study, &csv).expect("reconstruct branches-family census from fixture")
 });
+
+/// Guard — ignored by default because it pays the full ~209s (debug) sweep:
+/// the committed fixture reconstructs *exactly* what a live `run` produces,
+/// so every other test in this file may trust the fixture. Run it after
+/// regenerating the fixture, or explicitly:
+/// `cargo test -p hornvale-lab --test branches_family_calibration -- --ignored`.
+#[test]
+#[ignore = "runs the full ~209s (debug) family sweep; the fixture is drift-checked in CI"]
+fn branches_fixture_matches_live_run() {
+    let study = load_study(Path::new("../../studies/branches-family.study.json"))
+        .expect("load branches-family study");
+    let live = run(&study).expect("run branches-family study");
+    // Canonicalize live Numbers before comparing: the fixture's floats passed
+    // the quantizing serialization boundary (`render_csv`), the live run's
+    // have not (shared helper: `hornvale_lab::canonical_row`).
+    let live = RunResult {
+        study: live.study.clone(),
+        metric_names: live.metric_names.clone(),
+        rows: live.rows.iter().map(canonical_row).collect(),
+    };
+    let csv =
+        std::fs::read_to_string("../../book/src/laboratory/generated/branches-family/rows.csv")
+            .expect("read branches-family fixture");
+    let loaded = load_rows(&study, &csv).expect("reconstruct census from fixture");
+    assert_eq!(
+        loaded, live,
+        "fixture diverged from a live run — regenerate with \
+         `lab run studies/branches-family.study.json`"
+    );
+}
 
 /// The column index of `name` within `BRANCHES`'s rows.
 fn col(name: &str) -> usize {

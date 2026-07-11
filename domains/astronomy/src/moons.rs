@@ -22,6 +22,11 @@ pub struct Moon {
     pub angular_diameter_rel: f64,
     /// Tidal strength relative to Luna-on-Earth (derived: m/d³).
     pub tide_rel: f64,
+    /// Orbital inclination to the anchor's orbital plane, in degrees
+    /// (drawn 0–10, own stream — SKY-6): the node geometry that decides
+    /// how often a new moon actually crosses the sun.
+    /// type-audit: pending(wave-1)
+    pub inclination_deg: f64,
 }
 
 /// The anchor's Hill radius in Mm (model card formula).
@@ -40,6 +45,10 @@ fn derive_moon(mass: f64, distance: f64, anchor: &Anchor) -> Moon {
         period: StdDays(27.32 * ((distance / 384.4).powi(3) / anchor.mass.0).sqrt()),
         angular_diameter_rel: mass.powf(1.0 / 3.0) * 384.4 / distance,
         tide_rel: mass / (distance / 384.4).powi(3),
+        // Drawn after admission from its own stream (SKY-6), so the
+        // admission draws above stay byte-identical to the pre-eclipse
+        // save format.
+        inclination_deg: 0.0,
     }
 }
 
@@ -118,6 +127,13 @@ pub fn generate_moons(
     }
 
     moons.sort_by(|a, b| a.distance.0.total_cmp(&b.distance.0));
+    // SKY-6: inclinations draw from their own stream, after admission and
+    // the distance sort, so every pre-eclipse draw (count, masses,
+    // distances) is byte-identical and the draws are index-stable.
+    let mut inclinations = astronomy_seed.derive(streams::MOON_INCLINATIONS).stream();
+    for moon in &mut moons {
+        moon.inclination_deg = inclinations.next_f64() * 10.0;
+    }
     Ok((moons, notes))
 }
 
@@ -231,6 +247,26 @@ mod tests {
                 assert!((moon.tide_rel - expected_tide).abs() < 1e-9);
             }
             assert!(total_tide <= 8.0, "combined tide cap");
+        }
+    }
+
+    /// SKY-6: every admitted moon draws an inclination in [0, 10)°,
+    /// deterministically, from its own stream — the pre-eclipse draws
+    /// (count, masses, distances) are pinned unchanged by
+    /// `golden_seed_42.rs`.
+    #[test]
+    fn every_moon_draws_an_inclination_in_range() {
+        for seed in 0..64 {
+            let (star, anchor) = system(seed);
+            let (moons, _) =
+                generate_moons(Seed(seed), &star, &anchor, &SkyPins::default()).unwrap();
+            for moon in &moons {
+                assert!(
+                    (0.0..10.0).contains(&moon.inclination_deg),
+                    "seed {seed}: inclination {}",
+                    moon.inclination_deg
+                );
+            }
         }
     }
 

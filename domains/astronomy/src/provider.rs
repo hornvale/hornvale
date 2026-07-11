@@ -278,6 +278,7 @@ mod tests {
                 period: StdDays::new(400.0).unwrap(), // P_sid ≥ Y: degenerate
                 angular_diameter_rel: 1.0,
                 tide_rel: 1.0,
+                inclination_deg: 5.14,
             }],
             neighbors: vec![Neighbor {
                 class: NeighborClass::SunLike,
@@ -375,6 +376,7 @@ mod tests {
             period: crate::units::StdDays::new(27.32).unwrap(),
             angular_diameter_rel: 1.0,
             tide_rel: 1.0,
+            inclination_deg: 5.14,
         }
     }
 
@@ -396,6 +398,136 @@ mod tests {
             period: crate::units::StdDays::new(sidereal_days).unwrap(),
             ..luna_like()
         }
+    }
+
+    /// SKY-6: a moon whose disc covers the sun's promises total eclipses
+    /// on the node beat — Luna-and-Sol numbers reproduce Earth's rate
+    /// (~19% of new moons → one solar eclipse somewhere every ~153 days).
+    #[test]
+    fn a_covering_moon_promises_total_eclipses_on_the_node_beat() {
+        // bare_sky's star is Sol-like at 1 AU: sun angular diameter 1.0;
+        // luna_like covers it (1.0 ≥ 1.0) at inclination 5.14°.
+        let s = bare_sky(
+            0.0,
+            vec![luna_like()],
+            vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
+        );
+        let ph = s.phenomena(&ctx(0.0));
+        let eclipse = ph
+            .iter()
+            .find(|p| p.kind == ECLIPSE)
+            .expect("eclipse phenomenon");
+        assert!(
+            eclipse.description.contains("devours the sun whole"),
+            "got {}",
+            eclipse.description
+        );
+        let period = eclipse.period_days.expect("eclipses recur");
+        assert!(
+            (150.0..157.0).contains(&period),
+            "expected the Earth-like ~153 d beat, got {period}"
+        );
+        assert_eq!(eclipse.venue, Venue::DaySky);
+        assert!(eclipse.salience < 1.0, "nothing rivals the sun");
+    }
+
+    /// SKY-6: a small, distant moon cannot cover the sun — its eclipses
+    /// are rings, and they matter less.
+    #[test]
+    fn a_small_moon_leaves_a_burning_ring() {
+        let small = crate::moons::Moon {
+            angular_diameter_rel: 0.5,
+            ..luna_like()
+        };
+        let s = bare_sky(
+            0.0,
+            vec![small],
+            vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
+        );
+        let ph = s.phenomena(&ctx(0.0));
+        let eclipse = ph.iter().find(|p| p.kind == ECLIPSE).expect("eclipse");
+        assert!(
+            eclipse.description.contains("burning ring"),
+            "got {}",
+            eclipse.description
+        );
+        assert!(eclipse.salience < 0.9, "a ring is a lesser omen");
+    }
+
+    /// SKY-6: a flat (coplanar) orbit crosses the sun at every new moon —
+    /// the eclipse beat IS the synodic month.
+    #[test]
+    fn a_flat_orbit_eclipses_every_new_moon() {
+        let flat = crate::moons::Moon {
+            inclination_deg: 0.0,
+            ..luna_like()
+        };
+        let s = bare_sky(
+            0.0,
+            vec![flat],
+            vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
+        );
+        let ph = s.phenomena(&ctx(0.0));
+        let eclipse = ph.iter().find(|p| p.kind == ECLIPSE).expect("eclipse");
+        // Synodic month of a 27.32 d moon in a 365.25 d year ≈ 29.53 d.
+        assert_eq!(eclipse.period_days, Some(29.53));
+    }
+
+    /// SKY-6 × SEQ-5: eclipses are seen where the sun is seen — a locked
+    /// world's day side gets the omen, its night side never does.
+    #[test]
+    fn locked_day_side_sees_the_eclipse_and_night_side_does_not() {
+        let s = sky(SkyPins {
+            rotation: Some(RotationPin::Locked),
+            moons: Some(MoonsPin::exact(1).unwrap()),
+            ..SkyPins::default()
+        });
+        let at = |longitude: f64| {
+            let obs = ObserverContext::at_position(
+                EntityId(1),
+                WorldTime { day: 0.0 },
+                GeoCoord {
+                    latitude: 10.0,
+                    longitude,
+                },
+            );
+            s.phenomena(&obs)
+        };
+        assert!(
+            at(0.0).iter().any(|p| p.kind == ECLIPSE),
+            "day side sees the eclipse"
+        );
+        assert!(
+            !at(180.0).iter().any(|p| p.kind == ECLIPSE),
+            "night side never sees the sun devoured"
+        );
+    }
+
+    /// SKY-17: daylight carries the star's color — a K star's light is
+    /// warm and dim, an F star's harsh and blue-edged, a G star's golden —
+    /// and twilight takes the matching hue.
+    #[test]
+    fn daylight_and_twilight_carry_the_stars_color() {
+        assert!(daylight_words("orange dwarf (K)").contains("amber"));
+        assert!(daylight_words("yellow dwarf (G)").contains("golden"));
+        assert!(daylight_words("yellow-white dwarf (F)").contains("blue"));
+        assert!(twilight_words("orange dwarf (K)").contains("amber"));
+        assert!(twilight_words("yellow dwarf (G)").contains("gold"));
+        assert!(twilight_words("yellow-white dwarf (F)").contains("blue"));
+
+        // Through the report: the bare test sky is a G — golden noon,
+        // gold-glowing twilight.
+        let s = bare_sky(
+            0.0,
+            Vec::new(),
+            vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
+        );
+        let noon = s.sky_at(WorldTime { day: 10.5 }).description;
+        assert!(noon.contains("The light is golden."), "got {noon}");
+        let dusk = s.sky_at(WorldTime { day: 10.78 }).description;
+        assert!(dusk.contains("The horizon glows gold."), "got {dusk}");
+        let night = s.sky_at(WorldTime { day: 10.1 }).description;
+        assert!(!night.contains("horizon"), "night takes no hue: {night}");
     }
 
     /// SKY-5: the tide is felt, not watched — every moon raises an Ambient
@@ -470,6 +602,34 @@ mod tests {
         let ph = s.phenomena(&ctx(0.0));
         assert_eq!(ph.iter().filter(|p| p.kind == TIDE).count(), 1);
         assert!(!ph.iter().any(|p| p.description.contains("spring")));
+    }
+
+    /// SKY-7: the day sky tells morning from noon from evening, and the
+    /// edges of night read as twilight rather than full dark.
+    #[test]
+    fn day_prose_tells_morning_from_noon_from_evening_and_twilight() {
+        // Zero tilt: the daylight window is exactly (0.25, 0.75) of the
+        // local day, so the day-part bands are hand-checkable.
+        let s = bare_sky(
+            0.0,
+            Vec::new(),
+            vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
+        );
+        let at = |t: f64| s.sky_at(WorldTime { day: t }).description;
+        assert!(
+            at(10.30).contains("climbs the morning sky"),
+            "got {}",
+            at(10.30)
+        );
+        assert!(at(10.50).contains("stands high"), "got {}", at(10.50));
+        assert!(
+            at(10.70).contains("sinks toward evening"),
+            "got {}",
+            at(10.70)
+        );
+        assert!(at(10.22).starts_with("Twilight."), "got {}", at(10.22));
+        assert!(at(10.78).starts_with("Twilight."), "got {}", at(10.78));
+        assert!(at(10.10).starts_with("Night."), "got {}", at(10.10));
     }
 
     /// SKY-22: a retrograde world's day sky says the sun rises in the west;
@@ -595,9 +755,64 @@ pub const NIGHT_STAR: &str = "night-star";
 /// Phenomenon kind for the tides the moons raise (SKY-5).
 /// type-audit: bare-ok(identifier-text)
 pub const TIDE: &str = "tide";
+/// Phenomenon kind for a moon crossing the face of the sun (SKY-6).
+/// type-audit: bare-ok(identifier-text)
+pub const ECLIPSE: &str = "eclipse";
+
+/// One angular-diameter unit (Sol from 1 AU ≈ Luna from Earth) in degrees
+/// — the shared scale of `sun_angular_diameter_rel` and a moon's
+/// `angular_diameter_rel` (declared approximation: the two units differ
+/// by under 1%).
+const ANGULAR_UNIT_DEG: f64 = 0.53;
+/// How far (degrees of lunar ecliptic latitude) past the discs' own touch
+/// an eclipse still falls somewhere on the world — the parallax allowance.
+/// Calibrated so a Luna–Sol pair at 5.14° inclination eclipses at ~19% of
+/// new moons (Earth's ~2.4 solar eclipses a year).
+const ECLIPSE_PARALLAX_DEG: f64 = 1.0;
+
+/// The fraction of new moons that eclipse the sun somewhere on the world
+/// (SKY-6): the moon's ecliptic latitude at new moon must fall inside the
+/// node threshold, and a sinusoidal latitude distribution gives
+/// P = (2/π)·asin(threshold / i), saturating at 1 for a flat orbit.
+fn eclipse_chance(sun_angular_rel: f64, moon_angular_rel: f64, inclination_deg: f64) -> f64 {
+    let threshold =
+        ANGULAR_UNIT_DEG * (sun_angular_rel + moon_angular_rel) / 2.0 + ECLIPSE_PARALLAX_DEG;
+    let x = (threshold / inclination_deg.max(f64::MIN_POSITIVE)).min(1.0);
+    (2.0 / std::f64::consts::PI) * x.asin()
+}
 
 fn round2(x: f64) -> f64 {
     (x * 100.0).round() / 100.0
+}
+
+/// How far outside the daylight window (as a fraction of the local day)
+/// the dark still reads as twilight rather than night (SKY-7).
+const TWILIGHT_MARGIN: f64 = 0.05;
+
+/// The quality of a star's daylight from its spectral class (SKY-17):
+/// a cooler star pours warmer, dimmer light; a hotter one a harsher
+/// white. Keyed on the class letter the star's name already carries
+/// (`star.rs` — K, G or F on the shipped mass range).
+fn daylight_words(class_name: &str) -> &'static str {
+    if class_name.contains("(K)") {
+        "The light is amber and heavy, warmer than it is bright."
+    } else if class_name.contains("(F)") {
+        "The light is hard and white, edged with blue."
+    } else {
+        "The light is golden."
+    }
+}
+
+/// The twilight hue from the star's spectral class (SKY-17) — the same
+/// key as [`daylight_words`], seen at the horizon.
+fn twilight_words(class_name: &str) -> &'static str {
+    if class_name.contains("(K)") {
+        "The horizon smolders amber."
+    } else if class_name.contains("(F)") {
+        "The horizon shines pale blue-white."
+    } else {
+        "The horizon glows gold."
+    }
 }
 
 /// The eight-word moon-phase vocabulary, one word per eighth of the synodic
@@ -745,11 +960,29 @@ impl GeneratedSky {
                 }
             }
             Rotation::Spinning { retrograde, .. } => {
-                let is_day = matches!(self.calendar.is_daylight(t), Some(true));
+                // SKY-7: place the moment in the sun's arc. The daylight
+                // window is centered on the local day (`is_daylight`); the
+                // fraction's progress through it separates morning from
+                // noon from evening, and a margin either side of the
+                // window reads as twilight rather than full dark.
+                let fraction = self.calendar.local_day(t).map(|d| d.1).unwrap_or(0.0);
+                let f = self.calendar.daylight_fraction(t).unwrap_or(0.5);
+                let (dawn, dusk) = ((1.0 - f) / 2.0, (1.0 + f) / 2.0);
+                let is_day = fraction > dawn && fraction < dusk;
                 if is_day {
+                    let progress = (fraction - dawn) / f;
+                    let arc_words = if progress < 1.0 / 3.0 {
+                        "climbs the morning sky"
+                    } else if progress < 2.0 / 3.0 {
+                        "stands high in the sky"
+                    } else {
+                        "sinks toward evening"
+                    };
                     let mut description = format!(
-                        "The sun, a {}, stands in the sky.",
-                        self.system.star.class_name
+                        "The sun, a {}, {}. {}",
+                        self.system.star.class_name,
+                        arc_words,
+                        daylight_words(&self.system.star.class_name)
                     );
                     if *retrograde {
                         description.push_str(" Here it rises in the west and sets in the east.");
@@ -787,8 +1020,18 @@ impl GeneratedSky {
                         })
                         .collect();
                     parts.push(night_star_line(&self.system.neighbors));
+                    // SKY-7: within a twentieth of the local day of the
+                    // daylight window, the dark is twilight, not night.
+                    let twilight =
+                        fraction > dawn - TWILIGHT_MARGIN && fraction < dusk + TWILIGHT_MARGIN;
+                    // SKY-17: twilight takes the star's hue at the horizon.
+                    let dark_words = if twilight {
+                        format!("Twilight. {}", twilight_words(&self.system.star.class_name))
+                    } else {
+                        "Night.".to_string()
+                    };
                     SkyReport {
-                        description: format!("Night. {}", parts.join(" ")),
+                        description: format!("{} {}", dark_words, parts.join(" ")),
                         bodies,
                     }
                 }
@@ -842,6 +1085,45 @@ impl PhenomenaSource for GeneratedSky {
                     salience: 1.0,
                     venue: Venue::DaySky,
                 }),
+            }
+
+            // SKY-6: eclipses — pure geometry over quantities already
+            // held. Each moon with a synodic cycle crosses the sun on the
+            // node beat: total if its disc covers the sun's (SKY-7 gave
+            // the sun a disc), else a ring. Seen where the sun is seen.
+            let sun_angular =
+                crate::star::sun_angular_diameter_rel(&self.system.star, self.system.anchor.orbit);
+            for (index, moon) in self.system.moons.iter().enumerate() {
+                let Some(synodic) = self.calendar.synodic_month(index) else {
+                    continue;
+                };
+                let chance =
+                    eclipse_chance(sun_angular, moon.angular_diameter_rel, moon.inclination_deg);
+                let total = moon.angular_diameter_rel >= sun_angular;
+                let (description, salience) = if total {
+                    (
+                        format!(
+                            "an eclipse: the {} moon devours the sun whole",
+                            size_word(moon.angular_diameter_rel)
+                        ),
+                        0.9,
+                    )
+                } else {
+                    (
+                        format!(
+                            "an eclipse: the {} moon leaves a burning ring of the sun",
+                            size_word(moon.angular_diameter_rel)
+                        ),
+                        0.75,
+                    )
+                };
+                out.push(Phenomenon {
+                    kind: ECLIPSE.to_string(),
+                    description,
+                    period_days: Some(round2(synodic.get() / chance)),
+                    salience,
+                    venue: Venue::DaySky,
+                });
             }
         }
 

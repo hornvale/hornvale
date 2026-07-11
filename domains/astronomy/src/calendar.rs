@@ -53,6 +53,7 @@ mod tests {
                 day_phase_offset: 0.0,
                 moon_phase_offsets: vec![0.0],
             },
+            retrograde: false,
         }
     }
 
@@ -152,6 +153,7 @@ mod tests {
             year: StdDays::new(365.25).unwrap(),
             forcing,
             moon_periods: Vec::new(),
+            retrograde: false,
         };
         // Obliquity is identically zero, so any season/daylight variation is
         // purely apsidal (eccentricity-driven).
@@ -251,6 +253,95 @@ mod tests {
         );
     }
 
+    /// SKY-7: the sub-solar latitude swings with the (time-varying)
+    /// obliquity over the year — zero at the equinoxes, ±ε at the solstices.
+    #[test]
+    fn solar_declination_swings_with_the_obliquity() {
+        let pins = SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            obliquity: Some(Degrees::new(23.5).unwrap()),
+            forcing: Some(crate::pins::ForcingPin::Zero),
+            ..SkyPins::default()
+        };
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let year = cal.year_length().get();
+        // The genesis year-phase offset (SKY-4) shifts which absolute day
+        // each year phase falls on — solve for it, as the daylight tests do.
+        let at_phase = |p: f64| StdDays((p - cal.forcing.year_phase_offset).rem_euclid(1.0) * year);
+        assert!(cal.solar_declination(at_phase(0.0)).abs() < 1e-6);
+        assert!((cal.solar_declination(at_phase(0.25)) - 23.5).abs() < 1e-6);
+        assert!((cal.solar_declination(at_phase(0.75)) + 23.5).abs() < 1e-6);
+    }
+
+    /// SKY-7: on a zero-tilt world the equinoctial geometry is exact —
+    /// noon at the equator puts the sun at the zenith, latitude subtracts
+    /// straight off, and midnight puts it at the nadir.
+    #[test]
+    fn solar_altitude_runs_zenith_to_nadir_on_a_zero_tilt_equator() {
+        let pins = SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            obliquity: Some(Degrees::new(0.0).unwrap()),
+            forcing: Some(crate::pins::ForcingPin::Zero),
+            ..SkyPins::default()
+        };
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        // The genesis day-phase offset (SKY-4) shifts where in absolute
+        // time noon falls — solve for the local-day fraction wanted.
+        let at_fraction =
+            |f: f64| StdDays(10.0 + (f - cal.forcing.day_phase_offset).rem_euclid(1.0));
+        let alt = |f: f64, lat: f64| cal.solar_altitude_at(at_fraction(f), lat).unwrap();
+        assert!((alt(0.5, 0.0) - 90.0).abs() < 1e-6, "noon zenith");
+        assert!((alt(0.5, 40.0) - 50.0).abs() < 1e-6, "latitude subtracts");
+        assert!((alt(0.0, 0.0) + 90.0).abs() < 1e-6, "midnight nadir");
+        assert!(alt(0.25, 0.0).abs() < 1e-6, "sunrise on the horizon");
+    }
+
+    /// SKY-7 × SKY-22: the sun crosses east → west; a retrograde world
+    /// mirrors that, west → east.
+    #[test]
+    fn solar_azimuth_runs_east_to_west_and_retrograde_mirrors_it() {
+        let cal_with_spin = |spin| {
+            let pins = SkyPins {
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                obliquity: Some(Degrees::new(0.0).unwrap()),
+                forcing: Some(crate::pins::ForcingPin::Zero),
+                spin: Some(spin),
+                ..SkyPins::default()
+            };
+            calendar_of(&generate(Seed(42), &pins).unwrap().system)
+        };
+        let pro = cal_with_spin(crate::pins::SpinPin::Prograde);
+        // The spin pin draws from its own stream, so both calendars share
+        // the same genesis day-phase offset; solve for local fractions.
+        let at_fraction =
+            |f: f64| StdDays(10.0 + (f - pro.forcing.day_phase_offset).rem_euclid(1.0));
+        let morning = pro.solar_azimuth_at(at_fraction(0.3), 0.0).unwrap();
+        let evening = pro.solar_azimuth_at(at_fraction(0.7), 0.0).unwrap();
+        assert!(
+            (45.0..135.0).contains(&morning),
+            "morning east, got {morning}"
+        );
+        assert!(
+            (225.0..315.0).contains(&evening),
+            "evening west, got {evening}"
+        );
+
+        let retro = cal_with_spin(crate::pins::SpinPin::Retrograde);
+        let morning = retro.solar_azimuth_at(at_fraction(0.3), 0.0).unwrap();
+        assert!(
+            (225.0..315.0).contains(&morning),
+            "retrograde morning west, got {morning}"
+        );
+    }
+
+    /// SKY-7: a locked world has no hour angle — no solar position.
+    #[test]
+    fn locked_worlds_have_no_solar_position() {
+        let cal = calendar_of(&locked_system());
+        assert!(cal.solar_altitude_at(StdDays(5.0), 30.0).is_none());
+        assert!(cal.solar_azimuth_at(StdDays(5.0), 30.0).is_none());
+    }
+
     /// Luna-like check: 27.32 d sidereal in a 365.25 d year → 29.53 d synodic.
     #[test]
     fn synodic_month_matches_the_luna_check_value() {
@@ -287,19 +378,21 @@ pub struct Calendar {
     year: StdDays,
     moon_periods: Vec<StdDays>,
     forcing: crate::forcing::OrbitalForcing,
+    retrograde: bool,
 }
 
 /// Derive the calendar from a generated system.
 pub fn calendar_of(system: &StarSystem) -> Calendar {
-    let day = match system.anchor.rotation {
-        Rotation::Spinning { day, .. } => Some(day),
-        Rotation::Locked => None,
+    let (day, retrograde) = match system.anchor.rotation {
+        Rotation::Spinning { day, retrograde } => (Some(day), retrograde),
+        Rotation::Locked => (None, false),
     };
     Calendar {
         day,
         year: system.anchor.year,
         moon_periods: system.moons.iter().map(|m| m.period).collect(),
         forcing: system.forcing.clone(),
+        retrograde,
     }
 }
 
@@ -367,6 +460,56 @@ impl Calendar {
         let cos_h0 = (-phi.tan() * declination.tan()).clamp(-1.0, 1.0);
         Some(cos_h0.acos() / std::f64::consts::PI)
     }
+    /// The sub-solar latitude at `t`, in degrees (SKY-7): the solar
+    /// declination, oscillating over the year with amplitude the
+    /// (time-varying) obliquity — the same declination the latitude
+    /// daylight model already uses.
+    /// type-audit: pending(wave-1)
+    pub fn solar_declination(&self, t: StdDays) -> f64 {
+        self.forcing.obliquity_at(t.0) * (std::f64::consts::TAU * self.year_phase(t)).sin()
+    }
+
+    /// Hour angle (radians, 0 at local solar noon), declination and
+    /// latitude (radians) for the solar-position formulas. A retrograde
+    /// world (SKY-22) runs its hour angle backward. `None` on a locked
+    /// world, which has no hour.
+    fn solar_geometry(&self, t: StdDays, latitude: f64) -> Option<(f64, f64, f64)> {
+        let fraction = self.local_day(t)?.1;
+        let direction = if self.retrograde { -1.0 } else { 1.0 };
+        let hour_angle = std::f64::consts::TAU * (fraction - 0.5) * direction;
+        Some((
+            hour_angle,
+            self.solar_declination(t).to_radians(),
+            latitude.to_radians(),
+        ))
+    }
+
+    /// The sun's altitude above the horizon at `t` for an observer at
+    /// `latitude`, in degrees (SKY-7): sin a = sin φ sin δ + cos φ cos δ
+    /// cos H. Negative below the horizon. `None` on a locked world.
+    /// type-audit: pending(wave-1)
+    pub fn solar_altitude_at(&self, t: StdDays, latitude: f64) -> Option<f64> {
+        let (h, delta, phi) = self.solar_geometry(t, latitude)?;
+        Some(
+            (phi.sin() * delta.sin() + phi.cos() * delta.cos() * h.cos())
+                .asin()
+                .to_degrees(),
+        )
+    }
+
+    /// The sun's azimuth at `t` for an observer at `latitude`, in degrees
+    /// clockwise from north (90 = east) — SKY-7. The sun crosses east to
+    /// west; a retrograde world (SKY-22) mirrors the crossing. `None` on
+    /// a locked world.
+    /// type-audit: pending(wave-1)
+    pub fn solar_azimuth_at(&self, t: StdDays, latitude: f64) -> Option<f64> {
+        let (h, delta, phi) = self.solar_geometry(t, latitude)?;
+        // atan2 form measured from south, westward positive; shift to
+        // compass convention.
+        let from_south = h.sin().atan2(h.cos() * phi.sin() - delta.tan() * phi.cos());
+        Some((from_south.to_degrees() + 180.0).rem_euclid(360.0))
+    }
+
     /// Is it daylight at `t`? Daylight is a centered window of the local day.
     /// type-audit: bare-ok(flag)
     pub fn is_daylight(&self, t: StdDays) -> Option<bool> {
