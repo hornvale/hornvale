@@ -1906,17 +1906,30 @@ fn root_concepts(lex: &hornvale_language::Lexicon) -> Vec<&str> {
         .collect()
 }
 
-/// Whether every goblinoid daughter's Root `derivation.proto` matches an
-/// INDEPENDENT re-draw of the "goblinoid" family proto-root for that same
-/// concept (spec §3 monophyly: every daughter's rooted vocabulary traces to
-/// the one family ancestor). Draws the family proto-phonology once via
-/// [`hornvale_worldgen::proto_phonology_of`] and calls
-/// [`hornvale_language::proto_root`] directly — never reads a proto back
-/// from any daughter's own recorded [`Derivation`], which would only prove
-/// self-consistency, not shared ancestry. `Absent` if no goblinoid daughter
-/// in this world's roster minted a Root.
-fn monophyly_goblinoid(v: &WorldView) -> MetricValue {
+/// Re-derive the "goblinoid" family's injective proto-root assignment (epoch
+/// `root/v2`) INDEPENDENTLY of any daughter's recorded derivation — over the
+/// world's full registered concept universe (`exposure_of` classifies every
+/// registered concept, so its key set is exactly the registry), exactly as
+/// `build_lexicon` does. The shared basis for the monophyly and clean-outgroup
+/// checks: it proves shared ancestry, never mere self-consistency.
+fn goblinoid_proto_assignment(v: &WorldView) -> std::collections::BTreeMap<String, Vec<Segment>> {
     let proto_ph = hornvale_worldgen::proto_phonology_of(&v.world, "goblinoid");
+    let universe: Vec<&str> = v
+        .world
+        .registry
+        .concepts()
+        .map(|c| c.name.as_str())
+        .collect();
+    hornvale_language::assign_proto_roots(&v.world.seed, "goblinoid", &proto_ph, &universe)
+}
+
+/// Whether every goblinoid daughter's Root `derivation.proto` matches its
+/// concept's slot in an INDEPENDENT re-derivation of the "goblinoid" family
+/// proto-root assignment (spec §3 monophyly: every daughter's rooted
+/// vocabulary traces to the one family ancestor). `Absent` if no goblinoid
+/// daughter in this world's roster minted a Root.
+fn monophyly_goblinoid(v: &WorldView) -> MetricValue {
+    let assignment = goblinoid_proto_assignment(v);
     let mut any = false;
     let mut monophyletic = true;
     for species in GOBLINOID_DAUGHTERS {
@@ -1929,9 +1942,7 @@ fn monophyly_goblinoid(v: &WorldView) -> MetricValue {
         for (concept, entry) in lex.entries() {
             if let LexEntry::Root { derivation, .. } = entry {
                 any = true;
-                let expected =
-                    hornvale_language::proto_root(&v.world.seed, "goblinoid", concept, &proto_ph);
-                if derivation.proto != expected {
+                if assignment.get(concept) != Some(&derivation.proto) {
                     monophyletic = false;
                 }
             }
@@ -1955,15 +1966,13 @@ fn clean_outgroup_kobold(v: &WorldView) -> MetricValue {
     let Ok(kobold_lex) = hornvale_worldgen::lexicon_of(&v.world, "kobold") else {
         return MetricValue::Absent;
     };
-    let proto_ph = hornvale_worldgen::proto_phonology_of(&v.world, "goblinoid");
+    let assignment = goblinoid_proto_assignment(v);
     let mut any = false;
     let mut clean = true;
     for (concept, entry) in kobold_lex.entries() {
         if let LexEntry::Root { derivation, .. } = entry {
             any = true;
-            let goblinoid_proto =
-                hornvale_language::proto_root(&v.world.seed, "goblinoid", concept, &proto_ph);
-            if derivation.proto == goblinoid_proto {
+            if assignment.get(concept) == Some(&derivation.proto) {
                 clean = false;
             }
         }
@@ -2933,18 +2942,21 @@ mod tests {
     }
 
     #[test]
-    fn core_homophony_detects_the_reported_hand_many_night_collision_and_is_bounded() {
-        // The bug that opened this campaign: seed 42 goblin roots hand, many,
-        // and night all to *Noa* — three CORE concepts (Body, Quality,
-        // Celestial), so C(3,2) = 3 core pairs from that cluster alone.
+    fn core_homophony_is_eliminated_at_seed_42_by_the_injective_assignment() {
+        // Before the fix, seed 42 goblin rooted hand = many = night = *Noa*
+        // (three core concepts → 3 core pairs). The injective family-proto
+        // assignment resolves every draw-side core collision, so
+        // core-homophony-goblin is 0 here. (Residual cascade/nativize mergers
+        // are Stage 3's target and seed-dependent; seed 42's goblin cascade is
+        // identity, so none arise.)
         let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
         let core = match extract(&view, "core-homophony-goblin") {
             MetricValue::Number(n) => n,
             other => panic!("core-homophony-goblin not a number: {other:?}"),
         };
-        assert!(
-            core >= 3.0,
-            "the hand/many/night cluster alone is 3 core pairs; got {core}"
+        assert_eq!(
+            core, 0.0,
+            "the injective assignment must eliminate seed-42 core homophony; got {core}"
         );
         // Functional-load restriction can only ever be a subset of the raw
         // count, for every daughter.

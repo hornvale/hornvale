@@ -1,3 +1,11 @@
+# Empty table: type-audit is a deliberately out-of-workspace dev tool
+# (decision `non-workspace-dev-tools-may-use-parser-libraries`). Declaring it
+# its own workspace root keeps `--manifest-path` builds standalone even when
+# the repo is checked out as a git worktree nested inside the parent tree
+# (e.g. `.claude/worktrees/*`), where the parent Cargo.toml's `exclude` path
+# no longer matches.
+[workspace]
+
 [package]
 name = "type-audit"
 version = "0.1.0"

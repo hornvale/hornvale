@@ -179,6 +179,7 @@ const ROOT_EPOCH: &str = "v2";
 /// a reader — the forms must be audibly distinct). Assignment ranges over the
 /// WHOLE concept universe passed in, never a per-world subset, so a concept's
 /// form never depends on which other concepts a given world exposed.
+/// type-audit: bare-ok(identifier-text)
 pub fn assign_proto_roots(
     seed: &Seed,
     family: &str,

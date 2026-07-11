@@ -10,7 +10,7 @@
 #![warn(missing_docs)]
 
 use hornvale_kernel::{Seed, World};
-use hornvale_language::{Manner, Segment, ipa, proto_root, render_views, romanize};
+use hornvale_language::{Manner, Segment, assign_proto_roots, ipa, render_views, romanize};
 use hornvale_worldgen as world_builder;
 
 /// The reference seed this page's proto-root table is drawn from — the
@@ -44,7 +44,9 @@ pub fn render_proto() -> Result<String, String> {
          §3–4): a phonology with no speakers of its own, drawn once at the family level from \
          reference seed {REFERENCE_SEED} and the family's authored ancestral articulation \
          vector (`hornvale_species::family_registry`). Every registered concept's proto-root \
-         below is drawn directly from this inventory (`hornvale_language::proto_root`), \
+         below is assigned injectively over the whole concept universe from this inventory \
+         (`hornvale_language::assign_proto_roots`, epoch `root/v2`), so no two concepts share \
+         a proto-root, \
          independent of any daughter's actual exposure — the ancestral vocabulary exists \
          whether or not a given daughter still holds it as a root today. The \
          [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each \
@@ -81,9 +83,15 @@ pub fn render_proto() -> Result<String, String> {
 
     doc.push_str("## Proto-root table\n\n");
     doc.push_str("| Concept | Gloss | Proto | IPA |\n|---|---|---|---|\n");
+    // The injective family assignment (epoch root/v2), computed once over the
+    // whole concept universe — exactly what `build_lexicon` consumes, so this
+    // reference page shows the SAME proto-roots the dictionary's modern forms
+    // descend from.
+    let universe: Vec<&str> = world.registry.concepts().map(|c| c.name.as_str()).collect();
+    let assignment = assign_proto_roots(&world.seed, FAMILY, &phonology, &universe);
     for concept in world.registry.concepts() {
-        let proto = proto_root(&world.seed, FAMILY, &concept.name, &phonology);
-        let views = render_views(&proto);
+        let proto = &assignment[&concept.name];
+        let views = render_views(proto);
         doc.push_str(&format!(
             "| `{}` | {} | *{} | /{}/ |\n",
             concept.name, concept.doc, views.roman, views.ipa

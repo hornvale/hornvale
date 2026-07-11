@@ -32,7 +32,8 @@ pub mod phonology;
 pub mod register;
 
 pub use etymology::{
-    AppliedRule, Cascade, Derivation, RuleKind, SoundRule, draw_cascade, evolve, proto_root,
+    AppliedRule, Cascade, Derivation, RuleKind, SoundRule, assign_proto_roots, draw_cascade,
+    evolve, proto_root,
 };
 pub use lexicon::{
     ExposureClass, GapReason, Headedness, LexEntry, Lexicon, WordViews, build_lexicon,

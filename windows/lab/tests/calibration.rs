@@ -787,16 +787,17 @@ fn name_collision_rate_is_measured_and_pinned() {
     // (Task 6c/6d) reshape which cells goblin/kobold win and how many
     // settlements they each field per world, which reshuffles per-world
     // site-concept reuse; the net effect is FEWER zero-collision worlds
-    // (159 -> 40) and a higher mean collision rate. The honest measured
-    // rate is pinned exactly as before, never loosened to fit.
-    assert_eq!(zero, 40, "zero-collision world count drifted");
-    assert_eq!(nonzero, 460, "nonzero-collision world count drifted");
+    // (159 -> 40); the root/v2 injective assignment then makes the site-concept
+    // words themselves more distinct, nudging it back up to 42 zero-collision
+    // worlds and a slightly lower mean rate. Pinned exactly as measured.
+    assert_eq!(zero, 42, "zero-collision world count drifted");
+    assert_eq!(nonzero, 458, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.128_455_986_622_179).abs() < 1e-6,
+        (mean - 0.121_983_170_798).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -830,8 +831,8 @@ fn name_length_distributions_are_measured_and_pinned() {
     // how many settlements each fields per world; goblin is now present on
     // every seed (the founder floor's own guarantee), kobold on all but 1.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 500u32, 10.500_053_705_528_86),
-        ("kobold", 499u32, 14.237_543_579_153_998),
+        ("goblin", 500u32, 10.758_884_597_6),
+        ("kobold", 499u32, 15.454_121_625_450_9),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1018,7 +1019,7 @@ fn null_control_name_length_smd_is_pinned() {
         nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
     assert!(
-        (namelen - -0.068_569_489_200_608).abs() < 1e-9,
+        (namelen - -0.089_563_445_788_977).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

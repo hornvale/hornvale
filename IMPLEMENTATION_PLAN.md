@@ -45,12 +45,60 @@ regenerated, finding above recorded.
 
 ## Stage 2: Family-proto injective assignment (co-primary fix — draw side)
 **Goal**: kill draw-collisions at the source, preserving cognates.
-Assign proto-roots injectively **once at the family level**, in
-coreness-then-concept order, growing a root by one syllable only when its
-drawn form is already taken (git-short-hash style / minimal perfect hashing).
-**Save-format contract**: reseeds every root → epoch bump (`root/v2`), artifact
-regen. **Cognate safety**: assignment at family-proto only; daughters inherit.
-**Status**: Not Started
+**Design LOCKED (Nathan, hash-table framing + 4 ideonomy runs):** deterministic
+open-addressing with a **double-hash (re-draw) probe**, not linear probing.
+
+Assignment algorithm (`assign_proto_roots`, new; replaces per-concept
+`proto_root` inside `build_lexicon`'s pass 1):
+1. **Scope = the full family concept UNIVERSE**, never a world's exposed
+   subset (blind spot 1: else a word depends on which other concepts a world
+   exposed → breaks pin-isolation + cognates). The universe is the union of
+   the authored packs (`universal_stratum ∪ body_pack ∪ kin_pack ∪
+   color_pack ∪ …`) plus every other family-rootable concept — a single
+   canonical, ordered list.
+2. **Order = core-first, then concept-id** (stable). Core (universal/body/kin)
+   draws first and wins the short slots (Huffman/cuckoo priority → terse core
+   + near-zero-core). Id tiebreak → **insertion-stable** (blind spot 2: a new
+   concept appends without reshuffling committed words; rules out global
+   minimal-perfect-hash recompute).
+3. **Draw** each concept's proto-root at the family level, epoch `root/v2`
+   (`language/<family>/lexicon/root/v2/<concept>`).
+4. **On collision** (form already assigned): re-draw from a probe#-keyed
+   sub-stream (`…/root/v2/<concept>/probe/<n>`) — double hashing, so colliders
+   SCATTER (blind spot 3: linear "grow +1 syllable" makes Noa/Noka/Noke
+   minimal-pair clusters). **Grow length by one syllable only after same-length
+   probes exhaust** (a bounded probe budget → demand-driven length / table
+   resize).
+5. **Minimal-pair rejection**: a probe that is within edit-distance `<T` of an
+   already-placed CORE root is rejected like a collision (blind spot 4:
+   uniqueness ≠ distinguishability; the human "lookup" is phonetic).
+**Save-format contract**: reseeds every root → epoch `root/v2`, artifact regen.
+**Cognate safety**: assignment at family-proto only; daughters inherit + evolve.
+**Success Criteria**: `core-homophony-*` at proto level = 0 across a seed
+sweep; `monophyly`/`divergence-real`/pin-isolation tests still green;
+byte-identical determinism holds.
+**Status**: In Progress (wiring done, artifact regen running) —
+  ✅ `assign_proto_roots` core (`2bf6631`): injective, core-first, double-hash
+     probe, minimal-pair rejection, insertion-stable, 7 tests.
+  ✅ Wired into `build_lexicon` pass 1 over `exposures.keys()`; pin-isolation
+     contract tests rewritten to the `root/v2` epoch; monophyly/clean-outgroup
+     lab metrics re-derive via the v2 assignment.
+  ✅ 1000-seed re-measure: raw homophony −57–84% (goblin 15.06→4.04, bugbear
+     28.61→12.19, kobold 25.18→3.94); clean-outgroup now perfect ([]);
+     divergence ordering holds. Calibration pins re-baselined.
+  ✅ All artifacts regenerated (world.json fixture, 2 CI censuses,
+     branches-family, dictionary, almanacs, proto/phonology, type-audit
+     report); name-based census pins re-baselined (name lengths rose slightly
+     as colliders lengthen; name-collision rate *improved*); scene golden
+     regenerated. Worktree type-audit build fixed via empty `[workspace]`.
+     Full gate green (final confirmation running).
+
+  **PIVOTAL FINDING** — `homophony-merger-share-*` now reads **1.00** for
+  every daughter: the injective assignment eliminated *all* draw-collisions,
+  so 100% of the residual is cascade/nativize mergers. Core homophony still
+  affects bugbear in 78.9% of worlds (smallest inventory → most nativization
+  folding), goblin/hobgoblin/kobold ~27–30%. **Stage 3 is now the ENTIRE
+  remaining problem, not a co-primary half.**
 
 ## Stage 3: Post-evolution re-merger check (co-primary fix — merger side)
 **Goal**: catch the ~50–82% the cascade / `nativize` re-merge per daughter

@@ -8,7 +8,7 @@
 //! to a [`LexEntry::Gap`] carrying the recountable reason.
 #![warn(missing_docs)]
 
-use crate::etymology::{Derivation, draw_cascade, evolve, proto_root};
+use crate::etymology::{Derivation, assign_proto_roots, draw_cascade, evolve};
 use crate::packs::compound_recipe;
 use crate::phoneme::Segment;
 use crate::phonology::Phonology;
@@ -247,13 +247,22 @@ pub fn build_lexicon(
 
     let mut entries: BTreeMap<String, LexEntry> = BTreeMap::new();
 
-    // Pass 1: roots for every Steeped concept — pass 2's compounds need
-    // these already present in `entries`. The proto-root is drawn at the
-    // family level (shared by every daughter species), then evolved through
-    // this species' own cascade and nativized into its own phonology.
+    // Assign a distinct proto-root to every concept in the universe at the
+    // family level, once (the homophony fix, draw side — replaces per-concept
+    // `proto_root` drawing). The universe is the WHOLE `exposures` key set,
+    // Steeped/KnowsOf/Unknown alike, so a Steeped concept reserves the same
+    // distinct proto-root regardless of which other concepts a given world
+    // exposed — keeping the assignment world-independent and cognate-safe.
+    let universe: Vec<&str> = exposures.keys().map(String::as_str).collect();
+    let proto_roots = assign_proto_roots(seed, family, proto_ph, &universe);
+
+    // Pass 1: roots for every Steeped concept — pass 2's compounds need these
+    // already present in `entries`. Each concept's assigned family-level
+    // proto-root is evolved through this species' own cascade and nativized
+    // into its own phonology (shared proto → divergent reflexes = cognates).
     for (concept, class) in exposures {
         if matches!(class, ExposureClass::Steeped) {
-            let proto = proto_root(seed, family, concept, proto_ph);
+            let proto = proto_roots[concept].clone();
             let derivation = evolve(&proto, &cascade, ph);
             let views = word_views(&derivation.modern);
             entries.insert(concept.clone(), LexEntry::Root { derivation, views });
@@ -355,40 +364,42 @@ mod tests {
     }
 
     #[test]
-    fn singleton_family_reproduces_the_words() {
-        // family == species, proto_ph == ph: identical to the old 4-arg call.
+    fn singleton_family_uses_the_assigned_proto_root() {
+        // family == species, proto_ph == ph: build_lexicon's Root protos now
+        // come from the injective family-level assignment (epoch root/v2),
+        // evolved through the species' cascade — not a per-concept v1 draw.
         let ph = test_phonology();
         let ex = sea_exposures();
         let lex = build_lexicon(&Seed(1), "test", "test", &ph, &ph, &ex);
-        // water's proto-root draws under language/test/lexicon/root/water, as before
-        let proto = proto_root(&Seed(1), "test", "water", &ph);
-        let expected = evolve(&proto, &draw_cascade(&Seed(1), "test"), &ph).modern;
+        let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
+        let assigned = assign_proto_roots(&Seed(1), "test", &ph, &universe);
+        let expected = evolve(&assigned["water"], &draw_cascade(&Seed(1), "test"), &ph).modern;
         match lex.entry("water").unwrap() {
             LexEntry::Root { derivation, .. } => assert_eq!(derivation.modern, expected),
             _ => panic!("water should be a Root"),
         }
     }
 
-    /// Pin-isolation (Task 7, spec §3): kobold — the one people outside the
-    /// goblinoid family, a singleton stock — must resolve its proto-root
-    /// through exactly the stream path The Words consumed before this
-    /// campaign's family machinery existed
-    /// (`language/kobold/lexicon/root/<concept>`, `family == species ==
-    /// "kobold"`, `proto_ph == ph`). Calling `build_lexicon` under the
-    /// singleton pattern and calling `proto_root` directly on the same
-    /// literal species/family key must agree byte-for-byte — the family
-    /// parameter Task 6 added must never perturb a stock with no siblings.
+    /// Pin-isolation, updated for the `root/v2` epoch: a singleton stock
+    /// (kobold — no siblings) resolves its proto-roots through the SAME
+    /// injective family-level assignment every family uses, keyed on its own
+    /// label (`family == species == "kobold"`). The pre-Branches per-concept
+    /// v1 stream this once pinned is deliberately retired by the homophony
+    /// epoch bump (`assign_proto_roots`); what must still hold is that
+    /// `build_lexicon` consumes exactly the assignment `assign_proto_roots`
+    /// produces for the same key — there is no separate singleton code path.
     #[test]
-    fn kobold_singleton_consumes_the_pre_branches_stream_path() {
+    fn kobold_singleton_consumes_the_assigned_stream_path() {
         let ph = test_phonology();
         let ex = one_steeped("water");
         let lex = build_lexicon(&Seed(5), "kobold", "kobold", &ph, &ph, &ex);
-        let expected_proto = proto_root(&Seed(5), "kobold", "water", &ph);
+        let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
+        let assigned = assign_proto_roots(&Seed(5), "kobold", &ph, &universe);
         assert_eq!(
             root_proto(&lex, "water"),
-            expected_proto,
-            "kobold's singleton path must consume exactly the stream The \
-             Words consumed, unperturbed by the family parameter"
+            assigned["water"],
+            "a singleton stock must consume exactly the injective assignment, \
+             with no separate code path"
         );
     }
 

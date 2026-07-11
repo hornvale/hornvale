@@ -314,6 +314,7 @@ pub fn kin_pack() -> &'static [PackEntry] {
 /// every other core root. The split is pack membership, never a doc-string
 /// heuristic; the lab's `core-homophony-*` metrics measure against this same
 /// definition.
+/// type-audit: bare-ok(identifier-text)
 pub fn is_core_concept(concept: &str) -> bool {
     universal_stratum()
         .iter()
