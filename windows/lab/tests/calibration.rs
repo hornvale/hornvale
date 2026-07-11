@@ -831,14 +831,14 @@ fn name_collision_rate_is_measured_and_pinned() {
     // zero-collision worlds and a higher mean rate. An honest cost of the
     // richer pantheon plus the reseed, pinned not loosened; the homophony
     // campaign owns the name-space pressure question.
-    assert_eq!(zero, 18, "zero-collision world count drifted");
-    assert_eq!(nonzero, 482, "nonzero-collision world count drifted");
+    assert_eq!(zero, 19, "zero-collision world count drifted");
+    assert_eq!(nonzero, 481, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.182_772_204_576).abs() < 1e-6,
+        (mean - 0.182_512_148_104).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -877,8 +877,8 @@ fn name_length_distributions_are_measured_and_pinned() {
     // each culture's lexicon before settlements draw. Both means re-pinned on the
     // merged code; present counts unchanged (goblin every seed, kobold all but 1).
     for (species, expected_present, expected_mean) in [
-        ("goblin", 500u32, 10.481_047_173_4),
-        ("kobold", 499u32, 15.608_899_318_436_874),
+        ("goblin", 500u32, 10.612_795_414_4),
+        ("kobold", 499u32, 15.597_634_151_903_808),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1074,7 +1074,7 @@ fn null_control_name_length_smd_is_pinned() {
     // build's glossed-name draws; the SMD stays well inside the sampling bound
     // above. Shipped peoples are atonal, so the tone tier itself moves nothing.
     assert!(
-        (namelen - -0.058_867_047_032_953_534).abs() < 1e-9,
+        (namelen - -0.072_959_431_449_716_84).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

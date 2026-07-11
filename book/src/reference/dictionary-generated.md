@@ -11,74 +11,74 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
-| `blood` | the circulating fluid of a body | Doodoo | /doodoo/ | Doonoe | Doonoe → no change → Doodoo |
+| `blood` | the circulating fluid of a body | Doo | /doo/ | Neo | Neo → no change → Doo |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7 |
-| `bone` | the rigid frame of a body | Koa | /koa/ | Kea | Kea → no change → Koa |
+| `bone` | the rigid frame of a body | Kao | /kao/ | Kae | Kae → no change → Kao |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7 |
-| `bugbear-kind` | a bugbear | Doadao | /doadao/ | Neadae | Neadae → no change → Doadao |
-| `child` | one's son or daughter | Koo | /koo/ | Koo | Koo → no change → Koo |
+| `bugbear-kind` | a bugbear | Koa | /koa/ | Kea | Kea → no change → Koa |
+| `child` | one's son or daughter | Daokoa | /daokoa/ | Daekoa | Daekoa → no change → Daokoa |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
-| `dark` | the color term for black/dark hues | Boadoo | /boadoo/ | Peanoo | Peanoo → no change → Boadoo |
-| `day` | the light half of the day-night cycle | Koataa | /koataa/ | Koataa | Koataa → no change → Koataa |
+| `dark` | the color term for black/dark hues | Taadoo | /taadoo/ | Taanoo | Taanoo → no change → Taadoo |
+| `day` | the light half of the day-night cycle | Goadao | /goadao/ | Goanae | Goanae → no change → Goadao |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
-| `die` | to cease living | Taa | /taa/ | Taa | Taa → no change → Taa |
-| `earth` | the ground underfoot | Doo | /doo/ | Dee | Dee → no change → Doo |
-| `eat` | to consume food | Baodoo | /baodoo/ | Paenoo | Paenoo → no change → Baodoo |
+| `die` | to cease living | Taobaa | /taobaa/ | Taopaa | Taopaa → no change → Taobaa |
+| `earth` | the ground underfoot | Boo | /boo/ | Pee | Pee → no change → Boo |
+| `eat` | to consume food | Koo | /koo/ | Koo | Koo → no change → Koo |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
-| `eye` | the organ of sight | Gao | /gao/ | Gao | Gao → no change → Gao |
-| `fire` | flame and heat | Booqoa | /booqoa/ | Pooqoa | Pooqoa → no change → Booqoa |
-| `foot` | the walking limb-end | Qoodoo | /qoodoo/ | Qoenoe | Qoenoe → no change → Qoodoo |
-| `gloom` | the deepest, starless dark | Doo | /doo/ | Neo | Neo → no change → Doo |
-| `goblin-kind` | a goblin | Goodao | /goodao/ | Geenae | Geenae → no change → Goodao |
-| `god` | a deity | Toodoo | /toodoo/ | Teenoo | Teenoo → no change → Toodoo |
-| `green` | the color term for green | Doo | /doo/ | Noe | Noe → no change → Doo |
+| `eye` | the organ of sight | Qao | /qao/ | Qao | Qao → no change → Qao |
+| `fire` | flame and heat | Qoa | /qoa/ | Qea | Qea → no change → Qoa |
+| `foot` | the walking limb-end | Doa | /doa/ | Doa | Doa → no change → Doa |
+| `gloom` | the deepest, starless dark | Doa | /doa/ | Noa | Noa → no change → Doa |
+| `goblin-kind` | a goblin | Doa | /doa/ | Nea | Nea → no change → Doa |
+| `god` | a deity | Dootaa | /dootaa/ | Neetaa | Neetaa → no change → Dootaa |
+| `green` | the color term for green | Kooqao | /kooqao/ | Keoqae | Keoqae → no change → Kooqao |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
-| `hand` | the manipulating limb-end | Goodoo | /goodoo/ | Goedee | Goedee → no change → Goodoo |
-| `hearth` | the fire at the center of a home | Daodoa | /daodoa/ | Naonea | Naonea → no change → Daodoa |
-| `hobgoblin-kind` | a hobgoblin | Qooqoo | /qooqoo/ | Qoeqee | Qoeqee → no change → Qooqoo |
-| `home` | one's dwelling | Qaadoo | /qaadoo/ | Qaanoo | Qaanoo → no change → Qaadoo |
+| `hand` | the manipulating limb-end | Daa | /daa/ | Naa | Naa → no change → Daa |
+| `hearth` | the fire at the center of a home | Dooboo | /dooboo/ | Noopee | Noopee → no change → Dooboo |
+| `hobgoblin-kind` | a hobgoblin | Qaagoo | /qaagoo/ | Qaagoe | Qaagoe → no change → Qaagoo |
+| `home` | one's dwelling | Doo | /doo/ | Nee | Nee → no change → Doo |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
-| `kobold-kind` | a kobold | Doakaa | /doakaa/ | Neakaa | Neakaa → no change → Doakaa |
-| `light` | the color term for white/light hues | Doa | /doa/ | Nea | Nea → no change → Doa |
-| `many` | an indefinitely large count | Daodao | /daodao/ | Naenae | Naenae → no change → Daodao |
+| `kobold-kind` | a kobold | Doa | /doa/ | Dea | Dea → no change → Doa |
+| `light` | the color term for white/light hues | Tooqoa | /tooqoa/ | Toeqea | Toeqea → no change → Tooqoa |
+| `many` | an indefinitely large count | Doodoa | /doodoa/ | Neodoa | Neodoa → no change → Doodoa |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
-| `moon` | a moon | Kaadaa | /kaadaa/ | Kaanaa | Kaanaa → no change → Kaadaa |
+| `moon` | a moon | Toabao | /toabao/ | Teapae | Teapae → no change → Toabao |
 | `mountain` | high ground | — | — | — | gap (experiential): bugbear has no exposure to 'mountain' |
-| `mouth` | the organ of eating and speech | Dao | /dao/ | Nae | Nae → no change → Dao |
-| `name` | a word that identifies one who bears it | Goo | /goo/ | Goe | Goe → no change → Goo |
-| `night` | the dark half of the day-night cycle | Daabao | /daabao/ | Naapae | Naapae → no change → Daabao |
-| `one` | the cardinal number 1 | Boodoo | /boodoo/ | Peodee | Peodee → no change → Boodoo |
-| `parent` | one's father or mother | Dootoa | /dootoa/ | Nootea | Nootea → no change → Dootoa |
+| `mouth` | the organ of eating and speech | Doodoo | /doodoo/ | Doenoe | Doenoe → no change → Doodoo |
+| `name` | a word that identifies one who bears it | Dookao | /dookao/ | Deokao | Deokao → no change → Dookao |
+| `night` | the dark half of the day-night cycle | Daoqaa | /daoqaa/ | Naeqaa | Naeqaa → no change → Daoqaa |
+| `one` | the cardinal number 1 | Kaokao | /kaokao/ | Kaokao | Kaokao → no change → Kaokao |
+| `parent` | one's father or mother | Goatoo | /goatoo/ | Goatee | Goatee → no change → Goatoo |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): bugbear has no exposure to 'rain' |
-| `red` | the color term for red | Too | /too/ | Toe | Toe → no change → Too |
+| `red` | the color term for red | Doo | /doo/ | Noe | Noe → no change → Doo |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
-| `sea` | a body of salt water | Daodaodoagoa | /daodaodoagoa/ | — | compound: `many` + `water` |
+| `sea` | a body of salt water | Doodoadaokaa | /doodoadaokaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Daodoo | /daodoo/ | Naoneo | Naoneo → no change → Daodoo |
+| `shadow` | cast dark, distinct from open gloom | Daoqao | /daoqao/ | Naeqae | Naeqae → no change → Daoqao |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
-| `sibling` | one's brother or sister | Daadoa | /daadoa/ | Naanea | Naanea → no change → Daadoa |
-| `sleep` | to rest unconscious | Qoadaa | /qoadaa/ | Qeadaa | Qeadaa → no change → Qoadaa |
+| `sibling` | one's brother or sister | Boodao | /boodao/ | Peonae | Peonae → no change → Boodao |
+| `sleep` | to rest unconscious | Dooboo | /dooboo/ | Neepeo | Neepeo → no change → Dooboo |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): bugbear has no exposure to 'snow' |
-| `spirit` | a lesser or unseen supernatural presence | Booboo | /booboo/ | Peopeo | Peopeo → no change → Booboo |
-| `star` | a fixed point of light in the night sky | Doabaa | /doabaa/ | Noapaa | Noapaa → no change → Doabaa |
-| `starlit` | dark faintly lit by stars | Boa | /boa/ | Poa | Poa → no change → Boa |
-| `stone` | rock | Daoboa | /daoboa/ | Naopoa | Naopoa → no change → Daoboa |
-| `sun` | the sun | Toogoo | /toogoo/ | Teogeo | Teogeo → no change → Toogoo |
+| `spirit` | a lesser or unseen supernatural presence | Daodao | /daodao/ | Naodao | Naodao → no change → Daodao |
+| `star` | a fixed point of light in the night sky | Daotoa | /daotoa/ | Naetoa | Naetoa → no change → Daotoa |
+| `starlit` | dark faintly lit by stars | Kaodoa | /kaodoa/ | Kaonea | Kaonea → no change → Kaodoa |
+| `stone` | rock | Daodoa | /daodoa/ | Naonea | Naonea → no change → Daodoa |
+| `sun` | the sun | Doagoo | /doagoo/ | Noagoo | Noagoo → no change → Doagoo |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-forest' |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
-| `temperate-rainforest` | a biome class | Taotoa | /taotoa/ | Taetoa | Taetoa → no change → Taotoa |
-| `tree` | a woody plant | Gookoo | /gookoo/ | Geekoe | Geekoe → no change → Gookoo |
+| `temperate-rainforest` | a biome class | Toadoo | /toadoo/ | Toaneo | Toaneo → no change → Toadoo |
+| `tree` | a woody plant | Koodoo | /koodoo/ | Koonee | Koonee → no change → Koodoo |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
 | `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-seasonal-forest |
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
-| `two` | the cardinal number 2 | Koogoo | /koogoo/ | Koogee | Koogee → no change → Koogoo |
+| `two` | the cardinal number 2 | Daadaa | /daadaa/ | Naanaa | Naanaa → no change → Daadaa |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
-| `water` | the drinkable liquid | Doagoa | /doagoa/ | Noagea | Noagea → no change → Doagoa |
-| `wind` | moving air | Tootaa | /tootaa/ | Tootaa | Tootaa → no change → Tootaa |
-| `yellow` | the color term for yellow | Gaa | /gaa/ | Gaa | Gaa → no change → Gaa |
+| `water` | the drinkable liquid | Daokaa | /daokaa/ | Daokaa | Daokaa → no change → Daokaa |
+| `wind` | moving air | Dooqoo | /dooqoo/ | Noeqoo | Noeqoo → no change → Dooqoo |
+| `yellow` | the color term for yellow | Qaadoo | /qaadoo/ | Qaadeo | Qaadeo → no change → Qaadoo |
 
 ## Goblin
 
@@ -87,74 +87,74 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `abyssal` | a biome class | — | — | — | gap (experiential): no compound recipe for 'abyssal' |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
-| `blood` | the circulating fluid of a body | Doonoe | /doonoe/ | Doonoe | Doonoe → no change → Doonoe |
-| `blue` | the color term for blue | Noenee | /noenee/ | Noenee | Noenee → no change → Noenee |
-| `bone` | the rigid frame of a body | Kea | /kea/ | Kea | Kea → no change → Kea |
+| `blood` | the circulating fluid of a body | Neo | /neo/ | Neo | Neo → no change → Neo |
+| `blue` | the color term for blue | Taotao | /taotao/ | Taoqao | Taoqao → no change → Taotao |
+| `bone` | the rigid frame of a body | Kae | /kae/ | Kae | Kae → no change → Kae |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 4 from night-vision 0.5 |
-| `bugbear-kind` | a bugbear | Neadae | /neadae/ | Neadae | Neadae → no change → Neadae |
-| `child` | one's son or daughter | Koo | /koo/ | Koo | Koo → no change → Koo |
+| `bugbear-kind` | a bugbear | Kea | /kea/ | Kea | Kea → no change → Kea |
+| `child` | one's son or daughter | Daekoa | /daekoa/ | Daekoa | Daekoa → no change → Daekoa |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
-| `dark` | the color term for black/dark hues | Beanoo | /beanoo/ | Peanoo | Peanoo → no change → Beanoo |
-| `day` | the light half of the day-night cycle | Koataa | /koataa/ | Koataa | Koataa → no change → Koataa |
+| `dark` | the color term for black/dark hues | Taanoo | /taanoo/ | Taanoo | Taanoo → no change → Taanoo |
+| `day` | the light half of the day-night cycle | Boanae | /boanae/ | Goanae | Goanae → no change → Boanae |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
-| `die` | to cease living | Taa | /taa/ | Taa | Taa → no change → Taa |
-| `earth` | the ground underfoot | Dee | /dee/ | Dee | Dee → no change → Dee |
-| `eat` | to consume food | Baenoo | /baenoo/ | Paenoo | Paenoo → no change → Baenoo |
+| `die` | to cease living | Taobaa | /taobaa/ | Taopaa | Taopaa → no change → Taobaa |
+| `earth` | the ground underfoot | Bee | /bee/ | Pee | Pee → no change → Bee |
+| `eat` | to consume food | Koo | /koo/ | Koo | Koo → no change → Koo |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
-| `eye` | the organ of sight | Bao | /bao/ | Gao | Gao → no change → Bao |
-| `fire` | flame and heat | Bootoa | /bootoa/ | Pooqoa | Pooqoa → no change → Bootoa |
-| `foot` | the walking limb-end | Toenoe | /toenoe/ | Qoenoe | Qoenoe → no change → Toenoe |
-| `gloom` | the deepest, starless dark | Neo | /neo/ | Neo | Neo → no change → Neo |
-| `goblin-kind` | a goblin | Beenae | /beenae/ | Geenae | Geenae → no change → Beenae |
-| `god` | a deity | Teenoo | /teenoo/ | Teenoo | Teenoo → no change → Teenoo |
-| `green` | the color term for green | Noe | /noe/ | Noe | Noe → no change → Noe |
+| `eye` | the organ of sight | Tao | /tao/ | Qao | Qao → no change → Tao |
+| `fire` | flame and heat | Tea | /tea/ | Qea | Qea → no change → Tea |
+| `foot` | the walking limb-end | Doa | /doa/ | Doa | Doa → no change → Doa |
+| `gloom` | the deepest, starless dark | Noa | /noa/ | Noa | Noa → no change → Noa |
+| `goblin-kind` | a goblin | Nea | /nea/ | Nea | Nea → no change → Nea |
+| `god` | a deity | Neetaa | /neetaa/ | Neetaa | Neetaa → no change → Neetaa |
+| `green` | the color term for green | Keotae | /keotae/ | Keoqae | Keoqae → no change → Keotae |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
-| `hand` | the manipulating limb-end | Boedee | /boedee/ | Goedee | Goedee → no change → Boedee |
-| `hearth` | the fire at the center of a home | Naonea | /naonea/ | Naonea | Naonea → no change → Naonea |
-| `hobgoblin-kind` | a hobgoblin | Toetee | /toetee/ | Qoeqee | Qoeqee → no change → Toetee |
-| `home` | one's dwelling | Taanoo | /taanoo/ | Qaanoo | Qaanoo → no change → Taanoo |
+| `hand` | the manipulating limb-end | Naa | /naa/ | Naa | Naa → no change → Naa |
+| `hearth` | the fire at the center of a home | Noobee | /noobee/ | Noopee | Noopee → no change → Noobee |
+| `hobgoblin-kind` | a hobgoblin | Taaboe | /taaboe/ | Qaagoe | Qaagoe → no change → Taaboe |
+| `home` | one's dwelling | Nee | /nee/ | Nee | Nee → no change → Nee |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no compound recipe for 'hydrothermal-vent' |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'kelp-forest' |
-| `kobold-kind` | a kobold | Neakaa | /neakaa/ | Neakaa | Neakaa → no change → Neakaa |
-| `light` | the color term for white/light hues | Nea | /nea/ | Nea | Nea → no change → Nea |
-| `many` | an indefinitely large count | Naenae | /naenae/ | Naenae | Naenae → no change → Naenae |
+| `kobold-kind` | a kobold | Dea | /dea/ | Dea | Dea → no change → Dea |
+| `light` | the color term for white/light hues | Toetea | /toetea/ | Toeqea | Toeqea → no change → Toetea |
+| `many` | an indefinitely large count | Neodoa | /neodoa/ | Neodoa | Neodoa → no change → Neodoa |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
-| `moon` | a moon | Kaanaa | /kaanaa/ | Kaanaa | Kaanaa → no change → Kaanaa |
+| `moon` | a moon | Teabae | /teabae/ | Teapae | Teapae → no change → Teabae |
 | `mountain` | high ground | — | — | — | gap (experiential): goblin has no exposure to 'mountain' |
-| `mouth` | the organ of eating and speech | Nae | /nae/ | Nae | Nae → no change → Nae |
-| `name` | a word that identifies one who bears it | Boe | /boe/ | Goe | Goe → no change → Boe |
-| `night` | the dark half of the day-night cycle | Naabae | /naabae/ | Naapae | Naapae → no change → Naabae |
-| `one` | the cardinal number 1 | Beodee | /beodee/ | Peodee | Peodee → no change → Beodee |
-| `parent` | one's father or mother | Nootea | /nootea/ | Nootea | Nootea → no change → Nootea |
+| `mouth` | the organ of eating and speech | Doenoe | /doenoe/ | Doenoe | Doenoe → no change → Doenoe |
+| `name` | a word that identifies one who bears it | Deokao | /deokao/ | Deokao | Deokao → no change → Deokao |
+| `night` | the dark half of the day-night cycle | Naetaa | /naetaa/ | Naeqaa | Naeqaa → no change → Naetaa |
+| `one` | the cardinal number 1 | Kaokao | /kaokao/ | Kaokao | Kaokao → no change → Kaokao |
+| `parent` | one's father or mother | Boatee | /boatee/ | Goatee | Goatee → no change → Boatee |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): goblin has no exposure to 'rain' |
-| `red` | the color term for red | Toe | /toe/ | Toe | Toe → no change → Toe |
+| `red` | the color term for red | Noe | /noe/ | Noe | Noe → no change → Noe |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
-| `sea` | a body of salt water | Naenaenoabea | /naenaenoabea/ | — | compound: `many` + `water` |
+| `sea` | a body of salt water | Neodoadaokaa | /neodoadaokaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.5 |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'shrubland' |
-| `sibling` | one's brother or sister | Naanea | /naanea/ | Naanea | Naanea → no change → Naanea |
-| `sleep` | to rest unconscious | Teadaa | /teadaa/ | Qeadaa | Qeadaa → no change → Teadaa |
+| `sibling` | one's brother or sister | Beonae | /beonae/ | Peonae | Peonae → no change → Beonae |
+| `sleep` | to rest unconscious | Neebeo | /neebeo/ | Neepeo | Neepeo → no change → Neebeo |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): goblin has no exposure to 'snow' |
-| `spirit` | a lesser or unseen supernatural presence | Beobeo | /beobeo/ | Peopeo | Peopeo → no change → Beobeo |
-| `star` | a fixed point of light in the night sky | Noabaa | /noabaa/ | Noapaa | Noapaa → no change → Noabaa |
+| `spirit` | a lesser or unseen supernatural presence | Naodao | /naodao/ | Naodao | Naodao → no change → Naodao |
+| `star` | a fixed point of light in the night sky | Naetoa | /naetoa/ | Naetoa | Naetoa → no change → Naetoa |
 | `starlit` | dark faintly lit by stars | — | — | — | gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.5 |
-| `stone` | rock | Naoboa | /naoboa/ | Naopoa | Naopoa → no change → Naoboa |
-| `sun` | the sun | Teobeo | /teobeo/ | Teogeo | Teogeo → no change → Teobeo |
-| `taiga` | a biome class | Baoneo | /baoneo/ | Paoneo | Paoneo → no change → Baoneo |
-| `temperate-forest` | a biome class | Toonao | /toonao/ | Toonao | Toonao → no change → Toonao |
+| `stone` | rock | Naonea | /naonea/ | Naonea | Naonea → no change → Naonea |
+| `sun` | the sun | Noaboo | /noaboo/ | Noagoo | Noagoo → no change → Noaboo |
+| `taiga` | a biome class | Kaa | /kaa/ | Kaa | Kaa → no change → Kaa |
+| `temperate-forest` | a biome class | Noenoa | /noenoa/ | Noenoa | Noenoa → no change → Noenoa |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
-| `temperate-rainforest` | a biome class | Taetoa | /taetoa/ | Taetoa | Taetoa → no change → Taetoa |
-| `tree` | a woody plant | Beekoe | /beekoe/ | Geekoe | Geekoe → no change → Beekoe |
-| `tropical-rainforest` | a biome class | Kaabeo | /kaabeo/ | Kaapeo | Kaapeo → no change → Kaabeo |
-| `tropical-seasonal-forest` | a biome class | Toa | /toa/ | Toa | Toa → no change → Toa |
-| `tundra` | a biome class | Noo | /noo/ | Noo | Noo → no change → Noo |
-| `two` | the cardinal number 2 | Koobee | /koobee/ | Koogee | Koogee → no change → Koobee |
+| `temperate-rainforest` | a biome class | Toaneo | /toaneo/ | Toaneo | Toaneo → no change → Toaneo |
+| `tree` | a woody plant | Koonee | /koonee/ | Koonee | Koonee → no change → Koonee |
+| `tropical-rainforest` | a biome class | Toa | /toa/ | Qoa | Qoa → no change → Toa |
+| `tropical-seasonal-forest` | a biome class | Beetao | /beetao/ | Geetao | Geetao → no change → Beetao |
+| `tundra` | a biome class | Kaekoa | /kaekoa/ | Kaekoa | Kaekoa → no change → Kaekoa |
+| `two` | the cardinal number 2 | Naanaa | /naanaa/ | Naanaa | Naanaa → no change → Naanaa |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
-| `water` | the drinkable liquid | Noabea | /noabea/ | Noagea | Noagea → no change → Noabea |
-| `wind` | moving air | Tootaa | /tootaa/ | Tootaa | Tootaa → no change → Tootaa |
-| `yellow` | the color term for yellow | Baa | /baa/ | Gaa | Gaa → no change → Baa |
+| `water` | the drinkable liquid | Daokaa | /daokaa/ | Daokaa | Daokaa → no change → Daokaa |
+| `wind` | moving air | Noetoo | /noetoo/ | Noeqoo | Noeqoo → no change → Noetoo |
+| `yellow` | the color term for yellow | Taadeo | /taadeo/ | Qaadeo | Qaadeo → no change → Taadeo |
 
 ## Hobgoblin
 
@@ -163,74 +163,74 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
-| `blood` | the circulating fluid of a body | Boonoe | /boonoe/ | Doonoe | Doonoe → no change → Boonoe |
+| `blood` | the circulating fluid of a body | Neo | /neo/ | Neo | Neo → no change → Neo |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6 |
-| `bone` | the rigid frame of a body | Gea | /gea/ | Kea | Kea → lenition → Gea |
+| `bone` | the rigid frame of a body | Gae | /gae/ | Kae | Kae → lenition → Gae |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6 |
-| `bugbear-kind` | a bugbear | Neabae | /neabae/ | Neadae | Neadae → no change → Neabae |
-| `child` | one's son or daughter | Goo | /goo/ | Koo | Koo → lenition → Goo |
+| `bugbear-kind` | a bugbear | Gea | /gea/ | Kea | Kea → lenition → Gea |
+| `child` | one's son or daughter | Baegoa | /baegoa/ | Daekoa | Daekoa → lenition → Baegoa |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
-| `dark` | the color term for black/dark hues | Beanoo | /beanoo/ | Peanoo | Peanoo → lenition → Beanoo |
-| `day` | the light half of the day-night cycle | Goataa | /goataa/ | Koataa | Koataa → lenition → Goataa |
+| `dark` | the color term for black/dark hues | Taanoo | /taanoo/ | Taanoo | Taanoo → no change → Taanoo |
+| `day` | the light half of the day-night cycle | Goanae | /goanae/ | Goanae | Goanae → no change → Goanae |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
-| `die` | to cease living | Taa | /taa/ | Taa | Taa → no change → Taa |
-| `earth` | the ground underfoot | Bee | /bee/ | Dee | Dee → no change → Bee |
-| `eat` | to consume food | Baenoo | /baenoo/ | Paenoo | Paenoo → lenition → Baenoo |
+| `die` | to cease living | Taobaa | /taobaa/ | Taopaa | Taopaa → lenition → Taobaa |
+| `earth` | the ground underfoot | Bee | /bee/ | Pee | Pee → lenition → Bee |
+| `eat` | to consume food | Goo | /goo/ | Koo | Koo → lenition → Goo |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
-| `eye` | the organ of sight | Gao | /gao/ | Gao | Gao → no change → Gao |
-| `fire` | flame and heat | Booqoa | /booqoa/ | Pooqoa | Pooqoa → lenition → Booqoa |
-| `foot` | the walking limb-end | Qoenoe | /qoenoe/ | Qoenoe | Qoenoe → no change → Qoenoe |
-| `gloom` | the deepest, starless dark | Neo | /neo/ | Neo | Neo → no change → Neo |
-| `goblin-kind` | a goblin | Geenae | /geenae/ | Geenae | Geenae → no change → Geenae |
-| `god` | a deity | Teenoo | /teenoo/ | Teenoo | Teenoo → no change → Teenoo |
-| `green` | the color term for green | Noe | /noe/ | Noe | Noe → no change → Noe |
+| `eye` | the organ of sight | Qao | /qao/ | Qao | Qao → no change → Qao |
+| `fire` | flame and heat | Qea | /qea/ | Qea | Qea → no change → Qea |
+| `foot` | the walking limb-end | Boa | /boa/ | Doa | Doa → no change → Boa |
+| `gloom` | the deepest, starless dark | Noa | /noa/ | Noa | Noa → no change → Noa |
+| `goblin-kind` | a goblin | Nea | /nea/ | Nea | Nea → no change → Nea |
+| `god` | a deity | Neetaa | /neetaa/ | Neetaa | Neetaa → no change → Neetaa |
+| `green` | the color term for green | Geoqae | /geoqae/ | Keoqae | Keoqae → lenition → Geoqae |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
-| `hand` | the manipulating limb-end | Goebee | /goebee/ | Goedee | Goedee → no change → Goebee |
-| `hearth` | the fire at the center of a home | Naonea | /naonea/ | Naonea | Naonea → no change → Naonea |
-| `hobgoblin-kind` | a hobgoblin | Qoeqee | /qoeqee/ | Qoeqee | Qoeqee → no change → Qoeqee |
-| `home` | one's dwelling | Qaanoo | /qaanoo/ | Qaanoo | Qaanoo → no change → Qaanoo |
+| `hand` | the manipulating limb-end | Naa | /naa/ | Naa | Naa → no change → Naa |
+| `hearth` | the fire at the center of a home | Noobee | /noobee/ | Noopee | Noopee → lenition → Noobee |
+| `hobgoblin-kind` | a hobgoblin | Qaagoe | /qaagoe/ | Qaagoe | Qaagoe → no change → Qaagoe |
+| `home` | one's dwelling | Nee | /nee/ | Nee | Nee → no change → Nee |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
-| `kobold-kind` | a kobold | Neagaa | /neagaa/ | Neakaa | Neakaa → lenition → Neagaa |
-| `light` | the color term for white/light hues | Nea | /nea/ | Nea | Nea → no change → Nea |
-| `many` | an indefinitely large count | Naenae | /naenae/ | Naenae | Naenae → no change → Naenae |
+| `kobold-kind` | a kobold | Bea | /bea/ | Dea | Dea → no change → Bea |
+| `light` | the color term for white/light hues | Toeqea | /toeqea/ | Toeqea | Toeqea → no change → Toeqea |
+| `many` | an indefinitely large count | Neoboa | /neoboa/ | Neodoa | Neodoa → no change → Neoboa |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
-| `moon` | a moon | Gaanaa | /gaanaa/ | Kaanaa | Kaanaa → lenition → Gaanaa |
+| `moon` | a moon | Teabae | /teabae/ | Teapae | Teapae → lenition → Teabae |
 | `mountain` | high ground | — | — | — | gap (experiential): hobgoblin has no exposure to 'mountain' |
-| `mouth` | the organ of eating and speech | Nae | /nae/ | Nae | Nae → no change → Nae |
-| `name` | a word that identifies one who bears it | Goe | /goe/ | Goe | Goe → no change → Goe |
-| `night` | the dark half of the day-night cycle | Naabae | /naabae/ | Naapae | Naapae → lenition → Naabae |
-| `one` | the cardinal number 1 | Beobee | /beobee/ | Peodee | Peodee → lenition → Beobee |
-| `parent` | one's father or mother | Nootea | /nootea/ | Nootea | Nootea → no change → Nootea |
+| `mouth` | the organ of eating and speech | Boenoe | /boenoe/ | Doenoe | Doenoe → no change → Boenoe |
+| `name` | a word that identifies one who bears it | Beogao | /beogao/ | Deokao | Deokao → lenition → Beogao |
+| `night` | the dark half of the day-night cycle | Naeqaa | /naeqaa/ | Naeqaa | Naeqaa → no change → Naeqaa |
+| `one` | the cardinal number 1 | Gaogao | /gaogao/ | Kaokao | Kaokao → lenition → Gaogao |
+| `parent` | one's father or mother | Goatee | /goatee/ | Goatee | Goatee → no change → Goatee |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): hobgoblin has no exposure to 'rain' |
-| `red` | the color term for red | Toe | /toe/ | Toe | Toe → no change → Toe |
+| `red` | the color term for red | Noe | /noe/ | Noe | Noe → no change → Noe |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
-| `sea` | a body of salt water | Naenaenoagea | /naenaenoagea/ | — | compound: `many` + `water` |
+| `sea` | a body of salt water | Neoboabaogaa | /neoboabaogaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.6 |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
-| `sibling` | one's brother or sister | Naanea | /naanea/ | Naanea | Naanea → no change → Naanea |
-| `sleep` | to rest unconscious | Qeabaa | /qeabaa/ | Qeadaa | Qeadaa → no change → Qeabaa |
+| `sibling` | one's brother or sister | Beonae | /beonae/ | Peonae | Peonae → lenition → Beonae |
+| `sleep` | to rest unconscious | Neebeo | /neebeo/ | Neepeo | Neepeo → lenition → Neebeo |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): hobgoblin has no exposure to 'snow' |
-| `spirit` | a lesser or unseen supernatural presence | Beobeo | /beobeo/ | Peopeo | Peopeo → lenition → Beobeo |
-| `star` | a fixed point of light in the night sky | Noabaa | /noabaa/ | Noapaa | Noapaa → lenition → Noabaa |
+| `spirit` | a lesser or unseen supernatural presence | Naobao | /naobao/ | Naodao | Naodao → no change → Naobao |
+| `star` | a fixed point of light in the night sky | Naetoa | /naetoa/ | Naetoa | Naetoa → no change → Naetoa |
 | `starlit` | dark faintly lit by stars | — | — | — | gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.6 |
-| `stone` | rock | Naoboa | /naoboa/ | Naopoa | Naopoa → lenition → Naoboa |
-| `sun` | the sun | Teogeo | /teogeo/ | Teogeo | Teogeo → no change → Teogeo |
+| `stone` | rock | Naonea | /naonea/ | Naonea | Naonea → no change → Naonea |
+| `sun` | the sun | Noagoo | /noagoo/ | Noagoo | Noagoo → no change → Noagoo |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-forest' |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
-| `temperate-rainforest` | a biome class | Taetoa | /taetoa/ | Taetoa | Taetoa → no change → Taetoa |
-| `tree` | a woody plant | Geegoe | /geegoe/ | Geekoe | Geekoe → lenition → Geegoe |
+| `temperate-rainforest` | a biome class | Toaneo | /toaneo/ | Toaneo | Toaneo → no change → Toaneo |
+| `tree` | a woody plant | Goonee | /goonee/ | Koonee | Koonee → lenition → Goonee |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
 | `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-seasonal-forest |
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
-| `two` | the cardinal number 2 | Googee | /googee/ | Koogee | Koogee → lenition → Googee |
+| `two` | the cardinal number 2 | Naanaa | /naanaa/ | Naanaa | Naanaa → no change → Naanaa |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
-| `water` | the drinkable liquid | Noagea | /noagea/ | Noagea | Noagea → no change → Noagea |
-| `wind` | moving air | Tootaa | /tootaa/ | Tootaa | Tootaa → no change → Tootaa |
-| `yellow` | the color term for yellow | Gaa | /gaa/ | Gaa | Gaa → no change → Gaa |
+| `water` | the drinkable liquid | Baogaa | /baogaa/ | Daokaa | Daokaa → lenition → Baogaa |
+| `wind` | moving air | Noeqoo | /noeqoo/ | Noeqoo | Noeqoo → no change → Noeqoo |
+| `yellow` | the color term for yellow | Qaabeo | /qaabeo/ | Qaadeo | Qaadeo → no change → Qaabeo |
 
 ## Kobold
 
@@ -239,73 +239,73 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `abyssal` | a biome class | — | — | — | gap (experiential): no compound recipe for 'abyssal' |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
-| `blood` | the circulating fluid of a body | Xoxo | /xoxo/ | Xoxot | Xoxot → finalloss → Xoxo |
+| `blood` | the circulating fluid of a body | Ra | /ra/ | Rag | Rag → finalloss → Ra |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
-| `bone` | the rigid frame of a body | Xa | /xa/ | Xat | Xat → finalloss → Xa |
+| `bone` | the rigid frame of a body | Xo | /xo/ | Xo | Xo → no change → Xo |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
-| `bugbear-kind` | a bugbear | Roro | /roro/ | Rorog | Rorog → finalloss → Roro |
-| `child` | one's son or daughter | Ra | /ra/ | Rrak | Rrak → finalloss → clustersimplify → Ra |
+| `bugbear-kind` | a bugbear | Roqxa | /roqxa/ | Rroqxat | Rroqxat → finalloss → clustersimplify → Roqxa |
+| `child` | one's son or daughter | Rakxa | /rakxa/ | Rrakxak | Rrakxak → finalloss → clustersimplify → Rakxa |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
-| `dark` | the color term for black/dark hues | Rora | /rora/ | Rora | Rora → no change → Rora |
-| `day` | the light half of the day-night cycle | Rogra | /rogra/ | Rrograk | Rrograk → finalloss → clustersimplify → Rogra |
+| `dark` | the color term for black/dark hues | Xa | /xa/ | Xa | Xa → no change → Xa |
+| `day` | the light half of the day-night cycle | Ro | /ro/ | Rot | Rot → finalloss → Ro |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
-| `die` | to cease living | Xo | /xo/ | Xo | Xo → no change → Xo |
-| `earth` | the ground underfoot | Ra | /ra/ | Rra | Rra → clustersimplify → Ra |
-| `eat` | to consume food | Xoqrro | /xoqrro/ | Xoqrrok | Xoqrrok → finalloss → Xoqrro |
+| `die` | to cease living | Rogro | /rogro/ | Rogro | Rogro → no change → Rogro |
+| `earth` | the ground underfoot | Rorra | /rorra/ | Rorra | Rorra → no change → Rorra |
+| `eat` | to consume food | Rokxo | /rokxo/ | Rokxot | Rokxot → finalloss → Rokxo |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
-| `eye` | the organ of sight | Rotrro | /rotrro/ | Rrotrro | Rrotrro → clustersimplify → Rotrro |
-| `fire` | flame and heat | Xaqro | /xaqro/ | Xaqrot | Xaqrot → finalloss → Xaqro |
-| `foot` | the walking limb-end | Ragra | /ragra/ | Rragra | Rragra → clustersimplify → Ragra |
-| `gloom` | the deepest, starless dark | Rora | /rora/ | Rorak | Rorak → finalloss → Rora |
-| `goblin-kind` | a goblin | Roro | /roro/ | Rroro | Rroro → clustersimplify → Roro |
-| `god` | a deity | Xogxo | /xogxo/ | Xogxo | Xogxo → no change → Xogxo |
+| `eye` | the organ of sight | Rarro | /rarro/ | Rrarroq | Rrarroq → finalloss → clustersimplify → Rarro |
+| `fire` | flame and heat | Roro | /roro/ | Rorok | Rorok → finalloss → Roro |
+| `foot` | the walking limb-end | Rogrro | /rogrro/ | Rogrrog | Rogrrog → finalloss → Rogrro |
+| `gloom` | the deepest, starless dark | Rara | /rara/ | Rrara | Rrara → clustersimplify → Rara |
+| `goblin-kind` | a goblin | Xoro | /xoro/ | Xorog | Xorog → finalloss → Xoro |
+| `god` | a deity | Roqro | /roqro/ | Rroqro | Rroqro → clustersimplify → Roqro |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no compound recipe for 'hadal-trench' |
-| `hand` | the manipulating limb-end | Ra | /ra/ | Ra | Ra → no change → Ra |
-| `hearth` | the fire at the center of a home | Xa | /xa/ | Xa | Xa → no change → Xa |
-| `hobgoblin-kind` | a hobgoblin | Ro | /ro/ | Ro | Ro → no change → Ro |
-| `home` | one's dwelling | Rogrro | /rogrro/ | Rrogrro | Rrogrro → clustersimplify → Rogrro |
+| `hand` | the manipulating limb-end | Rorro | /rorro/ | Rorroq | Rorroq → finalloss → Rorro |
+| `hearth` | the fire at the center of a home | Xara | /xara/ | Xara | Xara → no change → Xara |
+| `hobgoblin-kind` | a hobgoblin | Ro | /ro/ | Rro | Rro → clustersimplify → Ro |
+| `home` | one's dwelling | Ragxo | /ragxo/ | Ragxog | Ragxog → finalloss → Ragxo |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no compound recipe for 'hydrothermal-vent' |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'kelp-forest' |
-| `kobold-kind` | a kobold | Ragxa | /ragxa/ | Rragxa | Rragxa → clustersimplify → Ragxa |
-| `light` | the color term for white/light hues | Rorro | /rorro/ | Rrorrok | Rrorrok → finalloss → clustersimplify → Rorro |
-| `many` | an indefinitely large count | Rakro | /rakro/ | Rakro | Rakro → no change → Rakro |
+| `kobold-kind` | a kobold | Roro | /roro/ | Rorot | Rorot → finalloss → Roro |
+| `light` | the color term for white/light hues | Xaxo | /xaxo/ | Xaxo | Xaxo → no change → Xaxo |
+| `many` | an indefinitely large count | Rogrra | /rogrra/ | Rogrra | Rogrra → no change → Rogrra |
 | `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
-| `moon` | a moon | Xaro | /xaro/ | Xaro | Xaro → no change → Xaro |
+| `moon` | a moon | Roqrra | /roqrra/ | Roqrrat | Roqrrat → finalloss → Roqrra |
 | `mountain` | high ground | — | — | — | gap (experiential): kobold has no exposure to 'mountain' |
-| `mouth` | the organ of eating and speech | Xoqro | /xoqro/ | Xoqro | Xoqro → no change → Xoqro |
-| `name` | a word that identifies one who bears it | Roxo | /roxo/ | Roxog | Roxog → finalloss → Roxo |
-| `night` | the dark half of the day-night cycle | Xorra | /xorra/ | Xorrat | Xorrat → finalloss → Xorra |
-| `one` | the cardinal number 1 | Ro | /ro/ | Rok | Rok → finalloss → Ro |
-| `parent` | one's father or mother | Rotro | /rotro/ | Rotroq | Rotroq → finalloss → Rotro |
+| `mouth` | the organ of eating and speech | Rakxo | /rakxo/ | Rrakxot | Rrakxot → finalloss → clustersimplify → Rakxo |
+| `name` | a word that identifies one who bears it | Ragxo | /ragxo/ | Ragxok | Ragxok → finalloss → Ragxo |
+| `night` | the dark half of the day-night cycle | Xaxa | /xaxa/ | Xaxag | Xaxag → finalloss → Xaxa |
+| `one` | the cardinal number 1 | Xoxo | /xoxo/ | Xoxo | Xoxo → no change → Xoxo |
+| `parent` | one's father or mother | Xaxo | /xaxo/ | Xaxoq | Xaxoq → finalloss → Xaxo |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): kobold has no exposure to 'rain' |
-| `red` | the color term for red | Ragro | /ragro/ | Ragro | Ragro → no change → Ragro |
+| `red` | the color term for red | Rara | /rara/ | Rrarag | Rrarag → finalloss → clustersimplify → Rara |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
-| `sea` | a body of salt water | Ratrrarakro | /ratrrarakro/ | — | compound: `many` + `water` |
+| `sea` | a body of salt water | Rarakrarogrra | /rarakrarogrra/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | Xokxa | /xokxa/ | Xokxa | Xokxa → no change → Xokxa |
-| `shrubland` | a biome class | Rara | /rara/ | Rarat | Rarat → finalloss → Rara |
-| `sibling` | one's brother or sister | Ratxo | /ratxo/ | Rratxo | Rratxo → clustersimplify → Ratxo |
-| `sleep` | to rest unconscious | Rarra | /rarra/ | Rarraq | Rarraq → finalloss → Rarra |
+| `shadow` | cast dark, distinct from open gloom | Xogrra | /xogrra/ | Xogrra | Xogrra → no change → Xogrra |
+| `shrubland` | a biome class | Roro | /roro/ | Rrorot | Rrorot → finalloss → clustersimplify → Roro |
+| `sibling` | one's brother or sister | Raxo | /raxo/ | Rraxo | Rraxo → clustersimplify → Raxo |
+| `sleep` | to rest unconscious | Roqxa | /roqxa/ | Roqxa | Roqxa → no change → Roqxa |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): kobold has no exposure to 'snow' |
-| `spirit` | a lesser or unseen supernatural presence | Raqra | /raqra/ | Raqraq | Raqraq → finalloss → Raqra |
-| `star` | a fixed point of light in the night sky | Ro | /ro/ | Rrot | Rrot → finalloss → clustersimplify → Ro |
-| `starlit` | dark faintly lit by stars | Xakrra | /xakrra/ | Xakrra | Xakrra → no change → Xakrra |
-| `stone` | rock | Raqxa | /raqxa/ | Raqxa | Raqxa → no change → Raqxa |
-| `sun` | the sun | Xatrro | /xatrro/ | Xatrro | Xatrro → no change → Xatrro |
+| `spirit` | a lesser or unseen supernatural presence | Ro | /ro/ | Rok | Rok → finalloss → Ro |
+| `star` | a fixed point of light in the night sky | Rogra | /rogra/ | Rrograq | Rrograq → finalloss → clustersimplify → Rogra |
+| `starlit` | dark faintly lit by stars | Ra | /ra/ | Rraq | Rraq → finalloss → clustersimplify → Ra |
+| `stone` | rock | Xa | /xa/ | Xaq | Xaq → finalloss → Xa |
+| `sun` | the sun | Rogxa | /rogxa/ | Rrogxa | Rrogxa → clustersimplify → Rogxa |
 | `taiga` | a biome class | — | — | — | gap (experiential): no compound recipe for 'taiga' |
-| `temperate-forest` | a biome class | Rakra | /rakra/ | Rrakrag | Rrakrag → finalloss → clustersimplify → Rakra |
+| `temperate-forest` | a biome class | Xatxo | /xatxo/ | Xatxo | Xatxo → no change → Xatxo |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-grassland' |
-| `temperate-rainforest` | a biome class | Rotra | /rotra/ | Rotrag | Rotrag → finalloss → Rotra |
-| `tree` | a woody plant | Xo | /xo/ | Xog | Xog → finalloss → Xo |
-| `tropical-rainforest` | a biome class | Ro | /ro/ | Roq | Roq → finalloss → Ro |
-| `tropical-seasonal-forest` | a biome class | Rarro | /rarro/ | Rrarroq | Rrarroq → finalloss → clustersimplify → Rarro |
-| `tundra` | a biome class | Rorra | /rorra/ | Rrorra | Rrorra → clustersimplify → Rorra |
-| `two` | the cardinal number 2 | Rarro | /rarro/ | Rrarro | Rrarro → clustersimplify → Rarro |
+| `temperate-rainforest` | a biome class | Xotro | /xotro/ | Xotrot | Xotrot → finalloss → Xotro |
+| `tree` | a woody plant | Rakrra | /rakrra/ | Rrakrra | Rrakrra → clustersimplify → Rakrra |
+| `tropical-rainforest` | a biome class | Rorro | /rorro/ | Rrorrog | Rrorrog → finalloss → clustersimplify → Rorro |
+| `tropical-seasonal-forest` | a biome class | Ro | /ro/ | Ro | Ro → no change → Ro |
+| `tundra` | a biome class | Xotxo | /xotxo/ | Xotxog | Xotxog → finalloss → Xotxo |
+| `two` | the cardinal number 2 | Roxa | /roxa/ | Rroxa | Rroxa → clustersimplify → Roxa |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
-| `water` | the drinkable liquid | Ratrra | /ratrra/ | Ratrra | Ratrra → no change → Ratrra |
-| `wind` | moving air | Raqxa | /raqxa/ | Raqxag | Raqxag → finalloss → Raqxa |
+| `water` | the drinkable liquid | Rarakra | /rarakra/ | Rarakrak | Rarakrak → finalloss → Rarakra |
+| `wind` | moving air | Raxakrra | /raxakrra/ | Rraxakrra | Rraxakrra → clustersimplify → Raxakrra |
 | `yellow` | the color term for yellow | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 
 ## Cognates
@@ -316,46 +316,46 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 
 | Concept | Gloss | Proto | Bugbear | Goblin | Hobgoblin | Descent |
 |---|---|---|---|---|---|---|
-| `blood` | the circulating fluid of a body | *Doonoe /doonoe/ | Doodoo /doodoo/ | Doonoe /doonoe/ | Boonoe /boonoe/ | *Doonoe → Doodoo / Doonoe / Boonoe |
-| `bone` | the rigid frame of a body | *Kea /kea/ | Koa /koa/ | Kea /kea/ | Gea /gea/ | *Kea → Koa / Kea / Gea |
-| `bugbear-kind` | a bugbear | *Neadae /neadae/ | Doadao /doadao/ | Neadae /neadae/ | Neabae /neabae/ | *Neadae → Doadao / Neadae / Neabae |
-| `child` | one's son or daughter | *Koo /koo/ | Koo /koo/ | Koo /koo/ | Goo /goo/ | *Koo → Koo / Koo / Goo |
-| `dark` | the color term for black/dark hues | *Peanoo /peanoo/ | Boadoo /boadoo/ | Beanoo /beanoo/ | Beanoo /beanoo/ | *Peanoo → Boadoo / Beanoo / Beanoo |
-| `day` | the light half of the day-night cycle | *Koataa /koataa/ | Koataa /koataa/ | Koataa /koataa/ | Goataa /goataa/ | *Koataa → Koataa / Koataa / Goataa |
-| `die` | to cease living | *Taa /taa/ | Taa /taa/ | Taa /taa/ | Taa /taa/ | *Taa → Taa / Taa / Taa |
-| `earth` | the ground underfoot | *Dee /dee/ | Doo /doo/ | Dee /dee/ | Bee /bee/ | *Dee → Doo / Dee / Bee |
-| `eat` | to consume food | *Paenoo /paenoo/ | Baodoo /baodoo/ | Baenoo /baenoo/ | Baenoo /baenoo/ | *Paenoo → Baodoo / Baenoo / Baenoo |
-| `eye` | the organ of sight | *Gao /gao/ | Gao /gao/ | Bao /bao/ | Gao /gao/ | *Gao → Gao / Bao / Gao |
-| `fire` | flame and heat | *Pooqoa /pooqoa/ | Booqoa /booqoa/ | Bootoa /bootoa/ | Booqoa /booqoa/ | *Pooqoa → Booqoa / Bootoa / Booqoa |
-| `foot` | the walking limb-end | *Qoenoe /qoenoe/ | Qoodoo /qoodoo/ | Toenoe /toenoe/ | Qoenoe /qoenoe/ | *Qoenoe → Qoodoo / Toenoe / Qoenoe |
-| `gloom` | the deepest, starless dark | *Neo /neo/ | Doo /doo/ | Neo /neo/ | Neo /neo/ | *Neo → Doo / Neo / Neo |
-| `goblin-kind` | a goblin | *Geenae /geenae/ | Goodao /goodao/ | Beenae /beenae/ | Geenae /geenae/ | *Geenae → Goodao / Beenae / Geenae |
-| `god` | a deity | *Teenoo /teenoo/ | Toodoo /toodoo/ | Teenoo /teenoo/ | Teenoo /teenoo/ | *Teenoo → Toodoo / Teenoo / Teenoo |
-| `green` | the color term for green | *Noe /noe/ | Doo /doo/ | Noe /noe/ | Noe /noe/ | *Noe → Doo / Noe / Noe |
-| `hand` | the manipulating limb-end | *Goedee /goedee/ | Goodoo /goodoo/ | Boedee /boedee/ | Goebee /goebee/ | *Goedee → Goodoo / Boedee / Goebee |
-| `hearth` | the fire at the center of a home | *Naonea /naonea/ | Daodoa /daodoa/ | Naonea /naonea/ | Naonea /naonea/ | *Naonea → Daodoa / Naonea / Naonea |
-| `hobgoblin-kind` | a hobgoblin | *Qoeqee /qoeqee/ | Qooqoo /qooqoo/ | Toetee /toetee/ | Qoeqee /qoeqee/ | *Qoeqee → Qooqoo / Toetee / Qoeqee |
-| `home` | one's dwelling | *Qaanoo /qaanoo/ | Qaadoo /qaadoo/ | Taanoo /taanoo/ | Qaanoo /qaanoo/ | *Qaanoo → Qaadoo / Taanoo / Qaanoo |
-| `kobold-kind` | a kobold | *Neakaa /neakaa/ | Doakaa /doakaa/ | Neakaa /neakaa/ | Neagaa /neagaa/ | *Neakaa → Doakaa / Neakaa / Neagaa |
-| `light` | the color term for white/light hues | *Nea /nea/ | Doa /doa/ | Nea /nea/ | Nea /nea/ | *Nea → Doa / Nea / Nea |
-| `many` | an indefinitely large count | *Naenae /naenae/ | Daodao /daodao/ | Naenae /naenae/ | Naenae /naenae/ | *Naenae → Daodao / Naenae / Naenae |
-| `moon` | a moon | *Kaanaa /kaanaa/ | Kaadaa /kaadaa/ | Kaanaa /kaanaa/ | Gaanaa /gaanaa/ | *Kaanaa → Kaadaa / Kaanaa / Gaanaa |
-| `mouth` | the organ of eating and speech | *Nae /nae/ | Dao /dao/ | Nae /nae/ | Nae /nae/ | *Nae → Dao / Nae / Nae |
-| `name` | a word that identifies one who bears it | *Goe /goe/ | Goo /goo/ | Boe /boe/ | Goe /goe/ | *Goe → Goo / Boe / Goe |
-| `night` | the dark half of the day-night cycle | *Naapae /naapae/ | Daabao /daabao/ | Naabae /naabae/ | Naabae /naabae/ | *Naapae → Daabao / Naabae / Naabae |
-| `one` | the cardinal number 1 | *Peodee /peodee/ | Boodoo /boodoo/ | Beodee /beodee/ | Beobee /beobee/ | *Peodee → Boodoo / Beodee / Beobee |
-| `parent` | one's father or mother | *Nootea /nootea/ | Dootoa /dootoa/ | Nootea /nootea/ | Nootea /nootea/ | *Nootea → Dootoa / Nootea / Nootea |
-| `red` | the color term for red | *Toe /toe/ | Too /too/ | Toe /toe/ | Toe /toe/ | *Toe → Too / Toe / Toe |
-| `sibling` | one's brother or sister | *Naanea /naanea/ | Daadoa /daadoa/ | Naanea /naanea/ | Naanea /naanea/ | *Naanea → Daadoa / Naanea / Naanea |
-| `sleep` | to rest unconscious | *Qeadaa /qeadaa/ | Qoadaa /qoadaa/ | Teadaa /teadaa/ | Qeabaa /qeabaa/ | *Qeadaa → Qoadaa / Teadaa / Qeabaa |
-| `spirit` | a lesser or unseen supernatural presence | *Peopeo /peopeo/ | Booboo /booboo/ | Beobeo /beobeo/ | Beobeo /beobeo/ | *Peopeo → Booboo / Beobeo / Beobeo |
-| `star` | a fixed point of light in the night sky | *Noapaa /noapaa/ | Doabaa /doabaa/ | Noabaa /noabaa/ | Noabaa /noabaa/ | *Noapaa → Doabaa / Noabaa / Noabaa |
-| `stone` | rock | *Naopoa /naopoa/ | Daoboa /daoboa/ | Naoboa /naoboa/ | Naoboa /naoboa/ | *Naopoa → Daoboa / Naoboa / Naoboa |
-| `sun` | the sun | *Teogeo /teogeo/ | Toogoo /toogoo/ | Teobeo /teobeo/ | Teogeo /teogeo/ | *Teogeo → Toogoo / Teobeo / Teogeo |
-| `temperate-rainforest` | a biome class | *Taetoa /taetoa/ | Taotoa /taotoa/ | Taetoa /taetoa/ | Taetoa /taetoa/ | *Taetoa → Taotoa / Taetoa / Taetoa |
-| `tree` | a woody plant | *Geekoe /geekoe/ | Gookoo /gookoo/ | Beekoe /beekoe/ | Geegoe /geegoe/ | *Geekoe → Gookoo / Beekoe / Geegoe |
-| `two` | the cardinal number 2 | *Koogee /koogee/ | Koogoo /koogoo/ | Koobee /koobee/ | Googee /googee/ | *Koogee → Koogoo / Koobee / Googee |
-| `water` | the drinkable liquid | *Noagea /noagea/ | Doagoa /doagoa/ | Noabea /noabea/ | Noagea /noagea/ | *Noagea → Doagoa / Noabea / Noagea |
-| `wind` | moving air | *Tootaa /tootaa/ | Tootaa /tootaa/ | Tootaa /tootaa/ | Tootaa /tootaa/ | *Tootaa → Tootaa / Tootaa / Tootaa |
-| `yellow` | the color term for yellow | *Gaa /gaa/ | Gaa /gaa/ | Baa /baa/ | Gaa /gaa/ | *Gaa → Gaa / Baa / Gaa |
+| `blood` | the circulating fluid of a body | *Neo /neo/ | Doo /doo/ | Neo /neo/ | Neo /neo/ | *Neo → Doo / Neo / Neo |
+| `bone` | the rigid frame of a body | *Kae /kae/ | Kao /kao/ | Kae /kae/ | Gae /gae/ | *Kae → Kao / Kae / Gae |
+| `bugbear-kind` | a bugbear | *Kea /kea/ | Koa /koa/ | Kea /kea/ | Gea /gea/ | *Kea → Koa / Kea / Gea |
+| `child` | one's son or daughter | *Daekoa /daekoa/ | Daokoa /daokoa/ | Daekoa /daekoa/ | Baegoa /baegoa/ | *Daekoa → Daokoa / Daekoa / Baegoa |
+| `dark` | the color term for black/dark hues | *Taanoo /taanoo/ | Taadoo /taadoo/ | Taanoo /taanoo/ | Taanoo /taanoo/ | *Taanoo → Taadoo / Taanoo / Taanoo |
+| `day` | the light half of the day-night cycle | *Goanae /goanae/ | Goadao /goadao/ | Boanae /boanae/ | Goanae /goanae/ | *Goanae → Goadao / Boanae / Goanae |
+| `die` | to cease living | *Taopaa /taopaa/ | Taobaa /taobaa/ | Taobaa /taobaa/ | Taobaa /taobaa/ | *Taopaa → Taobaa / Taobaa / Taobaa |
+| `earth` | the ground underfoot | *Pee /pee/ | Boo /boo/ | Bee /bee/ | Bee /bee/ | *Pee → Boo / Bee / Bee |
+| `eat` | to consume food | *Koo /koo/ | Koo /koo/ | Koo /koo/ | Goo /goo/ | *Koo → Koo / Koo / Goo |
+| `eye` | the organ of sight | *Qao /qao/ | Qao /qao/ | Tao /tao/ | Qao /qao/ | *Qao → Qao / Tao / Qao |
+| `fire` | flame and heat | *Qea /qea/ | Qoa /qoa/ | Tea /tea/ | Qea /qea/ | *Qea → Qoa / Tea / Qea |
+| `foot` | the walking limb-end | *Doa /doa/ | Doa /doa/ | Doa /doa/ | Boa /boa/ | *Doa → Doa / Doa / Boa |
+| `gloom` | the deepest, starless dark | *Noa /noa/ | Doa /doa/ | Noa /noa/ | Noa /noa/ | *Noa → Doa / Noa / Noa |
+| `goblin-kind` | a goblin | *Nea /nea/ | Doa /doa/ | Nea /nea/ | Nea /nea/ | *Nea → Doa / Nea / Nea |
+| `god` | a deity | *Neetaa /neetaa/ | Dootaa /dootaa/ | Neetaa /neetaa/ | Neetaa /neetaa/ | *Neetaa → Dootaa / Neetaa / Neetaa |
+| `green` | the color term for green | *Keoqae /keoqae/ | Kooqao /kooqao/ | Keotae /keotae/ | Geoqae /geoqae/ | *Keoqae → Kooqao / Keotae / Geoqae |
+| `hand` | the manipulating limb-end | *Naa /naa/ | Daa /daa/ | Naa /naa/ | Naa /naa/ | *Naa → Daa / Naa / Naa |
+| `hearth` | the fire at the center of a home | *Noopee /noopee/ | Dooboo /dooboo/ | Noobee /noobee/ | Noobee /noobee/ | *Noopee → Dooboo / Noobee / Noobee |
+| `hobgoblin-kind` | a hobgoblin | *Qaagoe /qaagoe/ | Qaagoo /qaagoo/ | Taaboe /taaboe/ | Qaagoe /qaagoe/ | *Qaagoe → Qaagoo / Taaboe / Qaagoe |
+| `home` | one's dwelling | *Nee /nee/ | Doo /doo/ | Nee /nee/ | Nee /nee/ | *Nee → Doo / Nee / Nee |
+| `kobold-kind` | a kobold | *Dea /dea/ | Doa /doa/ | Dea /dea/ | Bea /bea/ | *Dea → Doa / Dea / Bea |
+| `light` | the color term for white/light hues | *Toeqea /toeqea/ | Tooqoa /tooqoa/ | Toetea /toetea/ | Toeqea /toeqea/ | *Toeqea → Tooqoa / Toetea / Toeqea |
+| `many` | an indefinitely large count | *Neodoa /neodoa/ | Doodoa /doodoa/ | Neodoa /neodoa/ | Neoboa /neoboa/ | *Neodoa → Doodoa / Neodoa / Neoboa |
+| `moon` | a moon | *Teapae /teapae/ | Toabao /toabao/ | Teabae /teabae/ | Teabae /teabae/ | *Teapae → Toabao / Teabae / Teabae |
+| `mouth` | the organ of eating and speech | *Doenoe /doenoe/ | Doodoo /doodoo/ | Doenoe /doenoe/ | Boenoe /boenoe/ | *Doenoe → Doodoo / Doenoe / Boenoe |
+| `name` | a word that identifies one who bears it | *Deokao /deokao/ | Dookao /dookao/ | Deokao /deokao/ | Beogao /beogao/ | *Deokao → Dookao / Deokao / Beogao |
+| `night` | the dark half of the day-night cycle | *Naeqaa /naeqaa/ | Daoqaa /daoqaa/ | Naetaa /naetaa/ | Naeqaa /naeqaa/ | *Naeqaa → Daoqaa / Naetaa / Naeqaa |
+| `one` | the cardinal number 1 | *Kaokao /kaokao/ | Kaokao /kaokao/ | Kaokao /kaokao/ | Gaogao /gaogao/ | *Kaokao → Kaokao / Kaokao / Gaogao |
+| `parent` | one's father or mother | *Goatee /goatee/ | Goatoo /goatoo/ | Boatee /boatee/ | Goatee /goatee/ | *Goatee → Goatoo / Boatee / Goatee |
+| `red` | the color term for red | *Noe /noe/ | Doo /doo/ | Noe /noe/ | Noe /noe/ | *Noe → Doo / Noe / Noe |
+| `sibling` | one's brother or sister | *Peonae /peonae/ | Boodao /boodao/ | Beonae /beonae/ | Beonae /beonae/ | *Peonae → Boodao / Beonae / Beonae |
+| `sleep` | to rest unconscious | *Neepeo /neepeo/ | Dooboo /dooboo/ | Neebeo /neebeo/ | Neebeo /neebeo/ | *Neepeo → Dooboo / Neebeo / Neebeo |
+| `spirit` | a lesser or unseen supernatural presence | *Naodao /naodao/ | Daodao /daodao/ | Naodao /naodao/ | Naobao /naobao/ | *Naodao → Daodao / Naodao / Naobao |
+| `star` | a fixed point of light in the night sky | *Naetoa /naetoa/ | Daotoa /daotoa/ | Naetoa /naetoa/ | Naetoa /naetoa/ | *Naetoa → Daotoa / Naetoa / Naetoa |
+| `stone` | rock | *Naonea /naonea/ | Daodoa /daodoa/ | Naonea /naonea/ | Naonea /naonea/ | *Naonea → Daodoa / Naonea / Naonea |
+| `sun` | the sun | *Noagoo /noagoo/ | Doagoo /doagoo/ | Noaboo /noaboo/ | Noagoo /noagoo/ | *Noagoo → Doagoo / Noaboo / Noagoo |
+| `temperate-rainforest` | a biome class | *Toaneo /toaneo/ | Toadoo /toadoo/ | Toaneo /toaneo/ | Toaneo /toaneo/ | *Toaneo → Toadoo / Toaneo / Toaneo |
+| `tree` | a woody plant | *Koonee /koonee/ | Koodoo /koodoo/ | Koonee /koonee/ | Goonee /goonee/ | *Koonee → Koodoo / Koonee / Goonee |
+| `two` | the cardinal number 2 | *Naanaa /naanaa/ | Daadaa /daadaa/ | Naanaa /naanaa/ | Naanaa /naanaa/ | *Naanaa → Daadaa / Naanaa / Naanaa |
+| `water` | the drinkable liquid | *Daokaa /daokaa/ | Daokaa /daokaa/ | Daokaa /daokaa/ | Baogaa /baogaa/ | *Daokaa → Daokaa / Daokaa / Baogaa |
+| `wind` | moving air | *Noeqoo /noeqoo/ | Dooqoo /dooqoo/ | Noetoo /noetoo/ | Noeqoo /noeqoo/ | *Noeqoo → Dooqoo / Noetoo / Noeqoo |
+| `yellow` | the color term for yellow | *Qaadeo /qaadeo/ | Qaadoo /qaadoo/ | Taadeo /taadeo/ | Qaabeo /qaabeo/ | *Qaadeo → Qaadoo / Taadeo / Qaabeo |
 

@@ -41,7 +41,8 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/<species>/name/settlement/v2` | the glossed settlement name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above |
 | `language/<species>/name/deity/v2` | the glossed deity name (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the bare-stem v1 draw above |
 | `language/<species>/name/epithet/v2` | the glossed epithet (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the v1 draw above |
-| `language/<family>/lexicon/root/<concept>` | per-concept proto-root drawn from the family's proto phonology (1-2 syllables, from the phonotactic templates); family == species for a singleton stock |
+| `language/<family>/lexicon/root/v3/<concept>` | per-concept family proto-root, injectively and MERGER-AWARELY assigned (epoch root/v3): the open-addressing draw also rejects a core candidate whose evolved form would merge with an already-placed core concept in any daughter, so core homophony is zero; family == species for a singleton stock. Probe re-draws key a /probe/<n> sub-stream |
+| `language/<family>/lexicon/root/v2/<concept>` | (retired by the merger-aware assignment, superseded by root/v3) the injective-but-proto-only family assignment |
 | `language/goblin/lexicon/root/<concept>` | (retired at The Branches, superseded by language/goblinoid/lexicon/root/<concept>) pre-Branches per-species goblin proto-root |
 | `language/<species>/lexicon/cascade` | the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root |
 | `language/<species>/lexicon/headedness` | the species' drawn compound-joining order (HeadFirst/HeadLast), gating LexEntry::Compound component order |

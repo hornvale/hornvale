@@ -173,9 +173,9 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     let (mg, mh, mb) = (mean(&goblin), mean(&hobgoblin), mean(&bugbear));
 
     // The aggregate ordering: pinned exact means.
-    assert!((mg - 3.059).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 2.486).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 4.480).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mg - 3.058).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 2.485).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 4.482).abs() < 1e-9, "bugbear mean drifted: {mb}");
     assert!(
         mb >= mg && mg >= mh,
         "loudness ordering failed in aggregate: bugbear {mb} >= goblin {mg} >= hobgoblin {mh}"
@@ -191,26 +191,28 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     let chain = (0..n)
         .filter(|&i| bugbear[i] >= goblin[i] && goblin[i] >= hobgoblin[i])
         .count();
-    assert_eq!(bg, 860, "bugbear>=goblin rate drifted: {bg}/{n}");
-    assert_eq!(gh, 719, "goblin>=hobgoblin rate drifted: {gh}/{n}");
-    assert_eq!(bh, 908, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
-    assert_eq!(chain, 588, "full-chain per-seed rate drifted: {chain}/{n}");
+    assert_eq!(bg, 859, "bugbear>=goblin rate drifted: {bg}/{n}");
+    assert_eq!(gh, 718, "goblin>=hobgoblin rate drifted: {gh}/{n}");
+    assert_eq!(bh, 909, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
+    assert_eq!(chain, 586, "full-chain per-seed rate drifted: {chain}/{n}");
 }
 
 /// Observation, not a pass/fail invariant (spec §3's merger-induced
 /// homophony — the L4 confound banked, per the task brief, NOT asserted as
 /// a claim to hold): expected highest among the goblinoid daughters for
 /// bugbear (smallest family inventory). Re-measured over 1,000 seeds after the
-/// **phonology epoch** re-baseline (tonogenesis appended to the drawn cascade
-/// family, reseeding every derivation): mean homophone-pair count goblin 3.618,
-/// hobgoblin 2.479, bugbear 11.234, kobold 3.024 — every daughter fell from the
-/// prior injective-assignment counts (goblin 4.043, bugbear 12.194) as the
-/// reseeded cascades happen to merge fewer forms; the shipped peoples stay
-/// atonal, so tonogenesis is inert for them and the drop is purely the reseed,
-/// not tone. Bugbear stays highest among the goblinoid daughters as expected
-/// (smallest family inventory nativizes the most proto-contrasts back
-/// together). What remains is merger-induced (distinct protos re-merged by the
-/// cascade or nativization — see `homophony-merger-share-*`), the residual the
+/// **merger-aware assignment** (epoch root/v3): this is the RAW pair count over
+/// the whole vocabulary — mean goblin 2.589, hobgoblin 1.631, bugbear 6.765,
+/// kobold 2.454, down again from the phonology-epoch counts (goblin 3.618,
+/// bugbear 11.234) because choosing core protos that survive each daughter's
+/// cascade distinct also clears many periphery collisions. The functional-load
+/// number Nathan targets, `core-homophony-*`, is now exactly ZERO for every
+/// daughter on every seed (asserted in the Lab's
+/// `core_homophony_is_zero_for_every_daughter_under_the_merger_aware_assignment`);
+/// what remains here is periphery-only. Bugbear stays highest among the
+/// goblinoid daughters as expected (smallest family inventory nativizes the most
+/// proto-contrasts back together). The residual is merger-induced (distinct
+/// protos re-merged by the cascade or nativization — see `homophony-merger-share-*`),
 /// atonal-tail accounting (`confusable-homophony-*`) now measures.
 #[test]
 fn homophony_count_is_measured_and_pinned() {
@@ -233,10 +235,10 @@ fn homophony_count_is_measured_and_pinned() {
         mean(&bugbear),
         mean(&kobold),
     );
-    assert!((mg - 3.618).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 2.479).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 11.234).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 3.024).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mg - 2.589).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 1.631).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 6.765).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 2.454).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"
