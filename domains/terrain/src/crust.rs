@@ -45,18 +45,29 @@ const LOBE_AMP: f64 = 0.5;
 /// `sphere_fbm01` (which compresses variance toward 0.5): the raw
 /// average rarely reaches the extremes of [0, 1], so the centered
 /// value is amplified before it drives the rim. The subsequent
-/// `.clamp(-0.5, 0.5)` keeps the rim provably inside
-/// [1 - LOBE_AMP, 1 + LOBE_AMP] x radius_rad (i.e. [0.5, 1.5] x
-/// radius_rad) regardless of gain, by construction — increasing this
-/// constant only spends more of that fixed range on smaller inputs,
-/// it can never push the rim outside the bound.
+/// `0.5 * (GAIN * (n - 0.5)).tanh()` (Task 9 iteration 2: a smooth
+/// saturating map replacing the former hard `.clamp(-0.5, 0.5)`) keeps
+/// the rim provably inside the *open* interval
+/// (1 - LOBE_AMP, 1 + LOBE_AMP) x radius_rad — i.e. strictly inside
+/// (0.5, 1.5) x radius_rad — regardless of gain, by tanh saturation:
+/// tanh is bounded in (-1, 1) for every finite input, so the centered
+/// value stays strictly inside (-0.5, 0.5) and the rim can approach
+/// but never reach the bound. The hard clamp could jam the rim at
+/// exactly 0.5x radius over whole plateaus of the noise field,
+/// pinching craton margins into detached fragments; the smooth map
+/// removes those plateaus. Increasing this constant only saturates
+/// more of the input range earlier — it can never push the rim to or
+/// past the bound.
 ///
-/// Calibrated against 5000 seeds over the rim-spread test's exact ring
+/// Calibrated against 2000 seeds over the rim-spread test's exact ring
 /// geometry (radius 0.3, angle 0.3, 64 azimuths): the smallest gain
-/// giving >= 95% of seeds a rim-spread > 0.2 was 6.0 (95.1% pass
-/// rate); see the Task 4 review fix report for the full sweep table.
+/// giving >= 95% of seeds a rim-spread > 0.2 under the tanh map is
+/// 15.0 (95.40%; 13 -> 93.15%, 14 -> 94.50%, 16 -> 95.95%). The tanh
+/// map needs a higher gain than the clamp's 6.0 because it saturates
+/// only asymptotically where the clamp cut off exactly; see the Task 9
+/// iteration-2 report for the full sweep table.
 #[allow(dead_code)]
-const REBALANCE_GAIN: f64 = 6.0;
+const REBALANCE_GAIN: f64 = 15.0;
 
 /// Seam-free fBm in [0, 1) on the unit sphere: the mean of three
 /// orthogonal coordinate-plane slices (the `coast_render` construction).
@@ -84,7 +95,7 @@ pub(crate) fn lobed_envelope(seed: Seed, center: [f64; 3], p: [f64; 3], radius_r
         return 0.0;
     }
     let n = sphere_fbm01(seed, p, LOBE_FREQ, LOBE_OCTAVES);
-    let centered = ((n - 0.5) * REBALANCE_GAIN).clamp(-0.5, 0.5);
+    let centered = 0.5 * (REBALANCE_GAIN * (n - 0.5)).tanh();
     let rim = radius_rad * (1.0 + 2.0 * LOBE_AMP * centered);
     let x = (angle / rim).clamp(0.0, 1.0);
     (1.0 - x * x).powi(2)
@@ -178,12 +189,36 @@ fn slerp(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
 /// smaller — so the per-craton radius is *not* pin-isolated the way center
 /// and age are; that is by design, not a stream perturbation.
 ///
-/// `--supercontinent` is applied last, after every position is drawn and
-/// every radius rescaled: it clusters cratons 1.. toward craton 0 by
-/// `slerp`, so the pin perturbs positions but never the draw sequence or
-/// the area normalization (pin isolation again).
+/// `--supercontinent` is applied after every position is drawn and every
+/// radius rescaled: it clusters cratons 1.. toward craton 0 by `slerp`,
+/// so the pin perturbs positions but never the draw sequence or the area
+/// normalization (pin isolation again).
+///
+/// Repulsion (Task 9 iteration 2) is applied last, and only when the world
+/// is *not* pinned `--supercontinent` (that pin wants clustering — repelling
+/// what it just pulled together would fight it): one deterministic pass, in
+/// id order, zero stream draws, separating overlap-merged craton centers so
+/// distinct cratons read as distinct landmasses (see `repel_cratons`).
+/// Like the radius rescale, this makes the final *center* of cratons 1.. a
+/// downstream arithmetic consequence of the whole set (radii, count) rather
+/// than a raw stream draw; the stream-consumption order is untouched.
 /// type-audit: bare-ok(prose: notes)
 pub fn draw_cratons(
+    terrain_seed: Seed,
+    pins: &TerrainPins,
+    notes: &mut Vec<String>,
+) -> Vec<Craton> {
+    let mut cratons = draw_cratons_unrepelled(terrain_seed, pins, notes);
+    if pins.supercontinent != Some(true) {
+        repel_cratons(&mut cratons);
+    }
+    cratons
+}
+
+/// Everything in `draw_cratons` except the final repulsion pass: the draws,
+/// the area-normalization rescale, and the `--supercontinent` transform.
+/// Split out so the repulsion test can measure the pre-pass geometry.
+fn draw_cratons_unrepelled(
     terrain_seed: Seed,
     pins: &TerrainPins,
     notes: &mut Vec<String>,
@@ -225,6 +260,48 @@ pub fn draw_cratons(
         }
     }
     cratons
+}
+
+/// One deterministic repulsion pass over craton centers (Task 9
+/// iteration 2): for each craton i > 0 in id order, if any earlier-id
+/// craton j sits closer than `r_i + r_j` radians, the later craton is
+/// slerped directly AWAY from the earlier one to exactly that separation —
+/// `slerp(c_j, c_i, t)` with `t = (r_i + r_j) / omega > 1` extrapolates
+/// past `c_i` along the `c_j -> c_i` great circle, staying on the unit
+/// sphere exactly. Within craton i, the earlier-j sweep repeats (bounded
+/// at `REPEL_SWEEPS`) until no earlier craton is violated — a single naive
+/// j-sweep lets the fix for a later j undo the fix for an earlier one
+/// (measured while building this: worst post-pass separation 0.26x the
+/// target at seed 5, pair (0, 9)); repeating within i settles each craton
+/// against ALL its predecessors before moving on (worst 0.81x across seeds
+/// 0..8). Still one pass over cratons, id order, zero stream draws, fully
+/// deterministic, and still not perfect: settling craton i can re-crowd a
+/// pair among 0..i only via i itself, and chains may leave residual
+/// sub-target pairs — the test asserts 0.8x separation and monotone
+/// improvement, not full separation. Coincident centers (omega ~ 0) are
+/// left in place: no repulsion direction is privileged there.
+fn repel_cratons(cratons: &mut [Craton]) {
+    /// Bound on the within-craton settle sweeps: convergence is typically
+    /// 2-3 sweeps; the cap only guarantees termination.
+    const REPEL_SWEEPS: u32 = 16;
+    for i in 1..cratons.len() {
+        for _sweep in 0..REPEL_SWEEPS {
+            let mut moved = false;
+            for j in 0..i {
+                let (c_j, r_j) = (cratons[j].center, cratons[j].radius_rad);
+                let (c_i, r_i) = (cratons[i].center, cratons[i].radius_rad);
+                let separation = r_i + r_j;
+                let omega = dot(c_i, c_j).clamp(-1.0, 1.0).acos();
+                if omega > 1e-9 && omega < separation - 1e-12 {
+                    cratons[i].center = slerp(c_j, c_i, separation / omega);
+                    moved = true;
+                }
+            }
+            if !moved {
+                break;
+            }
+        }
+    }
 }
 
 /// The crust fields: stateless functions of position over the drawn
@@ -398,6 +475,66 @@ mod tests {
     }
 
     #[test]
+    fn repulsion_separates_crowded_cratons_without_new_draws() {
+        // Minimum pairwise angular separation over a craton set.
+        let min_pairwise_angle = |cratons: &[Craton]| -> f64 {
+            let mut min = f64::INFINITY;
+            for i in 1..cratons.len() {
+                for j in 0..i {
+                    let angle = dot(cratons[i].center, cratons[j].center)
+                        .clamp(-1.0, 1.0)
+                        .acos();
+                    min = min.min(angle);
+                }
+            }
+            min
+        };
+        for seed in 0..8u64 {
+            let terrain_seed = Seed(seed).derive(streams::ROOT);
+            let mut notes = Vec::new();
+            let pre = draw_cratons_unrepelled(terrain_seed, &TerrainPins::default(), &mut notes);
+            let mut post = pre.clone();
+            repel_cratons(&mut post);
+            // The public path is exactly pre + one repulsion pass.
+            assert_eq!(
+                post,
+                draw_cratons(terrain_seed, &TerrainPins::default(), &mut Vec::new()),
+                "seed {seed}: public path diverges from unrepelled + repel"
+            );
+            // Zero draws: everything but centers is byte-identical.
+            for (a, b) in pre.iter().zip(&post) {
+                assert_eq!(a.id, b.id);
+                assert_eq!(a.radius_rad, b.radius_rad);
+                assert_eq!(a.age, b.age);
+                assert!((crate::plates::norm(b.center) - 1.0).abs() < 1e-12);
+            }
+            // Improvement, not perfection: the single pass may not fully
+            // separate chains (a later adjustment can re-crowd an earlier
+            // pair), hence the 0.8 slack on the separation target...
+            for i in 1..post.len() {
+                for j in 0..i {
+                    let angle = dot(post[i].center, post[j].center).clamp(-1.0, 1.0).acos();
+                    let target = post[i].radius_rad + post[j].radius_rad;
+                    assert!(
+                        angle >= 0.8 * target,
+                        "seed {seed}: cratons {j},{i} at {angle} rad, \
+                         0.8x target {}",
+                        0.8 * target
+                    );
+                }
+            }
+            // ...and the crowdedness itself must never get worse.
+            assert!(
+                min_pairwise_angle(&post) >= min_pairwise_angle(&pre) - 1e-12,
+                "seed {seed}: repulsion reduced the minimum pairwise \
+                 separation ({} -> {})",
+                min_pairwise_angle(&pre),
+                min_pairwise_angle(&post)
+            );
+        }
+    }
+
+    #[test]
     fn continents_pin_overrides_without_perturbing_shared_cratons() {
         let seed = Seed(42).derive(streams::ROOT);
         let drawn = draw_cratons(seed, &TerrainPins::default(), &mut Vec::new());
@@ -410,22 +547,43 @@ mod tests {
             &mut Vec::new(),
         );
         assert_eq!(pinned.len(), 5);
+        assert_eq!(
+            drawn[0].center, pinned[0].center,
+            "craton 0 center perturbed"
+        );
         for (a, b) in drawn.iter().zip(&pinned) {
             assert_eq!(a.id, b.id);
+            assert_eq!(a.age, b.age, "shared-prefix craton {} age perturbed", a.id);
+            // radius_rad and (for cratons 1..) center are deliberately NOT
+            // asserted equal: the Task 9 area-normalization rescale
+            // redistributes the same drawn budget across whatever count of
+            // cratons survives the pin (fewer cratons means larger radii),
+            // and the Task 9 iteration-2 repulsion pass then displaces
+            // centers by amounts that depend on those radii and on which
+            // cratons exist. Both are downstream arithmetic consequences
+            // of the pin, not stream-draw perturbations — age (straight
+            // from the stream) and craton 0's center (never repelled) are
+            // the pin-isolation invariants this test protects; the raw
+            // center draws' invariance is covered structurally by the
+            // repulsion test's pre/post comparison.
+        }
+        // The pre-repulsion shared-prefix centers ARE stream-identical —
+        // the raw draws are pin-isolated; only the post-transforms differ.
+        let drawn_pre = draw_cratons_unrepelled(seed, &TerrainPins::default(), &mut Vec::new());
+        let pinned_pre = draw_cratons_unrepelled(
+            seed,
+            &TerrainPins {
+                continents: Some(5),
+                ..TerrainPins::default()
+            },
+            &mut Vec::new(),
+        );
+        for (a, b) in drawn_pre.iter().zip(&pinned_pre) {
             assert_eq!(
                 a.center, b.center,
-                "shared-prefix craton {} center perturbed",
+                "shared-prefix craton {} raw center draw perturbed",
                 a.id
             );
-            assert_eq!(a.age, b.age, "shared-prefix craton {} age perturbed", a.id);
-            // radius_rad is deliberately NOT asserted equal: the Task 9
-            // area-normalization rescale redistributes the same drawn
-            // budget across whatever count of cratons survives the pin, so
-            // fewer cratons legitimately means larger individual radii.
-            // That's a downstream arithmetic consequence of the pin, not a
-            // stream-draw perturbation — center and age (which come
-            // straight from the stream) are the pin-isolation invariant
-            // this test protects.
         }
     }
 

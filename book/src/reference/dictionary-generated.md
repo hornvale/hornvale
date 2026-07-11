@@ -35,7 +35,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hand` | the manipulating limb-end | Ngodnget | /ŋodŋet/ | Ngodnget | Ngodnget → no change → Ngodnget |
 | `hearth` | the fire at the center of a home | Fat | /fat/ | Zhfat | Zhfat → clustersimplify → Fat |
 | `home` | one's dwelling | Kotfnek | /kotfnek/ | Zxotfnek | Zxotfnek → fortition → clustersimplify → Kotfnek |
-| `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
+| `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no compound recipe for 'hydrothermal-vent' |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'kelp-forest' |
 | `kobold-kind` | a kobold | Beb | /beb/ | Zveb | Zveb → fortition → clustersimplify → Beb |
@@ -66,12 +66,12 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sun` | the sun | Ned | /ned/ | Ned | Ned → no change → Ned |
 | `taiga` | a biome class | Ngot | /ŋot/ | Ngot | Ngot → no change → Ngot |
 | `temperate-forest` | a biome class | Nadnob | /nadnob/ | Fnadnob | Fnadnob → clustersimplify → Nadnob |
-| `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
+| `temperate-grassland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-grassland' |
 | `temperate-rainforest` | a biome class | Bab | /bab/ | Zvab | Zvab → fortition → clustersimplify → Bab |
 | `tree` | a woody plant | Ngot | /ŋot/ | Ngot | Ngot → no change → Ngot |
 | `tropical-rainforest` | a biome class | Notngok | /notŋok/ | Notngok | Notngok → no change → Notngok |
-| `tropical-seasonal-forest` | a biome class | Noknek | /noknek/ | Xnoknek | Xnoknek → fortition → clustersimplify → Noknek |
-| `tundra` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tundra' |
+| `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-seasonal-forest' |
+| `tundra` | a biome class | Ngok | /ŋok/ | Xngok | Xngok → fortition → clustersimplify → Ngok |
 | `two` | the cardinal number 2 | Ngakskeb | /ŋakskeb/ | Ngaksxeb | Ngaksxeb → fortition → Ngakskeb |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
 | `water` | the drinkable liquid | Nged | /ŋed/ | Vnged | Vnged → fortition → clustersimplify → Nged |
@@ -129,7 +129,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sea` | a body of salt water | Xatrrara | /xatrrara/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Rro | /rro/ | Rro | Rro → no change → Rro |
-| `shrubland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'shrubland' |
+| `shrubland` | a biome class | Ra | /ra/ | Ra | Ra → no change → Ra |
 | `sibling` | one's brother or sister | Rro | /rro/ | Rro | Rro → no change → Rro |
 | `sleep` | to rest unconscious | Rro | /rro/ | Rrok | Rrok → finalloss → Rro |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): kobold has no exposure to 'snow' |
@@ -140,12 +140,12 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sun` | the sun | Ra | /ra/ | Ra | Ra → no change → Ra |
 | `taiga` | a biome class | Xaxo | /xaxo/ | Xaxot | Xaxot → finalloss → Xaxo |
 | `temperate-forest` | a biome class | Rra | /rra/ | Rra | Rra → no change → Rra |
-| `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
+| `temperate-grassland` | a biome class | Xokrra | /xokrra/ | Xokrra | Xokrra → no change → Xokrra |
 | `temperate-rainforest` | a biome class | Xo | /xo/ | Xo | Xo → no change → Xo |
 | `tree` | a woody plant | Xoro | /xoro/ | Xoro | Xoro → no change → Xoro |
 | `tropical-rainforest` | a biome class | Xaxo | /xaxo/ | Xaxok | Xaxok → finalloss → Xaxo |
-| `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-seasonal-forest |
-| `tundra` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tundra' |
+| `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-seasonal-forest' |
+| `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `two` | the cardinal number 2 | Rakra | /rakra/ | Rakraq | Rakraq → finalloss → Rakra |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
 | `water` | the drinkable liquid | Xatrra | /xatrra/ | Xatrraq | Xatrraq → finalloss → Xatrra |

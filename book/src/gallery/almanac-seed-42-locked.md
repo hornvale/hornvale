@@ -22,85 +22,79 @@ By night: a smoldering red star that does not wander; a warm yellow star that do
 ## The Land
 
 The globe breaks into 16 plates; the sea claims 73% of its surface.
-The highest land stands 8758 m above the sea.
+The highest land stands 7879 m above the sea.
 
 The air organizes into a single day–night overturning (tidally locked); 10 land biomes and 7 marine biomes cover the globe.
-Some 10% of the surface is habitable — land with water and a tolerable season.
+Some 7% of the surface is habitable — land with water and a tolerable season.
 
-- **Nobvnakned** — temperate-rainforest
-- **Sfetfnakned** — temperate-rainforest
-- **Xoraraxoqrog** — temperate-rainforest
-- **Zhvetzfak** — temperate-rainforest
-- **Xorarragrraxak** — temperate-rainforest
-- **Rarorot** — temperate-rainforest
-- **Xoroqrrokrok** — temperate-rainforest
-- **Rarroro** — temperate-rainforest
-- **Raxoxogxarra** — temperate-rainforest
-- **Xoraxaqrrorag** — temperate-rainforest
+- **Raxoroxotxok** — temperate-rainforest
+- **Raxorrakrroq** — temperate-rainforest
+- **Fngeknobned** — temperate-rainforest
+- **Xoraxaxoxo** — temperate-rainforest
+- **Zhxebzhvobned** — temperate-rainforest
+- **Natvngetfngabned** — temperate-rainforest
 - **Fnotfneb** — temperate-rainforest
-- **Fnebngedned** — temperate-rainforest
-- **Fnetngakzxod** — temperate-rainforest
-- **Zxetsvokfnot** — temperate-rainforest
-- **Fngaknatned** — temperate-forest
-- **Raxarat** — temperate-rainforest
-- **Fnobsvadnotngokned** — tropical-rainforest
-- **Xaxoxoro** — tropical-rainforest
-- **Rrarararro** — temperate-forest
-- **Raxakxatxa** — alpine
-- **Rarroro** — alpine
-- **Ngekfngadxnaknednotngok** — tropical-rainforest
-- **Ngetfngabnoknek** — tropical-seasonal-forest
-- **Zhvadvnekngotnotngokned** — tropical-rainforest
-- **Ngatxnaknednoknek** — tropical-seasonal-forest
-- **Rararakxoxoq** — alpine
-- **Rararroro** — alpine
-- **Fngabxngadngednotngokned** — tropical-rainforest
-- **Rararraqxo** — alpine
-- **Rararrotrag** — alpine
-- **Ngaksfobzvatnoknekned** — tropical-seasonal-forest
-- **Raraxotrraro** — alpine
-- **Rarrarraqrra** — alpine
-- **Raraxaxo** — alpine
-- **Ngebvnodned** — tropical-seasonal-forest
-- **Nabnatzhxebned** — tropical-seasonal-forest
-- **Vngabzvedzvodned** — tropical-seasonal-forest
-- **Ngobvnebfngotnoknekned** — tropical-seasonal-forest
-- **Ngeksfotnednoknek** — tropical-seasonal-forest
-- **Raxarroqxatrot** — savanna
+- **Xoxaratrok** — temperate-rainforest
+- **Raxorrokrraq** — temperate-rainforest
+- **Zhxobngobnek** — temperate-rainforest
+- **Zvakxnotneb** — temperate-rainforest
+- **Ngodnetfnekned** — temperate-rainforest
+- **Raxoxotxotxaq** — temperate-rainforest
+- **Raxoroqxa** — temperate-rainforest
+- **Nobnotnoknek** — tropical-seasonal-forest
+- **Rrararratxat** — temperate-forest
+- **Rararoqrrokrrok** — alpine
+- **Rarrograt** — alpine
+- **Fngotnabsxobned** — taiga
+- **Ngaknetfnoknotngok** — tropical-rainforest
+- **Sfedxneknotngok** — tropical-rainforest
+- **Rarrarotrat** — alpine
+- **Rarokrragxa** — alpine
+- **Nabngodned** — tropical-seasonal-forest
+- **Sfedfnekfngobnoknek** — tropical-seasonal-forest
+- **Zvetzhvaknednoknek** — tropical-seasonal-forest
+- **Sfebzhxokfngekned** — tropical-seasonal-forest
+- **Fngatzfatned** — tropical-seasonal-forest
+- **Vngebnekned** — tropical-seasonal-forest
+- **Rarrakraqxat** — alpine
+- **Zhvotsvatned** — tropical-seasonal-forest
+- **Rararragra** — alpine
+- **Notzhfodsfaknednoknek** — tropical-seasonal-forest
+- **Rarararokro** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## Deep Time
 
-The frost retreated: at the glacial maximum (day -243500000), ice advanced over 14% of the land.
+The frost retreated: at the glacial maximum (day -243500000), ice advanced over 11% of the land.
 
 ## The People
 
-The land holds 40 settlement(s).
-The chief goblin settlement, Nobvnakned, holds 355 souls amid temperate-rainforest.
-The chief kobold settlement, Xoraraxoqrog, holds 405 souls amid temperate-rainforest.
+The land holds 34 settlement(s).
+The chief goblin settlement, Fngeknobned, holds 467 souls amid temperate-rainforest.
+The chief kobold settlement, Raxoroxotxok, holds 517 souls amid temperate-rainforest.
 
-The goblin village of **Nobvnakned**, population 355.
+The goblin village of **Fngeknobned**, population 467.
 
-Nobvnakned lives by farming.
+Fngeknobned lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 
-The kobold warren of **Xoraraxoqrog**, population 405.
+The kobold warren of **Raxoroxotxok**, population 517.
 
-Xoraraxoqrog lives by farming.
+Raxoroxotxok lives by farming.
 Its roles, lowest to highest: digger, shaper, keeper, elders.
 
 ## The Gods
 
 An organized priesthood tends a pantheon:
 
-> Ngatned the Fnakned is ever: Ngatned the Fnakned watches unceasing. So it was, so it is. *(who presides)*
+> Ned the Sfadngat is ever: Ned the Sfadngat watches unceasing. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-In the warren of **Xoraraxoqrog**, an organized priesthood tends its own pantheon:
+In the warren of **Raxoroxotxok**, an organized priesthood tends its own pantheon:
 
-> Rora Ra is: Rora Ra is always watching. That's how it's always been. That's how it's always been. Rora is the highest among the gods. *(who presides)*
+> Ro Rora is: Ro Rora is always watching. That's how it's always been. That's how it's always been. Ro is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 

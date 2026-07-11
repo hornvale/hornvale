@@ -113,8 +113,11 @@ pub fn generate_plates(
     let maturities: Vec<f64> = (0..count).map(|_| maturity_stream.next_f64()).collect();
 
     /// Heavy-tail shape: weight = 1 / (1 - TAIL * u), u uniform — range
-    /// [1, 20], median ~1.9, a few giants per world.
-    const WEIGHT_TAIL: f64 = 0.95;
+    /// [1, 12.5], median ~1.85, a few giants per world. Task 9 iteration 2
+    /// softened this from 0.95 (range [1, 20]): the after-census's
+    /// plate-size-gini median overshot its 0.45-0.75 band at 0.767, so the
+    /// tail's giants are trimmed while the heavy-tail shape is kept.
+    const WEIGHT_TAIL: f64 = 0.92;
     let mut weight_stream = terrain_seed.derive(streams::PLATE_WEIGHTS).stream();
     let weights: Vec<f64> = (0..count)
         .map(|_| 1.0 / (1.0 - WEIGHT_TAIL * weight_stream.next_f64()))
@@ -245,7 +248,8 @@ mod tests {
                 &mut Vec::new(),
             );
             for p in &plates {
-                assert!((1.0..=20.0).contains(&p.weight), "weight {}", p.weight);
+                // True range of 1 / (1 - 0.92 u), u in [0, 1): [1, 12.5).
+                assert!((1.0..12.5).contains(&p.weight), "weight {}", p.weight);
             }
             let assignment = assign_plates(&geo, Seed(seed).derive(streams::ROOT), &plates);
             let mut counts = vec![0usize; plates.len()];

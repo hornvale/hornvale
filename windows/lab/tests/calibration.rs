@@ -781,14 +781,21 @@ fn name_collision_rate_is_measured_and_pinned() {
     // mean WORSENS (3.4163%, was 3.1042%): the now-larger, more
     // budget-accurate cratons shrink the number of distinct sky vantages
     // per world slightly relative to Task 8's under-sized ones.
-    assert_eq!(zero, 166, "zero-collision world count drifted");
-    assert_eq!(nonzero, 334, "nonzero-collision world count drifted");
+    //
+    // Crust epoch (Task 9 iteration 2, 2026-07-11: tanh lobing remap +
+    // WEIGHT_TAIL 0.95->0.92 + craton repulsion): re-pinned on the
+    // 500-seed drift study (was 166 zero / 334 nonzero, mean 3.4163%) —
+    // the smoother rims, softer plate-size tail, and separated cratons
+    // relocate settlements again; four worlds gained a collision
+    // (162/338) but the mean IMPROVES (3.3296%).
+    assert_eq!(zero, 162, "zero-collision world count drifted");
+    assert_eq!(nonzero, 338, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.034_162_668_391_552).abs() < 1e-6,
+        (mean - 0.033_296_017_938_487).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -839,9 +846,15 @@ fn name_length_distributions_are_measured_and_pinned() {
     // present-row counts hold (both species still place in all 500
     // worlds), but the transformed landmasses relocate every settlement's
     // presiding concept, shifting both means.
+    //
+    // Crust epoch (Task 9 iteration 2, 2026-07-11: tanh lobing remap +
+    // WEIGHT_TAIL 0.95->0.92 + craton repulsion): re-pinned on the
+    // 500-seed drift study (was goblin 500/14.744593607676443, kobold
+    // 500/13.893004502119725) — present-row counts hold again; the
+    // relocated settlements shift both means by fractions of a character.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 500u32, 14.744_593_607_676_443),
-        ("kobold", 500u32, 13.893_004_502_119_725),
+        ("goblin", 500u32, 14.744_520_121_312_846),
+        ("kobold", 500u32, 13.897_507_075_421_95),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1024,6 +1037,10 @@ fn null_control_name_length_smd_is_pinned() {
     // Crust epoch (Task 9, 2026-07-10: area-normalized craton budget +
     // PEAK_MIN_KM 30->33): re-pinned again (was -0.064112415249032) —
     // still comfortably inside the same ±0.2 bound.
+    //
+    // Crust epoch (Task 9 iteration 2, 2026-07-11: tanh lobing remap +
+    // WEIGHT_TAIL 0.95->0.92 + craton repulsion): re-pinned again (was
+    // -0.059459520252233) — still comfortably inside the same ±0.2 bound.
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let namelen = std_mean_diff(
@@ -1031,7 +1048,7 @@ fn null_control_name_length_smd_is_pinned() {
         nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
     assert!(
-        (namelen - -0.059_459_520_252_233).abs() < 1e-9,
+        (namelen - -0.064_495_973_866_366).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

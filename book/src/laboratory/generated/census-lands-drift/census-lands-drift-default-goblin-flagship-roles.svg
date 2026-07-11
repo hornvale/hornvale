@@ -8,19 +8,19 @@
 <text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">375</text>
 <line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
 <text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">500</text>
-<rect x="64.5" y="231.2" width="96.6" height="4.8" fill="#5b8dd9" rx="2" />
-<text x="112.8" y="227.2" font-size="11" fill="currentColor" text-anchor="middle">12</text>
+<rect x="64.5" y="230.4" width="96.6" height="5.6" fill="#5b8dd9" rx="2" />
+<text x="112.8" y="226.4" font-size="11" fill="currentColor" text-anchor="middle">14</text>
 <text x="112.8" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 112.8 252.0)">farmer,artisan,shaman,chief</text>
-<rect x="178.1" y="232.4" width="96.6" height="3.6" fill="#5b8dd9" rx="2" />
-<text x="226.4" y="228.4" font-size="11" fill="currentColor" text-anchor="middle">9</text>
+<rect x="178.1" y="233.6" width="96.6" height="2.4" fill="#5b8dd9" rx="2" />
+<text x="226.4" y="229.6" font-size="11" fill="currentColor" text-anchor="middle">6</text>
 <text x="226.4" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 226.4 252.0)">farmer,chief</text>
-<rect x="291.7" y="200.0" width="96.6" height="36.0" fill="#5b8dd9" rx="2" />
-<text x="340.0" y="196.0" font-size="11" fill="currentColor" text-anchor="middle">90</text>
+<rect x="291.7" y="202.0" width="96.6" height="34.0" fill="#5b8dd9" rx="2" />
+<text x="340.0" y="198.0" font-size="11" fill="currentColor" text-anchor="middle">85</text>
 <text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 340.0 252.0)">farmer,shaman,chief</text>
-<rect x="405.3" y="235.2" width="96.6" height="0.8" fill="#5b8dd9" rx="2" />
-<text x="453.6" y="231.2" font-size="11" fill="currentColor" text-anchor="middle">2</text>
+<rect x="405.3" y="233.6" width="96.6" height="2.4" fill="#5b8dd9" rx="2" />
+<text x="453.6" y="229.6" font-size="11" fill="currentColor" text-anchor="middle">6</text>
 <text x="453.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 453.6 252.0)">fisher,chief</text>
-<rect x="518.9" y="81.2" width="96.6" height="154.8" fill="#5b8dd9" rx="2" />
-<text x="567.2" y="77.2" font-size="11" fill="currentColor" text-anchor="middle">387</text>
+<rect x="518.9" y="80.4" width="96.6" height="155.6" fill="#5b8dd9" rx="2" />
+<text x="567.2" y="76.4" font-size="11" fill="currentColor" text-anchor="middle">389</text>
 <text x="567.2" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 567.2 252.0)">slave,farmer,artisan,shaman,chief</text>
 </svg>
