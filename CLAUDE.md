@@ -190,3 +190,12 @@ not product. Campaigns are named by sequence number + name; the Year-N
 prefix is retired (decision 0017). Book prose is written at a deliberate
 altitude: technical and mathematical, comprehensible without reading the
 code it may show.
+
+**Campaign branches absorb main at every plan-stage boundary**, not only at
+close: run `make preflight` from the branch; on an ancestry NO-GO, merge
+main INTO the branch and re-run the gate there. Two exceptions: never
+absorb mid-measurement (a preregistered study's baseline and readout must
+see the same physics — finish the readout first), and never while main's
+checkout shows another session mid-landing (the preflight peeks and warns).
+Parallel sessions are the norm; small absorptions keep semantic drift next
+to its cause instead of surfacing it at a 105-commit merge.
