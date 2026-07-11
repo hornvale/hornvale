@@ -366,3 +366,139 @@ fn the_book_carries_no_registry_ids_or_process_vocabulary() {
         errors.join("\n  ")
     );
 }
+
+/// Recursively collect `.rs` and `.sh` files under `dir`, skipping build
+/// output and hidden directories (the source-side companion to [`md_files`]).
+fn source_files(dir: &Path, out: &mut Vec<PathBuf>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries {
+        let path = entry.expect("dir entry").path();
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if path.is_dir() {
+            if name != "target" && !name.starts_with('.') {
+                source_files(&path, out);
+            }
+        } else if path.extension().is_some_and(|e| e == "rs" || e == "sh") {
+            out.push(path);
+        }
+    }
+}
+
+/// Check one cite token against the decision records. `None` means fine —
+/// either it resolves, or it is prose rather than a cite: a 4-digit token
+/// must match a `NNNN-*.md` record; a lowercase token with ≥ 2 hyphens must
+/// match a `<slug>.md` record or a numbered record's slug tail ("decision
+/// log" has no hyphen, "4-digit" has one — neither is a cite).
+fn cite_error(token: &str, numbers: &BTreeSet<String>, slugs: &BTreeSet<String>) -> Option<String> {
+    if token.len() == 4 && token.chars().all(|c| c.is_ascii_digit()) {
+        return (!numbers.contains(token))
+            .then(|| format!("no docs/decisions/{token}-*.md record"));
+    }
+    let is_slug_shaped = token.matches('-').count() >= 2
+        && !token.starts_with('-')
+        && !token.ends_with('-')
+        && token
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+    if is_slug_shaped && !slugs.contains(token) {
+        return Some(format!("no docs/decisions/{token}.md record"));
+    }
+    None
+}
+
+/// Every decision citation in the Rust and shell sources resolves to a
+/// record in `docs/decisions/` — the decision-log half of the knowledge-base
+/// drift linters. Forms: `decision 0014` / `decisions 0002` / `ADR 0016`
+/// (numeric) and `decision <slug>` (hyphenated slug, optionally backticked).
+#[test]
+fn decision_cites_in_sources_resolve() {
+    let root = repo_root();
+    let mut numbers = BTreeSet::new();
+    let mut slugs = BTreeSet::new();
+    for entry in fs::read_dir(root.join("docs/decisions")).expect("decisions dir") {
+        let name = entry.expect("dir entry").file_name();
+        let name = name.to_string_lossy();
+        let Some(stem) = name.strip_suffix(".md") else {
+            continue;
+        };
+        let numbered = stem.len() > 5
+            && stem.as_bytes()[4] == b'-'
+            && stem[..4].chars().all(|c| c.is_ascii_digit());
+        if numbered {
+            numbers.insert(stem[..4].to_string());
+            slugs.insert(stem[5..].to_string());
+        } else {
+            slugs.insert(stem.to_string());
+        }
+    }
+
+    let mut files = Vec::new();
+    for dir in ["kernel", "domains", "windows", "cli", "tools", "scripts"] {
+        source_files(&root.join(dir), &mut files);
+    }
+    files.sort();
+
+    let mut errors = Vec::new();
+    for file in &files {
+        let content = read(file);
+        let rel = file
+            .strip_prefix(&root)
+            .unwrap_or(file)
+            .display()
+            .to_string();
+        for (idx, line) in content.lines().enumerate() {
+            for keyword in ["decision ", "decisions ", "ADR "] {
+                let mut rest = line;
+                while let Some(pos) = rest.find(keyword) {
+                    let after = &rest[pos + keyword.len()..];
+                    let token: String = after
+                        .trim_start_matches('`')
+                        .chars()
+                        .take_while(|c| c.is_ascii_alphanumeric() || *c == '-')
+                        .collect();
+                    if let Some(err) = cite_error(&token, &numbers, &slugs) {
+                        errors.push(format!(
+                            "{rel}:{}: cite `{keyword}{token}` — {err}",
+                            idx + 1
+                        ));
+                    }
+                    rest = &rest[pos + keyword.len()..];
+                }
+            }
+        }
+    }
+    assert!(
+        errors.is_empty(),
+        "decision cites that resolve to no record (fix the cite, or add the \
+         missing record to docs/decisions/):\n  {}",
+        errors.join("\n  ")
+    );
+}
+
+#[test]
+fn cite_error_resolves_the_known_forms() {
+    let numbers: BTreeSet<String> = ["0016".to_string()].into();
+    let slugs: BTreeSet<String> = [
+        "calibration-loads-the-census-fixture".to_string(),
+        "slugs-not-numbers".to_string(),
+    ]
+    .into();
+    // Resolvable numeric and slug cites.
+    assert_eq!(cite_error("0016", &numbers, &slugs), None);
+    assert_eq!(
+        cite_error("calibration-loads-the-census-fixture", &numbers, &slugs),
+        None
+    );
+    // A numbered record's slug tail resolves too.
+    assert_eq!(cite_error("slugs-not-numbers", &numbers, &slugs), None);
+    // Unresolvable cites are errors.
+    assert!(cite_error("0999", &numbers, &slugs).is_some());
+    assert!(cite_error("no-such-decision-here", &numbers, &slugs).is_some());
+    // Prose, not cites: hyphen-free words and short hyphenations.
+    assert_eq!(cite_error("log", &numbers, &slugs), None);
+    assert_eq!(cite_error("point", &numbers, &slugs), None);
+    assert_eq!(cite_error("4-digit", &numbers, &slugs), None);
+    assert_eq!(cite_error("", &numbers, &slugs), None);
+}

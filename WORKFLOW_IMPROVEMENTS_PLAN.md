@@ -129,13 +129,13 @@ probe's missing-row panic; a mean-only-movement diff test; fail-fast
 `ADR NNNN` / hyphenated `decision <slug>` cite in `.rs`/`.sh` sources
 against `docs/decisions/`. The book-staleness half is deferred: mtimes do
 not survive git checkout; it needs a git-log-based freshness design.
-**Status**: Not Started
+**Status**: Complete
 
 ### 3c. PROC-9 — the layering page emitted from its enforcer
 **Deliverable**: `cli/tests/architecture.rs` renders the enforced graph to
 `book/src/reference/layering-generated.md`, golden-checked (REBASELINE=1
 accepts); wrapper chapter + SUMMARY entry.
-**Status**: Not Started
+**Status**: In Progress
 
 ### 3d. PROC-10 — `make doctor`, the repo self-map
 **Deliverable**: `scripts/doctor.sh` printing pointers to the authoritative
