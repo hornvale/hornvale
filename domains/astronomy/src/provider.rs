@@ -472,6 +472,34 @@ mod tests {
         assert!(!ph.iter().any(|p| p.description.contains("spring")));
     }
 
+    /// SKY-7: the day sky tells morning from noon from evening, and the
+    /// edges of night read as twilight rather than full dark.
+    #[test]
+    fn day_prose_tells_morning_from_noon_from_evening_and_twilight() {
+        // Zero tilt: the daylight window is exactly (0.25, 0.75) of the
+        // local day, so the day-part bands are hand-checkable.
+        let s = bare_sky(
+            0.0,
+            Vec::new(),
+            vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
+        );
+        let at = |t: f64| s.sky_at(WorldTime { day: t }).description;
+        assert!(
+            at(10.30).contains("climbs the morning sky"),
+            "got {}",
+            at(10.30)
+        );
+        assert!(at(10.50).contains("stands high"), "got {}", at(10.50));
+        assert!(
+            at(10.70).contains("sinks toward evening"),
+            "got {}",
+            at(10.70)
+        );
+        assert!(at(10.22).starts_with("Twilight."), "got {}", at(10.22));
+        assert!(at(10.78).starts_with("Twilight."), "got {}", at(10.78));
+        assert!(at(10.10).starts_with("Night."), "got {}", at(10.10));
+    }
+
     /// SKY-22: a retrograde world's day sky says the sun rises in the west;
     /// an ordinary world's does not.
     #[test]
@@ -599,6 +627,10 @@ pub const TIDE: &str = "tide";
 fn round2(x: f64) -> f64 {
     (x * 100.0).round() / 100.0
 }
+
+/// How far outside the daylight window (as a fraction of the local day)
+/// the dark still reads as twilight rather than night (SKY-7).
+const TWILIGHT_MARGIN: f64 = 0.05;
 
 /// The eight-word moon-phase vocabulary, one word per eighth of the synodic
 /// cycle (SKY-14), indexed by [`phase_eighth`].
@@ -745,12 +777,26 @@ impl GeneratedSky {
                 }
             }
             Rotation::Spinning { retrograde, .. } => {
-                let is_day = matches!(self.calendar.is_daylight(t), Some(true));
+                // SKY-7: place the moment in the sun's arc. The daylight
+                // window is centered on the local day (`is_daylight`); the
+                // fraction's progress through it separates morning from
+                // noon from evening, and a margin either side of the
+                // window reads as twilight rather than full dark.
+                let fraction = self.calendar.local_day(t).map(|d| d.1).unwrap_or(0.0);
+                let f = self.calendar.daylight_fraction(t).unwrap_or(0.5);
+                let (dawn, dusk) = ((1.0 - f) / 2.0, (1.0 + f) / 2.0);
+                let is_day = fraction > dawn && fraction < dusk;
                 if is_day {
-                    let mut description = format!(
-                        "The sun, a {}, stands in the sky.",
-                        self.system.star.class_name
-                    );
+                    let progress = (fraction - dawn) / f;
+                    let arc_words = if progress < 1.0 / 3.0 {
+                        "climbs the morning sky"
+                    } else if progress < 2.0 / 3.0 {
+                        "stands high in the sky"
+                    } else {
+                        "sinks toward evening"
+                    };
+                    let mut description =
+                        format!("The sun, a {}, {}.", self.system.star.class_name, arc_words);
                     if *retrograde {
                         description.push_str(" Here it rises in the west and sets in the east.");
                     }
@@ -787,8 +833,13 @@ impl GeneratedSky {
                         })
                         .collect();
                     parts.push(night_star_line(&self.system.neighbors));
+                    // SKY-7: within a twentieth of the local day of the
+                    // daylight window, the dark is twilight, not night.
+                    let twilight =
+                        fraction > dawn - TWILIGHT_MARGIN && fraction < dusk + TWILIGHT_MARGIN;
+                    let dark_word = if twilight { "Twilight." } else { "Night." };
                     SkyReport {
-                        description: format!("Night. {}", parts.join(" ")),
+                        description: format!("{} {}", dark_word, parts.join(" ")),
                         bodies,
                     }
                 }
