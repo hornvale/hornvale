@@ -100,6 +100,7 @@
 - [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
 - [Dictionary](./reference/dictionary-generated.md)
 - [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
+- [The Layering](./reference/layering.md)
 
 # Open Questions
 

@@ -135,13 +135,13 @@ not survive git checkout; it needs a git-log-based freshness design.
 **Deliverable**: `cli/tests/architecture.rs` renders the enforced graph to
 `book/src/reference/layering-generated.md`, golden-checked (REBASELINE=1
 accepts); wrapper chapter + SUMMARY entry.
-**Status**: In Progress
+**Status**: Complete
 
 ### 3d. PROC-10 — `make doctor`, the repo self-map
 **Deliverable**: `scripts/doctor.sh` printing pointers to the authoritative
 orientation sources (layering, gate, determinism contracts, artifact
 provenance, doc map, live git state) plus an orphaned-decision scan.
-**Status**: Not Started
+**Status**: In Progress
 
 ## Stage 4+ (later passes)
 
