@@ -1,5 +1,7 @@
 //! Hornvale kernel: the substrate every domain depends on — and the only
-//! thing any domain may depend on (Constitution §2.6).
+//! thing any domain may depend on (Constitution §2.6). Domains communicate
+//! solely through its trace protocol — facts, phenomena, fields
+//! (decision 0003).
 
 #![warn(missing_docs)]
 

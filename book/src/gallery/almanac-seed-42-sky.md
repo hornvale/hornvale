@@ -2,7 +2,7 @@
 
 ## The Sky
 
-Night. The vast moon shows its waning face. The small, distant moon shows its waxing face. Above, smoldering red stars keep their stations.
+Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
 
 Visible bodies: the sun, moon 1, moon 2.
 

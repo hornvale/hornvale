@@ -1,6 +1,7 @@
 //! Scenario pins: parameters supplied instead of drawn (spec §2.2).
 //! Downstream generation conditions on pinned values identically to drawn
-//! ones; unsatisfiable pins fail loudly.
+//! ones; unsatisfiable pins fail loudly — the seed is the world's identity,
+//! never retried (decision 0007).
 
 use crate::units::{Degrees, LocalDays};
 

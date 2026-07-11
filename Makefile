@@ -9,13 +9,14 @@
 #   make rebaseline   # regenerate every committed generated artifact
 #   make rebaseline-goldens # accept drifted byte-golden test fixtures
 #   make lab-diff STUDY=<name> # report which census metrics moved vs HEAD
+#   make preflight    # GO/NO-GO before integrating a campaign branch with main
 #   make doctor       # print the repo self-map (orientation for a fresh session)
 #   make install-hooks# point git at scripts/hooks (opt-in; edits local config)
 #
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff doctor install-hooks
+.PHONY: help quick gate fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -58,6 +59,9 @@ lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STU
 	cargo run -q -p hornvale -- lab diff studies/$(STUDY).study.json "$$old" \
 	    book/src/laboratory/generated/$(STUDY)/rows.csv; \
 	status=$$?; rm -f "$$old"; exit $$status
+
+preflight: ## GO/NO-GO before integrating a campaign branch with main (run from the branch)
+	@bash scripts/preflight-merge.sh
 
 doctor: ## Print the repo self-map (orientation for a fresh session)
 	@bash scripts/doctor.sh
