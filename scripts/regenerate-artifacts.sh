@@ -79,6 +79,7 @@ run -p hornvale -- scene system --world "$wsky" > book/src/gallery/scene-system-
 echo "regenerate-artifacts: lab censuses (release)" >&2
 run_release -p hornvale -- lab run studies/census-lands-drift.study.json
 run_release -p hornvale -- lab run studies/census-of-the-meeting.study.json
+run_release -p hornvale -- lab run studies/branches-family.study.json
 
 echo "regenerate-artifacts: orrery ephemeris golden" >&2
 run -p hornvale-scene --example ephemeris_golden > clients/orrery/testdata/ephemeris-seed-42.json
