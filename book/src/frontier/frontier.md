@@ -46,6 +46,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [Prophecy and the shape of time](#prophecy-and-the-shape-of-time)
   - [The projection layer](#the-projection-layer)
   - [The immune model of belief — deception as discrimination failure](#the-immune-model-of-belief--deception-as-discrimination-failure)
+  - [The immune stack — boundary-maintenance across every scale](#the-immune-stack--boundary-maintenance-across-every-scale)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
@@ -1524,6 +1525,89 @@ cheapest instance is a single lie believed by a single guard — a real utteranc
 credulous threshold, a derived false belief with provenance — long before any
 pathology is trusted. The population-scale mechanisms (contagion, herd immunity,
 moral panic) wait on the faction layer and the plague-curve machinery they share.
+
+---
+
+## The immune stack — boundary-maintenance across every scale
+
+*(High confidence the shape recurs; the calibration burden is each scale's own.
+A governing lens, not a domain — the generalization *over* UNI-16, reaching into
+culture, religion, language, the contact layer (MAP-9), and biology (BIO-5).)*
+
+**Lift UNI-16 one level and belief falls away.** What remains is a
+*boundary-maintenance system*: something that holds an identity by discriminating
+self from non-self, learns from encounters, remembers them, and fails on two
+sides — too permeable (invaded) or too reactive (attacking itself). Named that
+generally, the shape is everywhere in Hornvale, and the wager is that it is *one
+mechanism* — UNI-16's derived discrimination threshold — re-instantiated at every
+scale, not five systems that merely rhyme. **The stack:** the body (own cells vs
+pathogen — the literal immune system, BIO-5); the self (held belief vs lie —
+UNI-16); the culture (orthodoxy vs heresy); the settlement (kin vs outsider); the
+language (native word vs loanword).
+
+**The bridge concepts** fall out of crossing immune mechanism with social
+phenomenon, and they are startlingly exact: **heresy = autoimmunity** (a culture
+attacking its own over belief), with **orthodoxy the self-marker** it reads to
+tell member from heretic; **conversion = infection**; **assimilation = tolerance
+induction**; **an initiation rite = thymic training** (you are taught, during
+"development," what to hold as self); **xenophobia = transplant rejection** (the
+graft refused though it would heal); **linguistic purism = inflammation** against
+a loanword-antigen; and **the censor or the Inquisition = an engineered immune
+organ** — a deliberately built discrimination system, distinct from reflexive folk
+suspicion.
+
+**Three axes tune each scale.** *Rate* (innate reflex → adaptive learning): speed
+cultural immunity up and you get a moral panic, slow individual belief and you get
+a dawning doubt — so snap-judgment and mass-hysteria are one response at two
+clocks, and innate-vs-adaptive immunity is the two-speed structure (fast
+species-level priors vs slow learned discrimination). *Naturalness* (reflex →
+built): evolved xenophobia vs institutions as *synthetic immune organs* — schools,
+censors, orthodoxy tests. *Distribution* (central → herd): a Ministry of Truth vs
+decentralised gossip and folk skepticism, which is also a political-structure axis.
+
+**The border zones are where the drama lives** — the heretic, convert, spy,
+immigrant, traitor, loanword. Each is a thing *crossing an immune boundary*, and
+the game is whether it passes (disguise), is caught (detection), or provokes an
+overreaction (autoimmunity). One lens now spans deception, xenophobia, heresy,
+conversion, purism, and immigration at once.
+
+**Two refinements sharpen the whole stack:**
+
+- **The danger model.** Immunology's own paradigm shift (Matzinger) moved from
+  "self vs non-self" to "respond to *damage*, not foreignness" — the body tolerates
+  harmless foreign matter (food, the fetus, gut flora) and attacks damaged self.
+  Re-instantiated, this is the truer model of what a mind or culture rejects: not
+  the *foreign* belief or custom but the *threatening* one. It explains the
+  asymmetries pure self/non-self cannot — a harmless novelty waved through while a
+  threatening insider is savaged — and it relocates the discrimination threshold
+  from *novelty* to *perceived harm*, derived from the ledger's real tensions.
+- **Commensal tolerance — the useful fiction.** The gut hosts trillions of foreign
+  organisms the immune system deliberately *tolerates because they are beneficial*:
+  symbionts, not pathogens. The epistemic stack has the same category — the **noble
+  lie, the load-bearing myth, the polite fiction** (money, nation, rights, a
+  unifying origin-story): false or unfalsifiable, foreign to bare fact, yet hosted
+  because the identity needs them. Not all false belief is a pathogen; some is
+  *symbiotic*, and a people is a **holobiont** of its truths *and* its useful
+  fictions. This threads into the projection layer (gods and monsters as tolerated
+  projections) and religion (myth as commensal), and it recasts the stack's job:
+  not to purge all non-self, but to tell symbiont from pathogen — which is the
+  danger model's harm-not-foreignness rule once more.
+
+**What keeps it honest** is the derive-don't-author discipline the whole book
+carries: each scale's threshold is derived from *that scale's own self* — the
+body's markers, the mind's priors, the culture's tradition and orthodoxy, the
+settlement's kinship, the language's native lexicon — and its ledger-visible
+threats, never a "this culture is xenophobic" constant (the lookup table 0021
+forecloses). The Lab test is whether each scale's rejection tracks its actual
+boundary-history and threat exposure rather than an author's hand.
+
+**Sequencing.** A lens, not a crate: each scale's immune response lands with its
+own domain's social and contact work — culture and religion for heresy and
+conversion, language for purism, the contact layer (MAP-9) for xenophobia and
+assimilation — all sharing UNI-16's threshold machinery. The cheapest first
+instance is the heretic: an individual belief-immunity diverging from its
+culture's and triggering the autoimmune response of persecution (MAP-9b), because
+its pieces — religion, social structure — already exist.
 
 ---
 
