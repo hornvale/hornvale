@@ -22,9 +22,11 @@ use std::path::Path;
 /// couple of seconds — cheap enough for every workspace test run.
 const PROBE_SEEDS: u64 = 3;
 
-/// The two committed, CI-drift-checked censuses (decision
-/// `ci-checks-500-seed-censuses`).
-const CENSUSES: [(&str, &str); 2] = [
+/// The committed, CI-drift-checked censuses (decisions
+/// `ci-checks-500-seed-censuses` and `calibration-loads-the-census-fixture`):
+/// the two 500-seed world censuses and the 1,000-seed branches family
+/// battery, each backing a fixture-loading calibration suite.
+const CENSUSES: [(&str, &str); 3] = [
     (
         "../../studies/census-lands-drift.study.json",
         "../../book/src/laboratory/generated/census-lands-drift/rows.csv",
@@ -32,6 +34,10 @@ const CENSUSES: [(&str, &str); 2] = [
     (
         "../../studies/census-of-the-meeting.study.json",
         "../../book/src/laboratory/generated/census-of-the-meeting/rows.csv",
+    ),
+    (
+        "../../studies/branches-family.study.json",
+        "../../book/src/laboratory/generated/branches-family/rows.csv",
     ),
 ];
 
