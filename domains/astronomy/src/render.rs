@@ -19,9 +19,9 @@ pub const ASCII_WIDTH: usize = 72;
 pub const ASCII_HEIGHT: usize = 24;
 
 /// One synodic cycle as a 16-column glyph strip: `o` new, `)` waxing,
-/// `O` full, `(` waning — the provider's phase-word thresholds sampled
-/// at k/16.
-const PHASE_STRIP: &str = "oo))))))OO((((oo";
+/// `O` full, `(` waning — the provider's phase-word bands
+/// ([`crate::provider::phase_eighth`], centered by SKY-14) sampled at k/16.
+const PHASE_STRIP: &str = "o))))))OO((((((o";
 
 /// Render the fixed night sky as a 72×24 equirectangular ASCII chart.
 /// Stars plot as their 1-based brightness-rank digit; on a collision the
@@ -327,14 +327,11 @@ enum MoonFace {
 /// bands; only the *orientation* comes from geometry, so waxing and waning at
 /// the same screen position read identically (they are lit on the same side).
 fn moon_face(phase: f64, star_on_left: bool) -> MoonFace {
-    if !(0.125..0.875).contains(&phase) {
-        MoonFace::New
-    } else if (0.5..0.625).contains(&phase) {
-        MoonFace::Full
-    } else if star_on_left {
-        MoonFace::LitLeft
-    } else {
-        MoonFace::LitRight
+    match crate::provider::phase_eighth(phase) {
+        0 => MoonFace::New,
+        4 => MoonFace::Full,
+        _ if star_on_left => MoonFace::LitLeft,
+        _ => MoonFace::LitRight,
     }
 }
 
@@ -576,6 +573,33 @@ mod tests {
         let chart = chart_ascii(&[]);
         let row = chart.lines().nth(ASCII_HEIGHT / 2).unwrap();
         assert!(row.starts_with("- - "));
+    }
+
+    /// The strip is the provider's phase bands sampled at k/16 — recentered
+    /// with them by SKY-14, so `O` (full) straddles column 8 (phase 0.5).
+    #[test]
+    fn phase_strip_glyphs_follow_the_centered_phase_bands() {
+        for (k, glyph) in PHASE_STRIP.chars().enumerate() {
+            let expected = match crate::provider::phase_eighth(k as f64 / 16.0) {
+                0 => 'o',
+                1..=3 => ')',
+                4 => 'O',
+                _ => '(',
+            };
+            assert_eq!(glyph, expected, "column {k}");
+        }
+    }
+
+    /// The orrery face windows are the provider's bands too: full is
+    /// centered on 0.5 (it used to start there), new wraps around 0.
+    #[test]
+    fn moon_face_windows_are_centered_on_the_phases_they_name() {
+        assert!(matches!(moon_face(0.45, true), MoonFace::Full));
+        assert!(matches!(moon_face(0.55, true), MoonFace::Full));
+        assert!(matches!(moon_face(0.05, true), MoonFace::New));
+        assert!(matches!(moon_face(0.95, true), MoonFace::New));
+        assert!(matches!(moon_face(0.25, true), MoonFace::LitLeft));
+        assert!(matches!(moon_face(0.75, false), MoonFace::LitRight));
     }
 
     /// Hand-build a minimal system with one moon at the given sidereal

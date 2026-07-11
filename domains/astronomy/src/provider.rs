@@ -312,6 +312,175 @@ mod tests {
             report.description
         );
     }
+
+    /// A hand-built spinning sky with zeroed forcing (except the given
+    /// obliquity), a 365.25 d year and a 1 d day — so year phase, local day
+    /// and moon phase are all exact functions of `t` with no drawn offsets.
+    fn bare_sky(
+        obliquity: f64,
+        moons: Vec<crate::moons::Moon>,
+        neighbors: Vec<Neighbor>,
+    ) -> GeneratedSky {
+        use crate::anchor::Anchor;
+        use crate::star::Star;
+        use crate::units::{
+            Au, Degrees, EarthMasses, HabitableZone, SolarLuminosities, SolarMasses,
+        };
+        let moon_phase_offsets = vec![0.0; moons.len()];
+        let system = StarSystem {
+            star: Star {
+                mass: SolarMasses::new(1.0).unwrap(),
+                luminosity: SolarLuminosities::new(1.0).unwrap(),
+                class_name: "yellow dwarf".to_string(),
+                habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
+                    .unwrap(),
+            },
+            anchor: Anchor {
+                mass: EarthMasses::new(1.0).unwrap(),
+                orbit: Au::new(1.0).unwrap(),
+                year: crate::units::StdDays::new(365.25).unwrap(),
+                rotation: Rotation::Spinning {
+                    day: crate::units::StdDays::new(1.0).unwrap(),
+                },
+                obliquity: Degrees::new(obliquity).unwrap(),
+            },
+            moons,
+            neighbors,
+            forcing: crate::forcing::OrbitalForcing {
+                obliquity_mean: obliquity,
+                obliquity_amp: 0.0,
+                obliquity_phase: 0.0,
+                ecc_mean: 0.0,
+                ecc_amp: 0.0,
+                ecc_phase: 0.0,
+                precession_phase: 0.0,
+                year_phase_offset: 0.0,
+                day_phase_offset: 0.0,
+                moon_phase_offsets,
+            },
+        };
+        GeneratedSky::new(GenesisOutcome {
+            system,
+            notes: Vec::new(),
+        })
+    }
+
+    fn luna_like() -> crate::moons::Moon {
+        crate::moons::Moon {
+            mass: crate::units::LunarMasses::new(1.0).unwrap(),
+            distance: crate::units::Megameters::new(384.4).unwrap(),
+            period: crate::units::StdDays::new(27.32).unwrap(),
+            angular_diameter_rel: 1.0,
+            tide_rel: 1.0,
+        }
+    }
+
+    fn neighbor(class: crate::pins::NeighborClass, color: &str) -> Neighbor {
+        Neighbor {
+            class,
+            distance: crate::units::LightYears(10.0),
+            apparent_brightness: 1.0,
+            color: color.to_string(),
+            declination: 0.0,
+            right_ascension: 0.0,
+        }
+    }
+
+    use crate::neighborhood::Neighbor;
+
+    /// SKY-14: the full window is centered on phase 0.5 (it used to start
+    /// there), and the vocabulary runs crescent/quarter/gibbous, not just
+    /// waxing/waning.
+    #[test]
+    fn moon_prose_uses_the_eight_word_vocabulary_with_a_centered_full_window() {
+        let s = bare_sky(
+            0.0,
+            vec![luna_like()],
+            vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
+        );
+        // Synodic month = 27.32 × 365.25 / (365.25 − 27.32) ≈ 29.53 d.
+        // t = 13.1: phase ≈ 0.4436 — inside the centered full window
+        // [7/16, 9/16); local-day fraction 0.1 — night.
+        let full = s.sky_at(WorldTime { day: 13.1 });
+        assert!(
+            full.description.contains("shows its full face"),
+            "got {}",
+            full.description
+        );
+        // t = 7.1: phase ≈ 0.2404 — first quarter.
+        let quarter = s.sky_at(WorldTime { day: 7.1 });
+        assert!(
+            quarter.description.contains("shows its first-quarter face"),
+            "got {}",
+            quarter.description
+        );
+        // t = 3.05: phase ≈ 0.1033 — waxing crescent.
+        let crescent = s.sky_at(WorldTime { day: 3.05 });
+        assert!(
+            crescent
+                .description
+                .contains("shows its waxing crescent face"),
+            "got {}",
+            crescent.description
+        );
+    }
+
+    /// SKY-14: the night sky names every star's color, counted, in order —
+    /// not just `neighbors[0].color` stamped onto all of them.
+    #[test]
+    fn night_sky_prose_names_every_star_color_not_just_the_brightest() {
+        let s = bare_sky(
+            0.0,
+            Vec::new(),
+            vec![
+                neighbor(crate::pins::NeighborClass::SunLike, "warm yellow"),
+                neighbor(crate::pins::NeighborClass::RedDwarf, "dim red"),
+                neighbor(crate::pins::NeighborClass::RedDwarf, "dim red"),
+            ],
+        );
+        let night = s.sky_at(WorldTime { day: 10.1 });
+        assert!(
+            night
+                .description
+                .contains("Above, the stars keep their stations: one warm yellow, two dim red."),
+            "got {}",
+            night.description
+        );
+    }
+
+    /// SKY-14: season prose is graded — the solstice-adjacent eighths of the
+    /// year name the standstill, the rest name the direction.
+    #[test]
+    fn season_prose_names_the_solstice_standstills() {
+        let s = bare_sky(
+            23.5,
+            Vec::new(),
+            vec![neighbor(crate::pins::NeighborClass::SunLike, "warm yellow")],
+        );
+        let noon = |day: f64| s.sky_at(WorldTime { day }).description;
+        // Year phase 0.25 is midsummer (daylight peaks); ±1/16 around each
+        // solstice reads as a standstill.
+        assert!(
+            noon(91.5).contains("near their longest"),
+            "got {}",
+            noon(91.5)
+        );
+        assert!(
+            noon(274.5).contains("near their shortest"),
+            "got {}",
+            noon(274.5)
+        );
+        assert!(
+            noon(20.5).contains("The days are growing."),
+            "got {}",
+            noon(20.5)
+        );
+        assert!(
+            noon(170.5).contains("The days are shrinking."),
+            "got {}",
+            noon(170.5)
+        );
+    }
 }
 
 /// Phenomenon kind for the annual daylight cycle.
@@ -323,6 +492,74 @@ pub const NIGHT_STAR: &str = "night-star";
 
 fn round2(x: f64) -> f64 {
     (x * 100.0).round() / 100.0
+}
+
+/// The eight-word moon-phase vocabulary, one word per eighth of the synodic
+/// cycle (SKY-14), indexed by [`phase_eighth`].
+const PHASE_WORDS: [&str; 8] = [
+    "new",
+    "waxing crescent",
+    "first-quarter",
+    "waxing gibbous",
+    "full",
+    "waning gibbous",
+    "last-quarter",
+    "waning crescent",
+];
+
+/// Which eighth of a cycle `phase` (in [0,1)) falls in, with windows
+/// *centered* on the phases they name: full spans [7/16, 9/16) around 0.5,
+/// new wraps around 0 (SKY-14 — the full window used to start at 0.5
+/// instead of straddling it). `render.rs`'s phase strip and orrery faces
+/// sample these same bands.
+pub(crate) fn phase_eighth(phase: f64) -> usize {
+    ((phase * 8.0).round() as usize) % 8
+}
+
+/// The phase word for an illumination phase (0 = new, 0.5 = full).
+fn phase_word(phase: f64) -> &'static str {
+    PHASE_WORDS[phase_eighth(phase)]
+}
+
+/// A small count as prose; the neighborhood holds 2–5 stars, so anything
+/// past five (unreachable from genesis) reads honestly as "many".
+fn count_word(n: usize) -> &'static str {
+    ["one", "two", "three", "four", "five"]
+        .get(n.wrapping_sub(1))
+        .copied()
+        .unwrap_or("many")
+}
+
+/// The night-sky star line: every color represented, counted, in brightness
+/// order (SKY-14) — not just the brightest star's color stamped onto all.
+fn night_star_line(neighbors: &[crate::neighborhood::Neighbor]) -> String {
+    let mut groups: Vec<(&str, usize)> = Vec::new();
+    for n in neighbors {
+        match groups.iter_mut().find(|(color, _)| *color == n.color) {
+            Some((_, count)) => *count += 1,
+            None => groups.push((&n.color, 1)),
+        }
+    }
+    let listed: Vec<String> = groups
+        .iter()
+        .map(|(color, count)| format!("{} {}", count_word(*count), color))
+        .collect();
+    format!(
+        "Above, the stars keep their stations: {}.",
+        listed.join(", ")
+    )
+}
+
+/// Graded season prose (SKY-14): the solstice-adjacent eighths of the year
+/// name the standstill (daylight peaks at year phase 0.25); the rest name
+/// the direction the days are moving.
+fn season_words(phase: f64) -> &'static str {
+    match phase_eighth(phase) {
+        2 => "The days are near their longest.",
+        6 => "The days are near their shortest.",
+        _ if (std::f64::consts::TAU * phase).cos() > 0.0 => "The days are growing.",
+        _ => "The days are shrinking.",
+    }
 }
 
 /// Which size word describes a moon of this angular diameter (Luna = 1).
@@ -409,12 +646,8 @@ impl GeneratedSky {
                         self.system.star.class_name
                     );
                     if let Some(phase) = self.calendar.season_phase(t) {
-                        let derivative = (std::f64::consts::TAU * phase).cos();
-                        if derivative > 0.0 {
-                            description.push_str(" The days are growing.");
-                        } else {
-                            description.push_str(" The days are shrinking.");
-                        }
+                        description.push(' ');
+                        description.push_str(season_words(phase));
                     }
                     SkyReport {
                         description,
@@ -430,22 +663,11 @@ impl GeneratedSky {
                         .iter()
                         .enumerate()
                         .map(|(index, moon)| match self.calendar.moon_phase(t, index) {
-                            Some(phase) => {
-                                let phase_word = if !(0.125..0.875).contains(&phase) {
-                                    "new"
-                                } else if phase < 0.5 {
-                                    "waxing"
-                                } else if phase < 0.625 {
-                                    "full"
-                                } else {
-                                    "waning"
-                                };
-                                capitalize(&format!(
-                                    "the {} moon shows its {} face.",
-                                    size_word(moon.angular_diameter_rel),
-                                    phase_word
-                                ))
-                            }
+                            Some(phase) => capitalize(&format!(
+                                "the {} moon shows its {} face.",
+                                size_word(moon.angular_diameter_rel),
+                                phase_word(phase)
+                            )),
                             // Degenerate: P_sid ≥ Y, unreachable at genesis
                             // (the Hill cap keeps P_sid ≤ ~0.15×Y) but handled
                             // honestly rather than panicking.
@@ -455,10 +677,7 @@ impl GeneratedSky {
                             )),
                         })
                         .collect();
-                    parts.push(format!(
-                        "Above, {} stars keep their stations.",
-                        self.system.neighbors[0].color
-                    ));
+                    parts.push(night_star_line(&self.system.neighbors));
                     SkyReport {
                         description: format!("Night. {}", parts.join(" ")),
                         bodies,
