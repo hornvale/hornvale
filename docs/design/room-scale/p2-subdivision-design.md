@@ -116,7 +116,7 @@ struct RoomId(u64);
     ~17        cap                        RoomId still fits u64
   ```
 
-`RoomId` pack/unpack is a pure bijection (a frozen save-format contract, §7).
+`RoomId` pack/unpack is a pure bijection (a frozen save-format contract, §11).
 
 ## 5. Geometry (position, lazily)
 
@@ -166,7 +166,27 @@ infects every seam.
 
 > This up-walk/mirror-down neighbor algorithm is the one genuinely intricate
 > piece. It is well-trodden (quaternary triangular meshes / geodesic DGGS), it is
-> integer-only, and it is the thing to prototype and property-test *first* (§8).
+> integer-only, and it is the thing to prototype and property-test *first* (§12).
+
+**Adaptive depth (mixed resolution) is still exact and float-free.** Rooms need
+not all sit at one depth. Where the world is more interesting — settlement, a
+halo, high strangeness, expressed as a deterministic *target-depth field* over
+the coarse mesh — subdivision runs deeper. The geometry stays exact because a
+parent triangle's edge is tiled *precisely* by `2^Δ` of its descendants' edges
+(child 0's `a–ab` and child 1's `ab–b` cover the parent's `a–b`, recursively). So
+a coarse room borders exactly `2^Δ` finer rooms across a side where its neighbor
+is `Δ` levels deeper — a **T-junction**, not a mismatch. This is the
+*restricted-quadtree* adjacency structure: one-to-many, irregular, and **entirely
+path arithmetic** — no floats, no re-negotiation. The world becomes a graph, not
+a grid, which is exactly what a MUD wants. Two rules keep it clean:
+
+- **Canonical depth is a pure function of the world** (the target-depth field), so
+  both sides of any seam agree on who is subdivided without shared state. Player
+  "zoom" (§9) is a *transient view* below canonical depth — never a change to the
+  persistent graph.
+- **Correctness is independent of what is loaded** — a room computes a neighbor's
+  address and target-depth even if that neighbor is not resident, so adaptive
+  depth survives chunking (§10) untouched.
 
 ## 7. Coarse-field inheritance
 
@@ -177,15 +197,27 @@ three level-5 corner cells** and refines locally:
   `CellId`s (vertex indices are preserved across levels, §2). Computing them is a
   by-product of the path walk (record the three vertex indices at depth 5).
 - The room centroid's **barycentric coordinates** within that ancestor triangle
-  give three weights. Coarse fields sample as the weighted blend of the three
-  `CellMap` values, e.g. `biome_field = Σ wᵢ · coarse.get(cellᵢ)` (for scalar
-  fields; categorical fields take the max-weight corner or blend then
-  re-classify). This is exactly a P1 leaf field; room-depth noise (P1) adds the
+  give three weights — and, read straight off the integer path, they are **exact
+  dyadic rationals** `(i, j, k)/2^d`, so the blend needs no transcendentals.
+  Coarse fields sample as the weighted blend of the three `CellMap` values, e.g.
+  `biome_field = Σ wᵢ · coarse.get(cellᵢ)` (scalar fields; categorical fields take
+  the max-weight corner or blend then re-classify — §13). This is exactly a P1
+  leaf field; room-depth noise, seeded by the integer address (§8), adds the
   sub-cell texture.
 
 So the coarse mesh **constrains** the fine (the constitution's "coarse constrains
 fine, higher fidelity refines never contradicts") for free: a room can only ever
 be a refinement of the biome its three parents already agreed on.
+
+**Corollary — confine transcendentals to presentation.** Adjacency is integer
+(§6), seeds are integer (§8), and these blend weights are exact dyadic rationals —
+so the entire *content* pipeline is integer + rational and cross-platform-exact
+without libm at all. The only transcendentals (`normalize`/slerp, §5) compute a
+room's 3-D position, which feeds **rendering and coordinate display only**. Push
+them to that boundary and the platform-libm hazard never touches what a room
+*contains*. (A rule that genuinely needs metric geometry — "within X km of the
+coast" — uses graph distance in rooms or a quantized value; it does not reach back
+into content seeding.)
 
 ## 8. Seeds — integer-address-only (a determinism decision, not a detail)
 
@@ -229,15 +261,79 @@ Two reasons, the second constitutional:
   feels sparse in play. The triangle tiling stays the substrate; hexes are a
   presentation choice. Deferred.
 
-## 10. Constitutional fit — checklist
+## 10. Chunking, residency & the partitioned ledger
+
+Adaptive depth (§6) means detail concentrates locally and without bound; chunking
+keeps that tractable. It composes cleanly here **because a room is a pure function
+of its global address**, which dissolves the usual chunk-seam traps (boundary
+ownership, cross-chunk negotiation): any chunk that needs a boundary room computes
+the identical room. Chunks are therefore a **persistence + indexing + residency**
+concern, never a generation-correctness one, and *correctness is independent of
+what is loaded*.
+
+**Chunk key = an address prefix of length `k`.** Nothing else. room → chunk is
+prefix truncation; chunk adjacency is the same T-junction logic as room adjacency
+(a chunk is just a big room); and it nests for free — a busier region indexes at a
+longer prefix. **Do not** introduce a second coordinate system (a lat/long chunk
+grid): that re-imports the very seam-mismatch trap Approach C exists to escape.
+
+**A chunk is a namespace + index, not a pre-generated block.** "Load chunk C"
+loads its coarse fields and its *delta index* — not its millions of latent rooms,
+which stay lazy and LOD'd by activity. A pristine chunk nobody has touched costs a
+seed and nothing else.
+
+**Two-tier state keeps memory bounded:**
+
+```
+  REGENERABLE CACHE  (rooms you generated)  -> evict freely (LRU); pure fn of address
+  DURABLE DELTAS     (Facts: what happened) -> never evict; the only precious bytes
+```
+
+Camping in one spot deepens a chunk and accretes generated rooms, but those are
+disposable (regenerate in microseconds). Only *consequences* persist, and they go
+in the ledger.
+
+**The one real trap: the monolithic ledger.** Today a `World` is one ledger
+serialized to one JSON. At planetary room scale, consequence counts outgrow a
+load-everything blob — and the save format is exactly the kind of contract the
+constitution treats as catastrophic to change late. So **design the ledger to be
+chunk-partitionable now**, even if v1 still serializes monolithically: deltas
+keyed/shardable by address prefix. A world then reads as two tiers —
+
+```
+  planetary tier: seed + the small canonical ledger (astronomy/terrain/climate/
+                  settlements) — stays ~today's size, ~monolithic
+  room tier:      sparse per-chunk delta files — exist ONLY where play touched;
+                  most chunks are empty and cost zero
+```
+
+— still "a world is a seed plus a ledger," just spatially partitioned; an
+untouched world remains just a seed. The partition-key length becomes a **frozen
+save-format contract** once chosen, so it is a deliberate decision (see decision
+`the-room-tier-ledger-is-chunk-partitioned`). Keeping the *logical* partition (a
+rebuildable index) separate from the *physical* file layout preserves freedom to
+evolve the on-disk form later.
+
+**Span features cross chunks; derive them top-down.** Rivers, roads, migration
+routes, a territory's extent — simulate none of them room-by-room (that forces
+loading the path). Plan them at the coarse tier and let each room compute its own
+participation locally ("does the river cross my triangle?" from coarse routing +
+my address) — "coarse constrains fine" again. Wandering agents use `position =
+f(seed, time)` (P8), computable without walking the path. *Stateful*
+border-crossing NPCs are the genuinely harder case, deferred to a handoff protocol
+rather than solved in the mesh (§13).
+
+## 11. Constitutional fit — checklist
 
 - **Determinism.** Geometry is a pure path-walk (byte-identical to a full
   `Geosphere::new(L)`); seeds are integer-address-only (§8); field samples
   quantized before classification. No wall-clock.
 - **Save-format contracts (new, frozen).** (a) the `subdivide` child-order as the
   addressing alphabet; (b) the base-face numbering from `base_icosahedron()`;
-  (c) the 30-edge gluing table; (d) `RoomId` packing. Changing any is an
-  epoch-suffix regeneration, never an edit.
+  (c) the 30-edge gluing table; (d) `RoomId` packing; (e) the room-tier ledger's
+  chunk partition-key length (§10, decision
+  `the-room-tier-ledger-is-chunk-partitioned`). Changing any is an epoch-suffix
+  regeneration, never an edit.
 - **std-only + serde.** All of it — hashing, slerp, the neighbor walk, the gluing
   table — is std math and fixed data. No new crates (no H3/S2 crate; we borrow
   their *addressing math*, not their code).
@@ -247,7 +343,7 @@ Two reasons, the second constitutional:
   **locale window** (synthesis §4) composes the P1 stack over rooms. No domain
   depends on another.
 
-## 11. Validation plan (prototype order)
+## 12. Validation plan (prototype order)
 
 1. **Neighbor walk first** — it is the risk. Implement §6 integer-only.
 2. **Cross-check lazy vs authoritative.** Build a *full* `Geosphere::new(7)`
@@ -263,7 +359,7 @@ Two reasons, the second constitutional:
 4. **Bench.** Room + neighbors at depth 16 should be microseconds (O(depth)
    hashes and slerps). Confirm no global allocation.
 
-## 12. Open questions & risks
+## 13. Open questions & risks
 
 1. **The up-walk/mirror-down neighbor algorithm** (§6) is the one intricate part.
    Known-solvable, integer-only, but it carries the implementation risk — hence
@@ -281,10 +377,18 @@ Two reasons, the second constitutional:
    conditioned on the three). Small, but a real choice — likely a P3 concern.
 5. **Triangle vs dual-hex rooms** (§9) is a gameplay-feel decision that can be
    deferred; the substrate is unaffected.
+6. **Stateful cross-chunk agents** (§10). Span features and wandering agents are
+   handled by top-down derivation and `f(seed, time)`; NPCs that carry *mutable
+   state* across a chunk boundary need a handoff protocol. Deferred — a locale/
+   ecology concern, not a mesh one, but flagged so it is not forgotten.
+7. **Partition-key length `k`** (§10) is unset — chunk granularity trades index
+   fan-out against per-chunk delta volume; fixed when the locale window's
+   room-depth range is chosen (decision
+   `the-room-tier-ledger-is-chunk-partitioned`).
 
-## 13. Recommended next step
+## 14. Recommended next step
 
-Spike the neighbor walk (§6) + the lazy-vs-`Geosphere::new(7)` oracle test (§11.2)
+Spike the neighbor walk (§6) + the lazy-vs-`Geosphere::new(7)` oracle test (§12.2)
 as a throwaway prototype in the kernel. That single spike resolves the only
 first-order risk in this design; everything after it (positions, seeds,
 inheritance, the locale window) is straightforward and already de-risked by the

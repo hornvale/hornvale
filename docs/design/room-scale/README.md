@@ -25,9 +25,13 @@ small enclosed space to a small patch of wilderness distinct from its neighbors.
   is and gates every other primitive. Grounded in `kernel/src/geosphere.rs`: rooms
   are deeper triangles of the same icosphere, addressed by `(base face + child
   path)`, so adjacency stays inside one continuous mesh and the pentagon problem
-  is confined to 12 known points. Includes the addressing scheme, lazy geometry,
-  the neighbor-walk crux, integer-only seeding (a cross-platform determinism
-  decision), constitutional fit, and a validation plan.
+  is confined to 12 known points. Covers the addressing scheme, lazy geometry, the
+  neighbor-walk crux, adaptive depth (T-junctions, still float-free), integer-only
+  seeding + confining transcendentals to presentation (a cross-platform
+  determinism strategy), chunking/residency and the chunk-partitioned ledger,
+  constitutional fit, and a validation plan. The partitioned-ledger call is
+  reserved as a `Proposed` decision
+  (`docs/decisions/the-room-tier-ledger-is-chunk-partitioned.md`).
 
 ## The ideation cycles (raw material behind the synthesis)
 
