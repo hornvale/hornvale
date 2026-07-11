@@ -50,6 +50,27 @@ pub struct RunResult {
     pub rows: Vec<Row>,
 }
 
+/// Canonicalize a row for comparison with fixture-loaded rows: quantize
+/// `Number` values exactly as [`render_csv`] does at the serialization
+/// boundary, so a full-precision live row compares equal to its committed,
+/// quantized counterpart (decision
+/// `serialized-floats-are-quantized-for-cross-platform-determinism`).
+pub fn canonical_row(row: &Row) -> Row {
+    Row {
+        seed: row.seed,
+        pin_set: row.pin_set.clone(),
+        values: row
+            .values
+            .iter()
+            .map(|v| match v {
+                MetricValue::Number(n) => MetricValue::Number(hornvale_kernel::quantize(*n)),
+                other => other.clone(),
+            })
+            .collect(),
+        refusal: row.refusal.clone(),
+    }
+}
+
 /// Run a study: build worlds for each pin set × seed combination,
 /// extract metrics, and record results or refusals.
 ///
@@ -846,6 +867,31 @@ mod tests {
             err.message.contains("bogus"),
             "error must name the bad roster: {}",
             err.message
+        );
+    }
+
+    #[test]
+    fn canonical_row_quantizes_numbers_and_preserves_everything_else() {
+        let row = Row {
+            seed: 7,
+            pin_set: "default".to_string(),
+            values: vec![
+                MetricValue::Number(0.123_456_789_012_345),
+                MetricValue::Text("kept".to_string()),
+                MetricValue::Flag(true),
+                MetricValue::Absent,
+            ],
+            refusal: Some("kept too".to_string()),
+        };
+        let canon = canonical_row(&row);
+        assert_eq!(
+            canon.values[0],
+            MetricValue::Number(hornvale_kernel::quantize(0.123_456_789_012_345))
+        );
+        assert_eq!(canon.values[1..], row.values[1..]);
+        assert_eq!(
+            (canon.seed, &canon.pin_set, &canon.refusal),
+            (7, &row.pin_set, &row.refusal)
         );
     }
 

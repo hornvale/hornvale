@@ -48,7 +48,11 @@ rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), 
 lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STUDY=census-lands-drift)
 	@test -n "$(STUDY)" || { echo "usage: make lab-diff STUDY=<study-name>"; exit 2; }
 	@old="$$(mktemp)"; \
-	git show HEAD:book/src/laboratory/generated/$(STUDY)/rows.csv > "$$old"; \
+	if ! git show HEAD:book/src/laboratory/generated/$(STUDY)/rows.csv > "$$old" 2>/dev/null; then \
+	    rm -f "$$old"; \
+	    echo "lab-diff: no committed rows.csv for study '$(STUDY)' at HEAD (check the name under book/src/laboratory/generated/)"; \
+	    exit 2; \
+	fi; \
 	cargo run -q -p hornvale -- lab diff studies/$(STUDY).study.json "$$old" \
 	    book/src/laboratory/generated/$(STUDY)/rows.csv; \
 	status=$$?; rm -f "$$old"; exit $$status

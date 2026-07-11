@@ -238,6 +238,30 @@ mod tests {
     }
 
     #[test]
+    fn a_mean_only_shift_renders_the_mean_line_without_a_table() {
+        // 0.50 → 0.55 stays inside one histogram bucket, so the distribution
+        // is unchanged while the mean moves: the section must render with
+        // the mean line only — no distribution table.
+        let old = result_with(["K", "M"], [0.50, 0.70]);
+        let new = result_with(["K", "M"], [0.55, 0.70]);
+        let report = render_diff_results(&old, &new);
+        assert!(
+            report.contains("### ocean-fraction — default"),
+            "got:\n{report}"
+        );
+        assert!(report.contains("mean 0.6 → 0.625"), "got:\n{report}");
+        assert!(report.contains("Δ +0.025"), "got:\n{report}");
+        assert!(
+            !report.contains("| value | old | new | Δ |"),
+            "no distribution table when only the mean moved:\n{report}"
+        );
+        assert!(
+            report.contains("1 of 2 metric × pin-set distributions moved."),
+            "got:\n{report}"
+        );
+    }
+
+    #[test]
     fn header_reports_row_and_refusal_counts() {
         let old = result_with(["K", "M"], [0.5, 0.7]);
         let mut new = result_with(["K", "M"], [0.5, 0.7]);

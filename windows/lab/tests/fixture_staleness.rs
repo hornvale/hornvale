@@ -15,7 +15,7 @@
 //! and is caught there.
 
 use hornvale_kernel::quantize;
-use hornvale_lab::{MetricValue, Row, RunResult, Study, load_rows, load_study, run};
+use hornvale_lab::{MetricValue, Row, RunResult, Study, canonical_row, load_rows, load_study, run};
 use std::path::Path;
 
 /// Seeds probed per census: 3 seeds × (1 + 2) pin sets ≈ 9 worlds ≈ a
@@ -35,27 +35,6 @@ const CENSUSES: [(&str, &str); 2] = [
     ),
 ];
 
-/// Canonicalize a live row for comparison with a fixture row: fixture
-/// floats passed through the serialization boundary (`render_csv`
-/// quantizes — decision
-/// `serialized-floats-are-quantized-for-cross-platform-determinism`), so a
-/// live full-precision Number must be quantized before equality holds.
-fn canonical(row: &Row) -> Row {
-    Row {
-        seed: row.seed,
-        pin_set: row.pin_set.clone(),
-        values: row
-            .values
-            .iter()
-            .map(|v| match v {
-                MetricValue::Number(n) => MetricValue::Number(quantize(*n)),
-                other => other.clone(),
-            })
-            .collect(),
-        refusal: row.refusal.clone(),
-    }
-}
-
 /// Compare every live row against its fixture counterpart, failing with
 /// the actionable regeneration instruction on any mismatch.
 fn assert_fixture_fresh(live: &RunResult, fixture: &RunResult, study_path: &str, rows_path: &str) {
@@ -68,13 +47,14 @@ fn assert_fixture_fresh(live: &RunResult, fixture: &RunResult, study_path: &str,
                 panic!(
                     "census fixture {rows_path} has no row for seed {} / pin set '{}' — the \
                      fixture is stale or truncated; run `make rebaseline` (or `cargo run \
-                     --release -p hornvale -- lab run {study_path}`) and commit the diff",
+                     --release -p hornvale -- lab run {study_path}`) and commit the diff \
+                     (decision calibration-loads-the-census-fixture)",
                     row.seed, row.pin_set
                 )
             });
         assert_eq!(
             *pinned,
-            canonical(row),
+            canonical_row(row),
             "worldgen changed but the census fixture {rows_path} was not regenerated (seed {} \
              / pin set '{}' differs). Run `make rebaseline` (or `cargo run --release -p \
              hornvale -- lab run {study_path}`), review the diff, and commit it WITH the \

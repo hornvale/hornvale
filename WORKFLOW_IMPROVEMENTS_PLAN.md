@@ -96,7 +96,7 @@ shift); `make lab-diff STUDY=<name>` diffs the working tree against HEAD.
 
 ### Stage 2 deferred follow-ups (from the final whole-branch review)
 
-Small, non-blocking; fold into a later pass:
+All five resolved in Stage 3a:
 - Timing-accuracy sweep for the "~145s" census lore: a debug-profile run of
   the ignored guard measured ~450s. Touches the `#[ignore]` reason string
   in `windows/lab/tests/calibration.rs`, the sanctioned sample in
@@ -111,9 +111,42 @@ Small, non-blocking; fold into a later pass:
 - `make lab-diff`: fail fast with the real cause when
   `git show HEAD:...rows.csv` fails (typo'd STUDY / brand-new study).
 
-## Stage 3+ (later passes)
+## Stage 3: Drift-checks and orientation (this pass)
 
-TOOL-17/22/23 are CI-topology changes. PROC-7/8/9 are new drift-checks
-(host: `docs_consistency`). TOOL-18 and PROC-10 are standalone. TOOL-15's
-exclude-glob relocation remains a follow-up.
+**Goal**: the Stage-2 deferred follow-ups plus the three locally-verifiable
+process rows. Plan:
+`docs/superpowers/plans/2026-07-10-workflow-improvements-stage-3.md`.
+
+### 3a. Stage-2 deferred follow-ups
+**Deliverable**: shared `canonical_row` in `hornvale_lab`; timing-accuracy
+sweep of the "~145s" claims (measured ~450s debug); decision cite in the
+probe's missing-row panic; a mean-only-movement diff test; fail-fast
+`make lab-diff`.
+**Status**: Complete
+
+### 3b. PROC-8 — the decision-log consistency linter
+**Deliverable**: `docs_consistency` resolves every `decision NNNN` /
+`ADR NNNN` / hyphenated `decision <slug>` cite in `.rs`/`.sh` sources
+against `docs/decisions/`. The book-staleness half is deferred: mtimes do
+not survive git checkout; it needs a git-log-based freshness design.
+**Status**: Not Started
+
+### 3c. PROC-9 — the layering page emitted from its enforcer
+**Deliverable**: `cli/tests/architecture.rs` renders the enforced graph to
+`book/src/reference/layering-generated.md`, golden-checked (REBASELINE=1
+accepts); wrapper chapter + SUMMARY entry.
+**Status**: Not Started
+
+### 3d. PROC-10 — `make doctor`, the repo self-map
+**Deliverable**: `scripts/doctor.sh` printing pointers to the authoritative
+orientation sources (layering, gate, determinism contracts, artifact
+provenance, doc map, live git state) plus an orphaned-decision scan.
+**Status**: Not Started
+
+## Stage 4+ (later passes)
+
+TOOL-17/21/22/23 are CI-topology changes needing CI iteration. PROC-7 (the
+mechanical DoD gate) is CI-shaped too. TOOL-18 is sim-facing test policy
+(fairness batteries) — spec it deliberately. PROC-8's book-staleness scan
+needs the git-log design. TOOL-15's exclude-glob relocation remains.
 **Status**: Not Started
