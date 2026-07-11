@@ -7,10 +7,12 @@
 # decision 0026); prints the judgment half it cannot score as reminders.
 # Read-only: never mutates anything.
 #
-# Run it from the campaign branch (worktree or checkout) you intend to merge.
-# Run from main it degrades to checkout hygiene only — useful before any
-# commit in the shared checkout, where `git add <file>` has swept another
-# session's staged work into a commit before.
+# Run it from the campaign branch (worktree or checkout) you intend to merge
+# — at every plan-stage boundary, not only at close: small absorptions of
+# main keep semantic drift next to its cause (CLAUDE.md Process). Run from
+# main it degrades to checkout hygiene only — useful before any commit in
+# the shared checkout, where `git add <file>` has swept another session's
+# staged work into a commit before.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -40,6 +42,21 @@ else
     git diff --cached --name-only | sed 's/^/    /'
 fi
 
+# From a campaign worktree, also peek at the shared main checkout: dirty or
+# staged files THERE mean another session may be mid-landing — a bad moment
+# to absorb main.
+main_checkout="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
+if [[ "$main_checkout" != "$(pwd)" ]]; then
+    section "Main checkout peek ($main_checkout)"
+    main_busy="$(git -C "$main_checkout" status --porcelain | wc -l | tr -d ' ')"
+    main_staged="$(git -C "$main_checkout" diff --cached --name-only | wc -l | tr -d ' ')"
+    if [[ "$main_busy" -eq 0 ]]; then
+        ok "main checkout quiescent"
+    else
+        warn "main checkout has $main_busy dirty path(s) ($main_staged staged) — another session may be mid-landing; coordinate before absorbing or merging"
+    fi
+fi
+
 if [[ "$branch" == "main" ]]; then
     section "Verdict"
     echo "  on main: branch-vs-main checks skipped. Run from the campaign"
@@ -52,7 +69,8 @@ section "Ancestry (main must be an ancestor: merge main INTO the branch first)"
 if git merge-base --is-ancestor main HEAD; then
     ok "main ($(git rev-parse --short main)) is an ancestor of HEAD"
 else
-    fail "main has moved — merge main into this branch, re-run the full gate there, then re-run this preflight"
+    behind="$(git rev-list --count "$(git merge-base main HEAD)"..main)"
+    fail "main has moved ($behind commit(s) unabsorbed) — merge main into this branch, re-run the full gate there, then re-run this preflight"
 fi
 
 section "Both-sides-added slug collisions since the merge base (decision 0026)"
