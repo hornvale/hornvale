@@ -1330,6 +1330,104 @@ pub fn registry() -> Vec<Metric> {
             },
             extract: |v| homophony_merger_share(v, "kobold"),
         },
+        // --- Confusable-vs-free core homophony (spec §10 Q3): the
+        // same-semantic-domain subset of core-homophony — the genuinely
+        // parsing-costly collisions a listener cannot resolve by topic. Its
+        // complement within core-homophony is FREE (cross-domain) homophony,
+        // tolerable the way codon degeneracy is. This is what turns "accept the
+        // atonal tail" into a measurement. ---
+        Metric {
+            name: "confusable-homophony-goblin",
+            doc: "Count of goblin core homophone pairs that are CONFUSABLE (both concepts \
+                   share a semantic domain — universal/body/kin — so they compete in one \
+                   context); the same-domain subset of core-homophony-goblin, always \u{2264} it; \
+                   the complement is FREE cross-domain homophony; Absent if goblin minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
+            },
+            extract: |v| confusable_homophony(v, "goblin"),
+        },
+        Metric {
+            name: "confusable-homophony-hobgoblin",
+            doc: "Count of hobgoblin core homophone pairs that are CONFUSABLE (both concepts \
+                   share a semantic domain); the same-domain subset of core-homophony-hobgoblin, \
+                   always \u{2264} it; Absent if hobgoblin minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
+            },
+            extract: |v| confusable_homophony(v, "hobgoblin"),
+        },
+        Metric {
+            name: "confusable-homophony-bugbear",
+            doc: "Count of bugbear core homophone pairs that are CONFUSABLE (both concepts \
+                   share a semantic domain); the same-domain subset of core-homophony-bugbear, \
+                   always \u{2264} it; Absent if bugbear minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
+            },
+            extract: |v| confusable_homophony(v, "bugbear"),
+        },
+        Metric {
+            name: "confusable-homophony-kobold",
+            doc: "Count of kobold core homophone pairs that are CONFUSABLE (both concepts \
+                   share a semantic domain); the same-domain subset of core-homophony-kobold, \
+                   always \u{2264} it; Absent if kobold minted no Root",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
+            },
+            extract: |v| confusable_homophony(v, "kobold"),
+        },
+        // --- The tone tier (spec §11): the realized tone-inventory size (1 for
+        // the shipped atonal peoples) and the distinguishable-syllable capacity
+        // the floor guarantees. Tone-count >1 and the floor are exercised by a
+        // test-only tone-capable roster (see the lab's roster controls). ---
+        Metric {
+            name: "tone-count-goblin",
+            doc: "Size of goblin's realized tone inventory (spec §11): 1 for an atonal \
+                   people; >1 only for a tone-capable species; Absent if goblin is off-roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0],
+            },
+            extract: |v| tone_count_metric(v, "goblin"),
+        },
+        Metric {
+            name: "tone-count-kobold",
+            doc: "Size of kobold's realized tone inventory (spec §11): 1 for an atonal \
+                   people; Absent if kobold is off-roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 2.0, 3.0],
+            },
+            extract: |v| tone_count_metric(v, "kobold"),
+        },
+        Metric {
+            name: "distinguishable-capacity-goblin",
+            doc: "Goblin's distinguishable-syllable capacity (spec §2.3): onset × nucleus × \
+                   coda fillings, a lower bound on distinct syllables (tone folded into the \
+                   nucleus); Absent if goblin is off-roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[24.0, 48.0, 96.0, 192.0, 384.0, 768.0, 1536.0],
+            },
+            extract: |v| distinguishable_capacity_metric(v, "goblin"),
+        },
+        Metric {
+            name: "distinguishable-capacity-bugbear",
+            doc: "Bugbear's distinguishable-syllable capacity (spec §2.3): onset × nucleus × \
+                   coda fillings; bugbear draws the smallest family inventory; Absent if bugbear \
+                   is off-roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[24.0, 48.0, 96.0, 192.0, 384.0, 768.0, 1536.0],
+            },
+            extract: |v| distinguishable_capacity_metric(v, "bugbear"),
+        },
+        Metric {
+            name: "distinguishable-capacity-kobold",
+            doc: "Kobold's distinguishable-syllable capacity (spec §2.3): onset × nucleus × \
+                   coda fillings; Absent if kobold is off-roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[24.0, 48.0, 96.0, 192.0, 384.0, 768.0, 1536.0],
+            },
+            extract: |v| distinguishable_capacity_metric(v, "kobold"),
+        },
     ]
 }
 
@@ -1906,17 +2004,39 @@ fn root_concepts(lex: &hornvale_language::Lexicon) -> Vec<&str> {
         .collect()
 }
 
-/// Whether every goblinoid daughter's Root `derivation.proto` matches an
-/// INDEPENDENT re-draw of the "goblinoid" family proto-root for that same
-/// concept (spec §3 monophyly: every daughter's rooted vocabulary traces to
-/// the one family ancestor). Draws the family proto-phonology once via
-/// [`hornvale_worldgen::proto_phonology_of`] and calls
-/// [`hornvale_language::proto_root`] directly — never reads a proto back
-/// from any daughter's own recorded [`Derivation`], which would only prove
-/// self-consistency, not shared ancestry. `Absent` if no goblinoid daughter
-/// in this world's roster minted a Root.
-fn monophyly_goblinoid(v: &WorldView) -> MetricValue {
+/// Re-derive the "goblinoid" family's injective proto-root assignment (epoch
+/// `root/v2`) INDEPENDENTLY of any daughter's recorded derivation — over the
+/// world's full registered concept universe (`exposure_of` classifies every
+/// registered concept, so its key set is exactly the registry), exactly as
+/// `build_lexicon` does. The shared basis for the monophyly and clean-outgroup
+/// checks: it proves shared ancestry, never mere self-consistency.
+fn goblinoid_proto_assignment(v: &WorldView) -> std::collections::BTreeMap<String, Vec<Segment>> {
     let proto_ph = hornvale_worldgen::proto_phonology_of(&v.world, "goblinoid");
+    let universe: Vec<&str> = v
+        .world
+        .registry
+        .concepts()
+        .map(|c| c.name.as_str())
+        .collect();
+    // The merger-aware assignment (epoch root/v3) build_lexicon consumes, so
+    // this reconstruction matches every daughter's recorded proto exactly.
+    let daughters = hornvale_worldgen::family_daughters(&v.world, &v.roster, "goblinoid");
+    hornvale_language::assign_proto_roots(
+        &v.world.seed,
+        "goblinoid",
+        &proto_ph,
+        &universe,
+        &daughters,
+    )
+}
+
+/// Whether every goblinoid daughter's Root `derivation.proto` matches its
+/// concept's slot in an INDEPENDENT re-derivation of the "goblinoid" family
+/// proto-root assignment (spec §3 monophyly: every daughter's rooted
+/// vocabulary traces to the one family ancestor). `Absent` if no goblinoid
+/// daughter in this world's roster minted a Root.
+fn monophyly_goblinoid(v: &WorldView) -> MetricValue {
+    let assignment = goblinoid_proto_assignment(v);
     let mut any = false;
     let mut monophyletic = true;
     for species in GOBLINOID_DAUGHTERS {
@@ -1929,9 +2049,7 @@ fn monophyly_goblinoid(v: &WorldView) -> MetricValue {
         for (concept, entry) in lex.entries() {
             if let LexEntry::Root { derivation, .. } = entry {
                 any = true;
-                let expected =
-                    hornvale_language::proto_root(&v.world.seed, "goblinoid", concept, &proto_ph);
-                if derivation.proto != expected {
+                if assignment.get(concept) != Some(&derivation.proto) {
                     monophyletic = false;
                 }
             }
@@ -1955,15 +2073,13 @@ fn clean_outgroup_kobold(v: &WorldView) -> MetricValue {
     let Ok(kobold_lex) = hornvale_worldgen::lexicon_of(&v.world, "kobold") else {
         return MetricValue::Absent;
     };
-    let proto_ph = hornvale_worldgen::proto_phonology_of(&v.world, "goblinoid");
+    let assignment = goblinoid_proto_assignment(v);
     let mut any = false;
     let mut clean = true;
     for (concept, entry) in kobold_lex.entries() {
         if let LexEntry::Root { derivation, .. } = entry {
             any = true;
-            let goblinoid_proto =
-                hornvale_language::proto_root(&v.world.seed, "goblinoid", concept, &proto_ph);
-            if derivation.proto == goblinoid_proto {
+            if assignment.get(concept) == Some(&derivation.proto) {
                 clean = false;
             }
         }
@@ -2127,12 +2243,32 @@ fn homophony_count(v: &WorldView, species: &str) -> MetricValue {
 /// Terrain concepts a culture only names where it settles — is periphery,
 /// where incidental homophony is tolerable. The split is entirely
 /// data-driven (pack membership), never a doc-string heuristic.
-fn is_core_concept(concept: &str) -> bool {
-    hornvale_language::universal_stratum()
+/// The **semantic domain** of a core concept — the authored Swadesh stratum it
+/// belongs to (universal / body / kin), or `None` for periphery (a concept in
+/// no core pack). `domain.is_some()` is therefore core-hood — the
+/// functional-load split the fix targets. Two core concepts are *confusable*
+/// when their domains match (they compete in the same context; a listener
+/// cannot separate them by topic) and *free* when they differ. Data-driven from
+/// pack membership (decision 0011: studies are data).
+fn concept_domain(concept: &str) -> Option<&'static str> {
+    if hornvale_language::universal_stratum()
         .iter()
-        .chain(hornvale_language::body_pack())
-        .chain(hornvale_language::kin_pack())
         .any(|e| e.concept == concept)
+    {
+        Some("universal")
+    } else if hornvale_language::body_pack()
+        .iter()
+        .any(|e| e.concept == concept)
+    {
+        Some("body")
+    } else if hornvale_language::kin_pack()
+        .iter()
+        .any(|e| e.concept == concept)
+    {
+        Some("kin")
+    } else {
+        None
+    }
 }
 
 /// The homophony breakdown [`classify_homophony`] returns over a set of
@@ -2142,10 +2278,17 @@ fn is_core_concept(concept: &str) -> bool {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct HomophonyStats {
     /// Number of distinct-concept collision PAIRS where BOTH concepts are
-    /// core — the functional-load-restricted homophony the fix must drive to
-    /// zero. `\u{2211} C(core_members, 2)` over every surface form held by more
-    /// than one root.
+    /// core — the functional-load-restricted homophony. `\u{2211} C(core_members, 2)`
+    /// over every surface form held by more than one root.
     core_pairs: usize,
+    /// Of the core pairs, the **confusable** subset: both concepts share a
+    /// semantic domain (universal/body/kin), so they compete in the same
+    /// context and a listener cannot separate them by topic — the genuinely
+    /// parsing-costly homophony (spec §10 Q3). The complement (`core_pairs -
+    /// confusable_pairs`) is FREE: cross-domain core collisions a listener
+    /// resolves by topic, the codon-degeneracy case where a collision is
+    /// harmless because the classes don't compete. Always \u{2264} `core_pairs`.
+    confusable_pairs: usize,
     /// Number of surface forms held by more than one root (any collision).
     collision_clusters: usize,
     /// Of those, the number that are **mergers**: the colliding roots carry
@@ -2158,19 +2301,27 @@ struct HomophonyStats {
     merger_clusters: usize,
 }
 
-/// Group `(modern_form, proto_form, is_core)` triples by surface form and
-/// tally the core-pair count and the draw-vs-merger cluster split. Pure and
-/// total; generic over the form/proto types so it can be unit-tested with
-/// plain strings and driven from real `Vec<Segment>` forms alike. A form
-/// held by a single root is not a collision and contributes nothing.
-fn classify_homophony<F: Ord, P: Ord>(entries: &[(F, P, bool)]) -> HomophonyStats {
-    let mut by_form: std::collections::BTreeMap<&F, Vec<(&P, bool)>> =
+/// Group `(modern_form, proto_form, domain)` triples by surface form and tally
+/// the core-pair count, the confusable (same-domain) subset, and the
+/// draw-vs-merger cluster split. `domain` is `Some(field)` for a core concept
+/// (its semantic domain) and `None` for periphery — so `domain.is_some()` is
+/// core-hood and two core members are confusable iff their domains are equal.
+/// Pure and total; generic over the form/proto/domain types so it can be
+/// unit-tested with plain strings and driven from real `Vec<Segment>` forms
+/// alike. A form held by a single root is not a collision and contributes
+/// nothing.
+fn classify_homophony<F: Ord, P: Ord, D: Ord>(entries: &[(F, P, Option<D>)]) -> HomophonyStats {
+    let mut by_form: std::collections::BTreeMap<&F, Vec<(&P, Option<&D>)>> =
         std::collections::BTreeMap::new();
-    for (form, proto, core) in entries {
-        by_form.entry(form).or_default().push((proto, *core));
+    for (form, proto, domain) in entries {
+        by_form
+            .entry(form)
+            .or_default()
+            .push((proto, domain.as_ref()));
     }
     let mut stats = HomophonyStats {
         core_pairs: 0,
+        confusable_pairs: 0,
         collision_clusters: 0,
         merger_clusters: 0,
     };
@@ -2184,8 +2335,21 @@ fn classify_homophony<F: Ord, P: Ord>(entries: &[(F, P, bool)]) -> HomophonyStat
         if distinct_protos.len() >= 2 {
             stats.merger_clusters += 1;
         }
-        let core_members = members.iter().filter(|(_, core)| *core).count();
+        let core_members = members.iter().filter(|(_, d)| d.is_some()).count();
         stats.core_pairs += core_members * core_members.saturating_sub(1) / 2;
+        // Confusable pairs: core members grouped by shared domain, summed as
+        // C(n, 2) within each domain — same-field collisions the listener
+        // cannot resolve by topic.
+        let mut by_domain: std::collections::BTreeMap<&D, usize> =
+            std::collections::BTreeMap::new();
+        for (_, d) in members {
+            if let Some(dom) = d {
+                *by_domain.entry(*dom).or_insert(0) += 1;
+            }
+        }
+        for &n in by_domain.values() {
+            stats.confusable_pairs += n * n.saturating_sub(1) / 2;
+        }
     }
     stats
 }
@@ -2199,13 +2363,13 @@ fn homophony_stats(v: &WorldView, species: &str) -> Option<HomophonyStats> {
         return None;
     }
     let lex = hornvale_worldgen::lexicon_of(&v.world, species).ok()?;
-    let mut triples: Vec<(Vec<Segment>, Vec<Segment>, bool)> = Vec::new();
+    let mut triples: Vec<(Vec<Segment>, Vec<Segment>, Option<&'static str>)> = Vec::new();
     for (concept, entry) in lex.entries() {
         if let LexEntry::Root { derivation, .. } = entry {
             triples.push((
                 derivation.modern.clone(),
                 derivation.proto.clone(),
-                is_core_concept(concept),
+                concept_domain(concept),
             ));
         }
     }
@@ -2225,6 +2389,45 @@ fn core_homophony(v: &WorldView, species: &str) -> MetricValue {
         Some(s) => MetricValue::Number(s.core_pairs as f64),
         None => MetricValue::Absent,
     }
+}
+
+/// Count of **confusable** core homophone pairs — the same-semantic-domain
+/// subset of [`core_homophony`], the genuinely parsing-costly collisions a
+/// listener cannot separate by topic (spec §10 Q3). Its complement within
+/// `core-homophony-{species}` is FREE (cross-domain) homophony, the
+/// codon-degeneracy case where a collision is harmless. This is the number
+/// that justifies "accept the atonal tail" as a measurement rather than an
+/// assertion. `Absent` if `species` is off-roster or minted no Root; always
+/// `\u{2264}` `core-homophony-{species}`.
+fn confusable_homophony(v: &WorldView, species: &str) -> MetricValue {
+    match homophony_stats(v, species) {
+        Some(s) => MetricValue::Number(s.confusable_pairs as f64),
+        None => MetricValue::Absent,
+    }
+}
+
+/// The size of `species`' realized tone inventory (spec §11): 1 for an atonal
+/// people (the shipped humanoids), >1 for a tone-capable one. `Absent` if
+/// `species` is off-roster.
+fn tone_count_metric(v: &WorldView, species: &str) -> MetricValue {
+    if !in_roster(v, species) {
+        return MetricValue::Absent;
+    }
+    let ph = language_of_in(&v.world, &v.roster, species);
+    MetricValue::Number(hornvale_language::tone_inventory(&ph).len() as f64)
+}
+
+/// `species`' distinguishable-syllable capacity (spec §2.3, §11): a lower
+/// bound on the distinct syllables its phonology can form (onset × nucleus ×
+/// coda fillings, tone folded into the nucleus). The channel capacity the
+/// floor guarantees a minimum of for tone-capable species. `Absent` if
+/// `species` is off-roster.
+fn distinguishable_capacity_metric(v: &WorldView, species: &str) -> MetricValue {
+    if !in_roster(v, species) {
+        return MetricValue::Absent;
+    }
+    let ph = language_of_in(&v.world, &v.roster, species);
+    MetricValue::Number(hornvale_language::distinguishable_capacity(&ph) as f64)
 }
 
 /// Fraction of `species`' colliding surface forms that are **mergers** (the
@@ -2548,7 +2751,10 @@ mod tests {
         // inventory-closure-{goblin,hobgoblin,bugbear,kobold},
         // divergence-magnitude-{goblin,hobgoblin,bugbear}, divergence-real,
         // homophony-count-{goblin,hobgoblin,bugbear,kobold}).
-        assert_eq!(registry().len(), 100);
+        // +9 for the phonology epoch (tone + tonogenesis): confusable-homophony-
+        // {goblin,hobgoblin,bugbear,kobold}, tone-count-{goblin,kobold},
+        // distinguishable-capacity-{goblin,bugbear,kobold}.
+        assert_eq!(registry().len(), 109);
     }
 
     #[test]
@@ -2915,46 +3121,143 @@ mod tests {
     }
 
     #[test]
-    fn classify_homophony_counts_core_pairs_and_splits_draw_from_merger() {
-        // Pure classifier, no world. Forms are plain strings; the third
-        // tuple field is is-core. Four roots:
-        //   noa  <- P1  core   (hand)     \  draw-collision, both core
-        //   noa  <- P1  core   (night)    /  => 1 core pair, cluster = DRAW
-        //   ted  <- P2  core   (green)    \  merger (distinct protos P2,P3),
-        //   ted  <- P3  false  (a color)  /  both? only one core => 0 core pairs
-        //   wo   <- P4  core   (alone)       not a collision
+    fn classify_homophony_counts_core_confusable_and_splits_draw_from_merger() {
+        // Pure classifier, no world. Forms are plain strings; the third tuple
+        // field is the concept's semantic domain (Some = core, None = periphery).
+        //   noa <- P1 body       (hand)  \ draw-collision (shared P1); 1 core pair,
+        //   noa <- P1 universal  (night) / but DIFFERENT domains => FREE (0 confusable)
+        //   koo <- P2 body       (hand2) \ merger (P2 != P3); 1 core pair AND
+        //   koo <- P3 body       (foot)  / SAME domain => 1 confusable pair
+        //   ted <- P4 universal  (green) \ merger; only one core member => 0 core pairs
+        //   ted <- P5 None       (color) /
+        //   wo  <- P6 kin        (alone)   not a collision
         let entries = [
-            ("noa", "P1", true),
-            ("noa", "P1", true),
-            ("ted", "P2", true),
-            ("ted", "P3", false),
-            ("wo", "P4", true),
+            ("noa", "P1", Some("body")),
+            ("noa", "P1", Some("universal")),
+            ("koo", "P2", Some("body")),
+            ("koo", "P3", Some("body")),
+            ("ted", "P4", Some("universal")),
+            ("ted", "P5", None),
+            ("wo", "P6", Some("kin")),
         ];
         let s = classify_homophony(&entries);
-        assert_eq!(s.collision_clusters, 2, "noa and ted collide; wo does not");
         assert_eq!(
-            s.merger_clusters, 1,
-            "ted is a merger (P2 != P3); noa is a draw-collision (shared P1)"
+            s.collision_clusters, 3,
+            "noa, koo, ted collide; wo does not"
         );
         assert_eq!(
-            s.core_pairs, 1,
-            "only noa contributes a core pair; ted has one core member (0 pairs)"
+            s.merger_clusters, 2,
+            "koo (P2!=P3) and ted (P4!=P5) are mergers; noa shares P1 (draw)"
         );
+        assert_eq!(
+            s.core_pairs, 2,
+            "noa and koo each contribute one core pair; ted has one core member"
+        );
+        assert_eq!(
+            s.confusable_pairs, 1,
+            "only koo's pair is same-domain (body/body); noa's is cross-domain (FREE)"
+        );
+        assert!(s.confusable_pairs <= s.core_pairs, "confusable ⊆ core");
     }
 
     #[test]
-    fn core_homophony_detects_the_reported_hand_many_night_collision_and_is_bounded() {
-        // The bug that opened this campaign: seed 42 goblin roots hand, many,
-        // and night all to *Noa* — three CORE concepts (Body, Quality,
-        // Celestial), so C(3,2) = 3 core pairs from that cluster alone.
+    fn shipped_daughters_are_atonal_with_tone_count_one() {
+        let v = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        for daughter in ["goblin", "kobold"] {
+            assert_eq!(
+                tone_count_metric(&v, daughter),
+                MetricValue::Number(1.0),
+                "{daughter} must ship atonal (one tone: Neutral)"
+            );
+        }
+    }
+
+    #[test]
+    fn a_tone_capable_species_realizes_more_than_one_tone_and_clears_the_capacity_floor() {
+        // The test-only serpent roster exercises the tonal path (spec §11): a
+        // tone-capable species realizes >1 tone and its capacity meets the
+        // floor via pitch, across seeds.
+        for seed in [1u64, 7, 42] {
+            let v = WorldView::build_with_roster(
+                Seed(seed),
+                &SkyPins::default(),
+                crate::serpent_tonal_solo_roster(),
+            )
+            .unwrap();
+            let tones = match tone_count_metric(&v, "serpent") {
+                MetricValue::Number(n) => n,
+                other => panic!("tone-count not a number: {other:?}"),
+            };
+            assert!(
+                tones > 1.0,
+                "seed {seed}: a tonal species must realize >1 tone"
+            );
+            let cap = match distinguishable_capacity_metric(&v, "serpent") {
+                MetricValue::Number(n) => n,
+                other => panic!("capacity not a number: {other:?}"),
+            };
+            assert!(
+                cap >= 24.0,
+                "seed {seed}: a tone-capable species must clear the capacity floor (got {cap})"
+            );
+        }
+    }
+
+    #[test]
+    fn core_homophony_is_zero_for_every_daughter_under_the_merger_aware_assignment() {
+        // The root/v3 merger-aware family assignment chooses core proto-roots
+        // that survive every daughter's cascade distinct, so core homophony —
+        // the number Nathan targets — is zero for every shipped people on every
+        // seed (not merely the confusable subset). Absent (no Root minted) is
+        // vacuously fine.
+        for seed in [1u64, 7, 42, 123, 500] {
+            let v = WorldView::build(Seed(seed), &SkyPins::default()).unwrap();
+            for daughter in ["goblin", "hobgoblin", "bugbear", "kobold"] {
+                match extract(&v, &format!("core-homophony-{daughter}")) {
+                    MetricValue::Number(n) => assert_eq!(
+                        n, 0.0,
+                        "seed {seed}: {daughter} core homophony must be zero, got {n}"
+                    ),
+                    MetricValue::Absent => {}
+                    other => panic!("core-homophony-{daughter} not numeric: {other:?}"),
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn confusable_homophony_never_exceeds_core_homophony_for_every_daughter() {
+        // Q3: the confusable (same-domain) count is a subset of core homophony —
+        // the honest measurement that lets the atonal tail be accepted.
+        let v = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        for daughter in ["goblin", "hobgoblin", "bugbear", "kobold"] {
+            let core = extract(&v, &format!("core-homophony-{daughter}"));
+            let confusable = extract(&v, &format!("confusable-homophony-{daughter}"));
+            if let (MetricValue::Number(c), MetricValue::Number(f)) = (&core, &confusable) {
+                assert!(
+                    f <= c,
+                    "{daughter}: confusable {f} must not exceed core {c}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn core_homophony_is_eliminated_at_seed_42_by_the_injective_assignment() {
+        // Before the fix, seed 42 goblin rooted hand = many = night = *Noa*
+        // (three core concepts → 3 core pairs). The injective family-proto
+        // assignment resolves every draw-side core collision, so
+        // core-homophony-goblin is 0 here. (Residual cascade/nativize mergers
+        // are Stage 3's target and seed-dependent; seed 42's goblin cascade is
+        // identity, so none arise.)
         let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
         let core = match extract(&view, "core-homophony-goblin") {
             MetricValue::Number(n) => n,
             other => panic!("core-homophony-goblin not a number: {other:?}"),
         };
-        assert!(
-            core >= 3.0,
-            "the hand/many/night cluster alone is 3 core pairs; got {core}"
+        assert_eq!(
+            core, 0.0,
+            "the injective assignment must eliminate seed-42 core homophony; got {core}"
         );
         // Functional-load restriction can only ever be a subset of the raw
         // count, for every daughter.

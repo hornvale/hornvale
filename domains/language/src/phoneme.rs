@@ -71,6 +71,34 @@ pub enum Backness {
     Back,
 }
 
+/// A syllable nucleus's pitch — the suprasegmental tier, orthogonal to the
+/// segmental place/manner/height inventory (spec §2.1). `Neutral` is the
+/// atonal default: it carries no contrast and renders bare, so every vowel
+/// bearing it reproduces the pre-tone output exactly. A tone-capable language
+/// draws its inventory from the level tones. `Neutral` is declared first so
+/// it is the `Ord` minimum — the tone key sorts an atonal (all-`Neutral`)
+/// world identically to a world with no tone dimension at all.
+///
+/// `Mid` is authored but **banked**: the tonogenesis rule (spec §4) conditions
+/// on a single binary feature (the dropped segment's voicing → `High`/`Low`),
+/// so `Mid` awaits a future three-way conditioning source (aspiration, a
+/// three-register voicing split) and is never written by this epoch's rule.
+/// type-audit: bare-ok(flag)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Tone {
+    /// The atonal default: no pitch contrast, renders bare. Every daughter's
+    /// vowels carry this unless its drawn tone inventory admits a contrast.
+    Neutral,
+    /// A high level tone (˥). Written by tonogenesis when the merger dropped a
+    /// voiceless segment.
+    High,
+    /// A mid level tone (˧). Banked — no rule writes it this epoch.
+    Mid,
+    /// A low level tone (˩). Written by tonogenesis when the merger dropped a
+    /// voiced segment (nasals, being voiced, fall in this bucket).
+    Low,
+}
+
 /// A segment: an articulatory feature-bundle, the truth from which every
 /// surface form (romanization, IPA) derives as a view.
 /// type-audit: bare-ok(flag)
@@ -85,7 +113,10 @@ pub enum Segment {
         /// Whether the vocal folds vibrate.
         voiced: bool,
     },
-    /// A vowel: height, backness, and lip rounding.
+    /// A vowel: height, backness, lip rounding, and its suprasegmental tone.
+    /// `tone` is the LAST field so it is the last `Ord` key — the stable
+    /// tie-break the determinism contract depends on (an all-`Tone::Neutral`
+    /// world sorts identically to a pre-tone one).
     Vowel {
         /// How open the mouth is.
         height: Height,
@@ -93,6 +124,9 @@ pub enum Segment {
         backness: Backness,
         /// Whether the lips are rounded.
         rounded: bool,
+        /// The nucleus's suprasegmental pitch (`Tone::Neutral` for an atonal
+        /// language).
+        tone: Tone,
     },
 }
 
@@ -105,7 +139,7 @@ pub(crate) fn canonical_segments() -> Vec<Segment> {
     use Height::*;
     use Manner::*;
     use Place::*;
-    vec![
+    let mut segments = vec![
         // Stops.
         Segment::Consonant {
             place: Labial,
@@ -234,28 +268,66 @@ pub(crate) fn canonical_segments() -> Vec<Segment> {
             height: High,
             backness: Front,
             rounded: false,
+            tone: Tone::Neutral,
         }, // i
         Segment::Vowel {
             height: Mid,
             backness: Front,
             rounded: false,
+            tone: Tone::Neutral,
         }, // e
         Segment::Vowel {
             height: Low,
             backness: Central,
             rounded: false,
+            tone: Tone::Neutral,
         }, // a
         Segment::Vowel {
             height: Mid,
             backness: Back,
             rounded: true,
+            tone: Tone::Neutral,
         }, // o
         Segment::Vowel {
             height: High,
             backness: Back,
             rounded: true,
+            tone: Tone::Neutral,
         }, // u
-    ]
+    ];
+    // The toned vowel variants (spec §3: the curated set grows by the tone
+    // dimension). Only High and Low are offered — `Tone::Mid` is banked, so no
+    // rule writes it and the inventory draw never admits it. The `Neutral`
+    // block above stays first (so an atonal draw, which keeps only Neutral
+    // vowels, is byte-identical to the pre-tone set); the toned variants are
+    // appended in a fixed tone-major order. `draw_phonology` admits a toned
+    // variant only when the species' `tonality` put its tone in the drawn tone
+    // inventory, so `romanize`/`ipa` — which ignore tone and render the base
+    // glyph — never surface a `"?"` for any of them.
+    let qualities: Vec<Segment> = segments
+        .iter()
+        .copied()
+        .filter(|s| matches!(s, Segment::Vowel { .. }))
+        .collect();
+    for tone in [Tone::High, Tone::Low] {
+        for q in &qualities {
+            if let Segment::Vowel {
+                height,
+                backness,
+                rounded,
+                ..
+            } = *q
+            {
+                segments.push(Segment::Vowel {
+                    height,
+                    backness,
+                    rounded,
+                    tone,
+                });
+            }
+        }
+    }
+    segments
 }
 
 /// Render a segment as an ASCII-ish romanization, for the almanac.
@@ -388,26 +460,31 @@ pub fn romanize(seg: &Segment) -> &'static str {
             height: Height::High,
             backness: Backness::Front,
             rounded: false,
+            ..
         } => "i",
         Segment::Vowel {
             height: Height::Mid,
             backness: Backness::Front,
             rounded: false,
+            ..
         } => "e",
         Segment::Vowel {
             height: Height::Low,
             backness: Backness::Central,
             rounded: false,
+            ..
         } => "a",
         Segment::Vowel {
             height: Height::Mid,
             backness: Backness::Back,
             rounded: true,
+            ..
         } => "o",
         Segment::Vowel {
             height: Height::High,
             backness: Backness::Back,
             rounded: true,
+            ..
         } => "u",
         // Outside the curated inventory: no romanization is authored.
         _ => "?",
@@ -541,29 +618,71 @@ pub fn ipa(seg: &Segment) -> &'static str {
             height: Height::High,
             backness: Backness::Front,
             rounded: false,
+            ..
         } => "i",
         Segment::Vowel {
             height: Height::Mid,
             backness: Backness::Front,
             rounded: false,
+            ..
         } => "e",
         Segment::Vowel {
             height: Height::Low,
             backness: Backness::Central,
             rounded: false,
+            ..
         } => "a",
         Segment::Vowel {
             height: Height::Mid,
             backness: Backness::Back,
             rounded: true,
+            ..
         } => "o",
         Segment::Vowel {
             height: Height::High,
             backness: Backness::Back,
             rounded: true,
+            ..
         } => "u",
         // Outside the curated inventory: no IPA glyph is authored.
         _ => "?",
+    }
+}
+
+/// The romanization mark a `tone` appends to its vowel's glyph (spec §6): a
+/// trailing combining diacritic — High an acute (á), Low a grave (à), Mid a
+/// macron (ā) — or the empty string for `Tone::Neutral`, which renders bare.
+/// A view over the segment, never stored; a word-level renderer
+/// ([`crate::naming::render_views`]) appends it right after the vowel it tones.
+/// type-audit: bare-ok(identifier-text)
+pub fn tone_mark_roman(tone: Tone) -> &'static str {
+    match tone {
+        Tone::Neutral => "",
+        Tone::High => "\u{0301}", // combining acute accent
+        Tone::Mid => "\u{0304}",  // combining macron
+        Tone::Low => "\u{0300}",  // combining grave accent
+    }
+}
+
+/// The IPA mark a `tone` appends to its vowel (spec §6): a Chao tone letter —
+/// High `˥`, Mid `˧`, Low `˩` — or the empty string for `Tone::Neutral`. A
+/// view, appended after the vowel by the word-level renderer.
+/// type-audit: bare-ok(identifier-text)
+pub fn tone_mark_ipa(tone: Tone) -> &'static str {
+    match tone {
+        Tone::Neutral => "",
+        Tone::High => "˥",
+        Tone::Mid => "˧",
+        Tone::Low => "˩",
+    }
+}
+
+/// The tone borne by `seg` if it is a vowel, else `Tone::Neutral` — the hook a
+/// word-level renderer uses to decide whether to append a tone mark.
+pub fn tone_of(seg: &Segment) -> Tone {
+    match seg {
+        Segment::Vowel { tone, .. } => *tone,
+        Segment::Consonant { .. } => Tone::Neutral,
     }
 }
 
@@ -696,6 +815,64 @@ mod tests {
     }
 
     #[test]
+    fn tone_is_the_last_ord_key_of_a_vowel() {
+        // Determinism (spec §8): `tone` is the final `Ord` key, so an
+        // all-`Neutral` world sorts exactly as a pre-tone one, toned variants
+        // of one vowel order among themselves by tone, and any difference in
+        // vowel QUALITY is decided before tone is ever consulted — the stable
+        // tie-break `nativize` relies on.
+        let a = |tone| Segment::Vowel {
+            height: Height::Low,
+            backness: Backness::Central,
+            rounded: false,
+            tone,
+        };
+        // Same quality: tones order in their declared sequence.
+        assert!(a(Tone::Neutral) < a(Tone::High));
+        assert!(a(Tone::High) < a(Tone::Mid));
+        assert!(a(Tone::Mid) < a(Tone::Low));
+        // Quality dominates tone: a High-height vowel with the maximal tone
+        // still sorts before a Low-height vowel with the minimal tone.
+        let i_low_tone = Segment::Vowel {
+            height: Height::High,
+            backness: Backness::Front,
+            rounded: false,
+            tone: Tone::Low,
+        };
+        assert!(
+            i_low_tone < a(Tone::Neutral),
+            "a difference in height must decide before tone is consulted"
+        );
+    }
+
+    #[test]
+    fn tone_marks_render_for_toned_vowels_and_are_empty_for_neutral() {
+        // Neutral renders bare (byte-identity with the pre-tone views); the
+        // contrastive tones render their mark. Mid is banked but still has an
+        // authored mark for a future rule.
+        assert_eq!(tone_mark_roman(Tone::Neutral), "");
+        assert_eq!(tone_mark_ipa(Tone::Neutral), "");
+        assert_eq!(tone_mark_roman(Tone::High), "\u{0301}");
+        assert_eq!(tone_mark_ipa(Tone::High), "˥");
+        assert_eq!(tone_mark_roman(Tone::Low), "\u{0300}");
+        assert_eq!(tone_mark_ipa(Tone::Low), "˩");
+        // `tone_of` reads a vowel's tone and is Neutral for any consonant.
+        let a_high = Segment::Vowel {
+            height: Height::Low,
+            backness: Backness::Central,
+            rounded: false,
+            tone: Tone::High,
+        };
+        assert_eq!(tone_of(&a_high), Tone::High);
+        let t = Segment::Consonant {
+            place: Place::Alveolar,
+            manner: Manner::Stop,
+            voiced: false,
+        };
+        assert_eq!(tone_of(&t), Tone::Neutral);
+    }
+
+    #[test]
     fn sonority_orders_stop_below_vowel() {
         let stop = Segment::Consonant {
             place: Place::Velar,
@@ -706,6 +883,7 @@ mod tests {
             height: Height::Low,
             backness: Backness::Central,
             rounded: false,
+            tone: Tone::Neutral,
         };
         assert!(sonority(&stop) < sonority(&vowel));
     }
@@ -794,6 +972,7 @@ mod tests {
                 height: Mid,
                 backness: Front,
                 rounded: false,
+                tone: Tone::Neutral,
             },
             Segment::Consonant {
                 place: Alveolar,
@@ -809,6 +988,7 @@ mod tests {
                 height: Mid,
                 backness: Back,
                 rounded: true,
+                tone: Tone::Neutral,
             },
             Segment::Consonant {
                 place: Alveolar,

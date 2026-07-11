@@ -17,7 +17,7 @@
 #![warn(missing_docs)]
 
 use crate::naming::Namer;
-use crate::phoneme::{Height, Manner, Segment};
+use crate::phoneme::{Height, Manner, Segment, Tone};
 use crate::phonology::Phonology;
 use hornvale_kernel::{Seed, Stream};
 
@@ -39,6 +39,20 @@ pub enum RuleKind {
     ClusterSimplify,
     /// A word-final coda consonant drops.
     FinalLoss,
+    /// **Tonogenesis** (spec §4): the voicing of the consonant a prior
+    /// merging rule ([`RuleKind::ClusterSimplify`] or [`RuleKind::FinalLoss`])
+    /// dropped is reborn as a tone on the stranded nucleus — voiced-loss →
+    /// [`crate::phoneme::Tone::Low`], voiceless-loss →
+    /// [`crate::phoneme::Tone::High`] (the attested direction; nasals, being
+    /// voiced, fall in the Low bucket). It is a *regular conditioned* change,
+    /// not a homophony patch: it fires on every syllable whose onset/coda a
+    /// merger removed, collision or not. Subject to the same codomain
+    /// constraint as every rule — the toned vowel takes only if it is in the
+    /// phonology's inventory, so an atonal language (Neutral-only vowels) sees
+    /// it as identity. Reads the derivation's own step history (the dropped
+    /// voicing), never a stream draw, so it stays a pure function of
+    /// `(proto, cascade, ph)`.
+    Tonogenesis,
 }
 
 /// One drawn sound rule: its kind, and `param` selecting the kind's drawn
@@ -61,6 +75,21 @@ pub struct SoundRule {
 pub struct Cascade {
     /// The rules, in application order.
     pub rules: Vec<SoundRule>,
+}
+
+/// One daughter's evolution machinery, for the **merger-aware** family
+/// proto-assignment ([`assign_proto_roots`]): its drawn cascade and its own
+/// phonology. The composition root supplies one per family member so the
+/// assignment can evolve a candidate proto-root through every daughter and
+/// reject a candidate that would produce a *confusable* (same-domain) modern
+/// collision — the cognate-safe way to drive confusable core homophony to zero.
+/// Plain data (`Cascade` + `Phonology`), so this crate stays kernel-only.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Daughter {
+    /// The daughter's drawn sound-change cascade.
+    pub cascade: Cascade,
+    /// The daughter's own phonology (its inventory nativizes inherited sounds).
+    pub phonology: Phonology,
 }
 
 /// One rule's application to a whole word during [`evolve`]: the rule
@@ -90,14 +119,21 @@ pub struct Derivation {
     pub modern: Vec<Segment>,
 }
 
-/// The closed, canonically ordered list of rule kinds [`draw_cascade`]
-/// draws from.
-const RULE_KINDS: [RuleKind; 5] = [
+/// The closed, canonically ordered list of rule kinds [`draw_cascade`] draws
+/// from. [`RuleKind::Tonogenesis`] is the phonology epoch's addition, appended
+/// last: it is drawn like any other rule (uniformly, one `param` consumed), and
+/// its effect is gated by the codomain constraint — a tone-capable language's
+/// inventory admits the toned vowel and the split takes; an atonal language's
+/// does not, so it applies as identity. Adding it here reseeds every cascade in
+/// every world (a save-format contract): the deliberate epoch bump, carried by
+/// the campaign's full artifact + calibration re-baseline.
+const RULE_KINDS: [RuleKind; 6] = [
     RuleKind::Lenition,
     RuleKind::Fortition,
     RuleKind::VowelShift,
     RuleKind::ClusterSimplify,
     RuleKind::FinalLoss,
+    RuleKind::Tonogenesis,
 ];
 
 /// The `param` range every drawn rule consumes, regardless of kind (only
@@ -159,6 +195,160 @@ pub fn proto_root(seed: &Seed, species: &str, concept: &str, ph: &Phonology) -> 
     crate::naming::segments_of(&syllables)
 }
 
+/// The epoch suffix for the injective proto-root assignment. The Words drew
+/// each root independently at `language/<family>/lexicon/root/<concept>`; the
+/// homophony campaign's draw-side fix retired that for a collision-resolved
+/// assignment at `.../root/v2/<concept>`; `v3` is the **merger-aware**
+/// assignment — the same open-addressing draw, now also rejecting a core
+/// candidate whose *evolved* form would merge with an already-placed core
+/// concept's in any daughter (driving core homophony to zero). Deliberate
+/// regeneration uses an epoch suffix, never a rename — the save-format
+/// contract — so `v3` reseeds every root and old saves' `v2` forms are gone by
+/// design, regenerated with the world.
+const ROOT_EPOCH: &str = "v3";
+
+/// Assign a distinct proto-root to every concept in `concepts` under
+/// `family`'s proto-phonology `proto_ph` — the injective, collision-resolved
+/// replacement for per-concept [`proto_root`] drawing (the homophony fix,
+/// draw side). Deterministic open-addressing: each concept draws a candidate
+/// root at epoch `root/v3`, and on collision re-draws from a probe-keyed
+/// sub-stream (double hashing — colliders scatter rather than cluster), the
+/// root lengthening only once a same-length probe budget is exhausted. Core
+/// concepts (the authored Swadesh strata) are assigned first, so they win the
+/// short forms, and a core root additionally rejects any candidate that is a
+/// minimal pair of an already-placed core root (uniqueness is not enough for
+/// a reader — the forms must be audibly distinct). Assignment ranges over the
+/// WHOLE concept universe passed in, never a per-world subset, so a concept's
+/// form never depends on which other concepts a given world exposed.
+///
+/// **Merger-aware (`daughters` non-empty):** a proto-root distinct at the proto
+/// level can still merge with another after a daughter ages it through its own
+/// cascade and nativizes it (the residual post-evolution homophony). When
+/// `daughters` is supplied, a *core* candidate is additionally rejected if its
+/// EVOLVED form under any daughter lands on ANY already-placed core concept's
+/// evolved form in that daughter — driving core homophony to zero across the
+/// whole family, cognate-safely (`evolve` is untouched, the proto stays
+/// shared) and regularly (no sporadic rule; the proto is simply chosen to
+/// survive the cascade distinct). Periphery mergers are tolerable and never
+/// gate the assignment. An empty `daughters` reproduces the proto-only
+/// assignment exactly.
+/// type-audit: bare-ok(identifier-text)
+pub fn assign_proto_roots(
+    seed: &Seed,
+    family: &str,
+    proto_ph: &Phonology,
+    concepts: &[&str],
+    daughters: &[Daughter],
+) -> std::collections::BTreeMap<String, Vec<Segment>> {
+    // Core-first, then concept-id. Core concepts (the Swadesh strata) are
+    // assigned before periphery so they win the short forms (length ∝
+    // rarity), and the id tiebreak keeps the order stable — a concept added
+    // to the universe later slots in without reshuffling the words already
+    // assigned ahead of it.
+    let core_rank = |concept: &&str| u8::from(!crate::packs::is_core_concept(concept));
+    let mut ordered: Vec<&str> = concepts.to_vec();
+    ordered.sort_by(|a, b| core_rank(a).cmp(&core_rank(b)).then_with(|| a.cmp(b)));
+
+    let mut used: std::collections::BTreeSet<Vec<Segment>> = std::collections::BTreeSet::new();
+    // Placed core roots, kept for the minimal-pair guard: a core candidate is
+    // rejected not only when its form is already taken but when it is a
+    // minimal pair of any core root already placed (periphery roots need only
+    // be unequal — incidental near-homophony there is tolerable).
+    let mut core_forms: Vec<Vec<Segment>> = Vec::new();
+    // Merger-aware bookkeeping: per daughter, the set of modern forms already
+    // placed for core concepts. A candidate whose evolved form hits one of these
+    // in any daughter is a core merger to reject (domain-agnostic — the target
+    // is zero core homophony, not merely zero same-domain confusable homophony).
+    let mut placed_modern: Vec<std::collections::BTreeSet<Vec<Segment>>> =
+        vec![std::collections::BTreeSet::new(); daughters.len()];
+    let mut assigned: std::collections::BTreeMap<String, Vec<Segment>> =
+        std::collections::BTreeMap::new();
+    for concept in ordered {
+        let core = crate::packs::is_core_concept(concept);
+        let mut probe = 0u32;
+        let form = loop {
+            let candidate = draw_candidate(seed, family, concept, proto_ph, probe);
+            let taken = used.contains(&candidate);
+            let too_close = core
+                && core_forms
+                    .iter()
+                    .any(|placed| is_minimal_pair(placed, &candidate));
+            // Merger-aware: reject a core candidate that would evolve into ANY
+            // already-placed core concept's modern form in any daughter.
+            let merges = core
+                && daughters.iter().enumerate().any(|(d, daughter)| {
+                    let modern = evolve(&candidate, &daughter.cascade, &daughter.phonology).modern;
+                    placed_modern[d].contains(&modern)
+                });
+            if !taken && !too_close && !merges {
+                break candidate;
+            }
+            probe += 1;
+        };
+        used.insert(form.clone());
+        // Record this concept's evolved form in each daughter, so later core
+        // candidates are held off it (core concepts only — periphery mergers
+        // are tolerable and never gate the assignment).
+        if core {
+            core_forms.push(form.clone());
+            for (d, daughter) in daughters.iter().enumerate() {
+                let modern = evolve(&form, &daughter.cascade, &daughter.phonology).modern;
+                placed_modern[d].insert(modern);
+            }
+        }
+        assigned.insert(concept.to_string(), form);
+    }
+    assigned
+}
+
+/// Whether `a` and `b` are a **minimal pair** — equal length, differing in
+/// exactly one segment (one substitution). Such forms are formally distinct
+/// yet read as near-homophones (Noa / Noe / Noo), so the assignment holds
+/// core roots apart by this distance, not mere inequality. Different lengths
+/// or two-plus differences are not minimal pairs.
+fn is_minimal_pair(a: &[Segment], b: &[Segment]) -> bool {
+    a.len() == b.len() && a.iter().zip(b).filter(|(x, y)| x != y).count() == 1
+}
+
+/// The number of same-length probes tried before the candidate root is
+/// lengthened by one syllable — the open-addressing "table resize" that keeps
+/// assignment terminating even in a phonology whose base space is smaller
+/// than the concept universe.
+const PROBE_BUDGET: u32 = 8;
+
+/// Draw one candidate proto-root for `concept` at probe index `probe`. Probe
+/// 0 draws from the base epoch path (the common, no-collision case);
+/// higher probes draw from a probe-keyed sub-stream (double hashing — each
+/// probe scatters independently rather than perturbing the last). Every
+/// `PROBE_BUDGET` probes the candidate lengthens by one syllable, so a
+/// cramped phonology still resolves all collisions.
+fn draw_candidate(
+    seed: &Seed,
+    family: &str,
+    concept: &str,
+    ph: &Phonology,
+    probe: u32,
+) -> Vec<Segment> {
+    let tier = probe / PROBE_BUDGET;
+    let min = PROTO_ROOT_SYLLABLE_RANGE.0 + tier;
+    let max = PROTO_ROOT_SYLLABLE_RANGE.1 + tier;
+    let base = seed
+        .derive("language")
+        .derive(family)
+        .derive("lexicon")
+        .derive("root")
+        .derive(ROOT_EPOCH)
+        .derive(concept);
+    let mut stream = if probe == 0 {
+        base.stream()
+    } else {
+        base.derive("probe").derive(&probe.to_string()).stream()
+    };
+    let namer = Namer::new(seed, family, ph);
+    let syllables = namer.draw_syllables(&mut stream, min, max, false);
+    crate::naming::segments_of(&syllables)
+}
+
 /// Whether `seg` is a consonant (used by the two structural rules, which
 /// condition on consonant-hood rather than a specific place/manner).
 fn is_consonant(seg: Segment) -> bool {
@@ -209,6 +399,7 @@ fn vowel_shift(seg: Segment, param: u32) -> Segment {
             height,
             backness,
             rounded,
+            tone,
         } => {
             let height = match (param, height) {
                 (0, Height::Low) => Height::Mid,
@@ -217,10 +408,13 @@ fn vowel_shift(seg: Segment, param: u32) -> Segment {
                 (1, Height::Mid) => Height::Low,
                 (_, unchanged) => unchanged,
             };
+            // Tone is a separate tier: a quality shift carries the nucleus's
+            // tone through unchanged (spec §3, carry-forward).
             Segment::Vowel {
                 height,
                 backness,
                 rounded,
+                tone,
             }
         }
         other => other,
@@ -282,14 +476,108 @@ fn apply_final_loss(segs: &[Segment]) -> (Vec<Segment>, bool) {
     }
 }
 
-/// Dispatch one rule's application to a whole word under `ph`.
-fn apply_rule(segs: &[Segment], rule: &SoundRule, ph: &Phonology) -> (Vec<Segment>, bool) {
+/// Which nucleus a merger stranded — the tone-bearing unit tonogenesis
+/// writes to. A dropped onset (`ClusterSimplify`) strands the word's first
+/// vowel; a dropped coda (`FinalLoss`) strands its last.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ToneLocus {
+    /// The word's first vowel (an onset was dropped before it).
+    First,
+    /// The word's last vowel (a coda was dropped after it).
+    Last,
+}
+
+/// The tonogenetic conditioning a merger records for a later
+/// [`RuleKind::Tonogenesis`] step: which nucleus was stranded, and whether
+/// the dropped consonant was voiced (→ Low) or voiceless (→ High). Derived
+/// entirely from the derivation's own history, never a stream draw.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ToneConditioning {
+    /// The stranded nucleus.
+    locus: ToneLocus,
+    /// The dropped consonant's voicing.
+    dropped_voiced: bool,
+}
+
+/// The voicing of a dropped segment (always a consonant — the two structural
+/// mergers only ever drop consonants; the `false` fallback is unreachable and
+/// exists only to keep this total).
+fn dropped_voicing(seg: Segment) -> bool {
+    match seg {
+        Segment::Consonant { voiced, .. } => voiced,
+        Segment::Vowel { .. } => false,
+    }
+}
+
+/// Tonogenesis's total function on a whole word (spec §4): given the
+/// conditioning a prior merger recorded, write the corresponding tone
+/// (voiced-loss → [`Tone::Low`], voiceless-loss → [`Tone::High`]) onto the
+/// stranded nucleus. Applies only when a merger is pending AND the resulting
+/// toned vowel is in `ph.inventory` (the codomain constraint that keeps an
+/// atonal language a no-op). Pure — the pending conditioning is a function of
+/// the derivation so far, not of any draw.
+fn apply_tonogenesis(
+    segs: &[Segment],
+    pending: &Option<ToneConditioning>,
+    ph: &Phonology,
+) -> (Vec<Segment>, bool) {
+    let Some(cond) = pending else {
+        return (segs.to_vec(), false);
+    };
+    let tone = if cond.dropped_voiced {
+        Tone::Low
+    } else {
+        Tone::High
+    };
+    let target = match cond.locus {
+        ToneLocus::First => segs.iter().position(|s| matches!(s, Segment::Vowel { .. })),
+        ToneLocus::Last => segs
+            .iter()
+            .rposition(|s| matches!(s, Segment::Vowel { .. })),
+    };
+    let Some(i) = target else {
+        return (segs.to_vec(), false);
+    };
+    let Segment::Vowel {
+        height,
+        backness,
+        rounded,
+        ..
+    } = segs[i]
+    else {
+        return (segs.to_vec(), false);
+    };
+    let toned = Segment::Vowel {
+        height,
+        backness,
+        rounded,
+        tone,
+    };
+    if toned != segs[i] && ph.inventory.contains(&toned) {
+        let mut out = segs.to_vec();
+        out[i] = toned;
+        (out, true)
+    } else {
+        (segs.to_vec(), false)
+    }
+}
+
+/// Dispatch one rule's application to a whole word under `ph`. `pending`
+/// carries the tonogenetic conditioning a prior merger recorded (consumed
+/// only by [`RuleKind::Tonogenesis`]).
+fn apply_rule(
+    segs: &[Segment],
+    rule: &SoundRule,
+    ph: &Phonology,
+    pending: &Option<ToneConditioning>,
+) -> (Vec<Segment>, bool) {
     match rule.kind {
         RuleKind::Lenition => apply_segment_rule(segs, ph, lenition),
         RuleKind::Fortition => apply_segment_rule(segs, ph, fortition),
         RuleKind::VowelShift => apply_segment_rule(segs, ph, |s| vowel_shift(s, rule.param)),
         RuleKind::ClusterSimplify => apply_cluster_simplify(segs),
         RuleKind::FinalLoss => apply_final_loss(segs),
+        RuleKind::Tonogenesis => apply_tonogenesis(segs, pending, ph),
     }
 }
 
@@ -301,8 +589,33 @@ fn apply_rule(segs: &[Segment], rule: &SoundRule, ph: &Phonology) -> (Vec<Segmen
 pub fn evolve(proto: &[Segment], cascade: &Cascade, ph: &Phonology) -> Derivation {
     let mut current = proto.to_vec();
     let mut steps = Vec::with_capacity(cascade.rules.len());
+    // The most recent merger's tonogenetic conditioning, recorded from the
+    // pre-drop word and consumed by a later `Tonogenesis` step. Threading it
+    // through the derivation (never a stream draw) is what keeps tonogenesis a
+    // pure, replayable function of `(proto, cascade, ph)`.
+    let mut pending: Option<ToneConditioning> = None;
     for rule in &cascade.rules {
-        let (next, changed) = apply_rule(&current, rule, ph);
+        let (next, changed) = apply_rule(&current, rule, ph, &pending);
+        // Update the pending conditioning from `current` (the word *before*
+        // this rule dropped anything): a fired merger records its dropped
+        // consonant's voicing and stranded locus; a tonogenesis step consumes
+        // whatever was pending; every other rule leaves it intact.
+        match rule.kind {
+            RuleKind::ClusterSimplify if changed => {
+                pending = Some(ToneConditioning {
+                    locus: ToneLocus::First,
+                    dropped_voiced: dropped_voicing(current[0]),
+                });
+            }
+            RuleKind::FinalLoss if changed => {
+                pending = Some(ToneConditioning {
+                    locus: ToneLocus::Last,
+                    dropped_voiced: dropped_voicing(current[current.len() - 1]),
+                });
+            }
+            RuleKind::Tonogenesis => pending = None,
+            _ => {}
+        }
         steps.push(AppliedRule {
             rule: *rule,
             changed,
@@ -374,11 +687,13 @@ fn feature_distance(a: Segment, b: Segment) -> u8 {
                 height: h1,
                 backness: b1,
                 rounded: r1,
+                ..
             },
             Segment::Vowel {
                 height: h2,
                 backness: b2,
                 rounded: r2,
+                ..
             },
         ) => (h1 != h2) as u8 + (b1 != b2) as u8 + (r1 != r2) as u8,
         _ => u8::MAX,
@@ -409,6 +724,7 @@ mod tests {
                 voicing: 1.0,
                 sibilance: 1.0,
                 voice_loudness: 1.0,
+                tonality: 0.0,
                 exotic: ExoticSeg::None,
             },
         )
@@ -437,6 +753,7 @@ mod tests {
                 height: Height::Low,
                 backness: Backness::Central,
                 rounded: false,
+                tone: Tone::Neutral,
             }, // a
             Segment::Consonant {
                 place: Place::Velar,
@@ -501,12 +818,197 @@ mod tests {
         assert!(!a.is_empty());
     }
 
+    use crate::phoneme::{Backness, Place};
+
+    /// A deliberately cramped phonology: two stops (t, k), one nasal (n), two
+    /// vowels (a, e), single-vowel nuclei, an optional nasal coda. Its base
+    /// space is small enough that ~12 independent 1-2 syllable draws WOULD
+    /// collide (the birthday-paradox failure the assignment fixes), while
+    /// still admitting enough distinct forms to resolve them without
+    /// lengthening — so injectivity here exercises collision-probing, not
+    /// growth.
+    fn cramped_phonology() -> Phonology {
+        Phonology {
+            inventory: vec![
+                c(Place::Alveolar, Manner::Stop, false),  // t
+                c(Place::Velar, Manner::Stop, false),     // k
+                c(Place::Alveolar, Manner::Nasal, true),  // n
+                v(Height::Low, Backness::Central, false), // a
+                v(Height::Mid, Backness::Front, false),   // e
+            ],
+            onsets: vec![vec![Manner::Stop]],
+            nuclei: 1,
+            codas: vec![vec![Manner::Nasal], vec![]],
+        }
+    }
+
+    #[test]
+    fn assign_proto_roots_is_injective_where_independent_draws_would_collide() {
+        // The core guarantee: over a cramped phonology where per-concept
+        // draws collide, every concept still gets a DISTINCT proto-root.
+        let ph = cramped_phonology();
+        let concepts = [
+            "c00", "c01", "c02", "c03", "c04", "c05", "c06", "c07", "c08", "c09", "c10", "c11",
+        ];
+        let assigned = assign_proto_roots(&Seed(1), "fam", &ph, &concepts, &[]);
+        assert_eq!(assigned.len(), concepts.len(), "one form per concept");
+        let forms: std::collections::BTreeSet<&Vec<Segment>> = assigned.values().collect();
+        assert_eq!(
+            forms.len(),
+            concepts.len(),
+            "assignment must be injective: a distinct form per concept"
+        );
+    }
+
+    /// A phonology so tiny its base 1-2 syllable space cannot hold many
+    /// concepts: one stop (t), one nasal (n), one vowel (a), optional nasal
+    /// coda. Monosyllables: ta, tan (2); the base space saturates almost
+    /// immediately, forcing the assignment to lengthen roots to stay
+    /// injective.
+    fn minuscule_phonology() -> Phonology {
+        Phonology {
+            inventory: vec![
+                c(Place::Alveolar, Manner::Stop, false),  // t
+                c(Place::Alveolar, Manner::Nasal, true),  // n
+                v(Height::Low, Backness::Central, false), // a
+            ],
+            onsets: vec![vec![Manner::Stop]],
+            nuclei: 1,
+            codas: vec![vec![Manner::Nasal], vec![]],
+        }
+    }
+
+    #[test]
+    fn assign_proto_roots_lengthens_to_stay_injective_when_the_base_space_saturates() {
+        let ph = minuscule_phonology();
+        let concepts: Vec<String> = (0..16).map(|i| format!("c{i:02}")).collect();
+        let refs: Vec<&str> = concepts.iter().map(|s| s.as_str()).collect();
+        let assigned = assign_proto_roots(&Seed(2), "fam", &ph, &refs, &[]);
+        let forms: std::collections::BTreeSet<&Vec<Segment>> = assigned.values().collect();
+        assert_eq!(forms.len(), refs.len(), "still injective under saturation");
+        // Non-vacuity: growth must actually have fired — a base draw is at
+        // most PROTO_ROOT_SYLLABLE_RANGE.1 syllables, and in this 2-form
+        // space 16 concepts cannot fit without longer roots. A rough segment
+        // bound (>= 5) can only come from a 3+ syllable root here.
+        let longest = assigned.values().map(|f| f.len()).max().unwrap();
+        assert!(
+            longest >= 5,
+            "saturation must force lengthening beyond the base tier; longest was {longest} segments"
+        );
+    }
+
+    #[test]
+    fn is_minimal_pair_flags_exactly_one_substitution() {
+        let t = c(Place::Alveolar, Manner::Stop, false);
+        let n = c(Place::Alveolar, Manner::Nasal, true);
+        let a = v(Height::Low, Backness::Central, false);
+        let e = v(Height::Mid, Backness::Front, false);
+        // ta vs te: one vowel substitution → minimal pair.
+        assert!(is_minimal_pair(&[t, a], &[t, e]));
+        // ta vs na: one consonant substitution → minimal pair.
+        assert!(is_minimal_pair(&[t, a], &[n, a]));
+        // ta vs ta: identical (zero differences) → not a minimal pair.
+        assert!(!is_minimal_pair(&[t, a], &[t, a]));
+        // ta vs tan: different lengths → not a minimal pair.
+        assert!(!is_minimal_pair(&[t, a], &[t, a, n]));
+        // ta vs ne: two substitutions → not a minimal pair.
+        assert!(!is_minimal_pair(&[t, a], &[n, e]));
+    }
+
+    #[test]
+    fn assign_proto_roots_places_core_concepts_first_so_they_win_the_short_forms() {
+        // "water" is core (universal stratum) but sorts LAST here; the
+        // "aaN" fillers are periphery and sort first. Under a saturating
+        // phonology, whoever is assigned first gets the short base forms.
+        // Core-first ordering must give the core concept a form no longer
+        // than any periphery word — even though its id sorts last.
+        let ph = minuscule_phonology();
+        let mut concepts = vec!["water"];
+        let fillers: Vec<String> = (0..6).map(|i| format!("aa{i}")).collect();
+        concepts.extend(fillers.iter().map(|s| s.as_str()));
+        let assigned = assign_proto_roots(&Seed(3), "fam", &ph, &concepts, &[]);
+
+        let core_len = assigned["water"].len();
+        let max_periph = fillers.iter().map(|f| assigned[f].len()).max().unwrap();
+        assert!(
+            core_len <= max_periph,
+            "core 'water' ({core_len} segs) must be no longer than the longest \
+             periphery word ({max_periph} segs) — core is assigned first"
+        );
+    }
+
+    /// Fourteen real core concepts (universal stratum, body pack) — enough
+    /// to saturate a cramped phonology and force same-length neighbours.
+    fn core_concept_batch() -> Vec<&'static str> {
+        vec![
+            "water", "night", "day", "fire", "eat", "sleep", "die", "one", "two", "many", "hand",
+            "foot", "eye", "mouth",
+        ]
+    }
+
+    #[test]
+    fn assign_proto_roots_holds_core_roots_apart_by_more_than_a_minimal_pair() {
+        // Core vocabulary must be audibly distinct, not merely unequal: no two
+        // core roots may be a minimal pair (Noa/Noe). Checked over a cramped
+        // phonology that forces same-length neighbours, across several seeds.
+        let ph = cramped_phonology();
+        let concepts = core_concept_batch();
+        for seed in 0..8u64 {
+            let assigned = assign_proto_roots(&Seed(seed), "fam", &ph, &concepts, &[]);
+            let forms: Vec<&Vec<Segment>> = assigned.values().collect();
+            for i in 0..forms.len() {
+                for j in (i + 1)..forms.len() {
+                    assert!(
+                        !is_minimal_pair(forms[i], forms[j]),
+                        "seed {seed}: core roots {:?} and {:?} are a minimal pair",
+                        forms[i],
+                        forms[j]
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn assign_proto_roots_is_insertion_stable_for_earlier_sorting_concepts() {
+        // A concept's assignment depends only on the concepts sorted at or
+        // before it (core-first, then id). So adding a later-sorting concept
+        // to the universe leaves every earlier assignment byte-identical —
+        // the registry can grow without reshuffling committed vocabulary
+        // (the property a global minimal-perfect-hash recompute would break).
+        let ph = cramped_phonology();
+        let mut base = core_concept_batch();
+        base.push("aa0");
+        base.push("aa1");
+        let before = assign_proto_roots(&Seed(4), "fam", &ph, &base, &[]);
+
+        // "zzz-late" is non-core (sorts after every core concept) and its id
+        // sorts after "aa1" — so it lands strictly last.
+        let mut grown = base.clone();
+        grown.push("zzz-late");
+        let after = assign_proto_roots(&Seed(4), "fam", &ph, &grown, &[]);
+
+        for concept in &base {
+            assert_eq!(
+                before[*concept], after[*concept],
+                "{concept} must keep its form when a later-sorting concept is added"
+            );
+        }
+    }
+
+    #[test]
+    fn assign_proto_roots_is_deterministic() {
+        let ph = cramped_phonology();
+        let concepts = ["water", "night", "hand", "many", "c00", "c01", "c02"];
+        let a = assign_proto_roots(&Seed(7), "fam", &ph, &concepts, &[]);
+        let b = assign_proto_roots(&Seed(7), "fam", &ph, &concepts, &[]);
+        assert_eq!(a, b, "same inputs must yield an identical assignment");
+    }
+
     // ---- Per-rule transformation tests: each constructs a single-rule
     // cascade directly (no drawing), feeds a hand-built proto whose
     // segments are all in `test_phonology()`'s inventory, and asserts the
     // exact expected modern sequence.
-
-    use crate::phoneme::{Backness, Place};
 
     /// A consonant literal, for hand-built protos.
     fn c(place: Place, manner: Manner, voiced: bool) -> Segment {
@@ -517,12 +1019,24 @@ mod tests {
         }
     }
 
-    /// A vowel literal, for hand-built protos.
+    /// A vowel literal (atonal), for hand-built protos.
     fn v(height: Height, backness: Backness, rounded: bool) -> Segment {
         Segment::Vowel {
             height,
             backness,
             rounded,
+            tone: Tone::Neutral,
+        }
+    }
+
+    /// A toned vowel literal, for hand-built protos and tone-capable test
+    /// inventories exercising tonogenesis.
+    fn vt(height: Height, backness: Backness, rounded: bool, tone: Tone) -> Segment {
+        Segment::Vowel {
+            height,
+            backness,
+            rounded,
+            tone,
         }
     }
 
@@ -659,6 +1173,256 @@ mod tests {
         assert!(!d.steps[0].changed);
     }
 
+    // ---- Tonogenesis (Stage 3): a lost segmental contrast reborn as pitch.
+
+    /// A deliberately hand-built **tone-capable** phonology: the stops and
+    /// nasal the tonogenesis tests need, plus the low central vowel `a` in
+    /// all three relevant tones (Neutral, High, Low) IN the inventory — so a
+    /// tone the rule writes lands in the codomain and actually takes. (An
+    /// atonal inventory holds only the Neutral vowel; `test_phonology()` is
+    /// such a case, exercised by [`tonogenesis_is_inert_in_an_atonal_language`].)
+    fn tonal_phonology() -> Phonology {
+        Phonology {
+            inventory: vec![
+                c(Place::Labial, Manner::Stop, true),     // b (voiced)
+                c(Place::Labial, Manner::Stop, false),    // p (voiceless)
+                c(Place::Alveolar, Manner::Stop, false),  // t
+                c(Place::Alveolar, Manner::Stop, true),   // d (voiced)
+                c(Place::Velar, Manner::Stop, false),     // k
+                c(Place::Alveolar, Manner::Nasal, true),  // n (voiced)
+                v(Height::Low, Backness::Central, false), // a  (Neutral)
+                vt(Height::Low, Backness::Central, false, Tone::High), // á
+                vt(Height::Low, Backness::Central, false, Tone::Low), // à
+            ],
+            onsets: vec![vec![Manner::Stop]],
+            nuclei: 1,
+            codas: vec![vec![Manner::Nasal], vec![Manner::Stop], vec![]],
+        }
+    }
+
+    /// The tonogenesis cascade the tests drive: the merging rule, then the
+    /// split. Tonogenesis reads what the prior merger dropped.
+    fn merge_then_tonogenize(merger: RuleKind) -> Cascade {
+        Cascade {
+            rules: vec![
+                SoundRule {
+                    kind: merger,
+                    param: 0,
+                },
+                SoundRule {
+                    kind: RuleKind::Tonogenesis,
+                    param: 0,
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn tonogenesis_writes_high_for_a_dropped_voiceless_onset_low_for_a_voiced_one() {
+        let ph = tonal_phonology();
+        // p-t-a: ClusterSimplify drops the voiceless p; the stranded first
+        // nucleus takes High.
+        let voiceless = vec![
+            c(Place::Labial, Manner::Stop, false),    // p (voiceless)
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+        let d = evolve(
+            &voiceless,
+            &merge_then_tonogenize(RuleKind::ClusterSimplify),
+            &ph,
+        );
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Alveolar, Manner::Stop, false),               // t
+                vt(Height::Low, Backness::Central, false, Tone::High), // á
+            ],
+            "a dropped voiceless onset must raise the stranded nucleus to High"
+        );
+        assert!(d.steps[1].changed, "the tonogenesis step must fire");
+
+        // b-t-a: ClusterSimplify drops the voiced b; the nucleus takes Low.
+        let voiced = vec![
+            c(Place::Labial, Manner::Stop, true),     // b (voiced)
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+        let d = evolve(
+            &voiced,
+            &merge_then_tonogenize(RuleKind::ClusterSimplify),
+            &ph,
+        );
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Alveolar, Manner::Stop, false),              // t
+                vt(Height::Low, Backness::Central, false, Tone::Low), // à
+            ],
+            "a dropped voiced onset must lower the stranded nucleus to Low"
+        );
+    }
+
+    #[test]
+    fn tonogenesis_from_final_loss_tones_the_last_nucleus() {
+        let ph = tonal_phonology();
+        // t-a-d: FinalLoss drops the voiced coda d; the last nucleus → Low.
+        let voiced_coda = vec![
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+            c(Place::Alveolar, Manner::Stop, true),   // d (voiced)
+        ];
+        let d = evolve(
+            &voiced_coda,
+            &merge_then_tonogenize(RuleKind::FinalLoss),
+            &ph,
+        );
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Alveolar, Manner::Stop, false),              // t
+                vt(Height::Low, Backness::Central, false, Tone::Low), // à
+            ],
+        );
+
+        // t-a-k: FinalLoss drops the voiceless coda k; the last nucleus → High.
+        let voiceless_coda = vec![
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+            c(Place::Velar, Manner::Stop, false),     // k (voiceless)
+        ];
+        let d = evolve(
+            &voiceless_coda,
+            &merge_then_tonogenize(RuleKind::FinalLoss),
+            &ph,
+        );
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Alveolar, Manner::Stop, false),               // t
+                vt(Height::Low, Backness::Central, false, Tone::High), // á
+            ],
+        );
+    }
+
+    #[test]
+    fn a_dropped_nasal_coda_falls_in_the_voiced_low_bucket() {
+        // Nasals are voiced, so a lost nasal coda tonogenizes to Low — no
+        // special case (the §Q2 decision: nasal codas join the voiced bucket).
+        let ph = tonal_phonology();
+        let nasal_coda = vec![
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+            c(Place::Alveolar, Manner::Nasal, true),  // n (voiced)
+        ];
+        let d = evolve(
+            &nasal_coda,
+            &merge_then_tonogenize(RuleKind::FinalLoss),
+            &ph,
+        );
+        assert_eq!(
+            d.modern,
+            vec![
+                c(Place::Alveolar, Manner::Stop, false),              // t
+                vt(Height::Low, Backness::Central, false, Tone::Low), // à
+            ],
+        );
+    }
+
+    #[test]
+    fn tonogenesis_preserves_a_contrast_two_roots_would_otherwise_lose_to_a_merger() {
+        // The load-bearing invariant (spec §2.2): two roots differing ONLY in
+        // the onset the merger destroys stay distinct IFF they differed in the
+        // tonogenetic conditioning feature. b-t-a and p-t-a both cluster-
+        // simplify to t-a — a merger — but tonogenesis splits them by pitch.
+        let ph = tonal_phonology();
+        let voiced = vec![
+            c(Place::Labial, Manner::Stop, true),     // b
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+        let voiceless = vec![
+            c(Place::Labial, Manner::Stop, false),    // p
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+
+        // Without tonogenesis, the merger collapses them onto one form.
+        let merge_only = one_rule(RuleKind::ClusterSimplify, 0);
+        assert_eq!(
+            evolve(&voiced, &merge_only, &ph).modern,
+            evolve(&voiceless, &merge_only, &ph).modern,
+            "test premise: the bare merger homophones the two roots"
+        );
+
+        // With tonogenesis, the lost voicing contrast survives as pitch.
+        let cascade = merge_then_tonogenize(RuleKind::ClusterSimplify);
+        assert_ne!(
+            evolve(&voiced, &cascade, &ph).modern,
+            evolve(&voiceless, &cascade, &ph).modern,
+            "tonogenesis must rescue the contrast the merger destroyed"
+        );
+    }
+
+    #[test]
+    fn tonogenesis_is_inert_in_an_atonal_language() {
+        // The codomain constraint keeps atonal species byte-identical: their
+        // inventory holds only the Neutral vowel, so the toned output is
+        // off-inventory and tonogenesis applies as identity. `test_phonology`
+        // is atonal (every vowel Neutral).
+        let ph = test_phonology();
+        let proto = vec![
+            c(Place::Labial, Manner::Stop, true),     // b
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+        let with_tono = evolve(
+            &proto,
+            &merge_then_tonogenize(RuleKind::ClusterSimplify),
+            &ph,
+        );
+        let without = evolve(&proto, &one_rule(RuleKind::ClusterSimplify, 0), &ph);
+        assert_eq!(
+            with_tono.modern, without.modern,
+            "in an atonal inventory tonogenesis must be a no-op (byte-identity)"
+        );
+        assert!(
+            !with_tono.steps[1].changed,
+            "the tonogenesis step must record changed=false when inert"
+        );
+    }
+
+    #[test]
+    fn tonogenesis_is_pure_and_replayable() {
+        // evolve is pure: replaying the recorded proto+cascade reproduces the
+        // modern form exactly, tone and all.
+        let ph = tonal_phonology();
+        let proto = vec![
+            c(Place::Labial, Manner::Stop, true),     // b
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+        let cascade = merge_then_tonogenize(RuleKind::ClusterSimplify);
+        let d = evolve(&proto, &cascade, &ph);
+        let replay = evolve(&d.proto, &cascade, &ph);
+        assert_eq!(d.modern, replay.modern);
+    }
+
+    #[test]
+    fn tonogenesis_without_a_prior_merger_is_identity() {
+        // Tonogenesis reads a prior merger's dropped feature; with none, it
+        // has nothing to write and is the identity.
+        let ph = tonal_phonology();
+        let proto = vec![
+            c(Place::Alveolar, Manner::Stop, false),  // t
+            v(Height::Low, Backness::Central, false), // a
+        ];
+        let cascade = one_rule(RuleKind::Tonogenesis, 0);
+        let d = evolve(&proto, &cascade, &ph);
+        assert_eq!(d.modern, proto, "no prior merger ⇒ no tone written");
+        assert!(!d.steps[0].changed);
+    }
+
     // ---- Nativization fixtures and tests.
 
     /// A restrictive phonology whose inventory genuinely lacks the
@@ -750,6 +1514,7 @@ mod tests {
             height: Height::Low,
             backness: Backness::Central,
             rounded: false,
+            tone: Tone::Neutral,
         };
         let eng = Segment::Consonant {
             place: Place::Velar,
@@ -766,6 +1531,131 @@ mod tests {
         assert_ne!(
             d.modern, proto,
             "nativization must have replaced the off-inventory ŋ"
+        );
+    }
+
+    // ---- Merger-aware assignment: de-risk measurement (Stage 7 prep).
+
+    /// A goblinoid `Envelope` from the shipped articulation values (species
+    /// crate can't be imported here, so the numbers are transcribed).
+    fn gob_env(labiality: f64, vowel: f64, voicing: f64, sib: f64, loud: f64) -> Envelope {
+        Envelope {
+            labiality,
+            vowel_space: vowel,
+            voicing,
+            sibilance: sib,
+            voice_loudness: loud,
+            tonality: 0.0,
+            exotic: ExoticSeg::None,
+        }
+    }
+
+    /// The real shipped goblinoid family (proto + three daughters), rebuilt at
+    /// `seed` from the transcribed envelopes.
+    fn goblinoid_family(seed: u64) -> (Phonology, Vec<Daughter>) {
+        let proto_ph = draw_phonology(
+            &Seed(seed),
+            "goblinoid",
+            &gob_env(0.5, 0.5, 0.55, 0.45, 0.55),
+        );
+        let daughters = [
+            ("goblin", gob_env(0.5, 0.5, 0.5, 0.5, 0.5)),
+            ("hobgoblin", gob_env(0.5, 0.5, 0.6, 0.4, 0.8)),
+            ("bugbear", gob_env(0.5, 0.4, 0.7, 0.2, 0.3)),
+        ]
+        .iter()
+        .map(|(name, env)| Daughter {
+            cascade: draw_cascade(&Seed(seed), name),
+            phonology: draw_phonology(&Seed(seed), name, env),
+        })
+        .collect();
+        (proto_ph, daughters)
+    }
+
+    /// The core concept universe (universal ∪ body ∪ kin), each with its domain.
+    fn core_concepts() -> Vec<(&'static str, &'static str)> {
+        crate::packs::universal_stratum()
+            .iter()
+            .chain(crate::packs::body_pack())
+            .chain(crate::packs::kin_pack())
+            .map(|e| (e.concept, crate::packs::concept_domain(e.concept).unwrap()))
+            .collect()
+    }
+
+    /// `(all_core, confusable)` homophony pairs summed over the family: at each
+    /// daughter, group core concepts' evolved forms and sum `C(n, 2)` over every
+    /// shared form; the second figure restricts each count to same-domain
+    /// members (the parsing-costly subset).
+    fn core_homophony(
+        assigned: &std::collections::BTreeMap<String, Vec<Segment>>,
+        daughters: &[Daughter],
+        concepts: &[(&'static str, &'static str)],
+    ) -> (usize, usize) {
+        let (mut all, mut confusable) = (0usize, 0usize);
+        for daughter in daughters {
+            let mut by_form: std::collections::BTreeMap<Vec<Segment>, Vec<&str>> =
+                std::collections::BTreeMap::new();
+            for (concept, domain) in concepts {
+                let modern =
+                    evolve(&assigned[*concept], &daughter.cascade, &daughter.phonology).modern;
+                by_form.entry(modern).or_default().push(domain);
+            }
+            for domains in by_form.values() {
+                let n = domains.len();
+                all += n * n.saturating_sub(1) / 2;
+                let mut counts: std::collections::BTreeMap<&str, usize> =
+                    std::collections::BTreeMap::new();
+                for d in domains {
+                    *counts.entry(*d).or_insert(0) += 1;
+                }
+                for &c in counts.values() {
+                    confusable += c * c.saturating_sub(1) / 2;
+                }
+            }
+        }
+        (all, confusable)
+    }
+
+    #[test]
+    #[ignore]
+    fn measure_merger_aware_core_homophony_reduction() {
+        let concepts = core_concepts();
+        let refs: Vec<&str> = concepts.iter().map(|(c, _)| *c).collect();
+        let seeds = 0..200u64;
+        let (mut base_all, mut base_conf, mut ma_all, mut ma_conf) =
+            (0usize, 0usize, 0usize, 0usize);
+        let (mut base_worlds, mut ma_worlds) = (0usize, 0usize);
+        let (mut base_len, mut ma_len) = (0usize, 0usize);
+        let n = seeds.clone().count();
+        for seed in seeds {
+            let (proto_ph, daughters) = goblinoid_family(seed);
+            let base = assign_proto_roots(&Seed(seed), "goblinoid", &proto_ph, &refs, &[]);
+            let ma = assign_proto_roots(&Seed(seed), "goblinoid", &proto_ph, &refs, &daughters);
+            let (ba, bc) = core_homophony(&base, &daughters, &concepts);
+            let (ma_a, ma_c) = core_homophony(&ma, &daughters, &concepts);
+            base_all += ba;
+            base_conf += bc;
+            ma_all += ma_a;
+            ma_conf += ma_c;
+            base_worlds += usize::from(ba > 0);
+            ma_worlds += usize::from(ma_a > 0);
+            base_len += concepts.iter().map(|(c, _)| base[*c].len()).sum::<usize>();
+            ma_len += concepts.iter().map(|(c, _)| ma[*c].len()).sum::<usize>();
+        }
+        println!(
+            "MERGERAWARE (all-core) over {n} seeds, {} core concepts:",
+            refs.len()
+        );
+        println!("  core-homophony pairs (family):  base={base_all}  merger-aware={ma_all}");
+        println!("  confusable pairs (family):      base={base_conf}  merger-aware={ma_conf}");
+        println!(
+            "  worlds with any core pair:      base={base_worlds}/{n}  merger-aware={ma_worlds}/{n}"
+        );
+        println!(
+            "  mean core-root length:          base={:.3}  merger-aware={:.3}  (Δ={:+.3})",
+            base_len as f64 / (n * refs.len()) as f64,
+            ma_len as f64 / (n * refs.len()) as f64,
+            (ma_len as f64 - base_len as f64) / (n * refs.len()) as f64
         );
     }
 }

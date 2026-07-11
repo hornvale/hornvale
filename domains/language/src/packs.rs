@@ -304,6 +304,42 @@ pub fn kin_pack() -> &'static [PackEntry] {
     ]
 }
 
+/// Whether `concept` is **core** vocabulary — a member of the always-
+/// lexicalized Swadesh strata (the universal stratum, the body pack, the kin
+/// pack), where homophony genuinely confuses a reader. The ranked color
+/// ladder ([`color_pack`]) and the exposure-gated biome concepts are
+/// periphery, where incidental homophony is tolerable. The homophony fix
+/// assigns core concepts their proto-roots first — so they win the short,
+/// distinct forms — and holds a core root to a minimal-pair distance from
+/// every other core root. The split is pack membership, never a doc-string
+/// heuristic; the lab's `core-homophony-*` metrics measure against this same
+/// definition.
+/// type-audit: bare-ok(identifier-text)
+pub fn is_core_concept(concept: &str) -> bool {
+    concept_domain(concept).is_some()
+}
+
+/// The **semantic domain** of a core concept — the authored Swadesh stratum it
+/// belongs to (`"universal"` / `"body"` / `"kin"`), or `None` for periphery.
+/// Two core concepts are *confusable* when their domains match (they compete in
+/// one context; a listener cannot separate them by topic) and *free* when they
+/// differ — the split the merger-aware proto assignment drives to zero for the
+/// confusable case (the codon-degeneracy argument leaves cross-domain
+/// collisions alone). The lab's `confusable-homophony-*` metric measures against
+/// this same definition.
+/// type-audit: bare-ok(identifier-text)
+pub fn concept_domain(concept: &str) -> Option<&'static str> {
+    if universal_stratum().iter().any(|e| e.concept == concept) {
+        Some("universal")
+    } else if body_pack().iter().any(|e| e.concept == concept) {
+        Some("body")
+    } else if kin_pack().iter().any(|e| e.concept == concept) {
+        Some("kin")
+    } else {
+        None
+    }
+}
+
 /// The closed authored recipe table for KNOWS-OF compounds: concepts with
 /// no root word of their own in any pack, expressed instead as a
 /// `(modifier, head)` compound of two concept ids that *do* have roots

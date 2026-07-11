@@ -14,7 +14,10 @@ Expected branch: `<BRANCH>`
    Do not fix the branch, do not proceed on the wrong one.
 
 2. Run every long command (cargo test, censuses, artifact regeneration)
-   **in the foreground** and wait for it to finish. Do not start watchers.
+   **in the foreground** and wait for it to finish. Pass an explicit long
+   timeout on those Bash calls (`timeout: 3600000`) — repo settings raise
+   the ceiling to 60 minutes; the unstated default is 20 and a cold gate
+   can exceed it. Do not start watchers.
    If a job ends up in the background anyway, your next action is a bounded
    foreground poll — never ending your turn to "wait":
 

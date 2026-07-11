@@ -1006,6 +1006,7 @@ pub fn envelope_of(art: &hornvale_species::ArticulationVector) -> hornvale_langu
         voicing: art.voicing,
         sibilance: art.sibilance,
         voice_loudness: art.voice_loudness,
+        tonality: art.tonality,
         exotic: match art.exotic {
             hornvale_species::ExoticManner::None => hornvale_language::ExoticSeg::None,
             hornvale_species::ExoticManner::Trill => hornvale_language::ExoticSeg::Trill,
@@ -1360,9 +1361,46 @@ fn exposure_of_impl(
 /// assemble the two into a `Lexicon` (`hornvale_language::build_lexicon`).
 /// type-audit: bare-ok(identifier-text: species)
 pub fn lexicon_of(world: &World, species: &str) -> Result<hornvale_language::Lexicon, BuildError> {
-    let ph = language_of(world, species);
+    lexicon_of_in(world, &default_roster(), species)
+}
+
+/// The family's members (all `roster` species sharing `family`), each as a
+/// [`hornvale_language::Daughter`] — its drawn cascade and its own phonology —
+/// so the merger-aware proto assignment (epoch `root/v3`) can choose core roots
+/// that survive every daughter's descent distinct. The rejection is
+/// order-independent (a candidate is rejected iff it merges in ANY daughter),
+/// so the roster's order does not affect the result; a singleton family yields
+/// a one-element slice (itself). Public so the proto-goblinoid reference page
+/// and the Lab's monophyly/outgroup metrics can reproduce the SAME merger-aware
+/// assignment `build_lexicon` consumes.
+/// type-audit: bare-ok(identifier-text: family)
+pub fn family_daughters(
+    world: &World,
+    roster: &[hornvale_species::SpeciesDef],
+    family: &str,
+) -> Vec<hornvale_language::Daughter> {
+    roster
+        .iter()
+        .filter(|d| d.family == family)
+        .map(|d| hornvale_language::Daughter {
+            cascade: hornvale_language::draw_cascade(&world.seed, d.name),
+            phonology: language_of_in(world, roster, d.name),
+        })
+        .collect()
+}
+
+/// Build `species`' lexicon within an explicit `roster` — the merger-aware
+/// composition-root path. Assembles the family's daughters so the proto
+/// assignment drives core homophony to zero across the whole family.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn lexicon_of_in(
+    world: &World,
+    roster: &[hornvale_species::SpeciesDef],
+    species: &str,
+) -> Result<hornvale_language::Lexicon, BuildError> {
+    let ph = language_of_in(world, roster, species);
     let exposures = exposure_of(world, species)?;
-    let def = *def_in(&default_roster(), species)?;
+    let def = *def_in(roster, species)?;
     let family = def.family;
     // A family with more than one member has a proto ancestral vector in
     // `family_registry` and draws a real shared proto phonology; a
@@ -1373,6 +1411,7 @@ pub fn lexicon_of(world: &World, species: &str) -> Result<hornvale_language::Lex
         Some(_) => (family, proto_phonology_of(world, family)),
         None => (def.name, ph.clone()),
     };
+    let daughters = family_daughters(world, roster, family);
     Ok(hornvale_language::build_lexicon(
         &world.seed,
         def.name,
@@ -1380,6 +1419,7 @@ pub fn lexicon_of(world: &World, species: &str) -> Result<hornvale_language::Lex
         &ph,
         &proto_ph,
         &exposures,
+        &daughters,
     ))
 }
 
@@ -1723,9 +1763,12 @@ pub fn build_world_with_roster(
             Some(_) => (family, proto_phonology_of(&world, family)),
             None => (def.name, ph.clone()),
         };
+        let daughters = family_daughters(&world, roster, family);
         lexicons.insert(
             def.name,
-            hornvale_language::build_lexicon(&seed, def.name, fam_label, ph, &proto_ph, &exposures),
+            hornvale_language::build_lexicon(
+                &seed, def.name, fam_label, ph, &proto_ph, &exposures, &daughters,
+            ),
         );
     }
 
@@ -3446,9 +3489,18 @@ mod tests {
         let world = generated(42);
         let ph = language_of(&world, "kobold");
         let ex = exposure_of(&world, "kobold").unwrap();
-        // Singleton path: family == species, proto_ph == ph.
-        let direct =
-            hornvale_language::build_lexicon(&world.seed, "kobold", "kobold", &ph, &ph, &ex);
+        // Singleton path: family == species, proto_ph == ph; the merger-aware
+        // daughters slice is the family's one member (kobold itself).
+        let daughters = family_daughters(&world, &default_roster(), "kobold");
+        let direct = hornvale_language::build_lexicon(
+            &world.seed,
+            "kobold",
+            "kobold",
+            &ph,
+            &ph,
+            &ex,
+            &daughters,
+        );
         assert_eq!(lexicon_of(&world, "kobold").unwrap(), direct);
     }
 }

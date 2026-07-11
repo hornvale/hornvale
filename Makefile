@@ -6,6 +6,7 @@
 #
 #   make quick        # cheap half: fmt --check + clippy (the pre-commit gate)
 #   make gate         # the full commit gate: fmt + clippy + workspace tests
+#   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
 #   make rebaseline   # regenerate every committed generated artifact
 #   make rebaseline-goldens # accept drifted byte-golden test fixtures
 #   make lab-diff STUDY=<name> # report which census metrics moved vs HEAD
@@ -16,7 +17,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks
+.PHONY: help quick gate prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -38,6 +39,11 @@ clippy: ## Lint with warnings denied
 
 test: ## Run the full workspace test suite
 	cargo test --workspace
+
+prewarm: ## Warm a fresh worktree's caches (start in the background right after `git worktree add`)
+	cargo build --workspace --all-targets
+	cargo build --release -p hornvale
+	cargo build --manifest-path tools/type-audit/Cargo.toml
 
 rebaseline artifacts: ## Regenerate every committed generated artifact (review the diff, then commit)
 	bash scripts/regenerate-artifacts.sh

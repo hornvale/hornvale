@@ -2,7 +2,7 @@
 
 # Proto-goblinoid
 
-The shared ancestral language goblin, hobgoblin, and bugbear all descend from (spec §3–4): a phonology with no speakers of its own, drawn once at the family level from reference seed 42 and the family's authored ancestral articulation vector (`hornvale_species::family_registry`). Every registered concept's proto-root below is drawn directly from this inventory (`hornvale_language::proto_root`), independent of any daughter's actual exposure — the ancestral vocabulary exists whether or not a given daughter still holds it as a root today. The [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each daughter's own sound-change cascade nativizing these same roots into its modern reflex.
+The shared ancestral language goblin, hobgoblin, and bugbear all descend from (spec §3–4): a phonology with no speakers of its own, drawn once at the family level from reference seed 42 and the family's authored ancestral articulation vector (`hornvale_species::family_registry`). Every registered concept's proto-root below is assigned injectively over the whole concept universe from this inventory (`hornvale_language::assign_proto_roots`, epoch `root/v3` — merger-aware, so no two core concepts collide even after a daughter's cascade), independent of any daughter's actual exposure — the ancestral vocabulary exists whether or not a given daughter still holds it as a root today. The [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each daughter's own sound-change cascade nativizing these same roots into its modern reflex.
 
 ## Inventory
 
@@ -35,74 +35,74 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 
 | Concept | Gloss | Proto | IPA |
 |---|---|---|---|
-| `abyssal` | a biome class | *Poe | /poe/ |
-| `alpine` | a biome class | *Nao | /nao/ |
-| `bathypelagic` | a biome class | *Teakoo | /teakoo/ |
-| `blood` | the circulating fluid of a body | *Kea | /kea/ |
-| `blue` | the color term for blue | *Teenae | /teenae/ |
-| `bone` | the rigid frame of a body | *Qeegoo | /qeegoo/ |
-| `brown` | the color term for brown | *Noo | /noo/ |
-| `bugbear-kind` | a bugbear | *Noanae | /noanae/ |
-| `child` | one's son or daughter | *Goe | /goe/ |
-| `coral-reef` | a biome class | *Nea | /nea/ |
-| `dark` | the color term for black/dark hues | *Naadoo | /naadoo/ |
-| `day` | the light half of the day-night cycle | *Neo | /neo/ |
-| `desert` | a biome class | *Naanao | /naanao/ |
-| `die` | to cease living | *Poa | /poa/ |
-| `earth` | the ground underfoot | *Deo | /deo/ |
-| `eat` | to consume food | *Nae | /nae/ |
-| `epipelagic` | a biome class | *Nea | /nea/ |
-| `eye` | the organ of sight | *Nookoa | /nookoa/ |
-| `fire` | flame and heat | *Naonao | /naonao/ |
-| `foot` | the walking limb-end | *Doaqao | /doaqao/ |
-| `gloom` | the deepest, starless dark | *Neanao | /neanao/ |
-| `goblin-kind` | a goblin | *Noe | /noe/ |
-| `god` | a deity | *Naa | /naa/ |
-| `green` | the color term for green | *Deanaa | /deanaa/ |
-| `hadal-trench` | a biome class | *Nee | /nee/ |
-| `hand` | the manipulating limb-end | *Noa | /noa/ |
-| `hearth` | the fire at the center of a home | *Neoqeo | /neoqeo/ |
-| `hobgoblin-kind` | a hobgoblin | *Daonoo | /daonoo/ |
-| `home` | one's dwelling | *Tao | /tao/ |
-| `hydrothermal-vent` | a biome class | *Pao | /pao/ |
-| `ice` | frozen water | *Naonoa | /naonoa/ |
-| `kelp-forest` | a biome class | *Qoa | /qoa/ |
-| `kobold-kind` | a kobold | *Naonoe | /naonoe/ |
-| `light` | the color term for white/light hues | *Deo | /deo/ |
-| `many` | an indefinitely large count | *Noa | /noa/ |
-| `mesopelagic` | a biome class | *Tee | /tee/ |
-| `moon` | a moon | *Naa | /naa/ |
-| `mountain` | high ground | *Naepeo | /naepeo/ |
-| `mouth` | the organ of eating and speech | *Noo | /noo/ |
-| `name` | a word that identifies one who bears it | *Needea | /needea/ |
-| `night` | the dark half of the day-night cycle | *Noa | /noa/ |
-| `one` | the cardinal number 1 | *Naogoa | /naogoa/ |
-| `parent` | one's father or mother | *Noenee | /noenee/ |
-| `rain` | liquid precipitation | *Kaa | /kaa/ |
-| `red` | the color term for red | *Needao | /needao/ |
-| `savanna` | a biome class | *Tee | /tee/ |
-| `sea` | a body of salt water | *Neatoa | /neatoa/ |
-| `sea-ice` | a biome class | *Noedeo | /noedeo/ |
-| `shadow` | cast dark, distinct from open gloom | *Koapoa | /koapoa/ |
-| `shrubland` | a biome class | *Koanaa | /koanaa/ |
-| `sibling` | one's brother or sister | *Nae | /nae/ |
-| `sleep` | to rest unconscious | *Qea | /qea/ |
-| `snow` | frozen precipitation | *Neo | /neo/ |
-| `spirit` | a lesser or unseen supernatural presence | *Too | /too/ |
-| `star` | a fixed point of light in the night sky | *Noe | /noe/ |
-| `starlit` | dark faintly lit by stars | *Goeqoe | /goeqoe/ |
-| `stone` | rock | *Neopeo | /neopeo/ |
-| `sun` | the sun | *Deedaa | /deedaa/ |
-| `taiga` | a biome class | *Toanaa | /toanaa/ |
-| `temperate-forest` | a biome class | *Naeneo | /naeneo/ |
-| `temperate-grassland` | a biome class | *Neenaa | /neenaa/ |
-| `temperate-rainforest` | a biome class | *Qae | /qae/ |
-| `tree` | a woody plant | *Deonee | /deonee/ |
-| `tropical-rainforest` | a biome class | *Neenoa | /neenoa/ |
-| `tropical-seasonal-forest` | a biome class | *Toatae | /toatae/ |
-| `tundra` | a biome class | *Tao | /tao/ |
-| `two` | the cardinal number 2 | *Doapoe | /doapoe/ |
-| `upwelling` | a biome class | *Geo | /geo/ |
-| `water` | the drinkable liquid | *Paekae | /paekae/ |
-| `wind` | moving air | *Kaaneo | /kaaneo/ |
-| `yellow` | the color term for yellow | *Doa | /doa/ |
+| `abyssal` | a biome class | *Naanae | /naanae/ |
+| `alpine` | a biome class | *Poe | /poe/ |
+| `bathypelagic` | a biome class | *Nae | /nae/ |
+| `blood` | the circulating fluid of a body | *Neo | /neo/ |
+| `blue` | the color term for blue | *Taoqao | /taoqao/ |
+| `bone` | the rigid frame of a body | *Kae | /kae/ |
+| `brown` | the color term for brown | *Poa | /poa/ |
+| `bugbear-kind` | a bugbear | *Kea | /kea/ |
+| `child` | one's son or daughter | *Daekoa | /daekoa/ |
+| `coral-reef` | a biome class | *Doakae | /doakae/ |
+| `dark` | the color term for black/dark hues | *Taanoo | /taanoo/ |
+| `day` | the light half of the day-night cycle | *Goanae | /goanae/ |
+| `desert` | a biome class | *Neadoo | /neadoo/ |
+| `die` | to cease living | *Taopaa | /taopaa/ |
+| `earth` | the ground underfoot | *Pee | /pee/ |
+| `eat` | to consume food | *Koo | /koo/ |
+| `epipelagic` | a biome class | *Naapea | /naapea/ |
+| `eye` | the organ of sight | *Qao | /qao/ |
+| `fire` | flame and heat | *Qea | /qea/ |
+| `foot` | the walking limb-end | *Doa | /doa/ |
+| `gloom` | the deepest, starless dark | *Noa | /noa/ |
+| `goblin-kind` | a goblin | *Nea | /nea/ |
+| `god` | a deity | *Neetaa | /neetaa/ |
+| `green` | the color term for green | *Keoqae | /keoqae/ |
+| `hadal-trench` | a biome class | *Pae | /pae/ |
+| `hand` | the manipulating limb-end | *Naa | /naa/ |
+| `hearth` | the fire at the center of a home | *Noopee | /noopee/ |
+| `hobgoblin-kind` | a hobgoblin | *Qaagoe | /qaagoe/ |
+| `home` | one's dwelling | *Nee | /nee/ |
+| `hydrothermal-vent` | a biome class | *Tee | /tee/ |
+| `ice` | frozen water | *Dao | /dao/ |
+| `kelp-forest` | a biome class | *Nao | /nao/ |
+| `kobold-kind` | a kobold | *Dea | /dea/ |
+| `light` | the color term for white/light hues | *Toeqea | /toeqea/ |
+| `many` | an indefinitely large count | *Neodoa | /neodoa/ |
+| `mesopelagic` | a biome class | *Neanoa | /neanoa/ |
+| `moon` | a moon | *Teapae | /teapae/ |
+| `mountain` | high ground | *Teo | /teo/ |
+| `mouth` | the organ of eating and speech | *Doenoe | /doenoe/ |
+| `name` | a word that identifies one who bears it | *Deokao | /deokao/ |
+| `night` | the dark half of the day-night cycle | *Naeqaa | /naeqaa/ |
+| `one` | the cardinal number 1 | *Kaokao | /kaokao/ |
+| `parent` | one's father or mother | *Goatee | /goatee/ |
+| `rain` | liquid precipitation | *Doe | /doe/ |
+| `red` | the color term for red | *Noe | /noe/ |
+| `savanna` | a biome class | *Naadae | /naadae/ |
+| `sea` | a body of salt water | *Goadeo | /goadeo/ |
+| `sea-ice` | a biome class | *Naanea | /naanea/ |
+| `shadow` | cast dark, distinct from open gloom | *Naeqae | /naeqae/ |
+| `shrubland` | a biome class | *Naakoa | /naakoa/ |
+| `sibling` | one's brother or sister | *Peonae | /peonae/ |
+| `sleep` | to rest unconscious | *Neepeo | /neepeo/ |
+| `snow` | frozen precipitation | *Neogoa | /neogoa/ |
+| `spirit` | a lesser or unseen supernatural presence | *Naodao | /naodao/ |
+| `star` | a fixed point of light in the night sky | *Naetoa | /naetoa/ |
+| `starlit` | dark faintly lit by stars | *Kaonea | /kaonea/ |
+| `stone` | rock | *Naonea | /naonea/ |
+| `sun` | the sun | *Noagoo | /noagoo/ |
+| `taiga` | a biome class | *Kaa | /kaa/ |
+| `temperate-forest` | a biome class | *Noenoa | /noenoa/ |
+| `temperate-grassland` | a biome class | *Doanoo | /doanoo/ |
+| `temperate-rainforest` | a biome class | *Toaneo | /toaneo/ |
+| `tree` | a woody plant | *Koonee | /koonee/ |
+| `tropical-rainforest` | a biome class | *Qoa | /qoa/ |
+| `tropical-seasonal-forest` | a biome class | *Geetao | /geetao/ |
+| `tundra` | a biome class | *Kaekoa | /kaekoa/ |
+| `two` | the cardinal number 2 | *Naanaa | /naanaa/ |
+| `upwelling` | a biome class | *Qoo | /qoo/ |
+| `water` | the drinkable liquid | *Daokaa | /daokaa/ |
+| `wind` | moving air | *Noeqoo | /noeqoo/ |
+| `yellow` | the color term for yellow | *Qaadeo | /qaadeo/ |

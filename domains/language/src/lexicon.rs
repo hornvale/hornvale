@@ -8,7 +8,7 @@
 //! to a [`LexEntry::Gap`] carrying the recountable reason.
 #![warn(missing_docs)]
 
-use crate::etymology::{Derivation, draw_cascade, evolve, proto_root};
+use crate::etymology::{Daughter, Derivation, assign_proto_roots, draw_cascade, evolve};
 use crate::packs::compound_recipe;
 use crate::phoneme::Segment;
 use crate::phonology::Phonology;
@@ -241,19 +241,32 @@ pub fn build_lexicon(
     ph: &Phonology,
     proto_ph: &Phonology,
     exposures: &BTreeMap<String, ExposureClass>,
+    daughters: &[Daughter],
 ) -> Lexicon {
     let headedness = draw_headedness(seed, species);
     let cascade = draw_cascade(seed, species);
 
     let mut entries: BTreeMap<String, LexEntry> = BTreeMap::new();
 
-    // Pass 1: roots for every Steeped concept — pass 2's compounds need
-    // these already present in `entries`. The proto-root is drawn at the
-    // family level (shared by every daughter species), then evolved through
-    // this species' own cascade and nativized into its own phonology.
+    // Assign a distinct proto-root to every concept in the universe at the
+    // family level, once (the homophony fix, draw side — replaces per-concept
+    // `proto_root` drawing). The universe is the WHOLE `exposures` key set,
+    // Steeped/KnowsOf/Unknown alike, so a Steeped concept reserves the same
+    // distinct proto-root regardless of which other concepts a given world
+    // exposed — keeping the assignment world-independent and cognate-safe.
+    // `daughters` (the family's members, supplied by the composition root) make
+    // the assignment merger-aware (epoch root/v3): a core proto is chosen to
+    // survive every daughter's cascade distinct, so core homophony is zero.
+    let universe: Vec<&str> = exposures.keys().map(String::as_str).collect();
+    let proto_roots = assign_proto_roots(seed, family, proto_ph, &universe, daughters);
+
+    // Pass 1: roots for every Steeped concept — pass 2's compounds need these
+    // already present in `entries`. Each concept's assigned family-level
+    // proto-root is evolved through this species' own cascade and nativized
+    // into its own phonology (shared proto → divergent reflexes = cognates).
     for (concept, class) in exposures {
         if matches!(class, ExposureClass::Steeped) {
-            let proto = proto_root(seed, family, concept, proto_ph);
+            let proto = proto_roots[concept].clone();
             let derivation = evolve(&proto, &cascade, ph);
             let views = word_views(&derivation.modern);
             entries.insert(concept.clone(), LexEntry::Root { derivation, views });
@@ -304,6 +317,7 @@ mod tests {
                 voicing: 1.0,
                 sibilance: 1.0,
                 voice_loudness: 1.0,
+                tonality: 0.0,
                 exotic: ExoticSeg::None,
             },
         )
@@ -340,6 +354,7 @@ mod tests {
                 voicing: 1.0,
                 sibilance: 1.0,
                 voice_loudness: 1.0,
+                tonality: 0.0,
                 exotic: ExoticSeg::None,
             },
         )
@@ -355,40 +370,42 @@ mod tests {
     }
 
     #[test]
-    fn singleton_family_reproduces_the_words() {
-        // family == species, proto_ph == ph: identical to the old 4-arg call.
+    fn singleton_family_uses_the_assigned_proto_root() {
+        // family == species, proto_ph == ph: build_lexicon's Root protos now
+        // come from the injective family-level assignment (epoch root/v2),
+        // evolved through the species' cascade — not a per-concept v1 draw.
         let ph = test_phonology();
         let ex = sea_exposures();
-        let lex = build_lexicon(&Seed(1), "test", "test", &ph, &ph, &ex);
-        // water's proto-root draws under language/test/lexicon/root/water, as before
-        let proto = proto_root(&Seed(1), "test", "water", &ph);
-        let expected = evolve(&proto, &draw_cascade(&Seed(1), "test"), &ph).modern;
+        let lex = build_lexicon(&Seed(1), "test", "test", &ph, &ph, &ex, &[]);
+        let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
+        let assigned = assign_proto_roots(&Seed(1), "test", &ph, &universe, &[]);
+        let expected = evolve(&assigned["water"], &draw_cascade(&Seed(1), "test"), &ph).modern;
         match lex.entry("water").unwrap() {
             LexEntry::Root { derivation, .. } => assert_eq!(derivation.modern, expected),
             _ => panic!("water should be a Root"),
         }
     }
 
-    /// Pin-isolation (Task 7, spec §3): kobold — the one people outside the
-    /// goblinoid family, a singleton stock — must resolve its proto-root
-    /// through exactly the stream path The Words consumed before this
-    /// campaign's family machinery existed
-    /// (`language/kobold/lexicon/root/<concept>`, `family == species ==
-    /// "kobold"`, `proto_ph == ph`). Calling `build_lexicon` under the
-    /// singleton pattern and calling `proto_root` directly on the same
-    /// literal species/family key must agree byte-for-byte — the family
-    /// parameter Task 6 added must never perturb a stock with no siblings.
+    /// Pin-isolation, updated for the `root/v2` epoch: a singleton stock
+    /// (kobold — no siblings) resolves its proto-roots through the SAME
+    /// injective family-level assignment every family uses, keyed on its own
+    /// label (`family == species == "kobold"`). The pre-Branches per-concept
+    /// v1 stream this once pinned is deliberately retired by the homophony
+    /// epoch bump (`assign_proto_roots`); what must still hold is that
+    /// `build_lexicon` consumes exactly the assignment `assign_proto_roots`
+    /// produces for the same key — there is no separate singleton code path.
     #[test]
-    fn kobold_singleton_consumes_the_pre_branches_stream_path() {
+    fn kobold_singleton_consumes_the_assigned_stream_path() {
         let ph = test_phonology();
         let ex = one_steeped("water");
-        let lex = build_lexicon(&Seed(5), "kobold", "kobold", &ph, &ph, &ex);
-        let expected_proto = proto_root(&Seed(5), "kobold", "water", &ph);
+        let lex = build_lexicon(&Seed(5), "kobold", "kobold", &ph, &ph, &ex, &[]);
+        let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
+        let assigned = assign_proto_roots(&Seed(5), "kobold", &ph, &universe, &[]);
         assert_eq!(
             root_proto(&lex, "water"),
-            expected_proto,
-            "kobold's singleton path must consume exactly the stream The \
-             Words consumed, unperturbed by the family parameter"
+            assigned["water"],
+            "a singleton stock must consume exactly the injective assignment, \
+             with no separate code path"
         );
     }
 
@@ -404,8 +421,24 @@ mod tests {
         let gob_ph = daughter_ph("goblin");
         let hob_ph = daughter_ph("hobgoblin");
         let ex = one_steeped("water");
-        let g = build_lexicon(&Seed(3), "goblin", "goblinoid", &gob_ph, &proto_ph, &ex);
-        let h = build_lexicon(&Seed(3), "hobgoblin", "goblinoid", &hob_ph, &proto_ph, &ex);
+        let g = build_lexicon(
+            &Seed(3),
+            "goblin",
+            "goblinoid",
+            &gob_ph,
+            &proto_ph,
+            &ex,
+            &[],
+        );
+        let h = build_lexicon(
+            &Seed(3),
+            "hobgoblin",
+            "goblinoid",
+            &hob_ph,
+            &proto_ph,
+            &ex,
+            &[],
+        );
         let (gp, hp) = (root_proto(&g, "water"), root_proto(&h, "water"));
         assert_eq!(gp, hp, "same family+proto_ph ⇒ identical proto-root");
     }
@@ -423,8 +456,8 @@ mod tests {
         let ph = test_phonology();
         let proto_ph = test_phonology();
         let ex = one_steeped("water");
-        let a = build_lexicon(&Seed(3), "goblin", "goblinoid", &ph, &proto_ph, &ex);
-        let b = build_lexicon(&Seed(3), "goblin", "hobgoblinoid", &ph, &proto_ph, &ex);
+        let a = build_lexicon(&Seed(3), "goblin", "goblinoid", &ph, &proto_ph, &ex, &[]);
+        let b = build_lexicon(&Seed(3), "goblin", "hobgoblinoid", &ph, &proto_ph, &ex, &[]);
         assert_ne!(
             root_proto(&a, "water"),
             root_proto(&b, "water"),
@@ -445,7 +478,7 @@ mod tests {
                 ),
             },
         );
-        let lex = build_lexicon(&Seed(1), "test", "test", &ph, &ph, &exposures);
+        let lex = build_lexicon(&Seed(1), "test", "test", &ph, &ph, &exposures, &[]);
         for concept in exposures.keys() {
             assert!(
                 lex.entry(concept).is_some(),
@@ -463,7 +496,7 @@ mod tests {
     fn knows_of_concept_compounds_from_steeped_components_in_headedness_order() {
         let ph = test_phonology();
         let exposures = sea_exposures();
-        let lex = build_lexicon(&Seed(1), "test", "test", &ph, &ph, &exposures);
+        let lex = build_lexicon(&Seed(1), "test", "test", &ph, &ph, &exposures, &[]);
 
         let water_roman = match lex.entry("water").unwrap() {
             LexEntry::Root { views, .. } => views.roman.to_lowercase(),
@@ -509,7 +542,7 @@ mod tests {
         // is omitted, so the compound can't be assembled.
         exposures.insert("water".to_string(), ExposureClass::Steeped);
         exposures.insert("sea".to_string(), ExposureClass::KnowsOf);
-        let lex = build_lexicon(&Seed(1), "test", "test", &ph, &ph, &exposures);
+        let lex = build_lexicon(&Seed(1), "test", "test", &ph, &ph, &exposures, &[]);
         match lex.entry("sea").unwrap() {
             LexEntry::Gap {
                 reason: GapReason::Experiential(_),
@@ -522,8 +555,8 @@ mod tests {
     fn build_lexicon_is_pure() {
         let ph = test_phonology();
         let exposures = sea_exposures();
-        let a = build_lexicon(&Seed(5), "test", "test", &ph, &ph, &exposures);
-        let b = build_lexicon(&Seed(5), "test", "test", &ph, &ph, &exposures);
+        let a = build_lexicon(&Seed(5), "test", "test", &ph, &ph, &exposures, &[]);
+        let b = build_lexicon(&Seed(5), "test", "test", &ph, &ph, &exposures, &[]);
         assert_eq!(a, b, "same inputs must yield an identical lexicon");
     }
 
@@ -562,7 +595,15 @@ mod tests {
             }
         }
 
-        let first_lex = build_lexicon(&Seed(head_first_seed), "test", "test", &ph, &ph, &exposures);
+        let first_lex = build_lexicon(
+            &Seed(head_first_seed),
+            "test",
+            "test",
+            &ph,
+            &ph,
+            &exposures,
+            &[],
+        );
         assert_eq!(first_lex.headedness, Headedness::HeadFirst);
         let water_first = root_roman(&first_lex, "water");
         let many_first = root_roman(&first_lex, "many");
@@ -572,7 +613,15 @@ mod tests {
             "HeadFirst: {sea_first:?} should start with head {water_first:?} and end with modifier {many_first:?}"
         );
 
-        let last_lex = build_lexicon(&Seed(head_last_seed), "test", "test", &ph, &ph, &exposures);
+        let last_lex = build_lexicon(
+            &Seed(head_last_seed),
+            "test",
+            "test",
+            &ph,
+            &ph,
+            &exposures,
+            &[],
+        );
         assert_eq!(last_lex.headedness, Headedness::HeadLast);
         let water_last = root_roman(&last_lex, "water");
         let many_last = root_roman(&last_lex, "many");

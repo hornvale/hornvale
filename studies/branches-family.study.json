@@ -1,5 +1,5 @@
 { "name": "branches-family",
-  "description": "The Branches family battery: regularity, monophyly, clean outgroup, inventory closure, divergence magnitude/reality, and homophony (raw, core-restricted, and draw-vs-merger attributed) over the goblinoid family (goblin, hobgoblin, bugbear) against the kobold outgroup, seed-swept over 1,000 worlds (spec §3, Task 10) — so the family properties hold as all-seed invariants, not seed-42 facts.",
+  "description": "The Branches family battery: regularity, monophyly, clean outgroup, inventory closure, divergence magnitude/reality, and homophony (raw, core-restricted, draw-vs-merger attributed, and — from the phonology epoch — confusable-vs-free split, plus the tone-inventory size and distinguishable-syllable capacity) over the goblinoid family (goblin, hobgoblin, bugbear) against the kobold outgroup, seed-swept over 1,000 worlds (spec §3, Task 10) — so the family properties hold as all-seed invariants, not seed-42 facts.",
   "seeds": { "from": 0, "count": 1000 },
   "pin_sets": [ { "label": "default", "pins": [] } ],
   "metrics": [
@@ -25,5 +25,14 @@
     "homophony-merger-share-goblin",
     "homophony-merger-share-hobgoblin",
     "homophony-merger-share-bugbear",
-    "homophony-merger-share-kobold"
+    "homophony-merger-share-kobold",
+    "confusable-homophony-goblin",
+    "confusable-homophony-hobgoblin",
+    "confusable-homophony-bugbear",
+    "confusable-homophony-kobold",
+    "tone-count-goblin",
+    "tone-count-kobold",
+    "distinguishable-capacity-goblin",
+    "distinguishable-capacity-bugbear",
+    "distinguishable-capacity-kobold"
   ] }

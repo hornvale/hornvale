@@ -20,7 +20,7 @@ The air organizes into 3 circulation band(s) per hemisphere; 12 land biomes and 
 Some 12% of the surface is habitable — land with water and a tolerable season.
 
 - **Ngokzhvab** — shrubland
-- **Xaxorarrotrrot** — tropical-rainforest
+- **Rorrorogxarrotrrot** — tropical-rainforest
 - **Kbeagbeatbea** — shrubland
 - **Vngaoshvngoo** — shrubland
 - **Zxebzxed** — shrubland
@@ -28,47 +28,47 @@ Some 12% of the surface is habitable — land with water and a tolerable season.
 - **Netzhfot** — temperate-forest
 - **Vnodxngok** — temperate-forest
 - **Ngakvngob** — shrubland
-- **Rarakrot** — savanna
-- **Xoraragrrog** — temperate-rainforest
+- **Rogxarakrot** — savanna
+- **Xotrorogxaragrrog** — temperate-rainforest
 - **Nokfnet** — shrubland
 - **Fngetzxekzhxak** — tropical-rainforest
-- **Xaxoxakraq** — tropical-rainforest
+- **Rorroxakraq** — tropical-rainforest
 - **Xngatnebvned** — tropical-rainforest
 - **Ngetzhfeb** — temperate-forest
 - **Zxedsxod** — tropical-rainforest
-- **Raratrra** — alpine
-- **Raxaxorrarroxo** — tropical-rainforest
+- **Ratrraratrra** — alpine
+- **Rogxarorrorrarroxo** — tropical-rainforest
 - **Fnetfneb** — taiga
 - **Nakfngebnget** — taiga
-- **Rraraqxakxog** — temperate-forest
-- **Rarragragra** — alpine
-- **Xaxorogrog** — tropical-rainforest
-- **Raxaxorotxo** — tropical-rainforest
+- **Xatxoraqxakxog** — temperate-forest
+- **Rogxarragragra** — alpine
+- **Rorrorogrog** — tropical-rainforest
+- **Rogxarorrorotxo** — tropical-rainforest
 - **Zhfodfnaksvet** — taiga
-- **Raraxara** — tropical-rainforest
-- **Xokrraxarrorrot** — temperate-grassland
-- **Rararrogxaqxa** — shrubland
-- **Xokrrarraxaq** — temperate-grassland
-- **Raxaragrro** — savanna
-- **Raraxokrak** — tropical-rainforest
-- **Raxaxarro** — alpine
-- **Raxatro** — tropical-rainforest
-- **Xaxorarrakrat** — tropical-rainforest
+- **Rogxaraxara** — tropical-rainforest
+- **Roraxarrorrot** — temperate-grassland
+- **Rogxarororrogxaqxa** — shrubland
+- **Rorarraxaq** — temperate-grassland
+- **Rogxaxaroragrro** — savanna
+- **Rogxaraxokrak** — tropical-rainforest
+- **Rogxaxaxarro** — alpine
+- **Rogxaxatro** — tropical-rainforest
+- **Rorrorogxarrakrat** — tropical-rainforest
 - **Zvebnob** — tropical-seasonal-forest
-- **Xaxoraratro** — tropical-rainforest
-- **Xaxoraxoxaxa** — tropical-rainforest
-- **Raxaxorogro** — tropical-rainforest
-- **Raxaxoxokraro** — tropical-rainforest
-- **Rarrotrogxo** — tropical-rainforest
+- **Rorrorogxaratro** — tropical-rainforest
+- **Rorrorogxaxoxaxa** — tropical-rainforest
+- **Rogxarorrorogro** — tropical-rainforest
+- **Rogxarorroxokraro** — tropical-rainforest
+- **Rogxarrotrogxo** — tropical-rainforest
 - **Xngatnebfngod** — taiga
 - **Ngadsvoknget** — taiga
-- **Raxogxog** — temperate-grassland
-- **Rarararrarra** — tropical-seasonal-forest
+- **Rogxaxogxog** — temperate-grassland
+- **Rorogxarrarra** — tropical-seasonal-forest
 - **Zhfoksfetfngak** — taiga
-- **Rarraxot** — tropical-seasonal-forest
+- **Rogxarraxot** — tropical-seasonal-forest
 - **Zxobnak** — taiga
-- **Xaxoraratrokxa** — taiga
-- **Rarararaxarag** — tropical-seasonal-forest
+- **Rorogxaratrokxa** — taiga
+- **Rogxaroraxarag** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -78,7 +78,7 @@ The land holds 50 settlement(s).
 The chief bugbear settlement, Vngaoshvngoo, holds 288 souls amid shrubland.
 The chief goblin settlement, Ngokzhvab, holds 448 souls amid shrubland.
 The chief hobgoblin settlement, Kbeagbeatbea, holds 292 souls amid shrubland.
-The chief kobold settlement, Xaxorarrotrrot, holds 348 souls amid tropical-rainforest.
+The chief kobold settlement, Rorrorogxarrotrrot, holds 348 souls amid tropical-rainforest.
 
 The bugbear lair of **Vngaoshvngoo**, population 288.
 
@@ -95,9 +95,9 @@ The hobgoblin legion of **Kbeagbeatbea**, population 292.
 Kbeagbeatbea lives by fishing.
 Its roles, lowest to highest: laborer, warlord.
 
-The kobold warren of **Xaxorarrotrrot**, population 348.
+The kobold warren of **Rorrorogxarrotrrot**, population 348.
 
-Xaxorarrotrrot lives by farming.
+Rorrorogxarrotrrot lives by farming.
 Its roles, lowest to highest: digger, warden, shaper, keeper, elders.
 
 ## The Gods
@@ -120,9 +120,9 @@ The legion of **Kbeagbeatbea** keeps its own folk pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
-In the warren of **Xaxorarrotrrot**, an organized priesthood tends its own pantheon:
+In the warren of **Rorrorogxarrotrrot**, an organized priesthood tends its own pantheon:
 
-> Ra Ra is: Ra Ra is always watching. That's how it's always been. That's how it's always been. Ra is the highest among the gods. *(who presides)*
+> Rogxa Rogxa is: Rogxa Rogxa is always watching. That's how it's always been. That's how it's always been. Rogxa is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 

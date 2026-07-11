@@ -59,6 +59,7 @@
 - [The Type Audit](./chronicle/the-type-audit.md)
 - [Common Ground](./chronicle/common-ground.md)
 - [The Branches](./chronicle/the-branches.md)
+- [The Rising Tone](./chronicle/the-rising-tone.md)
 
 # The Gallery
 
