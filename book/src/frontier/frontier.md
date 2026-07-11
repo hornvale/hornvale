@@ -1475,6 +1475,26 @@ selection, and the carrying-capacity lift — niche construction read as a
 coupled system. As with every row above, none is scheduled; each is a line in
 the registry until a campaign pulls for it.
 
+A later pass read the map against the freshly-shipped climate crate and
+surfaced six more candidates — and, usefully, found most already answered.
+Four physical-pole capabilities an earlier reading would have called gaps are
+in fact owned as *climate features*: ocean circulation (`CLIM-ocean-currents`),
+the cryosphere (`CLIM-cryosphere`), the fire regime (`CLIM-hazards`), and
+atmospheric greenhouse forcing (`CLIM-greenhouse`). That they are features and
+not crates is not a matter of taste but of the layering rule: a domain depends
+on the kernel alone, yet ocean currents read the wind field and feed
+sea-surface temperature, so a standalone ocean crate would have to depend on
+`climate` — precisely what the rule forbids. The same logic returns faunal
+ethology to the biosphere (behaviour as a phenomenon over BIO-7's predator/prey
+fields) and mutualism to ecology (a trophic-interaction type, the constructive
+twin of the parasitic coupling `epidemiology` owns). The registry records all
+six as DOM rows regardless (`DOM-ocean`, `DOM-cryosphere`, `DOM-fire`,
+`DOM-air`, `DOM-ethology`, `DOM-symbiosis`) — not because they should split
+out, but because the crate-versus-feature question is itself worth holding
+open, and the row is where a future campaign that outgrew the feature framing
+would find the argument already set down against it. Each row names the feature
+that captures it today, so the pointer is a caution, not a plan.
+
 Two disciplines hold the map honest, and they are the same ones that govern
 the code. A feature is not a crate: soil, weather-as-sampled-instance,
 calendrics, law, and kinship are fields or data structures inside existing
