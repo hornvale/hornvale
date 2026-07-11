@@ -254,7 +254,7 @@ pub fn build_lexicon(
     // distinct proto-root regardless of which other concepts a given world
     // exposed — keeping the assignment world-independent and cognate-safe.
     let universe: Vec<&str> = exposures.keys().map(String::as_str).collect();
-    let proto_roots = assign_proto_roots(seed, family, proto_ph, &universe);
+    let proto_roots = assign_proto_roots(seed, family, proto_ph, &universe, &[]);
 
     // Pass 1: roots for every Steeped concept — pass 2's compounds need these
     // already present in `entries`. Each concept's assigned family-level
@@ -374,7 +374,7 @@ mod tests {
         let ex = sea_exposures();
         let lex = build_lexicon(&Seed(1), "test", "test", &ph, &ph, &ex);
         let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
-        let assigned = assign_proto_roots(&Seed(1), "test", &ph, &universe);
+        let assigned = assign_proto_roots(&Seed(1), "test", &ph, &universe, &[]);
         let expected = evolve(&assigned["water"], &draw_cascade(&Seed(1), "test"), &ph).modern;
         match lex.entry("water").unwrap() {
             LexEntry::Root { derivation, .. } => assert_eq!(derivation.modern, expected),
@@ -396,7 +396,7 @@ mod tests {
         let ex = one_steeped("water");
         let lex = build_lexicon(&Seed(5), "kobold", "kobold", &ph, &ph, &ex);
         let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
-        let assigned = assign_proto_roots(&Seed(5), "kobold", &ph, &universe);
+        let assigned = assign_proto_roots(&Seed(5), "kobold", &ph, &universe, &[]);
         assert_eq!(
             root_proto(&lex, "water"),
             assigned["water"],

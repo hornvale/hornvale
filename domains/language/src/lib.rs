@@ -32,8 +32,8 @@ pub mod phonology;
 pub mod register;
 
 pub use etymology::{
-    AppliedRule, Cascade, Derivation, RuleKind, SoundRule, assign_proto_roots, draw_cascade,
-    evolve, proto_root,
+    AppliedRule, Cascade, Daughter, Derivation, RuleKind, SoundRule, assign_proto_roots,
+    draw_cascade, evolve, proto_root,
 };
 pub use lexicon::{
     ExposureClass, GapReason, Headedness, LexEntry, Lexicon, WordViews, build_lexicon,
@@ -41,8 +41,8 @@ pub use lexicon::{
 };
 pub use naming::{GeneratedName, MorphOptions, NameKind, Namer, SiteConcepts, render_views};
 pub use packs::{
-    PackDepths, PackEntry, body_pack, color_pack, compound_recipe, in_ladder, is_core_concept,
-    kin_pack, register_concepts, universal_stratum,
+    PackDepths, PackEntry, body_pack, color_pack, compound_recipe, concept_domain, in_ladder,
+    is_core_concept, kin_pack, register_concepts, universal_stratum,
 };
 pub use phoneme::{
     Backness, Height, Manner, Place, Segment, Tone, espeak, espeak_word, ipa, romanize, sonority,

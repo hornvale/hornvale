@@ -2018,7 +2018,7 @@ fn goblinoid_proto_assignment(v: &WorldView) -> std::collections::BTreeMap<Strin
         .concepts()
         .map(|c| c.name.as_str())
         .collect();
-    hornvale_language::assign_proto_roots(&v.world.seed, "goblinoid", &proto_ph, &universe)
+    hornvale_language::assign_proto_roots(&v.world.seed, "goblinoid", &proto_ph, &universe, &[])
 }
 
 /// Whether every goblinoid daughter's Root `derivation.proto` matches its

@@ -88,7 +88,7 @@ pub fn render_proto() -> Result<String, String> {
     // reference page shows the SAME proto-roots the dictionary's modern forms
     // descend from.
     let universe: Vec<&str> = world.registry.concepts().map(|c| c.name.as_str()).collect();
-    let assignment = assign_proto_roots(&world.seed, FAMILY, &phonology, &universe);
+    let assignment = assign_proto_roots(&world.seed, FAMILY, &phonology, &universe, &[]);
     for concept in world.registry.concepts() {
         let proto = &assignment[&concept.name];
         let views = render_views(proto);

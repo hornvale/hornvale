@@ -316,11 +316,28 @@ pub fn kin_pack() -> &'static [PackEntry] {
 /// definition.
 /// type-audit: bare-ok(identifier-text)
 pub fn is_core_concept(concept: &str) -> bool {
-    universal_stratum()
-        .iter()
-        .chain(body_pack())
-        .chain(kin_pack())
-        .any(|e| e.concept == concept)
+    concept_domain(concept).is_some()
+}
+
+/// The **semantic domain** of a core concept — the authored Swadesh stratum it
+/// belongs to (`"universal"` / `"body"` / `"kin"`), or `None` for periphery.
+/// Two core concepts are *confusable* when their domains match (they compete in
+/// one context; a listener cannot separate them by topic) and *free* when they
+/// differ — the split the merger-aware proto assignment drives to zero for the
+/// confusable case (the codon-degeneracy argument leaves cross-domain
+/// collisions alone). The lab's `confusable-homophony-*` metric measures against
+/// this same definition.
+/// type-audit: bare-ok(identifier-text)
+pub fn concept_domain(concept: &str) -> Option<&'static str> {
+    if universal_stratum().iter().any(|e| e.concept == concept) {
+        Some("universal")
+    } else if body_pack().iter().any(|e| e.concept == concept) {
+        Some("body")
+    } else if kin_pack().iter().any(|e| e.concept == concept) {
+        Some("kin")
+    } else {
+        None
+    }
 }
 
 /// The closed authored recipe table for KNOWS-OF compounds: concepts with
