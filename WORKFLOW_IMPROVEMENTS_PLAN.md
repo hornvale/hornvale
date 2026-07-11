@@ -115,7 +115,7 @@ All five resolved in Stage 3a:
 
 **Goal**: the Stage-2 deferred follow-ups plus the three locally-verifiable
 process rows. Plan:
-`docs/superpowers/plans/2026-07-10-workflow-improvements-stage-3.md`.
+`docs/superpowers/plans/2026-07-10-workflow-improvements-stage-3.md`. All four landed.
 
 ### 3a. Stage-2 deferred follow-ups
 **Deliverable**: shared `canonical_row` in `hornvale_lab`; timing-accuracy
