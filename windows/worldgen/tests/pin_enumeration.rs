@@ -41,7 +41,11 @@
 //!
 //! Measured at authoring (2026-07-11, seed 42): 48 built, 0 refused --
 //! reported, not asserted; the split may legitimately move with physics
-//! changes.
+//! changes. Half the product (`SkyChoice::Constant`, 24 combinations) is
+//! refusal-free by construction: rotation and neighbor pins are still
+//! recorded on those worlds, but the generated-sky path that could act on
+//! them never runs, so any future refusal in this product can only arise
+//! on the generated-sky half.
 
 use hornvale_astronomy::{NeighborClass, RotationPin, SkyPins};
 use hornvale_kernel::Seed;

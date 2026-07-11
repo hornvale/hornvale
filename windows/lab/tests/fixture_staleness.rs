@@ -123,7 +123,7 @@ fn census_fixtures_match_a_probe_of_live_seeds() {
 
         if let Some(start) = window_start(&csv, study.seeds.count) {
             let mut window = study.clone();
-            window.seeds.from = start;
+            window.seeds.from = study.seeds.from + start;
             window.seeds.count = WINDOW_SEEDS;
             let live_window = run(&window).expect("probe rotating window");
             assert_fixture_fresh(&live_window, &fixture, study_path, rows_path);
@@ -178,6 +178,20 @@ fn a_stale_fixture_fails_with_the_regeneration_instruction() {
         msg.contains("was not regenerated"),
         "message must name the cause: {msg}"
     );
+
+    // Clean up: the mismatch path above calls `record_failure`, which
+    // writes into the shared workspace target/failures/ directory (see
+    // `blackbox.rs`'s own unit test for the idiom), not a private temp
+    // dir. The study name ("probe-self-test"), seed (0), and pin set
+    // ("default") come from `synthetic()` above, so the file names are
+    // fixed.
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("hornvale-lab lives two directories below the workspace root");
+    let base = workspace_root.join("target/failures/probe-self-test-seed0-default");
+    let _ = std::fs::remove_file(base.with_extension("json"));
+    let _ = std::fs::remove_file(base.with_extension("repro.txt"));
 }
 
 #[test]
@@ -232,6 +246,27 @@ fn window_start_is_in_bounds_at_the_span_seven_boundary() {
     // window for: [3, span - 3] must be non-empty.
     let start = window_start("boundary-bytes", 7).expect("span == 7 must still yield a window");
     assert!((3..=4).contains(&start), "got {start}");
+}
+
+#[test]
+fn window_start_offset_lands_within_the_studys_own_range_for_nonzero_from() {
+    // `window_start` returns an offset in `[3, span - 3]` relative to the
+    // study's own seed range, not an absolute seed number — the caller
+    // (`census_fixtures_match_a_probe_of_live_seeds`) must add
+    // `study.seeds.from` before using it as `window.seeds.from`. All three
+    // committed censuses happen to start at seed 0, where the offset and
+    // the absolute seed coincide; this test proves the arithmetic still
+    // lands in range for a study whose `from` is nonzero.
+    let span = 500;
+    let from = 1_000;
+    let start = window_start("some committed fixture bytes", span).expect("window");
+    let absolute_start = from + start;
+    assert!(
+        (from + 3..=from + span - 3).contains(&absolute_start),
+        "absolute window start {absolute_start} out of [{}, {}]",
+        from + 3,
+        from + span - 3
+    );
 }
 
 #[test]
