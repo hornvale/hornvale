@@ -196,17 +196,22 @@ pub fn proto_root(seed: &Seed, species: &str, concept: &str, ph: &Phonology) -> 
 }
 
 /// The epoch suffix for the injective proto-root assignment. The Words drew
-/// each root independently at `language/<family>/lexicon/root/<concept>`;
-/// this campaign retires that path for a collision-resolved assignment at
-/// `language/<family>/lexicon/root/v2/<concept>` (deliberate regeneration
-/// uses an epoch suffix, never a rename — the save-format contract).
-const ROOT_EPOCH: &str = "v2";
+/// each root independently at `language/<family>/lexicon/root/<concept>`; the
+/// homophony campaign's draw-side fix retired that for a collision-resolved
+/// assignment at `.../root/v2/<concept>`; `v3` is the **merger-aware**
+/// assignment — the same open-addressing draw, now also rejecting a core
+/// candidate whose *evolved* form would merge with an already-placed core
+/// concept's in any daughter (driving core homophony to zero). Deliberate
+/// regeneration uses an epoch suffix, never a rename — the save-format
+/// contract — so `v3` reseeds every root and old saves' `v2` forms are gone by
+/// design, regenerated with the world.
+const ROOT_EPOCH: &str = "v3";
 
 /// Assign a distinct proto-root to every concept in `concepts` under
 /// `family`'s proto-phonology `proto_ph` — the injective, collision-resolved
 /// replacement for per-concept [`proto_root`] drawing (the homophony fix,
 /// draw side). Deterministic open-addressing: each concept draws a candidate
-/// root at epoch `root/v2`, and on collision re-draws from a probe-keyed
+/// root at epoch `root/v3`, and on collision re-draws from a probe-keyed
 /// sub-stream (double hashing — colliders scatter rather than cluster), the
 /// root lengthening only once a same-length probe budget is exhausted. Core
 /// concepts (the authored Swadesh strata) are assigned first, so they win the
@@ -218,13 +223,15 @@ const ROOT_EPOCH: &str = "v2";
 ///
 /// **Merger-aware (`daughters` non-empty):** a proto-root distinct at the proto
 /// level can still merge with another after a daughter ages it through its own
-/// cascade and nativizes it (the residual confusable homophony). When
+/// cascade and nativizes it (the residual post-evolution homophony). When
 /// `daughters` is supplied, a *core* candidate is additionally rejected if its
-/// EVOLVED form under any daughter lands on an already-placed core concept's
-/// evolved form *in the same semantic domain* in that daughter — driving
-/// confusable core homophony to zero, cognate-safely (`evolve` is untouched,
-/// the proto stays shared). Cross-domain (free) collisions are left alone. An
-/// empty `daughters` reproduces the proto-only assignment exactly.
+/// EVOLVED form under any daughter lands on ANY already-placed core concept's
+/// evolved form in that daughter — driving core homophony to zero across the
+/// whole family, cognate-safely (`evolve` is untouched, the proto stays
+/// shared) and regularly (no sporadic rule; the proto is simply chosen to
+/// survive the cascade distinct). Periphery mergers are tolerable and never
+/// gate the assignment. An empty `daughters` reproduces the proto-only
+/// assignment exactly.
 /// type-audit: bare-ok(identifier-text)
 pub fn assign_proto_roots(
     seed: &Seed,
@@ -248,17 +255,16 @@ pub fn assign_proto_roots(
     // minimal pair of any core root already placed (periphery roots need only
     // be unequal — incidental near-homophony there is tolerable).
     let mut core_forms: Vec<Vec<Segment>> = Vec::new();
-    // Merger-aware bookkeeping: per daughter, the modern forms already placed
-    // for core concepts, each mapped to the set of semantic domains sitting at
-    // that form. A same-domain hit is a confusable collision to reject.
-    let mut placed_modern: Vec<
-        std::collections::BTreeMap<Vec<Segment>, std::collections::BTreeSet<&'static str>>,
-    > = vec![std::collections::BTreeMap::new(); daughters.len()];
+    // Merger-aware bookkeeping: per daughter, the set of modern forms already
+    // placed for core concepts. A candidate whose evolved form hits one of these
+    // in any daughter is a core merger to reject (domain-agnostic — the target
+    // is zero core homophony, not merely zero same-domain confusable homophony).
+    let mut placed_modern: Vec<std::collections::BTreeSet<Vec<Segment>>> =
+        vec![std::collections::BTreeSet::new(); daughters.len()];
     let mut assigned: std::collections::BTreeMap<String, Vec<Segment>> =
         std::collections::BTreeMap::new();
     for concept in ordered {
         let core = crate::packs::is_core_concept(concept);
-        let domain = crate::packs::concept_domain(concept);
         let mut probe = 0u32;
         let form = loop {
             let candidate = draw_candidate(seed, family, concept, proto_ph, probe);
@@ -267,31 +273,27 @@ pub fn assign_proto_roots(
                 && core_forms
                     .iter()
                     .any(|placed| is_minimal_pair(placed, &candidate));
-            // Merger-aware: reject a core candidate that would evolve into a
-            // same-domain modern collision in any daughter.
-            let confusable = domain.is_some_and(|dom| {
-                daughters.iter().enumerate().any(|(d, daughter)| {
+            // Merger-aware: reject a core candidate that would evolve into ANY
+            // already-placed core concept's modern form in any daughter.
+            let merges = core
+                && daughters.iter().enumerate().any(|(d, daughter)| {
                     let modern = evolve(&candidate, &daughter.cascade, &daughter.phonology).modern;
-                    placed_modern[d]
-                        .get(&modern)
-                        .is_some_and(|domains| domains.contains(dom))
-                })
-            });
-            if !taken && !too_close && !confusable {
+                    placed_modern[d].contains(&modern)
+                });
+            if !taken && !too_close && !merges {
                 break candidate;
             }
             probe += 1;
         };
         used.insert(form.clone());
+        // Record this concept's evolved form in each daughter, so later core
+        // candidates are held off it (core concepts only — periphery mergers
+        // are tolerable and never gate the assignment).
         if core {
             core_forms.push(form.clone());
-        }
-        // Record this core concept's evolved form in each daughter, tagged with
-        // its domain, so later same-domain candidates are held off it.
-        if let Some(dom) = domain {
             for (d, daughter) in daughters.iter().enumerate() {
                 let modern = evolve(&form, &daughter.cascade, &daughter.phonology).modern;
-                placed_modern[d].entry(modern).or_default().insert(dom);
+                placed_modern[d].insert(modern);
             }
         }
         assigned.insert(concept.to_string(), form);
@@ -1580,16 +1582,17 @@ mod tests {
             .collect()
     }
 
-    /// Confusable (same-domain) modern-collision pairs summed over the family,
-    /// for an assignment `assigned`.
-    fn confusable_pairs(
+    /// `(all_core, confusable)` homophony pairs summed over the family: at each
+    /// daughter, group core concepts' evolved forms and sum `C(n, 2)` over every
+    /// shared form; the second figure restricts each count to same-domain
+    /// members (the parsing-costly subset).
+    fn core_homophony(
         assigned: &std::collections::BTreeMap<String, Vec<Segment>>,
         daughters: &[Daughter],
         concepts: &[(&'static str, &'static str)],
-    ) -> usize {
-        let mut total = 0usize;
+    ) -> (usize, usize) {
+        let (mut all, mut confusable) = (0usize, 0usize);
         for daughter in daughters {
-            // modern form -> domains present
             let mut by_form: std::collections::BTreeMap<Vec<Segment>, Vec<&str>> =
                 std::collections::BTreeMap::new();
             for (concept, domain) in concepts {
@@ -1598,55 +1601,61 @@ mod tests {
                 by_form.entry(modern).or_default().push(domain);
             }
             for domains in by_form.values() {
+                let n = domains.len();
+                all += n * n.saturating_sub(1) / 2;
                 let mut counts: std::collections::BTreeMap<&str, usize> =
                     std::collections::BTreeMap::new();
                 for d in domains {
                     *counts.entry(*d).or_insert(0) += 1;
                 }
-                for &n in counts.values() {
-                    total += n * n.saturating_sub(1) / 2;
+                for &c in counts.values() {
+                    confusable += c * c.saturating_sub(1) / 2;
                 }
             }
         }
-        total
+        (all, confusable)
     }
 
     #[test]
     #[ignore]
-    fn measure_merger_aware_confusable_reduction() {
+    fn measure_merger_aware_core_homophony_reduction() {
         let concepts = core_concepts();
         let refs: Vec<&str> = concepts.iter().map(|(c, _)| *c).collect();
         let seeds = 0..200u64;
-        let (mut base_conf, mut ma_conf) = (0usize, 0usize);
-        let (mut base_worlds_hit, mut ma_worlds_hit) = (0usize, 0usize);
+        let (mut base_all, mut base_conf, mut ma_all, mut ma_conf) =
+            (0usize, 0usize, 0usize, 0usize);
+        let (mut base_worlds, mut ma_worlds) = (0usize, 0usize);
         let (mut base_len, mut ma_len) = (0usize, 0usize);
         let n = seeds.clone().count();
         for seed in seeds {
             let (proto_ph, daughters) = goblinoid_family(seed);
             let base = assign_proto_roots(&Seed(seed), "goblinoid", &proto_ph, &refs, &[]);
             let ma = assign_proto_roots(&Seed(seed), "goblinoid", &proto_ph, &refs, &daughters);
-            let bc = confusable_pairs(&base, &daughters, &concepts);
-            let mc = confusable_pairs(&ma, &daughters, &concepts);
+            let (ba, bc) = core_homophony(&base, &daughters, &concepts);
+            let (ma_a, ma_c) = core_homophony(&ma, &daughters, &concepts);
+            base_all += ba;
             base_conf += bc;
-            ma_conf += mc;
-            base_worlds_hit += usize::from(bc > 0);
-            ma_worlds_hit += usize::from(mc > 0);
+            ma_all += ma_a;
+            ma_conf += ma_c;
+            base_worlds += usize::from(ba > 0);
+            ma_worlds += usize::from(ma_a > 0);
             base_len += concepts.iter().map(|(c, _)| base[*c].len()).sum::<usize>();
             ma_len += concepts.iter().map(|(c, _)| ma[*c].len()).sum::<usize>();
         }
-        println!("MERGERAWARE over {n} seeds, {} core concepts:", refs.len());
-        println!("  confusable pairs (family-summed):  base={base_conf}  merger-aware={ma_conf}");
         println!(
-            "  worlds with any confusable pair:   base={base_worlds_hit}/{n}  merger-aware={ma_worlds_hit}/{n}"
+            "MERGERAWARE (all-core) over {n} seeds, {} core concepts:",
+            refs.len()
+        );
+        println!("  core-homophony pairs (family):  base={base_all}  merger-aware={ma_all}");
+        println!("  confusable pairs (family):      base={base_conf}  merger-aware={ma_conf}");
+        println!(
+            "  worlds with any core pair:      base={base_worlds}/{n}  merger-aware={ma_worlds}/{n}"
         );
         println!(
-            "  total core-root segments:          base={base_len}  merger-aware={ma_len}  (Δ={:+})",
-            ma_len as i64 - base_len as i64
-        );
-        println!(
-            "  mean core-root length:             base={:.3}  merger-aware={:.3}",
+            "  mean core-root length:          base={:.3}  merger-aware={:.3}  (Δ={:+.3})",
             base_len as f64 / (n * refs.len()) as f64,
-            ma_len as f64 / (n * refs.len()) as f64
+            ma_len as f64 / (n * refs.len()) as f64,
+            (ma_len as f64 - base_len as f64) / (n * refs.len()) as f64
         );
     }
 }

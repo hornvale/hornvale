@@ -120,8 +120,17 @@ fn kobold_lexicon_is_the_singleton_build_lexicon_call() {
     let kph = hornvale_worldgen::language_of(&world, "kobold");
     let kex = hornvale_worldgen::exposure_of(&world, "kobold")
         .expect("exposure_of(kobold) must succeed for a placed species");
-    let direct =
-        hornvale_language::build_lexicon(&world.seed, "kobold", "kobold", &kph, &kph, &kex);
+    let kdaughters =
+        hornvale_worldgen::family_daughters(&world, &hornvale_worldgen::default_roster(), "kobold");
+    let direct = hornvale_language::build_lexicon(
+        &world.seed,
+        "kobold",
+        "kobold",
+        &kph,
+        &kph,
+        &kex,
+        &kdaughters,
+    );
     assert_eq!(
         hornvale_worldgen::lexicon_of(&world, "kobold").expect("lexicon_of(kobold) must succeed"),
         direct,

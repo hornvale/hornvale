@@ -2018,7 +2018,16 @@ fn goblinoid_proto_assignment(v: &WorldView) -> std::collections::BTreeMap<Strin
         .concepts()
         .map(|c| c.name.as_str())
         .collect();
-    hornvale_language::assign_proto_roots(&v.world.seed, "goblinoid", &proto_ph, &universe, &[])
+    // The merger-aware assignment (epoch root/v3) build_lexicon consumes, so
+    // this reconstruction matches every daughter's recorded proto exactly.
+    let daughters = hornvale_worldgen::family_daughters(&v.world, &v.roster, "goblinoid");
+    hornvale_language::assign_proto_roots(
+        &v.world.seed,
+        "goblinoid",
+        &proto_ph,
+        &universe,
+        &daughters,
+    )
 }
 
 /// Whether every goblinoid daughter's Root `derivation.proto` matches its
@@ -3191,6 +3200,28 @@ mod tests {
                 cap >= 24.0,
                 "seed {seed}: a tone-capable species must clear the capacity floor (got {cap})"
             );
+        }
+    }
+
+    #[test]
+    fn core_homophony_is_zero_for_every_daughter_under_the_merger_aware_assignment() {
+        // The root/v3 merger-aware family assignment chooses core proto-roots
+        // that survive every daughter's cascade distinct, so core homophony —
+        // the number Nathan targets — is zero for every shipped people on every
+        // seed (not merely the confusable subset). Absent (no Root minted) is
+        // vacuously fine.
+        for seed in [1u64, 7, 42, 123, 500] {
+            let v = WorldView::build(Seed(seed), &SkyPins::default()).unwrap();
+            for daughter in ["goblin", "hobgoblin", "bugbear", "kobold"] {
+                match extract(&v, &format!("core-homophony-{daughter}")) {
+                    MetricValue::Number(n) => assert_eq!(
+                        n, 0.0,
+                        "seed {seed}: {daughter} core homophony must be zero, got {n}"
+                    ),
+                    MetricValue::Absent => {}
+                    other => panic!("core-homophony-{daughter} not numeric: {other:?}"),
+                }
+            }
         }
     }
 

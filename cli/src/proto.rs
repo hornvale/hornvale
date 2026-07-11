@@ -45,8 +45,8 @@ pub fn render_proto() -> Result<String, String> {
          reference seed {REFERENCE_SEED} and the family's authored ancestral articulation \
          vector (`hornvale_species::family_registry`). Every registered concept's proto-root \
          below is assigned injectively over the whole concept universe from this inventory \
-         (`hornvale_language::assign_proto_roots`, epoch `root/v2`), so no two concepts share \
-         a proto-root, \
+         (`hornvale_language::assign_proto_roots`, epoch `root/v3` — merger-aware, so no two \
+         core concepts collide even after a daughter's cascade), \
          independent of any daughter's actual exposure — the ancestral vocabulary exists \
          whether or not a given daughter still holds it as a root today. The \
          [dictionary](./dictionary-generated.md#cognates)'s Cognates section shows each \
@@ -83,12 +83,13 @@ pub fn render_proto() -> Result<String, String> {
 
     doc.push_str("## Proto-root table\n\n");
     doc.push_str("| Concept | Gloss | Proto | IPA |\n|---|---|---|---|\n");
-    // The injective family assignment (epoch root/v2), computed once over the
-    // whole concept universe — exactly what `build_lexicon` consumes, so this
-    // reference page shows the SAME proto-roots the dictionary's modern forms
-    // descend from.
     let universe: Vec<&str> = world.registry.concepts().map(|c| c.name.as_str()).collect();
-    let assignment = assign_proto_roots(&world.seed, FAMILY, &phonology, &universe, &[]);
+    // The merger-aware assignment (epoch root/v3): the same daughters the
+    // composition root feeds `build_lexicon`, so this page's proto-roots are
+    // exactly the ones the dictionary's modern forms descend from.
+    let daughters =
+        world_builder::family_daughters(&world, &world_builder::default_roster(), FAMILY);
+    let assignment = assign_proto_roots(&world.seed, FAMILY, &phonology, &universe, &daughters);
     for concept in world.registry.concepts() {
         let proto = &assignment[&concept.name];
         let views = render_views(proto);
