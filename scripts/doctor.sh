@@ -45,6 +45,25 @@ echo "  branch: $(git branch --show-current)   dirty files: $(git status --porce
 git worktree list | sed 's/^/  /'
 
 section "Decisions never cited in sources or docs (informational, not a gate)"
+# Cites often wrap across lines (the "decision" keyword ends one comment line,
+# the backticked slug starts the next), which a per-line grep misses. Build a
+# comment-marker-stripped, line-joined corpus once so wrapped cites count. The
+# match below also tolerates a short gap after the keyword (e.g. a shared
+# "(decisions `a` / `b`)" list crediting both slugs), bounded so it can't leap
+# past `.`, `;`, or `)` — which is what keeps it from crediting an unrelated
+# "(0003)" that only shares a sentence with an earlier "ADR 0002".
+corpus_file="$(mktemp "${TMPDIR:-/tmp}/hv-doctor-corpus.XXXXXX")"
+trap 'rm -f "$corpus_file"' EXIT
+find kernel domains windows cli tools scripts docs book CLAUDE.md \
+    -type f \( -name '*.rs' -o -name '*.sh' -o -name '*.md' \) \
+    -not -path '*/target/*' -not -path '*/.git/*' -not -path 'docs/decisions/*' \
+    -print0 2>/dev/null \
+    | xargs -0 awk '{print}' 2>/dev/null \
+    | sed -E 's@^[[:space:]]*(///|//!|//|#)[[:space:]]?@@' \
+    | tr '\n' ' ' \
+    > "$corpus_file"
+printf ' ' >> "$corpus_file"
+
 orphans=0
 for f in docs/decisions/*.md; do
     stem="$(basename "$f" .md)"
@@ -53,10 +72,7 @@ for f in docs/decisions/*.md; do
         [0-9][0-9][0-9][0-9]-*) pat="${stem:0:4}|${stem:5}" ;;
         *) pat="$stem" ;;
     esac
-    if ! grep -rqE "(decision|decisions|ADR) (\`)?($pat)" \
-        --include='*.rs' --include='*.sh' --include='*.md' \
-        --exclude-dir=decisions --exclude-dir=target --exclude-dir=.git \
-        kernel domains windows cli tools scripts docs book CLAUDE.md 2>/dev/null; then
+    if ! grep -qE "(decision|decisions|ADR)[^.;)]{0,80}(\`)?($pat)[^a-z0-9-]" "$corpus_file"; then
         echo "  $stem"
         orphans=$((orphans + 1))
     fi
