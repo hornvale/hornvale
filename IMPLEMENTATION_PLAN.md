@@ -77,7 +77,8 @@ Assignment algorithm (`assign_proto_roots`, new; replaces per-concept
 **Success Criteria**: `core-homophony-*` at proto level = 0 across a seed
 sweep; `monophyly`/`divergence-real`/pin-isolation tests still green;
 byte-identical determinism holds.
-**Status**: In Progress (wiring done, artifact regen running) —
+**Status**: ✅ COMPLETE (commits `2bf6631` + `dab3d32`; main merged in at
+`e8bf17d`, full gate 788 green) —
   ✅ `assign_proto_roots` core (`2bf6631`): injective, core-first, double-hash
      probe, minimal-pair rejection, insertion-stable, 7 tests.
   ✅ Wired into `build_lexicon` pass 1 over `exposures.keys()`; pin-isolation
@@ -100,19 +101,58 @@ byte-identical determinism holds.
   folding), goblin/hobgoblin/kobold ~27–30%. **Stage 3 is now the ENTIRE
   remaining problem, not a co-primary half.**
 
-## Stage 3: Post-evolution re-merger check (co-primary fix — merger side)
-**Goal**: catch the ~50–82% the cascade / `nativize` re-merge per daughter
-(Stage-1 finding: dominant for bugbear, ~half family-wide).
-After evolving, detect core-on-core modern-form collisions a daughter
-introduced and repair (append a distinguishing syllable / perturb), in
-deterministic order. **Status**: Not Started
+---
+## CAMPAIGN EXPANDED (Nathan): homophony → a PHONOLOGY EPOCH (tone + tonogenesis)
 
-## Stage 4: Phonotactic floor (safety net) + tuning
-**Goal**: bound the worst case seed-independently (no coda-less degenerate
-proto). Re-measure with Stage 1 metrics; tune root-length only if the
-instrument still shows core collisions. **Status**: Not Started
+The residual (100% mergers) and the exotic-species goal (yuan-ti/dragons) are
+the SAME problem — too few phonetic DIMENSIONS. The model is segmental-only
+(place/manner/voicing + 5 vowels); it has no suprasegmental tier (tone,
+phonation). Restricted species get tiny inventories → homophony AND monotony.
+The fix opens a second tier. Merger-repair via **tonogenesis** (a lost
+segmental contrast reborn as pitch — how real tone languages arose) threads
+the constitutional needle Options A/B could not: it is a REGULAR conditioned
+change (regularity holds), proto unchanged (cognates hold), and yields tonal
+languages as a byproduct. This is a new epoch beyond `root/v2`.
 
-## Stage 5: Close — book, decision log, retrospective
-Chronicle entry; re-score the relevant open-question; decision recording the
-functional-load definition and the injective-assignment approach;
-retrospective. **Status**: Not Started
+**Key design decisions (proposed; confirm before implementing):**
+- **Where tone lives**: per-syllable, on the nucleus — a `Tone` enum (Level
+  High/Mid/Low at minimum; Contour later). Atonal languages carry a single
+  neutral tone (no contrast), so the field is universal but usually inert.
+- **Tone capacity per species**: a new body-plan-derived scalar in the
+  articulation vector (`tonality`), drawn to a tone count (1 = atonal, the
+  humanoid default; 2–4 for serpentine/avian). Most species stay atonal.
+- **Tonogenesis trigger**: when a *specific* merging sound-change (voicing
+  loss, coda `FinalLoss`) collapses two forms in a tone-capable language, the
+  lost feature becomes a tone — a regular conditioned split, not a lexical
+  patch. Atonal species don't tonogenize (their residual is handled by the
+  Stage-4 capacity floor + accepted-realistic tail).
+- **Floor on CAPACITY, not segment count**: guarantee each species enough
+  distinguishable syllables, reachable via segments OR tone — so yuan-ti meets
+  the bar with pitch, keeping its serpentine (few-place) character.
+- **Rendering ceiling is espeak, not IPA**: tone/length render well, phonation
+  weakly — stay inside IPA-describable features (all of tone/phonation/clicks).
+
+## Stage 3: Tone dimension in the phoneme model + tonogenesis repair
+Add `Tone` to the segment/syllable model (per-nucleus); make it a regular
+conditioned outcome of the merging rules for tone-capable languages; verify
+`lexicon-regular` still holds (the split is regular) and cognates intact.
+**Status**: Not Started
+
+## Stage 4: Body-plan tone capacity + channel-capacity floor
+`tonality` scalar in the articulation vector (yuan-ti/dragon/bird propensities
+authored); a minimum-distinguishable-syllable floor met via segments OR tone;
+re-measure homophony with the Stage-1 instrument. **Status**: Not Started
+
+## Stage 5: Render + audio — tone across roman / IPA / espeak
+Tone marks in all three views; espeak tone approximation; the audio pipeline.
+**Status**: Not Started
+
+## Stage 6: Close — book, decisions, retro, re-measure
+Chronicle; re-score the relevant open-question; decisions (functional-load
+definition, injective assignment, tonogenesis-as-merger-repair, capacity
+floor); retrospective; final homophony + expressiveness re-measure.
+**Status**: Not Started
+
+*(Given the scope, this expansion likely warrants a short spec in
+`docs/superpowers/specs/` before Stage 3 — the phoneme-model change touches
+determinism, serialization, all render views, and the audio pipeline.)*
