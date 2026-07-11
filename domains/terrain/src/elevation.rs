@@ -8,24 +8,27 @@
 //! (`crust.rs`), producing a genuine shelf where crust tapers through the
 //! continental threshold.
 //!
-//! **Known finding (Task 8, recorded not silently retuned):** the drawn
-//! craton footprint (`crust.rs`'s radius/peak/count budget, Task 5) covers
-//! only ~2-10% of a globe's cells at the continental threshold, far short
-//! of the 25-50% land fraction `ocean_fraction`'s drawn range implies. Sea
-//! level's exact-percentile mechanism (`derive_sea_level`) therefore lands
-//! deep inside the abyssal plain for most seeds rather than on the craton's
-//! shelf taper, which weakens hypsometric bimodality and inflates the
-//! ±200 m shelf band for most worlds (measured: ~2/20 default seeds pass
-//! both bounds at canonical level 6; ~3/40 at the single-craton scenario).
-//! Root cause: `crust::PEAK_MIN_KM` (30, Task 5) equals `ISOSTASY_REF_KM`
-//! (30, this module) exactly, so an "old" craton (age → 1, peak → 30) never
-//! rises above sea level anywhere in its footprint — confirmed structural,
-//! not a wiring bug: pinning `ocean_fraction` down to match the actually
-//! available continental area (0.95) restores a 37/40 pass rate on the same
-//! genesis code. See the Task 8 report for the full evidence table; fixing
-//! this is a deliberate parameter decision (craton budget vs. isostasy
-//! reference, or the ocean-fraction range) owned by Task 9's after-census,
-//! not a unit-test retune.
+//! **Finding, largely resolved (diagnosed Task 8, fixed for the general
+//! case in Task 9):** the drawn craton footprint used to cover only
+//! ~2-10% of a globe's cells at the continental threshold, far short of
+//! the 25-50% land fraction `ocean_fraction`'s drawn range implies, so sea
+//! level's exact-percentile mechanism (`derive_sea_level`) landed deep
+//! inside the abyssal plain for most seeds instead of on the craton's
+//! shelf taper — weakening hypsometric bimodality and inflating the
+//! ±200 m shelf band (measured: ~2/20 default seeds passed both bounds at
+//! canonical level 6; ~3/40 at the single-craton scenario). Two authorized
+//! fixes landed together in Task 9: `crust::draw_cratons` now rescales its
+//! drawn radii so total spherical-cap area matches the land-quota budget
+//! (clamped at 0.6 rad per craton), and `crust::PEAK_MIN_KM` moved from 30
+//! (exactly `ISOSTASY_REF_KM`, so an "old" craton floated at 0 m and never
+//! surfaced) to 33 (crests ~540 m). See the Task 9 report for the
+//! after-census evidence on the general (multi-craton) population this
+//! fixes. One edge case remains structurally unfixable by these two knobs:
+//! a *lone pinned* craton (`continents=1`) always clamps to exactly
+//! 0.6 rad, capping its cap area at ~8.7% of the sphere — below any
+//! achievable land quota — so
+//! `a_single_craton_world_has_a_shelf_and_a_bimodal_hypsometry` stays
+//! `#[ignore]`d with that math in its own annotation.
 
 use crate::boundaries::{BoundaryKind, CellBoundary};
 use crate::pins::TerrainPins;
@@ -469,10 +472,18 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "known craton-budget/isostasy-reference parameter mismatch, \
-        not a Task 8 wiring bug — see this module's \"Known finding\" doc \
-        comment and the Task 8 report's evidence table; do not silently \
-        retune to force this green"]
+    #[ignore = "Task 9 re-verification (measured, not silently retuned): the \
+        area-normalization fix resolves the general multi-craton case, but \
+        a lone pinned craton (continents=1) is mathematically incapable of \
+        reaching the land quota under the directed r_i <= 0.6 rad ceiling — \
+        (1 - cos(0.6))/2 ~= 8.7% of the sphere is the hard ceiling on a \
+        single craton's cap area, versus the 20-50% ocean-fraction-implied \
+        land quota the percentile sea level always hits exactly. Verified: \
+        draw_cratons(continents=1) clamps to exactly 0.6 rad for every \
+        swept seed 1..=5, and the swept scenario (seeds 1..=40) passes \
+        0/40. Neither authorized knob (budget range, PEAK_MIN) touches \
+        footprint area, so this is outside Task 9's tuning scope — see the \
+        Task 9 report."]
     fn a_single_craton_world_has_a_shelf_and_a_bimodal_hypsometry() {
         let geo = Geosphere::new(4);
         let pins = TerrainPins {

@@ -1,33 +1,33 @@
 # The Peoples of Seed 42
 
-The land holds 38 settlement(s).
-The chief goblin settlement, Xngebnebned, holds 439 souls amid temperate-rainforest.
-The chief kobold settlement, Xorogxoqxag, holds 473 souls amid temperate-rainforest.
+The land holds 40 settlement(s).
+The chief goblin settlement, Nobvnakned, holds 355 souls amid temperate-rainforest.
+The chief kobold settlement, Xoraraxoqrog, holds 405 souls amid temperate-rainforest.
 
 ```text
-                                            o                           
-                     o          o                                       
-                                           o       o                    
-                    o      o                                            
-                                                                        
-                   o                               o                    
-                                                o                       
-                  o                             o   @                   
                                               o                         
-                    o  o                       o  o o                   
+                              o                                         
+                    o                      o                            
+                         o                                              
+                                              o                         
+                                                o  o                    
+                  o                          o                          
+                                                o    o                  
+                                             o     o                    
+                    o                                                   
+                                               o  o o                   
                   o                                                     
                                                  o                      
+                  o                           o                         
+                   o                          o   o                     
+                      o                              @                  
+                                            o   o  o                    
                   o                                                     
-                                                                        
-                  o                                                     
-                   o  o                                                 
-                                                  o                     
-                   o   o                  o   o                         
-                                                 o  o                   
-                     o                                                  
-                         o                         o                    
-                                                                        
-                     o               o           o                      
+                     o                     o        o                   
+                                               o                        
+                       o                            o                   
+                     o                o                                 
+                                                 o                      
                                                                         
 ```
 

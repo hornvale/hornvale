@@ -773,6 +773,14 @@ fn name_collision_rate_is_measured_and_pinned() {
     // landmasses move every settlement and its presiding phenomenon,
     // IMPROVING the rate (3.1042%): craton-shaped coasts spread
     // settlements across more distinct sky vantages.
+    //
+    // Crust epoch (Task 9, 2026-07-10: area-normalized craton budget +
+    // PEAK_MIN_KM 30->33, fixing Task 8's diagnosed area-quota mismatch):
+    // re-pinned on the 500-seed drift study — zero/nonzero counts hold
+    // (166/334, so the SAME worlds have any collision at all), but the
+    // mean WORSENS (3.4163%, was 3.1042%): the now-larger, more
+    // budget-accurate cratons shrink the number of distinct sky vantages
+    // per world slightly relative to Task 8's under-sized ones.
     assert_eq!(zero, 166, "zero-collision world count drifted");
     assert_eq!(nonzero, 334, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
@@ -780,7 +788,7 @@ fn name_collision_rate_is_measured_and_pinned() {
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.031_042_391_227_307).abs() < 1e-6,
+        (mean - 0.034_162_668_391_552).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -824,9 +832,16 @@ fn name_length_distributions_are_measured_and_pinned() {
     // the transformed landmasses relocate every settlement; kobolds now
     // place in all 500 worlds (the three total-exclusion worlds gained a
     // kobold-viable site), and both means shift.
+    //
+    // Crust epoch (Task 9, 2026-07-10: area-normalized craton budget +
+    // PEAK_MIN_KM 30->33): re-pinned on the 500-seed drift study (was
+    // goblin 500/14.847929675008448, kobold 500/13.574836542341416) —
+    // present-row counts hold (both species still place in all 500
+    // worlds), but the transformed landmasses relocate every settlement's
+    // presiding concept, shifting both means.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 500u32, 14.847_929_675_008_448),
-        ("kobold", 500u32, 13.574_836_542_341_416),
+        ("goblin", 500u32, 14.744_593_607_676_443),
+        ("kobold", 500u32, 13.893_004_502_119_725),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1005,6 +1020,10 @@ fn null_control_name_length_smd_is_pinned() {
     // cratons; plate-kind retired): re-pinned again (was
     // -0.078885075229913) — the transformed landmasses shift the
     // name-length distribution once more; still inside the same bound.
+    //
+    // Crust epoch (Task 9, 2026-07-10: area-normalized craton budget +
+    // PEAK_MIN_KM 30->33): re-pinned again (was -0.064112415249032) —
+    // still comfortably inside the same ±0.2 bound.
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let namelen = std_mean_diff(
@@ -1012,7 +1031,7 @@ fn null_control_name_length_smd_is_pinned() {
         nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
     assert!(
-        (namelen - -0.064_112_415_249_032).abs() < 1e-9,
+        (namelen - -0.059_459_520_252_233).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

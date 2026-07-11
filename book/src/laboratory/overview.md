@@ -33,6 +33,15 @@ addition) — are never committed as raw output. Each backs one or more
 chapters in this section; regenerating one is a one-line `lab run` and a
 manual re-read of its headline numbers, not a CI obligation.
 
+`census-of-coasts` re-runs the same study a second time within Campaign
+25's Crust epoch (immediately after Study 011 in the book's ordering): a
+**v1@L6 interim** re-measurement of the six shape metrics on the raised
+grid alone, then a **v2@L6 after-photograph** once the Crust generator
+lands, judged against the spec §7 acceptance bands. Both land in [The
+Census of Coasts II](./census-of-coasts-ii.md) rather than a new numbered
+study, since it is the same study file and the same ten thousand seeds —
+only the pins under test change.
+
 ### The instrument's self-check
 
 `census-lands-drift` is a small, fast study (500 seeds, every metric the

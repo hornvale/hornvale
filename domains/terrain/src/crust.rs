@@ -96,8 +96,13 @@ pub const OCEANIC_KM: f64 = 7.0;
 /// Crust at or above this thickness is continental, km.
 /// type-audit: pending(wave-2)
 pub const CONTINENTAL_THRESHOLD_KM: f64 = 20.0;
-/// Drawn craton peak thickness range, km.
-const PEAK_MIN_KM: f64 = 30.0;
+/// Drawn craton peak thickness range, km. Minimum must clear
+/// `elevation::ISOSTASY_REF_KM` (30 km) — otherwise an "old" craton
+/// (age -> 1, peak -> `PEAK_MIN_KM`) floats at or below sea level and never
+/// surfaces regardless of footprint area (Task 8's diagnosed finding, fixed
+/// here in Task 9). At 33 km an old craton crests
+/// `ISOSTASY_M_PER_KM * (33 - 30)` = ~540 m — comfortably above sea level.
+const PEAK_MIN_KM: f64 = 33.0;
 /// Upper end of the drawn peak range, km.
 const PEAK_MAX_KM: f64 = 45.0;
 
@@ -157,9 +162,26 @@ fn slerp(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
 /// fewer — never skipping the budget or count draws themselves (pin
 /// isolation). `notes` receives a metering entry when `continents` is
 /// pinned (Task 7's metering convention: `pinned <name> <value> (seed draws
-/// <drawn>)`). `--supercontinent` is applied last, after every position is
-/// drawn: it clusters cratons 1.. toward craton 0 by `slerp`, so the pin
-/// perturbs positions but never the draw sequence (pin isolation again).
+/// <drawn>)`).
+///
+/// Budget → area normalization (Task 9): the budget draw is a *fraction of
+/// the sphere's surface* the craton set should cover, matching the land
+/// quota's own range (0.20–0.50) rather than an independently-tuned number.
+/// After every radius is drawn, the whole set is rescaled — a pure
+/// post-draw transform, no extra stream draws — so total spherical-cap area
+/// (`Σ 2π(1 − cos r_i)`) matches `budget * 4π` exactly (up to the 0.6 rad
+/// ceiling clamp). This fixes Task 8's diagnosed area-quota mismatch (drawn
+/// craton footprint covering only ~2–10% of cells against a 25–50%-implying
+/// `ocean_fraction` range) at its root rather than by picking a lucky seed.
+/// A pinned count redistributes the same total budgeted area across
+/// however many cratons survive — fewer cratons means each is larger, not
+/// smaller — so the per-craton radius is *not* pin-isolated the way center
+/// and age are; that is by design, not a stream perturbation.
+///
+/// `--supercontinent` is applied last, after every position is drawn and
+/// every radius rescaled: it clusters cratons 1.. toward craton 0 by
+/// `slerp`, so the pin perturbs positions but never the draw sequence or
+/// the area normalization (pin isolation again).
 /// type-audit: bare-ok(prose: notes)
 pub fn draw_cratons(
     terrain_seed: Seed,
@@ -167,8 +189,8 @@ pub fn draw_cratons(
     notes: &mut Vec<String>,
 ) -> Vec<Craton> {
     let mut stream = terrain_seed.derive(streams::CRATONS).stream();
-    let budget = 0.15 + 0.25 * stream.next_f64();
-    let drawn_count = 3 + (budget * 20.0).round() as u32; // 6..=11 over the budget range
+    let budget = 0.20 + 0.30 * stream.next_f64();
+    let drawn_count = 3 + (budget * 20.0).round() as u32; // 7..=13 over the budget range
     let count = pins.continents.unwrap_or(drawn_count);
     if let Some(n) = pins.continents {
         notes.push(format!("pinned continents {n} (seed draws {drawn_count})"));
@@ -186,6 +208,16 @@ pub fn draw_cratons(
             }
         })
         .collect();
+    let total_area: f64 = cratons
+        .iter()
+        .map(|c| std::f64::consts::TAU * (1.0 - c.radius_rad.cos()))
+        .sum();
+    if total_area > 0.0 {
+        let scale = ((budget * 4.0 * std::f64::consts::PI) / total_area).sqrt();
+        for c in cratons.iter_mut() {
+            c.radius_rad = (c.radius_rad * scale).min(0.6);
+        }
+    }
     if pins.supercontinent == Some(true) && cratons.len() > 1 {
         let anchor = cratons[0].center;
         for craton in cratons.iter_mut().skip(1) {
@@ -342,15 +374,21 @@ mod tests {
                 &mut Vec::new(),
             );
             assert!(
-                (6..=11).contains(&cratons.len()),
+                (7..=13).contains(&cratons.len()),
                 "seed {seed}: {}",
                 cratons.len()
             );
             for (i, c) in cratons.iter().enumerate() {
                 assert_eq!(c.id, i as u32);
                 assert!((crate::plates::norm(c.center) - 1.0).abs() < 1e-12);
+                // Post-rescale bound, exact by construction rather than
+                // observed: scale = sqrt(budget * 4pi / total_area) is
+                // strictly positive (budget > 0, total_area > 0), so
+                // radius_rad = min(r * scale, 0.6) is always in (0, 0.6].
+                // The pre-rescale draw range (0.10..=0.45) no longer bounds
+                // it — that is the area-normalization's whole point.
                 assert!(
-                    (0.10..=0.45).contains(&c.radius_rad),
+                    c.radius_rad > 0.0 && c.radius_rad <= 0.6,
                     "radius {}",
                     c.radius_rad
                 );
@@ -373,7 +411,21 @@ mod tests {
         );
         assert_eq!(pinned.len(), 5);
         for (a, b) in drawn.iter().zip(&pinned) {
-            assert_eq!(a, b, "shared-prefix craton {} perturbed", a.id);
+            assert_eq!(a.id, b.id);
+            assert_eq!(
+                a.center, b.center,
+                "shared-prefix craton {} center perturbed",
+                a.id
+            );
+            assert_eq!(a.age, b.age, "shared-prefix craton {} age perturbed", a.id);
+            // radius_rad is deliberately NOT asserted equal: the Task 9
+            // area-normalization rescale redistributes the same drawn
+            // budget across whatever count of cratons survives the pin, so
+            // fewer cratons legitimately means larger individual radii.
+            // That's a downstream arithmetic consequence of the pin, not a
+            // stream-draw perturbation — center and age (which come
+            // straight from the stream) are the pin-isolation invariant
+            // this test protects.
         }
     }
 

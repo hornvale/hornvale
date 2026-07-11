@@ -31,137 +31,131 @@ By night: a smoldering red star that does not wander; a warm yellow star that do
 ## The Land
 
 The globe breaks into 16 plates; the sea claims 73% of its surface.
-The highest land stands 6753 m above the sea.
+The highest land stands 8758 m above the sea.
 
 The air organizes into 3 circulation band(s) per hemisphere; 12 land biomes and 8 marine biomes cover the globe.
-Some 15% of the surface is habitable — land with water and a tolerable season.
+Some 14% of the surface is habitable — land with water and a tolerable season.
 
-- **Raxaragrroq** — temperate-rainforest
-- **Raxaxakro** — temperate-rainforest
-- **Vnatnebned** — temperate-rainforest
-- **Nokxngekzfekned** — temperate-rainforest
-- **Xnatsfodzhfekned** — temperate-rainforest
-- **Fngatzhxabzfatnednadnob** — temperate-forest
-- **Raxaroqro** — temperate-rainforest
-- **Sfokzxakneknadnobned** — temperate-forest
-- **Fnobvngabned** — temperate-forest
-- **Sxekxngobzhfobned** — temperate-rainforest
-- **Fnobzvedzhvadned** — temperate-rainforest
-- **Xnebzhvobnadned** — temperate-rainforest
-- **Ngokngatned** — temperate-rainforest
-- **Zfadngebngodnednadnob** — temperate-forest
-- **Ngabfngebnabned** — temperate-forest
-- **Ngebxnabngetned** — temperate-rainforest
-- **Fnobzhxetvngobned** — temperate-forest
-- **Xngodzvabnednadnob** — temperate-forest
-- **Ngodxnebned** — temperate-forest
-- **Ngotxnetned** — temperate-rainforest
-- **Vngebngokned** — temperate-forest
-- **Noksxobzhfaknadnob** — temperate-forest
-- **Ngokngetnetnednadnob** — temperate-forest
-- **Xngotngedvngeknednadnob** — temperate-forest
-- **Zxetzhxobvnabned** — temperate-forest
-- **Raxaxororokxat** — temperate-rainforest
-- **Xnekngodngokned** — temperate-rainforest
-- **Vngobzvatzvotned** — temperate-rainforest
-- **Ngatnakned** — temperate-forest
-- **Xngebfngednoknotngok** — tropical-rainforest
-- **Zhfotvneknotngokned** — tropical-rainforest
-- **Ngodzhxaknebned** — temperate-rainforest
-- **Nobsvabzvodnednotngok** — tropical-rainforest
-- **Ngabzxebnodnotngok** — tropical-rainforest
-- **Sfebnobned** — temperate-forest
-- **Ngebngebnotngok** — tropical-rainforest
-- **Netngebvnebnednotngok** — tropical-rainforest
-- **Fngobnobxneknadnobned** — temperate-forest
-- **Svekfngekned** — tropical-rainforest
-- **Zvabngabngatnotngokned** — tropical-rainforest
-- **Vnatvnetnotngokned** — tropical-rainforest
-- **Vngadvnokngokned** — tropical-rainforest
-- **Nabvnadzhxeknotngokned** — tropical-rainforest
-- **Xnotxnadngobned** — shrubland
-- **Sfatfngobned** — tropical-rainforest
-- **Zxekxngetngobnotngokned** — tropical-rainforest
-- **Vnatvnatnotngokned** — tropical-rainforest
-- **Xngobnobvnobnotngok** — tropical-rainforest
-- **Nobzfodsxatnotngok** — tropical-rainforest
-- **Xaxorrarrokrro** — tropical-rainforest
-- **Ngodnatsxeknotngokned** — tropical-rainforest
-- **Zxadsvobnadnob** — temperate-forest
-- **Raxarrokrrarrok** — temperate-forest
-- **Nedfneknadnob** — temperate-forest
-- **Nobzhvedngot** — taiga
-- **Zhfetzvadnadnob** — temperate-forest
-- **Svokzhxekzxakngotned** — taiga
-- **Raxararoqxo** — shrubland
-- **Zxetxnebnotngot** — taiga
-- **Zhfetneknedngot** — taiga
-- **Nodnabnedngot** — taiga
-- **Nodnodsxokngotned** — taiga
-- **Nakvngatned** — taiga
-- **Nabzfednedngot** — taiga
-- **Ngokngebned** — taiga
-- **Vnadvnedngot** — taiga
-- **Xngokxnabnedngot** — taiga
-- **Zxetvnekngabned** — taiga
-- **Zhfedfnetngotned** — taiga
-- **Xnabngodvngekned** — taiga
-- **Svetzvakxnakngot** — taiga
-- **Ngadvnebngotned** — taiga
-- **Zhfadngokngatnedngok** — tundra
-- **Netxngobngot** — taiga
-- **Zhvatxngobned** — taiga
+- **Sxeknokzhxebned** — temperate-rainforest
+- **Nodzhfoknadned** — temperate-rainforest
+- **Ngedngatned** — temperate-rainforest
+- **Netxnabfngebned** — temperate-rainforest
+- **Fnabsvedned** — temperate-rainforest
+- **Zhvekngatned** — temperate-rainforest
+- **Ngeksvodnetnadnobned** — temperate-forest
+- **Xoraxaraxokrro** — temperate-rainforest
+- **Zhfeknadzvebned** — temperate-rainforest
+- **Svadvngedned** — temperate-rainforest
+- **Zhvodngokned** — temperate-forest
+- **Zhfekzfabxnot** — temperate-rainforest
+- **Ngokngabfnoknadnobned** — temperate-forest
+- **Xngednabnekned** — temperate-forest
+- **Zvodxnodnednadnob** — temperate-forest
+- **Xnebsvobnednadnob** — temperate-forest
+- **Fngedngetzhxeknadnob** — temperate-forest
+- **Fnetngakzxod** — temperate-rainforest
+- **Xngabzhfeksfakned** — temperate-rainforest
+- **Nokvnatzxedned** — temperate-rainforest
+- **Zvadnebngednadnobned** — temperate-forest
+- **Ngekngetnobnadnobned** — temperate-forest
+- **Ngatvnebnadnobned** — temperate-forest
+- **Netvngebnadnob** — temperate-forest
+- **Xngadfngaknadnobned** — temperate-forest
+- **Nakngabned** — temperate-rainforest
+- **Xnadzhvakfnabned** — temperate-forest
+- **Vnobnekxngotned** — temperate-forest
+- **Zxatngakvneknotngok** — tropical-rainforest
+- **Noknedngoknadnob** — temperate-forest
+- **Ngebsvobxnotned** — temperate-rainforest
+- **Zfabzhvodnadnob** — temperate-forest
+- **Sfetxnotfngaknednadnob** — temperate-forest
+- **Vngabzvedzvodned** — temperate-rainforest
+- **Ngotngetnednotngok** — tropical-rainforest
+- **Raxaraqrro** — tropical-rainforest
+- **Fnatfngodngebnotngok** — tropical-rainforest
+- **Raxarorrakxok** — tropical-rainforest
+- **Nedzxaksvaknednadnob** — temperate-forest
+- **Nedngobnotngok** — tropical-rainforest
+- **Zvobzxotnadnobned** — temperate-forest
+- **Raxaxaratrrot** — tropical-rainforest
+- **Zvatxnakzfebned** — tropical-rainforest
+- **Zfotnedsvokned** — temperate-forest
+- **Fngetvngebfnadned** — tropical-rainforest
+- **Nadzhfeknetnednotngok** — tropical-rainforest
+- **Rrararog** — temperate-forest
+- **Xngebnedzhvoknoknek** — tropical-seasonal-forest
+- **Rraraxaxatxat** — temperate-forest
+- **Xnodnodnadnobned** — temperate-forest
+- **Vngebsxedsfedned** — shrubland
+- **Zhfeknotnetngob** — shrubland
+- **Natvngakngotned** — taiga
+- **Fngotngokxnokngotned** — taiga
+- **Sfebnedngebngot** — taiga
+- **Nekfngoknakngot** — taiga
+- **Ngotxngatzxobngotned** — taiga
+- **Ngakvngebzhfadngot** — taiga
+- **Vngedngabzxotngotned** — taiga
+- **Natxngotnedngot** — taiga
+- **Xngadvngokzhfekngot** — taiga
+- **Vngetngedsxetned** — taiga
+- **Neknakfnotngot** — taiga
 - **Xaxoraxarrarorrak** — taiga
+- **Zhfatfngekzfokngotned** — taiga
+- **Xngebfnotsvobned** — taiga
+- **Netxngobngot** — taiga
+- **Raraxarrarrakrro** — alpine
+- **Netfnetngatngot** — taiga
+- **Raxarrogrroro** — taiga
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## Deep Time
 
-The frost retreated: at the glacial maximum (day -243500000), ice advanced over 43% of the land.
+The frost retreated: at the glacial maximum (day -243500000), ice advanced over 44% of the land.
 
 ## The People
 
-The land holds 76 settlement(s).
-The chief goblin settlement, Vnatnebned, holds 530 souls amid temperate-rainforest.
-The chief kobold settlement, Raxaragrroq, holds 531 souls amid temperate-rainforest.
+The land holds 70 settlement(s).
+The chief goblin settlement, Sxeknokzhxebned, holds 501 souls amid temperate-rainforest.
+The chief kobold settlement, Xoraxaraxokrro, holds 374 souls amid temperate-rainforest.
 
-The goblin village of **Vnatnebned**, population 530.
+The goblin village of **Sxeknokzhxebned**, population 501.
 
-Vnatnebned lives by farming.
+Sxeknokzhxebned lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 
-The kobold warren of **Raxaragrroq**, population 531.
+The kobold warren of **Xoraxaraxokrro**, population 374.
 
-Raxaragrroq lives by farming.
+Xoraxaraxokrro lives by farming.
 Its roles, lowest to highest: digger, shaper, keeper, elders.
 
 ## The Gods
 
 An organized priesthood tends a pantheon:
 
-> Ned the Fngadned returns every 0.88 days. So it was, so it is. *(who presides)*
+> Ned the Zhxabned returns every 0.88 days. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neb the Ngadneb returns every 15.99 days. So it was, so it is.
+> Neb the Sfokneb returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neb the Ngatneb returns every 32.55 days. So it was, so it is.
+> Neb the Svatneb returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-In the warren of **Raxaragrroq**, an organized priesthood tends its own pantheon:
+In the warren of **Xoraxaraxokrro**, an organized priesthood tends its own pantheon:
 
-> Raxa Rroraxa comes back every 15.99 days. That's how it's always been. That's how it's always been. Raxa is the highest among the gods. *(who presides)*
+> Raxa Raxarro comes back every 15.99 days. That's how it's always been. That's how it's always been. Raxa is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Raxa Rroraxa comes back every 32.55 days. That's how it's always been. That's how it's always been. Raxa is a great one among the gods.
+> Rro Raxarro comes back every 32.55 days. That's how it's always been. That's how it's always been. Rro is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Rro Ra comes back every 0.88 days. That's how it's always been. That's how it's always been. Rro is a great one among the gods.
+> Rro Rarro comes back every 0.88 days. That's how it's always been. That's how it's always been. Rro is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
