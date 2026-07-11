@@ -131,6 +131,28 @@ a fabricated pitch the voice cannot really produce.
   the parsing-side cost — is what makes a residual defensible rather than merely
   tolerated, and it did so without a single new sporadic rule.
 
+## Coda: core homophony reaches zero
+
+Tone drove the tonal path's residual to nothing, but the shipped peoples are
+atonal, so for them the confusable tail stayed real — bugbear carried a
+same-domain core collision in more than half its worlds. The measurement the
+tone epoch built is what made the next step legible, and the fix turned out to
+be the same idea one level up. Tonogenesis chooses, for a *tonal* language, to
+preserve a lost contrast rather than let two words merge; the **merger-aware
+assignment** chooses, for *any* language, an ancestral form that will not merge
+in the first place. Because every daughter's cascade is a pure, known function,
+the family can pick each core concept's shared proto-root to survive all three
+daughters' descent still distinct — regular (no sporadic rule, `evolve`
+untouched), cognate-safe (the proto stays shared), and exact: core homophony is
+now zero for every shipped people on every seed, measured 791 family-summed
+collisions down to none. It cost the core vocabulary about three percent in
+length and one durable concession — the assignment now depends on which
+daughters a family has, so a future sibling could reshuffle a few ancestral
+roots — the honest price of a guarantee that spans the whole family at once.
+Free, cross-domain collisions are left where they fell, realistic texture rather
+than a defect. The campaign that opened on *hand = many = night = Noa* closes
+with no two core concepts sharing a word anywhere.
+
 ## Deferred, deliberately
 
 Phonation — the dragon's growl, the whine — is IPA-native but espeak-weak, so it

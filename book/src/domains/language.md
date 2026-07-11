@@ -392,9 +392,17 @@ tolerate no exceptions, restated as a property the world enforces rather
 than merely asserts — a rule fires on every proto-root whose environment
 it matches, or on none, and replaying the cascade over a recorded
 proto-form must reproduce the recorded modern form exactly, every time.
-The cascade's target is fixed and deliberate: it lands only on the
-phonology this world already shipped a mouth for, never widening or
-retuning the inventory a name already draws from. A rule that would
+That very regularity is what makes descent lossy: a cascade that drops an
+onset or a coda can collapse two distinct proto-roots onto one modern word,
+so a family's proto-roots are not merely drawn distinct but assigned
+**merger-awarely** — each core concept's shared ancestral form is chosen to
+survive *every* daughter's cascade still distinct, so no two core concepts
+are ever homophones in any daughter (core homophony is zero on every seed),
+while the proto stays shared so cognate descent is untouched. Incidental
+collisions among the periphery — a rarely-named biome, a deep colour — are
+left as realistic texture. The cascade's target is fixed and deliberate: it
+lands only on the phonology this world already shipped a mouth for, never
+widening or retuning the inventory a name already draws from. A rule that would
 produce a segment outside that inventory applies as the identity function
 instead, changing nothing, rather than quietly inventing a new sound no
 one's anatomy was ever authored to make. This is the honest shape of the

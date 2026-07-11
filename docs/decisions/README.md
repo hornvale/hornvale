@@ -74,3 +74,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [`the-frontier-is-published…`](the-frontier-is-published-in-the-book.md) | The frontier is published in the book | Accepted |
 | [`tonogenesis-is-a-regular…merger-repair`](tonogenesis-is-a-regular-conditioned-merger-repair.md) | Tonogenesis is a regular conditioned sound change, not a homophony patch | Accepted |
 | [`the-capacity-floor-is-reached-by-tone…`](the-capacity-floor-is-reached-by-tone-not-segments.md) | The capacity floor is reached by tone, not by adding segments to atonal species | Accepted |
+| [`the-proto-assignment-is-merger-aware`](the-proto-assignment-is-merger-aware.md) | The proto-root assignment is merger-aware (zero core homophony) | Accepted |

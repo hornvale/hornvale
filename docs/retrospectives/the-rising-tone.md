@@ -85,3 +85,22 @@ warns is uniquely easy to forget. The open-questions map itself needed no
 re-score — no bet on it was moved by this epoch — and that honest no-change was
 recorded rather than manufactured, which is the case that decision was written
 to protect.
+
+**Postscript (2026-07-11) — the zero-core-homophony coda.** After merging the
+tone epoch, the campaign's original target (near-zero *core* homophony) was
+finished with a merger-aware proto-assignment. Two process notes. First,
+**de-risking before an expensive reseed paid for itself.** The change meant a
+`root/v3` epoch (full regen + re-pin + gate + another contended merge), so
+rather than build it and hope, the mechanism went in first as a dormant,
+byte-identical function measured on the real family across 200 seeds — 791
+collisions → 0 at +3.3% length — and only then was the reseed committed. The
+numbers also flipped a design choice mid-stream: the trivial cost turned "zero
+confusable" into "zero all-core," a decision the measurement earned rather than
+the spec guessed. Second, **`main` was a warzone.** Fast-forwarding the tone
+epoch lost the race four times against parallel astronomy/tooling sessions
+committing directly into the shared checkout; it landed only after Nathan opened
+a quiet window and a full reconciliation (regenerate under the merged code,
+re-pin the tide-and-reseed-combined name metrics). The reusable trick: a dirty
+`main` checkout does *not* block `git -C <main> merge --ff-only <branch>` when
+the ff delta is disjoint from the dirty files — verify with `comm -12` and the
+fast-forward proceeds without touching the other session's work.
