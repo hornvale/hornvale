@@ -77,7 +77,16 @@ fn pin_isolation_holds_at_the_globe_level() {
 }
 
 #[test]
-fn ocean_fraction_pin_perturbs_nothing_upstream() {
+fn ocean_fraction_pin_conditions_cratons_but_not_the_plate_skeleton() {
+    // Task 9 iteration 3': the ocean-fraction target now feeds the
+    // craton-area budget too (see `hornvale_terrain::crust::draw_cratons`'s
+    // doc), so pinning it legitimately conditions craton radii and, in
+    // turn, the crust/continental fields, elevation, and unrest — a
+    // pinned target conditions downstream identically to a drawn one
+    // (pin doctrine). What must stay untouched is the plate skeleton
+    // (built from streams independent of ocean fraction) and each
+    // shared-prefix craton's age (a raw stream draw the area-budget
+    // rescale never touches).
     let geo = Geosphere::new(4);
     let default = generate(Seed(7), &geo, &TerrainPins::default()).unwrap();
     let pinned = generate(
@@ -89,10 +98,30 @@ fn ocean_fraction_pin_perturbs_nothing_upstream() {
         },
     )
     .unwrap();
-    assert_eq!(pinned.globe.elevation, default.globe.elevation);
-    assert_eq!(pinned.globe.plate_of, default.globe.plate_of);
-    assert_eq!(pinned.globe.unrest, default.globe.unrest);
-    assert_ne!(pinned.globe.sea_level, default.globe.sea_level);
+    assert_eq!(
+        pinned.globe.plates, default.globe.plates,
+        "plate skeleton perturbed"
+    );
+    assert_eq!(
+        pinned.globe.plate_of, default.globe.plate_of,
+        "plate assignment perturbed"
+    );
+    for (a, b) in default.globe.cratons.iter().zip(&pinned.globe.cratons) {
+        assert_eq!(a.id, b.id);
+        assert_eq!(
+            a.age, b.age,
+            "shared-prefix craton {} age perturbed by the ocean-fraction pin",
+            a.id
+        );
+    }
+    assert_ne!(
+        pinned.globe.crust, default.globe.crust,
+        "ocean-fraction pin should move craton radii (and therefore crust)"
+    );
+    assert_ne!(
+        pinned.globe.sea_level, default.globe.sea_level,
+        "ocean-fraction pin should move sea level"
+    );
 }
 
 #[test]
@@ -158,13 +187,21 @@ fn every_default_globe_satisfies_every_invariant() {
 fn boundary_classification_agrees_from_both_sides_across_seeds() {
     use hornvale_terrain::boundaries::classify_contact;
     use hornvale_terrain::crust::{CrustField, draw_cratons};
+    use hornvale_terrain::elevation::resolve_ocean_fraction;
     use hornvale_terrain::plates::{assign_plates, generate_plates};
     let geo = Geosphere::new(3);
     for seed in 0..16u64 {
         let terrain_seed = Seed(seed).derive(streams::ROOT);
         let plates = generate_plates(terrain_seed, &TerrainPins::default(), &mut Vec::new());
         let plate_of = assign_plates(&geo, terrain_seed, &plates);
-        let cratons = draw_cratons(terrain_seed, &TerrainPins::default(), &mut Vec::new());
+        let ocean_target =
+            resolve_ocean_fraction(terrain_seed, &TerrainPins::default(), &mut Vec::new());
+        let cratons = draw_cratons(
+            terrain_seed,
+            &TerrainPins::default(),
+            ocean_target,
+            &mut Vec::new(),
+        );
         let field = CrustField::new(terrain_seed, cratons);
         let continental = CellMap::from_fn(&geo, |c| field.continental_at(geo.position(c)));
         for a in geo.cells() {

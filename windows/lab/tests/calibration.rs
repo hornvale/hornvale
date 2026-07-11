@@ -496,8 +496,19 @@ fn blind_attribution_beats_chance_decisively() {
     // attributable (three worlds that previously placed no attributable
     // pair now do), with two more correct calls; accuracy 0.834, still
     // above the pinned 0.8 floor.
-    assert_eq!(correct, 417, "blind-attribution count drifted");
-    assert_eq!(total, 500, "attributable-pair count drifted");
+    //
+    // Crust epoch (Task 9 through iteration 2): re-pinned across those
+    // tasks, ending at 417/500 (see the report for those tasks' iteration
+    // rows).
+    //
+    // Crust epoch (Task 9 iteration 3', 2026-07-11: budget coupled to ocean
+    // fraction, continental-area normalization, LOBE_FREQ 4, repulsion
+    // 1.2x): re-pinned on the 500-seed drift study (was 417/500) — the
+    // reshaped craton footprints cost one attributable pair (one world's
+    // pair no longer separates the species by domain) and one correct
+    // call; accuracy 0.834, still above the pinned 0.8 floor.
+    assert_eq!(correct, 416, "blind-attribution count drifted");
+    assert_eq!(total, 499, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -788,14 +799,21 @@ fn name_collision_rate_is_measured_and_pinned() {
     // the smoother rims, softer plate-size tail, and separated cratons
     // relocate settlements again; four worlds gained a collision
     // (162/338) but the mean IMPROVES (3.3296%).
-    assert_eq!(zero, 162, "zero-collision world count drifted");
-    assert_eq!(nonzero, 338, "nonzero-collision world count drifted");
-    assert_eq!(absent, 0, "absent name-collision-rate count drifted");
+    //
+    // Crust epoch (Task 9 iteration 3', 2026-07-11: budget coupled to ocean
+    // fraction, continental-area normalization, LOBE_FREQ 4, repulsion
+    // 1.2x): re-pinned on the 500-seed drift study (was 162 zero / 338
+    // nonzero, mean 3.3296%) — the reshaped, more numerous cratons relocate
+    // settlements again; ten more worlds gained a collision (172/328) and
+    // the mean WORSENS (3.5529%).
     let present = zero + nonzero;
-    assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
+    assert_eq!(zero, 172, "zero-collision world count drifted");
+    assert_eq!(nonzero, 328, "nonzero-collision world count drifted");
+    assert_eq!(absent, 0, "absent name-collision-rate count drifted");
+    assert!(present > 0, "no worlds with a measurable collision rate");
     assert!(
-        (mean - 0.033_296_017_938_487).abs() < 1e-6,
+        (mean - 0.035_529_463_525_802).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -852,9 +870,17 @@ fn name_length_distributions_are_measured_and_pinned() {
     // 500-seed drift study (was goblin 500/14.744593607676443, kobold
     // 500/13.893004502119725) — present-row counts hold again; the
     // relocated settlements shift both means by fractions of a character.
+    //
+    // Crust epoch (Task 9 iteration 3', 2026-07-11: budget coupled to ocean
+    // fraction, continental-area normalization, LOBE_FREQ 4, repulsion
+    // 1.2x): re-pinned on the 500-seed drift study (was goblin
+    // 500/14.744520121312846, kobold 500/13.89750707542195) — the
+    // reshaped cratons relocate every settlement's presiding concept,
+    // shifting both means; kobolds also drop from 500 to 499 present rows
+    // (one world's reshaped landmasses leave no kobold-viable site).
     for (species, expected_present, expected_mean) in [
-        ("goblin", 500u32, 14.744_520_121_312_846),
-        ("kobold", 500u32, 13.897_507_075_421_95),
+        ("goblin", 500u32, 14.611_693_622_112_934),
+        ("kobold", 499u32, 13.542_439_937_487_506),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1041,6 +1067,11 @@ fn null_control_name_length_smd_is_pinned() {
     // Crust epoch (Task 9 iteration 2, 2026-07-11: tanh lobing remap +
     // WEIGHT_TAIL 0.95->0.92 + craton repulsion): re-pinned again (was
     // -0.059459520252233) — still comfortably inside the same ±0.2 bound.
+    //
+    // Crust epoch (Task 9 iteration 3', 2026-07-11: budget coupled to ocean
+    // fraction, continental-area normalization, LOBE_FREQ 4, repulsion
+    // 1.2x): re-pinned again (was -0.064495973866366) — still comfortably
+    // inside the same ±0.2 bound.
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let namelen = std_mean_diff(
@@ -1048,7 +1079,7 @@ fn null_control_name_length_smd_is_pinned() {
         nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
     assert!(
-        (namelen - -0.064_495_973_866_366).abs() < 1e-9,
+        (namelen - -0.067_784_630_103_368).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

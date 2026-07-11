@@ -71,7 +71,8 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "terrain/cratons",
-            "continental budget, craton count, then per-craton center/radius/age",
+            "margin draw (scales the ocean-fraction-derived budget, Task 9 \
+             iteration 3'), craton count, then per-craton center/radius/age",
         ),
         (
             "terrain/plate-weights",

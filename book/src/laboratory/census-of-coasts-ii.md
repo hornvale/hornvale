@@ -155,6 +155,7 @@ with a clean single-knob cause, and the knob worked.
 | 0 | pre-Task-9 (budget 0.15–0.40; `PEAK_MIN_KM` 30 == `ISOSTASY_REF_KM`) | **not run** — predicted fail from Task 8's structural evidence (single-craton test: 2/20 default-seed pass rate on briefed shelf/bimodality bounds at canonical L6) | — | predicted fail | predicted fail | — | — | — | predicted fail (disclosed, not measured) |
 | 1 | budget 0.20–0.30·u (0.20–0.50), post-draw area-normalization rescale to match budget (new, capped 0.6 rad); `PEAK_MIN_KM` 30→33 | **run**, 10,000 seeds, 0 refusals | 11.09 — inside | 1.59 — outside, low | 0.581 — outside, high | 50.5 — outside, high | 0.730 — outside, high | 0.767 — outside, high | 1/6 inside |
 | 2 | tanh lobing remap (`0.5·tanh(GAIN·(n−0.5))` replaces the hard `clamp(−0.5, 0.5)`; `REBALANCE_GAIN` 6→15, recalibrated by sweep — see note); `WEIGHT_TAIL` 0.95→0.92 (plate weights [1, 12.5], median ~1.85); one deterministic craton-center repulsion pass (id order, zero draws, skipped under `--supercontinent`) | **run**, 10,000 seeds, 0 refusals | 11.36 — inside | 1.72 — outside, low (predicted up: **right**) | 0.276 — outside, high (predicted down: **right**, 0.581→0.276) | 54 — outside, high (predicted sharply down: **wrong**, 50.5→54) | 0.746 — outside, high (predicted toward ≤0.65: **wrong**, 0.730→0.746) | 0.709 — **inside** (predicted ~0.70: **right**) | 2/6 inside |
+| 3′ | budget coupled to ocean fraction (`budget = (1 − ocean_target) × (1 + margin)`, `margin = 0.05 + 0.10·u` on the CRATONS stream's existing first draw, reinterpreted — a pinned `--ocean-fraction` now legitimately conditions craton radii); continental-area normalization re-landed (rescale matches the cap's *continental* sub-area, `1 − √e_i`, to budget, not the full nominal cap — see `draw_cratons`'s doc); `LOBE_FREQ` 6→4 (fewer, larger lobes; the existing `REBALANCE_GAIN` 15 re-verified without a new sweep); repulsion separation 1.0x→1.2x(r_i+r_j), test relaxed from moat-attainment to monotone-reduction | **2k tuning census**, 2,000 seeds, 0 refusals (protocol: 2/6 bands failed at 2k ⇒ STOP, no 10,000-seed confirmation run) | 6.785 — outside, low (unpredicted: **regression** — smoother, fewer, larger-radius lobes cut coastline fractal complexity below the band) | 3.282 — **inside** (predicted ≥ 2: **right**) | 0.0483 — outside, low (predicted into band: **wrong**, overshot past the band's floor) | 8.0 — **inside** (predicted "arc islets drowned, fringe down": **right**, 54→8; unfloored `landmass-count` companion 29, down from iteration 2's fragment swarm) | 0.304 — **inside** (flagged at-risk: resolved comfortably, 0.746→0.304) | 0.707 — **inside** (untouched by this iteration's knobs; holds from iteration 2's 0.709) | 4/6 inside (2k tuning census) — **BLOCKED**, no 10k run |
 
 Iteration 2 note — the gain recalibration, recorded per the sweep
 discipline: under the tanh map the rim-spread calibration (≥95% of 2000
@@ -187,25 +188,73 @@ move largest-continent-share down (0.730 → 0.746). The fragment evidence
 now points at noisy plate-boundary uplift (`EDGE_AMP` arcs surfacing in
 open ocean), which no knob authorized in either iteration touches.
 
-## STOP: iteration 2 recorded; four bands still outside
+Iteration 3′ (Task 9's third-iteration package, re-run after the original
+iteration 3 was reverted for an unrelated knob calibration failure — see
+the Task 9 report) went straight at the `EDGE_AMP` diagnosis's *symptom*
+rather than `EDGE_AMP` itself: coupling the craton budget to the same
+ocean-fraction target sea level actually uses (rather than an
+independently-drawn budget that could drift from what percentile sea level
+would place), re-landing the continental-area normalization (matching the
+cap's *continental* sub-area to budget, not the whole nominal cap — this
+grows radii materially, since only the region past the continental
+threshold counts), thinning `LOBE_FREQ` from 6 to 4 (fewer, larger lobes),
+and stiffening craton-center repulsion from a 1.0x to a 1.2x separation
+target. The effect on the fragment swarm was dramatic and in the predicted
+direction: continent-count fell from 54 to a **2,000-seed tuning-census
+median of 8.0** (comfortably inside the 3–12 band), its unfloored
+`landmass-count` companion fell to 29, and largest-continent-share fell
+from 0.746 to 0.304 (also comfortably inside 0.25–0.65) — both predictions
+("arc islets drowned, fringe down" and "largest-share flagged at-risk")
+came true, the second more decisively than flagged. Hypsometric-bimodality
+crossed into its band too (1.72 → 3.282, predicted ≥ 2: right).
 
-Per the tuning protocol (bands are immutable; every iteration is recorded
-openly; a failing verdict stops the loop rather than iterating ad hoc),
-iteration 2 is committed as measured and no third iteration was attempted.
-The verdict stands at **2/6 inside** (shoreline-development,
-plate-size-gini), with the four remaining failures sharing, on the current
-evidence, one dominant unaddressed mechanism: `EDGE_AMP` boundary-uplift
-arcs surfacing as open-ocean island chains, inflating continent-count
-directly, holding shelf-fraction and hypsometric-bimodality just outside
-their bands via the near-sea-level fragment swarm, and inflating
-largest-continent-share's denominator asymmetry. Whether to authorize an
-`EDGE_AMP`-side remedy (or accept this as Crust's hand-off state) is the
-controller's and Nathan's call, not this page's.
+Two bands moved the wrong way, though. Shelf-fraction, predicted to land
+*inside* the band on the same taper-smoothing logic that worked in
+iteration 2, instead **overshot past the band's own floor** (0.276 →
+0.0483, band 0.08–0.22): the larger, continental-area-normalized radii and
+thinned lobing evidently steepen the shelf's taper enough to shrink the
+near-sea-level band below Earth's true share, not just off its
+decay-slope-inflated iteration-1 high. Shoreline-development, which no
+iteration-3′ prediction addressed at all, **regressed out of band**
+(11.36 → 6.785, band 9.51–21.95): the same fewer/larger/smoother lobes
+that tamed the fragment swarm also reduced coastline fractal complexity
+below what the band requires — the fragmentation fix and the coastline-
+complexity requirement pull in opposite directions at these settings.
 
-This v2@L6 census — two bands inside range, four outside — is nonetheless
-the number Sculpting inherits as its *before* photograph: Sculpting layers
-modulated relief, erosion, and hotspot trails on top of whatever Crust
-hands it, and this page is where that starting point is recorded, bands
-met or not. The supersession note above stays in force regardless of the
-disposition here — it documents why the band itself reads 0.08–0.22, not
-whether v2 hits it.
+## STOP: iteration 3′ recorded at the 2k tuning gate; two bands outside
+
+Per this task's protocol (a 2,000-seed tuning census gates the expensive
+10,000-seed confirmation run: all six bands must clear at 2k before the
+10k run proceeds), iteration 3′ scored **4/6 inside** at 2,000 seeds
+(hypsometric-bimodality, continent-count, largest-continent-share,
+plate-size-gini) against **2/6 outside** (shoreline-development and
+shelf-fraction, both now failing *low* rather than *high*). Per the
+explicit stop rule ("any band fails at 2k → commit the recorded iteration
+as-is, no 10k run, BLOCKED with the verdict table — no further iterations
+on your own"), the physics package is committed as measured and no 10k
+confirmation run followed.
+
+**This creates a disclosed gap between the shipped generator and this
+page's confirmed v2@L6 record.** The constants in `domains/terrain/src/
+crust.rs` at this commit are iteration 3′'s (budget-ocean coupling,
+continental-area normalization, `LOBE_FREQ` 4, 1.2x repulsion) — but the
+"v2@L6 verdicts" table and the header comparison table above still show
+iteration 2's numbers, because those are the last (and only)
+10,000-seed-*confirmed* measurement. Iteration 3′'s 6.785 / 3.282 / 0.0483
+/ 8.0 / 0.304 / 0.707 are 2,000-seed tuning-census medians only, recorded
+here in the Tuning iterations table per the "record every iteration
+openly" discipline, not promoted to v2@L6 status. Whether to authorize a
+fourth iteration (the evidence suggests shoreline-development and
+shelf-fraction want a less-aggressive smoothing setting — perhaps an
+intermediate `LOBE_FREQ` between 4 and 6, or a continental-area
+normalization that grows radii less sharply) or accept iteration 2's
+10k-confirmed v2@L6 as Crust's hand-off record while iteration 3′ ships
+un-reconfirmed is the controller's and Nathan's call, not this page's.
+
+This v2@L6 census — the iteration-2 numbers above, two bands inside range,
+four outside — is nonetheless the number Sculpting inherits as its
+*before* photograph: Sculpting layers modulated relief, erosion, and
+hotspot trails on top of whatever Crust hands it, and this page is where
+that starting point is recorded, bands met or not. The supersession note
+above stays in force regardless of the disposition here — it documents why
+the band itself reads 0.08–0.22, not whether v2 hits it.

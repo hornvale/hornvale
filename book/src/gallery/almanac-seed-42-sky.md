@@ -31,127 +31,112 @@ By night: a smoldering red star that does not wander; a warm yellow star that do
 ## The Land
 
 The globe breaks into 16 plates; the sea claims 73% of its surface.
-The highest land stands 7879 m above the sea.
+The highest land stands 6093 m above the sea.
 
-The air organizes into 3 circulation band(s) per hemisphere; 12 land biomes and 8 marine biomes cover the globe.
-Some 14% of the surface is habitable — land with water and a tolerable season.
+The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 8 marine biomes cover the globe.
+Some 11% of the surface is habitable — land with water and a tolerable season.
 
-- **Ngodvnetned** — temperate-rainforest
-- **Nodzhfoknadned** — temperate-rainforest
-- **Vnednakzhxad** — temperate-rainforest
-- **Zxadzhvedned** — temperate-forest
-- **Fnabsvedned** — temperate-rainforest
-- **Sxabvngabzfabned** — temperate-rainforest
-- **Sfatzhfebxngabned** — temperate-rainforest
-- **Vngednobngednadnobned** — temperate-forest
-- **Zhvedfngabned** — temperate-forest
-- **Zxakvnadnadned** — temperate-forest
-- **Nadngabfnetnadnob** — temperate-forest
-- **Fnotnodned** — temperate-rainforest
-- **Raxarokrratrot** — temperate-rainforest
-- **Natvngodvngetned** — temperate-rainforest
-- **Svekzhxetned** — temperate-rainforest
-- **Zhfobnetngaknednadnob** — temperate-forest
-- **Zfebfngebned** — temperate-rainforest
-- **Ngebxnatnadnobned** — temperate-forest
-- **Ngatngoknatnednadnob** — temperate-forest
-- **Ngaksvakned** — temperate-forest
-- **Ngatsvadned** — temperate-forest
-- **Ngetsxeknednadnob** — temperate-forest
-- **Sfedfngodsxeknadnobned** — temperate-forest
-- **Zfotvnebned** — temperate-rainforest
-- **Zhxabngatsxek** — temperate-rainforest
-- **Zxatngakvneknotngok** — tropical-rainforest
-- **Sxatsvodnadnob** — temperate-forest
-- **Rraraxaxorraxok** — temperate-forest
-- **Neknatnotngokned** — tropical-rainforest
-- **Ngotngetnednotngok** — tropical-rainforest
-- **Fngebvngetnednotngok** — tropical-rainforest
-- **Fnokxngodnotngokned** — tropical-rainforest
-- **Ngobvnadxnetnotngok** — tropical-rainforest
-- **Sfetzvetzhfoknadnobned** — temperate-forest
-- **Netvnekzvaknotngokned** — tropical-rainforest
-- **Sfobngedned** — temperate-forest
-- **Xaxoxaroq** — tropical-rainforest
-- **Zhxebzhvobned** — tropical-rainforest
-- **Fngebngadnadnobned** — temperate-forest
-- **Nabnadnednotngok** — tropical-rainforest
-- **Rrarorrat** — temperate-forest
-- **Fngadngebned** — temperate-forest
-- **Xngotngedzvadnotngok** — tropical-rainforest
-- **Xaxoxorra** — tropical-rainforest
-- **Zxatzhvatfnotnadnobned** — temperate-forest
-- **Ngadnobvnekned** — tropical-rainforest
-- **Raxarara** — temperate-forest
-- **Raxarokxaqraq** — temperate-grassland
-- **Fngatzfatned** — temperate-forest
-- **Nabnoknedngob** — shrubland
-- **Xngokzfadvngatnadnobned** — temperate-forest
-- **Nobngodvngebngotned** — taiga
-- **Zhxobsfedned** — taiga
-- **Sfadnakzfotngotned** — taiga
-- **Nebngedxnatngotned** — taiga
-- **Vngoknatnedngot** — taiga
-- **Xnadnobngot** — taiga
-- **Ngodnabned** — taiga
-- **Xaxoraxaxokrok** — taiga
-- **Rarogxotrrak** — shrubland
-- **Raxaxoqrraqrra** — temperate-grassland
-- **Netngedzfodnedngot** — taiga
-- **Zhvatngaknobnedngot** — taiga
-- **Vngetngabxnatnedngot** — taiga
-- **Raxararokrro** — alpine
-- **Nokfngebzfatnedngot** — taiga
-- **Zfakngodsxekngotned** — taiga
-- **Xnadnadnokned** — tundra
-- **Zfadsvotvngakned** — taiga
-- **Zhxodfngadnedngot** — taiga
-- **Netfnetngatngok** — tundra
-- **Raxaxaxorora** — taiga
-- **Zxeksfebsfabngok** — tundra
-- **Raraxarakrorra** — alpine
+- **Zhxokngakngedned** — temperate-rainforest
+- **Nedngebvngotned** — temperate-rainforest
+- **Vnobngobvnodned** — temperate-rainforest
+- **Nekxnobxngok** — temperate-rainforest
+- **Xnaknedzhvekned** — temperate-rainforest
+- **Raxarrotrroqroq** — temperate-rainforest
+- **Sfadvnoknadnob** — temperate-forest
+- **Xngadngetned** — temperate-rainforest
+- **Nebngatvngadned** — temperate-rainforest
+- **Zxekfnad** — temperate-rainforest
+- **Sxekvnakngaknadnob** — temperate-forest
+- **Ngotzhvabnednadnob** — temperate-forest
+- **Vnadnged** — temperate-rainforest
+- **Zhvedzfokngobnadnobned** — temperate-forest
+- **Zhfebngetnednadnobned** — temperate-forest
+- **Vngakvnokngetnadnob** — temperate-forest
+- **Raxarraxarratrro** — temperate-forest
+- **Nokzhxadnadnobned** — temperate-forest
+- **Ngetfngotnadnadnob** — temperate-forest
+- **Fneksvotngetned** — tropical-rainforest
+- **Zhvedzhxodned** — temperate-forest
+- **Vnobvnobzxodnadnob** — temperate-forest
+- **Vnabzhvaknadnob** — temperate-forest
+- **Ngokxngotned** — temperate-forest
+- **Zhxadngodzhvadnadnob** — temperate-forest
+- **Rraraxaxoxa** — temperate-forest
+- **Nebsxokvngetned** — taiga
+- **Raxaxaxoxorrarra** — tropical-rainforest
+- **Nodzhfetned** — tropical-rainforest
+- **Fngetxnekned** — temperate-forest
+- **Ngokzhxeknotngok** — tropical-rainforest
+- **Ngotngodnotngokned** — tropical-rainforest
+- **Fnotvnebnotned** — temperate-forest
+- **Raxarrararrarrat** — temperate-forest
+- **Zhxodnak** — savanna
+- **Notzfabngednadnobned** — temperate-forest
+- **Raxarraratrora** — temperate-forest
+- **Svakneknedngob** — shrubland
+- **Vngetngobnobngotned** — taiga
+- **Rraxotrog** — temperate-forest
+- **Xngebngodnotngobned** — shrubland
+- **Svedxnotned** — taiga
+- **Xngotnekngotned** — taiga
+- **Raxarragxagrroq** — temperate-forest
+- **Zxedsvekngot** — taiga
+- **Ngekvnabngok** — tundra
+- **Fngadzxakzhxobngot** — taiga
+- **Xaxoraxararra** — taiga
+- **Raxaxaxoxoxat** — taiga
+- **Nebnabnedngot** — taiga
+- **Raxarrarro** — taiga
+- **Zhxoksxetngebned** — taiga
+- **Sxodzfedzxekned** — taiga
+- **Vngekvngabngotned** — taiga
+- **Raxaxaxorrarrok** — taiga
+- **Ngednakngot** — taiga
+- **Notngekngot** — taiga
+- **Xaxoraxaxaroq** — taiga
+- **Raxaxokxatrro** — taiga
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## Deep Time
 
-The frost retreated: at the glacial maximum (day -243500000), ice advanced over 44% of the land.
+The frost retreated: at the glacial maximum (day -243500000), ice advanced over 39% of the land.
 
 ## The People
 
-The land holds 74 settlement(s).
-The chief goblin settlement, Ngodvnetned, holds 523 souls amid temperate-rainforest.
-The chief kobold settlement, Raxarokrratrot, holds 515 souls amid temperate-rainforest.
+The land holds 59 settlement(s).
+The chief goblin settlement, Zhxokngakngedned, holds 356 souls amid temperate-rainforest.
+The chief kobold settlement, Raxarrotrroqroq, holds 523 souls amid temperate-rainforest.
 
-The goblin village of **Ngodvnetned**, population 523.
+The goblin village of **Zhxokngakngedned**, population 356.
 
-Ngodvnetned lives by farming.
+Zhxokngakngedned lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 
-The kobold warren of **Raxarokrratrot**, population 515.
+The kobold warren of **Raxarrotrroqroq**, population 523.
 
-Raxarokrratrot lives by farming.
+Raxarrotrroqroq lives by farming.
 Its roles, lowest to highest: digger, shaper, keeper, elders.
 
 ## The Gods
 
 An organized priesthood tends a pantheon:
 
-> Ned the Ngatned returns every 0.88 days. So it was, so it is. *(who presides)*
+> Ned the Nabned returns every 0.88 days. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neb the Ngabneb returns every 15.99 days. So it was, so it is.
+> Neb the Xngodneb returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neb the Fngadneb returns every 32.55 days. So it was, so it is.
+> Neb the Xnobneb returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-In the warren of **Raxarokrratrot**, an organized priesthood tends its own pantheon:
+In the warren of **Raxarrotrroqroq**, an organized priesthood tends its own pantheon:
 
-> Raxarro Raxa comes back every 15.99 days. That's how it's always been. That's how it's always been. Raxarro is the highest among the gods. *(who presides)*
+> Rro Rro comes back every 15.99 days. That's how it's always been. That's how it's always been. Rro is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -159,7 +144,7 @@ In the warren of **Raxarokrratrot**, an organized priesthood tends its own panth
 >
 > — derived from the phenomenon *celestial-body*
 
-> Ra Rrora comes back every 0.88 days. That's how it's always been. That's how it's always been. Ra is a great one among the gods.
+> Rarro Rrora comes back every 0.88 days. That's how it's always been. That's how it's always been. Rarro is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 

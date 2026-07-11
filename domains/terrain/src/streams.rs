@@ -30,9 +30,12 @@ pub const OCEAN_FRACTION: &str = "ocean-fraction";
 /// `Stream`; the lens draws nothing (Campaign 25 spec §3).
 /// type-audit: bare-ok(identifier-text)
 pub const COAST_RENDER: &str = "coast-render";
-/// Craton draws: continental-area budget, craton count, then per-craton
-/// center (two draws), radius, age — sequential. Draw counts are a
-/// save-format contract.
+/// Craton draws: a margin draw (Task 9 iteration 3' reinterpretation —
+/// originally an independent area-budget fraction; now scales the
+/// ocean-fraction-derived budget instead, same single draw, see
+/// `crust::draw_cratons`'s doc), craton count (budget-scaled, no draw of
+/// its own), then per-craton center (two draws), radius, age —
+/// sequential. Draw counts are a save-format contract.
 /// type-audit: bare-ok(identifier-text)
 pub const CRATONS: &str = "cratons";
 /// Per-plate Voronoi weight draws (heavy-tailed; one per plate).

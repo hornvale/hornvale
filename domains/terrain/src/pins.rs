@@ -20,7 +20,8 @@ pub struct TerrainPins {
     /// `GLOBE_LEVEL` when `None`. Part of world identity: the same seed at
     /// a different level is deliberately a different world (spec §5).
     pub globe_level: Option<u32>,
-    /// Craton count (legal 1–16); drawn 6–11 (budget-scaled) when `None`.
+    /// Craton count (legal 1–16); drawn 8–14 (ocean-fraction-budget-scaled,
+    /// Task 9 iteration 3') when `None`.
     pub continents: Option<u32>,
 }
 

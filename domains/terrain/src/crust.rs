@@ -30,9 +30,12 @@ impl CrustKm {
     }
 }
 
-/// Base spatial frequency of the lobing noise (features ~1/6 rad).
+/// Base spatial frequency of the lobing noise (features ~1/4 rad; Task 9
+/// iteration 3': lowered from 6.0 so lobes are fewer and larger — smaller,
+/// higher-frequency lobes were pinching craton margins into detached rim
+/// fragments).
 #[allow(dead_code)]
-const LOBE_FREQ: f64 = 6.0;
+const LOBE_FREQ: f64 = 4.0;
 /// fBm octaves for the lobing noise.
 #[allow(dead_code)]
 const LOBE_OCTAVES: u32 = 4;
@@ -164,55 +167,97 @@ fn slerp(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
     ])
 }
 
-/// Draw the craton set: budget (one draw), count (one draw, budget-scaled),
+/// Draw the craton set: budget (one draw, Task 9 iteration 3': now a
+/// *margin* draw — see below), count (budget-scaled, no draw of its own),
 /// then per-craton center (two), radius (one), age (one) — mirroring
 /// `generate_plates`' pinned-count convention exactly: a pinned count
 /// (`--continents`, Task 7) drives the per-craton loop directly, so a
 /// pinned count larger than the drawn one consumes the same additional
 /// draws the drawn path would have, and a pinned count smaller consumes
-/// fewer — never skipping the budget or count draws themselves (pin
-/// isolation). `notes` receives a metering entry when `continents` is
-/// pinned (Task 7's metering convention: `pinned <name> <value> (seed draws
-/// <drawn>)`).
+/// fewer — never skipping the count draws themselves (pin isolation).
+/// `notes` receives a metering entry when `continents` is pinned (Task 7's
+/// metering convention: `pinned <name> <value> (seed draws <drawn>)`).
 ///
-/// Budget → area normalization (Task 9): the budget draw is a *fraction of
-/// the sphere's surface* the craton set should cover, matching the land
-/// quota's own range (0.20–0.50) rather than an independently-tuned number.
-/// After every radius is drawn, the whole set is rescaled — a pure
-/// post-draw transform, no extra stream draws — so total spherical-cap area
-/// (`Σ 2π(1 − cos r_i)`) matches `budget * 4π` exactly (up to the 0.6 rad
-/// ceiling clamp). This fixes Task 8's diagnosed area-quota mismatch (drawn
-/// craton footprint covering only ~2–10% of cells against a 25–50%-implying
-/// `ocean_fraction` range) at its root rather than by picking a lucky seed.
-/// A pinned count redistributes the same total budgeted area across
-/// however many cratons survive — fewer cratons means each is larger, not
-/// smaller — so the per-craton radius is *not* pin-isolated the way center
-/// and age are; that is by design, not a stream perturbation.
+/// Budget ← ocean fraction (Task 9 iteration 3'): the craton budget used to
+/// be its own independently-drawn fraction of the sphere, matching the land
+/// quota's *range* by construction but not its *value* — iteration 1 fixed
+/// the range mismatch, but a seed whose drawn `ocean_fraction` came out
+/// high could still land budget on the low end of its own separate range
+/// (or vice versa), decoupled from what the percentile sea-level mechanism
+/// would actually place. This iteration removes the decoupling: `budget =
+/// (1.0 - ocean_target) * (1.0 + margin)`, where `ocean_target` is the
+/// world's resolved ocean fraction (drawn or pinned — see
+/// `elevation::resolve_ocean_fraction`, called once in `generate` and
+/// threaded to both this function and `derive_sea_level`) and `margin =
+/// 0.05 + 0.10 * u` with `u` the CRATONS stream's existing first draw,
+/// reinterpreted rather than removed — so the label's draw *count* is
+/// byte-unchanged, only what the draw *means* changes (a save-format
+/// contract: see `streams::CRATONS`'s doc and `stream_labels()`). A pinned
+/// `ocean_fraction` now legitimately conditions craton radii too — per the
+/// pin doctrine, a pinned target conditions downstream identically to a
+/// drawn one (see the pin-isolation test in `tectonic_properties.rs`).
+/// Over the drawn range (`ocean_target` in \[0.5, 0.75), so land in
+/// (0.25, 0.5\]; margin factor `1 + margin` in \[1.05, 1.15)), budget spans
+/// roughly (0.2625, 0.575); `drawn_count = 3 + round(budget * 20)` spans
+/// 8..=14 (recomputed honestly from those endpoints, replacing iteration
+/// 1's 7..=13).
+///
+/// Continental-area normalization (Task 9 iteration 3', re-landing
+/// iteration 3's derivation after its package was reverted for an
+/// unrelated knob's calibration failure): the rescale below no longer
+/// matches the *nominal cap area* to budget — it matches the cap's
+/// *continental* area (the sub-region actually crossing
+/// `CONTINENTAL_THRESHOLD_KM`), which is smaller than the full cap because
+/// the lobed taper (`lobed_envelope`) is a flat-topped quartic,
+/// `envelope(x) = (1 - x^2)^2` for `x = angle / rim`. Solving
+/// `envelope(x) >= e` for the per-craton continental-threshold fraction
+/// `e_i` gives `x^2 <= 1 - sqrt(e_i)`, and since cap area scales as `x^2`
+/// at these radii, the continental fraction of a cap is `1 - sqrt(e_i)`,
+/// with `e_i = (CONTINENTAL_THRESHOLD_KM - OCEANIC_KM) / (peak_i -
+/// OCEANIC_KM)` and `peak_i` the same age-derived peak `thickness_at`
+/// uses. Rescale: `Σ cap_area(r_i) * (1 - sqrt(e_i)) = budget * 4π`, same
+/// `s = sqrt(target / current)` shape as iteration 1's simpler area match,
+/// same 0.6 rad cap, zero extra stream draws. Over the peak range \[33,
+/// 45\] km, `e_i` ∈ \[0.342, 0.500\] and `1 - sqrt(e_i)` ∈ \[0.293,
+/// 0.415\] — radii grow roughly 1.6x versus the plain-area match, since
+/// only a fraction of each nominal cap is actually continental.
 ///
 /// `--supercontinent` is applied after every position is drawn and every
 /// radius rescaled: it clusters cratons 1.. toward craton 0 by `slerp`,
 /// so the pin perturbs positions but never the draw sequence or the area
 /// normalization (pin isolation again).
 ///
-/// Repulsion (Task 9 iteration 2) is applied last, and only when the world
-/// is *not* pinned `--supercontinent` (that pin wants clustering — repelling
-/// what it just pulled together would fight it): one deterministic pass, in
-/// id order, zero stream draws, separating overlap-merged craton centers so
-/// distinct cratons read as distinct landmasses (see `repel_cratons`).
-/// Like the radius rescale, this makes the final *center* of cratons 1.. a
-/// downstream arithmetic consequence of the whole set (radii, count) rather
-/// than a raw stream draw; the stream-consumption order is untouched.
-/// type-audit: bare-ok(prose: notes)
+/// Repulsion (Task 9 iteration 2, retargeted in iteration 3') is applied
+/// last, and only when the world is *not* pinned `--supercontinent` (that
+/// pin wants clustering — repelling what it just pulled together would
+/// fight it): one deterministic pass, in id order, zero stream draws,
+/// separating overlap-merged craton centers so distinct cratons read as
+/// distinct landmasses (see `repel_cratons`). Like the radius rescale,
+/// this makes the final *center* of cratons 1.. a downstream arithmetic
+/// consequence of the whole set (radii, count) rather than a raw stream
+/// draw; the stream-consumption order is untouched.
+/// type-audit: bare-ok(prose: notes), bare-ok(ratio: ocean_target)
 pub fn draw_cratons(
     terrain_seed: Seed,
     pins: &TerrainPins,
+    ocean_target: f64,
     notes: &mut Vec<String>,
 ) -> Vec<Craton> {
-    let mut cratons = draw_cratons_unrepelled(terrain_seed, pins, notes);
+    let mut cratons = draw_cratons_unrepelled(terrain_seed, pins, ocean_target, notes);
     if pins.supercontinent != Some(true) {
         repel_cratons(&mut cratons);
     }
     cratons
+}
+
+/// The continental fraction of a craton's nominal cap: `1 - sqrt(e)`,
+/// where `e` is the envelope value at which crust thickness exactly
+/// crosses `CONTINENTAL_THRESHOLD_KM` (see `draw_cratons`'s doc for the
+/// derivation). `peak_km` is the same age-derived peak `thickness_at`
+/// computes.
+fn continental_cap_fraction(peak_km: f64) -> f64 {
+    let e = (CONTINENTAL_THRESHOLD_KM - OCEANIC_KM) / (peak_km - OCEANIC_KM);
+    1.0 - e.sqrt()
 }
 
 /// Everything in `draw_cratons` except the final repulsion pass: the draws,
@@ -221,11 +266,14 @@ pub fn draw_cratons(
 fn draw_cratons_unrepelled(
     terrain_seed: Seed,
     pins: &TerrainPins,
+    ocean_target: f64,
     notes: &mut Vec<String>,
 ) -> Vec<Craton> {
     let mut stream = terrain_seed.derive(streams::CRATONS).stream();
-    let budget = 0.20 + 0.30 * stream.next_f64();
-    let drawn_count = 3 + (budget * 20.0).round() as u32; // 7..=13 over the budget range
+    let u = stream.next_f64();
+    let margin = 0.05 + 0.10 * u;
+    let budget = (1.0 - ocean_target) * (1.0 + margin);
+    let drawn_count = 3 + (budget * 20.0).round() as u32; // 8..=14 over the drawn budget range
     let count = pins.continents.unwrap_or(drawn_count);
     if let Some(n) = pins.continents {
         notes.push(format!("pinned continents {n} (seed draws {drawn_count})"));
@@ -243,12 +291,15 @@ fn draw_cratons_unrepelled(
             }
         })
         .collect();
-    let total_area: f64 = cratons
+    let continental_area: f64 = cratons
         .iter()
-        .map(|c| std::f64::consts::TAU * (1.0 - c.radius_rad.cos()))
+        .map(|c| {
+            let peak = PEAK_MIN_KM + (PEAK_MAX_KM - PEAK_MIN_KM) * (1.0 - c.age);
+            std::f64::consts::TAU * (1.0 - c.radius_rad.cos()) * continental_cap_fraction(peak)
+        })
         .sum();
-    if total_area > 0.0 {
-        let scale = ((budget * 4.0 * std::f64::consts::PI) / total_area).sqrt();
+    if continental_area > 0.0 {
+        let scale = ((budget * 4.0 * std::f64::consts::PI) / continental_area).sqrt();
         for c in cratons.iter_mut() {
             c.radius_rad = (c.radius_rad * scale).min(0.6);
         }
@@ -262,24 +313,38 @@ fn draw_cratons_unrepelled(
     cratons
 }
 
+/// Separation target multiplier applied to `r_i + r_j` during the
+/// craton-center repulsion pass (Task 9 iteration 3', up from iteration
+/// 2's implicit 1.0x): pairs are pushed toward 1.2x their combined radii
+/// rather than exact rim tangency, leaving a moat of open ocean the lobed
+/// rims' overlapping skirts are less likely to bridge back together.
+const REPEL_SEPARATION_FACTOR: f64 = 1.2;
+
 /// One deterministic repulsion pass over craton centers (Task 9
-/// iteration 2): for each craton i > 0 in id order, if any earlier-id
-/// craton j sits closer than `r_i + r_j` radians, the later craton is
+/// iteration 2, retargeted in iteration 3'): for each craton i > 0 in id
+/// order, if any earlier-id craton j sits closer than
+/// `REPEL_SEPARATION_FACTOR * (r_i + r_j)` radians, the later craton is
 /// slerped directly AWAY from the earlier one to exactly that separation —
-/// `slerp(c_j, c_i, t)` with `t = (r_i + r_j) / omega > 1` extrapolates
+/// `slerp(c_j, c_i, t)` with `t = separation / omega > 1` extrapolates
 /// past `c_i` along the `c_j -> c_i` great circle, staying on the unit
 /// sphere exactly. Within craton i, the earlier-j sweep repeats (bounded
 /// at `REPEL_SWEEPS`) until no earlier craton is violated — a single naive
-/// j-sweep lets the fix for a later j undo the fix for an earlier one
-/// (measured while building this: worst post-pass separation 0.26x the
-/// target at seed 5, pair (0, 9)); repeating within i settles each craton
-/// against ALL its predecessors before moving on (worst 0.81x across seeds
-/// 0..8). Still one pass over cratons, id order, zero stream draws, fully
-/// deterministic, and still not perfect: settling craton i can re-crowd a
-/// pair among 0..i only via i itself, and chains may leave residual
-/// sub-target pairs — the test asserts 0.8x separation and monotone
-/// improvement, not full separation. Coincident centers (omega ~ 0) are
-/// left in place: no repulsion direction is privileged there.
+/// j-sweep lets the fix for a later j undo the fix for an earlier one;
+/// repeating within i settles each craton against ALL its predecessors
+/// before moving on. Still one pass over cratons, id order, zero stream
+/// draws, fully deterministic.
+///
+/// Under iteration 3's continental-area normalization the drawn cap
+/// *footprints* can total well over half the sphere's surface for
+/// crowded draws (see `draw_cratons`'s doc), so a fixed moat target is
+/// not always geometrically satisfiable — settling craton i can re-crowd
+/// a pair among 0..i only via i itself, and chains may leave residual
+/// sub-target pairs. The guarantee this pass makes is therefore
+/// *reduction*, not *attainment*: the minimum pairwise separation across
+/// the whole set never gets worse than it was before the pass (see the
+/// `repulsion_reduces_crowding_without_new_draws` test). Coincident
+/// centers (omega ~ 0) are left in place: no repulsion direction is
+/// privileged there.
 fn repel_cratons(cratons: &mut [Craton]) {
     /// Bound on the within-craton settle sweeps: convergence is typically
     /// 2-3 sweeps; the cap only guarantees termination.
@@ -290,7 +355,7 @@ fn repel_cratons(cratons: &mut [Craton]) {
             for j in 0..i {
                 let (c_j, r_j) = (cratons[j].center, cratons[j].radius_rad);
                 let (c_i, r_i) = (cratons[i].center, cratons[i].radius_rad);
-                let separation = r_i + r_j;
+                let separation = REPEL_SEPARATION_FACTOR * (r_i + r_j);
                 let omega = dot(c_i, c_j).clamp(-1.0, 1.0).acos();
                 if omega > 1e-9 && omega < separation - 1e-12 {
                     cratons[i].center = slerp(c_j, c_i, separation / omega);
@@ -379,6 +444,19 @@ mod tests {
     use crate::streams;
     use hornvale_kernel::{Geosphere, NearestCellIndex};
 
+    /// The default-pins ocean-fraction target for a given terrain seed —
+    /// what `generate` resolves once and threads to both `draw_cratons`
+    /// and `derive_sea_level` (Task 9 iteration 3'). Tests that exercise
+    /// `draw_cratons` directly (outside `generate`) need this to supply a
+    /// realistic budget.
+    fn default_ocean_target(terrain_seed: Seed) -> f64 {
+        crate::elevation::resolve_ocean_fraction(
+            terrain_seed,
+            &TerrainPins::default(),
+            &mut Vec::new(),
+        )
+    }
+
     #[test]
     fn crust_km_validates() {
         assert!(CrustKm::new(35.0).is_ok());
@@ -445,13 +523,16 @@ mod tests {
     #[test]
     fn craton_draws_are_sequential_and_in_range() {
         for seed in 0..16u64 {
+            let terrain_seed = Seed(seed).derive(streams::ROOT);
+            let ocean_target = default_ocean_target(terrain_seed);
             let cratons = draw_cratons(
-                Seed(seed).derive(streams::ROOT),
+                terrain_seed,
                 &TerrainPins::default(),
+                ocean_target,
                 &mut Vec::new(),
             );
             assert!(
-                (7..=13).contains(&cratons.len()),
+                (8..=14).contains(&cratons.len()),
                 "seed {seed}: {}",
                 cratons.len()
             );
@@ -459,8 +540,8 @@ mod tests {
                 assert_eq!(c.id, i as u32);
                 assert!((crate::plates::norm(c.center) - 1.0).abs() < 1e-12);
                 // Post-rescale bound, exact by construction rather than
-                // observed: scale = sqrt(budget * 4pi / total_area) is
-                // strictly positive (budget > 0, total_area > 0), so
+                // observed: scale = sqrt(budget * 4pi / continental_area) is
+                // strictly positive (budget > 0, continental_area > 0), so
                 // radius_rad = min(r * scale, 0.6) is always in (0, 0.6].
                 // The pre-rescale draw range (0.10..=0.45) no longer bounds
                 // it — that is the area-normalization's whole point.
@@ -475,7 +556,7 @@ mod tests {
     }
 
     #[test]
-    fn repulsion_separates_crowded_cratons_without_new_draws() {
+    fn repulsion_reduces_crowding_without_new_draws() {
         // Minimum pairwise angular separation over a craton set.
         let min_pairwise_angle = |cratons: &[Craton]| -> f64 {
             let mut min = f64::INFINITY;
@@ -491,39 +572,43 @@ mod tests {
         };
         for seed in 0..8u64 {
             let terrain_seed = Seed(seed).derive(streams::ROOT);
+            let ocean_target = default_ocean_target(terrain_seed);
             let mut notes = Vec::new();
-            let pre = draw_cratons_unrepelled(terrain_seed, &TerrainPins::default(), &mut notes);
+            let pre = draw_cratons_unrepelled(
+                terrain_seed,
+                &TerrainPins::default(),
+                ocean_target,
+                &mut notes,
+            );
             let mut post = pre.clone();
             repel_cratons(&mut post);
             // The public path is exactly pre + one repulsion pass.
             assert_eq!(
                 post,
-                draw_cratons(terrain_seed, &TerrainPins::default(), &mut Vec::new()),
+                draw_cratons(
+                    terrain_seed,
+                    &TerrainPins::default(),
+                    ocean_target,
+                    &mut Vec::new()
+                ),
                 "seed {seed}: public path diverges from unrepelled + repel"
             );
-            // Zero draws: everything but centers is byte-identical.
+            // (b) Zero extra draws: everything but centers is
+            // byte-identical between pre- and post-repulsion.
             for (a, b) in pre.iter().zip(&post) {
                 assert_eq!(a.id, b.id);
                 assert_eq!(a.radius_rad, b.radius_rad);
                 assert_eq!(a.age, b.age);
                 assert!((crate::plates::norm(b.center) - 1.0).abs() < 1e-12);
             }
-            // Improvement, not perfection: the single pass may not fully
-            // separate chains (a later adjustment can re-crowd an earlier
-            // pair), hence the 0.8 slack on the separation target...
-            for i in 1..post.len() {
-                for j in 0..i {
-                    let angle = dot(post[i].center, post[j].center).clamp(-1.0, 1.0).acos();
-                    let target = post[i].radius_rad + post[j].radius_rad;
-                    assert!(
-                        angle >= 0.8 * target,
-                        "seed {seed}: cratons {j},{i} at {angle} rad, \
-                         0.8x target {}",
-                        0.8 * target
-                    );
-                }
-            }
-            // ...and the crowdedness itself must never get worse.
+            // (a) Reduction, not attainment: under iteration 3's
+            // continental-area normalization the drawn cap footprints can
+            // total well over half the sphere's surface for crowded
+            // draws, so a fixed 1.2x-of-target moat is not always
+            // geometrically satisfiable (settling craton i can re-crowd a
+            // pair among 0..i only via i itself). What the pass
+            // guarantees instead: the minimum pairwise separation across
+            // the whole set never gets worse than it was before the pass.
             assert!(
                 min_pairwise_angle(&post) >= min_pairwise_angle(&pre) - 1e-12,
                 "seed {seed}: repulsion reduced the minimum pairwise \
@@ -532,18 +617,38 @@ mod tests {
                 min_pairwise_angle(&post)
             );
         }
+        // (c) Skipped under --supercontinent: the public path equals the
+        // unrepelled path exactly (that pin wants clustering, not
+        // separation).
+        for seed in 0..8u64 {
+            let terrain_seed = Seed(seed).derive(streams::ROOT);
+            let ocean_target = default_ocean_target(terrain_seed);
+            let pins = TerrainPins {
+                supercontinent: Some(true),
+                ..TerrainPins::default()
+            };
+            let unrepelled =
+                draw_cratons_unrepelled(terrain_seed, &pins, ocean_target, &mut Vec::new());
+            let public = draw_cratons(terrain_seed, &pins, ocean_target, &mut Vec::new());
+            assert_eq!(
+                unrepelled, public,
+                "seed {seed}: repulsion ran despite --supercontinent"
+            );
+        }
     }
 
     #[test]
     fn continents_pin_overrides_without_perturbing_shared_cratons() {
         let seed = Seed(42).derive(streams::ROOT);
-        let drawn = draw_cratons(seed, &TerrainPins::default(), &mut Vec::new());
+        let ocean_target = default_ocean_target(seed);
+        let drawn = draw_cratons(seed, &TerrainPins::default(), ocean_target, &mut Vec::new());
         let pinned = draw_cratons(
             seed,
             &TerrainPins {
                 continents: Some(5),
                 ..TerrainPins::default()
             },
+            ocean_target,
             &mut Vec::new(),
         );
         assert_eq!(pinned.len(), 5);
@@ -569,13 +674,15 @@ mod tests {
         }
         // The pre-repulsion shared-prefix centers ARE stream-identical —
         // the raw draws are pin-isolated; only the post-transforms differ.
-        let drawn_pre = draw_cratons_unrepelled(seed, &TerrainPins::default(), &mut Vec::new());
+        let drawn_pre =
+            draw_cratons_unrepelled(seed, &TerrainPins::default(), ocean_target, &mut Vec::new());
         let pinned_pre = draw_cratons_unrepelled(
             seed,
             &TerrainPins {
                 continents: Some(5),
                 ..TerrainPins::default()
             },
+            ocean_target,
             &mut Vec::new(),
         );
         for (a, b) in drawn_pre.iter().zip(&pinned_pre) {
@@ -590,13 +697,15 @@ mod tests {
     #[test]
     fn supercontinent_clusters_cratons_without_new_draws() {
         let seed = Seed(42).derive(streams::ROOT);
-        let scattered = draw_cratons(seed, &TerrainPins::default(), &mut Vec::new());
+        let ocean_target = default_ocean_target(seed);
+        let scattered = draw_cratons(seed, &TerrainPins::default(), ocean_target, &mut Vec::new());
         let clustered = draw_cratons(
             seed,
             &TerrainPins {
                 supercontinent: Some(true),
                 ..TerrainPins::default()
             },
+            ocean_target,
             &mut Vec::new(),
         );
         assert_eq!(scattered.len(), clustered.len());
@@ -621,6 +730,7 @@ mod tests {
                 supercontinent: Some(false),
                 ..TerrainPins::default()
             },
+            ocean_target,
             &mut Vec::new(),
         );
         assert_eq!(scattered, reaffirmed);
@@ -629,9 +739,10 @@ mod tests {
     #[test]
     fn crust_field_is_pure_and_bounded() {
         let seed = Seed(42).derive(streams::ROOT);
+        let ocean_target = default_ocean_target(seed);
         let field = CrustField::new(
             seed,
-            draw_cratons(seed, &TerrainPins::default(), &mut Vec::new()),
+            draw_cratons(seed, &TerrainPins::default(), ocean_target, &mut Vec::new()),
         );
         let p = [0.6, -0.48, 0.64];
         let p = crate::plates::normalize(p);
@@ -646,9 +757,10 @@ mod tests {
     fn crust_field_agrees_at_vertices_shared_across_levels() {
         // Icosphere levels nest: every level-4 vertex is a level-5 vertex.
         let seed = Seed(7).derive(streams::ROOT);
+        let ocean_target = default_ocean_target(seed);
         let field = CrustField::new(
             seed,
-            draw_cratons(seed, &TerrainPins::default(), &mut Vec::new()),
+            draw_cratons(seed, &TerrainPins::default(), ocean_target, &mut Vec::new()),
         );
         let coarse = Geosphere::new(4);
         let fine = Geosphere::new(5);
@@ -677,9 +789,10 @@ mod tests {
     #[test]
     fn kernel_field_sampling_matches_direct_evaluation() {
         let seed = Seed(42).derive(streams::ROOT);
+        let ocean_target = default_ocean_target(seed);
         let field = CrustField::new(
             seed,
-            draw_cratons(seed, &TerrainPins::default(), &mut Vec::new()),
+            draw_cratons(seed, &TerrainPins::default(), ocean_target, &mut Vec::new()),
         );
         let pos = hornvale_kernel::Position {
             x: -120.25,

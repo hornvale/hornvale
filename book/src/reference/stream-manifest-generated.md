@@ -73,7 +73,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/hotspots` | hotspot count, positions, and strengths |
 | `terrain/ocean-fraction` | target ocean fraction draw |
 | `terrain/coast-render` | render-lens coastline noise (hash-noise only; no stream draws) |
-| `terrain/cratons` | continental budget, craton count, then per-craton center/radius/age |
+| `terrain/cratons` | margin draw (scales the ocean-fraction-derived budget, Task 9 iteration 3'), craton count, then per-craton center/radius/age |
 | `terrain/plate-weights` | per-plate heavy-tailed Voronoi weight draws |
 | `terrain/plate-edge` | plate-edge noise (hash-noise only; no stream draws) |
 

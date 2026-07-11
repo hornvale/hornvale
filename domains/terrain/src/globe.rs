@@ -69,7 +69,11 @@ pub fn generate(
     let terrain_seed = world_seed.derive(streams::ROOT);
     let mut notes = Vec::new();
     let plate_list = plates::generate_plates(terrain_seed, pins, &mut notes);
-    let cratons = crust::draw_cratons(terrain_seed, pins, &mut notes);
+    // Task 9 iteration 3': the ocean-fraction target is resolved once,
+    // here, and threaded to both the craton budget and sea level below —
+    // a pinned target conditions both identically to a drawn one.
+    let ocean_target = elevation::resolve_ocean_fraction(terrain_seed, pins, &mut notes);
+    let cratons = crust::draw_cratons(terrain_seed, pins, ocean_target, &mut notes);
     let field = crust::CrustField::new(terrain_seed, cratons.clone());
     let crust_map = CellMap::from_fn(geosphere, |c| {
         field.thickness_at(geosphere.position(c)).get()
@@ -88,7 +92,7 @@ pub fn generate(
         &crust_map,
         &continental,
     );
-    let sea_level = elevation::derive_sea_level(terrain_seed, pins, &elevation_map, &mut notes);
+    let sea_level = elevation::derive_sea_level(&elevation_map, ocean_target);
     let unrest =
         elevation::generate_unrest(geosphere, &plate_list, &plate_of, &boundary_map, &distances);
     let (drainage, endorheic) =

@@ -201,18 +201,24 @@ pub fn generate_elevation(
     )
 }
 
-/// Derive sea level: draw (or pin) a target ocean fraction, then place sea
-/// level at the elevation percentile that puts exactly that fraction of
-/// cells strictly below it. The draw is consumed whether pinned or not
-/// (pin isolation). Sort uses `total_cmp` — elevations are finite and
-/// strictly ordered by construction. `notes` receives a metering entry
-/// when `ocean_fraction` is pinned (Task 7's metering convention: `pinned
-/// <name> <value> (seed draws <drawn>)`, the value formatted `{:.2}`).
-/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: return), bare-ok(prose: notes)
-pub fn derive_sea_level(
+/// Resolve the world's target ocean fraction: draw (or pin) it. The draw
+/// is consumed whether pinned or not (pin isolation). `notes` receives a
+/// metering entry when `ocean_fraction` is pinned (Task 7's metering
+/// convention: `pinned <name> <value> (seed draws <drawn>)`, the value
+/// formatted `{:.2}`).
+///
+/// Task 9 iteration 3': called once, early, in `globe::generate` — the
+/// resolved target is threaded to BOTH `crust::draw_cratons` (whose
+/// budget is now derived from it) and `derive_sea_level` below, rather
+/// than each drawing (or re-deriving) its own copy. Per the pin doctrine,
+/// a pinned target conditions everything downstream identically to a
+/// drawn one, so `--ocean-fraction` now legitimately perturbs craton
+/// radii too — see `draw_cratons`'s doc and the pin-isolation test in
+/// `tectonic_properties.rs`.
+/// type-audit: bare-ok(prose: notes), bare-ok(ratio: return)
+pub fn resolve_ocean_fraction(
     terrain_seed: Seed,
     pins: &TerrainPins,
-    elevation: &CellMap<f64>,
     notes: &mut Vec<String>,
 ) -> f64 {
     let drawn = 0.5
@@ -225,6 +231,17 @@ pub fn derive_sea_level(
     if let Some(f) = pins.ocean_fraction {
         notes.push(format!("pinned ocean-fraction {f:.2} (seed draws {drawn})"));
     }
+    target
+}
+
+/// Place sea level at the elevation percentile that puts exactly `target`
+/// fraction of cells strictly below it. Pure — no draws: `target` is
+/// resolved once in `generate` via `resolve_ocean_fraction` (Task 9
+/// iteration 3') and shared with `crust::draw_cratons`. Sort uses
+/// `total_cmp` — elevations are finite and strictly ordered by
+/// construction.
+/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: return), bare-ok(ratio: target)
+pub fn derive_sea_level(elevation: &CellMap<f64>, target: f64) -> f64 {
     let mut sorted: Vec<f64> = elevation.iter().map(|(_, e)| *e).collect();
     sorted.sort_by(|a, b| a.total_cmp(b));
     let index = ((target * sorted.len() as f64) as usize).min(sorted.len() - 1);
@@ -371,7 +388,9 @@ mod tests {
             let terrain_seed = Seed(seed).derive(streams::ROOT);
             let plates = generate_plates(terrain_seed, &pins, &mut Vec::new());
             let plate_of = assign_plates(&geo, terrain_seed, &plates);
-            let cratons = crate::crust::draw_cratons(terrain_seed, &pins, &mut Vec::new());
+            let ocean_target = resolve_ocean_fraction(terrain_seed, &pins, &mut Vec::new());
+            let cratons =
+                crate::crust::draw_cratons(terrain_seed, &pins, ocean_target, &mut Vec::new());
             let field = crate::crust::CrustField::new(terrain_seed, cratons);
             let crust = CellMap::from_fn(&geo, |c| field.thickness_at(geo.position(c)).get());
             let continental = CellMap::from_fn(&geo, |c| field.continental_at(geo.position(c)));
@@ -387,7 +406,7 @@ mod tests {
                 &crust,
                 &continental,
             );
-            let sea = derive_sea_level(terrain_seed, &pins, &elevation, &mut Vec::new());
+            let sea = derive_sea_level(&elevation, ocean_target);
             let below = elevation.iter().filter(|(_, e)| **e < sea).count();
             let achieved = below as f64 / elevation.len() as f64;
             assert!(
