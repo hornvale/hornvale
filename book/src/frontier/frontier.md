@@ -47,6 +47,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The projection layer](#the-projection-layer)
   - [The immune model of belief — deception as discrimination failure](#the-immune-model-of-belief--deception-as-discrimination-failure)
   - [The immune stack — boundary-maintenance across every scale](#the-immune-stack--boundary-maintenance-across-every-scale)
+  - [The anti-phenomenon — meaningful absence as an observable](#the-anti-phenomenon--meaningful-absence-as-an-observable)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
@@ -1616,6 +1617,62 @@ assimilation — all sharing UNI-16's threshold machinery. The cheapest first
 instance is the heretic: an individual belief-immunity diverging from its
 culture's and triggering the autoimmune response of persecution (MAP-9b), because
 its pieces — religion, social structure — already exist.
+
+---
+
+## The anti-phenomenon — meaningful absence as an observable
+
+*(High confidence in the mechanism, which is nearly free; medium on the rendering
+calibration. A read that sits beside the phenomena layer — the text medium's
+sharpest instrument. Feeds the-walk metaplan's Focalized Sight campaign.)*
+
+**Negate the phenomena layer and you find the game's best card unplayed.** The
+sim's universal read surfaces *what is*, salience-ranked. Negate every term —
+present → absent, notable → unremarked, is → isn't — and the shadow read appears:
+**meaningful nothing.** The dog that did not bark; the altar-shaped wear on a floor
+with no altar; the name a village will not say. In prose — and *only* in prose —
+absence often lands harder than presence, so a text simulation that renders only
+what is there leaves its home-field advantage on the table.
+
+**A dictionary of meaningful absence**, and the striking part is that Hornvale
+already computes almost all of it: the **lacuna** (structure expects it, the ledger
+lacks it — the empty throne); the **unremarked** (present but below salience, seen
+only by a stranger's different tolerance — the immune stack, UNI-17); the
+**withheld** (the immune-privileged taboo, a concealment whose *shape* still
+shows); the **forgotten** (a dropped ledger fact, MEM-1 — a trace without its
+referent); the **not-yet** (the prophesied, MAP-13); the **never-was** (a
+counterfactual branch that never fired, inference UNI-1); the **unsayable** (a
+lexical gap, a LANG fact); the **silenced** (a true ledger tension no one may
+speak — the projection layer, MAP-9); the **vanished** (the endling, MAP-7's N=1;
+the emptied deep-time village). The machinery for each exists; only the *read* is
+missing.
+
+**The mechanism is nearly free, and it falls out of the constitution.** An absence
+is legible only against an *expectation* — and Hornvale holds the expectation
+structurally. The **fields** are the statistical prior (what *should* be here); the
+**ledger** is committed reality (what *is*). So:
+
+> a salient absence is where the field-prior expects something the ledger lacks
+> (and its twin, the uncanny, is the reverse — a ledger fact the prior would never
+> have predicted).
+
+The gap between coarse expectation and fine reality *is* the meaningful nothing.
+Coarse-constrains-fine, run as a *difference* rather than a constraint, yields a
+**lacunae query** that ranks absences by how sharply the prior expected them — the
+structural sibling of salience-ranked phenomena. The focalizer renders its hits as
+felt gaps, and a place stops being merely empty and becomes *haunted* by what is
+not in it.
+
+**What keeps it honest** is that the absences must be *derived* from the
+prior-minus-reality difference, never a hand-placed "spooky empty room." The Lab
+test is whether the lacunae a world surfaces track its real history of loss,
+suppression, and expectation rather than an author's taste for atmosphere.
+
+**Sequencing.** Not a domain — a second read over the same query surface, landing
+with the-walk metaplan's Focalized Sight (Milestone 1, the focalizer), since the
+mechanism is a difference over machinery that already ships. Its cheapest instance
+is the ruin: a deep-time-emptied settlement (a field that once condensed a town, a
+ledger that now holds none) rendered as the still-set table.
 
 ---
 

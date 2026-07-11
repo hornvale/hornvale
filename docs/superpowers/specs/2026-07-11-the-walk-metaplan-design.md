@@ -325,7 +325,9 @@ Milestone 1 — the walkable slice:
 - **II. Focalized Sight** — vantage queries through the projection → authored-
   feeling room prose (the anti-repetition mandate). *Exit:* `look` describes where
   you stand, non-repetitive, from field + ledger. *Leans on:* `room-scale-variety`
-  worktree, the scene window.
+  worktree, the scene window. Also carries the **anti-phenomenon** read (frontier
+  RENDER-7): salient absences computed as field-prior minus ledger-reality and
+  rendered as felt gaps — the text medium's edge, and nearly free.
 - **III. The Walk** — walkable local space (the lazy elaborator, §4) + the verb
   loop (look / go / examine); moving re-focalizes. *Exit:* `possess` → move through
   a small local space; it re-describes; world still frozen. *Leans on:* terrain
