@@ -149,7 +149,7 @@ TOOL-17/21/22/23 are CI-topology changes needing CI iteration. PROC-7 (the
 mechanical DoD gate) is CI-shaped too. TOOL-18 is sim-facing test policy
 (fairness batteries) — spec it deliberately. PROC-8's book-staleness scan
 needs the git-log design. TOOL-15's exclude-glob relocation remains.
-Follow-ups from Stage 3's final review: teach the PROC-8 linter the
-line-wrapped cite form its scanner misses (false negatives only), and
-harden `cite_error`'s token shape against maximal-munch numerics.
+(Stage 3's final-review follow-ups — the PROC-8 linter's line-wrapped cite
+scan and `cite_error`'s maximal-munch hardening — landed as a standalone
+fix.)
 **Status**: Not Started

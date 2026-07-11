@@ -388,9 +388,12 @@ fn source_files(dir: &Path, out: &mut Vec<PathBuf>) {
 
 /// Check one cite token against the decision records. `None` means fine —
 /// either it resolves, or it is prose rather than a cite: a 4-digit token
-/// must match a `NNNN-*.md` record; a lowercase token with ≥ 2 hyphens must
-/// match a `<slug>.md` record or a numbered record's slug tail ("decision
-/// log" has no hyphen, "4-digit" has one — neither is a cite).
+/// must match a `NNNN-*.md` record; a lowercase token with ≥ 2 hyphens and
+/// at least one letter must match a `<slug>.md` record or a numbered
+/// record's slug tail ("decision log" has no hyphen, "4-digit" has one,
+/// "2026-07-05" has no letter — none is a cite; the letter rule keeps the
+/// maximal-munch token grabber from dressing dates and numeric ranges up as
+/// slugs).
 fn cite_error(token: &str, numbers: &BTreeSet<String>, slugs: &BTreeSet<String>) -> Option<String> {
     if token.len() == 4 && token.chars().all(|c| c.is_ascii_digit()) {
         return (!numbers.contains(token))
@@ -399,6 +402,7 @@ fn cite_error(token: &str, numbers: &BTreeSet<String>, slugs: &BTreeSet<String>)
     let is_slug_shaped = token.matches('-').count() >= 2
         && !token.starts_with('-')
         && !token.ends_with('-')
+        && token.chars().any(|c| c.is_ascii_lowercase())
         && token
             .chars()
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
@@ -406,6 +410,74 @@ fn cite_error(token: &str, numbers: &BTreeSet<String>, slugs: &BTreeSet<String>)
         return Some(format!("no docs/decisions/{token}.md record"));
     }
     None
+}
+
+/// Strip one leading comment marker (`///`, `//!`, `//`, `#`) and the space
+/// after it, so a cite wrapped across comment lines reads as continuous text
+/// once the lines are joined (the linter-side twin of the doctor's sed).
+fn strip_comment_marker(line: &str) -> &str {
+    let trimmed = line.trim_start();
+    for marker in ["///", "//!", "//", "#"] {
+        if let Some(rest) = trimmed.strip_prefix(marker) {
+            return rest.strip_prefix(' ').unwrap_or(rest);
+        }
+    }
+    line
+}
+
+/// A file's comment-marker-stripped, line-joined text, with a parallel map
+/// from each byte of the joined text to its 1-indexed source line — so a
+/// match in the joined text still reports a real line number.
+fn joined_with_line_map(content: &str) -> (String, Vec<usize>) {
+    let mut text = String::new();
+    let mut line_of = Vec::new();
+    for (idx, line) in content.lines().enumerate() {
+        if idx > 0 {
+            text.push(' ');
+            line_of.push(idx);
+        }
+        let stripped = strip_comment_marker(line);
+        text.push_str(stripped);
+        line_of.resize(text.len(), idx + 1);
+    }
+    (text, line_of)
+}
+
+/// Scan one file's content for `decision <token>` / `decisions <token>` /
+/// `ADR <token>` cites and return the errors for tokens that resolve to no
+/// decision record, each prefixed `<rel>:<line>`. Scans the line-joined view
+/// so a cite whose keyword ends one comment line and whose token starts the
+/// next is still checked.
+fn cite_errors_in(
+    content: &str,
+    rel: &str,
+    numbers: &BTreeSet<String>,
+    slugs: &BTreeSet<String>,
+) -> Vec<String> {
+    let (text, line_of) = joined_with_line_map(content);
+    let mut found = Vec::new();
+    for keyword in ["decision ", "decisions ", "ADR "] {
+        let mut from = 0;
+        while let Some(pos) = text[from..].find(keyword) {
+            let at = from + pos;
+            let after = &text[at + keyword.len()..];
+            let token: String = after
+                .trim_start_matches('`')
+                .chars()
+                .take_while(|c| c.is_ascii_alphanumeric() || *c == '-')
+                .collect();
+            if let Some(err) = cite_error(&token, numbers, slugs) {
+                let line = line_of[at];
+                found.push((
+                    line,
+                    format!("{rel}:{line}: cite `{keyword}{token}` — {err}"),
+                ));
+            }
+            from = at + keyword.len();
+        }
+    }
+    found.sort();
+    found.into_iter().map(|(_, msg)| msg).collect()
 }
 
 /// Every decision citation in the Rust and shell sources resolves to a
@@ -429,6 +501,9 @@ fn decision_cites_in_sources_resolve() {
         if numbered {
             numbers.insert(stem[..4].to_string());
             slugs.insert(stem[5..].to_string());
+            // The full stem (`0026-slugs-not-numbers`) is a citable form
+            // too — it is the record's actual filename.
+            slugs.insert(stem.to_string());
         } else {
             slugs.insert(stem.to_string());
         }
@@ -448,26 +523,7 @@ fn decision_cites_in_sources_resolve() {
             .unwrap_or(file)
             .display()
             .to_string();
-        for (idx, line) in content.lines().enumerate() {
-            for keyword in ["decision ", "decisions ", "ADR "] {
-                let mut rest = line;
-                while let Some(pos) = rest.find(keyword) {
-                    let after = &rest[pos + keyword.len()..];
-                    let token: String = after
-                        .trim_start_matches('`')
-                        .chars()
-                        .take_while(|c| c.is_ascii_alphanumeric() || *c == '-')
-                        .collect();
-                    if let Some(err) = cite_error(&token, &numbers, &slugs) {
-                        errors.push(format!(
-                            "{rel}:{}: cite `{keyword}{token}` — {err}",
-                            idx + 1
-                        ));
-                    }
-                    rest = &rest[pos + keyword.len()..];
-                }
-            }
-        }
+        errors.extend(cite_errors_in(&content, &rel, &numbers, &slugs));
     }
     assert!(
         errors.is_empty(),
@@ -483,6 +539,7 @@ fn cite_error_resolves_the_known_forms() {
     let slugs: BTreeSet<String> = [
         "calibration-loads-the-census-fixture".to_string(),
         "slugs-not-numbers".to_string(),
+        "0016-slugs-not-numbers".to_string(),
     ]
     .into();
     // Resolvable numeric and slug cites.
@@ -491,8 +548,9 @@ fn cite_error_resolves_the_known_forms() {
         cite_error("calibration-loads-the-census-fixture", &numbers, &slugs),
         None
     );
-    // A numbered record's slug tail resolves too.
+    // A numbered record's slug tail resolves too, and so does its full stem.
     assert_eq!(cite_error("slugs-not-numbers", &numbers, &slugs), None);
+    assert_eq!(cite_error("0016-slugs-not-numbers", &numbers, &slugs), None);
     // Unresolvable cites are errors.
     assert!(cite_error("0999", &numbers, &slugs).is_some());
     assert!(cite_error("no-such-decision-here", &numbers, &slugs).is_some());
@@ -501,4 +559,37 @@ fn cite_error_resolves_the_known_forms() {
     assert_eq!(cite_error("point", &numbers, &slugs), None);
     assert_eq!(cite_error("4-digit", &numbers, &slugs), None);
     assert_eq!(cite_error("", &numbers, &slugs), None);
+    // Maximal-munch numerics: the token grabber eats digits and hyphens, so
+    // a date or a numeric range after the keyword munches into a token with
+    // enough hyphens to look slug-shaped. A slug names words — no letters,
+    // no cite.
+    assert_eq!(cite_error("2026-07-05", &numbers, &slugs), None);
+    assert_eq!(cite_error("0002-0005-0007", &numbers, &slugs), None);
+}
+
+#[test]
+fn cite_errors_in_catches_line_wrapped_cites() {
+    let numbers: BTreeSet<String> = ["0016".to_string()].into();
+    let slugs: BTreeSet<String> = ["slugs-not-numbers".to_string()].into();
+    // A cite wrapped across comment lines: the keyword ends one line, the
+    // token starts the next. A wrapped cite of a real record stays silent...
+    let good = "// as ratified (decision\n// `slugs-not-numbers`), the log wins\n";
+    assert_eq!(
+        cite_errors_in(good, "src/lib.rs", &numbers, &slugs),
+        Vec::<String>::new()
+    );
+    // ...and a wrapped cite of a missing record is an error, reported at the
+    // keyword's line.
+    let bad = "fn f() {}\n// see decision\n// `no-such-decision-here` for why\n";
+    let errors = cite_errors_in(bad, "src/lib.rs", &numbers, &slugs);
+    assert_eq!(
+        errors.len(),
+        1,
+        "wrapped cite should be scanned: {errors:?}"
+    );
+    assert!(
+        errors[0].starts_with("src/lib.rs:2:"),
+        "line of the keyword: {errors:?}"
+    );
+    assert!(errors[0].contains("no-such-decision-here"), "{errors:?}");
 }
