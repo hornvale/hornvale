@@ -143,7 +143,7 @@ pub fn registry() -> Vec<Metric> {
             },
             extract: |v| match &v.system.anchor.rotation {
                 Rotation::Locked => MetricValue::Absent,
-                Rotation::Spinning { day } => MetricValue::Number(day.get() * 24.0),
+                Rotation::Spinning { day, .. } => MetricValue::Number(day.get() * 24.0),
             },
         },
         Metric {

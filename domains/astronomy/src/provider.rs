@@ -268,6 +268,7 @@ mod tests {
                 year: StdDays::new(365.25).unwrap(),
                 rotation: Rotation::Spinning {
                     day: StdDays::new(1.0).unwrap(),
+                    retrograde: false,
                 },
                 obliquity: Degrees::new(0.0).unwrap(),
             },
@@ -342,6 +343,7 @@ mod tests {
                 year: crate::units::StdDays::new(365.25).unwrap(),
                 rotation: Rotation::Spinning {
                     day: crate::units::StdDays::new(1.0).unwrap(),
+                    retrograde: false,
                 },
                 obliquity: Degrees::new(obliquity).unwrap(),
             },
@@ -468,6 +470,25 @@ mod tests {
         let ph = s.phenomena(&ctx(0.0));
         assert_eq!(ph.iter().filter(|p| p.kind == TIDE).count(), 1);
         assert!(!ph.iter().any(|p| p.description.contains("spring")));
+    }
+
+    /// SKY-22: a retrograde world's day sky says the sun rises in the west;
+    /// an ordinary world's does not.
+    #[test]
+    fn retrograde_worlds_see_the_sun_rise_in_the_west() {
+        let noon_sky = |spin| {
+            let pins = SkyPins {
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                forcing: Some(crate::pins::ForcingPin::Zero),
+                spin: Some(spin),
+                ..SkyPins::default()
+            };
+            sky(pins).sky_at(WorldTime { day: 10.5 }).description
+        };
+        let retro = noon_sky(crate::pins::SpinPin::Retrograde);
+        assert!(retro.contains("rises in the west"), "got {retro}");
+        let pro = noon_sky(crate::pins::SpinPin::Prograde);
+        assert!(!pro.contains("rises in the west"), "got {pro}");
     }
 
     /// SKY-14: the full window is centered on phase 0.5 (it used to start
@@ -723,13 +744,16 @@ impl GeneratedSky {
                     bodies,
                 }
             }
-            Rotation::Spinning { .. } => {
+            Rotation::Spinning { retrograde, .. } => {
                 let is_day = matches!(self.calendar.is_daylight(t), Some(true));
                 if is_day {
                     let mut description = format!(
                         "The sun, a {}, stands in the sky.",
                         self.system.star.class_name
                     );
+                    if *retrograde {
+                        description.push_str(" Here it rises in the west and sets in the east.");
+                    }
                     if let Some(phase) = self.calendar.season_phase(t) {
                         description.push(' ');
                         description.push_str(season_words(phase));
@@ -804,7 +828,7 @@ impl PhenomenaSource for GeneratedSky {
 
         if show_sun {
             match &self.system.anchor.rotation {
-                Rotation::Spinning { day } => out.push(Phenomenon {
+                Rotation::Spinning { day, .. } => out.push(Phenomenon {
                     kind: CELESTIAL_BODY.to_string(),
                     description: format!("the sun, a {}", self.system.star.class_name),
                     period_days: Some(round2(day.get())),
@@ -840,7 +864,7 @@ impl PhenomenaSource for GeneratedSky {
         // to the surface: the local day for a spinning world, the year for
         // a locked one (which turns once per orbit).
         let surface_rotation = match self.system.anchor.rotation {
-            Rotation::Spinning { day } => day.get(),
+            Rotation::Spinning { day, .. } => day.get(),
             Rotation::Locked => self.system.anchor.year.get(),
         };
         for moon in &self.system.moons {

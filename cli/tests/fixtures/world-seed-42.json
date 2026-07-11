@@ -187,6 +187,11 @@
         "functional": false,
         "doc": "a place habitable through the glacial maximum"
       },
+      "retrograde-spin": {
+        "name": "retrograde-spin",
+        "functional": true,
+        "doc": "the anchor world spins backward: the sun rises in the west"
+      },
       "scenario-pin": {
         "name": "scenario-pin",
         "functional": false,

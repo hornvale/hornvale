@@ -23,6 +23,7 @@ const SKY_FLAGS: &str =
   [--year-days F]                          pin the year length, in local days
   [--neighbor blue-giant|red-giant|white-dwarf|orange-giant|red-dwarf|sun-like]
                                             force one showpiece neighbor star
+  [--spin prograde|retrograde]             pin the spin direction (spinning worlds)
 ";
 
 const USAGE: &str = "\
@@ -137,6 +138,7 @@ fn parse_sky_args(args: &[String]) -> Result<(SkyPins, world_builder::SkyChoice)
         ("--obliquity", "obliquity"),
         ("--year-days", "year-days"),
         ("--neighbor", "neighbor"),
+        ("--spin", "spin"),
     ] {
         if let Some(value) = flag_value(args, flag) {
             parse_pin(&format!("{key}={value}"), &mut pins)?;
@@ -228,7 +230,7 @@ fn cmd_scout(args: &[String]) -> Result<(), String> {
         if let Ok(outcome) = hornvale_astronomy::generate(hornvale_kernel::Seed(seed), &pins) {
             let system = &outcome.system;
             let day = match system.anchor.rotation {
-                hornvale_astronomy::Rotation::Spinning { day } => {
+                hornvale_astronomy::Rotation::Spinning { day, .. } => {
                     format!("{:.1}h day", day.get() * 24.0)
                 }
                 hornvale_astronomy::Rotation::Locked => "tidally locked".to_string(),
@@ -794,6 +796,12 @@ mod tests {
     fn rotation_flag_parses() {
         let (pins, _) = parse_sky_args(&args(&["--rotation", "locked"])).unwrap();
         assert_eq!(pins.rotation, Some(RotationPin::Locked));
+    }
+
+    #[test]
+    fn spin_flag_parses() {
+        let (pins, _) = parse_sky_args(&args(&["--spin", "retrograde"])).unwrap();
+        assert_eq!(pins.spin, Some(hornvale_astronomy::SpinPin::Retrograde));
     }
 
     #[test]

@@ -622,6 +622,7 @@ mod tests {
                 year: StdDays::new(year_days).unwrap(),
                 rotation: Rotation::Spinning {
                     day: StdDays::new(1.0).unwrap(),
+                    retrograde: false,
                 },
                 obliquity: Degrees::new(0.0).unwrap(),
             },

@@ -41,6 +41,7 @@
 | `plate-count` | yes | how many tectonic plates the globe has |
 | `population` | yes | population of a settlement |
 | `refugium` | no | a place habitable through the glacial maximum |
+| `retrograde-spin` | yes | the anchor world spins backward: the sun rises in the west |
 | `scenario-pin` | no | an experimenter-supplied pin string conditioning genesis |
 | `sea-level-m` | yes | sea level in meters |
 | `sentiment` | yes | a belief's sentiment (eternal, cyclic, or ambient) |

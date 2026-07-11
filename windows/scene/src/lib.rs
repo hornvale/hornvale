@@ -317,7 +317,7 @@ pub fn system_scene(world: &World) -> Result<SystemScene, SceneError> {
         .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
     let anchor = &system.anchor;
     let day_length_days = match &anchor.rotation {
-        hornvale_astronomy::Rotation::Spinning { day } => Some(day.get()),
+        hornvale_astronomy::Rotation::Spinning { day, .. } => Some(day.get()),
         hornvale_astronomy::Rotation::Locked => None,
     };
     let moons = system

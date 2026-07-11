@@ -21,7 +21,8 @@ pub use calendar::{Calendar, calendar_of};
 pub use moons::{Moon, generate_moons, hill_radius_mm};
 pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
 pub use pins::{
-    ForcingPin, GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, parse_pin, pin_strings,
+    ForcingPin, GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, SpinPin, parse_pin,
+    pin_strings,
 };
 pub use provider::{GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE, TIDE};
 pub use star::{Star, generate_star};
@@ -65,6 +66,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "astronomy/neighbor-positions",
             "per-neighbor celestial position draws (declination, right ascension)",
+        ),
+        (
+            "astronomy/spin-direction",
+            "spin-direction draw: prograde or retrograde",
         ),
     ]
 }
@@ -111,6 +116,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::MOON_TIDE_REL,
         false,
         "tidal strength of a moon, relative to Luna on Earth",
+    )?;
+    registry.register_predicate(
+        facts::RETROGRADE_SPIN,
+        true,
+        "the anchor world spins backward: the sun rises in the west",
     )?;
     registry.register_predicate(
         facts::NOTABLE_NEIGHBOR,

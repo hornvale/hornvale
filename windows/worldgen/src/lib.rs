@@ -304,7 +304,7 @@ fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64) {
             let insolation = luminosity / (orbit * orbit);
             let obliquity = system.anchor.obliquity.get();
             let regime = match system.anchor.rotation {
-                hornvale_astronomy::Rotation::Spinning { day } => {
+                hornvale_astronomy::Rotation::Spinning { day, .. } => {
                     RotationRegime::Spinning { day_std: day.get() }
                 }
                 hornvale_astronomy::Rotation::Locked => RotationRegime::Locked,

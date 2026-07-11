@@ -37,6 +37,10 @@ pub const MOON_PERIOD_STD: &str = "moon-period-std";
 /// Number — one per moon; SKY-5).
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_TIDE_REL: &str = "moon-tide-rel";
+/// The anchor world spins backward: the sun rises in the west (functional,
+/// Flag — committed only when true, like tidally-locked; SKY-22).
+/// type-audit: bare-ok(identifier-text)
+pub const RETROGRADE_SPIN: &str = "retrograde-spin";
 /// A notable neighbor star visible in the night sky (non-functional, Text —
 /// one per neighbor).
 /// type-audit: bare-ok(identifier-text)
@@ -100,11 +104,17 @@ pub fn genesis(
                 &world.registry,
             )?;
         }
-        Rotation::Spinning { day } => {
+        Rotation::Spinning { day, retrograde } => {
             world.ledger.commit(
                 fact(subject, DAY_LENGTH_STD, Value::Number(day.get())),
                 &world.registry,
             )?;
+            if retrograde {
+                world.ledger.commit(
+                    fact(subject, RETROGRADE_SPIN, Value::Flag(true)),
+                    &world.registry,
+                )?;
+            }
         }
     }
 
@@ -320,6 +330,38 @@ mod tests {
             .map(|m| hornvale_kernel::quantize(m.tide_rel))
             .collect();
         assert_eq!(tides, expected);
+    }
+
+    /// SKY-22: a backward-spinning world says so in the ledger; an ordinary
+    /// one stays silent (the flag is committed only when true, like
+    /// tidally-locked).
+    #[test]
+    fn genesis_commits_the_retrograde_flag_only_when_retrograde() {
+        let retro_pins = SkyPins {
+            spin: Some(crate::pins::SpinPin::Retrograde),
+            ..SkyPins::default()
+        };
+        let outcome = generate(Seed(1), &retro_pins).unwrap();
+        let mut w = world_with(1);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+        assert_eq!(
+            w.ledger.value_of(subject, RETROGRADE_SPIN),
+            Some(&Value::Flag(true))
+        );
+
+        let outcome = generate(Seed(1), &SkyPins::default()).unwrap();
+        assert!(matches!(
+            outcome.system.anchor.rotation,
+            crate::anchor::Rotation::Spinning {
+                retrograde: false,
+                ..
+            }
+        ));
+        let mut w = world_with(1);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+        assert!(w.ledger.value_of(subject, RETROGRADE_SPIN).is_none());
     }
 
     #[test]
