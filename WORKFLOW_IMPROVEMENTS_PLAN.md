@@ -141,7 +141,7 @@ accepts); wrapper chapter + SUMMARY entry.
 **Deliverable**: `scripts/doctor.sh` printing pointers to the authoritative
 orientation sources (layering, gate, determinism contracts, artifact
 provenance, doc map, live git state) plus an orphaned-decision scan.
-**Status**: In Progress
+**Status**: Complete
 
 ## Stage 4+ (later passes)
 
