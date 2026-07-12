@@ -103,18 +103,31 @@ is disabled** — and realistically tier 1 stops it within ~5 minutes.
 `describe`+maybe-`terminate` — within the Lambda free tier (~$0/mo). EventBridge and
 Budgets are free.
 
-## 7. Provisioning
+## 7. Provisioning — a tag-scoped reconciler in shell
 
-One-time `scripts/aws-gate/setup.sh` (plain AWS CLI), creating: the sccache S3 bucket; the
-`hornvale-gate-runner` IAM user + scoped policy + access key (written to the local
-`hornvale-gate` profile, mode 600); the circuit-breaker Lambda + its execution role +
-5-min EventBridge rule; the security group (SSH from the caller's current public IP only);
-an SSH keypair; the launch template (spot, Ubuntu 24.04 ARM64, instance profile, userdata
-that installs `rustup` — which auto-selects pinned 1.96.1 from `rust-toolchain.toml` — plus
-the idle timer and sccache); and the `$10` alert + `$25` action budgets.
+Plain AWS CLI, no CloudFormation/Terraform/Ansible. The pattern is a **tag reconciler**:
+every resource is created carrying `project=hornvale-gate`, and destruction enumerates by
+that tag rather than by a hand-maintained list — so teardown is complete **by
+construction**, including anything a future `setup.sh` adds and a hand-written teardown
+would have forgotten. This is the safety property full IaC would provide, without the
+tooling or the stack-operation latency.
 
-`scripts/aws-gate/teardown.sh` removes all of it. The scripts are idempotent (safe to
-re-run) and print every resource they create/destroy.
+- **`scripts/aws-gate/setup.sh`** — idempotent create-if-absent (keyed by tag/name), so it
+  is safe to re-run and doubles as the converge/update path. It creates: the sccache S3
+  bucket; the `hornvale-gate-runner` IAM user + condition-scoped policy + access key
+  (written to the local `hornvale-gate` profile, mode 600); the circuit-breaker Lambda +
+  execution role + 5-min EventBridge rule; the security group (SSH from the caller's
+  current public IP only); an SSH keypair; the launch template (spot, Ubuntu 24.04 ARM64,
+  instance profile, userdata that installs `rustup` — auto-selecting pinned 1.96.1 from
+  `rust-toolchain.toml` — plus the idle timer and sccache); and the `$10` alert + `$25`
+  action budgets. It writes a **resource manifest** (`~/.hornvale-gate/manifest.json`:
+  launch-template id, sg id, bucket, subnet/AZ, runner profile, Lambda arn) that the
+  wrapper reads instead of rediscovering by tag on every run.
+- **`scripts/aws-gate/teardown.sh`** — enumerates every `project=hornvale-gate` resource
+  via the Resource Groups Tagging API and deletes it (IAM/budgets, which the tagging API
+  covers unevenly, are removed by their well-known names as a backstop). Prints each
+  resource destroyed.
+- Both scripts print every resource they touch; both are idempotent.
 
 **Confirmation gate:** building the scripts is free; the first `setup.sh` run and the first
 instance launch create billable resources. Neither runs without explicit developer
