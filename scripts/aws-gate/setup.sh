@@ -66,9 +66,14 @@ echo "  packaging: $breaker_zip"
 # ... manifest_set breaker_lambda_arn / breaker_rule_arn once created ...
 
 section "Budgets"
-# ... create/update a $HVG_BUDGET_ALERT ($10) monthly ACTUAL-cost budget, NOTIFY only,
+# NOTE: budgets are DAILY (TimeUnit: DAILY), matching the spec's "$10/day" alert
+# and "$25/day" hard action. A MONTHLY budget would trip the deny-all during
+# normal use (~$1-2.50/day crosses $25 cumulatively in ~2 weeks), defeating the
+# ~$25 worst-case-per-runaway bound — the hard action must fire on a RUNAWAY DAY,
+# not on ordinary accumulated spend.
+# ... create/update a $HVG_BUDGET_ALERT ($10) DAILY ACTUAL-cost budget, NOTIFY only,
 #     email subscriber = admin; tag project ...
-# ... create/update a $HVG_BUDGET_HARD ($25) monthly ACTUAL-cost budget with an
+# ... create/update a $HVG_BUDGET_HARD ($25) DAILY ACTUAL-cost budget with an
 #     IAM-deny budget ACTION (auto-apply, no approval required) targeting the
 #     hornvale-gate-runner user on ACTUAL >= 100% ...
 # ... manifest_set budget_alert_arn / budget_action_arn once created ...
