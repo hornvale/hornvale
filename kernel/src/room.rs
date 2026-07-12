@@ -856,6 +856,39 @@ mod tests {
     }
 
     #[test]
+    fn corner_weights_pin_cell_weight_pairing() {
+        use crate::NearestCellIndex;
+        // A constant field can't catch a transposition (any permutation of the
+        // same weights still blends to the constant). Pin the cell<->weight
+        // axis directly: the room centroid's barycentric weights ARE its
+        // proximity to each corner, so for an asymmetric room the
+        // max-weight corner must be the corner cell nearest the centroid.
+        let geo = Geosphere::new(3);
+        let index = NearestCellIndex::new(&geo);
+        // path biased toward corner 0 the whole way down -> distinct weights,
+        // corner 0 dominates.
+        let addr = RoomAddr {
+            face: 0,
+            path: vec![0, 0, 0, 0, 0],
+        };
+        let ws = addr.corner_weights(&geo, &index).expect("below the grid");
+        let (max_cell, max_w) = *ws.iter().max_by_key(|&&(_, w)| w).expect("three corners");
+        for &(cell, w) in &ws {
+            if cell != max_cell {
+                assert!(
+                    max_w > w,
+                    "max weight must be strictly unique for this test to pin anything"
+                );
+            }
+        }
+        let nearest = index.nearest_to_position(&geo, addr.centroid());
+        assert_eq!(
+            max_cell, nearest,
+            "the max-weight corner cell must be the cell nearest the centroid"
+        );
+    }
+
+    #[test]
     fn inheritance_at_a_pentagon_corner() {
         use crate::{CellId, NearestCellIndex};
         let geo = Geosphere::new(3);
