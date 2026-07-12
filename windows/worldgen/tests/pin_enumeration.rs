@@ -37,7 +37,12 @@
 //! well under the ~15 s gate-budget rule from the task brief, so the full
 //! product runs directly in the default gate; no `#[ignore]`d subset split
 //! was needed (see `full_pin_product_is_enumerated` below, which reports
-//! that measurement).
+//! that measurement). The 48 combos are independent -- each build depends
+//! only on `(Seed(42), combo's pins)` -- so the sweep runs one scoped
+//! thread per combo (`std::thread::scope`) rather than sequentially; this
+//! took the measured wall time from ~505 s sequential to ~64 s parallel (M1
+//! Max, 10 logical CPUs, debug profile) without touching the determinism
+//! guarantee.
 //!
 //! Measured at authoring (2026-07-11, seed 42): 48 built, 0 refused --
 //! reported, not asserted; the split may legitimately move with physics
@@ -155,21 +160,47 @@ fn check_combo(combo: &Combo) -> bool {
     }
 }
 
-/// The full 48-combo product, run directly in the default gate: measured
-/// wall time on an M1 Max (debug profile, hot-crate opt-level-2 packages
-/// already in effect) came in well under the task brief's ~15 s runtime
-/// rule, so no representative-subset/`#[ignore]` split was necessary. This
-/// IS `full_pin_product_is_enumerated` in spirit -- the brief's named
-/// ignored test is only required when the full product does not fit the
-/// gate budget.
+/// The full 48-combo product, run directly in the default gate. The 48
+/// combos are independent -- each `check_combo` builds worlds purely from
+/// `(Seed(42), combo's pins)` and shares no mutable state -- so the sweep
+/// runs one scoped thread per combo (`std::thread::scope`, std only,
+/// modeled on `windows/lab/src/runner.rs`'s `run_pin_set`) instead of a
+/// sequential loop. Byte-identity is untouched: each `check_combo` still
+/// builds its combo twice and compares the serialized ledgers on its own
+/// thread. Measured wall time on an M1 Max (10 logical CPUs, debug profile,
+/// hot-crate opt-level-2 packages already in effect) dropped from ~505 s
+/// sequential to ~64 s parallel, so no representative-subset/`#[ignore]`
+/// split is necessary. This IS `full_pin_product_is_enumerated` in spirit
+/// -- the brief's named ignored test is only required when the full
+/// product does not fit the gate budget.
 #[test]
 fn full_pin_product_is_enumerated() {
     let combos = full_product();
 
+    // One scoped thread per combo. `check_combo` contains the test's real
+    // failure signals (the determinism `assert_eq!` and the second-build
+    // `panic!`), so a panicking worker's payload is re-raised on the main
+    // thread with `resume_unwind` (not `.unwrap()`/`.expect()`) to preserve
+    // the original panic message instead of masking it behind a generic
+    // "thread panicked" one.
+    let results: Vec<bool> = std::thread::scope(|scope| {
+        let handles: Vec<_> = combos
+            .iter()
+            .map(|combo| scope.spawn(move || check_combo(combo)))
+            .collect();
+        handles
+            .into_iter()
+            .map(|handle| match handle.join() {
+                Ok(built) => built,
+                Err(payload) => std::panic::resume_unwind(payload),
+            })
+            .collect()
+    });
+
     let mut built = 0usize;
     let mut refused = 0usize;
-    for combo in &combos {
-        if check_combo(combo) {
+    for was_built in results {
+        if was_built {
             built += 1;
         } else {
             refused += 1;
