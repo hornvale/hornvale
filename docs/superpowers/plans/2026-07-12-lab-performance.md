@@ -386,6 +386,31 @@ git add docs/superpowers/plans/2026-07-12-lab-performance.md docs/superpowers/sp
 git commit -m "docs(lab-perf): Stage 1 readout — cost shares + Stage 2 decisions"
 ```
 
+## Stage 1 Readout (recorded 2026-07-12)
+
+**Measured** (release; `profile_build` 24 seeds / `profile_terrain` 8 seeds). Debug shares matched within <1pt, so these are robust:
+
+```
+build profile (release, 24 seeds, total 63.571s):
+  astronomy                  0.000s    0.0%
+  terrain                   15.548s   24.5%
+  climate+settlements       31.493s   49.5%
+  culture+religion+species   0.014s    0.0%
+  deep-time                 16.515s   26.0%
+
+terrain micro (release, 8 seeds):
+  generate                   4.470s
+  triple per-cell read       0.868s   19.4% of generate
+```
+
+**Decision 1 — MAP-25 premise: VALIDATED (but reframed).** A terrain census builds to Terrain depth = astronomy+terrain = **24.5%** of a full build; it skips **~75%** (climate+settlements 49.5% + deep-time 26.0%). The spec §7's "dominated by the language tail" wording is **wrong**: `culture+religion+species` is ~0% — the per-species lexicon build is folded into `climate+settlements` (naming), and the real skippable mass is climate+settlements + **deep-time (26%)**. Consequence: the ladder's big lever is confirmed, *and* the distinct **Settlements rung earns its place** — a settlement census skips deep-time's quarter. Stage 2 proceeds as designed.
+
+**Decision 2 — Astronomy-split: DROP (keep ladder strictly linear).** Astronomy is **0.000s** — free. A terrain census paying one genesis costs nothing. **Stage 2 Task 8 is removed.**
+
+**Decision 3 — `strongest()`-collapse: DROP (recommended; Nathan may override).** The triple-read is 19.4% of the terrain stage *worst case*, but production's `globe::generate` does only a **double** read per cell (`thickness_at`+`continental_at`; `age_at` is unused), ≈13%. Terrain is 24.5% of a full build, so the collapse saves ≈13% × 24.5% ≈ **3% of a full build** (≈13% of a terrain-only census). The readers live on `crust::CrustField` (keyed by raw point), **not** `GeneratedTerrain` as Task 7 sketched, so the collapse would restructure byte-identity-critical *frozen* crust code for a modest gain. Not worth the risk relative to the depth-ladder win. **Stage 2 Task 7 is dropped.**
+
+**Bonus finding — `pin_enumeration` is a free rider on MAP-25.** The `windows/worldgen/tests/pin_enumeration.rs` test (~505s debug, the gate's single elephant) does ~96 *full* builds to check sky+terrain **pin isolation** — pins that only touch astronomy+terrain. Two clean, byte-identity-preserving wins fall out: **depth-scope** it to `BuildDepth::Terrain` (~4×, a one-line change once Stage 2 Task 2 lands — added as **Task 10** below) and **parallelize** the 48 independent combos with `std::thread::scope` (~cores×, available now — landed as a standalone Stage-1 sidecar commit). Together ≈505s → ≈20-30s without weakening the determinism guarantee or the cross-product coverage. (Two further axes — single-build+golden, and sum-not-product coverage — were considered and **declined**: each trades a guarantee away.)
+
 ---
 
 # Track A — Stage 2: MAP-25 view-typed build-depth ladder
@@ -892,7 +917,9 @@ git add windows/lab/src/runner.rs windows/lab/tests/depth_ladder.rs windows/lab/
 git commit -m "feat(lab): runner builds to the study's required rung; metamorphic guard"
 ```
 
-### Task 7 (CONDITIONAL — only if Stage 1 Task 6 flagged it): collapse the `strongest()` triple-read
+### Task 7 — DROPPED per Stage 1 readout (collapse the `strongest()` triple-read)
+
+**Status: DROPPED.** Stage 1 measured the triple-read at ≈13% of the terrain stage in production (double-read; `age_at` unused) ≈ 3% of a full build, and the readers live on `crust::CrustField` (raw point), not `GeneratedTerrain` — the collapse would restructure frozen, byte-identity-critical crust code for a modest gain. Not worth the risk vs. the depth-ladder win. Retained below for the record; do not implement unless Nathan reopens it.
 
 **Files:**
 - Modify: `domains/terrain/src/crust.rs`
@@ -904,13 +931,25 @@ Only do this task if Stage 1 Task 4 showed the triple-read is a material share. 
 - [ ] **Step 2:** Add a test asserting the collapsed readers return byte-identical `thickness_at`/`age_at`/`continental_at` for every cell of a sample world vs the pre-collapse values (capture a golden before the change).
 - [ ] **Step 3:** `make rebaseline` → empty `book/src/laboratory/` diff. Commit.
 
-### Task 8 (CONDITIONAL — only if Stage 1 flagged astronomy as material): split astronomy off the linear ladder
+### Task 8 — DROPPED per Stage 1 readout (split astronomy off the linear ladder)
 
-Only if Stage 1 Task 6 found genesis a material share of a terrain census. Make `BuildDepth::Terrain` skip sky genesis when no selected metric is Astronomy-rung (astronomy and terrain are data-independent — `terrain::generate` takes no sky input). This needs a second axis (does the study need astronomy?) rather than a linear rung; defer the design to the readout. If Stage 1 found genesis cheap (expected), **skip this task** and keep the ladder linear.
+**Status: DROPPED.** Stage 1 measured astronomy at 0.000s — genesis is free, so a terrain census paying one genesis costs nothing. Keep the ladder strictly linear. Retained for the record only.
 
 ### Task 9: Stage 2 full gate
 
 - [ ] Run `make gate`. Expected: PASS. Absorb main if a stage boundary (per CLAUDE.md; not mid-measurement). Commit fmt fixups.
+
+### Task 10: Free rider — depth-scope `pin_enumeration` (gated on Task 2)
+
+**Files:**
+- Modify: `windows/worldgen/tests/pin_enumeration.rs`
+
+The enumerated pins (sky choice, rotation, neighbor, supercontinent) only write astronomy+terrain facts, so a terrain-depth build commits the exact fact prefix the determinism assert compares. Once Task 2's `build_world_to` exists, this test builds ~4× cheaper with an unchanged guarantee. (Parallelization across the 48 combos was landed separately as a Stage-1 sidecar commit; this task only changes build *depth*.)
+
+- [ ] **Step 1:** In `pin_enumeration.rs`'s `build(combo)`, replace `build_world(Seed(42), &sky_pins, sky_choice, &terrain_pins, &SettlementPins::default())` with `build_world_to(Seed(42), &sky_pins, sky_choice, &terrain_pins, &SettlementPins::default(), &default_roster(), BuildDepth::Terrain)`. The determinism `assert_eq!` compares two serialized ledgers — now terrain-depth ledgers, which is the correct scope for these pins.
+- [ ] **Step 2:** Run `cargo test -p hornvale-worldgen --test pin_enumeration`. Expected: PASS, and materially faster than the pre-change wall time recorded in the test's module doc (update that doc's timing note).
+- [ ] **Step 3:** Confirm the built/refused split (reported, not asserted) is unchanged from the full-build run — a terrain-depth build must refuse or succeed identically for these pins (refusals come from astronomy/terrain genesis, both inside the terrain rung).
+- [ ] **Step 4:** `cargo fmt && cargo clippy -p hornvale-worldgen --all-targets -- -D warnings`; commit.
 
 ---
 

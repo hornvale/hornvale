@@ -100,6 +100,8 @@ Instrument `build_world_with_roster` with `std::Instant` spans per stage, run on
 2. **Sets the astronomy-split** — is genesis cheap enough to keep the ladder strictly linear (§4)?
 3. **Gates the terrain sibling** — does terrain's internal split (fBm share, `strongest()`-recompute cost, per-cell craton-iteration cost) justify the single-sweep collapse (§4)?
 
+**Readout (2026-07-12; release, 24-seed build / 8-seed terrain).** Per-stage shares: astronomy **0.0%**, terrain **24.5%**, climate+settlements **49.5%**, culture+religion+species **0.0%**, deep-time **26.0%**. (1) **Premise validated, reframed:** a terrain census skips ~75% by building to Terrain depth — but the skippable mass is climate+settlements + deep-time, *not* a "language tail" (the per-species lexicon build sits inside settlement naming, so culture+religion+species is ~0%). The distinct Settlements rung is justified: it skips deep-time's 26%. (2) **Astronomy-split dropped** — genesis is free (0.0%); the ladder stays strictly linear. (3) **`strongest()`-collapse dropped** — the triple-read is 19.4% of the terrain stage worst-case but production does only a double-read (~13% ≈ 3% of a full build), on frozen `CrustField` code; not worth the risk. See the plan's "Stage 1 Readout" for full numbers and the `pin_enumeration` free-rider finding.
+
 **Kept committed, not thrown away.** A direction/decay pass noted the profile *decays* as later epochs add stages; a committed `--profile` mode (or equivalent) stays honest across Sculpting and pays for itself again there. Behind a flag, zero cost on the normal build path.
 
 ## 8. Sequencing and success criteria
