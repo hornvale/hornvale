@@ -279,20 +279,104 @@ fn aspect_pool(biome: Biome) -> &'static [&'static str] {
     }
 }
 
-// --- temporary stub (replaced in Task 4) ---
-fn exits_of(_addr: &RoomAddr) -> Vec<Exit> {
-    Vec::new()
-}
-/// Placeholder types filled in by Task 4.
-/// type-audit: bare-ok(identifier-text: direction), bare-ok(identifier-text: kind), bare-ok(index: to)
+/// A way out of a room. `ExitKind` is open so overlay kinds (river/road/
+/// tunnel/portal) and passability compose additively later.
+/// type-audit: bare-ok(count: to)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Exit {
-    /// Exit direction.
-    pub direction: String,
-    /// Exit kind.
-    pub kind: String,
+    /// Which way this exit goes.
+    pub direction: Direction,
+    /// The kind of traversal.
+    pub kind: ExitKind,
     /// Destination packed room id.
     pub to: u64,
+}
+
+/// An exit direction: a lateral compass bearing, or a vertical scale change.
+/// type-audit: bare-ok(index: Enter.0)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum Direction {
+    /// A lateral edge, bucketed to eight compass points.
+    Compass(Compass),
+    /// Descend into finer child `digit` (0..4).
+    Enter(u8),
+    /// Step back out to the containing room.
+    Exit,
+}
+
+/// Eight-point compass bucket.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum Compass {
+    /// North.
+    N,
+    /// North-east.
+    Ne,
+    /// East.
+    E,
+    /// South-east.
+    Se,
+    /// South.
+    S,
+    /// South-west.
+    Sw,
+    /// West.
+    W,
+    /// North-west.
+    Nw,
+}
+
+/// The traversal class of an exit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub enum ExitKind {
+    /// A geometric base-mesh edge.
+    Edge,
+    /// A vertical scale change (enter/exit).
+    Vertical,
+}
+
+/// Bucket a bearing (degrees clockwise from north) to eight points. Bucketing
+/// on a quantized bearing keeps it cross-platform stable.
+fn compass(bearing_deg: f64) -> Compass {
+    let b = quantize((bearing_deg % 360.0 + 360.0) % 360.0);
+    let idx = (((b + 22.5) / 45.0).floor() as i64).rem_euclid(8);
+    [
+        Compass::N,
+        Compass::Ne,
+        Compass::E,
+        Compass::Se,
+        Compass::S,
+        Compass::Sw,
+        Compass::W,
+        Compass::Nw,
+    ][idx as usize]
+}
+
+fn exits_of(addr: &RoomAddr) -> Vec<Exit> {
+    let mut exits = Vec::new();
+    for n in addr.neighbors() {
+        exits.push(Exit {
+            direction: Direction::Compass(compass(addr.bearing_to(&n))),
+            kind: ExitKind::Edge,
+            to: n.pack().map(|r| r.0).unwrap_or(0),
+        });
+    }
+    if let Some(parent) = addr.parent() {
+        exits.push(Exit {
+            direction: Direction::Exit,
+            kind: ExitKind::Vertical,
+            to: parent.pack().map(|r| r.0).unwrap_or(0),
+        });
+    }
+    for digit in 0..4u8 {
+        if let Ok(child) = addr.child(digit) {
+            exits.push(Exit {
+                direction: Direction::Enter(digit),
+                kind: ExitKind::Vertical,
+                to: child.pack().map(|r| r.0).unwrap_or(0),
+            });
+        }
+    }
+    exits
 }
 
 #[cfg(test)]
@@ -458,5 +542,51 @@ mod tests {
         );
         assert!((-1.0..=1.0).contains(&ta.relief_jitter));
         assert!(!ta.aspect.is_empty());
+    }
+
+    #[test]
+    fn exits_are_three_lateral_plus_vertical() {
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let addr = RoomAddr {
+            face: 3,
+            path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+        };
+        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        let lateral = loc
+            .exits
+            .iter()
+            .filter(|e| e.kind == ExitKind::Edge)
+            .count();
+        assert_eq!(lateral, 3, "exactly three geometric edges");
+        assert!(
+            loc.exits.iter().any(|e| e.direction == Direction::Exit),
+            "a mid-mesh room has a parent (Exit)"
+        );
+        let enters = loc
+            .exits
+            .iter()
+            .filter(|e| matches!(e.direction, Direction::Enter(_)))
+            .count();
+        assert_eq!(enters, 4, "four children to enter");
+        // every lateral destination is one of the substrate's neighbours
+        let ns: Vec<u64> = addr
+            .neighbors()
+            .iter()
+            .map(|n| n.pack().unwrap().0)
+            .collect();
+        for e in loc.exits.iter().filter(|e| e.kind == ExitKind::Edge) {
+            assert!(ns.contains(&e.to), "lateral exit must be a neighbour");
+        }
+    }
+
+    #[test]
+    fn compass_buckets_cover_the_circle() {
+        assert_eq!(compass(0.0), Compass::N);
+        assert_eq!(compass(90.0), Compass::E);
+        assert_eq!(compass(180.0), Compass::S);
+        assert_eq!(compass(270.0), Compass::W);
+        assert_eq!(compass(45.0), Compass::Ne);
+        assert_eq!(compass(359.9), Compass::N);
     }
 }
