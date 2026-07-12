@@ -201,8 +201,8 @@ impl LocaleContext {
                     weight: w,
                 })
                 .collect(),
-            texture: texture_of(self.seed, addr, biome), // Task 3 fills this in
-            exits: exits_of(addr),                       // Task 4 fills this in
+            texture: texture_of(self.seed, addr, biome), // seed-derived texture (§5)
+            exits: exits_of(addr),                       // base + vertical exits (§6)
         })
     }
 }
@@ -281,7 +281,7 @@ fn aspect_pool(biome: Biome) -> &'static [&'static str] {
 
 /// A way out of a room. `ExitKind` is open so overlay kinds (river/road/
 /// tunnel/portal) and passability compose additively later.
-/// type-audit: bare-ok(count: to)
+/// type-audit: bare-ok(index: to)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Exit {
     /// Which way this exit goes.
