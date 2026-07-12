@@ -30,6 +30,15 @@ this is not speculative generality. Each type's *richer surface* (accessors,
 conversions) stays reactive: added when a consumer needs it. The Datum is the
 pilot; a "Kernel Units" campaign builds the shared core.
 
+**Each family needs a real anchor.** Proactive applies to the *doctrine* and to
+families with a genuine current consumer (or a near-certain planned one) — not to
+speculative SI completeness. This is the guardrail that keeps a units effort out
+of the graveyard of built-but-unused abstractions: elevation (retires a live
+waiver; enables room-scale radius), temperature (dedups the live
+`paleoclimate::Celsius` wart), and angle (kills live degree/radian
+hand-conversions in `GeoCoord`) all clear the bar today; energy, mass, and
+vectors wait for a consumer.
+
 ## Promotion — classify the quantity, then type it
 
 ### Scale of measurement (Stevens) — the spine
