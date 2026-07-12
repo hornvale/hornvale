@@ -77,4 +77,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [`the-proto-assignment-is-merger-aware`](the-proto-assignment-is-merger-aware.md) | The proto-root assignment is merger-aware (zero core homophony) | Accepted |
 | [`identity-computes-on-the-canonical-grid`](identity-computes-on-the-canonical-grid.md) | Identity computes on the canonical grid; observation samples fields | Accepted |
 | [`epochs-replace-tiers-refine`](epochs-replace-tiers-refine.md) | Epochs replace, tiers refine — a contradicting generator cannot coexist as a tier | Accepted |
-| [`the-room-tier-ledger-is-chunk-partitioned`](the-room-tier-ledger-is-chunk-partitioned.md) | The room-tier ledger is chunk-partitioned | Proposed |
+| [`the-room-tier-ledger-is-chunk-partitioned`](the-room-tier-ledger-is-chunk-partitioned.md) | The room-tier ledger is chunk-partitioned — only if it outgrows memory (near-term defers to The Walk §3.6) | Proposed |

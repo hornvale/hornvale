@@ -18,6 +18,16 @@ small enclosed space to a small patch of wilderness distinct from its neighbors.
   Includes the build order, a confidence/value registry of all 60, and the open
   questions. **This supersedes the cycles as the working technical artifact.**
 
+## Reconciliation with parallel work (read this too)
+
+- **[reconciliation.md](reconciliation.md)** — this corpus and **The Walk** metaplan
+  (the game-layer spec) independently converged on the same coarse↔fine seam, and the
+  **Crust** epoch reshaped terrain under it, all on `main` in parallel. This file
+  records the convergence (and why the constitution forced it), triages every
+  room-scale claim against the authoritative work (ADOPT / YIELD / FOLD / PARK), and
+  cross-links the two. Read it before building on any single doc here — notably, the
+  ledger design **defers near-term to The Walk §3.6's in-memory model**.
+
 ## Keystone design
 
 - **[p2-subdivision-design.md](p2-subdivision-design.md)** — first-pass design for
@@ -29,9 +39,10 @@ small enclosed space to a small patch of wilderness distinct from its neighbors.
   neighbor-walk crux, adaptive depth (T-junctions, still float-free), integer-only
   seeding + confining transcendentals to presentation (a cross-platform
   determinism strategy), chunking/residency and the address-partitioned ledger
-  (freeze only the address; adaptive event-sourced LSM segments), concurrency &
-  write authority (the chunk as a DDD aggregate root; three near-term invariants;
-  untrusted-client / handoff / saga / netcode reserved for the multiplayer future),
+  (near-term defers to The Walk's in-memory model; partitioning reserved for the
+  out-of-RAM future), concurrency & write authority (the chunk as a DDD aggregate
+  root; three near-term invariants; untrusted-client / handoff / saga / netcode
+  parked for the multiplayer future),
   constitutional fit, and a validation plan. The partitioned-ledger call is reserved
   as a `Proposed` decision
   (`docs/decisions/the-room-tier-ledger-is-chunk-partitioned.md`).

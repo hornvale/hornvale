@@ -209,6 +209,19 @@ So the coarse mesh **constrains** the fine (the constitution's "coarse constrain
 fine, higher fidelity refines never contradicts") for free: a room can only ever
 be a refinement of the biome its three parents already agreed on.
 
+**Field-refinement, not mesh-requantization (Crust's canonical-grid line).** Crust
+ratified that *identity computes on the canonical grid; observation samples fields*
+(decision `identity-computes-on-the-canonical-grid`): pointwise `Field`s (elevation,
+crust, biome-via-field) are resolution-free, and a room may sample them as finely as
+it likes. But **mesh-bound quantities — sea level, drainage and basins, connected
+land components, settlement placement — bear world identity and are computed once on
+the canonical grid.** A room therefore *refines fields* yet *inherits* mesh-bound
+truth: it must not re-derive a coastline, a lake, or a drainage basin at room scale,
+because a finer re-quantization would *contradict* world identity, not refine it —
+that is an epoch, not a tier (decision `epochs-replace-tiers-refine`). Room detail
+adds *within* what the canonical grid already fixed; the constrain step (P2's kin to
+The Walk §4.1 step 5) enforces it.
+
 **Corollary — confine transcendentals to presentation.** Adjacency is integer
 (§6), seeds are integer (§8), and these blend weights are exact dyadic rationals —
 so the entire *content* pipeline is integer + rational and cross-platform-exact
@@ -270,6 +283,16 @@ ownership, cross-chunk negotiation): any chunk that needs a boundary room comput
 the identical room. Chunks are therefore a **persistence + indexing + residency**
 concern, never a generation-correctness one, and *correctness is independent of
 what is loaded*.
+
+> **Scope (reconciled with The Walk §3.6).** The *near-term* room-tier ledger is The
+> Walk's **in-memory** model — a `Vec<Fact>` log + `BTreeMap` indexes, bounded by the
+> memory economy (frontier MEM-1), persisted as today's single-JSON `World`. No LSM
+> machinery and no on-disk partitioning is built now. Everything in the rest of this
+> section — address-prefix chunks, event-sourced segments, split/compact/snapshot —
+> is the **deferred out-of-RAM form** that The Walk §3.6 explicitly sets aside, kept
+> here so the addressing stays partition-ready and the eventual design is on record.
+> The *shape* (append-only log + derived indexes) is shared; only scale and machinery
+> differ. See decision `the-room-tier-ledger-is-chunk-partitioned`.
 
 **The key is two layers — freeze only the address.** A first pass framed this as
 "pick a chunk-prefix length `k`" and freeze it; that optimizes the wrong quantity.
@@ -373,7 +396,11 @@ prefix-chunk is residency + storage-segment + index + **authority** — and it i
 classic MMO server-per-zone pattern; cross-chunk play is disjoint by construction.
 
 **The near-term sim needs almost none of this.** With one trusted authority (the
-sim itself) every write is already serialized and the machinery below is dormant.
+sim itself) every write is already serialized and the machinery below is dormant —
+The Walk's Milestone 1 is a *single-agent frozen slice* where "no one lies," so the
+reconciliation, validation, and handoff machinery is not even reachable yet. This
+whole section is **parked as reserved-for-multiplayer**, past The Walk's Milestone 2
+(liveness) and into Living-Globe territory.
 What matters now is preserving **three cheap invariants** so the multiplayer future
 stays reachable without a rewrite:
 
