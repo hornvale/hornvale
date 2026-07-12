@@ -61,6 +61,7 @@
 - [The Branches](./chronicle/the-branches.md)
 - [The Rising Tone](./chronicle/the-rising-tone.md)
 - [The Fast Gate](./chronicle/the-fast-gate.md)
+- [Crust](./chronicle/crust.md)
 
 # The Gallery
 

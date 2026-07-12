@@ -75,3 +75,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [`tonogenesis-is-a-regular…merger-repair`](tonogenesis-is-a-regular-conditioned-merger-repair.md) | Tonogenesis is a regular conditioned sound change, not a homophony patch | Accepted |
 | [`the-capacity-floor-is-reached-by-tone…`](the-capacity-floor-is-reached-by-tone-not-segments.md) | The capacity floor is reached by tone, not by adding segments to atonal species | Accepted |
 | [`the-proto-assignment-is-merger-aware`](the-proto-assignment-is-merger-aware.md) | The proto-root assignment is merger-aware (zero core homophony) | Accepted |
+| [`identity-computes-on-the-canonical-grid`](identity-computes-on-the-canonical-grid.md) | Identity computes on the canonical grid; observation samples fields | Accepted |
+| [`epochs-replace-tiers-refine`](epochs-replace-tiers-refine.md) | Epochs replace, tiers refine — a contradicting generator cannot coexist as a tier | Accepted |

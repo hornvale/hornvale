@@ -22,7 +22,8 @@ when generation arrives, nothing downstream changes.
 deleted chunking chapters).** Every new world now carries a second,
 independent answer to "what places exist": a coarse planetary surface, not
 a region graph but a kernel **Geosphere** — an icosphere subdivided to
-10,242 cells, identical for every world at a given subdivision level — with
+40,962 cells at the default level 6 — the level is a per-world pin
+(`--globe-level`, 4–7) and part of world identity — with
 plates, motion, and elevation drawn and derived on top of it. Nothing here
 touches the Vale; the tier-0 seam is a deliberate, documented transitional
 choice (spec §8), kept exactly as it was until a later local-refinement
@@ -102,6 +103,34 @@ ASCII; decision 0018), now rendered at 1024×512 and drift-checked in CI like
 every other committed artifact. Chronicle: [3b, the tectonic
 globe](../chronicle/campaign-3b.md); [25, the measured
 coast](../chronicle/25-the-measured-coast.md).
+
+**Crust — the terrain epoch (v2).** The Measured Coast measured the guitar
+pick; Crust replaced it. Continental crust is no longer a per-plate flag but
+a **field** — a stateless function of position drawn from a set of *cratons*
+(nuclei with a centre, radius, and age) whose lobed kernels sum to a thickness
+at any point, with no per-cell draws. A continent exists because a craton
+exists, not because a Voronoi cell was flagged; outlines are lobed and
+irregular, and a continent may span several plates or none. Plates kept their
+drawn skeleton but gained heavy-tailed **weights** (a few giants, a fringe of
+slivers) and stateless **edge noise** wandering their boundaries off the great
+circles. Elevation became **isostatic** — Airy flotation over crust thickness,
+so thick craton interiors ride high and the kernel's taper crosses sea level
+as a genuine shelf, giving passive margins for free, with the boundary
+rule-table riding on top. This supersedes the model card above: the
+continental/oceanic flag and its `plate-kind` stream are **retired** (never
+reused); the drawn set now includes cratons (`terrain/cratons`), plate weights
+(`terrain/plate-weights`), and edge noise (`terrain/plate-edge`, hash-noise,
+no draw); and the "no isostasy" line no longer holds. Two pins join the three
+above — `--continents N` (craton count) and `--globe-level 4–7` (the canonical
+grid, default 6, part of world identity per the decision
+*identity-computes-on-the-canonical-grid*) — and `--supercontinent` now
+clusters cratons rather than plates. The crust fields implement the kernel
+`Field` trait, so any grid samples the same underlying world: the
+coarse-constrains-fine boundary is drawn exactly at the graph-versus-field
+line (mesh-bound sea level, drainage, and placement compute once on the
+canonical grid; the pointwise crust is resampled at any resolution). Erosion,
+sediment, and the coastline texture Crust's census left outside its bands are
+Sculpting's (v3) mandate; see [Crust](../chronicle/crust.md).
 
 **The tier ladder ahead:** place names that feel authored rather than
 generated, and eventually the region-graph refinement that gives a
