@@ -78,10 +78,12 @@ per-claim, not one-directional.
 - The living layer (`cycle-03-the-living-layer.md`) elaborates the same space as
   frontier UNI-20 / SOC-9 / PSY-6 / MAP-27 and The Walk §3.1 — treat those rows as
   the home; cycle 03 is spatial/ecological colour on them, not a rival.
-- **Follow-up not done here:** reciprocal links *from* the frontier essays and The
-  Walk spec back into this corpus, and any decision to promote P2 / the bestiary into
-  frontier rows. Editing the published frontier deserves its own reviewed pass under
-  `book/src/frontier/CLAUDE.md`; this file only links outward from the design side.
+- **Follow-up — done 2026-07-12.** The reciprocal side is now in place. The corpus
+  is promoted into the registry as three rows — **MAP-28** (the room mesh / P2),
+  **MAP-29** (room-scale variety / the biome bestiary), **MAP-30** (palimpsest &
+  field-refinement) — and the four folded cycle-03 rows (**MAP-27, SOC-9, PSY-6,
+  UNI-20**) now carry back-links to `cycle-03-the-living-layer.md`. The Walk spec
+  §4.1 names P2 as its spatial instantiation. (`docs/CLAUDE.md` drift-check green.)
 
 ## The standing lesson (the reason it collided at all)
 

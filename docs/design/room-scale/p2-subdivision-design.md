@@ -596,5 +596,6 @@ The next steps, in order of remaining risk:
    and the locale window build on it. Fold in the two spike caveats: quantize
    field samples before discrete classification (§7), and **avalanche the
    target-depth hash** before its `mod` (§6).
-3. **Promote P2 into the frontier registry** (the reconciliation.md follow-up) —
-   a reviewed pass under `book/src/frontier/CLAUDE.md`.
+3. ~~**Promote P2 into the frontier registry**~~ **Done 2026-07-12** — P2 is
+   registry **MAP-28** (variety/bestiary MAP-29, palimpsest MAP-30); cycle-03's
+   folds carry back-links; The Walk §4.1 names P2 as its spatial instantiation.

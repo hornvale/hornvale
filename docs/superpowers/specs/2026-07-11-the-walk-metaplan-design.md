@@ -238,6 +238,16 @@ GOAL: focalized, deterministic, contradiction-free detail at (location, agent,
 
 Steps 3–6 for distinct locales run **independently → parallel by construction.**
 
+This protocol is abstract about *what* a locale is; its **spatial instantiation**
+is P2, the room-scale subdivision
+([`docs/design/room-scale/p2-subdivision-design.md`](../../design/room-scale/p2-subdivision-design.md),
+registry MAP-28). A "locale" is a triangular room of the level-5 icosphere refined
+deeper; step 1's coarse context is the room's three level-5 corner cells, step 3's
+`hash(location, …)` is the integer room address, and step 5's constrain-rule is the
+canonical-grid line (a room refines fields but never re-quantizes mesh-bound truth —
+registry MAP-30). The two derivations converged independently; see
+[`reconciliation.md`](../../design/room-scale/reconciliation.md).
+
 ### 4.2 Boundary conditions, and how each is handled
 
 - **Determinism of lazy generation** — same location → same detail regardless of
