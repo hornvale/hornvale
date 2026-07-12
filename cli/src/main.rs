@@ -59,7 +59,9 @@ sky flags (shared by new and scout):
 const TERRAIN_FLAGS: &str = "\
   [--plates N]                             pin the plate count (2-64)
   [--ocean-fraction F]                     pin the target ocean fraction (0.05-0.95)
-  [--supercontinent true|false]            cluster the continents into one landmass
+  [--supercontinent true|false]            cluster the cratons into one landmass
+  [--globe-level N]                        pin the canonical grid level (4-7; default 6)
+  [--continents N]                         pin the craton count (1-16)
 ";
 
 const SETTLEMENT_FLAGS: &str = "\
@@ -156,6 +158,8 @@ fn parse_terrain_args(args: &[String]) -> Result<hornvale_terrain::TerrainPins, 
         ("--plates", "plates"),
         ("--ocean-fraction", "ocean-fraction"),
         ("--supercontinent", "supercontinent"),
+        ("--globe-level", "globe-level"),
+        ("--continents", "continents"),
     ] {
         if let Some(value) = flag_value(args, flag) {
             hornvale_terrain::parse_pin(&format!("{key}={value}"), &mut pins)?;
@@ -740,11 +744,17 @@ mod tests {
             "0.7",
             "--supercontinent",
             "true",
+            "--globe-level",
+            "6",
+            "--continents",
+            "5",
         ]);
         let pins = parse_terrain_args(&a).unwrap();
         assert_eq!(pins.plates, Some(12));
         assert_eq!(pins.ocean_fraction, Some(0.7));
         assert_eq!(pins.supercontinent, Some(true));
+        assert_eq!(pins.globe_level, Some(6));
+        assert_eq!(pins.continents, Some(5));
         assert_eq!(
             parse_terrain_args(&args(&["new"])).unwrap(),
             hornvale_terrain::TerrainPins::default()

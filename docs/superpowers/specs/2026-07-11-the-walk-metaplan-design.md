@@ -381,7 +381,7 @@ Milestone 1 — the walkable slice:
   loop (look / go / examine); moving re-focalizes. *Exit:* `possess` → move through
   a small local space; it re-describes; world still frozen. *Leans on:* terrain
   region-graph (read), `crust` worktree. The verb loop is a **property-transformation
-  chemistry** (frontier MAP-23): entities are property-bags, verbs are reactions
+  chemistry** (frontier MAP-27): entities are property-bags, verbs are reactions
   (preconditions → effects) = GOAP operators — the *same* action system NPCs plan
   over in V, authored M+N not M×N.
 

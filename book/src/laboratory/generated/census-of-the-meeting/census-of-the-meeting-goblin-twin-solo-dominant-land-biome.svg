@@ -1,32 +1,29 @@
 <svg viewBox="0 0 640 300" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif, system-ui, sans-serif">
 <text x="56" y="20" font-size="13" font-weight="600" fill="currentColor">dominant-land-biome — goblin-twin-solo</text>
 <line x1="56.0" y1="186.0" x2="624.0" y2="186.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
-<text x="50" y="186.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">50</text>
+<text x="50" y="186.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">125</text>
 <line x1="56.0" y1="136.0" x2="624.0" y2="136.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
-<text x="50" y="136.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">100</text>
+<text x="50" y="136.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">250</text>
 <line x1="56.0" y1="86.0" x2="624.0" y2="86.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
-<text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">150</text>
+<text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">375</text>
 <line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
-<text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">200</text>
-<rect x="62.1" y="124.0" width="69.0" height="112.0" fill="#5b8dd9" rx="2" />
-<text x="96.6" y="120.0" font-size="11" fill="currentColor" text-anchor="middle">112</text>
-<text x="96.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 96.6 252.0)">alpine</text>
-<rect x="143.2" y="46.0" width="69.0" height="190.0" fill="#5b8dd9" rx="2" />
-<text x="177.7" y="42.0" font-size="11" fill="currentColor" text-anchor="middle">190</text>
-<text x="177.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 177.7 252.0)">ice</text>
-<rect x="224.4" y="233.0" width="69.0" height="3.0" fill="#5b8dd9" rx="2" />
-<text x="258.9" y="229.0" font-size="11" fill="currentColor" text-anchor="middle">3</text>
-<text x="258.9" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 258.9 252.0)">savanna</text>
-<rect x="305.5" y="185.0" width="69.0" height="51.0" fill="#5b8dd9" rx="2" />
-<text x="340.0" y="181.0" font-size="11" fill="currentColor" text-anchor="middle">51</text>
-<text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 340.0 252.0)">taiga</text>
-<rect x="386.7" y="198.0" width="69.0" height="38.0" fill="#5b8dd9" rx="2" />
-<text x="421.1" y="194.0" font-size="11" fill="currentColor" text-anchor="middle">38</text>
-<text x="421.1" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 421.1 252.0)">temperate-forest</text>
-<rect x="467.8" y="154.0" width="69.0" height="82.0" fill="#5b8dd9" rx="2" />
-<text x="502.3" y="150.0" font-size="11" fill="currentColor" text-anchor="middle">82</text>
-<text x="502.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 502.3 252.0)">tropical-seasonal-forest</text>
-<rect x="548.9" y="212.0" width="69.0" height="24.0" fill="#5b8dd9" rx="2" />
-<text x="583.4" y="208.0" font-size="11" fill="currentColor" text-anchor="middle">24</text>
-<text x="583.4" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 583.4 252.0)">tundra</text>
+<text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">500</text>
+<rect x="63.1" y="202.4" width="80.5" height="33.6" fill="#5b8dd9" rx="2" />
+<text x="103.3" y="198.4" font-size="11" fill="currentColor" text-anchor="middle">84</text>
+<text x="103.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 103.3 252.0)">alpine</text>
+<rect x="157.8" y="114.0" width="80.5" height="122.0" fill="#5b8dd9" rx="2" />
+<text x="198.0" y="110.0" font-size="11" fill="currentColor" text-anchor="middle">305</text>
+<text x="198.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 198.0 252.0)">ice</text>
+<rect x="252.4" y="226.8" width="80.5" height="9.2" fill="#5b8dd9" rx="2" />
+<text x="292.7" y="222.8" font-size="11" fill="currentColor" text-anchor="middle">23</text>
+<text x="292.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 292.7 252.0)">taiga</text>
+<rect x="347.1" y="225.6" width="80.5" height="10.4" fill="#5b8dd9" rx="2" />
+<text x="387.3" y="221.6" font-size="11" fill="currentColor" text-anchor="middle">26</text>
+<text x="387.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 387.3 252.0)">temperate-forest</text>
+<rect x="441.8" y="216.0" width="80.5" height="20.0" fill="#5b8dd9" rx="2" />
+<text x="482.0" y="212.0" font-size="11" fill="currentColor" text-anchor="middle">50</text>
+<text x="482.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 482.0 252.0)">tropical-seasonal-forest</text>
+<rect x="536.4" y="231.2" width="80.5" height="4.8" fill="#5b8dd9" rx="2" />
+<text x="576.7" y="227.2" font-size="11" fill="currentColor" text-anchor="middle">12</text>
+<text x="576.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 576.7 252.0)">tundra</text>
 </svg>

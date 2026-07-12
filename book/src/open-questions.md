@@ -59,11 +59,19 @@ right shape.
 - **Coarse constrains fine.** The design principle — a `ConstantSun` and a
   generated star system are both valid; higher fidelity refines and never
   contradicts lower — *shipped*, and holds from astronomy through religion's
-  tiers. What did **not** ship is the *Dwarf Fortress* move it is sometimes
-  conflated with: runtime level-of-detail, swapping the resolution of an
-  active region on the fly with the seams kept invisible. That remains
-  unattempted, and the principle's success should not be read as the runtime
-  feature's.
+  tiers. Crust sharpened it into a stated contract (decision
+  `identity-computes-on-the-canonical-grid`): the terrain quantities that are
+  *pointwise* — crust thickness and age — are stateless `Field`s any grid may
+  resample, while the *mesh-bound* ones (sea level, drainage, placement)
+  compute once on the world's canonical grid. So the pointwise half of the
+  substrate is now genuinely resolution-free: the render lens samples the
+  elevation field below cell scale, and the crust field byte-agrees across
+  nested grid levels. What still did **not** ship is the *Dwarf Fortress* move
+  it is sometimes conflated with: runtime level-of-detail, swapping the
+  resolution of an *active region* on the fly with the seams kept invisible —
+  the mesh-bound half, which the field/grid line now isolates as exactly the
+  remaining work. The fields are ready; the runtime active-region swap is not
+  yet attempted.
 
 ## Genuinely open — split by whether the world can grade itself
 

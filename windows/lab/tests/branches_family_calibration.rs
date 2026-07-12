@@ -288,10 +288,14 @@ fn homophony_count_is_measured_and_pinned() {
         mean(&bugbear),
         mean(&kobold),
     );
-    assert!((mg - 2.589).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 1.631).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 6.765).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 2.454).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // merge (2026-07-11, main into campaign-crust): re-pinned on the merged
+    // code — the L6 terrain relocates settlements and reshapes each people's
+    // naming draws, shifting the family homophony means (was goblin 2.589,
+    // hobgoblin 1.631, bugbear 6.765, kobold 2.454).
+    assert!((mg - 2.702).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 1.638).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 6.818).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 2.509).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

@@ -1968,7 +1968,7 @@ that reads it. Stated once:
 - **The engines** are two, and they are one active-inference loop: **inference**
   (UNI-1) fits the model to the world — perception, belief, abduction; **planning**
   (UNI-19 — A\* / GOAP) fits the world to the model — motivation (PSY-6), the player's
-  and NPCs' verbs (MAP-23, one action system), and causality in every tense. Both
+  and NPCs' verbs (MAP-27, one action system), and causality in every tense. Both
   minimise the same quantity: the discrepancy between a model and the world.
 
 **Three consequences fall out of stating it plainly.** *First*, **determinism all
@@ -2000,7 +2000,7 @@ the-walk brainstorm.)*
 **A triple store is inherently reflective: its schema is data.** The set of
 predicates a world uses, the attributes an entity carries, which domain provides
 which field or phenomenon kind, which verbs (property-transformation reactions,
-MAP-23) exist and with what preconditions — all of it is expressible as facts in the
+MAP-27) exist and with what preconditions — all of it is expressible as facts in the
 same shape as the world facts, and queryable by the same engine. So "the system can
 ask what it is able to relate, know, and do" needs no new subsystem — only a **view
 over its own capability schema**, most of which the concept registry already holds.

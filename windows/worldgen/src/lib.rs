@@ -150,12 +150,19 @@ pub fn register_all(registry: &mut ConceptRegistry) -> Result<(), RegistryError>
     hornvale_paleoclimate::register_concepts(registry)
 }
 
-/// The shared Geosphere at `GLOBE_LEVEL`: seed-independent, computed once
-/// per process and cloned into providers, so per-world mesh cost is a
-/// memcpy (spec §3: "computed once, shared across all worlds").
-fn shared_geosphere() -> &'static Geosphere {
-    static GEO: OnceLock<Geosphere> = OnceLock::new();
-    GEO.get_or_init(|| Geosphere::new(GLOBE_LEVEL))
+/// Geospheres by canonical level: seed-independent, computed once per
+/// process per level and cloned into providers (spec §3 posture kept;
+/// Crust spec §5 makes the level world-chosen). BTreeMap per the
+/// disallowed-types rule; Mutex because OnceLock alone can't grow.
+fn geosphere_for(level: u32) -> Geosphere {
+    use std::collections::BTreeMap;
+    use std::sync::Mutex;
+    static CACHE: OnceLock<Mutex<BTreeMap<u32, Geosphere>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(BTreeMap::new()));
+    let mut map = cache.lock().expect("geosphere cache poisoned");
+    map.entry(level)
+        .or_insert_with(|| Geosphere::new(level))
+        .clone()
 }
 
 fn scenario_fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
@@ -226,9 +233,11 @@ pub fn terrain_of(world: &World) -> Result<GeneratedTerrain, BuildError> {
             hornvale_terrain::parse_pin(s, &mut pins).map_err(BuildError::Pins)?;
         }
     }
-    let outcome = hornvale_terrain::generate(world.seed, shared_geosphere(), &pins)
-        .map_err(BuildError::TerrainGenesis)?;
-    Ok(GeneratedTerrain::new(shared_geosphere().clone(), outcome))
+    let level = pins.globe_level.unwrap_or(GLOBE_LEVEL);
+    let geo = geosphere_for(level);
+    let outcome =
+        hornvale_terrain::generate(world.seed, &geo, &pins).map_err(BuildError::TerrainGenesis)?;
+    Ok(GeneratedTerrain::new(geo, outcome))
 }
 
 /// Map a terrain boundary contact to the seafloor feature climate consumes
@@ -1260,7 +1269,7 @@ fn exposure_of_impl(
 
     let species = def.name;
     let depths = pack_depths(&def.perception);
-    let geo = shared_geosphere();
+    let geo = terrain.geosphere();
 
     let mut classes: std::collections::BTreeMap<String, ExposureClass> =
         std::collections::BTreeMap::new();
@@ -1630,7 +1639,8 @@ pub fn build_world_with_roster(
             &world.registry,
         )?;
     }
-    let terrain_outcome = hornvale_terrain::generate(seed, shared_geosphere(), terrain_pins)
+    let level = terrain_pins.globe_level.unwrap_or(GLOBE_LEVEL);
+    let terrain_outcome = hornvale_terrain::generate(seed, &geosphere_for(level), terrain_pins)
         .map_err(BuildError::TerrainGenesis)?;
     hornvale_terrain::facts::genesis(&mut world, world_entity, &terrain_outcome)?;
 
@@ -1922,7 +1932,7 @@ pub fn build_world_with_roster(
     // Deep time: extract the glacial strata and commit their summary facts on
     // the world entity, so `recount`/`why` can speak the world's past.
     let paleo = paleoclimate_of(&world)?;
-    hornvale_paleoclimate::genesis(&mut world, world_entity, shared_geosphere(), &paleo)?;
+    hornvale_paleoclimate::genesis(&mut world, world_entity, terrain.geosphere(), &paleo)?;
 
     Ok(world)
 }
@@ -2879,6 +2889,25 @@ mod tests {
         let b = terrain_of(&world).unwrap();
         assert_eq!(a.globe(), b.globe());
         assert_eq!(a.geosphere().level(), hornvale_terrain::GLOBE_LEVEL);
+    }
+
+    #[test]
+    fn globe_level_pin_selects_the_canonical_grid() {
+        let pins = hornvale_terrain::TerrainPins {
+            globe_level: Some(4),
+            ..hornvale_terrain::TerrainPins::default()
+        };
+        let world = build_world_with_roster(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &pins,
+            &SettlementPins::default(),
+            &default_roster(),
+        )
+        .expect("level-4 world builds");
+        let terrain = terrain_of(&world).expect("terrain");
+        assert_eq!(terrain.geosphere().level(), 4);
     }
 
     #[test]

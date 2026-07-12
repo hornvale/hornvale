@@ -3,7 +3,7 @@
 //! elevation envelope, ocean-fraction tolerance, determinism, and the
 //! convergent-vs-interior elevation contrast).
 
-use hornvale_kernel::{Geosphere, Seed};
+use hornvale_kernel::{CellMap, Geosphere, Seed};
 use hornvale_terrain::{GenesisError, TerrainPins, generate, streams, summarize};
 
 #[test]
@@ -11,16 +11,22 @@ fn pin_isolation_holds_at_the_globe_level() {
     let geo = Geosphere::new(4);
     let default = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
 
-    // Re-affirming the drawn plate count is byte-identical.
+    // Re-affirming the drawn plate count leaves the globe byte-identical
+    // (the notes gain a metering entry — Task 7 — since the pin is `Some`
+    // regardless of whether its value matches the drawn one; metering is
+    // pin-only, not value-only, by design).
     let summary = summarize(&default.globe);
     let pins = TerrainPins {
         plates: Some(summary.plate_count),
         ..TerrainPins::default()
     };
-    assert_eq!(generate(Seed(42), &geo, &pins).unwrap(), default);
+    assert_eq!(
+        generate(Seed(42), &geo, &pins).unwrap().globe,
+        default.globe
+    );
 
     // Re-affirming the drawn ocean fraction (recovered by replaying its
-    // labeled stream) is byte-identical.
+    // labeled stream) leaves the globe byte-identical, same caveat.
     let drawn = 0.5
         + 0.25
             * Seed(42)
@@ -32,7 +38,10 @@ fn pin_isolation_holds_at_the_globe_level() {
         ocean_fraction: Some(drawn),
         ..TerrainPins::default()
     };
-    assert_eq!(generate(Seed(42), &geo, &pins).unwrap(), default);
+    assert_eq!(
+        generate(Seed(42), &geo, &pins).unwrap().globe,
+        default.globe
+    );
 
     // supercontinent=false re-affirms the drawn scattered layout.
     let pins = TerrainPins {
@@ -40,10 +49,44 @@ fn pin_isolation_holds_at_the_globe_level() {
         ..TerrainPins::default()
     };
     assert_eq!(generate(Seed(42), &geo, &pins).unwrap(), default);
+
+    // Re-affirming the drawn craton count (Crust epoch, Task 8) leaves the
+    // globe byte-identical too — same pin-isolation caveat as plates and
+    // ocean-fraction above.
+    let pins = TerrainPins {
+        continents: Some(default.globe.cratons.len() as u32),
+        ..TerrainPins::default()
+    };
+    assert_eq!(
+        generate(Seed(42), &geo, &pins).unwrap().globe,
+        default.globe
+    );
+
+    // supercontinent on cratons (Crust epoch, Task 8): scattered vs
+    // supercontinent=false is byte-identical (the same re-affirmation
+    // guarantee as plates', now on the craton draw).
+    let pins = TerrainPins {
+        continents: Some(default.globe.cratons.len() as u32),
+        supercontinent: Some(false),
+        ..TerrainPins::default()
+    };
+    assert_eq!(
+        generate(Seed(42), &geo, &pins).unwrap().globe,
+        default.globe
+    );
 }
 
 #[test]
-fn ocean_fraction_pin_perturbs_nothing_upstream() {
+fn ocean_fraction_pin_conditions_cratons_but_not_the_plate_skeleton() {
+    // Task 9 iteration 3': the ocean-fraction target now feeds the
+    // craton-area budget too (see `hornvale_terrain::crust::draw_cratons`'s
+    // doc), so pinning it legitimately conditions craton radii and, in
+    // turn, the crust/continental fields, elevation, and unrest — a
+    // pinned target conditions downstream identically to a drawn one
+    // (pin doctrine). What must stay untouched is the plate skeleton
+    // (built from streams independent of ocean fraction) and each
+    // shared-prefix craton's age (a raw stream draw the area-budget
+    // rescale never touches).
     let geo = Geosphere::new(4);
     let default = generate(Seed(7), &geo, &TerrainPins::default()).unwrap();
     let pinned = generate(
@@ -55,10 +98,30 @@ fn ocean_fraction_pin_perturbs_nothing_upstream() {
         },
     )
     .unwrap();
-    assert_eq!(pinned.globe.elevation, default.globe.elevation);
-    assert_eq!(pinned.globe.plate_of, default.globe.plate_of);
-    assert_eq!(pinned.globe.unrest, default.globe.unrest);
-    assert_ne!(pinned.globe.sea_level, default.globe.sea_level);
+    assert_eq!(
+        pinned.globe.plates, default.globe.plates,
+        "plate skeleton perturbed"
+    );
+    assert_eq!(
+        pinned.globe.plate_of, default.globe.plate_of,
+        "plate assignment perturbed"
+    );
+    for (a, b) in default.globe.cratons.iter().zip(&pinned.globe.cratons) {
+        assert_eq!(a.id, b.id);
+        assert_eq!(
+            a.age, b.age,
+            "shared-prefix craton {} age perturbed by the ocean-fraction pin",
+            a.id
+        );
+    }
+    assert_ne!(
+        pinned.globe.crust, default.globe.crust,
+        "ocean-fraction pin should move craton radii (and therefore crust)"
+    );
+    assert_ne!(
+        pinned.globe.sea_level, default.globe.sea_level,
+        "ocean-fraction pin should move sea level"
+    );
 }
 
 #[test]
@@ -123,20 +186,48 @@ fn every_default_globe_satisfies_every_invariant() {
 #[test]
 fn boundary_classification_agrees_from_both_sides_across_seeds() {
     use hornvale_terrain::boundaries::classify_contact;
+    use hornvale_terrain::crust::{CrustField, draw_cratons};
+    use hornvale_terrain::elevation::resolve_ocean_fraction;
     use hornvale_terrain::plates::{assign_plates, generate_plates};
     let geo = Geosphere::new(3);
     for seed in 0..16u64 {
         let terrain_seed = Seed(seed).derive(streams::ROOT);
-        let plates = generate_plates(terrain_seed, &TerrainPins::default());
-        let plate_of = assign_plates(&geo, &plates);
+        let plates = generate_plates(terrain_seed, &TerrainPins::default(), &mut Vec::new());
+        let plate_of = assign_plates(&geo, terrain_seed, &plates);
+        let ocean_target =
+            resolve_ocean_fraction(terrain_seed, &TerrainPins::default(), &mut Vec::new());
+        let cratons = draw_cratons(
+            terrain_seed,
+            &TerrainPins::default(),
+            ocean_target,
+            &mut Vec::new(),
+        );
+        let field = CrustField::new(terrain_seed, cratons);
+        let continental = CellMap::from_fn(&geo, |c| field.continental_at(geo.position(c)));
         for a in geo.cells() {
             for &b in geo.neighbors(a) {
                 let (pa, pb) = (*plate_of.get(a), *plate_of.get(b));
                 if pa == pb {
                     continue;
                 }
-                let ab = classify_contact(&geo, a, b, &plates[pa as usize], &plates[pb as usize]);
-                let ba = classify_contact(&geo, b, a, &plates[pb as usize], &plates[pa as usize]);
+                let ab = classify_contact(
+                    &geo,
+                    a,
+                    b,
+                    &plates[pa as usize],
+                    &plates[pb as usize],
+                    *continental.get(a),
+                    *continental.get(b),
+                );
+                let ba = classify_contact(
+                    &geo,
+                    b,
+                    a,
+                    &plates[pb as usize],
+                    &plates[pa as usize],
+                    *continental.get(b),
+                    *continental.get(a),
+                );
                 assert_eq!(ab.kind, ba.kind, "seed {seed}: {}-{}", a.0, b.0);
                 assert_eq!(ab.magnitude, ba.magnitude, "seed {seed}: {}-{}", a.0, b.0);
             }
@@ -157,21 +248,17 @@ fn genesis_is_deterministic_across_the_sweep() {
 #[test]
 fn convergent_boundaries_stand_above_continental_interiors_on_average() {
     use hornvale_terrain::BoundaryKind;
-    use hornvale_terrain::boundaries::{boundary_distance, boundary_field};
-    use hornvale_terrain::plates::{assign_plates, generate_plates};
+    use hornvale_terrain::boundaries::boundary_distance;
+    use hornvale_terrain::crust::CONTINENTAL_THRESHOLD_KM;
     let geo = Geosphere::new(4);
     let mut uplifted = Vec::new();
     let mut interior = Vec::new();
     for seed in 0..16u64 {
-        let terrain_seed = Seed(seed).derive(streams::ROOT);
         let pins = TerrainPins::default();
-        let plates = generate_plates(terrain_seed, &pins);
-        let plate_of = assign_plates(&geo, &plates);
-        let boundaries = boundary_field(&geo, &plate_of, &plates);
-        let distances = boundary_distance(&geo, &plate_of, &boundaries);
         let globe = generate(Seed(seed), &geo, &pins).unwrap().globe;
-        for (cell, contact) in boundaries.iter() {
-            let continental = plates[*plate_of.get(cell) as usize].continental;
+        let distances = boundary_distance(&geo, &globe.plate_of, &globe.boundary);
+        for (cell, contact) in globe.boundary.iter() {
+            let continental = *globe.crust.get(cell) >= CONTINENTAL_THRESHOLD_KM;
             match contact {
                 Some(c)
                     if continental

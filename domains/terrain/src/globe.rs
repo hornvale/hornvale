@@ -2,19 +2,26 @@
 //! a seed plus a ledger — the globe is never serialized, always re-derived.
 
 use crate::boundaries::{self, CellBoundary};
+use crate::crust::Craton;
 use crate::pins::{self, GenesisError, TerrainPins};
 use crate::plates::Plate;
 use crate::streams;
-use crate::{elevation, plates};
+use crate::{crust, elevation, plates};
 use hornvale_kernel::{CellMap, Geosphere, Seed};
 
 /// A generated tectonic globe over the shared Geosphere. Recomputed from
 /// the seed on demand; never serialized.
-/// type-audit: bare-ok(index: plate_of), waiver(elevation-convention: elevation), bare-ok(ratio: unrest), pending(wave-2: sea_level), bare-ok(count: drainage), bare-ok(flag: endorheic)
+/// type-audit: bare-ok(index: plate_of), waiver(elevation-convention: elevation), bare-ok(ratio: unrest), pending(wave-2: sea_level), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust)
 #[derive(Debug, Clone, PartialEq)]
 pub struct TectonicGlobe {
     /// Plate index per cell (an index into `plates`).
     pub plate_of: CellMap<u32>,
+    /// Crust thickness per cell, in kilometers (bare f64 by documented
+    /// convention, mirroring the elevation waiver — the field's own
+    /// `CrustKm` newtype validates at construction; the per-cell sample
+    /// here is a plain `f64` for the same reason elevation is: it feeds
+    /// bulk numeric assembly, not a single validated boundary crossing).
+    pub crust: CellMap<f64>,
     /// Elevation per cell, in meters (bare f64 by documented convention;
     /// see the plan's Global Constraints for the typed-quantities waiver).
     pub elevation: CellMap<f64>,
@@ -33,6 +40,9 @@ pub struct TectonicGlobe {
     pub drainage: CellMap<f64>,
     /// Endorheic mask: land cells whose downhill path never reaches the sea.
     pub endorheic: CellMap<bool>,
+    /// The drawn craton set this globe's crust field was built from
+    /// (Crust epoch, Task 8). Recomputed at genesis, never serialized.
+    pub cratons: Vec<Craton>,
 }
 
 /// What tectonic genesis produced: the globe plus degradation notes.
@@ -57,9 +67,20 @@ pub fn generate(
 ) -> Result<GenesisOutcome, GenesisError> {
     pins::validate(pins)?;
     let terrain_seed = world_seed.derive(streams::ROOT);
-    let plate_list = plates::generate_plates(terrain_seed, pins);
-    let plate_of = plates::assign_plates(geosphere, &plate_list);
-    let boundary_map = boundaries::boundary_field(geosphere, &plate_of, &plate_list);
+    let mut notes = Vec::new();
+    let plate_list = plates::generate_plates(terrain_seed, pins, &mut notes);
+    // Task 9 iteration 3': the ocean-fraction target is resolved once,
+    // here, and threaded to both the craton budget and sea level below —
+    // a pinned target conditions both identically to a drawn one.
+    let ocean_target = elevation::resolve_ocean_fraction(terrain_seed, pins, &mut notes);
+    let cratons = crust::draw_cratons(terrain_seed, pins, ocean_target, &mut notes);
+    let field = crust::CrustField::new(terrain_seed, cratons.clone());
+    let crust_map = CellMap::from_fn(geosphere, |c| {
+        field.thickness_at(geosphere.position(c)).get()
+    });
+    let continental = CellMap::from_fn(geosphere, |c| field.continental_at(geosphere.position(c)));
+    let plate_of = plates::assign_plates(geosphere, terrain_seed, &plate_list);
+    let boundary_map = boundaries::boundary_field(geosphere, &plate_of, &plate_list, &continental);
     let distances = boundaries::boundary_distance(geosphere, &plate_of, &boundary_map);
     let elevation_map = elevation::generate_elevation(
         terrain_seed,
@@ -68,14 +89,15 @@ pub fn generate(
         &plate_of,
         &boundary_map,
         &distances,
+        &crust_map,
+        &continental,
     );
-    let sea_level = elevation::derive_sea_level(terrain_seed, pins, &elevation_map);
+    let sea_level = elevation::derive_sea_level(&elevation_map, ocean_target);
     let unrest =
         elevation::generate_unrest(geosphere, &plate_list, &plate_of, &boundary_map, &distances);
     let (drainage, endorheic) =
         crate::drainage::drainage_field(geosphere, &elevation_map, sea_level);
 
-    let mut notes = Vec::new();
     let mut populated = vec![false; plate_list.len()];
     for (_, plate) in plate_of.iter() {
         populated[*plate as usize] = true;
@@ -91,6 +113,7 @@ pub fn generate(
     Ok(GenesisOutcome {
         globe: TectonicGlobe {
             plate_of,
+            crust: crust_map,
             elevation: elevation_map,
             unrest,
             sea_level,
@@ -98,6 +121,7 @@ pub fn generate(
             boundary: boundary_map,
             drainage,
             endorheic,
+            cratons,
         },
         notes,
     })
@@ -194,5 +218,39 @@ mod tests {
         )
         .unwrap_err();
         assert!(matches!(err, GenesisError::InvalidPin { .. }));
+    }
+
+    #[test]
+    fn pinned_values_are_metered_in_the_notes() {
+        let geo = Geosphere::new(3);
+        let pins = TerrainPins {
+            plates: Some(12),
+            ocean_fraction: Some(0.80),
+            continents: Some(5),
+            ..TerrainPins::default()
+        };
+        let outcome = generate(Seed(42), &geo, &pins).expect("genesis");
+        let metered: Vec<&String> = outcome
+            .notes
+            .iter()
+            .filter(|n| n.starts_with("pinned "))
+            .collect();
+        assert!(
+            metered
+                .iter()
+                .any(|n| n.starts_with("pinned plates 12 (seed draws "))
+        );
+        assert!(
+            metered
+                .iter()
+                .any(|n| n.starts_with("pinned ocean-fraction 0.80 (seed draws "))
+        );
+        assert!(
+            metered
+                .iter()
+                .any(|n| n.starts_with("pinned continents 5 (seed draws "))
+        );
+        let unpinned = generate(Seed(42), &geo, &TerrainPins::default()).expect("genesis");
+        assert!(!unpinned.notes.iter().any(|n| n.starts_with("pinned ")));
     }
 }

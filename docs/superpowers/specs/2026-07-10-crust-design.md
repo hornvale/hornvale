@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-10
 **Status:** Approved (brainstorming session)
-**Campaign:** 28 (tentative — confirm numbering at merge; The Branches is in flight in parallel)
+**Campaign:** Crust (slug-named per decision 0026; The Branches is in flight in parallel)
 **Provenance:** Second leg of the ratified terrain-overhaul roadmap (Measured Coast → **Crust** → Sculpting). The Measured Coast (Campaign 25) preregistered the baseline this campaign is judged against (Study 010). Design decisions ratified in brainstorming (2026-07-10): canonical level-6 grid **plus** a `--globe-level` fidelity pin; conservative epoch (plate skeleton streams survive); parallel with The Branches, Crust merges second. Three ideonomy pulls hardened the design; their findings are folded in throughout and called out where load-bearing.
 
 ---
