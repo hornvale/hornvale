@@ -30,6 +30,25 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_predicate(SUBSISTENCE, true, "a settlement's subsistence mode")
 }
 
+/// Culture as a registrable unit for the composition-root roster.
+/// type-audit: bare-ok(identifier-text: return)
+pub struct Culture;
+
+impl hornvale_kernel::Domain for Culture {
+    fn crate_name(&self) -> &'static str {
+        env!("CARGO_PKG_NAME")
+    }
+    fn register_concepts(
+        &self,
+        registry: &mut hornvale_kernel::ConceptRegistry,
+    ) -> Result<(), hornvale_kernel::RegistryError> {
+        crate::register_concepts(registry)
+    }
+    fn stream_labels(&self) -> Vec<(&'static str, &'static str)> {
+        crate::stream_labels()
+    }
+}
+
 /// Tier-1 genesis: commit the settlement's subsistence mode and its emergent
 /// caste/role structure (from `structure`). Replaces the tier-0 fixed ladder.
 pub fn genesis(

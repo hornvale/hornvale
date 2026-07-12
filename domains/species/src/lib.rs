@@ -429,6 +429,25 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     Ok(())
 }
 
+/// Species as a registrable unit for the composition-root roster.
+/// type-audit: bare-ok(identifier-text: return)
+pub struct Species;
+
+impl hornvale_kernel::Domain for Species {
+    fn crate_name(&self) -> &'static str {
+        env!("CARGO_PKG_NAME")
+    }
+    fn register_concepts(
+        &self,
+        registry: &mut hornvale_kernel::ConceptRegistry,
+    ) -> Result<(), hornvale_kernel::RegistryError> {
+        crate::register_concepts(registry)
+    }
+    fn stream_labels(&self) -> Vec<(&'static str, &'static str)> {
+        crate::stream_labels()
+    }
+}
+
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     Fact {
         subject,

@@ -179,6 +179,25 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     )
 }
 
+/// Astronomy as a registrable unit for the composition-root roster.
+/// type-audit: bare-ok(identifier-text: return)
+pub struct Astronomy;
+
+impl hornvale_kernel::Domain for Astronomy {
+    fn crate_name(&self) -> &'static str {
+        env!("CARGO_PKG_NAME")
+    }
+    fn register_concepts(
+        &self,
+        registry: &mut hornvale_kernel::ConceptRegistry,
+    ) -> Result<(), hornvale_kernel::RegistryError> {
+        crate::register_concepts(registry)
+    }
+    fn stream_labels(&self) -> Vec<(&'static str, &'static str)> {
+        crate::stream_labels()
+    }
+}
+
 /// Tier-0 astronomy: the sun is always up, fixed at zenith.
 pub struct ConstantSun;
 
