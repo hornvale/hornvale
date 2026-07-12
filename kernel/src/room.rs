@@ -6,6 +6,7 @@
 
 use crate::GeoCoord;
 use crate::geosphere::{base_data, normalize, slerp_mid};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// The deepest path a `RoomId` can pack: 5 face bits + 1 sentinel + 2*29 digit
 /// bits = 64. Useful room scale is ~L16-20 (an L18 room edge is ~27 m).
@@ -48,28 +49,21 @@ pub enum RoomIdError {
 }
 
 /// Integer barycentric coordinate within a base face; components sum to the
-/// current scale `2^depth`. Only the round-trip test calls these helpers so
-/// far; the neighbour walk (Task 5) is their production caller, hence the
-/// blanket `#[allow(dead_code)]` below until that lands.
-#[allow(dead_code)]
+/// current scale `2^depth`.
 type Bary = [i64; 3];
 
-#[allow(dead_code)]
 fn add(a: Bary, b: Bary) -> Bary {
     [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
 }
-#[allow(dead_code)]
 fn dbl(a: Bary) -> Bary {
     [a[0] * 2, a[1] * 2, a[2] * 2]
 }
-#[allow(dead_code)]
 fn mid_i(a: Bary, b: Bary) -> Bary {
     [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2]
 }
 
 /// Forward walk: a path to its ordered barycentric triple and its scale
 /// `2^path.len()`. Child order matches `subdivide`.
-#[allow(dead_code)]
 fn bary_triple(path: &[u8]) -> (i64, [Bary; 3]) {
     let mut tri: [Bary; 3] = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
     let mut scale = 1i64;
@@ -88,13 +82,11 @@ fn bary_triple(path: &[u8]) -> (i64, [Bary; 3]) {
 }
 
 /// 2x signed area in the (x,y) projection of the plane x+y+z=const.
-#[allow(dead_code)]
 fn orient(a: Bary, b: Bary, c: Bary) -> i64 {
     (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])
 }
 
 /// Is `p` strictly inside triangle `t`? (all at the same scale)
-#[allow(dead_code)]
 fn strictly_inside(t: [Bary; 3], p: Bary) -> bool {
     let d = orient(t[0], t[1], t[2]);
     let s = [
@@ -106,7 +98,6 @@ fn strictly_inside(t: [Bary; 3], p: Bary) -> bool {
 }
 
 /// One subdivision at a FIXED scale (midpoint split), used by decode.
-#[allow(dead_code)]
 fn child_at_scale(r: [Bary; 3], digit: u8) -> [Bary; 3] {
     let [a, b, c] = r;
     let (mab, mbc, mca) = (mid_i(a, b), mid_i(b, c), mid_i(c, a));
@@ -121,7 +112,6 @@ fn child_at_scale(r: [Bary; 3], digit: u8) -> [Bary; 3] {
 /// Decode a barycentric triple (at `scale = 2^depth`) on `face` back to a path,
 /// by top-down containment: at each level pick the child whose triangle
 /// contains the target centroid. Integer-only.
-#[allow(dead_code)]
 fn decode(face: u8, tri: [Bary; 3], scale: i64) -> RoomAddr {
     let depth = scale.trailing_zeros();
     let g3 = add(add(tri[0], tri[1]), tri[2]); // 3 * centroid, at scale `scale`
@@ -144,6 +134,116 @@ fn decode(face: u8, tri: [Bary; 3], scale: i64) -> RoomAddr {
         path.push(digit);
     }
     RoomAddr { face, path }
+}
+
+/// Face-independent identity of a triangle corner. Two rooms are edge-adjacent
+/// iff they share two of these.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub(crate) enum VKey {
+    /// Interior lattice point: `(face, a, b, c)` barycentric coordinates.
+    Interior(u8, i64, i64, i64),
+    /// Boundary-edge lattice point: `(low global vertex, high global vertex,
+    /// weight toward the low vertex)`.
+    Edge(u32, u32, i64),
+    /// A base-mesh vertex, identified by its global vertex index.
+    Vertex(u32),
+}
+
+/// The global identity of barycentric point `c` on `face` (whose corners are
+/// global vertices `g`), at scale `s`.
+pub(crate) fn vkey(face: u8, g: [u32; 3], c: Bary, s: i64) -> VKey {
+    match c.iter().filter(|&&x| x == 0).count() {
+        0 => VKey::Interior(face, c[0], c[1], c[2]),
+        1 => {
+            let mut ends: Vec<(u32, i64)> = (0..3)
+                .filter(|&i| c[i] != 0)
+                .map(|i| (g[i], c[i]))
+                .collect();
+            ends.sort_by_key(|&(gi, _)| gi);
+            VKey::Edge(ends[0].0, ends[1].0, ends[0].1)
+        }
+        _ => VKey::Vertex(g[(0..3).find(|&i| c[i] == s).unwrap()]),
+    }
+}
+
+/// The pair of global vertices bounding the base edge that keys `a`/`b` (which
+/// must both lie on the same boundary edge or a shared vertex).
+fn base_edge(a: VKey, b: VKey) -> (u32, u32) {
+    let mut set = BTreeSet::new();
+    for k in [a, b] {
+        match k {
+            VKey::Edge(lo, hi, _) => {
+                set.insert(lo);
+                set.insert(hi);
+            }
+            VKey::Vertex(g) => {
+                set.insert(g);
+            }
+            VKey::Interior(..) => unreachable!("interior key on a boundary edge"),
+        }
+    }
+    let v: Vec<u32> = set.into_iter().collect();
+    (v[0], v[1])
+}
+
+/// Re-express boundary key `k` as a barycentric coordinate on the face whose
+/// global corners are `hg`, at scale `s`.
+fn place_on_face(k: VKey, hg: [u32; 3], s: i64) -> Bary {
+    let idx = |g: u32| hg.iter().position(|&x| x == g).expect("vertex on face");
+    let mut c = [0i64; 3];
+    match k {
+        VKey::Edge(lo, hi, wlo) => {
+            c[idx(lo)] = wlo;
+            c[idx(hi)] = s - wlo;
+        }
+        VKey::Vertex(g) => c[idx(g)] = s,
+        VKey::Interior(..) => unreachable!("interior key on a seam"),
+    }
+    c
+}
+
+const UNITS: [Bary; 6] = [
+    [1, -1, 0],
+    [-1, 1, 0],
+    [0, 1, -1],
+    [0, -1, 1],
+    [1, 0, -1],
+    [-1, 0, 1],
+];
+
+fn in_range(v: Bary, s: i64) -> bool {
+    v.iter().all(|&x| (0..=s).contains(&x))
+}
+
+/// The unique in-range lattice point adjacent to both `u` and `v` with edge
+/// step `h` — the inward apex on a base-face seam.
+fn common_apex(u: Bary, v: Bary, s: i64, h: i64) -> Bary {
+    let nbr = |p: Bary| -> BTreeSet<Bary> {
+        UNITS
+            .iter()
+            .map(|e| add(p, [e[0] * h, e[1] * h, e[2] * h]))
+            .filter(|&x| in_range(x, s))
+            .collect()
+    };
+    let both: Vec<Bary> = nbr(u).intersection(&nbr(v)).copied().collect();
+    debug_assert_eq!(both.len(), 1, "cross-face inward apex must be unique");
+    both[0]
+}
+
+/// Base edge -> the two faces sharing it, computed once.
+fn base_edge_faces() -> &'static BTreeMap<(u32, u32), [u8; 2]> {
+    use std::sync::OnceLock;
+    static T: OnceLock<BTreeMap<(u32, u32), [u8; 2]>> = OnceLock::new();
+    T.get_or_init(|| {
+        let (_v, faces) = base_data();
+        let mut acc: BTreeMap<(u32, u32), Vec<u8>> = BTreeMap::new();
+        for (i, g) in faces.iter().enumerate() {
+            for (a, b) in [(g[0], g[1]), (g[1], g[2]), (g[2], g[0])] {
+                acc.entry((a.min(b), a.max(b))).or_default().push(i as u8);
+            }
+        }
+        acc.into_iter().map(|(k, v)| (k, [v[0], v[1]])).collect()
+    })
 }
 
 impl RoomAddr {
@@ -247,12 +347,105 @@ impl RoomAddr {
         let deg = y.atan2(x).to_degrees();
         (deg + 360.0) % 360.0
     }
+
+    /// The three edge-neighbour rooms, at the same depth (the geometric base
+    /// graph). `neighbor[i]` is across the edge opposite corner `i` (between
+    /// corners `(i+1)%3` and `(i+2)%3`). Integer-only; passability and overlay
+    /// edges are higher layers and never enter here.
+    pub fn neighbors(&self) -> [RoomAddr; 3] {
+        let (scale, tri) = bary_triple(&self.path);
+        let h = scale >> self.path.len(); // = 1; edge step at this depth
+        let (_v, faces) = base_data();
+        let g = faces[self.face as usize];
+        let mut out: Vec<RoomAddr> = Vec::with_capacity(3);
+        // neighbor[n] is across the edge OPPOSITE corner n, so the excluded
+        // corner k == n: tuples ordered (i,j,k) with k = 0, 1, 2.
+        for (i, j, k) in [(1usize, 2, 0), (2, 0, 1), (0, 1, 2)] {
+            let (u, v, w) = (tri[i], tri[j], tri[k]);
+            let apex = add(add(u, v), [-w[0], -w[1], -w[2]]); // U + V - W_self
+            if in_range(apex, scale) && apex != w {
+                out.push(decode(self.face, [u, v, apex], scale));
+            } else {
+                let (ku, kv) = (vkey(self.face, g, u, scale), vkey(self.face, g, v, scale));
+                let (lo, hi) = base_edge(ku, kv);
+                let pair = base_edge_faces()[&(lo, hi)];
+                let fp = if pair[0] == self.face {
+                    pair[1]
+                } else {
+                    pair[0]
+                };
+                let hg = faces[fp as usize];
+                let (u2, v2) = (place_on_face(ku, hg, scale), place_on_face(kv, hg, scale));
+                let apex2 = common_apex(u2, v2, scale, h);
+                out.push(decode(fp, [u2, v2, apex2], scale));
+            }
+        }
+        [out[0].clone(), out[1].clone(), out[2].clone()]
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::geosphere::{Geosphere, base_data};
+    use std::collections::{BTreeMap, BTreeSet};
+
+    // Canonical key of a face at uniform depth: (base face, sorted bary triple).
+    fn fkey(face: u8, mut tri: [Bary; 3]) -> (u8, [Bary; 3]) {
+        tri.sort();
+        (face, tri)
+    }
+
+    #[test]
+    fn neighbours_match_the_oracle() {
+        let level = 5u32;
+        let scale = 1i64 << level;
+        let addrs = all_addrs(level);
+        let (verts, faces) = base_data().clone();
+        // oracle: map each global vertex key -> faces; adjacency = share 2 keys.
+        let mut vk_faces: BTreeMap<super::VKey, Vec<usize>> = BTreeMap::new();
+        let mut fkeys: Vec<(u8, [Bary; 3])> = Vec::new();
+        let mut face_vkeys: Vec<[super::VKey; 3]> = Vec::new();
+        for addr in &addrs {
+            let (_s, tri) = super::bary_triple(&addr.path);
+            let g = faces[addr.face as usize];
+            let ks = [
+                super::vkey(addr.face, g, tri[0], scale),
+                super::vkey(addr.face, g, tri[1], scale),
+                super::vkey(addr.face, g, tri[2], scale),
+            ];
+            let idx = fkeys.len();
+            fkeys.push(fkey(addr.face, tri));
+            face_vkeys.push(ks);
+            for k in ks {
+                vk_faces.entry(k).or_default().push(idx);
+            }
+        }
+        let _ = &verts;
+        for (idx, addr) in addrs.iter().enumerate() {
+            let ks = face_vkeys[idx];
+            let mut oracle: BTreeSet<(u8, [Bary; 3])> = BTreeSet::new();
+            for (a, b) in [(0, 1), (1, 2), (2, 0)] {
+                let sa: BTreeSet<usize> = vk_faces[&ks[a]].iter().copied().collect();
+                let shared: Vec<usize> = vk_faces[&ks[b]]
+                    .iter()
+                    .copied()
+                    .filter(|o| sa.contains(o) && *o != idx)
+                    .collect();
+                assert_eq!(shared.len(), 1, "one neighbour per edge");
+                oracle.insert(fkeys[shared[0]]);
+            }
+            let mine: BTreeSet<(u8, [Bary; 3])> = addr
+                .neighbors()
+                .iter()
+                .map(|n| {
+                    let (_s, t) = super::bary_triple(&n.path);
+                    fkey(n.face, t)
+                })
+                .collect();
+            assert_eq!(mine, oracle, "neighbour mismatch at {addr:?}");
+        }
+    }
 
     // Enumerate every RoomAddr at depth `level` by DFS over child digits.
     fn all_addrs(level: u32) -> Vec<RoomAddr> {
@@ -452,5 +645,70 @@ mod tests {
             .pack(),
             Err(RoomAddrError::Invalid)
         );
+    }
+
+    #[test]
+    fn adjacency_is_mutual_and_ternary() {
+        let addrs = all_addrs(4);
+        let present: BTreeSet<RoomAddr> = addrs.iter().cloned().collect();
+        for addr in &addrs {
+            let ns = addr.neighbors();
+            let uniq: BTreeSet<&RoomAddr> = ns.iter().collect();
+            assert_eq!(
+                uniq.len(),
+                3,
+                "exactly three distinct neighbours at {addr:?}"
+            );
+            for n in &ns {
+                assert!(present.contains(n), "neighbour {n:?} not on the mesh");
+                assert!(
+                    n.neighbors().contains(addr),
+                    "not mutual: {addr:?} -> {n:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn corner_at_pentagon_vertex_walks() {
+        // The all-0 path keeps a corner at a base icosahedron vertex (5-valent).
+        let addr = RoomAddr {
+            face: 0,
+            path: vec![0; 5],
+        };
+        let ns = addr.neighbors();
+        assert_eq!(ns.iter().collect::<BTreeSet<_>>().len(), 3);
+        for n in &ns {
+            assert!(
+                n.neighbors().contains(&addr),
+                "pentagon neighbour not mutual"
+            );
+        }
+    }
+
+    #[test]
+    fn neighbor_order_matches_opposite_corner_contract() {
+        // neighbor[n] is across the edge opposite corner n: it shares the OTHER
+        // two corners' positions with self, and not corner n's.
+        for addr in all_addrs(2) {
+            let sc = addr.corners();
+            let ns = addr.neighbors();
+            for n in 0..3usize {
+                let nc = ns[n].corners();
+                let shares = |p: [f64; 3]| nc.contains(&p);
+                assert!(
+                    !shares(sc[n]),
+                    "neighbor {n} of {addr:?} should not share corner {n}"
+                );
+                assert!(
+                    shares(sc[(n + 1) % 3]),
+                    "neighbor {n} of {addr:?} misses a shared corner"
+                );
+                assert!(
+                    shares(sc[(n + 2) % 3]),
+                    "neighbor {n} of {addr:?} misses a shared corner"
+                );
+            }
+        }
     }
 }
