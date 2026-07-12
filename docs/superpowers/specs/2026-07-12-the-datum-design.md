@@ -221,6 +221,18 @@ operation is unambiguous and frequent. Derived units are materialized on demand
 (most base×base combinations are meaningless); magnitude (km vs m vs Mm) is an
 accessor, never a type.
 
+**Trace boundary.** A unit crosses the deliberately-dumb `Fact`/`Value` envelope
+as its *canonical-unit* `Value::Number` — the envelope stays untyped, so no
+consumer learns a phenomenon's producer. The unit contract lives on the
+**predicate**: visible in its name (the `_c`/`_m` suffix — `identifier-text`)
+and declared in the registry, where the `Ledger` enforces the Value *kind*
+(unit-correctness stays a producer discipline against that single declared
+source). One canonical trace unit per quantity (no `_c`/`_k` proliferation;
+accessors are display-only); an *interval* quantity's predicate declares its
+**datum** as well as its unit. Same "rich inside, contract at the edge" shape as
+`serde(transparent)` and quantize — units fill an existing cell, they do not
+soften the envelope.
+
 The decision doc records the datum mental model above (primary/derived, the
 rate ladder), the Stevens spine, and these axes as its reasoning, so future
 unit work inherits the map.
