@@ -129,6 +129,16 @@ presentation       formatted string       the observer's frame (a window)   part
 evolution          a new representation    regenerate-from-seed + review     yes
 ```
 
+**Units are compute-only.** No unit type is *self*-serialized today: the World is
+`seed + ledger`, derived fields are recomputed, and a unit reaches the ledger (as
+a bare `Value::Number`) and artifacts (as bare `f64`) via `.get()` — the trace
+and presentation rows. The `serialize` row's `serde(transparent)` is therefore
+*conditional*: it applies only if a future serialized struct holds a unit
+directly. **And a validating unit must never derive transparent `Deserialize`** —
+it would bypass `new()` and admit the very values the type exists to forbid; a
+unit that ever needs deserialization uses a validating custom impl through
+`new()`.
+
 ### Trace boundary
 
 A unit crosses the deliberately-dumb `Fact`/`Value` envelope as its

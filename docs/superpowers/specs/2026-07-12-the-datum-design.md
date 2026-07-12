@@ -116,7 +116,7 @@ than re-deriving to radius-from-core.
 ### Three type roles (only the first is built here)
 
 - **`ReferenceElevation`** — the canonical stored value: meters against the
-  isostatic reference datum. What lives in `CellMap` and serializes. **Built
+  isostatic reference datum. What lives in `CellMap` (compute-only). **Built
   in this campaign.**
 - **`RelativeElevation<H>`** — a signed reframing against a named datum `H`
   (positive above, negative below). This is the surveyor's *reduced level* and
@@ -164,13 +164,13 @@ pilot's reasoning; the doctrine records the general classification.
 /// This is NOT height above sea level — sea level is itself a value of this
 /// type, derived from the elevation field. Deep ocean floor is strongly
 /// negative; validation admits any finite value, either sign.
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
-#[serde(transparent)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct ReferenceElevation(f64);
 ```
 
-(`Serialize`/`Deserialize` are required for `#[serde(transparent)]` to take
-effect — without them the attribute is inert.)
+(No `serde`: `ReferenceElevation` is compute-only — it is never serialized, and a
+validating newtype must not derive transparent `Deserialize`, which would bypass
+`new()`. It reaches artifacts/the ledger as bare `f64` via `.get()`.)
 
 - `new(value: f64) -> Result<Self, UnitError>` — rejects non-finite only (no
   range clamp; sign is meaningful).
@@ -185,9 +185,9 @@ effect — without them the attribute is inert.)
   crosses a pub boundary, so per 0008 it stays bare `f64`. If a
   height-above-a-datum ever *does* cross a boundary, it earns
   `RelativeElevation<H>` then, not now.
-- `#[serde(transparent)]` so the serialized bytes are identical to the bare
-  `f64` they replace. Quantization stays exactly where it is (the emit
-  boundary); this type never enters the compute path's precision story.
+- **Compute-only** — never serialized; it reaches artifacts/the ledger as bare
+  `f64` via `.get()`. Quantization stays exactly where it is (the emit boundary,
+  on that bare `f64`); the type never enters the compute path's precision story.
 
 The `UnitError` type follows the existing per-domain pattern
 (`domains/astronomy/src/units.rs`); the kernel gets its own copy (the kernel
@@ -227,13 +227,15 @@ re-running `type-audit report`, never hand-merged.)
 
 ## Determinism and save-format
 
-- **Behavior-free migration.** `#[serde(transparent)]` guarantees identical
-  serialized bytes. No stream labels, seed-derivation labels, stream
-  consumption order, or physics formulas change. This is a pure representation
+- **Behavior-free migration.** The type wraps the same `f64` and emits it bare
+  (`.get()`) at every boundary, so no stream labels, seed-derivation labels,
+  stream consumption order, or physics formulas change. A pure representation
   change, exactly like the 0008 retrofit ("a golden test showed the newtype
   migration was behavior-free").
-- **Guard test:** a seed-42 world (and its almanac) serialize **byte-identical**
-  before and after the migration. Cross-platform quantization is unaffected.
+- **Guard test:** the seed-42 almanac, map, and lab artifacts regenerate
+  **byte-identical** before and after the migration (elevation is not in the
+  serialized world — it is emitted to artifacts as bare `f64`). Cross-platform
+  quantization is unaffected.
 - `total_cmp`-based `min`/`max` preserves (indeed tightens) deterministic
   ordering; no `f64::min`/`max` remain on the datum.
 
@@ -257,8 +259,8 @@ first, consumers after, so no half-typed boundary ever exists:
 
 ## Testing
 
-- **Golden byte-identity** — seed-42 world + almanac serialize identically
-  pre/post (the behavior-free proof).
+- **Golden byte-identity** — seed-42 almanac, map, and lab artifacts regenerate
+  identically pre/post (the behavior-free proof).
 - **Unit** — `ReferenceElevation::new` rejects `NaN`/`±inf`; `min`/`max` match
   `total_cmp`; `Sub` yields the correct signed metre delta; `PartialOrd`
   orders as the bare `f64` did.
