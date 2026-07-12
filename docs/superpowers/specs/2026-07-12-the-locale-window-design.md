@@ -42,7 +42,8 @@ algebra (deferred — see §9).
 ## 2. Scope
 
 **In scope (v1):**
-- The `windows/locale` crate and the `Locale` data model (§3).
+- The `windows/locale` crate, the `locale/room/v1` schema, and the reusable
+  `LocaleContext` (§3).
 - Coarse-field inheritance and blend (§4) — settling P2 §14 Q4.
 - Seed-derived sub-cell texture as an explicit P3 placeholder (§5).
 - The exit model: base (lateral) + vertical (§6).
@@ -56,9 +57,19 @@ framework, the P3 weighted-cross-product grammar and its descriptor pools, the
 exits and passability, adaptive-depth T-junction neighbours, and any "walk"
 (movement) REPL.
 
-## 3. The `Locale` data model
+## 3. The `Locale` data model and the `LocaleContext`
+
+`Locale` is a **versioned semantic schema**, `locale/room/v1`, in the manner of
+the `scene` window (`scene/tiles/v1`): a save-format-class contract, additive
+changes stay in-version, changed meaning mints `locale/room/v2` alongside. It
+is **ground truth** — the derived, re-derivable, never-stored *view* a designer
+or the sim reads (UNI-20's derived-view architecture) — explicitly **not** the
+perceived/belief view (UNI-16 / The Walk's projection); a later belief layer
+reduces this, it does not replace it.
 
 ```rust
+pub const ROOM_SCHEMA: &str = "locale/room/v1";
+
 pub struct Locale {
     pub addr: RoomAddr,
     pub id: RoomId,
@@ -78,15 +89,31 @@ pub struct LocaleFields {
 }
 ```
 
-`Locale::describe(world: &World, addr: &RoomAddr) -> Result<Locale, LocaleError>`
-is the sole entry point. It is a pure function of `(seed, addr)`: same inputs →
-byte-identical `Locale`. The window owns the derivation; the CLI owns the
-prose. `LocaleError` fails loudly (`AboveGrid` when the room is coarser than
-the canonical grid; the physical reason, per the fail-loud convention).
+**The `LocaleContext` — the reusable coarse-world build.** Describing a room
+needs the whole planet's coarse world (geosphere + `NearestCellIndex` +
+`climate_of` + `terrain_of`), which is expensive to build. That build is
+therefore a **context object**, constructed once and reused, never rebuilt
+inside `describe`:
 
-Building the coarse world (`climate_of`/`terrain_of`) is done once per
-`describe` call in v1 for simplicity; batching/caching for a future walk loop
-is a §9 concern, not a v1 requirement.
+```rust
+pub struct LocaleContext { /* geosphere, index, climate, terrain, globe_level */ }
+
+impl LocaleContext {
+    pub fn build(world: &World) -> Result<LocaleContext, LocaleError>;
+    /// A room's ground-truth locale at observation time `at`. Pure over
+    /// (context, addr, at): same inputs → byte-identical `Locale`.
+    pub fn describe(&self, addr: &RoomAddr, at: WorldTime) -> Result<Locale, LocaleError>;
+}
+```
+
+This keeps `Locale` a genuinely cheap derived view: the v1 CLI builds the
+context once per invocation, and the deferred walk loop (§9) reuses one context
+across every step for free — no signature churn when it lands. `describe`
+threads `WorldTime` so the P8 temporal-phase layer (season/moon/succession) is
+an in-version refinement, not a breaking change; **v1 samples the
+time-independent annual mean and does not yet vary with `at`** (§4).
+`LocaleError` fails loudly (`AboveGrid` when the room is coarser than the
+canonical grid; the physical reason, per the fail-loud convention).
 
 ## 4. Inheritance & blend — settling §14 Q4
 
@@ -112,11 +139,22 @@ half of refinement — a room may sample coarse fields as finely as it likes.
 this never happens on the CLI happy path; the error exists for library callers
 passing arbitrary addresses.
 
-The three source `CellMap`s come from `worldgen`: biome from
-`climate_of(world).biome_map()`, temperature from the generated climate,
-elevation from `terrain_of(world).globe().elevation`. (Exact field accessors
-are pinned during implementation against the current worldgen surface;
-moisture uses climate's moisture field.)
+The three source fields come from `worldgen`: biome from
+`climate_of(world).biome_map()`, temperature from the climate's **annual mean**
+(`mean_temperature_at` — time-independent, the right static field for v1; the
+time-varying `temperature_at(cell, day)` is what P8 will read through the
+threaded `WorldTime`), moisture from `moisture_at`, elevation from
+`terrain_of(world).globe().elevation`.
+
+**Known aesthetic limit (deliberate).** Max-weight inheritance makes the biome
+a *step* function of position: it flips wherever the dominant corner changes, so
+adjacent rooms can show a **hard biome edge mid-triangle**. This is honest —
+the canonical grid itself has hard cell boundaries — and correct under
+"inherit, never re-quantize." v1 is intentionally the **low-variety inheritance
+spine**: it interpolates smoothly and offers no exceptions, so its bare "look"
+is close to uniform-by-design. Softening those seams (ecotones, frontiers) is
+P5's job; strangeness and true variety are P3/P7 — all deferred (§9). The one
+thread of non-sameness in v1 is the seed-derived texture (§5).
 
 ## 5. Sub-cell texture (seed-derived)
 
@@ -149,7 +187,7 @@ discipline). Stream-consumption order is a contract.
 
 ```rust
 pub struct Exit {
-    pub direction: Direction, // compass bucket, or Up / Down(digit)
+    pub direction: Direction, // compass bucket, or Enter(digit) / Exit
     pub kind: ExitKind,       // Edge | Vertical  (extensible)
     pub to: RoomAddr,
 }
@@ -158,8 +196,12 @@ pub struct Exit {
 - **Lateral (3):** `addr.neighbors()` — the three geometric base-mesh edges —
   each named by `addr.bearing_to(&neighbor)` bucketed to a compass point
   (N/NE/E/SE/S/SW/W/NW). `neighbor[i]` is across the edge opposite corner `i`.
-- **Vertical:** `parent()` → `Up` (if any), `child(0..4)` → `Down(digit)`
-  (enter / step-back — the shipped vertical verbs).
+- **Vertical:** `child(0..4)` → `Enter(digit)` (descend into a finer sub-room),
+  `parent()` → `Exit` (step back out to the containing room). Deliberately
+  **not** `Up`/`Down`: the vertical verb is a change of *scale* (zoom), and
+  `Down` would collide with the future Underdark's real *stratum* descent
+  (subterranean rooms, 1.16/1.17). `Enter`/`Exit` keeps that semantic space
+  clean for when strata land.
 
 `ExitKind` is an **open enum** shaped so overlay kinds (river / road / tunnel /
 portal, keyed by `RoomId`) and passability deltas compose as additive variants
@@ -205,15 +247,19 @@ hornvale locale --world w.json [--at LAT,LON | --room ID] [--depth D]
 - `--depth D` default = **`globe_level + 6`** (six refinements below the
   canonical cell — a sub-cell patch on the order of a few km, always below the
   grid so inheritance is defined). Depth is validated against `MAX_DEPTH`.
-- Output (std-only manual formatting, matching the other `cmd_*`): the
-  coordinate, inherited biome, blended fields, texture aspect, and the exit
-  list with bearings and destination room ids.
+- The command builds one `LocaleContext` (§3), then describes the addressed
+  room. Default output is prose (std-only manual formatting, matching the other
+  `cmd_*`): the coordinate, inherited biome, blended fields, texture aspect, and
+  the exit list with bearings/enter-exit and destination room ids. `--json`
+  emits the `locale/room/v1` schema instead — the machine contract, exactly as
+  the CLI's cartographic commands render from `scene` JSON.
 
-**Artifact:** a drift-checked `hornvale locale` render for **seed 42** at a
-fixed room (address chosen at implementation, over land) written to
-`book/src/gallery/` and regenerated in CI's "Artifacts are current" step. All
-`f64` in the serialized/emitted form pass through `hornvale_kernel::quantize`
-at the emit boundary, so the artifact is cross-platform byte-stable.
+**Artifact:** a drift-checked `locale/room/v1` JSON render for **seed 42** at a
+fixed room (address chosen at implementation, over land) written under
+`book/src/reference/` (the schema-emitting home, beside `scene`'s), and
+regenerated in CI's "Artifacts are current" step. All `f64` in the serialized
+form pass through `hornvale_kernel::quantize` at the emit boundary, so the
+artifact is cross-platform byte-stable.
 
 ## 9. Deliberate non-goals (deferred, with homes)
 
@@ -244,13 +290,19 @@ interfaces v1 fixes.
 - **Save-format contracts:** the texture seed-label(s) and their consumption
   order join the frozen set via `streams`/`stream_labels()`. No change to the
   `RoomId` addressing contract.
-- **No `HashMap`/`HashSet`, no wall-clock:** `BTreeMap`/`Vec` only; time (if
-  ever sampled) is `WorldTime`.
+- **No `HashMap`/`HashSet`, no wall-clock:** `BTreeMap`/`Vec` only; observation
+  time is `WorldTime` (threaded, not read from a clock).
+- **Derived view, versioned schema:** `Locale` is a UNI-20 derived view — cheap,
+  re-derivable from the seed, never stored — emitted as the save-format-class
+  schema `locale/room/v1` in `scene`'s manner (additive-in-version; changed
+  meaning mints `v2`). The `LocaleContext` isolates the one expensive build so
+  the view stays cheap per room.
 
 ## 11. Testing
 
-- **Determinism:** `describe(world, addr)` byte-identical across repeated
-  calls; artifact drift-checked in CI.
+- **Determinism:** `ctx.describe(addr, at)` byte-identical across repeated
+  calls and across two independently-built contexts for the same world;
+  `locale/room/v1` artifact drift-checked in CI.
 - **Blend:** weights sum to `D`; blended field = weighted mean of corners;
   max-weight biome selection with lowest-`CellId` tie-break pinned.
 - **Above-grid:** `depth < globe_level` → `LocaleError::AboveGrid`.
@@ -279,11 +331,12 @@ any Confidence-Gradient bet this resolves, and a one-page retrospective in
 A TDD sequence, each step compiling and gated:
 1. `RoomAddr::containing` in the kernel (+ round-trip tests) — the one new
    substrate surface, first because §8 depends on it.
-2. The `hornvale-locale` crate skeleton, `Locale`/`LocaleFields`/`Exit`/
-   `SubCellTexture` types, and `describe` inheritance + blend (§4) over a
-   worldgen world.
+2. The `hornvale-locale` crate skeleton, the `locale/room/v1` types
+   (`Locale`/`LocaleFields`/`Exit`/`SubCellTexture`), the `LocaleContext`
+   (build-once coarse world), and `describe` inheritance + blend (§4).
 3. Sub-cell texture (§5) + the `streams` seed-labels.
-4. Exits (§6).
-5. The `hornvale locale` CLI subcommand (§8) + the drift-checked artifact.
+4. Exits (§6) — lateral compass + `Enter`/`Exit`.
+5. The `hornvale locale` CLI subcommand (§8), `--json` schema emit + prose, and
+   the drift-checked `locale/room/v1` artifact.
 6. Campaign DoD: book chronicle, freshness sweep, registry/CI wiring,
    retrospective.
