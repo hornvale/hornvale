@@ -346,6 +346,157 @@ impl AsRef<AstronomyView> for FullView {
     }
 }
 
+/// A metric's extractor, tagged by the view rung it reads. The tag *is* the
+/// metric's build-depth: the runner builds each study only as deep as its
+/// deepest selected metric. Under-building is impossible — an extractor
+/// physically cannot name a field its view type does not expose. **Additive
+/// only for now** (MAP-25 Stage 2 Task 4): `Metric.extract` still takes a
+/// `&WorldView`; the atomic swap to `Extractor` is Task 5.
+pub enum Extractor {
+    /// Reads astronomy only.
+    Astronomy(fn(&AstronomyView) -> MetricValue),
+    /// Reads terrain (+ astronomy).
+    Terrain(fn(&TerrainView) -> MetricValue),
+    /// Reads climate (+ terrain).
+    Climate(fn(&ClimateView) -> MetricValue),
+    /// Reads settlement/culture facts.
+    Settlement(fn(&SettlementView) -> MetricValue),
+    /// Reads religion/language/species facts.
+    Full(fn(&FullView) -> MetricValue),
+}
+
+impl Extractor {
+    /// The build depth this extractor requires. Climate maps to
+    /// `BuildDepth::Terrain` because climate commits no facts — a
+    /// Climate-rung metric needs a Terrain-depth world plus the climate
+    /// reconstruction, which `ClimateView`'s constructor performs.
+    pub fn rung(&self) -> BuildDepth {
+        match self {
+            Extractor::Astronomy(_) => BuildDepth::Astronomy,
+            Extractor::Terrain(_) | Extractor::Climate(_) => BuildDepth::Terrain,
+            Extractor::Settlement(_) => BuildDepth::Settlements,
+            Extractor::Full(_) => BuildDepth::Full,
+        }
+    }
+
+    /// Apply to a built view. The built view is always >= the extractor's
+    /// rung (the runner guarantees it by building to the max selected rung),
+    /// so the needed narrower view is reachable by `AsRef`. A shallower
+    /// built view than the extractor's rung is a runner bug and panics
+    /// loudly.
+    pub fn apply(&self, view: &BuiltView) -> MetricValue {
+        match (self, view) {
+            (Extractor::Astronomy(f), v) => f(v.astronomy()),
+            (Extractor::Terrain(f), v) => f(v.terrain()),
+            (Extractor::Climate(f), v) => f(v.climate()),
+            (Extractor::Settlement(f), v) => f(v.settlement()),
+            (Extractor::Full(f), BuiltView::Full(fv)) => f(fv),
+            (Extractor::Full(_), _) => panic!("Full extractor on a shallow view: runner bug"),
+        }
+    }
+}
+
+/// The view a study was built to — the runner's single per-world artifact.
+/// Built once, at the study's deepest selected metric's rung, then every
+/// metric's `Extractor` reads its own narrower view out of it via `AsRef`.
+pub enum BuiltView {
+    /// Built to `BuildDepth::Astronomy`.
+    Astronomy(AstronomyView),
+    /// Built to `BuildDepth::Terrain`.
+    Terrain(TerrainView),
+    /// A `Terrain`-depth build reconstructed with climate (Climate is a view
+    /// rung, not a build stop — see `Extractor::rung`).
+    Climate(ClimateView),
+    /// Built to `BuildDepth::Settlements`.
+    Settlement(SettlementView),
+    /// Built to `BuildDepth::Full`.
+    Full(FullView),
+}
+
+impl BuiltView {
+    /// Build a world to `depth` and wrap the result in the matching
+    /// variant. `BuildDepth` has no `Climate` rung (climate commits no
+    /// facts — see `Extractor::rung`), so this always produces one of
+    /// `Astronomy`/`Terrain`/`Settlement`/`Full`; a `BuiltView::Climate` is
+    /// only ever constructed by widening the view of a `Terrain`-depth
+    /// build for a Climate-rung metric, never returned here.
+    pub fn build_to(
+        seed: Seed,
+        pins: &SkyPins,
+        roster: Vec<hornvale_species::SpeciesDef>,
+        depth: BuildDepth,
+    ) -> Result<BuiltView, BuildError> {
+        match depth {
+            BuildDepth::Astronomy => Ok(BuiltView::Astronomy(AstronomyView::build_with_roster(
+                seed, pins, roster,
+            )?)),
+            BuildDepth::Terrain => Ok(BuiltView::Terrain(TerrainView::build_with_roster(
+                seed, pins, roster,
+            )?)),
+            BuildDepth::Settlements => Ok(BuiltView::Settlement(
+                SettlementView::build_with_roster(seed, pins, roster)?,
+            )),
+            BuildDepth::Full => Ok(BuiltView::Full(FullView::build_with_roster(
+                seed, pins, roster,
+            )?)),
+        }
+    }
+
+    /// The astronomy-rung view, reached by `AsRef` from whichever variant
+    /// this built view actually is.
+    fn astronomy(&self) -> &AstronomyView {
+        match self {
+            BuiltView::Astronomy(v) => v,
+            BuiltView::Terrain(v) => v.as_ref(),
+            BuiltView::Climate(v) => v.as_ref(),
+            BuiltView::Settlement(v) => v.as_ref(),
+            BuiltView::Full(v) => v.as_ref(),
+        }
+    }
+
+    /// The terrain-rung view. Panics on `BuiltView::Astronomy` — a
+    /// Terrain-or-deeper extractor applied to a shallower built view is a
+    /// runner bug (the runner guarantees the build depth matches the
+    /// deepest selected metric's rung).
+    fn terrain(&self) -> &TerrainView {
+        match self {
+            BuiltView::Astronomy(_) => {
+                panic!("terrain-rung extractor on an astronomy-only built view: runner bug")
+            }
+            BuiltView::Terrain(v) => v,
+            BuiltView::Climate(v) => v.as_ref(),
+            BuiltView::Settlement(v) => v.as_ref(),
+            BuiltView::Full(v) => v.as_ref(),
+        }
+    }
+
+    /// The climate-rung view. Panics on `BuiltView::Astronomy` or
+    /// `BuiltView::Terrain` — a climate-rung extractor applied to a
+    /// shallower built view is a runner bug.
+    fn climate(&self) -> &ClimateView {
+        match self {
+            BuiltView::Astronomy(_) | BuiltView::Terrain(_) => {
+                panic!("climate-rung extractor on a shallower built view: runner bug")
+            }
+            BuiltView::Climate(v) => v,
+            BuiltView::Settlement(v) => v.as_ref(),
+            BuiltView::Full(v) => v.as_ref(),
+        }
+    }
+
+    /// The settlement-rung view. Panics on any shallower built view — a
+    /// settlement-rung extractor applied to one is a runner bug.
+    fn settlement(&self) -> &SettlementView {
+        match self {
+            BuiltView::Astronomy(_) | BuiltView::Terrain(_) | BuiltView::Climate(_) => {
+                panic!("settlement-rung extractor on a shallower built view: runner bug")
+            }
+            BuiltView::Settlement(v) => v,
+            BuiltView::Full(v) => v.as_ref(),
+        }
+    }
+}
+
 /// A single-value outcome from a metric extractor.
 /// type-audit: pending(wave-3: Number.0), bare-ok(identifier-text: Text.0), bare-ok(flag: Flag.0)
 #[derive(Clone, Debug, PartialEq)]

@@ -15,8 +15,8 @@ pub use blackbox::record_failure;
 pub use chart::{bar_chart_svg, charts_for};
 pub use diff::{render_diff, render_diff_results};
 pub use metrics::{
-    AstronomyView, ClimateView, FullView, Metric, MetricValue, SettlementView, SummaryKind,
-    TerrainView, WorldView, registry, render_metric_list,
+    AstronomyView, BuiltView, ClimateView, Extractor, FullView, Metric, MetricValue,
+    SettlementView, SummaryKind, TerrainView, WorldView, registry, render_metric_list,
 };
 pub use publish::publish;
 pub use roster::{goblin_solo_roster, goblin_twin_solo_roster, serpent_tonal_solo_roster};
