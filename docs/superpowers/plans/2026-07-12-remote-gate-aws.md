@@ -185,9 +185,8 @@ Expected: FAIL — policy file missing.
       "Action": "ec2:RunInstances",
       "Resource": "*",
       "Condition": {
-        "StringEquals": { "ec2:InstanceType": "c7g.4xlarge", "aws:RequestedRegion": "us-east-1" },
-        "StringLike": { "aws:RequestTag/project": "hornvale-gate" },
-        "Null": { "ec2:SpotInstanceRequest": "false" }
+        "StringEquals": { "ec2:InstanceType": "c7g.4xlarge", "aws:RequestedRegion": "us-east-1", "ec2:InstanceMarketType": "spot" },
+        "StringLike": { "aws:RequestTag/project": "hornvale-gate" }
       }
     },
     {
@@ -198,11 +197,18 @@ Expected: FAIL — policy file missing.
       "Condition": { "StringEquals": { "aws:ResourceTag/project": "hornvale-gate", "aws:RequestedRegion": "us-east-1" } }
     },
     {
-      "Sid": "DescribeAndPassAndCache",
+      "Sid": "DescribeAndCache",
       "Effect": "Allow",
-      "Action": ["ec2:DescribeInstances", "ec2:DescribeSpotInstanceRequests", "ec2:DescribeLaunchTemplates", "iam:PassRole"],
+      "Action": ["ec2:DescribeInstances", "ec2:DescribeSpotInstanceRequests", "ec2:DescribeLaunchTemplates"],
       "Resource": "*",
       "Condition": { "StringEquals": { "aws:RequestedRegion": "us-east-1" } }
+    },
+    {
+      "Sid": "PassOnlyTheBoxRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::*:role/hornvale-gate-runner-box",
+      "Condition": { "StringEquals": { "iam:PassedToService": "ec2.amazonaws.com" } }
     },
     {
       "Sid": "SccacheBucketOnly",
@@ -324,13 +330,22 @@ myip="$(curl -s https://checkip.amazonaws.com)"
 # ... create SG if absent, authorize tcp/22 from ${myip}/32, tag project ...
 section "Keypair"
 # ... create keypair if absent, write private key to ~/.hornvale-gate/id (600), tag ...
+section "Box instance profile (hornvale-gate-runner-box)"
+# The BOX's own role — distinct from the runner user and the Lambda role. The
+# runner's scoped iam:PassRole (Task 2) targets exactly this role name, so it
+# MUST exist or every launch is denied. Create if absent:
+#   - role `hornvale-gate-runner-box`, trust policy = ec2.amazonaws.com;
+#   - inline policy: ec2:TerminateInstances on instances tagged project=hornvale-gate
+#     (the 15-min idle self-terminate), + s3 Get/Put/List on the sccache bucket
+#     (RUSTC_WRAPPER=sccache);
+#   - instance profile `hornvale-gate-runner-box`, role added; tag project.
 section "Launch template"
 # ... register/refresh launch template: spot, $HVG_INSTANCE_TYPE, $ami, SG, keypair,
 #     IamInstanceProfile=hornvale-gate-runner-box, base64(userdata.sh with bucket templated),
 #     TagSpecifications project=hornvale-gate ...
 echo "setup complete (dry-run=$DRY_RUN)"
 ```
-> The `...` blocks are filled with concrete `aws ec2` calls during Task 8's live iteration; each is a `create-if-absent` guarded by a `describe`. Keep every created resource tagged `project=hornvale-gate`.
+> The `...` blocks are filled with concrete `aws` calls during Task 8's live iteration; each is a `create-if-absent` guarded by a `describe`. Keep every created resource tagged `project=hornvale-gate`. The box instance-profile role is the target of the runner's scoped `iam:PassRole` — creating it here closes the gap the Task 2 review surfaced.
 
 - [ ] **Step 3: Verify structure without spending** — `bash scripts/aws-gate/setup.sh --dry-run` prints the intended actions (admin `sts`/`ssm`/`checkip` reads are free and fine); `shellcheck scripts/aws-gate/setup.sh scripts/aws-gate/userdata.sh` clean.
 
