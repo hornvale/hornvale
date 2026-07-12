@@ -13,6 +13,7 @@ pub trait Domain {
     /// This domain's crate name — the streams-manifest key
     /// (e.g. `"hornvale-astronomy"`). Implementations return
     /// `env!("CARGO_PKG_NAME")` so the key is compiled from the crate itself.
+    /// type-audit: bare-ok(identifier-text)
     fn crate_name(&self) -> &'static str;
 
     /// Register this domain's predicates and concepts into the shared registry.
@@ -20,6 +21,7 @@ pub trait Domain {
 
     /// This domain's seed-derivation stream labels (permanent save-format
     /// contracts). Empty for domains that draw no seed streams.
+    /// type-audit: bare-ok(identifier-text)
     fn stream_labels(&self) -> Vec<(&'static str, &'static str)> {
         Vec::new()
     }
