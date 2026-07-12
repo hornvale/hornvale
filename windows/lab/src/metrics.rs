@@ -9,8 +9,8 @@ use hornvale_language::{
 use hornvale_religion::beliefs_of;
 use hornvale_terrain::GlobeSummary;
 use hornvale_worldgen::{
-    BuildError, Sky, SkyChoice, build_world_with_roster, climate_of, flagship_of, language_of_in,
-    observed_phenomena_as_in, sky_of, terrain_of,
+    BuildDepth, BuildError, Sky, SkyChoice, build_world_to, build_world_with_roster, climate_of,
+    flagship_of, language_of_in, observed_phenomena_as_in, sky_of, terrain_of,
 };
 
 use hornvale_astronomy::SkyPins;
@@ -75,6 +75,274 @@ impl WorldView {
             climate,
             roster,
         })
+    }
+}
+
+// --- The narrowed view chain (spec §4 / MAP-25): AstronomyView ⊂
+// TerrainView ⊂ ClimateView ⊂ SettlementView ⊂ FullView. Each deeper view
+// *contains* the shallower one, so a coercion down the chain is a field
+// borrow (no recompute), and each rung's constructor builds the world
+// exactly once, at its own target depth, then reconstructs the cheap
+// derived pieces (sky/terrain/climate) the same way `WorldView::build`
+// always has. `WorldView` above is untouched; these live alongside it
+// until a later task migrates extractors off it. ---
+
+/// Astronomy rung: star system, calendar, genesis notes. The narrowest view
+/// in the chain — every deeper rung coerces down to this one via `AsRef`,
+/// so an astronomy-only metric (including the two that read only `roster`)
+/// never pays for terrain/climate/settlement/full generation.
+/// type-audit: bare-ok(prose: notes)
+pub struct AstronomyView {
+    /// The world ledger (astronomy-depth facts, or deeper if this view was
+    /// reconstructed as part of a deeper rung's build).
+    pub world: World,
+    /// The reconstructed or constant star system.
+    pub system: StarSystem,
+    /// The calendar derived from the system.
+    pub calendar: Calendar,
+    /// Genesis notes recorded during sky generation.
+    pub notes: Vec<String>,
+    /// The species roster this view was built from (default = shipped).
+    pub roster: Vec<hornvale_species::SpeciesDef>,
+}
+
+impl AstronomyView {
+    /// Build an astronomy-rung view with the shipped species roster.
+    pub fn build(seed: Seed, pins: &SkyPins) -> Result<AstronomyView, BuildError> {
+        Self::build_with_roster(seed, pins, hornvale_worldgen::default_roster())
+    }
+
+    /// Build an astronomy-rung view with an explicit species roster.
+    pub fn build_with_roster(
+        seed: Seed,
+        pins: &SkyPins,
+        roster: Vec<hornvale_species::SpeciesDef>,
+    ) -> Result<AstronomyView, BuildError> {
+        Self::build_to(seed, pins, roster, BuildDepth::Astronomy)
+    }
+
+    /// Build the world to `depth` and reconstruct the astronomy-rung fields.
+    /// Deeper rungs call this directly with their own target depth so the
+    /// world is built exactly once per view, never once per rung.
+    fn build_to(
+        seed: Seed,
+        pins: &SkyPins,
+        roster: Vec<hornvale_species::SpeciesDef>,
+        depth: BuildDepth,
+    ) -> Result<AstronomyView, BuildError> {
+        let world = build_world_to(
+            seed,
+            pins,
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &hornvale_worldgen::SettlementPins::default(),
+            &roster,
+            depth,
+        )?;
+        let sky = sky_of(&world)?;
+        let Sky::Generated(sky) = sky else {
+            return Err(BuildError::Pins(
+                "expected Generated sky, got Constant".to_string(),
+            ));
+        };
+        Ok(AstronomyView {
+            system: sky.system().clone(),
+            calendar: sky.calendar().clone(),
+            notes: sky.notes().to_vec(),
+            world,
+            roster,
+        })
+    }
+}
+
+/// Terrain rung: astronomy + the tectonic globe.
+pub struct TerrainView {
+    /// The astronomy rung this view extends.
+    pub astronomy: AstronomyView,
+    /// The tectonic globe summary (plates, ocean fraction, sea level, peak).
+    pub globe: GlobeSummary,
+    /// The full tectonic globe (for coverage metrics over cells).
+    pub terrain: hornvale_terrain::GeneratedTerrain,
+}
+
+impl TerrainView {
+    /// Build a terrain-rung view with the shipped species roster.
+    pub fn build(seed: Seed, pins: &SkyPins) -> Result<TerrainView, BuildError> {
+        Self::build_with_roster(seed, pins, hornvale_worldgen::default_roster())
+    }
+
+    /// Build a terrain-rung view with an explicit species roster.
+    pub fn build_with_roster(
+        seed: Seed,
+        pins: &SkyPins,
+        roster: Vec<hornvale_species::SpeciesDef>,
+    ) -> Result<TerrainView, BuildError> {
+        Self::build_to(seed, pins, roster, BuildDepth::Terrain)
+    }
+
+    /// Build the world to `depth` and reconstruct the terrain-rung fields
+    /// atop the astronomy rung built at the same depth.
+    fn build_to(
+        seed: Seed,
+        pins: &SkyPins,
+        roster: Vec<hornvale_species::SpeciesDef>,
+        depth: BuildDepth,
+    ) -> Result<TerrainView, BuildError> {
+        let astronomy = AstronomyView::build_to(seed, pins, roster, depth)?;
+        let terrain = terrain_of(&astronomy.world)?;
+        let globe = hornvale_terrain::summarize(terrain.globe());
+        Ok(TerrainView {
+            astronomy,
+            globe,
+            terrain,
+        })
+    }
+}
+
+impl AsRef<AstronomyView> for TerrainView {
+    fn as_ref(&self) -> &AstronomyView {
+        &self.astronomy
+    }
+}
+
+/// Climate rung: terrain + reconstructed climate. Climate commits no facts
+/// of its own, so this rung builds the world only to `BuildDepth::Terrain`
+/// (or deeper, if reached from a deeper rung's constructor) and adds the
+/// `climate_of` reconstruction.
+pub struct ClimateView {
+    /// The terrain rung this view extends.
+    pub terrain: TerrainView,
+    /// The derived climate (biome + habitability).
+    pub climate: GeneratedClimate,
+}
+
+impl ClimateView {
+    /// Build a climate-rung view with the shipped species roster.
+    pub fn build(seed: Seed, pins: &SkyPins) -> Result<ClimateView, BuildError> {
+        Self::build_with_roster(seed, pins, hornvale_worldgen::default_roster())
+    }
+
+    /// Build a climate-rung view with an explicit species roster.
+    pub fn build_with_roster(
+        seed: Seed,
+        pins: &SkyPins,
+        roster: Vec<hornvale_species::SpeciesDef>,
+    ) -> Result<ClimateView, BuildError> {
+        Self::build_to(seed, pins, roster, BuildDepth::Terrain)
+    }
+
+    /// Build the world to `depth` and reconstruct the climate-rung fields
+    /// atop the terrain rung built at the same depth.
+    fn build_to(
+        seed: Seed,
+        pins: &SkyPins,
+        roster: Vec<hornvale_species::SpeciesDef>,
+        depth: BuildDepth,
+    ) -> Result<ClimateView, BuildError> {
+        let terrain = TerrainView::build_to(seed, pins, roster, depth)?;
+        let climate = climate_of(&terrain.astronomy.world)?;
+        Ok(ClimateView { terrain, climate })
+    }
+}
+
+impl AsRef<TerrainView> for ClimateView {
+    fn as_ref(&self) -> &TerrainView {
+        &self.terrain
+    }
+}
+impl AsRef<AstronomyView> for ClimateView {
+    fn as_ref(&self) -> &AstronomyView {
+        self.terrain.as_ref()
+    }
+}
+
+/// Settlement rung: climate + a world built to settlement depth (spec §4 /
+/// MAP-25). A metric handed a `SettlementView` reads a world whose
+/// religion/culture/species/deep-time facts do not exist yet — the type
+/// enforces the write-side boundary (this view has no `FullView`-only
+/// fields); the metamorphic guard is the read-side backstop.
+pub struct SettlementView {
+    /// The climate rung this view extends.
+    pub climate: ClimateView,
+}
+
+impl SettlementView {
+    /// Build a settlement-rung view with the shipped species roster.
+    pub fn build(seed: Seed, pins: &SkyPins) -> Result<SettlementView, BuildError> {
+        Self::build_with_roster(seed, pins, hornvale_worldgen::default_roster())
+    }
+
+    /// Build a settlement-rung view with an explicit species roster.
+    pub fn build_with_roster(
+        seed: Seed,
+        pins: &SkyPins,
+        roster: Vec<hornvale_species::SpeciesDef>,
+    ) -> Result<SettlementView, BuildError> {
+        let climate = ClimateView::build_to(seed, pins, roster, BuildDepth::Settlements)?;
+        Ok(SettlementView { climate })
+    }
+}
+
+impl AsRef<ClimateView> for SettlementView {
+    fn as_ref(&self) -> &ClimateView {
+        &self.climate
+    }
+}
+impl AsRef<TerrainView> for SettlementView {
+    fn as_ref(&self) -> &TerrainView {
+        self.climate.as_ref()
+    }
+}
+impl AsRef<AstronomyView> for SettlementView {
+    fn as_ref(&self) -> &AstronomyView {
+        self.climate.as_ref()
+    }
+}
+
+/// Full rung: a world built to full depth (culture, religion, species,
+/// deep time — today's full build).
+pub struct FullView {
+    /// The settlement rung this view extends.
+    pub settlement: SettlementView,
+}
+
+impl FullView {
+    /// Build a full-rung view with the shipped species roster.
+    pub fn build(seed: Seed, pins: &SkyPins) -> Result<FullView, BuildError> {
+        Self::build_with_roster(seed, pins, hornvale_worldgen::default_roster())
+    }
+
+    /// Build a full-rung view with an explicit species roster.
+    pub fn build_with_roster(
+        seed: Seed,
+        pins: &SkyPins,
+        roster: Vec<hornvale_species::SpeciesDef>,
+    ) -> Result<FullView, BuildError> {
+        let climate = ClimateView::build_to(seed, pins, roster, BuildDepth::Full)?;
+        Ok(FullView {
+            settlement: SettlementView { climate },
+        })
+    }
+}
+
+impl AsRef<SettlementView> for FullView {
+    fn as_ref(&self) -> &SettlementView {
+        &self.settlement
+    }
+}
+impl AsRef<ClimateView> for FullView {
+    fn as_ref(&self) -> &ClimateView {
+        self.settlement.as_ref()
+    }
+}
+impl AsRef<TerrainView> for FullView {
+    fn as_ref(&self) -> &TerrainView {
+        self.settlement.as_ref()
+    }
+}
+impl AsRef<AstronomyView> for FullView {
+    fn as_ref(&self) -> &AstronomyView {
+        self.settlement.as_ref()
     }
 }
 
@@ -2617,6 +2885,23 @@ pub fn render_metric_list() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn narrowed_views_build_and_coerce() {
+        let pins = SkyPins::default();
+        assert!(AstronomyView::build(Seed(42), &pins).is_ok());
+        let terrain = TerrainView::build(Seed(42), &pins);
+        assert!(terrain.is_ok());
+        let terrain = terrain.unwrap();
+        assert!(ClimateView::build(Seed(42), &pins).is_ok());
+        assert!(SettlementView::build(Seed(42), &pins).is_ok());
+        let full = FullView::build(Seed(42), &pins);
+        assert!(full.is_ok());
+        let full = full.unwrap();
+
+        let coerced: &TerrainView = full.as_ref();
+        assert_eq!(coerced.globe.plate_count, terrain.globe.plate_count);
+    }
 
     #[test]
     fn seed_42_default_builds_successfully() {
