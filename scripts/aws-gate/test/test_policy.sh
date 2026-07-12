@@ -24,5 +24,14 @@ pr_resources = pr_resource if isinstance(pr_resource, list) else [pr_resource]
 assert "*" not in pr_resources, "iam:PassRole must not be scoped to Resource: *"
 assert any("role/hornvale-gate-runner-box" in r for r in pr_resources), \
     "iam:PassRole must be scoped to the box role"
+
+# ec2:CreateTags is FORBIDDEN: with it, the runner could rewrite its own box's
+# `project` tag and become invisible to every tag-based kill switch (circuit
+# breaker, panic, teardown, and the box's own idle self-terminate) — an
+# unreapable box. The runner never needs it (launches tag via RunInstances
+# --tag-specifications), so it must not appear anywhere in the policy.
+all_actions=[a for s in d["Statement"] for a in (s.get("Action") if isinstance(s.get("Action"),list) else [s.get("Action")])]
+assert "ec2:CreateTags" not in all_actions, \
+    "runner must NOT be granted ec2:CreateTags (tag-rewrite = kill-switch evasion)"
 print("policy OK")
 PY
