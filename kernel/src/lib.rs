@@ -18,6 +18,7 @@ pub mod refine;
 pub mod registry;
 pub mod room;
 pub mod seed;
+pub mod streams;
 pub mod world;
 
 pub use cast::asciinema_v2;
@@ -31,4 +32,5 @@ pub use refine::choose_consistent;
 pub use registry::{ConceptDef, ConceptKind, ConceptRegistry, PredicateDef, RegistryError};
 pub use room::{MAX_DEPTH, RoomAddr, RoomAddrError, RoomId, RoomIdError};
 pub use seed::{Seed, Stream};
+pub use streams::stream_labels;
 pub use world::{NAME, World};

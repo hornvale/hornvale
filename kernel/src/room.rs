@@ -5,7 +5,9 @@
 //! only in position geometry (registry MAP-28).
 
 use crate::GeoCoord;
+use crate::Seed;
 use crate::geosphere::{base_data, normalize, slerp_mid};
+use crate::streams::{ROOM_CHILD, ROOM_FACE};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// The deepest path a `RoomId` can pack: 5 face bits + 1 sentinel + 2*29 digit
@@ -384,11 +386,106 @@ impl RoomAddr {
     }
 }
 
+impl RoomAddr {
+    /// The containing room one level coarser, or `None` at a base face.
+    pub fn parent(&self) -> Option<RoomAddr> {
+        if self.path.is_empty() {
+            return None;
+        }
+        let mut path = self.path.clone();
+        path.pop();
+        Some(RoomAddr {
+            face: self.face,
+            path,
+        })
+    }
+
+    /// Descend into child `digit` (0..4). Fails past `MAX_DEPTH` or on a bad digit.
+    /// type-audit: bare-ok(index)
+    pub fn child(&self, digit: u8) -> Result<RoomAddr, RoomAddrError> {
+        if digit >= 4 {
+            return Err(RoomAddrError::Invalid);
+        }
+        if self.path.len() >= MAX_DEPTH {
+            return Err(RoomAddrError::DepthExceedsCap);
+        }
+        let mut path = self.path.clone();
+        path.push(digit);
+        Ok(RoomAddr {
+            face: self.face,
+            path,
+        })
+    }
+
+    /// The containing room at coarser `depth`, or `None` if `depth > self.depth()`.
+    /// type-audit: bare-ok(count)
+    pub fn ancestor(&self, depth: u32) -> Option<RoomAddr> {
+        let d = depth as usize;
+        if d > self.path.len() {
+            return None;
+        }
+        Some(RoomAddr {
+            face: self.face,
+            path: self.path[..d].to_vec(),
+        })
+    }
+
+    /// Deterministic per-room seed, derived from the integer address only —
+    /// never the float position, so all room content is platform-exact.
+    pub fn seed(&self, world: Seed) -> Seed {
+        let mut s = world.derive(ROOM_FACE).derive(&self.face.to_string());
+        for &d in &self.path {
+            s = s.derive(ROOM_CHILD).derive(&d.to_string());
+        }
+        s
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Seed;
     use crate::geosphere::{Geosphere, base_data};
     use std::collections::{BTreeMap, BTreeSet};
+
+    #[test]
+    fn vertical_verbs_compose() {
+        let a = RoomAddr {
+            face: 4,
+            path: vec![1, 2, 3],
+        };
+        let child = a.child(0).unwrap();
+        assert_eq!(child.path, vec![1, 2, 3, 0]);
+        assert_eq!(child.parent(), Some(a.clone()));
+        assert_eq!(
+            a.ancestor(1),
+            Some(RoomAddr {
+                face: 4,
+                path: vec![1]
+            })
+        );
+        assert_eq!(
+            RoomAddr {
+                face: 4,
+                path: vec![]
+            }
+            .parent(),
+            None
+        );
+        assert_eq!(a.child(4), Err(RoomAddrError::Invalid));
+    }
+
+    #[test]
+    fn room_seed_is_deterministic_and_hierarchical() {
+        let world = Seed(42);
+        let a = RoomAddr {
+            face: 3,
+            path: vec![0, 1, 2],
+        };
+        assert_eq!(a.seed(world), a.seed(world));
+        // a parent and its child derive different seeds
+        assert_ne!(a.seed(world), a.parent().unwrap().seed(world));
+    }
 
     // Canonical key of a face at uniform depth: (base face, sorted bary triple).
     fn fkey(face: u8, mut tri: [Bary; 3]) -> (u8, [Bary; 3]) {
