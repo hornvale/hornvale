@@ -15,6 +15,13 @@ section() { printf '\n== %s\n' "$1"; }
 section "IAM runner identity"
 if [ "$DRY_RUN" = 1 ]; then echo "DRY: setup_iam"; else setup_iam; fi
 
+section "EC2 Spot service-linked role (one-time account bootstrap)"
+# The first spot launch needs AWSServiceRoleForEC2Spot; the least-privilege
+# runner can't create it, so provision it here as admin. Propagation lags a
+# few seconds after first creation.
+aws_admin iam get-role --role-name AWSServiceRoleForEC2Spot >/dev/null 2>&1 || \
+    run aws_admin iam create-service-linked-role --aws-service-name spot.amazonaws.com >/dev/null 2>&1 || true
+
 section "sccache S3 bucket"
 bucket="hornvale-gate-sccache-$(aws_admin sts get-caller-identity --query Account --output text)"
 aws_admin s3api head-bucket --bucket "$bucket" 2>/dev/null || run aws_admin s3api create-bucket --bucket "$bucket" --region "$HVG_REGION"

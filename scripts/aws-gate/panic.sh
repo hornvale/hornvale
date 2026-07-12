@@ -19,8 +19,12 @@ panic_all() {
       --query 'Reservations[].Instances[].InstanceId' --output text || true)"
   # shellcheck disable=SC2086
   [ -n "$ids" ] && aws_admin ec2 terminate-instances --instance-ids $ids || true
-  echo "PANIC: cancelling spot requests + deleting launch template"
-  # ... cancel open spot requests tagged project; delete the launch template by name ...
+  echo "PANIC: deleting the launch template (belt-and-suspenders; key-disable already blocks launches)"
+  # One-time spot requests auto-close when their instance terminates and are not
+  # separately tagged, so there is nothing safe to bulk-cancel here (cancelling
+  # by state alone could hit unrelated workloads). Deleting the template by name
+  # stops any reuse of it; setup.sh recreates it on re-enable.
+  aws_admin ec2 delete-launch-template --launch-template-name hornvale-gate >/dev/null 2>&1 || true
   echo "PANIC: complete — runner disabled. Re-enable with scripts/aws-gate/setup.sh"
 }
 
