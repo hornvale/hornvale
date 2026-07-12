@@ -13,6 +13,7 @@ setup_iam() {
   # Re-enable path: reactivate any key a prior panic or budget action disabled,
   # and detach the hard-budget deny policy, so the existing profile works again
   # instead of minting a duplicate key.
+  # shellcheck disable=SC2016  # backticks are JMESPath literal syntax, not shell
   for k in $(aws_admin iam list-access-keys --user-name "$user" --query 'AccessKeyMetadata[?Status==`Inactive`].AccessKeyId' --output text 2>/dev/null || true); do
     aws_admin iam update-access-key --user-name "$user" --access-key-id "$k" --status Active || true
   done
