@@ -211,6 +211,16 @@ Two rules fall out of the lattice:
   *decomposes* into scalar quantities + a direction (magnitude is a ratio
   scalar; direction is a cyclic angle), so nothing built here forecloses them.
 
+**Derived units.** No dimensional algebra — it is monolithic (every unit coupled
+through one exponent system), which 0008 already declined and which would
+violate "adding a quantity must never edit an existing one." A relation between
+units is a **named-law constructor** (`Speed::over(distance, duration)`,
+`Energy::kinetic(mass, speed)`) that documents the physical law it embodies; an
+operator impl (`impl Div<Duration> for Distance`) is added only where the
+operation is unambiguous and frequent. Derived units are materialized on demand
+(most base×base combinations are meaningless); magnitude (km vs m vs Mm) is an
+accessor, never a type.
+
 The decision doc records the datum mental model above (primary/derived, the
 rate ladder), the Stevens spine, and these axes as its reasoning, so future
 unit work inherits the map.
