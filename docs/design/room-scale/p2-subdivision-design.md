@@ -201,7 +201,7 @@ three level-5 corner cells** and refines locally:
   dyadic rationals** `(i, j, k)/2^d`, so the blend needs no transcendentals.
   Coarse fields sample as the weighted blend of the three `CellMap` values, e.g.
   `biome_field = Σ wᵢ · coarse.get(cellᵢ)` (scalar fields; categorical fields take
-  the max-weight corner or blend then re-classify — §13). This is exactly a P1
+  the max-weight corner or blend then re-classify — §14). This is exactly a P1
   leaf field; room-depth noise, seeded by the integer address (§8), adds the
   sub-cell texture.
 
@@ -271,11 +271,24 @@ the identical room. Chunks are therefore a **persistence + indexing + residency*
 concern, never a generation-correctness one, and *correctness is independent of
 what is loaded*.
 
-**Chunk key = an address prefix of length `k`.** Nothing else. room → chunk is
-prefix truncation; chunk adjacency is the same T-junction logic as room adjacency
-(a chunk is just a big room); and it nests for free — a busier region indexes at a
-longer prefix. **Do not** introduce a second coordinate system (a lat/long chunk
-grid): that re-imports the very seam-mismatch trap Approach C exists to escape.
+**The key is two layers — freeze only the address.** A first pass framed this as
+"pick a chunk-prefix length `k`" and freeze it; that optimizes the wrong quantity.
+A fixed prefix makes chunks uniform in *area*, but a ledger's cost scales with
+*weight* (delta count), so a metropolis chunk and an ocean chunk — same size on the
+map — are wildly unequal files. Every mature spatial-log system (spatial B-trees,
+R-trees, LSM stores, even ZIP+4 and cadastral lots) instead splits on *density*.
+So:
+
+- **Logical key = the full room address** — already frozen by `RoomId` (§4,
+  decision 0006). room → chunk-of-any-prefix is just truncation; a chunk is a big
+  room; it nests for free. **Do not** add a second coordinate system (a lat/long
+  grid): that re-imports the seam-mismatch trap Approach C exists to escape.
+- **Physical segmentation = adaptive, and explicitly *not* a contract** — group
+  addresses into files by a runtime policy (below), rebuildable from the ledger and
+  never referenced by content, so it is free to evolve.
+
+The thing that felt like it needed a frozen number is exactly the thing that must
+*not* be frozen; the thing that must be frozen is the address we already have.
 
 **A chunk is a namespace + index, not a pre-generated block.** "Load chunk C"
 loads its coarse fields and its *delta index* — not its millions of latent rooms,
@@ -293,6 +306,31 @@ Camping in one spot deepens a chunk and accretes generated rooms, but those are
 disposable (regenerate in microseconds). Only *consequences* persist, and they go
 in the ledger.
 
+**The physical segment is an event-sourced LSM store** (LevelDB/Bitcask/Datomic
+lineage) — which fits, because the ledger is *already* append-only and
+contradiction-checked. A segment grows by appending; at a **save-boundary
+structural trigger** (never wall-clock — constitutional) it does one of three
+things, chosen by *why* it grew:
+
+```
+  many distinct rooms touched  -> SPLIT spatially (the region is genuinely busy)
+  one room re-touched a lot     -> COMPACT in place (supersession); you CANNOT
+                                   split below a single room
+  old, settled deltas           -> SNAPSHOT: fold history into a base state
+```
+
+"Split at N" is really that three-way decision. Constitutional edges: compaction
+is **local, never a global rewrite**; and a *lossy* snapshot becomes authoritative,
+so it must be **full-precision** — never a quantized checkpoint re-derived forward
+from (the Lorenz guard-rail). Reverts are **appends** (a retracting fact), not
+mutations, so history stays replayable. Segments **split but never merge** — a
+cooled region compacts and rests; storage is cheap, merge is complexity. The **hot
+single room is the true floor**: below one room, splitting stops and in-room
+snapshotting takes over — a genuinely storied room earning its own store is a
+feature (cycle 03's rare deep places), not an exception. Emergent bonus: the layout
+self-organizes into a legible *map of consequence* — dense where a world was
+played, empty elsewhere, zero tuning.
+
 **The one real trap: the monolithic ledger.** Today a `World` is one ledger
 serialized to one JSON. At planetary room scale, consequence counts outgrow a
 load-everything blob — and the save format is exactly the kind of contract the
@@ -308,11 +346,9 @@ keyed/shardable by address prefix. A world then reads as two tiers —
 ```
 
 — still "a world is a seed plus a ledger," just spatially partitioned; an
-untouched world remains just a seed. The partition-key length becomes a **frozen
-save-format contract** once chosen, so it is a deliberate decision (see decision
-`the-room-tier-ledger-is-chunk-partitioned`). Keeping the *logical* partition (a
-rebuildable index) separate from the *physical* file layout preserves freedom to
-evolve the on-disk form later.
+untouched world remains just a seed. Because **only the address is a contract** (no
+chunk size is), the sole frozen surface is one we already own; the physical
+segmentation evolves freely (decision `the-room-tier-ledger-is-chunk-partitioned`).
 
 **Span features cross chunks; derive them top-down.** Rivers, roads, migration
 routes, a territory's extent — simulate none of them room-by-room (that forces
@@ -320,20 +356,85 @@ loading the path). Plan them at the coarse tier and let each room compute its ow
 participation locally ("does the river cross my triangle?" from coarse routing +
 my address) — "coarse constrains fine" again. Wandering agents use `position =
 f(seed, time)` (P8), computable without walking the path. *Stateful*
-border-crossing NPCs are the genuinely harder case, deferred to a handoff protocol
-rather than solved in the mesh (§13).
+border-crossing agents are handled by the authority-handoff protocol (§11), not in
+the mesh.
 
-## 11. Constitutional fit — checklist
+## 11. Concurrency & write authority
+
+A MUD is multi-writer, so concurrent deltas to the same region need deterministic
+reconciliation. Partitioning makes this **spatially local**: disjoint rooms write
+disjoint delta streams and never conflict, so the whole question reduces to the
+rare **contended hot room**.
+
+**The chunk is the write-authority unit** — a Domain-Driven-Design *aggregate
+root*: one authority serializes a chunk's writes; within it invariants hold
+synchronously, across chunks consistency is eventual. That is quadruple duty — the
+prefix-chunk is residency + storage-segment + index + **authority** — and it is the
+classic MMO server-per-zone pattern; cross-chunk play is disjoint by construction.
+
+**The near-term sim needs almost none of this.** With one trusted authority (the
+sim itself) every write is already serialized and the machinery below is dormant.
+What matters now is preserving **three cheap invariants** so the multiplayer future
+stays reachable without a rewrite:
+
+1. **Model a consequence as *proposed action → validated committed fact*** — even
+   single-player. Costs nothing now; is the entire basis of safe *untrusted* play
+   later (a client proposes; the authority validates against rules + prior state
+   and only then commits — anti-cheat falls out, because the authority re-derives
+   the result and never trusts the client's claim).
+2. **Keep the chunk as the aggregate / authority boundary** (it already is).
+3. **Keep determinism absolute** (constitutional) — it gifts cheap forking and
+   rollback (below).
+
+**Reconciling the genuinely-contended, when it arises.** Maximize commutative
+deltas (CRDT-style: two players dropping *different* items never contend — the
+ledger's contradiction-check is the non-commuting detector); order the remainder by
+a **deterministic total order that respects causality** — key `(WorldTime.day,
+fair-tiebreak)`, reusing the constitutional sim-clock (no wall-clock) and the
+existing `total_cmp`-with-tiebreak discipline. The tiebreak is seeded by a per-tick
+hash of the *contending set* (not raw `agent-id`, which would let a low id always
+win), so ties are fair and still reproducible. The reconciled state is **invented
+convention, not discovered truth** — pick the cheap fair rule and stop.
+
+**Reserved for the multiplayer / Living-Globe future** — nothing to build yet, but
+foreclosed if the three invariants are violated:
+
+```
+  NEED                       OFF-THE-SHELF ANSWER              TRIGGER
+  ------------------------   ------------------------------    -----------------------
+  untrusted clients          authority VALIDATES, not just     in-browser clients
+                             orders (action vs fact)
+  agent crosses a seam       ATC-style handoff: one owner      stateful cross-chunk
+                             at a time, clean transfer         agent
+  action spans chunks        saga / 2-phase commit +           drag item A->B across
+                             idempotency keys                  a seam
+  real-time responsiveness   client prediction + rollback      human play on a
+                             (netcode) — FREE here, as the     sim clock
+                             world re-derives deterministically
+  varying contention         consistency is a modular          wilderness vs an
+                             SPECTRUM per chunk (eventual       auction house
+                             for wilderness, strong for hot)
+```
+
+The one hard corner is **untrusted × cross-chunk** (a browser client dragging an
+item across a seam): validation at both authorities + a saga + a handoff at once —
+rare, nameable, the concurrency analogue of the hot-room floor. True peer-to-peer
+with *no* authority (needing consensus / vector clocks) is out of scope;
+per-chunk authority is required for any multi-writer deployment.
+
+## 12. Constitutional fit — checklist
 
 - **Determinism.** Geometry is a pure path-walk (byte-identical to a full
   `Geosphere::new(L)`); seeds are integer-address-only (§8); field samples
-  quantized before classification. No wall-clock.
+  quantized before classification; concurrent deltas fold by a deterministic
+  causal order (§11), not wall-clock.
 - **Save-format contracts (new, frozen).** (a) the `subdivide` child-order as the
   addressing alphabet; (b) the base-face numbering from `base_icosahedron()`;
-  (c) the 30-edge gluing table; (d) `RoomId` packing; (e) the room-tier ledger's
-  chunk partition-key length (§10, decision
-  `the-room-tier-ledger-is-chunk-partitioned`). Changing any is an epoch-suffix
-  regeneration, never an edit.
+  (c) the 30-edge gluing table; (d) `RoomId` packing — which is *also* the
+  room-tier ledger's only frozen key (§10): physical segmentation is adaptive and
+  explicitly **not** a contract (decision
+  `the-room-tier-ledger-is-chunk-partitioned`). Changing any of (a)–(d) is an
+  epoch-suffix regeneration, never an edit.
 - **std-only + serde.** All of it — hashing, slerp, the neighbor walk, the gluing
   table — is std math and fixed data. No new crates (no H3/S2 crate; we borrow
   their *addressing math*, not their code).
@@ -343,7 +444,7 @@ rather than solved in the mesh (§13).
   **locale window** (synthesis §4) composes the P1 stack over rooms. No domain
   depends on another.
 
-## 12. Validation plan (prototype order)
+## 13. Validation plan (prototype order)
 
 1. **Neighbor walk first** — it is the risk. Implement §6 integer-only.
 2. **Cross-check lazy vs authoritative.** Build a *full* `Geosphere::new(7)`
@@ -359,7 +460,7 @@ rather than solved in the mesh (§13).
 4. **Bench.** Room + neighbors at depth 16 should be microseconds (O(depth)
    hashes and slerps). Confirm no global allocation.
 
-## 13. Open questions & risks
+## 14. Open questions & risks
 
 1. **The up-walk/mirror-down neighbor algorithm** (§6) is the one intricate part.
    Known-solvable, integer-only, but it carries the implementation risk — hence
@@ -377,18 +478,18 @@ rather than solved in the mesh (§13).
    conditioned on the three). Small, but a real choice — likely a P3 concern.
 5. **Triangle vs dual-hex rooms** (§9) is a gameplay-feel decision that can be
    deferred; the substrate is unaffected.
-6. **Stateful cross-chunk agents** (§10). Span features and wandering agents are
-   handled by top-down derivation and `f(seed, time)`; NPCs that carry *mutable
-   state* across a chunk boundary need a handoff protocol. Deferred — a locale/
-   ecology concern, not a mesh one, but flagged so it is not forgotten.
-7. **Partition-key length `k`** (§10) is unset — chunk granularity trades index
-   fan-out against per-chunk delta volume; fixed when the locale window's
-   room-depth range is chosen (decision
-   `the-room-tier-ledger-is-chunk-partitioned`).
+6. **Segment split threshold & policy** (§10). The three-way split/compact/snapshot
+   decision and its trigger size are **tunable runtime policy, not a contract** —
+   they need measuring against real play density, not fixing now.
+7. **Multi-writer, only if/when it happens** (§11). Untrusted validation, the
+   ATC-style handoff, cross-chunk sagas, and rollback netcode are *reserved* for a
+   multiplayer/Living-Globe future; nothing to build for the single-authority sim
+   beyond preserving the three near-term invariants. The one hard corner when it
+   arrives is untrusted × cross-chunk.
 
-## 14. Recommended next step
+## 15. Recommended next step
 
-Spike the neighbor walk (§6) + the lazy-vs-`Geosphere::new(7)` oracle test (§12.2)
+Spike the neighbor walk (§6) + the lazy-vs-`Geosphere::new(7)` oracle test (§13.2)
 as a throwaway prototype in the kernel. That single spike resolves the only
 first-order risk in this design; everything after it (positions, seeds,
 inheritance, the locale window) is straightforward and already de-risked by the

@@ -28,9 +28,12 @@ small enclosed space to a small patch of wilderness distinct from its neighbors.
   is confined to 12 known points. Covers the addressing scheme, lazy geometry, the
   neighbor-walk crux, adaptive depth (T-junctions, still float-free), integer-only
   seeding + confining transcendentals to presentation (a cross-platform
-  determinism strategy), chunking/residency and the chunk-partitioned ledger,
-  constitutional fit, and a validation plan. The partitioned-ledger call is
-  reserved as a `Proposed` decision
+  determinism strategy), chunking/residency and the address-partitioned ledger
+  (freeze only the address; adaptive event-sourced LSM segments), concurrency &
+  write authority (the chunk as a DDD aggregate root; three near-term invariants;
+  untrusted-client / handoff / saga / netcode reserved for the multiplayer future),
+  constitutional fit, and a validation plan. The partitioned-ledger call is reserved
+  as a `Proposed` decision
   (`docs/decisions/the-room-tier-ledger-is-chunk-partitioned.md`).
 
 ## The ideation cycles (raw material behind the synthesis)
