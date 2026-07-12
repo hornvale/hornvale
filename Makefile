@@ -14,11 +14,12 @@
 #   make preflight    # GO/NO-GO before integrating a campaign branch with main
 #   make doctor       # print the repo self-map (orientation for a fresh session)
 #   make install-hooks# point git at scripts/hooks (opt-in; edits local config)
+#   make gate-remote  # run the gate on this worktree's AWS spot box (scripts/aws-gate/README.md)
 #
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks gate-remote gate-panic gate-remote-setup gate-remote-teardown shellcheck
+.PHONY: help quick gate gate-fast prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -82,6 +83,9 @@ install-hooks: ## Point git at scripts/hooks (runs `make quick` pre-commit)
 
 gate-remote: ## Run the CI gate on this worktree's AWS spot box
 	@scripts/aws-gate/gate-remote.sh
+
+gate-remote-verify: ## Local-vs-remote byte-identity acceptance test (libm go-live gate)
+	@scripts/aws-gate/gate-remote-verify.sh
 
 gate-panic: ## EMERGENCY: disable the runner and kill all gate resources
 	@scripts/aws-gate/panic.sh
