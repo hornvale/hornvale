@@ -19,8 +19,11 @@ setup_iam() {
   done
   aws_admin iam detach-user-policy --user-name "$user" \
     --policy-arn "arn:aws:iam::$(aws_admin sts get-caller-identity --query Account --output text):policy/hornvale-gate-deny" >/dev/null 2>&1 || true
-  # Create a key only if the profile has none configured yet.
-  if ! aws_runner sts get-caller-identity >/dev/null 2>&1; then
+  # Create a key ONLY if the user has none at all. Checking a live `sts` call
+  # here would race the key-reactivation propagation above and mint a duplicate;
+  # counting keys does not. (If a key exists but the local profile secret is
+  # missing, delete the key and re-run — setup won't silently mint a second.)
+  if [ "$(aws_admin iam list-access-keys --user-name "$user" --query 'length(AccessKeyMetadata)' --output text)" = "0" ]; then
     local out; out="$(aws_admin iam create-access-key --user-name "$user" --output json)"
     local id secret
     read -r id secret <<<"$(echo "$out" | python3 -c 'import json,sys;k=json.load(sys.stdin)["AccessKey"];print(k["AccessKeyId"], k["SecretAccessKey"])')"
