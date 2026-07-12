@@ -151,6 +151,38 @@ fourth-wall conceit ("you control an NPC"). **v1 builds the mechanism with no
 in-world commitment and reads as a clean conceit.** Diegetic possession is
 preserved as a later option (VI), foreclosed by nothing.
 
+### 3.6 The data model: a temporal triple store, hand-rolled and small
+
+The ledger is the game layer's only stored truth (§3.2), and its shape is a
+**temporal triple store**: an append-only log of `(entity, attribute, value, time,
+provenance)` tuples — the kernel's existing `Fact`, with time as a first-class
+column once the event ledger (Campaign IV) lands. Logically this is Datomic /
+event-sourcing: the log is authoritative, every view is a query or fold over it, and
+`as-of` queries (belief, confabulation) are a filter on the time column.
+
+**This is not an ECS.** ECS stores mutable *current* state with no history and
+answers neither `why?` nor `as-of`; the constitution requires both (determinism,
+provenance, time-travel). An ECS-shaped, archetype-indexed materialization of
+*current* state is welcome as a **derived cache** for hot iteration (the verb / GOAP
+matcher sweeping "everything `flammable`"), but it is a read-optimisation,
+reconstructible from the log — never the source of truth. Its indexes are
+`BTreeMap`, not `HashMap`, per the determinism ban.
+
+**No database library, and no LSM-tree.** The dependency constitution is `serde` +
+`serde_json` only (enforced by `cli/tests/architecture.rs`), so an embedded store
+(RocksDB, sled, sqlite, a datalog engine) is off the table — and it would import
+non-determinism (foreign iteration orders, float handling, background compaction)
+besides. The append-only-log-plus-derived-indexes shape *is* the LSM idea, but at
+**in-memory scale**: a world is a seed plus a bounded ledger of divergences (only the
+irreversible is stored, §3.4; the memory economy, MEM-1, prices retained facts to
+keep it bounded), so it fits in RAM. The implementation is a `Vec<Fact>` (the log)
+with `BTreeMap` secondary indexes rebuilt on load, queried by pattern in std-only
+Rust — no compaction, no disk paging, no LSM machinery. Persistence is the existing
+model: `World { seed, registry, ledger }` serialised to JSON. If a world's history
+ever outgrew memory (a long-running MUD), that is a bespoke, full-precision format
+decision (cf. the Lorenz guard-rail in the Constitution's determinism section), not
+a reach for a library.
+
 ## 4. The keystone: the two-directional seam
 
 Hornvale's worldgen is **bottom-up and eager** (Dwarf-Fortress-like: a global
