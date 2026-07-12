@@ -340,9 +340,11 @@ fn every_multi_member_family_has_a_proto() {
 - [ ] **Step 2: Run to verify failure.** Run: `cargo test -p hornvale-species registry_has_the_goblinoid_triad`. Expected: FAIL — field/species/fn missing.
 - [ ] **Step 3: Implement.** Add `pub family: &'static str` to `SpeciesDef`; set `family: "goblinoid"` on goblin, `family: "kobold"` on kobold. Insert the two species (values authored from SRD lore; scalars pinned here, reviewable):
 
-  **hobgoblin** — `noun: "legion"`, psych `{ threat_response: 0.7, deliberation_latency: 0.6, in_group_radius: 0.6, time_horizon: 0.7, sociality: Hierarchic, status_basis: Rank }`, perception `{ activity: Diurnal, night_vision: 0.6, sky_attention: 0.5 }`, articulation `{ labiality: 0.5, vowel_space: 0.5, voicing: 0.6, sibilance: 0.4, voice_loudness: 0.8, exotic: None }`, roles `worker_override: Some("laborer"), warrior: "soldier", artisan: "smith", shaman: "augur", top: "warlord"`.
+  **hobgoblin** — `noun: "legion"`, psych `{ threat_response: 0.7, deliberation_latency: 0.6, in_group_radius: 0.3, time_horizon: 0.5, sociality: Hierarchic, status_basis: Rank }`, perception `{ activity: Diurnal, night_vision: 0.6, sky_attention: 0.5 }`, articulation `{ labiality: 0.5, vowel_space: 0.5, voicing: 0.6, sibilance: 0.4, voice_loudness: 0.8, exotic: None }`, roles `worker_override: Some("laborer"), warrior: "soldier", artisan: "smith", shaman: "augur", top: "warlord"`.
 
-  **bugbear** — `noun: "lair"`, psych `{ threat_response: 0.7, deliberation_latency: 0.4, in_group_radius: 0.3, time_horizon: 0.3, sociality: Communal, status_basis: Rank }`, perception `{ activity: Nocturnal, night_vision: 0.7, sky_attention: 0.3 }`, articulation `{ labiality: 0.5, vowel_space: 0.4, voicing: 0.7, sibilance: 0.2, voice_loudness: 0.3, exotic: None }`, roles `worker_override: Some("forager"), warrior: "mauler", artisan: "tanner", shaman: "omen-reader", top: "headman"`.
+  **bugbear** — `noun: "lair"`, psych `{ threat_response: 0.8, deliberation_latency: 0.4, in_group_radius: 0.3, time_horizon: 0.3, sociality: Communal, status_basis: Rank }`, perception `{ activity: Nocturnal, night_vision: 0.7, sky_attention: 0.3 }`, articulation `{ labiality: 0.5, vowel_space: 0.4, voicing: 0.7, sibilance: 0.2, voice_loudness: 0.3, exotic: None }`, roles `worker_override: Some("forager"), warrior: "mauler", artisan: "tanner", shaman: "omen-reader", top: "headman"`.
+
+  (psych re-authored for coexistence; L1 also ships a founder-floor placement down-payment — MAP-22 K=1 — so every people gets a flagship)
 
   Add:
 ```rust

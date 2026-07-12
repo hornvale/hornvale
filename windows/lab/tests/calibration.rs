@@ -1,7 +1,7 @@
 //! Calibration: at tier 0, belief kind is a pure function of rotation.
 //! The instrument must reproduce known ground truth exactly (spec §2.5).
 use hornvale_culture::{BiomeClass, subsistence};
-use hornvale_lab::{MetricValue, RunResult, load_rows, load_study, run};
+use hornvale_lab::{MetricValue, RunResult, canonical_row, load_rows, load_study, run};
 use std::path::Path;
 use std::sync::LazyLock;
 
@@ -9,10 +9,10 @@ use std::sync::LazyLock;
 /// it. The fixture is published by `lab run` and regenerated + drift-checked in
 /// CI (the "Artifacts are current" step), so `load_rows(fixture)` equals
 /// `run(&study)` by construction — the `census_fixture_matches_live_run` guard
-/// below pins that equality directly. This is what keeps the ~145s census off
-/// every local `cargo test`; before this the suite recomputed it behind a
-/// `LazyLock` (TOOL-7). Init panics on a load error (a test-setup failure, not
-/// a calibration).
+/// below pins that equality directly. This is what keeps the ~450s (debug)
+/// census off every local `cargo test`; before this the suite recomputed it
+/// behind a `LazyLock` (TOOL-7). Init panics on a load error (a test-setup
+/// failure, not a calibration).
 fn load_census(study_path: &str, rows_path: &str) -> RunResult {
     let study = load_study(Path::new(study_path)).expect("load study");
     let csv = std::fs::read_to_string(rows_path).expect("read census fixture");
@@ -38,13 +38,14 @@ static MEETING: LazyLock<RunResult> = LazyLock::new(|| {
     )
 });
 
-/// Guard — ignored by default because it pays the full census (~145s): the
-/// committed fixtures reconstruct *exactly* what a live `run` produces, so
-/// every other test in this file may trust the fixture. Run it explicitly
-/// after regenerating the fixtures, or in CI:
+/// Guard — ignored by default because it pays the full census (~450s under
+/// the test profile; release regeneration via make rebaseline is much
+/// faster): the committed fixtures reconstruct *exactly* what a live `run`
+/// produces, so every other test in this file may trust the fixture. Run it
+/// explicitly after regenerating the fixtures, or in CI:
 /// `cargo test -p hornvale-lab --test calibration -- --ignored`.
 #[test]
-#[ignore = "runs the full ~145s census; fixtures are drift-checked in CI"]
+#[ignore = "runs the full ~450s (debug) census; fixtures are drift-checked in CI"]
 fn census_fixture_matches_live_run() {
     for (study_path, rows_path) in [
         (
@@ -58,6 +59,14 @@ fn census_fixture_matches_live_run() {
     ] {
         let study = load_study(Path::new(study_path)).expect("load study");
         let live = run(&study).expect("run study");
+        // Canonicalize live Numbers before comparing: the fixture's floats
+        // passed the quantizing serialization boundary (`render_csv`), the
+        // live run's have not (shared helper: `hornvale_lab::canonical_row`).
+        let live = RunResult {
+            study: live.study.clone(),
+            metric_names: live.metric_names.clone(),
+            rows: live.rows.iter().map(canonical_row).collect(),
+        };
         let csv = std::fs::read_to_string(rows_path).expect("read census fixture");
         let loaded = load_rows(&study, &csv).expect("reconstruct census from fixture");
         assert_eq!(
@@ -90,15 +99,89 @@ fn biome_class_from_name(name: &str) -> BiomeClass {
 }
 
 #[test]
-fn eternal_beliefs_coincide_exactly_with_tidal_locking() {
+fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
+    // `belief-kind` is the sentiment of `beliefs_of(&world).first()` — the
+    // FIRST belief minted anywhere in the ledger, across every species, not
+    // a particular species' head deity. Which species commits first is an
+    // artifact of `hornvale_species::registry()`'s `BTreeMap` (alphabetical)
+    // iteration order in the composition root's per-species religion loop:
+    // pre-Branches, with only `{goblin, kobold}` registered, "goblin" sorts
+    // first and ALWAYS commits first, and goblin's head deity is always
+    // solar (a separately preregistered invariant — see
+    // `goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar`)
+    // — a solar head's periodicity is an exact function of rotation (locked
+    // ⇒ aperiodic sun ⇒ eternal; spinning ⇒ periodic sun ⇒ cyclic), so
+    // "belief-kind coincides exactly with tidal locking" held as a
+    // consequence.
+    //
+    // The Branches: `registry()` now holds four peoples, and "bugbear"
+    // sorts alphabetically FIRST. The founder floor (Task 6d) guarantees
+    // bugbear a flagship on every seed, so bugbear's pantheon now commits
+    // first on every world — and bugbear's head-deity selection is not
+    // domain-restricted to the sun the way goblin's is: on a SPINNING world
+    // it can still pick an aperiodic night-star as its most salient
+    // phenomenon (night-stars have no orbital period around this world,
+    // hence `Sentiment::Eternal`, regardless of rotation — the same
+    // mechanism `blind_attribution_beats_chance_decisively`'s doc comment
+    // already names). This is a genuine behavioural finding, not a bug:
+    // measured over the 500-seed drift study, the `locked ⇒ eternal`
+    // direction still holds with ZERO exceptions (23/23 locked worlds), but
+    // the converse (`spinning ⇒ ¬eternal`) now fails on 9/477 spinning
+    // worlds (seeds 49, 140, 143, 220, 223, 234, 236, 363, 447) — bugbear's
+    // night-star-headed pantheon on an otherwise-ordinary spinning world.
+    // Per ADR 0016 this is pinned as an honest measured exception count,
+    // not forced, inverted, or silently dropped.
+    //
+    // SKY-5 (surfaced tides) then weakened `locked ⇒ eternal` itself,
+    // honestly: a locked world's most salient phenomenon is now usually the
+    // felt tide (`Venue::Ambient` ⇒ `Sentiment::Ambient`), not the
+    // motionless sun — SEQ-1's "locked-world religion hangs on moons,
+    // weather, and tides" made real. What survives exactly is the direction
+    // that matters: a frozen sky never yields a CYCLIC first belief (the
+    // tide is ambient however periodic its swell; sun and stars are
+    // eternal; only a rising-and-setting body could read cyclic, and a
+    // locked world offers none). Measured over the 500-seed drift study:
+    // 23 locked worlds = 19 tide-headed (ambient) + 4 sun-headed (eternal)
+    // + 0 cyclic, pinned per ADR 0016.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
     let (locked_i, belief_i) = (idx("tidally-locked"), idx("belief-kind"));
+    let (mut locked_eternal, mut locked_ambient, mut spinning_eternal_exceptions) =
+        (0u32, 0u32, 0u32);
     for row in &result.rows {
         let locked = matches!(row.values[locked_i], MetricValue::Flag(true));
-        let eternal = matches!(&row.values[belief_i], MetricValue::Text(t) if t == "eternal");
-        assert_eq!(locked, eternal, "seed {}: calibration violated", row.seed);
+        let kind = match &row.values[belief_i] {
+            MetricValue::Text(t) => t.as_str(),
+            other => panic!("seed {}: belief-kind not text: {other:?}", row.seed),
+        };
+        if locked {
+            match kind {
+                "eternal" => locked_eternal += 1,
+                "ambient" => locked_ambient += 1,
+                other => panic!(
+                    "seed {}: a tidally-locked world's first-minted belief is {other} — \
+                     a frozen sky must never head a cyclic pantheon",
+                    row.seed
+                ),
+            }
+        } else if kind == "eternal" {
+            spinning_eternal_exceptions += 1;
+        }
     }
+    assert_eq!(
+        (locked_eternal, locked_ambient),
+        (4, 19),
+        "locked-world head-belief split (eternal, ambient) drifted"
+    );
+    // Pinned calibration row (re-measured for the four-people world, Task
+    // 6b-2, 500-seed drift study; unchanged by SKY-5 — the same nine seeds):
+    // the exact count of spinning worlds whose first-minted belief is
+    // nonetheless eternal (a night-star-headed bugbear pantheon, per the
+    // mechanism above).
+    assert_eq!(
+        spinning_eternal_exceptions, 9,
+        "spinning-yet-eternal exception count drifted"
+    );
 }
 
 #[test]
@@ -240,17 +323,21 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // specifically (religion's community, spec §6), not just whichever
     // species' settlement happened to place first. Under joint-greedy
     // placement the two seeds that used to report an inland goblin flagship
-    // (172 and 257) instead lose that site to a higher-scoring kobold
-    // placement — both are total-kobold-exclusion worlds where goblins
-    // place nothing at all, so `flagship-coastal` reports `Absent` for
-    // them, independently verified. Coastal is unchanged at 498; inland
-    // drops from 2 to 0 (renamed from
-    // `flagships_are_sometimes_inland_and_sometimes_coastal`, now false).
+    // (172 and 257) briefly lost that site to a higher-scoring kobold
+    // placement — both were total-kobold-exclusion worlds where goblins
+    // placed nothing at all, so `flagship-coastal` reported `Absent` for
+    // them at that (pre-Branches) measurement.
     //
-    // Crust epoch (GLOBE_LEVEL 5→6, Task 3): the finer grid resolves two
-    // more goblin flagships coastal that the coarser level-5 grid placed
-    // inland (or the reverse — either way, a genuine terrain-driven shift,
-    // not a regression); re-pinned on the 500-seed drift study at level 6.
+    // The Branches (Task 6d): the founder floor reserves every people its
+    // best habitable cell before competitive placement, so goblins now
+    // place a flagship on every one of the 500 seeds — no more total-
+    // exclusion worlds, no more `Absent` rows. Seeds 172 and 257 are back to
+    // inland goblin flagships (independently verified against the final
+    // four-people world). Re-measured 2026-07: coastal unchanged at 498,
+    // inland restored to 2 (498 + 2 = 500, no `Absent`).
+    // merge (2026-07-11, main into campaign-crust): the L6 grid composed with
+    // the founder floor resolves seeds 172/257's goblin flagships coastal again,
+    // so all 500 are coastal and inland drops to 0 (overrides the pre-merge 498/2).
     assert_eq!(coastal, 500, "coastal flagship count drifted");
     assert_eq!(inland, 0, "inland flagship count drifted");
 }
@@ -405,17 +492,6 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // Task 4, 500-seed drift study): among SPINNING moonless worlds, the sun
     // wins most nights, but a bright-enough night-star still outshines it in
     // a minority of cases.
-    //
-    // Crust epoch (Task 6: heavy-tailed plate weights + noisy plate edges):
-    // re-pinned on the 500-seed drift study (was 60 solar / 10 lunar) — the
-    // weighted, edge-noised Voronoi assignment moves which cells settlements
-    // land on, shifting one moonless-spinning world's kobold flagship across
-    // the night-star/sun brightness split.
-    //
-    // Crust epoch (Task 8, 2026-07-10: isostatic elevation over drawn
-    // cratons; plate-kind retired): every world's landmass transforms and
-    // every settlement cell moves — re-pinned on the 500-seed drift study
-    // (was 59 solar / 10 lunar).
     assert_eq!(
         moonless_solar, 60,
         "moonless-solar kobold head count drifted"
@@ -479,36 +555,18 @@ fn blind_attribution_beats_chance_decisively() {
         accuracy >= 0.8,
         "blind attribution at {accuracy:.3} — below the pinned floor"
     );
-    // Pinned calibration row (re-measured for the placed observer, Plan 2
-    // Task 4; the drift study is 500 seeds, so this is an exact count, not a
-    // rate). Re-pinned again under the Crust epoch (GLOBE_LEVEL 5→6, Task
-    // 3): the finer grid resolves one more attributable pair and one more
-    // correct call among them.
-    //
-    // Crust epoch (Task 6: heavy-tailed plate weights + noisy plate edges):
-    // re-pinned again on the 500-seed drift study (was 414/497) — the
-    // weighted, edge-noised Voronoi assignment resolves one more correct
-    // call among the same attributable-pair count.
-    //
-    // Crust epoch (Task 8, 2026-07-10: isostatic elevation over drawn
-    // cratons; plate-kind retired): re-pinned on the 500-seed drift study
-    // (was 415/497) — the transformed landmasses make every world's pair
-    // attributable (three worlds that previously placed no attributable
-    // pair now do), with two more correct calls; accuracy 0.834, still
-    // above the pinned 0.8 floor.
-    //
-    // Crust epoch (Task 9 through iteration 2): re-pinned across those
-    // tasks, ending at 417/500 (see the report for those tasks' iteration
-    // rows).
-    //
-    // Crust epoch (Task 9 iteration 3', 2026-07-11: budget coupled to ocean
-    // fraction, continental-area normalization, LOBE_FREQ 4, repulsion
-    // 1.2x): re-pinned on the 500-seed drift study (was 417/500) — the
-    // reshaped craton footprints cost one attributable pair (one world's
-    // pair no longer separates the species by domain) and one correct
-    // call; accuracy 0.834, still above the pinned 0.8 floor.
-    assert_eq!(correct, 416, "blind-attribution count drifted");
-    assert_eq!(total, 499, "attributable-pair count drifted");
+    // Pinned calibration row (re-measured for the four-people world, Task
+    // 6b-2; the drift study is 500 seeds, so this is an exact count, not a
+    // rate). The founder floor (Task 6d) guarantees every people a
+    // flagship, so 3 seeds that used to be total-kobold- or
+    // total-goblin-exclusion worlds (no attributable pair) now place both
+    // species — total rises from 496 to 499. Accuracy is essentially
+    // unchanged (413/496 = 0.833 -> 416/499 = 0.834), still decisively
+    // above chance:
+    // merge (2026-07-11): L6 terrain composed with the founder floor shifts one
+    // pair to a correct attribution (416 -> 417) at the same 499 attributable total.
+    assert_eq!(correct, 417, "blind-attribution count drifted");
+    assert_eq!(total, 500, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -760,60 +818,38 @@ fn name_collision_rate_is_measured_and_pinned() {
     // placed-observer hemisphere culling, extended to per-settlement
     // vantages for glossed naming, means each settlement's own culled sky
     // feeds its presiding concept — re-pinned on the merged code, 500-seed
-    // drift study). The per-settlement skies IMPROVED the rate (pre-merge:
-    // 148 zero / 352 nonzero, mean 4.91%): more distinct presiding
-    // concepts, a wider descriptor space, fewer repeated compounds.
+    // drift study; pre-Branches: 159 zero / 341 nonzero, mean 4.70%).
     //
-    // Crust epoch (GLOBE_LEVEL 5→6, Task 3): the finer grid widens the
-    // presiding-phenomenon vantage further (more distinct cells, more
-    // distinct sky vantages per settlement), IMPROVING the rate again —
-    // re-pinned on the 500-seed drift study at level 6 (was 159 zero / 341
-    // nonzero, mean 4.7016%).
+    // The Branches (Task 6b-2): re-measured against the final four-people
+    // world. The founder floor (Task 6d) and the four-species niche vectors
+    // (Task 6c/6d) reshape which cells goblin/kobold win and how many
+    // settlements they each field per world, which reshuffles per-world
+    // site-concept reuse; the net effect is FEWER zero-collision worlds
+    // (159 -> 40); the root/v2 injective assignment then made the site-concept
+    // words more distinct. Two later forces move it again, and this merge
+    // re-pins to their COMBINED effect on the merged code: (1) the phonology
+    // epoch's cascade reseed (tonogenesis appended to the drawn cascade; the
+    // shipped peoples stay atonal, so it is the reseed, not tone), and (2)
+    // SKY-5's surfaced tides, whose tide-gods roughly double the deities most
+    // worlds mint — every extra deity name draws from the same per-culture
+    // lexicon the settlements name from, so more draws, more reuse, fewer
+    // zero-collision worlds and a higher mean rate. An honest cost of the
+    // richer pantheon plus the reseed, pinned not loosened; the homophony
+    // campaign owns the name-space pressure question.
     //
-    // Crust epoch (Task 6: heavy-tailed plate weights + noisy plate edges):
-    // re-pinned again on the 500-seed drift study — the weighted,
-    // edge-noised Voronoi assignment moves settlement cells and their
-    // presiding phenomena, WORSENING the rate back toward the pre-Task-3
-    // range (was 175 zero / 325 nonzero, mean 3.9417%): the noisy edges
-    // apparently narrow the vantage diversity for some worlds even though
-    // the grid itself did not change.
-    //
-    // Crust epoch (Task 8, 2026-07-10: isostatic elevation over drawn
-    // cratons; plate-kind retired): re-pinned on the 500-seed drift study
-    // (was 159 zero / 341 nonzero, mean 3.7525%) — the transformed
-    // landmasses move every settlement and its presiding phenomenon,
-    // IMPROVING the rate (3.1042%): craton-shaped coasts spread
-    // settlements across more distinct sky vantages.
-    //
-    // Crust epoch (Task 9, 2026-07-10: area-normalized craton budget +
-    // PEAK_MIN_KM 30->33, fixing Task 8's diagnosed area-quota mismatch):
-    // re-pinned on the 500-seed drift study — zero/nonzero counts hold
-    // (166/334, so the SAME worlds have any collision at all), but the
-    // mean WORSENS (3.4163%, was 3.1042%): the now-larger, more
-    // budget-accurate cratons shrink the number of distinct sky vantages
-    // per world slightly relative to Task 8's under-sized ones.
-    //
-    // Crust epoch (Task 9 iteration 2, 2026-07-11: tanh lobing remap +
-    // WEIGHT_TAIL 0.95->0.92 + craton repulsion): re-pinned on the
-    // 500-seed drift study (was 166 zero / 334 nonzero, mean 3.4163%) —
-    // the smoother rims, softer plate-size tail, and separated cratons
-    // relocate settlements again; four worlds gained a collision
-    // (162/338) but the mean IMPROVES (3.3296%).
-    //
-    // Crust epoch (Task 9 iteration 3', 2026-07-11: budget coupled to ocean
-    // fraction, continental-area normalization, LOBE_FREQ 4, repulsion
-    // 1.2x): re-pinned on the 500-seed drift study (was 162 zero / 338
-    // nonzero, mean 3.3296%) — the reshaped, more numerous cratons relocate
-    // settlements again; ten more worlds gained a collision (172/328) and
-    // the mean WORSENS (3.5529%).
-    let present = zero + nonzero;
-    let mean = sum / f64::from(present);
-    assert_eq!(zero, 172, "zero-collision world count drifted");
-    assert_eq!(nonzero, 328, "nonzero-collision world count drifted");
+    // SKY-6 (eclipses, 2026-07-11): re-measured (was 19 zero / 481 nonzero,
+    // mean 18.25%). Eclipse phenomena add one more deity per eclipsing moon
+    // to most pantheons — one more name draw per culture from the same
+    // lexicons, nudging the rate again (19 -> 18 zero, mean 18.25% ->
+    // 19.61%). Same mechanism as SKY-5's re-pin above.
+    assert_eq!(zero, 18, "zero-collision world count drifted");
+    assert_eq!(nonzero, 482, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
+    let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
+    let mean = sum / f64::from(present);
     assert!(
-        (mean - 0.035_529_463_525_802).abs() < 1e-6,
+        (mean - 0.168_866_097_746).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -840,47 +876,25 @@ fn name_length_distributions_are_measured_and_pinned() {
     // concept each settlement compounds over, moving both means by a
     // fraction of a character.
     //
-    // Crust epoch (GLOBE_LEVEL 5→6, Task 3): the finer grid changes which
-    // cells settlements land on and their presiding concepts, shifting both
-    // present-row counts and means again (was goblin 498/13.869962, kobold
-    // 498/14.262682); re-pinned on the 500-seed drift study at level 6.
+    // The Branches (Task 6b-2): re-measured against the final four-people
+    // world (was goblin 498 present / 13.869961501975723 mean, kobold 498 /
+    // 14.262681953972956 pre-Branches). The founder floor (Task 6d) and the
+    // four-species niche vectors change which cells goblin/kobold win and
+    // how many settlements each fields per world; goblin is now present on
+    // every seed (the founder floor's own guarantee), kobold on all but 1.
+    // Merged re-baseline (phonology epoch + SKY-5 tides): the cascade reseed
+    // (tonogenesis appended; shipped peoples atonal, so reseed not tone) and
+    // the larger tide-god pantheons together shift every name salt and reshuffle
+    // each culture's lexicon before settlements draw. Both means re-pinned on the
+    // merged code; present counts unchanged (goblin every seed, kobold all but 1).
     //
-    // Crust epoch (Task 6: heavy-tailed plate weights + noisy plate edges):
-    // re-pinned again on the 500-seed drift study (was goblin 500/14.084996,
-    // kobold 497/14.173051) — present-row counts hold, but the weighted,
-    // edge-noised Voronoi assignment moves which presiding concept each
-    // settlement compounds over, shifting both means.
-    //
-    // Crust epoch (Task 8, 2026-07-10: isostatic elevation over drawn
-    // cratons; plate-kind retired): re-pinned on the 500-seed drift study
-    // (was goblin 500/14.481806236373808, kobold 497/13.709415332150503) —
-    // the transformed landmasses relocate every settlement; kobolds now
-    // place in all 500 worlds (the three total-exclusion worlds gained a
-    // kobold-viable site), and both means shift.
-    //
-    // Crust epoch (Task 9, 2026-07-10: area-normalized craton budget +
-    // PEAK_MIN_KM 30->33): re-pinned on the 500-seed drift study (was
-    // goblin 500/14.847929675008448, kobold 500/13.574836542341416) —
-    // present-row counts hold (both species still place in all 500
-    // worlds), but the transformed landmasses relocate every settlement's
-    // presiding concept, shifting both means.
-    //
-    // Crust epoch (Task 9 iteration 2, 2026-07-11: tanh lobing remap +
-    // WEIGHT_TAIL 0.95->0.92 + craton repulsion): re-pinned on the
-    // 500-seed drift study (was goblin 500/14.744593607676443, kobold
-    // 500/13.893004502119725) — present-row counts hold again; the
-    // relocated settlements shift both means by fractions of a character.
-    //
-    // Crust epoch (Task 9 iteration 3', 2026-07-11: budget coupled to ocean
-    // fraction, continental-area normalization, LOBE_FREQ 4, repulsion
-    // 1.2x): re-pinned on the 500-seed drift study (was goblin
-    // 500/14.744520121312846, kobold 500/13.89750707542195) — the
-    // reshaped cratons relocate every settlement's presiding concept,
-    // shifting both means; kobolds also drop from 500 to 499 present rows
-    // (one world's reshaped landmasses leave no kobold-viable site).
+    // SKY-6 (eclipses, 2026-07-11): re-measured (was goblin 500 /
+    // 10.6127954144, kobold 499 / 15.597634151903808) — one more deity
+    // name draw per eclipsing moon shifts every later name salt, same
+    // mechanism as the SKY-5 re-pin.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 500u32, 14.611_693_622_112_934),
-        ("kobold", 499u32, 13.542_439_937_487_506),
+        ("goblin", 500u32, 11.255_035_493_600_001),
+        ("kobold", 500u32, 14.182_334_456_399_987),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1045,41 +1059,43 @@ fn null_control_name_length_smd_is_pinned() {
     // the ±0.2 sampling-theory bound `null_control_distributions_are_
     // within_the_sampling_bound` asserts, unaffected by this re-pin.
     //
-    // Crust epoch (GLOBE_LEVEL 5→6, Task 3): re-pinned again on the merged
-    // code at level 6 (was -0.065377251231494); still comfortably inside
-    // the same bound.
+    // The Branches (Task 6b-2): re-measured again (was -0.065377 pre-
+    // Branches). Neither pin set (`goblin-solo`/`goblin-twin-solo`) touches
+    // hobgoblin or bugbear directly, but goblin's naming now draws from the
+    // shared proto-goblinoid lexicon (Task 3/4/6), which shifts the exact
+    // stream draws feeding each settlement's glossed name even in a solo
+    // build — moving the SMD by a fraction of its own scale, still well
+    // inside the sampling bound above.
     //
-    // Crust epoch (Task 6: heavy-tailed plate weights + noisy plate edges):
-    // re-pinned again (was -0.061817423175291) — the weighted, edge-noised
-    // Voronoi assignment shifts the underlying name-length distribution
-    // again (see `name_length_distributions_are_measured_and_pinned`);
-    // still comfortably inside the same ±0.2 bound.
-    //
-    // Crust epoch (Task 8, 2026-07-10: isostatic elevation over drawn
-    // cratons; plate-kind retired): re-pinned again (was
-    // -0.078885075229913) — the transformed landmasses shift the
-    // name-length distribution once more; still inside the same bound.
-    //
-    // Crust epoch (Task 9, 2026-07-10: area-normalized craton budget +
-    // PEAK_MIN_KM 30->33): re-pinned again (was -0.064112415249032) —
-    // still comfortably inside the same ±0.2 bound.
-    //
-    // Crust epoch (Task 9 iteration 2, 2026-07-11: tanh lobing remap +
-    // WEIGHT_TAIL 0.95->0.92 + craton repulsion): re-pinned again (was
-    // -0.059459520252233) — still comfortably inside the same ±0.2 bound.
-    //
-    // Crust epoch (Task 9 iteration 3', 2026-07-11: budget coupled to ocean
-    // fraction, continental-area normalization, LOBE_FREQ 4, repulsion
-    // 1.2x): re-pinned again (was -0.064495973866366) — still comfortably
-    // inside the same ±0.2 bound.
+    // Quantization epoch (2026-07-10): re-measured again (was
+    // -0.068569499085015 pre-quantize). `census-of-the-meeting`'s fixture
+    // was regenerated under `kernel/src/quantize.rs` (floats canonicalized
+    // at the ledger-commit boundary), nudging the settlement lat/long that
+    // feeds culled-vantage naming by sub-quantum amounts — moving this SMD
+    // by ~1e-8, an order of magnitude below every prior re-pin here and
+    // still comfortably inside the sampling bound above.
     let result = &*MEETING;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    // SKY-5 (surfaced tides, 2026-07-10): re-measured (was
+    // -0.068569489200608). The tide deities enlarge both solo pantheons
+    // identically (structure stays TVD/SMD = 0 above), but the extra name
+    // draws shift the salts feeding both sides' settlement names — the SMD
+    // moves by ~0.003, still comfortably inside the ±0.2 sampling bound.
     let namelen = std_mean_diff(
         nums(result, "goblin-solo", idx("name-length-goblin")),
         nums(result, "goblin-twin-solo", idx("name-length-goblin-twin")),
     );
+    // Merged re-baseline (phonology epoch + SKY-5 tides, 2026-07-11): the
+    // cascade reseed and the larger tide-god pantheons together shift each solo
+    // build's glossed-name draws; the SMD stays well inside the sampling bound
+    // above. Shipped peoples are atonal, so the tone tier itself moves nothing.
+    //
+    // SKY-6 (eclipses, 2026-07-11): re-measured (was -0.07295943144971684);
+    // the eclipse deity's extra name draw shifts both solo builds' salts
+    // identically in structure, nudging the SMD by ~0.002 — still well
+    // inside the ±0.2 sampling bound.
     assert!(
-        (namelen - -0.067_784_630_103_368).abs() < 1e-9,
+        (namelen - -0.082_573_510_253_099_77).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

@@ -1,6 +1,6 @@
 //! Species, tier 1: authored species definitions — a closed six-dimension
 //! psychology vector, a closed three-dimension perception vector, a closed
-//! six-dimension articulation vector, and vocabulary stopgaps. Species are
+//! seven-dimension articulation vector, and vocabulary stopgaps. Species are
 //! data; the social grammar stays code (spec §2). Goblin is the baseline:
 //! scalars 0.5, default enum variants; every downstream modulation is the
 //! identity function at this vector. Placeholder name syllables (the
@@ -66,6 +66,9 @@ pub const SPECIES_VOICE_LOUDNESS: &str = "species-voice-loudness";
 /// Predicate: a species' exotic manner — none, trill, click, ejective (functional, Text).
 /// type-audit: bare-ok(identifier-text)
 pub const SPECIES_EXOTIC_MANNER: &str = "species-exotic-manner";
+/// Predicate: a species' tonal propensity, 0 atonal ↔ 1 fully tonal (functional, Number).
+/// type-audit: bare-ok(identifier-text)
+pub const SPECIES_TONALITY: &str = "species-tonality";
 
 /// How a species organizes authority.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -146,9 +149,11 @@ pub struct PerceptionVector {
     pub sky_attention: f64,
 }
 
-/// The closed six-dimension articulation vector (spec §5). Scalars are bare
-/// ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening the vector
-/// requires its own campaign. Every dimension is authored — nothing drawn.
+/// The closed seven-dimension articulation vector (spec §5, extended by the
+/// phonology epoch with `tonality`). Scalars are bare ratios in `[0, 1]` with
+/// 0.5 ≡ the goblin baseline (tonality 0.0 ≡ atonal, the humanoid default);
+/// widening the vector requires its own campaign. Every dimension is
+/// authored — nothing drawn.
 /// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ArticulationVector {
@@ -162,6 +167,12 @@ pub struct ArticulationVector {
     pub sibilance: f64,
     /// Voice-loudness range: quiet 0 ↔ loud 1.
     pub voice_loudness: f64,
+    /// Tonal propensity, authored from body plan: atonal 0 (humanoid default)
+    /// ↔ fully tonal 1. Maps to a tone-inventory size in `draw_phonology`
+    /// (1 = atonal Neutral-only, 2–3 tone-capable) and makes tonogenesis
+    /// effective. The shipped humanoids stay 0.0; the value earns its keep as
+    /// the bestiary grows (serpentine, avian).
+    pub tonality: f64,
     /// Exotic manner of articulation.
     pub exotic: ExoticManner,
 }
@@ -173,6 +184,10 @@ pub struct ArticulationVector {
 pub struct SpeciesDef {
     /// The species name ("goblin", "kobold").
     pub name: &'static str,
+    /// The family this species descends from ("goblinoid", "kobold"); a
+    /// singleton family's name equals its lone member's name. Looked up in
+    /// [`family_registry`] for the family's proto ancestral vector.
+    pub family: &'static str,
     /// The settlement noun ("village", "warren").
     pub noun: &'static str,
     /// The psychology vector.
@@ -193,9 +208,9 @@ pub struct SpeciesDef {
     pub top: &'static str,
 }
 
-/// The authored species registry, ordered (goblin sorts first). Kobold
-/// values are derived from D&D 5E SRD lore — see the species chapter's
-/// model card for each derivation.
+/// The authored species registry, ordered alphabetically by name (`BTreeMap`
+/// key order). Kobold, hobgoblin, and bugbear values are derived from D&D
+/// 5E SRD lore — see the species chapter's model card for each derivation.
 /// type-audit: bare-ok(identifier-text)
 pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
     let mut reg = BTreeMap::new();
@@ -203,6 +218,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         "goblin",
         SpeciesDef {
             name: "goblin",
+            family: "goblinoid",
             noun: "village",
             psych: PsychVector {
                 threat_response: 0.5,
@@ -223,6 +239,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 voicing: 0.5,
                 sibilance: 0.5,
                 voice_loudness: 0.5,
+                tonality: 0.0,
                 exotic: ExoticManner::None,
             },
             worker_override: None,
@@ -236,6 +253,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         "kobold",
         SpeciesDef {
             name: "kobold",
+            family: "kobold",
             noun: "warren",
             psych: PsychVector {
                 threat_response: 0.8,
@@ -256,6 +274,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 voicing: 0.6,
                 sibilance: 0.9,
                 voice_loudness: 0.2,
+                tonality: 0.0,
                 exotic: ExoticManner::Trill,
             },
             worker_override: Some("digger"),
@@ -265,7 +284,98 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
             top: "elders",
         },
     );
+    reg.insert(
+        "hobgoblin",
+        SpeciesDef {
+            name: "hobgoblin",
+            family: "goblinoid",
+            noun: "legion",
+            psych: PsychVector {
+                threat_response: 0.7,
+                deliberation_latency: 0.6,
+                in_group_radius: 0.3,
+                time_horizon: 0.5,
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Rank,
+            },
+            perception: PerceptionVector {
+                activity: ActivityCycle::Diurnal,
+                night_vision: 0.6,
+                sky_attention: 0.5,
+            },
+            articulation: ArticulationVector {
+                labiality: 0.5,
+                vowel_space: 0.5,
+                voicing: 0.6,
+                sibilance: 0.4,
+                voice_loudness: 0.8,
+                tonality: 0.0,
+                exotic: ExoticManner::None,
+            },
+            worker_override: Some("laborer"),
+            warrior: "soldier",
+            artisan: "smith",
+            shaman: "augur",
+            top: "warlord",
+        },
+    );
+    reg.insert(
+        "bugbear",
+        SpeciesDef {
+            name: "bugbear",
+            family: "goblinoid",
+            noun: "lair",
+            psych: PsychVector {
+                threat_response: 0.8,
+                deliberation_latency: 0.4,
+                in_group_radius: 0.3,
+                time_horizon: 0.3,
+                sociality: Sociality::Communal,
+                status_basis: StatusBasis::Rank,
+            },
+            perception: PerceptionVector {
+                activity: ActivityCycle::Nocturnal,
+                night_vision: 0.7,
+                sky_attention: 0.3,
+            },
+            articulation: ArticulationVector {
+                labiality: 0.5,
+                vowel_space: 0.4,
+                voicing: 0.7,
+                sibilance: 0.2,
+                voice_loudness: 0.3,
+                tonality: 0.0,
+                exotic: ExoticManner::None,
+            },
+            worker_override: Some("forager"),
+            warrior: "mauler",
+            artisan: "tanner",
+            shaman: "omen-reader",
+            top: "headman",
+        },
+    );
     reg
+}
+
+/// Proto ancestral articulation vectors, keyed by family, for families with
+/// more than one member (a singleton's proto is itself and is absent here).
+/// Each is a distinct point equal to no daughter's vector (spec §3).
+/// type-audit: bare-ok(identifier-text)
+pub fn family_registry() -> BTreeMap<&'static str, ArticulationVector> {
+    let mut m = BTreeMap::new();
+    m.insert(
+        "goblinoid",
+        ArticulationVector {
+            labiality: 0.5,
+            vowel_space: 0.5,
+            voicing: 0.55,
+            sibilance: 0.45,
+            voice_loudness: 0.55,
+            tonality: 0.0,
+            exotic: ExoticManner::None,
+        },
+    );
+    m
 }
 
 /// Every seed-derivation label this crate uses (none — species are authored).
@@ -301,9 +411,21 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         true,
         "exotic manner: none, trill, click, ejective",
     )?;
+    registry.register_predicate(
+        SPECIES_TONALITY,
+        true,
+        "tonal propensity, 0 atonal ↔ 1 tonal",
+    )?;
 
     registry.register_concept("goblin-kind", "species", ConceptKind::Living, "a goblin")?;
     registry.register_concept("kobold-kind", "species", ConceptKind::Living, "a kobold")?;
+    registry.register_concept(
+        "hobgoblin-kind",
+        "species",
+        ConceptKind::Living,
+        "a hobgoblin",
+    )?;
+    registry.register_concept("bugbear-kind", "species", ConceptKind::Living, "a bugbear")?;
     Ok(())
 }
 
@@ -445,6 +567,14 @@ pub fn genesis_in(
             &world.registry,
         )?;
         world.ledger.commit(
+            fact(
+                id,
+                SPECIES_TONALITY,
+                Value::Number(def.articulation.tonality),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
             fact(id, SPECIES_EXOTIC_MANNER, Value::Text(exotic.to_string())),
             &world.registry,
         )?;
@@ -499,7 +629,12 @@ mod tests {
     fn concepts_registered() {
         let mut r = ConceptRegistry::default();
         register_concepts(&mut r).unwrap();
-        for name in ["goblin-kind", "kobold-kind"] {
+        for name in [
+            "goblin-kind",
+            "kobold-kind",
+            "hobgoblin-kind",
+            "bugbear-kind",
+        ] {
             let c = r
                 .concept(name)
                 .unwrap_or_else(|| panic!("missing concept {name}"));
@@ -525,10 +660,10 @@ mod tests {
     }
 
     #[test]
-    fn registry_is_ordered_goblin_first_and_kobold_contrasts() {
+    fn registry_is_ordered_alphabetically_and_kobold_contrasts() {
         let reg = registry();
         let names: Vec<&str> = reg.keys().copied().collect();
-        assert_eq!(names, vec!["goblin", "kobold"]);
+        assert_eq!(names, vec!["bugbear", "goblin", "hobgoblin", "kobold"]);
         let k = &reg["kobold"].psych;
         assert_eq!(k.sociality, Sociality::Communal);
         assert_eq!(k.status_basis, StatusBasis::Knowledge);
@@ -543,7 +678,7 @@ mod tests {
         register_concepts(&mut w.registry).unwrap();
         let settlement = w.ledger.mint_entity();
         let ids = genesis(&mut w).unwrap();
-        assert_eq!(ids.len(), 2);
+        assert_eq!(ids.len(), 4);
         people(&mut w, settlement, "kobold").unwrap();
         assert_eq!(species_of(&w, settlement).as_deref(), Some("kobold"));
         // The species entity carries its vector under species predicates.
@@ -622,6 +757,57 @@ mod tests {
         assert!(
             matches!(w.ledger.value_of(k, SPECIES_SIBILANCE), Some(Value::Number(n)) if *n > 0.5)
         );
+    }
+
+    #[test]
+    fn registry_has_the_goblinoid_triad_and_kobold() {
+        let r = registry();
+        for name in ["goblin", "hobgoblin", "bugbear", "kobold"] {
+            assert!(r.contains_key(name), "{name} missing");
+        }
+        assert_eq!(r["hobgoblin"].family, "goblinoid");
+        assert_eq!(r["bugbear"].family, "goblinoid");
+        assert_eq!(r["kobold"].family, "kobold");
+    }
+
+    #[test]
+    fn family_divides_along_voice_loudness() {
+        let r = registry();
+        let l = |n: &str| r[n].articulation.voice_loudness;
+        assert!(l("bugbear") < l("goblin") && l("goblin") < l("hobgoblin"));
+    }
+
+    #[test]
+    fn proto_goblinoid_vector_equals_no_daughter() {
+        let proto = family_registry()["goblinoid"];
+        let r = registry();
+        for d in ["goblin", "hobgoblin", "bugbear"] {
+            assert_ne!(proto, r[d].articulation, "proto must differ from {d}");
+        }
+    }
+
+    #[test]
+    fn every_multi_member_family_has_a_proto() {
+        // CONSISTENCY GUARD (matters as more families are added). A species'
+        // `family` field points into `family_registry` by name; a lookup MISS
+        // falls through to the singleton path, so a typo'd or forgotten family
+        // would silently demote a would-be family member to an isolated language
+        // with no cognates. Assert every family shared by ≥2 species has a proto
+        // entry — the miss can then never be silent.
+        let r = registry();
+        let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
+        for def in r.values() {
+            *counts.entry(def.family).or_default() += 1;
+        }
+        let fams = family_registry();
+        for (family, n) in counts {
+            if n >= 2 {
+                assert!(
+                    fams.contains_key(family),
+                    "family {family} has {n} members but no proto vector"
+                );
+            }
+        }
     }
 
     #[test]

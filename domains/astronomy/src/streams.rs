@@ -36,3 +36,9 @@ pub const PHASE_OFFSETS: &str = "phase-offsets";
 /// Per-neighbor celestial position draws (declination, right ascension).
 /// type-audit: bare-ok(identifier-text)
 pub const NEIGHBOR_POSITIONS: &str = "neighbor-positions";
+/// Spin-direction draw: prograde or retrograde (SKY-22).
+/// type-audit: bare-ok(identifier-text)
+pub const SPIN_DIRECTION: &str = "spin-direction";
+/// Per-moon orbital-inclination draws (SKY-6).
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_INCLINATIONS: &str = "moon-inclinations";

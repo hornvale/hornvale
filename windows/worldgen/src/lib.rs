@@ -313,7 +313,7 @@ fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64) {
             let insolation = luminosity / (orbit * orbit);
             let obliquity = system.anchor.obliquity.get();
             let regime = match system.anchor.rotation {
-                hornvale_astronomy::Rotation::Spinning { day } => {
+                hornvale_astronomy::Rotation::Spinning { day, .. } => {
                     RotationRegime::Spinning { day_std: day.get() }
                 }
                 hornvale_astronomy::Rotation::Locked => RotationRegime::Locked,
@@ -1015,6 +1015,7 @@ pub fn envelope_of(art: &hornvale_species::ArticulationVector) -> hornvale_langu
         voicing: art.voicing,
         sibilance: art.sibilance,
         voice_loudness: art.voice_loudness,
+        tonality: art.tonality,
         exotic: match art.exotic {
             hornvale_species::ExoticManner::None => hornvale_language::ExoticSeg::None,
             hornvale_species::ExoticManner::Trill => hornvale_language::ExoticSeg::Trill,
@@ -1045,6 +1046,23 @@ pub fn language_of_in(
 /// type-audit: bare-ok(identifier-text: species)
 pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology {
     language_of_in(world, &default_roster(), species)
+}
+
+/// Draw a `family`'s proto phonology from this world's seed and the
+/// family's authored proto ancestral vector
+/// ([`hornvale_species::family_registry`]) — the family name occupies the
+/// species slot in the seed-derivation (e.g. `draw_phonology(seed,
+/// "goblinoid", env)`), a language with no speakers of its own, only
+/// daughters. Panics if `family` is not in `family_registry` (a singleton
+/// family has no entry there and never reaches this function — see
+/// `lexicon_of`'s resolution).
+/// type-audit: bare-ok(identifier-text: family)
+pub fn proto_phonology_of(world: &World, family: &str) -> hornvale_language::Phonology {
+    hornvale_language::draw_phonology(
+        &world.seed,
+        family,
+        &envelope_of(&hornvale_species::family_registry()[family]),
+    )
 }
 
 /// Map a species' perception vector onto the color pack's two acquisition
@@ -1352,13 +1370,65 @@ fn exposure_of_impl(
 /// assemble the two into a `Lexicon` (`hornvale_language::build_lexicon`).
 /// type-audit: bare-ok(identifier-text: species)
 pub fn lexicon_of(world: &World, species: &str) -> Result<hornvale_language::Lexicon, BuildError> {
-    let ph = language_of(world, species);
+    lexicon_of_in(world, &default_roster(), species)
+}
+
+/// The family's members (all `roster` species sharing `family`), each as a
+/// [`hornvale_language::Daughter`] — its drawn cascade and its own phonology —
+/// so the merger-aware proto assignment (epoch `root/v3`) can choose core roots
+/// that survive every daughter's descent distinct. The rejection is
+/// order-independent (a candidate is rejected iff it merges in ANY daughter),
+/// so the roster's order does not affect the result; a singleton family yields
+/// a one-element slice (itself). Public so the proto-goblinoid reference page
+/// and the Lab's monophyly/outgroup metrics can reproduce the SAME merger-aware
+/// assignment `build_lexicon` consumes.
+/// type-audit: bare-ok(identifier-text: family)
+pub fn family_daughters(
+    world: &World,
+    roster: &[hornvale_species::SpeciesDef],
+    family: &str,
+) -> Vec<hornvale_language::Daughter> {
+    roster
+        .iter()
+        .filter(|d| d.family == family)
+        .map(|d| hornvale_language::Daughter {
+            cascade: hornvale_language::draw_cascade(&world.seed, d.name),
+            phonology: language_of_in(world, roster, d.name),
+        })
+        .collect()
+}
+
+/// Build `species`' lexicon within an explicit `roster` — the merger-aware
+/// composition-root path. Assembles the family's daughters so the proto
+/// assignment drives core homophony to zero across the whole family.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn lexicon_of_in(
+    world: &World,
+    roster: &[hornvale_species::SpeciesDef],
+    species: &str,
+) -> Result<hornvale_language::Lexicon, BuildError> {
+    let ph = language_of_in(world, roster, species);
     let exposures = exposure_of(world, species)?;
+    let def = *def_in(roster, species)?;
+    let family = def.family;
+    // A family with more than one member has a proto ancestral vector in
+    // `family_registry` and draws a real shared proto phonology; a
+    // singleton family (e.g. kobold) is absent there, so it stays its own
+    // family label and its own phonology stands in for its proto — the
+    // pre-family draw, preserved exactly.
+    let (fam_label, proto_ph) = match hornvale_species::family_registry().get(family) {
+        Some(_) => (family, proto_phonology_of(world, family)),
+        None => (def.name, ph.clone()),
+    };
+    let daughters = family_daughters(world, roster, family);
     Ok(hornvale_language::build_lexicon(
         &world.seed,
-        species,
+        def.name,
+        fam_label,
         &ph,
+        &proto_ph,
         &exposures,
+        &daughters,
     ))
 }
 
@@ -1693,9 +1763,22 @@ pub fn build_world_with_roster(
         let ph = phonologies
             .get(def.name)
             .expect("a phonology was built for every placed species");
+        let family = def.family;
+        // A family with more than one member has a proto ancestral vector
+        // in `family_registry` and draws a real shared proto phonology; a
+        // singleton family (e.g. kobold) is absent there, so it stays its
+        // own family label and its own phonology stands in for its proto —
+        // the pre-family draw, preserved exactly.
+        let (fam_label, proto_ph) = match hornvale_species::family_registry().get(family) {
+            Some(_) => (family, proto_phonology_of(&world, family)),
+            None => (def.name, ph.clone()),
+        };
+        let daughters = family_daughters(&world, roster, family);
         lexicons.insert(
             def.name,
-            hornvale_language::build_lexicon(&seed, def.name, ph, &exposures),
+            hornvale_language::build_lexicon(
+                &seed, def.name, fam_label, ph, &proto_ph, &exposures, &daughters,
+            ),
         );
     }
 
@@ -2975,9 +3058,34 @@ mod tests {
             threat,
         };
 
+        // The Branches (4-species roster): the globally most-suitable cell
+        // is not necessarily goblin's a priori (at seed 42, under the
+        // current world, it happens to be), so the recomputed structure
+        // must use the flagship's OWN species' psychology and role
+        // vocabulary (the same construction `build_world_with_roster`
+        // performs per-flagship), not a fixed goblin-baseline
+        // `PsychSummary::default()` a single-species world could get away
+        // with.
+        let flagship_species = hornvale_species::species_of(&world, village.id)
+            .expect("the flagship settlement has a species fact");
+        let def = hornvale_species::registry()[flagship_species.as_str()];
+        let psych = hornvale_culture::PsychSummary {
+            threat_response: def.psych.threat_response,
+            time_horizon: def.psych.time_horizon,
+            communal: def.psych.sociality == hornvale_species::Sociality::Communal,
+            rank_status: def.psych.status_basis == hornvale_species::StatusBasis::Rank,
+            vocabulary: hornvale_culture::RoleVocabulary {
+                worker_override: def.worker_override.map(str::to_string),
+                warrior: def.warrior.to_string(),
+                artisan: def.artisan.to_string(),
+                shaman: def.shaman.to_string(),
+                top: def.top.to_string(),
+            },
+        };
+
         assert_eq!(
             hornvale_culture::castes_of(&world, village.id),
-            hornvale_culture::structure(&env, &hornvale_culture::PsychSummary::default())
+            hornvale_culture::structure(&env, &psych)
         );
         assert_eq!(
             hornvale_culture::subsistence_of(&world, village.id).as_deref(),
@@ -3071,11 +3179,14 @@ mod tests {
                 .first()
                 .map(|b| b.sentiment)
         };
-        // The head deity's periodicity flips with the sun's rotation regime.
+        // The head deity reorganizes with the sun's rotation regime. Since
+        // SKY-5 the locked head is the felt tide (Ambient): on a frozen sky
+        // the low-sky-attention first observer ranks the swelling water
+        // above the motionless sun — SEQ-1's locked-world religion.
         assert_eq!(
             head_sentiment(&locked),
-            Some(hornvale_religion::Sentiment::Eternal),
-            "locked world: an eternal high god"
+            Some(hornvale_religion::Sentiment::Ambient),
+            "locked world: the tide heads the pantheon"
         );
         assert_ne!(
             head_sentiment(&spinning),
@@ -3292,5 +3403,133 @@ mod tests {
             .map(|v| v.name.clone())
             .collect();
         assert_eq!(names_a, names_b);
+    }
+
+    /// The concepts `lex` holds as a bare [`hornvale_language::LexEntry::Root`]
+    /// (as opposed to a compound or a gap).
+    fn root_concepts(lex: &hornvale_language::Lexicon) -> Vec<&str> {
+        lex.entries()
+            .filter(|(_, e)| matches!(e, hornvale_language::LexEntry::Root { .. }))
+            .map(|(c, _)| c)
+            .collect()
+    }
+
+    /// `concept`'s proto-root segments in `lex`. Panics if `concept` isn't
+    /// held as a root — callers only ask after confirming membership via
+    /// [`root_concepts`].
+    fn root_proto<'a>(
+        lex: &'a hornvale_language::Lexicon,
+        concept: &str,
+    ) -> &'a [hornvale_language::Segment] {
+        match lex.entry(concept) {
+            Some(hornvale_language::LexEntry::Root { derivation, .. }) => &derivation.proto,
+            other => panic!("{concept} is not a Root entry in this lexicon: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn goblinoid_daughters_are_cognate_where_both_hold_a_root() {
+        // Whether a daughter is Steeped in a given concept depends on WHERE
+        // it is placed, so do NOT hard-code "water" (a new species may not
+        // be placed near it). Intersect the concepts each daughter actually
+        // holds as a Root and assert cognacy over that set — robust to
+        // placement.
+        let world = generated(42);
+        let g = lexicon_of(&world, "goblin").unwrap();
+        let h = lexicon_of(&world, "hobgoblin").unwrap();
+        let shared: Vec<&str> = root_concepts(&g)
+            .into_iter()
+            .filter(|c| root_concepts(&h).contains(c))
+            .collect();
+        assert!(
+            !shared.is_empty(),
+            "goblin and hobgoblin must share \u{2265}1 rooted concept"
+        );
+        for c in shared {
+            // same family + proto_ph => identical proto-root; modern forms
+            // may differ.
+            assert_eq!(
+                root_proto(&g, c),
+                root_proto(&h, c),
+                "{c}: same family proto-root"
+            );
+        }
+    }
+
+    #[test]
+    fn goblinoid_daughters_actually_diverge() {
+        // DIVERGENCE-REALITY GUARD (stemmatics: descent is proven by shared
+        // INNOVATIONS, not a shared ancestor alone). Some concept rooted in
+        // all three daughters must have >=2 distinct present-day forms —
+        // else the "family" is aliases and L4 would have nothing to
+        // reconstruct. Robust even if two cascades coincide, because the
+        // daughters' inventories differ along the loudness axis and
+        // nativization diverges them.
+        fn some_shared_concept_has_distinct_forms(lexes: &[hornvale_language::Lexicon]) -> bool {
+            let Some((first, rest)) = lexes.split_first() else {
+                return false;
+            };
+            let candidates: Vec<&str> = root_concepts(first)
+                .into_iter()
+                .filter(|c| rest.iter().all(|lex| root_concepts(lex).contains(c)))
+                .collect();
+            candidates.into_iter().any(|c| {
+                let forms: Vec<&hornvale_language::WordViews> = lexes
+                    .iter()
+                    .map(|lex| match lex.entry(c) {
+                        Some(hornvale_language::LexEntry::Root { views, .. }) => views,
+                        _ => panic!("{c} confirmed as a root above"),
+                    })
+                    .collect();
+                !forms.windows(2).all(|w| w[0] == w[1])
+            })
+        }
+
+        let world = generated(42);
+        let lexes: Vec<_> = ["goblin", "hobgoblin", "bugbear"]
+            .iter()
+            .map(|s| lexicon_of(&world, s).unwrap())
+            .collect();
+        assert!(
+            some_shared_concept_has_distinct_forms(&lexes),
+            "the three daughters must not be identical (a degenerate family)"
+        );
+    }
+
+    #[test]
+    fn every_goblinoid_word_is_in_its_inventory() {
+        let world = generated(42);
+        for sp in ["goblin", "hobgoblin", "bugbear"] {
+            let ph = language_of(&world, sp);
+            let lex = lexicon_of(&world, sp).unwrap();
+            for (_c, e) in lex.entries() {
+                if let hornvale_language::LexEntry::Root { derivation, .. } = e {
+                    assert!(
+                        derivation.modern.iter().all(|s| ph.inventory.contains(s)),
+                        "{sp}: a nativized root must draw only from its own inventory"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn kobold_lexicon_mechanism_is_stable_given_fixed_exposures() {
+        let world = generated(42);
+        let ph = language_of(&world, "kobold");
+        let ex = exposure_of(&world, "kobold").unwrap();
+        // Singleton path: family == species, proto_ph == ph; the merger-aware
+        // daughters slice is the family's one member (kobold itself).
+        let daughters = family_daughters(&world, &default_roster(), "kobold");
+        let direct = hornvale_language::build_lexicon(
+            &world.seed,
+            "kobold",
+            "kobold",
+            &ph,
+            &ph,
+            &ex,
+            &daughters,
+        );
+        assert_eq!(lexicon_of(&world, "kobold").unwrap(), direct);
     }
 }

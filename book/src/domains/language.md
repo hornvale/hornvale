@@ -21,17 +21,26 @@ gave it eyes; this campaign, the third of Year 2's spine, gives it **mouths**
 consequence of who is speaking it rather than a pool an author happened to
 seed. Every proper noun the world mints now — a settlement, a deity, a
 deity's epithet — is a real generated sound: seed 42's goblin flagship is
-**Xnebsvobned** (`/xnebsvobned/`), whose head god is **Ned the Nabned**;
-its kobold neighbor is **Raxaxoxokrrorat** (`/raxaxoxokrrorat/`), whose own
-head god is **Rro Rro**. See [Religion](./religion.md) for how a belief now
-carries that name as committed content rather than a frozen sentence.
+**Xnebsvob** (`/xnebsvob/`), whose head god is **Neb the Ngobneb**;
+its kobold neighbor is **Raxaxokroxog** (`/raxaxokroxog/`), whose own
+head god is **Raxarro Rro**. (These are the names the world renders today;
+[The Branches](../chronicle/the-branches.md) re-baselined every one of them
+when goblin joined a language family — see "The first family," below, for
+why a proper name is not held byte-stable across that kind of change.) See
+[Religion](./religion.md) for how a belief now carries that name as
+committed content rather than a frozen sentence.
 
 **Phonemes are feature-bearing segments; spellings are views.** The
 substrate's internal truth is never a string. A `Segment` is a bundle of
 articulatory features — for a consonant, place, manner, and voicing; for a
-vowel, height, backness, and rounding — the same move the species and
-perception vectors already made, an authored point in a small feature space
-rather than an opaque label. A handful of segments a people's anatomy
+vowel, height, backness, rounding, and, since the phonology epoch ([The Rising
+Tone](../chronicle/the-rising-tone.md)), a suprasegmental **tone** — the same
+move the species and perception vectors already made, an authored point in a
+small feature space rather than an opaque label. Tone is orthogonal to the
+segmental features: it lives on the syllable nucleus, so most peoples carry a
+single neutral tone with no contrast and render exactly as they did before the
+tier existed, while a tone-capable people draws high and low as a second,
+pitched channel over the same consonants and vowels. A handful of segments a people's anatomy
 affords but standard IPA does not name cleanly are permitted as **authored
 extensions**, each carrying a defined romanization and a best-effort
 IPA-adjacent notation rather than being forced into the nearest existing
@@ -53,20 +62,24 @@ is built from an **articulation vector** — the species crate's third closed
 vector, after the six-dimension psychology vector and the three-dimension
 perception vector, authored per species with goblin sitting at every
 scalar's 0.5 and every enumeration's goblin variant, the identity-at-baseline
-discipline both earlier vectors already keep. Six dimensions, no more: each
-one a named capacity the phonology engine intersects with whatever it draws,
-so that any difference between two peoples' sounds recounts to a dimension
-by name rather than to an author's ear. Widening this vector — a seventh
-dimension, a per-individual variation within a species — is real design work
-belonging to a campaign willing to weigh it, the same posture the species
-and perception vectors were built under and the same warning the frontier
-map keeps repeating: nothing here grows without someone choosing to grow it.
+discipline both earlier vectors already keep. Seven dimensions: each one a
+named capacity the phonology engine intersects with whatever it draws, so that
+any difference between two peoples' sounds recounts to a dimension by name
+rather than to an author's ear. The seventh, **tonality**, was the phonology
+epoch's own deliberate widening — the warning the earlier draft of this
+paragraph kept ("widening this vector is real design work belonging to a
+campaign willing to weigh it") discharged by a campaign that weighed it: tone is
+a capacity a body plan affords, so it earns a dimension rather than a hidden
+constant. The shipped humanoids sit at zero on it (atonal); the value earns its
+keep when the bestiary grows a serpent or a bird. Widening the vector further
+stays what it was — real design work belonging to a campaign willing to weigh
+it, nothing here growing without someone choosing to grow it.
 
 **The model card.** Every dimension below is **authored**, for both
 peoples — nothing in this table is drawn or fit, the same posture the
 species and perception model cards keep. Kobold's column continues the
 project's authoring method: a translation, by hand, of a reptilian,
-draconic-kin people's anatomy into six numbers a formula can read.
+draconic-kin people's anatomy into seven numbers a formula can read.
 
 | Dimension | Type | Goblin (baseline) | Kobold | Rationale (kobold) |
 |---|---|---|---|---|
@@ -75,6 +88,7 @@ draconic-kin people's anatomy into six numbers a formula can read.
 | Voicing contrast | scalar `[0,1]` | 0.5 | 0.6 | — |
 | Sibilance | scalar `[0,1]` | 0.5 | 0.9 | the draconic hiss — sibilant-rich |
 | Voice loudness | scalar `[0,1]` | 0.5 | 0.2 | small, frail, and stealthy — a dampable phonology |
+| Tonality | scalar `[0,1]` | 0.0 | 0.0 | atonal — the shipped humanoids carry no pitch contrast; tone is for the future bestiary |
 | Exotic manner (none, trill, click, or ejective) | enum | None | Trill | a signature resonant manner the anatomy affords |
 
 Voice loudness carries a second life beyond its row. The species crate does
@@ -108,6 +122,30 @@ phonotactics** — onset, nucleus, and coda templates with a drawn complexity
 Same seed, same labels, same language, every time: the phonology engine is
 pure and deterministic end to end, drawing nothing that the envelope did not
 first permit.
+
+**Tone: a second channel, and how a lost sound becomes pitch.** Tonality maps
+to a drawn **tone inventory** — one tone for an atonal people (the neutral
+default, no contrast), a contrastive high and low for a tone-capable one — over
+its own labeled stream, isolated so that adding it leaves an atonal people's
+draw byte-for-byte unchanged. Tone matters twice over. It is a dimension of
+*capacity*: the number of distinguishable syllables a language can form is its
+onsets times its nuclei times its codas times its tones, and the engine
+guarantees a floor on that product reachable through pitch — so a few-place
+people meets the bar by drawing tones rather than by growing consonants it has
+no anatomy for, keeping its character. And it is the endpoint of a sound change
+that is diachronically real: **tonogenesis**. When a merging rule drops a
+consonant — a two-consonant onset simplifying, a final coda falling — the
+voicing it carried is not simply lost; it is reborn as a tone on the neighbouring
+vowel, a dropped voiced consonant lowering the pitch and a voiceless one raising
+it, exactly as tone arose in Chinese and Vietnamese. This is a *regular*
+conditioned change, applied wherever its environment occurs rather than hunted
+word by word, so two roots a merger would have collapsed stay distinct precisely
+when they differed in the sound the merger destroyed — the segmental contrast
+transposed into pitch rather than erased. Cognate descent is untouched, because
+the rule reads the derivation's own history and never the shared proto. The
+shipped peoples are atonal, so tonogenesis is inert for them and their words
+change only through the epoch's reseed; the mechanism waits, complete, for the
+first tone-capable people the world admits.
 
 **Naming grammars, and the status-basis keying.** Three kinds of name this
 substrate generates — settlement names, deity names, deity epithets, place
@@ -354,9 +392,17 @@ tolerate no exceptions, restated as a property the world enforces rather
 than merely asserts — a rule fires on every proto-root whose environment
 it matches, or on none, and replaying the cascade over a recorded
 proto-form must reproduce the recorded modern form exactly, every time.
-The cascade's target is fixed and deliberate: it lands only on the
-phonology this world already shipped a mouth for, never widening or
-retuning the inventory a name already draws from. A rule that would
+That very regularity is what makes descent lossy: a cascade that drops an
+onset or a coda can collapse two distinct proto-roots onto one modern word,
+so a family's proto-roots are not merely drawn distinct but assigned
+**merger-awarely** — each core concept's shared ancestral form is chosen to
+survive *every* daughter's cascade still distinct, so no two core concepts
+are ever homophones in any daughter (core homophony is zero on every seed),
+while the proto stays shared so cognate descent is untouched. Incidental
+collisions among the periphery — a rarely-named biome, a deep colour — are
+left as realistic texture. The cascade's target is fixed and deliberate: it
+lands only on the phonology this world already shipped a mouth for, never
+widening or retuning the inventory a name already draws from. A rule that would
 produce a segment outside that inventory applies as the identity function
 instead, changing nothing, rather than quietly inventing a new sound no
 one's anatomy was ever authored to make. This is the honest shape of the
@@ -438,3 +484,201 @@ still carries no sense beyond its gloss — no frames, no figurative
 reach, no second meaning a listener could be misled by. A name finally has
 a story behind its sound. It does not yet have a grammar to tell that
 story in, or a second people's ear to carry it to.
+
+**The first family.** The previous campaign drew its own bright line at the
+close of the chapter above: "no tree behind goblin and kobold — two lines
+of own-line descent running the same machinery in parallel, never meeting."
+This campaign steps over that line, deliberately, in the smallest way that
+produces a real family. Own-line descent left the world with no shared
+ancestry to measure anything against — each language's proto-root was drawn
+from that language's own phonology, so nothing about goblin's history and
+nothing about kobold's history was ever the same fact told twice, and a
+resemblance between two languages' words, had one ever appeared, would have
+been coincidence rather than kinship. A family needs a single ancestor two
+or more descendants actually share, and nothing before this campaign built
+one. Proto-goblinoid is that ancestor, and it is not a new kind of object: a
+**proto-language**, here, is simply a language with no speakers — an
+authored ancestral articulation vector, its own point in the same
+six-dimension space every people's envelope already occupies; a phonology
+drawn under that vector by the same machinery that draws a daughter's; and
+one proto-root per concept, drawn once from that phonology under
+family-level labels and shared, unmodified, by every daughter. Proto-goblinoid's
+vector is authored equal to no daughter's — not goblin's, not any of the
+three — so that "all three diverge" is a literal fact about the family tree
+rather than a description of two lineages and a third that never moved. The
+alternative, authoring proto-goblinoid equal to goblin's own vector, was
+considered and refused: it would make goblin the frozen ancestor, which no
+living language actually is, and would collapse a future reconstruction
+effort's target to a trivial copy of a language already on the record. The
+proto is never committed to the ledger; a world is a seed plus a ledger, and
+proto-goblinoid re-derives exactly as every daughter phonology already does.
+It surfaces only as a reference page and as the shared head standing over
+every goblinoid cognate set's derivation. The family it seeds is `{goblin,
+hobgoblin, bugbear}` — three lineages descending one ancestor — with kobold
+explicitly outside it (see "Kobold, the outgroup," below).
+
+**Descent under anatomical constraint.** Own-line descent already gave
+every language its own cascade — lenition, fortition, a vowel shift,
+cluster simplification, final-segment loss, drawn once and applied
+uniformly. This campaign changes nothing about that machinery; it changes
+what the cascade is applied *to*, and adds one function after it runs. Each
+daughter still draws its own cascade under its own species label
+(`language/<species>/lexicon/cascade`, unchanged) and its own present
+phonology, exactly as before, but now evolves the *shared* proto-root — not
+one it drew for itself — through that cascade. Three cascades over one
+proto-root necessarily produce three modern forms: the concept `water`'s
+proto-root `*gʷat` descends to `wat-` in goblin, `vad-` in hobgoblin, and
+`gwad-` in bugbear — a cognate set whose members are provably related,
+because they share one recorded ancestor, and whose correspondences are
+regular, because each cascade obeys the same Neogrammarian invariant every
+cascade already obeyed. The articulation vector's role shifts with it:
+before, an envelope only bounded what a species' phonology could draw into
+its inventory; now it is also the **codomain** a lineage's cascade lands
+on — the target anatomy erosion converges toward, not merely the space
+erosion is drawn from. A cascade rule whose *output* would fall outside a
+daughter's inventory still applies as identity, unchanged from before. But
+descent adds a second failure mode a same-species draw never had: an
+*inherited* proto segment that no rule in the cascade ever touches, and
+that the daughter's own inventory never happened to include either. That
+segment is **nativized** — merged, by a fixed, draw-free function, to the
+nearest segment the daughter's inventory does hold, measured by
+articulatory-feature distance (place, manner, and voicing for a consonant;
+height, backness, and rounding for a vowel) — the way a real inventory
+absorbs a sound its speakers no longer make rather than preserving a
+phoneme nobody's mouth produces anymore. `evolve` therefore gains a
+stronger postcondition than any earlier campaign needed: the modern form is
+always a subset of the daughter's own inventory, `modern ⊆ inventory`, and
+a daughter's descent genuinely *loses* ancestral contrasts rather than
+merely reshaping them. Nativization is a no-op exactly where the proto
+inventory already sits inside the daughter's — every self-proto, singleton
+lineage, which is to say kobold and every world generated before this
+campaign — so the postcondition holds trivially there and the singleton
+mechanism is untouched.
+
+**The loudness axis.** Voice loudness was never a decorative number. The
+model card already made it load-bearing once, biasing the phonology
+engine's inventory draw and down-weighting any exotic manner by how loud a
+species is willing to be — a kobold can trill, the model card says, but its
+names hiss. It would be tidy if this campaign gave the dimension a second,
+symmetrical job — biasing *which* cascade rules a lineage draws, fortition
+for the loud and lenition for the quiet — and an early pass through this
+chapter said exactly that. It is not what the code does. `draw_cascade`
+picks each lineage's two-to-four rules from one closed, uniformly-weighted
+set — lenition, fortition, a vowel shift, cluster simplification,
+final-segment loss — with no term for loudness or any other vector
+anywhere in the draw; a hobgoblin cascade is exactly as likely to come up
+lenition-heavy as a bugbear's is to come up fortition-heavy. Loudness's
+second job runs through the inventory it already shapes, not through rule
+selection. It bites twice, both times downstream of the same drawn
+inventory: first as the cascade's existing codomain constraint — a rule's
+proposed output only lands when that segment already sits in the daughter's
+own inventory, so a lineage whose loudness-shaped inventory is sparse
+rejects more of its cascade's proposed changes back to identity than a
+lineage whose inventory is rich; second as nativization's target — whatever
+inherited proto segment the cascade leaves untouched and the daughter's
+inventory still does not hold gets merged, draw-free, to the nearest
+segment that inventory does hold. A quiet lineage's descent is therefore
+dominated less by its own cascade's rule-by-rule sound changes and more by
+this closing nativization pass, because its inventory has less room to
+receive what the cascade proposes. Hobgoblin sits loud, authored at
+roughly 0.8, a martial, disciplined, commanding people built as a diurnal
+legion society, and draws a comparatively rich inventory that admits more
+of whatever cascade it happens to draw. Goblin holds the family's
+baseline, its vector unchanged from every earlier chapter's 0.5 identity
+point — the family's middle case, but no less a genuine descendant for it,
+because its vocabulary now descends the same shared proto-root every other
+daughter does rather than being drawn fresh from its own phonology (see
+"The re-baseline," below). Bugbear sits quiet, authored at roughly 0.3, a
+large, hairy, stealthy ambush predator, and draws a sparser inventory that
+leaves more of proto-goblinoid's phonemic space for nativization to
+collapse. Measured over the thousand-seed family battery, bugbear's
+descent nativizes noticeably more inherited segments than hobgoblin's on
+average — a real, measured gap, driven by inventory size feeding a fixed
+codomain-and-merger mechanism, not by a cascade quietly favoring one
+direction of sound change. The gap holds in aggregate over the sweep, not
+on every single seed: with two independent draws (a cascade, an inventory)
+feeding a chain of per-segment decisions, a quiet lineage can still land a
+rich inventory on a given seed and out-diverge a loud one that draws
+poorly, so the ordering is a population-level tendency, not a per-world
+guarantee. Each daughter also carries its own authored psychology and
+perception vectors, taken from the same SRD-lore method kobold's did,
+because a species is a whole people and needs all three; those two vectors
+sit outside this mechanism entirely and never touch a lineage's descent,
+exactly as culture and perception have never touched a language's
+phonology envelope before now.
+
+**Kobold, the outgroup.** A family needs a control, and kobold is it.
+Kobold shares no ancestor with the goblinoids: it is a **family of one**,
+and for a family of one, the proto *is* the daughter — its proto-roots draw
+from its own phonology, under its own `language/kobold/...` labels, exactly
+as every language's did before this campaign existed. "Family" is the
+general mechanism here; a singleton is its degenerate case, not a special
+exemption written around it. That equivalence is the campaign's
+byte-stability keystone: kobold's `build_lexicon`, given identical
+exposures, is byte-identical to what The Words already shipped — the
+singleton mechanism does not change because two unrelated peoples joined
+the world it inhabits. That claim is deliberately narrow. It is a
+unit-level invariant, tested against fixed exposures, and it is not a claim
+that kobold's *world-integrated* output stays fixed — that output does
+shift, because the world itself now holds two more peoples to place, name,
+and worship (see "The re-baseline," below). The two claims are not in
+tension: byte-identity holds at the mechanism, determinism holds at the
+world, and neither one is asked to cover what the other already does.
+Kobold's role as negative control is exactly this: because it shares no
+proto with any goblinoid, no goblinoid cognate set may ever trace to a
+kobold form and no kobold word may ever trace to proto-goblinoid — a
+property the Lab battery asserts directly, from ground truth, today. It is
+the same property a later campaign's blind comparative method will have to
+recover with no ledger to consult — the honest reason a clean outgroup
+belongs in this campaign rather than being assumed.
+
+**The re-baseline.** Say plainly what changes: goblin's proto-roots now
+descend from proto-goblinoid instead of being drawn from goblin's own
+phonology, so goblin's present-day vocabulary — and every proper name built
+over it — changes. But the blast radius is wider than one language's word
+list. Two more peoples join the world outright: hobgoblin and bugbear are
+now placed, named, and worshipped, so settlement placement draws over a
+larger roster, the concept layer gains endonym and exonym concepts for both
+new peoples, and every language in the world — kobold included — grows
+lexicon entries for them as coexistence brings species into each other's
+exposure. Seed 42's world re-baselines **world-wide**, not just along the
+goblinoid branch. The project's epoch discipline governs the change rather
+than papering over it: the old per-species draw label,
+`language/goblin/lexicon/root/<concept>`, is retired rather than silently
+repurposed — it stays in `stream_labels()` with a `(retired at The
+Branches)` doc, so an old save keeps loading and keeps rendering the
+committed facts it already carries, while new generation draws under the
+family-level label, `language/goblinoid/lexicon/root/<concept>`, instead.
+Proper-noun byte-identity does not hold across this campaign, exactly as it
+did not across The Words before it — a name that used to render
+`Xnebsvobned` may render something else entirely once its roots descend
+from a shared ancestor rather than a private draw. What must hold, and is
+tested, is determinism: the same seed and the same roster reproduce the
+identical world, byte for byte, every time. The committed seed-42 galleries
+and the generated dictionary are regenerated and re-pinned **in this
+campaign's own commits** — not deferred to some later cleanup — because a
+drift check that tolerates its own campaign's drift is not a drift check at
+all.
+
+This campaign plants the tree and nothing more. Every concept a goblinoid
+daughter lexicalizes keeps the root it inherited — no daughter innovates a
+new root or loses one it was given, so the true rate at which languages
+actually replace their vocabulary, the Dolgopolsky ranking a real
+comparative linguist would recognize, is not yet a fact this world can
+show; that differential retention is the next arc's work. No word crosses a
+family boundary either: daughters do not borrow from one another and
+nothing here builds a Sprachbund, so loanword resistance — the true
+Leipzig-Jakarta ranking — waits on contact between peoples who have
+actually met. And no one *infers* any of this: the proto, the cascades, and
+the cognate sets are all asserted from ground truth the sim already holds,
+never reconstructed blind from surface wordlists the way a real historical
+linguist works from evidence alone — that blind comparative method, scored
+against the ground truth this campaign commits, is the capstone the whole
+descent arc has been building toward. One quieter non-goal rides along with
+the other three: a linguistic family this deliberate implies a species
+clade, but wiring the language tree to a deeper species phylogeny is
+explicitly not this campaign's work — noted as a future consistency
+constraint, not built as one. A family has an ancestor now, and three lines
+that can prove they share it. It does not yet have a history of change
+within any one line, a memory of contact between lines, or an ear capable
+of reconstructing either without being told.

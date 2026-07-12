@@ -43,3 +43,15 @@ sum draws from its own *derived* seed, so octaves are independent named
 streams like everything else. See the Gallery's
 [First Light](../gallery/first-light.md) for what seed 42's noise actually
 looks like.
+
+That first property — *every platform* — holds for the noise by
+construction: its value is an integer hash scaled to the unit interval, with
+no transcendental arithmetic, so it is bit-identical on any machine. Not
+every quantity is so lucky. The sines and power laws of orbital mechanics
+and terrain call out to the operating system's math library, and Apple's and
+Linux's disagree in the last bit — invisible to physics, loud to a byte
+comparison. The world stays byte-identical across platforms because those
+values are *quantized* to eight significant digits (using platform-independent
+formatting) as they are written into any committed artifact — at the emit
+boundary only, never in the computation. See the Chronicle's
+[Common Ground](../chronicle/common-ground.md).

@@ -57,6 +57,10 @@
 - [Campaign 26: The Live Orrery](./chronicle/26-the-live-orrery.md)
 - [Campaign 27: The Words](./chronicle/27-the-words.md)
 - [The Type Audit](./chronicle/the-type-audit.md)
+- [Common Ground](./chronicle/common-ground.md)
+- [The Branches](./chronicle/the-branches.md)
+- [The Rising Tone](./chronicle/the-rising-tone.md)
+- [The Fast Gate](./chronicle/the-fast-gate.md)
 
 # The Gallery
 
@@ -98,6 +102,8 @@
 - [Phonology](./reference/phonology.md)
 - [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
 - [Dictionary](./reference/dictionary-generated.md)
+- [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
+- [The Layering](./reference/layering.md)
 
 # Open Questions
 

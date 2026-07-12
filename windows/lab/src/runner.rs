@@ -11,7 +11,11 @@ use std::path::{Path, PathBuf};
 /// Resolve a pin set's roster name to a concrete species roster. The closed
 /// set the Lab knows (spec §5): `None`/`"default"` = shipped; the two solo
 /// null-control rosters otherwise. Unknown ⇒ loud `StudyError`.
-fn resolve_roster(name: Option<&str>) -> Result<Vec<SpeciesDef>, StudyError> {
+///
+/// `pub(crate)` (not private) so [`crate::blackbox::record_failure`] can
+/// resolve a pin set's roster exactly as the runner does, instead of
+/// duplicating this match.
+pub(crate) fn resolve_roster(name: Option<&str>) -> Result<Vec<SpeciesDef>, StudyError> {
     match name {
         None | Some("default") => Ok(hornvale_worldgen::default_roster()),
         Some("goblin-solo") => Ok(crate::goblin_solo_roster()),
@@ -48,6 +52,27 @@ pub struct RunResult {
     pub metric_names: Vec<&'static str>,
     /// One row per (pin_set, seed) pair.
     pub rows: Vec<Row>,
+}
+
+/// Canonicalize a row for comparison with fixture-loaded rows: quantize
+/// `Number` values exactly as [`render_csv`] does at the serialization
+/// boundary, so a full-precision live row compares equal to its committed,
+/// quantized counterpart (decision
+/// `serialized-floats-are-quantized-for-cross-platform-determinism`).
+pub fn canonical_row(row: &Row) -> Row {
+    Row {
+        seed: row.seed,
+        pin_set: row.pin_set.clone(),
+        values: row
+            .values
+            .iter()
+            .map(|v| match v {
+                MetricValue::Number(n) => MetricValue::Number(hornvale_kernel::quantize(*n)),
+                other => other.clone(),
+            })
+            .collect(),
+        refusal: row.refusal.clone(),
+    }
 }
 
 /// Run a study: build worlds for each pin set × seed combination,
@@ -195,8 +220,9 @@ fn csv_field(text: &str) -> String {
 /// publisher (the committed, drift-checked fixture), so the two are always
 /// byte-identical. The format:
 /// - Header: seed,pin_set,<metric names...>,refusal
-/// - Number values: displayed with default Rust formatting (shortest
-///   round-trippable form — [`load_rows`] parses it back exactly)
+/// - Number values: quantized to the kernel's platform-stable canonical
+///   form (8 significant digits), then displayed with default Rust
+///   formatting — [`load_rows`] parses the emitted text back exactly
 /// - Text values: quoted per RFC 4180 when they contain a comma, quote, or
 ///   newline; written verbatim otherwise
 /// - Flag values: "true" or "false"
@@ -219,7 +245,13 @@ pub(crate) fn render_csv(result: &RunResult) -> String {
         for value in &row.values {
             csv_content.push(',');
             match value {
-                MetricValue::Number(n) => csv_content.push_str(&format!("{}", n)),
+                // Quantize to the platform-stable canonical form (see the
+                // kernel `quantize` module): full-precision metric values
+                // otherwise carry last-ULP libm divergence into the committed
+                // census fixture and break the cross-platform drift check.
+                MetricValue::Number(n) => {
+                    csv_content.push_str(&format!("{}", hornvale_kernel::quantize(*n)))
+                }
                 MetricValue::Text(t) => csv_content.push_str(&csv_field(t)),
                 MetricValue::Flag(f) => csv_content.push_str(if *f { "true" } else { "false" }),
                 MetricValue::Absent => {
@@ -474,6 +506,44 @@ mod tests {
         let csv = render_csv(&original);
         let loaded = load_rows(&study, &csv).expect("load_rows inverts render_csv");
         assert_eq!(loaded, original);
+    }
+
+    #[test]
+    fn csv_numbers_are_quantized_for_cross_platform_stability() {
+        // Full-precision metric values carry last-ULP libm divergence between
+        // platforms; render_csv must emit the platform-stable quantized form.
+        let study = Study {
+            name: "q".to_string(),
+            description: "quantize".to_string(),
+            seeds: Seeds { from: 0, count: 0 },
+            pin_sets: vec![],
+            metrics: MetricSelection::Named(vec!["day-length-hours".to_string()]),
+        };
+        let raw = 39.46846507151197_f64;
+        let original = RunResult {
+            study: study.clone(),
+            metric_names: study
+                .selected_metrics()
+                .unwrap()
+                .iter()
+                .map(|m| m.name)
+                .collect(),
+            rows: vec![Row {
+                seed: 0,
+                pin_set: "default".to_string(),
+                values: vec![MetricValue::Number(raw)],
+                refusal: None,
+            }],
+        };
+        let csv = render_csv(&original);
+        assert!(
+            csv.contains(&hornvale_kernel::quantize(raw).to_string()),
+            "csv must contain the quantized value"
+        );
+        assert!(
+            !csv.contains(&raw.to_string()),
+            "csv must not contain the raw full-precision value"
+        );
     }
 
     /// The reference sequential sweep — the oracle the parallel `run` is
@@ -801,6 +871,31 @@ mod tests {
             err.message.contains("bogus"),
             "error must name the bad roster: {}",
             err.message
+        );
+    }
+
+    #[test]
+    fn canonical_row_quantizes_numbers_and_preserves_everything_else() {
+        let row = Row {
+            seed: 7,
+            pin_set: "default".to_string(),
+            values: vec![
+                MetricValue::Number(0.123_456_789_012_345),
+                MetricValue::Text("kept".to_string()),
+                MetricValue::Flag(true),
+                MetricValue::Absent,
+            ],
+            refusal: Some("kept too".to_string()),
+        };
+        let canon = canonical_row(&row);
+        assert_eq!(
+            canon.values[0],
+            MetricValue::Number(hornvale_kernel::quantize(0.123_456_789_012_345))
+        );
+        assert_eq!(canon.values[1..], row.values[1..]);
+        assert_eq!(
+            (canon.seed, &canon.pin_set, &canon.refusal),
+            (7, &row.pin_set, &row.refusal)
         );
     }
 

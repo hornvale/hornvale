@@ -1,6 +1,7 @@
 //! Scenario pins: parameters supplied instead of drawn (spec §2.2).
 //! Downstream generation conditions on pinned values identically to drawn
-//! ones; unsatisfiable pins fail loudly.
+//! ones; unsatisfiable pins fail loudly — the seed is the world's identity,
+//! never retried (decision 0007).
 
 use crate::units::{Degrees, LocalDays};
 
@@ -62,6 +63,9 @@ pub struct SkyPins {
     pub neighbor: Option<NeighborClass>,
     /// Deep-time orbital forcing; None = drawn.
     pub forcing: Option<ForcingPin>,
+    /// Spin direction of a spinning world (SKY-22); None = drawn.
+    /// Conflicts with a locked rotation, which has no sunrise to direct.
+    pub spin: Option<SpinPin>,
 }
 
 /// Pinnable rotation regimes.
@@ -74,6 +78,15 @@ pub enum RotationPin {
     Locked,
     /// A specific day length in standard hours (4–100).
     PeriodHours(f64),
+}
+
+/// Pinnable spin directions for a spinning world (SKY-22).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SpinPin {
+    /// Ordinary spin: the sun rises in the east.
+    Prograde,
+    /// Backward spin: the sun rises in the west.
+    Retrograde,
 }
 
 /// Spectral classes for notable neighbor stars.
@@ -183,6 +196,12 @@ pub fn pin_strings(pins: &SkyPins) -> Vec<String> {
         }
     }
 
+    match pins.spin {
+        Some(SpinPin::Prograde) => out.push("spin=prograde".to_string()),
+        Some(SpinPin::Retrograde) => out.push("spin=retrograde".to_string()),
+        None => {}
+    }
+
     out
 }
 
@@ -221,6 +240,13 @@ pub fn parse_pin(s: &str, pins: &mut SkyPins) -> Result<(), String> {
                 "normal" => RotationPin::Normal,
                 "locked" => RotationPin::Locked,
                 other => return Err(format!("rotation: unknown value '{other}'")),
+            });
+        }
+        "spin" => {
+            pins.spin = Some(match value {
+                "prograde" => SpinPin::Prograde,
+                "retrograde" => SpinPin::Retrograde,
+                other => return Err(format!("spin: unknown value '{other}'")),
             });
         }
         "day-hours" => {
@@ -317,6 +343,7 @@ mod tests {
             year_local_days: None,
             neighbor: Some(NeighborClass::BlueGiant),
             forcing: None,
+            spin: Some(SpinPin::Retrograde),
         };
         let mut rebuilt = SkyPins::default();
         for s in pin_strings(&pins) {
@@ -335,14 +362,16 @@ mod tests {
             year_local_days: Some(LocalDays::new(300.0).unwrap()),
             neighbor: Some(NeighborClass::RedGiant),
             forcing: None,
+            spin: Some(SpinPin::Prograde),
         };
         let strings = pin_strings(&pins);
-        assert_eq!(strings.len(), 5);
+        assert_eq!(strings.len(), 6);
         assert!(strings.contains(&"moons=2".to_string()));
         assert!(strings.contains(&"rotation=normal".to_string()));
         assert!(strings.contains(&"obliquity=none".to_string()));
         assert!(strings.contains(&"year-days=300".to_string()));
         assert!(strings.contains(&"neighbor=red-giant".to_string()));
+        assert!(strings.contains(&"spin=prograde".to_string()));
     }
 
     #[test]
@@ -355,6 +384,29 @@ mod tests {
         let mut rebuilt = SkyPins::default();
         parse_pin("moons=1+2", &mut rebuilt).unwrap();
         assert_eq!(rebuilt.moons, pins.moons);
+    }
+
+    #[test]
+    fn spin_pin_parses_and_round_trips() {
+        // SKY-22: the spin direction is its own orthogonal pin.
+        let mut pins = SkyPins::default();
+        parse_pin("spin=retrograde", &mut pins).unwrap();
+        assert_eq!(pins.spin, Some(SpinPin::Retrograde));
+        parse_pin("spin=prograde", &mut pins).unwrap();
+        assert_eq!(pins.spin, Some(SpinPin::Prograde));
+        assert!(parse_pin("spin=widdershins", &mut pins).is_err());
+
+        let pins = SkyPins {
+            spin: Some(SpinPin::Retrograde),
+            ..SkyPins::default()
+        };
+        let strings = pin_strings(&pins);
+        assert!(strings.contains(&"spin=retrograde".to_string()));
+        let mut reparsed = SkyPins::default();
+        for s in &strings {
+            parse_pin(s, &mut reparsed).unwrap();
+        }
+        assert_eq!(reparsed, pins);
     }
 
     #[test]

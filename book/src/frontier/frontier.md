@@ -33,6 +33,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The frontier map](#the-frontier-map)
   - [The unification thesis](#the-unification-thesis)
   - [The expressive-culture cluster](#the-expressive-culture-cluster)
+  - [The channel-capacity frontier — enriching a constrained phonology](#the-channel-capacity-frontier--enriching-a-constrained-phonology)
   - [The species-psychology substrate — the layer beneath the cluster](#the-species-psychology-substrate--the-layer-beneath-the-cluster)
   - [Ideonomic cognition — novel thought as seeded combinatorics](#ideonomic-cognition--novel-thought-as-seeded-combinatorics)
   - [Social structure as orthogonal axes — cashing the substrate](#social-structure-as-orthogonal-axes--cashing-the-substrate)
@@ -45,6 +46,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [Prophecy and the shape of time](#prophecy-and-the-shape-of-time)
   - [The projection layer](#the-projection-layer)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
+  - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
   - [The observer has no place — the position-blind sky](#the-observer-has-no-place--the-position-blind-sky)
   - [Sequencing the deep-time stack](#sequencing-the-deep-time-stack)
@@ -443,6 +445,115 @@ even if it ships with only one medium lit.
   almost incidental. **Lab candidate:** unarmed martial lineages should
   concentrate in disarmed subordinate populations, not among the armed and
   free.
+
+---
+
+## The channel-capacity frontier — enriching a constrained phonology
+
+*(Directly downstream of shipped reality; verification is strong — every idea
+here is a Lab-measurable capacity or collision count.)*
+
+The homophony campaign (The Words → The Branches → the phonology epoch) closed on
+a hard guarantee: no two *core* concepts share a word in any daughter, on any
+seed, reached by a merger-aware proto-assignment
+([decision](https://github.com/hornvale/hornvale/blob/main/docs/decisions/the-proto-assignment-is-merger-aware.md)).
+But that guarantee was won on a rich humanoid inventory. Strip the inventory down
+to a stereotyped species — a Yuan-Ti with few labials and a wall of sibilants —
+and the same pressure returns with force. The right frame is not phonology but
+**information theory: a low-capacity channel must carry more messages than its
+raw symbol count allows.** Every real language's answer to a small alphabet is
+one of a handful of channel-engineering moves — add orthogonal dimensions to
+each symbol, lengthen the codewords, use a product code, add error-correcting
+redundancy, lean on the decoder's context, or allocate short codes to frequent
+messages — and each maps to a concrete linguistic mechanism the system could
+grow. Channel capacity today is `onsets × nuclei × codas × tones`; the frontier
+is every further factor, and every way to fight *after* a collision rather than
+only before it.
+
+The interventions sort into a **defense-in-depth** over the life of a contrast.
+A distinction is born distinct at assignment; a lossy cascade rule threatens it;
+it either merges or is rescued. Three layers guard three transitions. **Prevent**
+(generation time): choose forms that will not merge. **Transphonologize**
+(diachronic): a lost segmental feature is caught by a suprasegmental tier before
+the merger completes — tonogenesis, already shipped, is the first instance of a
+general move. **Tolerate** (speak time): even identical forms are pulled apart by
+a second channel — the only layer that models the *listener*, the frontier the
+confusable-vs-free metric opened. The scarce, high-value work is in the second
+and third layers; the first is already best-served.
+
+**Layer 1 — new orthogonal tiers (transphonologize; body-plan capacities that
+multiply the channel).** Each is a `tonality`-style anatomy-derived scalar, and
+several are natural tonogenesis-siblings — a lost feature reborn on a *new* tier
+rather than pitch. **LANG-12** phonation register (modal/breathy/creaky — a lost
+voicing contrast transphonologized to voice quality; a serpent's hiss reads
+breathy). **LANG-13** vowel length (the cheapest clean multiplier of the nucleus
+factor). **LANG-14** nasalization (a lost nasal coda reborn as a nasal vowel —
+the historically real path tonogenesis currently dumps into the Low bucket).
+**LANG-15** contour tones (unbank the rising/falling dimension over the level
+tones). **LANG-16** secondary articulation — palatalization, labialization, and
+especially **pharyngealization** — the single best lever for a narrow inventory,
+because it *colors* the few consonants a species has (`tˤ`) rather than demanding
+new places of articulation. **LANG-17** gemination / fortis-lenis. **LANG-18**
+contrastive stress or pitch-accent *placement* (today stress is fixed on the
+first vowel; letting its position distinguish words multiplies capacity by
+syllable count and renders fully in espeak).
+
+**Layer 2 — structural word-formation (product codes; the big multipliers from a
+small alphabet).** **LANG-19** root-and-pattern (templatic) morphology — the
+killer feature for a stereotyped species: a consonantal **root** crossed with a
+vocalic/prosodic **template**, exactly how Arabic builds a vast lexicon from ~28
+consonants, so a Yuan-Ti's six sibilants over a three-consonant root yield
+thousands of distinct words. An authored typology dimension (templatic vs
+concatenative). **LANG-20** ablaut/apophony (a fixed vowel-melody alternation
+inflects one root into several forms with no new segments). **LANG-21**
+diphthong/rich-nucleus capacity (extend the flat 1–2 nucleus count to real
+glides). **LANG-22** productive derivational affixation, infixes included — so a
+derived concept is an affixed form, not a colliding compound.
+
+**Layer 3 — redundancy and side-information (tolerate: disambiguate even when the
+forms collide).** **LANG-23** noun classifiers / class markers — the
+codon-degeneracy move made structural: a classifier keyed to the semantic domain
+rides along, so two same-domain homophones separate by classifier; it is the
+confusability tag *made audible*, a direct structural attack on the costly kind
+of collision. **LANG-24** agreement/concord (redundant class marking on
+modifiers catches a collision on the head — parity). **LANG-25** register /
+honorific stratification (plain/honorific/taboo strata give a concept distinct
+forms and are themselves a disambiguating channel). **LANG-26** a modeled context
+for the confusability metric — upgrade confusable-vs-free from pack-domain to a
+seeded co-occurrence model, so two homophones count as confusable only if they
+actually appear in the same discourse, not merely the same Swadesh pack.
+
+**Layer 4 — generation-time guards (prevent; how the assignment spends its
+capacity).** **LANG-27** functional-load-weighted length (Zipf/Menzerath — make
+core-root length inversely proportional to frequency, so the merger-aware
+lengthening spends its ~3% where it buys the most distinction). **LANG-28**
+confusability-weighted minimal-pair spacing (today's rejection is edit-distance 1;
+make the required distance perceptual and load-weighted, so a high-load pair, or
+two perceptually-close sibilant clusters for a Yuan-Ti, is spaced further).
+**LANG-29** a per-domain homophony budget (generalize "zero core" to a tunable
+budget of tolerated collisions per domain, spent on the lowest-load pairs first —
+Huffman, not a hard core/periphery line). **LANG-30** cross-tier capacity-floor
+accounting (extend the floor's `onsets × nuclei × codas × tones` product to every
+tier above, so a few-place species provably clears the floor through the tiers
+its body plan affords, and the metric reports which tier carried it).
+
+**Layer 5 — enrichment (character, and a soft guard).** **LANG-31** sound
+symbolism / phonaesthemes and an ideophone stratum — a seeded map from semantic
+features to sound features (bouba/kiki; sibilant → small/sharp for a serpent), so
+related concepts *cluster* phonetically on purpose. Beyond flavour it is a mild
+anti-arbitrariness that aids the listener — meanings that sound related are less
+cross-confusable — and it gives a stereotyped species genuine character.
+
+Two constraints bound the whole frontier. **The espeak ceiling** is the real
+limit on the richest multipliers: phonation, secondary articulation, and contour
+tone are IPA-native but espeak-weak, so each ships as an honest audio limit the
+way tone-espeak already does — rendered in the romanization and the IPA, silent
+in the clip. And **everything stays a body-plan-derived capacity, not a free
+knob**: the point is that a Yuan-Ti is rescued not by growing places it has no
+anatomy for, but by *coloring* the few it has (LANG-16), *permuting* them
+templatically (LANG-19), *spacing* them perceptually (LANG-28), and *proving* the
+capacity floor is met through those tiers (LANG-30) — that quartet is the
+narrow-inventory answer, and the one to build first.
 
 ---
 
@@ -1383,6 +1494,125 @@ genesis day 0. Sequenced, it belongs wherever a campaign first needs two
 places on one world to see different skies: locked-world religion (SEQ-1), the
 epistemic layer (MAP-2), or a firm-ground observation-path campaign (SEQ-4),
 whichever pulls first.
+
+---
+
+## The domain map — which capabilities want their own crate
+
+The frontier holds ~150 ideas; the architecture holds nine domains. Those
+are different populations. A *domain* is a specific object — a crate that
+depends on the kernel and nothing else, speaks only through facts,
+phenomena, and fields, and can be added without editing any sibling
+(they meet only at the `worldgen` composition root). Most registry rows are
+*features*: a field, a phenomenon, a formula that belongs inside a domain
+that already exists or will. A minority are latent *crates* — capabilities
+whose natural home is a new kernel-only domain rather than a feature of an
+old one. This section reads the nine existing domains as a decomposition and
+asks which capabilities want to become their own crate. It generates no new
+ideas; it re-sorts the ones already captured by where they should *live*.
+
+Read the nine along three axes — is the subject **alive, mechanical, or
+abstract** (animacy); is it **externally driven or self-driven** (autonomy);
+does it **accumulate, oscillate, or decay** over time (direction) — and the
+same three gaps open every time.
+
+**The living middle is nearly empty.** The domains cluster at two poles:
+mechanical/physical (astronomy, terrain, climate, paleoclimate) and
+abstract/informational (language, culture, religion, settlement). The *alive*
+middle is one thin crate, `species`, which is an authored taxonomy of
+psychology vectors, not a living substrate. There is no vegetation, no fauna,
+no ecology, no population-as-field, no disease. This is the largest and most
+obviously warranted cluster, and it is already the next build on the roadmap.
+
+**Nothing is self-driven yet.** Every current domain is driven from outside —
+by physics, or by a one-shot genesis pass. The self-driven and co-driven end
+— institutions, markets, polities that run *themselves* over historical time
+and feed back — does not exist as domains; everything social is compressed
+into coarse `culture`, `settlement`, and `religion`. As the sim climbs the
+scale ladder these want to split out.
+
+**There is no decay engine.** The world only accretes: tectonics accumulate,
+cycles oscillate, genesis commits facts forever. Nothing systematically
+*erodes* at the cultural scale. The cultural-memory economy is designed to be
+exactly that engine — upkeep cost, the floating gap, forgetting — and it is
+entirely unbuilt. A world that only accumulates reads as a museum, not a
+history; giving the world a decay direction is a first-class goal, not a late
+refinement.
+
+The decomposition that follows from those gaps, priority-ordered by leverage
+× readiness rather than by difficulty, is enumerated in the registry's DOM
+category. The near-term core fills the empty living middle — a **biosphere**
+(vegetation and fungal cover as fields, fauna on the fast–slow axis), the
+**ecology** that prices coexistence over it, a **demography** extracted from
+settlement (population as a field, settlements as condensations), and a
+**hydrology** split from terrain's drainage (rivers as people-infrastructure,
+not land-refinement). Two are promotions of things wrongly embedded today: a
+**psychology** crate lifting the per-species vector out of `species`, where
+the whole social stack silently reads it, and a **memory** crate that *is*
+the decay engine. The self-driven social layer arrives later —
+**technology** as capability thresholds (never a tech tree), an **economy**
+of exchange and clearing, an **epistemics** second ledger (the scholar's
+knowledge, provenance-tagged — a change to what "a world" *is*, so it earns a
+spec well before code), a **perception** crate supplying the observer model
+the text lens already needs, and eventually a **polity**. Two genuinely new
+physical crates sit beside terrain: a **lithosphere** (rock, ore, karst — the
+mineral and vertical layer) and **geohazards** (earthquake, eruption,
+tsunami as episodic phenomena — the negative pole of the sky's benign
+spectacle). The speculative tier stays behind one gate: a single
+**metaphysics** crate selecting the rule-system, with the undead and
+prophecy families as its outputs, never a sprawl of sibling crates.
+
+Four later additions come not from the three gaps but from reading the map
+for **broken symmetries** — places where it holds an input without its
+output, or a decay without its twin. `perception` supplies the observer's
+senses, but nothing produces what is sensed: an **aesthetics** crate is the
+output twin, the generative engine behind the whole expressive-culture
+cluster (one seeded grammar across text, image, music, and built space) and
+a structural sibling of `language`, a per-culture generative grammar behind a
+render seam. `memory` is the *cultural* decay engine, but the world has no
+*physical* one: a **taphonomy** crate owns preservation and its bias — what
+survives, what is buried, the settlement that becomes a tell and the body
+that becomes a fossil — the evidence substrate `epistemics` must infer over,
+and the physical sibling of the memory economy. `epidemiology` spreads
+disease through bodies; its informational twin, a **transmission** crate,
+would carry traits, rumours, and innovations through minds (the diffusion
+dynamics myth-phylogenetics and the language-contact layer both assume but
+none owns) — the weakest of the four, and possibly a shared field rather than
+a crate. And subsistence, homeless between `culture`, biosphere, technology,
+and genetics, wants an **agroecology** crate for the one thing none of them
+owns: the people-managed ecosystem itself — domestication, artificial
+selection, and the carrying-capacity lift — niche construction read as a
+coupled system. As with every row above, none is scheduled; each is a line in
+the registry until a campaign pulls for it.
+
+A later pass read the map against the freshly-shipped climate crate and
+surfaced six more candidates — and, usefully, found most already answered.
+Four physical-pole capabilities an earlier reading would have called gaps are
+in fact owned as *climate features*: ocean circulation (`CLIM-ocean-currents`),
+the cryosphere (`CLIM-cryosphere`), the fire regime (`CLIM-hazards`), and
+atmospheric greenhouse forcing (`CLIM-greenhouse`). That they are features and
+not crates is not a matter of taste but of the layering rule: a domain depends
+on the kernel alone, yet ocean currents read the wind field and feed
+sea-surface temperature, so a standalone ocean crate would have to depend on
+`climate` — precisely what the rule forbids. The same logic returns faunal
+ethology to the biosphere (behaviour as a phenomenon over BIO-7's predator/prey
+fields) and mutualism to ecology (a trophic-interaction type, the constructive
+twin of the parasitic coupling `epidemiology` owns). The registry records all
+six as DOM rows regardless (`DOM-ocean`, `DOM-cryosphere`, `DOM-fire`,
+`DOM-air`, `DOM-ethology`, `DOM-symbiosis`) — not because they should split
+out, but because the crate-versus-feature question is itself worth holding
+open, and the row is where a future campaign that outgrew the feature framing
+would find the argument already set down against it. Each row names the feature
+that captures it today, so the pointer is a caution, not a plan.
+
+Two disciplines hold the map honest, and they are the same ones that govern
+the code. A feature is not a crate: soil, weather-as-sampled-instance,
+calendrics, law, and kinship are fields or data structures inside existing
+domains, and giving each a crate fragments the layering without buying any
+isolation. And no domain is scheduled — the decomposition constrains *what
+splits from what*, not *when*; each crate still earns its spec only when a
+campaign pulls for it, and until then it is a line in the registry, not a
+directory under `domains/`.
 
 ---
 

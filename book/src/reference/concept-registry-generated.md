@@ -29,7 +29,9 @@
 | `longitude` | yes | settlement longitude, degrees |
 | `max-ice-fraction` | yes | land fraction under ice at the glacial maximum |
 | `moon-count` | yes | how many moons the anchor world has |
+| `moon-inclination-degrees` | no | orbital inclination of a moon to the anchor's orbital plane, in degrees |
 | `moon-period-std` | no | orbital period of a moon, in standard days |
+| `moon-tide-rel` | no | tidal strength of a moon, relative to Luna on Earth |
 | `name` | yes | canonical name of an entity |
 | `name-gloss` | yes | the glossed meaning of an entity's generated name |
 | `notable-neighbor` | no | a notable neighbor star visible in the night sky |
@@ -40,6 +42,7 @@
 | `plate-count` | yes | how many tectonic plates the globe has |
 | `population` | yes | population of a settlement |
 | `refugium` | no | a place habitable through the glacial maximum |
+| `retrograde-spin` | yes | the anchor world spins backward: the sun rises in the west |
 | `scenario-pin` | no | an experimenter-supplied pin string conditioning genesis |
 | `sea-level-m` | yes | sea level in meters |
 | `sentiment` | yes | a belief's sentiment (eternal, cyclic, or ambient) |
@@ -58,6 +61,7 @@
 | `species-status-basis` | yes | rank, knowledge, or generosity |
 | `species-threat-response` | yes | flee 0 ↔ stand 1 |
 | `species-time-horizon` | yes | planning depth, 0-1 |
+| `species-tonality` | yes | tonal propensity, 0 atonal ↔ 1 tonal |
 | `species-voice-loudness` | yes | voice-loudness range, 0-1 |
 | `species-voicing` | yes | voicing emphasis, 0-1 |
 | `species-vowel-space` | yes | vowel-space size, 0-1 |
@@ -75,8 +79,10 @@
 |---|---|
 | `ambient` | a pervasive atmospheric condition |
 | `celestial-body` | a body visible in the sky |
+| `eclipse` | a moon crossing the face of the sun |
 | `night-star` | a fixed star notable in the night sky |
 | `seasonal-cycle` | the annual daylight cycle |
+| `tide` | the rise and fall of the waters under the moons |
 
 ### Concepts
 
@@ -89,6 +95,7 @@
 | `blue` | language | quality | the color term for blue |
 | `bone` | language | body | the rigid frame of a body |
 | `brown` | language | quality | the color term for brown |
+| `bugbear-kind` | species | living | a bugbear |
 | `child` | language | kin | one's son or daughter |
 | `coral-reef` | climate | terrain | a biome class |
 | `dark` | language | quality | the color term for black/dark hues |
@@ -108,6 +115,7 @@
 | `hadal-trench` | climate | terrain | a biome class |
 | `hand` | language | body | the manipulating limb-end |
 | `hearth` | settlement | social | the fire at the center of a home |
+| `hobgoblin-kind` | species | living | a hobgoblin |
 | `home` | settlement | social | one's dwelling |
 | `hydrothermal-vent` | climate | terrain | a biome class |
 | `ice` | climate | substance | frozen water |

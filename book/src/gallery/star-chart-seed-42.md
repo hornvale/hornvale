@@ -35,10 +35,12 @@ The sun is a yellow dwarf (G).
 4. A red dwarf — dim red, 57.7 light-years away, apparent brightness 0.000.
 5. A white dwarf — pale white, 67.0 light-years away, apparent brightness 0.000.
 
-Moon 1 (vast): `oo))))))OO((((oo` — one cycle every 16.7 standard days.
-Moon 2 (small, distant): `oo))))))OO((((oo` — one cycle every 35.7 standard days.
+Moon 1 (vast): `o))))))OO((((((o` — one cycle every 16.7 standard days.
+Moon 2 (small, distant): `o))))))OO((((((o` — one cycle every 35.7 standard days.
 
 ![Full-color render](./star-chart-seed-42.png)
+
+> Rendered view — this raster's exact bytes are platform-local (pixel colors depend on the host math library) and are not cross-platform byte-checked; the page above is deterministic.
 
 ---
 

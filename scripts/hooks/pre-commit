@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# scripts/hooks/pre-commit — the cheap half of the gate (TOOL-14).
+#
+# Runs `make quick` (fmt --check + clippy) before every commit. These are the
+# cheapest checks and the most common review finding per CLAUDE.md, so catching
+# them here reserves the expensive `--workspace` test gate for pre-push/CI.
+#
+# Opt-in: enable with `make install-hooks` (sets core.hooksPath). Bypass a
+# single commit with `git commit --no-verify` only when you have a reason —
+# never to skip the fmt gate (CLAUDE.md forbids --no-verify for that).
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+if ! make quick; then
+    echo "pre-commit: 'make quick' failed — fix fmt/clippy before committing." >&2
+    exit 1
+fi

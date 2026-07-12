@@ -5,9 +5,14 @@
 use hornvale_language::{ExposureClass, GapReason, LexEntry};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world, exposure_of, lexicon_of};
 
-/// The same seed-42, generated-sky, default-pins world the existing
-/// two-species integration tests (`species_worlds.rs`) build — both goblin
-/// and kobold place settlements on it.
+/// The seed-42, generated-sky, default-pins (full four-people roster)
+/// world `species_worlds.rs` builds. Since the founder floor (settlement's
+/// founder-reservation pass, MAP-22 K=1), all four peoples coexist in this
+/// world's shared joint-greedy placement pass (goblin and kobold each win
+/// many cells on their own suitability; hobgoblin and bugbear win exactly
+/// the one cell the founder floor reserves for them). The coexistence
+/// test below uses goblin and kobold, mirroring the pre-Branches
+/// two-species test this file descends from.
 fn world() -> hornvale_kernel::World {
     build_world(
         hornvale_kernel::Seed(42),
@@ -58,7 +63,9 @@ fn each_placed_species_holds_a_root_for_every_placed_species_kind() {
     // Spec §3: "each language will hold its own words for goblin-kind and
     // kobold-kind — endonym and exonym fall out free." Coexistence in one
     // shared world is exposure: both peoples place, so each is Steeped in
-    // the other's kind and each lexicon roots both.
+    // the other's kind and each lexicon roots both. Since the founder
+    // floor, goblin and kobold both coexist in this world (see `world()`'s
+    // doc comment) exactly as the pre-Branches two-species world did.
     let w = world();
     let goblin = lexicon_of(&w, "goblin").unwrap();
     let kobold = lexicon_of(&w, "kobold").unwrap();

@@ -1,19 +1,23 @@
 //! The anchor world: placed in the habitable zone by construction
 //! (spec §2.1). Rotation and obliquity drawn or pinned.
 
-use crate::pins::{GenesisError, RotationPin, SkyPins};
+use crate::pins::{GenesisError, RotationPin, SkyPins, SpinPin};
 use crate::star::Star;
 use crate::streams;
 use crate::units::{Au, Degrees, EarthMasses, SolarMasses, StdDays};
 use hornvale_kernel::Seed;
 
 /// Rotation regime of the anchor world.
+/// type-audit: bare-ok(flag: Spinning.retrograde)
 #[derive(Debug, Clone, PartialEq)]
 pub enum Rotation {
     /// Ordinary spin with a solar day of this many standard days.
     Spinning {
         /// Day length in standard days.
         day: StdDays,
+        /// Backward spin (SKY-22): the sun rises in the west. Drawn or
+        /// pinned; direction never changes the day's length or timing.
+        retrograde: bool,
     },
     /// Tidally locked: no local solar day exists.
     Locked,
@@ -52,8 +56,10 @@ pub fn generate_anchor(
             * 1.5,
     );
 
-    let rotation = match &pins.rotation {
-        Some(RotationPin::Locked) => Rotation::Locked,
+    // The day length first; the spin direction (SKY-22) is one further bit
+    // from its own stream, so pinning either never disturbs the other.
+    let day: Option<StdDays> = match &pins.rotation {
+        Some(RotationPin::Locked) => None,
         Some(RotationPin::PeriodHours(h)) => {
             if !(4.0..=100.0).contains(h) {
                 return Err(GenesisError::InvalidPin {
@@ -61,28 +67,51 @@ pub fn generate_anchor(
                     reason: format!("{h} hours is outside the legal range 4–100"),
                 });
             }
-            Rotation::Spinning {
-                day: StdDays(h / 24.0),
-            }
+            Some(StdDays(h / 24.0))
         }
         Some(RotationPin::Normal) | None => {
             let mut stream = astronomy_seed.derive(streams::ROTATION).stream();
             let lock_roll = stream.next_f64();
             let locked = pins.rotation.is_none() && lock_roll < 0.05;
             if locked {
-                Rotation::Locked
+                None
             } else {
-                Rotation::Spinning {
-                    day: StdDays((16.0 + stream.next_f64() * 24.0) / 24.0),
-                }
+                Some(StdDays((16.0 + stream.next_f64() * 24.0) / 24.0))
             }
         }
+    };
+    let rotation = match day {
+        None => {
+            if pins.spin.is_some() {
+                return Err(GenesisError::UnsatisfiablePin {
+                    pin: "spin".to_string(),
+                    reason: "a tidally locked world has no sunrise to direct".to_string(),
+                });
+            }
+            Rotation::Locked
+        }
+        Some(day) => Rotation::Spinning {
+            day,
+            retrograde: match pins.spin {
+                Some(SpinPin::Retrograde) => true,
+                Some(SpinPin::Prograde) => false,
+                // Authored prior: backward spin is rare (a Venus, not a
+                // coin flip).
+                None => {
+                    astronomy_seed
+                        .derive(streams::SPIN_DIRECTION)
+                        .stream()
+                        .next_f64()
+                        < 0.1
+                }
+            },
+        },
     };
 
     let (inner, outer) = (star.habitable_zone.inner(), star.habitable_zone.outer());
     let (orbit, year) = match pins.year_local_days {
         Some(local_days) => {
-            let Rotation::Spinning { day } = rotation else {
+            let Rotation::Spinning { day, .. } = rotation else {
                 return Err(GenesisError::UnsatisfiablePin {
                     pin: "year-days".to_string(),
                     reason: "a tidally locked world has no local days to count a year in"
@@ -200,7 +229,13 @@ mod tests {
             ..SkyPins::default()
         };
         let a = generate_anchor(Seed(1), &s, &pins).unwrap();
-        assert_eq!(a.rotation, Rotation::Spinning { day: StdDays(1.25) });
+        assert_eq!(
+            a.rotation,
+            Rotation::Spinning {
+                day: StdDays(1.25),
+                retrograde: false
+            }
+        );
     }
 
     #[test]
@@ -217,6 +252,96 @@ mod tests {
         };
         let pinned_anchor = generate_anchor(Seed(42), &s, &pins).unwrap();
         assert_eq!(pinned_anchor, default_anchor);
+    }
+
+    /// SKY-22: the spin pin flips exactly one bit. Direction draws from its
+    /// own stream, so a pinned direction leaves every other drawn quantity
+    /// untouched — and pinning the direction a seed would draw anyway is
+    /// byte-identical to not pinning at all.
+    #[test]
+    fn spin_pin_forces_the_direction_and_touches_nothing_else() {
+        let s = star();
+        let default_anchor = generate_anchor(Seed(42), &s, &SkyPins::default()).unwrap();
+        let Rotation::Spinning {
+            day: default_day,
+            retrograde: default_retro,
+        } = default_anchor.rotation
+        else {
+            panic!("seed 42's default anchor must be Spinning");
+        };
+
+        let retro = generate_anchor(
+            Seed(42),
+            &s,
+            &SkyPins {
+                spin: Some(SpinPin::Retrograde),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap();
+        let pro = generate_anchor(
+            Seed(42),
+            &s,
+            &SkyPins {
+                spin: Some(SpinPin::Prograde),
+                ..SkyPins::default()
+            },
+        )
+        .unwrap();
+
+        for (anchor, want) in [(&retro, true), (&pro, false)] {
+            let Rotation::Spinning { day, retrograde } = anchor.rotation else {
+                panic!("pinned spin must leave the world spinning");
+            };
+            assert_eq!(retrograde, want);
+            assert_eq!(day, default_day, "spin pin must not move the day length");
+            assert_eq!(anchor.mass, default_anchor.mass);
+            assert_eq!(anchor.orbit, default_anchor.orbit);
+            assert_eq!(anchor.obliquity, default_anchor.obliquity);
+        }
+        // Pinning what the seed would draw is byte-identical to no pin.
+        let matching = if default_retro { &retro } else { &pro };
+        assert_eq!(*matching, default_anchor);
+    }
+
+    /// SKY-22: a locked world has no sunrise to direct — the pin conflicts.
+    #[test]
+    fn spin_pin_on_locked_world_is_a_conflict() {
+        let s = star();
+        let pins = SkyPins {
+            rotation: Some(RotationPin::Locked),
+            spin: Some(SpinPin::Retrograde),
+            ..SkyPins::default()
+        };
+        assert!(matches!(
+            generate_anchor(Seed(1), &s, &pins),
+            Err(GenesisError::UnsatisfiablePin { .. })
+        ));
+    }
+
+    /// SKY-22: retrograde is drawn — rare (authored prior 10%) but real
+    /// over a population, and deterministic per seed.
+    #[test]
+    fn retrograde_spin_is_drawn_rare_but_real() {
+        let mut retro = 0u32;
+        let mut spinning = 0u32;
+        for seed in 0..200u64 {
+            let s = generate_star(Seed(seed));
+            let a = generate_anchor(Seed(seed), &s, &SkyPins::default()).unwrap();
+            let b = generate_anchor(Seed(seed), &s, &SkyPins::default()).unwrap();
+            assert_eq!(a, b);
+            if let Rotation::Spinning { retrograde, .. } = a.rotation {
+                spinning += 1;
+                if retrograde {
+                    retro += 1;
+                }
+            }
+        }
+        assert!(spinning > 150, "most worlds spin");
+        assert!(
+            (5..=40).contains(&retro),
+            "retrograde count {retro} outside the plausible band for p=0.1"
+        );
     }
 
     #[test]

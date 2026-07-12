@@ -3,6 +3,7 @@
 //! section describes these rules; this file enforces them.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::path::Path;
 use std::process::Command;
 
 /// The only crates permitted from outside the workspace (decision 0004).
@@ -148,4 +149,96 @@ fn windows_depend_only_on_kernel_domains_and_windows() {
             );
         }
     }
+}
+
+/// Sort rank of a layer along the constitutional chain.
+fn layer_rank(layer: &str) -> usize {
+    match layer {
+        "kernel" => 0,
+        "domains" => 1,
+        "windows" => 2,
+        "cli" => 3,
+        other => panic!("unknown layer '{other}' — extend the chain deliberately"),
+    }
+}
+
+/// Render the enforced dependency graph as the book's generated layering
+/// page: the layer chain plus one row per crate, from the same
+/// `cargo metadata` truth the assertions above enforce. Deterministic:
+/// crates ordered by (layer, name), dependency lists sorted.
+fn render_layering(packages: &[Package]) -> String {
+    let internal: BTreeSet<&str> = packages.iter().map(|p| p.name.as_str()).collect();
+    let mut sorted: Vec<&Package> = packages.iter().collect();
+    sorted.sort_by(|a, b| {
+        layer_rank(&a.layer)
+            .cmp(&layer_rank(&b.layer))
+            .then_with(|| a.name.cmp(&b.name))
+    });
+    let fmt_deps = |deps: &[&str]| {
+        if deps.is_empty() {
+            "—".to_string()
+        } else {
+            deps.join(", ")
+        }
+    };
+    let mut out = String::from(
+        "<!-- GENERATED FILE — do not edit. Emitted and drift-checked by \
+         cli/tests/architecture.rs (the layering enforcer); accept a deliberate \
+         graph change with REBASELINE=1 (make rebaseline-goldens). -->\n\n",
+    );
+    out.push_str("```text\nkernel  →  domains/*  →  windows/*  →  cli\n```\n\n");
+    out.push_str("| crate | layer | workspace dependencies | dev/build-only extras |\n");
+    out.push_str("|---|---|---|---|\n");
+    for pkg in sorted {
+        let mut normal: Vec<&str> = pkg
+            .normal_deps
+            .iter()
+            .map(String::as_str)
+            .filter(|d| internal.contains(*d))
+            .collect();
+        normal.sort_unstable();
+        normal.dedup();
+        let mut extras: Vec<&str> = pkg
+            .all_deps
+            .iter()
+            .map(String::as_str)
+            .filter(|d| internal.contains(*d) && !normal.contains(d))
+            .collect();
+        extras.sort_unstable();
+        extras.dedup();
+        out.push_str(&format!(
+            "| {} | {} | {} | {} |\n",
+            pkg.name,
+            pkg.layer,
+            fmt_deps(&normal),
+            fmt_deps(&extras)
+        ));
+    }
+    out
+}
+
+#[test]
+fn the_layering_render_is_deterministic_and_grounded() {
+    let packages = workspace();
+    let a = render_layering(&packages);
+    assert_eq!(a, render_layering(&packages));
+    assert!(
+        a.contains("| hornvale-kernel | kernel | — | — |"),
+        "the kernel row must show no workspace dependencies:\n{a}"
+    );
+}
+
+#[test]
+fn the_layering_page_matches_the_enforced_graph() {
+    hornvale_kernel::golden::assert_golden(
+        Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../book/src/reference/layering-generated.md"
+        )),
+        &render_layering(&workspace()),
+        "the book's layering page drifted from the enforced dependency graph — if the \
+         workspace graph changed deliberately, accept with REBASELINE=1 (or `make \
+         rebaseline-goldens`) and review the diff as an architecture change; the picture \
+         is authored by the enforcer, never by hand",
+    );
 }

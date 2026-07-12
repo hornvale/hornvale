@@ -42,6 +42,15 @@ pub fn generate_star(astronomy_seed: Seed) -> Star {
     }
 }
 
+/// Apparent angular diameter of the star seen from `orbit`, relative to
+/// Sol from 1 AU (SKY-7). The stellar radius comes from the main-sequence
+/// mass–radius relation R = M^0.8 (declared approximation, model card) —
+/// the disc a moon must cover to eclipse it.
+/// type-audit: pending(wave-1)
+pub fn sun_angular_diameter_rel(star: &Star, orbit: Au) -> f64 {
+    star.mass.0.powf(0.8) / orbit.0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,6 +71,28 @@ mod tests {
         assert!((zone.inner().get() - 0.95 * expected_l.sqrt()).abs() < 1e-12);
         assert!((zone.outer().get() - 1.37 * expected_l.sqrt()).abs() < 1e-12);
         assert!(zone.inner().get() < zone.outer().get());
+    }
+
+    /// SKY-7: the sun finally has an angular size — Sol from 1 AU is the
+    /// unit, and the main-sequence mass–radius relation (R = M^0.8) sets
+    /// the disc.
+    #[test]
+    fn sun_angular_diameter_follows_the_main_sequence_radius() {
+        let sol = Star {
+            mass: SolarMasses::new(1.0).unwrap(),
+            luminosity: SolarLuminosities::new(1.0).unwrap(),
+            class_name: "yellow dwarf (G)".to_string(),
+            habitable_zone: HabitableZone::new(Au::new(0.95).unwrap(), Au::new(1.37).unwrap())
+                .unwrap(),
+        };
+        assert!((sun_angular_diameter_rel(&sol, Au::new(1.0).unwrap()) - 1.0).abs() < 1e-12);
+        // A heavier star seen from a wider orbit: θ = M^0.8 / a.
+        let heavy = Star {
+            mass: SolarMasses::new(1.4).unwrap(),
+            ..sol.clone()
+        };
+        let expected = 1.4_f64.powf(0.8) / 1.2;
+        assert!((sun_angular_diameter_rel(&heavy, Au::new(1.2).unwrap()) - expected).abs() < 1e-12);
     }
 
     #[test]

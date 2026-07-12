@@ -10,7 +10,12 @@
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SettlementPins {
     /// Minimum suitability required to place a settlement (legal `[0, 1]`);
-    /// the placement floor defaults to 0.25 when `None`.
+    /// the placement floor defaults to 0.25 when `None`. Since the founder
+    /// pass (MAP-22 K=1), each placed species' single best cell is reserved
+    /// BEFORE the floor applies, so a high floor caps a species at its one
+    /// founder settlement but can never drive it to zero — pre-founder
+    /// behaviour, where a high enough floor emptied a species entirely, is
+    /// gone by design (`hornvale_settlement::place_tagged`).
     pub min_suitability: Option<f64>,
     /// Restrict the placed species set to this one species; `None` = all
     /// registry species. Validated against the species registry at build.

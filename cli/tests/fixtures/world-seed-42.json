@@ -127,10 +127,20 @@
         "functional": true,
         "doc": "how many moons the anchor world has"
       },
+      "moon-inclination-degrees": {
+        "name": "moon-inclination-degrees",
+        "functional": false,
+        "doc": "orbital inclination of a moon to the anchor's orbital plane, in degrees"
+      },
       "moon-period-std": {
         "name": "moon-period-std",
         "functional": false,
         "doc": "orbital period of a moon, in standard days"
+      },
+      "moon-tide-rel": {
+        "name": "moon-tide-rel",
+        "functional": false,
+        "doc": "tidal strength of a moon, relative to Luna on Earth"
       },
       "name": {
         "name": "name",
@@ -181,6 +191,11 @@
         "name": "refugium",
         "functional": false,
         "doc": "a place habitable through the glacial maximum"
+      },
+      "retrograde-spin": {
+        "name": "retrograde-spin",
+        "functional": true,
+        "doc": "the anchor world spins backward: the sun rises in the west"
       },
       "scenario-pin": {
         "name": "scenario-pin",
@@ -272,6 +287,11 @@
         "functional": true,
         "doc": "planning depth, 0-1"
       },
+      "species-tonality": {
+        "name": "species-tonality",
+        "functional": true,
+        "doc": "tonal propensity, 0 atonal ↔ 1 tonal"
+      },
       "species-voice-loudness": {
         "name": "species-voice-loudness",
         "functional": true,
@@ -326,8 +346,10 @@
     "phenomenon_kinds": {
       "ambient": "a pervasive atmospheric condition",
       "celestial-body": "a body visible in the sky",
+      "eclipse": "a moon crossing the face of the sun",
       "night-star": "a fixed star notable in the night sky",
-      "seasonal-cycle": "the annual daylight cycle"
+      "seasonal-cycle": "the annual daylight cycle",
+      "tide": "the rise and fall of the waters under the moons"
     },
     "concepts": {
       "abyssal": {
@@ -371,6 +393,12 @@
         "domain": "language",
         "kind": "Quality",
         "doc": "the color term for brown"
+      },
+      "bugbear-kind": {
+        "name": "bugbear-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a bugbear"
       },
       "child": {
         "name": "child",
@@ -485,6 +513,12 @@
         "domain": "settlement",
         "kind": "Social",
         "doc": "the fire at the center of a home"
+      },
+      "hobgoblin-kind": {
+        "name": "hobgoblin-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a hobgoblin"
       },
       "home": {
         "name": "home",
@@ -772,7 +806,7 @@
         "subject": 1,
         "predicate": "day-length-std",
         "object": {
-          "Number": 0.8798799803519574
+          "Number": 0.87987998
         },
         "place": null,
         "day": 0.0,
@@ -782,7 +816,7 @@
         "subject": 1,
         "predicate": "year-length-std",
         "object": {
-          "Number": 368.05357093462703
+          "Number": 368.05357
         },
         "place": null,
         "day": 0.0,
@@ -792,7 +826,7 @@
         "subject": 1,
         "predicate": "obliquity-degrees",
         "object": {
-          "Number": 0.9593056670606165
+          "Number": 0.95930567
         },
         "place": null,
         "day": 0.0,
@@ -812,7 +846,7 @@
         "subject": 1,
         "predicate": "eccentricity-mean",
         "object": {
-          "Number": 0.04116143676389656
+          "Number": 0.041161437
         },
         "place": null,
         "day": 0.0,
@@ -822,7 +856,7 @@
         "subject": 1,
         "predicate": "obliquity-amplitude",
         "object": {
-          "Number": 0.12690199868208984
+          "Number": 0.126902
         },
         "place": null,
         "day": 0.0,
@@ -832,7 +866,27 @@
         "subject": 1,
         "predicate": "moon-period-std",
         "object": {
-          "Number": 15.993805342676167
+          "Number": 15.993805
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-tide-rel",
+        "object": {
+          "Number": 4.3713667
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-inclination-degrees",
+        "object": {
+          "Number": 4.6667409
         },
         "place": null,
         "day": 0.0,
@@ -842,7 +896,27 @@
         "subject": 1,
         "predicate": "moon-period-std",
         "object": {
-          "Number": 32.55499951908771
+          "Number": 32.555
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-tide-rel",
+        "object": {
+          "Number": 0.3292236
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-inclination-degrees",
+        "object": {
+          "Number": 6.948374
         },
         "place": null,
         "day": 0.0,
@@ -912,7 +986,7 @@
         "subject": 1,
         "predicate": "ocean-fraction",
         "object": {
-          "Number": 0.7325081783116059
+          "Number": 0.73250818
         },
         "place": null,
         "day": 0.0,
@@ -922,7 +996,7 @@
         "subject": 1,
         "predicate": "sea-level-m",
         "object": {
-          "Number": -2581.881588936238
+          "Number": -2581.8816
         },
         "place": null,
         "day": 0.0,
@@ -932,7 +1006,7 @@
         "subject": 1,
         "predicate": "highest-elevation-m",
         "object": {
-          "Number": 3511.4329142354663
+          "Number": 3511.4329
         },
         "place": null,
         "day": 0.0,
@@ -942,7 +1016,7 @@
         "subject": 2,
         "predicate": "name",
         "object": {
-          "Text": "Zhxokngakngedned"
+          "Text": "Zhxokngaknged"
         },
         "place": 2,
         "day": 0.0,
@@ -1002,7 +1076,7 @@
         "subject": 2,
         "predicate": "latitude",
         "object": {
-          "Number": -22.72437636910838
+          "Number": -22.724376
         },
         "place": 2,
         "day": 0.0,
@@ -1012,7 +1086,7 @@
         "subject": 2,
         "predicate": "longitude",
         "object": {
-          "Number": -72.76143899103543
+          "Number": -72.761439
         },
         "place": 2,
         "day": 0.0,
@@ -1022,7 +1096,7 @@
         "subject": 3,
         "predicate": "name",
         "object": {
-          "Text": "Nedngebvngotned"
+          "Text": "Roqrraxotrororaq"
         },
         "place": 3,
         "day": 0.0,
@@ -1062,7 +1136,7 @@
         "subject": 3,
         "predicate": "population",
         "object": {
-          "Number": 389.0
+          "Number": 529.0
         },
         "place": 3,
         "day": 0.0,
@@ -1082,7 +1156,7 @@
         "subject": 3,
         "predicate": "latitude",
         "object": {
-          "Number": -22.332297012564513
+          "Number": -22.332297
         },
         "place": 3,
         "day": 0.0,
@@ -1092,7 +1166,7 @@
         "subject": 3,
         "predicate": "longitude",
         "object": {
-          "Number": 19.47627521662903
+          "Number": 19.476275
         },
         "place": 3,
         "day": 0.0,
@@ -1102,7 +1176,7 @@
         "subject": 4,
         "predicate": "name",
         "object": {
-          "Text": "Vnobngobvnodned"
+          "Text": "Btoanjeonjoa"
         },
         "place": 4,
         "day": 0.0,
@@ -1142,7 +1216,7 @@
         "subject": 4,
         "predicate": "population",
         "object": {
-          "Number": 546.0
+          "Number": 421.0
         },
         "place": 4,
         "day": 0.0,
@@ -1162,7 +1236,7 @@
         "subject": 4,
         "predicate": "latitude",
         "object": {
-          "Number": -18.26670825225149
+          "Number": -18.266708
         },
         "place": 4,
         "day": 0.0,
@@ -1172,7 +1246,7 @@
         "subject": 4,
         "predicate": "longitude",
         "object": {
-          "Number": -56.00379339138714
+          "Number": -56.003793
         },
         "place": 4,
         "day": 0.0,
@@ -1182,7 +1256,7 @@
         "subject": 5,
         "predicate": "name",
         "object": {
-          "Text": "Nekxnobxngok"
+          "Text": "Vngaashgvoo"
         },
         "place": 5,
         "day": 0.0,
@@ -1222,7 +1296,7 @@
         "subject": 5,
         "predicate": "population",
         "object": {
-          "Number": 508.0
+          "Number": 298.0
         },
         "place": 5,
         "day": 0.0,
@@ -1242,7 +1316,7 @@
         "subject": 5,
         "predicate": "latitude",
         "object": {
-          "Number": 19.714560217133656
+          "Number": 19.71456
         },
         "place": 5,
         "day": 0.0,
@@ -1252,7 +1326,7 @@
         "subject": 5,
         "predicate": "longitude",
         "object": {
-          "Number": 18.22184716435267
+          "Number": 18.221847
         },
         "place": 5,
         "day": 0.0,
@@ -1262,7 +1336,7 @@
         "subject": 6,
         "predicate": "name",
         "object": {
-          "Text": "Xnaknedzhvekned"
+          "Text": "Xnaknedzhvek"
         },
         "place": 6,
         "day": 0.0,
@@ -1322,7 +1396,7 @@
         "subject": 6,
         "predicate": "latitude",
         "object": {
-          "Number": 20.053882580792965
+          "Number": 20.053883
         },
         "place": 6,
         "day": 0.0,
@@ -1332,7 +1406,7 @@
         "subject": 6,
         "predicate": "longitude",
         "object": {
-          "Number": 101.74773801229733
+          "Number": 101.74774
         },
         "place": 6,
         "day": 0.0,
@@ -1342,7 +1416,7 @@
         "subject": 7,
         "predicate": "name",
         "object": {
-          "Text": "Raxarrotrroqroq"
+          "Text": "Roqrrarrotrroqroq"
         },
         "place": 7,
         "day": 0.0,
@@ -1402,7 +1476,7 @@
         "subject": 7,
         "predicate": "latitude",
         "object": {
-          "Number": 22.71609879191963
+          "Number": 22.716099
         },
         "place": 7,
         "day": 0.0,
@@ -1412,7 +1486,7 @@
         "subject": 7,
         "predicate": "longitude",
         "object": {
-          "Number": -108.35982458274971
+          "Number": -108.35982
         },
         "place": 7,
         "day": 0.0,
@@ -1422,7 +1496,7 @@
         "subject": 8,
         "predicate": "name",
         "object": {
-          "Text": "Sfadvnoknadnob"
+          "Text": "Sfadvnok"
         },
         "place": 8,
         "day": 0.0,
@@ -1482,7 +1556,7 @@
         "subject": 8,
         "predicate": "latitude",
         "object": {
-          "Number": 22.488909341108066
+          "Number": 22.488909
         },
         "place": 8,
         "day": 0.0,
@@ -1492,7 +1566,7 @@
         "subject": 8,
         "predicate": "longitude",
         "object": {
-          "Number": 121.61139261989179
+          "Number": 121.61139
         },
         "place": 8,
         "day": 0.0,
@@ -1502,7 +1576,7 @@
         "subject": 9,
         "predicate": "name",
         "object": {
-          "Text": "Xngadngetned"
+          "Text": "Xngadnget"
         },
         "place": 9,
         "day": 0.0,
@@ -1562,7 +1636,7 @@
         "subject": 9,
         "predicate": "latitude",
         "object": {
-          "Number": 21.606980771753594
+          "Number": 21.606981
         },
         "place": 9,
         "day": 0.0,
@@ -1572,7 +1646,7 @@
         "subject": 9,
         "predicate": "longitude",
         "object": {
-          "Number": 170.8440214325457
+          "Number": 170.84402
         },
         "place": 9,
         "day": 0.0,
@@ -1582,7 +1656,7 @@
         "subject": 10,
         "predicate": "name",
         "object": {
-          "Text": "Nebngatvngadned"
+          "Text": "Nebngatvngad"
         },
         "place": 10,
         "day": 0.0,
@@ -1642,7 +1716,7 @@
         "subject": 10,
         "predicate": "latitude",
         "object": {
-          "Number": -20.810752613126663
+          "Number": -20.810753
         },
         "place": 10,
         "day": 0.0,
@@ -1652,7 +1726,7 @@
         "subject": 10,
         "predicate": "longitude",
         "object": {
-          "Number": -40.16058612189202
+          "Number": -40.160586
         },
         "place": 10,
         "day": 0.0,
@@ -1722,7 +1796,7 @@
         "subject": 11,
         "predicate": "latitude",
         "object": {
-          "Number": 16.874999999999996
+          "Number": 16.875
         },
         "place": 11,
         "day": 0.0,
@@ -1732,7 +1806,7 @@
         "subject": 11,
         "predicate": "longitude",
         "object": {
-          "Number": -148.282525588539
+          "Number": -148.28253
         },
         "place": 11,
         "day": 0.0,
@@ -1742,7 +1816,7 @@
         "subject": 12,
         "predicate": "name",
         "object": {
-          "Text": "Sxekvnakngaknadnob"
+          "Text": "Sxekvnakngak"
         },
         "place": 12,
         "day": 0.0,
@@ -1802,7 +1876,7 @@
         "subject": 12,
         "predicate": "latitude",
         "object": {
-          "Number": 21.094258759333705
+          "Number": 21.094259
         },
         "place": 12,
         "day": 0.0,
@@ -1812,7 +1886,7 @@
         "subject": 12,
         "predicate": "longitude",
         "object": {
-          "Number": -5.072127003929358
+          "Number": -5.072127
         },
         "place": 12,
         "day": 0.0,
@@ -1822,7 +1896,7 @@
         "subject": 13,
         "predicate": "name",
         "object": {
-          "Text": "Ngotzhvabnednadnob"
+          "Text": "Ngotzhvab"
         },
         "place": 13,
         "day": 0.0,
@@ -1882,7 +1956,7 @@
         "subject": 13,
         "predicate": "latitude",
         "object": {
-          "Number": 15.233727088111575
+          "Number": 15.233727
         },
         "place": 13,
         "day": 0.0,
@@ -1892,7 +1966,7 @@
         "subject": 13,
         "predicate": "longitude",
         "object": {
-          "Number": 159.29367671069187
+          "Number": 159.29368
         },
         "place": 13,
         "day": 0.0,
@@ -1962,7 +2036,7 @@
         "subject": 14,
         "predicate": "latitude",
         "object": {
-          "Number": 24.627919523156137
+          "Number": 24.62792
         },
         "place": 14,
         "day": 0.0,
@@ -1972,7 +2046,7 @@
         "subject": 14,
         "predicate": "longitude",
         "object": {
-          "Number": 33.9324985573157
+          "Number": 33.932499
         },
         "place": 14,
         "day": 0.0,
@@ -1982,7 +2056,7 @@
         "subject": 15,
         "predicate": "name",
         "object": {
-          "Text": "Zhvedzfokngobnadnobned"
+          "Text": "Zhvedzfokngob"
         },
         "place": 15,
         "day": 0.0,
@@ -2042,7 +2116,7 @@
         "subject": 15,
         "predicate": "latitude",
         "object": {
-          "Number": -25.550760567660785
+          "Number": -25.550761
         },
         "place": 15,
         "day": 0.0,
@@ -2052,7 +2126,7 @@
         "subject": 15,
         "predicate": "longitude",
         "object": {
-          "Number": 50.67131139466161
+          "Number": 50.671311
         },
         "place": 15,
         "day": 0.0,
@@ -2062,7 +2136,7 @@
         "subject": 16,
         "predicate": "name",
         "object": {
-          "Text": "Zhfebngetnednadnobned"
+          "Text": "Zhfebngetned"
         },
         "place": 16,
         "day": 0.0,
@@ -2122,7 +2196,7 @@
         "subject": 16,
         "predicate": "latitude",
         "object": {
-          "Number": 20.12007355325509
+          "Number": 20.120074
         },
         "place": 16,
         "day": 0.0,
@@ -2132,7 +2206,7 @@
         "subject": 16,
         "predicate": "longitude",
         "object": {
-          "Number": 146.13882079876197
+          "Number": 146.13882
         },
         "place": 16,
         "day": 0.0,
@@ -2142,7 +2216,7 @@
         "subject": 17,
         "predicate": "name",
         "object": {
-          "Text": "Vngakvnokngetnadnob"
+          "Text": "Vngakvnoknget"
         },
         "place": 17,
         "day": 0.0,
@@ -2202,7 +2276,7 @@
         "subject": 17,
         "predicate": "latitude",
         "object": {
-          "Number": 5.742704146211282
+          "Number": 5.7427041
         },
         "place": 17,
         "day": 0.0,
@@ -2212,7 +2286,7 @@
         "subject": 17,
         "predicate": "longitude",
         "object": {
-          "Number": 97.56962414858143
+          "Number": 97.569624
         },
         "place": 17,
         "day": 0.0,
@@ -2222,7 +2296,7 @@
         "subject": 18,
         "predicate": "name",
         "object": {
-          "Text": "Raxarraxarratrro"
+          "Text": "Roqrraxatxoxarratrro"
         },
         "place": 18,
         "day": 0.0,
@@ -2282,7 +2356,7 @@
         "subject": 18,
         "predicate": "latitude",
         "object": {
-          "Number": -24.454569129768274
+          "Number": -24.454569
         },
         "place": 18,
         "day": 0.0,
@@ -2292,7 +2366,7 @@
         "subject": 18,
         "predicate": "longitude",
         "object": {
-          "Number": -97.03343392259353
+          "Number": -97.033434
         },
         "place": 18,
         "day": 0.0,
@@ -2302,7 +2376,7 @@
         "subject": 19,
         "predicate": "name",
         "object": {
-          "Text": "Nokzhxadnadnobned"
+          "Text": "Nokzhxad"
         },
         "place": 19,
         "day": 0.0,
@@ -2362,7 +2436,7 @@
         "subject": 19,
         "predicate": "latitude",
         "object": {
-          "Number": 27.62286093449651
+          "Number": 27.622861
         },
         "place": 19,
         "day": 0.0,
@@ -2372,7 +2446,7 @@
         "subject": 19,
         "predicate": "longitude",
         "object": {
-          "Number": -93.94494959297415
+          "Number": -93.94495
         },
         "place": 19,
         "day": 0.0,
@@ -2382,7 +2456,7 @@
         "subject": 20,
         "predicate": "name",
         "object": {
-          "Text": "Ngetfngotnadnadnob"
+          "Text": "Ngetfngotnad"
         },
         "place": 20,
         "day": 0.0,
@@ -2442,7 +2516,7 @@
         "subject": 20,
         "predicate": "latitude",
         "object": {
-          "Number": 11.456420947367654
+          "Number": 11.456421
         },
         "place": 20,
         "day": 0.0,
@@ -2452,7 +2526,7 @@
         "subject": 20,
         "predicate": "longitude",
         "object": {
-          "Number": -102.33251134767076
+          "Number": -102.33251
         },
         "place": 20,
         "day": 0.0,
@@ -2462,7 +2536,7 @@
         "subject": 21,
         "predicate": "name",
         "object": {
-          "Text": "Fneksvotngetned"
+          "Text": "Fneksvotnget"
         },
         "place": 21,
         "day": 0.0,
@@ -2522,7 +2596,7 @@
         "subject": 21,
         "predicate": "latitude",
         "object": {
-          "Number": -10.473889292905412
+          "Number": -10.473889
         },
         "place": 21,
         "day": 0.0,
@@ -2532,7 +2606,7 @@
         "subject": 21,
         "predicate": "longitude",
         "object": {
-          "Number": -110.08424313318646
+          "Number": -110.08424
         },
         "place": 21,
         "day": 0.0,
@@ -2542,7 +2616,7 @@
         "subject": 22,
         "predicate": "name",
         "object": {
-          "Text": "Zhvedzhxodned"
+          "Text": "Zhvedzhxod"
         },
         "place": 22,
         "day": 0.0,
@@ -2602,7 +2676,7 @@
         "subject": 22,
         "predicate": "latitude",
         "object": {
-          "Number": -6.958135255025457
+          "Number": -6.9581353
         },
         "place": 22,
         "day": 0.0,
@@ -2612,7 +2686,7 @@
         "subject": 22,
         "predicate": "longitude",
         "object": {
-          "Number": -131.38773272871714
+          "Number": -131.38773
         },
         "place": 22,
         "day": 0.0,
@@ -2622,7 +2696,7 @@
         "subject": 23,
         "predicate": "name",
         "object": {
-          "Text": "Vnobvnobzxodnadnob"
+          "Text": "Vnobvnobzxod"
         },
         "place": 23,
         "day": 0.0,
@@ -2682,7 +2756,7 @@
         "subject": 23,
         "predicate": "latitude",
         "object": {
-          "Number": 6.363744891356212
+          "Number": 6.3637449
         },
         "place": 23,
         "day": 0.0,
@@ -2692,7 +2766,7 @@
         "subject": 23,
         "predicate": "longitude",
         "object": {
-          "Number": -135.5210145622952
+          "Number": -135.52101
         },
         "place": 23,
         "day": 0.0,
@@ -2702,7 +2776,7 @@
         "subject": 24,
         "predicate": "name",
         "object": {
-          "Text": "Vnabzhvaknadnob"
+          "Text": "Vnabzhvak"
         },
         "place": 24,
         "day": 0.0,
@@ -2762,7 +2836,7 @@
         "subject": 24,
         "predicate": "latitude",
         "object": {
-          "Number": 28.231831363649935
+          "Number": 28.231831
         },
         "place": 24,
         "day": 0.0,
@@ -2772,7 +2846,7 @@
         "subject": 24,
         "predicate": "longitude",
         "object": {
-          "Number": -18.28465114801167
+          "Number": -18.284651
         },
         "place": 24,
         "day": 0.0,
@@ -2782,7 +2856,7 @@
         "subject": 25,
         "predicate": "name",
         "object": {
-          "Text": "Ngokxngotned"
+          "Text": "Ngokxngot"
         },
         "place": 25,
         "day": 0.0,
@@ -2842,7 +2916,7 @@
         "subject": 25,
         "predicate": "latitude",
         "object": {
-          "Number": -29.18573249534541
+          "Number": -29.185732
         },
         "place": 25,
         "day": 0.0,
@@ -2852,7 +2926,7 @@
         "subject": 25,
         "predicate": "longitude",
         "object": {
-          "Number": -29.78416311589295
+          "Number": -29.784163
         },
         "place": 25,
         "day": 0.0,
@@ -2862,7 +2936,7 @@
         "subject": 26,
         "predicate": "name",
         "object": {
-          "Text": "Zhxadngodzhvadnadnob"
+          "Text": "Zhxadngodzhvad"
         },
         "place": 26,
         "day": 0.0,
@@ -2922,7 +2996,7 @@
         "subject": 26,
         "predicate": "latitude",
         "object": {
-          "Number": 28.46718505398352
+          "Number": 28.467185
         },
         "place": 26,
         "day": 0.0,
@@ -2932,7 +3006,7 @@
         "subject": 26,
         "predicate": "longitude",
         "object": {
-          "Number": -153.08668266645407
+          "Number": -153.08668
         },
         "place": 26,
         "day": 0.0,
@@ -2942,7 +3016,7 @@
         "subject": 27,
         "predicate": "name",
         "object": {
-          "Text": "Rraraxaxoxa"
+          "Text": "Xatxoroqrraxoxa"
         },
         "place": 27,
         "day": 0.0,
@@ -3002,7 +3076,7 @@
         "subject": 27,
         "predicate": "latitude",
         "object": {
-          "Number": 2.8686721689930668
+          "Number": 2.8686722
         },
         "place": 27,
         "day": 0.0,
@@ -3012,7 +3086,7 @@
         "subject": 27,
         "predicate": "longitude",
         "object": {
-          "Number": 82.2494901421677
+          "Number": 82.24949
         },
         "place": 27,
         "day": 0.0,
@@ -3022,7 +3096,7 @@
         "subject": 28,
         "predicate": "name",
         "object": {
-          "Text": "Nebsxokvngetned"
+          "Text": "Nebsxokvnget"
         },
         "place": 28,
         "day": 0.0,
@@ -3082,7 +3156,7 @@
         "subject": 28,
         "predicate": "latitude",
         "object": {
-          "Number": 28.771719918251957
+          "Number": 28.77172
         },
         "place": 28,
         "day": 0.0,
@@ -3092,7 +3166,7 @@
         "subject": 28,
         "predicate": "longitude",
         "object": {
-          "Number": -176.77094595455986
+          "Number": -176.77095
         },
         "place": 28,
         "day": 0.0,
@@ -3102,7 +3176,7 @@
         "subject": 29,
         "predicate": "name",
         "object": {
-          "Text": "Raxaxaxoxorrarra"
+          "Text": "Roqrrarorroxorrarra"
         },
         "place": 29,
         "day": 0.0,
@@ -3162,7 +3236,7 @@
         "subject": 29,
         "predicate": "latitude",
         "object": {
-          "Number": 7.673245939989019
+          "Number": 7.6732459
         },
         "place": 29,
         "day": 0.0,
@@ -3182,7 +3256,7 @@
         "subject": 30,
         "predicate": "name",
         "object": {
-          "Text": "Nodzhfetned"
+          "Text": "Nodzhfet"
         },
         "place": 30,
         "day": 0.0,
@@ -3242,7 +3316,7 @@
         "subject": 30,
         "predicate": "latitude",
         "object": {
-          "Number": -6.700082408627832
+          "Number": -6.7000824
         },
         "place": 30,
         "day": 0.0,
@@ -3252,7 +3326,7 @@
         "subject": 30,
         "predicate": "longitude",
         "object": {
-          "Number": -97.17449115654887
+          "Number": -97.174491
         },
         "place": 30,
         "day": 0.0,
@@ -3262,7 +3336,7 @@
         "subject": 31,
         "predicate": "name",
         "object": {
-          "Text": "Fngetxnekned"
+          "Text": "Fngetxnek"
         },
         "place": 31,
         "day": 0.0,
@@ -3322,7 +3396,7 @@
         "subject": 31,
         "predicate": "latitude",
         "object": {
-          "Number": 15.543581425424632
+          "Number": 15.543581
         },
         "place": 31,
         "day": 0.0,
@@ -3332,7 +3406,7 @@
         "subject": 31,
         "predicate": "longitude",
         "object": {
-          "Number": 53.09737818520466
+          "Number": 53.097378
         },
         "place": 31,
         "day": 0.0,
@@ -3342,7 +3416,7 @@
         "subject": 32,
         "predicate": "name",
         "object": {
-          "Text": "Ngokzhxeknotngok"
+          "Text": "Ngokzhxek"
         },
         "place": 32,
         "day": 0.0,
@@ -3402,7 +3476,7 @@
         "subject": 32,
         "predicate": "latitude",
         "object": {
-          "Number": -0.9462213185581276
+          "Number": -0.94622132
         },
         "place": 32,
         "day": 0.0,
@@ -3412,7 +3486,7 @@
         "subject": 32,
         "predicate": "longitude",
         "object": {
-          "Number": 69.51032959381158
+          "Number": 69.51033
         },
         "place": 32,
         "day": 0.0,
@@ -3422,7 +3496,7 @@
         "subject": 33,
         "predicate": "name",
         "object": {
-          "Text": "Ngotngodnotngokned"
+          "Text": "Ngotngod"
         },
         "place": 33,
         "day": 0.0,
@@ -3482,7 +3556,7 @@
         "subject": 33,
         "predicate": "latitude",
         "object": {
-          "Number": -1.7488125697826737
+          "Number": -1.7488126
         },
         "place": 33,
         "day": 0.0,
@@ -3492,7 +3566,7 @@
         "subject": 33,
         "predicate": "longitude",
         "object": {
-          "Number": -145.75000946540365
+          "Number": -145.75001
         },
         "place": 33,
         "day": 0.0,
@@ -3502,7 +3576,7 @@
         "subject": 34,
         "predicate": "name",
         "object": {
-          "Text": "Fnotvnebnotned"
+          "Text": "Fnotvnebnot"
         },
         "place": 34,
         "day": 0.0,
@@ -3562,7 +3636,7 @@
         "subject": 34,
         "predicate": "latitude",
         "object": {
-          "Number": 27.46890542596476
+          "Number": 27.468905
         },
         "place": 34,
         "day": 0.0,
@@ -3572,7 +3646,7 @@
         "subject": 34,
         "predicate": "longitude",
         "object": {
-          "Number": 49.97842914610881
+          "Number": 49.978429
         },
         "place": 34,
         "day": 0.0,
@@ -3582,7 +3656,7 @@
         "subject": 35,
         "predicate": "name",
         "object": {
-          "Text": "Raxarrararrarrat"
+          "Text": "Roqrraxatxorarrarrat"
         },
         "place": 35,
         "day": 0.0,
@@ -3642,7 +3716,7 @@
         "subject": 35,
         "predicate": "latitude",
         "object": {
-          "Number": 10.38684240083654
+          "Number": 10.386842
         },
         "place": 35,
         "day": 0.0,
@@ -3652,7 +3726,7 @@
         "subject": 35,
         "predicate": "longitude",
         "object": {
-          "Number": 64.7439176556847
+          "Number": 64.743918
         },
         "place": 35,
         "day": 0.0,
@@ -3722,7 +3796,7 @@
         "subject": 36,
         "predicate": "latitude",
         "object": {
-          "Number": 14.560382925792126
+          "Number": 14.560383
         },
         "place": 36,
         "day": 0.0,
@@ -3732,7 +3806,7 @@
         "subject": 36,
         "predicate": "longitude",
         "object": {
-          "Number": 5.913196901228926
+          "Number": 5.9131969
         },
         "place": 36,
         "day": 0.0,
@@ -3742,7 +3816,7 @@
         "subject": 37,
         "predicate": "name",
         "object": {
-          "Text": "Notzfabngednadnobned"
+          "Text": "Notzfabnged"
         },
         "place": 37,
         "day": 0.0,
@@ -3802,7 +3876,7 @@
         "subject": 37,
         "predicate": "latitude",
         "object": {
-          "Number": 30.09839619843562
+          "Number": 30.098396
         },
         "place": 37,
         "day": 0.0,
@@ -3812,7 +3886,7 @@
         "subject": 37,
         "predicate": "longitude",
         "object": {
-          "Number": 154.13359635131206
+          "Number": 154.1336
         },
         "place": 37,
         "day": 0.0,
@@ -3822,7 +3896,7 @@
         "subject": 38,
         "predicate": "name",
         "object": {
-          "Text": "Raxarraratrora"
+          "Text": "Roqrraxatxoratrora"
         },
         "place": 38,
         "day": 0.0,
@@ -3882,7 +3956,7 @@
         "subject": 38,
         "predicate": "latitude",
         "object": {
-          "Number": 1.8931812298609294
+          "Number": 1.8931812
         },
         "place": 38,
         "day": 0.0,
@@ -3892,7 +3966,7 @@
         "subject": 38,
         "predicate": "longitude",
         "object": {
-          "Number": -110.16186394029948
+          "Number": -110.16186
         },
         "place": 38,
         "day": 0.0,
@@ -3902,7 +3976,7 @@
         "subject": 39,
         "predicate": "name",
         "object": {
-          "Text": "Svakneknedngob"
+          "Text": "Svaknek"
         },
         "place": 39,
         "day": 0.0,
@@ -3962,7 +4036,7 @@
         "subject": 39,
         "predicate": "latitude",
         "object": {
-          "Number": -30.72576408989413
+          "Number": -30.725764
         },
         "place": 39,
         "day": 0.0,
@@ -3972,7 +4046,7 @@
         "subject": 39,
         "predicate": "longitude",
         "object": {
-          "Number": -153.1917594602439
+          "Number": -153.19176
         },
         "place": 39,
         "day": 0.0,
@@ -3982,7 +4056,7 @@
         "subject": 40,
         "predicate": "name",
         "object": {
-          "Text": "Vngetngobnobngotned"
+          "Text": "Vngetngobnob"
         },
         "place": 40,
         "day": 0.0,
@@ -4042,7 +4116,7 @@
         "subject": 40,
         "predicate": "latitude",
         "object": {
-          "Number": -32.65962272843671
+          "Number": -32.659623
         },
         "place": 40,
         "day": 0.0,
@@ -4052,7 +4126,7 @@
         "subject": 40,
         "predicate": "longitude",
         "object": {
-          "Number": 66.66190956363245
+          "Number": 66.66191
         },
         "place": 40,
         "day": 0.0,
@@ -4062,7 +4136,7 @@
         "subject": 41,
         "predicate": "name",
         "object": {
-          "Text": "Rraxotrog"
+          "Text": "Xatxoxotrog"
         },
         "place": 41,
         "day": 0.0,
@@ -4122,7 +4196,7 @@
         "subject": 41,
         "predicate": "latitude",
         "object": {
-          "Number": 12.2545412822363
+          "Number": 12.254541
         },
         "place": 41,
         "day": 0.0,
@@ -4132,7 +4206,7 @@
         "subject": 41,
         "predicate": "longitude",
         "object": {
-          "Number": -116.64858211636844
+          "Number": -116.64858
         },
         "place": 41,
         "day": 0.0,
@@ -4142,7 +4216,7 @@
         "subject": 42,
         "predicate": "name",
         "object": {
-          "Text": "Xngebngodnotngobned"
+          "Text": "Xngebngodnot"
         },
         "place": 42,
         "day": 0.0,
@@ -4202,7 +4276,7 @@
         "subject": 42,
         "predicate": "latitude",
         "object": {
-          "Number": -30.786897172633676
+          "Number": -30.786897
         },
         "place": 42,
         "day": 0.0,
@@ -4212,7 +4286,7 @@
         "subject": 42,
         "predicate": "longitude",
         "object": {
-          "Number": 35.23733898631843
+          "Number": 35.237339
         },
         "place": 42,
         "day": 0.0,
@@ -4222,7 +4296,7 @@
         "subject": 43,
         "predicate": "name",
         "object": {
-          "Text": "Svedxnotned"
+          "Text": "Svedxnot"
         },
         "place": 43,
         "day": 0.0,
@@ -4282,7 +4356,7 @@
         "subject": 43,
         "predicate": "latitude",
         "object": {
-          "Number": 34.40554633524419
+          "Number": 34.405546
         },
         "place": 43,
         "day": 0.0,
@@ -4292,7 +4366,7 @@
         "subject": 43,
         "predicate": "longitude",
         "object": {
-          "Number": 115.040866673492
+          "Number": 115.04087
         },
         "place": 43,
         "day": 0.0,
@@ -4302,7 +4376,7 @@
         "subject": 44,
         "predicate": "name",
         "object": {
-          "Text": "Xngotnekngotned"
+          "Text": "Xngotnek"
         },
         "place": 44,
         "day": 0.0,
@@ -4362,7 +4436,7 @@
         "subject": 44,
         "predicate": "latitude",
         "object": {
-          "Number": -34.12328786779884
+          "Number": -34.123288
         },
         "place": 44,
         "day": 0.0,
@@ -4372,7 +4446,7 @@
         "subject": 44,
         "predicate": "longitude",
         "object": {
-          "Number": 14.1940250085909
+          "Number": 14.194025
         },
         "place": 44,
         "day": 0.0,
@@ -4382,7 +4456,7 @@
         "subject": 45,
         "predicate": "name",
         "object": {
-          "Text": "Raxarragxagrroq"
+          "Text": "Roqrrarragxagrroq"
         },
         "place": 45,
         "day": 0.0,
@@ -4442,7 +4516,7 @@
         "subject": 45,
         "predicate": "latitude",
         "object": {
-          "Number": 1.5254466871853798
+          "Number": 1.5254467
         },
         "place": 45,
         "day": 0.0,
@@ -4452,7 +4526,7 @@
         "subject": 45,
         "predicate": "longitude",
         "object": {
-          "Number": -122.21324541718943
+          "Number": -122.21325
         },
         "place": 45,
         "day": 0.0,
@@ -4462,7 +4536,7 @@
         "subject": 46,
         "predicate": "name",
         "object": {
-          "Text": "Zxedsvekngot"
+          "Text": "Zxedsvek"
         },
         "place": 46,
         "day": 0.0,
@@ -4522,7 +4596,7 @@
         "subject": 46,
         "predicate": "latitude",
         "object": {
-          "Number": -36.94729180360476
+          "Number": -36.947292
         },
         "place": 46,
         "day": 0.0,
@@ -4532,7 +4606,7 @@
         "subject": 46,
         "predicate": "longitude",
         "object": {
-          "Number": -103.64696573828661
+          "Number": -103.64697
         },
         "place": 46,
         "day": 0.0,
@@ -4542,7 +4616,7 @@
         "subject": 47,
         "predicate": "name",
         "object": {
-          "Text": "Ngekvnabngok"
+          "Text": "Ngekvnab"
         },
         "place": 47,
         "day": 0.0,
@@ -4602,7 +4676,7 @@
         "subject": 47,
         "predicate": "latitude",
         "object": {
-          "Number": 33.23875138422496
+          "Number": 33.238751
         },
         "place": 47,
         "day": 0.0,
@@ -4612,7 +4686,7 @@
         "subject": 47,
         "predicate": "longitude",
         "object": {
-          "Number": -138.6178638846591
+          "Number": -138.61786
         },
         "place": 47,
         "day": 0.0,
@@ -4622,7 +4696,7 @@
         "subject": 48,
         "predicate": "name",
         "object": {
-          "Text": "Fngadzxakzhxobngot"
+          "Text": "Fngadzxakzhxob"
         },
         "place": 48,
         "day": 0.0,
@@ -4682,7 +4756,7 @@
         "subject": 48,
         "predicate": "latitude",
         "object": {
-          "Number": 37.092224329489774
+          "Number": 37.092224
         },
         "place": 48,
         "day": 0.0,
@@ -4692,7 +4766,7 @@
         "subject": 48,
         "predicate": "longitude",
         "object": {
-          "Number": 27.48271285467619
+          "Number": 27.482713
         },
         "place": 48,
         "day": 0.0,
@@ -4702,7 +4776,7 @@
         "subject": 49,
         "predicate": "name",
         "object": {
-          "Text": "Xaxoraxararra"
+          "Text": "Roroqrrararra"
         },
         "place": 49,
         "day": 0.0,
@@ -4762,7 +4836,7 @@
         "subject": 49,
         "predicate": "latitude",
         "object": {
-          "Number": 18.975599111371864
+          "Number": 18.975599
         },
         "place": 49,
         "day": 0.0,
@@ -4772,7 +4846,7 @@
         "subject": 49,
         "predicate": "longitude",
         "object": {
-          "Number": -135.22850986415233
+          "Number": -135.22851
         },
         "place": 49,
         "day": 0.0,
@@ -4782,7 +4856,7 @@
         "subject": 50,
         "predicate": "name",
         "object": {
-          "Text": "Raxaxaxoxoxat"
+          "Text": "Roqrraroxoxat"
         },
         "place": 50,
         "day": 0.0,
@@ -4842,7 +4916,7 @@
         "subject": 50,
         "predicate": "latitude",
         "object": {
-          "Number": 14.350014689167546
+          "Number": 14.350015
         },
         "place": 50,
         "day": 0.0,
@@ -4852,7 +4926,7 @@
         "subject": 50,
         "predicate": "longitude",
         "object": {
-          "Number": 76.72745999524906
+          "Number": 76.72746
         },
         "place": 50,
         "day": 0.0,
@@ -4862,7 +4936,7 @@
         "subject": 51,
         "predicate": "name",
         "object": {
-          "Text": "Nebnabnedngot"
+          "Text": "Nebnab"
         },
         "place": 51,
         "day": 0.0,
@@ -4922,7 +4996,7 @@
         "subject": 51,
         "predicate": "latitude",
         "object": {
-          "Number": 37.7066266910036
+          "Number": 37.706627
         },
         "place": 51,
         "day": 0.0,
@@ -4932,7 +5006,7 @@
         "subject": 51,
         "predicate": "longitude",
         "object": {
-          "Number": 75.46888422976993
+          "Number": 75.468884
         },
         "place": 51,
         "day": 0.0,
@@ -4942,7 +5016,7 @@
         "subject": 52,
         "predicate": "name",
         "object": {
-          "Text": "Raxarrarro"
+          "Text": "Roqrrarrarro"
         },
         "place": 52,
         "day": 0.0,
@@ -5002,7 +5076,7 @@
         "subject": 52,
         "predicate": "latitude",
         "object": {
-          "Number": 15.450437086325827
+          "Number": 15.450437
         },
         "place": 52,
         "day": 0.0,
@@ -5022,7 +5096,7 @@
         "subject": 53,
         "predicate": "name",
         "object": {
-          "Text": "Zhxoksxetngebned"
+          "Text": "Zhxoksxetngeb"
         },
         "place": 53,
         "day": 0.0,
@@ -5082,7 +5156,7 @@
         "subject": 53,
         "predicate": "latitude",
         "object": {
-          "Number": 43.803872536913005
+          "Number": 43.803873
         },
         "place": 53,
         "day": 0.0,
@@ -5092,7 +5166,7 @@
         "subject": 53,
         "predicate": "longitude",
         "object": {
-          "Number": -16.470009584345572
+          "Number": -16.47001
         },
         "place": 53,
         "day": 0.0,
@@ -5102,7 +5176,7 @@
         "subject": 54,
         "predicate": "name",
         "object": {
-          "Text": "Sxodzfedzxekned"
+          "Text": "Sxodzfedzxek"
         },
         "place": 54,
         "day": 0.0,
@@ -5162,7 +5236,7 @@
         "subject": 54,
         "predicate": "latitude",
         "object": {
-          "Number": -41.23282768269566
+          "Number": -41.232828
         },
         "place": 54,
         "day": 0.0,
@@ -5172,7 +5246,7 @@
         "subject": 54,
         "predicate": "longitude",
         "object": {
-          "Number": -173.81995687151584
+          "Number": -173.81996
         },
         "place": 54,
         "day": 0.0,
@@ -5182,7 +5256,7 @@
         "subject": 55,
         "predicate": "name",
         "object": {
-          "Text": "Vngekvngabngotned"
+          "Text": "Vngekvngab"
         },
         "place": 55,
         "day": 0.0,
@@ -5242,7 +5316,7 @@
         "subject": 55,
         "predicate": "latitude",
         "object": {
-          "Number": -36.76228721068689
+          "Number": -36.762287
         },
         "place": 55,
         "day": 0.0,
@@ -5252,7 +5326,7 @@
         "subject": 55,
         "predicate": "longitude",
         "object": {
-          "Number": -138.18153186997546
+          "Number": -138.18153
         },
         "place": 55,
         "day": 0.0,
@@ -5262,7 +5336,7 @@
         "subject": 56,
         "predicate": "name",
         "object": {
-          "Text": "Raxaxaxorrarrok"
+          "Text": "Roqrrarorrarrok"
         },
         "place": 56,
         "day": 0.0,
@@ -5322,7 +5396,7 @@
         "subject": 56,
         "predicate": "latitude",
         "object": {
-          "Number": 27.77409415571354
+          "Number": 27.774094
         },
         "place": 56,
         "day": 0.0,
@@ -5332,7 +5406,7 @@
         "subject": 56,
         "predicate": "longitude",
         "object": {
-          "Number": -125.47557355172034
+          "Number": -125.47557
         },
         "place": 56,
         "day": 0.0,
@@ -5342,7 +5416,7 @@
         "subject": 57,
         "predicate": "name",
         "object": {
-          "Text": "Ngednakngot"
+          "Text": "Ngednak"
         },
         "place": 57,
         "day": 0.0,
@@ -5402,7 +5476,7 @@
         "subject": 57,
         "predicate": "latitude",
         "object": {
-          "Number": 42.93452204011626
+          "Number": 42.934522
         },
         "place": 57,
         "day": 0.0,
@@ -5412,7 +5486,7 @@
         "subject": 57,
         "predicate": "longitude",
         "object": {
-          "Number": 4.751366933870466
+          "Number": 4.7513669
         },
         "place": 57,
         "day": 0.0,
@@ -5422,7 +5496,7 @@
         "subject": 58,
         "predicate": "name",
         "object": {
-          "Text": "Notngekngot"
+          "Text": "Notngek"
         },
         "place": 58,
         "day": 0.0,
@@ -5482,7 +5556,7 @@
         "subject": 58,
         "predicate": "latitude",
         "object": {
-          "Number": 38.4461153480946
+          "Number": 38.446115
         },
         "place": 58,
         "day": 0.0,
@@ -5492,7 +5566,7 @@
         "subject": 58,
         "predicate": "longitude",
         "object": {
-          "Number": -87.02818572822225
+          "Number": -87.028186
         },
         "place": 58,
         "day": 0.0,
@@ -5502,7 +5576,7 @@
         "subject": 59,
         "predicate": "name",
         "object": {
-          "Text": "Xaxoraxaxaroq"
+          "Text": "Roroqrraxaroq"
         },
         "place": 59,
         "day": 0.0,
@@ -5562,7 +5636,7 @@
         "subject": 59,
         "predicate": "latitude",
         "object": {
-          "Number": -29.59237262496346
+          "Number": -29.592373
         },
         "place": 59,
         "day": 0.0,
@@ -5572,7 +5646,7 @@
         "subject": 59,
         "predicate": "longitude",
         "object": {
-          "Number": -84.74949943613447
+          "Number": -84.749499
         },
         "place": 59,
         "day": 0.0,
@@ -5582,7 +5656,7 @@
         "subject": 60,
         "predicate": "name",
         "object": {
-          "Text": "Raxaxokxatrro"
+          "Text": "Roqrraxokxatrro"
         },
         "place": 60,
         "day": 0.0,
@@ -5642,7 +5716,7 @@
         "subject": 60,
         "predicate": "latitude",
         "object": {
-          "Number": 22.55770602094419
+          "Number": 22.557706
         },
         "place": 60,
         "day": 0.0,
@@ -5652,7 +5726,7 @@
         "subject": 60,
         "predicate": "longitude",
         "object": {
-          "Number": 66.03939324652315
+          "Number": 66.039393
         },
         "place": 60,
         "day": 0.0,
@@ -5672,7 +5746,7 @@
         "subject": 3,
         "predicate": "name-gloss",
         "object": {
-          "Text": "sun-temperate-rainforest"
+          "Text": "temperate-rainforest-moon"
         },
         "place": null,
         "day": 0.0,
@@ -5682,7 +5756,7 @@
         "subject": 4,
         "predicate": "name-gloss",
         "object": {
-          "Text": "sun"
+          "Text": "sun-temperate-rainforest"
         },
         "place": null,
         "day": 0.0,
@@ -6249,6 +6323,646 @@
         "provenance": "worldgen"
       },
       {
+        "subject": 5,
+        "predicate": "subsistence",
+        "object": {
+          "Text": "farming"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 5,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "forager"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 5,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "omen-reader"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 5,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "headman"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 61,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Bvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "bvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Vngaashbvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "vŋaaʃbvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 62,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 62,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Bvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 62,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "bvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 62,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Shngaoshbvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 62,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "ʃŋaoʃbvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 62,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "ambient"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 62,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 62,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "tide"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 62,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 63,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 63,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Bvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 63,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "bvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 63,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Bvaobvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 63,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "bvaobvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 63,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 63,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 63,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 63,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Bvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "bvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Dvaashbvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "dvaaʃbvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "ambient"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "tide"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 64,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Bvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "bvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Vngaoshbvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "vŋaoʃbvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 65,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Bvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "bvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Shngooshbvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "ʃŋooʃbvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "eclipse"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 66,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 61,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 62,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "gloom"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 63,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 64,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "gloom"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 65,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "shadow-sun"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 66,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "shadow"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
         "subject": 2,
         "predicate": "subsistence",
         "object": {
@@ -6309,7 +7023,7 @@
         "provenance": "culture"
       },
       {
-        "subject": 61,
+        "subject": 67,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -6319,47 +7033,47 @@
         "provenance": "religion"
       },
       {
-        "subject": 61,
+        "subject": 67,
         "predicate": "deity-name",
         "object": {
-          "Text": "Ned"
+          "Text": "Neb"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 61,
+        "subject": 67,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "ned"
+          "Text": "neb"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 61,
+        "subject": 67,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Nabned"
+          "Text": "Zhfobneb"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 61,
+        "subject": 67,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "nabned"
+          "Text": "ʒfobneb"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 61,
+        "subject": 67,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -6369,7 +7083,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 61,
+        "subject": 67,
         "predicate": "held-by",
         "object": {
           "Entity": 2
@@ -6379,7 +7093,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 61,
+        "subject": 67,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "celestial-body"
@@ -6389,7 +7103,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 61,
+        "subject": 67,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -6399,7 +7113,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 61,
+        "subject": 67,
         "predicate": "high-god",
         "object": {
           "Flag": true
@@ -6409,7 +7123,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 62,
+        "subject": 68,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -6419,47 +7133,47 @@
         "provenance": "religion"
       },
       {
-        "subject": 62,
+        "subject": 68,
         "predicate": "deity-name",
         "object": {
-          "Text": "Neb"
+          "Text": "Nabvngad"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 62,
+        "subject": 68,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "neb"
+          "Text": "nabvŋad"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 62,
+        "subject": 68,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Xngodneb"
+          "Text": "Sfeknetneknek"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 62,
+        "subject": 68,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "xŋodneb"
+          "Text": "sfeknetneknek"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 62,
+        "subject": 68,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -6469,7 +7183,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 62,
+        "subject": 68,
         "predicate": "held-by",
         "object": {
           "Entity": 2
@@ -6479,17 +7193,17 @@
         "provenance": "religion"
       },
       {
-        "subject": 62,
+        "subject": 68,
         "predicate": "derived-from-phenomenon",
         "object": {
-          "Text": "celestial-body"
+          "Text": "eclipse"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 62,
+        "subject": 68,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -6499,7 +7213,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 63,
+        "subject": 69,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -6509,47 +7223,47 @@
         "provenance": "religion"
       },
       {
-        "subject": 63,
+        "subject": 69,
         "predicate": "deity-name",
         "object": {
-          "Text": "Neb"
+          "Text": "Zhvobvngab"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 63,
+        "subject": 69,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "neb"
+          "Text": "ʒvobvŋab"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 63,
+        "subject": 69,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Xnobneb"
+          "Text": "Vngeknobxngek"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 63,
+        "subject": 69,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "xnobneb"
+          "Text": "vŋeknobxŋek"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 63,
+        "subject": 69,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -6559,7 +7273,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 63,
+        "subject": 69,
         "predicate": "held-by",
         "object": {
           "Entity": 2
@@ -6569,17 +7283,17 @@
         "provenance": "religion"
       },
       {
-        "subject": 63,
+        "subject": 69,
         "predicate": "derived-from-phenomenon",
         "object": {
-          "Text": "celestial-body"
+          "Text": "eclipse"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 63,
+        "subject": 69,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -6589,7 +7303,367 @@
         "provenance": "religion"
       },
       {
-        "subject": 61,
+        "subject": 70,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 70,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Neb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 70,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "neb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 70,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Fnakneb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 70,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "fnakneb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 70,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 70,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 2
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 70,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 70,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 71,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 71,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Neb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 71,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "neb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 71,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Xngebneb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 71,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "xŋebneb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 71,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "ambient"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 71,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 2
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 71,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "tide"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 71,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 72,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 72,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Neb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 72,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "neb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 72,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Zhxabneb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 72,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "ʒxabneb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 72,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 72,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 2
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 72,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 72,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 73,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 73,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Neb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 73,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "neb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 73,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Sfokneb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 73,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "sfokneb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 73,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "ambient"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 73,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 2
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 73,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "tide"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 73,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 67,
         "predicate": "name-gloss",
         "object": {
           "Text": "sun"
@@ -6599,7 +7673,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 62,
+        "subject": 70,
         "predicate": "name-gloss",
         "object": {
           "Text": "moon"
@@ -6609,7 +7683,17 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 63,
+        "subject": 71,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "gloom"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 72,
         "predicate": "name-gloss",
         "object": {
           "Text": "moon"
@@ -6619,7 +7703,17 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 7,
+        "subject": 73,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "gloom"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 4,
         "predicate": "subsistence",
         "object": {
           "Text": "farming"
@@ -6629,47 +7723,57 @@
         "provenance": "culture"
       },
       {
-        "subject": 7,
+        "subject": 4,
         "predicate": "has-caste",
         "object": {
-          "Text": "digger"
+          "Text": "slave"
         },
         "place": null,
         "day": 0.0,
         "provenance": "culture"
       },
       {
-        "subject": 7,
+        "subject": 4,
         "predicate": "has-caste",
         "object": {
-          "Text": "shaper"
+          "Text": "laborer"
         },
         "place": null,
         "day": 0.0,
         "provenance": "culture"
       },
       {
-        "subject": 7,
+        "subject": 4,
         "predicate": "has-caste",
         "object": {
-          "Text": "keeper"
+          "Text": "smith"
         },
         "place": null,
         "day": 0.0,
         "provenance": "culture"
       },
       {
-        "subject": 7,
+        "subject": 4,
         "predicate": "has-caste",
         "object": {
-          "Text": "elders"
+          "Text": "augur"
         },
         "place": null,
         "day": 0.0,
         "provenance": "culture"
       },
       {
-        "subject": 64,
+        "subject": 4,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "warlord"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 74,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -6679,47 +7783,47 @@
         "provenance": "religion"
       },
       {
-        "subject": 64,
+        "subject": 74,
         "predicate": "deity-name",
         "object": {
-          "Text": "Rro"
+          "Text": "Fee"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 64,
+        "subject": 74,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "rro"
+          "Text": "fee"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 64,
+        "subject": 74,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Rro"
+          "Text": "Xaefee"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 64,
+        "subject": 74,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "rro"
+          "Text": "xaefee"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 64,
+        "subject": 74,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -6729,17 +7833,17 @@
         "provenance": "religion"
       },
       {
-        "subject": 64,
+        "subject": 74,
         "predicate": "held-by",
         "object": {
-          "Entity": 7
+          "Entity": 4
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 64,
+        "subject": 74,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "celestial-body"
@@ -6749,7 +7853,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 64,
+        "subject": 74,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -6759,7 +7863,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 64,
+        "subject": 74,
         "predicate": "high-god",
         "object": {
           "Flag": true
@@ -6769,7 +7873,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 65,
+        "subject": 75,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -6779,47 +7883,47 @@
         "provenance": "religion"
       },
       {
-        "subject": 65,
+        "subject": 75,
         "predicate": "deity-name",
         "object": {
-          "Text": "Raxa"
+          "Text": "Feavoengjea"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 65,
+        "subject": 75,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "raxa"
+          "Text": "feavoeŋjea"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 65,
+        "subject": 75,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Raxarro"
+          "Text": "Qqaexee"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 65,
+        "subject": 75,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "raxarro"
+          "Text": "qqaexee"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 65,
+        "subject": 75,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -6829,27 +7933,27 @@
         "provenance": "religion"
       },
       {
-        "subject": 65,
+        "subject": 75,
         "predicate": "held-by",
         "object": {
-          "Entity": 7
+          "Entity": 4
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 65,
+        "subject": 75,
         "predicate": "derived-from-phenomenon",
         "object": {
-          "Text": "celestial-body"
+          "Text": "eclipse"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 65,
+        "subject": 75,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -6859,7 +7963,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 66,
+        "subject": 76,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -6869,47 +7973,47 @@
         "provenance": "religion"
       },
       {
-        "subject": 66,
+        "subject": 76,
         "predicate": "deity-name",
         "object": {
-          "Text": "Rarro"
+          "Text": "Tbeaxoo"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 66,
+        "subject": 76,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "rarro"
+          "Text": "tbeaxoo"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 66,
+        "subject": 76,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Rrora"
+          "Text": "Foaktoemjee"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 66,
+        "subject": 76,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "rrora"
+          "Text": "foaktoemjee"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 66,
+        "subject": 76,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -6919,27 +8023,27 @@
         "provenance": "religion"
       },
       {
-        "subject": 66,
+        "subject": 76,
         "predicate": "held-by",
         "object": {
-          "Entity": 7
+          "Entity": 4
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 66,
+        "subject": 76,
         "predicate": "derived-from-phenomenon",
         "object": {
-          "Text": "celestial-body"
+          "Text": "eclipse"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 66,
+        "subject": 76,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -6949,17 +8053,377 @@
         "provenance": "religion"
       },
       {
-        "subject": 64,
+        "subject": 77,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 77,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Fee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 77,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "fee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 77,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Tqaefee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 77,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "tqaefee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 77,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 77,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 4
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 77,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 77,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 78,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 78,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Fee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 78,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "fee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 78,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Qgeofee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 78,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "qgeofee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 78,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 78,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 4
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 78,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 78,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 79,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 79,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Fee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 79,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "fee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 79,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Xoefee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 79,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "xoefee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 79,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "ambient"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 79,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 4
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 79,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "tide"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 79,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 80,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 80,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Fee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 80,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "fee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 80,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Ktaofee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 80,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "ktaofee"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 80,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "ambient"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 80,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 4
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 80,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "tide"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 80,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 74,
         "predicate": "name-gloss",
         "object": {
-          "Text": "shadow"
+          "Text": "sun"
         },
         "place": null,
         "day": 0.0,
         "provenance": "worldgen"
       },
       {
-        "subject": 65,
+        "subject": 77,
         "predicate": "name-gloss",
         "object": {
           "Text": "moon"
@@ -6969,187 +8433,707 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 66,
+        "subject": 78,
         "predicate": "name-gloss",
         "object": {
-          "Text": "shadow-sun"
+          "Text": "moon"
         },
         "place": null,
         "day": 0.0,
         "provenance": "worldgen"
       },
       {
-        "subject": 67,
+        "subject": 79,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "gloom"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 80,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "gloom"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 3,
+        "predicate": "subsistence",
+        "object": {
+          "Text": "farming"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 3,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "digger"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 3,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "shaper"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 3,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "keeper"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 3,
+        "predicate": "has-caste",
+        "object": {
+          "Text": "elders"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "culture"
+      },
+      {
+        "subject": 81,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 81,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Roqrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 81,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "roqrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 81,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Xogrraroqrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 81,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "xogrraroqrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 81,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 81,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 3
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 81,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 81,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 81,
+        "predicate": "high-god",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 82,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 82,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Roqrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 82,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "roqrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 82,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Xogrraroqrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 82,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "xogrraroqrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 82,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 82,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 3
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 82,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 82,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 83,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 83,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 83,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 83,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Rogxa"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 83,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "rogxa"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 83,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 83,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 3
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 83,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 83,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 84,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 84,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 84,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 84,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 84,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 84,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 84,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 3
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 84,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "eclipse"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 84,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 85,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 85,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 85,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 85,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 85,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 85,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 85,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 3
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 85,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "eclipse"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 85,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 86,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 86,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Rara"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 86,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "rara"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 86,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Rara"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 86,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "rara"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 86,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "ambient"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 86,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 3
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 86,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "tide"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 86,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 81,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 82,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 83,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "shadow"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 84,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "shadow"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 85,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "shadow"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 86,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "gloom"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 87,
         "predicate": "species-name",
         "object": {
-          "Text": "goblin"
+          "Text": "bugbear"
         },
         "place": null,
         "day": 0.0,
         "provenance": "species"
       },
       {
-        "subject": 67,
-        "predicate": "species-threat-response",
-        "object": {
-          "Number": 0.5
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 67,
-        "predicate": "species-deliberation-latency",
-        "object": {
-          "Number": 0.5
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 67,
-        "predicate": "species-in-group-radius",
-        "object": {
-          "Number": 0.5
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 67,
-        "predicate": "species-time-horizon",
-        "object": {
-          "Number": 0.5
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 67,
-        "predicate": "species-sociality-mode",
-        "object": {
-          "Text": "hierarchic"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 67,
-        "predicate": "species-status-basis",
-        "object": {
-          "Text": "rank"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 67,
-        "predicate": "species-activity-cycle",
-        "object": {
-          "Text": "diurnal"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 67,
-        "predicate": "species-night-vision",
-        "object": {
-          "Number": 0.5
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 67,
-        "predicate": "species-sky-attention",
-        "object": {
-          "Number": 0.5
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 67,
-        "predicate": "species-labiality",
-        "object": {
-          "Number": 0.5
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 67,
-        "predicate": "species-vowel-space",
-        "object": {
-          "Number": 0.5
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 67,
-        "predicate": "species-voicing",
-        "object": {
-          "Number": 0.5
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 67,
-        "predicate": "species-sibilance",
-        "object": {
-          "Number": 0.5
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 67,
-        "predicate": "species-voice-loudness",
-        "object": {
-          "Number": 0.5
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 67,
-        "predicate": "species-exotic-manner",
-        "object": {
-          "Text": "none"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 68,
-        "predicate": "species-name",
-        "object": {
-          "Text": "kobold"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 68,
+        "subject": 87,
         "predicate": "species-threat-response",
         "object": {
           "Number": 0.8
@@ -7159,37 +9143,37 @@
         "provenance": "species"
       },
       {
-        "subject": 68,
+        "subject": 87,
         "predicate": "species-deliberation-latency",
         "object": {
-          "Number": 0.7
+          "Number": 0.4
         },
         "place": null,
         "day": 0.0,
         "provenance": "species"
       },
       {
-        "subject": 68,
+        "subject": 87,
         "predicate": "species-in-group-radius",
         "object": {
-          "Number": 0.2
+          "Number": 0.3
         },
         "place": null,
         "day": 0.0,
         "provenance": "species"
       },
       {
-        "subject": 68,
+        "subject": 87,
         "predicate": "species-time-horizon",
         "object": {
-          "Number": 0.8
+          "Number": 0.3
         },
         "place": null,
         "day": 0.0,
         "provenance": "species"
       },
       {
-        "subject": 68,
+        "subject": 87,
         "predicate": "species-sociality-mode",
         "object": {
           "Text": "communal"
@@ -7199,17 +9183,17 @@
         "provenance": "species"
       },
       {
-        "subject": 68,
+        "subject": 87,
         "predicate": "species-status-basis",
         "object": {
-          "Text": "knowledge"
+          "Text": "rank"
         },
         "place": null,
         "day": 0.0,
         "provenance": "species"
       },
       {
-        "subject": 68,
+        "subject": 87,
         "predicate": "species-activity-cycle",
         "object": {
           "Text": "nocturnal"
@@ -7219,38 +9203,18 @@
         "provenance": "species"
       },
       {
-        "subject": 68,
+        "subject": 87,
         "predicate": "species-night-vision",
         "object": {
-          "Number": 0.9
+          "Number": 0.7
         },
         "place": null,
         "day": 0.0,
         "provenance": "species"
       },
       {
-        "subject": 68,
+        "subject": 87,
         "predicate": "species-sky-attention",
-        "object": {
-          "Number": 0.8
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 68,
-        "predicate": "species-labiality",
-        "object": {
-          "Number": 0.1
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "species"
-      },
-      {
-        "subject": 68,
-        "predicate": "species-vowel-space",
         "object": {
           "Number": 0.3
         },
@@ -7259,7 +9223,367 @@
         "provenance": "species"
       },
       {
-        "subject": 68,
+        "subject": 87,
+        "predicate": "species-labiality",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 87,
+        "predicate": "species-vowel-space",
+        "object": {
+          "Number": 0.4
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 87,
+        "predicate": "species-voicing",
+        "object": {
+          "Number": 0.7
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 87,
+        "predicate": "species-sibilance",
+        "object": {
+          "Number": 0.2
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 87,
+        "predicate": "species-voice-loudness",
+        "object": {
+          "Number": 0.3
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 87,
+        "predicate": "species-tonality",
+        "object": {
+          "Number": 0.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 87,
+        "predicate": "species-exotic-manner",
+        "object": {
+          "Text": "none"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-name",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-threat-response",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-deliberation-latency",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-in-group-radius",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-time-horizon",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-sociality-mode",
+        "object": {
+          "Text": "hierarchic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-status-basis",
+        "object": {
+          "Text": "rank"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-activity-cycle",
+        "object": {
+          "Text": "diurnal"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-night-vision",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-sky-attention",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-labiality",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-vowel-space",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-voicing",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-sibilance",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-voice-loudness",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-tonality",
+        "object": {
+          "Number": 0.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 88,
+        "predicate": "species-exotic-manner",
+        "object": {
+          "Text": "none"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-name",
+        "object": {
+          "Text": "hobgoblin"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-threat-response",
+        "object": {
+          "Number": 0.7
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-deliberation-latency",
+        "object": {
+          "Number": 0.6
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-in-group-radius",
+        "object": {
+          "Number": 0.3
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-time-horizon",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-sociality-mode",
+        "object": {
+          "Text": "hierarchic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-status-basis",
+        "object": {
+          "Text": "rank"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-activity-cycle",
+        "object": {
+          "Text": "diurnal"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-night-vision",
+        "object": {
+          "Number": 0.6
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-sky-attention",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-labiality",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-vowel-space",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
         "predicate": "species-voicing",
         "object": {
           "Number": 0.6
@@ -7269,7 +9593,177 @@
         "provenance": "species"
       },
       {
-        "subject": 68,
+        "subject": 89,
+        "predicate": "species-sibilance",
+        "object": {
+          "Number": 0.4
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-voice-loudness",
+        "object": {
+          "Number": 0.8
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-tonality",
+        "object": {
+          "Number": 0.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 89,
+        "predicate": "species-exotic-manner",
+        "object": {
+          "Text": "none"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
+        "predicate": "species-name",
+        "object": {
+          "Text": "kobold"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
+        "predicate": "species-threat-response",
+        "object": {
+          "Number": 0.8
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
+        "predicate": "species-deliberation-latency",
+        "object": {
+          "Number": 0.7
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
+        "predicate": "species-in-group-radius",
+        "object": {
+          "Number": 0.2
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
+        "predicate": "species-time-horizon",
+        "object": {
+          "Number": 0.8
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
+        "predicate": "species-sociality-mode",
+        "object": {
+          "Text": "communal"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
+        "predicate": "species-status-basis",
+        "object": {
+          "Text": "knowledge"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
+        "predicate": "species-activity-cycle",
+        "object": {
+          "Text": "nocturnal"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
+        "predicate": "species-night-vision",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
+        "predicate": "species-sky-attention",
+        "object": {
+          "Number": 0.8
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
+        "predicate": "species-labiality",
+        "object": {
+          "Number": 0.1
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
+        "predicate": "species-vowel-space",
+        "object": {
+          "Number": 0.3
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
+        "predicate": "species-voicing",
+        "object": {
+          "Number": 0.6
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
         "predicate": "species-sibilance",
         "object": {
           "Number": 0.9
@@ -7279,7 +9773,7 @@
         "provenance": "species"
       },
       {
-        "subject": 68,
+        "subject": 90,
         "predicate": "species-voice-loudness",
         "object": {
           "Number": 0.2
@@ -7289,7 +9783,17 @@
         "provenance": "species"
       },
       {
-        "subject": 68,
+        "subject": 90,
+        "predicate": "species-tonality",
+        "object": {
+          "Number": 0.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 90,
         "predicate": "species-exotic-manner",
         "object": {
           "Text": "trill"
@@ -7312,7 +9816,7 @@
         "subject": 3,
         "predicate": "peopled-by",
         "object": {
-          "Text": "goblin"
+          "Text": "kobold"
         },
         "place": null,
         "day": 0.0,
@@ -7322,7 +9826,7 @@
         "subject": 4,
         "predicate": "peopled-by",
         "object": {
-          "Text": "goblin"
+          "Text": "hobgoblin"
         },
         "place": null,
         "day": 0.0,
@@ -7332,7 +9836,7 @@
         "subject": 5,
         "predicate": "peopled-by",
         "object": {
-          "Text": "goblin"
+          "Text": "bugbear"
         },
         "place": null,
         "day": 0.0,
@@ -7902,7 +10406,7 @@
         "subject": 1,
         "predicate": "max-ice-fraction",
         "object": {
-          "Number": 0.38831400535236393
+          "Number": 0.38831401
         },
         "place": null,
         "day": 0.0,
@@ -7939,6 +10443,6 @@
         "provenance": "paleoclimate"
       }
     ],
-    "next_entity": 68
+    "next_entity": 90
   }
 }

@@ -18,21 +18,24 @@ fn main() {
     let system = sky.system().expect("system");
     let cal = sky.calendar().expect("calendar");
     let day_length = match &system.anchor.rotation {
-        hornvale_astronomy::Rotation::Spinning { day } => day.get(),
+        hornvale_astronomy::Rotation::Spinning { day, .. } => day.get(),
         hornvale_astronomy::Rotation::Locked => f64::INFINITY,
     };
     let mut rows = Vec::new();
     let mut d = 0.0_f64;
     while d < 365.0 {
+        // Quantize every emitted phase to the platform-stable canonical form
+        // (kernel `quantize`): these are transcendental-derived, and the
+        // ephemeris JSON is a committed, cross-platform drift-checked artifact.
         let t = StdDays::new(d).unwrap();
-        let world_phase = cal.year_phase(t);
-        let rotation_phase = if day_length.is_finite() {
+        let world_phase = hornvale_kernel::quantize(cal.year_phase(t));
+        let rotation_phase = hornvale_kernel::quantize(if day_length.is_finite() {
             (d / day_length).rem_euclid(1.0)
         } else {
             0.0
-        };
+        });
         let moons: Vec<f64> = (0..system.moons.len())
-            .map(|i| cal.moon_phase(t, i).unwrap_or(0.0))
+            .map(|i| hornvale_kernel::quantize(cal.moon_phase(t, i).unwrap_or(0.0)))
             .collect();
         let moons_json = moons
             .iter()

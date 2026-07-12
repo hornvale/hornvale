@@ -5,6 +5,7 @@ mod audio;
 mod concepts;
 mod dictionary;
 mod phonology;
+mod proto;
 mod repl;
 mod streams;
 
@@ -22,6 +23,7 @@ const SKY_FLAGS: &str =
   [--year-days F]                          pin the year length, in local days
   [--neighbor blue-giant|red-giant|white-dwarf|orange-giant|red-dwarf|sun-like]
                                             force one showpiece neighbor star
+  [--spin prograde|retrograde]             pin the spin direction (spinning worlds)
 ";
 
 const USAGE: &str = "\
@@ -45,8 +47,10 @@ usage:
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
+  hornvale proto                           dump proto-goblinoid's inventory/phonotactics/proto-root table as markdown
   hornvale voice [--out <DIR>]             author missing phonology audio clips (espeak-ng + ffmpeg; default out: book/src/audio)
   hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
+  hornvale lab diff <STUDY> <OLD_CSV> <NEW_CSV>  report which census metrics moved between two rows.csv snapshots
   hornvale lab list-metrics                list every metric in the lab's registry
 
 sky flags (shared by new and scout):
@@ -61,7 +65,9 @@ const TERRAIN_FLAGS: &str = "\
 ";
 
 const SETTLEMENT_FLAGS: &str = "\
-  [--min-suitability F]                    pin the settlement placement floor (0-1)
+  [--min-suitability F]                    pin the settlement placement floor (0-1); each species' single
+                                           best (founder) cell bypasses it, so no floor drops a placed
+                                           species below one settlement
   --species <NAME>  place only this species (default: all known species)
 ";
 
@@ -89,6 +95,7 @@ fn main() -> ExitCode {
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
         Some("dictionary") => cmd_dictionary(&args),
+        Some("proto") => cmd_proto(),
         Some("voice") => audio::cmd_voice(&args),
         Some("lab") => cmd_lab(&args),
         Some("help") | None => {
@@ -133,6 +140,7 @@ fn parse_sky_args(args: &[String]) -> Result<(SkyPins, world_builder::SkyChoice)
         ("--obliquity", "obliquity"),
         ("--year-days", "year-days"),
         ("--neighbor", "neighbor"),
+        ("--spin", "spin"),
     ] {
         if let Some(value) = flag_value(args, flag) {
             parse_pin(&format!("{key}={value}"), &mut pins)?;
@@ -226,7 +234,7 @@ fn cmd_scout(args: &[String]) -> Result<(), String> {
         if let Ok(outcome) = hornvale_astronomy::generate(hornvale_kernel::Seed(seed), &pins) {
             let system = &outcome.system;
             let day = match system.anchor.rotation {
-                hornvale_astronomy::Rotation::Spinning { day } => {
+                hornvale_astronomy::Rotation::Spinning { day, .. } => {
                     format!("{:.1}h day", day.get() * 24.0)
                 }
                 hornvale_astronomy::Rotation::Locked => "tidally locked".to_string(),
@@ -270,6 +278,18 @@ fn cmd_repl(args: &[String]) -> Result<(), String> {
 /// Render the world's elevation map: a markdown page (title, land lines,
 /// ASCII map) to stdout and, with `--out`, the PNG image to disk. Both are
 /// deterministic; CI drift-checks the committed copies.
+/// Appended after every emitted map/chart PNG reference. The raster's exact
+/// bytes are a *platform-local render*: pixel colors come from per-cell
+/// classifications (biome, ocean) thresholded on transcendental-derived
+/// floats, which the host math library computes to the last ULP differently
+/// on different platforms. So the PNGs are not cross-platform byte-checked
+/// (see the determinism decision on quantization); the markdown page's text
+/// and ASCII map above remain deterministic. Canonical numeric state
+/// (world.json, censuses, ephemeris) stays byte-identical everywhere.
+const PLATFORM_LOCAL_RENDER_NOTE: &str = "> Rendered view — this raster's exact bytes are platform-local (pixel colors \
+depend on the host math library) and are not cross-platform byte-checked; the \
+page above is deterministic.\n\n";
+
 fn cmd_map(args: &[String]) -> Result<(), String> {
     let world = load_world(args)?;
     let terrain = world_builder::terrain_of(&world).map_err(|e| e.to_string())?;
@@ -295,6 +315,7 @@ fn cmd_map(args: &[String]) -> Result<(), String> {
             .and_then(|n| n.to_str())
             .unwrap_or(out);
         doc.push_str(&format!("![Full-color render](./{name})\n\n"));
+        doc.push_str(PLATFORM_LOCAL_RENDER_NOTE);
     }
     doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
     print!("{doc}");
@@ -325,6 +346,7 @@ fn cmd_biome_map(args: &[String]) -> Result<(), String> {
             .and_then(|n| n.to_str())
             .unwrap_or(out);
         doc.push_str(&format!("![Full-color render](./{name})\n\n"));
+        doc.push_str(PLATFORM_LOCAL_RENDER_NOTE);
     }
     doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
     print!("{doc}");
@@ -359,6 +381,7 @@ fn cmd_paleo_map(args: &[String]) -> Result<(), String> {
             .and_then(|n| n.to_str())
             .unwrap_or(out);
         doc.push_str(&format!("![Full-color render](./{name})\n\n"));
+        doc.push_str(PLATFORM_LOCAL_RENDER_NOTE);
     }
     doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
     print!("{doc}");
@@ -411,6 +434,7 @@ fn cmd_settlement_map(args: &[String]) -> Result<(), String> {
             .and_then(|n| n.to_str())
             .unwrap_or(out);
         doc.push_str(&format!("![Full-color render](./{name})\n\n"));
+        doc.push_str(PLATFORM_LOCAL_RENDER_NOTE);
     }
     doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
     print!("{doc}");
@@ -465,6 +489,7 @@ fn cmd_star_chart(args: &[String]) -> Result<(), String> {
             .and_then(|n| n.to_str())
             .unwrap_or(out);
         doc.push_str(&format!("![Full-color render](./{name})\n\n"));
+        doc.push_str(PLATFORM_LOCAL_RENDER_NOTE);
     }
     doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
     print!("{doc}");
@@ -587,14 +612,24 @@ fn cmd_dictionary(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
-/// Dispatch `lab` subcommands: `run <PATH>` and `list-metrics`.
+/// Dump proto-goblinoid's reference page (inventory, phonotactics, and
+/// proto-root table) — a pure function of the reference seed, so unlike
+/// `dictionary` this takes no `--world`.
+fn cmd_proto() -> Result<(), String> {
+    print!("{}", proto::render_proto()?);
+    Ok(())
+}
+
+/// Dispatch `lab` subcommands: `run <PATH>`, `diff <STUDY> <OLD_CSV> <NEW_CSV>`,
+/// and `list-metrics`.
 fn cmd_lab(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("run") => cmd_lab_run(args),
+        Some("diff") => cmd_lab_diff(args),
         Some("list-metrics") => cmd_lab_list_metrics(),
         Some(other) => Err(format!("lab: unknown subcommand '{other}'\n{}", usage())),
         None => Err(format!(
-            "lab: requires a subcommand (run <PATH>|list-metrics)\n{}",
+            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|list-metrics)\n{}",
             usage()
         )),
     }
@@ -619,6 +654,30 @@ fn cmd_lab_run(args: &[String]) -> Result<(), String> {
         result.rows.len(),
         refusals,
         written.len() - 1
+    );
+    Ok(())
+}
+
+/// Diff two `rows.csv` snapshots of one study: which metric moved, and by
+/// how much. Old/new are paths to CSV files (typically `git show
+/// HEAD:<...>/rows.csv` output vs the working tree's copy — `make lab-diff
+/// STUDY=<name>` wraps exactly that).
+fn cmd_lab_diff(args: &[String]) -> Result<(), String> {
+    let (Some(study_path), Some(old_path), Some(new_path)) =
+        (args.get(2), args.get(3), args.get(4))
+    else {
+        return Err(format!(
+            "lab diff requires <STUDY> <OLD_CSV> <NEW_CSV>\n{}",
+            usage()
+        ));
+    };
+    let study =
+        hornvale_lab::load_study(std::path::Path::new(study_path)).map_err(|e| e.to_string())?;
+    let old_csv = std::fs::read_to_string(old_path).map_err(|e| format!("read {old_path}: {e}"))?;
+    let new_csv = std::fs::read_to_string(new_path).map_err(|e| format!("read {new_path}: {e}"))?;
+    print!(
+        "{}",
+        hornvale_lab::render_diff(&study, &old_csv, &new_csv).map_err(|e| e.to_string())?
     );
     Ok(())
 }
@@ -750,6 +809,12 @@ mod tests {
     }
 
     #[test]
+    fn spin_flag_parses() {
+        let (pins, _) = parse_sky_args(&args(&["--spin", "retrograde"])).unwrap();
+        assert_eq!(pins.spin, Some(hornvale_astronomy::SpinPin::Retrograde));
+    }
+
+    #[test]
     fn day_hours_flag_sets_a_period_hours_rotation() {
         let (pins, _) = parse_sky_args(&args(&["--day-hours", "30"])).unwrap();
         assert_eq!(pins.rotation, Some(RotationPin::PeriodHours(30.0)));
@@ -839,6 +904,7 @@ mod tests {
     #[test]
     fn usage_mentions_lab() {
         assert!(USAGE.contains("lab run"));
+        assert!(USAGE.contains("lab diff"));
         assert!(USAGE.contains("list-metrics"));
     }
 
@@ -928,6 +994,11 @@ mod tests {
     #[test]
     fn usage_mentions_dictionary() {
         assert!(USAGE.contains("dictionary"));
+    }
+
+    #[test]
+    fn usage_mentions_proto() {
+        assert!(USAGE.contains("proto"));
     }
 
     #[test]

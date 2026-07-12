@@ -19,107 +19,131 @@ The highest land stands 6093 m above the sea.
 The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 8 marine biomes cover the globe.
 Some 14% of the surface is habitable — land with water and a tolerable season.
 
-- **Zhvedxngabnadnob** — temperate-forest
-- **Fngodngoknadnob** — temperate-forest
-- **Fngekvnebnadnednadnob** — temperate-forest
-- **Zhxatvnebnadnob** — temperate-forest
-- **Zhfebfnokngadnednadnob** — temperate-forest
-- **Rarrararro** — temperate-forest
-- **Rrararotrraq** — temperate-forest
-- **Raxagrrog** — temperate-forest
-- **Rarrarrotrarrok** — temperate-forest
-- **Raraxogrrarot** — alpine
-- **Rararraqxoq** — alpine
-- **Ngedngadned** — temperate-forest
-- **Rarrarokrrag** — temperate-forest
-- **Rrararograrag** — temperate-forest
-- **Ngekzvadnodnedngob** — shrubland
-- **Netfnetngatnadnob** — temperate-forest
-- **Sfadsvetzhvebned** — temperate-grassland
-- **Rraraqroq** — temperate-forest
-- **Rarorrak** — temperate-forest
-- **Zvobnekngobned** — shrubland
-- **Vngadzfobngob** — shrubland
-- **Sxatngadned** — temperate-grassland
-- **Fngakngobfngednadnob** — temperate-forest
-- **Sfobzhfetfngedned** — tropical-rainforest
-- **Xnodxnetngednednadnob** — temperate-forest
-- **Rrarararoxo** — temperate-forest
-- **Zxobfnotned** — savanna
-- **Nodngobned** — savanna
-- **Vnatxngobxngakngob** — shrubland
-- **Ngadsxekned** — savanna
-- **Natvngetnednadnob** — temperate-forest
-- **Rarrarrarrarro** — temperate-forest
-- **Sfotngakned** — savanna
-- **Vnobzfoknadned** — taiga
-- **Zhvekxnobfnotngotned** — taiga
-- **Vngabxngadnadnobned** — temperate-forest
-- **Rrararroragxog** — temperate-forest
-- **Netnokngotned** — taiga
-- **Svatnodvngobngot** — taiga
-- **Fngodzxadnadnednotngok** — tropical-rainforest
-- **Neksvabned** — taiga
-- **Zhvatnednotngok** — tropical-rainforest
-- **Raxorog** — tropical-seasonal-forest
-- **Rararaxaroxa** — tropical-seasonal-forest
-- **Vnadngednotngok** — tropical-rainforest
-- **Raxaxoxaxaq** — taiga
-- **Nokzhxadnotngokned** — tropical-rainforest
-- **Ngedsfedvngabned** — taiga
-- **Nobzxekngatnoknek** — tropical-seasonal-forest
-- **Vngedngakfngodngotned** — taiga
-- **Svakngodngot** — taiga
-- **Rararaxaqrrora** — tropical-seasonal-forest
+- **Zhvedxngab** — temperate-forest
+- **Rogxaxatxorarro** — temperate-forest
+- **Voengjaongjee** — temperate-forest
+- **Dvaagvao** — temperate-forest
+- **Zhxatvneb** — temperate-forest
+- **Zhfebfnokngad** — temperate-forest
+- **Xatxorogxarotrraq** — temperate-forest
+- **Rogxaxagrrog** — temperate-forest
+- **Rogxaxatxorrotrarrok** — temperate-forest
+- **Rogxaratrraxogrrarot** — alpine
+- **Ratrrarogxarraqxoq** — alpine
+- **Ngedngad** — temperate-forest
+- **Rogxaxatxorokrrag** — temperate-forest
+- **Xatxorogxarograrag** — temperate-forest
+- **Ngekzvadnod** — shrubland
+- **Netfnetngat** — temperate-forest
+- **Sfadsvetzhveb** — temperate-grassland
+- **Xatxoraqroq** — temperate-forest
+- **Rogxarorrak** — temperate-forest
+- **Zvobnek** — shrubland
+- **Vngadzfob** — shrubland
+- **Sxatngad** — temperate-grassland
+- **Fngakngobfnged** — temperate-forest
+- **Sfobzhfetfnged** — tropical-rainforest
+- **Xnodxnetnged** — temperate-forest
+- **Xatxorogxararoxo** — temperate-forest
+- **Zxobfnot** — savanna
+- **Nodngob** — savanna
+- **Vnatxngobxngak** — shrubland
+- **Ngadsxek** — savanna
+- **Natvnget** — temperate-forest
+- **Rogxaxatxorrarrarro** — temperate-forest
+- **Sfotngak** — savanna
+- **Vnobzfoknad** — taiga
+- **Zhvekxnobfnot** — taiga
+- **Vngabxngad** — temperate-forest
+- **Xatxorogxarroragxog** — temperate-forest
+- **Netnok** — taiga
+- **Svatnodvngob** — taiga
+- **Fngodzxadnad** — tropical-rainforest
+- **Neksvab** — taiga
+- **Zhvatned** — tropical-rainforest
+- **Rogxaxorog** — tropical-seasonal-forest
+- **Rorogxaxaroxa** — tropical-seasonal-forest
+- **Vnadnged** — tropical-rainforest
+- **Rogxaroxaxaq** — taiga
+- **Nokzhxad** — tropical-rainforest
+- **Ngedsfedvngab** — taiga
+- **Nobzxekngat** — tropical-seasonal-forest
+- **Vngedngakfngod** — taiga
+- **Svakngod** — taiga
+- **Rogxaroxaqrrora** — tropical-seasonal-forest
 - **Ngedvngebxned** — savanna
-- **Raxaxoxarratrro** — tropical-rainforest
-- **Vnabzhvaknoknek** — tropical-seasonal-forest
-- **Zhxotfngobnednoknek** — tropical-seasonal-forest
-- **Xnetngadngobned** — savanna
-- **Nadnabnedngok** — tundra
-- **Zxekzhfotxngebngotned** — taiga
-- **Ngekfngatsvodnoknekned** — tropical-seasonal-forest
-- **Ngokngebvnatnedngot** — taiga
-- **Rararaxokrrakxa** — tropical-seasonal-forest
-- **Rararrorroxot** — tropical-seasonal-forest
-- **Raraxoxoq** — tropical-seasonal-forest
-- **Notngobned** — taiga
-- **Xaxoxokrrarro** — taiga
-- **Rarararraroq** — tropical-seasonal-forest
-- **Raraxagxaq** — tropical-seasonal-forest
-- **Raxoqrarroq** — tropical-seasonal-forest
-- **Rarokxok** — tropical-seasonal-forest
-- **Xngekxnekfnoknedngok** — tundra
+- **Rogxarorroxarratrro** — tropical-rainforest
+- **Vnabzhvak** — tropical-seasonal-forest
+- **Zhxotfngob** — tropical-seasonal-forest
+- **Xnetngadngob** — savanna
+- **Nadnab** — tundra
+- **Zxekzhfotxngeb** — taiga
+- **Ngekfngatsvod** — tropical-seasonal-forest
+- **Ngokngebvnat** — taiga
+- **Rogxaroxokrrakxa** — tropical-seasonal-forest
+- **Rorrorroxot** — tropical-seasonal-forest
+- **Roxoxoq** — tropical-seasonal-forest
+- **Notngob** — taiga
+- **Roxokrrarro** — taiga
+- **Rogxarorraroq** — tropical-seasonal-forest
+- **Roxagxaq** — tropical-seasonal-forest
+- **Rogxaxoqrarroq** — tropical-seasonal-forest
+- **Rogxarokxok** — tropical-seasonal-forest
+- **Xngekxnekfnok** — tundra
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
 The land holds 71 settlement(s).
-The chief goblin settlement, Zhvedxngabnadnob, holds 368 souls amid temperate-forest.
-The chief kobold settlement, Rarrararro, holds 302 souls amid temperate-forest.
+The chief bugbear settlement, Dvaagvao, holds 385 souls amid temperate-forest.
+The chief goblin settlement, Zhvedxngab, holds 368 souls amid temperate-forest.
+The chief hobgoblin settlement, Voengjaongjee, holds 415 souls amid temperate-forest.
+The chief kobold settlement, Rogxaxatxorarro, holds 302 souls amid temperate-forest.
 
-The goblin village of **Zhvedxngabnadnob**, population 368.
+The bugbear lair of **Dvaagvao**, population 385.
 
-Zhvedxngabnadnob lives by farming.
+Dvaagvao lives by farming.
+Its roles, lowest to highest: forager, headman.
+
+The goblin village of **Zhvedxngab**, population 368.
+
+Zhvedxngab lives by farming.
 Its roles, lowest to highest: farmer, chief.
 
-The kobold warren of **Rarrararro**, population 302.
+The hobgoblin legion of **Voengjaongjee**, population 415.
 
-Rarrararro lives by farming.
+Voengjaongjee lives by farming.
+Its roles, lowest to highest: laborer, warlord.
+
+The kobold warren of **Rogxaxatxorarro**, population 302.
+
+Rogxaxatxorarro lives by farming.
 Its roles, lowest to highest: digger, shaper, keeper, elders.
 
 ## The Gods
 
 The people keep a folk pantheon:
 
-> Ngat the Ngokngat is ever: Ngat the Ngokngat watches unceasing. So it was, so it is.
+> Bvaash the Vngoabvaash is: Bvaash the Vngoabvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-In the warren of **Rarrararro**, an organized priesthood tends its own pantheon:
+The village of **Zhvedxngab** keeps its own folk pantheon:
 
-> Ra Ro is: Ra Ro is always watching. That's how it's always been. That's how it's always been. Ra is the highest among the gods. *(who presides)*
+> Neb the Ngatneb is ever: Neb the Ngatneb watches unceasing. So it was, so it is.
+>
+> — derived from the phenomenon *celestial-body*
+
+The legion of **Voengjaongjee** keeps its own folk pantheon:
+
+> Fee the Mjoefee is ever: Fee the Mjoefee watches unceasing. So it was, so it is.
+>
+> — derived from the phenomenon *celestial-body*
+
+In the warren of **Rogxaxatxorarro**, an organized priesthood tends its own pantheon:
+
+> Xaxo Rogxaxaxo is: Xaxo Rogxaxaxo is always watching. That's how it's always been. That's how it's always been. Xaxo is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 

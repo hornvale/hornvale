@@ -1,7 +1,8 @@
 //! The scene/tiles/v1 byte pin: this fixture changing is the epoch
 //! decision point (scene-protocol spec §2). Regenerate deliberately, never
-//! casually: `cargo test -p hornvale-scene --test golden -- --ignored`
-//! rewrites it, then review the diff as a contract change.
+//! casually: `REBASELINE=1 cargo test -p hornvale-scene --test golden`
+//! (or `make rebaseline-goldens`) rewrites it, then review the diff as a
+//! contract change.
 
 use hornvale_scene::{scene_json, tiles_scene};
 
@@ -25,14 +26,13 @@ fn seed_1_json() -> String {
 
 #[test]
 fn v1_bytes_are_pinned() {
-    assert_eq!(
-        seed_1_json(),
-        include_str!("fixtures/tiles-seed-1-w16.json")
+    hornvale_kernel::golden::assert_golden(
+        std::path::Path::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/tiles-seed-1-w16.json"
+        )),
+        &seed_1_json(),
+        "scene/tiles/v1 bytes moved — this is the epoch decision point (scene-protocol \
+         spec §2); accept deliberately and review the diff as a contract change",
     );
-}
-
-#[test]
-#[ignore = "regenerates the golden fixture; run deliberately"]
-fn regenerate_golden() {
-    std::fs::write("tests/fixtures/tiles-seed-1-w16.json", seed_1_json()).unwrap();
 }

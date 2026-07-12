@@ -25,7 +25,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 #      Trust the exit code (non-zero = failure); `--no-fail-fast` for the whole
 #      failure list in one pass:
 cargo test --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file freely
-#   The ~145s calibration census (windows/lab) loads a drift-checked fixture
+#   The calibration census (windows/lab; ~450s live in debug) loads a drift-checked fixture
 #   (book/src/laboratory/generated/*/rows.csv), so it is cheap UNLESS you
 #   changed worldgen — after a worldgen change, regenerate the artifacts
 #   (below) so the fixture and calibration reflect it.
@@ -102,6 +102,19 @@ contradicts, lower ("coarse constrains fine").
 
 - Same seed + same pins → byte-identical worlds, almanacs, and artifacts.
   Tests assert this; CI's drift check enforces it on committed artifacts.
+- **Cross-platform byte-identity via quantization** (decision
+  `serialized-floats-are-quantized-for-cross-platform-determinism`): `f64`
+  transcendentals route to the platform libm (Apple's vs glibc's), which
+  differ in the last ULP, so serialized floats are quantized to 8
+  significant digits (`hornvale_kernel::quantize`, libm-free) at every
+  serialization boundary — `Ledger::commit`, the lab `render_csv`, and the
+  scene/ephemeris JSON. Quantization is at the emit boundary **only**, never
+  in the compute path (the noise fields, sculpting, and orbital mechanics
+  run at full precision). **Lorenz guard-rail:** a lossy save is safe only
+  because reload re-derives from the lossless seed — never seed a chaotic
+  forward-integrator from quantized ledger floats; resumption re-derives
+  from the seed, and any chaotic checkpoint needs its own full-precision
+  format.
 - **No wall-clock time anywhere**. Time is `WorldTime { day: f64 }` —
   absolute standard days.
 - No `HashMap`/`HashSet` — `BTreeMap`/`BTreeSet`/`Vec` only. Float sorting
@@ -177,3 +190,12 @@ not product. Campaigns are named by sequence number + name; the Year-N
 prefix is retired (decision 0017). Book prose is written at a deliberate
 altitude: technical and mathematical, comprehensible without reading the
 code it may show.
+
+**Campaign branches absorb main at every plan-stage boundary**, not only at
+close: run `make preflight` from the branch; on an ancestry NO-GO, merge
+main INTO the branch and re-run the gate there. Two exceptions: never
+absorb mid-measurement (a preregistered study's baseline and readout must
+see the same physics — finish the readout first), and never while main's
+checkout shows another session mid-landing (the preflight peeks and warns).
+Parallel sessions are the norm; small absorptions keep semantic drift next
+to its cause instead of surfacing it at a 105-commit merge.

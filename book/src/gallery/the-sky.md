@@ -8,14 +8,15 @@ the Returning One under a spinning sun, a god who departs and returns and is
 mourned and feasted in turn, and the Unblinking Eye under a locked one, a
 god who has never departed and will never blink. Seven campaigns of
 deepening later, the same one-bit difference reaches much further down the
-page: the spinning sky's climate scatters 59 settlements across both
-peoples and crowns the goblin flagship **Xnebsvobned**, whose priesthood is
-headed by **Ned the Nabned**; the locked sky collapses habitability
-toward the terminator ring, places 28, crowns **Xngatnebvnedned**, and raises
-**Nedngat the Vngakned**, a head deity that never sets — both
+page: the spinning sky's climate scatters 61 settlements across all four
+peoples and crowns the goblin flagship **Xnebsvob**, whose priesthood is
+headed by **Neb the Ngobneb**; the locked sky collapses habitability
+toward the terminator ring, places 29, crowns **Xngatnebvned**, and raises
+**Neb the Nodneb**, a head deity that never sets — both
 names, like every proper noun below, drawn from that people's own generated
 phonology rather than an author's syllable pool (Campaign Y2-3, The
-Tongues).
+Tongues; re-baselined again when goblin joined a language family — see
+[The Branches](../chronicle/the-branches.md)).
 
 Compare the two almanacs section by section — the Land's biomes, the People,
 the Gods, the Calendar — and every difference traces back to the one pinned

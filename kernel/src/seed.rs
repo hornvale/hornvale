@@ -1,4 +1,5 @@
-//! Hierarchical seeding and deterministic random streams.
+//! Hierarchical seeding and deterministic random streams — the root of the
+//! byte-identical guarantee (decision 0001).
 
 use serde::{Deserialize, Serialize};
 

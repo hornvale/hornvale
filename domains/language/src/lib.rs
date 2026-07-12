@@ -32,7 +32,8 @@ pub mod phonology;
 pub mod register;
 
 pub use etymology::{
-    AppliedRule, Cascade, Derivation, RuleKind, SoundRule, draw_cascade, evolve, proto_root,
+    AppliedRule, Cascade, Daughter, Derivation, RuleKind, SoundRule, assign_proto_roots,
+    draw_cascade, evolve, proto_root,
 };
 pub use lexicon::{
     ExposureClass, GapReason, Headedness, LexEntry, Lexicon, WordViews, build_lexicon,
@@ -40,13 +41,17 @@ pub use lexicon::{
 };
 pub use naming::{GeneratedName, MorphOptions, NameKind, Namer, SiteConcepts, render_views};
 pub use packs::{
-    PackDepths, PackEntry, body_pack, color_pack, compound_recipe, in_ladder, kin_pack,
-    register_concepts, universal_stratum,
+    PackDepths, PackEntry, body_pack, color_pack, compound_recipe, concept_domain, in_ladder,
+    is_core_concept, kin_pack, register_concepts, universal_stratum,
 };
 pub use phoneme::{
-    Backness, Height, Manner, Place, Segment, espeak, espeak_word, ipa, romanize, sonority,
+    Backness, Height, Manner, Place, Segment, Tone, espeak, espeak_word, ipa, romanize, sonority,
+    tone_mark_ipa, tone_mark_roman, tone_of,
 };
-pub use phonology::{Envelope, ExoticSeg, Phonology, draw_phonology, permits};
+pub use phonology::{
+    Envelope, ExoticSeg, Phonology, distinguishable_capacity, draw_phonology, permits,
+    tone_inventory,
+};
 pub use register::{LineContent, LineSentiment, VoiceParams, render_line};
 
 /// Every seed-derivation label (or pattern) this crate uses, with docs.
@@ -66,11 +71,15 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     vec![
         (
             "language/<species>/phonology/inventory",
-            "per-species phoneme inventory draw under the articulation envelope",
+            "per-species phoneme inventory draw under the articulation envelope; for a family's shared proto-language (e.g. goblinoid) a family name occupies the <species> slot — a language with no speakers",
         ),
         (
             "language/<species>/phonology/phonotactics",
             "per-species syllable phonotactic templates (onsets, nuclei, codas)",
+        ),
+        (
+            "language/<species>/phonology/tones",
+            "the phonology epoch's tone-inventory draw: which contrastive level tone (High/Low) joins Neutral for a partly-tonal species (tonality → 2 tones); atonal (1) and fully tonal (3) draw nothing here",
         ),
         (
             "language/<species>/name/settlement",
@@ -97,8 +106,16 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "the glossed epithet (Task 9): composed from the lexicon's roots/compounds under the species' drawn headedness, replacing the v1 draw above",
         ),
         (
-            "language/<species>/lexicon/root/<concept>",
-            "per-concept proto-root (1-2 syllables, from the phonotactic templates)",
+            "language/<family>/lexicon/root/v3/<concept>",
+            "per-concept family proto-root, injectively and MERGER-AWARELY assigned (epoch root/v3): the open-addressing draw also rejects a core candidate whose evolved form would merge with an already-placed core concept in any daughter, so core homophony is zero; family == species for a singleton stock. Probe re-draws key a /probe/<n> sub-stream",
+        ),
+        (
+            "language/<family>/lexicon/root/v2/<concept>",
+            "(retired by the merger-aware assignment, superseded by root/v3) the injective-but-proto-only family assignment",
+        ),
+        (
+            "language/goblin/lexicon/root/<concept>",
+            "(retired at The Branches, superseded by language/goblinoid/lexicon/root/<concept>) pre-Branches per-species goblin proto-root",
         ),
         (
             "language/<species>/lexicon/cascade",
