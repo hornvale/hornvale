@@ -1,0 +1,36 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "LaunchOnlyBoxedSpot",
+      "Effect": "Allow",
+      "Action": "ec2:RunInstances",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": { "ec2:InstanceType": "c7g.4xlarge", "aws:RequestedRegion": "us-east-1" },
+        "StringLike": { "aws:RequestTag/project": "hornvale-gate" },
+        "Null": { "ec2:SpotInstanceRequest": "false" }
+      }
+    },
+    {
+      "Sid": "ManageOwnTaggedBoxes",
+      "Effect": "Allow",
+      "Action": ["ec2:TerminateInstances", "ec2:CreateTags"],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:ResourceTag/project": "hornvale-gate", "aws:RequestedRegion": "us-east-1" } }
+    },
+    {
+      "Sid": "DescribeAndPassAndCache",
+      "Effect": "Allow",
+      "Action": ["ec2:DescribeInstances", "ec2:DescribeSpotInstanceRequests", "ec2:DescribeLaunchTemplates", "iam:PassRole"],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:RequestedRegion": "us-east-1" } }
+    },
+    {
+      "Sid": "SccacheBucketOnly",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+      "Resource": ["arn:aws:s3:::hornvale-gate-sccache-*", "arn:aws:s3:::hornvale-gate-sccache-*/*"]
+    }
+  ]
+}
