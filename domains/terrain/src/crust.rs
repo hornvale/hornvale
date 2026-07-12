@@ -372,18 +372,27 @@ fn repel_cratons(cratons: &mut [Craton]) {
 /// The crust fields: stateless functions of position over the drawn
 /// craton set (Crust spec §2). Pure — the `Field` contract.
 pub struct CrustField {
-    /// Noise seed for the lobing kernels (per-craton derivations inside).
-    seed: Seed,
     /// The drawn cratons.
     cratons: Vec<Craton>,
+    /// Per-craton lobing-kernel seeds, indexed by craton id — the exact
+    /// `craton-{id}` derivations `strongest` used to recompute on every
+    /// sample. Precomputed once here so per-cell and per-pixel sampling
+    /// (millions of calls at the canonical grid) allocates and hashes
+    /// nothing per craton. Byte-identical to the per-sample derivation.
+    lobing_seeds: Vec<Seed>,
 }
 
 impl CrustField {
     /// Assemble the field over a drawn craton set.
     pub fn new(terrain_seed: Seed, cratons: Vec<Craton>) -> CrustField {
+        let lobing_root = terrain_seed.derive(streams::CRATONS).derive("lobing");
+        let lobing_seeds = cratons
+            .iter()
+            .map(|c| lobing_root.derive(&format!("craton-{}", c.id)))
+            .collect();
         CrustField {
-            seed: terrain_seed.derive(streams::CRATONS).derive("lobing"),
             cratons,
+            lobing_seeds,
         }
     }
 
@@ -392,7 +401,7 @@ impl CrustField {
         self.cratons
             .iter()
             .map(|c| {
-                let seed = self.seed.derive(&format!("craton-{}", c.id));
+                let seed = self.lobing_seeds[c.id as usize];
                 (lobed_envelope(seed, c.center, p, c.radius_rad), c)
             })
             .max_by(|(a, ca), (b, cb)| a.total_cmp(b).then(cb.id.cmp(&ca.id)))
