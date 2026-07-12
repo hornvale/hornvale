@@ -136,7 +136,11 @@ do not care about.
 
 ## The policy (durable decision 0027)
 
-Land `docs/decisions/0027-shared-units-live-in-the-kernel.md`:
+Land `docs/decisions/0027-shared-units-live-in-the-kernel.md`. Two parts: a
+**placement** rule (where a unit lives) and a **promotion** rule (how a
+quantity is typed, by classification).
+
+**Placement.**
 
 > **Coherent physical quantities that cross domain boundaries live in the
 > kernel; single-domain quantities stay in their domain.** A quantity belongs
@@ -145,14 +149,52 @@ Land `docs/decisions/0027-shared-units-live-in-the-kernel.md`:
 > domain-local. This refines 0008 (which mandated newtypes but was silent on
 > location) and preserves the existing split by example: the kernel holds the
 > substrate quantity (`WorldTime`), a domain holds its flavored interpretation
-> (astronomy's `StdDays`/`LocalDays` over `WorldTime`). The
+> (astronomy's `StdDays`/`LocalDays` over `WorldTime`; `Au`/`SolarMasses` are
+> astronomy's scaled views over kernel Distance/Mass). The
 > `elevation-convention` waiver is hereby given a cited home and reclassified
 > as *temporary*: the kernel `ReferenceElevation` type retires it for the
 > elevation datum; sibling conventions (`crust-km-convention`) follow the same
 > path in their own waves.
 
-The decision doc records the datum mental model above (primary/derived,
-the rate ladder) as the reasoning, so future unit work inherits the map.
+**Proactive, not reactive.** The planned domains will share a common physical
+vocabulary, so the kernel unit *vocabulary* is built ahead of demand — units
+are a closed, knowable domain, so this is not speculative generality. Each
+type's *richer surface* (extra accessors, conversions) stays reactive: added
+when a consumer needs it, not before. The Datum is the pilot; a successor
+"Kernel Units" campaign builds the shared core.
+
+**Promotion — classify the quantity, then type it.** Singular/plural is one
+axis of several; a quantity is typed according to where it sits on all of them:
+
+- **Multiplicity** — *singular* (one meaning, compares everywhere: temperature,
+  energy) → one shared kernel type. *Plural* (meanings that must not intermix:
+  length → elevation vs crust-thickness vs distance) → semantic newtypes at
+  boundaries (`ReferenceElevation`, `CrustThickness`), never a bare shared
+  `Length`.
+- **Additivity — affine vs vector.** *Affine* positions subtract (→ a
+  difference) but do not add (`ReferenceElevation`, absolute temperature,
+  time-instant); they are **promoted together with their companion vector delta
+  type** (elevation's `Sub`-delta; temperature's `TempAnomaly`; time's
+  duration). *Vector* magnitudes add (energy, mass, the deltas themselves). The
+  code already grew these pairs blind (`Celsius`/`TempAnomaly`,
+  sea-level/`SeaLevelChange`); the pattern is now deliberate.
+- **Cyclicity — linear vs cyclic vs bounded.** *Cyclic* quantities wrap
+  (longitude, phase, time-of-day) and need modular arithmetic and
+  normalization; *bounded* clamp (latitude ±90); *linear* do neither (elevation,
+  energy). An angle type is therefore **not** a re-skin of the linear elevation
+  pattern.
+- **Rank — scalar vs vector/tensor.** The types built now are *scalars*. Rank-1
+  quantities (position, velocity, gradient — today bare `[f64; 3]`) are a
+  recognized **deferred category**, not a claim the library is "done" once the
+  scalars are typed.
+- **Naturalness — physical vs conventional.** Only SI-dimensional physical
+  quantities are units. Ordinal/convention scales (a future sim's faith,
+  reputation, danger; Mohs, Beaufort) are **out of scope** — they are ordered
+  enums, not `f64`-with-dimension, and must not be dumped in the units library.
+
+The decision doc records the datum mental model above (primary/derived, the
+rate ladder) and this classification as its reasoning, so future unit work
+inherits the map.
 
 ## What this campaign builds
 
@@ -270,23 +312,40 @@ first, consumers after, so no half-typed boundary ever exists:
 
 ## Follow-ons (out of scope; recorded so the map survives)
 
-- **`RelativeElevation<H>`** — introduce when a *second* datum exists (the
-  subterranean/cave frame). Open sub-choice deferred to then: compile-time
-  phantom-tag `H` (zero-cost, prevents datum-mixing, heavier Rust) vs distinct
-  named views. Until then the sea-level reframing is a local `Sub`-derived
-  `f64`.
-- **`GeocentricRadius`** — the from-core view; add when a consumer needs it.
-- **`SurfaceElevation`** — a named height-above-sea-level type; add when that
-  reframing first crosses a pub boundary.
-- **Angle family** — `latitude`/`longitude` (originate in `GeoCoord` → kernel),
-  obliquity, `radius_rad`; consider migrating astronomy's `Degrees` onto a
-  kernel angle core.
-- **Temperature family** — a kernel `Celsius` that dedupes paleoclimate's
-  existing `Celsius` and climate's need for one (today worldgen wraps
-  climate's bare output in `paleoclimate::Celsius` — the "already-typed,
-  trivial conversion" case).
-- **`crust-km-convention`** — the sibling bare-datum waiver; retire it the same
-  way in the terrain/crust wave.
+Classified per the promotion axes (see The policy):
+
+- **`RelativeElevation<H>`** (plural length, affine) — introduce when a *second*
+  datum exists (the subterranean/cave frame). Open sub-choice deferred to then:
+  compile-time phantom-tag `H` (zero-cost, prevents datum-mixing, heavier Rust)
+  vs distinct named views. Until then the sea-level reframing is a local
+  `Sub`-derived `f64` (the unnamed elevation delta).
+- **`GeocentricRadius`** (from-core view) — likely pulled first by the
+  room-scale 3D placement work (positioning a room needs the point's radius).
+- **`SurfaceElevation`** — a named height-above-sea-level type; likely pulled by
+  The Walk (describing altitude to a player crosses a pub boundary).
+- **Angle family** (plural, **cyclic**) — `latitude`/`longitude` (originate in
+  `GeoCoord` → kernel), obliquity, `radius_rad`. **Its own campaign, not a
+  re-skin of the linear elevation pattern**: `Longitude` wraps (modular
+  arithmetic + normalization + shortest-angular-distance), `Latitude` clamps
+  (±90). Astronomy's `Degrees` is a plain validated newtype with no wrap, so it
+  needs more than a lift-to-kernel. `GeoCoord`'s bare-`f64` latitude is the
+  highest-blast-radius target in the system.
+- **Temperature family** (singular, **affine → carries its delta**) — a kernel
+  `Temperature` promoted *together with* `TempAnomaly` (the ΔT vector delta,
+  already in paleoclimate). Dedupes paleoclimate's `Celsius` and climate's need
+  for one (today worldgen wraps climate's bare output in `paleoclimate::Celsius`
+  — a cross-domain type borrow that exists only for lack of a shared home).
+  Canonical fork to settle then: one `Temperature` (Kelvin canonical,
+  `.celsius()` accessor) vs unit-named `Celsius`/`Kelvin`.
+- **`crust-km-convention`** (plural length) — the sibling bare-datum waiver;
+  retire it with its own semantic type (`CrustThickness` — *not* a shared
+  `Length` with elevation) in the terrain/crust wave.
+- **Vector/tensor quantities** (rank ≥ 1) — position, velocity, gradient, today
+  bare `[f64; 3]`. A recognized deferred *category*, not designed here; the
+  scalar library is not "the whole library."
+- **Conventional/ordinal scales** — faith, reputation, danger, Mohs, Beaufort:
+  **not units.** Recorded as an explicit fence so the units library never
+  becomes their dumping ground (they are ordered enums / ordinal scales).
 
 ## Definition of Done (per CLAUDE.md)
 
