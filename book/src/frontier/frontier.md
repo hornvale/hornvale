@@ -50,6 +50,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The anti-phenomenon — meaningful absence as an observable](#the-anti-phenomenon--meaningful-absence-as-an-observable)
   - [The social graph — a derived, self-balancing relational layer](#the-social-graph--a-derived-self-balancing-relational-layer)
   - [The motivation engine — Goal-Oriented Action Planning over belief](#the-motivation-engine--goal-oriented-action-planning-over-belief)
+  - [The planning engine — A-star as causality across the tenses](#the-planning-engine--a-star-as-causality-across-the-tenses)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
@@ -1773,6 +1774,19 @@ agent. And the reactive rungs (reflex, drive) need no search at all: they are th
 scalar, utility-AI floor beneath the deliberative GOAP ceiling — the autonomy scale
 mapped onto algorithmic depth.
 
+**But the dramatically interesting agent is the one whose plan fails.** Real minds
+*satisfice* — first good-enough, not optimal (bounded rationality) — which is
+cheaper and stops NPCs looking eerily omniscient. When the planner returns
+*nothing* (an unreachable goal) the agent must still act: despair, substitute a new
+goal, or — darkest — **re-plan over false beliefs** to make the goal seem reachable
+(denial, the doomed quest). Some plan *anti-optimally* on purpose: the ordeal, the
+ascetic's hard road, the tragic flaw, where a value makes the cost itself the goal.
+Two agents plan *against* each other (minimax — the con over the target's belief,
+MAP-15). And every plan throws **side-effects**: my least-cost path wrecks yours,
+minting an enmity edge on the social graph (SOC-9) — individual optimisation is the
+engine of collective conflict. The negations of the algorithm, not its successes,
+are where the drama lives.
+
 **It closes the observation cycle for NPCs, and it runs lazily.** perceive → select
 goal → plan → act → commit an event → which updates every projection and the social
 graph → perceive again: the metaplan's spine, running autonomously. And by the
@@ -1785,6 +1799,51 @@ instance is a single hungry agent with two actions (forage, beg) planning one st
 over what it believes — before goals nest, costs personalise, and the plans grow
 wrong in interesting ways. Downstream of the drives (PSY-1) and the concept layer
 (LANG-4); the deliberative complement to ideonomic cognition (PSY-5).
+
+---
+
+## The planning engine — A-star as causality across the tenses
+
+*(High confidence in the observation; it reorganises several sections rather than
+adding a system. The action-half of the sim, complement to UNI-1's inference-half.
+From the-walk brainstorm's A\* / GOAP exploration.)*
+
+**Abstract the motivation engine (PSY-6) one notch and GOAP is just A\*: least-cost
+path through a state space.** Named that generally it stops being an NPC brain and
+becomes a recurring engine — the same deterministic search (start → goal, minimise
+cost, ties broken by seed) is *causality itself*, run in every tense:
+
+- **Backward — the past.** Retrospective confabulation (the-walk metaplan, Campaign
+  IV) must find a plausible causal chain from the deep-time priors to the committed
+  present: A\* with goal = the present facts, operators = events, **cost =
+  implausibility**. The most plausible history that yields "now" wins.
+- **Over space — the present.** Not only the player's walk but **roads, trade
+  routes, migration, and drainage** are least-cost paths over terrain — the literal
+  A\*, and a plausible-infrastructure generator for free.
+- **Forward — the future.** NPC behaviour (GOAP), and **fate itself as forward A\***
+  toward a foretold outcome: MAP-15's "not too blatant" plausibility floor *is* the
+  A\* cost, so prophecy is fulfilled by the least-miraculous chain of coincidences
+  that reaches the foretold end.
+
+Beyond the tenses the same shape recurs: a **tech tree** is planning over
+prerequisites; **etymology** is a derivation path and the **comparative method**
+(LANG-8) a search for the least-cost proto-tree; **abduction** (UNI-1 at the
+explanatory pole) is search for the least-cost hypothesis. So the sim has two
+universal search engines that are one active-inference loop: **UNI-1 is inference
+(fit the model to the world); this is planning (fit the world to the model)** —
+perceive and act, minimising the same gap.
+
+**Why it matters practically:** A\* is the rare game-AI primitive that is natively
+deterministic (fixed cost + seeded tie-break → byte-identical), so a single, small,
+well-tested planner — plausibly one kernel utility — serves navigation, history,
+prophecy, technology, and reconstruction alike, each supplying its own state space
+and cost function. Its negations are where the drama lives (PSY-6's failure modes):
+satisficing over optimising, the unreachable goal, the deliberately hard road.
+
+**Sequencing.** Not a campaign — an observation that shapes several. The first
+concrete cash-in is the cheapest cost function that already has a state space:
+navigation over the terrain graph, or the backward confabulation the event ledger
+(Campaign IV) needs. Everything else reuses the same engine.
 
 ---
 
