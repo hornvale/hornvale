@@ -11,6 +11,10 @@ HVG_MAX_AGE_SECS="${HVG_MAX_AGE_SECS:-7200}"   # 2h
 HVG_IDLE_MIN="${HVG_IDLE_MIN:-15}"
 HVG_BUDGET_ALERT="${HVG_BUDGET_ALERT:-10}"
 HVG_BUDGET_HARD="${HVG_BUDGET_HARD:-25}"
+# AWS budget ACTIONS support only monthly granularity (not daily), so the
+# auto-disable backstop is a MONTHLY ceiling well above normal use (~$30-75/mo).
+# The fast asleep-safety is the 5-min circuit breaker, not this.
+HVG_BUDGET_MONTHLY_HARD="${HVG_BUDGET_MONTHLY_HARD:-150}"
 HVG_MANIFEST="${HVG_MANIFEST:-$HOME/.hornvale-gate/manifest.json}"
 
 # Admin context: the developer's default credentials (setup/teardown/panic).

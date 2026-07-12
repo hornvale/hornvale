@@ -112,17 +112,44 @@ section "Circuit breaker (Lambda)"
 breaker_zip="$(mktemp -d)/circuit_breaker.zip"
 (cd "$here" && zip -q -X "$breaker_zip" circuit_breaker.py)
 echo "  packaging: $breaker_zip"
-# ... create/update execution role `hornvale-gate-breaker` (trust = lambda.amazonaws.com):
-#     inline policy: ec2:DescribeInstances + ec2:TerminateInstances on instances tagged
-#     project=hornvale-gate, iam:ListAccessKeys + iam:UpdateAccessKey on user
-#     hornvale-gate-runner, logs:CreateLogGroup/CreateLogStream/PutLogEvents; tag project ...
-# ... create/update Lambda function `hornvale-gate-breaker`: runtime python3.12, handler
-#     circuit_breaker.handler, code = $breaker_zip, role = above, env vars HVG_REGION /
-#     HVG_MAX_AGE_SECS / HVG_MAX_COUNT (from lib.sh); tag project ...
-# ... create/update EventBridge rule `hornvale-gate-breaker-tick`: schedule rate(5 minutes),
-#     target = the Lambda's ARN; `aws lambda add-permission` granting events.amazonaws.com
-#     invoke, SourceArn = the rule's ARN ...
-# ... manifest_set breaker_lambda_arn / breaker_rule_arn once created ...
+account="$(aws_admin sts get-caller-identity --query Account --output text)"
+breaker_role=hornvale-gate-breaker
+aws_admin iam get-role --role-name "$breaker_role" >/dev/null 2>&1 || \
+    run aws_admin iam create-role --role-name "$breaker_role" \
+        --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}' \
+        --tags Key=project,Value=hornvale-gate >/dev/null
+breaker_pol="$(mktemp)"
+cat > "$breaker_pol" <<JSON
+{ "Version":"2012-10-17","Statement":[
+  {"Effect":"Allow","Action":"ec2:DescribeInstances","Resource":"*"},
+  {"Effect":"Allow","Action":"ec2:TerminateInstances","Resource":"*","Condition":{"StringEquals":{"aws:ResourceTag/project":"hornvale-gate"}}},
+  {"Effect":"Allow","Action":["iam:ListAccessKeys","iam:UpdateAccessKey"],"Resource":"arn:aws:iam::${account}:user/hornvale-gate-runner"},
+  {"Effect":"Allow","Action":["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],"Resource":"*"} ]}
+JSON
+run aws_admin iam put-role-policy --role-name "$breaker_role" --policy-name breaker --policy-document "file://$breaker_pol"
+breaker_role_arn="arn:aws:iam::${account}:role/${breaker_role}"
+if aws_admin lambda get-function --function-name hornvale-gate-breaker >/dev/null 2>&1; then
+    run aws_admin lambda update-function-code --function-name hornvale-gate-breaker --zip-file "fileb://$breaker_zip" >/dev/null
+else
+    # New-role propagation to Lambda can lag; retry the create a few times.
+    for _ in 1 2 3 4 5 6; do
+        if aws_admin lambda create-function --function-name hornvale-gate-breaker \
+            --runtime python3.12 --handler circuit_breaker.handler --role "$breaker_role_arn" \
+            --zip-file "fileb://$breaker_zip" --timeout 30 \
+            --environment "Variables={HVG_REGION=$HVG_REGION,HVG_MAX_AGE_SECS=$HVG_MAX_AGE_SECS,HVG_MAX_COUNT=$HVG_MAX_COUNT}" \
+            --tags project=hornvale-gate >/dev/null 2>&1; then break; fi
+        echo "  waiting for breaker-role propagation..."; sleep 5
+    done
+fi
+lambda_arn="$(aws_admin lambda get-function --function-name hornvale-gate-breaker --query 'Configuration.FunctionArn' --output text)"
+manifest_set breaker_lambda_arn "$lambda_arn"
+rule_arn="$(aws_admin events put-rule --name hornvale-gate-breaker-tick --schedule-expression 'rate(5 minutes)' \
+    --tags Key=project,Value=hornvale-gate --query RuleArn --output text)"
+aws_admin lambda add-permission --function-name hornvale-gate-breaker --statement-id hvg-breaker-tick \
+    --action lambda:InvokeFunction --principal events.amazonaws.com --source-arn "$rule_arn" >/dev/null 2>&1 || true
+run aws_admin events put-targets --rule hornvale-gate-breaker-tick --targets "Id=1,Arn=$lambda_arn" >/dev/null
+manifest_set breaker_rule_arn "$rule_arn"
+echo "  breaker lambda: $lambda_arn"
 
 section "Budgets"
 # NOTE: budgets are DAILY (TimeUnit: DAILY), matching the spec's "$10/day" alert
@@ -130,11 +157,56 @@ section "Budgets"
 # normal use (~$1-2.50/day crosses $25 cumulatively in ~2 weeks), defeating the
 # ~$25 worst-case-per-runaway bound — the hard action must fire on a RUNAWAY DAY,
 # not on ordinary accumulated spend.
-# ... create/update a $HVG_BUDGET_ALERT ($10) DAILY ACTUAL-cost budget, NOTIFY only,
-#     email subscriber = admin; tag project ...
-# ... create/update a $HVG_BUDGET_HARD ($25) DAILY ACTUAL-cost budget with an
-#     IAM-deny budget ACTION (auto-apply, no approval required) targeting the
-#     hornvale-gate-runner user on ACTUAL >= 100% ...
-# ... manifest_set budget_alert_arn / budget_action_arn once created ...
+email="${HVG_BUDGET_EMAIL:-claude@tenesm.us}"   # alert recipient; override with HVG_BUDGET_EMAIL
+echo "  alert email: $email"
+# DAILY alert budget: two email thresholds — 100% (=$HVG_BUDGET_ALERT) and the
+# $HVG_BUDGET_HARD level (AWS budget ACTIONS can't be daily, so daily is
+# notify-only; the 5-min circuit breaker is the daily-scale enforcement).
+warn_pct="$(python3 -c "print(round(100*$HVG_BUDGET_HARD/$HVG_BUDGET_ALERT))")"
+ab="$(mktemp)"; an="$(mktemp)"
+printf '{"BudgetName":"hornvale-gate-daily-alert","BudgetLimit":{"Amount":"%s","Unit":"USD"},"TimeUnit":"DAILY","BudgetType":"COST"}' "$HVG_BUDGET_ALERT" > "$ab"
+printf '[{"Notification":{"NotificationType":"ACTUAL","ComparisonOperator":"GREATER_THAN","Threshold":100,"ThresholdType":"PERCENTAGE"},"Subscribers":[{"SubscriptionType":"EMAIL","Address":"%s"}]},{"Notification":{"NotificationType":"ACTUAL","ComparisonOperator":"GREATER_THAN","Threshold":%s,"ThresholdType":"PERCENTAGE"},"Subscribers":[{"SubscriptionType":"EMAIL","Address":"%s"}]}]' "$email" "$warn_pct" "$email" > "$an"
+if aws_admin budgets describe-budget --account-id "$account" --budget-name hornvale-gate-daily-alert >/dev/null 2>&1; then
+    run aws_admin budgets update-budget --account-id "$account" --new-budget "file://$ab" >/dev/null
+    aws_admin budgets create-notification --account-id "$account" --budget-name hornvale-gate-daily-alert \
+        --notification "{\"NotificationType\":\"ACTUAL\",\"ComparisonOperator\":\"GREATER_THAN\",\"Threshold\":$warn_pct,\"ThresholdType\":\"PERCENTAGE\"}" \
+        --subscribers "{\"SubscriptionType\":\"EMAIL\",\"Address\":\"$email\"}" >/dev/null 2>&1 || true
+else
+    run aws_admin budgets create-budget --account-id "$account" --budget "file://$ab" --notifications-with-subscribers "file://$an"
+fi
+# Retire the earlier daily "hard" budget — AWS budget ACTIONS can't be daily, so
+# the auto-disable backstop is monthly (below).
+aws_admin budgets delete-budget --account-id "$account" --budget-name hornvale-gate-daily-hard >/dev/null 2>&1 || true
+# Deny policy the hard action attaches (kills the runner's ability to launch).
+deny_arn="arn:aws:iam::${account}:policy/hornvale-gate-deny"
+aws_admin iam get-policy --policy-arn "$deny_arn" >/dev/null 2>&1 || \
+    run aws_admin iam create-policy --policy-name hornvale-gate-deny \
+        --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Deny","Action":"ec2:RunInstances","Resource":"*"}]}' \
+        --tags Key=project,Value=hornvale-gate >/dev/null
+# Budgets-assumed role that attaches the deny policy to the runner.
+ba_role=hornvale-gate-budget-action
+aws_admin iam get-role --role-name "$ba_role" >/dev/null 2>&1 || \
+    run aws_admin iam create-role --role-name "$ba_role" \
+        --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"budgets.amazonaws.com"},"Action":"sts:AssumeRole"}]}' \
+        --tags Key=project,Value=hornvale-gate >/dev/null
+run aws_admin iam put-role-policy --role-name "$ba_role" --policy-name attach \
+    --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"iam:AttachUserPolicy\",\"Resource\":\"arn:aws:iam::${account}:user/hornvale-gate-runner\"}]}"
+# MONTHLY hard budget ($HVG_BUDGET_MONTHLY_HARD) + auto-apply IAM-deny action at
+# 100% ACTUAL. Monthly because AWS budget ACTIONS don't support daily; set well
+# above normal use (~$30-75/mo) so it only fires on a sustained runaway.
+hb="$(mktemp)"
+printf '{"BudgetName":"hornvale-gate-monthly-hard","BudgetLimit":{"Amount":"%s","Unit":"USD"},"TimeUnit":"MONTHLY","BudgetType":"COST"}' "$HVG_BUDGET_MONTHLY_HARD" > "$hb"
+aws_admin budgets describe-budget --account-id "$account" --budget-name hornvale-gate-monthly-hard >/dev/null 2>&1 || \
+    run aws_admin budgets create-budget --account-id "$account" --budget "file://$hb"
+existing_action="$(aws_admin budgets describe-budget-actions-for-budget --account-id "$account" --budget-name hornvale-gate-monthly-hard --query 'Actions[0].ActionId' --output text 2>/dev/null || true)"
+if [ -z "$existing_action" ] || [ "$existing_action" = "None" ]; then
+    run aws_admin budgets create-budget-action --account-id "$account" --budget-name hornvale-gate-monthly-hard \
+        --notification-type ACTUAL --action-type APPLY_IAM_POLICY \
+        --action-threshold '{"ActionThresholdValue":100,"ActionThresholdType":"PERCENTAGE"}' \
+        --definition "{\"IamActionDefinition\":{\"PolicyArn\":\"$deny_arn\",\"Users\":[\"hornvale-gate-runner\"]}}" \
+        --execution-role-arn "arn:aws:iam::${account}:role/${ba_role}" --approval-model AUTOMATIC \
+        --subscribers "[{\"SubscriptionType\":\"EMAIL\",\"Address\":\"$email\"}]" >/dev/null
+fi
+echo "  budgets: \$${HVG_BUDGET_ALERT}/day + \$${HVG_BUDGET_HARD}/day email alerts; \$${HVG_BUDGET_MONTHLY_HARD}/mo hard IAM-deny action -> $email"
 
 echo "setup complete (dry-run=$DRY_RUN)"
