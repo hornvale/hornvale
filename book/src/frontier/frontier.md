@@ -54,6 +54,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The verb as reaction — a property-transformation chemistry](#the-verb-as-reaction--a-property-transformation-chemistry)
   - [Emotion as appraisal — the affective readout of the gap](#emotion-as-appraisal--the-affective-readout-of-the-gap)
   - [The derived-view architecture — the game layer as readouts over one ledger](#the-derived-view-architecture--the-game-layer-as-readouts-over-one-ledger)
+  - [The self-reflective ledger — the capability schema as a derived view](#the-self-reflective-ledger--the-capability-schema-as-a-derived-view)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
@@ -1987,6 +1988,56 @@ is wiring the existing views (belief, graph, emotion) and the two engines togeth
 over the ledger the event campaign (IV) already builds. The convergence is the
 design: agility comes from there being *less* here than it looks — the game-layer
 analogue of the constitution's "coarse constrains fine."
+
+---
+
+## The self-reflective ledger — the capability schema as a derived view
+
+*(High confidence in the shape; it is the derived-view architecture (UNI-20) pointed
+at itself. Determinism-clean because it is build-derived, not wall-clock. From the
+the-walk brainstorm.)*
+
+**A triple store is inherently reflective: its schema is data.** The set of
+predicates a world uses, the attributes an entity carries, which domain provides
+which field or phenomenon kind, which verbs (property-transformation reactions,
+MAP-23) exist and with what preconditions — all of it is expressible as facts in the
+same shape as the world facts, and queryable by the same engine. So "the system can
+ask what it is able to relate, know, and do" needs no new subsystem — only a **view
+over its own capability schema**, most of which the concept registry already holds.
+
+**The determinism boundary is what keeps it clean, and it is easy to hold.** This is
+*not* a record of the development process — no campaigns, commits, or wall-clock
+dates, which could never enter a world (the Constitution forbids wall-clock time and
+requires same-seed → same-world). It is the **compiled capability set**: a pure
+function of the build, *derived at load* from the registry and the providers wired at
+the composition root, never written to the world's save. It is build-state, not
+world-state — current for whatever binary is running, carrying no cross-version save
+hazard.
+
+**Reflection then falls out as another derived view, with a load-bearing use.**
+GOAP's available-action set (PSY-6) *is* a capability query — the planner must
+enumerate the verbs it may compose, which is exactly folding over the capability
+schema. What the player may attempt, what a domain can answer, what a provider offers
+at which tier all become the same query, and the concept-registry review run by hand
+each campaign (are there predicates with no producer? phenomena no one consumes?)
+becomes a query the system can run on itself.
+
+**The meta-circular payoff closes the unification thesis.** The system's model of its
+own capabilities and an *in-world* sage's model of the world's laws are the same kind
+of thing — facts about the hidden ruleset, differing only in vantage and
+completeness. A culture doing astronomy (MAP-18, calendrics as computed knowledge) or
+folk physics (MAP-19, the commonsense ruleset) runs the same introspection the
+developer's tools do, from inside, with partial information (UNI-1: inference over the
+hidden seeded ruleset). "The engine queries its capabilities" and "a civilisation
+discovers its physics" are one mechanism at two vantages — the derived-view
+architecture (UNI-20) turned reflexive.
+
+**Sequencing.** A view, not a campaign — its cheapest instance already exists as
+`hornvale concepts` (the registry dump); the step is to expose that schema as
+queryable tuples in the ledger's own shape, derived at load, so the same query engine
+that answers world questions answers questions about the world's vocabulary.
+Downstream of the concept registry; the reflexive read over everything the
+derived-view architecture builds.
 
 ---
 
