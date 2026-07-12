@@ -53,7 +53,7 @@ tersely.
 | `homophony_stats` (backs `core_homophony`, `confusable_homophony`, `homophony_merger_share`) | `lexicon_of` + pack membership | Full |
 | `tone_count_metric` | `language_of_in` + `tone_inventory` | Full |
 | `distinguishable_capacity_metric` | `language_of_in` + `distinguishable_capacity` | Full |
-| `beliefs_of` | pre-species genesis belief fact, committed at genesis (see Anomaly 2) | Astronomy |
+| `beliefs_of` | `IS_BELIEF` facts, committed ONLY at `religion::genesis` (Full depth) | Full |
 
 ## Enumeration
 
@@ -72,7 +72,7 @@ tersely.
 | 11 | `months-per-year-innermost` | Astronomy | `v.calendar.months_per_year(0)` |
 | 12 | `neighbor-count` | Astronomy | `v.system.neighbors.len()` |
 | 13 | `brightest-neighbor-class` | Astronomy | `v.system.neighbors.first()` |
-| 14 | `belief-kind` | Astronomy | `beliefs_of(&v.world)` reads the pre-species genesis belief (see Anomaly 2) |
+| 14 | `belief-kind` | Full | `beliefs_of(&v.world)` reads `IS_BELIEF` facts committed ONLY at `religion::genesis` (Full depth) — CORRECTED from Astronomy, see Anomaly 2 |
 | 15 | `genesis-note-count` | Astronomy | `v.notes.len()` |
 | 16 | `plate-count` | Terrain | `v.globe.plate_count` |
 | 17 | `ocean-fraction` | Terrain | `v.globe.ocean_fraction` |
@@ -128,8 +128,8 @@ tersely.
 | 67 | `lexicon-regular-kobold` | Full | helper `lexicon_regular` |
 | 68 | `exposure-sound-goblin` | Full | helper `exposure_sound` / `independently_steeped_concepts` |
 | 69 | `exposure-sound-kobold` | Full | helper `exposure_sound` |
-| 70 | `hue-depth-goblin` | Full | helper `hue_depth` — reads `v.roster` only (see Anomaly 1) |
-| 71 | `hue-depth-kobold` | Full | helper `hue_depth` — reads `v.roster` only (see Anomaly 1) |
+| 70 | `hue-depth-goblin` | Astronomy | helper `hue_depth` — reads `v.roster` only (on the base view); tightest correct rung, see Anomaly 1 |
+| 71 | `hue-depth-kobold` | Astronomy | helper `hue_depth` — reads `v.roster` only (on the base view); tightest correct rung, see Anomaly 1 |
 | 72 | `shoreline-development` | Terrain | `v.terrain.globe()` + `shape::shoreline_development` |
 | 73 | `hypsometric-bimodality` | Terrain | `v.terrain.globe()` + `shape::hypsometric_bimodality` |
 | 74 | `shelf-fraction` | Terrain | `v.terrain.globe()` + `shape::shelf_fraction` |
@@ -174,17 +174,21 @@ tersely.
 
 | Rung | Count |
 |---|---|
-| Astronomy | 15 |
+| Astronomy | 16 |
 | Terrain | 12 |
 | Climate | 4 |
 | Settlements | 16 |
-| Full | 63 |
+| Full | 62 |
 | **Total** | **110** |
+
+(Corrected 2026-07-12: `belief-kind` Astronomy→Full and `hue-depth-*` ×2 Full→Astronomy after Task 2's fact-commit trace — see Anomalies.)
 
 ## Sanity check against the brief's Step 2 groupings
 
 - Every `star-*`/`*-neighbor`/`moons-*`/`obliquity-*`/`year-*`/`day-*`/`tide`/
-  `month`/`belief-kind`/`genesis-note-count` metric: Astronomy (15/15 ✓).
+  `month`/`genesis-note-count` metric, plus `hue-depth-*` (roster-only):
+  Astronomy (16/16 ✓ after corrections). NOTE: `belief-kind` was moved OUT to
+  Full — see Anomalies.
 - Every `*-continent*`/`plate-*`/`ocean-fraction`/`mountain-coverage`/
   `unrest-coverage`/`endorheic-*`/`shoreline-*`/`hypsometric-*`/`shelf-*`/
   `landmass-*` metric: Terrain (12/12 ✓).
@@ -194,69 +198,57 @@ tersely.
   Settlements (16/16 ✓).
 - Every pantheon/cult/head-deity/flagship-roles/blind-attribution/
   phonotactic/epithet/name-length/name-collision/name-gloss/lexicon-*/
-  exposure-*/hue-depth-*/monophyly-*/clean-outgroup-*/inventory-closure-*/
-  divergence-*/homophony-*/tone-count-*/distinguishable-capacity-* metric:
-  Full (63/63 ✓).
+  exposure-*/monophyly-*/clean-outgroup-*/inventory-closure-*/
+  divergence-*/homophony-*/tone-count-*/distinguishable-capacity-* metric,
+  plus `belief-kind` (religion-genesis fact): Full (62/62 ✓ after
+  corrections; `hue-depth-*` moved OUT to Astronomy).
 
 ## Anomalies / design notes
 
-Two genuine surprises turned up under "read the helper, don't infer the
-rung from the name":
+Two metrics needed a "read the helper, don't infer the rung from the name"
+check. **Both were resolved by controller adjudication after Stage 2 Task 2
+traced the actual fact-commit sites in the code — the rows above are the
+CORRECTED rungs.** Updated distribution: Astronomy **16**, Terrain 12,
+Climate 4, Settlements 16, Full **62** (was 15 / … / 63 before the two
+corrections below).
 
-1. **`hue-depth-goblin`/`hue-depth-kobold` read only `v.roster`, never
-   `v.world`.** `hue_depth(v, species)` (`windows/lab/src/metrics.rs:1962`)
-   is `v.roster.iter().find(|d| d.name == species)` → `pack_depths(&def
-   .perception).hue` — a pure function of the species roster the `WorldView`
-   was *constructed with*, not anything the build pipeline commits. The
-   roster is available before any generation happens at all (it's a
-   constructor argument, present at every rung). Read field-mechanically
-   this metric would classify as **Astronomy** (or shallower — it needs no
-   build stop whatsoever). It is nonetheless grouped under **Full** per the
-   brief's explicit sanity-check enumeration (`hue-depth-*` is listed in the
-   Full row), which this document follows as directed. **This is worth a
-   deliberate call before Task 2 encodes it in types**: either (a) keep it
-   at Full for uniformity with its sibling metrics and accept an
-   unnecessary full build for two metrics that could run off `AstronomyView`
-   alone, or (b) special-case it to whatever the shallowest rung's view type
-   turns out to be, since `AsRef`-coercion chains mean a shallow view is
-   always assignable to it "for free" as long as `roster` is threaded
-   through every rung's view struct. Either choice is safe — the risk this
-   task exists to catch is a metric assigned *too shallow*, and Full is
-   never too shallow — so this is flagged as a design/efficiency note, not a
-   correctness defect.
+1. **`hue-depth-goblin`/`hue-depth-kobold` → Astronomy (was Full).**
+   `hue_depth(v, species)` (`windows/lab/src/metrics.rs:1962`) is
+   `v.roster.iter().find(|d| d.name == species)` → `pack_depths(&def
+   .perception).hue` — a pure function of the species roster the view is
+   *constructed with*, touching no committed fact, no globe, no climate. Since
+   `roster` lives on the base `AstronomyView`, the tightest correct rung is
+   **Astronomy**. Over-mapping to Full would only have been wasteful (Full is
+   never *too shallow*), but the accurate rung is Astronomy and the metamorphic
+   guard (Task 6) will confirm byte-identity across depths trivially (the value
+   is depth-independent).
 
-2. **`belief-kind` reads `v.world` (via `beliefs_of`) yet is Astronomy, not
-   Full — the `WorldView` field alone does not determine the rung; which
-   facts inside `v.world` matters.** `beliefs_of(&v.world)`
-   (`domains/religion/src/lib.rs:310`) is documented at its call site in
-   `windows/worldgen/src/lib.rs:2339` as rendering "a pre-species save's
-   beliefs" — the belief the world's very first observer forms from sky/tide
-   phenomena, committed during genesis, before any terrain, settlement, or
-   species-specific machinery runs (confirmed by the existing test
-   `locked_world_first_belief_is_the_ambient_tide`, which needs only a sky
-   pin to produce a belief). By contrast `pantheon_sig` also reads `v.world`
-   religion facts (`beliefs_held_by`) but those are gated behind
-   `flagship_of` — a settlement — and are `Full` because a settlement's
-   pantheon can only exist after species are placed. **The lesson for Task
-   2**: `v.world` is not itself a rung-determining field the way `v.globe`/
-   `v.terrain`/`v.climate` are — two reads of `v.world` can pin different
-   rungs depending on which facts they touch, so the narrowed view types
-   cannot gate on "does this extractor touch `v.world` at all" but must
-   track, per extractor, which *kind* of fact it reads (a genesis-level
-   fact vs. a settlement-gated vs. a religion/language-gated one). This is
-   exactly the hazard the brief's opening paragraph names ("a metric mapped
-   too shallow is the one hazard this design eliminates") — `belief-kind`
-   is the one metric in this registry where the naive "reads `v.world` ⇒
-   Full" rule would have overshot (built deeper than necessary), and the
-   converse mistake (reading `v.world` and assuming Astronomy without
-   checking) would have undershot for every other `v.world`-reading metric
-   in this table. No other metric in the registry shows this pattern —
-   every other `v.world` read either stays inside `flagship_of`-gated
-   settlement facts (Settlements) or reaches into religion/language/species
-   facts that are unambiguously post-settlement (Full).
+2. **`belief-kind` → Full (CORRECTED from Astronomy — this was an
+   under-mapping, the dangerous direction).** Task 1 reasoned that
+   `beliefs_of(&v.world)` reads a "pre-species genesis belief committed during
+   genesis," citing the call-site doc at `lib.rs:2339` and the
+   `locked_world_first_belief_is_the_ambient_tide` test. **That is wrong, and
+   verified so:** the `IS_BELIEF` fact `beliefs_of` reads
+   (`domains/religion/src/lib.rs:310`) is committed at exactly ONE site —
+   `religion::genesis` (`domains/religion/src/lib.rs:265`) — whose sole
+   pipeline call is `windows/worldgen/src/lib.rs:2086`, inside the
+   `culture+religion+species` stage = **Full depth**. Astronomy genesis commits
+   no belief facts. The "ambient tide" belief is *conceptually* derived from an
+   early sky/tide phenomenon but the *fact* is committed late; the test builds a
+   full world and checks the *first* belief, which never established
+   commit-depth. Left at Astronomy, a study whose deepest metric is
+   `belief-kind` would build to astronomy depth and the metric would read
+   `Absent` — silently wrong. This is **the exact hazard the whole design
+   exists to eliminate**, and it was caught here (Task 2's stop-point check),
+   before types were written, with the metamorphic guard as the runtime
+   backstop.
 
-No metric in this registry reads across rungs in a way the linear ladder
-cannot express — every metric's justification above resolves to exactly one
-`WorldView` field (or one helper with a single deepest read), with the two
-notes above flagged as the design signal Task 1 exists to surface, not as
-counterexamples to the ladder itself.
+**Load-bearing lesson for Tasks 3-6:** `v.world` is NOT a rung-determining
+field the way `v.globe`/`v.terrain`/`v.climate` are — different reads of
+`v.world` pin different rungs by *which fact at what commit-depth* they touch,
+which the compiler cannot see (every view carries `world`). So the four
+`v.world`-reading rungs (the belief-kind Full case, the Settlements bucket, and
+the Full bucket) are enforced by the runner's build-depth + the per-study
+metamorphic guard, not by the type system. The guard (Task 6) MUST include a
+study that selects `belief-kind` (and ideally `hue-depth-*`) so this
+correction is machine-checked, not just documented.
