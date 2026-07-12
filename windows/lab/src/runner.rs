@@ -1,10 +1,10 @@
 //! Deterministic sweep engine: run studies, collect metrics, write results.
 
-use crate::{BuiltView, FullView, Metric, MetricValue, Study, StudyError, SummaryKind};
+use crate::{BuiltView, Metric, MetricValue, Study, StudyError, SummaryKind};
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_species::SpeciesDef;
-use hornvale_worldgen::BuildError;
+use hornvale_worldgen::{BuildDepth, BuildError};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -78,12 +78,52 @@ pub fn canonical_row(row: &Row) -> Row {
 /// Run a study: build worlds for each pin set × seed combination,
 /// extract metrics, and record results or refusals.
 ///
+/// Each world is built only as deep as `required` — the maximum rung any
+/// selected metric's `Extractor` needs (spec §4 / MAP-25 Stage 2 Task 6).
+/// This is where the census speedup lands: a study whose metrics are all
+/// Astronomy- or Terrain-rung never pays for settlement placement, culture,
+/// religion, or language generation. The `depth_scoped_metrics_match_full_build`
+/// metamorphic guard (`tests/depth_ladder.rs`) is the runtime backstop —
+/// it proves this depth-scoped `run` returns byte-identical values to
+/// [`run_forced_full`] for every committed study.
+///
 /// Returns a RunResult on success. On any BuildError other than Genesis,
 /// returns a StudyError with a detailed message.
 pub fn run(study: &Study) -> Result<RunResult, StudyError> {
     let metrics = study.selected_metrics()?;
-    let pin_sets = study.pin_sets_parsed()?;
+    let required = required_depth(&metrics);
+    run_at_depth(study, &metrics, required)
+}
 
+/// Run a study, always building every world to `BuildDepth::Full` — the
+/// metamorphic guard's forced-full baseline (MAP-25 Stage 2 Task 6 compares
+/// the depth-scoped [`run`]'s output against this one; a mismatch means an
+/// extractor's rung under-built or a view coercion read the wrong facts).
+pub fn run_forced_full(study: &Study) -> Result<RunResult, StudyError> {
+    let metrics = study.selected_metrics()?;
+    run_at_depth(study, &metrics, BuildDepth::Full)
+}
+
+/// The build depth a study requires: the maximum rung over its selected
+/// metrics, or `BuildDepth::Astronomy` if it selects none (the shallowest
+/// rung, so an empty selection never over-builds).
+fn required_depth(metrics: &[Metric]) -> BuildDepth {
+    metrics
+        .iter()
+        .map(|m| m.rung())
+        .max()
+        .unwrap_or(BuildDepth::Astronomy)
+}
+
+/// Shared by [`run`] and [`run_forced_full`]: run a study's full pin-set ×
+/// seed sweep, building every world to `depth` (already resolved by the
+/// caller — depth-scoped for `run`, always `Full` for `run_forced_full`).
+fn run_at_depth(
+    study: &Study,
+    metrics: &[Metric],
+    depth: BuildDepth,
+) -> Result<RunResult, StudyError> {
+    let pin_sets = study.pin_sets_parsed()?;
     let metric_names: Vec<&'static str> = metrics.iter().map(|m| m.name).collect();
 
     // Pin sets in file order; within each, seeds ascending from seeds.from. The
@@ -99,7 +139,8 @@ pub fn run(study: &Study) -> Result<RunResult, StudyError> {
             label,
             pins,
             roster.as_deref(),
-            &metrics,
+            metrics,
+            depth,
         )?);
     }
 
@@ -110,21 +151,11 @@ pub fn run(study: &Study) -> Result<RunResult, StudyError> {
     })
 }
 
-/// Run a study, always building every world to `BuildDepth::Full` — the
-/// metamorphic guard's forced-full baseline (MAP-25 Stage 2 Task 6 compares
-/// the depth-scoped `run`'s output against this one; a mismatch means an
-/// extractor's rung under-built). Identical to [`run`] in this task: `run`
-/// does not depth-scope yet (`build_row` always builds Full here too), so
-/// there is nothing to factor out beyond calling straight through — Task 6
-/// is what makes `run` build only as deep as each study's deepest selected
-/// metric while this function keeps forcing Full.
-pub fn run_forced_full(study: &Study) -> Result<RunResult, StudyError> {
-    run(study)
-}
-
 /// Build the row for one (seed offset, pin set): a successful measurement, a
 /// genesis refusal (recorded as a row, not an error), or a fatal `StudyError`.
-/// A pure function of its inputs — the unit of parallel work.
+/// A pure function of its inputs — the unit of parallel work. Builds the
+/// world only to `depth` (the study's required rung, or `Full` when called
+/// from [`run_forced_full`]).
 fn build_row(
     study: &Study,
     label: &str,
@@ -132,23 +163,17 @@ fn build_row(
     roster: Option<&str>,
     seed_offset: u64,
     metrics: &[Metric],
+    depth: BuildDepth,
 ) -> Result<Row, StudyError> {
     let seed_value = study.seeds.from + seed_offset;
     let roster = resolve_roster(roster)?;
-    // Always builds to Full depth (no depth optimization yet — MAP-25 Stage 2
-    // Task 6 scopes `run` to each study's deepest selected metric's rung;
-    // this task only swaps `Metric.extract`'s type and dispatch, so it stays
-    // behavior-preserving by construction).
-    match FullView::build_with_roster(Seed(seed_value), pins, roster) {
-        Ok(view) => {
-            let built = BuiltView::Full(view);
-            Ok(Row {
-                seed: seed_value,
-                pin_set: label.to_string(),
-                values: metrics.iter().map(|m| m.extract.apply(&built)).collect(),
-                refusal: None,
-            })
-        }
+    match BuiltView::build_to(Seed(seed_value), pins, roster, depth) {
+        Ok(built) => Ok(Row {
+            seed: seed_value,
+            pin_set: label.to_string(),
+            values: metrics.iter().map(|m| m.extract.apply(&built)).collect(),
+            refusal: None,
+        }),
         Err(BuildError::Genesis(e)) => Ok(Row {
             seed: seed_value,
             pin_set: label.to_string(),
@@ -171,6 +196,7 @@ fn run_pin_set(
     pins: &SkyPins,
     roster: Option<&str>,
     metrics: &[Metric],
+    depth: BuildDepth,
 ) -> Result<Vec<Row>, StudyError> {
     let count = study.seeds.count;
     if count == 0 {
@@ -183,7 +209,7 @@ fn run_pin_set(
 
     if threads == 1 {
         return (0..count)
-            .map(|off| build_row(study, label, pins, roster, off, metrics))
+            .map(|off| build_row(study, label, pins, roster, off, metrics, depth))
             .collect();
     }
 
@@ -203,7 +229,12 @@ fn run_pin_set(
             let hi = ((t + 1) * chunk).min(count);
             handles.push(scope.spawn(move || {
                 (lo..hi)
-                    .map(|off| (off, build_row(study, label, pins, roster, off, metrics)))
+                    .map(|off| {
+                        (
+                            off,
+                            build_row(study, label, pins, roster, off, metrics, depth),
+                        )
+                    })
                     .collect::<Vec<_>>()
             }));
         }
@@ -571,6 +602,7 @@ mod tests {
         let metrics = study.selected_metrics()?;
         let pin_sets = study.pin_sets_parsed()?;
         let metric_names: Vec<&'static str> = metrics.iter().map(|m| m.name).collect();
+        let depth = required_depth(&metrics);
         let mut rows = Vec::new();
         for (label, pins, roster) in &pin_sets {
             for off in 0..study.seeds.count {
@@ -581,6 +613,7 @@ mod tests {
                     roster.as_deref(),
                     off,
                     &metrics,
+                    depth,
                 )?);
             }
         }
