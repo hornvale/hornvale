@@ -758,7 +758,7 @@ impl Extractor {
 
 (Climate maps to `BuildDepth::Terrain` because climate commits no facts — a Climate-rung metric needs a Terrain-depth *world* plus the climate reconstruction, which the `ClimateView` constructor does.)
 
-Change `Metric.extract` to `pub extract: Extractor`, and add `pub fn rung(&self) -> BuildDepth { self.extract.rung() }`.
+(The `Metric.extract` field type change and `Metric::rung()` belong to Task 5's atomic swap, NOT this task — see the SEQUENCING CORRECTION box above. This task only *adds* `Extractor`; nothing consumes it yet.)
 
 - [ ] **Step 2: Add the dispatcher — apply an `Extractor` to the deepest built view**
 
