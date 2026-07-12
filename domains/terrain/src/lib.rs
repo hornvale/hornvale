@@ -4,6 +4,7 @@
 #![warn(missing_docs)]
 
 pub mod boundaries;
+pub mod crust;
 pub mod drainage;
 pub mod elevation;
 pub mod facts;
@@ -23,12 +24,17 @@ pub use provider::GeneratedTerrain;
 
 use hornvale_kernel::{ConceptKind, ConceptRegistry, EntityId, RegistryError, World};
 
-/// The fixed subdivision level of the shared Geosphere (10 × 4^5 + 2 =
-/// 10,242 cells). The composition root builds `Geosphere::new(GLOBE_LEVEL)`
-/// once per process; every terrain (and, in Plan 3c, climate) CellMap in a
-/// world is built against that mesh and must only ever be queried with it.
+/// The *default* subdivision level of the shared Geosphere (10 × 4^6 + 2 =
+/// 40,962 cells, ~110 km resolution) — used when `TerrainPins.globe_level`
+/// is `None`. Canonical grid raised from level 5 to level 6 in the Crust
+/// epoch (spec §5): the coarser grid under-resolved shelf and coastline
+/// structure for the sculpting work that campaign does. The composition
+/// root builds `Geosphere::new(level)` (per-level cached) once per process
+/// per level; every terrain (and, in Plan 3c, climate) CellMap in a world
+/// is built against the mesh its level selected and must only ever be
+/// queried with it.
 /// type-audit: bare-ok(count)
-pub const GLOBE_LEVEL: u32 = 5;
+pub const GLOBE_LEVEL: u32 = 6;
 
 /// Predicate marking an entity as a traversable place.
 /// type-audit: bare-ok(identifier-text)
@@ -50,10 +56,6 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "per-plate seed positions on the sphere",
         ),
         (
-            "terrain/plate-kind",
-            "continental fraction and per-plate continental rolls",
-        ),
-        (
             "terrain/plate-motion",
             "per-plate Euler pole axis and rate draws",
         ),
@@ -66,6 +68,19 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "terrain/coast-render",
             "render-lens coastline noise (hash-noise only; no stream draws)",
+        ),
+        (
+            "terrain/cratons",
+            "margin draw (scales the ocean-fraction-derived budget, Task 9 \
+             iteration 3'), craton count, then per-craton center/radius/age",
+        ),
+        (
+            "terrain/plate-weights",
+            "per-plate heavy-tailed Voronoi weight draws",
+        ),
+        (
+            "terrain/plate-edge",
+            "plate-edge noise (hash-noise only; no stream draws)",
         ),
     ]
 }
@@ -178,7 +193,7 @@ mod tests {
     #[test]
     fn stream_labels_are_fully_qualified_and_documented() {
         let labels = stream_labels();
-        assert_eq!(labels.len(), 9);
+        assert_eq!(labels.len(), 11);
         assert_eq!(labels[0].0, "terrain");
         for (label, doc) in &labels[1..] {
             assert!(label.starts_with("terrain/"), "unqualified label {label}");

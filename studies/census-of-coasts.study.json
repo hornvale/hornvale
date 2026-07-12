@@ -2,4 +2,4 @@
   "description": "The Census of Coasts: continental-shape metrics over 10,000 worlds — the preregistered baseline the terrain overhaul (Crust, Sculpting) must move.",
   "seeds": { "from": 0, "count": 10000 },
   "pin_sets": [ { "label": "default", "pins": [] } ],
-  "metrics": [ "shoreline-development", "hypsometric-bimodality", "shelf-fraction", "continent-count", "largest-continent-share", "plate-size-gini" ] }
+  "metrics": [ "shoreline-development", "hypsometric-bimodality", "shelf-fraction", "continent-count", "largest-continent-share", "plate-size-gini", "landmass-count" ] }

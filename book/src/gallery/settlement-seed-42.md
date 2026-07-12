@@ -1,10 +1,10 @@
 # The Peoples of Seed 42
 
-The land holds 61 settlement(s).
-The chief bugbear settlement, Shngooshkvaoshgvoa, holds 327 souls amid temperate-rainforest.
-The chief goblin settlement, Xnebsvob, holds 359 souls amid temperate-rainforest.
-The chief hobgoblin settlement, Ngjoavoo, holds 467 souls amid temperate-rainforest.
-The chief kobold settlement, Roqrraxokroxog, holds 522 souls amid temperate-rainforest.
+The land holds 59 settlement(s).
+The chief bugbear settlement, Vngaashgvoo, holds 298 souls amid temperate-rainforest.
+The chief goblin settlement, Zhxokngaknged, holds 356 souls amid temperate-rainforest.
+The chief hobgoblin settlement, Btoanjeonjoa, holds 421 souls amid temperate-rainforest.
+The chief kobold settlement, Roqrraxotrororaq, holds 529 souls amid temperate-rainforest.
 
 ```text
                                                                         
@@ -13,18 +13,18 @@ The chief kobold settlement, Roqrraxokroxog, holds 522 souls amid temperate-rain
                                                                         
                                                                         
                                                                         
-                                                                        
-                     o       o  o         o     o                       
-                 o o  o  o           o  o  o                  o         
-                 o         o  o  o  o         o  o         o     o      
-                     o  o              o o  o           o          o    
-                  o        o   o               o o    o       o         
-                o      o o                                 o      o o   
-                   o  o   o  o                    o  o         o        
-                  o                                                  o  
-                     o  o                        o  o            @o     
-                                                                  o   o 
-                                                               o        
+                  o             o   o              o                    
+        o                                o                 o      o     
+o    o    o   o  o              o         o  o   o                      
+      o o                         o    o      o       o o   o    o o  o 
+            o  o  o                  o          o  o                    
+        o  o o                                      o  o                
+      o  o      o                                o                      
+             o                                                          
+                        o  o           o                                
+                o  o @        o               o                         
+     o  o      o                      o    o     o                      
+ o                                                                      
                                                                         
                                                                         
                                                                         

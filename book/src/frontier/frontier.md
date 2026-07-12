@@ -45,6 +45,16 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The cultural-memory economy — knowledge as a maintained thing](#the-cultural-memory-economy--knowledge-as-a-maintained-thing)
   - [Prophecy and the shape of time](#prophecy-and-the-shape-of-time)
   - [The projection layer](#the-projection-layer)
+  - [The immune model of belief — deception as discrimination failure](#the-immune-model-of-belief--deception-as-discrimination-failure)
+  - [The immune stack — boundary-maintenance across every scale](#the-immune-stack--boundary-maintenance-across-every-scale)
+  - [The anti-phenomenon — meaningful absence as an observable](#the-anti-phenomenon--meaningful-absence-as-an-observable)
+  - [The social graph — a derived, self-balancing relational layer](#the-social-graph--a-derived-self-balancing-relational-layer)
+  - [The motivation engine — Goal-Oriented Action Planning over belief](#the-motivation-engine--goal-oriented-action-planning-over-belief)
+  - [The planning engine — A-star as causality across the tenses](#the-planning-engine--a-star-as-causality-across-the-tenses)
+  - [The verb as reaction — a property-transformation chemistry](#the-verb-as-reaction--a-property-transformation-chemistry)
+  - [Emotion as appraisal — the affective readout of the gap](#emotion-as-appraisal--the-affective-readout-of-the-gap)
+  - [The derived-view architecture — the game layer as readouts over one ledger](#the-derived-view-architecture--the-game-layer-as-readouts-over-one-ledger)
+  - [The self-reflective ledger — the capability schema as a derived view](#the-self-reflective-ledger--the-capability-schema-as-a-derived-view)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
@@ -1395,6 +1405,639 @@ its cheapest instance already exists in miniature: the revenant (UNI-11), where
 the latent state is *already a ledger fact* (a buried injustice) and the
 projection is nearly mechanical. That is where to prototype the principle before
 trusting it with anything softer.
+
+---
+
+## The immune model of belief — deception as discrimination failure
+
+*(High confidence that the analogy is structural rather than decorative;
+medium on calibration; low on the general inference engine that would make it
+buildable. Like the projection layer, this is a governing framing for the
+belief tier of UNI-1 and the epistemic layer (MAP-2), not a domain. Design fuel
+for the-walk metaplan's Milestone-2 inference tier, captured before it is lost.)*
+
+**The claim.** An agent's belief is not a stored fact but the output of a
+*discrimination*: reading signals that can be spoofed, and sorting the world into
+true and false, friend and foe, real and illusion. That is exactly what an
+adaptive immune system does — self/non-self discrimination over molecular signals
+under adversarial pressure — and evolution has spent a billion years finding its
+failure modes. So the immune system is not a metaphor for the inference program
+(UNI-1); it is a fully worked *instance* of it, and its entire canon of
+mechanisms and pathologies re-instantiates, nearly one-for-one, as the epistemics
+of a world where players lie, cast illusions, wear disguises, forge evidence, and
+charm.
+
+**Deception needs no second ledger — the matrix verdict.** Every deceptive act is
+a *real event* in the one ground-truth ledger: the lie was spoken, the illusion
+cast, the disguise worn, the forgery made. The victim perceives it truthfully —
+perception is lossy and *spoofable* — and then *infers* a falsehood. Molecular
+mimicry, a pathogen coating itself in host proteins, is a disguise: a real
+molecular event inducing the misclassification "self." So the false belief is
+always *derived*, never stored, and it carries real provenance — the causal
+chain, not a tag ("the guard thinks you a priest because he saw the robes on day
+412"). This is the mechanism under the-walk metaplan's §3.2: one event ledger,
+belief a derived view.
+
+**The real knob is a threshold, and it fails on both sides.** The immune system's
+central parameter is a discrimination threshold — how much foreignness triggers a
+response. Set it too low and pathogens pass as self: the *credulous* agent
+believes lies, illusions, forgeries. Set it too high and the system attacks the
+body itself — *autoimmunity*: the *paranoid* agent rejects true testimony and
+real evidence, reads conspiracy into the genuine. This reframes the inference
+program from "compute what the agent believes" into a signal-detection problem —
+a threshold trading false-positives against false-negatives — and it makes the
+gullible NPC and the paranoid NPC *one mechanism at two settings*, not two
+authored types. Culture and species set the resting threshold; evidence, charm,
+and prior exposure move it; it is derived per agent over the ledger, never set by
+hand per character.
+
+Then the canon, each mechanism a design move brought back:
+
+- **Central tolerance** (the immune system is trained during development not to
+  attack self) → the unquestioned priors a culture and species take for granted.
+  **The best lies hide in tolerance:** you cannot detect what you never think to
+  question, so deception is *culturally relative* — a lie that sails past a
+  trusting goblin is caught by a wary drow, because their trained tolerances
+  differ. This threads deception into the psychology substrate and the
+  commonsense ruleset (MAP-19/20).
+- **Immunological memory** (re-exposure triggers a faster, stronger response) →
+  learned skepticism: an agent fooled once recognises the trick faster, and
+  belief-update carries hysteresis. Derived from the prior-exposure event.
+- **Antigenic variation** (pathogens change their surface faster than memory can
+  track) → the deception *arms race*: a disguise has a **detection half-life**,
+  decaying as observers accumulate evidence unless refreshed or varied; the
+  durable deceiver shifts cues faster than the population updates. Deceiver and
+  detector coevolve.
+- **Immunosuppression** (some pathogens attack the immune response itself) →
+  **charm as inference-suppression**, cleanly distinct from illusion: illusion
+  spoofs the *perception*; charm lowers the *skepticism threshold* so the target
+  cannot doubt. Two magic types from one distinction.
+- **Vaccination** (a weakened antigen primes future defence) → **epistemic
+  inoculation / prebunking**: forewarn an agent of a deception type and it
+  resists — a native counter-deception system, itself derived from the
+  warning-event.
+- **Adjuvants** (nonspecific boosters of response) → the amplifiers that make a
+  lie stick: fear, authority, repetition. Belief strength is a function of the
+  stimulus *and* its emotional and source properties, all readable off the event.
+- **Herd immunity** → deception resistance is a *population* property: enough
+  agents seeing through a lie and it cannot spread. **Belief is contagion** —
+  rumour propagation is an SIR epidemic (susceptible = credulous, infected =
+  believing, recovered = inoculated-skeptic) with a reproduction number, the very
+  math already gestured at for the pan-species plague curve (TOOL-11). This links
+  the individual belief layer to the faction and tides-of-empire scale: a
+  well-placed truth is herd immunity; a lie has an R0.
+
+**The pathologies are the richest part** — where the immune canon predicts
+social-epistemic disease:
+
+- **Cancer** — a self-cell that turns hostile yet evades detection *because it
+  presents as self*, inside tolerance. This is the **traitor, the mole, the
+  sleeper**: the insider threat is undetectable not through a good disguise but
+  because it sits inside unquestioned trust. Betrayal is the deception that needs
+  no disguise.
+- **Cytokine storm** — a runaway overreaction that kills the host → the **witch
+  hunt, the moral panic, mass hysteria**: a population-scale collapse of the
+  skepticism threshold in which a people begins attacking its own. Social
+  autoimmunity — the mechanistic underside of persecution concentrating at
+  aligned cleavages (MAP-9b).
+- **Immune privilege** (the eye, the brain — sites the immune system does not
+  patrol) → **taboo and the sacred cow**: topics, institutions, or persons that
+  escape scrutiny entirely. Deception thrives in immune-privileged zones; the con
+  cloaked in the sacred is never checked.
+- **The hygiene hypothesis** (too little early exposure yields a miscalibrated,
+  overreacting immune system) → **naive populations are fragile**: a people never
+  lied to is *more* gullible and more prone to panic when finally deceived, not
+  less. Innocence is an epistemic vulnerability.
+- **Immune exhaustion** (chronic antigen wears out the response) → **the firehose
+  of falsehood**: sustained, high-volume lying exhausts scrutiny until the
+  population stops checking at all — deception by fatigue, not by any single
+  convincing lie.
+- **Allergy** (overreaction to a harmless antigen) → **misdirected outrage**:
+  vigilance spent attacking the benign while the real threat walks past.
+
+**What keeps it honest** is the racecraft discipline the projection layer carries:
+the threshold and its movements must be *derived* — from the species perception
+vector, the culture's trained tolerances, the memory economy's scarce attention
+(you scrutinise selectively because vigilance has upkeep, MEM-1), and the events
+actually perceived — never authored as "this NPC is gullible." The instant one
+writes a per-character credulity constant, the model collapses into the lookup
+table decision 0021 forecloses. Done right, the Lab payoff is sharp: does a
+population's deception-resistance track its exposure history and cultural
+tolerances rather than an author's hand, and does a rumour's spread obey a
+computable R0?
+
+**Sequencing.** Not its own domain — a mode of the inference program (UNI-1) and
+the epistemic layer (MAP-2), landing with the-walk metaplan's Milestone-2
+inference tier, atop the projection (perception) tier that ships first. Its
+cheapest instance is a single lie believed by a single guard — a real utterance, a
+credulous threshold, a derived false belief with provenance — long before any
+pathology is trusted. The population-scale mechanisms (contagion, herd immunity,
+moral panic) wait on the faction layer and the plague-curve machinery they share.
+
+---
+
+## The immune stack — boundary-maintenance across every scale
+
+*(High confidence the shape recurs; the calibration burden is each scale's own.
+A governing lens, not a domain — the generalization *over* UNI-16, reaching into
+culture, religion, language, the contact layer (MAP-9), and biology (BIO-5).)*
+
+**Lift UNI-16 one level and belief falls away.** What remains is a
+*boundary-maintenance system*: something that holds an identity by discriminating
+self from non-self, learns from encounters, remembers them, and fails on two
+sides — too permeable (invaded) or too reactive (attacking itself). Named that
+generally, the shape is everywhere in Hornvale, and the wager is that it is *one
+mechanism* — UNI-16's derived discrimination threshold — re-instantiated at every
+scale, not five systems that merely rhyme. **The stack:** the body (own cells vs
+pathogen — the literal immune system, BIO-5); the self (held belief vs lie —
+UNI-16); the culture (orthodoxy vs heresy); the settlement (kin vs outsider); the
+language (native word vs loanword).
+
+**The bridge concepts** fall out of crossing immune mechanism with social
+phenomenon, and they are startlingly exact: **heresy = autoimmunity** (a culture
+attacking its own over belief), with **orthodoxy the self-marker** it reads to
+tell member from heretic; **conversion = infection**; **assimilation = tolerance
+induction**; **an initiation rite = thymic training** (you are taught, during
+"development," what to hold as self); **xenophobia = transplant rejection** (the
+graft refused though it would heal); **linguistic purism = inflammation** against
+a loanword-antigen; and **the censor or the Inquisition = an engineered immune
+organ** — a deliberately built discrimination system, distinct from reflexive folk
+suspicion.
+
+**Three axes tune each scale.** *Rate* (innate reflex → adaptive learning): speed
+cultural immunity up and you get a moral panic, slow individual belief and you get
+a dawning doubt — so snap-judgment and mass-hysteria are one response at two
+clocks, and innate-vs-adaptive immunity is the two-speed structure (fast
+species-level priors vs slow learned discrimination). *Naturalness* (reflex →
+built): evolved xenophobia vs institutions as *synthetic immune organs* — schools,
+censors, orthodoxy tests. *Distribution* (central → herd): a Ministry of Truth vs
+decentralised gossip and folk skepticism, which is also a political-structure axis.
+
+**The border zones are where the drama lives** — the heretic, convert, spy,
+immigrant, traitor, loanword. Each is a thing *crossing an immune boundary*, and
+the game is whether it passes (disguise), is caught (detection), or provokes an
+overreaction (autoimmunity). One lens now spans deception, xenophobia, heresy,
+conversion, purism, and immigration at once.
+
+**Two refinements sharpen the whole stack:**
+
+- **The danger model.** Immunology's own paradigm shift (Matzinger) moved from
+  "self vs non-self" to "respond to *damage*, not foreignness" — the body tolerates
+  harmless foreign matter (food, the fetus, gut flora) and attacks damaged self.
+  Re-instantiated, this is the truer model of what a mind or culture rejects: not
+  the *foreign* belief or custom but the *threatening* one. It explains the
+  asymmetries pure self/non-self cannot — a harmless novelty waved through while a
+  threatening insider is savaged — and it relocates the discrimination threshold
+  from *novelty* to *perceived harm*, derived from the ledger's real tensions.
+- **Commensal tolerance — the useful fiction.** The gut hosts trillions of foreign
+  organisms the immune system deliberately *tolerates because they are beneficial*:
+  symbionts, not pathogens. The epistemic stack has the same category — the **noble
+  lie, the load-bearing myth, the polite fiction** (money, nation, rights, a
+  unifying origin-story): false or unfalsifiable, foreign to bare fact, yet hosted
+  because the identity needs them. Not all false belief is a pathogen; some is
+  *symbiotic*, and a people is a **holobiont** of its truths *and* its useful
+  fictions. This threads into the projection layer (gods and monsters as tolerated
+  projections) and religion (myth as commensal), and it recasts the stack's job:
+  not to purge all non-self, but to tell symbiont from pathogen — which is the
+  danger model's harm-not-foreignness rule once more.
+
+**Further correspondences** are illustrative rather than model-changing, but worth
+the archive: the complement cascade (an amplifying signal chain) is
+belief-amplification — outrage recruiting outrage; inflammation is the visible
+*social friction* that scrutiny costs; immune senescence, an ageing system that
+discriminates worse, is cultural ossification (CUL-17) — a people grown unable to
+recognise new threats or to update; and graft-versus-host disease is the convert
+or immigrant who, once admitted, turns on the host.
+
+**What keeps it honest** is the derive-don't-author discipline the whole book
+carries: each scale's threshold is derived from *that scale's own self* — the
+body's markers, the mind's priors, the culture's tradition and orthodoxy, the
+settlement's kinship, the language's native lexicon — and its ledger-visible
+threats, never a "this culture is xenophobic" constant (the lookup table 0021
+forecloses). The Lab test is whether each scale's rejection tracks its actual
+boundary-history and threat exposure rather than an author's hand.
+
+**Sequencing.** A lens, not a crate: each scale's immune response lands with its
+own domain's social and contact work — culture and religion for heresy and
+conversion, language for purism, the contact layer (MAP-9) for xenophobia and
+assimilation — all sharing UNI-16's threshold machinery. The cheapest first
+instance is the heretic: an individual belief-immunity diverging from its
+culture's and triggering the autoimmune response of persecution (MAP-9b), because
+its pieces — religion, social structure — already exist.
+
+---
+
+## The anti-phenomenon — meaningful absence as an observable
+
+*(High confidence in the mechanism, which is nearly free; medium on the rendering
+calibration. A read that sits beside the phenomena layer — the text medium's
+sharpest instrument. Feeds the-walk metaplan's Focalized Sight campaign.)*
+
+**Negate the phenomena layer and you find the game's best card unplayed.** The
+sim's universal read surfaces *what is*, salience-ranked. Negate every term —
+present → absent, notable → unremarked, is → isn't — and the shadow read appears:
+**meaningful nothing.** The dog that did not bark; the altar-shaped wear on a floor
+with no altar; the name a village will not say. In prose — and *only* in prose —
+absence often lands harder than presence, so a text simulation that renders only
+what is there leaves its home-field advantage on the table.
+
+**A dictionary of meaningful absence**, and the striking part is that Hornvale
+already computes almost all of it: the **lacuna** (structure expects it, the ledger
+lacks it — the empty throne); the **unremarked** (present but below salience, seen
+only by a stranger's different tolerance — the immune stack, UNI-17); the
+**withheld** (the immune-privileged taboo, a concealment whose *shape* still
+shows); the **forgotten** (a dropped ledger fact, MEM-1 — a trace without its
+referent); the **not-yet** (the prophesied, MAP-13); the **never-was** (a
+counterfactual branch that never fired, inference UNI-1); the **unsayable** (a
+lexical gap, a LANG fact); the **silenced** (a true ledger tension no one may
+speak — the projection layer, MAP-9); the **vanished** (the endling, MAP-7's N=1;
+the emptied deep-time village). The machinery for each exists; only the *read* is
+missing.
+
+**The mechanism is nearly free, and it falls out of the constitution.** An absence
+is legible only against an *expectation* — and Hornvale holds the expectation
+structurally. The **fields** are the statistical prior (what *should* be here); the
+**ledger** is committed reality (what *is*). So:
+
+> a salient absence is where the field-prior expects something the ledger lacks
+> (and its twin, the uncanny, is the reverse — a ledger fact the prior would never
+> have predicted).
+
+The gap between coarse expectation and fine reality *is* the meaningful nothing.
+Coarse-constrains-fine, run as a *difference* rather than a constraint, yields a
+**lacunae query** that ranks absences by how sharply the prior expected them — the
+structural sibling of salience-ranked phenomena. The focalizer renders its hits as
+felt gaps, and a place stops being merely empty and becomes *haunted* by what is
+not in it.
+
+**What keeps it honest** is that the absences must be *derived* from the
+prior-minus-reality difference, never a hand-placed "spooky empty room." The Lab
+test is whether the lacunae a world surfaces track its real history of loss,
+suppression, and expectation rather than an author's taste for atmosphere.
+
+**Sequencing.** Not a domain — a second read over the same query surface, landing
+with the-walk metaplan's Focalized Sight (Milestone 1, the focalizer), since the
+mechanism is a difference over machinery that already ships. Its cheapest instance
+is the ruin: a deep-time-emptied settlement (a field that once condensed a town, a
+ledger that now holds none) rendered as the still-set table.
+
+---
+
+## The social graph — a derived, self-balancing relational layer
+
+*(High confidence in the architecture and the balance dynamic; medium on the
+edge-typology's calibration. Not a domain — a derived layer over the event ledger,
+and the missing substrate under Milestone-2 liveness. From the-walk brainstorm.)*
+
+**What makes a world feel alive is not its agents but the edges between them.** A
+relationship is a standing, often directed disposition one agent holds toward
+another — kinship, affection, enmity, debt, trust, allegiance — and the wager is
+that the whole layer is *one graph*: derived, not stored, and governed by a
+deterministic dynamic.
+
+**Every edge is minted by an event, so the graph is a derived view over the event
+ledger** — the architecture the epistemic layer already uses (UNI-16). A gift
+makes a debt; a wound makes enmity; a shared meal makes a bond; a birth makes
+kinship. A relationship is therefore the *reduction of the past events between a
+pair*, and its provenance is those events — "why do they hate you?" answers itself
+with the wound. Nothing new is stored, and trust rides the very threshold the
+immune model (UNI-16) defines: slow to build, instant to break.
+
+**The graph's own topology hands over structure and story, unauthored:**
+
+- **Cycles are drama.** A reciprocity loop is an alliance, a feud loop a vendetta,
+  a love triangle a tragedy. Where the graph closes on itself is where structure
+  and story concentrate.
+- **Triads self-balance.** Heider's structural balance: an unbalanced triangle — A
+  allied to both B and D while B and D feud — is under tension and *relaxes
+  deterministically* toward balance; someone flips, reconciles, or is cast out.
+  The relaxation is emergent social drama with **no randomness** — the social-scale
+  form of the-walk metaplan's "surprise is epistemic, not stochastic," and a real
+  liveness engine that keeps determinism intact.
+- **Brokers are power.** The high-betweenness node — the sole bridge between two
+  clusters, the diplomat, the spy, the one bilingual trader — is pivotal and
+  fragile; remove it and the graph fractures. Topology names who matters without
+  an author naming them.
+
+**Reversibility is asymmetric, and the asymmetry is the feeling.** Trust builds
+slowly and shatters at once; grudges are sticky; some debts can never be repaid;
+kinship is severable only by a new event (disownment), never erased. These are
+properties of the edge *types*, not of any character — and they are what make a
+bond read as real rather than a number.
+
+**It re-instantiates twice over.** As the **food web** (ecology's who-eats-whom is
+a directed graph with trophic cycles — the DOM-3 ecology crate is the same math on
+a different edge type), and as **kinship/alliance theory** (Lévi-Strauss: marriage
+is an edge that binds *groups*, and the incest taboo is a graph constraint that
+*forces* exogamy — outward-binding edges — which is precisely how a scatter of
+settlements knits into a society).
+
+**Sequencing.** A derived layer, landing with Milestone-2 liveness (the event
+ledger is its source, structural balance its engine). Its cheapest instance is a
+single dyad — one debt minted by one gift, repaid or resented — before the balance
+dynamic is trusted on triads and the drama it produces is measured against a
+world's real history in the Lab.
+
+---
+
+## The motivation engine — Goal-Oriented Action Planning over belief
+
+*(High confidence in the fit; the algorithm is off-the-shelf and constitutionally
+legal. Not a domain — the individual-scale liveness engine, twin to the social
+graph (SOC-9), folded into the belief layer (UNI-16). From the-walk brainstorm.)*
+
+**Rank motivation by autonomy and it is a scale** — reflex, drive, emotion, goal,
+value, project — from hardwired reaction to self-authored arc. But ask what every
+rung *is* and they collapse to one object: a **setpoint**, a desired world-state.
+An agent acts to close the gap between its setpoints and the world it *perceives*,
+and the algorithm that does this is already famous and already legal: **Goal-
+Oriented Action Planning** (Orkin, F.E.A.R.).
+
+**GOAP is the ladder made mechanical, and every part already exists in the
+kernel.** Its world-state is a set of predicates — the fact ledger. Its actions are
+authored verbs with preconditions and effects, and an effect is an event committed
+to the ledger ("models author, dice roll," MAP-5). Its goal is the ladder's current
+setpoint. Its planner is A* over the action space — **deterministic** given a fixed
+cost and a seeded tie-break, so same seed + same world → the same plan, byte for
+byte. The one technique of game AI that needs no randomness is the one the
+constitution demanded.
+
+**The decisive move is that the planner reads *belief*, not truth.** An agent plans
+over its **projection** (UNI-16), so its preconditions are what it *thinks* is true
+— and therefore **a plan can be wrong.** Deception, charm, and false rumour steer
+behaviour for free: corrupt the facts the planner sees and the agent competently
+pursues the deceiver's ends. Motivation and belief stop being two systems; they are
+one active-inference loop — *perceive* changes the model to fit the world, *act*
+changes the world to fit the model, minimising the same gap. The immune-threshold
+lens and the planning lens are the same machine from two sides.
+
+**Personality is the cost function.** Action costs are read from the species and
+culture psychology vectors — a proud agent prices flight high, a pious one prices
+blasphemy high — so identical worlds yield different plans, deterministically, per
+agent. And the reactive rungs (reflex, drive) need no search at all: they are the
+scalar, utility-AI floor beneath the deliberative GOAP ceiling — the autonomy scale
+mapped onto algorithmic depth.
+
+**But the dramatically interesting agent is the one whose plan fails.** Real minds
+*satisfice* — first good-enough, not optimal (bounded rationality) — which is
+cheaper and stops NPCs looking eerily omniscient. When the planner returns
+*nothing* (an unreachable goal) the agent must still act: despair, substitute a new
+goal, or — darkest — **re-plan over false beliefs** to make the goal seem reachable
+(denial, the doomed quest). Some plan *anti-optimally* on purpose: the ordeal, the
+ascetic's hard road, the tragic flaw, where a value makes the cost itself the goal.
+Two agents plan *against* each other (minimax — the con over the target's belief,
+MAP-15). And every plan throws **side-effects**: my least-cost path wrecks yours,
+minting an enmity edge on the social graph (SOC-9) — individual optimisation is the
+engine of collective conflict. The negations of the algorithm, not its successes,
+are where the drama lives.
+
+**It closes the observation cycle for NPCs, and it runs lazily.** perceive → select
+goal → plan → act → commit an event → which updates every projection and the social
+graph → perceive again: the metaplan's spine, running autonomously. And by the
+refinement discipline it fires only for observed, salient agents — an observed
+dragon plans; the unobserved thousand stay statistical.
+
+**Sequencing.** The liveness engine of Milestone-2, twin to the social graph (one
+supplies the drives, the other the edges those drives act across). Its cheapest
+instance is a single hungry agent with two actions (forage, beg) planning one step
+over what it believes — before goals nest, costs personalise, and the plans grow
+wrong in interesting ways. Downstream of the drives (PSY-1) and the concept layer
+(LANG-4); the deliberative complement to ideonomic cognition (PSY-5).
+
+---
+
+## The planning engine — A-star as causality across the tenses
+
+*(High confidence in the observation; it reorganises several sections rather than
+adding a system. The action-half of the sim, complement to UNI-1's inference-half.
+From the-walk brainstorm's A\* / GOAP exploration.)*
+
+**Abstract the motivation engine (PSY-6) one notch and GOAP is just A\*: least-cost
+path through a state space.** Named that generally it stops being an NPC brain and
+becomes a recurring engine — the same deterministic search (start → goal, minimise
+cost, ties broken by seed) is *causality itself*, run in every tense:
+
+- **Backward — the past.** Retrospective confabulation (the-walk metaplan, Campaign
+  IV) must find a plausible causal chain from the deep-time priors to the committed
+  present: A\* with goal = the present facts, operators = events, **cost =
+  implausibility**. The most plausible history that yields "now" wins.
+- **Over space — the present.** Not only the player's walk but **roads, trade
+  routes, migration, and drainage** are least-cost paths over terrain — the literal
+  A\*, and a plausible-infrastructure generator for free.
+- **Forward — the future.** NPC behaviour (GOAP), and **fate itself as forward A\***
+  toward a foretold outcome: MAP-15's "not too blatant" plausibility floor *is* the
+  A\* cost, so prophecy is fulfilled by the least-miraculous chain of coincidences
+  that reaches the foretold end.
+
+Beyond the tenses the same shape recurs: a **tech tree** is planning over
+prerequisites; **etymology** is a derivation path and the **comparative method**
+(LANG-8) a search for the least-cost proto-tree; **abduction** (UNI-1 at the
+explanatory pole) is search for the least-cost hypothesis. So the sim has two
+universal search engines that are one active-inference loop: **UNI-1 is inference
+(fit the model to the world); this is planning (fit the world to the model)** —
+perceive and act, minimising the same gap.
+
+**Why it matters practically:** A\* is the rare game-AI primitive that is natively
+deterministic (fixed cost + seeded tie-break → byte-identical), so a single, small,
+well-tested planner — plausibly one kernel utility — serves navigation, history,
+prophecy, technology, and reconstruction alike, each supplying its own state space
+and cost function. Its negations are where the drama lives (PSY-6's failure modes):
+satisficing over optimising, the unreachable goal, the deliberately hard road.
+
+**Sequencing.** Not a campaign — an observation that shapes several. The first
+concrete cash-in is the cheapest cost function that already has a state space:
+navigation over the terrain graph, or the backward confabulation the event ledger
+(Campaign IV) needs. Everything else reuses the same engine.
+
+---
+
+## The verb as reaction — a property-transformation chemistry
+
+*(High confidence in the model; the action-complement to MAP-19's object ontology,
+and it unifies the player's verbs with NPC planning. From the-walk brainstorm.)*
+
+**Ask "what can I do to this?" and the naive answer is a table** — a hand-authored
+outcome for every verb × object pair, the combinatorial trap interactive fiction
+has fought for decades. Lift the question and a verb is not an outcome but a
+**reaction**: entities are **property-bags** (flammable, container, locked, animate,
+audible, believes-X), and a verb is a transformation gated by required properties —
+preconditions in, effects out. Affordances then *emerge* from property-matching, so
+the world is authored **M + N** (properties and reactions, separately) rather than
+**M × N** (every pair). This is the systemic-design principle behind
+emergent-interaction games, and its payoff is a large interaction space from a
+small, legible rule set.
+
+**A verb, so defined, *is* a GOAP operator** (PSY-6): preconditions are required
+properties, effects are property changes committed as events. That collapses two
+systems into one — **the player's verb loop (the-walk metaplan, Campaign III) and
+NPC planning (Campaign V) are the same action system**, player and NPC acting
+through the same reactions over the same ledger. It is the third instance of one
+machine seen from two sides (after belief/motivation and perceive/act), and it is
+the *action*-half of MAP-19, whose ontology supplies the properties the reactions
+read and write.
+
+**Animacy is the sharp axis, because it is a *mutable* property.** `kill` maps
+animate → inert, `raise` inert → undead, `charm` animate → controllable — verbs
+transform the very class that selects which verbs apply. Physical verbs want inert
+targets, social verbs animate ones (acting over the belief threshold, UNI-16, and
+the social graph, SOC-9), epistemic verbs informative ones (over the projection).
+So a target's animacy chooses the verb sub-language, and killing a guard changes
+what can be done to the body — the world stays interactive as its ontology shifts
+beneath the act.
+
+**The interaction space is an atlas of four chemistries** over one
+property-transformation core: **physical** (burn, break, move — material
+properties), **social** (persuade, threaten, gift — belief and relationship),
+**epistemic** (examine, read, eavesdrop — the projection), and **spatial** (go,
+climb, hide — the place graph). Same engine, four reagent-sets.
+
+**Sequencing.** The verb loop of Milestone 1 is the first instance, deliberately
+tiny — a handful of properties and reactions (open, take, burn) — and it grows into
+the NPC planners of Milestone 2 without a second system, because they were the same
+system all along. Downstream of MAP-19's ontology; it is the place the player
+finally touches the world.
+
+---
+
+## Emotion as appraisal — the affective readout of the gap
+
+*(High confidence in the decomposition; the affect-to-behaviour feedback is the open
+calibration. Not a system but a derived readout, and a modulator of the others. From
+the-walk brainstorm.)*
+
+**Decompose an emotion and it is not atomic — it is a bundle of appraisals**
+(appraisal theory: Scherer, Lazarus, the OCC model). Each axis is already computed by
+a system the game has: **valence and arousal** from the motivation gap (PSY-6);
+**agency and blame** from the event's provenance and the social graph (SOC-9);
+**expectedness** from prediction-error against belief (the projection, UNI-16);
+**coping** from whether the planner finds a route (PSY-6). So an emotion is the
+*affective readout of appraising the gap* — derived, the same posture as belief,
+relationships, and motivation, not a new store.
+
+**Substitution generates the emotion space from a few axes.** Hold the event fixed —
+an ally is killed — and swap one appraisal: blame the circumstance and it is
+**grief**; blame an enemy and it is **rage**; blame yourself and it is **guilt**;
+find a plan and it is **resolve**. The flip rides the *blame* appraisal, which is
+just who the event's provenance points to on the social graph — so the whole family
+(anger, guilt, sadness) is derivable, M + N over appraisal dimensions rather than an
+authored emotion table.
+
+**The discovery–invention axis places the culture.** Basic affect is
+species-universal (discovered, from the psychology substrate); constructed emotion is
+culture-specific (invented, from the culture's values and its *lexicon*, à la
+Barrett). A people with no word for an emotion feels it as undifferentiated affect —
+the lexical gap of the anti-phenomenon (RENDER-7) and language (LANG) — which gives
+untranslatable emotions (*saudade*, *amae*) a principled, derived home rather than an
+authored one.
+
+**And emotion feeds back as a modulator.** It biases the belief threshold (fear
+toward vigilance or credulity, UNI-16), bumps a GOAP goal's priority (fear promotes
+the safety goal), charges the social-graph edges (the affect *is* the edge's colour,
+SOC-9), and gates salience so emotional things surface first in the phenomena rank.
+It is the derived readout *and* the affective loop over the cognitive core.
+
+**Sequencing.** Lands with Milestone-2 liveness (it needs the appraisal inputs — the
+gap, the provenance, the prediction-error, the plan) and colours the focalizer before
+that (an agent's rendering is tinted by its affect). Downstream of the drives (PSY-1)
+and the gap engine (PSY-6); one of the readouts the synthesis (UNI-20) draws
+together.
+
+---
+
+## The derived-view architecture — the game layer as readouts over one ledger
+
+*(The synthesis of the-walk brainstorm's lenses. High confidence that the pattern is
+real — it is the keystone (metaplan §3.2) generalised — and that it is the game
+layer's organising principle. Discovered in brainstorming, not yet built.)*
+
+**Eight passes over the game layer's design, taken from different angles, kept
+arriving at the same shape.** Belief, absence, relationships, motivation, planning,
+verbs, and emotion each began as its own system and each turned out to be a *derived
+view* over a single substrate: **one event ledger**, plus a small deterministic core
+that reads it. Stated once:
+
+- **One ledger of events** is the only stored truth; everything else is recomputed
+  from it (the keystone, metaplan §3.2 / §3.4 — store the irreversible, derive the
+  reversible).
+- **The views** are lossy or lensed reductions of that ledger: **belief** (UNI-16 —
+  the events an agent perceived, projected through its senses); **the social graph**
+  (SOC-9 — the events *between* a pair reduced to a typed edge); **emotion** (the
+  appraisal of the gap an event opens); **salient absence** (RENDER-7 — the events
+  the prior expected but the ledger lacks); **history** (the events themselves and
+  their confabulated backfill).
+- **The engines** are two, and they are one active-inference loop: **inference**
+  (UNI-1) fits the model to the world — perception, belief, abduction; **planning**
+  (UNI-19 — A\* / GOAP) fits the world to the model — motivation (PSY-6), the player's
+  and NPCs' verbs (MAP-27, one action system), and causality in every tense. Both
+  minimise the same quantity: the discrepancy between a model and the world.
+
+**Three consequences fall out of stating it plainly.** *First*, **determinism all
+the way up**: the ledger is lossless, every view is a pure function of it, and both
+engines are seeded search — so "surprise is epistemic, not stochastic" holds from the
+physics to an NPC's grudge. *Second*, **one machine, many users**: player and NPC act
+through the same verb-reactions; belief and motivation are the same gap seen twice;
+the game AI is not a bolted-on subsystem but the same core the player inhabits.
+*Third*, **cheap and provenanced**: nothing is stored that can be re-derived, and
+because every view is a reduction of real events, `why?` always has an answer — the
+causal chain, never a tag.
+
+**What this buys the metaplan.** The game layer is not the dozen subsystems its
+campaign list might suggest; it is **one event ledger and a handful of readouts**,
+built once and reused. Milestone-2 "liveness" in particular is not an AI project — it
+is wiring the existing views (belief, graph, emotion) and the two engines together
+over the ledger the event campaign (IV) already builds. The convergence is the
+design: agility comes from there being *less* here than it looks — the game-layer
+analogue of the constitution's "coarse constrains fine."
+
+---
+
+## The self-reflective ledger — the capability schema as a derived view
+
+*(High confidence in the shape; it is the derived-view architecture (UNI-20) pointed
+at itself. Determinism-clean because it is build-derived, not wall-clock. From the
+the-walk brainstorm.)*
+
+**A triple store is inherently reflective: its schema is data.** The set of
+predicates a world uses, the attributes an entity carries, which domain provides
+which field or phenomenon kind, which verbs (property-transformation reactions,
+MAP-27) exist and with what preconditions — all of it is expressible as facts in the
+same shape as the world facts, and queryable by the same engine. So "the system can
+ask what it is able to relate, know, and do" needs no new subsystem — only a **view
+over its own capability schema**, most of which the concept registry already holds.
+
+**The determinism boundary is what keeps it clean, and it is easy to hold.** This is
+*not* a record of the development process — no campaigns, commits, or wall-clock
+dates, which could never enter a world (the Constitution forbids wall-clock time and
+requires same-seed → same-world). It is the **compiled capability set**: a pure
+function of the build, *derived at load* from the registry and the providers wired at
+the composition root, never written to the world's save. It is build-state, not
+world-state — current for whatever binary is running, carrying no cross-version save
+hazard.
+
+**Reflection then falls out as another derived view, with a load-bearing use.**
+GOAP's available-action set (PSY-6) *is* a capability query — the planner must
+enumerate the verbs it may compose, which is exactly folding over the capability
+schema. What the player may attempt, what a domain can answer, what a provider offers
+at which tier all become the same query, and the concept-registry review run by hand
+each campaign (are there predicates with no producer? phenomena no one consumes?)
+becomes a query the system can run on itself.
+
+**The meta-circular payoff closes the unification thesis.** The system's model of its
+own capabilities and an *in-world* sage's model of the world's laws are the same kind
+of thing — facts about the hidden ruleset, differing only in vantage and
+completeness. A culture doing astronomy (MAP-18, calendrics as computed knowledge) or
+folk physics (MAP-19, the commonsense ruleset) runs the same introspection the
+developer's tools do, from inside, with partial information (UNI-1: inference over the
+hidden seeded ruleset). "The engine queries its capabilities" and "a civilisation
+discovers its physics" are one mechanism at two vantages — the derived-view
+architecture (UNI-20) turned reflexive.
+
+**Sequencing.** A view, not a campaign — its cheapest instance already exists as
+`hornvale concepts` (the registry dump); the step is to expose that schema as
+queryable tuples in the ledger's own shape, derived at load, so the same query engine
+that answers world questions answers questions about the world's vocabulary.
+Downstream of the concept registry; the reflexive read over everything the
+derived-view architecture builds.
 
 ---
 

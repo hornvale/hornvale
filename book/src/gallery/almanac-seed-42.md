@@ -14,115 +14,136 @@ Salient phenomena, most attention-demanding first:
 ## The Land
 
 The globe breaks into 16 plates; the sea claims 73% of its surface.
-The highest land stands 3919 m above the sea.
+The highest land stands 6093 m above the sea.
 
-The air organizes into 3 circulation band(s) per hemisphere; 12 land biomes and 9 marine biomes cover the globe.
-Some 12% of the surface is habitable — land with water and a tolerable season.
+The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 8 marine biomes cover the globe.
+Some 14% of the surface is habitable — land with water and a tolerable season.
 
-- **Ngokzhvab** — shrubland
-- **Rorrorogxarrotrrot** — tropical-rainforest
-- **Kbeagbeatbea** — shrubland
-- **Vngaoshvngoo** — shrubland
-- **Zxebzxed** — shrubland
-- **Zxebnedxnot** — shrubland
-- **Netzhfot** — temperate-forest
-- **Vnodxngok** — temperate-forest
-- **Ngakvngob** — shrubland
-- **Rogxarakrot** — savanna
-- **Xotrorogxaragrrog** — temperate-rainforest
-- **Nokfnet** — shrubland
-- **Fngetzxekzhxak** — tropical-rainforest
-- **Rorroxakraq** — tropical-rainforest
-- **Xngatnebvned** — tropical-rainforest
-- **Ngetzhfeb** — temperate-forest
-- **Zxedsxod** — tropical-rainforest
-- **Ratrraratrra** — alpine
-- **Rogxarorrorrarroxo** — tropical-rainforest
-- **Fnetfneb** — taiga
-- **Nakfngebnget** — taiga
-- **Xatxoraqxakxog** — temperate-forest
-- **Rogxarragragra** — alpine
-- **Rorrorogrog** — tropical-rainforest
-- **Rogxarorrorotxo** — tropical-rainforest
-- **Zhfodfnaksvet** — taiga
-- **Rogxaraxara** — tropical-rainforest
-- **Roraxarrorrot** — temperate-grassland
-- **Rogxarororrogxaqxa** — shrubland
-- **Rorarraxaq** — temperate-grassland
-- **Rogxaxaroragrro** — savanna
-- **Rogxaraxokrak** — tropical-rainforest
-- **Rogxaxaxarro** — alpine
-- **Rogxaxatro** — tropical-rainforest
-- **Rorrorogxarrakrat** — tropical-rainforest
-- **Zvebnob** — tropical-seasonal-forest
-- **Rorrorogxaratro** — tropical-rainforest
-- **Rorrorogxaxoxaxa** — tropical-rainforest
-- **Rogxarorrorogro** — tropical-rainforest
-- **Rogxarorroxokraro** — tropical-rainforest
-- **Rogxarrotrogxo** — tropical-rainforest
-- **Xngatnebfngod** — taiga
-- **Ngadsvoknget** — taiga
-- **Rogxaxogxog** — temperate-grassland
-- **Rorogxarrarra** — tropical-seasonal-forest
-- **Zhfoksfetfngak** — taiga
-- **Rogxarraxot** — tropical-seasonal-forest
-- **Zxobnak** — taiga
-- **Rorogxaratrokxa** — taiga
-- **Rogxaroraxarag** — tropical-seasonal-forest
+- **Zhvedxngab** — temperate-forest
+- **Rogxaxatxorarro** — temperate-forest
+- **Voengjaongjee** — temperate-forest
+- **Dvaagvao** — temperate-forest
+- **Zhxatvneb** — temperate-forest
+- **Zhfebfnokngad** — temperate-forest
+- **Xatxorogxarotrraq** — temperate-forest
+- **Rogxaxagrrog** — temperate-forest
+- **Rogxaxatxorrotrarrok** — temperate-forest
+- **Rogxaratrraxogrrarot** — alpine
+- **Ratrrarogxarraqxoq** — alpine
+- **Ngedngad** — temperate-forest
+- **Rogxaxatxorokrrag** — temperate-forest
+- **Xatxorogxarograrag** — temperate-forest
+- **Ngekzvadnod** — shrubland
+- **Netfnetngat** — temperate-forest
+- **Sfadsvetzhveb** — temperate-grassland
+- **Xatxoraqroq** — temperate-forest
+- **Rogxarorrak** — temperate-forest
+- **Zvobnek** — shrubland
+- **Vngadzfob** — shrubland
+- **Sxatngad** — temperate-grassland
+- **Fngakngobfnged** — temperate-forest
+- **Sfobzhfetfnged** — tropical-rainforest
+- **Xnodxnetnged** — temperate-forest
+- **Xatxorogxararoxo** — temperate-forest
+- **Zxobfnot** — savanna
+- **Nodngob** — savanna
+- **Vnatxngobxngak** — shrubland
+- **Ngadsxek** — savanna
+- **Natvnget** — temperate-forest
+- **Rogxaxatxorrarrarro** — temperate-forest
+- **Sfotngak** — savanna
+- **Vnobzfoknad** — taiga
+- **Zhvekxnobfnot** — taiga
+- **Vngabxngad** — temperate-forest
+- **Xatxorogxarroragxog** — temperate-forest
+- **Netnok** — taiga
+- **Svatnodvngob** — taiga
+- **Fngodzxadnad** — tropical-rainforest
+- **Neksvab** — taiga
+- **Zhvatned** — tropical-rainforest
+- **Rogxaxorog** — tropical-seasonal-forest
+- **Rorogxaxaroxa** — tropical-seasonal-forest
+- **Vnadnged** — tropical-rainforest
+- **Rogxaroxaxaq** — taiga
+- **Nokzhxad** — tropical-rainforest
+- **Ngedsfedvngab** — taiga
+- **Nobzxekngat** — tropical-seasonal-forest
+- **Vngedngakfngod** — taiga
+- **Svakngod** — taiga
+- **Rogxaroxaqrrora** — tropical-seasonal-forest
+- **Ngedvngebxned** — savanna
+- **Rogxarorroxarratrro** — tropical-rainforest
+- **Vnabzhvak** — tropical-seasonal-forest
+- **Zhxotfngob** — tropical-seasonal-forest
+- **Xnetngadngob** — savanna
+- **Nadnab** — tundra
+- **Zxekzhfotxngeb** — taiga
+- **Ngekfngatsvod** — tropical-seasonal-forest
+- **Ngokngebvnat** — taiga
+- **Rogxaroxokrrakxa** — tropical-seasonal-forest
+- **Rorrorroxot** — tropical-seasonal-forest
+- **Roxoxoq** — tropical-seasonal-forest
+- **Notngob** — taiga
+- **Roxokrrarro** — taiga
+- **Rogxarorraroq** — tropical-seasonal-forest
+- **Roxagxaq** — tropical-seasonal-forest
+- **Rogxaxoqrarroq** — tropical-seasonal-forest
+- **Rogxarokxok** — tropical-seasonal-forest
+- **Xngekxnekfnok** — tundra
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## The People
 
-The land holds 50 settlement(s).
-The chief bugbear settlement, Vngaoshvngoo, holds 288 souls amid shrubland.
-The chief goblin settlement, Ngokzhvab, holds 448 souls amid shrubland.
-The chief hobgoblin settlement, Kbeagbeatbea, holds 292 souls amid shrubland.
-The chief kobold settlement, Rorrorogxarrotrrot, holds 348 souls amid tropical-rainforest.
+The land holds 71 settlement(s).
+The chief bugbear settlement, Dvaagvao, holds 385 souls amid temperate-forest.
+The chief goblin settlement, Zhvedxngab, holds 368 souls amid temperate-forest.
+The chief hobgoblin settlement, Voengjaongjee, holds 415 souls amid temperate-forest.
+The chief kobold settlement, Rogxaxatxorarro, holds 302 souls amid temperate-forest.
 
-The bugbear lair of **Vngaoshvngoo**, population 288.
+The bugbear lair of **Dvaagvao**, population 385.
 
-Vngaoshvngoo lives by fishing.
+Dvaagvao lives by farming.
 Its roles, lowest to highest: forager, headman.
 
-The goblin village of **Ngokzhvab**, population 448.
+The goblin village of **Zhvedxngab**, population 368.
 
-Ngokzhvab lives by fishing.
-Its roles, lowest to highest: fisher, chief.
+Zhvedxngab lives by farming.
+Its roles, lowest to highest: farmer, chief.
 
-The hobgoblin legion of **Kbeagbeatbea**, population 292.
+The hobgoblin legion of **Voengjaongjee**, population 415.
 
-Kbeagbeatbea lives by fishing.
+Voengjaongjee lives by farming.
 Its roles, lowest to highest: laborer, warlord.
 
-The kobold warren of **Rorrorogxarrotrrot**, population 348.
+The kobold warren of **Rogxaxatxorarro**, population 302.
 
-Rorrorogxarrotrrot lives by farming.
-Its roles, lowest to highest: digger, warden, shaper, keeper, elders.
+Rogxaxatxorarro lives by farming.
+Its roles, lowest to highest: digger, shaper, keeper, elders.
 
 ## The Gods
 
 The people keep a folk pantheon:
 
-> Bvaash the Shngooshbvaash is: Bvaash the Shngooshbvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Vngoabvaash is: Bvaash the Vngoabvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-The village of **Ngokzhvab** keeps its own folk pantheon:
+The village of **Zhvedxngab** keeps its own folk pantheon:
 
-> Neb the Zhxebneb is ever: Neb the Zhxebneb watches unceasing. So it was, so it is.
+> Neb the Ngatneb is ever: Neb the Ngatneb watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-The legion of **Kbeagbeatbea** keeps its own folk pantheon:
+The legion of **Voengjaongjee** keeps its own folk pantheon:
 
-> Fee the Qtaafee is ever: Fee the Qtaafee watches unceasing. So it was, so it is.
+> Fee the Mjoefee is ever: Fee the Mjoefee watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-In the warren of **Rorrorogxarrotrrot**, an organized priesthood tends its own pantheon:
+In the warren of **Rogxaxatxorarro**, an organized priesthood tends its own pantheon:
 
-> Rogxa Rogxa is: Rogxa Rogxa is always watching. That's how it's always been. That's how it's always been. Rogxa is the highest among the gods. *(who presides)*
+> Xaxo Rogxaxaxo is: Xaxo Rogxaxaxo is always watching. That's how it's always been. That's how it's always been. Xaxo is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 

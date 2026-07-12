@@ -1,0 +1,5 @@
+{ "name": "census-of-coasts-tuning",
+  "description": "The Census of Coasts, tuning-loop variant: identical metrics over 2,000 worlds instead of 10,000, for fast iteration during Task 9's physics tuning loop. Medians here guide the next iteration's go/no-go call; the final recorded row always re-measures at the full 10,000-seed census (census-of-coasts.study.json) before a page is finalized.",
+  "seeds": { "from": 0, "count": 2000 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": [ "shoreline-development", "hypsometric-bimodality", "shelf-fraction", "continent-count", "largest-continent-share", "plate-size-gini", "landmass-count" ] }

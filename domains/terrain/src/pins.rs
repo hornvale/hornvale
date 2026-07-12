@@ -4,16 +4,25 @@
 
 /// The scenario pins for tectonic genesis. Every field: `None` = drawn from
 /// the seed; `Some` = supplied by the experimenter and conditioned on.
-/// type-audit: bare-ok(count: plates), bare-ok(ratio: ocean_fraction), bare-ok(flag: supercontinent)
+/// type-audit: bare-ok(count: plates), bare-ok(ratio: ocean_fraction), bare-ok(flag: supercontinent), bare-ok(count: globe_level), bare-ok(count: continents)
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct TerrainPins {
     /// Plate count (legal 2–64); drawn 8–40 when `None`.
     pub plates: Option<u32>,
     /// Target ocean fraction (legal 0.05–0.95); drawn 0.5–0.75 when `None`.
     pub ocean_fraction: Option<f64>,
-    /// `Some(true)` clusters the continental plates into one landmass;
-    /// `Some(false)` explicitly re-affirms the drawn (scattered) layout.
+    /// `Some(true)` clusters the drawn cratons (see `continents`) toward
+    /// craton 0 into one landmass; `Some(false)` explicitly re-affirms the
+    /// drawn (scattered) layout. Structural — no drawn counterpart, so it
+    /// is never metered in genesis notes.
     pub supercontinent: Option<bool>,
+    /// Canonical geodesic grid level (legal 4–7); the crate default
+    /// `GLOBE_LEVEL` when `None`. Part of world identity: the same seed at
+    /// a different level is deliberately a different world (spec §5).
+    pub globe_level: Option<u32>,
+    /// Craton count (legal 1–16); drawn 8–14 (ocean-fraction-budget-scaled,
+    /// Task 9 iteration 3') when `None`.
+    pub continents: Option<u32>,
 }
 
 /// Why tectonic genesis refused to produce a globe.
@@ -71,6 +80,22 @@ pub(crate) fn validate(pins: &TerrainPins) -> Result<(), GenesisError> {
             reason: format!("{f} requested; the legal range is 0.05-0.95"),
         });
     }
+    if let Some(level) = pins.globe_level
+        && !(4..=7).contains(&level)
+    {
+        return Err(GenesisError::InvalidPin {
+            pin: "globe-level".to_string(),
+            reason: format!("globe level {level} outside legal 4-7"),
+        });
+    }
+    if let Some(n) = pins.continents
+        && !(1..=16).contains(&n)
+    {
+        return Err(GenesisError::InvalidPin {
+            pin: "continents".to_string(),
+            reason: format!("craton count {n} outside legal 1-16"),
+        });
+    }
     Ok(())
 }
 
@@ -87,6 +112,12 @@ pub fn pin_strings(pins: &TerrainPins) -> Vec<String> {
     }
     if let Some(s) = pins.supercontinent {
         out.push(format!("supercontinent={s}"));
+    }
+    if let Some(level) = pins.globe_level {
+        out.push(format!("globe-level={level}"));
+    }
+    if let Some(n) = pins.continents {
+        out.push(format!("continents={n}"));
     }
     out
 }
@@ -123,6 +154,18 @@ pub fn parse_pin(s: &str, pins: &mut TerrainPins) -> Result<(), String> {
                 }
             });
         }
+        "globe-level" => {
+            let n: u32 = value
+                .parse()
+                .map_err(|_| format!("globe-level: invalid level '{value}'"))?;
+            pins.globe_level = Some(n);
+        }
+        "continents" => {
+            let n: u32 = value
+                .parse()
+                .map_err(|_| format!("continents: invalid count '{value}'"))?;
+            pins.continents = Some(n);
+        }
         other => return Err(format!("unknown terrain pin key '{other}'")),
     }
     Ok(())
@@ -143,6 +186,8 @@ mod tests {
             plates: Some(12),
             ocean_fraction: Some(0.65),
             supercontinent: Some(true),
+            globe_level: Some(6),
+            continents: Some(5),
         };
         let mut rebuilt = TerrainPins::default();
         for s in pin_strings(&pins) {
@@ -174,6 +219,56 @@ mod tests {
                 .unwrap_err()
                 .contains("true or false")
         );
+    }
+
+    #[test]
+    fn globe_level_pin_validates_its_range() {
+        for bad in [0u32, 3, 8, 99] {
+            let pins = TerrainPins {
+                globe_level: Some(bad),
+                ..TerrainPins::default()
+            };
+            assert!(matches!(
+                validate(&pins),
+                Err(GenesisError::InvalidPin { pin, .. }) if pin == "globe-level"
+            ));
+        }
+        for good in [4u32, 5, 6, 7] {
+            let pins = TerrainPins {
+                globe_level: Some(good),
+                ..TerrainPins::default()
+            };
+            assert!(validate(&pins).is_ok(), "level {good} should be legal");
+        }
+    }
+
+    #[test]
+    fn continents_pin_validates_its_range() {
+        for bad in [0u32, 17, 99] {
+            let pins = TerrainPins {
+                continents: Some(bad),
+                ..TerrainPins::default()
+            };
+            assert!(matches!(
+                validate(&pins),
+                Err(GenesisError::InvalidPin { pin, .. }) if pin == "continents"
+            ));
+        }
+        for good in [1u32, 5, 11, 16] {
+            let pins = TerrainPins {
+                continents: Some(good),
+                ..TerrainPins::default()
+            };
+            assert!(validate(&pins).is_ok(), "count {good} should be legal");
+        }
+    }
+
+    #[test]
+    fn globe_level_pin_parses() {
+        let mut pins = TerrainPins::default();
+        parse_pin("globe-level=6", &mut pins).expect("parses");
+        assert_eq!(pins.globe_level, Some(6));
+        assert!(parse_pin("globe-level=9", &mut pins).is_err() || validate(&pins).is_err());
     }
 
     #[test]

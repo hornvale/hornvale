@@ -1,5 +1,5 @@
 { "name": "census-of-skies",
-  "description": "Distributions of everything the sky generator produces, plus the belief split as instrument calibration.",
+  "description": "Sky-only census: star class, orbital mechanics, moon count and tides, and calendar properties — land columns live in census-lands-drift.",
   "seeds": { "from": 0, "count": 10000 },
   "pin_sets": [ { "label": "default", "pins": [] } ],
-  "metrics": "all" }
+  "metrics": ["star-class", "tidally-locked", "day-length-hours", "year-std-days", "year-local-days", "obliquity-degrees", "obliquity-range", "moons-admitted", "refused-a-moon", "total-tide", "months-per-year-innermost", "neighbor-count", "brightest-neighbor-class", "genesis-note-count"] }

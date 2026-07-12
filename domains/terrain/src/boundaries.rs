@@ -47,14 +47,21 @@ const TRANSFORM_THRESHOLD: f64 = 0.25;
 /// `b` (on `plate_b`). The relative velocity is evaluated at the midpoint;
 /// its component along the great-circle direction from `a` toward `b` is
 /// the closing speed (positive = converging). Exactly symmetric: swapping
-/// `(a, b)` flips both the direction and the relative velocity, so kind and
-/// magnitude are bit-identical from either side.
+/// `(a, b)` (and its flags) flips both the direction and the relative
+/// velocity, so kind and magnitude are bit-identical from either side.
+/// Crust epoch (Task 8): continental character is a per-cell crust flag,
+/// not a plate property, so the caller passes each cell's own flag
+/// (`continental_a` for `a`, `continental_b` for `b`) instead of reading
+/// `plate.continental`.
+/// type-audit: bare-ok(flag: continental_a), bare-ok(flag: continental_b)
 pub fn classify_contact(
     geo: &Geosphere,
     a: CellId,
     b: CellId,
     plate_a: &Plate,
     plate_b: &Plate,
+    continental_a: bool,
+    continental_b: bool,
 ) -> CellBoundary {
     let pa = geo.position(a);
     let pb = geo.position(b);
@@ -73,13 +80,13 @@ pub fn classify_contact(
         };
     }
     let kind = if closing > 0.0 {
-        match (plate_a.continental, plate_b.continental) {
+        match (continental_a, continental_b) {
             (true, true) => BoundaryKind::ContinentalCollision,
             (false, false) => BoundaryKind::IslandArc,
             _ => BoundaryKind::CoastalRange,
         }
     } else {
-        match (plate_a.continental, plate_b.continental) {
+        match (continental_a, continental_b) {
             (true, true) => BoundaryKind::ContinentalRift,
             _ => BoundaryKind::OceanicRidge,
         }
@@ -94,11 +101,15 @@ pub fn classify_contact(
 /// Every cell's strongest boundary contact: among neighbors on other
 /// plates, the contact with the greatest magnitude (the first neighbor in
 /// ascending order wins ties, via strict `>`). `None` for plate interiors.
-/// type-audit: bare-ok(index: plate_of)
+/// `continental` is the per-cell crust flag (Crust epoch, Task 8): each
+/// side of a contact is classified by its own cell's crust, not its
+/// plate's identity.
+/// type-audit: bare-ok(index: plate_of), bare-ok(flag: continental)
 pub fn boundary_field(
     geo: &Geosphere,
     plate_of: &CellMap<u32>,
     plates: &[Plate],
+    continental: &CellMap<bool>,
 ) -> CellMap<Option<CellBoundary>> {
     CellMap::from_fn(geo, |cell| {
         let my_plate = *plate_of.get(cell);
@@ -114,6 +125,8 @@ pub fn boundary_field(
                 neighbor,
                 &plates[my_plate as usize],
                 &plates[other as usize],
+                *continental.get(cell),
+                *continental.get(neighbor),
             );
             let better = match &best {
                 None => true,
@@ -168,37 +181,45 @@ pub fn boundary_distance(
 mod tests {
     use super::*;
     use crate::plates::{Plate, assign_plates};
-    use hornvale_kernel::Geosphere;
+    use crate::streams;
+    use hornvale_kernel::{CellMap, Geosphere, Seed};
 
-    /// Two continental hemisphere plates spinning against each other:
-    /// convergent where y < 0, divergent where y > 0, transform near x = ±1.
+    /// Two hemisphere plates spinning against each other: convergent where
+    /// y < 0, divergent where y > 0, transform near x = ±1. Continental
+    /// character lives in the crust flag map now, not the plate.
     fn hemisphere_plates(maturity: f64) -> Vec<Plate> {
         vec![
             Plate {
                 id: 0,
                 seed_position: [0.0, 0.0, 1.0],
-                continental: true,
                 euler_axis: [1.0, 0.0, 0.0],
                 rate: 1.0,
                 maturity,
+                weight: 1.0,
             },
             Plate {
                 id: 1,
                 seed_position: [0.0, 0.0, -1.0],
-                continental: true,
                 euler_axis: [-1.0, 0.0, 0.0],
                 rate: 1.0,
                 maturity,
+                weight: 1.0,
             },
         ]
+    }
+
+    /// Every cell continental — mirrors the old `continental: true` plates.
+    fn all_continental(geo: &Geosphere) -> CellMap<bool> {
+        CellMap::from_fn(geo, |_| true)
     }
 
     #[test]
     fn hemisphere_plates_produce_an_equatorial_boundary_of_every_regime() {
         let geo = Geosphere::new(2);
         let plates = hemisphere_plates(0.5);
-        let plate_of = assign_plates(&geo, &plates);
-        let boundaries = boundary_field(&geo, &plate_of, &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
+        let continental = all_continental(&geo);
+        let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
         assert!(boundaries.iter().any(|(_, c)| c.is_some()));
         for (cell, contact) in boundaries.iter() {
             if contact.is_some() {
@@ -221,15 +242,31 @@ mod tests {
     fn classification_agrees_from_both_sides() {
         let geo = Geosphere::new(2);
         let plates = hemisphere_plates(0.5);
-        let plate_of = assign_plates(&geo, &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
         for a in geo.cells() {
             for &b in geo.neighbors(a) {
                 let (pa, pb) = (*plate_of.get(a), *plate_of.get(b));
                 if pa == pb {
                     continue;
                 }
-                let ab = classify_contact(&geo, a, b, &plates[pa as usize], &plates[pb as usize]);
-                let ba = classify_contact(&geo, b, a, &plates[pb as usize], &plates[pa as usize]);
+                let ab = classify_contact(
+                    &geo,
+                    a,
+                    b,
+                    &plates[pa as usize],
+                    &plates[pb as usize],
+                    true,
+                    true,
+                );
+                let ba = classify_contact(
+                    &geo,
+                    b,
+                    a,
+                    &plates[pb as usize],
+                    &plates[pa as usize],
+                    true,
+                    true,
+                );
                 assert_eq!(ab.kind, ba.kind, "asymmetric kind {}-{}", a.0, b.0);
                 assert_eq!(ab.magnitude, ba.magnitude, "asymmetric magnitude");
             }
@@ -237,11 +274,78 @@ mod tests {
     }
 
     #[test]
+    fn classification_uses_cell_crust_not_plate_identity() {
+        // Same two plates, same geometry: continental flags decide the kind.
+        let geo = Geosphere::new(2);
+        let plates = hemisphere_plates(0.5);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
+        // Scan for the first adjacent cross-plate cell pair whose contact is
+        // convergent (both-continental classifies as a collision) — the
+        // hemisphere plates also produce divergent and transform contacts,
+        // which this test isn't exercising.
+        let (a, b) = geo
+            .cells()
+            .into_iter()
+            .find_map(|cell| {
+                let mine = *plate_of.get(cell);
+                geo.neighbors(cell).iter().find_map(|&n| {
+                    let other = *plate_of.get(n);
+                    if other == mine {
+                        return None;
+                    }
+                    let probe = classify_contact(
+                        &geo,
+                        cell,
+                        n,
+                        &plates[mine as usize],
+                        &plates[other as usize],
+                        true,
+                        true,
+                    );
+                    (probe.kind == BoundaryKind::ContinentalCollision).then_some((cell, n))
+                })
+            })
+            .expect("hemisphere plates have a convergent cross-plate contact");
+        let (pa, pb) = (*plate_of.get(a), *plate_of.get(b));
+        let cc = classify_contact(
+            &geo,
+            a,
+            b,
+            &plates[pa as usize],
+            &plates[pb as usize],
+            true,
+            true,
+        );
+        assert_eq!(cc.kind, BoundaryKind::ContinentalCollision);
+        let oo = classify_contact(
+            &geo,
+            a,
+            b,
+            &plates[pa as usize],
+            &plates[pb as usize],
+            false,
+            false,
+        );
+        assert_eq!(oo.kind, BoundaryKind::IslandArc);
+        let mixed = classify_contact(
+            &geo,
+            a,
+            b,
+            &plates[pa as usize],
+            &plates[pb as usize],
+            true,
+            false,
+        );
+        assert_eq!(mixed.kind, BoundaryKind::CoastalRange);
+    }
+
+    #[test]
     fn distances_start_at_zero_attribute_a_source_and_grow_by_at_most_one() {
         let geo = Geosphere::new(2);
         let plates = hemisphere_plates(0.5);
-        let plate_of = assign_plates(&geo, &plates);
-        let boundaries = boundary_field(&geo, &plate_of, &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
+        let continental = all_continental(&geo);
+        let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);
         for (cell, entry) in distances.iter() {
             let Some((distance, source)) = entry else {

@@ -36,112 +36,118 @@ By night: a smoldering red star that does not wander; a warm yellow star that do
 ## The Land
 
 The globe breaks into 16 plates; the sea claims 73% of its surface.
-The highest land stands 3919 m above the sea.
+The highest land stands 6093 m above the sea.
 
-The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 9 marine biomes cover the globe.
-Some 19% of the surface is habitable — land with water and a tolerable season.
+The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 8 marine biomes cover the globe.
+Some 11% of the surface is habitable — land with water and a tolerable season.
 
-- **Xnebsvob** — temperate-rainforest
-- **Roqrraxokroxog** — temperate-rainforest
-- **Ngjoavoo** — temperate-rainforest
-- **Shngooshkvaoshgvoa** — temperate-rainforest
-- **Xngatnebvned** — temperate-rainforest
-- **Roqrraxotroxokrrorat** — temperate-rainforest
-- **Xotroxoxoq** — temperate-rainforest
-- **Nobneb** — temperate-forest
-- **Roqrrarorrat** — temperate-rainforest
-- **Xotroroqrraratrratrra** — temperate-rainforest
-- **Xotrorokroxa** — temperate-rainforest
-- **Sfebxnodngot** — temperate-forest
-- **Roqrraxotroxaxoq** — temperate-rainforest
-- **Vnatzhxoksvot** — temperate-forest
-- **Xotroroqrraratro** — temperate-rainforest
-- **Roqrrarorrorragrorog** — tropical-rainforest
-- **Xngokzhvabvnget** — tropical-rainforest
-- **Rorroroqrraxotxora** — tropical-rainforest
-- **Xotroroqrraxoxaxa** — temperate-rainforest
-- **Zvebnob** — temperate-forest
-- **Zxakngak** — temperate-forest
-- **Fnotxnebzhvok** — tropical-rainforest
-- **Zxedzhfebxnod** — tropical-rainforest
-- **Zhxotxngak** — tropical-rainforest
-- **Vngobngobxnot** — tropical-rainforest
-- **Sfobsxat** — tropical-rainforest
-- **Roqrraxatro** — temperate-rainforest
-- **Netngob** — tropical-rainforest
-- **Nadnednak** — tropical-rainforest
-- **Xatxoroqrraxokrraqrrot** — temperate-forest
-- **Ngedzfad** — tropical-rainforest
-- **Rorroxokrrag** — tropical-rainforest
-- **Roqrrarraxo** — temperate-forest
-- **Vnedxngedzhved** — tropical-rainforest
-- **Roqrraxatxorotxo** — temperate-forest
-- **Ngebzveksxet** — tropical-seasonal-forest
-- **Vnabnebzfad** — temperate-forest
-- **Roqrrarrograkxo** — temperate-forest
-- **Xatxoxatra** — temperate-forest
-- **Roqrrarrorra** — temperate-forest
-- **Roqrraxatxorrarroxaq** — temperate-forest
-- **Xatxoroqrrarrarra** — temperate-forest
-- **Xatxorragxoq** — temperate-forest
-- **Roqrraxarrarrog** — temperate-forest
-- **Xatxoroqrraxaqrrorra** — temperate-forest
-- **Xatxoroqrrarotxotrro** — temperate-forest
-- **Roqrrarakrot** — tundra
-- **Xatxorrogra** — temperate-forest
-- **Zxetnak** — taiga
-- **Roqrraroratrotxa** — tropical-seasonal-forest
-- **Roqrrarraxoxat** — tropical-seasonal-forest
-- **Roroqrrarrorraqxo** — tropical-seasonal-forest
-- **Xnedzhvaknad** — taiga
-- **Zhxakzhfobxngod** — taiga
-- **Ngodvngob** — taiga
-- **Rororoqrrarraxot** — shrubland
-- **Vngokvnat** — tundra
-- **Ngadnot** — tundra
-- **Zfatzfod** — tundra
-- **Xotxorraratrroq** — tundra
-- **Roqrrarragrraxot** — tundra
+- **Zhxokngaknged** — temperate-rainforest
+- **Roqrraxotrororaq** — temperate-rainforest
+- **Btoanjeonjoa** — temperate-rainforest
+- **Vngaashgvoo** — temperate-rainforest
+- **Xnaknedzhvek** — temperate-rainforest
+- **Roqrrarrotrroqroq** — temperate-rainforest
+- **Sfadvnok** — temperate-forest
+- **Xngadnget** — temperate-rainforest
+- **Nebngatvngad** — temperate-rainforest
+- **Zxekfnad** — temperate-rainforest
+- **Sxekvnakngak** — temperate-forest
+- **Ngotzhvab** — temperate-forest
+- **Vnadnged** — temperate-rainforest
+- **Zhvedzfokngob** — temperate-forest
+- **Zhfebngetned** — temperate-forest
+- **Vngakvnoknget** — temperate-forest
+- **Roqrraxatxoxarratrro** — temperate-forest
+- **Nokzhxad** — temperate-forest
+- **Ngetfngotnad** — temperate-forest
+- **Fneksvotnget** — tropical-rainforest
+- **Zhvedzhxod** — temperate-forest
+- **Vnobvnobzxod** — temperate-forest
+- **Vnabzhvak** — temperate-forest
+- **Ngokxngot** — temperate-forest
+- **Zhxadngodzhvad** — temperate-forest
+- **Xatxoroqrraxoxa** — temperate-forest
+- **Nebsxokvnget** — taiga
+- **Roqrrarorroxorrarra** — tropical-rainforest
+- **Nodzhfet** — tropical-rainforest
+- **Fngetxnek** — temperate-forest
+- **Ngokzhxek** — tropical-rainforest
+- **Ngotngod** — tropical-rainforest
+- **Fnotvnebnot** — temperate-forest
+- **Roqrraxatxorarrarrat** — temperate-forest
+- **Zhxodnak** — savanna
+- **Notzfabnged** — temperate-forest
+- **Roqrraxatxoratrora** — temperate-forest
+- **Svaknek** — shrubland
+- **Vngetngobnob** — taiga
+- **Xatxoxotrog** — temperate-forest
+- **Xngebngodnot** — shrubland
+- **Svedxnot** — taiga
+- **Xngotnek** — taiga
+- **Roqrrarragxagrroq** — temperate-forest
+- **Zxedsvek** — taiga
+- **Ngekvnab** — tundra
+- **Fngadzxakzhxob** — taiga
+- **Roroqrrararra** — taiga
+- **Roqrraroxoxat** — taiga
+- **Nebnab** — taiga
+- **Roqrrarrarro** — taiga
+- **Zhxoksxetngeb** — taiga
+- **Sxodzfedzxek** — taiga
+- **Vngekvngab** — taiga
+- **Roqrrarorrarrok** — taiga
+- **Ngednak** — taiga
+- **Notngek** — taiga
+- **Roroqrraxaroq** — taiga
+- **Roqrraxokxatrro** — taiga
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 ## Deep Time
 
-The frost retreated: at the glacial maximum (day -243500000), ice advanced over 37% of the land.
+The frost retreated: at the glacial maximum (day -243500000), ice advanced over 39% of the land.
 
 ## The People
 
-The land holds 61 settlement(s).
-The chief bugbear settlement, Shngooshkvaoshgvoa, holds 327 souls amid temperate-rainforest.
-The chief goblin settlement, Xnebsvob, holds 359 souls amid temperate-rainforest.
-The chief hobgoblin settlement, Ngjoavoo, holds 467 souls amid temperate-rainforest.
-The chief kobold settlement, Roqrraxokroxog, holds 522 souls amid temperate-rainforest.
+The land holds 59 settlement(s).
+The chief bugbear settlement, Vngaashgvoo, holds 298 souls amid temperate-rainforest.
+The chief goblin settlement, Zhxokngaknged, holds 356 souls amid temperate-rainforest.
+The chief hobgoblin settlement, Btoanjeonjoa, holds 421 souls amid temperate-rainforest.
+The chief kobold settlement, Roqrraxotrororaq, holds 529 souls amid temperate-rainforest.
 
-The bugbear lair of **Shngooshkvaoshgvoa**, population 327.
+The bugbear lair of **Vngaashgvoo**, population 298.
 
-Shngooshkvaoshgvoa lives by farming.
-Its roles, lowest to highest: slave, forager, omen-reader, headman.
+Vngaashgvoo lives by farming.
+Its roles, lowest to highest: forager, omen-reader, headman.
 
-The goblin village of **Xnebsvob**, population 359.
+The goblin village of **Zhxokngaknged**, population 356.
 
-Xnebsvob lives by farming.
+Zhxokngaknged lives by farming.
 Its roles, lowest to highest: slave, farmer, artisan, shaman, chief.
 
-The hobgoblin legion of **Ngjoavoo**, population 467.
+The hobgoblin legion of **Btoanjeonjoa**, population 421.
 
-Ngjoavoo lives by farming.
+Btoanjeonjoa lives by farming.
 Its roles, lowest to highest: slave, laborer, smith, augur, warlord.
 
-The kobold warren of **Roqrraxokroxog**, population 522.
+The kobold warren of **Roqrraxotrororaq**, population 529.
 
-Roqrraxokroxog lives by farming.
+Roqrraxotrororaq lives by farming.
 Its roles, lowest to highest: digger, shaper, keeper, elders.
 
 ## The Gods
 
 An organized priesthood tends a pantheon:
 
-> Bvaash the Bvaobvaash comes back every 15.99 days. That's how it's always been. That's how it's always been. Bvaash is the highest among the gods. *(who presides)*
+> Bvaash the Vngaashbvaash comes back every 15.99 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+>
+> — derived from the phenomenon *celestial-body*
+
+> Bvaash the Shngaoshbvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+>
+> — derived from the phenomenon *tide*
+
+> Bvaash the Bvaobvaash comes back every 32.55 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -149,37 +155,37 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *tide*
 
-> Bvaash the Vngaoshbvaash comes back every 32.55 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Vngaoshbvaash comes back every 0.88 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bvaash the Shngooshbvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Shngooshbvaash comes back every 71.11 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+>
+> — derived from the phenomenon *eclipse*
+
+In the village of **Zhxokngaknged**, an organized priesthood tends its own pantheon:
+
+> Neb the Zhfobneb returns every 0.88 days. So it was, so it is. *(who presides)*
+>
+> — derived from the phenomenon *celestial-body*
+
+> Nabvngad the Sfeknetneknek returns every 71.11 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Zhvobvngab the Vngeknobxngek returns every 269.79 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Neb the Fnakneb returns every 15.99 days. So it was, so it is.
+>
+> — derived from the phenomenon *celestial-body*
+
+> Neb the Xngebneb is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Bvaash the Dvaashbvaash comes back every 0.88 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
->
-> — derived from the phenomenon *celestial-body*
-
-> Bvaash the Kvoashbvaash comes back every 71.11 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
->
-> — derived from the phenomenon *eclipse*
-
-In the village of **Xnebsvob**, an organized priesthood tends its own pantheon:
-
-> Neb the Nobneb returns every 0.88 days. So it was, so it is. *(who presides)*
->
-> — derived from the phenomenon *celestial-body*
-
-> Fngakfnot the Nokfnakned returns every 71.11 days. So it was, so it is.
->
-> — derived from the phenomenon *eclipse*
-
-> Sxabfngekvnob the Vnebxngebxngeb returns every 269.79 days. So it was, so it is.
->
-> — derived from the phenomenon *eclipse*
-
-> Neb the Zhxabneb returns every 15.99 days. So it was, so it is.
+> Neb the Zhxabneb returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -187,55 +193,47 @@ In the village of **Xnebsvob**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-> Neb the Svatneb returns every 32.55 days. So it was, so it is.
+In the legion of **Btoanjeonjoa**, an organized priesthood tends its own pantheon:
+
+> Fee the Xaefee returns every 0.88 days. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neb the Zhfabneb is felt, not counted. So it was, so it is.
->
-> — derived from the phenomenon *tide*
-
-In the legion of **Ngjoavoo**, an organized priesthood tends its own pantheon:
-
-> Fee the Ktoefee returns every 0.88 days. So it was, so it is. *(who presides)*
->
-> — derived from the phenomenon *celestial-body*
-
-> Ngjoagboaveo the Ktoetqae returns every 71.11 days. So it was, so it is.
+> Feavoengjea the Qqaexee returns every 71.11 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Tboektoovoo the Ngjaaqgeoqgeo returns every 269.79 days. So it was, so it is.
+> Tbeaxoo the Foaktoemjee returns every 269.79 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Fee the Xoefee returns every 15.99 days. So it was, so it is.
+> Fee the Tqaefee returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Fee the Ktaofee returns every 32.55 days. So it was, so it is.
+> Fee the Qgeofee returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Fee the Qkaofee is felt, not counted. So it was, so it is.
+> Fee the Xoefee is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Fee the Xoofee is felt, not counted. So it was, so it is.
+> Fee the Ktaofee is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-In the warren of **Roqrraxokroxog**, an organized priesthood tends its own pantheon:
+In the warren of **Roqrraxotrororaq**, an organized priesthood tends its own pantheon:
 
-> Xogrra Roqrra comes back every 15.99 days. That's how it's always been. That's how it's always been. Xogrra is the highest among the gods. *(who presides)*
+> Roqrra Xogrraroqrra comes back every 15.99 days. That's how it's always been. That's how it's always been. Roqrra is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Roqrraxogrra Roqrraxogrra comes back every 32.55 days. That's how it's always been. That's how it's always been. Roqrraxogrra is a great one among the gods.
+> Roqrra Xogrraroqrra comes back every 32.55 days. That's how it's always been. That's how it's always been. Roqrra is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Xogrrarogxa Rogxaxogrra comes back every 0.88 days. That's how it's always been. That's how it's always been. Xogrrarogxa is a great one among the gods.
+> Xogrra Rogxa comes back every 0.88 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
