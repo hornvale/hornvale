@@ -78,10 +78,20 @@ impl<T> CellMap<T> {
 }
 
 /// Normalize a 3-vector to unit length.
-fn normalize(v: [f64; 3]) -> [f64; 3] {
+pub(crate) fn normalize(v: [f64; 3]) -> [f64; 3] {
     let [x, y, z] = v;
     let len = (x * x + y * y + z * z).sqrt();
     [x / len, y / len, z / len]
+}
+
+/// Edge midpoint projected onto the unit sphere — the subdivision step
+/// (average, then normalize). The one place the sphere-midpoint op is defined.
+pub(crate) fn slerp_mid(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    normalize([
+        (a[0] + b[0]) / 2.0,
+        (a[1] + b[1]) / 2.0,
+        (a[2] + b[2]) / 2.0,
+    ])
 }
 
 /// The twelve icosahedron vertices (golden-ratio rectangles), unnormalized,
@@ -129,6 +139,18 @@ fn base_icosahedron() -> (Vec<[f64; 3]>, Vec<[u32; 3]>) {
     (vertices, faces)
 }
 
+/// The base icosahedron (12 vertices, 20 faces), computed once. `room` reads
+/// this immutably; `Geosphere::new` keeps taking its own owned copy to mutate.
+// Not yet consumed within this crate — `room` (a later task in the same
+// campaign) is its first caller.
+#[allow(dead_code)]
+#[allow(clippy::type_complexity)]
+pub(crate) fn base_data() -> &'static (Vec<[f64; 3]>, Vec<[u32; 3]>) {
+    use std::sync::OnceLock;
+    static BASE: OnceLock<(Vec<[f64; 3]>, Vec<[u32; 3]>)> = OnceLock::new();
+    BASE.get_or_init(base_icosahedron)
+}
+
 /// Subdivide each triangular face into four, projecting new edge-midpoint
 /// vertices onto the unit sphere. Shared midpoints are deduplicated via an
 /// edge cache keyed by the ordered vertex-index pair, so vertex numbering is
@@ -142,9 +164,7 @@ fn subdivide(positions: Vec<[f64; 3]>, faces: Vec<[u32; 3]>) -> (Vec<[f64; 3]>, 
         if let Some(&idx) = cache.get(&key) {
             return idx;
         }
-        let [ax, ay, az] = positions[a as usize];
-        let [bx, by, bz] = positions[b as usize];
-        let mid = normalize([(ax + bx) / 2.0, (ay + by) / 2.0, (az + bz) / 2.0]);
+        let mid = slerp_mid(positions[a as usize], positions[b as usize]);
         let idx = positions.len() as u32;
         positions.push(mid);
         cache.insert(key, idx);
