@@ -34,9 +34,16 @@ main() {
   $ssh 'touch /run/hvg-heartbeat'                       # refresh idle timer
   rsync -az --delete --exclude target/ --filter=':- .gitignore' -e "ssh -i $HOME/.hornvale-gate/id -o StrictHostKeyChecking=accept-new" \
       "$(git rev-parse --show-toplevel)/" "ubuntu@$ip:work/"
+  # Keep the heartbeat fresh during the gate: a cold build can exceed the 15-min
+  # idle timeout, and a single touch-at-start would let the box self-terminate
+  # mid-run. Background loop, reaped after the gate returns.
+  # shellcheck disable=SC2086
+  ( while sleep 300; do $ssh 'touch /run/hvg-heartbeat' 2>/dev/null || break; done ) &
+  local hb_pid=$!
   # shellcheck disable=SC2086
   local rc=0
   $ssh 'cd work && make gate && scripts/regenerate-artifacts.sh && git -c core.fileMode=false diff --exit-code -- book/' || rc=$?
+  kill "$hb_pid" 2>/dev/null || true
   # Sync any regenerated artifacts back so legitimate changes can be committed locally.
   rsync -az -e "ssh -i $HOME/.hornvale-gate/id -o StrictHostKeyChecking=accept-new" "ubuntu@$ip:work/book/" "$(git rev-parse --show-toplevel)/book/"
   [ $rc -eq 0 ] && echo "gate-remote: PASS" || echo "gate-remote: FAIL (rc=$rc)"
