@@ -118,6 +118,13 @@ frozen, single-agent world); the inference tier (UNI-1) and belief-events arrive
 with the social/deception features in Milestone 2, so the architecture costs
 nothing early.
 
+**This is the first of several derived views.** The brainstorm that produced this
+metaplan kept finding the same shape — the social graph, emotion, motivation, and the
+player's verbs are all reductions of the one event ledger, read by one deterministic
+core. The whole pattern is stated as frontier UNI-20 (the derived-view architecture);
+belief is simply the view built first, and Milestone-2 "liveness" is wiring the rest
+of the views and the two engines (inference, planning) over the same ledger.
+
 ### 3.3 Surprise is epistemic, not stochastic
 
 Determinism stays constitutional. Novelty comes from the player not *yet* knowing

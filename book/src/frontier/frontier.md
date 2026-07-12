@@ -52,6 +52,8 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The motivation engine — Goal-Oriented Action Planning over belief](#the-motivation-engine--goal-oriented-action-planning-over-belief)
   - [The planning engine — A-star as causality across the tenses](#the-planning-engine--a-star-as-causality-across-the-tenses)
   - [The verb as reaction — a property-transformation chemistry](#the-verb-as-reaction--a-property-transformation-chemistry)
+  - [Emotion as appraisal — the affective readout of the gap](#emotion-as-appraisal--the-affective-readout-of-the-gap)
+  - [The derived-view architecture — the game layer as readouts over one ledger](#the-derived-view-architecture--the-game-layer-as-readouts-over-one-ledger)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
@@ -1893,6 +1895,98 @@ tiny — a handful of properties and reactions (open, take, burn) — and it gro
 the NPC planners of Milestone 2 without a second system, because they were the same
 system all along. Downstream of MAP-19's ontology; it is the place the player
 finally touches the world.
+
+---
+
+## Emotion as appraisal — the affective readout of the gap
+
+*(High confidence in the decomposition; the affect-to-behaviour feedback is the open
+calibration. Not a system but a derived readout, and a modulator of the others. From
+the-walk brainstorm.)*
+
+**Decompose an emotion and it is not atomic — it is a bundle of appraisals**
+(appraisal theory: Scherer, Lazarus, the OCC model). Each axis is already computed by
+a system the game has: **valence and arousal** from the motivation gap (PSY-6);
+**agency and blame** from the event's provenance and the social graph (SOC-9);
+**expectedness** from prediction-error against belief (the projection, UNI-16);
+**coping** from whether the planner finds a route (PSY-6). So an emotion is the
+*affective readout of appraising the gap* — derived, the same posture as belief,
+relationships, and motivation, not a new store.
+
+**Substitution generates the emotion space from a few axes.** Hold the event fixed —
+an ally is killed — and swap one appraisal: blame the circumstance and it is
+**grief**; blame an enemy and it is **rage**; blame yourself and it is **guilt**;
+find a plan and it is **resolve**. The flip rides the *blame* appraisal, which is
+just who the event's provenance points to on the social graph — so the whole family
+(anger, guilt, sadness) is derivable, M + N over appraisal dimensions rather than an
+authored emotion table.
+
+**The discovery–invention axis places the culture.** Basic affect is
+species-universal (discovered, from the psychology substrate); constructed emotion is
+culture-specific (invented, from the culture's values and its *lexicon*, à la
+Barrett). A people with no word for an emotion feels it as undifferentiated affect —
+the lexical gap of the anti-phenomenon (RENDER-7) and language (LANG) — which gives
+untranslatable emotions (*saudade*, *amae*) a principled, derived home rather than an
+authored one.
+
+**And emotion feeds back as a modulator.** It biases the belief threshold (fear
+toward vigilance or credulity, UNI-16), bumps a GOAP goal's priority (fear promotes
+the safety goal), charges the social-graph edges (the affect *is* the edge's colour,
+SOC-9), and gates salience so emotional things surface first in the phenomena rank.
+It is the derived readout *and* the affective loop over the cognitive core.
+
+**Sequencing.** Lands with Milestone-2 liveness (it needs the appraisal inputs — the
+gap, the provenance, the prediction-error, the plan) and colours the focalizer before
+that (an agent's rendering is tinted by its affect). Downstream of the drives (PSY-1)
+and the gap engine (PSY-6); one of the readouts the synthesis (UNI-20) draws
+together.
+
+---
+
+## The derived-view architecture — the game layer as readouts over one ledger
+
+*(The synthesis of the-walk brainstorm's lenses. High confidence that the pattern is
+real — it is the keystone (metaplan §3.2) generalised — and that it is the game
+layer's organising principle. Discovered in brainstorming, not yet built.)*
+
+**Eight passes over the game layer's design, taken from different angles, kept
+arriving at the same shape.** Belief, absence, relationships, motivation, planning,
+verbs, and emotion each began as its own system and each turned out to be a *derived
+view* over a single substrate: **one event ledger**, plus a small deterministic core
+that reads it. Stated once:
+
+- **One ledger of events** is the only stored truth; everything else is recomputed
+  from it (the keystone, metaplan §3.2 / §3.4 — store the irreversible, derive the
+  reversible).
+- **The views** are lossy or lensed reductions of that ledger: **belief** (UNI-16 —
+  the events an agent perceived, projected through its senses); **the social graph**
+  (SOC-9 — the events *between* a pair reduced to a typed edge); **emotion** (the
+  appraisal of the gap an event opens); **salient absence** (RENDER-7 — the events
+  the prior expected but the ledger lacks); **history** (the events themselves and
+  their confabulated backfill).
+- **The engines** are two, and they are one active-inference loop: **inference**
+  (UNI-1) fits the model to the world — perception, belief, abduction; **planning**
+  (UNI-19 — A\* / GOAP) fits the world to the model — motivation (PSY-6), the player's
+  and NPCs' verbs (MAP-23, one action system), and causality in every tense. Both
+  minimise the same quantity: the discrepancy between a model and the world.
+
+**Three consequences fall out of stating it plainly.** *First*, **determinism all
+the way up**: the ledger is lossless, every view is a pure function of it, and both
+engines are seeded search — so "surprise is epistemic, not stochastic" holds from the
+physics to an NPC's grudge. *Second*, **one machine, many users**: player and NPC act
+through the same verb-reactions; belief and motivation are the same gap seen twice;
+the game AI is not a bolted-on subsystem but the same core the player inhabits.
+*Third*, **cheap and provenanced**: nothing is stored that can be re-derived, and
+because every view is a reduction of real events, `why?` always has an answer — the
+causal chain, never a tag.
+
+**What this buys the metaplan.** The game layer is not the dozen subsystems its
+campaign list might suggest; it is **one event ledger and a handful of readouts**,
+built once and reused. Milestone-2 "liveness" in particular is not an AI project — it
+is wiring the existing views (belief, graph, emotion) and the two engines together
+over the ledger the event campaign (IV) already builds. The convergence is the
+design: agility comes from there being *less* here than it looks — the game-layer
+analogue of the constitution's "coarse constrains fine."
 
 ---
 
