@@ -18,7 +18,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks
+.PHONY: help quick gate gate-fast prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks gate-remote gate-panic gate-remote-setup gate-remote-teardown shellcheck
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -79,3 +79,18 @@ doctor: ## Print the repo self-map (orientation for a fresh session)
 install-hooks: ## Point git at scripts/hooks (runs `make quick` pre-commit)
 	git config core.hooksPath scripts/hooks
 	@echo "git hooks path set to scripts/hooks; 'make quick' now runs pre-commit."
+
+gate-remote: ## Run the CI gate on this worktree's AWS spot box
+	@scripts/aws-gate/gate-remote.sh
+
+gate-panic: ## EMERGENCY: disable the runner and kill all gate resources
+	@scripts/aws-gate/panic.sh
+
+gate-remote-setup: ## Provision remote-gate infra (BILLABLE; confirmation-gated)
+	@scripts/aws-gate/setup.sh
+
+gate-remote-teardown: ## Remove all remote-gate infra
+	@scripts/aws-gate/teardown.sh
+
+shellcheck: ## Lint all shell scripts
+	@shellcheck scripts/*.sh scripts/aws-gate/*.sh scripts/aws-gate/test/*.sh scripts/hooks/*
