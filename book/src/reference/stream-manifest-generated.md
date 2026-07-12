@@ -29,6 +29,13 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 *(no seed-derivation streams)*
 
+### hornvale-kernel
+
+| Label | Meaning |
+|---|---|
+| `room/face` | room base face |
+| `room/child` | room child descent |
+
 ### hornvale-language
 
 | Label | Meaning |

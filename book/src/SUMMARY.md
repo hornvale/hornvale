@@ -62,6 +62,7 @@
 - [The Rising Tone](./chronicle/the-rising-tone.md)
 - [The Fast Gate](./chronicle/the-fast-gate.md)
 - [Crust](./chronicle/crust.md)
+- [The Room Mesh](./chronicle/the-room-mesh.md)
 - [The Domain Trait](./chronicle/the-domain-trait.md)
 
 # The Gallery

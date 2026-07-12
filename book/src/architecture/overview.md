@@ -2,13 +2,16 @@
 
 Hornvale is organized as four layers, from substrate to surface:
 
-**The Kernel** — small, finished early, changes rarely. It provides the seven
+**The Kernel** — small, finished early, changes rarely. It provides the
 capabilities every other part of the system depends on: hierarchical seeding,
 coherent noise, fields, the fact ledger, refinement, the trace protocol's
-shared vocabularies, and the geosphere (a spherical region graph). The kernel
-is the *only* thing a domain is allowed to depend on. Built in Campaign 1a;
-gained enumeration interfaces in 1b; the geosphere arrived in Campaign 3;
-otherwise already stable.
+shared vocabularies, the geosphere (a spherical region graph), and — below the
+globe — the room substrate: an addressable, lazily generated finer mesh that is
+the *same* icosphere refined deeper, for local detail at zero global cost. The
+kernel is the *only* thing a domain is allowed to depend on. Built in Campaign
+1a; gained enumeration interfaces in 1b; the geosphere arrived in Campaign 3;
+the room substrate in [The Room Mesh](../chronicle/the-room-mesh.md); otherwise
+already stable.
 
 **The Domains** — one module per pillar of the vision: astronomy, climate,
 terrain, ecology, subsistence, settlement, social structure, language,

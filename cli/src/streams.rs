@@ -1,23 +1,29 @@
 //! Render the stream manifest: every seed-derivation label in the project.
 
-use hornvale_kernel::Domain;
-
 /// Render every registered crate's stream labels as the book's generated
 /// reference page. Labels are permanent save-format contracts.
 /// type-audit: bare-ok(artifact: return)
 pub fn render_streams() -> String {
+    // Domain sections come from the single composition-root roster (DOMAINS),
+    // which stores domains in registration order; the kernel is the substrate,
+    // not a domain, so its own seed labels (room addressing) are listed
+    // explicitly alongside them. The whole list is sorted alphabetically, so
+    // `hornvale-kernel` slots between `hornvale-culture` and `hornvale-language`.
+    let mut sources: Vec<(&str, Vec<(&'static str, &'static str)>)> = hornvale_worldgen::DOMAINS
+        .iter()
+        .map(|d| (d.crate_name(), d.stream_labels()))
+        .collect();
+    sources.push(("hornvale-kernel", hornvale_kernel::stream_labels()));
+    sources.sort_by(|a, b| a.0.cmp(b.0));
+
     let mut doc = String::new();
     doc.push_str("<!-- GENERATED FILE — do not edit. Regenerate with `hornvale streams`. -->\n\n");
     doc.push_str(
         "Labels are permanent save-format contracts; regeneration uses epoch \
          suffixes (e.g. `settlement/name/v2`), never renames.\n\n",
     );
-    // DOMAINS is stored in registration order; the manifest is alphabetical.
-    let mut domains: Vec<&dyn Domain> = hornvale_worldgen::DOMAINS.to_vec();
-    domains.sort_by_key(|d| d.crate_name());
-    for domain in domains {
-        doc.push_str(&format!("### {}\n\n", domain.crate_name()));
-        let labels = domain.stream_labels();
+    for (crate_name, labels) in sources {
+        doc.push_str(&format!("### {crate_name}\n\n"));
         if labels.is_empty() {
             doc.push_str("*(no seed-derivation streams)*\n\n");
             continue;
@@ -50,6 +56,8 @@ mod tests {
             "octave-{n}",
             "### hornvale-paleoclimate",
             "*(no seed-derivation streams)*",
+            "### hornvale-kernel",
+            "| `room/face` |",
         ] {
             assert!(doc.contains(expected), "missing: {expected}");
         }
