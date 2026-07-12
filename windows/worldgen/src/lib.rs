@@ -15,7 +15,7 @@ use hornvale_climate::{
     UniformClimate,
 };
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Fact, GeoCoord, Geosphere, LedgerError, ObserverContext,
+    ConceptRegistry, Domain, EntityId, Fact, GeoCoord, Geosphere, LedgerError, ObserverContext,
     PerceptionLens, PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime,
     observe,
 };
@@ -132,22 +132,40 @@ impl PhenomenaSource for Sky {
 /// type-audit: bare-ok(identifier-text)
 pub const NAME_GLOSS: &str = "name-gloss";
 
+/// The composition root's domain roster — the single membership list every
+/// per-domain aggregation draws on (registration; the streams manifest).
+///
+/// Order is REGISTRATION order, not alphabetical: `language::register_concepts`
+/// references concepts it does not own (terrain's `stone`, religion's `god`, …)
+/// and must run AFTER their owners or it claims them under domain "language"
+/// and conflicts. Owners first, `language` last (before streamless
+/// `paleoclimate`). `register_all` iterates this as stored; the streams
+/// manifest sorts by crate name. Adding a domain is one line here plus its
+/// `Domain` impl — respecting this order only if it lends/borrows stratum
+/// concepts.
+pub const DOMAINS: &[&dyn Domain] = &[
+    &hornvale_astronomy::Astronomy,
+    &hornvale_climate::Climate,
+    &hornvale_terrain::Terrain,
+    &hornvale_settlement::Settlement,
+    &hornvale_species::Species,
+    &hornvale_culture::Culture,
+    &hornvale_religion::Religion,
+    &hornvale_language::Language,
+    &hornvale_paleoclimate::Paleoclimate,
+];
+
 /// Register every domain's concepts, plus the composition root's own.
 pub fn register_all(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
-    hornvale_astronomy::register_concepts(registry)?;
-    hornvale_climate::register_concepts(registry)?;
-    hornvale_terrain::register_concepts(registry)?;
-    hornvale_settlement::register_concepts(registry)?;
-    hornvale_species::register_concepts(registry)?;
-    hornvale_culture::register_concepts(registry)?;
-    hornvale_religion::register_concepts(registry)?;
-    hornvale_language::register_concepts(registry)?;
+    for domain in DOMAINS {
+        domain.register_concepts(registry)?;
+    }
     registry.register_predicate(
         NAME_GLOSS,
         true,
         "the glossed meaning of an entity's generated name",
     )?;
-    hornvale_paleoclimate::register_concepts(registry)
+    Ok(())
 }
 
 /// Geospheres by canonical level: seed-independent, computed once per
@@ -3337,6 +3355,52 @@ mod tests {
             .predicate(NAME_GLOSS)
             .expect("name-gloss must be registered");
         assert!(def.functional, "an entity has exactly one glossed meaning");
+    }
+
+    #[test]
+    fn domains_roster_crate_names_are_unique_and_nonempty() {
+        let mut names: Vec<&str> = DOMAINS.iter().map(|d| d.crate_name()).collect();
+        assert_eq!(names.len(), 9, "expected nine domains in the roster");
+        assert!(names.iter().all(|n| !n.is_empty()));
+        let before = names.len();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), before, "duplicate crate_name in DOMAINS");
+    }
+
+    #[test]
+    fn domains_roster_registers_language_after_its_lenders() {
+        // language::register_concepts references (and, if absent, claims) concepts
+        // owned by these domains, so it must appear AFTER all of them in DOMAINS,
+        // or register_all conflicts. This pins the registration-order invariant.
+        let names: Vec<&str> = DOMAINS.iter().map(|d| d.crate_name()).collect();
+        let idx = |n: &str| {
+            names
+                .iter()
+                .position(|x| *x == n)
+                .unwrap_or_else(|| panic!("{n} missing from DOMAINS"))
+        };
+        let language = idx("hornvale-language");
+        for lender in [
+            "hornvale-terrain",
+            "hornvale-climate",
+            "hornvale-settlement",
+            "hornvale-species",
+            "hornvale-religion",
+        ] {
+            assert!(
+                idx(lender) < language,
+                "{lender} must be registered before hornvale-language"
+            );
+        }
+    }
+
+    #[test]
+    fn register_all_via_roster_registers_name_gloss() {
+        let mut registry = hornvale_kernel::ConceptRegistry::default();
+        register_all(&mut registry).expect("register_all succeeds on a fresh registry");
+        // NAME_GLOSS is registered as a predicate after the roster loop.
+        assert!(registry.predicate(NAME_GLOSS).is_some());
     }
 
     #[test]
