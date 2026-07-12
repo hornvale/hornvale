@@ -11,10 +11,10 @@ setup_iam() {
   aws_admin iam get-user --user-name "$user" >/dev/null 2>&1 || aws_admin iam create-user --user-name "$user" --tags "Key=project,Value=hornvale-gate"
   aws_admin iam put-user-policy --user-name "$user" --policy-name hornvale-gate-runner --policy-document "file://$here/policy/runner-policy.json"
   # Create a key only if the profile has none configured yet.
-  if ! aws --profile "$HVG_PROFILE" sts get-caller-identity >/dev/null 2>&1; then
+  if ! aws_runner sts get-caller-identity >/dev/null 2>&1; then
     local out; out="$(aws_admin iam create-access-key --user-name "$user" --output json)"
-    local id secret; id="$(echo "$out" | python3 -c 'import json,sys;print(json.load(sys.stdin)["AccessKey"]["AccessKeyId"])')"
-    secret="$(echo "$out" | python3 -c 'import json,sys;print(json.load(sys.stdin)["AccessKey"]["SecretAccessKey"])')"
+    local id secret
+    read -r id secret <<<"$(echo "$out" | python3 -c 'import json,sys;k=json.load(sys.stdin)["AccessKey"];print(k["AccessKeyId"], k["SecretAccessKey"])')"
     aws configure set aws_access_key_id "$id" --profile "$HVG_PROFILE"
     aws configure set aws_secret_access_key "$secret" --profile "$HVG_PROFILE"
     aws configure set region "$HVG_REGION" --profile "$HVG_PROFILE"

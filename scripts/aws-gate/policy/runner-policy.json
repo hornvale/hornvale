@@ -7,9 +7,12 @@
       "Action": "ec2:RunInstances",
       "Resource": "*",
       "Condition": {
-        "StringEquals": { "ec2:InstanceType": "c7g.4xlarge", "aws:RequestedRegion": "us-east-1" },
-        "StringLike": { "aws:RequestTag/project": "hornvale-gate" },
-        "Null": { "ec2:SpotInstanceRequest": "false" }
+        "StringEquals": {
+          "ec2:InstanceType": "c7g.4xlarge",
+          "aws:RequestedRegion": "us-east-1",
+          "ec2:InstanceMarketType": "spot"
+        },
+        "StringLike": { "aws:RequestTag/project": "hornvale-gate" }
       }
     },
     {
@@ -20,11 +23,18 @@
       "Condition": { "StringEquals": { "aws:ResourceTag/project": "hornvale-gate", "aws:RequestedRegion": "us-east-1" } }
     },
     {
-      "Sid": "DescribeAndPassAndCache",
+      "Sid": "DescribeAndCache",
       "Effect": "Allow",
-      "Action": ["ec2:DescribeInstances", "ec2:DescribeSpotInstanceRequests", "ec2:DescribeLaunchTemplates", "iam:PassRole"],
+      "Action": ["ec2:DescribeInstances", "ec2:DescribeSpotInstanceRequests", "ec2:DescribeLaunchTemplates"],
       "Resource": "*",
       "Condition": { "StringEquals": { "aws:RequestedRegion": "us-east-1" } }
+    },
+    {
+      "Sid": "PassOnlyTheBoxRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::*:role/hornvale-gate-runner-box",
+      "Condition": { "StringEquals": { "iam:PassedToService": "ec2.amazonaws.com" } }
     },
     {
       "Sid": "SccacheBucketOnly",
