@@ -5,6 +5,14 @@
 room-scale primitive is gated on.
 **Grounded in:** `kernel/src/geosphere.rs` (read in full). Terms below match that
 module: `Geosphere`, `CellId`, `CellMap`, `subdivide`, `build_neighbors`.
+**Spike (2026-07-12):** the first-order risk — the neighbor walk + seam gluing
+(§6) — is **validated** against a fully-built `Geosphere::new(7)` oracle: all
+327,680 faces' lazy neighbor sets and geometry match byte-for-byte (7,680
+cross-seam links = 30 edges × 128 × 2). It came out **simpler than §6/§14
+feared** — O(1), not the O(depth) up-walk/mirror-down (see §6, §13, §14.1). P2 is
+buildable. A second spike then validated **adaptive depth / T-junctions** (§6),
+interior *and* across base-face seams (the "one hard corner"). Only a
+two-platform libm-swap fixture (§13.3) remains unspiked.
 
 ---
 
@@ -164,9 +172,28 @@ walk closes on a 5-face vertex figure (handled explicitly in the gluing table).
 This is the whole of the "pentagon problem" here — versus Approach A, where it
 infects every seam.
 
+> **Spike finding: the pentagon problem does not touch edge-neighbor finding at
+> all.** Every icosahedron edge borders *exactly two* faces, so an edge crossing
+> is always unambiguous (the spike asserts this over all 30 edges). The 5-face
+> vertex figure only matters for *vertex*-adjacency (going around a corner); the
+> MUD's three exits are *edge*-adjacency. The spike exercises the
+> corner-at-a-base-vertex rooms (all-`0` paths) and they pass with no special
+> case. So pentagons cost nothing for movement — they would only surface if a
+> later feature needed the dual-hex's six vertex-neighbors (§9, deferred).
+
 > This up-walk/mirror-down neighbor algorithm is the one genuinely intricate
 > piece. It is well-trodden (quaternary triangular meshes / geodesic DGGS), it is
 > integer-only, and it is the thing to prototype and property-test *first* (§12).
+>
+> **Spike finding (2026-07-12): it is O(1), not O(depth).** Represent a
+> sub-triangle as an ordered triple of integer barycentric coords `(a,b,c)`,
+> `a+b+c = 2^d` (the exact dyadic coords of §7). The neighbor across edge `(U,V)`
+> is the lattice apex `W'` satisfying `W' + W_self = U + V` (the two triangles on
+> an edge have apexes summing to `U+V`). If any coord of `W'` is negative the
+> edge is a seam — re-express `U,V` on the adjacent face (preserving the
+> along-edge parameter, via the base-edge table) and take the one inward apex
+> there. No up-walk, no recursion, no LCA — pure constant-time integer
+> arithmetic. This is the algorithm the spike validated exhaustively.
 
 **Adaptive depth (mixed resolution) is still exact and float-free.** Rooms need
 not all sit at one depth. Where the world is more interesting — settlement, a
@@ -187,6 +214,29 @@ a grid, which is exactly what a MUD wants. Two rules keep it clean:
 - **Correctness is independent of what is loaded** — a room computes a neighbor's
   address and target-depth even if that neighbor is not resident, so adaptive
   depth survives chunking (§10) untouched.
+
+> **Spike finding (2026-07-12): validated, interior and cross-seam.** A second
+> throwaway prototype ran a deterministic per-coarse-cell target-depth field over
+> the mesh and checked adaptive adjacency against a fine-mesh oracle: a coarse
+> room across a T-junction sees exactly `2^Δ` finer rooms, each finer room sees
+> the one coarse room, adjacency is mutual, and the lazy result matched the oracle
+> on every leaf pair — including T-junctions that cross a base-face seam. Two
+> resolution rules: (a) a room's canonical depth is `target_depth(coarse_cell)`,
+> evaluated independently on both sides of a seam (no shared state); (b) across an
+> edge, if the neighbour region is coarser, take the coarser ancestor (one
+> neighbour); if finer, enumerate the `2^Δ` descendants of the same-depth mirror
+> whose edge lies on the shared segment.
+>
+> **Implementation caveat the spike surfaced.** The target-depth field is a
+> *discrete* classification (`hash(coarse_cell) mod k`), and coarse-cell corner
+> coordinates are all multiples of the coarse step — hence `≡ 0` modulo small
+> powers of two. A weakly-mixed hash (plain FNV) then leaves its **low bits**
+> unperturbed by those coordinates, and `mod k` reads exactly those bits, silently
+> collapsing the field to depend only on the base face. This is the same
+> discrete-threshold-on-low-bits hazard §7/§8 warn about; the field's hash **must
+> avalanche** (e.g. a splitmix64 finalizer) before the `mod`. A degenerate field
+> still *passes* an adjacency-equality test (both sides share it) — so the field's
+> non-degeneracy needs its own assertion.
 
 ## 7. Coarse-field inheritance
 
@@ -473,6 +523,19 @@ per-chunk authority is required for any multi-writer deployment.
 
 ## 13. Validation plan (prototype order)
 
+> **Spike result (2026-07-12).** Steps 1–3 below were run as a throwaway
+> out-of-workspace prototype (borrowing `Geosphere` as the oracle) at level 7,
+> uniform depth. All passed: lazy neighbor set == oracle for **all 327,680
+> faces** (7,680 cross-seam links, count-confirmed as 30 edges × 128 × 2);
+> adjacency mutual/symmetric; independent lazy path-walk geometry byte-identical
+> to the authoritative mesh (`max|Δ| = 0`); integer-address seeds deterministic.
+> The replica was first proven byte-identical to `Geosphere::new(7)` so the
+> oracle is trustworthy. A **second spike** then covered adaptive depth /
+> T-junctions (step 3's mixed-resolution case) against a fine-mesh oracle —
+> interior and cross-base-seam, `2^Δ` fan-out confirmed, mutual (see §6). **Still
+> not covered:** a two-platform libm-swap fixture (low-risk; all content-path
+> outputs are integer-derived by construction, §8).
+
 1. **Neighbor walk first** — it is the risk. Implement §6 integer-only.
 2. **Cross-check lazy vs authoritative.** Build a *full* `Geosphere::new(7)`
    (163,842 cells — cheap) and assert: every room address's lazy `centroid`
@@ -491,7 +554,10 @@ per-chunk authority is required for any multi-writer deployment.
 
 1. **The up-walk/mirror-down neighbor algorithm** (§6) is the one intricate part.
    Known-solvable, integer-only, but it carries the implementation risk — hence
-   "prototype first."
+   "prototype first." **RESOLVED (2026-07-12 spike).** Reformulated on the
+   barycentric lattice it is O(1) (apex `W' = U+V−W_self`; negative coord ⇒ seam),
+   not the O(depth) up-walk this item feared, and it validates exhaustively
+   against the level-7 oracle (§13). No longer the first-order risk.
 2. **Area distortion.** Icosphere triangles are *not* equal-area (center children
    larger than corner children); room areas vary ~1.5–2×, roughly the coarse
    5-vs-6 valence ratio. Almost certainly fine at room scale; an equal-area
@@ -516,9 +582,19 @@ per-chunk authority is required for any multi-writer deployment.
 
 ## 15. Recommended next step
 
-Spike the neighbor walk (§6) + the lazy-vs-`Geosphere::new(7)` oracle test (§13.2)
-as a throwaway prototype in the kernel. That single spike resolves the only
-first-order risk in this design; everything after it (positions, seeds,
-inheritance, the locale window) is straightforward and already de-risked by the
-mesh reading. If the spike holds, P2 graduates from "keystone risk" to "buildable,"
-and the P1/P3 layers on top can start.
+~~Spike the neighbor walk (§6) + the lazy-vs-`Geosphere::new(7)` oracle test
+(§13.2) as a throwaway prototype in the kernel.~~ **Done 2026-07-12 — it held**
+(§13 result). P2 has graduated from "keystone risk" to "buildable."
+
+The next steps, in order of remaining risk:
+
+1. ~~**Spike adaptive depth / T-junctions** (§6)~~ **Done 2026-07-12 — it held**
+   (§6 finding). Interior and cross-seam, `2^Δ` fan-out, mutual.
+2. **Stand up P2 for real** — a kernel `room` module beside `Geosphere`
+   (addressing, lazy geometry, the O(1) neighbor walk, coarse-field inheritance).
+   This is a campaign (spec → plan → execute), not a drive-by; the P1/P3 layers
+   and the locale window build on it. Fold in the two spike caveats: quantize
+   field samples before discrete classification (§7), and **avalanche the
+   target-depth hash** before its `mod` (§6).
+3. **Promote P2 into the frontier registry** (the reconciliation.md follow-up) —
+   a reviewed pass under `book/src/frontier/CLAUDE.md`.
