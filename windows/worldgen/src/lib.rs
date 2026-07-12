@@ -23,7 +23,56 @@ use hornvale_paleoclimate::{
     Celsius, EraClimate, PaleoRecord, caloric_summer_index, integrate_ice,
 };
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
+use std::cell::RefCell;
 use std::sync::OnceLock;
+// The profiler measures wall-clock stage durations for a committed diagnostic
+// (`profile_build` example); it never reads `WorldTime` and never touches a
+// fact, so it is exempt from the wall-clock ban (clippy.toml / decision 0001).
+#[allow(clippy::disallowed_types)]
+use std::time::{Duration, Instant};
+
+thread_local! {
+    // `Some` only inside a `profiled(..)` scope; `None` on the normal build
+    // path, so the stage spans compile to a single thread-local read + branch.
+    static PROFILE: RefCell<Option<Vec<(&'static str, Duration)>>> = const { RefCell::new(None) };
+}
+
+/// Per-stage wall-clock spans recorded during one profiled world build.
+/// type-audit: bare-ok(prose: stages)
+#[derive(Clone, Debug, Default)]
+pub struct BuildProfile {
+    /// `(stage label, elapsed)` in pipeline order.
+    pub stages: Vec<(&'static str, Duration)>,
+}
+
+/// Run `f` with stage profiling active and return its result plus the profile.
+/// Nesting is not supported (the inner scope's spans replace the outer's); the
+/// lab/CLI call it at the top of one build.
+pub fn profiled<T>(f: impl FnOnce() -> T) -> (T, BuildProfile) {
+    PROFILE.with(|p| *p.borrow_mut() = Some(Vec::new()));
+    let out = f();
+    let stages = PROFILE.with(|p| p.borrow_mut().take().unwrap_or_default());
+    (out, BuildProfile { stages })
+}
+
+/// Record `label` with the time `f` took, but only when a `profiled` scope is
+/// active. Off the profiled path this is one thread-local read and a call.
+#[allow(clippy::disallowed_types, dead_code)]
+fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
+    let active = PROFILE.with(|p| p.borrow().is_some());
+    if !active {
+        return f();
+    }
+    let start = Instant::now();
+    let out = f();
+    let elapsed = start.elapsed();
+    PROFILE.with(|p| {
+        if let Some(v) = p.borrow_mut().as_mut() {
+            v.push((label, elapsed));
+        }
+    });
+    out
+}
 
 pub mod settlement_pins;
 pub use settlement_pins::SettlementPins;
