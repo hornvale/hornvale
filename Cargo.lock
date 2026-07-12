@@ -99,6 +99,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-locale"
+version = "0.1.0"
+dependencies = [
+ "hornvale-climate",
+ "hornvale-kernel",
+ "hornvale-terrain",
+ "hornvale-worldgen",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "hornvale-paleoclimate"
 version = "0.1.0"
 dependencies = [
