@@ -107,21 +107,30 @@ roster, `pub` so the CLI consumes it through its existing worldgen re-export.
 
 ```rust
 // windows/worldgen/src/lib.rs
+// Order is REGISTRATION order, not alphabetical: `language::register_concepts`
+// references concepts it does not own (terrain's `stone`, religion's `god`, …)
+// and must run AFTER their owners, or it claims them under domain "language"
+// and conflicts. This is the pre-existing cascade order that made that work.
+// (The deeper fix — un-conflating register vs. reference — is a captured
+// follow-up; see §4. Adding a domain that lends/borrows stratum concepts must
+// respect this order; every other domain is order-free.)
 pub const DOMAINS: &[&dyn Domain] = &[
     &hornvale_astronomy::Astronomy,
     &hornvale_climate::Climate,
-    &hornvale_culture::Culture,
-    &hornvale_language::Language,
-    &hornvale_paleoclimate::Paleoclimate,
-    &hornvale_religion::Religion,
+    &hornvale_terrain::Terrain,
     &hornvale_settlement::Settlement,
     &hornvale_species::Species,
-    &hornvale_terrain::Terrain,
+    &hornvale_culture::Culture,
+    &hornvale_religion::Religion,
+    &hornvale_language::Language,
+    &hornvale_paleoclimate::Paleoclimate,
 ];
 ```
 
-`DOMAINS` is the score; `register_all` and the streams manifest are parts extracted from
-it, never authored separately.
+`DOMAINS` is the single membership list — the score. Each consumer imposes its own
+ordering on it: `register_all` iterates it as stored (registration order), the streams
+manifest sorts it by crate name. Neither authors its own domain list; the roster is the
+one place membership lives.
 
 ### Consumers
 
@@ -135,6 +144,7 @@ pub fn register_all(registry: &mut ConceptRegistry) -> Result<(), RegistryError>
 }
 
 // streams manifest (cli/src/streams.rs, rewritten to iterate DOMAINS):
+//   sort DOMAINS by crate_name FIRST (the manifest is alphabetical), then
 //   for each domain: header `### {crate_name}`, then either the label table
 //   or `*(no seed-derivation streams)*` when stream_labels() is empty.
 //   The trailing hardcoded `hornvale-kernel (internal)` section is appended after.
@@ -155,13 +165,20 @@ The **concepts dump stays byte-identical** — that is the primary drift proof. 
 page is regenerated and committed in the same change. No stream label is added, removed,
 or renamed, so no save-format contract is touched.
 
-1. **Roster order = alphabetical by crate name**, matching today's *streams manifest*
-   order (`cli/src/streams.rs`), with paleoclimate slotting in alphabetically (between
-   `language` and `religion`). `register_all`'s current cascade order is **not**
-   observable — concept/predicate registration is pure set-insertion into the registry's
-   `BTreeMap`, and the concepts dump is emitted sorted — so re-ordering registration to
-   alphabetical changes no artifact. The drift check on the concepts dump proves this
-   empirically.
+1. **Registration order IS observable — the roster is stored in registration order.**
+   The original spec assumed registration order was unobservable (pure `BTreeMap`
+   set-insertion). That is **false**: `hornvale_language::register_concepts` registers
+   concepts it *references but does not own* (terrain's `stone`, religion's `god`,
+   settlement's `home`, climate's `snow`/biomes, species' `<kind>`s) under domain
+   `"language"` **only if absent** — so if `language` runs before an owner, it claims that
+   owner's concept and the owner's later registration conflicts (`ConflictingDefinition`).
+   The old hand-ordered `register_all` worked because `language` ran last; an alphabetical
+   roster runs it fourth and breaks. Therefore `DOMAINS` is stored in the pre-existing
+   **cascade order** (owners before `language`); `register_all` iterates it as stored,
+   reproducing today's ownership exactly, so the concepts dump is byte-identical. The
+   drift check on the concepts dump proves it. The **streams manifest sorts `DOMAINS` by
+   crate name** at render time, so it stays alphabetical and byte-identical independent of
+   storage order.
 
 2. **The manifest iterates the roster uniformly.** Every registered domain gets a
    section; streamless domains (`climate`, `culture`, `religion`, `species`, and now
@@ -173,6 +190,19 @@ or renamed, so no save-format contract is touched.
 
 3. **`NAME_GLOSS` stays a post-roster registration** inside `register_all`. worldgen is
    the composition root, not a domain; it does not join the roster.
+
+### Deferred: un-conflating `register` vs. `reference` (the root fix)
+
+The order dependency above is a symptom: `ConceptRegistry::register_concept` conflates two
+acts — *claiming ownership* of a concept and *ensuring a concept is present*. `language`
+uses the ownership verb to do what is semantically a *reference*, so whoever runs first
+"owns" a shared concept. This also hides a latent bug unrelated to A1: if `language` lists
+a concept **no** domain owns, it silently becomes the owner under `"language"`, masking a
+missing registration. The principled fix is a distinct `reference_concept(name)` primitive
+(assert-present, claim nothing; dangling reference → loud error), leaving `register_concept`
+as the ownership claim. That is out of A1's scope (a kernel-API change with its own review
+surface); A1 takes the minimal registration-order fix above and **captures the root fix as
+a frontier idea-registry row + a follow-up**. This spec does not depend on that follow-up.
 
 ## 5. `crate_name()` via `CARGO_PKG_NAME`
 

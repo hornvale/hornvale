@@ -221,7 +221,9 @@ git commit -m "feat(domains): implement kernel Domain for all nine domains (A1 t
 
 **Interfaces:**
 - Consumes: the nine domain ZSTs (Task 2); `hornvale_kernel::Domain`.
-- Produces: `hornvale_worldgen::DOMAINS: &[&dyn Domain]` — nine domains, alphabetical by crate name.
+- Produces: `hornvale_worldgen::DOMAINS: &[&dyn Domain]` — nine domains in **registration order** (owners before `language`; see the note below).
+
+> **Why registration order, not alphabetical (read before Step 1).** `hornvale_language::register_concepts` registers concepts it references but does not own (terrain's `stone`, religion's `god`, settlement's `home`, climate's `snow`/biomes, species' `<kind>`s) under domain `"language"` **only if absent**. So `language` must run **after** those owners, or it claims their concepts and the owner's later registration hits `ConflictingDefinition`. `DOMAINS` is therefore stored in the pre-existing cascade order (owners first, `language` last before `paleoclimate`). `register_all` iterates it as stored → today's ownership exactly → concepts dump byte-identical. The streams manifest (Task 4) **sorts** `DOMAINS` by crate name, so it stays alphabetical regardless. (The deeper fix — a `reference_concept` primitive — is a captured follow-up, not part of A1.)
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -240,11 +242,26 @@ fn domains_roster_crate_names_are_unique_and_nonempty() {
 }
 
 #[test]
-fn domains_roster_is_alphabetical_by_crate_name() {
+fn domains_roster_registers_language_after_its_lenders() {
+    // language::register_concepts references (and, if absent, claims) concepts
+    // owned by these domains, so it must appear AFTER all of them in DOMAINS,
+    // or register_all conflicts. This pins the registration-order invariant.
     let names: Vec<&str> = DOMAINS.iter().map(|d| d.crate_name()).collect();
-    let mut sorted = names.clone();
-    sorted.sort_unstable();
-    assert_eq!(names, sorted, "DOMAINS must be alphabetical by crate name");
+    let idx = |n: &str| names.iter().position(|x| *x == n)
+        .unwrap_or_else(|| panic!("{n} missing from DOMAINS"));
+    let language = idx("hornvale-language");
+    for lender in [
+        "hornvale-terrain",
+        "hornvale-climate",
+        "hornvale-settlement",
+        "hornvale-species",
+        "hornvale-religion",
+    ] {
+        assert!(
+            idx(lender) < language,
+            "{lender} must be registered before hornvale-language"
+        );
+    }
 }
 
 #[test]
@@ -266,19 +283,27 @@ Expected: FAIL to compile — `DOMAINS` is not defined.
 Ensure `Domain` is in worldgen's kernel import list (`use hornvale_kernel::{… Domain …};`). Add the roster just above `register_all`:
 
 ```rust
-/// The composition root's domain roster — the single list every per-domain
-/// aggregation iterates (registration, the streams manifest). Alphabetical by
-/// crate name; adding a domain is one line here plus its `Domain` impl.
+/// The composition root's domain roster — the single membership list every
+/// per-domain aggregation draws on (registration; the streams manifest).
+///
+/// Order is REGISTRATION order, not alphabetical: `language::register_concepts`
+/// references concepts it does not own (terrain's `stone`, religion's `god`, …)
+/// and must run AFTER their owners or it claims them under domain "language"
+/// and conflicts. Owners first, `language` last (before streamless
+/// `paleoclimate`). `register_all` iterates this as stored; the streams
+/// manifest sorts by crate name. Adding a domain is one line here plus its
+/// `Domain` impl — respecting this order only if it lends/borrows stratum
+/// concepts.
 pub const DOMAINS: &[&dyn Domain] = &[
     &hornvale_astronomy::Astronomy,
     &hornvale_climate::Climate,
-    &hornvale_culture::Culture,
-    &hornvale_language::Language,
-    &hornvale_paleoclimate::Paleoclimate,
-    &hornvale_religion::Religion,
+    &hornvale_terrain::Terrain,
     &hornvale_settlement::Settlement,
     &hornvale_species::Species,
-    &hornvale_terrain::Terrain,
+    &hornvale_culture::Culture,
+    &hornvale_religion::Religion,
+    &hornvale_language::Language,
+    &hornvale_paleoclimate::Paleoclimate,
 ];
 ```
 
@@ -340,6 +365,26 @@ In `cli/src/streams.rs`'s `#[cfg(test)] mod tests`, extend `manifest_lists_every
             "*(no seed-derivation streams)*",
 ```
 
+Also add a new test pinning the manifest's alphabetical order (DOMAINS is stored in registration order, so the manifest must sort — this guards the sort against regression):
+```rust
+#[test]
+fn manifest_sections_are_alphabetical_by_crate() {
+    let doc = render_streams();
+    // The domain section headers, in document order, must be sorted.
+    let headers: Vec<&str> = doc
+        .lines()
+        .filter(|l| l.starts_with("### hornvale-") && !l.contains("kernel"))
+        .collect();
+    let mut sorted = headers.clone();
+    sorted.sort_unstable();
+    assert_eq!(headers, sorted, "manifest domain sections must be alphabetical");
+    // paleoclimate sorts between language and religion.
+    let pos = |s: &str| headers.iter().position(|h| *h == s).unwrap();
+    assert!(pos("### hornvale-language") < pos("### hornvale-paleoclimate"));
+    assert!(pos("### hornvale-paleoclimate") < pos("### hornvale-religion"));
+}
+```
+
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `cargo test -p hornvale streams::`
@@ -364,7 +409,10 @@ pub fn render_streams() -> String {
         "Labels are permanent save-format contracts; regeneration uses epoch \
          suffixes (e.g. `settlement/name/v2`), never renames.\n\n",
     );
-    for domain in hornvale_worldgen::DOMAINS {
+    // DOMAINS is stored in registration order; the manifest is alphabetical.
+    let mut domains: Vec<&dyn Domain> = hornvale_worldgen::DOMAINS.to_vec();
+    domains.sort_by_key(|d| d.crate_name());
+    for domain in domains {
         doc.push_str(&format!("### {}\n\n", domain.crate_name()));
         let labels = domain.stream_labels();
         if labels.is_empty() {
@@ -387,7 +435,7 @@ pub fn render_streams() -> String {
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `cargo test -p hornvale streams::`
-Expected: PASS (both `manifest_lists_every_crate_and_label` and `manifest_is_deterministic`).
+Expected: PASS (`manifest_lists_every_crate_and_label`, `manifest_is_deterministic`, and `manifest_sections_are_alphabetical_by_crate`).
 
 - [ ] **Step 5: Regenerate the committed page and inspect the diff**
 
