@@ -128,6 +128,23 @@ pub enum SkyChoice {
     Generated,
 }
 
+/// How deep to build the world's fact-committing pipeline (spec §4 / MAP-25).
+/// Earlier rungs are a byte-identical prefix of later ones — the pipeline is
+/// linear, so each rung reads only earlier rungs' facts and stopping early
+/// simply omits later appends. Climate is *not* a rung: it commits no facts,
+/// and is reconstructed on demand from a Terrain-depth world.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum BuildDepth {
+    /// Sky genesis only.
+    Astronomy,
+    /// …plus terrain genesis.
+    Terrain,
+    /// …plus settlement placement, naming, and glosses.
+    Settlements,
+    /// …plus culture, religion, species, and deep time (today's full build).
+    Full,
+}
+
 /// The live astronomy provider a world uses, reconstructed from its ledger.
 pub enum Sky {
     /// Tier-0 constant sun.
@@ -1650,6 +1667,56 @@ pub fn build_world_with_roster(
     settlement_pins: &SettlementPins,
     roster: &[hornvale_species::SpeciesDef],
 ) -> Result<World, BuildError> {
+    build_to(
+        seed,
+        pins,
+        sky,
+        terrain_pins,
+        settlement_pins,
+        roster,
+        BuildDepth::Full,
+    )
+}
+
+/// Build a world only as deep as `depth` (spec §4 / MAP-25). At any depth the
+/// committed facts are a byte-identical prefix of the full build's — stopping
+/// early only omits later appends; it never changes a fact it does commit.
+#[allow(clippy::too_many_arguments)]
+pub fn build_world_to(
+    seed: Seed,
+    pins: &SkyPins,
+    sky: SkyChoice,
+    terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
+    roster: &[hornvale_species::SpeciesDef],
+    depth: BuildDepth,
+) -> Result<World, BuildError> {
+    build_to(
+        seed,
+        pins,
+        sky,
+        terrain_pins,
+        settlement_pins,
+        roster,
+        depth,
+    )
+}
+
+/// The full pipeline, run only as deep as `depth`. `build_world_with_roster`
+/// delegates with `BuildDepth::Full`; `build_world_to` forwards its argument.
+/// The only depth-dependent behavior is early `return Ok(world)` between
+/// stages — every statement's order and borrows are otherwise unchanged, so
+/// the Full path is identical to the pre-depth pipeline.
+#[allow(clippy::too_many_arguments)]
+fn build_to(
+    seed: Seed,
+    pins: &SkyPins,
+    sky: SkyChoice,
+    terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
+    roster: &[hornvale_species::SpeciesDef],
+    depth: BuildDepth,
+) -> Result<World, BuildError> {
     let mut world = World::new(seed);
     register_all(&mut world.registry)?;
 
@@ -1681,6 +1748,10 @@ pub fn build_world_with_roster(
         Ok(())
     })?;
 
+    if depth == BuildDepth::Astronomy {
+        return Ok(world);
+    }
+
     stage("terrain", || -> Result<(), BuildError> {
         for pin_string in hornvale_terrain::pin_strings(terrain_pins) {
             world.ledger.commit(
@@ -1698,6 +1769,10 @@ pub fn build_world_with_roster(
         hornvale_terrain::facts::genesis(&mut world, world_entity, &terrain_outcome)?;
         Ok(())
     })?;
+
+    if depth <= BuildDepth::Terrain {
+        return Ok(world);
+    }
 
     // Settlement pins are never reconstructed (settlements persist as their
     // own committed facts, not re-derived from a provider like sky/terrain);
@@ -1926,6 +2001,11 @@ pub fn build_world_with_roster(
             ))
         },
     )?;
+
+    if depth <= BuildDepth::Settlements {
+        return Ok(world);
+    }
+
     // `geo` borrows `terrain`, and `namers` borrows `phonologies` (see
     // `Namer<'a>`), so neither can be returned out of the closure above
     // alongside the values they borrow from — both are cheap, pure,

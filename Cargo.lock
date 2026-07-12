@@ -162,6 +162,7 @@ dependencies = [
  "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",
+ "serde_json",
 ]
 
 [[package]]
