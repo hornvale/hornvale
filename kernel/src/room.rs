@@ -47,6 +47,105 @@ pub enum RoomIdError {
     Malformed,
 }
 
+/// Integer barycentric coordinate within a base face; components sum to the
+/// current scale `2^depth`. Only the round-trip test calls these helpers so
+/// far; the neighbour walk (Task 5) is their production caller, hence the
+/// blanket `#[allow(dead_code)]` below until that lands.
+#[allow(dead_code)]
+type Bary = [i64; 3];
+
+#[allow(dead_code)]
+fn add(a: Bary, b: Bary) -> Bary {
+    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
+}
+#[allow(dead_code)]
+fn dbl(a: Bary) -> Bary {
+    [a[0] * 2, a[1] * 2, a[2] * 2]
+}
+#[allow(dead_code)]
+fn mid_i(a: Bary, b: Bary) -> Bary {
+    [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2]
+}
+
+/// Forward walk: a path to its ordered barycentric triple and its scale
+/// `2^path.len()`. Child order matches `subdivide`.
+#[allow(dead_code)]
+fn bary_triple(path: &[u8]) -> (i64, [Bary; 3]) {
+    let mut tri: [Bary; 3] = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    let mut scale = 1i64;
+    for &d in path {
+        let [p0, p1, p2] = tri;
+        let (m01, m12, m20) = (add(p0, p1), add(p1, p2), add(p2, p0));
+        tri = match d {
+            0 => [dbl(p0), m01, m20],
+            1 => [dbl(p1), m12, m01],
+            2 => [dbl(p2), m20, m12],
+            _ => [m01, m12, m20],
+        };
+        scale *= 2;
+    }
+    (scale, tri)
+}
+
+/// 2x signed area in the (x,y) projection of the plane x+y+z=const.
+#[allow(dead_code)]
+fn orient(a: Bary, b: Bary, c: Bary) -> i64 {
+    (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])
+}
+
+/// Is `p` strictly inside triangle `t`? (all at the same scale)
+#[allow(dead_code)]
+fn strictly_inside(t: [Bary; 3], p: Bary) -> bool {
+    let d = orient(t[0], t[1], t[2]);
+    let s = [
+        orient(t[1], t[2], p),
+        orient(t[2], t[0], p),
+        orient(t[0], t[1], p),
+    ];
+    s.iter().all(|&si| si != 0 && (si > 0) == (d > 0))
+}
+
+/// One subdivision at a FIXED scale (midpoint split), used by decode.
+#[allow(dead_code)]
+fn child_at_scale(r: [Bary; 3], digit: u8) -> [Bary; 3] {
+    let [a, b, c] = r;
+    let (mab, mbc, mca) = (mid_i(a, b), mid_i(b, c), mid_i(c, a));
+    match digit {
+        0 => [a, mab, mca],
+        1 => [b, mbc, mab],
+        2 => [c, mca, mbc],
+        _ => [mab, mbc, mca],
+    }
+}
+
+/// Decode a barycentric triple (at `scale = 2^depth`) on `face` back to a path,
+/// by top-down containment: at each level pick the child whose triangle
+/// contains the target centroid. Integer-only.
+#[allow(dead_code)]
+fn decode(face: u8, tri: [Bary; 3], scale: i64) -> RoomAddr {
+    let depth = scale.trailing_zeros();
+    let g3 = add(add(tri[0], tri[1]), tri[2]); // 3 * centroid, at scale `scale`
+    let mut region: [Bary; 3] = [[scale, 0, 0], [0, scale, 0], [0, 0, scale]];
+    let mut path = Vec::with_capacity(depth as usize);
+    for _ in 0..depth {
+        let digit = (0..4u8)
+            .find(|&d| {
+                let c = child_at_scale(region, d);
+                // compare g3 (=3*centroid) against child scaled by 3
+                let c3 = [
+                    [c[0][0] * 3, c[0][1] * 3, c[0][2] * 3],
+                    [c[1][0] * 3, c[1][1] * 3, c[1][2] * 3],
+                    [c[2][0] * 3, c[2][1] * 3, c[2][2] * 3],
+                ];
+                strictly_inside(c3, g3)
+            })
+            .expect("centroid lies in exactly one child");
+        region = child_at_scale(region, digit);
+        path.push(digit);
+    }
+    RoomAddr { face, path }
+}
+
 impl RoomAddr {
     /// Refinement depth = path length.
     /// type-audit: bare-ok(count)
@@ -156,9 +255,6 @@ mod tests {
     use crate::geosphere::{Geosphere, base_data};
 
     // Enumerate every RoomAddr at depth `level` by DFS over child digits.
-    // Not yet consumed within this task's tests — a later task in the same
-    // campaign (barycentric walk/decode) is its first caller.
-    #[allow(dead_code)]
     fn all_addrs(level: u32) -> Vec<RoomAddr> {
         let mut out = Vec::new();
         for face in 0..20u8 {
@@ -327,6 +423,15 @@ mod tests {
     fn unpack_rejects_malformed() {
         assert_eq!(RoomId(20).unpack(), Err(RoomIdError::Malformed)); // face 20, no path
         assert_eq!(RoomId(0).unpack(), Err(RoomIdError::Malformed)); // face 0, pathword 0
+    }
+
+    #[test]
+    fn bary_forward_decode_round_trips() {
+        for addr in all_addrs(6) {
+            let (scale, tri) = bary_triple(&addr.path);
+            let back = decode(addr.face, tri, scale);
+            assert_eq!(back, addr, "bary round-trip for {addr:?}");
+        }
     }
 
     #[test]
