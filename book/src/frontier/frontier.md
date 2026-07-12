@@ -51,6 +51,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The social graph — a derived, self-balancing relational layer](#the-social-graph--a-derived-self-balancing-relational-layer)
   - [The motivation engine — Goal-Oriented Action Planning over belief](#the-motivation-engine--goal-oriented-action-planning-over-belief)
   - [The planning engine — A-star as causality across the tenses](#the-planning-engine--a-star-as-causality-across-the-tenses)
+  - [The verb as reaction — a property-transformation chemistry](#the-verb-as-reaction--a-property-transformation-chemistry)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
@@ -1844,6 +1845,54 @@ satisficing over optimising, the unreachable goal, the deliberately hard road.
 concrete cash-in is the cheapest cost function that already has a state space:
 navigation over the terrain graph, or the backward confabulation the event ledger
 (Campaign IV) needs. Everything else reuses the same engine.
+
+---
+
+## The verb as reaction — a property-transformation chemistry
+
+*(High confidence in the model; the action-complement to MAP-19's object ontology,
+and it unifies the player's verbs with NPC planning. From the-walk brainstorm.)*
+
+**Ask "what can I do to this?" and the naive answer is a table** — a hand-authored
+outcome for every verb × object pair, the combinatorial trap interactive fiction
+has fought for decades. Lift the question and a verb is not an outcome but a
+**reaction**: entities are **property-bags** (flammable, container, locked, animate,
+audible, believes-X), and a verb is a transformation gated by required properties —
+preconditions in, effects out. Affordances then *emerge* from property-matching, so
+the world is authored **M + N** (properties and reactions, separately) rather than
+**M × N** (every pair). This is the systemic-design principle behind
+emergent-interaction games, and its payoff is a large interaction space from a
+small, legible rule set.
+
+**A verb, so defined, *is* a GOAP operator** (PSY-6): preconditions are required
+properties, effects are property changes committed as events. That collapses two
+systems into one — **the player's verb loop (the-walk metaplan, Campaign III) and
+NPC planning (Campaign V) are the same action system**, player and NPC acting
+through the same reactions over the same ledger. It is the third instance of one
+machine seen from two sides (after belief/motivation and perceive/act), and it is
+the *action*-half of MAP-19, whose ontology supplies the properties the reactions
+read and write.
+
+**Animacy is the sharp axis, because it is a *mutable* property.** `kill` maps
+animate → inert, `raise` inert → undead, `charm` animate → controllable — verbs
+transform the very class that selects which verbs apply. Physical verbs want inert
+targets, social verbs animate ones (acting over the belief threshold, UNI-16, and
+the social graph, SOC-9), epistemic verbs informative ones (over the projection).
+So a target's animacy chooses the verb sub-language, and killing a guard changes
+what can be done to the body — the world stays interactive as its ontology shifts
+beneath the act.
+
+**The interaction space is an atlas of four chemistries** over one
+property-transformation core: **physical** (burn, break, move — material
+properties), **social** (persuade, threaten, gift — belief and relationship),
+**epistemic** (examine, read, eavesdrop — the projection), and **spatial** (go,
+climb, hide — the place graph). Same engine, four reagent-sets.
+
+**Sequencing.** The verb loop of Milestone 1 is the first instance, deliberately
+tiny — a handful of properties and reactions (open, take, burn) — and it grows into
+the NPC planners of Milestone 2 without a second system, because they were the same
+system all along. Downstream of MAP-19's ontology; it is the place the player
+finally touches the world.
 
 ---
 
