@@ -361,7 +361,7 @@ git commit -m "feat(aws-gate): setup.sh — sccache bucket, AMI, SG, keypair, la
 ### Task 4: The circuit breaker (Lambda) + its pure decision function
 
 **Files:**
-- Create: `scripts/aws-gate/circuit-breaker.py`
+- Create: `scripts/aws-gate/circuit_breaker.py`
 - Create: `scripts/aws-gate/test/test_circuit_breaker.py`
 - Modify: `scripts/aws-gate/setup.sh` (deploy the Lambda + role + 5-min EventBridge rule; create the $10 alert and $25 action budgets)
 
@@ -393,7 +393,7 @@ if __name__ == "__main__":
 
 - [ ] **Step 2: Run it, verify it fails** — `python3 scripts/aws-gate/test/test_circuit_breaker.py` → ImportError/AssertionError.
 
-- [ ] **Step 3: Write `circuit-breaker.py`**
+- [ ] **Step 3: Write `circuit_breaker.py`**
 
 ```python
 """Circuit breaker for the remote gate. Runs on a 5-min schedule.
@@ -434,12 +434,12 @@ def handler(event, context):
 
 - [ ] **Step 4: Run it, verify it passes** — `python3 scripts/aws-gate/test/test_circuit_breaker.py` → `circuit_breaker: OK`.
 
-- [ ] **Step 5: Add deploy + budgets to `setup.sh`** (dry-run-guarded, tagged) — a `section "Circuit breaker"` that zips `circuit-breaker.py`, creates/updates the Lambda + execution role (terminate tagged instances + iam:UpdateAccessKey on the runner + logs) + a 5-min EventBridge schedule with invoke permission; and a `section "Budgets"` that creates a $10 NOTIFY budget (email) and a $25 budget with an IAM-deny **budget action** targeting the runner. Store arns in the manifest. Exact `aws lambda`/`aws budgets` calls verified live in Task 8.
+- [ ] **Step 5: Add deploy + budgets to `setup.sh`** (dry-run-guarded, tagged) — a `section "Circuit breaker"` that zips `circuit_breaker.py`, creates/updates the Lambda + execution role (terminate tagged instances + iam:UpdateAccessKey on the runner + logs) + a 5-min EventBridge schedule with invoke permission; and a `section "Budgets"` that creates a $10 NOTIFY budget (email) and a $25 budget with an IAM-deny **budget action** targeting the runner. Store arns in the manifest. Exact `aws lambda`/`aws budgets` calls verified live in Task 8.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add scripts/aws-gate/circuit-breaker.py scripts/aws-gate/test/test_circuit_breaker.py scripts/aws-gate/setup.sh
+git add scripts/aws-gate/circuit_breaker.py scripts/aws-gate/test/test_circuit_breaker.py scripts/aws-gate/setup.sh
 git commit -m "feat(aws-gate): circuit-breaker Lambda (pure decision fn + handler) + budgets in setup"
 ```
 
