@@ -256,10 +256,16 @@ hornvale locale --world w.json [--at LAT,LON | --room ID] [--depth D]
 
 **Artifact:** a drift-checked `locale/room/v1` JSON render for **seed 42** at a
 fixed room (address chosen at implementation, over land) written under
-`book/src/reference/` (the schema-emitting home, beside `scene`'s), and
-regenerated in CI's "Artifacts are current" step. All `f64` in the serialized
-form pass through `hornvale_kernel::quantize` at the emit boundary, so the
-artifact is cross-platform byte-stable.
+`book/src/reference/` (the schema-emitting home, beside `scene`'s), regenerated
+by `scripts/regenerate-artifacts.sh` (the single source of truth CI and `make
+rebaseline` both call). All `f64` pass through `hornvale_kernel::quantize` at
+the emit boundary, so the **float fields are cross-platform byte-identical**.
+The inherited `biome`, however, is a per-cell classification thresholded on the
+host libm's last-ULP-divergent transcendentals — the same reason CI's strict
+diff already excludes `scene-tiles-seed-42.json` and the biome PNGs — so this
+artifact joins that **exclusion** from the strict cross-platform tail (it stays
+drift-checked locally; a real change surfaces in the diff). This is the honest
+scope of the guarantee, not a gap.
 
 ## 9. Deliberate non-goals (deferred, with homes)
 
