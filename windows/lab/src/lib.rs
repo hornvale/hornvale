@@ -20,6 +20,6 @@ pub use metrics::{
 };
 pub use publish::publish;
 pub use roster::{goblin_solo_roster, goblin_twin_solo_roster, serpent_tonal_solo_roster};
-pub use runner::{Row, RunResult, canonical_row, load_rows, run, write_csv};
+pub use runner::{Row, RunResult, canonical_row, load_rows, run, run_forced_full, write_csv};
 pub use study::{MetricSelection, PinSet, Seeds, Study, StudyError, load_study};
 pub use summary::render_summary;

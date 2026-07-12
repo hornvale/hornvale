@@ -243,6 +243,13 @@ impl ClimateView {
         let climate = climate_of(&terrain.astronomy.world)?;
         Ok(ClimateView { terrain, climate })
     }
+
+    /// The full tectonic globe, reached through the terrain rung this view
+    /// extends. A passthrough (spec MAP-25 Stage 2 Task 5) so climate-rung
+    /// closures read `v.terrain()` rather than `v.terrain.terrain`.
+    pub fn terrain(&self) -> &hornvale_terrain::GeneratedTerrain {
+        &self.terrain.terrain
+    }
 }
 
 impl AsRef<TerrainView> for ClimateView {
@@ -280,6 +287,26 @@ impl SettlementView {
     ) -> Result<SettlementView, BuildError> {
         let climate = ClimateView::build_to(seed, pins, roster, BuildDepth::Settlements)?;
         Ok(SettlementView { climate })
+    }
+
+    /// The world ledger, reached through the climate/terrain/astronomy
+    /// rungs this view extends. A passthrough (spec MAP-25 Stage 2 Task 5)
+    /// so settlement-rung closures read `v.world()` rather than a deep
+    /// field chain.
+    pub fn world(&self) -> &World {
+        &self.climate.terrain.astronomy.world
+    }
+
+    /// The full tectonic globe, reached through the climate/terrain rungs
+    /// this view extends.
+    pub fn terrain(&self) -> &hornvale_terrain::GeneratedTerrain {
+        self.climate.terrain()
+    }
+
+    /// The derived climate, reached through the climate rung this view
+    /// extends.
+    pub fn climate(&self) -> &GeneratedClimate {
+        &self.climate.climate
     }
 }
 
@@ -323,6 +350,25 @@ impl FullView {
             settlement: SettlementView { climate },
         })
     }
+
+    /// The world ledger, reached through the settlement rung this view
+    /// extends. A passthrough (spec MAP-25 Stage 2 Task 5) so full-rung
+    /// closures read `v.world()` rather than a deep field chain.
+    pub fn world(&self) -> &World {
+        self.settlement.world()
+    }
+
+    /// The species roster this view was built from, reached through the
+    /// settlement/climate/terrain/astronomy rungs this view extends.
+    pub fn roster(&self) -> &[hornvale_species::SpeciesDef] {
+        &self.settlement.climate.terrain.astronomy.roster
+    }
+
+    /// The derived climate, reached through the settlement/climate rungs
+    /// this view extends.
+    pub fn climate(&self) -> &GeneratedClimate {
+        self.settlement.climate()
+    }
 }
 
 impl AsRef<SettlementView> for FullView {
@@ -349,9 +395,7 @@ impl AsRef<AstronomyView> for FullView {
 /// A metric's extractor, tagged by the view rung it reads. The tag *is* the
 /// metric's build-depth: the runner builds each study only as deep as its
 /// deepest selected metric. Under-building is impossible — an extractor
-/// physically cannot name a field its view type does not expose. **Additive
-/// only for now** (MAP-25 Stage 2 Task 4): `Metric.extract` still takes a
-/// `&WorldView`; the atomic swap to `Extractor` is Task 5.
+/// physically cannot name a field its view type does not expose.
 pub enum Extractor {
     /// Reads astronomy only.
     Astronomy(fn(&AstronomyView) -> MetricValue),
@@ -535,8 +579,16 @@ pub struct Metric {
     pub doc: &'static str,
     /// The kind of analysis this metric supports.
     pub summary: SummaryKind,
-    /// Extract this metric from a view of a world.
-    pub extract: fn(&WorldView) -> MetricValue,
+    /// Extract this metric from the narrowest view it reads, tagged by rung.
+    pub extract: Extractor,
+}
+
+impl Metric {
+    /// The build depth this metric requires — delegates to its extractor's
+    /// rung (the tag *is* the metric's build-depth, spec MAP-25).
+    pub fn rung(&self) -> BuildDepth {
+        self.extract.rung()
+    }
 }
 
 /// Build the registry of tier-1 metrics.
@@ -546,13 +598,17 @@ pub fn registry() -> Vec<Metric> {
             name: "star-class",
             doc: "Spectral class of the host star",
             summary: SummaryKind::Categorical,
-            extract: |v| MetricValue::Text(v.system.star.class_name.clone()),
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Text(v.system.star.class_name.clone())
+            }),
         },
         Metric {
             name: "tidally-locked",
             doc: "Whether the world is tidally locked to its star",
             summary: SummaryKind::Flag,
-            extract: |v| MetricValue::Flag(matches!(v.system.anchor.rotation, Rotation::Locked)),
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Flag(matches!(v.system.anchor.rotation, Rotation::Locked))
+            }),
         },
         Metric {
             name: "day-length-hours",
@@ -560,10 +616,10 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[16.0, 20.0, 24.0, 28.0, 32.0, 36.0, 40.0],
             },
-            extract: |v| match &v.system.anchor.rotation {
+            extract: Extractor::Astronomy(|v: &AstronomyView| match &v.system.anchor.rotation {
                 Rotation::Locked => MetricValue::Absent,
                 Rotation::Spinning { day, .. } => MetricValue::Number(day.get() * 24.0),
-            },
+            }),
         },
         Metric {
             name: "year-std-days",
@@ -571,7 +627,9 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 200.0, 400.0, 600.0, 800.0, 1000.0, 1200.0, 1400.0],
             },
-            extract: |v| MetricValue::Number(v.system.anchor.year.get()),
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Number(v.system.anchor.year.get())
+            }),
         },
         Metric {
             name: "year-local-days",
@@ -579,13 +637,13 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 200.0, 400.0, 600.0, 800.0, 1000.0, 1200.0, 1400.0],
             },
-            extract: |v| {
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
                 if let Some(day_len) = v.calendar.day_length() {
                     MetricValue::Number(v.system.anchor.year.get() / day_len.get())
                 } else {
                     MetricValue::Absent
                 }
-            },
+            }),
         },
         Metric {
             name: "obliquity-degrees",
@@ -593,7 +651,9 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0],
             },
-            extract: |v| MetricValue::Number(v.system.anchor.obliquity.get()),
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Number(v.system.anchor.obliquity.get())
+            }),
         },
         Metric {
             name: "obliquity-range",
@@ -603,19 +663,25 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
             },
-            extract: |v| MetricValue::Number(2.0 * v.system.forcing.obliquity_amp),
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Number(2.0 * v.system.forcing.obliquity_amp)
+            }),
         },
         Metric {
             name: "moons-admitted",
             doc: "Number of moons in orbit",
             summary: SummaryKind::Categorical,
-            extract: |v| MetricValue::Text(v.system.moons.len().to_string()),
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Text(v.system.moons.len().to_string())
+            }),
         },
         Metric {
             name: "refused-a-moon",
             doc: "Whether moon genesis recorded refusals",
             summary: SummaryKind::Flag,
-            extract: |v| MetricValue::Flag(!v.notes.is_empty()),
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Flag(!v.notes.is_empty())
+            }),
         },
         Metric {
             name: "total-tide",
@@ -623,10 +689,10 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
             },
-            extract: |v| {
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
                 let total: f64 = v.system.moons.iter().map(|m| m.tide_rel).sum();
                 MetricValue::Number(total)
-            },
+            }),
         },
         Metric {
             name: "months-per-year-innermost",
@@ -634,25 +700,27 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 5.0, 10.0, 25.0, 50.0, 100.0, 250.0, 700.0],
             },
-            extract: |v| {
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
                 if let Some(months) = v.calendar.months_per_year(0) {
                     MetricValue::Number(months)
                 } else {
                     MetricValue::Absent
                 }
-            },
+            }),
         },
         Metric {
             name: "neighbor-count",
             doc: "Number of notable neighbor stars",
             summary: SummaryKind::Categorical,
-            extract: |v| MetricValue::Text(v.system.neighbors.len().to_string()),
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Text(v.system.neighbors.len().to_string())
+            }),
         },
         Metric {
             name: "brightest-neighbor-class",
             doc: "Spectral class of the brightest neighbor, in kebab-case",
             summary: SummaryKind::Categorical,
-            extract: |v| {
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
                 if let Some(neighbor) = v.system.neighbors.first() {
                     let class_name = match neighbor.class {
                         NeighborClass::RedDwarf => "red-dwarf",
@@ -666,32 +734,36 @@ pub fn registry() -> Vec<Metric> {
                 } else {
                     MetricValue::Absent
                 }
-            },
+            }),
         },
         Metric {
             name: "belief-kind",
             doc: "The first belief's sentiment tag ('eternal', 'cyclic', or 'ambient'); \
                    Absent if no beliefs",
             summary: SummaryKind::Categorical,
-            extract: |v| {
-                let beliefs = beliefs_of(&v.world);
+            extract: Extractor::Full(|v: &FullView| {
+                let beliefs = beliefs_of(v.world());
                 match beliefs.first() {
                     Some(first) => MetricValue::Text(first.sentiment.as_str().to_string()),
                     None => MetricValue::Absent,
                 }
-            },
+            }),
         },
         Metric {
             name: "genesis-note-count",
             doc: "Number of genesis notes recorded",
             summary: SummaryKind::Categorical,
-            extract: |v| MetricValue::Text(v.notes.len().to_string()),
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Text(v.notes.len().to_string())
+            }),
         },
         Metric {
             name: "plate-count",
             doc: "Number of tectonic plates the globe drew or was pinned to",
             summary: SummaryKind::Categorical,
-            extract: |v| MetricValue::Text(v.globe.plate_count.to_string()),
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                MetricValue::Text(v.globe.plate_count.to_string())
+            }),
         },
         Metric {
             name: "ocean-fraction",
@@ -699,7 +771,9 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
             },
-            extract: |v| MetricValue::Number(v.globe.ocean_fraction),
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                MetricValue::Number(v.globe.ocean_fraction)
+            }),
         },
         Metric {
             name: "mountain-coverage",
@@ -707,7 +781,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
-            extract: |v| {
+            extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let sea = v.terrain.sea_level();
                 let (mut land, mut high) = (0usize, 0usize);
@@ -725,16 +799,16 @@ pub fn registry() -> Vec<Metric> {
                 } else {
                     high as f64 / land as f64
                 })
-            },
+            }),
         },
         Metric {
             name: "band-count",
             doc: "Circulation bands per hemisphere; 'locked' if tidally locked",
             summary: SummaryKind::Categorical,
-            extract: |v| match v.climate.band_count() {
+            extract: Extractor::Climate(|v: &ClimateView| match v.climate.band_count() {
                 Some(n) => MetricValue::Text(n.to_string()),
                 None => MetricValue::Text("locked".to_string()),
-            },
+            }),
         },
         Metric {
             name: "habitable-fraction",
@@ -742,7 +816,9 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5],
             },
-            extract: |v| MetricValue::Number(v.climate.habitable_fraction()),
+            extract: Extractor::Climate(|v: &ClimateView| {
+                MetricValue::Number(v.climate.habitable_fraction())
+            }),
         },
         Metric {
             name: "unrest-coverage",
@@ -750,7 +826,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
             },
-            extract: |v| {
+            extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let total = geo.cell_count();
                 let restless = geo
@@ -762,13 +838,13 @@ pub fn registry() -> Vec<Metric> {
                 } else {
                     restless as f64 / total as f64
                 })
-            },
+            }),
         },
         Metric {
             name: "dominant-land-biome",
             doc: "The most common land biome by cell count, kebab-case",
             summary: SummaryKind::Categorical,
-            extract: |v| {
+            extract: Extractor::Climate(|v: &ClimateView| {
                 let biomes = v.climate.biome_map();
                 // Count land biomes in ascending name order for determinism.
                 let mut counts: std::collections::BTreeMap<&'static str, usize> =
@@ -785,7 +861,7 @@ pub fn registry() -> Vec<Metric> {
                     Some((name, _)) => MetricValue::Text(name.to_string()),
                     None => MetricValue::Absent,
                 }
-            },
+            }),
         },
         Metric {
             name: "mean-land-temperature-c",
@@ -794,11 +870,11 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[-30.0, -20.0, -10.0, 0.0, 10.0, 20.0, 30.0],
             },
-            extract: |v| {
-                let geo = v.terrain.geosphere();
+            extract: Extractor::Climate(|v: &ClimateView| {
+                let geo = v.terrain().geosphere();
                 let (mut sum, mut count) = (0.0_f64, 0_u32);
                 for cell in geo.cells() {
-                    if !v.terrain.is_ocean(cell) {
+                    if !v.terrain().is_ocean(cell) {
                         sum += v.climate.mean_temperature_at(cell);
                         count += 1;
                     }
@@ -808,7 +884,7 @@ pub fn registry() -> Vec<Metric> {
                 } else {
                     MetricValue::Number(sum / f64::from(count))
                 }
-            },
+            }),
         },
         Metric {
             name: "settlement-count",
@@ -816,7 +892,9 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 10.0, 20.0, 40.0, 60.0, 80.0, 120.0],
             },
-            extract: |v| MetricValue::Number(hornvale_terrain::places(&v.world).len() as f64),
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                MetricValue::Number(hornvale_terrain::places(v.world()).len() as f64)
+            }),
         },
         Metric {
             name: "mean-population",
@@ -825,13 +903,13 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
             },
-            extract: |v| {
-                let places = hornvale_terrain::places(&v.world);
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let places = hornvale_terrain::places(v.world());
                 let pops: Vec<f64> = places
                     .iter()
                     .filter_map(|p| {
                         match v
-                            .world
+                            .world()
                             .ledger
                             .value_of(p.id, hornvale_settlement::POPULATION)
                         {
@@ -845,7 +923,7 @@ pub fn registry() -> Vec<Metric> {
                 } else {
                     MetricValue::Number(pops.iter().sum::<f64>() / pops.len() as f64)
                 }
-            },
+            }),
         },
         Metric {
             name: "flagship-subsistence",
@@ -853,38 +931,48 @@ pub fn registry() -> Vec<Metric> {
                    community, spec §6); Absent if there is no goblin flagship or no committed \
                    subsistence",
             summary: SummaryKind::Categorical,
-            extract: |v| match flagship_of(&v.world, "goblin") {
-                Some(info) => match hornvale_culture::subsistence_of(&v.world, info.id) {
-                    Some(s) => MetricValue::Text(s),
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                match flagship_of(v.world(), "goblin") {
+                    Some(info) => match hornvale_culture::subsistence_of(v.world(), info.id) {
+                        Some(s) => MetricValue::Text(s),
+                        None => MetricValue::Absent,
+                    },
                     None => MetricValue::Absent,
-                },
-                None => MetricValue::Absent,
-            },
+                }
+            }),
         },
         Metric {
             name: "flagship-biome",
             doc: "The goblin flagship settlement's committed biome; Absent if there is no \
                    goblin flagship",
             summary: SummaryKind::Categorical,
-            extract: |v| match flagship_of(&v.world, "goblin") {
-                Some(info) => match v.world.ledger.text_of(info.id, hornvale_settlement::BIOME) {
-                    Some(b) => MetricValue::Text(b.to_string()),
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                match flagship_of(v.world(), "goblin") {
+                    Some(info) => {
+                        match v
+                            .world()
+                            .ledger
+                            .text_of(info.id, hornvale_settlement::BIOME)
+                        {
+                            Some(b) => MetricValue::Text(b.to_string()),
+                            None => MetricValue::Absent,
+                        }
+                    }
                     None => MetricValue::Absent,
-                },
-                None => MetricValue::Absent,
-            },
+                }
+            }),
         },
         Metric {
             name: "flagship-coastal",
             doc: "Whether the goblin flagship settlement's cell borders an ocean cell, \
                    recomputed from the terrain provider; Absent if there is no goblin flagship",
             summary: SummaryKind::Flag,
-            extract: |v| {
-                let Some(info) = flagship_of(&v.world, "goblin") else {
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
                 };
                 let Some(Value::Number(cell_id)) = v
-                    .world
+                    .world()
                     .ledger
                     .value_of(info.id, hornvale_settlement::CELL_ID)
                 else {
@@ -892,13 +980,13 @@ pub fn registry() -> Vec<Metric> {
                 };
                 let cell = CellId(*cell_id as u32);
                 let coastal = v
-                    .terrain
+                    .terrain()
                     .geosphere()
                     .neighbors(cell)
                     .iter()
-                    .any(|n| v.terrain.is_ocean(*n));
+                    .any(|n| v.terrain().is_ocean(*n));
                 MetricValue::Flag(coastal)
-            },
+            }),
         },
         Metric {
             name: "flagship-structure-size",
@@ -909,12 +997,14 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
-            extract: |v| match flagship_of(&v.world, "goblin") {
-                Some(info) => {
-                    MetricValue::Number(hornvale_culture::castes_of(&v.world, info.id).len() as f64)
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                match flagship_of(v.world(), "goblin") {
+                    Some(info) => MetricValue::Number(
+                        hornvale_culture::castes_of(v.world(), info.id).len() as f64,
+                    ),
+                    None => MetricValue::Absent,
                 }
-                None => MetricValue::Absent,
-            },
+            }),
         },
         Metric {
             name: "endorheic-coverage",
@@ -922,7 +1012,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
             },
-            extract: |v| {
+            extract: Extractor::Terrain(|v: &TerrainView| {
                 let geo = v.terrain.geosphere();
                 let (mut land, mut endorheic) = (0usize, 0usize);
                 for cell in geo.cells() {
@@ -938,7 +1028,7 @@ pub fn registry() -> Vec<Metric> {
                 } else {
                     endorheic as f64 / land as f64
                 })
-            },
+            }),
         },
         Metric {
             name: "pantheon-size",
@@ -946,43 +1036,43 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
-            extract: |v| {
-                let Some(info) = flagship_of(&v.world, "goblin") else {
+            extract: Extractor::Full(|v: &FullView| {
+                let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
                 };
-                let beliefs = hornvale_religion::beliefs_held_by(&v.world, info.id);
+                let beliefs = hornvale_religion::beliefs_held_by(v.world(), info.id);
                 if beliefs.is_empty() {
                     MetricValue::Absent
                 } else {
                     MetricValue::Number(beliefs.len() as f64)
                 }
-            },
+            }),
         },
         Metric {
             name: "cult-form",
             doc: "The goblin flagship's pantheon's shared cult form ('organized' or 'folk'); \
                    Absent if no goblin beliefs",
             summary: SummaryKind::Categorical,
-            extract: |v| {
-                let Some(info) = flagship_of(&v.world, "goblin") else {
+            extract: Extractor::Full(|v: &FullView| {
+                let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
                 };
-                match hornvale_religion::cult_form_held_by(&v.world, info.id) {
+                match hornvale_religion::cult_form_held_by(v.world(), info.id) {
                     Some(form) => MetricValue::Text(form),
                     None => MetricValue::Absent,
                 }
-            },
+            }),
         },
         Metric {
             name: "pantheon-verticality",
             doc: "Whether the goblin flagship's pantheon is ranked (a high god presides) or \
                    flat; Absent if there is no goblin flagship pantheon",
             summary: SummaryKind::Categorical,
-            extract: |v| {
-                let Some(info) = flagship_of(&v.world, "goblin") else {
+            extract: Extractor::Full(|v: &FullView| {
+                let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
                 };
-                let beliefs = hornvale_religion::beliefs_held_by(&v.world, info.id);
+                let beliefs = hornvale_religion::beliefs_held_by(v.world(), info.id);
                 if beliefs.is_empty() {
                     MetricValue::Absent
                 } else if beliefs.iter().any(|b| b.high_god) {
@@ -990,57 +1080,61 @@ pub fn registry() -> Vec<Metric> {
                 } else {
                     MetricValue::Text("flat".to_string())
                 }
-            },
+            }),
         },
         Metric {
             name: "head-deity-periodicity",
             doc: "The sentiment tag of the goblin flagship's head deity (the most salient \
                    belief): 'eternal', 'cyclic', or 'ambient'; Absent if no goblin beliefs",
             summary: SummaryKind::Categorical,
-            extract: |v| {
-                let Some(info) = flagship_of(&v.world, "goblin") else {
+            extract: Extractor::Full(|v: &FullView| {
+                let Some(info) = flagship_of(v.world(), "goblin") else {
                     return MetricValue::Absent;
                 };
-                let beliefs = hornvale_religion::beliefs_held_by(&v.world, info.id);
+                let beliefs = hornvale_religion::beliefs_held_by(v.world(), info.id);
                 match beliefs.first() {
                     Some(head) => MetricValue::Text(head.sentiment.as_str().to_string()),
                     None => MetricValue::Absent,
                 }
-            },
+            }),
         },
         Metric {
             name: "goblin-flagship-roles",
             doc: "The goblin flagship's committed role ladder, comma-joined, \
                    lowest to highest; Absent if goblins placed no settlement",
             summary: SummaryKind::Categorical,
-            extract: |v| match flagship_of(&v.world, "goblin") {
-                Some(info) => {
-                    let castes = hornvale_culture::castes_of(&v.world, info.id);
-                    if castes.is_empty() {
-                        MetricValue::Absent
-                    } else {
-                        MetricValue::Text(castes.join(","))
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                match flagship_of(v.world(), "goblin") {
+                    Some(info) => {
+                        let castes = hornvale_culture::castes_of(v.world(), info.id);
+                        if castes.is_empty() {
+                            MetricValue::Absent
+                        } else {
+                            MetricValue::Text(castes.join(","))
+                        }
                     }
+                    None => MetricValue::Absent,
                 }
-                None => MetricValue::Absent,
-            },
+            }),
         },
         Metric {
             name: "kobold-flagship-roles",
             doc: "The kobold flagship's committed role ladder, comma-joined, \
                    lowest to highest; Absent if kobolds placed no settlement",
             summary: SummaryKind::Categorical,
-            extract: |v| match flagship_of(&v.world, "kobold") {
-                Some(info) => {
-                    let castes = hornvale_culture::castes_of(&v.world, info.id);
-                    if castes.is_empty() {
-                        MetricValue::Absent
-                    } else {
-                        MetricValue::Text(castes.join(","))
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                match flagship_of(v.world(), "kobold") {
+                    Some(info) => {
+                        let castes = hornvale_culture::castes_of(v.world(), info.id);
+                        if castes.is_empty() {
+                            MetricValue::Absent
+                        } else {
+                            MetricValue::Text(castes.join(","))
+                        }
                     }
+                    None => MetricValue::Absent,
                 }
-                None => MetricValue::Absent,
-            },
+            }),
         },
         Metric {
             name: "goblin-flagship-population",
@@ -1049,10 +1143,12 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
             },
-            extract: |v| match flagship_of(&v.world, "goblin") {
-                Some(info) => MetricValue::Number(f64::from(info.population)),
-                None => MetricValue::Absent,
-            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                match flagship_of(v.world(), "goblin") {
+                    Some(info) => MetricValue::Number(f64::from(info.population)),
+                    None => MetricValue::Absent,
+                }
+            }),
         },
         Metric {
             name: "kobold-flagship-population",
@@ -1061,10 +1157,12 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 500.0],
             },
-            extract: |v| match flagship_of(&v.world, "kobold") {
-                Some(info) => MetricValue::Number(f64::from(info.population)),
-                None => MetricValue::Absent,
-            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                match flagship_of(v.world(), "kobold") {
+                    Some(info) => MetricValue::Number(f64::from(info.population)),
+                    None => MetricValue::Absent,
+                }
+            }),
         },
         Metric {
             name: "goblin-flagship-surplus",
@@ -1075,7 +1173,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
-            extract: |v| flagship_surplus(v, "goblin"),
+            extract: Extractor::Settlement(|v: &SettlementView| flagship_surplus(v, "goblin")),
         },
         Metric {
             name: "kobold-flagship-surplus",
@@ -1086,7 +1184,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
-            extract: |v| flagship_surplus(v, "kobold"),
+            extract: Extractor::Settlement(|v: &SettlementView| flagship_surplus(v, "kobold")),
         },
         Metric {
             name: "goblin-flagship-coastal",
@@ -1094,7 +1192,7 @@ pub fn registry() -> Vec<Metric> {
                    ocean cell, recomputed from the terrain provider; Absent \
                    if goblins placed no settlement",
             summary: SummaryKind::Flag,
-            extract: |v| flagship_coastal(v, "goblin"),
+            extract: Extractor::Settlement(|v: &SettlementView| flagship_coastal(v, "goblin")),
         },
         Metric {
             name: "kobold-flagship-coastal",
@@ -1102,7 +1200,7 @@ pub fn registry() -> Vec<Metric> {
                    ocean cell, recomputed from the terrain provider; Absent \
                    if kobolds placed no settlement",
             summary: SummaryKind::Flag,
-            extract: |v| flagship_coastal(v, "kobold"),
+            extract: Extractor::Settlement(|v: &SettlementView| flagship_coastal(v, "kobold")),
         },
         Metric {
             name: "goblin-settlement-count",
@@ -1110,7 +1208,9 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
-            extract: |v| MetricValue::Number(species_settlement_count(v, "goblin")),
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                MetricValue::Number(species_settlement_count(v, "goblin"))
+            }),
         },
         Metric {
             name: "kobold-settlement-count",
@@ -1118,25 +1218,27 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
             },
-            extract: |v| MetricValue::Number(species_settlement_count(v, "kobold")),
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                MetricValue::Number(species_settlement_count(v, "kobold"))
+            }),
         },
         Metric {
             name: "head-deity-domain-goblin",
             doc: "Venue domain of the goblin flagship's head deity: solar, lunar, or ambient; Absent without a goblin pantheon",
             summary: SummaryKind::Categorical,
-            extract: |v| match pantheon_sig(v, "goblin") {
+            extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin") {
                 Some(s) => MetricValue::Text(s.domain.to_string()),
                 None => MetricValue::Absent,
-            },
+            }),
         },
         Metric {
             name: "head-deity-domain-kobold",
             doc: "Venue domain of the kobold flagship's head deity: solar, lunar, or ambient; Absent without a kobold pantheon",
             summary: SummaryKind::Categorical,
-            extract: |v| match pantheon_sig(v, "kobold") {
+            extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "kobold") {
                 Some(s) => MetricValue::Text(s.domain.to_string()),
                 None => MetricValue::Absent,
-            },
+            }),
         },
         Metric {
             name: "pantheon-size-goblin",
@@ -1144,10 +1246,10 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
-            extract: |v| match pantheon_sig(v, "goblin") {
+            extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin") {
                 Some(s) => MetricValue::Number(s.size as f64),
                 None => MetricValue::Absent,
-            },
+            }),
         },
         Metric {
             name: "pantheon-size-kobold",
@@ -1155,34 +1257,34 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
-            extract: |v| match pantheon_sig(v, "kobold") {
+            extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "kobold") {
                 Some(s) => MetricValue::Number(s.size as f64),
                 None => MetricValue::Absent,
-            },
+            }),
         },
         Metric {
             name: "cult-form-goblin",
             doc: "Cult form of the goblin flagship's pantheon (organized/folk); Absent without one",
             summary: SummaryKind::Categorical,
-            extract: |v| match pantheon_sig(v, "goblin") {
+            extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin") {
                 Some(s) => MetricValue::Text(s.cult),
                 None => MetricValue::Absent,
-            },
+            }),
         },
         Metric {
             name: "cult-form-kobold",
             doc: "Cult form of the kobold flagship's pantheon (organized/folk); Absent without one",
             summary: SummaryKind::Categorical,
-            extract: |v| match pantheon_sig(v, "kobold") {
+            extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "kobold") {
                 Some(s) => MetricValue::Text(s.cult),
                 None => MetricValue::Absent,
-            },
+            }),
         },
         Metric {
             name: "blind-attribution-correct",
             doc: "Whether the fixed structural rule (lunar head, then cyclic share, then size — no lexical input) attributes the kobold pantheon correctly; Absent unless both peoples hold pantheons",
             summary: SummaryKind::Flag,
-            extract: |v| {
+            extract: Extractor::Full(|v: &FullView| {
                 let (Some(g), Some(k)) = (pantheon_sig(v, "goblin"), pantheon_sig(v, "kobold"))
                 else {
                     return MetricValue::Absent;
@@ -1191,7 +1293,7 @@ pub fn registry() -> Vec<Metric> {
                 // presenting (goblin, kobold) and requiring index 1 is the
                 // correctness check, not a labeling leak.
                 MetricValue::Flag(pick_kobold([&g, &k]) == Some(1))
-            },
+            }),
         },
         Metric {
             name: "phonotactic-validity-goblin",
@@ -1200,7 +1302,7 @@ pub fn registry() -> Vec<Metric> {
                    independently re-derived and re-parsed from the surface string; \
                    Absent if goblins produced no names",
             summary: SummaryKind::Flag,
-            extract: |v| phonotactic_validity(v, "goblin"),
+            extract: Extractor::Full(|v: &FullView| phonotactic_validity(v, "goblin")),
         },
         Metric {
             name: "phonotactic-validity-kobold",
@@ -1209,7 +1311,7 @@ pub fn registry() -> Vec<Metric> {
                    independently re-derived and re-parsed from the surface string; \
                    Absent if kobolds produced no names",
             summary: SummaryKind::Flag,
-            extract: |v| phonotactic_validity(v, "kobold"),
+            extract: Extractor::Full(|v: &FullView| phonotactic_validity(v, "kobold")),
         },
         Metric {
             name: "epithet-honorific-goblin",
@@ -1219,7 +1321,7 @@ pub fn registry() -> Vec<Metric> {
                    and be strictly longer (Rank status basis → honorifics on, spec §7); Absent \
                    if goblins hold no pantheon",
             summary: SummaryKind::Flag,
-            extract: |v| epithet_honorific(v, "goblin"),
+            extract: Extractor::Full(|v: &FullView| epithet_honorific(v, "goblin")),
         },
         Metric {
             name: "epithet-honorific-kobold",
@@ -1229,7 +1331,7 @@ pub fn registry() -> Vec<Metric> {
                    off, so the committed epithet equals the plain stem and this reads false; \
                    Absent if kobolds hold no pantheon",
             summary: SummaryKind::Flag,
-            extract: |v| epithet_honorific(v, "kobold"),
+            extract: Extractor::Full(|v: &FullView| epithet_honorific(v, "kobold")),
         },
         Metric {
             name: "name-length-goblin",
@@ -1238,7 +1340,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
             },
-            extract: |v| mean_name_length(v, "goblin"),
+            extract: Extractor::Full(|v: &FullView| mean_name_length(v, "goblin")),
         },
         Metric {
             name: "name-length-kobold",
@@ -1247,7 +1349,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
             },
-            extract: |v| mean_name_length(v, "kobold"),
+            extract: Extractor::Full(|v: &FullView| mean_name_length(v, "kobold")),
         },
         Metric {
             name: "name-collision-rate",
@@ -1261,16 +1363,16 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.4],
             },
-            extract: name_collision_rate,
+            extract: Extractor::Full(name_collision_rate),
         },
         Metric {
             name: "head-deity-domain-goblin-twin",
             doc: "Venue domain of the goblin-twin flagship's head deity (null control, spec §4); Absent without a goblin-twin pantheon",
             summary: SummaryKind::Categorical,
-            extract: |v| match pantheon_sig(v, "goblin-twin") {
+            extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin-twin") {
                 Some(s) => MetricValue::Text(s.domain.to_string()),
                 None => MetricValue::Absent,
-            },
+            }),
         },
         Metric {
             name: "pantheon-size-goblin-twin",
@@ -1278,19 +1380,19 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
             },
-            extract: |v| match pantheon_sig(v, "goblin-twin") {
+            extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin-twin") {
                 Some(s) => MetricValue::Number(s.size as f64),
                 None => MetricValue::Absent,
-            },
+            }),
         },
         Metric {
             name: "cult-form-goblin-twin",
             doc: "Cult form of the goblin-twin flagship's pantheon (null control); Absent without one",
             summary: SummaryKind::Categorical,
-            extract: |v| match pantheon_sig(v, "goblin-twin") {
+            extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin-twin") {
                 Some(s) => MetricValue::Text(s.cult),
                 None => MetricValue::Absent,
-            },
+            }),
         },
         Metric {
             name: "name-length-goblin-twin",
@@ -1298,7 +1400,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
             },
-            extract: |v| mean_name_length(v, "goblin-twin"),
+            extract: Extractor::Full(|v: &FullView| mean_name_length(v, "goblin-twin")),
         },
         Metric {
             name: "pantheon-cyclic-share-goblin",
@@ -1306,10 +1408,10 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
-            extract: |v| match pantheon_sig(v, "goblin") {
+            extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin") {
                 Some(s) => MetricValue::Number(s.cyclic_share),
                 None => MetricValue::Absent,
-            },
+            }),
         },
         Metric {
             name: "pantheon-cyclic-share-goblin-twin",
@@ -1317,10 +1419,10 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
-            extract: |v| match pantheon_sig(v, "goblin-twin") {
+            extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "goblin-twin") {
                 Some(s) => MetricValue::Number(s.cyclic_share),
                 None => MetricValue::Absent,
-            },
+            }),
         },
         // --- The Words (Task 12): name-gloss truthfulness, lexicon
         // regularity, exposure soundness, and the pack-depth baseline
@@ -1333,7 +1435,7 @@ pub fn registry() -> Vec<Metric> {
                    rather than read back from worldgen's own composition; Absent if no \
                    settlement in this world carries a gloss",
             summary: SummaryKind::Flag,
-            extract: name_gloss_true,
+            extract: Extractor::Full(name_gloss_true),
         },
         Metric {
             name: "lexicon-regular-goblin",
@@ -1341,7 +1443,7 @@ pub fn registry() -> Vec<Metric> {
                    derivation replays byte-identically through evolve (Neogrammarian \
                    regularity, spec §9.1); Absent if the goblin lexicon minted no Root",
             summary: SummaryKind::Flag,
-            extract: |v| lexicon_regular(v, "goblin"),
+            extract: Extractor::Full(|v: &FullView| lexicon_regular(v, "goblin")),
         },
         Metric {
             name: "lexicon-regular-kobold",
@@ -1349,7 +1451,7 @@ pub fn registry() -> Vec<Metric> {
                    derivation replays byte-identically through evolve (Neogrammarian \
                    regularity, spec §9.1); Absent if the kobold lexicon minted no Root",
             summary: SummaryKind::Flag,
-            extract: |v| lexicon_regular(v, "kobold"),
+            extract: Extractor::Full(|v: &FullView| lexicon_regular(v, "kobold")),
         },
         Metric {
             name: "exposure-sound-goblin",
@@ -1358,7 +1460,7 @@ pub fn registry() -> Vec<Metric> {
                    every committed Gap carries a non-empty reason (spec §9.2); Absent if the \
                    goblin lexicon has no entries",
             summary: SummaryKind::Flag,
-            extract: |v| exposure_sound(v, "goblin"),
+            extract: Extractor::Full(|v: &FullView| exposure_sound(v, "goblin")),
         },
         Metric {
             name: "exposure-sound-kobold",
@@ -1367,7 +1469,7 @@ pub fn registry() -> Vec<Metric> {
                    every committed Gap carries a non-empty reason (spec §9.2); Absent if the \
                    kobold lexicon has no entries",
             summary: SummaryKind::Flag,
-            extract: |v| exposure_sound(v, "kobold"),
+            extract: Extractor::Full(|v: &FullView| exposure_sound(v, "kobold")),
         },
         Metric {
             name: "hue-depth-goblin",
@@ -1377,7 +1479,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0],
             },
-            extract: |v| hue_depth(v, "goblin"),
+            extract: Extractor::Astronomy(|v: &AstronomyView| hue_depth(v, "goblin")),
         },
         Metric {
             name: "hue-depth-kobold",
@@ -1387,7 +1489,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[2.0, 3.0, 4.0, 5.0, 6.0],
             },
-            extract: |v| hue_depth(v, "kobold"),
+            extract: Extractor::Astronomy(|v: &AstronomyView| hue_depth(v, "kobold")),
         },
         Metric {
             name: "shoreline-development",
@@ -1397,7 +1499,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 6.0],
             },
-            extract: |v| {
+            extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 match hornvale_terrain::shape::shoreline_development(
                     v.terrain.geosphere(),
@@ -1407,7 +1509,7 @@ pub fn registry() -> Vec<Metric> {
                     Some(d) => MetricValue::Number(d),
                     None => MetricValue::Absent,
                 }
-            },
+            }),
         },
         Metric {
             name: "hypsometric-bimodality",
@@ -1417,7 +1519,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0],
             },
-            extract: |v| {
+            extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 match hornvale_terrain::shape::hypsometric_bimodality(
                     &globe.elevation,
@@ -1426,7 +1528,7 @@ pub fn registry() -> Vec<Metric> {
                     Some(d) => MetricValue::Number(d),
                     None => MetricValue::Absent,
                 }
-            },
+            }),
         },
         Metric {
             name: "shelf-fraction",
@@ -1435,13 +1537,13 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.15, 0.2, 0.3],
             },
-            extract: |v| {
+            extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 MetricValue::Number(hornvale_terrain::shape::shelf_fraction(
                     &globe.elevation,
                     globe.sea_level,
                 ))
-            },
+            }),
         },
         Metric {
             name: "continent-count",
@@ -1454,7 +1556,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0],
             },
-            extract: |v| {
+            extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 let sizes = hornvale_terrain::shape::land_component_sizes(
                     v.terrain.geosphere(),
@@ -1464,7 +1566,7 @@ pub fn registry() -> Vec<Metric> {
                 let land: usize = sizes.iter().sum();
                 let floor = 0.005 * land as f64;
                 MetricValue::Number(sizes.iter().filter(|&&s| s as f64 >= floor).count() as f64)
-            },
+            }),
         },
         Metric {
             name: "largest-continent-share",
@@ -1473,7 +1575,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 0.9],
             },
-            extract: |v| {
+            extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 let sizes = hornvale_terrain::shape::land_component_sizes(
                     v.terrain.geosphere(),
@@ -1485,7 +1587,7 @@ pub fn registry() -> Vec<Metric> {
                     Some(largest) if land > 0 => MetricValue::Number(*largest as f64 / land as f64),
                     _ => MetricValue::Absent,
                 }
-            },
+            }),
         },
         Metric {
             name: "plate-size-gini",
@@ -1494,7 +1596,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
             },
-            extract: |v| {
+            extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 let mut counts = vec![0usize; globe.plates.len()];
                 for (_, plate) in globe.plate_of.iter() {
@@ -1504,7 +1606,7 @@ pub fn registry() -> Vec<Metric> {
                     Some(g) => MetricValue::Number(g),
                     None => MetricValue::Absent,
                 }
-            },
+            }),
         },
         Metric {
             name: "landmass-count",
@@ -1514,7 +1616,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 12.0],
             },
-            extract: |v| {
+            extract: Extractor::Terrain(|v: &TerrainView| {
                 let globe = v.terrain.globe();
                 MetricValue::Number(
                     hornvale_terrain::shape::land_component_sizes(
@@ -1524,7 +1626,7 @@ pub fn registry() -> Vec<Metric> {
                     )
                     .len() as f64,
                 )
-            },
+            }),
         },
         // --- The Branches (Task 10): the family battery, seed-swept —
         // regularity, monophyly, clean outgroup, inventory closure,
@@ -1539,7 +1641,7 @@ pub fn registry() -> Vec<Metric> {
                    world's roster (spec §9.1, generalized family-wide); Absent if no \
                    daughter minted a Root",
             summary: SummaryKind::Flag,
-            extract: lexicon_regular_family,
+            extract: Extractor::Full(lexicon_regular_family),
         },
         Metric {
             name: "monophyly-goblinoid",
@@ -1550,7 +1652,7 @@ pub fn registry() -> Vec<Metric> {
                    sibling's own recorded derivation; Absent if no goblinoid daughter \
                    minted a Root",
             summary: SummaryKind::Flag,
-            extract: monophyly_goblinoid,
+            extract: Extractor::Full(monophyly_goblinoid),
         },
         Metric {
             name: "clean-outgroup-kobold",
@@ -1560,7 +1662,7 @@ pub fn registry() -> Vec<Metric> {
                    \"goblinoid\" family proto-root for that same concept (spec §3's clean \
                    outgroup); Absent if kobold minted no Root",
             summary: SummaryKind::Flag,
-            extract: clean_outgroup_kobold,
+            extract: Extractor::Full(clean_outgroup_kobold),
         },
         Metric {
             name: "inventory-closure-goblin",
@@ -1568,7 +1670,7 @@ pub fn registry() -> Vec<Metric> {
                    goblin's own drawn inventory (spec §2.2's nativization contract); \
                    Absent if goblin minted no Root",
             summary: SummaryKind::Flag,
-            extract: |v| inventory_closure(v, "goblin"),
+            extract: Extractor::Full(|v: &FullView| inventory_closure(v, "goblin")),
         },
         Metric {
             name: "inventory-closure-hobgoblin",
@@ -1576,7 +1678,7 @@ pub fn registry() -> Vec<Metric> {
                    in hobgoblin's own drawn inventory (spec §2.2's nativization \
                    contract); Absent if hobgoblin minted no Root",
             summary: SummaryKind::Flag,
-            extract: |v| inventory_closure(v, "hobgoblin"),
+            extract: Extractor::Full(|v: &FullView| inventory_closure(v, "hobgoblin")),
         },
         Metric {
             name: "inventory-closure-bugbear",
@@ -1584,7 +1686,7 @@ pub fn registry() -> Vec<Metric> {
                    bugbear's own drawn inventory (spec §2.2's nativization contract); \
                    Absent if bugbear minted no Root",
             summary: SummaryKind::Flag,
-            extract: |v| inventory_closure(v, "bugbear"),
+            extract: Extractor::Full(|v: &FullView| inventory_closure(v, "bugbear")),
         },
         Metric {
             name: "inventory-closure-kobold",
@@ -1592,7 +1694,7 @@ pub fn registry() -> Vec<Metric> {
                    kobold's own drawn inventory (spec §2.2's nativization contract); \
                    Absent if kobold minted no Root",
             summary: SummaryKind::Flag,
-            extract: |v| inventory_closure(v, "kobold"),
+            extract: Extractor::Full(|v: &FullView| inventory_closure(v, "kobold")),
         },
         Metric {
             name: "divergence-magnitude-goblin",
@@ -1605,7 +1707,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
-            extract: |v| divergence_magnitude(v, "goblin"),
+            extract: Extractor::Full(|v: &FullView| divergence_magnitude(v, "goblin")),
         },
         Metric {
             name: "divergence-magnitude-hobgoblin",
@@ -1618,7 +1720,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
-            extract: |v| divergence_magnitude(v, "hobgoblin"),
+            extract: Extractor::Full(|v: &FullView| divergence_magnitude(v, "hobgoblin")),
         },
         Metric {
             name: "divergence-magnitude-bugbear",
@@ -1631,7 +1733,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
-            extract: |v| divergence_magnitude(v, "bugbear"),
+            extract: Extractor::Full(|v: &FullView| divergence_magnitude(v, "bugbear")),
         },
         Metric {
             name: "divergence-real",
@@ -1642,7 +1744,7 @@ pub fn registry() -> Vec<Metric> {
                    daughters are silent aliases of one another must read false; Absent if \
                    no concept is rooted in all three",
             summary: SummaryKind::Flag,
-            extract: divergence_real,
+            extract: Extractor::Full(divergence_real),
         },
         Metric {
             name: "homophony-count-goblin",
@@ -1654,7 +1756,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
-            extract: |v| homophony_count(v, "goblin"),
+            extract: Extractor::Full(|v: &FullView| homophony_count(v, "goblin")),
         },
         Metric {
             name: "homophony-count-hobgoblin",
@@ -1665,7 +1767,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
-            extract: |v| homophony_count(v, "hobgoblin"),
+            extract: Extractor::Full(|v: &FullView| homophony_count(v, "hobgoblin")),
         },
         Metric {
             name: "homophony-count-bugbear",
@@ -1677,7 +1779,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
-            extract: |v| homophony_count(v, "bugbear"),
+            extract: Extractor::Full(|v: &FullView| homophony_count(v, "bugbear")),
         },
         Metric {
             name: "homophony-count-kobold",
@@ -1688,7 +1790,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
-            extract: |v| homophony_count(v, "kobold"),
+            extract: Extractor::Full(|v: &FullView| homophony_count(v, "kobold")),
         },
         // --- Lexicon homophony, functional-load restricted + attributed
         // (the confusable-core count Nathan targets at ~zero, and the
@@ -1704,7 +1806,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
-            extract: |v| core_homophony(v, "goblin"),
+            extract: Extractor::Full(|v: &FullView| core_homophony(v, "goblin")),
         },
         Metric {
             name: "core-homophony-hobgoblin",
@@ -1714,7 +1816,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
-            extract: |v| core_homophony(v, "hobgoblin"),
+            extract: Extractor::Full(|v: &FullView| core_homophony(v, "hobgoblin")),
         },
         Metric {
             name: "core-homophony-bugbear",
@@ -1724,7 +1826,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
-            extract: |v| core_homophony(v, "bugbear"),
+            extract: Extractor::Full(|v: &FullView| core_homophony(v, "bugbear")),
         },
         Metric {
             name: "core-homophony-kobold",
@@ -1734,7 +1836,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
-            extract: |v| core_homophony(v, "kobold"),
+            extract: Extractor::Full(|v: &FullView| core_homophony(v, "kobold")),
         },
         Metric {
             name: "homophony-merger-share-goblin",
@@ -1745,7 +1847,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
-            extract: |v| homophony_merger_share(v, "goblin"),
+            extract: Extractor::Full(|v: &FullView| homophony_merger_share(v, "goblin")),
         },
         Metric {
             name: "homophony-merger-share-hobgoblin",
@@ -1754,7 +1856,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
-            extract: |v| homophony_merger_share(v, "hobgoblin"),
+            extract: Extractor::Full(|v: &FullView| homophony_merger_share(v, "hobgoblin")),
         },
         Metric {
             name: "homophony-merger-share-bugbear",
@@ -1763,7 +1865,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
-            extract: |v| homophony_merger_share(v, "bugbear"),
+            extract: Extractor::Full(|v: &FullView| homophony_merger_share(v, "bugbear")),
         },
         Metric {
             name: "homophony-merger-share-kobold",
@@ -1772,7 +1874,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
             },
-            extract: |v| homophony_merger_share(v, "kobold"),
+            extract: Extractor::Full(|v: &FullView| homophony_merger_share(v, "kobold")),
         },
         // --- Confusable-vs-free core homophony (spec §10 Q3): the
         // same-semantic-domain subset of core-homophony — the genuinely
@@ -1789,7 +1891,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
-            extract: |v| confusable_homophony(v, "goblin"),
+            extract: Extractor::Full(|v: &FullView| confusable_homophony(v, "goblin")),
         },
         Metric {
             name: "confusable-homophony-hobgoblin",
@@ -1799,7 +1901,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
-            extract: |v| confusable_homophony(v, "hobgoblin"),
+            extract: Extractor::Full(|v: &FullView| confusable_homophony(v, "hobgoblin")),
         },
         Metric {
             name: "confusable-homophony-bugbear",
@@ -1809,7 +1911,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
-            extract: |v| confusable_homophony(v, "bugbear"),
+            extract: Extractor::Full(|v: &FullView| confusable_homophony(v, "bugbear")),
         },
         Metric {
             name: "confusable-homophony-kobold",
@@ -1819,7 +1921,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 12.0],
             },
-            extract: |v| confusable_homophony(v, "kobold"),
+            extract: Extractor::Full(|v: &FullView| confusable_homophony(v, "kobold")),
         },
         // --- The tone tier (spec §11): the realized tone-inventory size (1 for
         // the shipped atonal peoples) and the distinguishable-syllable capacity
@@ -1832,7 +1934,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0],
             },
-            extract: |v| tone_count_metric(v, "goblin"),
+            extract: Extractor::Full(|v: &FullView| tone_count_metric(v, "goblin")),
         },
         Metric {
             name: "tone-count-kobold",
@@ -1841,7 +1943,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[1.0, 2.0, 3.0],
             },
-            extract: |v| tone_count_metric(v, "kobold"),
+            extract: Extractor::Full(|v: &FullView| tone_count_metric(v, "kobold")),
         },
         Metric {
             name: "distinguishable-capacity-goblin",
@@ -1851,7 +1953,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[24.0, 48.0, 96.0, 192.0, 384.0, 768.0, 1536.0],
             },
-            extract: |v| distinguishable_capacity_metric(v, "goblin"),
+            extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "goblin")),
         },
         Metric {
             name: "distinguishable-capacity-bugbear",
@@ -1861,7 +1963,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[24.0, 48.0, 96.0, 192.0, 384.0, 768.0, 1536.0],
             },
-            extract: |v| distinguishable_capacity_metric(v, "bugbear"),
+            extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "bugbear")),
         },
         Metric {
             name: "distinguishable-capacity-kobold",
@@ -1870,7 +1972,7 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Numeric {
                 bucket_edges: &[24.0, 48.0, 96.0, 192.0, 384.0, 768.0, 1536.0],
             },
-            extract: |v| distinguishable_capacity_metric(v, "kobold"),
+            extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "kobold")),
         },
     ]
 }
@@ -1895,15 +1997,15 @@ struct PantheonSig {
     cyclic_share: f64,
 }
 
-fn pantheon_sig(v: &WorldView, species: &str) -> Option<PantheonSig> {
-    let flagship = flagship_of(&v.world, species)?;
-    let beliefs = hornvale_religion::beliefs_held_by(&v.world, flagship.id);
+fn pantheon_sig(v: &FullView, species: &str) -> Option<PantheonSig> {
+    let flagship = flagship_of(v.world(), species)?;
+    let beliefs = hornvale_religion::beliefs_held_by(v.world(), flagship.id);
     if beliefs.is_empty() {
         return None;
     }
     // Pantheons derive from the same first-place, hemisphere-culled vantage
     // religion's genesis observes (SEQ-4/SEQ-5).
-    let seen = observed_phenomena_as_in(&v.world, &v.roster, species).ok()?;
+    let seen = observed_phenomena_as_in(v.world(), v.roster(), species).ok()?;
     let top = seen.first()?;
     let domain = match top.venue {
         hornvale_kernel::Venue::DaySky => "solar",
@@ -1916,7 +2018,7 @@ fn pantheon_sig(v: &WorldView, species: &str) -> Option<PantheonSig> {
         domain,
         size: beliefs.len(),
         ranked: beliefs.iter().any(|b| b.high_god),
-        cult: hornvale_religion::cult_form_held_by(&v.world, flagship.id)
+        cult: hornvale_religion::cult_form_held_by(v.world(), flagship.id)
             .unwrap_or_else(|| "folk".to_string()),
         cyclic_share: cyclic as f64 / members.len().max(1) as f64,
     })
@@ -1950,32 +2052,32 @@ fn pick_kobold(pair: [&PantheonSig; 2]) -> Option<usize> {
 /// Recompute a species flagship's subsistence surplus directly from the
 /// climate/terrain providers, independent of the culture-committed inputs —
 /// the independence the slave calibration needs (spec §9.2).
-fn flagship_surplus(v: &WorldView, species: &str) -> MetricValue {
-    let Some(info) = flagship_of(&v.world, species) else {
+fn flagship_surplus(v: &SettlementView, species: &str) -> MetricValue {
+    let Some(info) = flagship_of(v.world(), species) else {
         return MetricValue::Absent;
     };
     let Some(Value::Number(cell_id)) = v
-        .world
+        .world()
         .ledger
         .value_of(info.id, hornvale_settlement::CELL_ID)
     else {
         return MetricValue::Absent;
     };
     let cell = CellId(*cell_id as u32);
-    let class = hornvale_worldgen::biome_class(v.climate.biome_at(cell));
+    let class = hornvale_worldgen::biome_class(v.climate().biome_at(cell));
     let surplus =
-        (hornvale_culture::fertility(class) * v.climate.moisture_at(cell)).clamp(0.0, 1.0);
+        (hornvale_culture::fertility(class) * v.climate().moisture_at(cell)).clamp(0.0, 1.0);
     MetricValue::Number(surplus)
 }
 
 /// Recompute whether a species flagship's cell borders an ocean cell,
 /// directly from the terrain provider.
-fn flagship_coastal(v: &WorldView, species: &str) -> MetricValue {
-    let Some(info) = flagship_of(&v.world, species) else {
+fn flagship_coastal(v: &SettlementView, species: &str) -> MetricValue {
+    let Some(info) = flagship_of(v.world(), species) else {
         return MetricValue::Absent;
     };
     let Some(Value::Number(cell_id)) = v
-        .world
+        .world()
         .ledger
         .value_of(info.id, hornvale_settlement::CELL_ID)
     else {
@@ -1983,20 +2085,20 @@ fn flagship_coastal(v: &WorldView, species: &str) -> MetricValue {
     };
     let cell = CellId(*cell_id as u32);
     let coastal = v
-        .terrain
+        .terrain()
         .geosphere()
         .neighbors(cell)
         .iter()
-        .any(|n| v.terrain.is_ocean(*n));
+        .any(|n| v.terrain().is_ocean(*n));
     MetricValue::Flag(coastal)
 }
 
 /// Count settlements peopled by `species`.
-fn species_settlement_count(v: &WorldView, species: &str) -> f64 {
-    v.world
+fn species_settlement_count(v: &SettlementView, species: &str) -> f64 {
+    v.world()
         .ledger
         .find(hornvale_settlement::IS_SETTLEMENT)
-        .filter(|f| hornvale_species::species_of(&v.world, f.subject).as_deref() == Some(species))
+        .filter(|f| hornvale_species::species_of(v.world(), f.subject).as_deref() == Some(species))
         .count() as f64
 }
 
@@ -2004,14 +2106,14 @@ fn species_settlement_count(v: &WorldView, species: &str) -> f64 {
 /// settlement names (from the places registry) plus, if it holds a
 /// pantheon, every deity name and epithet its flagship's beliefs carry.
 /// Empty if the species placed nothing and holds no pantheon.
-fn species_generated_names(v: &WorldView, species: &str) -> Vec<String> {
-    let mut names: Vec<String> = hornvale_terrain::places(&v.world)
+fn species_generated_names(v: &FullView, species: &str) -> Vec<String> {
+    let mut names: Vec<String> = hornvale_terrain::places(v.world())
         .into_iter()
-        .filter(|p| hornvale_species::species_of(&v.world, p.id).as_deref() == Some(species))
+        .filter(|p| hornvale_species::species_of(v.world(), p.id).as_deref() == Some(species))
         .map(|p| p.name)
         .collect();
-    if let Some(info) = flagship_of(&v.world, species) {
-        for belief in hornvale_religion::beliefs_held_by(&v.world, info.id) {
+    if let Some(info) = flagship_of(v.world(), species) {
+        for belief in hornvale_religion::beliefs_held_by(v.world(), info.id) {
             names.push(belief.deity);
             names.push(belief.epithet);
         }
@@ -2022,12 +2124,12 @@ fn species_generated_names(v: &WorldView, species: &str) -> Vec<String> {
 /// Whether every generated name attributed to `species` in this world
 /// re-validates against `species`' own re-derived phonology; `Absent` if it
 /// produced no names.
-fn phonotactic_validity(v: &WorldView, species: &str) -> MetricValue {
+fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
     let names = species_generated_names(v, species);
     if names.is_empty() {
         return MetricValue::Absent;
     }
-    let ph = language_of_in(&v.world, &v.roster, species);
+    let ph = language_of_in(v.world(), v.roster(), species);
     MetricValue::Flag(names.iter().all(|n| is_phonotactically_valid(n, &ph)))
 }
 
@@ -2054,25 +2156,25 @@ fn phonotactic_validity(v: &WorldView, species: &str) -> MetricValue {
 /// none does (kobold, Knowledge). A broken honorific pipeline — a goblin
 /// epithet committed without its affix — would equal its plain word here
 /// and flip the flag to false, which the preregistered calibration catches.
-fn epithet_honorific(v: &WorldView, species: &str) -> MetricValue {
-    let Some(info) = flagship_of(&v.world, species) else {
+fn epithet_honorific(v: &FullView, species: &str) -> MetricValue {
+    let Some(info) = flagship_of(v.world(), species) else {
         return MetricValue::Absent;
     };
-    let beliefs = hornvale_religion::beliefs_held_by(&v.world, info.id);
+    let beliefs = hornvale_religion::beliefs_held_by(v.world(), info.id);
     if beliefs.is_empty() {
         return MetricValue::Absent;
     }
     // Religion (and the deity glosses drawn inside it) observes from the
     // world's first place, hemisphere-culled (SEQ-4/SEQ-5) — re-derive from
     // exactly that vantage so the check tracks the pipeline's real sky.
-    let Ok(seen) = observed_phenomena_as_in(&v.world, &v.roster, species) else {
+    let Ok(seen) = observed_phenomena_as_in(v.world(), v.roster(), species) else {
         return MetricValue::Absent;
     };
-    let Ok(lexicon) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+    let Ok(lexicon) = hornvale_worldgen::lexicon_of(v.world(), species) else {
         return MetricValue::Absent;
     };
-    let ph = language_of_in(&v.world, &v.roster, species);
-    let namer = Namer::new(&v.world.seed, species, &ph);
+    let ph = language_of_in(v.world(), v.roster(), species);
+    let namer = Namer::new(&v.world().seed, species, &ph);
     let carries = |(i, b): (usize, &hornvale_religion::Belief)| {
         let Some(phenomenon) = seen.get(i) else {
             // More beliefs than observed phenomena would mean the
@@ -2100,7 +2202,7 @@ fn epithet_honorific(v: &WorldView, species: &str) -> MetricValue {
 
 /// Mean character length of every generated name attributed to `species` in
 /// this world; `Absent` if it produced no names.
-fn mean_name_length(v: &WorldView, species: &str) -> MetricValue {
+fn mean_name_length(v: &FullView, species: &str) -> MetricValue {
     let names = species_generated_names(v, species);
     if names.is_empty() {
         return MetricValue::Absent;
@@ -2113,12 +2215,12 @@ fn mean_name_length(v: &WorldView, species: &str) -> MetricValue {
 /// that duplicate another name in the same world; `Absent` if there are
 /// none. Uniqueness is de-facto, not enforced (Task 9) — this is a measured
 /// property of the name space, not an assertion of zero collisions.
-fn name_collision_rate(v: &WorldView) -> MetricValue {
-    let mut names: Vec<String> = hornvale_terrain::places(&v.world)
+fn name_collision_rate(v: &FullView) -> MetricValue {
+    let mut names: Vec<String> = hornvale_terrain::places(v.world())
         .into_iter()
         .map(|p| p.name)
         .collect();
-    names.extend(beliefs_of(&v.world).into_iter().map(|b| b.deity));
+    names.extend(beliefs_of(v.world()).into_iter().map(|b| b.deity));
     if names.is_empty() {
         return MetricValue::Absent;
     }
@@ -2163,15 +2265,15 @@ fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
 /// entity's own facts), if any. `None` if the settlement is missing a
 /// biome/species fact, which `name_gloss_true` below treats as an
 /// unverifiable (failing) row rather than skipping it silently.
-fn settlement_site_concepts(v: &WorldView, id: EntityId) -> Option<Vec<String>> {
+fn settlement_site_concepts(v: &FullView, id: EntityId) -> Option<Vec<String>> {
     let biome = v
-        .world
+        .world()
         .ledger
         .text_of(id, hornvale_settlement::BIOME)?
         .to_string();
-    let species = hornvale_species::species_of(&v.world, id)?;
+    let species = hornvale_species::species_of(v.world(), id)?;
     let phenomena =
-        hornvale_worldgen::observed_phenomena_as_at(&v.world, &v.roster, &species, id).ok()?;
+        hornvale_worldgen::observed_phenomena_as_at(v.world(), v.roster(), &species, id).ok()?;
     let mut concepts = vec![biome];
     if let Some(concept) = phenomena.first().and_then(phenomenon_concept) {
         concepts.push(concept.to_string());
@@ -2207,12 +2309,12 @@ fn candidate_glosses(concepts: &[String]) -> std::collections::BTreeSet<String> 
 /// fact and this module's own re-derivation of the site concepts that fact
 /// should be true to). `Absent` if no settlement in this world carries a
 /// gloss.
-fn name_gloss_true(v: &WorldView) -> MetricValue {
+fn name_gloss_true(v: &FullView) -> MetricValue {
     let mut checked = false;
     let mut all_true = true;
-    for f in v.world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
+    for f in v.world().ledger.find(hornvale_settlement::IS_SETTLEMENT) {
         let id = f.subject;
-        let Some(gloss) = v.world.ledger.text_of(id, hornvale_worldgen::NAME_GLOSS) else {
+        let Some(gloss) = v.world().ledger.text_of(id, hornvale_worldgen::NAME_GLOSS) else {
             continue;
         };
         checked = true;
@@ -2232,13 +2334,13 @@ fn name_gloss_true(v: &WorldView) -> MetricValue {
 /// regularity, spec §9.1) — the per-species aggregate of
 /// `cli/tests/branches_coverage.rs`'s `derivations_replay`. `Absent` if
 /// `species` is not in this world's roster or its lexicon minted no `Root`.
-fn lexicon_regular(v: &WorldView, species: &str) -> MetricValue {
-    if !v.roster.iter().any(|d| d.name == species) {
+fn lexicon_regular(v: &FullView, species: &str) -> MetricValue {
+    if !v.roster().iter().any(|d| d.name == species) {
         return MetricValue::Absent;
     }
-    let ph = language_of_in(&v.world, &v.roster, species);
-    let cascade = hornvale_language::draw_cascade(&v.world.seed, species);
-    let Ok(lex) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+    let ph = language_of_in(v.world(), v.roster(), species);
+    let cascade = hornvale_language::draw_cascade(&v.world().seed, species);
+    let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
         return MetricValue::Absent;
     };
     let mut any = false;
@@ -2272,10 +2374,10 @@ fn lexicon_regular(v: &WorldView, species: &str) -> MetricValue {
 /// are irrelevant to this specific soundness check and are not reproduced
 /// here. `None` if `species` is not in this world's roster.
 fn independently_steeped_concepts(
-    v: &WorldView,
+    v: &FullView,
     species: &str,
 ) -> Option<std::collections::BTreeSet<String>> {
-    let def = v.roster.iter().find(|d| d.name == species)?;
+    let def = v.roster().iter().find(|d| d.name == species)?;
     let depths = hornvale_worldgen::pack_depths(&def.perception);
     let mut steeped: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
 
@@ -2292,27 +2394,31 @@ fn independently_steeped_concepts(
         }
     }
 
-    let settled: Vec<CellId> = hornvale_terrain::places(&v.world)
+    let settled: Vec<CellId> = hornvale_terrain::places(v.world())
         .into_iter()
-        .filter(|p| hornvale_species::species_of(&v.world, p.id).as_deref() == Some(species))
-        .filter_map(
-            |p| match v.world.ledger.value_of(p.id, hornvale_settlement::CELL_ID) {
+        .filter(|p| hornvale_species::species_of(v.world(), p.id).as_deref() == Some(species))
+        .filter_map(|p| {
+            match v
+                .world()
+                .ledger
+                .value_of(p.id, hornvale_settlement::CELL_ID)
+            {
                 Some(Value::Number(n)) => Some(CellId(*n as u32)),
                 _ => None,
-            },
-        )
+            }
+        })
         .collect();
     for &cell in &settled {
-        steeped.insert(v.climate.biome_at(cell).concept_name().to_string());
+        steeped.insert(v.climate().biome_at(cell).concept_name().to_string());
     }
 
     let own_kind = format!("{species}-kind");
-    if v.world.registry.concept(&own_kind).is_some() {
+    if v.world().registry.concept(&own_kind).is_some() {
         steeped.insert(own_kind);
     }
     if !settled.is_empty() {
         let coexisting: std::collections::BTreeSet<String> = v
-            .world
+            .world()
             .ledger
             .find(hornvale_species::PEOPLED_BY)
             .filter_map(|f| match &f.object {
@@ -2322,12 +2428,12 @@ fn independently_steeped_concepts(
             .collect();
         for placed in &coexisting {
             let kind = format!("{placed}-kind");
-            if v.world.registry.concept(&kind).is_some() {
+            if v.world().registry.concept(&kind).is_some() {
                 steeped.insert(kind);
             }
         }
         for concept in ["home", "hearth", "god", "spirit"] {
-            if v.world.registry.concept(concept).is_some() {
+            if v.world().registry.concept(concept).is_some() {
                 steeped.insert(concept.to_string());
             }
         }
@@ -2340,11 +2446,11 @@ fn independently_steeped_concepts(
 /// a `Root` entry, and every committed `Gap` carries a non-empty reason.
 /// `Absent` if `species` is not in this world's roster or its lexicon has
 /// no entries.
-fn exposure_sound(v: &WorldView, species: &str) -> MetricValue {
+fn exposure_sound(v: &FullView, species: &str) -> MetricValue {
     let Some(steeped) = independently_steeped_concepts(v, species) else {
         return MetricValue::Absent;
     };
-    let Ok(lex) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+    let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
         return MetricValue::Absent;
     };
     let mut any = false;
@@ -2378,7 +2484,7 @@ fn exposure_sound(v: &WorldView, species: &str) -> MetricValue {
 /// `species`' hue-ladder acquisition depth (spec §7's pack-depth model
 /// card), read straight from `pack_depths` over the roster's own
 /// perception vector. `Absent` if `species` is not in this world's roster.
-fn hue_depth(v: &WorldView, species: &str) -> MetricValue {
+fn hue_depth(v: &AstronomyView, species: &str) -> MetricValue {
     match v.roster.iter().find(|d| d.name == species) {
         Some(def) => MetricValue::Number(f64::from(
             hornvale_worldgen::pack_depths(&def.perception).hue,
@@ -2407,8 +2513,8 @@ const ALL_DAUGHTERS: [&str; 4] = ["goblin", "hobgoblin", "bugbear", "kobold"];
 /// `lexicon_of` alone would silently keep resolving hobgoblin/bugbear/
 /// kobold against the GLOBAL default roster even when they were never part
 /// of this particular world.
-fn in_roster(v: &WorldView, species: &str) -> bool {
-    v.roster.iter().any(|d| d.name == species)
+fn in_roster(v: &FullView, species: &str) -> bool {
+    v.roster().iter().any(|d| d.name == species)
 }
 
 /// Whether every daughter in [`ALL_DAUGHTERS`] is lexicon-regular
@@ -2416,7 +2522,7 @@ fn in_roster(v: &WorldView, species: &str) -> bool {
 /// of the single-species `lexicon-regular-{goblin,kobold}` metrics (spec
 /// §9.1). `Absent` if no daughter in this world's roster minted a Root
 /// (every daughter `Absent`).
-fn lexicon_regular_family(v: &WorldView) -> MetricValue {
+fn lexicon_regular_family(v: &FullView) -> MetricValue {
     let mut any = false;
     let mut regular = true;
     for species in ALL_DAUGHTERS {
@@ -2454,19 +2560,19 @@ fn root_concepts(lex: &hornvale_language::Lexicon) -> Vec<&str> {
 /// registered concept, so its key set is exactly the registry), exactly as
 /// `build_lexicon` does. The shared basis for the monophyly and clean-outgroup
 /// checks: it proves shared ancestry, never mere self-consistency.
-fn goblinoid_proto_assignment(v: &WorldView) -> std::collections::BTreeMap<String, Vec<Segment>> {
-    let proto_ph = hornvale_worldgen::proto_phonology_of(&v.world, "goblinoid");
+fn goblinoid_proto_assignment(v: &FullView) -> std::collections::BTreeMap<String, Vec<Segment>> {
+    let proto_ph = hornvale_worldgen::proto_phonology_of(v.world(), "goblinoid");
     let universe: Vec<&str> = v
-        .world
+        .world()
         .registry
         .concepts()
         .map(|c| c.name.as_str())
         .collect();
     // The merger-aware assignment (epoch root/v3) build_lexicon consumes, so
     // this reconstruction matches every daughter's recorded proto exactly.
-    let daughters = hornvale_worldgen::family_daughters(&v.world, &v.roster, "goblinoid");
+    let daughters = hornvale_worldgen::family_daughters(v.world(), v.roster(), "goblinoid");
     hornvale_language::assign_proto_roots(
-        &v.world.seed,
+        &v.world().seed,
         "goblinoid",
         &proto_ph,
         &universe,
@@ -2479,7 +2585,7 @@ fn goblinoid_proto_assignment(v: &WorldView) -> std::collections::BTreeMap<Strin
 /// proto-root assignment (spec §3 monophyly: every daughter's rooted
 /// vocabulary traces to the one family ancestor). `Absent` if no goblinoid
 /// daughter in this world's roster minted a Root.
-fn monophyly_goblinoid(v: &WorldView) -> MetricValue {
+fn monophyly_goblinoid(v: &FullView) -> MetricValue {
     let assignment = goblinoid_proto_assignment(v);
     let mut any = false;
     let mut monophyletic = true;
@@ -2487,7 +2593,7 @@ fn monophyly_goblinoid(v: &WorldView) -> MetricValue {
         if !in_roster(v, species) {
             continue;
         }
-        let Ok(lex) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+        let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
             continue;
         };
         for (concept, entry) in lex.entries() {
@@ -2510,11 +2616,11 @@ fn monophyly_goblinoid(v: &WorldView) -> MetricValue {
 /// Root, its recorded proto-root must differ from an INDEPENDENT re-draw of
 /// the "goblinoid" family proto-root for that same concept (spec §3's clean
 /// outgroup). `Absent` if kobold minted no Root.
-fn clean_outgroup_kobold(v: &WorldView) -> MetricValue {
+fn clean_outgroup_kobold(v: &FullView) -> MetricValue {
     if !in_roster(v, "kobold") {
         return MetricValue::Absent;
     }
-    let Ok(kobold_lex) = hornvale_worldgen::lexicon_of(&v.world, "kobold") else {
+    let Ok(kobold_lex) = hornvale_worldgen::lexicon_of(v.world(), "kobold") else {
         return MetricValue::Absent;
     };
     let assignment = goblinoid_proto_assignment(v);
@@ -2539,12 +2645,12 @@ fn clean_outgroup_kobold(v: &WorldView) -> MetricValue {
 /// the per-daughter aggregate of `windows/worldgen/src/lib.rs`'s test-only
 /// `every_goblinoid_word_is_in_its_inventory`, generalized to include the
 /// kobold outgroup). `Absent` if `species` minted no Root.
-fn inventory_closure(v: &WorldView, species: &str) -> MetricValue {
+fn inventory_closure(v: &FullView, species: &str) -> MetricValue {
     if !in_roster(v, species) {
         return MetricValue::Absent;
     }
-    let ph = language_of_in(&v.world, &v.roster, species);
-    let Ok(lex) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+    let ph = language_of_in(v.world(), v.roster(), species);
+    let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
         return MetricValue::Absent;
     };
     let mut any = false;
@@ -2580,12 +2686,12 @@ fn inventory_closure(v: &WorldView, species: &str) -> MetricValue {
 /// `evolve` performed on the surface forms (a cascade rule may change or
 /// delete a segment before word-level nativization ever sees it). `Absent`
 /// if `species` minted no Root.
-fn divergence_magnitude(v: &WorldView, species: &str) -> MetricValue {
+fn divergence_magnitude(v: &FullView, species: &str) -> MetricValue {
     if !in_roster(v, species) {
         return MetricValue::Absent;
     }
-    let ph = language_of_in(&v.world, &v.roster, species);
-    let Ok(lex) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+    let ph = language_of_in(v.world(), v.roster(), species);
+    let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
         return MetricValue::Absent;
     };
     let mut any = false;
@@ -2616,13 +2722,13 @@ fn divergence_magnitude(v: &WorldView, species: &str) -> MetricValue {
 /// read false here. Compares recorded `derivation.modern` segment
 /// sequences directly (not romanized views) to avoid any rendering-layer
 /// false negative. `Absent` if no concept is rooted in all three daughters.
-fn divergence_real(v: &WorldView) -> MetricValue {
+fn divergence_real(v: &FullView) -> MetricValue {
     if !GOBLINOID_DAUGHTERS.iter().all(|s| in_roster(v, s)) {
         return MetricValue::Absent;
     }
     let lexes: Vec<hornvale_language::Lexicon> = GOBLINOID_DAUGHTERS
         .iter()
-        .filter_map(|s| hornvale_worldgen::lexicon_of(&v.world, s).ok())
+        .filter_map(|s| hornvale_worldgen::lexicon_of(v.world(), s).ok())
         .collect();
     if lexes.len() < GOBLINOID_DAUGHTERS.len() {
         return MetricValue::Absent;
@@ -2656,11 +2762,11 @@ fn divergence_real(v: &WorldView) -> MetricValue {
 /// pass/fail invariant; homophony is legal and realistic. Groups every Root
 /// entry by its exact modern segment sequence and sums \u{2211} C(group_size, 2)
 /// over every group larger than one. `Absent` if `species` minted no Root.
-fn homophony_count(v: &WorldView, species: &str) -> MetricValue {
+fn homophony_count(v: &FullView, species: &str) -> MetricValue {
     if !in_roster(v, species) {
         return MetricValue::Absent;
     }
-    let Ok(lex) = hornvale_worldgen::lexicon_of(&v.world, species) else {
+    let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
         return MetricValue::Absent;
     };
     let mut by_form: std::collections::BTreeMap<Vec<Segment>, usize> =
@@ -2802,11 +2908,11 @@ fn classify_homophony<F: Ord, P: Ord, D: Ord>(entries: &[(F, P, Option<D>)]) -> 
 /// classify it — the shared body under both the `core-homophony-*` and
 /// `homophony-merger-share-*` metrics. `None` if `species` is off-roster or
 /// minted no Root.
-fn homophony_stats(v: &WorldView, species: &str) -> Option<HomophonyStats> {
+fn homophony_stats(v: &FullView, species: &str) -> Option<HomophonyStats> {
     if !in_roster(v, species) {
         return None;
     }
-    let lex = hornvale_worldgen::lexicon_of(&v.world, species).ok()?;
+    let lex = hornvale_worldgen::lexicon_of(v.world(), species).ok()?;
     let mut triples: Vec<(Vec<Segment>, Vec<Segment>, Option<&'static str>)> = Vec::new();
     for (concept, entry) in lex.entries() {
         if let LexEntry::Root { derivation, .. } = entry {
@@ -2828,7 +2934,7 @@ fn homophony_stats(v: &WorldView, species: &str) -> Option<HomophonyStats> {
 /// the colliding pair are core vocabulary). `Absent` if `species` is
 /// off-roster or minted no Root. Always `\u{2264}` the unrestricted
 /// `homophony-count-{species}`.
-fn core_homophony(v: &WorldView, species: &str) -> MetricValue {
+fn core_homophony(v: &FullView, species: &str) -> MetricValue {
     match homophony_stats(v, species) {
         Some(s) => MetricValue::Number(s.core_pairs as f64),
         None => MetricValue::Absent,
@@ -2843,7 +2949,7 @@ fn core_homophony(v: &WorldView, species: &str) -> MetricValue {
 /// that justifies "accept the atonal tail" as a measurement rather than an
 /// assertion. `Absent` if `species` is off-roster or minted no Root; always
 /// `\u{2264}` `core-homophony-{species}`.
-fn confusable_homophony(v: &WorldView, species: &str) -> MetricValue {
+fn confusable_homophony(v: &FullView, species: &str) -> MetricValue {
     match homophony_stats(v, species) {
         Some(s) => MetricValue::Number(s.confusable_pairs as f64),
         None => MetricValue::Absent,
@@ -2853,11 +2959,11 @@ fn confusable_homophony(v: &WorldView, species: &str) -> MetricValue {
 /// The size of `species`' realized tone inventory (spec §11): 1 for an atonal
 /// people (the shipped humanoids), >1 for a tone-capable one. `Absent` if
 /// `species` is off-roster.
-fn tone_count_metric(v: &WorldView, species: &str) -> MetricValue {
+fn tone_count_metric(v: &FullView, species: &str) -> MetricValue {
     if !in_roster(v, species) {
         return MetricValue::Absent;
     }
-    let ph = language_of_in(&v.world, &v.roster, species);
+    let ph = language_of_in(v.world(), v.roster(), species);
     MetricValue::Number(hornvale_language::tone_inventory(&ph).len() as f64)
 }
 
@@ -2866,11 +2972,11 @@ fn tone_count_metric(v: &WorldView, species: &str) -> MetricValue {
 /// coda fillings, tone folded into the nucleus). The channel capacity the
 /// floor guarantees a minimum of for tone-capable species. `Absent` if
 /// `species` is off-roster.
-fn distinguishable_capacity_metric(v: &WorldView, species: &str) -> MetricValue {
+fn distinguishable_capacity_metric(v: &FullView, species: &str) -> MetricValue {
     if !in_roster(v, species) {
         return MetricValue::Absent;
     }
-    let ph = language_of_in(&v.world, &v.roster, species);
+    let ph = language_of_in(v.world(), v.roster(), species);
     MetricValue::Number(hornvale_language::distinguishable_capacity(&ph) as f64)
 }
 
@@ -2880,7 +2986,7 @@ fn distinguishable_capacity_metric(v: &WorldView, species: &str) -> MetricValue 
 /// draw-collisions (one shared proto). `Absent` if `species` is off-roster,
 /// minted no Root, or has no collision at all (an undefined ratio, never
 /// reported as 0). Decides whether proto-injective assignment alone suffices.
-fn homophony_merger_share(v: &WorldView, species: &str) -> MetricValue {
+fn homophony_merger_share(v: &FullView, species: &str) -> MetricValue {
     match homophony_stats(v, species) {
         Some(s) if s.collision_clusters > 0 => {
             MetricValue::Number(s.merger_clusters as f64 / s.collision_clusters as f64)
@@ -3054,9 +3160,21 @@ mod tests {
         assert_eq!(coerced.globe.plate_count, terrain.globe.plate_count);
     }
 
+    /// Extract `name`'s metric from an already-built `BuiltView`, panicking
+    /// if the metric isn't registered — a small test convenience so each
+    /// test doesn't hand-roll the registry lookup.
+    fn extract_from(built: &BuiltView, name: &str) -> MetricValue {
+        registry()
+            .into_iter()
+            .find(|m| m.name == name)
+            .unwrap_or_else(|| panic!("metric {name} not registered"))
+            .extract
+            .apply(built)
+    }
+
     #[test]
     fn seed_42_default_builds_successfully() {
-        let view = WorldView::build(Seed(42), &SkyPins::default());
+        let view = AstronomyView::build(Seed(42), &SkyPins::default());
         assert!(view.is_ok());
         let view = view.unwrap();
         assert!(!view.system.moons.is_empty());
@@ -3065,10 +3183,9 @@ mod tests {
 
     #[test]
     fn seed_42_star_class_is_text() {
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
-        let metrics = registry();
-        let star_class = metrics.iter().find(|m| m.name == "star-class").unwrap();
-        let value = (star_class.extract)(&view);
+        let view = AstronomyView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Astronomy(view);
+        let value = extract_from(&built, "star-class");
         match value {
             MetricValue::Text(_) => {}
             _ => panic!("Expected Text, got {:?}", value),
@@ -3077,10 +3194,9 @@ mod tests {
 
     #[test]
     fn seed_42_moons_admitted_is_text() {
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
-        let metrics = registry();
-        let moons = metrics.iter().find(|m| m.name == "moons-admitted").unwrap();
-        let value = (moons.extract)(&view);
+        let view = AstronomyView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Astronomy(view);
+        let value = extract_from(&built, "moons-admitted");
         match value {
             MetricValue::Text(_) => {}
             _ => panic!("Expected Text, got {:?}", value),
@@ -3089,10 +3205,9 @@ mod tests {
 
     #[test]
     fn seed_42_belief_kind_is_text_and_not_absent() {
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
-        let metrics = registry();
-        let belief = metrics.iter().find(|m| m.name == "belief-kind").unwrap();
-        let value = (belief.extract)(&view);
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        let value = extract_from(&built, "belief-kind");
         match value {
             MetricValue::Text(_) => {}
             _ => panic!("Expected Text, got {:?}", value),
@@ -3105,10 +3220,9 @@ mod tests {
             rotation: Some(hornvale_astronomy::pins::RotationPin::Locked),
             ..SkyPins::default()
         };
-        let view = WorldView::build(Seed(42), &pins).unwrap();
-        let metrics = registry();
-        let tidally_locked = metrics.iter().find(|m| m.name == "tidally-locked").unwrap();
-        let value = (tidally_locked.extract)(&view);
+        let view = AstronomyView::build(Seed(42), &pins).unwrap();
+        let built = BuiltView::Astronomy(view);
+        let value = extract_from(&built, "tidally-locked");
         assert_eq!(value, MetricValue::Flag(true));
     }
 
@@ -3118,13 +3232,9 @@ mod tests {
             rotation: Some(hornvale_astronomy::pins::RotationPin::Locked),
             ..SkyPins::default()
         };
-        let view = WorldView::build(Seed(42), &pins).unwrap();
-        let metrics = registry();
-        let day_length = metrics
-            .iter()
-            .find(|m| m.name == "day-length-hours")
-            .unwrap();
-        let value = (day_length.extract)(&view);
+        let view = AstronomyView::build(Seed(42), &pins).unwrap();
+        let built = BuiltView::Astronomy(view);
+        let value = extract_from(&built, "day-length-hours");
         assert_eq!(value, MetricValue::Absent);
     }
 
@@ -3134,13 +3244,9 @@ mod tests {
             rotation: Some(hornvale_astronomy::pins::RotationPin::Locked),
             ..SkyPins::default()
         };
-        let view = WorldView::build(Seed(42), &pins).unwrap();
-        let metrics = registry();
-        let year_local = metrics
-            .iter()
-            .find(|m| m.name == "year-local-days")
-            .unwrap();
-        let value = (year_local.extract)(&view);
+        let view = AstronomyView::build(Seed(42), &pins).unwrap();
+        let built = BuiltView::Astronomy(view);
+        let value = extract_from(&built, "year-local-days");
         assert_eq!(value, MetricValue::Absent);
     }
 
@@ -3155,15 +3261,14 @@ mod tests {
             rotation: Some(hornvale_astronomy::pins::RotationPin::Locked),
             ..SkyPins::default()
         };
-        let view = WorldView::build(Seed(42), &pins).unwrap();
-        let first = beliefs_of(&view.world)
+        let view = FullView::build(Seed(42), &pins).unwrap();
+        let first = beliefs_of(view.world())
             .into_iter()
             .next()
             .expect("locked world has beliefs");
         assert_eq!(first.source_kind, "tide");
-        let metrics = registry();
-        let belief = metrics.iter().find(|m| m.name == "belief-kind").unwrap();
-        let value = (belief.extract)(&view);
+        let built = BuiltView::Full(view);
+        let value = extract_from(&built, "belief-kind");
         assert_eq!(value, MetricValue::Text("ambient".to_string()));
     }
 
@@ -3173,31 +3278,25 @@ mod tests {
             rotation: Some(hornvale_astronomy::pins::RotationPin::PeriodHours(24.0)),
             ..SkyPins::default()
         };
-        let view = WorldView::build(Seed(42), &pins).unwrap();
-        let metrics = registry();
-        let belief = metrics.iter().find(|m| m.name == "belief-kind").unwrap();
-        let value = (belief.extract)(&view);
+        let view = FullView::build(Seed(42), &pins).unwrap();
+        let built = BuiltView::Full(view);
+        let value = extract_from(&built, "belief-kind");
         assert_eq!(value, MetricValue::Text("cyclic".to_string()));
     }
 
     #[test]
     fn seed_23_refused_a_moon() {
-        let view = WorldView::build(Seed(23), &SkyPins::default()).unwrap();
-        let metrics = registry();
-        let refused = metrics.iter().find(|m| m.name == "refused-a-moon").unwrap();
-        let value = (refused.extract)(&view);
+        let view = AstronomyView::build(Seed(23), &SkyPins::default()).unwrap();
+        let built = BuiltView::Astronomy(view);
+        let value = extract_from(&built, "refused-a-moon");
         assert_eq!(value, MetricValue::Flag(true));
     }
 
     #[test]
     fn seed_23_genesis_note_count_is_one() {
-        let view = WorldView::build(Seed(23), &SkyPins::default()).unwrap();
-        let metrics = registry();
-        let notes = metrics
-            .iter()
-            .find(|m| m.name == "genesis-note-count")
-            .unwrap();
-        let value = (notes.extract)(&view);
+        let view = AstronomyView::build(Seed(23), &SkyPins::default()).unwrap();
+        let built = BuiltView::Astronomy(view);
+        let value = extract_from(&built, "genesis-note-count");
         assert_eq!(value, MetricValue::Text("1".to_string()));
     }
 
@@ -3234,9 +3333,9 @@ mod tests {
         // `hornvale_language::naming`'s repair formula) to keep every
         // committed name template-conform. This probes the live committed
         // names, exactly as before the epoch bump.
-        let view = WorldView::build(Seed(0), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(0), &SkyPins::default()).unwrap();
         for species in ["goblin", "kobold"] {
-            let ph = hornvale_worldgen::language_of(&view.world, species);
+            let ph = hornvale_worldgen::language_of(view.world(), species);
             for n in species_generated_names(&view, species) {
                 assert!(
                     is_phonotactically_valid(&n, &ph),
@@ -3262,7 +3361,7 @@ mod tests {
         // honorific-bearing epithets — this metric is per-species and
         // does not depend on which OTHER Rank-status people (goblin) also
         // places. kobold (Knowledge) is unaffected.
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         assert_eq!(
             epithet_honorific(&view, "hobgoblin"),
             MetricValue::Flag(true),
@@ -3277,7 +3376,7 @@ mod tests {
 
     #[test]
     fn phonotactic_validator_rejects_garbage_and_empty_strings() {
-        let view = WorldView::build(Seed(0), &SkyPins::default()).unwrap();
+        let view = AstronomyView::build(Seed(0), &SkyPins::default()).unwrap();
         let ph = hornvale_worldgen::language_of(&view.world, "goblin");
         assert!(!is_phonotactically_valid("", &ph));
         // "qw" (uvular stop q + labial approximant w): q is never a Stop
@@ -3288,9 +3387,9 @@ mod tests {
 
     #[test]
     fn land_metrics_extract_for_seed_42() {
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
-        let reg = registry();
-        let m = |name: &str| (reg.iter().find(|m| m.name == name).unwrap().extract)(&view);
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        let m = |name: &str| extract_from(&built, name);
         assert!(matches!(m("plate-count"), MetricValue::Text(_)));
         assert!(matches!(m("ocean-fraction"), MetricValue::Number(f) if (0.0..=1.0).contains(&f)));
         assert!(
@@ -3306,9 +3405,9 @@ mod tests {
 
     #[test]
     fn census_of_peoples_metrics_extract_for_seed_42() {
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
-        let reg = registry();
-        let m = |name: &str| (reg.iter().find(|m| m.name == name).unwrap().extract)(&view);
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        let m = |name: &str| extract_from(&built, name);
         assert!(matches!(m("settlement-count"), MetricValue::Number(n) if n > 0.0));
         assert!(matches!(m("mean-population"), MetricValue::Number(n) if n > 0.0));
         // The four `flagship-*` metrics are documented as specifically the
@@ -3335,9 +3434,9 @@ mod tests {
 
     #[test]
     fn per_species_metrics_have_the_expected_kinds_for_seed_42() {
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
-        let reg = registry();
-        let m = |name: &str| (reg.iter().find(|m| m.name == name).unwrap().extract)(&view);
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        let m = |name: &str| extract_from(&built, name);
         for species in ["goblin", "kobold"] {
             assert!(matches!(
                 m(&format!("{species}-flagship-roles")),
@@ -3368,9 +3467,9 @@ mod tests {
             rotation: Some(hornvale_astronomy::pins::RotationPin::Locked),
             ..SkyPins::default()
         };
-        let view = WorldView::build(Seed(42), &pins).unwrap();
-        let reg = registry();
-        let bc = (reg.iter().find(|m| m.name == "band-count").unwrap().extract)(&view);
+        let view = FullView::build(Seed(42), &pins).unwrap();
+        let built = BuiltView::Full(view);
+        let bc = extract_from(&built, "band-count");
         assert_eq!(bc, MetricValue::Text("locked".to_string()));
     }
 
@@ -3413,28 +3512,25 @@ mod tests {
 
     #[test]
     fn solo_goblin_and_twin_share_placement_and_head_domain_at_seed_42() {
-        let g = WorldView::build_with_roster(
-            Seed(42),
-            &SkyPins::default(),
-            crate::goblin_solo_roster(),
-        )
-        .unwrap();
-        let t = WorldView::build_with_roster(
+        let g =
+            FullView::build_with_roster(Seed(42), &SkyPins::default(), crate::goblin_solo_roster())
+                .unwrap();
+        let t = FullView::build_with_roster(
             Seed(42),
             &SkyPins::default(),
             crate::goblin_twin_solo_roster(),
         )
         .unwrap();
-        let gf = flagship_of(&g.world, "goblin").unwrap();
-        let tf = flagship_of(&t.world, "goblin-twin").unwrap();
+        let gf = flagship_of(g.world(), "goblin").unwrap();
+        let tf = flagship_of(t.world(), "goblin-twin").unwrap();
         // Identical vectors + no competitor ⇒ identical cell (spec §3).
         let gcell = g
-            .world
+            .world()
             .ledger
             .value_of(gf.id, hornvale_settlement::CELL_ID)
             .cloned();
         let tcell = t
-            .world
+            .world()
             .ledger
             .value_of(tf.id, hornvale_settlement::CELL_ID)
             .cloned();
@@ -3444,18 +3540,21 @@ mod tests {
         );
         // Same cell, same sky, same perception ⇒ same head-deity domain.
         let reg = registry();
-        let dom = |view: &WorldView, name: &str| match (reg
+        let dom = |built: &BuiltView, name: &str| match reg
             .iter()
             .find(|m| m.name == name)
             .unwrap()
-            .extract)(view)
+            .extract
+            .apply(built)
         {
             MetricValue::Text(s) => s,
             other => panic!("expected domain text, got {other:?}"),
         };
+        let g_built = BuiltView::Full(g);
+        let t_built = BuiltView::Full(t);
         assert_eq!(
-            dom(&g, "head-deity-domain-goblin"),
-            dom(&t, "head-deity-domain-goblin-twin")
+            dom(&g_built, "head-deity-domain-goblin"),
+            dom(&t_built, "head-deity-domain-goblin-twin")
         );
         // But names differ (independent stream).
         assert_ne!(gf.name, tf.name, "twin names must differ from goblin's");
@@ -3473,15 +3572,18 @@ mod tests {
             "landmass-count",
         ];
         let registry = registry();
-        let a = WorldView::build(Seed(7), &SkyPins::default()).expect("seed 7");
-        let b = WorldView::build(Seed(7), &SkyPins::default()).expect("seed 7 again");
+        let a =
+            BuiltView::Terrain(TerrainView::build(Seed(7), &SkyPins::default()).expect("seed 7"));
+        let b = BuiltView::Terrain(
+            TerrainView::build(Seed(7), &SkyPins::default()).expect("seed 7 again"),
+        );
         for name in names {
             let metric = registry
                 .iter()
                 .find(|m| m.name == name)
                 .unwrap_or_else(|| panic!("metric {name} not registered"));
-            let va = (metric.extract)(&a);
-            assert_eq!(va, (metric.extract)(&b), "{name} not deterministic");
+            let va = metric.extract.apply(&a);
+            assert_eq!(va, metric.extract.apply(&b), "{name} not deterministic");
             if let MetricValue::Number(x) = va {
                 assert!(x.is_finite(), "{name} not finite: {x}");
             }
@@ -3508,18 +3610,26 @@ mod tests {
 
     /// Look up a registered metric by name and extract it — a small
     /// convenience shared by the family-battery tests below, mirroring the
-    /// `m` closures the older per-metric tests already build inline.
-    fn extract(view: &WorldView, name: &str) -> MetricValue {
+    /// `m` closures the older per-metric tests already build inline. Every
+    /// family-battery metric is Full-rung (per the rung map), so this calls
+    /// the extractor's `Full` fn pointer directly rather than routing
+    /// through a `BuiltView` (the tests hold a borrowed `&FullView`, not an
+    /// owned one a `BuiltView` could wrap).
+    fn extract(view: &FullView, name: &str) -> MetricValue {
         let reg = registry();
-        (reg.iter()
+        let metric = reg
+            .iter()
             .find(|m| m.name == name)
-            .unwrap_or_else(|| panic!("metric {name} not registered"))
-            .extract)(view)
+            .unwrap_or_else(|| panic!("metric {name} not registered"));
+        match &metric.extract {
+            Extractor::Full(f) => f(view),
+            other => panic!("metric {name} is {:?}-rung, not Full", other.rung()),
+        }
     }
 
     #[test]
     fn lexicon_regular_family_holds_at_seed_42() {
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         assert_eq!(
             extract(&view, "lexicon-regular-family"),
             MetricValue::Flag(true),
@@ -3529,7 +3639,7 @@ mod tests {
 
     #[test]
     fn monophyly_goblinoid_holds_at_seed_42() {
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         assert_eq!(
             extract(&view, "monophyly-goblinoid"),
             MetricValue::Flag(true),
@@ -3539,7 +3649,7 @@ mod tests {
 
     #[test]
     fn clean_outgroup_kobold_holds_at_seed_42() {
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         assert_eq!(
             extract(&view, "clean-outgroup-kobold"),
             MetricValue::Flag(true),
@@ -3549,7 +3659,7 @@ mod tests {
 
     #[test]
     fn inventory_closure_holds_for_every_daughter_at_seed_42() {
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         for species in ALL_DAUGHTERS {
             assert_eq!(
                 extract(&view, &format!("inventory-closure-{species}")),
@@ -3561,7 +3671,7 @@ mod tests {
 
     #[test]
     fn divergence_magnitude_is_a_nonnegative_number_for_every_goblinoid_daughter_at_seed_42() {
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         for species in GOBLINOID_DAUGHTERS {
             match extract(&view, &format!("divergence-magnitude-{species}")) {
                 MetricValue::Number(n) => assert!(n >= 0.0, "{species}: {n} must be >= 0"),
@@ -3574,7 +3684,7 @@ mod tests {
     fn divergence_real_holds_at_seed_42() {
         // Seed-42 form of the Task 6 guard (`goblinoid_daughters_actually_diverge`
         // in `windows/worldgen/src/lib.rs`): the family is not aliases.
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         assert_eq!(
             extract(&view, "divergence-real"),
             MetricValue::Flag(true),
@@ -3624,7 +3734,7 @@ mod tests {
 
     #[test]
     fn shipped_daughters_are_atonal_with_tone_count_one() {
-        let v = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let v = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         for daughter in ["goblin", "kobold"] {
             assert_eq!(
                 tone_count_metric(&v, daughter),
@@ -3640,7 +3750,7 @@ mod tests {
         // tone-capable species realizes >1 tone and its capacity meets the
         // floor via pitch, across seeds.
         for seed in [1u64, 7, 42] {
-            let v = WorldView::build_with_roster(
+            let v = FullView::build_with_roster(
                 Seed(seed),
                 &SkyPins::default(),
                 crate::serpent_tonal_solo_roster(),
@@ -3673,7 +3783,7 @@ mod tests {
         // seed (not merely the confusable subset). Absent (no Root minted) is
         // vacuously fine.
         for seed in [1u64, 7, 42, 123, 500] {
-            let v = WorldView::build(Seed(seed), &SkyPins::default()).unwrap();
+            let v = FullView::build(Seed(seed), &SkyPins::default()).unwrap();
             for daughter in ["goblin", "hobgoblin", "bugbear", "kobold"] {
                 match extract(&v, &format!("core-homophony-{daughter}")) {
                     MetricValue::Number(n) => assert_eq!(
@@ -3691,7 +3801,7 @@ mod tests {
     fn confusable_homophony_never_exceeds_core_homophony_for_every_daughter() {
         // Q3: the confusable (same-domain) count is a subset of core homophony —
         // the honest measurement that lets the atonal tail be accepted.
-        let v = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let v = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         for daughter in ["goblin", "hobgoblin", "bugbear", "kobold"] {
             let core = extract(&v, &format!("core-homophony-{daughter}"));
             let confusable = extract(&v, &format!("confusable-homophony-{daughter}"));
@@ -3712,7 +3822,7 @@ mod tests {
         // core-homophony-goblin is 0 here. (Residual cascade/nativize mergers
         // are Stage 3's target and seed-dependent; seed 42's goblin cascade is
         // identity, so none arise.)
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         let core = match extract(&view, "core-homophony-goblin") {
             MetricValue::Number(n) => n,
             other => panic!("core-homophony-goblin not a number: {other:?}"),
@@ -3739,7 +3849,7 @@ mod tests {
 
     #[test]
     fn homophony_merger_share_is_a_unit_fraction_or_absent_for_every_daughter() {
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         for species in ALL_DAUGHTERS {
             match extract(&view, &format!("homophony-merger-share-{species}")) {
                 MetricValue::Number(f) => {
@@ -3753,7 +3863,7 @@ mod tests {
 
     #[test]
     fn homophony_count_is_a_nonnegative_number_for_every_daughter_at_seed_42() {
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         for species in ALL_DAUGHTERS {
             match extract(&view, &format!("homophony-count-{species}")) {
                 MetricValue::Number(n) => assert!(n >= 0.0, "{species}: {n} must be >= 0"),
@@ -3781,8 +3891,8 @@ mod tests {
             "homophony-count-bugbear",
             "homophony-count-kobold",
         ];
-        let a = WorldView::build(Seed(11), &SkyPins::default()).expect("seed 11");
-        let b = WorldView::build(Seed(11), &SkyPins::default()).expect("seed 11 again");
+        let a = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11");
+        let b = FullView::build(Seed(11), &SkyPins::default()).expect("seed 11 again");
         for name in names {
             assert_eq!(
                 extract(&a, name),
@@ -3802,7 +3912,7 @@ mod tests {
         // draws a real proto/daughter phonology split (Task 6/7's
         // family-vs-species stream keying), so at least one daughter must
         // show nonzero divergence, or this metric is measuring nothing.
-        let view = WorldView::build(Seed(42), &SkyPins::default()).unwrap();
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         let any_nonzero = GOBLINOID_DAUGHTERS.iter().any(|species| {
             matches!(
                 extract(&view, &format!("divergence-magnitude-{species}")),

@@ -1,6 +1,6 @@
 //! Deterministic sweep engine: run studies, collect metrics, write results.
 
-use crate::{Metric, MetricValue, Study, StudyError, SummaryKind, WorldView};
+use crate::{BuiltView, FullView, Metric, MetricValue, Study, StudyError, SummaryKind};
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_species::SpeciesDef;
@@ -110,6 +110,18 @@ pub fn run(study: &Study) -> Result<RunResult, StudyError> {
     })
 }
 
+/// Run a study, always building every world to `BuildDepth::Full` — the
+/// metamorphic guard's forced-full baseline (MAP-25 Stage 2 Task 6 compares
+/// the depth-scoped `run`'s output against this one; a mismatch means an
+/// extractor's rung under-built). Identical to [`run`] in this task: `run`
+/// does not depth-scope yet (`build_row` always builds Full here too), so
+/// there is nothing to factor out beyond calling straight through — Task 6
+/// is what makes `run` build only as deep as each study's deepest selected
+/// metric while this function keeps forcing Full.
+pub fn run_forced_full(study: &Study) -> Result<RunResult, StudyError> {
+    run(study)
+}
+
 /// Build the row for one (seed offset, pin set): a successful measurement, a
 /// genesis refusal (recorded as a row, not an error), or a fatal `StudyError`.
 /// A pure function of its inputs — the unit of parallel work.
@@ -123,13 +135,20 @@ fn build_row(
 ) -> Result<Row, StudyError> {
     let seed_value = study.seeds.from + seed_offset;
     let roster = resolve_roster(roster)?;
-    match WorldView::build_with_roster(Seed(seed_value), pins, roster) {
-        Ok(view) => Ok(Row {
-            seed: seed_value,
-            pin_set: label.to_string(),
-            values: metrics.iter().map(|m| (m.extract)(&view)).collect(),
-            refusal: None,
-        }),
+    // Always builds to Full depth (no depth optimization yet — MAP-25 Stage 2
+    // Task 6 scopes `run` to each study's deepest selected metric's rung;
+    // this task only swaps `Metric.extract`'s type and dispatch, so it stays
+    // behavior-preserving by construction).
+    match FullView::build_with_roster(Seed(seed_value), pins, roster) {
+        Ok(view) => {
+            let built = BuiltView::Full(view);
+            Ok(Row {
+                seed: seed_value,
+                pin_set: label.to_string(),
+                values: metrics.iter().map(|m| m.extract.apply(&built)).collect(),
+                refusal: None,
+            })
+        }
         Err(BuildError::Genesis(e)) => Ok(Row {
             seed: seed_value,
             pin_set: label.to_string(),
