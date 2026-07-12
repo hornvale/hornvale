@@ -53,8 +53,9 @@ type at all — the doctrine's placement rule, with a live anchor.
 **Canonical representation: Celsius (forced).** The doctrine flags Kelvin
 (ratio, no datum) vs Celsius (smaller magnitude → better quantization precision)
 as a live tradeoff — but for *this* migration byte-identity **forces Celsius**:
-every serialized temperature in the tree is already Celsius (`paleoclimate` and
-climate both). Kelvin-canonical would change serialized bytes → not behavior-free.
+every temperature the tree *emits* (into artifacts, and into the ledger as a bare
+`Value::Number`) is already Celsius. Kelvin-canonical would change those emitted
+numbers → not behavior-free.
 Precision also favors Celsius. So the kernel type is canonical-Celsius, with a
 `.kelvin()` accessor for physics/ratios. (A future Kelvin-canonical world would
 be a non-byte-identical epoch — out of scope.)
@@ -74,9 +75,10 @@ a `Celsius` type, so a future canonical change need not rename it):
   (accessor). `Sub → TempAnomaly`, `Add<TempAnomaly> → Temperature`; **no**
   `Add<Temperature>`.
 - `TempAnomaly(f64)` — the ratio-extensive delta; `from_offset_c` guarded
-  constructor preserved; `Add<TempAnomaly>` legal. Serde-transparent (unchanged
-  bytes).
-- `#[serde(transparent)]`, `total_cmp`-based ordering per the elevation pattern.
+  constructor preserved; `Add<TempAnomaly>` legal.
+- **No `serde`** — temperature is compute-only (never serialized; it crosses to
+  the ledger/artifacts as a bare `f64` via `.get()`). Keep the moved type's
+  derived `PartialOrd`.
 
 Register/re-export from `kernel/src/lib.rs`. (Assumes `units.rs` exists from The
 Datum; if Temperature lands first, it creates the module.)
@@ -108,11 +110,12 @@ regenerate `docs/audits/type-audit-report.md`.
 
 ## Determinism and byte-identity
 
-Canonical-Celsius wraps the existing bytes; `TempAnomaly` is already serde-
-transparent. No stream labels, seed-derivation, consumption order, or physics
-formulas change. **Guard test:** seed-42 world + almanac serialize byte-identical
-pre/post. The rename `Celsius → Temperature` is a source-level change only (no
-serialized type name; `#[serde(transparent)]`).
+Temperature is **compute-only — never serialized** (no `serde`; it reaches the
+ledger and artifacts as a bare `f64` via `.get()`, the doctrine's trace boundary).
+No stream labels, seed-derivation, consumption order, or physics formulas change,
+and the canonical Celsius values are unchanged. **Guard test:** the seed-42
+almanac and lab CSV regenerate **byte-identical** (the emit boundary prints the
+same numbers). The rename `Celsius → Temperature` is source-level only.
 
 ## Rollout staging (for the plan)
 
