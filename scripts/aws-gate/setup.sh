@@ -48,4 +48,29 @@ section "Launch template"
 #     IamInstanceProfile=hornvale-gate-runner-box, base64(userdata.sh with bucket templated),
 #     TagSpecifications project=hornvale-gate ...
 
+section "Circuit breaker (Lambda)"
+# Local, free build step — packages the pure-decision-fn + handler for upload.
+breaker_zip="$(mktemp -d)/circuit_breaker.zip"
+(cd "$here" && zip -q -X "$breaker_zip" circuit_breaker.py)
+echo "  packaging: $breaker_zip"
+# ... create/update execution role `hornvale-gate-breaker` (trust = lambda.amazonaws.com):
+#     inline policy: ec2:DescribeInstances + ec2:TerminateInstances on instances tagged
+#     project=hornvale-gate, iam:ListAccessKeys + iam:UpdateAccessKey on user
+#     hornvale-gate-runner, logs:CreateLogGroup/CreateLogStream/PutLogEvents; tag project ...
+# ... create/update Lambda function `hornvale-gate-breaker`: runtime python3.12, handler
+#     circuit_breaker.handler, code = $breaker_zip, role = above, env vars HVG_REGION /
+#     HVG_MAX_AGE_SECS / HVG_MAX_COUNT (from lib.sh); tag project ...
+# ... create/update EventBridge rule `hornvale-gate-breaker-tick`: schedule rate(5 minutes),
+#     target = the Lambda's ARN; `aws lambda add-permission` granting events.amazonaws.com
+#     invoke, SourceArn = the rule's ARN ...
+# ... manifest_set breaker_lambda_arn / breaker_rule_arn once created ...
+
+section "Budgets"
+# ... create/update a $HVG_BUDGET_ALERT ($10) monthly ACTUAL-cost budget, NOTIFY only,
+#     email subscriber = admin; tag project ...
+# ... create/update a $HVG_BUDGET_HARD ($25) monthly ACTUAL-cost budget with an
+#     IAM-deny budget ACTION (auto-apply, no approval required) targeting the
+#     hornvale-gate-runner user on ACTUAL >= 100% ...
+# ... manifest_set budget_alert_arn / budget_action_arn once created ...
+
 echo "setup complete (dry-run=$DRY_RUN)"
