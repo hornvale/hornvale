@@ -49,6 +49,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The immune stack — boundary-maintenance across every scale](#the-immune-stack--boundary-maintenance-across-every-scale)
   - [The anti-phenomenon — meaningful absence as an observable](#the-anti-phenomenon--meaningful-absence-as-an-observable)
   - [The social graph — a derived, self-balancing relational layer](#the-social-graph--a-derived-self-balancing-relational-layer)
+  - [The motivation engine — Goal-Oriented Action Planning over belief](#the-motivation-engine--goal-oriented-action-planning-over-belief)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
@@ -1731,6 +1732,59 @@ ledger is its source, structural balance its engine). Its cheapest instance is a
 single dyad — one debt minted by one gift, repaid or resented — before the balance
 dynamic is trusted on triads and the drama it produces is measured against a
 world's real history in the Lab.
+
+---
+
+## The motivation engine — Goal-Oriented Action Planning over belief
+
+*(High confidence in the fit; the algorithm is off-the-shelf and constitutionally
+legal. Not a domain — the individual-scale liveness engine, twin to the social
+graph (SOC-9), folded into the belief layer (UNI-16). From the-walk brainstorm.)*
+
+**Rank motivation by autonomy and it is a scale** — reflex, drive, emotion, goal,
+value, project — from hardwired reaction to self-authored arc. But ask what every
+rung *is* and they collapse to one object: a **setpoint**, a desired world-state.
+An agent acts to close the gap between its setpoints and the world it *perceives*,
+and the algorithm that does this is already famous and already legal: **Goal-
+Oriented Action Planning** (Orkin, F.E.A.R.).
+
+**GOAP is the ladder made mechanical, and every part already exists in the
+kernel.** Its world-state is a set of predicates — the fact ledger. Its actions are
+authored verbs with preconditions and effects, and an effect is an event committed
+to the ledger ("models author, dice roll," MAP-5). Its goal is the ladder's current
+setpoint. Its planner is A* over the action space — **deterministic** given a fixed
+cost and a seeded tie-break, so same seed + same world → the same plan, byte for
+byte. The one technique of game AI that needs no randomness is the one the
+constitution demanded.
+
+**The decisive move is that the planner reads *belief*, not truth.** An agent plans
+over its **projection** (UNI-16), so its preconditions are what it *thinks* is true
+— and therefore **a plan can be wrong.** Deception, charm, and false rumour steer
+behaviour for free: corrupt the facts the planner sees and the agent competently
+pursues the deceiver's ends. Motivation and belief stop being two systems; they are
+one active-inference loop — *perceive* changes the model to fit the world, *act*
+changes the world to fit the model, minimising the same gap. The immune-threshold
+lens and the planning lens are the same machine from two sides.
+
+**Personality is the cost function.** Action costs are read from the species and
+culture psychology vectors — a proud agent prices flight high, a pious one prices
+blasphemy high — so identical worlds yield different plans, deterministically, per
+agent. And the reactive rungs (reflex, drive) need no search at all: they are the
+scalar, utility-AI floor beneath the deliberative GOAP ceiling — the autonomy scale
+mapped onto algorithmic depth.
+
+**It closes the observation cycle for NPCs, and it runs lazily.** perceive → select
+goal → plan → act → commit an event → which updates every projection and the social
+graph → perceive again: the metaplan's spine, running autonomously. And by the
+refinement discipline it fires only for observed, salient agents — an observed
+dragon plans; the unobserved thousand stay statistical.
+
+**Sequencing.** The liveness engine of Milestone-2, twin to the social graph (one
+supplies the drives, the other the edges those drives act across). Its cheapest
+instance is a single hungry agent with two actions (forage, beg) planning one step
+over what it believes — before goals nest, costs personalise, and the plans grow
+wrong in interesting ways. Downstream of the drives (PSY-1) and the concept layer
+(LANG-4); the deliberative complement to ideonomic cognition (PSY-5).
 
 ---
 

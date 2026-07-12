@@ -344,7 +344,9 @@ Milestone 2 — the living world:
   you perceive change on re-query; death → re-drop. *Leans on:* I (spine reused), IV.
   Its social dynamics are the **social graph** (frontier SOC-9): relationships
   derived from the event ledger, evolving by structural balance — deterministic
-  drama, no RNG.
+  drama, no RNG. Agent behavior is the **motivation engine** (frontier PSY-6): GOAP
+  planning over each agent's *belief*, with the psychology vector as the cost
+  function — deterministic, and deception steers it for free.
 
 Later / off the critical path:
 
