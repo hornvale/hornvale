@@ -704,10 +704,26 @@ git commit -m "feat(lab): narrowed view chain (Astronomy⊂…⊂Full) with AsRe
 
 ### Task 4: `Extractor` enum — a rung-tagged extractor
 
-**Files:**
-- Modify: `windows/lab/src/metrics.rs`
+> **SEQUENCING CORRECTION (2026-07-12, compile-atomicity).** The original
+> Tasks 4/5/6 changed `Metric.extract`'s type in Task 4 and fixed its 110
+> uses + the runner in later tasks — leaving non-compiling intermediate
+> commits, which violates the "every commit compiles" rule. Re-decomposed so
+> each commit compiles: **Task 4** adds `Extractor`/`BuiltView`/dispatch as
+> *additive* types (re-exported from `lib.rs` to avoid `dead_code`, exactly as
+> Task 3 did) and does NOT touch `Metric`; **Task 5** is the *atomic swap* —
+> change `Metric.extract` → `Extractor`, retype all 110 closures, AND update
+> the runner (`build_row`) to build a `BuiltView` and dispatch — but build
+> **always-`Full`** (`BuiltView::Full(FullView::build(..))`), so the swap is
+> behavior-preserving and the existing calibration/drift tests prove every
+> value is unchanged; **Task 6** changes the runner from always-`Full` to the
+> study's *required* depth (the perf win) and adds the metamorphic guard.
 
-- [ ] **Step 1: Replace `extract: fn(&WorldView) -> MetricValue` with a rung-tagged enum**
+**Files:**
+- Modify: `windows/lab/src/metrics.rs` (add the enum/dispatch), `windows/lab/src/lib.rs` (re-export the new public types so they aren't dead code)
+
+- [ ] **Step 1: ADD (do not yet consume) a rung-tagged extractor enum**
+
+Add `Extractor`, `BuiltView`, `Extractor::rung`, `Extractor::apply`, the `BuiltView` accessors, and a `BuiltView::build_to(seed, pins, roster, depth)` constructor (dispatches to the right view constructor and wraps in the matching variant). Re-export `Extractor` and `BuiltView` from `lib.rs`. **Do NOT change `Metric.extract` in this task** — that is Task 5's atomic swap. This task is purely additive and must compile clean.
 
 ```rust
 /// A metric's extractor, tagged by the view rung it reads. The tag *is* the
@@ -794,38 +810,37 @@ impl BuiltView {
 }
 ```
 
-- [ ] **Step 3: Compile** (extractors not yet migrated, so `registry()` won't compile — expected). Move to Task 5.
+Also add `BuiltView::build_to(seed, pins, roster, depth) -> Result<BuiltView, BuildError>` that matches on `depth` and calls the matching view constructor (`AstronomyView::build_with_roster`/`TerrainView::…`/…), wrapping the result in the corresponding `BuiltView` variant. Task 5's runner uses it.
+
+- [ ] **Step 3: Compile — additive, must be clean.** `cargo build -p hornvale-lab` + `cargo clippy -p hornvale-lab --all-targets -- -D warnings`. The new types are unused until Task 5, so re-export `Extractor` and `BuiltView` from `windows/lab/src/lib.rs` to avoid `dead_code` (Task 3's precedent). Commit: `feat(lab): add rung-tagged Extractor + BuiltView dispatch (additive)`.
 
 ### Task 5: Retype every extractor to its rung (compiler-guided)
 
 **Files:**
 - Modify: `windows/lab/src/metrics.rs`
 
-This is mechanical and the compiler enforces correctness: wrap each metric's `extract` closure in the `Extractor` variant its Task 1 rung dictates, and change the closure's parameter type. A closure that reads a field its new view type lacks **fails to compile** — that failure is the whole point.
+**This is the atomic swap — ONE commit that must compile and pass all tests.** It changes `Metric.extract`'s type, retypes all 110 closures, AND updates the runner, because those are inseparable (the field type, its 110 uses, and the runner call site all change together). The runner builds **always-`Full`** here (no depth optimization yet — that is Task 6), so this commit is *behavior-preserving*: every metric is still computed on a full-depth world, just dispatched through `Extractor`. The existing calibration + drift tests are the proof — they must pass **unchanged** (byte-identical census values), which is the whole safety argument for the retype.
 
-- [ ] **Step 1:** For every metric, per the Task 1 enumeration, change `extract: |v| …` to `extract: Extractor::<Rung>(|v: &<Rung>View| …)` and fix the field paths:
-  - Astronomy metrics: `v.system` / `v.calendar` / `v.notes` unchanged (they're now `AstronomyView` fields).
-  - Terrain metrics: `v.terrain` / `v.globe` stay; if the closure also read `v.system` etc., it now reaches them via the nested `v.astronomy.system` — **but** a terrain metric that reads astronomy is mis-classified; re-check Task 1.
-  - Climate metrics: `v.climate` on `ClimateView`; terrain fields via `v.terrain.terrain` / `v.terrain.globe`.
-  - Settlement metrics: `v.world` via `v.climate.terrain.astronomy.world` — add a `SettlementView::world(&self) -> &World` helper (and `terrain`, `climate` passthroughs) so the closures stay readable: `v.world()`, `v.terrain()`, `v.climate()`.
-  - Full metrics: same, via `FullView` passthrough helpers `world()`, `terrain()`, `climate()`.
-- [ ] **Step 2:** Add passthrough accessors on `SettlementView`/`FullView` so extractor bodies read `v.world()` / `v.terrain()` / `v.climate()` instead of deep field chains — keeps the ~40 deep-rung closures legible and their diffs minimal.
-- [ ] **Step 3: Compile — the compiler now proves the rung map**
+**Files:** `windows/lab/src/metrics.rs` (Metric + retype), `windows/lab/src/runner.rs` (`build_row`), `docs/superpowers/plans/lab-perf-rung-map.md` (the authoritative rung per metric).
 
-Run: `cargo build -p hornvale-lab`
-Expected: clean. **Every compile error here is a metric whose Task 1 rung was wrong (it reads a field its view lacks) — fix the rung, not by widening the view.** A metric that genuinely needs a deeper field belongs at the deeper rung.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add windows/lab/src/metrics.rs
-git commit -m "feat(lab): retype every metric extractor to its narrowest rung"
-```
+- [ ] **Step 1:** Change `Metric.extract` to `pub extract: Extractor`; add `pub fn rung(&self) -> BuildDepth { self.extract.rung() }` to `Metric`.
+- [ ] **Step 2:** For every metric, per the corrected rung map (`lab-perf-rung-map.md` — note `belief-kind` is **Full**, `hue-depth-*` are **Astronomy**), change `extract: |v| …` to `extract: Extractor::<Rung>(|v: &<Rung>View| …)` and fix the field paths:
+  - Astronomy metrics: `v.system` / `v.calendar` / `v.notes` / `v.roster` (all on `AstronomyView`).
+  - Terrain metrics: `v.terrain` / `v.globe`.
+  - Climate metrics: `v.climate` on `ClimateView`; terrain fields via passthroughs.
+  - Settlement/Full metrics: `v.world` etc. via passthrough accessors (Step 3).
+- [ ] **Step 3:** Add passthrough accessors on `ClimateView`/`SettlementView`/`FullView` (`world()`, `terrain()`, `globe()`, `climate()`, `system()`, `calendar()`, `notes()`, `roster()` as each rung needs) so the deep-rung closures read `v.world()` etc. instead of deep field chains — keeps the ~80 deep closures legible and their diffs minimal.
+- [ ] **Step 4:** In `runner.rs` `build_row`, replace `WorldView::build_with_roster(Seed(seed_value), pins, roster)` + `(m.extract)(&view)` with: build `BuiltView::Full(FullView::build_with_roster(Seed(seed_value), pins, roster)?)` (always Full for now) and `values: metrics.iter().map(|m| m.extract.apply(&built)).collect()`. Add a `pub fn run_forced_full(study) -> Result<RunResult, StudyError>` that is the current always-Full runner (Task 6's guard compares against it).
+- [ ] **Step 5: Compile — the compiler now proves the rung map.** `cargo build -p hornvale-lab`. **Every compile error here is a metric whose rung was wrong (it reads a field its view lacks) — fix the rung/the map, not by widening the view.**
+- [ ] **Step 6: Prove behavior-preserving.** `cargo test -p hornvale-lab` → PASS, **especially the calibration + fixture tests** (they assert census values against the committed `rows.csv` — an unchanged pass proves the Extractor dispatch computes byte-identical values). `cargo fmt && cargo clippy -p hornvale-lab --all-targets -- -D warnings`.
+- [ ] **Step 7: Commit** `feat(lab): swap Metric to rung-tagged Extractor; retype all 110 (runner always-Full)`.
 
 ### Task 6: Runner builds to the required depth + metamorphic guard
 
+> **Scope after the sequencing correction:** Task 5 already routed the runner through `BuiltView` + `Extractor::apply`, building **always-`Full`**. This task changes only the *depth*: compute `required = max rung over selected metrics` and build `BuiltView::build_to(.., required)` instead of always `Full` — that is where the census speedup finally lands. Then add the metamorphic guard proving the depth-scoped values equal the always-`Full` values (`run_forced_full`, added in Task 5). The guard MUST include a study that selects `belief-kind` (Full) and one selecting `hue-depth-*` (Astronomy) so the rung-map corrections are machine-checked.
+
 **Files:**
-- Modify: `windows/lab/src/runner.rs` (`build_row`)
+- Modify: `windows/lab/src/runner.rs` (`build_row` — always-`Full` → `required` depth)
 - Test: `windows/lab/tests/depth_ladder.rs`
 
 - [ ] **Step 1: Write the metamorphic guard (the acceptance gate)**
