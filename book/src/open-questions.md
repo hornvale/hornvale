@@ -66,12 +66,21 @@ right shape.
   compute once on the world's canonical grid. So the pointwise half of the
   substrate is now genuinely resolution-free: the render lens samples the
   elevation field below cell scale, and the crust field byte-agrees across
-  nested grid levels. What still did **not** ship is the *Dwarf Fortress* move
-  it is sometimes conflated with: runtime level-of-detail, swapping the
-  resolution of an *active region* on the fly with the seams kept invisible —
-  the mesh-bound half, which the field/grid line now isolates as exactly the
-  remaining work. The fields are ready; the runtime active-region swap is not
-  yet attempted.
+  nested grid levels. The *Dwarf Fortress* move it is sometimes conflated with —
+  runtime level-of-detail, refining an *active region* on the fly with the seams
+  kept invisible — was the mesh-bound half the field/grid line isolated as the
+  remaining work, and [The Room Mesh](./chronicle/the-room-mesh.md) has now laid
+  its foundation. A room is a triangular face of the *same* icosphere refined
+  deeper, so a level-7 room literally *is* a level-7 triangle: the seam problem
+  that made active-region refinement look risky is dissolved structurally, not
+  patched, and the dissolution was oracle-validated to `max|Δ| = 0` across all
+  327,680 faces of a level-7 globe. Local detail is now summonable per-address
+  at arbitrary depth for zero global cost, through an O(1) integer neighbour walk
+  and coarse-field inheritance hooks. What is *not* yet built is the layer that
+  consumes this substrate: the runtime active-region swap itself, its delta
+  store, and the spike-validated adaptive-depth walk that lifts the uniform-depth
+  restriction — all deferred, all resting now on a substrate that exists. The bet
+  has moved from *no mechanism* to *mechanism shipped, composition pending*.
 
 ## Genuinely open — split by whether the world can grade itself
 
