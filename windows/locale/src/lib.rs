@@ -77,13 +77,17 @@ pub struct SubCellTexture {
 }
 
 /// Why a locale could not be described.
-/// type-audit: bare-ok(prose: Build.0)
+/// type-audit: bare-ok(prose: Build.0), bare-ok(prose: Unaddressable.0)
 #[derive(Debug, Clone, PartialEq)]
 pub enum LocaleError {
     /// Building the coarse world failed (worldgen).
     Build(String),
     /// The room is coarser than the canonical grid, so it has no inheritance.
     AboveGrid,
+    /// The room address has no packed id (e.g. `path.len() > MAX_DEPTH`); its
+    /// `RoomAddrError` debug is carried. Fail fast rather than mint a
+    /// meaningless `id: 0`.
+    Unaddressable(String),
 }
 
 impl std::fmt::Display for LocaleError {
@@ -95,6 +99,9 @@ impl std::fmt::Display for LocaleError {
                     f,
                     "room is coarser than the canonical grid (no inheritance)"
                 )
+            }
+            LocaleError::Unaddressable(m) => {
+                write!(f, "room address is unaddressable: {m}")
             }
         }
     }
@@ -137,6 +144,13 @@ impl LocaleContext {
     /// the time-independent annual mean and does not yet vary with `at`
     /// (threaded for the P8 temporal-phase layer).
     pub fn describe(&self, addr: &RoomAddr, _at: WorldTime) -> Result<Locale, LocaleError> {
+        // Fail fast on an unaddressable room (e.g. `path.len() > MAX_DEPTH`)
+        // rather than mint a meaningless `id: 0` (fields are public, so a
+        // caller can hand us an over-deep address).
+        let id = addr
+            .pack()
+            .map_err(|e| LocaleError::Unaddressable(format!("{e:?}")))?
+            .0;
         let geo = self.climate.geosphere();
         let weights = addr
             .corner_weights(geo, &self.index)
@@ -168,7 +182,7 @@ impl LocaleContext {
         let coord = addr.coord();
         Ok(Locale {
             schema: ROOM_SCHEMA,
-            id: addr.pack().map(|r| r.0).unwrap_or(0),
+            id,
             face: addr.face,
             path: addr.path.clone(),
             depth: addr.depth(),
@@ -295,5 +309,37 @@ mod tests {
         assert!(loc.fields.elevation_m.is_finite());
         assert!(loc.fields.temperature_c.is_finite());
         assert_eq!(loc.schema, ROOM_SCHEMA);
+    }
+
+    #[test]
+    fn describe_over_deep_address_errors() {
+        // A path deeper than MAX_DEPTH (29) has no packed id: fail fast with
+        // Unaddressable, never mint a valid-looking Locale with id: 0.
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let over_deep = RoomAddr {
+            face: 0,
+            path: vec![0; 30],
+        };
+        assert!(matches!(
+            ctx.describe(&over_deep, WorldTime { day: 0.0 }),
+            Err(LocaleError::Unaddressable(_))
+        ));
+    }
+
+    #[test]
+    fn blend_and_inheritance_pin_exact_values() {
+        // §14 Q4 regression: pin the blended field + inherited biome for a
+        // fixed seed-42 world at a fixed deep address. Values captured from a
+        // known-good run; a change to the blend/inheritance math trips this.
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let addr = RoomAddr {
+            face: 3,
+            path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+        };
+        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        assert_eq!(loc.biome, "bathypelagic");
+        assert_eq!(loc.fields.temperature_c, 38.082618);
     }
 }
