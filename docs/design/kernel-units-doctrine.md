@@ -28,7 +28,8 @@ The planned domains share a common physical vocabulary, so the kernel unit
 *vocabulary* is built ahead of demand — units are a closed, knowable domain, so
 this is not speculative generality. Each type's *richer surface* (accessors,
 conversions) stays reactive: added when a consumer needs it. The Datum is the
-pilot; a "Kernel Units" campaign builds the shared core.
+pilot; the shared core is then built as a *series* of small, anchored,
+byte-identical family campaigns (see Roadmap), not one mega-campaign.
 
 **Each family needs a real anchor.** Proactive applies to the *doctrine* and to
 families with a genuine current consumer (or a near-certain planned one) — not to
@@ -197,3 +198,24 @@ decision, not only a semantic one.
   **not units.** They are ordered enums / ordinal scales, kept out of the units
   library. If one will ever need arithmetic, model it interval/ratio at birth
   (level is chosen at birth).
+
+## Roadmap — the family queue
+
+The doctrine spawns a *series* of small, anchored, byte-identical family
+campaigns (not one mega-campaign), ordered by anchor and risk:
+
+1. **Elevation** — The Datum (the pilot). Ready to execute (kernel freed when The
+   Room Mesh shipped, 2026-07-12).
+2. **Temperature** — next: re-uses the elevation mechanism on a simpler quantity
+   (no datum, no cyclicity). Singular, ratio-but-intensive, carries `TempAnomaly`.
+   Anchor: dedups `paleoclimate::Celsius` and the worldgen cross-domain borrow.
+   Spec: `docs/superpowers/specs/2026-07-12-temperature-design.md`.
+3. **Angle** — its own campaign (new cyclic machinery: `Longitude` wraps,
+   `Latitude` clamps; shortest-angular-distance). Highest blast radius
+   (`GeoCoord.latitude`); migrates astronomy's `Degrees`.
+4. **Deferred until anchored** — `GeocentricRadius`/`Distance` (room-scale 3D),
+   `CrustThickness` (retires `crust-km-convention`), `RelativeElevation<H>` (the
+   Underdark), `Energy`/`Mass`/vectors (a computing consumer).
+
+Per-family recipe: classify per this doctrine → spec → byte-identical plan →
+origin-first migration → retire a waiver / dedup a wart → golden drift test.
