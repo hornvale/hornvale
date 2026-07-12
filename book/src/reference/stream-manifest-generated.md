@@ -48,6 +48,10 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/<species>/lexicon/cascade` | the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root |
 | `language/<species>/lexicon/headedness` | the species' drawn compound-joining order (HeadFirst/HeadLast), gating LexEntry::Compound component order |
 
+### hornvale-paleoclimate
+
+*(no seed-derivation streams)*
+
 ### hornvale-religion
 
 *(no seed-derivation streams)*

@@ -1,27 +1,23 @@
 //! Render the stream manifest: every seed-derivation label in the project.
 
+use hornvale_kernel::Domain;
+
 /// Render every registered crate's stream labels as the book's generated
 /// reference page. Labels are permanent save-format contracts.
 /// type-audit: bare-ok(artifact: return)
 pub fn render_streams() -> String {
-    let sources: [(&str, Vec<(&'static str, &'static str)>); 8] = [
-        ("hornvale-astronomy", hornvale_astronomy::stream_labels()),
-        ("hornvale-climate", hornvale_climate::stream_labels()),
-        ("hornvale-culture", hornvale_culture::stream_labels()),
-        ("hornvale-language", hornvale_language::stream_labels()),
-        ("hornvale-religion", hornvale_religion::stream_labels()),
-        ("hornvale-settlement", hornvale_settlement::stream_labels()),
-        ("hornvale-species", hornvale_species::stream_labels()),
-        ("hornvale-terrain", hornvale_terrain::stream_labels()),
-    ];
     let mut doc = String::new();
     doc.push_str("<!-- GENERATED FILE — do not edit. Regenerate with `hornvale streams`. -->\n\n");
     doc.push_str(
         "Labels are permanent save-format contracts; regeneration uses epoch \
          suffixes (e.g. `settlement/name/v2`), never renames.\n\n",
     );
-    for (crate_name, labels) in sources {
-        doc.push_str(&format!("### {crate_name}\n\n"));
+    // DOMAINS is stored in registration order; the manifest is alphabetical.
+    let mut domains: Vec<&dyn Domain> = hornvale_worldgen::DOMAINS.to_vec();
+    domains.sort_by_key(|d| d.crate_name());
+    for domain in domains {
+        doc.push_str(&format!("### {}\n\n", domain.crate_name()));
+        let labels = domain.stream_labels();
         if labels.is_empty() {
             doc.push_str("*(no seed-derivation streams)*\n\n");
             continue;
@@ -52,6 +48,8 @@ mod tests {
             "| `terrain/plate-count` |",
             "| `language/<species>/name/settlement` |",
             "octave-{n}",
+            "### hornvale-paleoclimate",
+            "*(no seed-derivation streams)*",
         ] {
             assert!(doc.contains(expected), "missing: {expected}");
         }
@@ -60,5 +58,25 @@ mod tests {
     #[test]
     fn manifest_is_deterministic() {
         assert_eq!(render_streams(), render_streams());
+    }
+
+    #[test]
+    fn manifest_sections_are_alphabetical_by_crate() {
+        let doc = render_streams();
+        // The domain section headers, in document order, must be sorted.
+        let headers: Vec<&str> = doc
+            .lines()
+            .filter(|l| l.starts_with("### hornvale-") && !l.contains("kernel"))
+            .collect();
+        let mut sorted = headers.clone();
+        sorted.sort_unstable();
+        assert_eq!(
+            headers, sorted,
+            "manifest domain sections must be alphabetical"
+        );
+        // paleoclimate sorts between language and religion.
+        let pos = |s: &str| headers.iter().position(|h| *h == s).unwrap();
+        assert!(pos("### hornvale-language") < pos("### hornvale-paleoclimate"));
+        assert!(pos("### hornvale-paleoclimate") < pos("### hornvale-religion"));
     }
 }
