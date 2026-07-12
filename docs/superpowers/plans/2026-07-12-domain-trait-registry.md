@@ -462,10 +462,14 @@ Create `docs/retrospectives/the-domain-trait.md` — one page of *process* lesso
 cargo test --workspace
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
+cargo run --manifest-path tools/type-audit/Cargo.toml -- check
 cargo test -p hornvale --test docs_consistency
 git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/
 ```
-Expected: all green; no artifact drift.
+Expected: all green; type-audit reports no untagged primitives; no artifact drift.
+(The type-audit check is default-deny on untagged pub-boundary primitives — it is
+part of CI and must pass. Any new `pub` item introduced by this branch carries a
+`type-audit:` verdict tag.)
 
 - [ ] **Step 6: Commit**
 
