@@ -18,8 +18,12 @@ members — concept registration and seed-derivation stream labels — are aggre
 
 - `windows/worldgen/src/lib.rs` `register_all()` calls `register_concepts` on 9 domains
   in cascade order.
-- `cli/src/streams.rs` lists 8 domains (paleoclimate correctly omitted — it draws no
-  seed streams) to build the drift-checked streams manifest.
+- `cli/src/streams.rs` lists 8 domains to build the drift-checked streams manifest. It
+  renders a section for every listed domain — including the four streamless ones
+  (`climate`, `culture`, `religion`, `species`), which show `*(no seed-derivation
+  streams)*`. paleoclimate is the lone omission, and not by any rule: it was simply never
+  added to the list. A1 makes the manifest iterate the roster uniformly, which restores
+  paleoclimate to it (see §4).
 
 Nothing enforces that these two lists agree. Their membership already differs, and their
 *ordering* differs. This is latent drift: a new domain added to one list but not the
@@ -125,32 +129,47 @@ it, never authored separately.
 // register_all: iterate the roster, then worldgen's own NAME_GLOSS predicate.
 pub fn register_all(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     for d in DOMAINS {
-        d.register_concepts(registry)
-            .map_err(|e| /* wrap with d.crate_name() so the failing domain is named */)?;
+        d.register_concepts(registry)?;
     }
     registry.register_predicate(NAME_GLOSS, true, "...")
 }
 
-// streams manifest (moves from cli/src/streams.rs to iterate DOMAINS):
-//   for each domain, bind labels = d.stream_labels() ONCE; emit (crate_name, labels)
-//   ONLY when labels is non-empty.
+// streams manifest (cli/src/streams.rs, rewritten to iterate DOMAINS):
+//   for each domain: header `### {crate_name}`, then either the label table
+//   or `*(no seed-derivation streams)*` when stream_labels() is empty.
+//   The trailing hardcoded `hornvale-kernel (internal)` section is appended after.
 ```
 
-## 4. The three byte-identity contracts
+**On error context:** `register_all` keeps its `Result<(), RegistryError>` signature.
+The notation pass proposed wrapping the loop error with the failing domain's
+`crate_name()`, but `RegistryError` carries only `ConflictingDefinition { name }` (no
+context slot) and `register_all` has ~8 callers — a return-type change is out of
+proportion to A1, and the existing error already names the conflicting *concept*, which
+(registered by exactly one domain) already locates the culprit. Refinement dropped.
 
-The refactor is byte-identical to today's committed artifacts or it is not done. CI's
-existing drift check (streams manifest + concepts dump) is the primary proof.
+## 4. The contracts (one deliberate regeneration; everything else byte-identical)
+
+The **concepts dump stays byte-identical** — that is the primary drift proof. The
+**streams manifest gains exactly one section** (`hornvale-paleoclimate`, rendered
+`*(no seed-derivation streams)*`) as a deliberate, reviewed regeneration; the committed
+page is regenerated and committed in the same change. No stream label is added, removed,
+or renamed, so no save-format contract is touched.
 
 1. **Roster order = alphabetical by crate name**, matching today's *streams manifest*
-   order (`cli/src/streams.rs`). `register_all`'s current cascade order is **not**
+   order (`cli/src/streams.rs`), with paleoclimate slotting in alphabetically (between
+   `language` and `religion`). `register_all`'s current cascade order is **not**
    observable — concept/predicate registration is pure set-insertion into the registry's
    `BTreeMap`, and the concepts dump is emitted sorted — so re-ordering registration to
-   alphabetical changes no artifact. The drift check proves this empirically.
+   alphabetical changes no artifact. The drift check on the concepts dump proves this
+   empirically.
 
-2. **The manifest omits empty-`stream_labels` domains.** Paleoclimate is a `Domain`
-   (it registers concepts) but draws no seed streams → default-empty labels → it must
-   **not** appear in the streams manifest, exactly as today. Rule: *a domain with no seed
-   streams contributes no manifest section.*
+2. **The manifest iterates the roster uniformly.** Every registered domain gets a
+   section; streamless domains (`climate`, `culture`, `religion`, `species`, and now
+   `paleoclimate`) render `*(no seed-derivation streams)*`. This removes the arbitrary
+   paleoclimate omission — the *only* intended artifact change in A1. The trait needs no
+   opt-out flag; emptiness is shown, not hidden. (The trailing hardcoded
+   `hornvale-kernel (internal)` section is not a domain and stays appended after the
+   loop.)
 
 3. **`NAME_GLOSS` stays a post-roster registration** inside `register_all`. worldgen is
    the composition root, not a domain; it does not join the roster.
@@ -182,15 +201,16 @@ non-empty (guarding against a duplicated or missing roster entry).
 
 ## 7. Testing
 
-- **Characterization guard (primary):** the existing CI artifact drift-check — streams
-  manifest and concepts dump byte-identical — proves correctness and the save-format
-  contract in one pass.
+- **Characterization guard (primary):** the CI artifact drift-check proves the
+  **concepts dump** is byte-identical, and that the **streams manifest** matches its
+  regenerated form (the one that now includes the paleoclimate `no streams` section). The
+  regeneration is committed as part of stage 4.
 - **worldgen unit tests (new):**
   - `DOMAINS` crate-names are unique and non-empty.
   - Iterating `DOMAINS` registers the same sorted predicate/concept name-set as a
     snapshot captured before the change.
-  - The manifest built from `DOMAINS` equals the committed manifest (including the
-    empty-labels omission of paleoclimate).
+  - The manifest built from `DOMAINS` contains a section for every roster domain,
+    including `hornvale-paleoclimate` rendered as `*(no seed-derivation streams)*`.
 - **Per-domain tests (unchanged):** `register_concepts` idempotent; `stream_labels`
   declares every derivation — all keep passing through the shims.
 - **Architecture test (unchanged):** `cli/tests/architecture.rs` continues to enforce
