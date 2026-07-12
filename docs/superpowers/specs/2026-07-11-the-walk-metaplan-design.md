@@ -178,7 +178,17 @@ irreversible is stored, §3.4; the memory economy, MEM-1, prices retained facts 
 keep it bounded), so it fits in RAM. The implementation is a `Vec<Fact>` (the log)
 with `BTreeMap` secondary indexes rebuilt on load, queried by pattern in std-only
 Rust — no compaction, no disk paging, no LSM machinery. Persistence is the existing
-model: `World { seed, registry, ledger }` serialised to JSON. If a world's history
+model: `World { seed, registry, ledger }` serialised to JSON.
+
+**The concrete build** — the ledger surface Chunk 0 needs: a `Vec<Fact>` log
+(append-only, the kernel's `Ledger` today); `BTreeMap` secondary indexes (entity →
+facts, predicate → facts, and a time-ordered view once events land) rebuilt on load;
+the views as hand-rolled, std-only query functions over the indexed facts (Datalog's
+data *model*, not its language); and `as-of` as a filter on the time column. The
+LSM-tree is the right mental model at the wrong scale — build its shape, an
+append-only log plus derived indexes, in memory and in std.
+
+If a world's history
 ever outgrew memory (a long-running MUD), that is a bespoke, full-precision format
 decision (cf. the Lorenz guard-rail in the Constitution's determinism section), not
 a reach for a library.
