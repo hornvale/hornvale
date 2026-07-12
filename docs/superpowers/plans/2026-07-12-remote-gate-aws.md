@@ -190,9 +190,9 @@ Expected: FAIL — policy file missing.
       }
     },
     {
-      "Sid": "ManageOwnTaggedBoxes",
+      "Sid": "TerminateOwnTaggedBoxes",
       "Effect": "Allow",
-      "Action": ["ec2:TerminateInstances", "ec2:CreateTags"],
+      "Action": "ec2:TerminateInstances",
       "Resource": "*",
       "Condition": { "StringEquals": { "aws:ResourceTag/project": "hornvale-gate", "aws:RequestedRegion": "us-east-1" } }
     },
