@@ -5,6 +5,7 @@
 use crate::anchor::Rotation;
 use crate::system::StarSystem;
 use crate::units::StdDays;
+use hornvale_kernel::math;
 
 #[cfg(test)]
 mod tests {
@@ -437,8 +438,8 @@ impl Calendar {
         let obliquity = self.forcing.obliquity_at(t.0);
         let ecc = self.forcing.eccentricity_at(t.0);
         let phase = self.year_phase(t);
-        let tilt_term = (obliquity / 90.0) * 0.5 * (std::f64::consts::TAU * phase).sin();
-        let apsidal_term = ecc * 0.5 * (std::f64::consts::TAU * phase).sin();
+        let tilt_term = (obliquity / 90.0) * 0.5 * math::sin(std::f64::consts::TAU * phase);
+        let apsidal_term = ecc * 0.5 * math::sin(std::f64::consts::TAU * phase);
         Some((0.5 + tilt_term + apsidal_term).clamp(0.0, 1.0))
     }
     /// Daylight fraction of the local day at a latitude (SKY-8): the standard
@@ -452,13 +453,13 @@ impl Calendar {
         // Solar declination: the sub-solar latitude oscillates over the year,
         // its amplitude the (time-varying) obliquity.
         let obliquity = self.forcing.obliquity_at(t.0).to_radians();
-        let declination = obliquity * (std::f64::consts::TAU * self.year_phase(t)).sin();
+        let declination = obliquity * math::sin(std::f64::consts::TAU * self.year_phase(t));
         let phi = latitude.to_radians();
         // cos H0 = −tan φ · tan δ; the clamp yields polar day (−1 → H0 = π,
         // fraction 1) and polar night (1 → H0 = 0, fraction 0) past the polar
         // circles.
-        let cos_h0 = (-phi.tan() * declination.tan()).clamp(-1.0, 1.0);
-        Some(cos_h0.acos() / std::f64::consts::PI)
+        let cos_h0 = (-math::tan(phi) * math::tan(declination)).clamp(-1.0, 1.0);
+        Some(math::acos(cos_h0) / std::f64::consts::PI)
     }
     /// The sub-solar latitude at `t`, in degrees (SKY-7): the solar
     /// declination, oscillating over the year with amplitude the
@@ -466,7 +467,7 @@ impl Calendar {
     /// daylight model already uses.
     /// type-audit: pending(wave-1)
     pub fn solar_declination(&self, t: StdDays) -> f64 {
-        self.forcing.obliquity_at(t.0) * (std::f64::consts::TAU * self.year_phase(t)).sin()
+        self.forcing.obliquity_at(t.0) * math::sin(std::f64::consts::TAU * self.year_phase(t))
     }
 
     /// Hour angle (radians, 0 at local solar noon), declination and
@@ -491,9 +492,11 @@ impl Calendar {
     pub fn solar_altitude_at(&self, t: StdDays, latitude: f64) -> Option<f64> {
         let (h, delta, phi) = self.solar_geometry(t, latitude)?;
         Some(
-            (phi.sin() * delta.sin() + phi.cos() * delta.cos() * h.cos())
-                .asin()
-                .to_degrees(),
+            math::asin(
+                math::sin(phi) * math::sin(delta)
+                    + math::cos(phi) * math::cos(delta) * math::cos(h),
+            )
+            .to_degrees(),
         )
     }
 
@@ -506,7 +509,10 @@ impl Calendar {
         let (h, delta, phi) = self.solar_geometry(t, latitude)?;
         // atan2 form measured from south, westward positive; shift to
         // compass convention.
-        let from_south = h.sin().atan2(h.cos() * phi.sin() - delta.tan() * phi.cos());
+        let from_south = math::atan2(
+            math::sin(h),
+            math::cos(h) * math::sin(phi) - math::tan(delta) * math::cos(phi),
+        );
         Some((from_south.to_degrees() + 180.0).rem_euclid(360.0))
     }
 

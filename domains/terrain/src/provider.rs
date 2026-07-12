@@ -3,7 +3,7 @@
 use crate::boundaries::CellBoundary;
 use crate::globe::{GenesisOutcome, TectonicGlobe};
 use crate::plates::dot;
-use hornvale_kernel::{CellId, Geosphere};
+use hornvale_kernel::{CellId, Geosphere, math};
 
 /// A queryable tectonic terrain provider. Owns its Geosphere so queries and
 /// the globe's CellMaps always agree on the cell space — a CellMap must
@@ -90,7 +90,11 @@ impl GeneratedTerrain {
     /// type-audit: pending(wave-2: latitude), pending(wave-2: longitude)
     pub fn nearest_cell(&self, latitude: f64, longitude: f64) -> CellId {
         let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
-        let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+        let target = [
+            math::cos(lat) * math::cos(lon),
+            math::cos(lat) * math::sin(lon),
+            math::sin(lat),
+        ];
         let mut best = CellId(0);
         let mut best_dot = f64::NEG_INFINITY;
         for cell in self.geosphere.cells() {

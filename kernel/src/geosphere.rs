@@ -5,6 +5,7 @@
 //! `Field`. This is the spatial substrate the terrain and climate domains
 //! compute over.
 
+use crate::math;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Identifier for a cell — an index into the mesh's vertices.
@@ -239,8 +240,8 @@ impl Geosphere {
     pub fn coord(&self, id: CellId) -> GeoCoord {
         let [x, y, z] = self.positions[id.0 as usize];
         GeoCoord {
-            latitude: z.asin().to_degrees(),
-            longitude: y.atan2(x).to_degrees(),
+            latitude: math::asin(z).to_degrees(),
+            longitude: math::atan2(y, x).to_degrees(),
         }
     }
 
@@ -287,7 +288,11 @@ impl NearestCellIndex {
     /// type-audit: pending(wave-1)
     pub fn nearest(&self, geo: &Geosphere, latitude: f64, longitude: f64) -> CellId {
         let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
-        let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+        let target = [
+            math::cos(lat) * math::cos(lon),
+            math::cos(lat) * math::sin(lon),
+            math::sin(lat),
+        ];
         let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
         let lo = band.saturating_sub(1);
         let hi = (band + 1).min(BAND_COUNT - 1);
@@ -310,7 +315,7 @@ impl NearestCellIndex {
     /// this returns that exact vertex (self-dot = 1.0 wins).
     /// type-audit: pending(wave-1)
     pub fn nearest_to_position(&self, geo: &Geosphere, pos: [f64; 3]) -> CellId {
-        let latitude = pos[2].asin().to_degrees();
+        let latitude = math::asin(pos[2]).to_degrees();
         let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
         let lo = band.saturating_sub(1);
         let hi = (band + 1).min(BAND_COUNT - 1);
@@ -477,7 +482,11 @@ mod tests {
         for (latitude, longitude) in [(0.0, 0.0), (89.0, 10.0), (-89.0, -170.0), (45.5, 179.5)] {
             let banded = index.nearest(&geo, latitude, longitude);
             let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
-            let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+            let target = [
+                super::math::cos(lat) * super::math::cos(lon),
+                super::math::cos(lat) * super::math::sin(lon),
+                super::math::sin(lat),
+            ];
             let mut best = CellId(0);
             let mut best_dot = f64::NEG_INFINITY;
             for cell in geo.cells() {

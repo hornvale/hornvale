@@ -10,6 +10,9 @@ license = "MIT"
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# SPIKE(libm): portable transcendentals — bit-identical across platforms.
+# Allowlist amendment pending a decision supersede if the spike lands.
+libm = "0.2"
 
 # TOOL-hot-crate-opt: hornvale-language's tests sweep 1,000-seed language
 # evolution; O2 here buys release-grade test speed while every other crate

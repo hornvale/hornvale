@@ -4,7 +4,7 @@
 //! Discrete estimators (documented per function) are declared
 //! approximations; each is deterministic and consistent across metrics.
 
-use hornvale_kernel::{CellMap, Geosphere};
+use hornvale_kernel::{CellMap, Geosphere, math};
 use std::collections::VecDeque;
 
 /// Half-width of the shelf band around sea level, meters (Earth's
@@ -14,9 +14,7 @@ pub const SHELF_BAND_M: f64 = 200.0;
 
 /// Angular distance between two unit vectors, radians.
 fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
-    (a[0] * b[0] + a[1] * b[1] + a[2] * b[2])
-        .clamp(-1.0, 1.0)
-        .acos()
+    math::acos((a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).clamp(-1.0, 1.0))
 }
 
 /// Shoreline development index `D = L / (2 sqrt(pi A))`: coastline length
@@ -185,8 +183,8 @@ mod tests {
         // far more shoreline for less area.
         let stripes = CellMap::from_fn(&geo, |c| {
             let p = geo.position(c);
-            let sector =
-                ((p[1].atan2(p[0]) + std::f64::consts::PI) / (std::f64::consts::PI / 6.0)) as i64;
+            let sector = ((math::atan2(p[1], p[0]) + std::f64::consts::PI)
+                / (std::f64::consts::PI / 6.0)) as i64;
             if p[2] >= 0.5 && sector % 2 == 0 {
                 100.0
             } else {

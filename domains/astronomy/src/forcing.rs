@@ -10,6 +10,7 @@ use crate::anchor::Anchor;
 use crate::pins::SkyPins;
 use crate::streams;
 use hornvale_kernel::Seed;
+use hornvale_kernel::math;
 
 /// Obliquity oscillation period, standard days (~41 kyr).
 /// type-audit: pending(wave-1)
@@ -59,14 +60,15 @@ impl OrbitalForcing {
     pub fn obliquity_at(&self, t: f64) -> f64 {
         self.obliquity_mean
             + self.obliquity_amp
-                * ((TAU * t / P_OBLIQUITY + self.obliquity_phase).sin()
-                    - self.obliquity_phase.sin())
+                * (math::sin(TAU * t / P_OBLIQUITY + self.obliquity_phase)
+                    - math::sin(self.obliquity_phase))
     }
     /// Eccentricity at `t`; a genuinely new element, so `eccentricity_at(0.0)`
     /// is `ecc_mean + ecc_amp*sin(ecc_phase)` (the present gains eccentricity).
     /// type-audit: pending(wave-1: t), bare-ok(ratio: return)
     pub fn eccentricity_at(&self, t: f64) -> f64 {
-        (self.ecc_mean + self.ecc_amp * (TAU * t / P_ECCENTRICITY + self.ecc_phase).sin()).max(0.0)
+        (self.ecc_mean + self.ecc_amp * math::sin(TAU * t / P_ECCENTRICITY + self.ecc_phase))
+            .max(0.0)
     }
     /// Precession phase at `t`, radians, wrapping over `P_PRECESSION`.
     /// type-audit: pending(wave-1)
