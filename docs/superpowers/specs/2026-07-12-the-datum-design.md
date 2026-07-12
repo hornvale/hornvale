@@ -163,38 +163,57 @@ type's *richer surface* (extra accessors, conversions) stays reactive: added
 when a consumer needs it, not before. The Datum is the pilot; a successor
 "Kernel Units" campaign builds the shared core.
 
-**Promotion — classify the quantity, then type it.** Singular/plural is one
-axis of several; a quantity is typed according to where it sits on all of them:
+**Promotion — classify the quantity, then type it.** The primary classifier is
+the quantity's **scale of measurement** (Stevens); three orthogonal axes then
+shape the type.
 
-- **Multiplicity** — *singular* (one meaning, compares everywhere: temperature,
-  energy) → one shared kernel type. *Plural* (meanings that must not intermix:
-  length → elevation vs crust-thickness vs distance) → semantic newtypes at
-  boundaries (`ReferenceElevation`, `CrustThickness`), never a bare shared
-  `Length`.
-- **Additivity — affine vs vector.** *Affine* positions subtract (→ a
-  difference) but do not add (`ReferenceElevation`, absolute temperature,
-  time-instant); they are **promoted together with their companion vector delta
-  type** (elevation's `Sub`-delta; temperature's `TempAnomaly`; time's
-  duration). *Vector* magnitudes add (energy, mass, the deltas themselves). The
-  code already grew these pairs blind (`Celsius`/`TempAnomaly`,
-  sea-level/`SeaLevelChange`); the pattern is now deliberate.
-- **Cyclicity — linear vs cyclic vs bounded.** *Cyclic* quantities wrap
-  (longitude, phase, time-of-day) and need modular arithmetic and
-  normalization; *bounded* clamp (latitude ±90); *linear* do neither (elevation,
-  energy). An angle type is therefore **not** a re-skin of the linear elevation
-  pattern.
-- **Rank — scalar vs vector/tensor.** The types built now are *scalars*. Rank-1
-  quantities (position, velocity, gradient — today bare `[f64; 3]`) are a
-  recognized **deferred category**, not a claim the library is "done" once the
-  scalars are typed.
-- **Naturalness — physical vs conventional.** Only SI-dimensional physical
-  quantities are units. Ordinal/convention scales (a future sim's faith,
-  reputation, danger; Mohs, Beaufort) are **out of scope** — they are ordered
-  enums, not `f64`-with-dimension, and must not be dumped in the units library.
+*Scale (Stevens) — the spine.* A quantity's scale decides whether it is a unit
+at all, and the levels form a lattice from most to least structure:
+
+- **ratio** (true zero; add/subtract/multiply/divide) — energy, mass, distance,
+  radius, duration, and every *delta* → a shared kernel unit type with full
+  arithmetic.
+- **interval** (arbitrary zero; differences meaningful, ratios not) — absolute
+  temperature, elevation, calendar date, longitude-as-position → a unit type
+  **that carries its zero-convention (datum)**, whose *difference is a ratio
+  quantity* — its companion delta (elevation's `Sub`-delta, `Celsius` →
+  `TempAnomaly`, instant → duration). The code grew these pairs blind
+  (`Celsius`/`TempAnomaly`, sea-level/`SeaLevelChange`); the pattern is now
+  deliberate: **an interval type is promoted together with its ratio delta.**
+- **ordinal** (order only — Mohs, Beaufort; a future sim's faith, reputation,
+  danger) and **nominal** (categories — biome, species; the rubric's
+  `identifier-text`) are **not units** — ordered enums / identifiers, kept out
+  of the units library.
+
+Two rules fall out of the lattice:
+
+- **Level is chosen at birth.** Structure only ever flows *down* the lattice
+  (ratio → interval → ordinal → nominal); it is never recoverable upward (a rank
+  cannot become a magnitude again). A quantity that will ever need arithmetic
+  must be *born* interval/ratio — an ordinal stat cannot be "upgraded" later
+  without re-modelling.
+- **Interval types carry their datum.** An interval value is meaningless without
+  its zero-convention recorded, and that convention must travel with it through
+  serialization — which is exactly why `ReferenceElevation` names its datum
+  (`Celsius`'s zero is the freezing convention; a calendar's is its epoch).
+
+*Orthogonal axes* (independent of scale):
+
+- **Multiplicity** — *singular* (one meaning, compares everywhere) → one shared
+  type; *plural* (meanings that must not intermix: length → elevation vs
+  crust-thickness vs distance) → semantic newtypes (`ReferenceElevation`,
+  `CrustThickness`), never a bare shared `Length`.
+- **Cyclicity** — *cyclic* quantities wrap (longitude, phase) and need modular
+  arithmetic + normalization; *bounded* clamp (latitude ±90); *linear* do
+  neither. An angle type is **not** a re-skin of the linear elevation pattern.
+- **Rank** — the types built now are *scalars*. Rank-1 vectors (position,
+  velocity, gradient — today bare `[f64; 3]`) are a **deferred category** that
+  *decomposes* into scalar quantities + a direction (magnitude is a ratio
+  scalar; direction is a cyclic angle), so nothing built here forecloses them.
 
 The decision doc records the datum mental model above (primary/derived, the
-rate ladder) and this classification as its reasoning, so future unit work
-inherits the map.
+rate ladder), the Stevens spine, and these axes as its reasoning, so future
+unit work inherits the map.
 
 ## What this campaign builds
 
