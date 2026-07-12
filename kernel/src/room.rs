@@ -6,11 +6,13 @@
 
 /// The deepest path a `RoomId` can pack: 5 face bits + 1 sentinel + 2*29 digit
 /// bits = 64. Useful room scale is ~L16-20 (an L18 room edge is ~27 m).
+/// type-audit: bare-ok(count)
 pub const MAX_DEPTH: usize = 29;
 
 /// A room — a triangular face of the icosphere at refinement depth
 /// `path.len()`. Keyed to the base icosahedron face (level 0), so the address
 /// is independent of the world's canonical globe level.
+/// type-audit: bare-ok(index: face), bare-ok(index: path)
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RoomAddr {
     /// Which of the 20 base icosahedron faces (0..20).
@@ -22,6 +24,7 @@ pub struct RoomAddr {
 /// Packed, serialized form of a `RoomAddr` — a frozen save-format contract.
 /// Layout: bits `[0,5)` = face; bits `[5,64)` = a leading-1 sentinel then 2
 /// bits per digit, root digit first.
+/// type-audit: bare-ok(constructor-edge)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RoomId(pub u64);
 
@@ -43,6 +46,7 @@ pub enum RoomIdError {
 
 impl RoomAddr {
     /// Refinement depth = path length.
+    /// type-audit: bare-ok(count)
     pub fn depth(&self) -> u32 {
         self.path.len() as u32
     }
@@ -131,5 +135,25 @@ mod tests {
     fn unpack_rejects_malformed() {
         assert_eq!(RoomId(20).unpack(), Err(RoomIdError::Malformed)); // face 20, no path
         assert_eq!(RoomId(0).unpack(), Err(RoomIdError::Malformed)); // face 0, pathword 0
+    }
+
+    #[test]
+    fn pack_rejects_invalid() {
+        assert_eq!(
+            RoomAddr {
+                face: 20,
+                path: vec![]
+            }
+            .pack(),
+            Err(RoomAddrError::Invalid)
+        );
+        assert_eq!(
+            RoomAddr {
+                face: 0,
+                path: vec![4]
+            }
+            .pack(),
+            Err(RoomAddrError::Invalid)
+        );
     }
 }
