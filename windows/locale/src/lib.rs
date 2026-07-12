@@ -1,6 +1,10 @@
 #![warn(missing_docs)]
 //! The locale window: a `RoomAddr` rendered as an observable place.
 
+mod streams;
+pub use streams::stream_labels;
+use streams::{LOCALE_ASPECT, LOCALE_JITTER};
+
 use hornvale_climate::{Biome, GeneratedClimate};
 use hornvale_kernel::{CellId, NearestCellIndex, RoomAddr, Seed, World, WorldTime, quantize};
 use hornvale_terrain::GeneratedTerrain;
@@ -231,13 +235,51 @@ fn biome_name(b: Biome) -> &'static str {
     }
 }
 
-// --- temporary stubs (replaced in Task 3 / Task 4) ---
-fn texture_of(_seed: Seed, _addr: &RoomAddr, _biome: Biome) -> SubCellTexture {
+/// Seed-derived sub-cell texture for a room: an aspect drawn from a tiny
+/// biome-keyed pool plus a per-room relief jitter, both off the integer room
+/// seed (platform-exact).
+fn texture_of(seed: Seed, addr: &RoomAddr, biome: Biome) -> SubCellTexture {
+    let room_seed = addr.seed(seed);
+    let pool = aspect_pool(biome);
+    let aspect = room_seed
+        .derive(LOCALE_ASPECT)
+        .stream()
+        .pick(pool)
+        .copied()
+        .unwrap_or("unremarkable ground")
+        .to_string();
+    // next_f64 ∈ [0,1) → [-1,1), then quantize at emit.
+    let jitter = quantize(room_seed.derive(LOCALE_JITTER).stream().next_f64() * 2.0 - 1.0);
     SubCellTexture {
-        aspect: String::new(),
-        relief_jitter: 0.0,
+        aspect,
+        relief_jitter: jitter,
     }
 }
+
+/// A tiny biome-keyed aspect pool — the explicit stand-in for the P3
+/// descriptor grammar. Kept ≤ 4 entries so it does not pre-empt MAP-29.
+fn aspect_pool(biome: Biome) -> &'static [&'static str] {
+    match biome {
+        Biome::TemperateForest | Biome::TemperateRainforest => &[
+            "dense understory",
+            "old growth",
+            "windthrow clearing",
+            "mossy hollow",
+        ],
+        Biome::Taiga => &["boreal stand", "peat hollow", "burnt snag"],
+        Biome::Desert => &["dune field", "gravel pan", "wadi cut"],
+        Biome::Tundra | Biome::Alpine => &["frost heave", "boulder field", "wind scour"],
+        Biome::Savanna | Biome::TemperateGrassland => {
+            &["open sward", "scattered copse", "grazed flat"]
+        }
+        Biome::TropicalRainforest | Biome::TropicalSeasonalForest => {
+            &["buttressed canopy", "liana tangle", "stream gully"]
+        }
+        _ => &["unremarkable ground", "broken terrain"],
+    }
+}
+
+// --- temporary stub (replaced in Task 4) ---
 fn exits_of(_addr: &RoomAddr) -> Vec<Exit> {
     Vec::new()
 }
@@ -391,5 +433,30 @@ mod tests {
             "abyssal",
         ];
         assert!(KNOWN_BIOMES.contains(&loc.biome.as_str()));
+    }
+
+    #[test]
+    fn texture_is_deterministic_and_siblings_differ() {
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let a = RoomAddr {
+            face: 3,
+            path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 0],
+        };
+        let b = RoomAddr {
+            face: 3,
+            path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 1],
+        };
+        let ta = ctx.describe(&a, WorldTime { day: 0.0 }).unwrap().texture;
+        let ta2 = ctx.describe(&a, WorldTime { day: 0.0 }).unwrap().texture;
+        let tb = ctx.describe(&b, WorldTime { day: 0.0 }).unwrap().texture;
+        assert_eq!(ta, ta2, "same room → identical texture");
+        assert_ne!(
+            (ta.aspect.clone(), ta.relief_jitter),
+            (tb.aspect.clone(), tb.relief_jitter),
+            "sibling rooms should differ"
+        );
+        assert!((-1.0..=1.0).contains(&ta.relief_jitter));
+        assert!(!ta.aspect.is_empty());
     }
 }
