@@ -304,6 +304,29 @@ impl NearestCellIndex {
         }
         best
     }
+
+    /// The cell nearest a unit-sphere position, by maximum dot product. Because
+    /// a room's ancestor-corner positions are byte-identical to mesh vertices,
+    /// this returns that exact vertex (self-dot = 1.0 wins).
+    /// type-audit: pending(wave-1)
+    pub fn nearest_to_position(&self, geo: &Geosphere, pos: [f64; 3]) -> CellId {
+        let latitude = pos[2].asin().to_degrees();
+        let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
+        let lo = band.saturating_sub(1);
+        let hi = (band + 1).min(BAND_COUNT - 1);
+        let mut best = CellId(0);
+        let mut best_dot = f64::NEG_INFINITY;
+        for cells in &self.bands[lo..=hi] {
+            for &cell in cells {
+                let d = dot3(geo.position(cell), pos);
+                if d > best_dot {
+                    best_dot = d;
+                    best = cell;
+                }
+            }
+        }
+        best
+    }
 }
 
 #[cfg(test)]

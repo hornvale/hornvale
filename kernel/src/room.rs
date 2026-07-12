@@ -8,6 +8,7 @@ use crate::GeoCoord;
 use crate::Seed;
 use crate::geosphere::{base_data, normalize, slerp_mid};
 use crate::streams::{ROOM_CHILD, ROOM_FACE};
+use crate::{CellId, Geosphere, NearestCellIndex};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// The deepest path a `RoomId` can pack: 5 face bits + 1 sentinel + 2*29 digit
@@ -383,6 +384,45 @@ impl RoomAddr {
             }
         }
         [out[0].clone(), out[1].clone(), out[2].clone()]
+    }
+
+    /// The room's three canonical-grid corner cells, each with its integer
+    /// blend weight at the room centroid (numerators over
+    /// `D = 3 << (depth - globe_level)`, summing to `D`). `None` if the room is
+    /// coarser than the grid (`depth < geo.level()`).
+    /// type-audit: bare-ok(count: return)
+    pub fn corner_weights(
+        &self,
+        geo: &Geosphere,
+        index: &NearestCellIndex,
+    ) -> Option<[(CellId, u64); 3]> {
+        let gl = geo.level();
+        if self.depth() < gl {
+            return None;
+        }
+        // Ancestor triangle at the globe level: its 3 corner positions (exact
+        // mesh vertices) resolve to CellIds.
+        let anc = RoomAddr {
+            face: self.face,
+            path: self.path[..gl as usize].to_vec(),
+        };
+        let corner_pos = anc.corners();
+        let cells = [
+            index.nearest_to_position(geo, corner_pos[0]),
+            index.nearest_to_position(geo, corner_pos[1]),
+            index.nearest_to_position(geo, corner_pos[2]),
+        ];
+        // Centroid barycentric within the ancestor: numerators over 3*2^d.
+        // Express this room's corners in the ancestor's scale (2^d, d=depth-gl),
+        // then the centroid numerators are the summed corner coords.
+        let (scale, tri) = bary_triple(&self.path[gl as usize..]);
+        debug_assert_eq!(scale, 1i64 << (self.depth() - gl));
+        let centroid_num = add(add(tri[0], tri[1]), tri[2]); // sums to 3*scale per axis-total
+        Some([
+            (cells[0], centroid_num[0] as u64),
+            (cells[1], centroid_num[1] as u64),
+            (cells[2], centroid_num[2] as u64),
+        ])
     }
 }
 
@@ -781,6 +821,56 @@ mod tests {
                 "pentagon neighbour not mutual"
             );
         }
+    }
+
+    #[test]
+    fn corner_weights_sum_and_blend() {
+        use crate::{CellMap, NearestCellIndex};
+        let geo = Geosphere::new(3); // globe level 3 for a cheap test
+        let index = NearestCellIndex::new(&geo);
+        // a room several levels below the grid
+        let addr = RoomAddr {
+            face: 6,
+            path: vec![0, 3, 1, 2, 3],
+        };
+        let denom: u64 = 3 << (addr.path.len() as u32 - geo.level());
+        let ws = addr.corner_weights(&geo, &index).expect("below the grid");
+        let sum: u64 = ws.iter().map(|&(_, w)| w).sum();
+        assert_eq!(sum, denom, "weights sum to 3*2^(depth-globe)");
+        // a constant field blends to the constant
+        let field = CellMap::from_fn(&geo, |_| 5.0f64);
+        let blended: f64 = ws
+            .iter()
+            .map(|&(c, w)| (w as f64 / denom as f64) * field.get(c))
+            .sum();
+        assert!(
+            (blended - 5.0).abs() < 1e-9,
+            "constant field blends to the constant"
+        );
+        // above the grid -> None
+        let coarse = RoomAddr {
+            face: 6,
+            path: vec![0, 3],
+        };
+        assert!(coarse.corner_weights(&geo, &index).is_none());
+    }
+
+    #[test]
+    fn inheritance_at_a_pentagon_corner() {
+        use crate::{CellId, NearestCellIndex};
+        let geo = Geosphere::new(3);
+        let index = NearestCellIndex::new(&geo);
+        // all-0 path keeps a corner at a base vertex (a 5-valent pentagon cell)
+        let addr = RoomAddr {
+            face: 0,
+            path: vec![0, 0, 0, 0, 0],
+        };
+        let ws = addr.corner_weights(&geo, &index).expect("below the grid");
+        let denom: u64 = 3 << (addr.path.len() as u32 - geo.level());
+        assert_eq!(ws.iter().map(|&(_, w)| w).sum::<u64>(), denom);
+        // the three corner cells are distinct valid ids
+        let ids: BTreeSet<CellId> = ws.iter().map(|&(c, _)| c).collect();
+        assert_eq!(ids.len(), 3);
     }
 
     #[test]
