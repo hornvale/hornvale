@@ -342,6 +342,9 @@ Milestone 2 — the living world:
 - **V. The World Moves** — time-stepping + liveness; NPCs are the same agent spine,
   deterministic (§3.3); re-drop / permadeath become real. *Exit:* NPCs act daily;
   you perceive change on re-query; death → re-drop. *Leans on:* I (spine reused), IV.
+  Its social dynamics are the **social graph** (frontier SOC-9): relationships
+  derived from the event ledger, evolving by structural balance — deterministic
+  drama, no RNG.
 
 Later / off the critical path:
 

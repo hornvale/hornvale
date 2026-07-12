@@ -48,6 +48,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The immune model of belief — deception as discrimination failure](#the-immune-model-of-belief--deception-as-discrimination-failure)
   - [The immune stack — boundary-maintenance across every scale](#the-immune-stack--boundary-maintenance-across-every-scale)
   - [The anti-phenomenon — meaningful absence as an observable](#the-anti-phenomenon--meaningful-absence-as-an-observable)
+  - [The social graph — a derived, self-balancing relational layer](#the-social-graph--a-derived-self-balancing-relational-layer)
   - [Provenance interrogation — the `explain` verb](#provenance-interrogation--the-explain-verb)
   - [The domain map — which capabilities want their own crate](#the-domain-map--which-capabilities-want-their-own-crate)
   - [Two sequencing notes for the remaining Year-1 campaigns](#two-sequencing-notes-for-the-remaining-year-1-campaigns)
@@ -1673,6 +1674,63 @@ with the-walk metaplan's Focalized Sight (Milestone 1, the focalizer), since the
 mechanism is a difference over machinery that already ships. Its cheapest instance
 is the ruin: a deep-time-emptied settlement (a field that once condensed a town, a
 ledger that now holds none) rendered as the still-set table.
+
+---
+
+## The social graph — a derived, self-balancing relational layer
+
+*(High confidence in the architecture and the balance dynamic; medium on the
+edge-typology's calibration. Not a domain — a derived layer over the event ledger,
+and the missing substrate under Milestone-2 liveness. From the-walk brainstorm.)*
+
+**What makes a world feel alive is not its agents but the edges between them.** A
+relationship is a standing, often directed disposition one agent holds toward
+another — kinship, affection, enmity, debt, trust, allegiance — and the wager is
+that the whole layer is *one graph*: derived, not stored, and governed by a
+deterministic dynamic.
+
+**Every edge is minted by an event, so the graph is a derived view over the event
+ledger** — the architecture the epistemic layer already uses (UNI-16). A gift
+makes a debt; a wound makes enmity; a shared meal makes a bond; a birth makes
+kinship. A relationship is therefore the *reduction of the past events between a
+pair*, and its provenance is those events — "why do they hate you?" answers itself
+with the wound. Nothing new is stored, and trust rides the very threshold the
+immune model (UNI-16) defines: slow to build, instant to break.
+
+**The graph's own topology hands over structure and story, unauthored:**
+
+- **Cycles are drama.** A reciprocity loop is an alliance, a feud loop a vendetta,
+  a love triangle a tragedy. Where the graph closes on itself is where structure
+  and story concentrate.
+- **Triads self-balance.** Heider's structural balance: an unbalanced triangle — A
+  allied to both B and D while B and D feud — is under tension and *relaxes
+  deterministically* toward balance; someone flips, reconciles, or is cast out.
+  The relaxation is emergent social drama with **no randomness** — the social-scale
+  form of the-walk metaplan's "surprise is epistemic, not stochastic," and a real
+  liveness engine that keeps determinism intact.
+- **Brokers are power.** The high-betweenness node — the sole bridge between two
+  clusters, the diplomat, the spy, the one bilingual trader — is pivotal and
+  fragile; remove it and the graph fractures. Topology names who matters without
+  an author naming them.
+
+**Reversibility is asymmetric, and the asymmetry is the feeling.** Trust builds
+slowly and shatters at once; grudges are sticky; some debts can never be repaid;
+kinship is severable only by a new event (disownment), never erased. These are
+properties of the edge *types*, not of any character — and they are what make a
+bond read as real rather than a number.
+
+**It re-instantiates twice over.** As the **food web** (ecology's who-eats-whom is
+a directed graph with trophic cycles — the DOM-3 ecology crate is the same math on
+a different edge type), and as **kinship/alliance theory** (Lévi-Strauss: marriage
+is an edge that binds *groups*, and the incest taboo is a graph constraint that
+*forces* exogamy — outward-binding edges — which is precisely how a scatter of
+settlements knits into a society).
+
+**Sequencing.** A derived layer, landing with Milestone-2 liveness (the event
+ledger is its source, structural balance its engine). Its cheapest instance is a
+single dyad — one debt minted by one gift, repaid or resented — before the balance
+dynamic is trusted on triads and the drama it produces is measured against a
+world's real history in the Lab.
 
 ---
 
