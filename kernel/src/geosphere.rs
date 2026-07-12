@@ -141,9 +141,6 @@ fn base_icosahedron() -> (Vec<[f64; 3]>, Vec<[u32; 3]>) {
 
 /// The base icosahedron (12 vertices, 20 faces), computed once. `room` reads
 /// this immutably; `Geosphere::new` keeps taking its own owned copy to mutate.
-// Not yet consumed within this crate — `room` (a later task in the same
-// campaign) is its first caller.
-#[allow(dead_code)]
 #[allow(clippy::type_complexity)]
 pub(crate) fn base_data() -> &'static (Vec<[f64; 3]>, Vec<[u32; 3]>) {
     use std::sync::OnceLock;

@@ -4,6 +4,9 @@
 //! Identity, adjacency, and seeding are integer/rational; transcendentals live
 //! only in position geometry (registry MAP-28).
 
+use crate::GeoCoord;
+use crate::geosphere::{base_data, normalize, slerp_mid};
+
 /// The deepest path a `RoomId` can pack: 5 face bits + 1 sentinel + 2*29 digit
 /// bits = 64. Useful room scale is ~L16-20 (an L18 room edge is ~27 m).
 /// type-audit: bare-ok(count)
@@ -88,9 +91,198 @@ impl RoomId {
     }
 }
 
+impl RoomAddr {
+    /// The three unit-sphere corner positions of the room's triangle, in the
+    /// mesh's corner order. Byte-identical to the same face in
+    /// `Geosphere::new(self.path.len())`.
+    /// type-audit: pending(wave-1)
+    pub fn corners(&self) -> [[f64; 3]; 3] {
+        let (verts, faces) = base_data();
+        let g = faces[self.face as usize];
+        let mut v = [
+            verts[g[0] as usize],
+            verts[g[1] as usize],
+            verts[g[2] as usize],
+        ];
+        for &d in &self.path {
+            let ab = slerp_mid(v[0], v[1]);
+            let bc = slerp_mid(v[1], v[2]);
+            let ca = slerp_mid(v[2], v[0]);
+            v = match d {
+                0 => [v[0], ab, ca],
+                1 => [v[1], bc, ab],
+                2 => [v[2], ca, bc],
+                _ => [ab, bc, ca],
+            };
+        }
+        v
+    }
+
+    /// The room centroid — `normalize(v0 + v1 + v2)`.
+    /// type-audit: pending(wave-1)
+    pub fn centroid(&self) -> [f64; 3] {
+        let [a, b, c] = self.corners();
+        normalize([a[0] + b[0] + c[0], a[1] + b[1] + c[1], a[2] + b[2] + c[2]])
+    }
+
+    /// The geographic coordinate of the centroid (matches `Geosphere::coord`).
+    /// type-audit: pending(wave-1)
+    pub fn coord(&self) -> GeoCoord {
+        let [x, y, z] = self.centroid();
+        GeoCoord {
+            latitude: z.asin().to_degrees(),
+            longitude: y.atan2(x).to_degrees(),
+        }
+    }
+
+    /// Great-circle initial azimuth (degrees, clockwise from north) from this
+    /// room's centroid to `other`'s. For rendering and exit-naming only.
+    /// type-audit: pending(wave-1)
+    pub fn bearing_to(&self, other: &RoomAddr) -> f64 {
+        let a = self.coord();
+        let b = other.coord();
+        let (lat1, lat2) = (a.latitude.to_radians(), b.latitude.to_radians());
+        let dlon = (b.longitude - a.longitude).to_radians();
+        let y = dlon.sin() * lat2.cos();
+        let x = lat1.cos() * lat2.sin() - lat1.sin() * lat2.cos() * dlon.cos();
+        let deg = y.atan2(x).to_degrees();
+        (deg + 360.0) % 360.0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::geosphere::{Geosphere, base_data};
+
+    // Enumerate every RoomAddr at depth `level` by DFS over child digits.
+    // Not yet consumed within this task's tests — a later task in the same
+    // campaign (barycentric walk/decode) is its first caller.
+    #[allow(dead_code)]
+    fn all_addrs(level: u32) -> Vec<RoomAddr> {
+        let mut out = Vec::new();
+        for face in 0..20u8 {
+            let mut stack = vec![RoomAddr { face, path: vec![] }];
+            while let Some(a) = stack.pop() {
+                if a.path.len() as u32 == level {
+                    out.push(a);
+                } else {
+                    for d in 0..4u8 {
+                        let mut p = a.path.clone();
+                        p.push(d);
+                        stack.push(RoomAddr {
+                            face: a.face,
+                            path: p,
+                        });
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    // Test oracle: replicate subdivide carrying (RoomAddr, [gvert;3]) per face.
+    fn reference_mesh(level: u32) -> (Vec<[f64; 3]>, Vec<RoomAddr>, Vec<[u32; 3]>) {
+        use crate::geosphere::slerp_mid;
+        use std::collections::BTreeMap;
+        let (verts, faces) = base_data().clone();
+        let mut positions = verts;
+        let mut addrs: Vec<RoomAddr> = (0..faces.len() as u8)
+            .map(|f| RoomAddr {
+                face: f,
+                path: vec![],
+            })
+            .collect();
+        let mut gverts: Vec<[u32; 3]> = faces;
+        for _ in 0..level {
+            let mut cache: BTreeMap<(u32, u32), u32> = BTreeMap::new();
+            let mut midpoint = |a: u32, b: u32, pos: &mut Vec<[f64; 3]>| -> u32 {
+                let key = (a.min(b), a.max(b));
+                if let Some(&idx) = cache.get(&key) {
+                    return idx;
+                }
+                let mid = slerp_mid(pos[a as usize], pos[b as usize]);
+                let idx = pos.len() as u32;
+                pos.push(mid);
+                cache.insert(key, idx);
+                idx
+            };
+            let mut na = Vec::with_capacity(addrs.len() * 4);
+            let mut ng = Vec::with_capacity(gverts.len() * 4);
+            for (addr, &[a, b, c]) in addrs.iter().zip(gverts.iter()) {
+                let ab = midpoint(a, b, &mut positions);
+                let bc = midpoint(b, c, &mut positions);
+                let ca = midpoint(c, a, &mut positions);
+                for (digit, gv) in [
+                    (0u8, [a, ab, ca]),
+                    (1, [b, bc, ab]),
+                    (2, [c, ca, bc]),
+                    (3, [ab, bc, ca]),
+                ] {
+                    let mut p = addr.path.clone();
+                    p.push(digit);
+                    na.push(RoomAddr {
+                        face: addr.face,
+                        path: p,
+                    });
+                    ng.push(gv);
+                }
+            }
+            addrs = na;
+            gverts = ng;
+        }
+        (positions, addrs, gverts)
+    }
+
+    #[test]
+    fn lazy_geometry_is_byte_identical_to_geosphere() {
+        // Build a reference mesh by replicating subdivide while tracking, per
+        // face, its (RoomAddr, [global vertex index; 3]); then compare lazy
+        // corners against the mesh's own vertex positions. See helper below.
+        let level = 5u32;
+        let (positions, face_addrs, face_gverts) = reference_mesh(level);
+        let geo = Geosphere::new(level);
+        // 1. the replica equals Geosphere byte-for-byte (trust transfer)
+        assert_eq!(positions.len(), geo.cell_count());
+        for (id, &pos) in positions.iter().enumerate() {
+            assert_eq!(pos, geo.position(crate::CellId(id as u32)));
+        }
+        // 2. lazy corners equal the mesh vertices for every face
+        for (addr, gverts) in face_addrs.iter().zip(face_gverts.iter()) {
+            let lazy = addr.corners();
+            for i in 0..3 {
+                assert_eq!(
+                    lazy[i], positions[gverts[i] as usize],
+                    "corner drift at {addr:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn geometry_is_deterministic() {
+        let a = RoomAddr {
+            face: 11,
+            path: vec![0, 3, 1, 2, 3, 0],
+        };
+        assert_eq!(a.corners(), a.clone().corners());
+        assert_eq!(a.centroid(), a.centroid());
+    }
+
+    #[test]
+    fn bearing_is_in_range() {
+        let a = RoomAddr {
+            face: 0,
+            path: vec![0, 1, 2],
+        };
+        let b = RoomAddr {
+            face: 0,
+            path: vec![3, 3, 3],
+        };
+        for bear in [a.bearing_to(&b), b.bearing_to(&a)] {
+            assert!((0.0..360.0).contains(&bear), "bearing {bear} out of range");
+        }
+    }
 
     #[test]
     fn roomid_round_trips() {
