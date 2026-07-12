@@ -37,10 +37,13 @@ touch /run/hvg-ready
 EOS
 ud_b64="$(base64 < "$ud" | tr -d '\n')"
 
+# 60 GB gp3 root — the default (~8 GB) fills during the cold workspace build and
+# `ld` dies with SIGBUS. (Ubuntu Canonical AMIs root at /dev/sda1.)
 iid="$(aws_admin ec2 run-instances --image-id "$ami" --instance-type "$TYPE" \
   --instance-market-options 'MarketType=spot' \
   --security-group-ids "$sg" --key-name hornvale-gate \
   --metadata-options 'HttpTokens=optional' --user-data "$ud_b64" \
+  --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":60,"VolumeType":"gp3","DeleteOnTermination":true}}]' \
   --tag-specifications "ResourceType=instance,Tags=[{Key=project,Value=hornvale-gate},{Key=role,Value=bench},{Key=Name,Value=hvg-bench-$TYPE}]" \
   --query 'Instances[0].InstanceId' --output text)"
 echo "== instance $iid"

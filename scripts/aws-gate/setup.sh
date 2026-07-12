@@ -98,7 +98,8 @@ lt_data="$(mktemp)"
 cat > "$lt_data" <<JSON
 { "ImageId": "${ami}", "InstanceType": "${HVG_INSTANCE_TYPE}", "KeyName": "hornvale-gate",
   "SecurityGroupIds": ["${sg_id}"], "IamInstanceProfile": { "Name": "${box_role}" },
-  "UserData": "${ud_b64}", "MetadataOptions": { "HttpTokens": "optional" } }
+  "UserData": "${ud_b64}", "MetadataOptions": { "HttpTokens": "optional" },
+  "BlockDeviceMappings": [{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":60,"VolumeType":"gp3","DeleteOnTermination":true}}] }
 JSON
 lt_id="$(aws_admin ec2 describe-launch-templates --launch-template-names hornvale-gate --query 'LaunchTemplates[0].LaunchTemplateId' --output text 2>/dev/null || true)"
 if [ -z "$lt_id" ] || [ "$lt_id" = "None" ]; then
