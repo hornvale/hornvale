@@ -37,18 +37,36 @@ pilot; a "Kernel Units" campaign builds the shared core.
 A quantity's scale decides whether it is a unit at all; the levels form a lattice
 from most to least structure:
 
-- **ratio** (true zero; +,−,×,÷) — energy, mass, distance, radius, duration, and
-  every *delta* → a shared kernel unit type with full arithmetic.
-- **interval** (arbitrary zero; differences meaningful, ratios not) — absolute
-  temperature, elevation, calendar date, longitude-as-position → a unit type
-  **that carries its zero-convention (datum)**, whose *difference is a ratio
+- **ratio** (true zero; +,−,×,÷) — energy, mass, distance, radius, duration,
+  absolute (Kelvin) temperature, and every *delta* → a shared kernel unit type
+  with full arithmetic.
+- **interval** (arbitrary zero; differences meaningful, ratios not) — elevation,
+  Celsius/Fahrenheit temperature, calendar date, longitude-as-position → a unit
+  type **that carries its zero-convention (datum)**, whose *difference is a ratio
   quantity*: its companion delta (elevation's `Sub`-delta, `Celsius` →
   `TempAnomaly`, instant → duration). The code grew these pairs blind
   (`Celsius`/`TempAnomaly`, sea-level/`SeaLevelChange`); the pattern is now
   deliberate — **an interval type is promoted together with its ratio delta.**
+
+  *The same quantity can sit at different levels by representation:* absolute
+  (Kelvin) temperature is ratio; Celsius temperature is interval. So the
+  **canonical-unit choice sets the stored Stevens level**, trading ratio's clean
+  true-zero (no datum) against interval's smaller-magnitude quantization
+  precision (see Evolution boundary). A *genuinely* interval quantity (elevation
+  — no true zero exists) has no such choice: its datum is load-bearing meaning,
+  not a representation convenience.
 - **ordinal** (order only — Mohs, Beaufort; a future sim's faith, reputation,
   danger) and **nominal** (categories — biome, species; the rubric's
   `identifier-text`) are **not units**: ordered enums / identifiers.
+
+**Additivity is a related but distinct property.** Whether a type impls `Add`
+(and therefore needs a companion delta) tracks *extensive vs intensive/positional*,
+which correlates with — but is not identical to — the Stevens level. *Extensive*
+ratio quantities add (mass + mass, energy + energy). *Intensive* ratio quantities
+(temperature, density, pressure) and *all* interval quantities do **not** add —
+they carry a ratio delta and support only `value − value → delta` and
+`value ± delta`. Temperature is the case that proves the distinction: ratio (a
+true zero exists) yet non-additive.
 
 ### Two rules from the lattice
 

@@ -287,13 +287,18 @@ Classified per the promotion axes (see The policy):
   (±90). Astronomy's `Degrees` is a plain validated newtype with no wrap, so it
   needs more than a lift-to-kernel. `GeoCoord`'s bare-`f64` latitude is the
   highest-blast-radius target in the system.
-- **Temperature family** (singular, **affine → carries its delta**) — a kernel
-  `Temperature` promoted *together with* `TempAnomaly` (the ΔT vector delta,
-  already in paleoclimate). Dedupes paleoclimate's `Celsius` and climate's need
-  for one (today worldgen wraps climate's bare output in `paleoclimate::Celsius`
-  — a cross-domain type borrow that exists only for lack of a shared home).
-  Canonical fork to settle then: one `Temperature` (Kelvin canonical,
-  `.celsius()` accessor) vs unit-named `Celsius`/`Kelvin`.
+- **Temperature family** (singular; ratio *but intensive* → carries a delta) — a
+  kernel temperature type promoted *together with* `TempAnomaly` (the ΔT delta,
+  already in paleoclimate). Absolute temperature has a true zero (ratio) yet is
+  *intensive* — you don't add two temperatures — so it behaves affine (no `Add`;
+  `temp − temp → TempAnomaly`), the same delta pattern as the interval
+  quantities. Dedupes paleoclimate's `Celsius` and climate's need for one (today
+  worldgen wraps climate's bare output in `paleoclimate::Celsius` — a
+  cross-domain type borrow that exists only for lack of a shared home). Canonical
+  fork to settle then: **Kelvin** (ratio, true-zero, no datum, physics-natural)
+  vs **Celsius** (interval representation, smaller magnitude → better
+  quantization precision but carries the freezing offset) — a real tradeoff, not
+  a foregone Kelvin.
 - **`crust-km-convention`** (plural length) — the sibling bare-datum waiver;
   retire it with its own semantic type (`CrustThickness` — *not* a shared
   `Length` with elevation) in the terrain/crust wave.
