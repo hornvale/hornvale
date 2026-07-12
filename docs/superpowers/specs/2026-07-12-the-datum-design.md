@@ -134,108 +134,24 @@ ordinary meaning); the from-core quantity is a *radius*, not an elevation;
 names the datum without leaking the isostatic *mechanism* that most call sites
 do not care about.
 
-## The policy (durable decision 0027)
+## The policy this campaign pilots
 
-Land `docs/decisions/0027-shared-units-live-in-the-kernel.md`. Two parts: a
-**placement** rule (where a unit lives) and a **promotion** rule (how a
-quantity is typed, by classification).
+The full **kernel units doctrine** — placement, the proactive stance, the
+Stevens-based promotion classifier (scale/multiplicity/cyclicity/rank), derived
+units, and the trace / presentation / evolution boundaries — lives in
+[`docs/design/kernel-units-doctrine.md`](../../design/kernel-units-doctrine.md),
+to be ratified as **decision 0027** when the successor "Kernel Units" campaign
+lands. The Datum is that doctrine's pilot; only the elevation-specific
+application is recorded here:
 
-**Placement.**
+> The kernel `ReferenceElevation` type gives the `elevation-convention` waiver a
+> cited home and retires it for the elevation datum — an *interval* quantity, so
+> it carries its datum (the isostatic reference) per the doctrine's
+> "interval types carry their datum" rule. Sibling conventions
+> (`crust-km-convention`) follow the same path in their own waves.
 
-> **Coherent physical quantities that cross domain boundaries live in the
-> kernel; single-domain quantities stay in their domain.** A quantity belongs
-> in the kernel when either (a) more than one domain speaks it, or (b) it
-> originates in a kernel type (e.g. `GeoCoord`'s latitude). Otherwise it stays
-> domain-local. This refines 0008 (which mandated newtypes but was silent on
-> location) and preserves the existing split by example: the kernel holds the
-> substrate quantity (`WorldTime`), a domain holds its flavored interpretation
-> (astronomy's `StdDays`/`LocalDays` over `WorldTime`; `Au`/`SolarMasses` are
-> astronomy's scaled views over kernel Distance/Mass). The
-> `elevation-convention` waiver is hereby given a cited home and reclassified
-> as *temporary*: the kernel `ReferenceElevation` type retires it for the
-> elevation datum; sibling conventions (`crust-km-convention`) follow the same
-> path in their own waves.
-
-**Proactive, not reactive.** The planned domains will share a common physical
-vocabulary, so the kernel unit *vocabulary* is built ahead of demand — units
-are a closed, knowable domain, so this is not speculative generality. Each
-type's *richer surface* (extra accessors, conversions) stays reactive: added
-when a consumer needs it, not before. The Datum is the pilot; a successor
-"Kernel Units" campaign builds the shared core.
-
-**Promotion — classify the quantity, then type it.** The primary classifier is
-the quantity's **scale of measurement** (Stevens); three orthogonal axes then
-shape the type.
-
-*Scale (Stevens) — the spine.* A quantity's scale decides whether it is a unit
-at all, and the levels form a lattice from most to least structure:
-
-- **ratio** (true zero; add/subtract/multiply/divide) — energy, mass, distance,
-  radius, duration, and every *delta* → a shared kernel unit type with full
-  arithmetic.
-- **interval** (arbitrary zero; differences meaningful, ratios not) — absolute
-  temperature, elevation, calendar date, longitude-as-position → a unit type
-  **that carries its zero-convention (datum)**, whose *difference is a ratio
-  quantity* — its companion delta (elevation's `Sub`-delta, `Celsius` →
-  `TempAnomaly`, instant → duration). The code grew these pairs blind
-  (`Celsius`/`TempAnomaly`, sea-level/`SeaLevelChange`); the pattern is now
-  deliberate: **an interval type is promoted together with its ratio delta.**
-- **ordinal** (order only — Mohs, Beaufort; a future sim's faith, reputation,
-  danger) and **nominal** (categories — biome, species; the rubric's
-  `identifier-text`) are **not units** — ordered enums / identifiers, kept out
-  of the units library.
-
-Two rules fall out of the lattice:
-
-- **Level is chosen at birth.** Structure only ever flows *down* the lattice
-  (ratio → interval → ordinal → nominal); it is never recoverable upward (a rank
-  cannot become a magnitude again). A quantity that will ever need arithmetic
-  must be *born* interval/ratio — an ordinal stat cannot be "upgraded" later
-  without re-modelling.
-- **Interval types carry their datum.** An interval value is meaningless without
-  its zero-convention recorded, and that convention must travel with it through
-  serialization — which is exactly why `ReferenceElevation` names its datum
-  (`Celsius`'s zero is the freezing convention; a calendar's is its epoch).
-
-*Orthogonal axes* (independent of scale):
-
-- **Multiplicity** — *singular* (one meaning, compares everywhere) → one shared
-  type; *plural* (meanings that must not intermix: length → elevation vs
-  crust-thickness vs distance) → semantic newtypes (`ReferenceElevation`,
-  `CrustThickness`), never a bare shared `Length`.
-- **Cyclicity** — *cyclic* quantities wrap (longitude, phase) and need modular
-  arithmetic + normalization; *bounded* clamp (latitude ±90); *linear* do
-  neither. An angle type is **not** a re-skin of the linear elevation pattern.
-- **Rank** — the types built now are *scalars*. Rank-1 vectors (position,
-  velocity, gradient — today bare `[f64; 3]`) are a **deferred category** that
-  *decomposes* into scalar quantities + a direction (magnitude is a ratio
-  scalar; direction is a cyclic angle), so nothing built here forecloses them.
-
-**Derived units.** No dimensional algebra — it is monolithic (every unit coupled
-through one exponent system), which 0008 already declined and which would
-violate "adding a quantity must never edit an existing one." A relation between
-units is a **named-law constructor** (`Speed::over(distance, duration)`,
-`Energy::kinetic(mass, speed)`) that documents the physical law it embodies; an
-operator impl (`impl Div<Duration> for Distance`) is added only where the
-operation is unambiguous and frequent. Derived units are materialized on demand
-(most base×base combinations are meaningless); magnitude (km vs m vs Mm) is an
-accessor, never a type.
-
-**Trace boundary.** A unit crosses the deliberately-dumb `Fact`/`Value` envelope
-as its *canonical-unit* `Value::Number` — the envelope stays untyped, so no
-consumer learns a phenomenon's producer. The unit contract lives on the
-**predicate**: visible in its name (the `_c`/`_m` suffix — `identifier-text`)
-and declared in the registry, where the `Ledger` enforces the Value *kind*
-(unit-correctness stays a producer discipline against that single declared
-source). One canonical trace unit per quantity (no `_c`/`_k` proliferation;
-accessors are display-only); an *interval* quantity's predicate declares its
-**datum** as well as its unit. Same "rich inside, contract at the edge" shape as
-`serde(transparent)` and quantize — units fill an existing cell, they do not
-soften the envelope.
-
-The decision doc records the datum mental model above (primary/derived, the
-rate ladder), the Stevens spine, and these axes as its reasoning, so future
-unit work inherits the map.
+The datum mental model above (primary/derived horizons, the rate ladder) is this
+pilot's reasoning; the doctrine records the general classification.
 
 ## What this campaign builds
 
