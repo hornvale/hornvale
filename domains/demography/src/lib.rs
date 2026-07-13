@@ -11,4 +11,6 @@
 #![warn(missing_docs)]
 
 pub mod carrying_capacity;
+pub mod flow;
 pub use carrying_capacity::{CarryingInput, carrying_capacity};
+pub use flow::{Flow, flow};
