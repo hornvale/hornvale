@@ -9,3 +9,6 @@
 //! lifting all three onto one kernel primitive is future work — see the
 //! design spec's scope boundary.
 #![warn(missing_docs)]
+
+pub mod carrying_capacity;
+pub use carrying_capacity::{CarryingInput, carrying_capacity};
