@@ -230,6 +230,7 @@ fn worlds_survive_reload_byte_identically() {
 }
 
 #[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn graded_pins_never_fail_above_min() {
     let dir = temp_dir("pins");
 

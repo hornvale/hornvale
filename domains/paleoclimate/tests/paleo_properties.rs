@@ -3,6 +3,7 @@
 //! root's determinism and the zero-forcing null control live in
 //! `windows/worldgen` tests (Task 7).
 
+use hornvale_kernel::math;
 use hornvale_paleoclimate::{caloric_summer_index, integrate_ice};
 
 const DAYS_PER_KYR: f64 = 1_000.0 * 365.25;
@@ -19,7 +20,7 @@ fn series(g: impl Fn(f64) -> f64, steps: usize) -> Vec<(f64, f64)> {
 #[test]
 fn integration_is_byte_identical_across_runs() {
     let s = series(
-        |d| caloric_summer_index(23.5 + (d / 5e6).sin(), 23.5, 0.03, d / 3e6),
+        |d| caloric_summer_index(23.5 + math::sin(d / 5e6), 23.5, 0.03, d / 3e6),
         500,
     );
     assert_eq!(integrate_ice(&s), integrate_ice(&s));
@@ -28,7 +29,7 @@ fn integration_is_byte_identical_across_runs() {
 #[test]
 fn ice_volume_stays_in_unit_range() {
     let s = series(
-        |d| caloric_summer_index(20.0 + 5.0 * (d / 4e6).sin(), 23.5, 0.04, d / 2e6),
+        |d| caloric_summer_index(20.0 + 5.0 * math::sin(d / 4e6), 23.5, 0.04, d / 2e6),
         800,
     );
     for st in integrate_ice(&s) {

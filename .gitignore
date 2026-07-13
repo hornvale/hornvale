@@ -36,3 +36,5 @@ book/src/laboratory/generated/census-of-words/
 .claude/*
 !.claude/skills/
 !.claude/settings.json
+__pycache__/
+*.pyc

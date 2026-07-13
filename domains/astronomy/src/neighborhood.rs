@@ -6,6 +6,7 @@ use crate::pins::{NeighborClass, SkyPins};
 use crate::streams;
 use crate::units::LightYears;
 use hornvale_kernel::Seed;
+use hornvale_kernel::math;
 
 /// A notable neighbor star, visible in the night sky.
 /// type-audit: bare-ok(ratio: apparent_brightness), bare-ok(identifier-text: color), pending(wave-1: declination), pending(wave-1: right_ascension)
@@ -96,7 +97,7 @@ pub fn generate_neighbors(astronomy_seed: Seed, pins: &SkyPins) -> Vec<Neighbor>
                 _ => draw_class(roll),
             };
             let distance = LightYears(4.0 + stream.next_f64() * 76.0);
-            let declination = (positions.next_f64() * 2.0 - 1.0).asin().to_degrees();
+            let declination = math::asin(positions.next_f64() * 2.0 - 1.0).to_degrees();
             let right_ascension = positions.next_f64() * 360.0;
             Neighbor {
                 class,

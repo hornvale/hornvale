@@ -20,7 +20,6 @@ hornvale-almanac = { path = "../windows/almanac" }
 hornvale-worldgen = { path = "../windows/worldgen" }
 hornvale-lab = { path = "../windows/lab" }
 hornvale-historiography = { path = "../windows/historiography" }
+hornvale-locale = { path = "../windows/locale" }
 hornvale-scene = { path = "../windows/scene" }
-
-[dev-dependencies]
 serde_json = { workspace = true }

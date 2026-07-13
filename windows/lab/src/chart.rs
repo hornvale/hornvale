@@ -2,6 +2,7 @@
 
 use crate::summary::distribution;
 use crate::{MetricValue, RunResult};
+use hornvale_kernel::math;
 
 const VIEW_WIDTH: f64 = 640.0;
 const VIEW_HEIGHT: f64 = 300.0;
@@ -21,8 +22,8 @@ fn nice_ceiling(value: f64) -> f64 {
         return 1.0;
     }
 
-    let exponent = value.log10().floor();
-    let mut power = 10f64.powf(exponent);
+    let exponent = math::log10(value).floor();
+    let mut power = math::powf(10f64, exponent);
     // Guard against float drift landing just above the true power of ten.
     if power > value {
         power /= 10.0;

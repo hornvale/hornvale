@@ -10,6 +10,7 @@ use crate::pins::NeighborClass;
 use crate::provider::size_word;
 use crate::system::StarSystem;
 use crate::units::StdDays;
+use hornvale_kernel::math;
 
 /// ASCII chart width in characters.
 /// type-audit: bare-ok(render-internal)
@@ -179,7 +180,7 @@ fn draw_disc(pixels: &mut [u8], center: (f64, f64)) {
             }
             for ring in [DISC_RADIUS / 3.0, DISC_RADIUS * 2.0 / 3.0] {
                 if (d - ring).abs() < 0.5 {
-                    let dash = dy.atan2(dx) / std::f64::consts::TAU * 24.0;
+                    let dash = math::atan2(dy, dx) / std::f64::consts::TAU * 24.0;
                     if dash.rem_euclid(2.0) < 1.0 {
                         set_px(pixels, x, y, RING);
                     }
@@ -197,8 +198,12 @@ fn star_xy(n: &Neighbor) -> (f64, f64) {
     let center = if north { NORTH_CENTER } else { SOUTH_CENTER };
     let r = (90.0 - n.declination.abs()) / 90.0 * DISC_RADIUS;
     let theta = n.right_ascension.to_radians();
-    let sy = if north { -theta.sin() } else { theta.sin() };
-    (center.0 + r * theta.cos(), center.1 + r * sy)
+    let sy = if north {
+        -math::sin(theta)
+    } else {
+        math::sin(theta)
+    };
+    (center.0 + r * math::cos(theta), center.1 + r * sy)
 }
 
 /// Filled dot of the given radius.
@@ -441,8 +446,8 @@ pub fn orrery_ansi(
                 theta: f64,
                 cell: Cell,
                 color: &'static str| {
-        let x = (cx + aspect * r * theta.cos()).round() as isize;
-        let y = (cy + r * theta.sin()).round() as isize;
+        let x = (cx + aspect * r * math::cos(theta)).round() as isize;
+        let y = (cy + r * math::sin(theta)).round() as isize;
         if x >= 0 && (x as usize) < w && y >= 0 && (y as usize) < h {
             grid[y as usize][x as usize] = (cell, color);
         }
@@ -473,8 +478,8 @@ pub fn orrery_ansi(
     // The world on its orbit (green), and its screen position.
     let theta = std::f64::consts::TAU * calendar.year_phase(t);
     plot(&mut grid, world_r, theta, Cell::World, "\u{1b}[38;5;42m");
-    let wx = cx + aspect * world_r * theta.cos();
-    let wy = cy + world_r * theta.sin();
+    let wx = cx + aspect * world_r * math::cos(theta);
+    let wy = cy + world_r * math::sin(theta);
 
     // Moons: placed where their illumination phase requires (see
     // `moon_placement`), so new sits toward the star and full opposite; then the
@@ -485,8 +490,8 @@ pub fn orrery_ansi(
     for (index, moon) in system.moons.iter().enumerate() {
         let (ma, phase) = moon_placement(calendar, index, moon.period, t, theta);
         let mr = 2.0 + index as f64;
-        let mx = wx + aspect * mr * ma.cos();
-        let my = wy + mr * ma.sin();
+        let mx = wx + aspect * mr * math::cos(ma);
+        let my = wy + mr * math::sin(ma);
         let face = match phase {
             Some(p) => moon_face(p, cx < mx),
             None => MoonFace::New,
@@ -869,11 +874,11 @@ mod tests {
             while d < 400.0 {
                 let t = StdDays::new(d).unwrap();
                 let theta = TAU * cal.year_phase(t);
-                let wx = cx + aspect * world_r * theta.cos();
+                let wx = cx + aspect * world_r * math::cos(theta);
                 let (ma, phase) = moon_placement(&cal, index, moon.period, t, theta);
-                let mx = wx + aspect * (2.0 + index as f64) * ma.cos();
+                let mx = wx + aspect * (2.0 + index as f64) * math::cos(ma);
                 // (1) placement: near-new toward star, near-full opposite.
-                let toward_star = (ma - (theta + PI)).cos();
+                let toward_star = math::cos(ma - (theta + PI));
                 if let Some(p) = phase {
                     if !(0.125..0.875).contains(&p) {
                         assert!(

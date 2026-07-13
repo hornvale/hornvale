@@ -34,7 +34,7 @@ use crate::boundaries::{BoundaryKind, CellBoundary};
 use crate::pins::TerrainPins;
 use crate::plates::{Plate, dot, unit_vector};
 use crate::streams;
-use hornvale_kernel::{CellId, CellMap, Geosphere, Seed};
+use hornvale_kernel::{CellId, CellMap, Geosphere, Seed, math};
 
 /// Airy isostasy: meters of elevation per kilometer of crust thickness.
 /// type-audit: pending(wave-2)
@@ -104,8 +104,9 @@ const HOTSPOT_SIGMA_RAD: f64 = 0.05;
 impl Hotspot {
     /// Gaussian dome contribution at a unit-sphere position, meters.
     fn contribution_m(&self, position: [f64; 3]) -> f64 {
-        let angle = dot(self.position, position).clamp(-1.0, 1.0).acos();
-        self.strength_m * (-(angle * angle) / (2.0 * HOTSPOT_SIGMA_RAD * HOTSPOT_SIGMA_RAD)).exp()
+        let angle = math::acos(dot(self.position, position).clamp(-1.0, 1.0));
+        self.strength_m
+            * math::exp(-(angle * angle) / (2.0 * HOTSPOT_SIGMA_RAD * HOTSPOT_SIGMA_RAD))
     }
 }
 
@@ -163,7 +164,7 @@ fn assemble_elevation(
                 amplitude
                     * (contact.magnitude / MAX_CLOSING_SPEED)
                     * factor
-                    * (-f64::from(distance) / decay_cells).exp()
+                    * math::exp(-f64::from(distance) / decay_cells)
             }
         };
         let position = geo.position(cell);
@@ -285,7 +286,7 @@ pub fn generate_unrest(
         let raw = intensity(contact.kind)
             * (contact.magnitude / MAX_CLOSING_SPEED)
             * youth
-            * (-f64::from(distance) / UNREST_DECAY_CELLS).exp();
+            * math::exp(-f64::from(distance) / UNREST_DECAY_CELLS);
         raw.clamp(0.0, 1.0)
     })
 }
