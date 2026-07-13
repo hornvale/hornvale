@@ -32,12 +32,12 @@
 //! and pins yields byte-identical serialized ledgers (`World::to_json`,
 //! which routes through the quantized emit boundary).
 //!
-//! Measured wall time for the full 48-combo product (M1 Max, debug profile
-//! with the hot-crate opt-level-2 packages from TOOL-hot-crate-opt) came in
-//! well under the ~15 s gate-budget rule from the task brief, so the full
-//! product runs directly in the default gate; no `#[ignore]`d subset split
-//! was needed (see `full_pin_product_is_enumerated` below, which reports
-//! that measurement).
+//! Wall time for the full 48-combo product has grown well past the task
+//! brief's ~15 s budget as the genesis pipeline deepened (the fast-gate-tiers
+//! census, 2026-07-13, timed this binary in the minutes), so the test is
+//! `#[ignore]`d into the heavy tier: it runs in `make gate-full` and the
+//! cloud, not the default commit gate (see `full_pin_product_is_enumerated`
+//! below).
 //!
 //! Measured at authoring (2026-07-11, seed 42): 48 built, 0 refused --
 //! reported, not asserted; the split may legitimately move with physics
@@ -155,15 +155,14 @@ fn check_combo(combo: &Combo) -> bool {
     }
 }
 
-/// The full 48-combo product, run directly in the default gate: measured
-/// wall time on an M1 Max (debug profile, hot-crate opt-level-2 packages
-/// already in effect) came in well under the task brief's ~15 s runtime
-/// rule, so no representative-subset/`#[ignore]` split was necessary. This
-/// IS `full_pin_product_is_enumerated` in spirit -- the brief's named
-/// ignored test is only required when the full product does not fit the
-/// gate budget.
+/// The full 48-combo product. Its wall time has grown past the task brief's
+/// ~15 s gate budget as the genesis pipeline deepened, so it is `#[ignore]`d
+/// into the heavy tier (the fast-gate-tiers spec) and runs in `make gate-full`
+/// / the cloud, not the default commit gate. It still asserts total
+/// certainty over the product — every combo builds or loudly refuses, and
+/// every `Ok` is byte-deterministic — just off the per-commit path.
 #[test]
-#[ignore = "heavy: live-worldgen battery; runs in make gate-full / cloud nightly"]
+#[ignore = "heavy: live-worldgen battery (minutes); runs in make gate-full / cloud nightly"]
 fn full_pin_product_is_enumerated() {
     let combos = full_product();
 

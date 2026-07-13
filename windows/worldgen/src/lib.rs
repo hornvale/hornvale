@@ -2501,7 +2501,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "heavy: live-worldgen battery; runs in make gate-full / cloud nightly"]
+    #[ignore = "heavy: live-worldgen battery (minutes); runs in make gate-full / cloud nightly"]
     fn build_world_with_default_roster_matches_build_world_byte_for_byte() {
         use hornvale_terrain::TerrainPins;
         let sp = SettlementPins::default();

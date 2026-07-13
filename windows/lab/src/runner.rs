@@ -573,7 +573,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "heavy: live-worldgen battery; runs in make gate-full / cloud nightly"]
+    #[ignore = "heavy: live-worldgen battery (minutes); runs in make gate-full / cloud nightly"]
     fn parallel_run_matches_sequential() {
         // Two pin sets × enough seeds to span multiple worker threads. If the
         // parallel sweep ever diverged from the sequential one — a reassembly
@@ -625,7 +625,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "heavy: live-worldgen battery; runs in make gate-full / cloud nightly"]
+    #[ignore = "heavy: live-worldgen battery (minutes); runs in make gate-full / cloud nightly"]
     fn five_seed_study_runs_and_is_deterministic() {
         let study = Study {
             name: "t".to_string(),
@@ -670,7 +670,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "heavy: live-worldgen battery; runs in make gate-full / cloud nightly"]
+    #[ignore = "heavy: live-worldgen battery (minutes); runs in make gate-full / cloud nightly"]
     fn refusals_are_rows_not_errors() {
         let study = Study {
             name: "t".to_string(),
@@ -735,7 +735,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "heavy: live-worldgen battery; runs in make gate-full / cloud nightly"]
+    #[ignore = "heavy: live-worldgen battery (minutes); runs in make gate-full / cloud nightly"]
     fn row_count_is_seeds_times_pin_sets() {
         let study = Study {
             name: "t".to_string(),
@@ -803,7 +803,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "heavy: live-worldgen battery; runs in make gate-full / cloud nightly"]
+    #[ignore = "heavy: live-worldgen battery (minutes); runs in make gate-full / cloud nightly"]
     fn csv_round_trips_comma_containing_text_fields() {
         let study = Study {
             name: "t".to_string(),
