@@ -249,6 +249,37 @@ impl Geosphere {
     pub fn neighbors(&self, id: CellId) -> &[CellId] {
         &self.neighbors[id.0 as usize]
     }
+
+    /// Bounded breadth-first hop distance between two cells over the neighbour
+    /// graph. `Some(hops)` if `b` is within `max` hops of `a` (0 if `a == b`),
+    /// else `None`. Integer-only, deterministic (no transcendentals).
+    /// type-audit: bare-ok(count)
+    pub fn hops_between(&self, a: CellId, b: CellId, max: u32) -> Option<u32> {
+        if a == b {
+            return Some(0);
+        }
+        let mut visited: std::collections::BTreeSet<CellId> = std::collections::BTreeSet::new();
+        visited.insert(a);
+        let mut frontier: Vec<CellId> = vec![a];
+        for depth in 1..=max {
+            let mut next: Vec<CellId> = Vec::new();
+            for &c in &frontier {
+                for &n in self.neighbors(c) {
+                    if n == b {
+                        return Some(depth);
+                    }
+                    if visited.insert(n) {
+                        next.push(n);
+                    }
+                }
+            }
+            if next.is_empty() {
+                break;
+            }
+            frontier = next;
+        }
+        None
+    }
 }
 
 /// Latitude bands in the nearest-cell index.
@@ -373,6 +404,26 @@ mod tests {
                 "cell {id:?} not unit-length: {len}"
             );
         }
+    }
+
+    #[test]
+    fn hops_between_is_bounded_bfs() {
+        let geo = Geosphere::new(5);
+        let c = geo.cells().next().unwrap();
+        let n = geo.neighbors(c)[0];
+        assert_eq!(geo.hops_between(c, c, 3), Some(0));
+        assert_eq!(geo.hops_between(c, n, 3), Some(1));
+        assert_eq!(
+            geo.hops_between(c, n, 0),
+            None,
+            "neighbour is beyond a 0-hop bound"
+        );
+        let two = *geo
+            .neighbors(n)
+            .iter()
+            .find(|&&x| x != c && !geo.neighbors(c).contains(&x))
+            .expect("a 2-hop cell exists");
+        assert_eq!(geo.hops_between(c, two, 3), Some(2));
     }
 
     #[test]
