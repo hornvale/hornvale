@@ -29,9 +29,10 @@ impl Focalizer for TemplateFocalizer {
         let biome = v.locale.biome.clone();
         let aspect = v.locale.texture.aspect.clone();
         let village = v.village.name.clone();
+        let sky_noun = "sky".to_string();
         let prose = format!(
             "You stand in {biome} — {aspect} — in the lands of {village}. \
-             The sky above: {}",
+             The {sky_noun} above: {}",
             v.sky
         );
         let nouns = vec![
@@ -55,7 +56,7 @@ impl Focalizer for TemplateFocalizer {
                 village,
                 format!("{} souls call it home.", v.village.population),
             ),
-            ("sky".to_string(), v.sky.clone()),
+            (sky_noun, v.sky.clone()),
         ];
         Focalized { prose, nouns }
     }
