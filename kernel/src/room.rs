@@ -85,6 +85,29 @@ fn bary_triple(path: &[u8]) -> (i64, [Bary; 3]) {
     (scale, tri)
 }
 
+/// Dot product of two vectors.
+fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+/// Cross product of two vectors.
+fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+
+/// Is unit point `p` inside the spherical triangle `a,b,c`? Orientation-robust:
+/// `p` is on the same side of each edge's great circle as the opposite corner.
+fn point_in_sph_tri(p: [f64; 3], a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> bool {
+    let side = |x: [f64; 3], y: [f64; 3], q: [f64; 3]| dot(q, cross(x, y));
+    side(a, b, p) * side(a, b, c) >= 0.0
+        && side(b, c, p) * side(b, c, a) >= 0.0
+        && side(c, a, p) * side(c, a, b) >= 0.0
+}
+
 /// 2x signed area in the (x,y) projection of the plane x+y+z=const.
 fn orient(a: Bary, b: Bary, c: Bary) -> i64 {
     (b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])
@@ -326,6 +349,72 @@ impl RoomAddr {
     pub fn centroid(&self) -> [f64; 3] {
         let [a, b, c] = self.corners();
         normalize([a[0] + b[0] + c[0], a[1] + b[1] + c[1], a[2] + b[2] + c[2]])
+    }
+
+    /// The room at `depth` whose spherical triangle contains `position`.
+    /// PRESENTATION-SIDE: resolves a float coordinate to an integer address
+    /// (float→address, the same determinism class as `NearestCellIndex::nearest`).
+    /// Not an identity path — a boundary-straddling position may resolve to
+    /// adjacent rooms on different platforms; a room's content stays
+    /// integer-exact once addressed. Descends by the same `slerp_mid` midpoints
+    /// and child order as `corners`, so `containing(r.centroid(), r.depth()) == r`
+    /// for interior rooms.
+    /// type-audit: pending(wave-1)
+    pub fn containing(position: [f64; 3], depth: u32) -> RoomAddr {
+        let p = normalize(position);
+        let (verts, faces) = base_data();
+        // 1. the base face whose spherical triangle contains p (fallback:
+        //    the face whose centroid is nearest, for numerically-on-seam points).
+        let corners_of = |f: u8| {
+            let g = faces[f as usize];
+            [
+                verts[g[0] as usize],
+                verts[g[1] as usize],
+                verts[g[2] as usize],
+            ]
+        };
+        let face = (0..faces.len() as u8)
+            .find(|&f| {
+                let c = corners_of(f);
+                point_in_sph_tri(p, c[0], c[1], c[2])
+            })
+            .unwrap_or_else(|| {
+                (0..faces.len() as u8)
+                    .max_by(|&x, &y| {
+                        let cx = corners_of(x);
+                        let cy = corners_of(y);
+                        let sx = normalize([
+                            cx[0][0] + cx[1][0] + cx[2][0],
+                            cx[0][1] + cx[1][1] + cx[2][1],
+                            cx[0][2] + cx[1][2] + cx[2][2],
+                        ]);
+                        let sy = normalize([
+                            cy[0][0] + cy[1][0] + cy[2][0],
+                            cy[0][1] + cy[1][1] + cy[2][1],
+                            cy[0][2] + cy[1][2] + cy[2][2],
+                        ]);
+                        dot(p, sx).total_cmp(&dot(p, sy))
+                    })
+                    .unwrap()
+            });
+        // 2. descend, mirroring `corners`'s slerp_mid split and child order.
+        let mut v = corners_of(face);
+        let mut path = Vec::with_capacity(depth as usize);
+        for _ in 0..depth {
+            let ab = slerp_mid(v[0], v[1]);
+            let bc = slerp_mid(v[1], v[2]);
+            let ca = slerp_mid(v[2], v[0]);
+            let children = [[v[0], ab, ca], [v[1], bc, ab], [v[2], ca, bc], [ab, bc, ca]];
+            let d = (0..4u8)
+                .find(|&d| {
+                    let c = children[d as usize];
+                    point_in_sph_tri(p, c[0], c[1], c[2])
+                })
+                .unwrap_or(3);
+            v = children[d as usize];
+            path.push(d);
+        }
+        RoomAddr { face, path }
     }
 
     /// The geographic coordinate of the centroid (matches `Geosphere::coord`).
@@ -932,5 +1021,45 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn containing_round_trips_room_centroids() {
+        // Every interior room's own centroid must resolve back to that room.
+        for depth in [1u32, 2, 3] {
+            for face in 0..20u8 {
+                // enumerate all rooms at `depth` on this face
+                let mut stack = vec![RoomAddr { face, path: vec![] }];
+                for _ in 0..depth {
+                    let mut next = Vec::new();
+                    for a in stack {
+                        for d in 0..4u8 {
+                            next.push(a.child(d).unwrap());
+                        }
+                    }
+                    stack = next;
+                }
+                for room in stack {
+                    let got = RoomAddr::containing(room.centroid(), depth);
+                    assert_eq!(got, room, "centroid of {room:?} resolved to {got:?}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn containing_at_depth_zero_is_the_base_face() {
+        let room = RoomAddr {
+            face: 7,
+            path: vec![1, 2],
+        };
+        let got = RoomAddr::containing(room.centroid(), 0);
+        assert_eq!(
+            got,
+            RoomAddr {
+                face: 7,
+                path: vec![]
+            }
+        );
     }
 }
