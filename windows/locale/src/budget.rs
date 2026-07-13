@@ -232,7 +232,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "heavy: live worldgen census over many seeds"]
+    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn census_budget_and_spacing_hold_across_seeds() {
         // Founder-floor cells intentionally bypass the repulsion radius (each
         // candidate reserves its single best-unclaimed cell before the
