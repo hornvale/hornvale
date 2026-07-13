@@ -10,7 +10,7 @@ mod repl;
 mod streams;
 
 use hornvale_astronomy::{SkyPins, parse_pin};
-use hornvale_kernel::{RoomAddr, RoomId, Seed, World, WorldTime};
+use hornvale_kernel::{RoomAddr, RoomId, Seed, World, WorldTime, math};
 use hornvale_worldgen as world_builder;
 use std::process::ExitCode;
 
@@ -750,7 +750,11 @@ fn cmd_locale(args: &[String]) -> Result<(), String> {
             .parse()
             .map_err(|_| "bad longitude".to_string())?;
         let (la, lo) = (lat.to_radians(), lon.to_radians());
-        let position = [la.cos() * lo.cos(), la.cos() * lo.sin(), la.sin()];
+        let position = [
+            math::cos(la) * math::cos(lo),
+            math::cos(la) * math::sin(lo),
+            math::sin(la),
+        ];
         RoomAddr::containing(position, depth)
     } else {
         return Err("provide --at LAT,LON or --room ID".to_string());
