@@ -78,6 +78,24 @@ impl<'w> Session<'w> {
         Ok(self.focalizer.render(&v))
     }
 
+    /// The lateral exits from here: each compass bearing paired with its
+    /// destination's packed room id (three per room, always — the mesh's
+    /// base-edge neighbors). For the walker battery's deterministic pick.
+    /// type-audit: bare-ok(index: return)
+    pub fn ways(&self) -> Vec<(Compass, u64)> {
+        let v = observable(self.world, &self.ctx, &self.agent, self.day)
+            .expect("the current position is always observable");
+        v.locale
+            .exits
+            .iter()
+            .filter(|e| e.kind == ExitKind::Edge)
+            .filter_map(|e| match e.direction {
+                Direction::Compass(c) => Some((c, e.to)),
+                _ => None,
+            })
+            .collect()
+    }
+
     /// One verb, one response. `Turn::Released` ends the possession.
     /// type-audit: bare-ok(prose: line)
     pub fn handle(&mut self, line: &str) -> Turn {
