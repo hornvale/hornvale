@@ -97,11 +97,12 @@ Replace `paleoclimate`'s local `Celsius`/`TempAnomaly` with the kernel types
 `Temperature`. Construction wraps the existing Celsius `f64`; comparisons/deltas
 use `Sub`/`PartialOrd`.
 
-### 4. Drop the bridge in `worldgen` + `scene`
+### 4. Drop the bridge in `worldgen` + `scene`; re-type `locale`
 
 `Celsius::new(climate.mean_temperature_at(c))` → `climate.mean_temperature_at(c)`
-(already `Temperature`); re-point imports to the kernel. Scene emits `.celsius()`
-at the JSON boundary (same bytes).
+(already `Temperature`); re-point imports to the kernel. Scene and `locale` emit
+`.get()` (raw Celsius) at their JSON boundaries — same bytes; `locale` blends
+`mean_temperature_at` into its serialized `temperature_c`.
 
 ### 5. Retag + regenerate the type audit
 
@@ -123,8 +124,8 @@ Origin-out, each step compiling:
 1. Kernel `Temperature`/`TempAnomaly` (+ module if absent). Additive.
 2. `paleoclimate` re-points to the kernel; delete its local copies.
 3. `climate` boundaries typed to `Temperature`.
-4. `worldgen` + `scene` drop the bridge; re-point imports. *(Coordinate with The
-   Lab Performance campaign.)*
+4. `worldgen` + `scene` + `locale` drop the bridge / re-point imports.
+   *(Coordinate with The Lab Performance campaign.)*
 5. Retag + regenerate audit.
 6. Byte-identity guard + full workspace gate.
 
@@ -140,8 +141,8 @@ Origin-out, each step compiling:
 ## Sequencing
 
 After The Datum (shares `units.rs`); kernel is free (The Room Mesh shipped
-2026-07-12); worldgen stage coordinates with The Lab Performance campaign; gated
-on main unfreezing (CI-red).
+2026-07-12); worldgen stage coordinates with The Lab Performance campaign. main's CI is green
+again (libm, decision 0041), so this is executable now.
 
 ## Follow-ons
 

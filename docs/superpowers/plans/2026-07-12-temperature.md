@@ -15,7 +15,7 @@
 - Determinism is constitutional: no `HashMap`/`HashSet`; no wall-clock; float ordering via `total_cmp`. **Byte-identical migration** — same seed → identical worlds, almanacs, artifacts.
 - Canonical unit is **Celsius**; `get()` returns raw Celsius degrees (matching the current `Celsius::get`); `.kelvin()` is an accessor (`get() + 273.15`). Temperature is **compute-only — never serialized**; it reaches the ledger/artifacts as a bare `f64` (`.get()`). Byte-identity is therefore an **artifact** property (almanac/lab print identical Celsius numbers); the source-level rename changes nothing emitted.
 - `#![warn(missing_docs)]`; one-line doc on every public item.
-- Full gate: `cargo test --workspace`, `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`. Cost-order fmt+clippy first; scope tests to the changed crate; `--workspace` only at the pre-commit gate.
+- Commit gate: **`make gate`** (fmt + clippy + `cargo nextest run --workspace` + doctests; heavy live-worldgen tier `#[ignore]`d, in `make gate-full`); iterate with `make gate-fast`. CLAUDE.md's gate ladder is authoritative.
 - Every commit message ends with: `Claude-Session: https://claude.ai/code/session_01VADHoYci3kwUe14WhmCDKJ`
 
 ---
@@ -183,17 +183,17 @@ Claude-Session: https://claude.ai/code/session_01VADHoYci3kwUe14WhmCDKJ"
 
 ---
 
-### Task 4: Drop the bridge in `worldgen` + `scene`
+### Task 4: Drop the bridge in `worldgen` + `scene`; re-type `locale`
 
-**Files (modify):** `windows/worldgen/src/lib.rs`, `windows/scene/src/lib.rs`. **Coordinate with The Lab Performance campaign first.**
+**Files (modify):** `windows/worldgen/src/lib.rs`, `windows/scene/src/lib.rs`, `windows/locale/src/lib.rs`. `locale` (shipped P2 campaign 2) blends `climate.mean_temperature_at` into its serialized `temperature_c` (bare `f64`). **Coordinate with The Lab Performance campaign first.**
 
 **Interfaces:**
 - Consumes: the typed boundaries from Tasks 2–3.
-- Produces: worldgen imports `Temperature`/`TempAnomaly` from the kernel; the `Celsius::new(climate.mean_temperature_at(c))` wrap becomes a direct `climate.mean_temperature_at(c)`; scene emits `.get()` (raw Celsius) at any temperature JSON boundary.
+- Produces: worldgen imports `Temperature`/`TempAnomaly` from the kernel; the `Celsius::new(climate.mean_temperature_at(c))` wrap becomes a direct `climate.mean_temperature_at(c)`; scene and `locale` emit `.get()` (raw Celsius) at their temperature JSON boundaries.
 
 - [ ] **Step 1: Enumerate**
 
-Run: `grep -rnE "Celsius|TempAnomaly|mean_temperature|temperature" windows/worldgen/src windows/scene/src`
+Run: `grep -rnE "Celsius|TempAnomaly|mean_temperature|temperature" windows/worldgen/src windows/scene/src windows/locale/src`
 
 - [ ] **Step 2: Re-point imports; drop the wrap**
 
@@ -201,16 +201,16 @@ Change `hornvale_paleoclimate::{Celsius, ...}` imports to `hornvale_kernel::{Tem
 
 - [ ] **Step 3: Test**
 
-Run: `cargo test -p hornvale-worldgen -p hornvale-scene`
+Run: `cargo test -p hornvale-worldgen -p hornvale-scene -p hornvale-locale`
 Expected: PASS.
 
 - [ ] **Step 4: Gate and commit**
 
-Run: `cargo fmt -p hornvale-worldgen -p hornvale-scene && cargo clippy -p hornvale-worldgen -p hornvale-scene --all-targets -- -D warnings`
+Run: `cargo fmt -p hornvale-worldgen -p hornvale-scene -p hornvale-locale && cargo clippy -p hornvale-worldgen -p hornvale-scene -p hornvale-locale --all-targets -- -D warnings`
 
 ```bash
-git add windows/worldgen/src windows/scene/src
-git commit -m "refactor(worldgen,scene): use kernel Temperature; drop the Celsius bridge
+git add windows/worldgen/src windows/scene/src windows/locale/src
+git commit -m "refactor(worldgen,scene,locale): use kernel Temperature; drop the Celsius bridge
 
 Claude-Session: https://claude.ai/code/session_01VADHoYci3kwUe14WhmCDKJ"
 ```
@@ -224,13 +224,13 @@ Claude-Session: https://claude.ai/code/session_01VADHoYci3kwUe14WhmCDKJ"
 - [ ] **Step 1: Prove behavior-free — regenerate artifacts, assert no drift**
 
 ```bash
-cargo run -p hornvale -- new --seed 42 --out /tmp/hv.json
-cargo run -p hornvale -- almanac --world /tmp/hv.json > book/src/gallery/almanac-seed-42-sky.md
-cargo run -p hornvale -- lab run studies/census-lands-drift.study.json
-git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/
+scripts/regenerate-artifacts.sh
+git diff --exit-code book/
 ```
 
-Expected: **empty diff** — Celsius-canonical means every serialized temperature is unchanged.
+Expected: **empty diff** — Celsius-canonical means every emitted temperature number
+is unchanged (`scripts/regenerate-artifacts.sh` is TOOL-15, the canonical
+regeneration used by CI and `make rebaseline`).
 
 - [ ] **Step 2: Retag + regenerate the audit report**
 
@@ -245,7 +245,7 @@ Expected: `check` passes; report regenerated.
 
 - [ ] **Step 3: Full gate and commit**
 
-Run: `cargo test --workspace && cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings`
+Run: `make gate` (fmt + clippy + nextest + doctests)
 
 ```bash
 git add -A

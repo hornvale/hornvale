@@ -140,7 +140,7 @@ The full **kernel units doctrine** — placement, the proactive stance, the
 Stevens-based promotion classifier (scale/multiplicity/cyclicity/rank), derived
 units, and the trace / presentation / evolution boundaries — lives in
 [`docs/design/kernel-units-doctrine.md`](../../design/kernel-units-doctrine.md),
-to be ratified as **decision 0027** when the successor "Kernel Units" campaign
+to be ratified as the **`shared-units-live-in-the-kernel`** decision when the successor "Kernel Units" campaign
 lands. The Datum is that doctrine's pilot; only the elevation-specific
 application is recorded here:
 
@@ -213,7 +213,8 @@ ReferenceElevation`. Ripple surface (origin → consumers):
   `provider.rs`; `strata.rs`. `paleoclimate::SeaLevelChange` (a deep-time
   **anomaly/delta**) is untouched — only the absolute position is re-typed.
 - **worldgen** (composition root, wiring), **windows/scene** (re-emits
-  `elevation_at`).
+  `elevation_at`), **windows/locale** (blends `terrain.globe().elevation`;
+  carries the `elevation-convention` waiver).
 
 ### 3. Retag the type audit
 
@@ -251,9 +252,10 @@ first, consumers after, so no half-typed boundary ever exists:
    convert internal arithmetic to `Sub`/`min`/`max`/`PartialOrd`.
 3. **Climate + paleoclimate.** Re-type the received field and threshold at
    every boundary.
-4. **Worldgen + scene.** Wire the typed field through the composition root and
-   scene emission. *(Coordinate with The Lab Performance campaign.)*
-5. **Retag + regenerate** the type audit; land decision 0027.
+4. **Worldgen + scene + locale.** Wire the typed field through the composition
+   root, scene emission, and the `locale` window. *(Coordinate with The Lab
+   Performance campaign.)*
+5. **Retag + regenerate** the type audit; land the `shared-units-live-in-the-kernel` decision.
 6. **Gate:** golden byte-identity test, unit tests, full workspace gate,
    artifact drift check.
 
@@ -266,8 +268,8 @@ first, consumers after, so no half-typed boundary ever exists:
   orders as the bare `f64` did.
 - **Type audit** — `check` passes with the new verdicts; regenerated report is
   drift-clean.
-- **Full gate** — `cargo test --workspace`, `cargo fmt --check`,
-  `cargo clippy --workspace --all-targets -- -D warnings`.
+- **Full gate** — `make gate` (fmt + clippy + `cargo nextest run --workspace` +
+  doctests; heavy tier `#[ignore]`d, run via `make gate-full`).
 
 ## Follow-ons (out of scope; recorded so the map survives)
 

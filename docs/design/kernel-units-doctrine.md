@@ -1,7 +1,9 @@
 # Kernel Units Doctrine
 
-**Status:** Draft design note (2026-07-12). To be ratified as **decision 0027**
-when the successor "Kernel Units" campaign lands. **Pilot:** The Datum
+**Status:** Draft design note (2026-07-12). To be ratified as the
+**`shared-units-live-in-the-kernel`** decision — numbered at merge (decision 0043
+restored numbered decision records; the next free number after 0043) — when the
+successor "Kernel Units" campaign lands. **Pilot:** The Datum
 (elevation) — `docs/superpowers/specs/2026-07-12-the-datum-design.md`.
 
 How Hornvale types physical quantities and where those types live. This grew out
