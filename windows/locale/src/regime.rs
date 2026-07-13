@@ -9,7 +9,6 @@ use serde::Serialize;
 const STRANGENESS_CEILING: f64 = 30.0;
 
 /// The material a room's ground is made of (substrate slot; proxy-earned only).
-/// type-audit: bare-ok(prose)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum Substrate {
     /// Rock and soil — the mundane default.
@@ -25,7 +24,6 @@ pub enum Substrate {
 }
 
 /// What powers a room's ecology (energy slot).
-/// type-audit: bare-ok(prose)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum EnergySource {
     /// Sunlight — the mundane default.
@@ -37,7 +35,6 @@ pub enum EnergySource {
 }
 
 /// The dominant kingdom of life (kingdom slot).
-/// type-audit: bare-ok(prose)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum Kingdom {
     /// Plants then animals — the mundane default.
@@ -51,7 +48,7 @@ pub enum Kingdom {
 }
 
 /// The negation vector: one draw per exclusion slot plus the endemic toggle.
-/// type-audit: bare-ok(prose: substrate), bare-ok(prose: energy), bare-ok(prose: kingdom), bare-ok(flag: endemic)
+/// type-audit: bare-ok(flag: endemic)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Negations {
     /// Substrate slot.
