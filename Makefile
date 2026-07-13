@@ -5,8 +5,9 @@
 # dependency; this uses `make`, already present everywhere.
 #
 #   make quick        # cheap half: fmt --check + clippy (the pre-commit gate)
-#   make gate         # the full commit gate: fmt + clippy + workspace tests
+#   make gate         # the commit gate: fmt + clippy + nextest + doctests (heavy tier skipped)
 #   make gate-fast    # ITERATION ONLY: scope fmt/clippy/test to changed crates (make gate still gates commits)
+#   make gate-full    # full evidence: the commit gate + the cost-tagged heavy tier
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
 #   make rebaseline   # regenerate every committed generated artifact
 #   make rebaseline-goldens # accept drifted byte-golden test fixtures
@@ -14,11 +15,12 @@
 #   make preflight    # GO/NO-GO before integrating a campaign branch with main
 #   make doctor       # print the repo self-map (orientation for a fresh session)
 #   make install-hooks# point git at scripts/hooks (opt-in; edits local config)
+#   make gate-remote  # run the gate on this worktree's AWS spot box (scripts/aws-gate/README.md)
 #
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks
+.PHONY: help quick gate gate-fast gate-full nextest-check prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -27,10 +29,13 @@ help: ## Show this help
 
 quick: fmt-check clippy ## Cheap half of the gate (fmt-check + clippy)
 
-gate: fmt-check clippy test ## The full commit gate (fmt + clippy + workspace tests)
+gate: fmt-check clippy test ## The commit gate (fmt + clippy + nextest + doctests; heavy tier #[ignore]d, ~4 min)
 
 gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)
 	@bash scripts/gate-fast.sh
+
+gate-full: gate ## Full evidence: the commit gate + the heavy tier (cost-tagged #[ignore]d tests only)
+	@bash scripts/gate-full-heavy.sh
 
 fmt: ## Format the workspace in place
 	cargo fmt
@@ -41,8 +46,15 @@ fmt-check: ## Verify formatting without writing
 clippy: ## Lint with warnings denied
 	cargo clippy --workspace --all-targets -- -D warnings
 
-test: ## Run the full workspace test suite
-	cargo test --workspace
+test: nextest-check ## Run the workspace tests: nextest (parallel binaries) + doctests
+	cargo nextest run --workspace
+	cargo test --workspace --doc
+
+nextest-check: ## Fail with an install hint if cargo-nextest is missing
+	@command -v cargo-nextest >/dev/null 2>&1 || { \
+		echo "cargo-nextest not found — install it (decision 0027):"; \
+		echo "  cargo install cargo-nextest   # or: brew install cargo-nextest"; \
+		exit 1; }
 
 prewarm: ## Warm a fresh worktree's caches (start in the background right after `git worktree add`)
 	cargo build --workspace --all-targets
@@ -50,7 +62,10 @@ prewarm: ## Warm a fresh worktree's caches (start in the background right after 
 	cargo build --manifest-path tools/type-audit/Cargo.toml
 
 rebaseline artifacts: ## Regenerate every committed generated artifact (review the diff, then commit)
-	bash scripts/regenerate-artifacts.sh
+	@bash scripts/timed.sh rebaseline -- bash scripts/regenerate-artifacts.sh
+
+timings: ## Show the timing ledger (usage: make timings [LABEL=rebaseline])
+	@bash scripts/timed.sh report $(LABEL)
 
 rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), then review the diff
 	REBASELINE=1 cargo test -q -p hornvale --test lens_purity
@@ -79,3 +94,21 @@ doctor: ## Print the repo self-map (orientation for a fresh session)
 install-hooks: ## Point git at scripts/hooks (runs `make quick` pre-commit)
 	git config core.hooksPath scripts/hooks
 	@echo "git hooks path set to scripts/hooks; 'make quick' now runs pre-commit."
+
+gate-remote: ## Run the CI gate on this worktree's AWS spot box
+	@scripts/aws-gate/gate-remote.sh
+
+gate-remote-verify: ## Local-vs-remote byte-identity acceptance test (libm go-live gate)
+	@scripts/aws-gate/gate-remote-verify.sh
+
+gate-panic: ## EMERGENCY: disable the runner and kill all gate resources
+	@scripts/aws-gate/panic.sh
+
+gate-remote-setup: ## Provision remote-gate infra (BILLABLE; confirmation-gated)
+	@scripts/aws-gate/setup.sh
+
+gate-remote-teardown: ## Remove all remote-gate infra
+	@scripts/aws-gate/teardown.sh
+
+shellcheck: ## Lint all shell scripts
+	@shellcheck scripts/*.sh scripts/aws-gate/*.sh scripts/aws-gate/test/*.sh scripts/hooks/*

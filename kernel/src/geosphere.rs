@@ -5,6 +5,7 @@
 //! `Field`. This is the spatial substrate the terrain and climate domains
 //! compute over.
 
+use crate::math;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Identifier for a cell — an index into the mesh's vertices.
@@ -78,10 +79,20 @@ impl<T> CellMap<T> {
 }
 
 /// Normalize a 3-vector to unit length.
-fn normalize(v: [f64; 3]) -> [f64; 3] {
+pub(crate) fn normalize(v: [f64; 3]) -> [f64; 3] {
     let [x, y, z] = v;
     let len = (x * x + y * y + z * z).sqrt();
     [x / len, y / len, z / len]
+}
+
+/// Edge midpoint projected onto the unit sphere — the subdivision step
+/// (average, then normalize). The one place the sphere-midpoint op is defined.
+pub(crate) fn slerp_mid(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    normalize([
+        (a[0] + b[0]) / 2.0,
+        (a[1] + b[1]) / 2.0,
+        (a[2] + b[2]) / 2.0,
+    ])
 }
 
 /// The twelve icosahedron vertices (golden-ratio rectangles), unnormalized,
@@ -129,6 +140,15 @@ fn base_icosahedron() -> (Vec<[f64; 3]>, Vec<[u32; 3]>) {
     (vertices, faces)
 }
 
+/// The base icosahedron (12 vertices, 20 faces), computed once. `room` reads
+/// this immutably; `Geosphere::new` keeps taking its own owned copy to mutate.
+#[allow(clippy::type_complexity)]
+pub(crate) fn base_data() -> &'static (Vec<[f64; 3]>, Vec<[u32; 3]>) {
+    use std::sync::OnceLock;
+    static BASE: OnceLock<(Vec<[f64; 3]>, Vec<[u32; 3]>)> = OnceLock::new();
+    BASE.get_or_init(base_icosahedron)
+}
+
 /// Subdivide each triangular face into four, projecting new edge-midpoint
 /// vertices onto the unit sphere. Shared midpoints are deduplicated via an
 /// edge cache keyed by the ordered vertex-index pair, so vertex numbering is
@@ -142,9 +162,7 @@ fn subdivide(positions: Vec<[f64; 3]>, faces: Vec<[u32; 3]>) -> (Vec<[f64; 3]>, 
         if let Some(&idx) = cache.get(&key) {
             return idx;
         }
-        let [ax, ay, az] = positions[a as usize];
-        let [bx, by, bz] = positions[b as usize];
-        let mid = normalize([(ax + bx) / 2.0, (ay + by) / 2.0, (az + bz) / 2.0]);
+        let mid = slerp_mid(positions[a as usize], positions[b as usize]);
         let idx = positions.len() as u32;
         positions.push(mid);
         cache.insert(key, idx);
@@ -222,8 +240,8 @@ impl Geosphere {
     pub fn coord(&self, id: CellId) -> GeoCoord {
         let [x, y, z] = self.positions[id.0 as usize];
         GeoCoord {
-            latitude: z.asin().to_degrees(),
-            longitude: y.atan2(x).to_degrees(),
+            latitude: math::asin(z).to_degrees(),
+            longitude: math::atan2(y, x).to_degrees(),
         }
     }
 
@@ -270,7 +288,11 @@ impl NearestCellIndex {
     /// type-audit: pending(wave-1)
     pub fn nearest(&self, geo: &Geosphere, latitude: f64, longitude: f64) -> CellId {
         let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
-        let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+        let target = [
+            math::cos(lat) * math::cos(lon),
+            math::cos(lat) * math::sin(lon),
+            math::sin(lat),
+        ];
         let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
         let lo = band.saturating_sub(1);
         let hi = (band + 1).min(BAND_COUNT - 1);
@@ -279,6 +301,29 @@ impl NearestCellIndex {
         for cells in &self.bands[lo..=hi] {
             for &cell in cells {
                 let d = dot3(geo.position(cell), target);
+                if d > best_dot {
+                    best_dot = d;
+                    best = cell;
+                }
+            }
+        }
+        best
+    }
+
+    /// The cell nearest a unit-sphere position, by maximum dot product. Because
+    /// a room's ancestor-corner positions are byte-identical to mesh vertices,
+    /// this returns that exact vertex (self-dot = 1.0 wins).
+    /// type-audit: pending(wave-1)
+    pub fn nearest_to_position(&self, geo: &Geosphere, pos: [f64; 3]) -> CellId {
+        let latitude = math::asin(pos[2]).to_degrees();
+        let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
+        let lo = band.saturating_sub(1);
+        let hi = (band + 1).min(BAND_COUNT - 1);
+        let mut best = CellId(0);
+        let mut best_dot = f64::NEG_INFINITY;
+        for cells in &self.bands[lo..=hi] {
+            for &cell in cells {
+                let d = dot3(geo.position(cell), pos);
                 if d > best_dot {
                     best_dot = d;
                     best = cell;
@@ -437,7 +482,11 @@ mod tests {
         for (latitude, longitude) in [(0.0, 0.0), (89.0, 10.0), (-89.0, -170.0), (45.5, 179.5)] {
             let banded = index.nearest(&geo, latitude, longitude);
             let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
-            let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+            let target = [
+                super::math::cos(lat) * super::math::cos(lon),
+                super::math::cos(lat) * super::math::sin(lon),
+                super::math::sin(lat),
+            ];
             let mut best = CellId(0);
             let mut best_dot = f64::NEG_INFINITY;
             for cell in geo.cells() {

@@ -210,6 +210,7 @@ pub fn place(sites: &[SiteInput], min_separation_dot: f64, floor: f64) -> Vec<Pl
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hornvale_kernel::math;
 
     fn site(
         cell: u32,
@@ -256,7 +257,7 @@ mod tests {
             site(12, far, true, 0.85, true, 15.0, 0.0),
             site(13, [0.0, 1.0, 0.0], true, 0.05, false, 40.0, 0.9), // below floor
         ];
-        let sep = (12.0_f64.to_radians()).cos();
+        let sep = math::cos(12.0_f64.to_radians());
         let placed = place(&sites, sep, 0.25);
         // close_b is within 12° of close_a and lower suitability → excluded.
         let cells: Vec<u32> = placed.iter().map(|p| p.cell.0).collect();
@@ -285,7 +286,7 @@ mod tests {
             site(1, [1.0, 0.0, 0.0], true, 0.7, true, 15.0, 0.1),
             site(2, [0.0, 1.0, 0.0], true, 0.6, false, 12.0, 0.2),
         ];
-        let sep = (12.0_f64.to_radians()).cos();
+        let sep = math::cos(12.0_f64.to_radians());
         assert_eq!(place(&sites, sep, 0.25), place(&sites, sep, 0.25));
     }
 
@@ -302,7 +303,7 @@ mod tests {
             site(12, [-1.0, 0.0, 0.0], true, 0.85, true, 15.0, 0.0),
             site(13, [0.0, 1.0, 0.0], true, 0.05, false, 40.0, 0.9),
         ];
-        let sep = (12.0_f64.to_radians()).cos();
+        let sep = math::cos(12.0_f64.to_radians());
         let scored: Vec<(SiteInput, f64, u32)> = sites
             .iter()
             .filter_map(|s| suitability(s).map(|sc| (*s, sc, 0u32)))
@@ -324,7 +325,7 @@ mod tests {
         let close_b = [0.9998, 0.02, 0.0]; // ~1.1° away
         let a = site(1, close_a, true, 0.9, true, 15.0, 0.0);
         let b = site(2, close_b, true, 0.8, true, 15.0, 0.0);
-        let sep = (12.0_f64.to_radians()).cos();
+        let sep = math::cos(12.0_f64.to_radians());
         let placed = place_tagged(&[(a, 0.9, 0), (b, 0.8, 1)], sep, 0.25);
         assert_eq!(
             placed.len(),
@@ -344,7 +345,7 @@ mod tests {
         let a = site(1, [1.0, 0.0, 0.0], true, 0.9, true, 15.0, 0.0);
         let far_b = site(2, [-1.0, 0.0, 0.0], true, 0.95, true, 15.0, 0.0);
         let close_c = site(3, [0.9998, 0.02, 0.0], true, 0.5, true, 15.0, 0.0); // ~1.1° from a
-        let sep = (12.0_f64.to_radians()).cos();
+        let sep = math::cos(12.0_f64.to_radians());
         let placed = place_tagged(
             &[(a, 0.9, 0), (far_b, 0.95, 1), (close_c, 0.5, 1)],
             sep,
@@ -379,7 +380,7 @@ mod tests {
             .enumerate()
             .map(|(tag, s)| (*s, suitability(s).unwrap(), tag as u32))
             .collect();
-        let sep = (12.0_f64.to_radians()).cos();
+        let sep = math::cos(12.0_f64.to_radians());
         let placed = place_tagged(&scored, sep, 0.25);
         let tags: std::collections::BTreeSet<u32> = placed.iter().map(|(_, t)| *t).collect();
         assert_eq!(
@@ -401,7 +402,7 @@ mod tests {
             (shared, 0.7, 1u32),
             (fallback, 0.4, 1u32),
         ];
-        let placed = place_tagged(&scored, (12.0_f64.to_radians()).cos(), 0.25);
+        let placed = place_tagged(&scored, math::cos(12.0_f64.to_radians()), 0.25);
         let by_tag = |t: u32| placed.iter().find(|(_, tag)| *tag == t).unwrap().0.cell.0;
         assert_eq!(
             by_tag(0),
@@ -423,7 +424,7 @@ mod tests {
             (shared, 0.7, 1u32),
             (fallback, 0.5, 1u32),
         ];
-        let placed = place_tagged(&scored, (12.0_f64.to_radians()).cos(), 0.25);
+        let placed = place_tagged(&scored, math::cos(12.0_f64.to_radians()), 0.25);
         let by_tag = |t: u32| placed.iter().find(|(_, tag)| *tag == t).unwrap().0.cell.0;
         assert_eq!(by_tag(0), 1, "lower tag index wins the exact tie");
         assert_eq!(by_tag(1), 2, "tag 1 falls back after losing the tie");
@@ -444,7 +445,7 @@ mod tests {
             .collect();
         let mut reversed = scored.clone();
         reversed.reverse();
-        let sep = (12.0_f64.to_radians()).cos();
+        let sep = math::cos(12.0_f64.to_radians());
         let a = place_tagged(&scored, sep, 0.25);
         let b = place_tagged(&reversed, sep, 0.25);
         assert_eq!(a, b, "result must not depend on input ordering");

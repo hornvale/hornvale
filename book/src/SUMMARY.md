@@ -62,6 +62,8 @@
 - [The Rising Tone](./chronicle/the-rising-tone.md)
 - [The Fast Gate](./chronicle/the-fast-gate.md)
 - [Crust](./chronicle/crust.md)
+- [The Room Mesh](./chronicle/the-room-mesh.md)
+- [The Locale Window](./chronicle/the-locale-window.md)
 
 # The Gallery
 

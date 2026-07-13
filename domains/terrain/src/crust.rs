@@ -6,7 +6,7 @@
 use crate::pins::TerrainPins;
 use crate::plates::dot;
 use crate::streams;
-use hornvale_kernel::{Seed, noise};
+use hornvale_kernel::{Seed, math, noise};
 
 /// Continental crust thickness in kilometers.
 /// type-audit: newtype
@@ -93,12 +93,12 @@ pub(crate) fn sphere_fbm01(seed: Seed, p: [f64; 3], frequency: f64, octaves: u32
 /// 1.5x the nominal radius. Flat-topped quartic taper.
 #[allow(dead_code)]
 pub(crate) fn lobed_envelope(seed: Seed, center: [f64; 3], p: [f64; 3], radius_rad: f64) -> f64 {
-    let angle = dot(center, p).clamp(-1.0, 1.0).acos();
+    let angle = math::acos(dot(center, p).clamp(-1.0, 1.0));
     if angle >= 1.5 * radius_rad {
         return 0.0;
     }
     let n = sphere_fbm01(seed, p, LOBE_FREQ, LOBE_OCTAVES);
-    let centered = 0.5 * (REBALANCE_GAIN * (n - 0.5)).tanh();
+    let centered = 0.5 * math::tanh(REBALANCE_GAIN * (n - 0.5));
     let rim = radius_rad * (1.0 + 2.0 * LOBE_AMP * centered);
     let x = (angle / rim).clamp(0.0, 1.0);
     (1.0 - x * x).powi(2)
@@ -143,7 +143,7 @@ const CLUSTER_PULL: f64 = 0.75;
 /// great-circle analogue of a linear blend, so a slid center stays on the
 /// unit sphere exactly rather than needing a post-hoc renormalize-to-taste.
 fn slerp(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
-    let omega = crate::plates::dot(a, b).clamp(-1.0, 1.0).acos();
+    let omega = math::acos(crate::plates::dot(a, b).clamp(-1.0, 1.0));
     if omega < 1e-9 {
         return a;
     }
@@ -157,8 +157,8 @@ fn slerp(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
         return a;
     }
     let (sa, sb) = (
-        ((1.0 - t) * omega).sin() / omega.sin(),
-        (t * omega).sin() / omega.sin(),
+        math::sin((1.0 - t) * omega) / math::sin(omega),
+        math::sin(t * omega) / math::sin(omega),
     );
     crate::plates::normalize([
         sa * a[0] + sb * b[0],
@@ -295,7 +295,7 @@ fn draw_cratons_unrepelled(
         .iter()
         .map(|c| {
             let peak = PEAK_MIN_KM + (PEAK_MAX_KM - PEAK_MIN_KM) * (1.0 - c.age);
-            std::f64::consts::TAU * (1.0 - c.radius_rad.cos()) * continental_cap_fraction(peak)
+            std::f64::consts::TAU * (1.0 - math::cos(c.radius_rad)) * continental_cap_fraction(peak)
         })
         .sum();
     if continental_area > 0.0 {
@@ -356,7 +356,7 @@ fn repel_cratons(cratons: &mut [Craton]) {
                 let (c_j, r_j) = (cratons[j].center, cratons[j].radius_rad);
                 let (c_i, r_i) = (cratons[i].center, cratons[i].radius_rad);
                 let separation = REPEL_SEPARATION_FACTOR * (r_i + r_j);
-                let omega = dot(c_i, c_j).clamp(-1.0, 1.0).acos();
+                let omega = math::acos(dot(c_i, c_j).clamp(-1.0, 1.0));
                 if omega > 1e-9 && omega < separation - 1e-12 {
                     cratons[i].center = slerp(c_j, c_i, separation / omega);
                     moved = true;
@@ -442,7 +442,11 @@ impl hornvale_kernel::Field<f64> for CrustField {
     /// crust is static — time is ignored.
     fn sample(&self, pos: hornvale_kernel::Position, _time: hornvale_kernel::WorldTime) -> f64 {
         let (lat, lon) = (pos.y.to_radians(), pos.x.to_radians());
-        let p = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+        let p = [
+            math::cos(lat) * math::cos(lon),
+            math::cos(lat) * math::sin(lon),
+            math::sin(lat),
+        ];
         self.thickness_at(p).get()
     }
 }
@@ -488,8 +492,8 @@ mod tests {
             (0..64)
                 .map(|i| {
                     let az = std::f64::consts::TAU * (i as f64) / 64.0;
-                    let s = angle.sin();
-                    let p = [s * az.cos(), s * az.sin(), angle.cos()];
+                    let s = math::sin(angle);
+                    let p = [s * math::cos(az), s * math::sin(az), math::cos(angle)];
                     lobed_envelope(seed, center, p, 0.3)
                 })
                 .sum::<f64>()
@@ -511,8 +515,8 @@ mod tests {
             let values: Vec<f64> = (0..64)
                 .map(|i| {
                     let az = std::f64::consts::TAU * (i as f64) / 64.0;
-                    let s = 0.3f64.sin();
-                    let p = [s * az.cos(), s * az.sin(), 0.3f64.cos()];
+                    let s = math::sin(0.3f64);
+                    let p = [s * math::cos(az), s * math::sin(az), math::cos(0.3f64)];
                     lobed_envelope(seed, center, p, 0.3)
                 })
                 .collect();
@@ -571,9 +575,8 @@ mod tests {
             let mut min = f64::INFINITY;
             for i in 1..cratons.len() {
                 for j in 0..i {
-                    let angle = dot(cratons[i].center, cratons[j].center)
-                        .clamp(-1.0, 1.0)
-                        .acos();
+                    let angle =
+                        math::acos(dot(cratons[i].center, cratons[j].center).clamp(-1.0, 1.0));
                     min = min.min(angle);
                 }
             }
@@ -809,7 +812,11 @@ mod tests {
         };
         let time = hornvale_kernel::WorldTime { day: 3.0 };
         let (lat, lon) = (45.5f64.to_radians(), (-120.25f64).to_radians());
-        let p = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+        let p = [
+            math::cos(lat) * math::cos(lon),
+            math::cos(lat) * math::sin(lon),
+            math::sin(lat),
+        ];
         use hornvale_kernel::Field;
         assert_eq!(field.sample(pos, time), field.thickness_at(p).get());
     }

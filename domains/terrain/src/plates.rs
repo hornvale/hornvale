@@ -6,7 +6,7 @@
 
 use crate::pins::TerrainPins;
 use crate::streams;
-use hornvale_kernel::{CellMap, Geosphere, Seed, Stream};
+use hornvale_kernel::{CellMap, Geosphere, Seed, Stream, math};
 
 /// A tectonic plate.
 /// type-audit: bare-ok(index: id), bare-ok(ratio: seed_position), bare-ok(ratio: euler_axis), bare-ok(ratio: rate), bare-ok(ratio: maturity), bare-ok(ratio: weight)
@@ -68,7 +68,7 @@ pub(crate) fn unit_vector(stream: &mut Stream) -> [f64; 3] {
     let z = 2.0 * stream.next_f64() - 1.0;
     let azimuth = std::f64::consts::TAU * stream.next_f64();
     let r = (1.0 - z * z).sqrt();
-    [r * azimuth.cos(), r * azimuth.sin(), z]
+    [r * math::cos(azimuth), r * math::sin(azimuth), z]
 }
 
 /// Drawn plate-count range (spec §4: ~8–40).
@@ -154,7 +154,7 @@ pub fn assign_plates(geo: &Geosphere, terrain_seed: Seed, plates: &[Plate]) -> C
         let mut best = 0u32;
         let mut best_score = f64::INFINITY;
         for plate in plates {
-            let angle = dot(position, plate.seed_position).clamp(-1.0, 1.0).acos();
+            let angle = math::acos(dot(position, plate.seed_position).clamp(-1.0, 1.0));
             let noise_seed = edge_root.derive(&format!("plate-{}", plate.id));
             let noise =
                 EDGE_AMP * (2.0 * crate::crust::sphere_fbm01(noise_seed, position, 8.0, 4) - 1.0);

@@ -6,6 +6,7 @@ use crate::star::Star;
 use crate::streams;
 use crate::units::{Au, Degrees, EarthMasses, SolarMasses, StdDays};
 use hornvale_kernel::Seed;
+use hornvale_kernel::math;
 
 /// Rotation regime of the anchor world.
 /// type-audit: bare-ok(flag: Spinning.retrograde)
@@ -131,7 +132,10 @@ pub fn generate_anchor(
                 });
             }
             let year_std = StdDays(local_days.0 * day.0);
-            let orbit = Au((star.mass.0 * (year_std.0 / 365.25).powi(2)).powf(1.0 / 3.0));
+            let orbit = Au(math::powf(
+                star.mass.0 * (year_std.0 / 365.25).powi(2),
+                1.0 / 3.0,
+            ));
             if !(inner.0..=outer.0).contains(&orbit.0) {
                 return Err(GenesisError::UnsatisfiablePin {
                     pin: "year-days".to_string(),

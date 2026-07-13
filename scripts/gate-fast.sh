@@ -127,8 +127,10 @@ cargo fmt --check
 section "cargo clippy (scoped)"
 cargo clippy "${pkg_flags[@]}" --all-targets -- -D warnings
 
-section "cargo test (scoped)"
-cargo test "${pkg_flags[@]}"
+section "cargo nextest + doctests (scoped)"
+command -v cargo-nextest >/dev/null 2>&1 || { echo "cargo-nextest not found — cargo install cargo-nextest (decision 0027)"; exit 1; }
+cargo nextest run "${pkg_flags[@]}"
+cargo test "${pkg_flags[@]}" --doc
 
 section "Verdict"
 echo "  gate-fast OK for: ${packages_sorted//$'\n'/, }"

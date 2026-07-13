@@ -29,6 +29,13 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 *(no seed-derivation streams)*
 
+### hornvale-kernel
+
+| Label | Meaning |
+|---|---|
+| `room/face` | room base face |
+| `room/child` | room child descent |
+
 ### hornvale-language
 
 | Label | Meaning |
@@ -47,6 +54,13 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/goblin/lexicon/root/<concept>` | (retired at The Branches, superseded by language/goblinoid/lexicon/root/<concept>) pre-Branches per-species goblin proto-root |
 | `language/<species>/lexicon/cascade` | the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root |
 | `language/<species>/lexicon/headedness` | the species' drawn compound-joining order (HeadFirst/HeadLast), gating LexEntry::Compound component order |
+
+### hornvale-locale
+
+| Label | Meaning |
+|---|---|
+| `locale/aspect` | room aspect draw |
+| `locale/jitter` | room relief jitter |
 
 ### hornvale-religion
 

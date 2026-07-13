@@ -1,6 +1,9 @@
 # P2 — Deterministic Hierarchical Subdivision (first-pass design)
 
-**Status:** Design proposal, first pass. The keystone primitive from
+**Status:** Design proposal; **campaign 1 (The Room Mesh) shipped the kernel
+substrate 2026-07-12** — `kernel/src/room.rs` (registry MAP-28). The remaining
+sections (adaptive depth, §10 chunking, §11 concurrency, the locale window) stay
+design. The keystone primitive from
 [synthesis.md](synthesis.md) §2 — what a "room" *is*, and the thing every other
 room-scale primitive is gated on.
 **Grounded in:** `kernel/src/geosphere.rs` (read in full). Terms below match that
@@ -590,12 +593,14 @@ The next steps, in order of remaining risk:
 
 1. ~~**Spike adaptive depth / T-junctions** (§6)~~ **Done 2026-07-12 — it held**
    (§6 finding). Interior and cross-seam, `2^Δ` fan-out, mutual.
-2. **Stand up P2 for real** — a kernel `room` module beside `Geosphere`
-   (addressing, lazy geometry, the O(1) neighbor walk, coarse-field inheritance).
-   This is a campaign (spec → plan → execute), not a drive-by; the P1/P3 layers
-   and the locale window build on it. Fold in the two spike caveats: quantize
-   field samples before discrete classification (§7), and **avalanche the
-   target-depth hash** before its `mod` (§6).
+2. ~~**Stand up P2 for real** — a kernel `room` module beside `Geosphere`~~
+   **Done 2026-07-12 — The Room Mesh (campaign 1)** shipped `kernel/src/room.rs`:
+   addressing, lazy geometry (byte-identical to `Geosphere`), the O(1) neighbor
+   walk + seam gluing, vertical verbs, integer-address seeding, and coarse-field
+   inheritance hooks. The two spike caveats (quantize before discrete
+   classification §7; avalanche the target-depth hash before its `mod` §6) carry
+   forward to the still-deferred adaptive-depth and variety layers (P1/P3, the
+   locale window).
 3. ~~**Promote P2 into the frontier registry**~~ **Done 2026-07-12** — P2 is
    registry **MAP-28** (variety/bestiary MAP-29, palimpsest MAP-30); cycle-03's
    folds carry back-links; The Walk §4.1 names P2 as its spatial instantiation.

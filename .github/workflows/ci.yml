@@ -1,9 +1,11 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  # Manual-only (decision 0029): a solo project whose dev machine outpaces the
+  # free 2-core runners, so per-push CI added latency without value. The local
+  # gate + the AWS Linux runs (scripts/aws-gate/) are the gates; run this by
+  # hand (Actions tab -> Run workflow) for an on-demand Linux check.
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -27,8 +29,12 @@ jobs:
           # Regenerate every committed generated artifact via the single
           # source of truth `make rebaseline` also calls, so CI and local
           # regeneration cannot silently diverge (TOOL-15). Generation only;
-          # the verification tail below stays here.
-          bash scripts/regenerate-artifacts.sh
+          # the verification tail below stays here. SKIP_CENSUS=1: the full
+          # 1000-world censuses take ~1-2 h on a 2-core runner and are
+          # author-time evidence; per-push CI cross-platform-checks them with a
+          # fast seed probe instead (cross-platform drift is systematic).
+          SKIP_CENSUS=1 bash scripts/regenerate-artifacts.sh
+          bash scripts/ci-census-probe.sh
           # Verification tail (not artifact generation). The debug/release
           # cross-check ratifies that both build byte-identical worlds before
           # we trust the release-mode censuses the script ran; only the
@@ -50,7 +56,8 @@ jobs:
           # world.json and the censuses).
           git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ clients/orrery/testdata/ docs/audits/ \
             ':(exclude)book/src/gallery/*.png' \
-            ':(exclude)book/src/gallery/scene-tiles-seed-42.json'
+            ':(exclude)book/src/gallery/scene-tiles-seed-42.json' \
+            ':(exclude)book/src/reference/locale-seed-42.json'
 
   atlas:
     name: Atlas client
