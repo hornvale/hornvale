@@ -6,13 +6,17 @@
 mod agent;
 mod focalize;
 mod knowledge;
+mod session;
 pub mod streams;
 mod vantage;
 pub use agent::{Agent, AgentId, mint_flagship, walk_depth};
 pub use focalize::*;
 pub use knowledge::*;
+pub use session::Session;
 pub use streams::stream_labels;
 pub use vantage::*;
+
+use std::io::{BufRead, Write};
 
 /// Why a possession could not begin or proceed.
 /// type-audit: bare-ok(prose: NoSpecies.0), bare-ok(prose: NoPosition.0), bare-ok(prose: Build.0)
@@ -40,4 +44,58 @@ impl std::fmt::Display for VesselError {
             VesselError::Build(m) => write!(f, "building the coarse world: {m}"),
         }
     }
+}
+
+/// Options for a possession.
+/// type-audit: bare-ok(flag: echo)
+pub struct PossessOpts {
+    /// The frozen day the possession observes.
+    pub day: hornvale_kernel::WorldTime,
+    /// Echo each command line (script/transcript mode).
+    pub echo: bool,
+}
+
+/// One verb's outcome.
+/// type-audit: bare-ok(prose: Out.0), bare-ok(prose: Released.0)
+pub enum Turn {
+    /// Text to print; the possession continues.
+    Out(String),
+    /// Final text; the possession ends.
+    Released(String),
+}
+
+/// Drive a session over line-based I/O until release or EOF — the same
+/// shape as the repl's `run`, so tests drive it with buffers.
+pub fn run(
+    world: &hornvale_kernel::World,
+    opts: PossessOpts,
+    input: impl BufRead,
+    mut output: impl Write,
+) -> std::io::Result<()> {
+    let (mut session, opening) = match Session::start(world, &opts) {
+        Ok(x) => x,
+        Err(e) => {
+            writeln!(output, "error: {e}")?;
+            return Ok(());
+        }
+    };
+    writeln!(output, "{opening}")?;
+    for line in input.lines() {
+        let line = line?;
+        if opts.echo {
+            writeln!(output, "> {line}")?;
+        }
+        match session.handle(&line) {
+            Turn::Out(s) => {
+                if !s.is_empty() {
+                    writeln!(output, "{s}")?;
+                }
+            }
+            Turn::Released(s) => {
+                writeln!(output, "{s}")?;
+                break;
+            }
+        }
+    }
+    Ok(())
 }
