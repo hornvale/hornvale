@@ -418,6 +418,12 @@ mod tests {
             None,
             "neighbour is beyond a 0-hop bound"
         );
+        let two = *geo
+            .neighbors(n)
+            .iter()
+            .find(|&&x| x != c && !geo.neighbors(c).contains(&x))
+            .expect("a 2-hop cell exists");
+        assert_eq!(geo.hops_between(c, two, 3), Some(2));
     }
 
     #[test]

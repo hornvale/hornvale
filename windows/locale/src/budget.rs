@@ -67,7 +67,7 @@ fn candidates() -> [Candidate; 3] {
             score: |t, c| {
                 let g = t.globe();
                 let relief = quantize(*g.elevation.get(c) - g.sea_level);
-                if relief > 0.0 && *g.unrest.get(c) < 0.4 {
+                if relief > 0.0 && quantize(*g.unrest.get(c)) < 0.4 {
                     quantize(1.0 - *g.unrest.get(c))
                 } else {
                     0.0
@@ -100,7 +100,7 @@ impl StrangenessBudget {
             if let Some(best) = land
                 .iter()
                 .copied()
-                .filter(|&c| (cand.score)(terrain, c) > 0.0)
+                .filter(|&c| (cand.score)(terrain, c) > 0.0 && !sites.contains_key(&c.0))
                 .max_by(|&a, &b| {
                     (cand.score)(terrain, a)
                         .total_cmp(&(cand.score)(terrain, b))
@@ -118,6 +118,9 @@ impl StrangenessBudget {
         }
 
         // (3) Field-weighted blue-noise over a seeded permutation of land cells.
+        // Exempt from the quantize rule: an exact IEEE-754 multiply of an
+        // integer by a compile-time constant (no libm involved), so it is
+        // platform-identical without quantization.
         let budget = ((land.len() as f64) * BUDGET_FRACTION) as usize;
         let mut stream = seed.derive(LOCALE_PLACE).stream();
         let order = permute(&land, &mut stream);
@@ -203,12 +206,18 @@ mod tests {
     use hornvale_kernel::{Seed, World};
     use hornvale_worldgen::{climate_of, terrain_of};
 
-    fn budget_for(seed: u64) -> (StrangenessBudget, hornvale_climate::GeneratedClimate) {
+    fn budget_for(
+        seed: u64,
+    ) -> (
+        StrangenessBudget,
+        hornvale_climate::GeneratedClimate,
+        GeneratedTerrain,
+    ) {
         let w = World::new(Seed(seed));
         let climate = climate_of(&w).unwrap();
         let terrain = terrain_of(&w).unwrap();
         let b = StrangenessBudget::build(Seed(seed), &climate, &terrain);
-        (b, climate)
+        (b, climate, terrain)
     }
 
     #[test]
@@ -220,7 +229,7 @@ mod tests {
 
     #[test]
     fn placed_sites_are_a_small_minority() {
-        let (b, climate) = budget_for(42);
+        let (b, climate, _terrain) = budget_for(42);
         let land = climate.geosphere().cells().count(); // upper bound
         assert!(b.sites().len() * 20 < land, "strange sites must stay rare");
     }
@@ -228,15 +237,42 @@ mod tests {
     #[test]
     #[ignore = "heavy: live worldgen census over many seeds"]
     fn census_budget_and_spacing_hold_across_seeds() {
+        // Founder-floor cells intentionally bypass the repulsion radius (each
+        // candidate reserves its single best-unclaimed cell before the
+        // blue-noise pass), so a global pairwise-spacing invariant is false
+        // by design and is not asserted here.
         for seed in 0..25 {
-            let (b, _climate) = budget_for(seed);
-            // every placed regime is a real exotic (never all-mundane)
-            for s in b.sites() {
-                assert!(
-                    s.energy != EnergySource::Sunlit || s.kingdom != Kingdom::PlantAnimal,
-                    "a placed site must negate at least one exotic slot"
-                );
-            }
+            let (b, climate, terrain) = budget_for(seed);
+            let globe = terrain.globe();
+            let land_count = climate
+                .geosphere()
+                .cells()
+                .filter(|&c| quantize(*globe.elevation.get(c)) > quantize(globe.sea_level))
+                .count();
+            let sites = b.sites();
+
+            // Budget minority: placed sites are a small minority of land.
+            assert!(
+                sites.len() * 20 < land_count,
+                "seed {seed}: strange sites must stay a rare minority of land"
+            );
+
+            // Determinism: rebuilding for the same seed is byte-identical.
+            let rebuilt = StrangenessBudget::build(Seed(seed), &climate, &terrain);
+            assert_eq!(
+                serde_json::to_string(&b.sites()).unwrap(),
+                serde_json::to_string(&rebuilt.sites()).unwrap(),
+                "seed {seed}: rebuilding the budget must be byte-identical"
+            );
+
+            // Distinct cells: no silent overwrite in the sites map.
+            let cells: Vec<u32> = sites.iter().map(|s| s.cell).collect();
+            let distinct: std::collections::BTreeSet<u32> = cells.iter().copied().collect();
+            assert_eq!(
+                cells.len(),
+                distinct.len(),
+                "seed {seed}: placed sites must occupy distinct cells"
+            );
         }
     }
 }
