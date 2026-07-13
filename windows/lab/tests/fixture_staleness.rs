@@ -110,6 +110,7 @@ fn assert_fixture_fresh(live: &RunResult, fixture: &RunResult, study_path: &str,
 }
 
 #[test]
+#[ignore = "heavy: live-worldgen battery; runs in make gate-full / cloud nightly"]
 fn census_fixtures_match_a_probe_of_live_seeds() {
     for (study_path, rows_path) in CENSUSES {
         let study = load_study(Path::new(study_path)).expect("load study");

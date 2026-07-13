@@ -163,6 +163,7 @@ fn check_combo(combo: &Combo) -> bool {
 /// ignored test is only required when the full product does not fit the
 /// gate budget.
 #[test]
+#[ignore = "heavy: live-worldgen battery; runs in make gate-full / cloud nightly"]
 fn full_pin_product_is_enumerated() {
     let combos = full_product();
 
