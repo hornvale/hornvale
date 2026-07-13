@@ -27,8 +27,12 @@ jobs:
           # Regenerate every committed generated artifact via the single
           # source of truth `make rebaseline` also calls, so CI and local
           # regeneration cannot silently diverge (TOOL-15). Generation only;
-          # the verification tail below stays here.
-          bash scripts/regenerate-artifacts.sh
+          # the verification tail below stays here. SKIP_CENSUS=1: the full
+          # 1000-world censuses take ~1-2 h on a 2-core runner and are
+          # author-time evidence; per-push CI cross-platform-checks them with a
+          # fast seed probe instead (cross-platform drift is systematic).
+          SKIP_CENSUS=1 bash scripts/regenerate-artifacts.sh
+          bash scripts/ci-census-probe.sh
           # Verification tail (not artifact generation). The debug/release
           # cross-check ratifies that both build byte-identical worlds before
           # we trust the release-mode censuses the script ran; only the

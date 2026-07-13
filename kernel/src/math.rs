@@ -12,72 +12,84 @@
 //! those inherent methods remain allowed everywhere.
 
 /// Portable sine (radians).
+/// type-audit: bare-ok(ratio)
 #[inline]
 pub fn sin(x: f64) -> f64 {
     libm::sin(x)
 }
 
 /// Portable cosine (radians).
+/// type-audit: bare-ok(ratio)
 #[inline]
 pub fn cos(x: f64) -> f64 {
     libm::cos(x)
 }
 
 /// Portable tangent (radians).
+/// type-audit: bare-ok(ratio)
 #[inline]
 pub fn tan(x: f64) -> f64 {
     libm::tan(x)
 }
 
 /// Portable arcsine: result in [-pi/2, pi/2].
+/// type-audit: bare-ok(ratio)
 #[inline]
 pub fn asin(x: f64) -> f64 {
     libm::asin(x)
 }
 
 /// Portable arccosine: result in [0, pi].
+/// type-audit: bare-ok(ratio)
 #[inline]
 pub fn acos(x: f64) -> f64 {
     libm::acos(x)
 }
 
 /// Portable arctangent: result in [-pi/2, pi/2].
+/// type-audit: bare-ok(ratio)
 #[inline]
 pub fn atan(x: f64) -> f64 {
     libm::atan(x)
 }
 
 /// Portable four-quadrant arctangent of `y/x`: result in [-pi, pi].
+/// type-audit: bare-ok(ratio)
 #[inline]
 pub fn atan2(y: f64, x: f64) -> f64 {
     libm::atan2(y, x)
 }
 
 /// Portable natural exponential.
+/// type-audit: bare-ok(ratio)
 #[inline]
 pub fn exp(x: f64) -> f64 {
     libm::exp(x)
 }
 
 /// Portable natural logarithm.
+/// type-audit: bare-ok(ratio)
 #[inline]
 pub fn ln(x: f64) -> f64 {
     libm::log(x)
 }
 
 /// Portable base-10 logarithm.
+/// type-audit: bare-ok(ratio)
 #[inline]
 pub fn log10(x: f64) -> f64 {
     libm::log10(x)
 }
 
 /// Portable floating-point power `x^y`.
+/// type-audit: bare-ok(ratio)
 #[inline]
 pub fn powf(x: f64, y: f64) -> f64 {
     libm::pow(x, y)
 }
 
 /// Portable hyperbolic tangent.
+/// type-audit: bare-ok(ratio)
 #[inline]
 pub fn tanh(x: f64) -> f64 {
     libm::tanh(x)
