@@ -5,6 +5,8 @@
 //! are never committed as facts (spec §3, §6) — the tier-0 `biome` fact stays
 //! with the Vale.
 
+use hornvale_kernel::ReferenceElevation;
+
 /// A seafloor tectonic feature at an ocean cell (climate-owned; the
 /// composition root maps `terrain::BoundaryKind` into this so climate imports
 /// no domain).
@@ -286,8 +288,8 @@ impl Biome {
 pub fn classify_land(
     temp_c: f64,
     moisture: f64,
-    elevation_m: f64,
-    sea_level_m: f64,
+    elevation_m: ReferenceElevation,
+    sea_level_m: ReferenceElevation,
     latitude_deg: f64,
 ) -> Biome {
     if temp_c < ICE_C {
@@ -387,8 +389,8 @@ pub fn classify(
     temp_c: f64,
     moisture: f64,
     sst_c: f64,
-    elevation_m: f64,
-    sea_level_m: f64,
+    elevation_m: ReferenceElevation,
+    sea_level_m: ReferenceElevation,
     latitude_deg: f64,
     feature: SeafloorFeature,
     upwelling: bool,
@@ -412,29 +414,46 @@ mod tests {
         assert_eq!(names.len(), catalog.len(), "duplicate biome in catalog");
     }
 
+    /// Test-only helper: a validated `ReferenceElevation`.
+    fn e(m: f64) -> ReferenceElevation {
+        ReferenceElevation::new(m).unwrap()
+    }
+
     #[test]
     fn whittaker_hits_known_corners() {
         // Hot & wet → tropical rainforest; hot & dry → desert.
         assert_eq!(
-            classify_land(27.0, 0.9, 300.0, 0.0, 0.0),
+            classify_land(27.0, 0.9, e(300.0), e(0.0), 0.0),
             Biome::TropicalRainforest
         );
-        assert_eq!(classify_land(27.0, 0.05, 300.0, 0.0, 10.0), Biome::Desert);
+        assert_eq!(
+            classify_land(27.0, 0.05, e(300.0), e(0.0), 10.0),
+            Biome::Desert
+        );
         // Temperate mid-moisture → temperate forest.
         assert_eq!(
-            classify_land(12.0, 0.5, 200.0, 0.0, 45.0),
+            classify_land(12.0, 0.5, e(200.0), e(0.0), 45.0),
             Biome::TemperateForest
         );
         // Cold → taiga/tundra.
-        assert_eq!(classify_land(-2.0, 0.4, 100.0, 0.0, 60.0), Biome::Taiga);
+        assert_eq!(
+            classify_land(-2.0, 0.4, e(100.0), e(0.0), 60.0),
+            Biome::Taiga
+        );
     }
 
     #[test]
     fn specials_take_precedence() {
         // Below the ice threshold → Ice regardless of moisture.
-        assert_eq!(classify_land(-25.0, 0.8, 100.0, 0.0, 80.0), Biome::Ice);
+        assert_eq!(
+            classify_land(-25.0, 0.8, e(100.0), e(0.0), 80.0),
+            Biome::Ice
+        );
         // Above the tree line → Alpine.
-        assert_eq!(classify_land(5.0, 0.5, 4500.0, 0.0, 0.0), Biome::Alpine);
+        assert_eq!(
+            classify_land(5.0, 0.5, e(4500.0), e(0.0), 0.0),
+            Biome::Alpine
+        );
     }
 
     #[test]
@@ -501,8 +520,8 @@ mod tests {
             10.0,
             0.5,
             22.0,
-            -50.0,
-            0.0,
+            e(-50.0),
+            e(0.0),
             20.0,
             SeafloorFeature::None,
             false,
@@ -513,8 +532,8 @@ mod tests {
             25.0,
             0.9,
             25.0,
-            300.0,
-            0.0,
+            e(300.0),
+            e(0.0),
             0.0,
             SeafloorFeature::None,
             false,

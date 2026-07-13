@@ -8,7 +8,7 @@
 
 use crate::circulation::RotationRegime;
 use hornvale_kernel::math;
-use hornvale_kernel::{CellId, CellMap, Geosphere};
+use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
 
 /// Dry-adiabatic-ish lapse rate: °C lost per meter of elevation above sea level.
 const LAPSE_C_PER_M: f64 = 6.5 / 1000.0;
@@ -21,8 +21,8 @@ const SUBSTELLAR: [f64; 3] = [1.0, 0.0, 0.0];
 /// type-audit: pending(wave-2: elevation), pending(wave-2: sea_level), bare-ok(ratio: return)
 pub fn continentality(
     geo: &Geosphere,
-    elevation: &CellMap<f64>,
-    sea_level: f64,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
     cell: CellId,
 ) -> f64 {
     let neighbors = geo.neighbors(cell);
@@ -43,8 +43,8 @@ pub fn continentality(
 /// type-audit: pending(wave-2)
 pub fn mean_temperature(
     geo: &Geosphere,
-    elevation: &CellMap<f64>,
-    sea_level: f64,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
     insolation: f64,
     regime: &RotationRegime,
 ) -> CellMap<f64> {
@@ -82,8 +82,8 @@ pub fn mean_temperature(
 /// type-audit: pending(wave-2)
 pub fn seasonal_amplitude(
     geo: &Geosphere,
-    elevation: &CellMap<f64>,
-    sea_level: f64,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
     obliquity_deg: f64,
     cell: CellId,
 ) -> f64 {
@@ -99,8 +99,8 @@ pub fn seasonal_amplitude(
 pub fn temperature_at(
     mean: &CellMap<f64>,
     geo: &Geosphere,
-    elevation: &CellMap<f64>,
-    sea_level: f64,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
     obliquity_deg: f64,
     year_length_std: f64,
     regime: &RotationRegime,
@@ -127,25 +127,29 @@ mod tests {
     use super::*;
     use hornvale_kernel::Geosphere;
 
-    fn flat_ocean_then_land(geo: &Geosphere, sea: f64) -> CellMap<f64> {
+    fn flat_ocean_then_land(
+        geo: &Geosphere,
+        sea: ReferenceElevation,
+    ) -> CellMap<ReferenceElevation> {
         // Half the globe below sea level (x<0), half above — a crude land mask.
         CellMap::from_fn(geo, |c| {
-            if geo.position(c)[0] < 0.0 {
-                sea - 1000.0
+            let m = if geo.position(c)[0] < 0.0 {
+                sea.get() - 1000.0
             } else {
-                sea + 200.0
-            }
+                sea.get() + 200.0
+            };
+            ReferenceElevation::new(m).unwrap()
         })
     }
 
     #[test]
     fn temperature_falls_with_latitude_on_a_spinning_world() {
         let geo = Geosphere::new(4);
-        let elev = CellMap::from_fn(&geo, |_| 0.0);
+        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
         let mean = mean_temperature(
             &geo,
             &elev,
-            0.0,
+            ReferenceElevation::new(0.0).unwrap(),
             1.0,
             &RotationRegime::Spinning { day_std: 1.0 },
         );
@@ -176,11 +180,12 @@ mod tests {
     #[test]
     fn temperature_falls_with_altitude() {
         let geo = Geosphere::new(3);
-        let low = CellMap::from_fn(&geo, |_| 0.0);
-        let high = CellMap::from_fn(&geo, |_| 3000.0);
+        let low = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let high = CellMap::from_fn(&geo, |_| ReferenceElevation::new(3000.0).unwrap());
         let regime = RotationRegime::Spinning { day_std: 1.0 };
-        let mlow = mean_temperature(&geo, &low, 0.0, 1.0, &regime);
-        let mhigh = mean_temperature(&geo, &high, 0.0, 1.0, &regime);
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let mlow = mean_temperature(&geo, &low, sea, 1.0, &regime);
+        let mhigh = mean_temperature(&geo, &high, sea, 1.0, &regime);
         for c in geo.cells() {
             assert!(
                 mhigh.get(c) < mlow.get(c),
@@ -193,8 +198,14 @@ mod tests {
     #[test]
     fn locked_world_is_hottest_at_substellar_and_coldest_at_antistellar() {
         let geo = Geosphere::new(4);
-        let elev = CellMap::from_fn(&geo, |_| 0.0);
-        let mean = mean_temperature(&geo, &elev, 0.0, 1.0, &RotationRegime::Locked);
+        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let mean = mean_temperature(
+            &geo,
+            &elev,
+            ReferenceElevation::new(0.0).unwrap(),
+            1.0,
+            &RotationRegime::Locked,
+        );
         let sub = geo
             .cells()
             .max_by(|a, b| geo.position(*a)[0].total_cmp(&geo.position(*b)[0]))
@@ -212,7 +223,7 @@ mod tests {
     #[test]
     fn coastal_seasonal_swing_is_smaller_than_continental() {
         let geo = Geosphere::new(4);
-        let sea = 0.0;
+        let sea = ReferenceElevation::new(0.0).unwrap();
         let elev = flat_ocean_then_land(&geo, sea);
         // A land cell touching ocean vs a land cell deep inland at similar latitude.
         let coastal = geo
