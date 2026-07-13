@@ -3,6 +3,11 @@
 //! climate/terrain signals; everything else is `Ordinary`. A real lithology
 //! field later replaces this function without touching any consumer.
 
+// `substrate_at` is `pub(crate)`, so it is invisible to the crate's external
+// reachability analysis until a non-test caller lands (Task 7's `describe`
+// integration). Remove once that lands.
+#![allow(dead_code)]
+
 use crate::regime::Substrate;
 use hornvale_climate::GeneratedClimate;
 use hornvale_kernel::{CellId, quantize};

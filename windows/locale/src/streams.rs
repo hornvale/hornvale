@@ -10,6 +10,12 @@ pub const LOCALE_JITTER: &str = "locale/jitter";
 /// Stream label for a room's sub-cell micro-field.
 /// type-audit: bare-ok(identifier-text)
 pub const LOCALE_MICRO: &str = "locale/regime/micro";
+/// Stream label for a room's descriptor variety draw.
+/// type-audit: bare-ok(identifier-text)
+pub const LOCALE_VARIETY: &str = "locale/regime/variety";
+/// Stream label for a room's substrate-detail draw.
+/// type-audit: bare-ok(identifier-text)
+pub const LOCALE_SUBSTRATE_DETAIL: &str = "locale/regime/substrate";
 
 /// Every locale seed label, for the generated stream manifest.
 /// type-audit: bare-ok(artifact: return)
@@ -18,5 +24,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (LOCALE_ASPECT, "room aspect draw"),
         (LOCALE_JITTER, "room relief jitter"),
         (LOCALE_MICRO, "room sub-cell micro-field"),
+        (LOCALE_VARIETY, "room descriptor variety draw"),
+        (LOCALE_SUBSTRATE_DETAIL, "room substrate-detail draw"),
     ]
 }
