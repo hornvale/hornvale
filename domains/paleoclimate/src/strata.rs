@@ -3,8 +3,7 @@
 //! composition root. The full fields live here on the non-serialized
 //! `PaleoRecord`; only summaries become facts (see `facts`).
 
-use crate::units::Celsius;
-use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation};
+use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation, Temperature};
 
 /// One coarse era's climate fields, all bare kernel types, filled by the
 /// composition root after re-running climate at the era's sea level and
@@ -44,20 +43,20 @@ pub struct EraClimate {
 /// lets the same global cooling offset move a latitudinal snowline instead
 /// of flipping the whole globe at once. Callers diagnose an era's ice by
 /// first adding that era's cooling offset to the present temperature field
-/// (`Celsius`'s `Add` impl) and passing the result here; see the
+/// (`Temperature`'s `Add` impl) and passing the result here; see the
 /// composition root's `climate_at_era` for the advance-beyond-present
 /// convention this feeds.
 ///
-/// Takes a per-cell [`Celsius`], not a bare `f64` (decision 0008): an
+/// Takes a per-cell [`Temperature`], not a bare `f64` (decision 0008): an
 /// earlier version of this function accepted an anomaly and callers twice
-/// mixed up the two conventions. `Celsius` and [`crate::units::TempAnomaly`]
+/// mixed up the two conventions. `Temperature` and [`hornvale_kernel::TempAnomaly`]
 /// stay distinct types precisely so that mistake can't happen again.
 /// type-audit: bare-ok(flag: return)
 pub fn glaciated(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
-    temperature: &CellMap<Celsius>,
-    freeze: Celsius,
+    temperature: &CellMap<Temperature>,
+    freeze: Temperature,
     sea_level: ReferenceElevation,
 ) -> CellMap<bool> {
     CellMap::from_fn(geo, |cell| {
@@ -150,8 +149,8 @@ mod tests {
     fn glaciated_ices_land_under_a_cold_field() {
         let geo = Geosphere::new(3);
         let elevation = CellMap::from_fn(&geo, |_| e(100.0)); // all land
-        let temperature = CellMap::from_fn(&geo, |_| Celsius::new(-10.0).unwrap());
-        let freeze = Celsius::new(0.0).unwrap();
+        let temperature = CellMap::from_fn(&geo, |_| Temperature::new(-10.0).unwrap());
+        let freeze = Temperature::new(0.0).unwrap();
         let ice = glaciated(&geo, &elevation, &temperature, freeze, e(0.0));
         assert!(
             ice.iter().all(|(_, &b)| b),
@@ -163,8 +162,8 @@ mod tests {
     fn glaciated_leaves_land_bare_under_a_warm_field() {
         let geo = Geosphere::new(3);
         let elevation = CellMap::from_fn(&geo, |_| e(100.0)); // all land
-        let temperature = CellMap::from_fn(&geo, |_| Celsius::new(20.0).unwrap());
-        let freeze = Celsius::new(0.0).unwrap();
+        let temperature = CellMap::from_fn(&geo, |_| Temperature::new(20.0).unwrap());
+        let freeze = Temperature::new(0.0).unwrap();
         let ice = glaciated(&geo, &elevation, &temperature, freeze, e(0.0));
         assert!(
             ice.iter().all(|(_, &b)| !b),
@@ -176,8 +175,8 @@ mod tests {
     fn glaciated_never_ices_ocean_regardless_of_temperature() {
         let geo = Geosphere::new(3);
         let elevation = CellMap::from_fn(&geo, |_| e(-100.0)); // all ocean
-        let temperature = CellMap::from_fn(&geo, |_| Celsius::new(-10.0).unwrap());
-        let freeze = Celsius::new(0.0).unwrap();
+        let temperature = CellMap::from_fn(&geo, |_| Temperature::new(-10.0).unwrap());
+        let freeze = Temperature::new(0.0).unwrap();
         let ice = glaciated(&geo, &elevation, &temperature, freeze, e(0.0));
         assert!(
             ice.iter().all(|(_, &b)| !b),
@@ -194,9 +193,9 @@ mod tests {
         let geo = Geosphere::new(4);
         let elevation = CellMap::from_fn(&geo, |_| e(100.0)); // all land
         let temperature = CellMap::from_fn(&geo, |c| {
-            Celsius::new(30.0 - geo.coord(c).latitude.abs()).unwrap()
+            Temperature::new(30.0 - geo.coord(c).latitude.abs()).unwrap()
         });
-        let freeze = Celsius::new(0.0).unwrap();
+        let freeze = Temperature::new(0.0).unwrap();
         let ice = glaciated(&geo, &elevation, &temperature, freeze, e(0.0));
         assert!(
             ice.iter().any(|(_, &b)| b),
