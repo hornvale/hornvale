@@ -4,9 +4,13 @@
 //! The Walk).
 
 mod agent;
+mod knowledge;
 pub mod streams;
+mod vantage;
 pub use agent::{Agent, AgentId, mint_flagship, walk_depth};
+pub use knowledge::*;
 pub use streams::stream_labels;
+pub use vantage::*;
 
 /// Why a possession could not begin or proceed.
 /// type-audit: bare-ok(prose: NoSpecies.0), bare-ok(prose: NoPosition.0), bare-ok(prose: Build.0)
