@@ -1,5 +1,7 @@
 # The Uncommon Ground — Implementation Plan
 
+**Status: SHIPPED** — all 10 tasks complete, full gate green, merged to main 2026-07-13.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Overlay a combinatorially-generated, natural-tier **strangeness regime** on each room's inherited climate biome, so an Earth-sized world has genuinely varied room-scale terrain — including *within* a homogeneous biome.

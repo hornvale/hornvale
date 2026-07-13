@@ -113,3 +113,14 @@ harder half of the "refinement at scale" bet the open-questions chapter
 still holds open. The chapter is left as is rather than re-scored on
 invented grounds, consistent with how the previous campaign's retrospective
 handled the same judgment call.
+
+## Close note — integration cadence
+
+The campaign ran as a single continuous session, so the branch met `main`
+for the first time at the close preflight (which flagged one unabsorbed
+commit — an unrelated `regen → AWS-only` chore). For a single-session
+campaign this is the expected cadence; the stage-boundary absorption
+discipline (CLAUDE.md Process) targets multi-session campaigns where main
+moves under a long-lived branch. Absorbing at close was clean: no file
+overlap, no slug/ID collisions, and a `SKIP_CENSUS=1` regen under main's
+updated script produced zero artifact drift.
