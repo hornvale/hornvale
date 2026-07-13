@@ -15,7 +15,6 @@ use hornvale_worldgen::{BuildError, SettlementPins, SkyChoice, build_world, flag
 fn pins(species: Option<&str>) -> SettlementPins {
     SettlementPins {
         species: species.map(str::to_string),
-        ..SettlementPins::default()
     }
 }
 

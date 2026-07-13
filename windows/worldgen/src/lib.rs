@@ -17,7 +17,7 @@ use hornvale_climate::{
 use hornvale_kernel::{
     ConceptRegistry, EntityId, Fact, GeoCoord, Geosphere, LedgerError, ObserverContext,
     PerceptionLens, PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime,
-    math, observe,
+    observe,
 };
 use hornvale_paleoclimate::{
     Celsius, EraClimate, PaleoRecord, caloric_summer_index, integrate_ice,
@@ -352,16 +352,27 @@ pub fn biome_class(biome: hornvale_climate::Biome) -> hornvale_culture::BiomeCla
     }
 }
 
-/// Per-species suitability weights derived from the psychology vector
-/// (spec §4); identity at the goblin baseline.
-pub fn species_weights(
+/// Fold a species' psychology (spec §4) into its carrying-capacity inputs.
+/// The retired suitability formula scaled a people's freshwater weight by its
+/// time horizon and softened its hostility penalty by its threat response; the
+/// same psychology now scales each species' freshwater draw and hostility
+/// sensitivity so per-species variation survives the move to the carrying-
+/// capacity field. Exact fidelity to the old weights is not required — Task 8
+/// re-calibrates these constants and then freezes them as save-format
+/// constants. Identity-ish at the goblin baseline; deterministic in `p`.
+pub fn species_carrying_input(
+    base: hornvale_demography::CarryingInput,
     p: &hornvale_species::PsychVector,
-) -> hornvale_settlement::SuitabilityWeights {
-    hornvale_settlement::SuitabilityWeights {
-        freshwater: 0.45 * (0.5 + p.time_horizon),
-        coast: 0.20 * (2.0 * p.in_group_radius),
-        temperance: 0.35,
-        hostility: 0.50 * (1.5 - p.threat_response),
+) -> hornvale_demography::CarryingInput {
+    // Long-horizon peoples value reliable water more; bold (high threat-
+    // response) peoples tolerate hostile ground better (lower effective
+    // hostility). Both factors are >= 0 and the results re-clamp to [0, 1].
+    let freshwater_factor = 0.5 + p.time_horizon;
+    let hostility_factor = (1.5 - p.threat_response).max(0.0);
+    hornvale_demography::CarryingInput {
+        freshwater: (base.freshwater * freshwater_factor).clamp(0.0, 1.0),
+        hostility: (base.hostility * hostility_factor).clamp(0.0, 1.0),
+        ..base
     }
 }
 
@@ -1791,8 +1802,9 @@ fn build_to(
         )?;
     }
 
-    // Reconstruct terrain + climate, assemble per-cell site inputs, place a
-    // spaced scatter of settlements, and commit each as its own place entity.
+    // Reconstruct terrain + climate, build each species' carrying-capacity
+    // field, condense settlements off it (demography), and commit each as its
+    // own place entity.
     #[allow(clippy::type_complexity)]
     let (terrain, climate, ids, placed, placements, lexicons, species_set, phonologies) = stage(
         "climate+settlements",
@@ -1802,7 +1814,7 @@ fn build_to(
                 GeneratedClimate,
                 Vec<EntityId>,
                 Vec<hornvale_settlement::PlacedSettlement>,
-                Vec<(hornvale_settlement::Placement, u32)>,
+                Vec<(hornvale_demography::Condensation, u32)>,
                 std::collections::BTreeMap<&str, hornvale_language::Lexicon>,
                 Vec<&hornvale_species::SpeciesDef>,
                 std::collections::BTreeMap<&str, hornvale_language::Phonology>,
@@ -1813,30 +1825,38 @@ fn build_to(
     let climate = climate_of(&world)?;
     let geo = terrain.geosphere();
     const DRAINAGE_REF: f64 = 200.0;
-    let sites: Vec<hornvale_settlement::SiteInput> = geo
-        .cells()
-        .map(|cell| {
+    // Condensation threshold: an attractor whose catchment population clears
+    // this becomes a settlement. PLACEHOLDER — Task 8 tunes and freezes it as
+    // a save-format constant, jointly with the carrying_capacity constants
+    // (both un-calibrated). NOTE: against the current placeholder K constants
+    // this small value condenses ~1000 settlements on a level-6 seed-42 world
+    // (avg catchment ~7 people), an order of magnitude more than the retired
+    // spaced scatter; Task 8's calibration is what restores a sane town count
+    // and population scale.
+    const THRESHOLD: f64 = 0.5;
+
+    // The bare per-cell carrying-capacity inputs, shared across species; each
+    // species folds its psychology into a per-species copy below. These are
+    // the same terrain/climate reads the retired suitability scatter used.
+    let base_inputs: hornvale_kernel::CellMap<hornvale_demography::CarryingInput> =
+        hornvale_kernel::CellMap::from_fn(geo, |cell| {
             let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
             let moisture = climate.moisture_at(cell);
             let drainage_norm = (terrain.drainage_at(cell) / DRAINAGE_REF).min(1.0);
             // Seawater is not freshwater: coastal access is priced by the
-            // coast term in settlement's suitability, not smuggled in here.
+            // coast bonus in carrying_capacity, not smuggled in here.
             let freshwater = drainage_norm.max(moisture).clamp(0.0, 1.0);
             let aridity = ((0.2 - moisture).max(0.0) * 5.0).clamp(0.0, 1.0);
             let hostility = terrain.unrest_at(cell).max(aridity).clamp(0.0, 1.0);
-            hornvale_settlement::SiteInput {
-                cell,
-                position: geo.position(cell),
+            hornvale_demography::CarryingInput {
                 habitable: *climate.habitability().get(cell),
+                temperature_c: climate.mean_temperature_at(cell),
+                moisture,
                 freshwater,
                 coastal,
-                temperature_c: climate.mean_temperature_at(cell),
                 hostility,
             }
-        })
-        .collect();
-    let min_sep = math::cos(12.0_f64.to_radians());
-    let floor = settlement_pins.min_suitability.unwrap_or(0.25);
+        });
 
     // Which species this world places: the whole roster, or the pinned one.
     let species_set: Vec<&hornvale_species::SpeciesDef> = match &settlement_pins.species {
@@ -1844,18 +1864,22 @@ fn build_to(
         Some(name) => vec![def_in(roster, name)?],
     };
 
-    // Joint greedy across species: every (site × species) pair scored with
-    // that species' psychology-derived weights, one shared spacing pass.
-    let mut scored: Vec<(hornvale_settlement::SiteInput, f64, u32)> = Vec::new();
-    for (tag, def) in species_set.iter().enumerate() {
-        let weights = species_weights(&def.psych);
-        for site in &sites {
-            if let Some(score) = hornvale_settlement::suitability_weighted(site, &weights) {
-                scored.push((*site, score, tag as u32));
-            }
-        }
-    }
-    let placements = hornvale_settlement::place_tagged(&scored, min_sep, floor);
+    // Each species' carrying-capacity inputs: the shared base with its
+    // psychology folded in (spec §4). Demography condenses settlements off
+    // all species' fields together, flagship (largest catchment) first.
+    let per_species_inputs: Vec<(u32, hornvale_kernel::CellMap<hornvale_demography::CarryingInput>)> =
+        species_set
+            .iter()
+            .enumerate()
+            .map(|(tag, def)| {
+                let psych = &def.psych;
+                let inputs = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+                    species_carrying_input(*base_inputs.get(cell), psych)
+                });
+                (tag as u32, inputs)
+            })
+            .collect();
+    let placements = hornvale_demography::report(geo, &per_species_inputs, THRESHOLD).settlements;
 
     // Each placed species' phonology, drawn once from the world seed and
     // its authored articulation vector, and a `Namer` built over it. Every
@@ -1966,11 +1990,10 @@ fn build_to(
             &site,
             lexicon,
         );
-        let population = if def.name == "goblin" {
-            hornvale_settlement::draw_population(seed, salt, p.suitability)
-        } else {
-            hornvale_settlement::draw_species_population(seed, def.name, salt, p.suitability)
-        };
+        // Population is the conserved catchment readout of the demography
+        // field, not a draw. `.round()` quantizes the continuous field value
+        // to whole people at this emit boundary (the ledger stores counts).
+        let population = p.population.round() as u32;
         placed.push(hornvale_settlement::PlacedSettlement {
             cell: p.cell.0,
             latitude: coord.latitude,
@@ -3305,25 +3328,24 @@ mod tests {
     }
 
     #[test]
-    fn min_suitability_pin_reduces_the_settlement_count() {
-        let default_world = generated(42);
-        let pinned_world = build_world(
-            Seed(42),
-            &SkyPins::default(),
-            SkyChoice::Generated,
-            &hornvale_terrain::TerrainPins::default(),
-            &SettlementPins {
-                min_suitability: Some(0.5),
-                ..SettlementPins::default()
-            },
-        )
-        .unwrap();
-        let default_count = hornvale_terrain::places(&default_world).len();
-        let pinned_count = hornvale_terrain::places(&pinned_world).len();
-        assert!(
-            pinned_count < default_count,
-            "raising the suitability floor must reduce the settlement count: {pinned_count} >= {default_count}"
-        );
+    fn settlement_populations_are_the_conserved_field_readout() {
+        // Settlement populations are the demography catchment readout, not a
+        // draw: a peopled world has positive total settlement population.
+        let world = generated(42);
+        let total: f64 = world
+            .ledger
+            .find(hornvale_settlement::IS_SETTLEMENT)
+            .filter_map(|f| {
+                match world
+                    .ledger
+                    .value_of(f.subject, hornvale_settlement::POPULATION)
+                {
+                    Some(Value::Number(n)) => Some(*n),
+                    _ => None,
+                }
+            })
+            .sum();
+        assert!(total > 0.0, "a peopled world has positive total population");
     }
 
     #[test]

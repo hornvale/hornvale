@@ -176,6 +176,7 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-climate",
  "hornvale-culture",
+ "hornvale-demography",
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-paleoclimate",

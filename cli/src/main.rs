@@ -67,9 +67,6 @@ const TERRAIN_FLAGS: &str = "\
 ";
 
 const SETTLEMENT_FLAGS: &str = "\
-  [--min-suitability F]                    pin the settlement placement floor (0-1); each species' single
-                                           best (founder) cell bypasses it, so no floor drops a placed
-                                           species below one settlement
   --species <NAME>  place only this species (default: all known species)
 ";
 
@@ -177,10 +174,7 @@ fn parse_terrain_args(args: &[String]) -> Result<hornvale_terrain::TerrainPins, 
 /// `parse_terrain_args`).
 fn parse_settlement_args(args: &[String]) -> Result<world_builder::SettlementPins, String> {
     let mut pins = world_builder::SettlementPins::default();
-    for (flag, key) in [
-        ("--min-suitability", "min-suitability"),
-        ("--species", "species"),
-    ] {
+    for (flag, key) in [("--species", "species")] {
         if let Some(value) = flag_value(args, flag) {
             world_builder::settlement_pins::parse_pin(&format!("{key}={value}"), &mut pins)?;
         }
@@ -834,9 +828,9 @@ mod tests {
 
     #[test]
     fn settlement_flags_fold_into_pins() {
-        let a = args(&["new", "--min-suitability", "0.5"]);
+        let a = args(&["new", "--species", "kobold"]);
         let pins = parse_settlement_args(&a).unwrap();
-        assert_eq!(pins.min_suitability, Some(0.5));
+        assert_eq!(pins.species.as_deref(), Some("kobold"));
         assert_eq!(
             parse_settlement_args(&args(&["new"])).unwrap(),
             world_builder::SettlementPins::default()
@@ -1058,8 +1052,8 @@ mod tests {
     }
 
     #[test]
-    fn usage_mentions_min_suitability() {
-        assert!(usage().contains("--min-suitability"));
+    fn usage_mentions_species() {
+        assert!(usage().contains("--species"));
     }
 
     #[test]
