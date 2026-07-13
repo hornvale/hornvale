@@ -6,7 +6,7 @@
 //! lowest-neighbor flow direction (no splitting), unit-area accumulation
 //! (no precipitation weighting), no sub-cell river geometry or lake filling.
 
-use hornvale_kernel::{CellId, CellMap, Geosphere};
+use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
 
 /// Compute the drainage (flow-accumulation) field and the endorheic mask.
 /// Returns `(drainage, endorheic)`: `drainage[c]` counts the land cells
@@ -15,8 +15,8 @@ use hornvale_kernel::{CellId, CellMap, Geosphere};
 /// type-audit: waiver(elevation-convention: elevation), pending(wave-2: sea_level), bare-ok(count: return)
 pub fn drainage_field(
     geo: &Geosphere,
-    elevation: &CellMap<f64>,
-    sea_level: f64,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
 ) -> (CellMap<f64>, CellMap<bool>) {
     let n = geo.cell_count();
     let is_land = |c: CellId| *elevation.get(c) >= sea_level;
@@ -93,7 +93,7 @@ pub fn drainage_field(
     order.sort_by(|a, b| {
         elevation
             .get(*b)
-            .total_cmp(elevation.get(*a))
+            .total_cmp(*elevation.get(*a))
             .then(a.0.cmp(&b.0))
     });
     let mut acc = vec![0.0f64; n];
@@ -164,15 +164,18 @@ mod tests {
             .cells()
             .filter(|c| *globe.elevation.get(*c) >= globe.sea_level)
             .collect();
-        let mean: f64 =
-            land.iter().map(|c| *globe.elevation.get(*c)).sum::<f64>() / land.len() as f64;
+        let mean: f64 = land
+            .iter()
+            .map(|c| globe.elevation.get(*c).get())
+            .sum::<f64>()
+            / land.len() as f64;
         let outlet = land
             .iter()
             .copied()
             .max_by(|a, b| d.get(*a).total_cmp(d.get(*b)))
             .unwrap();
         assert!(
-            *globe.elevation.get(outlet) <= mean,
+            globe.elevation.get(outlet).get() <= mean,
             "drainage outlet stands above mean land"
         );
     }

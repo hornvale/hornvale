@@ -164,8 +164,9 @@ fn every_default_globe_satisfies_every_invariant() {
             );
         }
         for (cell, e) in globe.elevation.iter() {
+            let e = e.get();
             assert!(
-                e.is_finite() && (-12000.0..=12000.0).contains(e),
+                e.is_finite() && (-12000.0..=12000.0).contains(&e),
                 "seed {seed}: cell {} elevation {e} out of envelope",
                 cell.0
             );
@@ -267,14 +268,14 @@ fn convergent_boundaries_stand_above_continental_interiors_on_average() {
                             BoundaryKind::ContinentalCollision | BoundaryKind::CoastalRange
                         ) =>
                 {
-                    uplifted.push(*globe.elevation.get(cell));
+                    uplifted.push(globe.elevation.get(cell).get());
                 }
                 None => {
                     if continental
                         && let Some((distance, _)) = distances.get(cell)
                         && *distance >= 6
                     {
-                        interior.push(*globe.elevation.get(cell));
+                        interior.push(globe.elevation.get(cell).get());
                     }
                 }
                 _ => {}

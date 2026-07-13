@@ -3,7 +3,7 @@
 use crate::boundaries::CellBoundary;
 use crate::globe::{GenesisOutcome, TectonicGlobe};
 use crate::plates::dot;
-use hornvale_kernel::{CellId, Geosphere, math};
+use hornvale_kernel::{CellId, Geosphere, ReferenceElevation, math};
 
 /// A queryable tectonic terrain provider. Owns its Geosphere so queries and
 /// the globe's CellMaps always agree on the cell space — a CellMap must
@@ -48,9 +48,10 @@ impl GeneratedTerrain {
         &self.notes
     }
 
-    /// Elevation at a cell, meters.
+    /// Elevation at a cell, meters (relative to the isostatic reference
+    /// datum — see `hornvale_kernel::ReferenceElevation`).
     /// type-audit: waiver(elevation-convention)
-    pub fn elevation_at(&self, id: CellId) -> f64 {
+    pub fn elevation_at(&self, id: CellId) -> ReferenceElevation {
         *self.globe.elevation.get(id)
     }
 
@@ -68,7 +69,7 @@ impl GeneratedTerrain {
 
     /// Sea level, meters.
     /// type-audit: pending(wave-2)
-    pub fn sea_level(&self) -> f64 {
+    pub fn sea_level(&self) -> ReferenceElevation {
         self.globe.sea_level
     }
 
