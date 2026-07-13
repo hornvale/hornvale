@@ -39,7 +39,8 @@ pub(crate) fn substrate_at(
     if moisture < 0.15 && relief < 200.0 {
         return Substrate::Evaporite;
     }
-    // Sand: dry + near the coast (low relief above sea level).
+    // Sand: arid lowland where sand seas / dunes form (the drier, flatter
+    // Evaporite branch above catches salt pans; this is the broader arid case).
     if moisture < 0.25 && relief < 100.0 {
         return Substrate::Sand;
     }
@@ -67,21 +68,26 @@ mod tests {
     }
 
     #[test]
-    fn high_unrest_reads_volcanic() {
-        // A high-unrest land cell is Basaltic or Ashen, never Ordinary.
+    fn high_unrest_cells_read_volcanic() {
+        // Every high-unrest land cell reads Basaltic or Ashen (a total
+        // implication — never vacuously misleading).
         let w = World::new(hornvale_kernel::Seed(42));
         let climate = climate_of(&w).unwrap();
         let terrain = terrain_of(&w).unwrap();
         let geo = climate.geosphere();
         let globe = terrain.globe();
-        let volcanic = geo
-            .cells()
-            .find(|&c| *globe.unrest.get(c) > 0.7 && *globe.elevation.get(c) > globe.sea_level);
-        if let Some(c) = volcanic {
-            assert!(matches!(
-                substrate_at(&climate, &terrain, c),
-                Substrate::Basaltic | Substrate::Ashen
-            ));
+        for c in geo.cells() {
+            let above_sea = hornvale_kernel::quantize(*globe.elevation.get(c))
+                > hornvale_kernel::quantize(globe.sea_level);
+            if above_sea && hornvale_kernel::quantize(*globe.unrest.get(c)) > 0.6 {
+                assert!(
+                    matches!(
+                        substrate_at(&climate, &terrain, c),
+                        Substrate::Basaltic | Substrate::Ashen
+                    ),
+                    "high-unrest land cell {c:?} must read volcanic"
+                );
+            }
         }
     }
 }
