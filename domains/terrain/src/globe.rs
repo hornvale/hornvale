@@ -11,7 +11,7 @@ use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation, Seed};
 
 /// A generated tectonic globe over the shared Geosphere. Recomputed from
 /// the seed on demand; never serialized.
-/// type-audit: bare-ok(index: plate_of), waiver(elevation-convention: elevation), bare-ok(ratio: unrest), pending(wave-2: sea_level), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust)
+/// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust)
 #[derive(Debug, Clone, PartialEq)]
 pub struct TectonicGlobe {
     /// Plate index per cell (an index into `plates`).

@@ -12,7 +12,7 @@ use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
 /// Returns `(drainage, endorheic)`: `drainage[c]` counts the land cells
 /// upstream of and including `c` (0 on ocean cells); `endorheic[c]` is true
 /// when `c`'s downhill path ends at an interior minimum, never reaching sea.
-/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: sea_level), bare-ok(count: return)
+/// type-audit: bare-ok(count: return)
 pub fn drainage_field(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,

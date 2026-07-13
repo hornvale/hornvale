@@ -284,7 +284,7 @@ impl Biome {
 
 /// Classify a land cell. Specials first (ice below `ICE_C`, alpine above the
 /// tree line), then a Whittaker lookup on (annual-mean temperature, moisture).
-/// type-audit: pending(wave-2: temp_c), bare-ok(ratio: moisture), pending(wave-2: elevation_m), pending(wave-2: sea_level_m), pending(wave-2: latitude_deg)
+/// type-audit: pending(wave-2: temp_c), bare-ok(ratio: moisture), pending(wave-2: latitude_deg)
 pub fn classify_land(
     temp_c: f64,
     moisture: f64,
@@ -383,7 +383,7 @@ pub fn classify_marine(
 
 /// Classify any cell: marine when below sea level (depth = sea_level − elev),
 /// otherwise land. `sst_c` is the surface temperature used for marine cells.
-/// type-audit: pending(wave-2: temp_c), bare-ok(ratio: moisture), pending(wave-2: sst_c), pending(wave-2: elevation_m), pending(wave-2: sea_level_m), pending(wave-2: latitude_deg), bare-ok(flag: upwelling)
+/// type-audit: pending(wave-2: temp_c), bare-ok(ratio: moisture), pending(wave-2: sst_c), pending(wave-2: latitude_deg), bare-ok(flag: upwelling)
 #[allow(clippy::too_many_arguments)]
 pub fn classify(
     temp_c: f64,

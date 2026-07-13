@@ -178,7 +178,7 @@ fn assemble_elevation(
 /// the nearest same-plate boundary's contribution decayed by graph distance
 /// and shaped by maturity, drawn hotspots, and a strict-ordering
 /// micro-epsilon.
-/// type-audit: bare-ok(index: plate_of), bare-ok(count: distances), waiver(crust-km-convention: crust), bare-ok(flag: continental), waiver(elevation-convention: return)
+/// type-audit: bare-ok(index: plate_of), bare-ok(count: distances), waiver(crust-km-convention: crust), bare-ok(flag: continental)
 #[allow(clippy::too_many_arguments)]
 pub fn generate_elevation(
     terrain_seed: Seed,
@@ -242,7 +242,7 @@ pub fn resolve_ocean_fraction(
 /// iteration 3') and shared with `crust::draw_cratons`. Sort uses
 /// `total_cmp` — elevations are finite and strictly ordered by
 /// construction.
-/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: return), bare-ok(ratio: target)
+/// type-audit: bare-ok(ratio: target)
 pub fn derive_sea_level(
     elevation: &CellMap<ReferenceElevation>,
     target: f64,

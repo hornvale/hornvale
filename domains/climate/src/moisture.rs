@@ -80,7 +80,7 @@ fn rain_shadow(
 }
 
 /// Moisture per cell, `[0, 1]`. See the module doc for the model.
-/// type-audit: pending(wave-2: elevation), pending(wave-2: sea_level), bare-ok(ratio: return)
+/// type-audit: bare-ok(ratio: return)
 pub fn moisture_field(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,

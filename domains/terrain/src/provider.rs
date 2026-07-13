@@ -50,7 +50,6 @@ impl GeneratedTerrain {
 
     /// Elevation at a cell, meters (relative to the isostatic reference
     /// datum — see `hornvale_kernel::ReferenceElevation`).
-    /// type-audit: waiver(elevation-convention)
     pub fn elevation_at(&self, id: CellId) -> ReferenceElevation {
         *self.globe.elevation.get(id)
     }
@@ -68,7 +67,6 @@ impl GeneratedTerrain {
     }
 
     /// Sea level, meters.
-    /// type-audit: pending(wave-2)
     pub fn sea_level(&self) -> ReferenceElevation {
         self.globe.sea_level
     }

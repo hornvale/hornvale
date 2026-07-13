@@ -18,7 +18,7 @@ const SUBSTELLAR: [f64; 3] = [1.0, 0.0, 0.0];
 
 /// Continentality: `1.0` fully inland, dropping toward `0.2` as a cell gains
 /// ocean neighbors. Damps the seasonal swing (the sea is a thermal buffer).
-/// type-audit: pending(wave-2: elevation), pending(wave-2: sea_level), bare-ok(ratio: return)
+/// type-audit: bare-ok(ratio: return)
 pub fn continentality(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,

@@ -24,7 +24,7 @@ fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
 /// between two neighboring cells is approximated as their center distance
 /// over sqrt(3) (the regular-hexagon dual). `None` when the globe has no
 /// land or no shoreline.
-/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: sea_level), bare-ok(ratio: return)
+/// type-audit: bare-ok(ratio: return)
 pub fn shoreline_development(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
@@ -58,7 +58,7 @@ pub fn shoreline_development(
 /// Fraction of all cells within [`SHELF_BAND_M`] of sea level — Earth's
 /// hypsometry keeps a populated shelf here; a cliff-coast generator does
 /// not.
-/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: sea_level), bare-ok(ratio: return)
+/// type-audit: bare-ok(ratio: return)
 pub fn shelf_fraction(
     elevation: &CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
@@ -75,7 +75,7 @@ pub fn shelf_fraction(
 /// population variance. Earth's hypsometry is strongly bimodal (high D).
 /// `None` when either population is empty or both are degenerate
 /// (zero variance).
-/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: sea_level), bare-ok(ratio: return)
+/// type-audit: bare-ok(ratio: return)
 pub fn hypsometric_bimodality(
     elevation: &CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
@@ -110,7 +110,7 @@ pub fn hypsometric_bimodality(
 /// Sizes (cell counts) of connected land components, descending. BFS in
 /// ascending cell-id order — fully deterministic. Empty when there is no
 /// land.
-/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: sea_level), bare-ok(count: return)
+/// type-audit: bare-ok(count: return)
 pub fn land_component_sizes(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,

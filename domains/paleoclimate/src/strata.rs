@@ -9,7 +9,7 @@ use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation};
 /// One coarse era's climate fields, all bare kernel types, filled by the
 /// composition root after re-running climate at the era's sea level and
 /// applying the era's albedo cooling offset to the temperature field.
-/// type-audit: pending(wave-2: day), bare-ok(flag: ice), bare-ok(flag: habitable), pending(wave-2: sea_level), bare-ok(ratio: ice_fraction)
+/// type-audit: pending(wave-2: day), bare-ok(flag: ice), bare-ok(flag: habitable), bare-ok(ratio: ice_fraction)
 #[derive(Debug, Clone)]
 pub struct EraClimate {
     /// Absolute standard day of the era.
@@ -52,7 +52,7 @@ pub struct EraClimate {
 /// earlier version of this function accepted an anomaly and callers twice
 /// mixed up the two conventions. `Celsius` and [`crate::units::TempAnomaly`]
 /// stay distinct types precisely so that mistake can't happen again.
-/// type-audit: pending(wave-2: elevation), pending(wave-2: sea_level), bare-ok(flag: return)
+/// type-audit: bare-ok(flag: return)
 pub fn glaciated(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
@@ -87,7 +87,6 @@ pub struct PaleoRecord {
 /// — it never re-diagnoses glaciation from temperature, so it cannot
 /// disagree with the era's own `ice_fraction` (both derive from the same
 /// mask, computed once by the composition root).
-/// type-audit: pending(wave-2: elevation), pending(wave-2: present_sea_level)
 pub fn extract(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
