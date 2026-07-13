@@ -42,7 +42,7 @@ pub struct ReferenceElevation(f64);
 
 impl ReferenceElevation {
     /// Validating constructor: rejects non-finite values (either sign is valid).
-    /// type-audit: bare-ok(constructor-edge: value), bare-ok(constructor-edge: return)
+    /// type-audit: bare-ok(constructor-edge: value)
     pub fn new(value: f64) -> Result<Self, UnitError> {
         if !value.is_finite() {
             return Err(UnitError {
