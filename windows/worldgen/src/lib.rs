@@ -17,7 +17,7 @@ use hornvale_climate::{
 use hornvale_kernel::{
     ConceptRegistry, EntityId, Fact, GeoCoord, Geosphere, LedgerError, ObserverContext,
     PerceptionLens, PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime,
-    observe,
+    math, observe,
 };
 use hornvale_paleoclimate::{
     Celsius, EraClimate, PaleoRecord, caloric_summer_index, integrate_ice,
@@ -1835,7 +1835,7 @@ fn build_to(
             }
         })
         .collect();
-    let min_sep = (12.0_f64.to_radians()).cos();
+    let min_sep = math::cos(12.0_f64.to_radians());
     let floor = settlement_pins.min_suitability.unwrap_or(0.25);
 
     // Which species this world places: the whole roster, or the pinned one.
@@ -2679,6 +2679,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn build_world_with_default_roster_matches_build_world_byte_for_byte() {
         use hornvale_terrain::TerrainPins;
         let sp = SettlementPins::default();

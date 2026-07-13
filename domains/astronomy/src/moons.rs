@@ -7,6 +7,7 @@ use crate::star::Star;
 use crate::streams;
 use crate::units::{LunarMasses, Megameters, StdDays};
 use hornvale_kernel::Seed;
+use hornvale_kernel::math;
 
 /// A moon of the anchor world. Mass and distance drawn; the rest derived.
 /// type-audit: bare-ok(ratio)
@@ -32,7 +33,7 @@ pub struct Moon {
 /// The anchor's Hill radius in Mm (model card formula).
 /// type-audit: pending(wave-1)
 pub fn hill_radius_mm(star: &Star, anchor: &Anchor) -> f64 {
-    anchor.orbit.0 * (anchor.mass.0 * 3.003e-6 / (3.0 * star.mass.0)).powf(1.0 / 3.0) * 1.496e5
+    anchor.orbit.0 * math::powf(anchor.mass.0 * 3.003e-6 / (3.0 * star.mass.0), 1.0 / 3.0) * 1.496e5
 }
 
 const ATTEMPTS_PER_MOON: u32 = 128;
@@ -43,7 +44,7 @@ fn derive_moon(mass: f64, distance: f64, anchor: &Anchor) -> Moon {
         mass: LunarMasses(mass),
         distance: Megameters(distance),
         period: StdDays(27.32 * ((distance / 384.4).powi(3) / anchor.mass.0).sqrt()),
-        angular_diameter_rel: mass.powf(1.0 / 3.0) * 384.4 / distance,
+        angular_diameter_rel: math::powf(mass, 1.0 / 3.0) * 384.4 / distance,
         tide_rel: mass / (distance / 384.4).powi(3),
         // Drawn after admission from its own stream (SKY-6), so the
         // admission draws above stay byte-identical to the pre-eclipse
@@ -241,7 +242,8 @@ mod tests {
                 let expected_period =
                     27.32 * ((moon.distance.get() / 384.4).powi(3) / anchor.mass.get()).sqrt();
                 assert!((moon.period.get() - expected_period).abs() < 1e-9);
-                let expected_theta = moon.mass.get().powf(1.0 / 3.0) * 384.4 / moon.distance.get();
+                let expected_theta =
+                    math::powf(moon.mass.get(), 1.0 / 3.0) * 384.4 / moon.distance.get();
                 assert!((moon.angular_diameter_rel - expected_theta).abs() < 1e-9);
                 let expected_tide = moon.mass.get() / (moon.distance.get() / 384.4).powi(3);
                 assert!((moon.tide_rel - expected_tide).abs() < 1e-9);

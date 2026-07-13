@@ -8,7 +8,7 @@
 
 use crate::globe::TectonicGlobe;
 use crate::streams;
-use hornvale_kernel::{Geosphere, NearestCellIndex, Seed, noise};
+use hornvale_kernel::{Geosphere, NearestCellIndex, Seed, math, noise};
 
 /// Raster image width in pixels; the image is equirectangular, so height is
 /// `MAP_WIDTH / 2`. 1024×512; pixel ≈ 0.35°, fine enough to show the
@@ -37,7 +37,11 @@ const COAST_OCTAVES: u32 = 5;
 /// kernel's `Geosphere::coord` convention).
 fn direction(latitude: f64, longitude: f64) -> [f64; 3] {
     let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
-    [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()]
+    [
+        math::cos(lat) * math::cos(lon),
+        math::cos(lat) * math::sin(lon),
+        math::sin(lat),
+    ]
 }
 
 /// Seam-free coastline noise in [−1, 1) at a unit-sphere position: the
@@ -82,7 +86,7 @@ fn interpolated_elevation(
     let mut total = 0.0;
     for cell in std::iter::once(nearest).chain(neighbors.iter().copied()) {
         let theta = angle(p, geo.position(cell));
-        let weight = (-(theta * theta) / (sigma * sigma)).exp();
+        let weight = math::exp(-(theta * theta) / (sigma * sigma));
         weighted += weight * *globe.elevation.get(cell);
         total += weight;
     }
@@ -91,9 +95,7 @@ fn interpolated_elevation(
 
 /// Angular distance between two unit vectors, radians.
 fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
-    (a[0] * b[0] + a[1] * b[1] + a[2] * b[2])
-        .clamp(-1.0, 1.0)
-        .acos()
+    math::acos((a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).clamp(-1.0, 1.0))
 }
 
 /// The refined per-pixel elevation: the interpolated prior plus bounded
@@ -112,7 +114,7 @@ fn refined_elevation(
     if d.abs() > 3.0 {
         return interp;
     }
-    let envelope = (-d * d).exp();
+    let envelope = math::exp(-d * d);
     interp + COAST_AMP_M * envelope * coast_noise(noise_seed, direction(latitude, longitude))
 }
 

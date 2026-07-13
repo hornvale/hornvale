@@ -32,17 +32,16 @@
 //! and pins yields byte-identical serialized ledgers (`World::to_json`,
 //! which routes through the quantized emit boundary).
 //!
-//! Measured wall time for the full 48-combo product (M1 Max, debug profile
-//! with the hot-crate opt-level-2 packages from TOOL-hot-crate-opt) came in
-//! well under the ~15 s gate-budget rule from the task brief, so the full
-//! product runs directly in the default gate; no `#[ignore]`d subset split
-//! was needed (see `full_pin_product_is_enumerated` below, which reports
-//! that measurement). The 48 combos are independent -- each build depends
-//! only on `(Seed(42), combo's pins)` -- so the sweep runs one scoped
-//! thread per combo (`std::thread::scope`) rather than sequentially; this
-//! took the measured wall time from ~505 s sequential to ~64 s parallel (M1
-//! Max, 10 logical CPUs, debug profile) without touching the determinism
-//! guarantee.
+//! The full 48-combo product's wall time has grown well past the task
+//! brief's ~15 s commit-gate budget as the genesis pipeline deepened (the
+//! fast-gate-tiers census, 2026-07-13, timed the sequential binary in the
+//! minutes), so the test is `#[ignore]`d into the heavy tier: it runs in
+//! `make gate-full`, not the default commit gate. The 48 combos are
+//! independent -- each build depends only on `(Seed(42), combo's pins)` --
+//! so the sweep runs one scoped thread per combo (`std::thread::scope`)
+//! rather than sequentially, cutting the heavy-tier wall time from ~505 s
+//! to ~64 s (M1 Max, 10 logical CPUs, debug profile) without touching the
+//! determinism guarantee (see `full_pin_product_is_enumerated` below).
 //!
 //! Measured at authoring (2026-07-11, seed 42): 48 built, 0 refused --
 //! reported, not asserted; the split may legitimately move with physics
@@ -160,20 +159,20 @@ fn check_combo(combo: &Combo) -> bool {
     }
 }
 
-/// The full 48-combo product, run directly in the default gate. The 48
-/// combos are independent -- each `check_combo` builds worlds purely from
-/// `(Seed(42), combo's pins)` and shares no mutable state -- so the sweep
-/// runs one scoped thread per combo (`std::thread::scope`, std only,
-/// modeled on `windows/lab/src/runner.rs`'s `run_pin_set`) instead of a
-/// sequential loop. Byte-identity is untouched: each `check_combo` still
-/// builds its combo twice and compares the serialized ledgers on its own
-/// thread. Measured wall time on an M1 Max (10 logical CPUs, debug profile,
-/// hot-crate opt-level-2 packages already in effect) dropped from ~505 s
-/// sequential to ~64 s parallel, so no representative-subset/`#[ignore]`
-/// split is necessary. This IS `full_pin_product_is_enumerated` in spirit
-/// -- the brief's named ignored test is only required when the full
-/// product does not fit the gate budget.
+/// The full 48-combo product, `#[ignore]`d into the heavy tier (fast-gate-tiers
+/// spec): even parallelized its wall time exceeds the ~15 s commit-gate budget
+/// as the genesis pipeline deepened, so it runs in `make gate-full`, not the
+/// default commit gate. The 48 combos are independent -- each `check_combo`
+/// builds worlds purely from `(Seed(42), combo's pins)` and shares no mutable
+/// state -- so the sweep runs one scoped thread per combo (`std::thread::scope`,
+/// std only, modeled on `windows/lab/src/runner.rs`'s `run_pin_set`) instead of
+/// a sequential loop, cutting the heavy-tier wall time from ~505 s to ~64 s (M1
+/// Max, 10 logical CPUs, debug profile). It still asserts total certainty over
+/// the product -- every combo builds or loudly refuses, and every `Ok` is
+/// byte-deterministic (each `check_combo` builds its combo twice and compares
+/// serialized ledgers on its own thread) -- just off the per-commit path.
 #[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn full_pin_product_is_enumerated() {
     let combos = full_product();
 

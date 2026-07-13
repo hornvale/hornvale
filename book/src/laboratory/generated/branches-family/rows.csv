@@ -454,7 +454,7 @@ seed,pin_set,lexicon-regular-family,monophyly-goblinoid,clean-outgroup-kobold,in
 452,default,true,true,true,true,true,true,true,3,2,4,true,3,2,8,0,0,0,0,0,1,1,1,,0,0,0,0,1,1,42,170,18,
 453,default,true,true,true,true,true,true,true,3,3,8,true,1,1,6,5,0,0,0,0,1,1,1,1,0,0,0,0,1,1,162,16,120,
 454,default,true,true,true,true,true,true,true,2,2,5,true,4,5,4,0,0,0,0,0,1,1,1,,0,0,0,0,1,1,144,96,20,
-455,default,true,true,true,true,true,true,true,3,3,4,true,3,12,3,47,0,0,0,0,1,1,1,1,0,0,0,0,1,1,675,288,50,
+455,default,true,true,true,true,true,true,true,3,3,4,true,3,12,3,39,0,0,0,0,1,1,1,1,0,0,0,0,1,1,675,288,50,
 456,default,true,true,true,true,true,true,true,1,0,5,true,1,0,24,0,0,0,0,0,1,,1,,0,0,0,0,1,1,33,24,100,
 457,default,true,true,true,true,true,true,true,2,1,2,true,5,0,14,0,0,0,0,0,1,,1,,0,0,0,0,1,1,378,180,10,
 458,default,true,true,true,true,true,true,true,1,3,5,true,1,2,5,3,0,0,0,0,1,1,1,1,0,0,0,0,1,1,144,8,16,

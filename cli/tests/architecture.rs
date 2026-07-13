@@ -6,8 +6,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::process::Command;
 
-/// The only crates permitted from outside the workspace (decision 0004).
-const ALLOWED_EXTERNAL: &[&str] = &["serde", "serde_json"];
+/// The only crates permitted from outside the workspace (decision 0004,
+/// amended by decision 0028 to admit `libm` for portable transcendentals).
+const ALLOWED_EXTERNAL: &[&str] = &["libm", "serde", "serde_json"];
 
 /// One workspace crate: its name, its layer (the first path component under
 /// the workspace root), and its dependency names by kind.

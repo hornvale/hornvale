@@ -7,6 +7,7 @@ use crate::calendar::{Calendar, calendar_of};
 use crate::system::{GenesisOutcome, StarSystem};
 use crate::units::StdDays;
 use crate::{CELESTIAL_BODY, SkyReport};
+use hornvale_kernel::math;
 use hornvale_kernel::{ObserverContext, PhenomenaSource, Phenomenon, Venue, WorldTime};
 
 #[cfg(test)]
@@ -778,7 +779,7 @@ fn eclipse_chance(sun_angular_rel: f64, moon_angular_rel: f64, inclination_deg: 
     let threshold =
         ANGULAR_UNIT_DEG * (sun_angular_rel + moon_angular_rel) / 2.0 + ECLIPSE_PARALLAX_DEG;
     let x = (threshold / inclination_deg.max(f64::MIN_POSITIVE)).min(1.0);
-    (2.0 / std::f64::consts::PI) * x.asin()
+    (2.0 / std::f64::consts::PI) * math::asin(x)
 }
 
 fn round2(x: f64) -> f64 {
@@ -878,7 +879,7 @@ fn season_words(phase: f64) -> &'static str {
     match phase_eighth(phase) {
         2 => "The days are near their longest.",
         6 => "The days are near their shortest.",
-        _ if (std::f64::consts::TAU * phase).cos() > 0.0 => "The days are growing.",
+        _ if math::cos(std::f64::consts::TAU * phase) > 0.0 => "The days are growing.",
         _ => "The days are shrinking.",
     }
 }
@@ -1209,7 +1210,7 @@ impl PhenomenaSource for GeneratedSky {
                     description: neighbor.night_description(),
                     period_days: None,
                     salience: round2(
-                        (0.1 + 0.1 * (1.0 + neighbor.apparent_brightness).ln()).clamp(0.1, 0.6),
+                        (0.1 + 0.1 * math::ln(1.0 + neighbor.apparent_brightness)).clamp(0.1, 0.6),
                     ),
                     venue: Venue::NightSky,
                 });

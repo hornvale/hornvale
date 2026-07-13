@@ -10,6 +10,7 @@ pub mod field;
 pub mod geosphere;
 pub mod golden;
 pub mod ledger;
+pub mod math;
 pub mod noise;
 pub mod phenomena;
 pub mod png;

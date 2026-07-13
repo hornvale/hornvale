@@ -35,8 +35,8 @@ resolve; do not add new content under `docs/vision/`.
 
 ## The drift-check enforces the above
 
-`cli/tests/docs_consistency.rs` runs inside the normal `cargo test --workspace`
-gate and asserts three invariants:
+`cli/tests/docs_consistency.rs` runs inside the normal commit gate (`make
+gate`, via `cargo nextest run --workspace`) and asserts three invariants:
 
 1. every `## ` section in the frontier is listed in the Contents ToC;
 2. registry IDs are unique;
