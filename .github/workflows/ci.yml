@@ -1,9 +1,11 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  # Manual-only (decision 0029): a solo project whose dev machine outpaces the
+  # free 2-core runners, so per-push CI added latency without value. The local
+  # gate + the AWS Linux runs (scripts/aws-gate/) are the gates; run this by
+  # hand (Actions tab -> Run workflow) for an on-demand Linux check.
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
