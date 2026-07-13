@@ -1,4 +1,4 @@
-# The capacity floor is reached by tone, not by adding segments to atonal species
+# 0035. The capacity floor is reached by tone, not by adding segments to atonal species
 
 **Status:** Accepted (2026-07-10) · **Decider:** Nathan
 
@@ -44,7 +44,7 @@ rule, so it stays constitutionally clean.
 **See also.** The phonology-epoch spec (§2.3, §5, §10 Q3); decision 0011
 (studies are data, metrics are code — the confusable split is a metric, the
 domain partition is pack data); the sibling decision
-`tonogenesis-is-a-regular-conditioned-merger-repair` (the tail's other guard);
+0034 (the tail's other guard);
 `distinguishable_capacity` /
 `ensure_capacity_floor` in `domains/language/src/phonology.rs` and
 `confusable_homophony` in `windows/lab/src/metrics.rs`. Slug filename per

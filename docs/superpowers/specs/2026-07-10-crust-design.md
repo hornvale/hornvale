@@ -54,7 +54,7 @@ The craton kernel's radial taper crosses `CONTINENTAL_THRESHOLD` gradually, so i
 
 ## 5. Canonical grid and the level pin
 
-**The contract (to be ratified as a decision, slug `identity-computes-on-the-canonical-grid`):** *a world's identity-bearing derivations — sea level, drainage, endorheic basins, land components, settlement placement, paleoclimate strata — compute once on the world's canonical grid; everything pointwise is a Field that observation may sample at any resolution.* Campaign 25's coastline lens was the first instance; crust makes it constitutional.
+**The contract (to be ratified as a decision, slug 0038):** *a world's identity-bearing derivations — sea level, drainage, endorheic basins, land components, settlement placement, paleoclimate strata — compute once on the world's canonical grid; everything pointwise is a Field that observation may sample at any resolution.* Campaign 25's coastline lens was the first instance; crust makes it constitutional.
 
 - `GLOBE_LEVEL` default rises 5 → 6 (10,242 → 40,962 cells, ~110 km).
 - New pin `--globe-level` (legal 4–7): the canonical level joins world identity — same seed at different levels is a different world, by declaration. The pin consumes no draws (structural, like the composition of the pin set itself); crust fields make cross-level worlds *consistent* (shared geometry) without being *identical* (sea level, drainage, and facts differ). Worldgen's one-shot static `Geosphere` becomes a per-level cache (`BTreeMap<u32, Geosphere>` behind a lock, deterministic).
@@ -137,7 +137,7 @@ new       cratons           (budget, count, then per-craton
 
 ## 11. Definition of Done
 
-- The full gate; type-audit check + regenerated report; both census stages run and published; Census of Coasts II page with band verdicts and the supersession note; chronicle entry; freshness sweep (terrain.md, laboratory overview, any chapter stating cell counts, plate-flag prose, paleo chapters); decision doc `identity-computes-on-the-canonical-grid`; retrospective; idea-registry row for adaptive/local mesh refinement (`raw`, rejected-for-now rationale); fixture refreezes per §9; merge-second reconciliation with The Branches.
+- The full gate; type-audit check + regenerated report; both census stages run and published; Census of Coasts II page with band verdicts and the supersession note; chronicle entry; freshness sweep (terrain.md, laboratory overview, any chapter stating cell counts, plate-flag prose, paleo chapters); decision doc 0038; retrospective; idea-registry row for adaptive/local mesh refinement (`raw`, rejected-for-now rationale); fixture refreezes per §9; merge-second reconciliation with The Branches.
 
 ## 12. Non-goals
 

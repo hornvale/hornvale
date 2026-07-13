@@ -1,4 +1,4 @@
-# The Confidence Gradient is re-scored, not frozen
+# 0030. The Confidence Gradient is re-scored, not frozen
 
 **Status:** Accepted (2026-07-10) · **Decider:** Nathan
 

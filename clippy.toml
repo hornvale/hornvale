@@ -9,7 +9,7 @@ disallowed-types = [
     { path = "std::time::Instant", reason = "wall-clock time is forbidden; time is WorldTime (decision 0001)" },
 ]
 
-# libm (decision 0028): std's f64 transcendentals dispatch to the *platform*
+# libm (decision 0041): std's f64 transcendentals dispatch to the *platform*
 # libm (Apple's vs glibc's, last-ULP divergent); use hornvale_kernel::math,
 # which routes through the portable libm crate. IEEE-exact operations (sqrt,
 # abs, floor/ceil/round, mul_add, powi, arithmetic) remain allowed.

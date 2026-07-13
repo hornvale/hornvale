@@ -1,9 +1,9 @@
-# The bare-ok rubric for primitives at API boundaries
+# 0028. The bare-ok rubric for primitives at API boundaries
 
 **Status:** Accepted (2026-07-09) · **Decider:** Nathan
 
 In the context of the type audit (spec; decision
-`non-workspace-dev-tools-may-use-parser-libraries`) requiring a verdict on
+0027) requiring a verdict on
 every primitive crossing a public boundary, facing the question of which bare
 primitives are *permanently* fine versus deferred newtypes, we decided the
 **bare-ok rubric**: a primitive at a `pub` boundary is permanently acceptable
@@ -66,7 +66,7 @@ is added only by *superseding this decision* (never editing it), after
 ratifying a contested case. The remediation waves (spec §7) convert every
 `pending` tag; each wave's diff deletes the tags it resolves.
 
-**See also.** Decision `non-workspace-dev-tools-may-use-parser-libraries`
+**See also.** Decision 0027
 (the tool); decisions 0008 (typed quantities), 0014 (`Fact.day`), 0006
 (labels are permanent contracts); the type-audit spec §4; the elevation
 convention (Campaign 3 plan). Slug filename, not a number, per decision 0026

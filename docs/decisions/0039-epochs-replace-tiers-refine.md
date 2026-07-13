@@ -1,4 +1,4 @@
-# Epochs replace, tiers refine — a contradicting generator cannot coexist as a tier
+# 0039. Epochs replace, tiers refine — a contradicting generator cannot coexist as a tier
 
 **Status:** Accepted (2026-07-11) · **Decider:** Nathan
 
@@ -46,4 +46,4 @@ the chronicle, not a live tier switch.
 generator change that alters — rather than refines — the worlds a prior
 generator produced. Tier coexistence remains correct for genuine
 fidelity levels of one truth (the sky tiers, and crust *fields* sampled at
-different resolutions per `identity-computes-on-the-canonical-grid`).
+different resolutions per 0038).

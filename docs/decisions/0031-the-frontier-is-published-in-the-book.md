@@ -1,4 +1,4 @@
-# The frontier is published in the book
+# 0031. The frontier is published in the book
 
 **Status:** Accepted (2026-07-10) · **Decider:** Nathan
 

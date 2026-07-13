@@ -1,6 +1,6 @@
 # 0026. Slugs, not numbers
 
-**Status:** Accepted (2026-07-10) · **Decider:** Nathan
+**Status:** Superseded by 0043 (for decision records; the study/chronicle/registry-row provisions stand) · **Decider:** Nathan
 
 In the context of parallel campaign sessions triple-colliding on
 sequentially numbered artifacts in two days (two Campaign 20s, two decision

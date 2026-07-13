@@ -23,7 +23,7 @@ governs.
 #   make gate        # COMMIT GATE: fmt + clippy + nextest + doctests (heavy tier skipped, ~4 min)
 #   make gate-fast   # ITERATION ONLY: the above, scoped to changed crates
 #   make gate-full   # full evidence: the commit gate + the cost-tagged heavy tier (scripts/gate-full-heavy.sh)
-# nextest is a dev tool, not a workspace dependency (decision 0027); install
+# nextest is a dev tool, not a workspace dependency (decision 0040); install
 # with `cargo install cargo-nextest` or `brew install cargo-nextest`.
 # The raw checks `make gate` runs (every commit must pass all):
 cargo nextest run --workspace       # unit + integration, parallel (skips the heavy tier)
@@ -67,7 +67,7 @@ cargo run -p hornvale -- lab run studies/census-lands-drift.study.json
 cargo run -p hornvale -- lab list-metrics
 
 # The type audit — a standalone tool OUTSIDE the workspace (decisions
-# `non-workspace-dev-tools-may-use-parser-libraries` / `the-bare-ok-rubric`);
+# 0027 / 0028);
 # check is default-deny (any untagged pub-boundary primitive fails), report
 # regenerates the committed audit report:
 cargo run --manifest-path tools/type-audit/Cargo.toml -- check
@@ -120,7 +120,7 @@ contradicts, lower ("coarse constrains fine").
 - Same seed + same pins → byte-identical worlds, almanacs, and artifacts.
   Tests assert this; CI's drift check enforces it on committed artifacts.
 - **Cross-platform byte-identity via quantization** (decision
-  `serialized-floats-are-quantized-for-cross-platform-determinism`): `f64`
+  0033): `f64`
   transcendentals route to the platform libm (Apple's vs glibc's), which
   differ in the last ULP, so serialized floats are quantized to 8
   significant digits (`hornvale_kernel::quantize`, libm-free) at every
@@ -174,7 +174,7 @@ contradicts, lower ("coarse constrains fine").
   dimensionless ratios stay bare `f64`. No dimensional-analysis crates.
   Rationale and scope: Campaign 2 spec, design principle 5. Enforced by
   `tools/type-audit/` (decisions
-  `non-workspace-dev-tools-may-use-parser-libraries` / `the-bare-ok-rubric`):
+  0027 / 0028):
   every primitive at a `pub`
   boundary carries a `type-audit:` verdict tag (`bare-ok(<class>)` /
   `waiver(<reason>)` / `pending(wave-N)`), drift-checked in CI.
@@ -201,7 +201,7 @@ for every merged plan includes the project book**: a chronicle entry
 may never lag merged reality; a campaign that resolves or moves one of the
 **Confidence Gradient**'s bets (`book/src/open-questions.md`) re-scores that
 chapter as part of the sweep (decision
-`the-confidence-gradient-is-re-scored-not-frozen`). It also includes a one-page campaign
+0030). It also includes a one-page campaign
 retrospective in `docs/retrospectives/` (decision 0020) — process lessons,
 not product. Campaigns are named by sequence number + name; the Year-N
 prefix is retired (decision 0017). Book prose is written at a deliberate

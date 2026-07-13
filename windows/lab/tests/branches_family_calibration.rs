@@ -11,7 +11,7 @@ use std::sync::LazyLock;
 /// The 1,000-seed family-battery census, loaded ONCE from its committed
 /// `rows.csv` fixture and shared by every calibration in this file (mirrors
 /// `calibration.rs`'s `DRIFT`/`MEETING` per decision
-/// `calibration-loads-the-census-fixture`). The fixture is published by
+/// 0032). The fixture is published by
 /// `lab run` and regenerated + drift-checked in CI's "Artifacts are current"
 /// step; `branches_fixture_matches_live_run` below pins fixture == live.
 /// Loading instead of recomputing keeps the ~209s (debug) sweep off every
@@ -292,7 +292,7 @@ fn homophony_count_is_measured_and_pinned() {
     // code — the L6 terrain relocates settlements and reshapes each people's
     // naming draws, shifting the family homophony means (was goblin 2.589,
     // hobgoblin 1.631, bugbear 6.765, kobold 2.454).
-    // libm (decision 0028, 2026-07-13): kobold re-pinned 2.509 -> 2.501; the
+    // libm (decision 0041, 2026-07-13): kobold re-pinned 2.509 -> 2.501; the
     // other three are unchanged to 1e-9 (Apple libm == crate libm there).
     assert!((mg - 2.702).abs() < 1e-9, "goblin mean drifted: {mg}");
     assert!((mh - 1.638).abs() < 1e-9, "hobgoblin mean drifted: {mh}");

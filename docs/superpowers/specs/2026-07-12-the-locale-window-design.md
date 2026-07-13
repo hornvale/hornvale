@@ -18,7 +18,7 @@ interface**: the game layer's first walkable surface.
   `locale` window as composition consumer over worldgen).
 - `docs/design/room-scale/p2-subdivision-design.md` §14 Q4 — the categorical
   field-blend question this spec settles.
-- Decision `identity-computes-on-the-canonical-grid` and registry **MAP-30**
+- Decision 0038 and registry **MAP-30**
   — refine fields, inherit mesh-bound truth unchanged; a finer re-quantization
   of a category is an epoch, not a tier.
 
@@ -126,7 +126,7 @@ the room's `Biome` is the biome of the **maximum-weight** corner cell. Ties
 break by **lowest `CellId`** (deterministic, platform-exact — all integer). No
 blend-then-reclassify: re-quantizing a category at finer resolution would
 contradict the canonical grid, which decision
-`identity-computes-on-the-canonical-grid` reserves for an *epoch*, not a tier.
+0038 reserves for an *epoch*, not a tier.
 
 **Continuous fields (resolution-free — refined by weighted blend):**
 `temperature_c`, `moisture`, and `elevation_m` are the integer-weighted average

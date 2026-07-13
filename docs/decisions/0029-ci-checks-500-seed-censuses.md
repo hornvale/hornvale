@@ -1,4 +1,4 @@
-# CI checks 500-seed censuses
+# 0029. CI checks 500-seed censuses
 
 **Status:** Accepted (2026-07-10) · **Decider:** Nathan
 

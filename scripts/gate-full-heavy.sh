@@ -4,7 +4,7 @@
 #
 # `#[ignore]` is overloaded in this tree: it marks BOTH cost-deferred heavy
 # batteries (censuses, the full pin product — greppable via the `heavy:`
-# reason token, see cli/tests/heavy_tier.rs and decision 0027) AND
+# reason token, see cli/tests/heavy_tier.rs and decision 0040) AND
 # genuinely-deferred tests (WIP, flaky, superseded, or a documented physics
 # limitation like the single-craton hypsometry). `--run-ignored all` would
 # run the latter too and be red by design, so `make gate-full` must not use

@@ -88,7 +88,7 @@ In `windows/lab/src/runner.rs`, directly after the `Row` struct definition:
 /// `Number` values exactly as [`render_csv`] does at the serialization
 /// boundary, so a full-precision live row compares equal to its committed,
 /// quantized counterpart (decision
-/// `serialized-floats-are-quantized-for-cross-platform-determinism`).
+/// 0033).
 pub fn canonical_row(row: &Row) -> Row {
     Row {
         seed: row.seed,
@@ -123,7 +123,7 @@ Expected: PASS.
 - Delete the local `fn canonical(row: &Row) -> Row { … }` (the whole function and its doc comment).
 - Change the import line to `use hornvale_lab::{MetricValue, Row, RunResult, Study, canonical_row, load_rows, load_study, run};` (keep `use hornvale_kernel::quantize;` — the self-test still calls it).
 - In `assert_fixture_fresh`, replace `canonical(row)` with `canonical_row(row)`.
-- In the missing-row panic (the `unwrap_or_else` whose message ends "and commit the diff"), append the decision cite so it ends: `and commit the diff (decision calibration-loads-the-census-fixture)`.
+- In the missing-row panic (the `unwrap_or_else` whose message ends "and commit the diff"), append the decision cite so it ends: `and commit the diff (decision 0032)`.
 
 `windows/lab/tests/calibration.rs`, in `census_fixture_matches_live_run`:
 - Replace the inline canonicalizing rebuild of `live` with:

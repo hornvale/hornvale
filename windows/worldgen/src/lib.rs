@@ -23,7 +23,56 @@ use hornvale_paleoclimate::{
     Celsius, EraClimate, PaleoRecord, caloric_summer_index, integrate_ice,
 };
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
+use std::cell::RefCell;
 use std::sync::OnceLock;
+// The profiler measures wall-clock stage durations for a committed diagnostic
+// (`profile_build` example); it never reads `WorldTime` and never touches a
+// fact, so it is exempt from the wall-clock ban (clippy.toml / decision 0001).
+#[allow(clippy::disallowed_types)]
+use std::time::{Duration, Instant};
+
+thread_local! {
+    // `Some` only inside a `profiled(..)` scope; `None` on the normal build
+    // path, so the stage spans compile to a single thread-local read + branch.
+    static PROFILE: RefCell<Option<Vec<(&'static str, Duration)>>> = const { RefCell::new(None) };
+}
+
+/// Per-stage wall-clock spans recorded during one profiled world build.
+/// type-audit: bare-ok(prose: stages)
+#[derive(Clone, Debug, Default)]
+pub struct BuildProfile {
+    /// `(stage label, elapsed)` in pipeline order.
+    pub stages: Vec<(&'static str, Duration)>,
+}
+
+/// Run `f` with stage profiling active and return its result plus the profile.
+/// Nesting is not supported (the inner scope's spans replace the outer's); the
+/// lab/CLI call it at the top of one build.
+pub fn profiled<T>(f: impl FnOnce() -> T) -> (T, BuildProfile) {
+    PROFILE.with(|p| *p.borrow_mut() = Some(Vec::new()));
+    let out = f();
+    let stages = PROFILE.with(|p| p.borrow_mut().take().unwrap_or_default());
+    (out, BuildProfile { stages })
+}
+
+/// Record `label` with the time `f` took, but only when a `profiled` scope is
+/// active. Off the profiled path this is one thread-local read and a call.
+#[allow(clippy::disallowed_types, dead_code)]
+fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
+    let active = PROFILE.with(|p| p.borrow().is_some());
+    if !active {
+        return f();
+    }
+    let start = Instant::now();
+    let out = f();
+    let elapsed = start.elapsed();
+    PROFILE.with(|p| {
+        if let Some(v) = p.borrow_mut().as_mut() {
+            v.push((label, elapsed));
+        }
+    });
+    out
+}
 
 pub mod settlement_pins;
 pub use settlement_pins::SettlementPins;
@@ -77,6 +126,23 @@ pub enum SkyChoice {
     Constant,
     /// Tiers 1/2: a fully generated star system.
     Generated,
+}
+
+/// How deep to build the world's fact-committing pipeline (spec §4 / MAP-25).
+/// Earlier rungs are a byte-identical prefix of later ones — the pipeline is
+/// linear, so each rung reads only earlier rungs' facts and stopping early
+/// simply omits later appends. Climate is *not* a rung: it commits no facts,
+/// and is reconstructed on demand from a Terrain-depth world.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum BuildDepth {
+    /// Sky genesis only.
+    Astronomy,
+    /// …plus terrain genesis.
+    Terrain,
+    /// …plus settlement placement, naming, and glosses.
+    Settlements,
+    /// …plus culture, religion, species, and deep time (today's full build).
+    Full,
 }
 
 /// The live astronomy provider a world uses, reconstructed from its ledger.
@@ -1601,6 +1667,56 @@ pub fn build_world_with_roster(
     settlement_pins: &SettlementPins,
     roster: &[hornvale_species::SpeciesDef],
 ) -> Result<World, BuildError> {
+    build_to(
+        seed,
+        pins,
+        sky,
+        terrain_pins,
+        settlement_pins,
+        roster,
+        BuildDepth::Full,
+    )
+}
+
+/// Build a world only as deep as `depth` (spec §4 / MAP-25). At any depth the
+/// committed facts are a byte-identical prefix of the full build's — stopping
+/// early only omits later appends; it never changes a fact it does commit.
+#[allow(clippy::too_many_arguments)]
+pub fn build_world_to(
+    seed: Seed,
+    pins: &SkyPins,
+    sky: SkyChoice,
+    terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
+    roster: &[hornvale_species::SpeciesDef],
+    depth: BuildDepth,
+) -> Result<World, BuildError> {
+    build_to(
+        seed,
+        pins,
+        sky,
+        terrain_pins,
+        settlement_pins,
+        roster,
+        depth,
+    )
+}
+
+/// The full pipeline, run only as deep as `depth`. `build_world_with_roster`
+/// delegates with `BuildDepth::Full`; `build_world_to` forwards its argument.
+/// The only depth-dependent behavior is early `return Ok(world)` between
+/// stages — every statement's order and borrows are otherwise unchanged, so
+/// the Full path is identical to the pre-depth pipeline.
+#[allow(clippy::too_many_arguments)]
+fn build_to(
+    seed: Seed,
+    pins: &SkyPins,
+    sky: SkyChoice,
+    terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
+    roster: &[hornvale_species::SpeciesDef],
+    depth: BuildDepth,
+) -> Result<World, BuildError> {
     let mut world = World::new(seed);
     register_all(&mut world.registry)?;
 
@@ -1624,25 +1740,39 @@ pub fn build_world_with_roster(
         )?;
     }
 
-    if let SkyChoice::Generated = sky {
-        let outcome = generate(seed, pins).map_err(BuildError::Genesis)?;
-        facts::genesis(&mut world, world_entity, &outcome)?;
+    stage("astronomy", || -> Result<(), BuildError> {
+        if let SkyChoice::Generated = sky {
+            let outcome = generate(seed, pins).map_err(BuildError::Genesis)?;
+            facts::genesis(&mut world, world_entity, &outcome)?;
+        }
+        Ok(())
+    })?;
+
+    if depth == BuildDepth::Astronomy {
+        return Ok(world);
     }
 
-    for pin_string in hornvale_terrain::pin_strings(terrain_pins) {
-        world.ledger.commit(
-            scenario_fact(
-                world_entity,
-                hornvale_terrain::facts::TERRAIN_PIN,
-                Value::Text(pin_string),
-            ),
-            &world.registry,
-        )?;
+    stage("terrain", || -> Result<(), BuildError> {
+        for pin_string in hornvale_terrain::pin_strings(terrain_pins) {
+            world.ledger.commit(
+                scenario_fact(
+                    world_entity,
+                    hornvale_terrain::facts::TERRAIN_PIN,
+                    Value::Text(pin_string),
+                ),
+                &world.registry,
+            )?;
+        }
+        let level = terrain_pins.globe_level.unwrap_or(GLOBE_LEVEL);
+        let terrain_outcome = hornvale_terrain::generate(seed, &geosphere_for(level), terrain_pins)
+            .map_err(BuildError::TerrainGenesis)?;
+        hornvale_terrain::facts::genesis(&mut world, world_entity, &terrain_outcome)?;
+        Ok(())
+    })?;
+
+    if depth <= BuildDepth::Terrain {
+        return Ok(world);
     }
-    let level = terrain_pins.globe_level.unwrap_or(GLOBE_LEVEL);
-    let terrain_outcome = hornvale_terrain::generate(seed, &geosphere_for(level), terrain_pins)
-        .map_err(BuildError::TerrainGenesis)?;
-    hornvale_terrain::facts::genesis(&mut world, world_entity, &terrain_outcome)?;
 
     // Settlement pins are never reconstructed (settlements persist as their
     // own committed facts, not re-derived from a provider like sky/terrain);
@@ -1663,6 +1793,22 @@ pub fn build_world_with_roster(
 
     // Reconstruct terrain + climate, assemble per-cell site inputs, place a
     // spaced scatter of settlements, and commit each as its own place entity.
+    #[allow(clippy::type_complexity)]
+    let (terrain, climate, ids, placed, placements, lexicons, species_set, phonologies) = stage(
+        "climate+settlements",
+        || -> Result<
+            (
+                GeneratedTerrain,
+                GeneratedClimate,
+                Vec<EntityId>,
+                Vec<hornvale_settlement::PlacedSettlement>,
+                Vec<(hornvale_settlement::Placement, u32)>,
+                std::collections::BTreeMap<&str, hornvale_language::Lexicon>,
+                Vec<&hornvale_species::SpeciesDef>,
+                std::collections::BTreeMap<&str, hornvale_language::Phonology>,
+            ),
+            BuildError,
+        > {
     let terrain = terrain_of(&world)?;
     let climate = climate_of(&world)?;
     let geo = terrain.geosphere();
@@ -1843,96 +1989,128 @@ pub fn build_world_with_roster(
                 .commit(name_gloss_fact(*id, gloss), &world.registry)?;
         }
     }
+            Ok((
+                terrain,
+                climate,
+                ids,
+                placed,
+                placements,
+                lexicons,
+                species_set,
+                phonologies,
+            ))
+        },
+    )?;
 
-    // Per-species flagship culture and religion.
-    for (tag, def) in species_set.iter().enumerate() {
-        let Some(pos) = placements.iter().position(|(_, t)| *t as usize == tag) else {
-            continue; // a species may place nothing on a hostile world
-        };
-        let flagship = ids[pos];
-        let fcell = placements[pos].0.cell;
-        let coastal = geo.neighbors(fcell).iter().any(|n| terrain.is_ocean(*n));
-        let moisture = climate.moisture_at(fcell);
-        let class = biome_class(climate.biome_at(fcell));
-        let subsistence = hornvale_culture::subsistence(class, coastal);
-        let surplus = (hornvale_culture::fertility(class) * moisture).clamp(0.0, 1.0);
-        let threat = terrain.unrest_at(fcell).clamp(0.0, 1.0);
-        let env = hornvale_culture::EnvSummary {
-            subsistence,
-            surplus,
-            population: placed[pos].population,
-            threat,
-        };
-        let psych = hornvale_culture::PsychSummary {
-            threat_response: def.psych.threat_response,
-            time_horizon: def.psych.time_horizon,
-            communal: def.psych.sociality == hornvale_species::Sociality::Communal,
-            rank_status: def.psych.status_basis == hornvale_species::StatusBasis::Rank,
-            vocabulary: hornvale_culture::RoleVocabulary {
-                worker_override: def.worker_override.map(str::to_string),
-                warrior: def.warrior.to_string(),
-                artisan: def.artisan.to_string(),
-                shaman: def.shaman.to_string(),
-                top: def.top.to_string(),
-            },
-        };
-        hornvale_culture::genesis(&mut world, flagship, &env, &psych)?;
+    if depth <= BuildDepth::Settlements {
+        return Ok(world);
+    }
 
-        // Religion for every species-flagship (spec §5): each species sees
-        // the sky through its own lens at its own hour. The priesthood
-        // check uses the species' own shaman-rung word — kobold "keeper"
-        // is a priesthood exactly as goblin "shaman" is.
-        let castes = hornvale_culture::castes_of(&world, flagship);
-        let society = hornvale_religion::SocietySummary {
-            strata: castes.len(),
-            has_priesthood: castes.iter().any(|c| c == def.shaman),
-        };
-        // Religion (and the deity glosses drawn inside it) observes from
-        // the world's first place — the flagship vantage, its hemisphere
-        // culling the sky (SEQ-4/SEQ-5) — exactly the observation
-        // `religion::genesis` derives its beliefs from, so every deity
-        // name-gloss is truthful to the phenomenon its belief was actually
-        // derived from. Settlements exist by now, so the placed-observer
-        // path is live.
-        let seen = observed_phenomena_as_in(&world, roster, def.name)?;
-        let namer = namers
-            .get(def.name)
-            .expect("a Namer was built for every placed species");
-        let morph = morph_options(&def.psych);
-        let lexicon = lexicons
-            .get(def.name)
-            .expect("a lexicon was built for every placed species");
-        let mut deity_namer = LanguageDeityNamer {
-            namer,
-            morph,
-            lexicon,
-            phenomena: &seen,
-            index: 0,
-            glosses: std::collections::BTreeMap::new(),
-        };
-        hornvale_religion::genesis(&mut world, flagship, &seen, &society, &mut deity_namer)?;
-        for (salt, gloss) in &deity_namer.glosses {
-            world.ledger.commit(
-                name_gloss_fact(hornvale_kernel::EntityId(*salt), gloss),
-                &world.registry,
-            )?;
+    // `geo` borrows `terrain`, and `namers` borrows `phonologies` (see
+    // `Namer<'a>`), so neither can be returned out of the closure above
+    // alongside the values they borrow from — both are cheap, pure,
+    // side-effect-free recomputations of what the closure already derived.
+    let geo = terrain.geosphere();
+    let namers: std::collections::BTreeMap<&str, hornvale_language::Namer> = phonologies
+        .iter()
+        .map(|(name, ph)| (*name, hornvale_language::Namer::new(&seed, name, ph)))
+        .collect();
+
+    stage("culture+religion+species", || -> Result<(), BuildError> {
+        // Per-species flagship culture and religion.
+        for (tag, def) in species_set.iter().enumerate() {
+            let Some(pos) = placements.iter().position(|(_, t)| *t as usize == tag) else {
+                continue; // a species may place nothing on a hostile world
+            };
+            let flagship = ids[pos];
+            let fcell = placements[pos].0.cell;
+            let coastal = geo.neighbors(fcell).iter().any(|n| terrain.is_ocean(*n));
+            let moisture = climate.moisture_at(fcell);
+            let class = biome_class(climate.biome_at(fcell));
+            let subsistence = hornvale_culture::subsistence(class, coastal);
+            let surplus = (hornvale_culture::fertility(class) * moisture).clamp(0.0, 1.0);
+            let threat = terrain.unrest_at(fcell).clamp(0.0, 1.0);
+            let env = hornvale_culture::EnvSummary {
+                subsistence,
+                surplus,
+                population: placed[pos].population,
+                threat,
+            };
+            let psych = hornvale_culture::PsychSummary {
+                threat_response: def.psych.threat_response,
+                time_horizon: def.psych.time_horizon,
+                communal: def.psych.sociality == hornvale_species::Sociality::Communal,
+                rank_status: def.psych.status_basis == hornvale_species::StatusBasis::Rank,
+                vocabulary: hornvale_culture::RoleVocabulary {
+                    worker_override: def.worker_override.map(str::to_string),
+                    warrior: def.warrior.to_string(),
+                    artisan: def.artisan.to_string(),
+                    shaman: def.shaman.to_string(),
+                    top: def.top.to_string(),
+                },
+            };
+            hornvale_culture::genesis(&mut world, flagship, &env, &psych)?;
+
+            // Religion for every species-flagship (spec §5): each species sees
+            // the sky through its own lens at its own hour. The priesthood
+            // check uses the species' own shaman-rung word — kobold "keeper"
+            // is a priesthood exactly as goblin "shaman" is.
+            let castes = hornvale_culture::castes_of(&world, flagship);
+            let society = hornvale_religion::SocietySummary {
+                strata: castes.len(),
+                has_priesthood: castes.iter().any(|c| c == def.shaman),
+            };
+            // Religion (and the deity glosses drawn inside it) observes from
+            // the world's first place — the flagship vantage, its hemisphere
+            // culling the sky (SEQ-4/SEQ-5) — exactly the observation
+            // `religion::genesis` derives its beliefs from, so every deity
+            // name-gloss is truthful to the phenomenon its belief was actually
+            // derived from. Settlements exist by now, so the placed-observer
+            // path is live.
+            let seen = observed_phenomena_as_in(&world, roster, def.name)?;
+            let namer = namers
+                .get(def.name)
+                .expect("a Namer was built for every placed species");
+            let morph = morph_options(&def.psych);
+            let lexicon = lexicons
+                .get(def.name)
+                .expect("a lexicon was built for every placed species");
+            let mut deity_namer = LanguageDeityNamer {
+                namer,
+                morph,
+                lexicon,
+                phenomena: &seen,
+                index: 0,
+                glosses: std::collections::BTreeMap::new(),
+            };
+            hornvale_religion::genesis(&mut world, flagship, &seen, &society, &mut deity_namer)?;
+            for (salt, gloss) in &deity_namer.glosses {
+                world.ledger.commit(
+                    name_gloss_fact(hornvale_kernel::EntityId(*salt), gloss),
+                    &world.registry,
+                )?;
+            }
         }
-    }
 
-    // Species entities AFTER every pre-species subsystem (settlements,
-    // culture, religion) — entity-id stability, spec §8: a goblin-pinned
-    // world must mint the exact same ids for pre-C1 entities as pre-species
-    // main, so the new, Y2-1-only entities are appended last rather than
-    // interleaved. Then the peopled-by link for every settlement.
-    hornvale_species::genesis_in(&mut world, roster)?;
-    for (id, (_, tag)) in ids.iter().zip(placements.iter()) {
-        hornvale_species::people(&mut world, *id, species_set[*tag as usize].name)?;
-    }
+        // Species entities AFTER every pre-species subsystem (settlements,
+        // culture, religion) — entity-id stability, spec §8: a goblin-pinned
+        // world must mint the exact same ids for pre-C1 entities as pre-species
+        // main, so the new, Y2-1-only entities are appended last rather than
+        // interleaved. Then the peopled-by link for every settlement.
+        hornvale_species::genesis_in(&mut world, roster)?;
+        for (id, (_, tag)) in ids.iter().zip(placements.iter()) {
+            hornvale_species::people(&mut world, *id, species_set[*tag as usize].name)?;
+        }
+        Ok(())
+    })?;
 
-    // Deep time: extract the glacial strata and commit their summary facts on
-    // the world entity, so `recount`/`why` can speak the world's past.
-    let paleo = paleoclimate_of(&world)?;
-    hornvale_paleoclimate::genesis(&mut world, world_entity, terrain.geosphere(), &paleo)?;
+    stage("deep-time", || -> Result<(), BuildError> {
+        // Deep time: extract the glacial strata and commit their summary facts on
+        // the world entity, so `recount`/`why` can speak the world's past.
+        let paleo = paleoclimate_of(&world)?;
+        hornvale_paleoclimate::genesis(&mut world, world_entity, terrain.geosphere(), &paleo)?;
+        Ok(())
+    })?;
 
     Ok(world)
 }

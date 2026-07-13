@@ -1,7 +1,7 @@
 //! Staleness probe for the committed census fixtures (TOOL-16,
 //! TOOL-drift-scan-probes).
 //!
-//! Decision `calibration-loads-the-census-fixture` accepted one cost
+//! Decision 0032 accepted one cost
 //! knowingly: a developer who changes worldgen sees calibration pass
 //! against the stale fixture until the artifact drift check catches it.
 //! This probe narrows that gap: it regenerates each census's first
@@ -60,7 +60,7 @@ fn window_start(csv: &str, span: u64) -> Option<u64> {
 }
 
 /// The committed, CI-drift-checked censuses (decisions
-/// `ci-checks-500-seed-censuses` and `calibration-loads-the-census-fixture`):
+/// 0029 and 0032):
 /// the two 500-seed world censuses and the 1,000-seed branches family
 /// battery, each backing a fixture-loading calibration suite.
 const CENSUSES: [(&str, &str); 3] = [
@@ -91,7 +91,7 @@ fn assert_fixture_fresh(live: &RunResult, fixture: &RunResult, study_path: &str,
                     "census fixture {rows_path} has no row for seed {} / pin set '{}' — the \
                      fixture is stale or truncated; run `make rebaseline` (or `cargo run \
                      --release -p hornvale -- lab run {study_path}`) and commit the diff \
-                     (decision calibration-loads-the-census-fixture)",
+                     (decision 0032)",
                     row.seed, row.pin_set
                 )
             });
@@ -108,7 +108,7 @@ fn assert_fixture_fresh(live: &RunResult, fixture: &RunResult, study_path: &str,
                 "worldgen changed but the census fixture {rows_path} was not regenerated (seed {} \
                  / pin set '{}' differs). Run `make rebaseline` (or `cargo run --release -p \
                  hornvale -- lab run {study_path}`), review the diff, and commit it WITH the \
-                 change that moved it (decision calibration-loads-the-census-fixture).{recording_note}",
+                 change that moved it (decision 0032).{recording_note}",
                 row.seed, row.pin_set
             );
         }

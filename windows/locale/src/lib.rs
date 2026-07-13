@@ -162,7 +162,7 @@ impl LocaleContext {
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
 
         // Categorical biome: max weight, tie-break lowest CellId. Inherited,
-        // never re-quantized (identity-computes-on-the-canonical-grid).
+        // never re-quantized (decision 0038).
         let mut best = weights[0];
         for &cand in &weights[1..] {
             if cand.1 > best.1 || (cand.1 == best.1 && cand.0.0 < best.0.0) {

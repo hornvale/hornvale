@@ -4,7 +4,7 @@
 #
 # Mechanizes the checkable half of the parallel-campaign integration ritual
 # (parallel sessions have triple-collided on artifacts in two days — see
-# decision 0026); prints the judgment half it cannot score as reminders.
+# decisions 0026/0043); prints the judgment half it cannot score as reminders.
 # Read-only: never mutates anything.
 #
 # Run it from the campaign branch (worktree or checkout) you intend to merge
@@ -73,7 +73,7 @@ else
     fail "main has moved ($behind commit(s) unabsorbed) — merge main into this branch, re-run the full gate there, then re-run this preflight"
 fi
 
-section "Both-sides-added slug collisions since the merge base (decision 0026)"
+section "Both-sides-added slug collisions since the merge base (decisions 0026/0043 — decision records are numbered again: confirm the next free number too)"
 merge_base="$(git merge-base main HEAD)"
 slug_dirs=(docs/decisions book/src/chronicle docs/retrospectives studies)
 branch_added="$(git diff --name-only --diff-filter=A "$merge_base"..HEAD -- "${slug_dirs[@]}" | sort)"

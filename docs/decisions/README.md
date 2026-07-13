@@ -65,19 +65,21 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0023](0023-in-repo-clients-carry-their-own-toolchains.md) | In-repo clients carry their own toolchains | Accepted |
 | [0024](0024-settlement-name-uniqueness-is-reference-time.md) | Settlement-name uniqueness is a reference-time property | Accepted |
 | [0025](0025-one-concept-name-one-owner.md) | One concept name, one owner | Accepted |
-| [0026](0026-slugs-not-numbers.md) | Slugs, not numbers (the last numbered decision) | Accepted |
-| [`…parser-libraries`](non-workspace-dev-tools-may-use-parser-libraries.md) | Non-workspace dev tools may use parser libraries | Accepted |
-| [`the-bare-ok-rubric`](the-bare-ok-rubric.md) | The bare-ok rubric for primitives at API boundaries | Accepted |
-| [`ci-checks-500-seed-censuses`](ci-checks-500-seed-censuses.md) | CI checks 500-seed censuses; 10k runs are author-time | Accepted |
-| [`calibration-loads-the-census-fixture`](calibration-loads-the-census-fixture.md) | Calibration loads the drift-checked census fixture, not a live recompute | Accepted |
-| [`…re-scored-not-frozen`](the-confidence-gradient-is-re-scored-not-frozen.md) | The Confidence Gradient is re-scored, not frozen | Accepted |
-| [`the-frontier-is-published…`](the-frontier-is-published-in-the-book.md) | The frontier is published in the book | Accepted |
-| [`tonogenesis-is-a-regular…merger-repair`](tonogenesis-is-a-regular-conditioned-merger-repair.md) | Tonogenesis is a regular conditioned sound change, not a homophony patch | Accepted |
-| [`the-capacity-floor-is-reached-by-tone…`](the-capacity-floor-is-reached-by-tone-not-segments.md) | The capacity floor is reached by tone, not by adding segments to atonal species | Accepted |
-| [`the-proto-assignment-is-merger-aware`](the-proto-assignment-is-merger-aware.md) | The proto-root assignment is merger-aware (zero core homophony) | Accepted |
-| [`identity-computes-on-the-canonical-grid`](identity-computes-on-the-canonical-grid.md) | Identity computes on the canonical grid; observation samples fields | Accepted |
-| [`epochs-replace-tiers-refine`](epochs-replace-tiers-refine.md) | Epochs replace, tiers refine — a contradicting generator cannot coexist as a tier | Accepted |
-| [`the-room-tier-ledger-is-chunk-partitioned`](the-room-tier-ledger-is-chunk-partitioned.md) | The room-tier ledger is chunk-partitioned — only if it outgrows memory (near-term defers to The Walk §3.6) | Proposed |
-| [0027](0027-nextest-is-the-gate-runner.md) | cargo-nextest is the gate's test runner | Accepted |
-| [0028](0028-libm-for-portable-transcendentals.md) | libm for portable transcendentals (amends 0004) | Accepted |
-| [0029](0029-github-ci-is-manual-only.md) | GitHub Actions CI is manual-only (local + AWS are the gates) | Accepted |
+| [0026](0026-slugs-not-numbers.md) | Slugs, not numbers | Superseded by 0043 |
+| [0027](0027-non-workspace-dev-tools-may-use-parser-libraries.md) | Non-workspace dev tools may use parser libraries | Accepted |
+| [0028](0028-the-bare-ok-rubric.md) | The bare-ok rubric for primitives at API boundaries | Accepted |
+| [0029](0029-ci-checks-500-seed-censuses.md) | CI checks 500-seed censuses; 10k runs are author-time | Accepted |
+| [0030](0030-the-confidence-gradient-is-re-scored-not-frozen.md) | The Confidence Gradient is re-scored, not frozen | Accepted |
+| [0031](0031-the-frontier-is-published-in-the-book.md) | The frontier is published in the book | Accepted |
+| [0032](0032-calibration-loads-the-census-fixture.md) | Calibration loads the drift-checked census fixture, not a live recompute | Accepted |
+| [0033](0033-serialized-floats-are-quantized-for-cross-platform-determinism.md) | Serialized floats are quantized for cross-platform determinism | Accepted |
+| [0034](0034-tonogenesis-is-a-regular-conditioned-merger-repair.md) | Tonogenesis is a regular conditioned sound change, not a homophony patch | Accepted |
+| [0035](0035-the-capacity-floor-is-reached-by-tone-not-segments.md) | The capacity floor is reached by tone, not by adding segments to atonal species | Accepted |
+| [0036](0036-the-proto-assignment-is-merger-aware.md) | The proto-root assignment is merger-aware (zero core homophony) | Accepted |
+| [0037](0037-the-room-tier-ledger-is-chunk-partitioned.md) | The room-tier ledger is chunk-partitioned — only if it outgrows memory (near-term defers to The Walk §3.6) | Proposed |
+| [0038](0038-identity-computes-on-the-canonical-grid.md) | Identity computes on the canonical grid; observation samples fields | Accepted |
+| [0039](0039-epochs-replace-tiers-refine.md) | Epochs replace, tiers refine — a contradicting generator cannot coexist as a tier | Accepted |
+| [0040](0040-nextest-is-the-gate-runner.md) | cargo-nextest is the gate's test runner | Accepted |
+| [0041](0041-libm-for-portable-transcendentals.md) | libm for portable transcendentals (amends 0004) | Accepted |
+| [0042](0042-github-ci-is-manual-only.md) | GitHub Actions CI is manual-only (local + AWS are the gates) | Accepted |
+| [0043](0043-numbers-not-slugs.md) | Numbers, not slugs (supersedes 0026's decision-record naming) | Accepted |

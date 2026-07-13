@@ -1,4 +1,4 @@
-# 0029. GitHub Actions CI is manual-only
+# 0042. GitHub Actions CI is manual-only
 
 **Status:** Accepted (2026-07-13) · **Decider:** Nathan
 
@@ -21,7 +21,7 @@ pushes need gating, so automatic CI added latency without value.
 - **AWS Linux runs** for the one axis local macOS *cannot* verify —
   cross-platform byte-identity. `scripts/aws-gate/regen-git.sh` (full regen +
   return over SSH) and `gate-remote.sh` run the gate on a fast Linux spot box,
-  on demand. libm (decision 0028) makes the compute cross-platform
+  on demand. libm (decision 0041) makes the compute cross-platform
   deterministic, but this only stays honest if the Linux check is actually run
   for census/naming/terrain-touching changes — that discipline is the cost of
   this decision.
@@ -32,6 +32,6 @@ run), not per-push. `ci.yml` remains in the tree, runnable by hand
 spot-check so a manual run is quick. Local macOS green does not, by itself,
 prove Linux correctness.
 
-**See also.** decision 0028 (libm — the cross-platform compute fix);
+**See also.** decision 0041 (libm — the cross-platform compute fix);
 `scripts/aws-gate/` (the AWS toolkit); `.github/workflows/book.yml` (still
 auto-publishes on push).
