@@ -20,6 +20,7 @@ pub mod registry;
 pub mod room;
 pub mod seed;
 pub mod streams;
+pub mod units;
 pub mod world;
 
 pub use cast::asciinema_v2;
@@ -34,4 +35,5 @@ pub use registry::{ConceptDef, ConceptKind, ConceptRegistry, PredicateDef, Regis
 pub use room::{MAX_DEPTH, RoomAddr, RoomAddrError, RoomId, RoomIdError};
 pub use seed::{Seed, Stream};
 pub use streams::stream_labels;
+pub use units::{ReferenceElevation, UnitError};
 pub use world::{NAME, World};
