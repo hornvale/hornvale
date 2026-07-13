@@ -225,6 +225,13 @@ mod tests {
     }
 
     #[test]
+    fn placement_is_byte_identical_on_rebuild() {
+        let a = serde_json::to_string(&budget_for(42).0.sites()).unwrap();
+        let b = serde_json::to_string(&budget_for(42).0.sites()).unwrap();
+        assert_eq!(a, b);
+    }
+
+    #[test]
     fn placed_sites_are_a_small_minority() {
         let (b, climate, _terrain) = budget_for(42);
         let land = climate.geosphere().cells().count(); // upper bound
