@@ -384,10 +384,13 @@ built on that command is optional polish, not required.
    too stingy → the exotic never appears (synthesis §6 open question 3). The
    census pins it; the default (≈1% land cells) is a starting estimate to be
    calibrated, not a commitment.
-2. **Terrain accessor.** The substrate proxy and field-weighted placement need
-   a per-cell tectonic-proximity signal; if `GeneratedTerrain` does not already
-   expose one, exposing it is a small additive terrain change. Confirm at
-   plan time.
+2. **Terrain accessor** — *resolved at plan time.* The substrate proxy and
+   field-weighted placement need a per-cell tectonic-proximity signal;
+   `GeneratedTerrain::globe()` already exposes `unrest`, `boundary`, `plate_of`,
+   `elevation`, `sea_level`, and `endorheic` (the last doubles as the endemic
+   isolation signal), so **no new terrain accessor is required**. The one small
+   *kernel* addition the plan surfaces is a bounded `Geosphere::hops_between`
+   (integer BFS) for the placement repulsion radius.
 3. **Proxy honesty.** The substrate proxy must stay conservative — every
    distinction it draws must be defensible from its signal, or it is deferred
    to DOM-14. The risk is scope-creep into faux-lithology.
