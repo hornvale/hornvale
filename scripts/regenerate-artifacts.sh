@@ -77,18 +77,18 @@ echo "regenerate-artifacts: scene exports" >&2
 run -p hornvale -- scene tiles --world "$wsky" > book/src/gallery/scene-tiles-seed-42.json
 run -p hornvale -- scene system --world "$wsky" > book/src/gallery/scene-system-seed-42.json
 
-# The full 1000-world censuses are the slow part (~15-25 min local, ~1-2 h on
-# a 2-core CI runner). Local `make rebaseline` needs them (they produce the
-# committed fixtures), but per-push CI only needs a cross-platform spot-check
-# (scripts/ci-census-probe.sh checks the first N seeds). SKIP_CENSUS=1 skips
-# them here so CI can run the fast probe instead.
-if [ "${SKIP_CENSUS:-0}" = 1 ]; then
-    echo "regenerate-artifacts: SKIPPING full censuses (SKIP_CENSUS=1; CI uses ci-census-probe.sh)" >&2
-else
-    echo "regenerate-artifacts: lab censuses (release)" >&2
+# OWNER DIRECTIVE (2026-07-13): the full censuses NEVER regenerate on a
+# local box unless Nathan explicitly says so. The sanctioned path is the
+# AWS spot box (`make regen-remote` / scripts/aws-gate/regen-git.sh), which
+# invokes this script with HV_CENSUS=1. Locally the censuses are therefore
+# skipped BY DEFAULT; SKIP_CENSUS=1 (CI's fast probe path) also skips.
+if [ "${HV_CENSUS:-0}" = 1 ] && [ "${SKIP_CENSUS:-0}" != 1 ]; then
+    echo "regenerate-artifacts: lab censuses (release; HV_CENSUS=1)" >&2
     run_release -p hornvale -- lab run studies/census-lands-drift.study.json
     run_release -p hornvale -- lab run studies/census-of-the-meeting.study.json
     run_release -p hornvale -- lab run studies/branches-family.study.json
+else
+    echo "regenerate-artifacts: censuses SKIPPED — census regeneration is AWS-only (make regen-remote); HV_CENSUS=1 only on explicit owner direction" >&2
 fi
 
 echo "regenerate-artifacts: orrery ephemeris golden" >&2

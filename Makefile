@@ -20,7 +20,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast gate-full nextest-check prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck
+.PHONY: help quick gate gate-fast gate-full nextest-check prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -61,7 +61,7 @@ prewarm: ## Warm a fresh worktree's caches (start in the background right after 
 	cargo build --release -p hornvale
 	cargo build --manifest-path tools/type-audit/Cargo.toml
 
-rebaseline artifacts: ## Regenerate every committed generated artifact (review the diff, then commit)
+rebaseline artifacts: ## Regenerate committed artifacts EXCEPT censuses (census regen is AWS-only: make regen-remote)
 	@bash scripts/timed.sh rebaseline -- bash scripts/regenerate-artifacts.sh
 
 timings: ## Show the timing ledger (usage: make timings [LABEL=rebaseline])
@@ -84,6 +84,9 @@ lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STU
 	cargo run -q -p hornvale -- lab diff studies/$(STUDY).study.json "$$old" \
 	    book/src/laboratory/generated/$(STUDY)/rows.csv; \
 	status=$$?; rm -f "$$old"; exit $$status
+
+regen-remote: ## Regenerate ALL artifacts incl. censuses on the AWS spot box (BILLABLE; the only sanctioned census-regen path)
+	@scripts/aws-gate/regen-git.sh .
 
 preflight: ## GO/NO-GO before integrating a campaign branch with main (run from the branch)
 	@bash scripts/preflight-merge.sh
