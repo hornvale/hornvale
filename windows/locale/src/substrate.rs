@@ -16,8 +16,8 @@ pub(crate) fn substrate_at(
     cell: CellId,
 ) -> Substrate {
     let globe = terrain.globe();
-    let elevation = quantize(*globe.elevation.get(cell));
-    let sea_level = quantize(globe.sea_level);
+    let elevation = quantize(globe.elevation.get(cell).get());
+    let sea_level = quantize(globe.sea_level.get());
     if elevation <= sea_level {
         // Underwater cells keep the ordinary substrate; marine biomes carry
         // their own identity via the base biome.
@@ -77,8 +77,8 @@ mod tests {
         let geo = climate.geosphere();
         let globe = terrain.globe();
         for c in geo.cells() {
-            let above_sea = hornvale_kernel::quantize(*globe.elevation.get(c))
-                > hornvale_kernel::quantize(globe.sea_level);
+            let above_sea = hornvale_kernel::quantize(globe.elevation.get(c).get())
+                > hornvale_kernel::quantize(globe.sea_level.get());
             if above_sea && hornvale_kernel::quantize(*globe.unrest.get(c)) > 0.6 {
                 assert!(
                     matches!(

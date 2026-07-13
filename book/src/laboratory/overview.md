@@ -71,14 +71,21 @@ same way the census calibrations do, keeping a roughly 200-second sweep
 off every local `cargo test`, and it is re-run and drift-checked on every
 build like the other two.
 
-Between commits, a cheap always-on probe (`windows/lab/tests/fixture_staleness.rs`)
+Between full refreshes, a staleness probe (`windows/lab/tests/fixture_staleness.rs`)
 regenerates each census's first three seeds — plus a rotating three-seed
 window whose position derives from the committed fixture's own bytes, so
-successive regenerations sweep different slices of the seed range — live on
-every `cargo test` and compares them against the committed rows — so a worldgen change that moves
-the census fails locally with the regeneration instruction (`make
-rebaseline`) instead of surfacing an hour later in CI's full
-regenerate-and-diff.
+successive regenerations sweep different slices of the seed range — and
+compares them against the committed rows. It was authored as an always-on,
+few-seconds check on every `cargo test`, but as the worldgen pipeline
+deepened its cost grew to minutes, so it now runs in the heavy tier
+(`make gate-full`) rather than in the commit gate: a worldgen change that
+moves a census surfaces there and in CI's regenerate-and-diff, not on the
+developer's next local test run. The full census fixtures themselves are refreshed once
+per campaign on the remote regeneration box (`make regen-remote`),
+just before the campaign merges to `main` — never on the local machine, whose
+gate stays under five minutes by design. Between those refreshes a moved
+census is *known* (the probe fails) but its committed rows deliberately lag
+until the pre-merge regeneration.
 
 When a census *does* move, the reviewable surface is `make lab-diff
 STUDY=<name>` (wrapping `hornvale lab diff`): a per-metric report of which

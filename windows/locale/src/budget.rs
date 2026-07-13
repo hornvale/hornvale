@@ -86,7 +86,7 @@ impl StrangenessBudget {
         // Land cells only, in CellId order (deterministic).
         let land: Vec<CellId> = geo
             .cells()
-            .filter(|&c| quantize(*globe.elevation.get(c)) > quantize(globe.sea_level))
+            .filter(|&c| quantize(globe.elevation.get(c).get()) > quantize(globe.sea_level.get()))
             .collect();
         let cands = candidates();
         let mut sites: BTreeMap<u32, StrangeSite> = BTreeMap::new();
@@ -251,7 +251,9 @@ mod tests {
             let land_count = climate
                 .geosphere()
                 .cells()
-                .filter(|&c| quantize(*globe.elevation.get(c)) > quantize(globe.sea_level))
+                .filter(|&c| {
+                    quantize(globe.elevation.get(c).get()) > quantize(globe.sea_level.get())
+                })
                 .count();
             let sites = b.sites();
 

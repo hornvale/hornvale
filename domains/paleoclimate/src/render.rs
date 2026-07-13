@@ -88,18 +88,23 @@ pub fn paleo_ascii(geo: &Geosphere, record: &PaleoRecord) -> String {
 mod tests {
     use super::*;
     use crate::strata::{EraClimate, extract};
-    use hornvale_kernel::CellMap;
+    use hornvale_kernel::{CellMap, ReferenceElevation};
+
+    /// Test-only helper: a validated `ReferenceElevation`.
+    fn e(m: f64) -> ReferenceElevation {
+        ReferenceElevation::new(m).unwrap()
+    }
 
     fn record(geo: &Geosphere) -> PaleoRecord {
-        let elev = CellMap::from_fn(geo, |_| 100.0);
+        let elev = CellMap::from_fn(geo, |_| e(100.0));
         let eras = vec![EraClimate {
             day: 0.0,
             ice: CellMap::from_fn(geo, |c| geo.coord(c).latitude.abs() > 60.0),
             habitable: CellMap::from_fn(geo, |c| geo.coord(c).latitude.abs() < 30.0),
-            sea_level: -40.0,
+            sea_level: e(-40.0),
             ice_fraction: 0.3,
         }];
-        extract(geo, &elev, 0.0, &eras)
+        extract(geo, &elev, e(0.0), &eras)
     }
 
     #[test]

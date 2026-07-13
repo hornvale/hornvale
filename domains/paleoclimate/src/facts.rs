@@ -140,18 +140,23 @@ pub fn genesis(
 mod tests {
     use super::*;
     use crate::strata::{EraClimate, extract};
-    use hornvale_kernel::{CellMap, Seed, World};
+    use hornvale_kernel::{CellMap, ReferenceElevation, Seed, World};
+
+    /// Test-only helper: a validated `ReferenceElevation`.
+    fn e(m: f64) -> ReferenceElevation {
+        ReferenceElevation::new(m).unwrap()
+    }
 
     fn cold_world_record(geo: &Geosphere) -> PaleoRecord {
-        let elev = CellMap::from_fn(geo, |_| 100.0);
+        let elev = CellMap::from_fn(geo, |_| e(100.0));
         let eras = vec![EraClimate {
             day: 500_000.0,
             ice: CellMap::from_fn(geo, |_| true),
             habitable: CellMap::from_fn(geo, |c| geo.coord(c).latitude.abs() < 30.0),
-            sea_level: -60.0,
+            sea_level: e(-60.0),
             ice_fraction: 0.8,
         }];
-        extract(geo, &elev, 0.0, &eras)
+        extract(geo, &elev, e(0.0), &eras)
     }
 
     #[test]
@@ -180,15 +185,15 @@ mod tests {
     #[test]
     fn zero_ice_world_records_no_frost_retreat() {
         let geo = Geosphere::new(3);
-        let elev = CellMap::from_fn(&geo, |_| 100.0);
+        let elev = CellMap::from_fn(&geo, |_| e(100.0));
         let eras = vec![EraClimate {
             day: 0.0,
             ice: CellMap::from_fn(&geo, |_| false),
             habitable: CellMap::from_fn(&geo, |_| true),
-            sea_level: 0.0,
+            sea_level: e(0.0),
             ice_fraction: 0.0,
         }];
-        let record = extract(&geo, &elev, 0.0, &eras);
+        let record = extract(&geo, &elev, e(0.0), &eras);
         let mut world = World::new(Seed(1));
         register_concepts(&mut world.registry).unwrap();
         let subject = world.ledger.mint_entity();

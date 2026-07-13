@@ -9,7 +9,7 @@ use crate::circulation::{RotationRegime, band_count_for, prevailing_wind};
 use crate::habitability;
 use crate::moisture::moisture_field;
 use crate::temperature::{mean_temperature, temperature_at};
-use hornvale_kernel::{CellId, CellMap, Geosphere};
+use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Temperature};
 
 /// The inputs the composition root supplies to build a climate (all bare
 /// kernel types or climate-owned types — no terrain/astronomy imports).
@@ -18,9 +18,9 @@ pub struct ClimateInputs<'a> {
     /// The shared globe mesh.
     pub geosphere: &'a Geosphere,
     /// Elevation per cell, meters.
-    pub elevation: &'a CellMap<f64>,
+    pub elevation: &'a CellMap<ReferenceElevation>,
     /// Sea level, meters.
-    pub sea_level: f64,
+    pub sea_level: ReferenceElevation,
     /// Seafloor tectonic features per cell (mapped from terrain boundaries).
     pub seafloor: &'a CellMap<SeafloorFeature>,
     /// Stellar insolation relative to Earth (L / d², solar units / AU²).
@@ -39,9 +39,9 @@ pub struct ClimateInputs<'a> {
 #[derive(Debug, Clone)]
 pub struct GeneratedClimate {
     geosphere: Geosphere,
-    elevation: CellMap<f64>,
-    sea_level: f64,
-    mean_temp: CellMap<f64>,
+    elevation: CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+    mean_temp: CellMap<Temperature>,
     moisture: CellMap<f64>,
     biome: CellMap<Biome>,
     habitability: CellMap<bool>,
@@ -56,8 +56,8 @@ pub struct GeneratedClimate {
 /// mean direction to its land neighbors).
 fn is_upwelling(
     geo: &Geosphere,
-    elevation: &CellMap<f64>,
-    sea_level: f64,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
     cell: CellId,
     bands: Option<u32>,
 ) -> bool {
@@ -151,13 +151,12 @@ impl GeneratedClimate {
         self.regime
     }
     /// Annual-mean temperature at a cell, °C.
-    /// type-audit: pending(wave-2)
-    pub fn mean_temperature_at(&self, cell: CellId) -> f64 {
+    pub fn mean_temperature_at(&self, cell: CellId) -> Temperature {
         *self.mean_temp.get(cell)
     }
     /// Temperature at a cell on a given day, °C (mean plus the seasonal term).
-    /// type-audit: pending(wave-2)
-    pub fn temperature_at(&self, cell: CellId, day: f64) -> f64 {
+    /// type-audit: pending(wave-2: day)
+    pub fn temperature_at(&self, cell: CellId, day: f64) -> Temperature {
         temperature_at(
             &self.mean_temp,
             &self.geosphere,
@@ -238,14 +237,14 @@ mod tests {
 
     fn inputs<'a>(
         geo: &'a Geosphere,
-        elev: &'a CellMap<f64>,
+        elev: &'a CellMap<ReferenceElevation>,
         sea: &'a CellMap<SeafloorFeature>,
         regime: RotationRegime,
     ) -> ClimateInputs<'a> {
         ClimateInputs {
             geosphere: geo,
             elevation: elev,
-            sea_level: 0.0,
+            sea_level: ReferenceElevation::new(0.0).unwrap(),
             seafloor: sea,
             insolation: 1.0,
             obliquity_deg: 23.5,
@@ -258,11 +257,12 @@ mod tests {
     fn provider_answers_every_query_and_is_deterministic() {
         let geo = Geosphere::new(4);
         let elev = CellMap::from_fn(&geo, |c| {
-            if geo.position(c)[2] > 0.0 {
+            let m = if geo.position(c)[2] > 0.0 {
                 300.0
             } else {
                 -1000.0
-            }
+            };
+            ReferenceElevation::new(m).unwrap()
         });
         let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
         let regime = RotationRegime::Spinning { day_std: 1.0 };
@@ -280,7 +280,7 @@ mod tests {
     #[test]
     fn locked_provider_has_no_band_count() {
         let geo = Geosphere::new(3);
-        let elev = CellMap::from_fn(&geo, |_| 200.0);
+        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
         let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
         let c = GeneratedClimate::generate(&inputs(&geo, &elev, &sea, RotationRegime::Locked));
         assert_eq!(c.band_count(), None);
@@ -290,11 +290,12 @@ mod tests {
     fn ocean_cells_map_to_marine_biomes() {
         let geo = Geosphere::new(4);
         let elev = CellMap::from_fn(&geo, |c| {
-            if geo.position(c)[2] > 0.0 {
+            let m = if geo.position(c)[2] > 0.0 {
                 300.0
             } else {
                 -3000.0
-            }
+            };
+            ReferenceElevation::new(m).unwrap()
         });
         let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
         let c = GeneratedClimate::generate(&inputs(
@@ -304,7 +305,7 @@ mod tests {
             RotationRegime::Spinning { day_std: 1.0 },
         ));
         for cell in geo.cells() {
-            let marine = *elev.get(cell) < 0.0;
+            let marine = elev.get(cell).get() < 0.0;
             assert_eq!(
                 c.biome_at(cell).is_marine(),
                 marine,

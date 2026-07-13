@@ -41,11 +41,15 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file freely
 #   The census/calibration LIVE batteries (the calibration sweep, the
 #   1000-world branches-family census) are their own #[ignore]d tests with
-#   non-`heavy:` reasons, so `make gate-full` does NOT run them; their
-#   freshness is guaranteed by CI's regenerate-and-diff step
-#   (scripts/regenerate-artifacts.sh). The fast-gate calibration checks read a
-#   drift-checked fixture (book/src/laboratory/generated/*/rows.csv); after a
-#   worldgen change, regenerate the artifacts (below) so the fixture reflects it.
+#   non-`heavy:` reasons, so `make gate-full` does NOT run them. CENSUSES ARE
+#   NEVER REGENERATED LOCALLY (the local gate stays < 5 min): censuses are
+#   opt-in via HV_CENSUS=1, which only `make regen-remote` (the AWS spot
+#   box; scripts/aws-gate/regen-git.sh) sets — a plain local
+#   regenerate-artifacts.sh / `make rebaseline` skips them by default.
+#   Census fixtures refresh once per campaign, just before the merge to
+#   main, with warning given to Nathan first. After a worldgen change the
+#   census fixtures (book/src/laboratory/generated/*/rows.csv) lag until
+#   that pre-merge AWS regen; that lag is the chosen trade.
 
 # Single test / single crate / the property batteries:
 cargo test -p hornvale-kernel text_of

@@ -20,9 +20,11 @@ phenomena-only domain and becomes the field infrastructure's first heavy
 user, and biomes arrive as its first queryable payoff. `GeneratedClimate`
 still depends on `hornvale-kernel` and nothing else — never
 `hornvale-terrain` or `hornvale-astronomy` directly — so terrain's
-elevation and astronomy's sky reach it only as bare kernel types
-(`CellMap<f64>`, `f64`) and climate-owned enums (`SeafloorFeature`,
-`RotationRegime`), mapped once at the composition root
+elevation and astronomy's sky reach it only as kernel types: the shared
+`CellMap<ReferenceElevation>` field and its `ReferenceElevation` sea level
+(typed in [The Datum](../chronicle/the-datum.md); bare `f64` remains only
+where the quantity is dimensionless) and climate-owned enums
+(`SeafloorFeature`, `RotationRegime`), mapped once at the composition root
 (`windows/worldgen`), the only place all three domains meet. The tier-0
 `UniformClimate` keeps feeding the social cascade unchanged (spec §8); the
 biome map is an *additional* capability, reconstructed on demand exactly as
@@ -40,7 +42,10 @@ entirely: no bands, no latitude organization — climate reorganizes around
 the substellar/antistellar axis instead, a single day–night overturning
 cell.
 
-**Temperature and moisture as real fields.** Temperature falls with
+**Temperature and moisture as real fields.** The temperature field's
+boundary speaks the kernel's `Temperature` type (promoted in
+[Temperature](../chronicle/temperature.md)), so an absolute reading can
+never be mistaken for a difference. Temperature falls with
 latitude (spinning worlds) or with distance from the substellar point
 (locked worlds), cooled further by a lapse rate above sea level, and
 carries a seasonal term set by obliquity and damped near oceans (the

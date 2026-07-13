@@ -875,7 +875,7 @@ pub fn registry() -> Vec<Metric> {
                 let (mut sum, mut count) = (0.0_f64, 0_u32);
                 for cell in geo.cells() {
                     if !v.terrain().is_ocean(cell) {
-                        sum += v.climate.mean_temperature_at(cell);
+                        sum += v.climate.mean_temperature_at(cell).get();
                         count += 1;
                     }
                 }

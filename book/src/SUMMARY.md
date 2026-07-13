@@ -65,6 +65,8 @@
 - [The Room Mesh](./chronicle/the-room-mesh.md)
 - [The Locale Window](./chronicle/the-locale-window.md)
 - [The Uncommon Ground](./chronicle/the-uncommon-ground.md)
+- [The Datum](./chronicle/the-datum.md)
+- [Temperature](./chronicle/temperature.md)
 
 # The Gallery
 

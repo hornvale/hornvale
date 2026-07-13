@@ -87,7 +87,7 @@ fn interpolated_elevation(
     for cell in std::iter::once(nearest).chain(neighbors.iter().copied()) {
         let theta = angle(p, geo.position(cell));
         let weight = math::exp(-(theta * theta) / (sigma * sigma));
-        weighted += weight * *globe.elevation.get(cell);
+        weighted += weight * globe.elevation.get(cell).get();
         total += weight;
     }
     weighted / total
@@ -110,7 +110,7 @@ fn refined_elevation(
     longitude: f64,
 ) -> f64 {
     let interp = interpolated_elevation(geo, index, globe, latitude, longitude);
-    let d = (interp - globe.sea_level) / COAST_ENVELOPE_M;
+    let d = (interp - globe.sea_level.get()) / COAST_ENVELOPE_M;
     if d.abs() > 3.0 {
         return interp;
     }
@@ -162,7 +162,7 @@ fn elevation_pixels(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) ->
         for px in 0..width {
             let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
             let elevation = refined_elevation(geo, &index, globe, noise_seed, latitude, longitude);
-            out.extend_from_slice(&color(elevation, globe.sea_level));
+            out.extend_from_slice(&color(elevation, globe.sea_level.get()));
         }
     }
     out
@@ -267,13 +267,14 @@ mod tests {
                     // Bounded displacement, always.
                     assert!((refined - interp).abs() <= COAST_AMP_M + 1e-9);
                     // Exactly the prior away from the coast.
-                    if (interp - globe.sea_level).abs() > 3.0 * COAST_ENVELOPE_M {
+                    if (interp - globe.sea_level.get()).abs() > 3.0 * COAST_ENVELOPE_M {
                         assert_eq!(refined, interp);
                     }
                     // A land/ocean flip only happens inside the displacement band.
-                    let flipped = (refined >= globe.sea_level) != (interp >= globe.sea_level);
+                    let flipped =
+                        (refined >= globe.sea_level.get()) != (interp >= globe.sea_level.get());
                     if flipped {
-                        assert!((interp - globe.sea_level).abs() <= COAST_AMP_M + 1e-9);
+                        assert!((interp - globe.sea_level.get()).abs() <= COAST_AMP_M + 1e-9);
                     }
                 }
             }
@@ -290,11 +291,11 @@ mod tests {
         for (latitude, longitude) in [(0.0, 0.0), (45.5, -120.25), (-67.0, 13.0), (89.0, 179.0)] {
             let interp = interpolated_elevation(&geo, &index, &globe, latitude, longitude);
             let nearest = index.nearest(&geo, latitude, longitude);
-            let mut lo = *globe.elevation.get(nearest);
+            let mut lo = globe.elevation.get(nearest).get();
             let mut hi = lo;
             for &n in geo.neighbors(nearest) {
-                lo = lo.min(*globe.elevation.get(n));
-                hi = hi.max(*globe.elevation.get(n));
+                lo = lo.min(globe.elevation.get(n).get());
+                hi = hi.max(globe.elevation.get(n).get());
             }
             assert!(
                 (lo..=hi).contains(&interp),
