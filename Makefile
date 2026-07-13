@@ -18,7 +18,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks
+.PHONY: help quick gate gate-fast gate-full prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -27,10 +27,13 @@ help: ## Show this help
 
 quick: fmt-check clippy ## Cheap half of the gate (fmt-check + clippy)
 
-gate: fmt-check clippy test ## The full commit gate (fmt + clippy + workspace tests)
+gate: fmt-check clippy test ## The commit gate (fmt + clippy + workspace tests; heavy tier #[ignore]d, ≤5 min)
 
 gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)
 	@bash scripts/gate-fast.sh
+
+gate-full: fmt-check clippy ## Full evidence: fmt + clippy + ALL tests incl. the #[ignore]d heavy tier (~40 min)
+	cargo test --workspace -- --include-ignored
 
 fmt: ## Format the workspace in place
 	cargo fmt
