@@ -4,7 +4,7 @@
 /// reference page. Labels are permanent save-format contracts.
 /// type-audit: bare-ok(artifact: return)
 pub fn render_streams() -> String {
-    let sources: [(&str, Vec<(&'static str, &'static str)>); 10] = [
+    let sources: [(&str, Vec<(&'static str, &'static str)>); 11] = [
         ("hornvale-astronomy", hornvale_astronomy::stream_labels()),
         ("hornvale-climate", hornvale_climate::stream_labels()),
         ("hornvale-culture", hornvale_culture::stream_labels()),
@@ -15,6 +15,7 @@ pub fn render_streams() -> String {
         ("hornvale-settlement", hornvale_settlement::stream_labels()),
         ("hornvale-species", hornvale_species::stream_labels()),
         ("hornvale-terrain", hornvale_terrain::stream_labels()),
+        ("hornvale-vessel", hornvale_vessel::stream_labels()),
     ];
     let mut doc = String::new();
     doc.push_str("<!-- GENERATED FILE — do not edit. Regenerate with `hornvale streams`. -->\n\n");

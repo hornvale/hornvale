@@ -96,6 +96,13 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/plate-weights` | per-plate heavy-tailed Voronoi weight draws |
 | `terrain/plate-edge` | plate-edge noise (hash-noise only; no stream draws) |
 
+### hornvale-vessel
+
+| Label | Meaning |
+|---|---|
+| `vessel/agent` | minted agent id draw |
+| `vessel/walk` | walker-battery deterministic walk |
+
 ### hornvale-kernel (internal)
 
 | Label | Meaning |

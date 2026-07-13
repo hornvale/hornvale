@@ -1,0 +1,15 @@
+[package]
+name = "hornvale-vessel"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Hornvale vessel window: possess an agent and walk the frozen world."
+
+[dependencies]
+hornvale-kernel = { path = "../../kernel" }
+hornvale-worldgen = { path = "../worldgen" }
+hornvale-locale = { path = "../locale" }
+hornvale-settlement = { path = "../../domains/settlement" }
+hornvale-species = { path = "../../domains/species" }
+serde = { workspace = true }
+serde_json = { workspace = true }
