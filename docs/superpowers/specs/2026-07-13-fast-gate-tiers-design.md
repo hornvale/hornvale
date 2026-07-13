@@ -143,3 +143,39 @@ The change is test-infrastructure, so "tests" here means measurements:
   test) asserting the `heavy:` grep roster is non-empty and every match
   carries the full reason string — so the convention is enforced, not
   aspirational.
+
+## Addendum (2026-07-13): nextest adopted as the gate runner
+
+Gating alone left the default `cargo test --workspace` at **379s (6.3 min)** —
+over the binding ≤300s criterion — because `cargo test` runs test *binaries*
+sequentially, and the residual cost is *distributed* live-worldgen unit tests
+(worldgen 82s, lab 70s, cli 44s) with no single elephant left to gate.
+Gating further would strip broad core coverage for a few seconds of
+wall-time, so the roster stayed at 12.
+
+Instead the gate switched to **`cargo nextest run`**, which schedules every
+test as a process across all cores: the fast tier dropped to **234s (3.9
+min)** on the same contended machine — under the criterion, with no
+over-gating. The two levers are complementary (the `#[ignore]` tier removes
+the multi-minute censuses; nextest parallelizes the rest); neither alone
+crosses 5 min. Recorded as [decision 0027](../../decisions/0027-nextest-is-the-gate-runner.md).
+The canonical `heavy:` reason string gained a `(minutes)` cost token so it
+satisfies the pre-existing ADR-0016 preregistration guard, should a
+heavy-tagged test ever land in a `*calibration*.rs` file. `make gate` now
+also runs `cargo test --doc` (nextest does not execute doctests).
+
+**gate-full is scoped, superseding body criterion #4 (`--include-ignored`).**
+Running all ignored tests would drag in tests `#[ignore]`d for reasons other
+than cost — WIP, flaky, superseded, and a documented physics limitation (the
+single-craton hypsometry test, deferred to the terrain/Sculpting roadmap with
+a measured justification). Those are red by design, so `--run-ignored all`
+could never be green. Instead `scripts/gate-full-heavy.sh` discovers the
+`heavy:` roster from source and runs exactly those 12 via nextest
+`--run-ignored only -E 'test(/name$/)'`; the pre-existing heavy censuses keep
+their drift-check coverage (the cloud runs `regenerate-artifacts.sh`). So
+gate-full = the commit gate + the cost-tagged heavy tier, and stays a
+green/red signal.
+
+The `gate-remote.sh` cloud edit (success criterion #5) remains a follow-up on
+the unmerged `remote-gate-aws` branch, where that script lives; CLAUDE.md is
+worded so the cloud path is "once wired," not claimed as done.

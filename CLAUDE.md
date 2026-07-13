@@ -13,14 +13,21 @@ governs.
 
 ```bash
 # The gate ladder (`make help` lists all targets). The commit gate is
-# `make gate`; the heavy live-worldgen correctness batteries are #[ignore]d
-# out of it and run in `make gate-full` / the cloud (greppable via the
-# `heavy:` ignore-reason token; see cli/tests/heavy_tier.rs):
-#   make gate        # COMMIT GATE: fmt + clippy + workspace tests, heavy tier skipped (≤5 min)
-#   make gate-full   # full evidence: + the #[ignore]d batteries (--include-ignored, ~40 min)
-# The three checks `make gate` runs, if you prefer them raw (every commit
-# must pass all three — `cargo test --workspace` skips the heavy tier):
-cargo test --workspace
+# `make gate`; it runs `cargo nextest run` (test binaries in PARALLEL) plus
+# doctests. The heavy live-worldgen batteries (censuses, the full pin
+# product, byte-identity rebuilds) are #[ignore]d out of it and run in
+# `make gate-full` (and the cloud, once that path is wired). The #[ignore]
+# tier AND nextest's parallelism together put the commit gate near ~4 min;
+# neither lever alone gets there. The batteries this tiering deferred carry
+# a `heavy:` ignore-reason token (see cli/tests/heavy_tier.rs):
+#   make gate        # COMMIT GATE: fmt + clippy + nextest + doctests (heavy tier skipped, ~4 min)
+#   make gate-fast   # ITERATION ONLY: the above, scoped to changed crates
+#   make gate-full   # full evidence: the commit gate + the cost-tagged heavy tier (scripts/gate-full-heavy.sh)
+# nextest is a dev tool, not a workspace dependency (decision 0027); install
+# with `cargo install cargo-nextest` or `brew install cargo-nextest`.
+# The raw checks `make gate` runs (every commit must pass all):
+cargo nextest run --workspace       # unit + integration, parallel (skips the heavy tier)
+cargo test --workspace --doc        # doctests (nextest does not run these)
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
 
@@ -31,11 +38,12 @@ cargo clippy --workspace --all-targets -- -D warnings
 #   3. Run ONCE, inspect many — never re-run the suite to grep a second line.
 #      Trust the exit code (non-zero = failure); `--no-fail-fast` for the whole
 #      failure list in one pass:
-cargo test --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file freely
-#   The calibration census (windows/lab; ~450s live in debug) loads a drift-checked fixture
-#   (book/src/laboratory/generated/*/rows.csv), so it is cheap UNLESS you
-#   changed worldgen — after a worldgen change, regenerate the artifacts
-#   (below) so the fixture and calibration reflect it.
+cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file freely
+#   The census/calibration LIVE batteries (the calibration sweep, the
+#   1000-world branches-family census) sit in the heavy tier — `make gate-full`,
+#   not `make gate`. The fast-gate calibration checks instead read a
+#   drift-checked fixture (book/src/laboratory/generated/*/rows.csv); after a
+#   worldgen change, regenerate the artifacts (below) so the fixture reflects it.
 
 # Single test / single crate / the property batteries:
 cargo test -p hornvale-kernel text_of

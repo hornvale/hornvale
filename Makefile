@@ -18,7 +18,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast gate-full prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks
+.PHONY: help quick gate gate-fast gate-full nextest-check prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -27,13 +27,13 @@ help: ## Show this help
 
 quick: fmt-check clippy ## Cheap half of the gate (fmt-check + clippy)
 
-gate: fmt-check clippy test ## The commit gate (fmt + clippy + workspace tests; heavy tier #[ignore]d, ≤5 min)
+gate: fmt-check clippy test ## The commit gate (fmt + clippy + nextest + doctests; heavy tier #[ignore]d, ~4 min)
 
 gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)
 	@bash scripts/gate-fast.sh
 
-gate-full: fmt-check clippy ## Full evidence: fmt + clippy + ALL tests incl. the #[ignore]d heavy tier (~40 min)
-	cargo test --workspace -- --include-ignored
+gate-full: gate ## Full evidence: the commit gate + the heavy tier (cost-tagged #[ignore]d tests only)
+	@bash scripts/gate-full-heavy.sh
 
 fmt: ## Format the workspace in place
 	cargo fmt
@@ -44,8 +44,15 @@ fmt-check: ## Verify formatting without writing
 clippy: ## Lint with warnings denied
 	cargo clippy --workspace --all-targets -- -D warnings
 
-test: ## Run the full workspace test suite
-	cargo test --workspace
+test: nextest-check ## Run the workspace tests: nextest (parallel binaries) + doctests
+	cargo nextest run --workspace
+	cargo test --workspace --doc
+
+nextest-check: ## Fail with an install hint if cargo-nextest is missing
+	@command -v cargo-nextest >/dev/null 2>&1 || { \
+		echo "cargo-nextest not found — install it (decision 0027):"; \
+		echo "  cargo install cargo-nextest   # or: brew install cargo-nextest"; \
+		exit 1; }
 
 prewarm: ## Warm a fresh worktree's caches (start in the background right after `git worktree add`)
 	cargo build --workspace --all-targets
