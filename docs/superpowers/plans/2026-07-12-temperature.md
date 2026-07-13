@@ -1,5 +1,11 @@
 # Temperature Implementation Plan
 
+> **Status: EXECUTED (2026-07-13) and merged.** All five tasks landed
+> byte-identical; `Temperature`/`TempAnomaly` are kernel types, climate's
+> boundary is typed, and worldgen's `Celsius` bridge is gone. See the
+> chronicle (`book/src/chronicle/temperature.md`) and the retrospective
+> (`docs/retrospectives/temperature.md`).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Promote `paleoclimate`'s `Celsius`/`TempAnomaly` pair to the kernel as `Temperature`/`TempAnomaly`, type `climate`'s bare-`f64` temperature boundary, and remove `worldgen`'s cross-domain `Celsius` borrow — a byte-identical migration.
