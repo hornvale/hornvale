@@ -34,9 +34,15 @@ frozen world that re-describes as you move* — not printing one line.
    from real fields/facts. Repetition across rooms is acceptable; The
    Uncommon Ground (MAP-29, planned) buys variety and absorbs into this
    exact surface later.
-4. **Walk extent: one locale** — the walk is bounded to the starting
-   locale. `ExitKind::Exit` exits render diegetically but refuse to
-   traverse; inter-locale travel is a later chunk.
+4. **Walk extent: one scale** — ratified as "one locale"; reconciled with
+   the shipped mesh at planning time. The room mesh has no locale
+   boundary — lateral walking is globally lazy and uniform cost — so the
+   bound the choice was protecting (no fresh derivation surface) is
+   realized by *scale*, not area: the walk stays at the canonical walk
+   depth (`globe_level + 6`, the locale CLI's default), lateral compass
+   exits traverse freely, and the **vertical** `Enter`/`Exit` exits
+   (`ExitKind::Vertical`, the actual seams) render diegetically but
+   refuse. Scale travel is a later chunk.
 5. **Layering: window-first, graduate later** — all five interfaces and
    their tier-0 implementations are born in one new window crate. Nothing
    touches the kernel or any domain. When The Vessel (Milestone I)
@@ -170,9 +176,10 @@ anything, so the verb-chemistry engine (frontier MAP-27) is correctly
 *absent*, not stubbed:
 
 - `look` — re-render the current vantage through the focalizer.
-- `go <direction>` — traverse a locale exit and re-focalize.
-  `ExitKind::Exit` exits render diegetically but refuse to traverse
-  ("the road runs on beyond your knowing" — wording is the implementer's).
+- `go <direction>` — traverse a lateral compass exit and re-focalize.
+  Vertical `Enter`/`Exit` exits render diegetically but refuse to
+  traverse ("the grain of the world resists" — wording is the
+  implementer's).
 - `examine <thing>` — **the examine contract**: the examinable nouns are
   exactly the vantage's named constituents, and the focalized line is
   their catalog — *if `look` mentions it, you can examine it.* No hidden
@@ -242,7 +249,8 @@ emit boundaries only, as everywhere.
 
 - **No liveness, no events, no time-stepping** — `--day` parameterizes the
   freeze; it does not thaw it. Milestone IV/V.
-- **No inter-locale travel** — one locale; Exit exits refuse.
+- **No scale travel** — the walk stays at the canonical walk depth;
+  vertical `Enter`/`Exit` exits refuse diegetically.
 - **No prose variety** — The Uncommon Ground's job; it runs independently
   (feeds, not blockers) and absorbs into the Focalizer surface.
 - **No anti-phenomenon reads, no sense-verbs** (`listen`/`smell`/`touch`)
