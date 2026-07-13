@@ -505,7 +505,7 @@ mod tests {
     }
 
     #[test]
-    fn texture_is_deterministic_and_siblings_differ() {
+    fn regime_is_deterministic_and_siblings_differ() {
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
         let a = RoomAddr {
