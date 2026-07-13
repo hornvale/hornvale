@@ -12,7 +12,14 @@ governs.
 ## Commands
 
 ```bash
-# The full gate — every commit must pass all three:
+# The gate ladder (`make help` lists all targets). The commit gate is
+# `make gate`; the heavy live-worldgen correctness batteries are #[ignore]d
+# out of it and run in `make gate-full` / the cloud (greppable via the
+# `heavy:` ignore-reason token; see cli/tests/heavy_tier.rs):
+#   make gate        # COMMIT GATE: fmt + clippy + workspace tests, heavy tier skipped (≤5 min)
+#   make gate-full   # full evidence: + the #[ignore]d batteries (--include-ignored, ~40 min)
+# The three checks `make gate` runs, if you prefer them raw (every commit
+# must pass all three — `cargo test --workspace` skips the heavy tier):
 cargo test --workspace
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
