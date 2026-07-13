@@ -178,7 +178,7 @@ impl LocaleContext {
             quantize(sum / denom as f64)
         };
         let fields = LocaleFields {
-            temperature_c: blend(&|c| self.climate.mean_temperature_at(c)),
+            temperature_c: blend(&|c| self.climate.mean_temperature_at(c).get()),
             moisture: blend(&|c| self.climate.moisture_at(c)),
             elevation_m: blend(&|c| self.terrain.globe().elevation.get(c).get()),
         };

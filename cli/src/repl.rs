@@ -125,7 +125,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                                 "cell {}: biome {} — {:.0}°C, moisture {:.2}",
                                 cell.0,
                                 climate.biome_at(cell).name(),
-                                climate.mean_temperature_at(cell),
+                                climate.mean_temperature_at(cell).get(),
                                 climate.moisture_at(cell)
                             )?;
                         }
