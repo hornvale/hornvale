@@ -26,7 +26,7 @@ fn locale_json_is_deterministic_for_a_coordinate() {
     let (b, _eb, _) = run(&["locale", "--world", w, "--at", "35.0,-80.0", "--json"]);
     assert_eq!(a, b, "same coordinate → identical json");
     assert!(a.contains("\"schema\""), "json carries the schema tag");
-    assert!(a.contains("locale/room/v1"));
+    assert!(a.contains("locale/room/v2"));
 }
 
 #[test]

@@ -1,5 +1,5 @@
 {
-  "schema": "locale/room/v1",
+  "schema": "locale/room/v2",
   "id": 1015166224,
   "face": 16,
   "path": [
@@ -39,9 +39,21 @@
       "weight": 13
     }
   ],
-  "texture": {
-    "aspect": "boreal stand",
-    "relief_jitter": -0.57219192
+  "regime": {
+    "negations": {
+      "substrate": "Ordinary",
+      "energy": "Sunlit",
+      "kingdom": "PlantAnimal",
+      "endemic": false
+    },
+    "micro": {
+      "relief": 0.19504828,
+      "aspect": 0.029023334,
+      "wetness": 0.038805085,
+      "openness": 0.66924456
+    },
+    "descriptor": "a peat hollow",
+    "strangeness": 0.0
   },
   "exits": [
     {
