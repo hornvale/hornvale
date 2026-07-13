@@ -9,6 +9,8 @@
 //! zero-forcing world's flat index land in the dead band regardless of what
 //! obliquity that world happened to draw. Positive = warm summers.
 
+use hornvale_kernel::math;
+
 /// Index sensitivity to obliquity, per degree.
 const K_OBLIQUITY: f64 = 1.0;
 /// Index sensitivity to climatic precession (e·sin ϖ).
@@ -27,7 +29,7 @@ pub fn caloric_summer_index(
     precession_phase: f64,
 ) -> f64 {
     (obliquity_deg - reference_obliquity_deg) * K_OBLIQUITY
-        + eccentricity * precession_phase.sin() * K_PRECESSION
+        + eccentricity * math::sin(precession_phase) * K_PRECESSION
 }
 
 #[cfg(test)]

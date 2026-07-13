@@ -4,6 +4,7 @@
 use crate::streams;
 use crate::units::{Au, HabitableZone, SolarLuminosities, SolarMasses};
 use hornvale_kernel::Seed;
+use hornvale_kernel::math;
 
 /// A main-sequence star: mass drawn, everything else derived.
 /// type-audit: bare-ok(identifier-text)
@@ -23,7 +24,7 @@ pub struct Star {
 pub fn generate_star(astronomy_seed: Seed) -> Star {
     let mut stream = astronomy_seed.derive(streams::STAR_MASS).stream();
     let mass = SolarMasses(0.6 + stream.next_f64() * 0.8);
-    let luminosity = SolarLuminosities(mass.0.powf(3.5));
+    let luminosity = SolarLuminosities(math::powf(mass.0, 3.5));
     let sqrt_l = luminosity.0.sqrt();
     let class_name = if mass.0 < 0.8 {
         "orange dwarf (K)"
@@ -48,7 +49,7 @@ pub fn generate_star(astronomy_seed: Seed) -> Star {
 /// the disc a moon must cover to eclipse it.
 /// type-audit: pending(wave-1)
 pub fn sun_angular_diameter_rel(star: &Star, orbit: Au) -> f64 {
-    star.mass.0.powf(0.8) / orbit.0
+    math::powf(star.mass.0, 0.8) / orbit.0
 }
 
 #[cfg(test)]
@@ -65,7 +66,7 @@ mod tests {
     #[test]
     fn luminosity_and_zone_are_derived() {
         let s = generate_star(Seed(7));
-        let expected_l = s.mass.get().powf(3.5);
+        let expected_l = math::powf(s.mass.get(), 3.5);
         assert!((s.luminosity.get() - expected_l).abs() < 1e-12);
         let zone = s.habitable_zone;
         assert!((zone.inner().get() - 0.95 * expected_l.sqrt()).abs() < 1e-12);
@@ -91,7 +92,7 @@ mod tests {
             mass: SolarMasses::new(1.4).unwrap(),
             ..sol.clone()
         };
-        let expected = 1.4_f64.powf(0.8) / 1.2;
+        let expected = math::powf(1.4_f64, 0.8) / 1.2;
         assert!((sun_angular_diameter_rel(&heavy, Au::new(1.2).unwrap()) - expected).abs() < 1e-12);
     }
 

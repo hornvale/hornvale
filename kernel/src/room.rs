@@ -7,6 +7,7 @@
 use crate::GeoCoord;
 use crate::Seed;
 use crate::geosphere::{base_data, normalize, slerp_mid};
+use crate::math;
 use crate::streams::{ROOM_CHILD, ROOM_FACE};
 use crate::{CellId, Geosphere, NearestCellIndex};
 use std::collections::{BTreeMap, BTreeSet};
@@ -332,8 +333,8 @@ impl RoomAddr {
     pub fn coord(&self) -> GeoCoord {
         let [x, y, z] = self.centroid();
         GeoCoord {
-            latitude: z.asin().to_degrees(),
-            longitude: y.atan2(x).to_degrees(),
+            latitude: math::asin(z).to_degrees(),
+            longitude: math::atan2(y, x).to_degrees(),
         }
     }
 
@@ -345,9 +346,10 @@ impl RoomAddr {
         let b = other.coord();
         let (lat1, lat2) = (a.latitude.to_radians(), b.latitude.to_radians());
         let dlon = (b.longitude - a.longitude).to_radians();
-        let y = dlon.sin() * lat2.cos();
-        let x = lat1.cos() * lat2.sin() - lat1.sin() * lat2.cos() * dlon.cos();
-        let deg = y.atan2(x).to_degrees();
+        let y = math::sin(dlon) * math::cos(lat2);
+        let x =
+            math::cos(lat1) * math::sin(lat2) - math::sin(lat1) * math::cos(lat2) * math::cos(dlon);
+        let deg = math::atan2(y, x).to_degrees();
         (deg + 360.0) % 360.0
     }
 

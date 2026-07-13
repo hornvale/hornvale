@@ -7,6 +7,7 @@
 //! no ocean currents, smooth-sinusoid seasons, prograde-only.
 
 use crate::circulation::RotationRegime;
+use hornvale_kernel::math;
 use hornvale_kernel::{CellId, CellMap, Geosphere};
 
 /// Dry-adiabatic-ish lapse rate: °C lost per meter of elevation above sea level.
@@ -48,7 +49,7 @@ pub fn mean_temperature(
     regime: &RotationRegime,
 ) -> CellMap<f64> {
     // Equilibrium temperature scales as S^(1/4).
-    let scale = insolation.max(0.0).powf(0.25);
+    let scale = math::powf(insolation.max(0.0), 0.25);
     CellMap::from_fn(geo, |cell| {
         let above = (*elevation.get(cell) - sea_level).max(0.0);
         let lapse = LAPSE_C_PER_M * above;
@@ -58,7 +59,7 @@ pub fn mean_temperature(
                 // Blackbody baseline (288 K × S^(1/4)) plus a latitude term of +30 °C at the
                 // equator to -30 °C at the pole; endpoints land near +45 °C / -15 °C, area-mean ~15 °C.
                 let base_k = 288.0 * scale;
-                let lat_term = 30.0 - 60.0 * lat.sin() * lat.sin();
+                let lat_term = 30.0 - 60.0 * math::sin(lat) * math::sin(lat);
                 (base_k - 273.15) + lat_term - lapse
             }
             RotationRegime::Locked => {
@@ -66,7 +67,7 @@ pub fn mean_temperature(
                 let cos_theta = p[0] * SUBSTELLAR[0] + p[1] * SUBSTELLAR[1] + p[2] * SUBSTELLAR[2];
                 if cos_theta > 0.0 {
                     // Day side: hot at substellar, ~0 °C toward the terminator.
-                    (-18.0 + 78.0 * cos_theta.powf(0.3) * scale) - lapse
+                    (-18.0 + 78.0 * math::powf(cos_theta, 0.3) * scale) - lapse
                 } else {
                     // Night side: a deep frozen floor.
                     -60.0 - lapse
@@ -116,7 +117,7 @@ pub fn temperature_at(
             let amp = seasonal_amplitude(geo, elevation, sea_level, obliquity_deg, cell);
             let phase = (day / year_length_std).rem_euclid(1.0);
             let hemi = geo.coord(cell).latitude.signum();
-            base + amp * hemi * (std::f64::consts::TAU * phase).sin()
+            base + amp * hemi * math::sin(std::f64::consts::TAU * phase)
         }
     }
 }

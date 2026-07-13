@@ -6,5 +6,6 @@ license.workspace = true
 description = "Hornvale kernel: seeds, noise, fields, facts, refinement, phenomena."
 
 [dependencies]
+libm = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
