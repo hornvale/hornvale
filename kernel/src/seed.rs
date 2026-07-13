@@ -76,6 +76,32 @@ impl Stream {
         let i = (self.next_u64() % items.len() as u64) as usize;
         Some(&items[i])
     }
+
+    /// Deterministically pick an index with probability proportional to its
+    /// weight. `None` if the slice is empty or all weights are ≤ 0. Weights
+    /// are consumed in slice order; the threshold is `next_f64() * total`,
+    /// and the first cumulative bucket strictly exceeding it wins. This
+    /// draw-semantics is a frozen save-format contract.
+    /// type-audit: bare-ok(index)
+    pub fn weighted_index(&mut self, weights: &[f64]) -> Option<usize> {
+        let total: f64 = weights.iter().filter(|w| **w > 0.0).sum();
+        if total <= 0.0 {
+            return None;
+        }
+        let threshold = self.next_f64() * total;
+        let mut cumulative = 0.0;
+        for (i, &w) in weights.iter().enumerate() {
+            if w <= 0.0 {
+                continue;
+            }
+            cumulative += w;
+            if cumulative > threshold {
+                return Some(i);
+            }
+        }
+        // Floating-point tail: return the last positive-weight index.
+        weights.iter().rposition(|&w| w > 0.0)
+    }
 }
 
 #[cfg(test)]
@@ -149,6 +175,38 @@ mod tests {
         let mut s = Seed(3).stream();
         let items = ["a", "b", "c"];
         assert!(items.contains(s.pick(&items).unwrap()));
+    }
+
+    #[test]
+    fn weighted_index_is_deterministic() {
+        let w = [1.0, 2.0, 3.0];
+        let a = Seed(7).stream().weighted_index(&w);
+        let b = Seed(7).stream().weighted_index(&w);
+        assert_eq!(a, b);
+        assert!(a.is_some());
+    }
+
+    #[test]
+    fn weighted_index_empty_and_zero_are_none() {
+        assert_eq!(Seed(1).stream().weighted_index(&[]), None);
+        assert_eq!(Seed(1).stream().weighted_index(&[0.0, 0.0]), None);
+    }
+
+    #[test]
+    fn weighted_index_respects_weights() {
+        // With weights [0, 1], index 0 (weight 0) can never be chosen.
+        for s in 0..64 {
+            assert_eq!(Seed(s).stream().weighted_index(&[0.0, 1.0]), Some(1));
+        }
+    }
+
+    #[test]
+    fn weighted_index_uniform_matches_pick_distribution() {
+        // Equal weights → all indices reachable across seeds.
+        let seen: std::collections::BTreeSet<usize> = (0..200)
+            .filter_map(|s| Seed(s).stream().weighted_index(&[1.0, 1.0, 1.0, 1.0]))
+            .collect();
+        assert_eq!(seen, [0, 1, 2, 3].into_iter().collect());
     }
 
     #[test]
