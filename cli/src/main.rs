@@ -34,6 +34,8 @@ usage:
                                             scan seeds for ones satisfying the pins
   hornvale almanac [--world <PATH>]        render the almanac (default: world.json)
   hornvale repl [--world <PATH>]           interrogate a world interactively
+  hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>]
+                                            walk a frozen world as its flagship settler
   hornvale map [--world <PATH>] [--out <PNG>] render the elevation map (markdown to stdout)
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
   hornvale paleo-map [--world <PATH>] [--out <PNG>] render the deep-time strata map (markdown to stdout)
@@ -88,6 +90,7 @@ fn main() -> ExitCode {
         Some("scout") => cmd_scout(&args),
         Some("almanac") => cmd_almanac(&args),
         Some("repl") => cmd_repl(&args),
+        Some("possess") => cmd_possess(&args),
         Some("map") => cmd_map(&args),
         Some("biome-map") => cmd_biome_map(&args),
         Some("paleo-map") => cmd_paleo_map(&args),
@@ -278,6 +281,61 @@ fn cmd_repl(args: &[String]) -> Result<(), String> {
     let stdin = std::io::stdin();
     let stdout = std::io::stdout();
     repl::run(&world, stdin.lock(), stdout.lock()).map_err(|e| e.to_string())
+}
+
+/// Possess the flagship agent and walk. `--seed` builds the world in
+/// memory through the composition root (default pins), so the metaplan's
+/// exit criterion — `hornvale possess --seed 42` — works verbatim.
+fn cmd_possess(args: &[String]) -> Result<(), String> {
+    let world = if let Some(seed) = flag_value(args, "--seed") {
+        let seed: u64 = seed
+            .parse()
+            .map_err(|e| format!("--seed must be a u64: {e}"))?;
+        let (pins, sky) = parse_sky_args(args)?;
+        let terrain_pins = parse_terrain_args(args)?;
+        let settlement_pins = parse_settlement_args(args)?;
+        world_builder::build_world(Seed(seed), &pins, sky, &terrain_pins, &settlement_pins)
+            .map_err(|e| e.to_string())?
+    } else {
+        load_world(args)?
+    };
+    let day: f64 = match flag_value(args, "--day") {
+        Some(s) => s.parse().map_err(|_| format!("bad --day: {s}"))?,
+        None => 0.0,
+    };
+    let stdout = std::io::stdout();
+    if let Some(path) = flag_value(args, "--script") {
+        let script = std::fs::read_to_string(path).map_err(|e| format!("reading {path}: {e}"))?;
+        let mut out = stdout.lock();
+        use std::io::Write;
+        writeln!(out, "# A Possession — seed {}, day {day}\n", world.seed.0)
+            .map_err(|e| e.to_string())?;
+        writeln!(out, "```text").map_err(|e| e.to_string())?;
+        hornvale_vessel::run(
+            &world,
+            hornvale_vessel::PossessOpts {
+                day: WorldTime { day },
+                echo: true,
+            },
+            std::io::Cursor::new(script),
+            &mut out,
+        )
+        .map_err(|e| e.to_string())?;
+        writeln!(out, "```").map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        let stdin = std::io::stdin();
+        hornvale_vessel::run(
+            &world,
+            hornvale_vessel::PossessOpts {
+                day: WorldTime { day },
+                echo: false,
+            },
+            stdin.lock(),
+            stdout.lock(),
+        )
+        .map_err(|e| e.to_string())
+    }
 }
 
 /// Render the world's elevation map: a markdown page (title, land lines,
