@@ -18,10 +18,10 @@ Expected branch: `<BRANCH>`
    timeout on those Bash calls (`timeout: 3600000`) — repo settings raise
    the ceiling to 60 minutes; the unstated default is 20 and a cold gate
    can exceed it. Do not start watchers. NEVER regenerate censuses
-   locally: artifact regeneration is always
-   `SKIP_CENSUS=1 bash scripts/regenerate-artifacts.sh` (full censuses run
-   once per campaign on the AWS box, pre-merge — the controller's job,
-   never yours).
+   locally: `bash scripts/regenerate-artifacts.sh` skips them by default
+   (they are opt-in via HV_CENSUS=1, which only the AWS regen path sets —
+   never set it yourself; the once-per-campaign census refresh is the
+   controller's job).
    If a job ends up in the background anyway, your next action is a bounded
    foreground poll — never ending your turn to "wait":
 

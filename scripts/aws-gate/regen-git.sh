@@ -28,7 +28,7 @@ ROOT_GB=80
 SSH_KEY="$HOME/.hornvale-gate/id"
 
 WT=""
-REMOTE_CMD=(bash scripts/regenerate-artifacts.sh)
+REMOTE_CMD=(env HV_CENSUS=1 bash scripts/regenerate-artifacts.sh)
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --type) TYPE="$2"; shift 2;;

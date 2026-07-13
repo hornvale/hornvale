@@ -27,22 +27,6 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
-# POLICY (Nathan, 2026-07-13): censuses are NEVER regenerated on the local
-# Mac — the local gate stays < 5 min, and census/validation coverage
-# deliberately lags (once per campaign, on the AWS spot box via
-# scripts/aws-gate/regen-git.sh, just before the merge to main, with warning
-# given). Locally, always SKIP_CENSUS=1; this guard enforces that, with
-# ALLOW_LOCAL_CENSUS=1 as the explicit-authorization bypass. This check runs
-# BEFORE any artifact regenerates, so a refused run exits clean instead of
-# leaving most artifacts rewritten with the census step (and everything
-# after it) unrun. CI's per-run check is the fast spot-check
-# (scripts/ci-census-probe.sh).
-if [ "${SKIP_CENSUS:-0}" != 1 ] && [ "$(uname)" = Darwin ] && [ "${ALLOW_LOCAL_CENSUS:-0}" != 1 ]; then
-    echo "regenerate-artifacts: REFUSING full censuses on the local Mac (policy: AWS box via scripts/aws-gate/regen-git.sh)." >&2
-    echo "  Use SKIP_CENSUS=1 for the local drift check, or ALLOW_LOCAL_CENSUS=1 only with explicit authorization." >&2
-    exit 1
-fi
-
 # Intermediate world files are throwaway; their path never enters artifact
 # bytes. A dedicated temp dir keeps them out of the tree.
 work="$(mktemp -d "${TMPDIR:-/tmp}/hv-regen.XXXXXX")"
@@ -93,18 +77,21 @@ echo "regenerate-artifacts: scene exports" >&2
 run -p hornvale -- scene tiles --world "$wsky" > book/src/gallery/scene-tiles-seed-42.json
 run -p hornvale -- scene system --world "$wsky" > book/src/gallery/scene-system-seed-42.json
 
-# The full 1000-world censuses are the slow part (~15-25 min on the AWS box,
-# ~1-2 h on a 2-core CI runner). The Darwin refusal now lives in the top-of-
-# script guard (unreachable here: this section only runs once that guard has
-# already let the run through, i.e. SKIP_CENSUS=1, or non-Darwin, or
-# ALLOW_LOCAL_CENSUS=1).
-if [ "${SKIP_CENSUS:-0}" = 1 ]; then
-    echo "regenerate-artifacts: SKIPPING full censuses (SKIP_CENSUS=1; CI uses ci-census-probe.sh)" >&2
-else
-    echo "regenerate-artifacts: lab censuses (release)" >&2
+# OWNER DIRECTIVE (2026-07-13): the full censuses NEVER regenerate on a
+# local box unless Nathan explicitly says so. The sanctioned path is the
+# AWS spot box (`make regen-remote` / scripts/aws-gate/regen-git.sh), which
+# invokes this script with HV_CENSUS=1. Locally the censuses are therefore
+# skipped BY DEFAULT; SKIP_CENSUS=1 (CI's fast probe path) also skips.
+# Cadence: once per campaign, just before the merge to main, with warning
+# given to Nathan first — census/validation coverage deliberately lags
+# (the local gate stays < 5 min; rapid development is the ratified trade).
+if [ "${HV_CENSUS:-0}" = 1 ] && [ "${SKIP_CENSUS:-0}" != 1 ]; then
+    echo "regenerate-artifacts: lab censuses (release; HV_CENSUS=1)" >&2
     run_release -p hornvale -- lab run studies/census-lands-drift.study.json
     run_release -p hornvale -- lab run studies/census-of-the-meeting.study.json
     run_release -p hornvale -- lab run studies/branches-family.study.json
+else
+    echo "regenerate-artifacts: censuses SKIPPED — census regeneration is AWS-only (make regen-remote); HV_CENSUS=1 only on explicit owner direction" >&2
 fi
 
 echo "regenerate-artifacts: orrery ephemeris golden" >&2

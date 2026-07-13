@@ -78,7 +78,7 @@ successive regenerations sweep different slices of the seed range — live on
 every `cargo test` and compares them against the committed rows — so a worldgen change that moves
 the census fails locally, immediately, instead of surfacing later in a full
 regenerate-and-diff. The full census fixtures themselves are refreshed once
-per campaign on the remote regeneration box (`scripts/aws-gate/regen-git.sh`),
+per campaign on the remote regeneration box (`make regen-remote`),
 just before the campaign merges to `main` — never on the local machine, whose
 gate stays under five minutes by design. Between those refreshes a moved
 census is *known* (the probe fails) but its committed rows deliberately lag

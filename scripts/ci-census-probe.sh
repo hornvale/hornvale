@@ -46,5 +46,5 @@ PY
     fi
     rm -f "$probe"
 done
-[ "$fail" = 0 ] || { echo "census-probe: cross-platform DRIFT — regen on the AWS box (scripts/aws-gate/regen-git.sh) and investigate" >&2; exit 1; }
+[ "$fail" = 0 ] || { echo "census-probe: cross-platform DRIFT — regenerate on AWS ('make regen-remote'; census regen is never local) and investigate" >&2; exit 1; }
 echo "census-probe: all ${#STUDIES[@]} studies match on the first ${N} seeds"
