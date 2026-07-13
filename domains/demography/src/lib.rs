@@ -13,6 +13,8 @@
 pub mod carrying_capacity;
 pub mod condense;
 pub mod flow;
+pub mod founder;
 pub use carrying_capacity::{CarryingInput, carrying_capacity};
 pub use condense::{Condensation, condense};
 pub use flow::{Flow, flow};
+pub use founder::condense_tagged;
