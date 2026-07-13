@@ -45,12 +45,14 @@ frozen world that re-describes as you move* — not printing one line.
    before. The five signatures are named by this spec, **not frozen** by
    it (metaplan §9).
 
-Four adoptions from the ideonomy pass (2026-07-13), folded in below:
+Six adoptions from the ideonomy passes (2026-07-13), folded in below:
 day-parameterized possession (§ Verb loop), the scripted-replay transcript
 and walker battery (§ Determinism and testing), breadcrumbs in the
-transcript (§ Verb loop), and the perception-vector slot in the Agent mint
-(§ The five interfaces). Explicitly *skipped*: free choice of incarnation
-site (`--at LAT,LON`) — the mint is flagship-only this campaign.
+transcript (§ Verb loop), the perception-vector slot in the Agent mint
+(§ The five interfaces), the examine contract (§ Verb loop), and
+session-accumulating knowledge (§ The five interfaces, Projection).
+Explicitly *skipped*: free choice of incarnation site (`--at LAT,LON`) —
+the mint is flagship-only this campaign.
 
 ## Architecture
 
@@ -124,10 +126,15 @@ the plan freezes field-level detail):
   ```
 
   Tier-0: the identity projection — the coarse facts and field values at
-  the agent's location. The **subset contract is the interface**:
-  `Knowledge` is provably a subset of ground truth, asserted by the walker
-  battery in every room visited. False belief, inference, fog: The
-  Vessel's job, not this one.
+  the agent's location. **Knowledge accumulates over the session**: the
+  possession loop folds each visited room's projection into the session's
+  `Knowledge`, so `knows` is the observation *history* of the walked path,
+  not a snapshot of the current room. This is the metaplan §3.2 definition
+  taken at its word ("what an agent *has observed*"), session-local and
+  deterministic given the path. The **subset contract is the interface**:
+  the accumulated `Knowledge` is provably a subset of ground truth,
+  asserted path-dependently by the walker battery. False belief,
+  inference, fog, forgetting: The Vessel's job, not this one.
 
 - **Vantage-query** — "what is observable from here, now, to this agent."
 
@@ -166,7 +173,13 @@ anything, so the verb-chemistry engine (frontier MAP-27) is correctly
 - `go <direction>` — traverse a locale exit and re-focalize.
   `ExitKind::Exit` exits render diegetically but refuse to traverse
   ("the road runs on beyond your knowing" — wording is the implementer's).
-- `examine <thing>` — a named feature of the current vantage.
+- `examine <thing>` — **the examine contract**: the examinable nouns are
+  exactly the vantage's named constituents, and the focalized line is
+  their catalog — *if `look` mentions it, you can examine it.* No hidden
+  nouns, no unexaminable scenery ("LOOK SUN → I don't see any such thing
+  here" is the classic text-adventure realism break this contract exists
+  to forbid). Tier-0 `examine` renders the datum behind the noun as one
+  templated line.
 - `whoami` / `knows` — dump the agent and its projected knowledge: the
   seam's epistemics made visible at the prompt.
 - `back` — retrace the last step (sugar over the breadcrumb trail).
@@ -204,13 +217,16 @@ Everything byte-deterministic; three tiers:
 2. **The walker battery** — deterministic pseudo-random walks seeded from
    a kernel `Stream` (stream labels declared in the crate's `streams`
    module and published into the manifest, per the save-format contract),
-   asserting three invariants in every room visited:
-   - **projection subset** — everything in `knows` is derivable from
-     ground truth;
+   asserting four invariants along every walk:
+   - **projection subset** — the session's accumulated `Knowledge` (the
+     union over the walked path) is derivable from ground truth at every
+     step;
    - **exit reciprocity** — `go d` then the reverse direction round-trips
      (the room mesh's seam-gluing, asserted from above);
    - **focalizer totality** — every room renders non-empty prose without
-     panicking.
+     panicking;
+   - **examine totality** — every noun the focalizer emits resolves
+     through `examine` (the examine contract, enforced mechanically).
    Bounded to one locale this should be fast-gate cheap; if it measures
    otherwise, it takes a `heavy:` ignore-reason token and moves to
    gate-full.
