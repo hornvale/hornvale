@@ -9,11 +9,11 @@
 # byte-identity just as well, in seconds. The lab runner reassembles rows by
 # seed offset, so a count=N study yields the same rows as the first N seeds of
 # the full study (validated). The full-census cross-platform re-verification
-# is author-time / nightly (make rebaseline + regen-git.sh), not per-push.
+# is author-time / nightly on the AWS box (make regen-remote), not per-push.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 N="${CI_PROBE_SEEDS:-8}"
-STUDIES=(census-lands-drift census-of-the-meeting branches-family)
+STUDIES=(the-census census-of-the-meeting)
 
 cleanup() { for s in "${STUDIES[@]}"; do rm -rf "book/src/laboratory/generated/${s}-ciprobe"; done; }
 trap cleanup EXIT
@@ -45,5 +45,5 @@ PY
     fi
     rm -f "$probe"
 done
-[ "$fail" = 0 ] || { echo "census-probe: cross-platform DRIFT — run 'make rebaseline' and investigate" >&2; exit 1; }
+[ "$fail" = 0 ] || { echo "census-probe: cross-platform DRIFT — regenerate on AWS ('make regen-remote'; census regen is never local) and investigate" >&2; exit 1; }
 echo "census-probe: all ${#STUDIES[@]} studies match on the first ${N} seeds"

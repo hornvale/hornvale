@@ -61,20 +61,19 @@ fn window_start(csv: &str, span: u64) -> Option<u64> {
 
 /// The committed, CI-drift-checked censuses (decisions
 /// 0029 and 0032):
-/// the two 500-seed world censuses and the 1,000-seed branches family
-/// battery, each backing a fixture-loading calibration suite.
-const CENSUSES: [(&str, &str); 3] = [
+/// the-census (the 1,000-seed canonical census) and the 500-seed
+/// census-of-the-meeting null control, each backing a fixture-loading
+/// calibration suite. `branches-family` is EXCLUDED here: it is frozen
+/// (census-as-data spec §1) — a frozen fixture is intentionally stale and
+/// must not be staleness-checked.
+const CENSUSES: [(&str, &str); 2] = [
     (
-        "../../studies/census-lands-drift.study.json",
-        "../../book/src/laboratory/generated/census-lands-drift/rows.csv",
+        "../../studies/the-census.study.json",
+        "../../book/src/laboratory/generated/the-census/rows.csv",
     ),
     (
         "../../studies/census-of-the-meeting.study.json",
         "../../book/src/laboratory/generated/census-of-the-meeting/rows.csv",
-    ),
-    (
-        "../../studies/branches-family.study.json",
-        "../../book/src/laboratory/generated/branches-family/rows.csv",
     ),
 ];
 
@@ -89,9 +88,9 @@ fn assert_fixture_fresh(live: &RunResult, fixture: &RunResult, study_path: &str,
             .unwrap_or_else(|| {
                 panic!(
                     "census fixture {rows_path} has no row for seed {} / pin set '{}' — the \
-                     fixture is stale or truncated; run `make rebaseline` (or `cargo run \
-                     --release -p hornvale -- lab run {study_path}`) and commit the diff \
-                     (decision 0032)",
+                     fixture is stale or truncated; regenerate on the AWS box: `make \
+                     regen-remote` (census regen is never local; study \
+                     {study_path}) and commit the diff (decision 0032)",
                     row.seed, row.pin_set
                 )
             });
@@ -106,9 +105,9 @@ fn assert_fixture_fresh(live: &RunResult, fixture: &RunResult, study_path: &str,
             };
             panic!(
                 "worldgen changed but the census fixture {rows_path} was not regenerated (seed {} \
-                 / pin set '{}' differs). Run `make rebaseline` (or `cargo run --release -p \
-                 hornvale -- lab run {study_path}`), review the diff, and commit it WITH the \
-                 change that moved it (decision 0032).{recording_note}",
+                 / pin set '{}' differs). Regenerate on the AWS box: `make regen-remote` (census \
+                 regen is never local; study {study_path}), review the diff, and commit it \
+                 WITH the change that moved it (decision 0032).{recording_note}",
                 row.seed, row.pin_set
             );
         }
@@ -178,7 +177,7 @@ fn a_stale_fixture_fails_with_the_regeneration_instruction() {
         .downcast_ref::<String>()
         .expect("panic payload is a String");
     assert!(
-        msg.contains("make rebaseline"),
+        msg.contains("make regen-remote"),
         "message must name the fix: {msg}"
     );
     assert!(

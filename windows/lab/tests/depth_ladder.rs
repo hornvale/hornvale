@@ -113,7 +113,7 @@ fn depth_scoped_metrics_match_full_build() {
             this test's doc comment"]
 fn depth_scoped_metrics_match_full_build_for_all_metric_studies() {
     const SEED_CAP: u64 = 1;
-    assert_scoped_matches_full("census-lands-drift", BuildDepth::Full, SEED_CAP);
+    assert_scoped_matches_full("the-census", BuildDepth::Full, SEED_CAP);
     assert_scoped_matches_full("census-of-the-meeting", BuildDepth::Full, SEED_CAP);
 }
 
@@ -124,7 +124,7 @@ fn depth_scoped_metrics_match_full_build_for_all_metric_studies() {
 /// ran end to end — the ignored test above does that, at cost).
 #[test]
 fn all_metric_studies_require_full_depth() {
-    for study_file in ["census-lands-drift", "census-of-the-meeting"] {
+    for study_file in ["the-census", "census-of-the-meeting"] {
         let study = load_capped(study_file, 1);
         assert_eq!(
             required_depth_of(&study),
