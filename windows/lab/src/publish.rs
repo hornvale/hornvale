@@ -56,9 +56,19 @@ pub fn publish(result: &RunResult, base_dir: &Path) -> std::io::Result<Vec<PathB
     // consumers (the calibration suite) can load the census instead of
     // recomputing it. Regenerated and drift-checked in CI like every other
     // artifact here.
+    let csv_content = crate::runner::render_csv(result);
     let rows_path = study_dir.join("rows.csv");
-    fs::write(&rows_path, crate::runner::render_csv(result))?;
+    fs::write(&rows_path, &csv_content)?;
     written.push(rows_path);
+
+    // The self-describing manifest, co-generated from the same RunResult so
+    // it can never disagree with the CSV it sits next to (spec §2).
+    let schema_path = study_dir.join("schema.json");
+    fs::write(
+        &schema_path,
+        crate::schema::render_schema(result, &csv_content, false),
+    )?;
+    written.push(schema_path);
 
     for (stem, svg) in charts_for(result) {
         let chart_path = study_dir.join(format!("{}.svg", stem));
@@ -126,8 +136,8 @@ mod tests {
 
         let written = publish(&result, &dir).expect("publish should succeed");
 
-        // 1 summary + 1 rows.csv + 2 metrics * 1 pin set = 4 files.
-        assert_eq!(written.len(), 4);
+        // 1 summary + 1 rows.csv + 1 schema.json + 2 metrics * 1 pin set = 5 files.
+        assert_eq!(written.len(), 5);
 
         let mut sorted_expected = written.clone();
         sorted_expected.sort();
@@ -142,6 +152,18 @@ mod tests {
         let rows_path = study_dir.join("rows.csv");
         assert!(written.contains(&rows_path));
         assert!(rows_path.exists());
+
+        let schema_path = study_dir.join("schema.json");
+        assert!(written.contains(&schema_path));
+        let schema: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&schema_path).unwrap()).unwrap();
+        assert_eq!(schema["study"]["name"], "publish-study");
+        // The manifest binds the CSV it sits next to.
+        let csv_bytes = fs::read(study_dir.join("rows.csv")).unwrap();
+        assert_eq!(
+            schema["rows"]["fnv1a64"],
+            format!("0x{:016x}", crate::schema::fnv1a64(&csv_bytes))
+        );
 
         let chart1 = study_dir.join("publish-study-default-star-class.svg");
         let chart2 = study_dir.join("publish-study-default-moons-admitted.svg");
