@@ -77,13 +77,20 @@ echo "regenerate-artifacts: scene exports" >&2
 run -p hornvale -- scene tiles --world "$wsky" > book/src/gallery/scene-tiles-seed-42.json
 run -p hornvale -- scene system --world "$wsky" > book/src/gallery/scene-system-seed-42.json
 
-# The full 1000-world censuses are the slow part (~15-25 min local, ~1-2 h on
-# a 2-core CI runner). Local `make rebaseline` needs them (they produce the
-# committed fixtures), but per-push CI only needs a cross-platform spot-check
-# (scripts/ci-census-probe.sh checks the first N seeds). SKIP_CENSUS=1 skips
-# them here so CI can run the fast probe instead.
+# The full 1000-world censuses are the slow part (~15-25 min on the AWS box,
+# ~1-2 h on a 2-core CI runner). POLICY (Nathan, 2026-07-13): censuses are
+# NEVER regenerated on the local Mac — the local gate stays < 5 min, and
+# census/validation coverage deliberately lags (once per campaign, on the AWS
+# spot box via scripts/aws-gate/regen-git.sh, just before the merge to main,
+# with warning given). Locally, always SKIP_CENSUS=1; the Darwin guard below
+# enforces this, with ALLOW_LOCAL_CENSUS=1 as the explicit-authorization
+# bypass. CI's per-run check is the fast spot-check (scripts/ci-census-probe.sh).
 if [ "${SKIP_CENSUS:-0}" = 1 ]; then
     echo "regenerate-artifacts: SKIPPING full censuses (SKIP_CENSUS=1; CI uses ci-census-probe.sh)" >&2
+elif [ "$(uname)" = Darwin ] && [ "${ALLOW_LOCAL_CENSUS:-0}" != 1 ]; then
+    echo "regenerate-artifacts: REFUSING full censuses on the local Mac (policy: AWS box via scripts/aws-gate/regen-git.sh)." >&2
+    echo "  Use SKIP_CENSUS=1 for the local drift check, or ALLOW_LOCAL_CENSUS=1 only with explicit authorization." >&2
+    exit 1
 else
     echo "regenerate-artifacts: lab censuses (release)" >&2
     run_release -p hornvale -- lab run studies/census-lands-drift.study.json

@@ -8,8 +8,9 @@
 # and confirming they match the committed rows.csv head proves cross-platform
 # byte-identity just as well, in seconds. The lab runner reassembles rows by
 # seed offset, so a count=N study yields the same rows as the first N seeds of
-# the full study (validated). The full-census cross-platform re-verification
-# is author-time / nightly (make rebaseline + regen-git.sh), not per-push.
+# the full study (validated). The full-census re-verification runs once per
+# campaign on the AWS box (scripts/aws-gate/regen-git.sh), just before the
+# merge to main — never per-push, never on the local Mac.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 N="${CI_PROBE_SEEDS:-8}"
@@ -45,5 +46,5 @@ PY
     fi
     rm -f "$probe"
 done
-[ "$fail" = 0 ] || { echo "census-probe: cross-platform DRIFT — run 'make rebaseline' and investigate" >&2; exit 1; }
+[ "$fail" = 0 ] || { echo "census-probe: cross-platform DRIFT — regen on the AWS box (scripts/aws-gate/regen-git.sh) and investigate" >&2; exit 1; }
 echo "census-probe: all ${#STUDIES[@]} studies match on the first ${N} seeds"

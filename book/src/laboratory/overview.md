@@ -76,9 +76,13 @@ regenerates each census's first three seeds — plus a rotating three-seed
 window whose position derives from the committed fixture's own bytes, so
 successive regenerations sweep different slices of the seed range — live on
 every `cargo test` and compares them against the committed rows — so a worldgen change that moves
-the census fails locally with the regeneration instruction (`make
-rebaseline`) instead of surfacing an hour later in CI's full
-regenerate-and-diff.
+the census fails locally, immediately, instead of surfacing later in a full
+regenerate-and-diff. The full census fixtures themselves are refreshed once
+per campaign on the remote regeneration box (`scripts/aws-gate/regen-git.sh`),
+just before the campaign merges to `main` — never on the local machine, whose
+gate stays under five minutes by design. Between those refreshes a moved
+census is *known* (the probe fails) but its committed rows deliberately lag
+until the pre-merge regeneration.
 
 When a census *does* move, the reviewable surface is `make lab-diff
 STUDY=<name>` (wrapping `hornvale lab diff`): a per-metric report of which

@@ -9,7 +9,7 @@
 #   make gate-fast    # ITERATION ONLY: scope fmt/clippy/test to changed crates (make gate still gates commits)
 #   make gate-full    # full evidence: the commit gate + the cost-tagged heavy tier
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
-#   make rebaseline   # regenerate every committed generated artifact
+#   make rebaseline   # regenerate every committed generated artifact (censuses: AWS box only — scripts/aws-gate/regen-git.sh; locally refuses without ALLOW_LOCAL_CENSUS=1)
 #   make rebaseline-goldens # accept drifted byte-golden test fixtures
 #   make lab-diff STUDY=<name> # report which census metrics moved vs HEAD
 #   make preflight    # GO/NO-GO before integrating a campaign branch with main

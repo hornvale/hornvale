@@ -13,11 +13,15 @@ Expected branch: `<BRANCH>`
    `BLOCKED: wrong branch <actual-branch>` and end your turn.
    Do not fix the branch, do not proceed on the wrong one.
 
-2. Run every long command (cargo test, censuses, artifact regeneration)
+2. Run every long command (cargo test, artifact regeneration)
    **in the foreground** and wait for it to finish. Pass an explicit long
    timeout on those Bash calls (`timeout: 3600000`) — repo settings raise
    the ceiling to 60 minutes; the unstated default is 20 and a cold gate
-   can exceed it. Do not start watchers.
+   can exceed it. Do not start watchers. NEVER regenerate censuses
+   locally: artifact regeneration is always
+   `SKIP_CENSUS=1 bash scripts/regenerate-artifacts.sh` (full censuses run
+   once per campaign on the AWS box, pre-merge — the controller's job,
+   never yours).
    If a job ends up in the background anyway, your next action is a bounded
    foreground poll — never ending your turn to "wait":
 

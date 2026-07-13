@@ -224,13 +224,14 @@ Claude-Session: https://claude.ai/code/session_01VADHoYci3kwUe14WhmCDKJ"
 - [ ] **Step 1: Prove behavior-free — regenerate artifacts, assert no drift**
 
 ```bash
-scripts/regenerate-artifacts.sh
+SKIP_CENSUS=1 bash scripts/regenerate-artifacts.sh
 git diff --exit-code book/
 ```
 
 Expected: **empty diff** — Celsius-canonical means every emitted temperature number
-is unchanged (`scripts/regenerate-artifacts.sh` is TOOL-15, the canonical
-regeneration used by CI and `make rebaseline`).
+is unchanged. (Censuses are never regenerated locally; they refresh once per
+campaign on the AWS box via `scripts/aws-gate/regen-git.sh`, just before the
+merge to main, with warning to Nathan.)
 
 - [ ] **Step 2: Retag + regenerate the audit report**
 
