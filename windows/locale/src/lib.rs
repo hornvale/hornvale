@@ -3,6 +3,9 @@
 
 mod streams;
 pub use streams::stream_labels;
+
+mod regime;
+pub use regime::{EnergySource, Kingdom, MicroField, Negations, Regime, Substrate};
 use streams::{LOCALE_ASPECT, LOCALE_JITTER};
 
 use hornvale_climate::{Biome, GeneratedClimate};
