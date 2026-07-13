@@ -2,12 +2,6 @@
 //! from the room's address noise, so a walk through homogeneous biome still
 //! varies room-to-room (the "miles and miles of forest" answer).
 
-// `micro_field` is `pub(crate)`, so it is invisible to the crate's external
-// reachability analysis until a non-test caller lands; its consumer is
-// `grammar::render` (Task 5). Remove once `describe` wires the regime
-// overlay in (Task 7).
-#![allow(dead_code)]
-
 use crate::regime::MicroField;
 use crate::streams::LOCALE_MICRO;
 use hornvale_kernel::{Seed, quantize};

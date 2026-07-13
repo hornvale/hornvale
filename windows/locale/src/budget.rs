@@ -4,9 +4,6 @@
 //! are on quantized values (decision 0041). Placement is *repulsive*; the
 //! future negative wing will be *excitatory* — do not bake repulsion deeper.
 
-// consumers land in Task 7
-#![allow(dead_code)]
-
 use crate::regime::{EnergySource, Kingdom, Negations, Substrate};
 use crate::streams::LOCALE_PLACE;
 use hornvale_climate::GeneratedClimate;

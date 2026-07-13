@@ -117,7 +117,6 @@ pub struct Regime {
     pub strangeness: f64,
 }
 
-#[allow(dead_code)] // consumers land in later tasks
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -2,12 +2,6 @@
 //! biome / substrate / micro-field, assembled to prose. Pools are the
 //! authoring-time artifact (decision 0009); this is the first complete set.
 
-// `derived_regime`/`render` are `pub(crate)`, so they are invisible to the
-// crate's external reachability analysis until a non-test caller lands
-// (Task 6's placed-exotics override, Task 7's `describe` integration).
-// Remove once those land.
-#![allow(dead_code)]
-
 use crate::regime::{EnergySource, Kingdom, MicroField, Negations, Regime, Substrate};
 use crate::streams::{LOCALE_SUBSTRATE_DETAIL, LOCALE_VARIETY};
 use hornvale_climate::Biome;
