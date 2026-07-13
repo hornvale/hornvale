@@ -19,7 +19,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast gate-full nextest-check prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks
+.PHONY: help quick gate gate-fast gate-full nextest-check prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff timings preflight doctor install-hooks
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -61,7 +61,10 @@ prewarm: ## Warm a fresh worktree's caches (start in the background right after 
 	cargo build --manifest-path tools/type-audit/Cargo.toml
 
 rebaseline artifacts: ## Regenerate every committed generated artifact (review the diff, then commit)
-	bash scripts/regenerate-artifacts.sh
+	@bash scripts/timed.sh rebaseline -- bash scripts/regenerate-artifacts.sh
+
+timings: ## Show the timing ledger (usage: make timings [LABEL=rebaseline])
+	@bash scripts/timed.sh report $(LABEL)
 
 rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), then review the diff
 	REBASELINE=1 cargo test -q -p hornvale --test lens_purity
