@@ -59,8 +59,10 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 | Label | Meaning |
 |---|---|
-| `locale/aspect` | room aspect draw |
-| `locale/jitter` | room relief jitter |
+| `locale/regime/micro` | room sub-cell micro-field |
+| `locale/regime/variety` | room descriptor variety draw |
+| `locale/regime/substrate` | room substrate-detail draw |
+| `locale/strangeness/place` | world rarity-budget placement pass |
 
 ### hornvale-religion
 

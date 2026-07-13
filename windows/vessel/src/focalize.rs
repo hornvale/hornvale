@@ -27,11 +27,11 @@ pub struct TemplateFocalizer;
 impl Focalizer for TemplateFocalizer {
     fn render(&self, v: &Vantage) -> Focalized {
         let biome = v.locale.biome.clone();
-        let aspect = v.locale.texture.aspect.clone();
+        let descriptor = v.locale.regime.descriptor.clone();
         let village = v.village.name.clone();
         let sky_noun = "sky".to_string();
         let prose = format!(
-            "You stand in {biome} — {aspect} — in the lands of {village}. \
+            "You stand in {biome} — {descriptor} — in the lands of {village}. \
              The {sky_noun} above: {}",
             v.sky
         );
@@ -46,10 +46,10 @@ impl Focalizer for TemplateFocalizer {
                 ),
             ),
             (
-                aspect,
+                descriptor,
                 format!(
-                    "The ground here: {} (relief {:+.2}).",
-                    v.locale.texture.aspect, v.locale.texture.relief_jitter
+                    "The ground here: {} (strangeness {:.0}).",
+                    v.locale.regime.descriptor, v.locale.regime.strangeness
                 ),
             ),
             (

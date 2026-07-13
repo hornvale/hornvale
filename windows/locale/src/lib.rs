@@ -3,7 +3,19 @@
 
 mod streams;
 pub use streams::stream_labels;
-use streams::{LOCALE_ASPECT, LOCALE_JITTER};
+
+mod regime;
+pub use regime::{EnergySource, Kingdom, MicroField, Negations, Regime, Substrate};
+
+mod substrate;
+
+mod micro;
+
+mod grammar;
+
+mod budget;
+pub use budget::StrangeSite;
+use budget::StrangenessBudget;
 
 use hornvale_climate::{Biome, GeneratedClimate};
 use hornvale_kernel::{CellId, NearestCellIndex, RoomAddr, Seed, World, WorldTime, quantize};
@@ -14,14 +26,14 @@ use serde::Serialize;
 /// The versioned semantic schema this window emits (save-format class; a
 /// changed meaning mints `locale/room/v2` alongside).
 /// type-audit: bare-ok(identifier-text)
-pub const ROOM_SCHEMA: &str = "locale/room/v1";
+pub const ROOM_SCHEMA: &str = "locale/room/v2";
 
 /// A room rendered as an observable place — ground truth, re-derivable, never
 /// stored (UNI-20 derived view). Plain serializable values only.
 /// type-audit: bare-ok(identifier-text: schema), bare-ok(index: id), bare-ok(index: face), bare-ok(index: path), bare-ok(count: depth), pending(wave-3: latitude), pending(wave-3: longitude), bare-ok(prose: biome)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Locale {
-    /// Schema tag (`locale/room/v1`).
+    /// Schema tag (`locale/room/v2`).
     pub schema: &'static str,
     /// Packed room id (`RoomId.0`).
     pub id: u64,
@@ -41,8 +53,8 @@ pub struct Locale {
     pub fields: LocaleFields,
     /// The three canonical-grid corner cells and their integer weights.
     pub corners: Vec<CellWeight>,
-    /// Seed-derived sub-cell texture.
-    pub texture: SubCellTexture,
+    /// The strangeness overlay: descriptor, negation vector, and magnitude.
+    pub regime: Regime,
     /// Base + vertical exits.
     pub exits: Vec<Exit>,
 }
@@ -68,16 +80,6 @@ pub struct LocaleFields {
     pub moisture: f64,
     /// Elevation, meters.
     pub elevation_m: f64,
-}
-
-/// Seed-derived sub-cell texture — an explicit P3 placeholder, kept tiny.
-/// type-audit: bare-ok(prose: aspect), bare-ok(ratio: relief_jitter)
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct SubCellTexture {
-    /// One draw from a tiny biome-keyed pool (the P3 descriptor stand-in).
-    pub aspect: String,
-    /// A deterministic per-room character scalar in [-1, 1] (dimensionless).
-    pub relief_jitter: f64,
 }
 
 /// Why a locale could not be described.
@@ -119,6 +121,7 @@ pub struct LocaleContext {
     terrain: GeneratedTerrain,
     index: NearestCellIndex,
     globe_level: u32,
+    budget: StrangenessBudget,
 }
 
 impl LocaleContext {
@@ -128,12 +131,14 @@ impl LocaleContext {
         let terrain = terrain_of(world).map_err(|e| LocaleError::Build(e.to_string()))?;
         let index = NearestCellIndex::new(climate.geosphere());
         let globe_level = climate.geosphere().level();
+        let budget = StrangenessBudget::build(world.seed, &climate, &terrain);
         Ok(LocaleContext {
             seed: world.seed,
             climate,
             terrain,
             index,
             globe_level,
+            budget,
         })
     }
 
@@ -141,6 +146,11 @@ impl LocaleContext {
     /// type-audit: bare-ok(count)
     pub fn globe_level(&self) -> u32 {
         self.globe_level
+    }
+
+    /// The world's placed exotic sites, for findability (derived, not stored).
+    pub fn strange_sites(&self) -> Vec<StrangeSite> {
+        self.budget.sites()
     }
 
     /// A room's ground-truth locale at observation time `at`. Pure over
@@ -183,6 +193,25 @@ impl LocaleContext {
             elevation_m: blend(&|c| *self.terrain.globe().elevation.get(c)),
         };
 
+        let substrate = crate::substrate::substrate_at(&self.climate, &self.terrain, best.0);
+        let micro = crate::micro::micro_field(addr.seed(self.seed));
+        let mut regime = crate::grammar::derived_regime(self.seed, addr, biome, substrate, micro);
+        if let Some(placed) = self.budget.regime_at(best.0) {
+            let negations = Negations {
+                substrate: regime.negations.substrate,
+                energy: placed.energy,
+                kingdom: placed.kingdom,
+                endemic: placed.endemic,
+            };
+            let descriptor = crate::grammar::render(negations, micro, biome, self.seed, addr);
+            regime = Regime {
+                negations,
+                micro,
+                descriptor,
+                strangeness: negations.strangeness(),
+            };
+        }
+
         let coord = addr.coord();
         Ok(Locale {
             schema: ROOM_SCHEMA,
@@ -201,13 +230,13 @@ impl LocaleContext {
                     weight: w,
                 })
                 .collect(),
-            texture: texture_of(self.seed, addr, biome), // seed-derived texture (§5)
-            exits: exits_of(addr),                       // base + vertical exits (§6)
+            regime,                // strangeness overlay (§5-§7)
+            exits: exits_of(addr), // base + vertical exits (§6)
         })
     }
 }
 
-/// Stable biome name for the `locale/room/v1` schema (owned here, not Debug).
+/// Stable biome name for the `locale/room/v2` schema (owned here, not Debug).
 fn biome_name(b: Biome) -> &'static str {
     match b {
         Biome::Ice => "ice",
@@ -232,50 +261,6 @@ fn biome_name(b: Biome) -> &'static str {
         Biome::Mesopelagic => "mesopelagic",
         Biome::Bathypelagic => "bathypelagic",
         Biome::Abyssal => "abyssal",
-    }
-}
-
-/// Seed-derived sub-cell texture for a room: an aspect drawn from a tiny
-/// biome-keyed pool plus a per-room relief jitter, both off the integer room
-/// seed (platform-exact).
-fn texture_of(seed: Seed, addr: &RoomAddr, biome: Biome) -> SubCellTexture {
-    let room_seed = addr.seed(seed);
-    let pool = aspect_pool(biome);
-    let aspect = room_seed
-        .derive(LOCALE_ASPECT)
-        .stream()
-        .pick(pool)
-        .copied()
-        .unwrap_or("unremarkable ground")
-        .to_string();
-    // next_f64 ∈ [0,1) → [-1,1), then quantize at emit.
-    let jitter = quantize(room_seed.derive(LOCALE_JITTER).stream().next_f64() * 2.0 - 1.0);
-    SubCellTexture {
-        aspect,
-        relief_jitter: jitter,
-    }
-}
-
-/// A tiny biome-keyed aspect pool — the explicit stand-in for the P3
-/// descriptor grammar. Kept ≤ 4 entries so it does not pre-empt MAP-29.
-fn aspect_pool(biome: Biome) -> &'static [&'static str] {
-    match biome {
-        Biome::TemperateForest | Biome::TemperateRainforest => &[
-            "dense understory",
-            "old growth",
-            "windthrow clearing",
-            "mossy hollow",
-        ],
-        Biome::Taiga => &["boreal stand", "peat hollow", "burnt snag"],
-        Biome::Desert => &["dune field", "gravel pan", "wadi cut"],
-        Biome::Tundra | Biome::Alpine => &["frost heave", "boulder field", "wind scour"],
-        Biome::Savanna | Biome::TemperateGrassland => {
-            &["open sward", "scattered copse", "grazed flat"]
-        }
-        Biome::TropicalRainforest | Biome::TropicalSeasonalForest => {
-            &["buttressed canopy", "liana tangle", "stream gully"]
-        }
-        _ => &["unremarkable ground", "broken terrain"],
     }
 }
 
@@ -520,7 +505,7 @@ mod tests {
     }
 
     #[test]
-    fn texture_is_deterministic_and_siblings_differ() {
+    fn regime_is_deterministic_and_siblings_differ() {
         let world = land_world();
         let ctx = LocaleContext::build(&world).unwrap();
         let a = RoomAddr {
@@ -531,17 +516,35 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 1],
         };
-        let ta = ctx.describe(&a, WorldTime { day: 0.0 }).unwrap().texture;
-        let ta2 = ctx.describe(&a, WorldTime { day: 0.0 }).unwrap().texture;
-        let tb = ctx.describe(&b, WorldTime { day: 0.0 }).unwrap().texture;
-        assert_eq!(ta, ta2, "same room → identical texture");
-        assert_ne!(
-            (ta.aspect.clone(), ta.relief_jitter),
-            (tb.aspect.clone(), tb.relief_jitter),
-            "sibling rooms should differ"
-        );
-        assert!((-1.0..=1.0).contains(&ta.relief_jitter));
-        assert!(!ta.aspect.is_empty());
+        let ra = ctx.describe(&a, WorldTime { day: 0.0 }).unwrap().regime;
+        let ra2 = ctx.describe(&a, WorldTime { day: 0.0 }).unwrap().regime;
+        let rb = ctx.describe(&b, WorldTime { day: 0.0 }).unwrap().regime;
+        assert_eq!(ra, ra2, "same room → identical regime");
+        assert_ne!(ra.descriptor, rb.descriptor, "sibling rooms should differ");
+        assert!(ra.strangeness >= 0.0);
+        assert!(!ra.descriptor.is_empty());
+    }
+
+    #[test]
+    fn schema_is_v2_and_regime_present() {
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let addr = RoomAddr {
+            face: 3,
+            path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+        };
+        let loc = ctx.describe(&addr, WorldTime { day: 0.0 }).unwrap();
+        assert_eq!(loc.schema, "locale/room/v2");
+        assert!(loc.regime.strangeness >= 0.0);
+        assert!(!loc.regime.descriptor.is_empty());
+    }
+
+    #[test]
+    fn strange_sites_are_exposed() {
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        // A derived query; may be empty on a mundane world but must not panic.
+        let _ = ctx.strange_sites();
     }
 
     #[test]
