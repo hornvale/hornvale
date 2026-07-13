@@ -79,3 +79,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [`epochs-replace-tiers-refine`](epochs-replace-tiers-refine.md) | Epochs replace, tiers refine — a contradicting generator cannot coexist as a tier | Accepted |
 | [`the-room-tier-ledger-is-chunk-partitioned`](the-room-tier-ledger-is-chunk-partitioned.md) | The room-tier ledger is chunk-partitioned — only if it outgrows memory (near-term defers to The Walk §3.6) | Proposed |
 | [0027](0027-nextest-is-the-gate-runner.md) | cargo-nextest is the gate's test runner | Accepted |
+| [0028](0028-libm-for-portable-transcendentals.md) | libm for portable transcendentals (amends 0004) | Accepted |

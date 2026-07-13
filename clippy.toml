@@ -9,10 +9,10 @@ disallowed-types = [
     { path = "std::time::Instant", reason = "wall-clock time is forbidden; time is WorldTime (decision 0001)" },
 ]
 
-# SPIKE(libm): std's f64 transcendentals dispatch to the *platform* libm
-# (Apple's vs glibc's, last-ULP divergent); use hornvale_kernel::math, which
-# routes through the portable libm crate. IEEE-exact operations (sqrt, abs,
-# floor/ceil/round, mul_add, powi, arithmetic) remain allowed.
+# libm (decision 0028): std's f64 transcendentals dispatch to the *platform*
+# libm (Apple's vs glibc's, last-ULP divergent); use hornvale_kernel::math,
+# which routes through the portable libm crate. IEEE-exact operations (sqrt,
+# abs, floor/ceil/round, mul_add, powi, arithmetic) remain allowed.
 disallowed-methods = [
     { path = "f64::sin", reason = "platform libm diverges; use hornvale_kernel::math::sin" },
     { path = "f64::cos", reason = "platform libm diverges; use hornvale_kernel::math::cos" },

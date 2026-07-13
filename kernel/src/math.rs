@@ -1,5 +1,5 @@
 //! Portable transcendental math: every `f64` transcendental in the
-//! workspace routes through here (SPIKE: decision pending).
+//! workspace routes through here (decision 0028).
 //!
 //! Rust's inherent `f64` transcendentals (`x.sin()`, `x.powf(y)`, …)
 //! dispatch to the *platform* libm — Apple's on macOS, glibc's on Linux —
