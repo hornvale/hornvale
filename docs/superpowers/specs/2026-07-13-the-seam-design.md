@@ -51,12 +51,14 @@ frozen world that re-describes as you move* — not printing one line.
    before. The five signatures are named by this spec, **not frozen** by
    it (metaplan §9).
 
-Six adoptions from the ideonomy passes (2026-07-13), folded in below:
+Seven adoptions from the ideonomy passes (2026-07-13), folded in below:
 day-parameterized possession (§ Verb loop), the scripted-replay transcript
 and walker battery (§ Determinism and testing), breadcrumbs in the
 transcript (§ Verb loop), the perception-vector slot in the Agent mint
-(§ The five interfaces), the examine contract (§ Verb loop), and
-session-accumulating knowledge (§ The five interfaces, Projection).
+(§ The five interfaces), the examine contract (§ Verb loop),
+session-accumulating knowledge (§ The five interfaces, Projection), and
+the `wait` verb (§ Verb loop — the round-4 negation table's one unowned
+cell: mid-session time re-parameterization).
 Explicitly *skipped*: free choice of incarnation site (`--at LAT,LON`) —
 the mint is flagship-only this campaign.
 
@@ -190,6 +192,10 @@ anything, so the verb-chemistry engine (frontier MAP-27) is correctly
 - `whoami` / `knows` — dump the agent and its projected knowledge: the
   seam's epistemics made visible at the prompt.
 - `back` — retrace the last step (sugar over the breadcrumb trail).
+- `wait [N]` — advance the session's frozen day by N standard days
+  (default 1) and re-focalize: the interactive form of `--day`. It
+  re-parameterizes the freeze, never thaws it — nothing steps, nothing
+  mutates; the sky wheels while the ground holds still.
 - `release` / `quit` — end possession. Entered from the repl, `release`
   returns to the scholar loop; from the subcommand, it exits.
 
@@ -247,8 +253,8 @@ emit boundaries only, as everywhere.
 
 ## Out of scope (the fence)
 
-- **No liveness, no events, no time-stepping** — `--day` parameterizes the
-  freeze; it does not thaw it. Milestone IV/V.
+- **No liveness, no events, no time-stepping** — `--day` and the `wait`
+  verb parameterize the freeze; they do not thaw it. Milestone IV/V.
 - **No scale travel** — the walk stays at the canonical walk depth;
   vertical `Enter`/`Exit` exits refuse diegetically.
 - **No prose variety** — The Uncommon Ground's job; it runs independently
