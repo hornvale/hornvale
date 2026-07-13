@@ -8,6 +8,9 @@ mod regime;
 pub use regime::{EnergySource, Kingdom, MicroField, Negations, Regime, Substrate};
 
 mod substrate;
+
+mod micro;
+
 use streams::{LOCALE_ASPECT, LOCALE_JITTER};
 
 use hornvale_climate::{Biome, GeneratedClimate};
