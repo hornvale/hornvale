@@ -40,8 +40,10 @@ cargo clippy --workspace --all-targets -- -D warnings
 #      failure list in one pass:
 cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file freely
 #   The census/calibration LIVE batteries (the calibration sweep, the
-#   1000-world branches-family census) sit in the heavy tier — `make gate-full`,
-#   not `make gate`. The fast-gate calibration checks instead read a
+#   1000-world branches-family census) are their own #[ignore]d tests with
+#   non-`heavy:` reasons, so `make gate-full` does NOT run them; their
+#   freshness is guaranteed by CI's regenerate-and-diff step
+#   (scripts/regenerate-artifacts.sh). The fast-gate calibration checks read a
 #   drift-checked fixture (book/src/laboratory/generated/*/rows.csv); after a
 #   worldgen change, regenerate the artifacts (below) so the fixture reflects it.
 

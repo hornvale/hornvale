@@ -5,8 +5,9 @@
 # dependency; this uses `make`, already present everywhere.
 #
 #   make quick        # cheap half: fmt --check + clippy (the pre-commit gate)
-#   make gate         # the full commit gate: fmt + clippy + workspace tests
+#   make gate         # the commit gate: fmt + clippy + nextest + doctests (heavy tier skipped)
 #   make gate-fast    # ITERATION ONLY: scope fmt/clippy/test to changed crates (make gate still gates commits)
+#   make gate-full    # full evidence: the commit gate + the cost-tagged heavy tier
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
 #   make rebaseline   # regenerate every committed generated artifact
 #   make rebaseline-goldens # accept drifted byte-golden test fixtures

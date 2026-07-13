@@ -7,7 +7,7 @@ use std::process::Command;
 
 /// The one reason string every heavy-tier test must use verbatim.
 const CANONICAL: &str =
-    "heavy: live-worldgen battery (minutes); runs in make gate-full / cloud nightly";
+    "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full";
 
 /// The workspace root. `cargo test` runs with CWD set to the package dir
 /// (`cli/`), so a bare `git grep` would only see `cli/**`; search from the

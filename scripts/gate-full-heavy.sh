@@ -22,6 +22,20 @@ names="$(grep -rEA1 '#\[ignore = "heavy:' --include='*.rs' . \
     | grep -oE 'fn [a-z0-9_]+' | sed 's/^fn //' | sort -u)"
 [ -n "$names" ] || { echo "gate-full-heavy: no heavy-tier tests found" >&2; exit 1; }
 
+# Guard against layout drift: if a heavy tag is ever NOT directly above its
+# fn (e.g. an intervening #[allow(...)]), grep -A1 grabs the wrong line, the
+# name is lost, and the test would silently vanish from gate-full. Assert one
+# fn name per heavy tag.
+tag_count="$(grep -rc '#\[ignore = "heavy:' --include='*.rs' . | awk -F: '{s+=$2} END{print s+0}')"
+name_count="$(printf '%s\n' "$names" | grep -c .)"
+if [ "$tag_count" != "$name_count" ]; then
+    echo "gate-full-heavy: $tag_count heavy: tags but $name_count fn names extracted —" >&2
+    echo "  a heavy #[ignore] tag is not directly above its fn (intervening attribute?)," >&2
+    echo "  or two heavy tests share a name. Fix the layout; gate-full must not silently" >&2
+    echo "  skip a heavy test." >&2
+    exit 1
+fi
+
 # Build a nextest filterset: test(/name$/) | ... — end-anchored regex, so it
 # matches both bare integration-test names and module-qualified unit-test
 # names (e.g. runner::tests::parallel_run_matches_sequential). `test(=name)`

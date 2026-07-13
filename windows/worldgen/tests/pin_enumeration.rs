@@ -35,9 +35,8 @@
 //! Wall time for the full 48-combo product has grown well past the task
 //! brief's ~15 s budget as the genesis pipeline deepened (the fast-gate-tiers
 //! census, 2026-07-13, timed this binary in the minutes), so the test is
-//! `#[ignore]`d into the heavy tier: it runs in `make gate-full` and the
-//! cloud, not the default commit gate (see `full_pin_product_is_enumerated`
-//! below).
+//! `#[ignore]`d into the heavy tier: it runs in `make gate-full`, not the
+//! default commit gate (see `full_pin_product_is_enumerated` below).
 //!
 //! Measured at authoring (2026-07-11, seed 42): 48 built, 0 refused --
 //! reported, not asserted; the split may legitimately move with physics
@@ -157,12 +156,12 @@ fn check_combo(combo: &Combo) -> bool {
 
 /// The full 48-combo product. Its wall time has grown past the task brief's
 /// ~15 s gate budget as the genesis pipeline deepened, so it is `#[ignore]`d
-/// into the heavy tier (the fast-gate-tiers spec) and runs in `make gate-full`
-/// / the cloud, not the default commit gate. It still asserts total
+/// into the heavy tier (the fast-gate-tiers spec) and runs in `make gate-full`,
+/// not the default commit gate. It still asserts total
 /// certainty over the product — every combo builds or loudly refuses, and
 /// every `Ok` is byte-deterministic — just off the per-commit path.
 #[test]
-#[ignore = "heavy: live-worldgen battery (minutes); runs in make gate-full / cloud nightly"]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn full_pin_product_is_enumerated() {
     let combos = full_product();
 
