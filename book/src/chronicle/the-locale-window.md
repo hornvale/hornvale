@@ -84,12 +84,13 @@ space free for when subterranean rooms land.
 `LocaleContext::describe` takes a `RoomAddr`, but the CLI's friendly path
 takes a coordinate — `--at LAT,LON`. The substrate had no public
 coordinate-to-room locator, so the campaign added exactly one:
-`RoomAddr::containing(geo, position, depth)`, living beside `coord` and
+`RoomAddr::containing(position, depth)`, living beside `coord` and
 `corners` in `kernel/src/room.rs` as another float presentation helper. It
 introduces no new identity or save-format surface; a boundary-straddling
 coordinate may resolve to adjacent rooms on different platforms (the ordinary
-float-presentation caveat), but once a room is addressed its content is
-integer-exact, as it always was.
+float-presentation caveat), but once a room is addressed, its address and the
+integer blend weights are exact on every platform — the field values and the
+biome it inherits carry the coarse world's own platform-sensitivity, unchanged.
 
 ## What v1 deliberately is not
 
