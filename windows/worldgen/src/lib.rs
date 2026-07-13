@@ -352,14 +352,55 @@ pub fn biome_class(biome: hornvale_climate::Biome) -> hornvale_culture::BiomeCla
     }
 }
 
+/// Drainage normalization reference for the carrying-capacity freshwater
+/// term (§2): drainage accumulation above this reads as "as good as any
+/// river gets", not an unbounded score.
+const DRAINAGE_REF: f64 = 200.0;
+
+/// The bare per-cell carrying-capacity inputs, shared across species (spec
+/// §2): the same terrain/climate reads the retired suitability scatter used.
+/// Each species folds its own psychology on top via `species_carrying_input`.
+/// Exposed (not inlined at the one call site) so a Lab metric can recompute
+/// the identical field the composition root feeds into demography — the
+/// gradient calibration (Task 8) reads it without duplicating the formula.
+pub fn carrying_inputs_of(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
+    hornvale_kernel::CellMap::from_fn(geo, |cell| {
+        let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
+        let moisture = climate.moisture_at(cell);
+        let drainage_norm = (terrain.drainage_at(cell) / DRAINAGE_REF).min(1.0);
+        // Seawater is not freshwater: coastal access is priced by the
+        // coast bonus in carrying_capacity, not smuggled in here.
+        let freshwater = drainage_norm.max(moisture).clamp(0.0, 1.0);
+        let aridity = ((0.2 - moisture).max(0.0) * 5.0).clamp(0.0, 1.0);
+        let hostility = terrain.unrest_at(cell).max(aridity).clamp(0.0, 1.0);
+        hornvale_demography::CarryingInput {
+            habitable: *climate.habitability().get(cell),
+            temperature_c: climate.mean_temperature_at(cell),
+            moisture,
+            freshwater,
+            coastal,
+            hostility,
+        }
+    })
+}
+
 /// Fold a species' psychology (spec §4) into its carrying-capacity inputs.
 /// The retired suitability formula scaled a people's freshwater weight by its
 /// time horizon and softened its hostility penalty by its threat response; the
 /// same psychology now scales each species' freshwater draw and hostility
 /// sensitivity so per-species variation survives the move to the carrying-
-/// capacity field. Exact fidelity to the old weights is not required — Task 8
-/// re-calibrates these constants and then freezes them as save-format
-/// constants. Identity-ish at the goblin baseline; deterministic in `p`.
+/// capacity field. Exact fidelity to the old weights was not required —
+/// CALIBRATED (the-gathering, 2026-07-13): the summed-across-roster gradient
+/// these per-species factors feed into (the Lab's `capacity-by-abs-latitude`
+/// metric) already reproduces the real biomass-by-latitude gradient
+/// decisively against the 200-seed `census-of-the-gathering` census (mean
+/// 27.15; see `carrying_capacity.rs`'s freeze note for the full measurement),
+/// so these factors are frozen unchanged as save-format constants.
+/// Identity-ish at the goblin baseline; deterministic in `p`.
 pub fn species_carrying_input(
     base: hornvale_demography::CarryingInput,
     p: &hornvale_species::PsychVector,
@@ -1824,39 +1865,22 @@ fn build_to(
     let terrain = terrain_of(&world)?;
     let climate = climate_of(&world)?;
     let geo = terrain.geosphere();
-    const DRAINAGE_REF: f64 = 200.0;
     // Condensation threshold: an attractor whose catchment population clears
-    // this becomes a settlement. PLACEHOLDER — Task 8 tunes and freezes it as
-    // a save-format constant, jointly with the carrying_capacity constants
-    // (both un-calibrated). NOTE: against the current placeholder K constants
-    // this small value condenses ~1000 settlements on a level-6 seed-42 world
-    // (avg catchment ~7 people), an order of magnitude more than the retired
-    // spaced scatter; Task 8's calibration is what restores a sane town count
-    // and population scale.
-    const THRESHOLD: f64 = 0.5;
+    // this becomes a settlement. CALIBRATED (the-gathering, 2026-07-13):
+    // tuned against the (also frozen this task) carrying_capacity constants
+    // to a manageable seed-42 settlement count. Before tuning, the placeholder
+    // 0.5 condensed 998 settlements on the level-6 seed-42 world (avg
+    // catchment ~7 people); this value condenses 182 (avg catchment ~22, max
+    // 71) — low hundreds, an order of magnitude down from the placeholder and
+    // in the range of the retired spaced scatter's town count. A save-format
+    // constant from here on.
+    const THRESHOLD: f64 = 10.0;
 
     // The bare per-cell carrying-capacity inputs, shared across species; each
-    // species folds its psychology into a per-species copy below. These are
-    // the same terrain/climate reads the retired suitability scatter used.
-    let base_inputs: hornvale_kernel::CellMap<hornvale_demography::CarryingInput> =
-        hornvale_kernel::CellMap::from_fn(geo, |cell| {
-            let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
-            let moisture = climate.moisture_at(cell);
-            let drainage_norm = (terrain.drainage_at(cell) / DRAINAGE_REF).min(1.0);
-            // Seawater is not freshwater: coastal access is priced by the
-            // coast bonus in carrying_capacity, not smuggled in here.
-            let freshwater = drainage_norm.max(moisture).clamp(0.0, 1.0);
-            let aridity = ((0.2 - moisture).max(0.0) * 5.0).clamp(0.0, 1.0);
-            let hostility = terrain.unrest_at(cell).max(aridity).clamp(0.0, 1.0);
-            hornvale_demography::CarryingInput {
-                habitable: *climate.habitability().get(cell),
-                temperature_c: climate.mean_temperature_at(cell),
-                moisture,
-                freshwater,
-                coastal,
-                hostility,
-            }
-        });
+    // species folds its psychology into a per-species copy below. `carrying_
+    // inputs_of` is exposed so a Lab metric can recompute the identical field
+    // without duplicating the formula (the gradient calibration reads it).
+    let base_inputs = carrying_inputs_of(geo, &terrain, &climate);
 
     // Which species this world places: the whole roster, or the pinned one.
     let species_set: Vec<&hornvale_species::SpeciesDef> = match &settlement_pins.species {

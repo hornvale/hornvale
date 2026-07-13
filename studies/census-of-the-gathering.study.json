@@ -1,0 +1,5 @@
+{ "name": "census-of-the-gathering",
+  "description": "The Census of the Gathering: the carrying-capacity field's calibration over 200 worlds — the headline biomass-by-latitude gradient (capacity-by-abs-latitude), settlement scale, and the rank-size slope recorded as an observed (not tuned) metric.",
+  "seeds": { "from": 0, "count": 200 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": ["capacity-by-abs-latitude", "rank-size-slope", "settlement-count", "mean-population"] }

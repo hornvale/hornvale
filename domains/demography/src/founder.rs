@@ -21,7 +21,15 @@ pub fn condense_tagged(
         let mut nodes = condense(geo, k, threshold);
         if nodes.is_empty() {
             // Founder floor: the single strongest attractor, threshold ignored.
-            if let Some(flagship) = condense(geo, k, 0.0).into_iter().next() {
+            // Its catchment may fall (far) below a whole person; flooring at 1
+            // here — rather than at the emit boundary — keeps "no
+            // zero-population settlement" an invariant of the domain itself,
+            // not a worldgen-side patch (design spec §5, "no peopleless
+            // settlements"). This is the one deliberate, documented exception
+            // to conservation (`Σ pop == Σ K`): the founder floor already
+            // bypasses the threshold, so it was never conserved-exact.
+            if let Some(mut flagship) = condense(geo, k, 0.0).into_iter().next() {
+                flagship.population = flagship.population.max(1.0);
                 nodes.push(flagship);
             }
         }
@@ -41,7 +49,7 @@ pub fn condense_tagged(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::{CellId, Geosphere};
+    use hornvale_kernel::{CellId, CellMap, Geosphere};
 
     fn peak_at(geo: &Geosphere, cell: u32) -> CellMap<f64> {
         let peak = geo.position(CellId(cell));
@@ -63,6 +71,31 @@ mod tests {
             tags,
             std::collections::BTreeSet::from([0, 1]),
             "every tag founds one settlement"
+        );
+    }
+
+    #[test]
+    fn founder_floor_never_places_a_zero_population_settlement() {
+        let geo = Geosphere::new(3);
+        // A species with only a trace of carrying capacity at a single cell:
+        // its lone attractor's catchment accumulation is far below one
+        // person, and every other cell is exactly zero. Without the floor,
+        // `.round() as u32` at the emit boundary would commit a
+        // population-0 settlement (the wrinkle this test guards).
+        let trace_cell = CellId(5);
+        let k = CellMap::from_fn(&geo, |c| if c == trace_cell { 1e-6 } else { 0.0 });
+        let per = vec![(0u32, k)];
+        // A threshold far above the trace K forces the founder-floor path.
+        let placed = condense_tagged(&per, &geo, 1.0);
+        assert_eq!(
+            placed.len(),
+            1,
+            "the founder floor still places one settlement"
+        );
+        assert!(
+            placed[0].0.population >= 1.0,
+            "founder-floor population must never round to zero: {}",
+            placed[0].0.population
         );
     }
 }

@@ -45,10 +45,16 @@ pub const SETTLEMENT_PIN: &str = "settlement-pin";
 /// generation paths (The Tongues moves settlement-name generation to
 /// `hornvale-language`, which owns the real `language/<species>/name/...`
 /// derivation labels, since this domain cannot depend on another domain
-/// crate — spec §7) but stay documented here forever, never renamed (ADR
-/// 0006). No new label is minted here for the move: nothing under
-/// `settlement/*` derives a name any longer, so publishing a phantom
-/// `settlement/name/v2` would only mislead a reader of the manifest.
+/// crate — spec §7); `settlement/placement` and `settlement/kobold/population`
+/// are retired as live generation paths for the same reason the-gathering
+/// (MAP-7) gives (settlement population is now a `demography` catchment
+/// readout, drawn from nothing — see `hornvale_demography::condense` — so
+/// this crate's placement/population streams draw nothing either). All four
+/// stay documented here forever, never renamed (ADR 0006). No new label is
+/// minted here for either move: nothing under `settlement/*` derives a name
+/// or a population any longer, so publishing phantom `settlement/name/v2` /
+/// `settlement/placement/v2` labels would only mislead a reader of the
+/// manifest.
 /// type-audit: bare-ok(identifier-text)
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     vec![
@@ -61,7 +67,11 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "settlement/placement",
-            "per-settlement population against carrying capacity",
+            "RETIRED (the-gathering): per-settlement population against \
+             carrying capacity, goblin stream. Population is now the conserved \
+             catchment readout of hornvale-demography's flow-condensation, \
+             drawing nothing from the seed. Kept documented for legacy-save \
+             continuity; never renamed.",
         ),
         (
             "settlement/kobold/name",
@@ -72,7 +82,11 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "settlement/kobold/population",
-            "per-settlement population, kobold stream (species-qualified; goblin keeps settlement/placement)",
+            "RETIRED (the-gathering): per-settlement population, kobold \
+             stream (species-qualified; goblin kept settlement/placement). \
+             Population is now the conserved catchment readout of \
+             hornvale-demography's flow-condensation, drawing nothing from the \
+             seed. Kept documented for legacy-save continuity; never renamed.",
         ),
     ]
 }
