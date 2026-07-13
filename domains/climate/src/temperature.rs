@@ -8,7 +8,7 @@
 
 use crate::circulation::RotationRegime;
 use hornvale_kernel::math;
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
+use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, TempAnomaly, Temperature};
 
 /// Dry-adiabatic-ish lapse rate: °C lost per meter of elevation above sea level.
 const LAPSE_C_PER_M: f64 = 6.5 / 1000.0;
@@ -40,20 +40,20 @@ pub fn continentality(
 /// Annual-mean temperature per cell, °C. Spinning: an insolation baseline
 /// (equator warm, poles cold) minus lapse-rate cooling above sea level.
 /// Locked: a substellar cosine, hottest at `+x` and floored on the night side.
-/// type-audit: pending(wave-2)
+/// type-audit: pending(wave-2: insolation)
 pub fn mean_temperature(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
     insolation: f64,
     regime: &RotationRegime,
-) -> CellMap<f64> {
+) -> CellMap<Temperature> {
     // Equilibrium temperature scales as S^(1/4).
     let scale = math::powf(insolation.max(0.0), 0.25);
     CellMap::from_fn(geo, |cell| {
         let above = (*elevation.get(cell) - sea_level).max(0.0);
         let lapse = LAPSE_C_PER_M * above;
-        match regime {
+        let c = match regime {
             RotationRegime::Spinning { .. } => {
                 let lat = geo.coord(cell).latitude.to_radians();
                 // Blackbody baseline (288 K × S^(1/4)) plus a latitude term of +30 °C at the
@@ -73,7 +73,8 @@ pub fn mean_temperature(
                     -60.0 - lapse
                 }
             }
-        }
+        };
+        Temperature::new(c).expect("temperature is finite")
     })
 }
 
@@ -97,7 +98,7 @@ pub fn seasonal_amplitude(
 /// type-audit: pending(wave-2)
 #[allow(clippy::too_many_arguments)]
 pub fn temperature_at(
-    mean: &CellMap<f64>,
+    mean: &CellMap<Temperature>,
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
@@ -106,7 +107,7 @@ pub fn temperature_at(
     regime: &RotationRegime,
     cell: CellId,
     day: f64,
-) -> f64 {
+) -> Temperature {
     let base = *mean.get(cell);
     match regime {
         RotationRegime::Locked => base,
@@ -117,7 +118,7 @@ pub fn temperature_at(
             let amp = seasonal_amplitude(geo, elevation, sea_level, obliquity_deg, cell);
             let phase = (day / year_length_std).rem_euclid(1.0);
             let hemi = geo.coord(cell).latitude.signum();
-            base + amp * hemi * math::sin(std::f64::consts::TAU * phase)
+            base + TempAnomaly::from_offset_c(amp * hemi * math::sin(std::f64::consts::TAU * phase))
         }
     }
 }
@@ -215,7 +216,7 @@ mod tests {
             .min_by(|a, b| geo.position(*a)[0].total_cmp(&geo.position(*b)[0]))
             .unwrap();
         assert!(
-            *mean.get(sub) > *mean.get(anti) + 50.0,
+            *mean.get(sub) > *mean.get(anti) + TempAnomaly::from_offset_c(50.0),
             "substellar must tower over antistellar"
         );
     }

@@ -3,7 +3,7 @@
 //! (spec §6). It pre-wires the embark seam and yields the Lab's habitable-
 //! fraction unknown number (spec §10).
 
-use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation};
+use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation, Temperature};
 
 /// Coldest tolerable annual-mean temperature (°C).
 const HABITABLE_MIN_C: f64 = -5.0;
@@ -13,24 +13,26 @@ const HABITABLE_MAX_C: f64 = 35.0;
 const HABITABLE_MIN_MOISTURE: f64 = 0.2;
 
 /// Whether a cell could host a vale-like settlement.
-/// type-audit: pending(wave-2: temp_c), bare-ok(ratio: moisture), bare-ok(flag: return)
+/// type-audit: bare-ok(ratio: moisture), bare-ok(flag: return)
 pub fn is_habitable(
-    temp_c: f64,
+    temp_c: Temperature,
     moisture: f64,
     elevation_m: ReferenceElevation,
     sea_level_m: ReferenceElevation,
 ) -> bool {
+    let min = Temperature::new(HABITABLE_MIN_C).expect("habitable min is finite");
+    let max = Temperature::new(HABITABLE_MAX_C).expect("habitable max is finite");
     elevation_m >= sea_level_m
-        && (HABITABLE_MIN_C..=HABITABLE_MAX_C).contains(&temp_c)
+        && (min..=max).contains(&temp_c)
         && moisture >= HABITABLE_MIN_MOISTURE
 }
 
 /// The per-cell habitability mask.
-/// type-audit: pending(wave-2: mean_temp), bare-ok(ratio: moisture), bare-ok(flag: return)
+/// type-audit: bare-ok(ratio: moisture), bare-ok(flag: return)
 pub fn habitability_map(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
-    mean_temp: &CellMap<f64>,
+    mean_temp: &CellMap<Temperature>,
     moisture: &CellMap<f64>,
     sea_level: ReferenceElevation,
 ) -> CellMap<bool> {
@@ -59,29 +61,34 @@ mod tests {
     use super::*;
     use hornvale_kernel::Geosphere;
 
+    /// Test-only helper: a validated `Temperature`.
+    fn t(c: f64) -> Temperature {
+        Temperature::new(c).unwrap()
+    }
+
     #[test]
     fn ocean_and_extremes_are_uninhabitable_temperate_land_is_habitable() {
         let sea = ReferenceElevation::new(0.0).unwrap();
         assert!(!is_habitable(
-            20.0,
+            t(20.0),
             0.5,
             ReferenceElevation::new(-100.0).unwrap(),
             sea
         )); // ocean
         assert!(!is_habitable(
-            50.0,
+            t(50.0),
             0.5,
             ReferenceElevation::new(100.0).unwrap(),
             sea
         )); // too hot
         assert!(!is_habitable(
-            15.0,
+            t(15.0),
             0.05,
             ReferenceElevation::new(100.0).unwrap(),
             sea
         )); // too dry
         assert!(is_habitable(
-            15.0,
+            t(15.0),
             0.5,
             ReferenceElevation::new(100.0).unwrap(),
             sea
@@ -99,7 +106,7 @@ mod tests {
             };
             ReferenceElevation::new(m).unwrap()
         });
-        let temp = CellMap::from_fn(&geo, |_| 15.0);
+        let temp = CellMap::from_fn(&geo, |_| t(15.0));
         let moist = CellMap::from_fn(&geo, |_| 0.5);
         let map = habitability_map(
             &geo,

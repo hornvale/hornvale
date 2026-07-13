@@ -9,7 +9,7 @@ use crate::circulation::{RotationRegime, band_count_for, prevailing_wind};
 use crate::habitability;
 use crate::moisture::moisture_field;
 use crate::temperature::{mean_temperature, temperature_at};
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
+use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Temperature};
 
 /// The inputs the composition root supplies to build a climate (all bare
 /// kernel types or climate-owned types — no terrain/astronomy imports).
@@ -41,7 +41,7 @@ pub struct GeneratedClimate {
     geosphere: Geosphere,
     elevation: CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    mean_temp: CellMap<f64>,
+    mean_temp: CellMap<Temperature>,
     moisture: CellMap<f64>,
     biome: CellMap<Biome>,
     habitability: CellMap<bool>,
@@ -151,13 +151,12 @@ impl GeneratedClimate {
         self.regime
     }
     /// Annual-mean temperature at a cell, °C.
-    /// type-audit: pending(wave-2)
-    pub fn mean_temperature_at(&self, cell: CellId) -> f64 {
+    pub fn mean_temperature_at(&self, cell: CellId) -> Temperature {
         *self.mean_temp.get(cell)
     }
     /// Temperature at a cell on a given day, °C (mean plus the seasonal term).
-    /// type-audit: pending(wave-2)
-    pub fn temperature_at(&self, cell: CellId, day: f64) -> f64 {
+    /// type-audit: pending(wave-2: day)
+    pub fn temperature_at(&self, cell: CellId, day: f64) -> Temperature {
         temperature_at(
             &self.mean_temp,
             &self.geosphere,
