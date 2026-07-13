@@ -1,5 +1,5 @@
 //! Shared physical-quantity newtypes that cross domain boundaries
-//! (decision `shared-units-live-in-the-kernel`: coherent quantities crossing domain boundaries live in the
+//! (decision 0044 (`shared-units-live-in-the-kernel`): coherent quantities crossing domain boundaries live in the
 //! kernel). A domain depends on the kernel and nothing else, so a quantity
 //! spoken by more than one domain has its only legal home here.
 
@@ -86,7 +86,7 @@ impl ReferenceElevation {
 
 /// The signed metre difference between two elevations. A local intermediate
 /// (lapse rate, depth shading) — a height-above-a-datum earns its own type
-/// only if it crosses a pub boundary (spec "The Datum" / decision `shared-units-live-in-the-kernel`).
+/// only if it crosses a pub boundary (spec "The Datum" / decision 0044 (`shared-units-live-in-the-kernel`)).
 impl Sub for ReferenceElevation {
     type Output = f64;
     fn sub(self, rhs: Self) -> f64 {
@@ -136,12 +136,13 @@ impl Temperature {
 
 impl Sub for Temperature {
     type Output = TempAnomaly;
-    /// One of the two production paths that produce a [`TempAnomaly`] (the
-    /// other is [`TempAnomaly::from_offset_c`]): subtracting two [`Temperature`]
-    /// readings. There is no other constructor that turns an absolute
-    /// temperature into an anomaly, so it is impossible to accidentally hand
-    /// an absolute reading to code that expects a difference from present
-    /// (decision 0008).
+    /// One of three production paths that produce a [`TempAnomaly`] (the
+    /// others are [`TempAnomaly::from_offset_c`] and [`Add`](std::ops::Add)
+    /// for `TempAnomaly`): subtracting two [`Temperature`] readings. There
+    /// is no other constructor that turns an absolute temperature into an
+    /// anomaly, so it is impossible to accidentally hand an absolute
+    /// reading to code that expects a difference from present (decision
+    /// 0008).
     fn sub(self, rhs: Temperature) -> TempAnomaly {
         TempAnomaly(self.0 - rhs.0)
     }
@@ -166,12 +167,14 @@ impl Add<TempAnomaly> for Temperature {
 pub struct TempAnomaly(f64);
 
 impl TempAnomaly {
-    /// Validating constructor: finite (sign and magnitude unconstrained).
     /// Builds a `TempAnomaly` directly from a computed ΔT, rather than from
-    /// a difference of two readings. Now `pub` (was `pub(crate)` in paleoclimate):
-    /// the kernel is a shared home, so the guarded-offset constructor is now
-    /// crate-public; the finite validation is preserved, and [`Sub`](std::ops::Sub)
-    /// remains the only *other* production path.
+    /// a difference of two readings. Fully `pub` since the kernel promotion
+    /// (was `pub(crate)` in paleoclimate): the kernel is a shared home, so
+    /// any domain may call this constructor directly. Finiteness is checked
+    /// only by a `debug_assert!` — release builds accept a non-finite value
+    /// without error, so callers must supply a finite offset themselves.
+    /// [`Sub`](std::ops::Sub) for [`Temperature`] and [`Add`](std::ops::Add)
+    /// for `TempAnomaly` are the other production paths.
     /// type-audit: bare-ok(constructor-edge: value)
     pub fn from_offset_c(value: f64) -> Self {
         debug_assert!(value.is_finite(), "temperature offset must be finite");

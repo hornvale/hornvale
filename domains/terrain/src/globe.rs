@@ -16,11 +16,12 @@ use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation, Seed};
 pub struct TectonicGlobe {
     /// Plate index per cell (an index into `plates`).
     pub plate_of: CellMap<u32>,
-    /// Crust thickness per cell, in kilometers (bare f64 by documented
-    /// convention, mirroring the elevation waiver — the field's own
-    /// `CrustKm` newtype validates at construction; the per-cell sample
-    /// here is a plain `f64` for the same reason elevation is: it feeds
-    /// bulk numeric assembly, not a single validated boundary crossing).
+    /// Crust thickness per cell, in kilometers (bare f64 under the
+    /// `crust-km-convention` type-audit waiver, its own family's future
+    /// wave — see decision 0044's roadmap). The field's own `CrustKm`
+    /// newtype validates at construction; the per-cell sample here is a
+    /// plain `f64` because it feeds bulk numeric assembly, not a single
+    /// validated boundary crossing.
     pub crust: CellMap<f64>,
     /// Elevation per cell, relative to the isostatic reference datum (see
     /// `hornvale_kernel::ReferenceElevation`).

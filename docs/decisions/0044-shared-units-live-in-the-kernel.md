@@ -75,7 +75,7 @@ as worked rationale and the family roadmap).
   forecloses them. Ordinal/nominal scales are never units, by definition
   above.
 
-This record supersedes 0008's silence on placement; 0008's newtype-vs-bare-f64
+This record replaces 0008's silence on placement; 0008's newtype-vs-bare-f64
 boundary rule stands unchanged. The `elevation-convention` waiver (decision
 0028's rubric) is reclassified **temporary**: it is retired for the elevation
 datum by `ReferenceElevation` (`kernel/src/units.rs`), the pilot this record

@@ -1,4 +1,5 @@
-//! Temperature over the globe (°C, bare f64 by documented convention).
+//! Temperature over the globe (canonical °C; the kernel's `Temperature`
+//! newtype is the typed boundary — see `hornvale_kernel::Temperature`).
 //! Spinning worlds: an insolation baseline that falls with latitude and with
 //! elevation (lapse rate), plus a hemisphere-signed seasonal swing set by
 //! obliquity and damped near oceans. Tidally locked worlds: temperature is
