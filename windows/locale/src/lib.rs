@@ -13,6 +13,8 @@ mod micro;
 
 mod grammar;
 
+mod budget;
+
 use streams::{LOCALE_ASPECT, LOCALE_JITTER};
 
 use hornvale_climate::{Biome, GeneratedClimate};
