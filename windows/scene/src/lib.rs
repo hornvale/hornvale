@@ -138,7 +138,7 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
             let t_cell = terrain_index.nearest(terrain.geosphere(), latitude, longitude);
             let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
-            elevation_m.push(terrain.elevation_at(t_cell));
+            elevation_m.push(terrain.elevation_at(t_cell).get());
             ocean.push(terrain.is_ocean(t_cell));
             let b = *biomes.get(c_cell);
             let index = catalog
@@ -162,7 +162,7 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
         seed: world.seed.0,
         width,
         height,
-        sea_level_m: terrain.sea_level(),
+        sea_level_m: terrain.sea_level().get(),
         elevation_m,
         ocean,
         biome,

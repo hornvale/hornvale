@@ -16,8 +16,8 @@ use hornvale_climate::{
 };
 use hornvale_kernel::{
     ConceptRegistry, EntityId, Fact, GeoCoord, Geosphere, LedgerError, ObserverContext,
-    PerceptionLens, PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime,
-    math, observe,
+    PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation, RegistryError, Seed, Value,
+    World, WorldTime, math, observe,
 };
 use hornvale_paleoclimate::{
     Celsius, EraClimate, PaleoRecord, caloric_summer_index, integrate_ice,
@@ -454,7 +454,7 @@ struct EraContext<'a> {
     /// The shared geosphere (terrain's, reused for climate's grid).
     geo: &'a Geosphere,
     /// Present relief; elevation does not change across eras.
-    elevation: &'a hornvale_kernel::CellMap<f64>,
+    elevation: &'a hornvale_kernel::CellMap<ReferenceElevation>,
     /// Seafloor feature per cell, derived once from terrain's boundaries.
     seafloor: &'a hornvale_kernel::CellMap<SeafloorFeature>,
     /// Insolation relative to Earth, from the world's sky (constant per world).
@@ -479,8 +479,8 @@ struct EraContext<'a> {
 struct EraInputs {
     /// Absolute standard day of the era.
     day: f64,
-    /// This era's sea level (metres): present + eustatic change.
-    sea_level: f64,
+    /// This era's sea level: present + eustatic change.
+    sea_level: ReferenceElevation,
     /// This era's obliquity, degrees, from the sky's forcing.
     obliquity_deg: f64,
     /// This era's albedo-cooling offset from the integrated ice history.
@@ -718,7 +718,10 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
             .expect("history is non-empty");
         era_inputs.push(EraInputs {
             day: era_day,
-            sea_level: present_sea_level + state.sea_level_change.get(),
+            sea_level: ReferenceElevation::new(
+                present_sea_level.get() + state.sea_level_change.get(),
+            )
+            .expect("present sea level plus a finite eustatic change is finite"),
             obliquity_deg: forcing.obliquity_at(era_day),
             temp_offset: state.temp_offset,
         });
