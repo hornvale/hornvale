@@ -1,4 +1,4 @@
-# Serialized floats are quantized for cross-platform determinism
+# 0033. Serialized floats are quantized for cross-platform determinism
 
 **Status:** Accepted (2026-07-10) · **Decider:** Nathan · **Campaign:** Common Ground
 

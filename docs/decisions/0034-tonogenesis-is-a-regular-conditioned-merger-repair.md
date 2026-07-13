@@ -1,4 +1,4 @@
-# Tonogenesis is a regular conditioned sound change, not a homophony patch
+# 0034. Tonogenesis is a regular conditioned sound change, not a homophony patch
 
 **Status:** Accepted (2026-07-10) · **Decider:** Nathan
 
@@ -35,7 +35,7 @@ so an atonal language (Neutral-only vowels) sees it as identity, and the shipped
 peoples' output changes only through the epoch reseed, never by gaining tone.
 What we knowingly give up: tonogenesis is not a homophony *guarantee*; a
 same-feature-loss collision survives, and that residual is the accepted realistic
-tail (see the sibling decision, `the-capacity-floor-is-reached-by-tone-not-segments`).
+tail (see the sibling decision, 0035).
 `Tone::Mid`
 is authored but banked — voicing is one bit, so the rule writes only `High`/`Low`
 — awaiting a future three-way conditioning source.

@@ -1,4 +1,4 @@
-# Calibration loads the census fixture
+# 0032. Calibration loads the census fixture
 
 **Status:** Accepted (2026-07-10) · **Decider:** Nathan
 
@@ -41,7 +41,7 @@ against the stale fixture until CI catches it, the same contract every other
 committed artifact already carries. After a worldgen change, regenerate with
 `lab run`.
 
-**See also.** Decision `ci-checks-500-seed-censuses` (the two fixtures are the
+**See also.** Decision 0029 (the two fixtures are the
 CI-checked census half); decision 0011 (studies are data, metrics are code);
 the Laboratory overview self-check section
 (`book/src/laboratory/overview.md`). Slug filename per decision 0026.

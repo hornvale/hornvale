@@ -1,4 +1,4 @@
-# The room-tier ledger is chunk-partitioned (only if it outgrows memory)
+# 0037. The room-tier ledger is chunk-partitioned (only if it outgrows memory)
 
 **Status:** Proposed (2026-07-11; re-scoped 2026-07-12 to defer to The Walk
 §3.6) · **Decider:** Nathan
@@ -45,5 +45,5 @@ runtime-vs-knowledge boundary, resolved by §3.4); `docs/design/room-scale/p2-su
 §10 (the partitioning design, now scoped to the deferred case); decision 0007 (the
 seed is a world's identity); decision 0006 (permanent contracts — the model for
 what "frozen" means); decision
-`serialized-floats-are-quantized-for-cross-platform-determinism` (the Lorenz
+0033 (the Lorenz
 guard-rail governs lossy snapshots).

@@ -102,7 +102,7 @@ All five resolved in Stage 3a:
   in `windows/lab/tests/calibration.rs`, the sanctioned sample in
   `preregistration_guard.rs`, and CLAUDE.md; do as one coordinated edit
   with a release-vs-debug note.
-- Add the `calibration-loads-the-census-fixture` decision cite to the
+- Add the 0032 decision cite to the
   probe's missing-row panic (it carries only the `make rebaseline` fix).
 - Extract the duplicated quantize-canonicalize helper (in
   `fixture_staleness.rs` and `calibration.rs`) into `hornvale_lab`.

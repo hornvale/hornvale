@@ -33,7 +33,7 @@ canonical-grid corner cells of its coarse ancestor triangle — a room's
 along a line the Crust campaign already drew: some quantities are *pointwise*
 fields, resample-anywhere; others are *mesh-bound* truth, computed once and
 never re-derived at a different resolution
-(decision `identity-computes-on-the-canonical-grid`).
+(decision 0038).
 
 **Continuous fields — temperature, moisture, elevation — blend.** These are
 resolution-free by the constitution's own terms, so a room may sample them as
@@ -45,7 +45,7 @@ from.
 **Biome does not blend — it inherits, at maximum weight.** Biome is a
 *category*, and blending a category is not refinement, it is re-quantization —
 computing a new classification at a resolution the canonical grid never
-authorized. Decision `identity-computes-on-the-canonical-grid` reserves that
+authorized. Decision 0038 reserves that
 move for an epoch, not a tier, so a room's biome is simply the biome of
 whichever corner cell carries the largest weight (ties broken by lowest
 `CellId`, deterministic and platform-exact, since the weights themselves are

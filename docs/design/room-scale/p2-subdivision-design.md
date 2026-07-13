@@ -264,14 +264,14 @@ be a refinement of the biome its three parents already agreed on.
 
 **Field-refinement, not mesh-requantization (Crust's canonical-grid line).** Crust
 ratified that *identity computes on the canonical grid; observation samples fields*
-(decision `identity-computes-on-the-canonical-grid`): pointwise `Field`s (elevation,
+(decision 0038): pointwise `Field`s (elevation,
 crust, biome-via-field) are resolution-free, and a room may sample them as finely as
 it likes. But **mesh-bound quantities — sea level, drainage and basins, connected
 land components, settlement placement — bear world identity and are computed once on
 the canonical grid.** A room therefore *refines fields* yet *inherits* mesh-bound
 truth: it must not re-derive a coastline, a lake, or a drainage basin at room scale,
 because a finer re-quantization would *contradict* world identity, not refine it —
-that is an epoch, not a tier (decision `epochs-replace-tiers-refine`). Room detail
+that is an epoch, not a tier (decision 0039). Room detail
 adds *within* what the canonical grid already fixed; the constrain step (P2's kin to
 The Walk §4.1 step 5) enforces it.
 
@@ -345,7 +345,7 @@ what is loaded*.
 > is the **deferred out-of-RAM form** that The Walk §3.6 explicitly sets aside, kept
 > here so the addressing stays partition-ready and the eventual design is on record.
 > The *shape* (append-only log + derived indexes) is shared; only scale and machinery
-> differ. See decision `the-room-tier-ledger-is-chunk-partitioned`.
+> differ. See decision 0037.
 
 **The key is two layers — freeze only the address.** A first pass framed this as
 "pick a chunk-prefix length `k`" and freeze it; that optimizes the wrong quantity.
@@ -424,7 +424,7 @@ keyed/shardable by address prefix. A world then reads as two tiers —
 — still "a world is a seed plus a ledger," just spatially partitioned; an
 untouched world remains just a seed. Because **only the address is a contract** (no
 chunk size is), the sole frozen surface is one we already own; the physical
-segmentation evolves freely (decision `the-room-tier-ledger-is-chunk-partitioned`).
+segmentation evolves freely (decision 0037).
 
 **Span features cross chunks; derive them top-down.** Rivers, roads, migration
 routes, a territory's extent — simulate none of them room-by-room (that forces
@@ -513,7 +513,7 @@ per-chunk authority is required for any multi-writer deployment.
   (c) the 30-edge gluing table; (d) `RoomId` packing — which is *also* the
   room-tier ledger's only frozen key (§10): physical segmentation is adaptive and
   explicitly **not** a contract (decision
-  `the-room-tier-ledger-is-chunk-partitioned`). Changing any of (a)–(d) is an
+  0037). Changing any of (a)–(d) is an
   epoch-suffix regeneration, never an edit.
 - **std-only + serde.** All of it — hashing, slerp, the neighbor walk, the gluing
   table — is std math and fixed data. No new crates (no H3/S2 crate; we borrow

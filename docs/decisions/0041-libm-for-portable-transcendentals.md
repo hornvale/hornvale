@@ -1,4 +1,4 @@
-# 0028. libm for portable transcendentals
+# 0041. libm for portable transcendentals
 
 **Status:** Accepted (2026-07-13) · **Decider:** Nathan
 
@@ -11,7 +11,7 @@ by the pure-Rust `libm` crate**, and that **`libm` joins the dependency
 allowlist** (amending [0004](0004-no-new-dependencies.md)).
 
 **Context.** 8-sig-fig quantization (decision
-`serialized-floats-are-quantized-for-cross-platform-determinism`) makes the
+0033) makes the
 *serialization* boundary portable, but the *compute* path still sees
 full-precision platform-libm values — and a discrete threshold on such a value
 (a percentile sea level, a merger test) can flip between platforms even when
@@ -51,5 +51,5 @@ confirming byte-identity with the committed macOS set (this campaign's
 cross-platform check).
 
 **See also.** [0004](0004-no-new-dependencies.md) (no new dependencies —
-amended here); `serialized-floats-are-quantized-for-cross-platform-determinism`;
+amended here); 0033;
 `kernel/src/math.rs`; `clippy.toml`.

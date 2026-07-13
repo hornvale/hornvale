@@ -3,7 +3,7 @@
 This directory is **The Frontier** — the book's one speculative part: the
 frontier essays (`frontier.md`) and the idea registry (`idea-registry.md`).
 It is published, but it is NOT merged reality; it governs nothing, and
-specs bind over it (decision `the-frontier-is-published-in-the-book`).
+specs bind over it (decision 0031).
 
 ## The registry and the frontier are two halves of one thing
 

@@ -45,7 +45,7 @@ small enclosed space to a small patch of wilderness distinct from its neighbors.
   parked for the multiplayer future),
   constitutional fit, and a validation plan. The partitioned-ledger call is reserved
   as a `Proposed` decision
-  (`docs/decisions/the-room-tier-ledger-is-chunk-partitioned.md`).
+  (`docs/decisions/0037-the-room-tier-ledger-is-chunk-partitioned.md`).
 
 ## The ideation cycles (raw material behind the synthesis)
 

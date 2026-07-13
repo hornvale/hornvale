@@ -1,4 +1,4 @@
-# The proto-root assignment is merger-aware (zero core homophony)
+# 0036. The proto-root assignment is merger-aware (zero core homophony)
 
 **Status:** Accepted (2026-07-11) · **Decider:** Nathan
 
@@ -47,9 +47,9 @@ defect.
 
 **See also.** The phonology-epoch spec
 (`docs/superpowers/specs/2026-07-10-phonology-tone-tonogenesis-design.md`);
-`tonogenesis-is-a-regular-conditioned-merger-repair` (the tonal-species repair
+0034 (the tonal-species repair
 this generalizes to atonal peoples) and
-`the-capacity-floor-is-reached-by-tone-not-segments`; decision 0011 (studies are
+0035; decision 0011 (studies are
 data, metrics are code — the confusable/core split is measured);
 `assign_proto_roots` in `domains/language/src/etymology.rs` and the Lab test
 `core_homophony_is_zero_for_every_daughter_under_the_merger_aware_assignment`.

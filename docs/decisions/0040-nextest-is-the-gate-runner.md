@@ -1,4 +1,4 @@
-# 0027. cargo-nextest is the gate's test runner
+# 0040. cargo-nextest is the gate's test runner
 
 **Status:** Accepted (2026-07-13) · **Decider:** Nathan
 

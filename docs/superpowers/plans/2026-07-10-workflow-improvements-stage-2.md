@@ -114,7 +114,7 @@ Claude-Session: https://claude.ai/code/session_01STboWuJ5sz26RTjVwDkGQu"
 
 ### Task 2: TOOL-16 — the fixture-staleness probe
 
-A developer who changes worldgen and runs only `cargo test` currently sees calibration pass against a stale census fixture until CI catches it (the one cost decision `calibration-loads-the-census-fixture` accepted knowingly). Close most of that gap with a ~seconds-cost always-on probe: regenerate the first 3 seeds live, compare against the fixture, fail with the regeneration instruction.
+A developer who changes worldgen and runs only `cargo test` currently sees calibration pass against a stale census fixture until CI catches it (the one cost decision 0032 accepted knowingly). Close most of that gap with a ~seconds-cost always-on probe: regenerate the first 3 seeds live, compare against the fixture, fail with the regeneration instruction.
 
 **Known latent bug this task also fixes:** `run()` returns full-precision `MetricValue::Number`s; quantization happens only at the `render_csv` emit boundary; `load_rows` returns quantized values. So the ignored guard `census_fixture_matches_live_run` (`windows/lab/tests/calibration.rs:46-68`), which asserts `loaded == live` and which CI does **not** run, has been silently broken since the quantization epoch. Both the new probe and the repaired guard must canonicalize live rows (quantize their Numbers) before comparing.
 
@@ -135,7 +135,7 @@ Create `windows/lab/tests/fixture_staleness.rs`:
 ```rust
 //! Always-on staleness probe for the committed census fixtures (TOOL-16).
 //!
-//! Decision `calibration-loads-the-census-fixture` accepted one cost
+//! Decision 0032 accepted one cost
 //! knowingly: a developer who changes worldgen and runs only `cargo test`
 //! sees calibration pass against the stale fixture until CI's artifact
 //! drift check catches it. This probe closes most of that gap for a few
@@ -158,7 +158,7 @@ use std::path::Path;
 const PROBE_SEEDS: u64 = 3;
 
 /// The two committed, CI-drift-checked censuses (decision
-/// `ci-checks-500-seed-censuses`).
+/// 0029).
 const CENSUSES: [(&str, &str); 2] = [
     (
         "../../studies/census-lands-drift.study.json",
@@ -173,7 +173,7 @@ const CENSUSES: [(&str, &str); 2] = [
 /// Canonicalize a live row for comparison with a fixture row: fixture
 /// floats passed through the serialization boundary (`render_csv`
 /// quantizes — decision
-/// `serialized-floats-are-quantized-for-cross-platform-determinism`), so a
+/// 0033), so a
 /// live full-precision Number must be quantized before equality holds.
 fn canonical(row: &Row) -> Row {
     Row {
@@ -218,7 +218,7 @@ fn assert_fixture_fresh(
             "worldgen changed but the census fixture {rows_path} was not regenerated (seed {} \
              / pin set '{}' differs). Run `make rebaseline` (or `cargo run --release -p \
              hornvale -- lab run {study_path}`), review the diff, and commit it WITH the \
-             change that moved it (decision calibration-loads-the-census-fixture).",
+             change that moved it (decision 0032).",
             row.seed,
             row.pin_set
         );
@@ -854,7 +854,7 @@ Run `shellcheck scripts/freeze-fixture.sh`; expected: clean.
 cargo run --manifest-path tools/type-audit/Cargo.toml -- check
 ```
 
-Expected: PASS (the new pub items carry `type-audit:` tags). If it flags an untagged boundary, add the missing verdict tag per `docs/decisions/the-bare-ok-rubric.md` — do not waive without reason. Then regenerate the committed report:
+Expected: PASS (the new pub items carry `type-audit:` tags). If it flags an untagged boundary, add the missing verdict tag per `docs/decisions/0028-the-bare-ok-rubric.md` — do not waive without reason. Then regenerate the committed report:
 
 ```bash
 cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md

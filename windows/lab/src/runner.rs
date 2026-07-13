@@ -58,7 +58,7 @@ pub struct RunResult {
 /// `Number` values exactly as [`render_csv`] does at the serialization
 /// boundary, so a full-precision live row compares equal to its committed,
 /// quantized counterpart (decision
-/// `serialized-floats-are-quantized-for-cross-platform-determinism`).
+/// 0033).
 pub fn canonical_row(row: &Row) -> Row {
     Row {
         seed: row.seed,

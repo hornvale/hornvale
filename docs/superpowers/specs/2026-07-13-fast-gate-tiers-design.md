@@ -158,7 +158,7 @@ test as a process across all cores: the fast tier dropped to **234s (3.9
 min)** on the same contended machine — under the criterion, with no
 over-gating. The two levers are complementary (the `#[ignore]` tier removes
 the multi-minute censuses; nextest parallelizes the rest); neither alone
-crosses 5 min. Recorded as [decision 0027](../../decisions/0027-nextest-is-the-gate-runner.md).
+crosses 5 min. Recorded as [decision 0040](../../decisions/0040-nextest-is-the-gate-runner.md).
 The canonical `heavy:` reason string gained a `(minutes)` cost token so it
 satisfies the pre-existing ADR-0016 preregistration guard, should a
 heavy-tagged test ever land in a `*calibration*.rs` file. `make gate` now

@@ -60,7 +60,7 @@ right shape.
   generated star system are both valid; higher fidelity refines and never
   contradicts lower — *shipped*, and holds from astronomy through religion's
   tiers. Crust sharpened it into a stated contract (decision
-  `identity-computes-on-the-canonical-grid`): the terrain quantities that are
+  0038): the terrain quantities that are
   *pointwise* — crust thickness and age — are stateless `Field`s any grid may
   resample, while the *mesh-bound* ones (sea level, drainage, placement)
   compute once on the world's canonical grid. So the pointwise half of the

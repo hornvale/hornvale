@@ -849,7 +849,7 @@ fn name_collision_rate_is_measured_and_pinned() {
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        // libm re-pin (decision 0028): 0.168_866_097_746 -> 0.168_816_377_846
+        // libm re-pin (decision 0041): 0.168_866_097_746 -> 0.168_816_377_846
         (mean - 0.168_816_377_846).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
@@ -894,7 +894,7 @@ fn name_length_distributions_are_measured_and_pinned() {
     // name draw per eclipsing moon shifts every later name salt, same
     // mechanism as the SKY-5 re-pin.
     for (species, expected_present, expected_mean) in [
-        // libm re-pin (decision 0028): goblin 11.255_035_493_600_001, kobold
+        // libm re-pin (decision 0041): goblin 11.255_035_493_600_001, kobold
         // 14.182_334_456_399_987 -> below
         ("goblin", 500u32, 11.254_475_200_600),
         ("kobold", 500u32, 14.179_907_668_000),
@@ -1098,7 +1098,7 @@ fn null_control_name_length_smd_is_pinned() {
     // identically in structure, nudging the SMD by ~0.002 — still well
     // inside the ±0.2 sampling bound.
     assert!(
-        // libm re-pin (decision 0028): -0.082_573_510_253_099_77 -> below
+        // libm re-pin (decision 0041): -0.082_573_510_253_099_77 -> below
         (namelen - -0.082_524_201_701_795_61).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );

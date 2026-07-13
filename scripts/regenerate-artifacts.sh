@@ -17,7 +17,7 @@
 #
 # Canonical numeric artifacts are byte-identical across platforms (floats are
 # quantized at every serialization boundary — decision
-# serialized-floats-are-quantized-for-cross-platform-determinism). The PNG maps
+# 0033). The PNG maps
 # and scene/tiles are rendered per-cell views whose pixels/indices come from
 # host-libm-divergent transcendentals; CI excludes those from its byte drift
 # check (see ci.yml), but this script still regenerates them so a local

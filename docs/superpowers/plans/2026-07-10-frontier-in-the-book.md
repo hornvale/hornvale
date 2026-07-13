@@ -116,7 +116,7 @@ New first paragraph of the doc comment:
 ```rust
 /// The merged-reality parts of the book must not cite the idea registry:
 /// The Frontier part is the registry's published home (decision
-/// `the-frontier-is-published-in-the-book`), and every other part describes
+/// 0031), and every other part describes
 /// merged reality — the recurring failure where a chronicle or domain
 /// chapter cited a registry ID (`EXP-3`) or leaked engineering-process
 /// vocabulary was caught by review twice before this check existed.
@@ -235,7 +235,7 @@ rendered at <https://hornvale.github.io/hornvale/frontier/frontier.html>.
 
 This stub keeps historical links resolving — ratified decisions and frozen
 plans/specs are never edited. See decision
-[`the-frontier-is-published-in-the-book`](../decisions/the-frontier-is-published-in-the-book.md).
+[0031](../decisions/0031-the-frontier-is-published-in-the-book.md).
 ```
 
 Create `docs/vision/idea-registry.md`:
@@ -250,7 +250,7 @@ rendered at <https://hornvale.github.io/hornvale/frontier/idea-registry.html>.
 The registry-first habit is unchanged: grep the new path before proposing
 or reopening any idea. This stub keeps historical links resolving — ratified
 decisions and frozen plans/specs are never edited. See decision
-[`the-frontier-is-published-in-the-book`](../decisions/the-frontier-is-published-in-the-book.md).
+[0031](../decisions/0031-the-frontier-is-published-in-the-book.md).
 ```
 
 (These stubs link to a decision record created in Task 2; the stubs are outside the drift-check's link-checked set, so this ordering is safe, and Task 2 lands before anything is pushed.)
@@ -318,18 +318,18 @@ Claude-Session: https://claude.ai/code/session_01AVcNDBVsLpjnS19xdreZei"
 ### Task 2: Repoint the live docs, ratify the decision (one commit)
 
 **Files:**
-- Create: `docs/decisions/the-frontier-is-published-in-the-book.md`
+- Create: `docs/decisions/0031-the-frontier-is-published-in-the-book.md`
 - Create: `book/src/frontier/CLAUDE.md`
 - Modify: `docs/decisions/README.md` (append one index row)
 - Modify: `docs/README.md`, `docs/CLAUDE.md`, `CLAUDE.md` (repo root), `book/src/introduction.md`
 
 **Interfaces:**
 - Consumes: the chapters at `book/src/frontier/` from Task 1.
-- Produces: the decision slug `the-frontier-is-published-in-the-book` (already linked by Task 1's stubs).
+- Produces: the decision slug 0031 (already linked by Task 1's stubs).
 
 - [ ] **Step 1: Write the decision record**
 
-Create `docs/decisions/the-frontier-is-published-in-the-book.md`:
+Create `docs/decisions/0031-the-frontier-is-published-in-the-book.md`:
 
 ```markdown
 # The frontier is published in the book
@@ -367,7 +367,7 @@ lifecycle, and decisions/specs staying out of the book.
 Append to the index table in `docs/decisions/README.md`:
 
 ```markdown
-| [`the-frontier-is-published…`](the-frontier-is-published-in-the-book.md) | The frontier is published in the book | Accepted |
+| [`the-frontier-is-published…`](0031-the-frontier-is-published-in-the-book.md) | The frontier is published in the book | Accepted |
 ```
 
 - [ ] **Step 2: Create `book/src/frontier/CLAUDE.md` (the editing rules follow the files)**
@@ -380,7 +380,7 @@ CLAUDE.md files load by directory, so the registry/frontier editing discipline m
 This directory is **The Frontier** — the book's one speculative part: the
 frontier essays (`frontier.md`) and the idea registry (`idea-registry.md`).
 It is published, but it is NOT merged reality; it governs nothing, and
-specs bind over it (decision `the-frontier-is-published-in-the-book`).
+specs bind over it (decision 0031).
 
 ## The registry and the frontier are two halves of one thing
 
@@ -462,7 +462,7 @@ with:
 
 The frontier essays and the idea registry live at `book/src/frontier/` —
 the book's one clearly-marked speculative part (decision
-`the-frontier-is-published-in-the-book`). Their editing discipline (IDs are
+0031). Their editing discipline (IDs are
 permanent, ToC completeness, status flips, link conventions) lives beside
 them in [`book/src/frontier/CLAUDE.md`](../book/src/frontier/CLAUDE.md).
 The old `docs/vision/` paths hold redirect stubs so historical links
@@ -482,7 +482,7 @@ with:
 ```markdown
 - **The book's merged-reality contract is per-part.** The frontier and
   registry are published as the book's clearly-marked Frontier part
-  (decision `the-frontier-is-published-in-the-book`); every other part of
+  (decision 0031); every other part of
   the book describes merged reality — do not surface speculative material
   anywhere else in `book/`, and do not cite registry IDs outside
   `book/src/frontier/` (the drift-check enforces this). Specs, plans, and
@@ -498,7 +498,7 @@ Five edits:
 ```markdown
 (The registry and frontier live in the book — `book/src/frontier/`, the
 published Frontier part — since decision
-`the-frontier-is-published-in-the-book`; the pipeline itself is unchanged.)
+0031; the pipeline itself is unchanged.)
 ```
 
 **(b)** Table row — replace:
@@ -555,7 +555,7 @@ with:
 ```markdown
 - **The book's merged-reality contract is per-part.** The frontier and
   registry are published as the book's marked Frontier part (decision
-  `the-frontier-is-published-in-the-book`); every other part of the book is
+  0031); every other part of the book is
   merged reality. Specs, plans, and decisions stay in `docs/`.
 ```
 
@@ -615,11 +615,11 @@ mdbook build book
 Expected: both green (`docs/README.md`'s rewritten links now resolve into `book/src/frontier/`; the drift-check checks them).
 
 ```bash
-git add docs/decisions/the-frontier-is-published-in-the-book.md docs/decisions/README.md \
+git add docs/decisions/0031-the-frontier-is-published-in-the-book.md docs/decisions/README.md \
   book/src/frontier/CLAUDE.md docs/CLAUDE.md docs/README.md CLAUDE.md book/src/introduction.md
 git commit -m "docs: ratify the frontier's publication; repoint the live docs
 
-Decision the-frontier-is-published-in-the-book records the boundary change
+Decision 0031 records the boundary change
 (per-part merged-reality contract) and what it deliberately leaves intact
 (REJ-3, registry-first, drain-to-specs). The registry/frontier editing
 rules move beside the files (book/src/frontier/CLAUDE.md); docs/CLAUDE.md,

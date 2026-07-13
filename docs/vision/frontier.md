@@ -6,4 +6,4 @@ rendered at <https://hornvale.github.io/hornvale/frontier/frontier.html>.
 
 This stub keeps historical links resolving — ratified decisions and frozen
 plans/specs are never edited. See decision
-[`the-frontier-is-published-in-the-book`](../decisions/the-frontier-is-published-in-the-book.md).
+[0031](../decisions/0031-the-frontier-is-published-in-the-book.md).

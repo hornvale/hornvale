@@ -1,4 +1,4 @@
-# Non-workspace dev tools may use parser libraries
+# 0027. Non-workspace dev tools may use parser libraries
 
 **Status:** Accepted (2026-07-09) · **Decider:** Nathan
 
@@ -29,5 +29,5 @@ workspace, own lockfile, committed and drift-checked outputs.
 
 **See also.** Decisions 0019, 0009, 0023, 0004, 0008; the type-audit spec
 (`docs/superpowers/specs/2026-07-09-the-type-audit-design.md`); decision
-`the-bare-ok-rubric` (the rubric the tool enforces). Slug filename, not a
+0028 (the rubric the tool enforces). Slug filename, not a
 number, per decision 0026 (slugs, not numbers).

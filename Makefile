@@ -52,7 +52,7 @@ test: nextest-check ## Run the workspace tests: nextest (parallel binaries) + do
 
 nextest-check: ## Fail with an install hint if cargo-nextest is missing
 	@command -v cargo-nextest >/dev/null 2>&1 || { \
-		echo "cargo-nextest not found — install it (decision 0027):"; \
+		echo "cargo-nextest not found — install it (decision 0040):"; \
 		echo "  cargo install cargo-nextest   # or: brew install cargo-nextest"; \
 		exit 1; }
 

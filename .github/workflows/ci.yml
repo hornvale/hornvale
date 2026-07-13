@@ -1,7 +1,7 @@
 name: CI
 
 on:
-  # Manual-only (decision 0029): a solo project whose dev machine outpaces the
+  # Manual-only (decision 0042): a solo project whose dev machine outpaces the
   # free 2-core runners, so per-push CI added latency without value. The local
   # gate + the AWS Linux runs (scripts/aws-gate/) are the gates; run this by
   # hand (Actions tab -> Run workflow) for an on-demand Linux check.
@@ -39,14 +39,14 @@ jobs:
           # cross-check ratifies that both build byte-identical worlds before
           # we trust the release-mode censuses the script ran; only the
           # 500-seed drift family is regenerated (10k censuses are author-time-
-          # only — decision ci-checks-500-seed-censuses). The type-audit check
+          # only — decision 0029). The type-audit check
           # is default-deny over pub-boundary primitives (its report is
           # regenerated inside the script).
           cargo test -p hornvale --test release_determinism -- --ignored
           cargo run --manifest-path tools/type-audit/Cargo.toml -- check
           # Canonical numeric artifacts are byte-identical across platforms
           # (floats quantized at every serialization boundary — decision
-          # serialized-floats-are-quantized-for-cross-platform-determinism), so
+          # 0033), so
           # they are strictly drift-checked. The PNG maps and scene/tiles are
           # *rendered per-cell views*: their pixel colors / biome indices come
           # from classifications thresholded on the host libm's last-ULP-
