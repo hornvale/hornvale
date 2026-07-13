@@ -87,7 +87,7 @@ figures (85.3% coastal — kobolds remain measurably less coastal than
 goblins, the campaign's first preregistered hypothesis) and the
 competitive-exclusion worlds this reversal sits alongside.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-flagship-subsistence.svg}}
+{{#include generated/the-census/the-census-default-flagship-subsistence.svg}}
 
 ## The first unknown number: how many settlements, and how big
 
@@ -118,7 +118,7 @@ unchanged in strength (+0.90). Mean population per world moves from 289.2
 to **294.9**. Full per-species distributions are
 [Study 006](study-006.md).
 
-{{#include generated/census-lands-drift/census-lands-drift-default-settlement-count.svg}}
+{{#include generated/the-census/the-census-default-settlement-count.svg}}
 
 **Mean population per world is far tighter than the settlement count that
 produces it: 289.2 (median 286.3, standard deviation 29.8, over a 133–402
@@ -131,7 +131,7 @@ the suitability — and so the population draw — of every settlement across
 the whole scatter, not only the flagship's site. The census is the first
 measurement of how much a world's mean narrows at this generator's scale.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-mean-population.svg}}
+{{#include generated/the-census/the-census-default-mean-population.svg}}
 
 ## The second unknown number: how stratified a flagship grows
 
@@ -168,7 +168,7 @@ Kobold structures, absent from this metric entirely (it stays
 goblin-pointed for continuity), have their own ceiling and shape recorded
 in [Study 006](study-006.md).
 
-{{#include generated/census-lands-drift/census-lands-drift-default-flagship-structure-size.svg}}
+{{#include generated/the-census/the-census-default-flagship-structure-size.svg}}
 
 ## The third unknown number: endorheic coverage
 
@@ -185,7 +185,7 @@ drains to the sea by the single-lowest-neighbor rule, banked substrate for
 salt lakes and closed watersheds that a future campaign can spend without
 regenerating a single world.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-endorheic-coverage.svg}}
+{{#include generated/the-census/the-census-default-endorheic-coverage.svg}}
 
 ## What the census does not yet say
 

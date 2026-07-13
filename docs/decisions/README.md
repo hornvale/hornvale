@@ -83,3 +83,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0041](0041-libm-for-portable-transcendentals.md) | libm for portable transcendentals (amends 0004) | Accepted |
 | [0042](0042-github-ci-is-manual-only.md) | GitHub Actions CI is manual-only (local + AWS are the gates) | Accepted |
 | [0043](0043-numbers-not-slugs.md) | Numbers, not slugs (supersedes 0026's decision-record naming) | Accepted |
+| [0044](0044-one-canonical-census.md) | One canonical census; frozen studies are evidence | Accepted |
+| [0045](0045-census-regen-is-remote-only.md) | Census regeneration is AWS-only | Accepted |

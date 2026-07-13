@@ -67,7 +67,7 @@ Zero mismatches, over 9,972 worlds with a pantheon — the same shift Study
 before the two-peoples re-baseline, no longer occurs at all) propagates
 exactly through this threshold, as the re-derivation guarantees it must.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-pantheon-verticality.svg}}
+{{#include generated/the-census/the-census-default-pantheon-verticality.svg}}
 
 **The head deity's tenet is not authored either; it is read straight off
 the world's rotation regime.** The most salient phenomenon a spinning world
@@ -86,7 +86,7 @@ already reports for tidally locked worlds in this same seed range, reached
 here by an entirely different metric (a pantheon's head-deity tenet, not a
 rotation flag), the same fact seen from theology instead of astronomy.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-head-deity-periodicity.svg}}
+{{#include generated/the-census/the-census-default-head-deity-periodicity.svg}}
 
 ## The first unknown number: how many gods
 
@@ -107,7 +107,7 @@ two-peoples re-baseline untouched, exactly as it should: a pantheon's
 composition, where one exists at all, is a function of observed phenomena,
 and the sky does not care where joint placement put the flagship.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-pantheon-size.svg}}
+{{#include generated/the-census/the-census-default-pantheon-size.svg}}
 
 ## The second unknown number: cult form and verticality are separate axes
 
@@ -123,7 +123,7 @@ since priesthood asks only "does a shaman caste exist," a coarser
 threshold than verticality's four-strata bar that a lean structure clears
 more easily.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-cult-form.svg}}
+{{#include generated/the-census/the-census-default-cult-form.svg}}
 
 Crossing the two axes shows exactly how much room separates them: every
 flat pantheon in a folk cult (17.5% of the census) behaves as expected, and

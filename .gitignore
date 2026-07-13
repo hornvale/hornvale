@@ -38,3 +38,6 @@ book/src/laboratory/generated/census-of-words/
 !.claude/settings.json
 __pycache__/
 *.pyc
+
+# Throwaway census analysis database (tools/census/build.sh output)
+tools/census/.build/

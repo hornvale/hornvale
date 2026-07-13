@@ -49,7 +49,7 @@ emptiness is itself informative: it is the same kind of envelope check
 Study 001 ran on obliquity and tidal strength, now extended to a
 downstream quantity climate derives rather than astronomy draws.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-band-count.svg}}
+{{#include generated/the-census/the-census-default-band-count.svg}}
 
 ## The first unknown number: habitable fraction
 
@@ -66,7 +66,7 @@ distribution is unimodal and fairly tight — the great majority of worlds
 land between 5% and 30% habitable, with two worlds at the extreme low end
 reaching exactly 0% and the single most generous world reaching 40.9%.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-habitable-fraction.svg}}
+{{#include generated/the-census/the-census-default-habitable-fraction.svg}}
 
 What drives the tails is now measurable, not guessed:
 
@@ -113,7 +113,7 @@ roughly evenly across [0.5, 0.6), [0.6, 0.7), and [0.7, 0.8) — a direct
 readout of the drawn target the tectonic model aims sea level at, now
 shown to land inside its intended envelope at scale.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-ocean-fraction.svg}}
+{{#include generated/the-census/the-census-default-ocean-fraction.svg}}
 
 **Mountain coverage** (land above 2,000 m over the sea) is sharply
 bimodal, not centered: roughly half of worlds (48%) carry it above 30%,
@@ -124,7 +124,7 @@ answerable later from the same rows without regenerating anything, exactly
 as Study 001 left the star-class/tidal-lock question open for its
 successor.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-mountain-coverage.svg}}
+{{#include generated/the-census/the-census-default-mountain-coverage.svg}}
 
 **Unrest coverage** (the fraction of cells with tectonic unrest above 0.3)
 stays low and unimodal — 56% of worlds keep it under 5% of their surface,
@@ -133,7 +133,7 @@ domain in C3 (spec §15); the census is simply the first measurement of a
 field waiting for a future architecture, theology, or legend campaign to
 read it.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-unrest-coverage.svg}}
+{{#include generated/the-census/the-census-default-unrest-coverage.svg}}
 
 ## What grows there: the dominant land biome
 
@@ -149,7 +149,7 @@ high-latitude ground is the single category most likely to out-count every
 warmer alternative on any one globe, the same distinction Study 001 drew
 between the moon-refusal rate and simple childlessness.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-dominant-land-biome.svg}}
+{{#include generated/the-census/the-census-default-dominant-land-biome.svg}}
 
 Tidal lock sharpens this further: **among the 457 locked worlds, 410
 (90%) are dominated by ice** — the frozen far side simply outweighs the
