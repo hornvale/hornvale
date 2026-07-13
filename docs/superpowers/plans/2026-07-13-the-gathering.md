@@ -709,45 +709,56 @@ git add domains/settlement windows/worldgen
 git commit -m "feat(worldgen): condense settlements via demography; retire suitability scatter + population draw"
 ```
 
-### Task 8: Calibrate K + threshold to Zipf; add Lab metrics and the study
+### Task 8: Calibrate K to the biome/latitude gradient; tune threshold to a sane count; fix zero-pop + stream labels; add Lab metrics and study
+
+> **Scope changed from the original plan** (design evolution, see the spec's revised §5 and Scope boundary): the deliverable is the *field*, and the condensation is a simple *interim* the MAP-22 coexistence-stack campaign will replace. So the HEADLINE calibration is the **latitude/biome gradient of the field**, NOT Zipf; the threshold is tuned only to a **sane interim settlement count**. `rank-size-slope` is recorded as an *observed* metric, not a tuned target.
 
 **Files:**
-- Modify: `domains/demography/src/carrying_capacity.rs` (freeze constants)
-- Modify: `windows/worldgen/src/lib.rs` (freeze `THRESHOLD`)
-- Modify: `windows/lab/src/metrics.rs` (add settlement metrics)
+- Modify: `domains/demography/src/carrying_capacity.rs` (freeze constants after tuning)
+- Modify: `windows/worldgen/src/lib.rs` (freeze `THRESHOLD`; floor emitted population at 1)
+- Modify: `domains/settlement/src/lib.rs` (`stream_labels()`: annotate `settlement/placement` and `settlement/<species>/population` as `RETIRED (the-gathering)` — Task 7 review finding)
+- Modify: `windows/lab/src/metrics.rs` (add settlement/field metrics)
 - Create: `studies/census-of-the-gathering.study.json` (preregistered)
-- Test: `windows/lab/tests/` (a calibration assertion, mirroring `calibration.rs`)
+- Test: `windows/lab/tests/` (a calibration assertion, mirroring `calibration.rs`); a worldgen no-zero-population unit test.
 
 **Interfaces:**
-- Produces: named Lab metrics `settlement-count`, `total-population`, `rank-size-slope`, `pop-weighted-abs-latitude`, read from `SettlementView`.
+- Produces: named Lab metrics `settlement-count`, `total-population`, `capacity-by-abs-latitude` (the gradient), `pop-weighted-abs-latitude`, and `rank-size-slope` (observed only), read from `SettlementView`.
 
-- [ ] **Step 1: Add the metrics.** In `metrics.rs`, following the existing `Extractor::Settlement(fn(&SettlementView) -> MetricValue)` entries, add extractors that read the ledger via `view.world()`:
+- [ ] **Step 1: Fix the zero-population wrinkle first.** In the worldgen naming loop, floor the emitted population: `population = (n.population.round() as u32).max(1)` (documented at the emit boundary; the float-level demography conservation invariant is unaffected). Add a worldgen unit test: a built seed-42 world commits no settlement with `POPULATION == 0`.
+
+Run: `cargo test -p hornvale-worldgen no_zero_population_settlements`
+Expected: PASS (after the fix; write it RED first if practical).
+
+- [ ] **Step 2: Annotate the retired stream labels.** In `domains/settlement/src/lib.rs` `stream_labels()`, add `RETIRED (the-gathering): population is now the demography catchment readout, no draw` to the `settlement/placement` and `settlement/<species>/population` label descriptions (the labels STAY — permanent save-format contract — only the doc changes), mirroring how `settlement/name` labels were annotated `RETIRED (pre-Tongues)`.
+
+- [ ] **Step 3: Add the metrics.** In `metrics.rs`, following the existing `Extractor::Settlement(fn(&SettlementView) -> MetricValue)` entries, add extractors reading the ledger via `view.world()`:
   - `settlement-count` = count of `IS_SETTLEMENT` facts.
   - `total-population` = Σ `POPULATION`.
-  - `rank-size-slope` = the log-log least-squares slope of settlement population vs rank (a pure function; write it inline, no new dep).
-  - `pop-weighted-abs-latitude` = Σ(pop·|lat|)/Σpop, reading `LATITUDE`.
-  Register each in the named-metric table exactly where the other settlement metrics are registered.
+  - `capacity-by-abs-latitude` = the gradient check: Σ population in the equatorial third of `|lat|` divided by Σ population in the polar third (expect ≫ 1 — people concentrate off the poles). A pure function; write it inline.
+  - `pop-weighted-abs-latitude` = Σ(pop·|lat|)/Σpop.
+  - `rank-size-slope` = log-log least-squares slope of population vs rank (OBSERVED metric, not a tuned target; recorded for MAP-22's later use). Inline, no new dep.
+  Register each where the other settlement metrics are registered.
 
-- [ ] **Step 2: Write the preregistered study** `studies/census-of-the-gathering.study.json`, mirroring an existing census study's shape (`census-of-peoples.study.json`), selecting the four new metrics over seeds `0..=199`, default pins. Add its **hypothesis** field (the preregistration): `rank-size-slope` mean ∈ [−1.2, −0.8]; `pop-weighted-abs-latitude` below the uniform-sphere baseline (people concentrate off the poles).
+- [ ] **Step 4: Write the preregistered study** `studies/census-of-the-gathering.study.json`, mirroring `census-of-peoples.study.json`, selecting the metrics over seeds `0..=199`, default pins. **Hypothesis** field (the preregistration): `capacity-by-abs-latitude` mean ≫ 1 (a stated floor, e.g. ≥ 3); `pop-weighted-abs-latitude` below the uniform-sphere baseline. (Do NOT preregister a `rank-size-slope` target — it is observational this campaign.)
 
-- [ ] **Step 3: Run the study, read the distributions.**
+- [ ] **Step 5: Quick single-world count check, THEN the study.** First build one world and count settlements (`cargo run -p hornvale -- new --seed 42 --out /tmp/hv.json` then inspect, or a scratch test) — with `THRESHOLD=0.5` this is ~998. Tune `THRESHOLD` up until the seed-42 count is manageable (target order-of-magnitude: low hundreds total, not ~1000) BEFORE running the 200-seed census, so the census isn't slow/huge. Then run it:
 
 Run: `cargo run -p hornvale -- lab run studies/census-of-the-gathering.study.json`
-Expected: a rows.csv + summary under `book/src/laboratory/generated/census-of-the-gathering/`.
+Expected: rows.csv + summary under `book/src/laboratory/generated/census-of-the-gathering/`.
 
-- [ ] **Step 4: Tune once.** Adjust `carrying_capacity.rs`'s constants and worldgen's `THRESHOLD` until the study's `rank-size-slope` lands in the preregistered band and the latitude gradient is off-pole. Re-run Step 3 to confirm. **Then freeze** the constants (update the `PLACEHOLDER` comment to `CALIBRATED (the-gathering, 2026-07-13); frozen save-format constant`).
+- [ ] **Step 6: Tune once, then freeze.** Adjust `carrying_capacity.rs`'s constants until `capacity-by-abs-latitude` clears the preregistered floor and the gradient reads off-pole; keep `THRESHOLD` at the sane-count value from Step 5. Re-run Step 5's census to confirm. **Then freeze** the constants (update `PLACEHOLDER` → `CALIBRATED (the-gathering, 2026-07-13); frozen save-format constant`) and `THRESHOLD` likewise.
 
-- [ ] **Step 5: Add the calibration guard test**, mirroring `windows/lab/tests/calibration.rs`: assert the frozen fixture's `rank-size-slope` stays in-band and total-population conservation holds at the world level.
+- [ ] **Step 7: Add the calibration guard test**, mirroring `windows/lab/tests/calibration.rs`: assert the frozen fixture's `capacity-by-abs-latitude` stays above the floor and world-level population conservation holds (Σ committed pop ≈ Σ K within rounding + the pop≥1 floor).
 
 Run: `cargo test -p hornvale-lab calibration`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 cargo fmt && cargo clippy --workspace --all-targets -- -D warnings
-git add domains/demography windows/worldgen windows/lab studies book/src/laboratory/generated
-git commit -m "feat(lab): the-gathering calibration — Zipf rank-size + conservation, constants frozen"
+git add domains/demography domains/settlement windows/worldgen windows/lab studies book/src/laboratory/generated
+git commit -m "feat(lab): the-gathering calibration — biome/latitude gradient + sane count; fix zero-pop + retired stream labels"
 ```
 
 ---

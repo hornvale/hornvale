@@ -48,11 +48,18 @@ construction.
 
 - A `demography` crate (kernel-only) owning the field, the flow, the
   condensation, and the migrated MAP-22 founder floor.
+- **The deliverable is the carrying-capacity field** — the physically-grounded
+  prior every later layer reads from. It is calibrated to the **real
+  biomass-by-latitude/biome gradient** (the campaign's headline
+  calibration-checked claim).
 - Settlements whose population is a **readout of the field**, not a draw:
   `Σ settlement populations == Σ carrying capacity`, per species, exactly.
-- A settlement size distribution tuned once to **Zipf rank-size** and frozen.
-- Carrying capacity that tracks the **real biomass-by-latitude gradient**,
-  a calibration-checked claim.
+- A **deliberately-simple interim condensation** (per-species flow attractors
+  with the founder floor), tuned only to a **sane settlement count** that
+  keeps committed artifacts and censuses manageable. The realistic
+  multi-species composition — footprint-scaled home ranges, coexistence
+  sharing, tiers — is **not** this campaign; it is the MAP-22 coexistence-stack
+  campaign that builds on this field (see Scope boundary).
 - The suitability-scatter mechanism **retired**; flow-condensation the sole
   path; drift artifacts rebaselined in the landing commit.
 
@@ -69,12 +76,20 @@ to the later history campaign (MAP-7's second half):
 - **The N=1 endling edge** (MAP-7 registry row) — it only bites once
   population moves through time.
 - **Species dispersal appetite / tolerance bands** — wants PSY-1, unshipped.
-- **Full cross-species competitive exclusion** (Gause, the might-ordered
-  draft, niche differentiation) — this is MAP-22's own campaign. Campaign 1
-  keeps only MAP-22's already-shipped **founder floor**, and therefore
-  slightly *loosens* today's cross-tag spacing: two species may co-occupy
-  geography. This is an accepted, documented regression — the field is the
-  better foundation, and exclusion deserves to be done properly in MAP-22.
+- **The entire multi-species coexistence stack** — this is the **MAP-22
+  campaign** that builds on this field, and it now has a design (see
+  `docs/superpowers/specs/2026-07-13-the-coexistence-stack-design.md`). It
+  covers: footprint-as-mass-scaled-home-range and multi-grain density
+  stacking (a cell is a stack); coexistence by a temperature-controlled
+  normalized share (`K^β` softmax) against competitors and a viability floor
+  (the monoculture↔oatmeal knob); bidirectional trophic coupling (prey
+  supports apex, apex shadows prey); soft-capacity overflow; and the derived
+  byproducts — the strife field, wilderness (fragmentation), and refugia.
+  This campaign keeps only MAP-22's already-shipped **founder floor** and
+  ships the interim per-species condensation above; it therefore *loosens*
+  today's cross-tag spacing (two species may co-occupy geography) as an
+  accepted, documented regression. The field is the foundation the stack
+  needs; the stack deserves its own spec, not a cram into this one.
 - **A shared kernel field→fact operator.** The ideation surfaced that
   condensation is the same operation the codebase already performs for
   biomes (Whittaker classification) and rivers (`drainage.rs` extraction);
@@ -253,20 +268,30 @@ residual Field held in memory.
 MAP-7 is calibration-checked; checks are preregistered before the sweep
 (decision 0016).
 
+- **Population-vs-latitude / biome gradient (preregistered Lab study; the
+  HEADLINE calibration).** Because the field is the deliverable, its grounding
+  is the headline claim: total supported carrying capacity must track the real
+  biomass gradient — high in wet tropics and temperate bands, low in deserts
+  and ice. The study preregisters this (a monotone falloff off the wet-tropic
+  band, capacity below a uniform-sphere baseline at the poles) before the
+  sweep; the K constants are tuned **once** to land it, then frozen. Negative
+  results are published like any other (the book's laboratory pages).
 - **Conservation invariant (unit test; the strongest guard).**
   `Σ settlement populations == Σ K over catchment cells`, per species, to
   within quantization. Exact by construction; catches any accumulation or
   catchment-partition bug immediately.
-- **Zipf rank-size (preregistered Lab study; headline calibration).** Across
-  a seed census, settlement sizes should follow a rank-size law (the n-th
-  settlement ≈ 1/n the flagship). The study registers its hypothesis (a
-  target log-log slope near −1) in its JSON before the sweep; the
-  concentration knob `T` is tuned **once** to land it, then frozen. Negative
-  results are published like any other (the book's laboratory pages).
-- **Population-vs-latitude / biome gradient (Lab metric).** Total supported
-  population should track the real biomass gradient — high in wet tropics and
-  temperate bands, low in deserts and ice. The "K is grounded, not noise"
-  check.
+- **Sane interim settlement count (not Zipf).** The threshold `T` is tuned so
+  the interim per-species condensation yields a **manageable settlement
+  count** — enough to people the world, few enough to keep `world.json`, the
+  scene bytes, and the census tractable — then frozen. Full **Zipf rank-size**
+  calibration is deliberately deferred to the MAP-22 coexistence-stack
+  campaign, where size is measured by mass and composition is real; tuning a
+  Zipf slope on this interim per-species condensation would calibrate a model
+  MAP-22 replaces.
+- **No peopleless settlements.** The condensation must not emit a settlement
+  whose rounded population is 0 (a founder-floor node with a sub-threshold
+  catchment): floor committed population at 1, or drop zero-population nodes.
+  A unit test guards it.
 - **Pin-isolation & determinism.** A demography pin (if any) must consume the
   same stream draws as the unpinned path (the genesis-properties pattern) —
   a small surface, since the pipeline draws nothing; determinism is mostly
