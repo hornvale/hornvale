@@ -1,0 +1,436 @@
+{
+  "backfilled": true,
+  "columns": [
+    {
+      "kind": "integer",
+      "name": "seed"
+    },
+    {
+      "kind": "categorical",
+      "name": "pin_set"
+    },
+    {
+      "doc": "Whether every daughter's lexicon (goblin, hobgoblin, bugbear, kobold) is Neogrammarian-regular: every Root's recorded derivation replays byte-identically through evolve, checked for EVERY daughter in this world's roster (spec §9.1, generalized family-wide); Absent if no daughter minted a Root",
+      "kind": "flag",
+      "name": "lexicon-regular-family",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every goblinoid daughter's (goblin, hobgoblin, bugbear) Root derivation.proto matches an INDEPENDENT re-draw of the shared \"goblinoid\" family proto-root for that concept (spec §3: cognates share a proto ancestor) — never reading the family proto back from a sibling's own recorded derivation; Absent if no goblinoid daughter minted a Root",
+      "kind": "flag",
+      "name": "monophyly-goblinoid",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether kobold — the family with no siblings — never coincides with the goblinoid family: for every concept kobold holds as a Root, its recorded proto-root differs from an INDEPENDENT re-draw of the \"goblinoid\" family proto-root for that same concept (spec §3's clean outgroup); Absent if kobold minted no Root",
+      "kind": "flag",
+      "name": "clean-outgroup-kobold",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every goblin lexicon Root's modern form draws only segments in goblin's own drawn inventory (spec §2.2's nativization contract); Absent if goblin minted no Root",
+      "kind": "flag",
+      "name": "inventory-closure-goblin",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every hobgoblin lexicon Root's modern form draws only segments in hobgoblin's own drawn inventory (spec §2.2's nativization contract); Absent if hobgoblin minted no Root",
+      "kind": "flag",
+      "name": "inventory-closure-hobgoblin",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every bugbear lexicon Root's modern form draws only segments in bugbear's own drawn inventory (spec §2.2's nativization contract); Absent if bugbear minted no Root",
+      "kind": "flag",
+      "name": "inventory-closure-bugbear",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every kobold lexicon Root's modern form draws only segments in kobold's own drawn inventory (spec §2.2's nativization contract); Absent if kobold minted no Root",
+      "kind": "flag",
+      "name": "inventory-closure-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Count of DISTINCT proto segments (drawn from the shared goblinoid family proto-phonology) appearing in goblin's own Root proto-roots that nativize.rs collapses onto an existing goblin inventory segment (i.e. absent from goblin's own inventory) — the measured cost of goblin's nativization under the loudness-drawn inventory (spec §3); Absent if goblin minted no Root",
+      "kind": "numeric",
+      "name": "divergence-magnitude-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Count of DISTINCT proto segments (drawn from the shared goblinoid family proto-phonology) appearing in hobgoblin's own Root proto-roots that nativize.rs collapses onto an existing hobgoblin inventory segment (i.e. absent from hobgoblin's own inventory) — the measured cost of hobgoblin's nativization under the loudness-drawn inventory (spec §3); Absent if hobgoblin minted no Root",
+      "kind": "numeric",
+      "name": "divergence-magnitude-hobgoblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Count of DISTINCT proto segments (drawn from the shared goblinoid family proto-phonology) appearing in bugbear's own Root proto-roots that nativize.rs collapses onto an existing bugbear inventory segment (i.e. absent from bugbear's own inventory) — the measured cost of bugbear's nativization under the loudness-drawn inventory (spec §3); Absent if bugbear minted no Root",
+      "kind": "numeric",
+      "name": "divergence-magnitude-bugbear",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether some concept rooted in ALL THREE goblinoid daughters (goblin, hobgoblin, bugbear) has ≥2 distinct present-day forms — the seed-swept stemmatics guard (spec §3): descent is proven by shared INNOVATIONS, not a shared ancestor alone, so a degenerate family whose daughters are silent aliases of one another must read false; Absent if no concept is rooted in all three",
+      "kind": "flag",
+      "name": "divergence-real",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of distinct-concept pairs whose goblin Root.modern forms coincide (two proto-roots merged onto one surface form) — an observation, not a pass/fail invariant: homophony is legal and realistic, and this banks the confound L4's reconstruction will fight (homophones read as one word); Absent if goblin minted no Root",
+      "kind": "numeric",
+      "name": "homophony-count-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of distinct-concept pairs whose hobgoblin Root.modern forms coincide (two proto-roots merged onto one surface form) — an observation, not a pass/fail invariant; Absent if hobgoblin minted no Root",
+      "kind": "numeric",
+      "name": "homophony-count-hobgoblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of distinct-concept pairs whose bugbear Root.modern forms coincide (two proto-roots merged onto one surface form) — an observation, not a pass/fail invariant; expected highest among the goblinoid daughters, bugbear drawing the smallest family inventory; Absent if bugbear minted no Root",
+      "kind": "numeric",
+      "name": "homophony-count-bugbear",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of distinct-concept pairs whose kobold Root.modern forms coincide (two proto-roots landed on one surface form) — an observation, not a pass/fail invariant, banked for the clean-outgroup comparison; Absent if kobold minted no Root",
+      "kind": "numeric",
+      "name": "homophony-count-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of goblin homophone pairs where BOTH concepts are core vocabulary (universal + body + kin packs) — the functional-load-restricted homophony the fix drives to zero; always ≤ homophony-count-goblin; Absent if goblin minted no Root",
+      "kind": "numeric",
+      "name": "core-homophony-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of hobgoblin homophone pairs where BOTH concepts are core vocabulary (universal + body + kin packs); always ≤ homophony-count-hobgoblin; Absent if hobgoblin minted no Root",
+      "kind": "numeric",
+      "name": "core-homophony-hobgoblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of bugbear homophone pairs where BOTH concepts are core vocabulary (universal + body + kin packs); always ≤ homophony-count-bugbear; Absent if bugbear minted no Root",
+      "kind": "numeric",
+      "name": "core-homophony-bugbear",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of kobold homophone pairs where BOTH concepts are core vocabulary (universal + body + kin packs); always ≤ homophony-count-kobold; Absent if kobold minted no Root",
+      "kind": "numeric",
+      "name": "core-homophony-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of goblin colliding surface forms that are MERGERS (colliding roots carry ≥2 distinct proto-forms — the cascade or nativization made the collision after the proto) rather than draw-collisions (one shared proto); Absent if goblin has no collision (an undefined ratio, never reported as 0)",
+      "kind": "numeric",
+      "name": "homophony-merger-share-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of hobgoblin colliding surface forms that are MERGERS (≥2 distinct proto-forms) rather than draw-collisions; Absent if hobgoblin has no collision",
+      "kind": "numeric",
+      "name": "homophony-merger-share-hobgoblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of bugbear colliding surface forms that are MERGERS (≥2 distinct proto-forms) rather than draw-collisions; Absent if bugbear has no collision",
+      "kind": "numeric",
+      "name": "homophony-merger-share-bugbear",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of kobold colliding surface forms that are MERGERS (≥2 distinct proto-forms) rather than draw-collisions; Absent if kobold has no collision",
+      "kind": "numeric",
+      "name": "homophony-merger-share-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of goblin core homophone pairs that are CONFUSABLE (both concepts share a semantic domain — universal/body/kin — so they compete in one context); the same-domain subset of core-homophony-goblin, always ≤ it; the complement is FREE cross-domain homophony; Absent if goblin minted no Root",
+      "kind": "numeric",
+      "name": "confusable-homophony-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of hobgoblin core homophone pairs that are CONFUSABLE (both concepts share a semantic domain); the same-domain subset of core-homophony-hobgoblin, always ≤ it; Absent if hobgoblin minted no Root",
+      "kind": "numeric",
+      "name": "confusable-homophony-hobgoblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of bugbear core homophone pairs that are CONFUSABLE (both concepts share a semantic domain); the same-domain subset of core-homophony-bugbear, always ≤ it; Absent if bugbear minted no Root",
+      "kind": "numeric",
+      "name": "confusable-homophony-bugbear",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of kobold core homophone pairs that are CONFUSABLE (both concepts share a semantic domain); the same-domain subset of core-homophony-kobold, always ≤ it; Absent if kobold minted no Root",
+      "kind": "numeric",
+      "name": "confusable-homophony-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "doc": "Size of goblin's realized tone inventory (spec §11): 1 for an atonal people; >1 only for a tone-capable species; Absent if goblin is off-roster",
+      "kind": "numeric",
+      "name": "tone-count-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "doc": "Size of kobold's realized tone inventory (spec §11): 1 for an atonal people; Absent if kobold is off-roster",
+      "kind": "numeric",
+      "name": "tone-count-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        24.0,
+        48.0,
+        96.0,
+        192.0,
+        384.0,
+        768.0,
+        1536.0
+      ],
+      "doc": "Goblin's distinguishable-syllable capacity (spec §2.3): onset × nucleus × coda fillings, a lower bound on distinct syllables (tone folded into the nucleus); Absent if goblin is off-roster",
+      "kind": "numeric",
+      "name": "distinguishable-capacity-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        24.0,
+        48.0,
+        96.0,
+        192.0,
+        384.0,
+        768.0,
+        1536.0
+      ],
+      "doc": "Bugbear's distinguishable-syllable capacity (spec §2.3): onset × nucleus × coda fillings; bugbear draws the smallest family inventory; Absent if bugbear is off-roster",
+      "kind": "numeric",
+      "name": "distinguishable-capacity-bugbear",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        24.0,
+        48.0,
+        96.0,
+        192.0,
+        384.0,
+        768.0,
+        1536.0
+      ],
+      "doc": "Kobold's distinguishable-syllable capacity (spec §2.3): onset × nucleus × coda fillings; Absent if kobold is off-roster",
+      "kind": "numeric",
+      "name": "distinguishable-capacity-kobold",
+      "rung": "full"
+    },
+    {
+      "kind": "categorical",
+      "name": "refusal"
+    }
+  ],
+  "conventions": {
+    "float_quantization": "8-significant-digits"
+  },
+  "rows": {
+    "count": 1000,
+    "fnv1a64": "0xa85bb5de4f1e7b17"
+  },
+  "schema_version": 1,
+  "study": {
+    "description": "The Branches family battery: regularity, monophyly, clean outgroup, inventory closure, divergence magnitude/reality, and homophony (raw, core-restricted, draw-vs-merger attributed, and — from the phonology epoch — confusable-vs-free split, plus the tone-inventory size and distinguishable-syllable capacity) over the goblinoid family (goblin, hobgoblin, bugbear) against the kobold outgroup, seed-swept over 1,000 worlds (spec §3, Task 10) — so the family properties hold as all-seed invariants, not seed-42 facts.",
+    "name": "branches-family",
+    "pin_sets": [
+      {
+        "label": "default",
+        "pins": [],
+        "roster": null
+      }
+    ],
+    "seeds": {
+      "count": 1000,
+      "from": 0
+    }
+  }
+}

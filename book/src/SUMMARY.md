@@ -67,6 +67,8 @@
 - [The Uncommon Ground](./chronicle/the-uncommon-ground.md)
 - [The Datum](./chronicle/the-datum.md)
 - [Temperature](./chronicle/temperature.md)
+- [Census as Data](./chronicle/census-as-data.md)
+- [The Seam](./chronicle/the-seam.md)
 - [The Self-Describing Sky](./chronicle/the-self-describing-sky.md)
 
 # The Gallery
@@ -85,6 +87,7 @@
 - [The Meeting of Seed 42](./gallery/the-meeting-seed-42.md)
 - [The Atlas of Seed 42](./gallery/atlas.md)
 - [The Deep Time of Seed 42](./gallery/paleo-seed-42.md)
+- [A Possession — Seed 42](./gallery/possession-seed-42.md)
 
 # The Laboratory
 

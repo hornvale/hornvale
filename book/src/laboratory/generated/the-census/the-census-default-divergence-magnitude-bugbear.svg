@@ -1,0 +1,33 @@
+<svg viewBox="0 0 640 300" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="ui-sans-serif, system-ui, sans-serif">
+<text x="56" y="20" font-size="13" font-weight="600" fill="currentColor">divergence-magnitude-bugbear — default</text>
+<line x1="56.0" y1="186.0" x2="624.0" y2="186.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="186.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">125</text>
+<line x1="56.0" y1="136.0" x2="624.0" y2="136.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="136.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">250</text>
+<line x1="56.0" y1="86.0" x2="624.0" y2="86.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">375</text>
+<line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+<text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">500</text>
+<text x="91.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
+<text x="91.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">&lt; 0</text>
+<text x="162.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
+<text x="162.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[0, 1)</text>
+<rect x="203.3" y="227.2" width="60.4" height="8.8" fill="#5b8dd9" rx="2" />
+<text x="233.5" y="223.2" font-size="11" fill="currentColor" text-anchor="middle">22</text>
+<text x="233.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[1, 2)</text>
+<rect x="274.3" y="198.4" width="60.4" height="37.6" fill="#5b8dd9" rx="2" />
+<text x="304.5" y="194.4" font-size="11" fill="currentColor" text-anchor="middle">94</text>
+<text x="304.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[2, 3)</text>
+<rect x="345.3" y="160.4" width="60.4" height="75.6" fill="#5b8dd9" rx="2" />
+<text x="375.5" y="156.4" font-size="11" fill="currentColor" text-anchor="middle">189</text>
+<text x="375.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[3, 4)</text>
+<rect x="416.3" y="58.8" width="60.4" height="177.2" fill="#5b8dd9" rx="2" />
+<text x="446.5" y="54.8" font-size="11" fill="currentColor" text-anchor="middle">443</text>
+<text x="446.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[4, 6)</text>
+<rect x="487.3" y="156.4" width="60.4" height="79.6" fill="#5b8dd9" rx="2" />
+<text x="517.5" y="152.4" font-size="11" fill="currentColor" text-anchor="middle">199</text>
+<text x="517.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[6, 8)</text>
+<rect x="558.3" y="214.8" width="60.4" height="21.2" fill="#5b8dd9" rx="2" />
+<text x="588.5" y="210.8" font-size="11" fill="currentColor" text-anchor="middle">53</text>
+<text x="588.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">&gt;= 8</text>
+</svg>

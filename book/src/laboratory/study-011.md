@@ -16,15 +16,16 @@ from a 10,000-seed run of `studies/census-of-words.study.json`,
 executed once by hand at author time, in the same arrangement Studies 001,
 002, 003, 006, 007, and 008 use for their own 10,000-seed headline runs. It
 is **not** committed and **not** part of CI. The exact-count calibration
-rows this page pins are measured instead over the two CI-drift-checked
-500-seed populations every prior campaign's calibrations already share:
-`census-lands-drift` (`book/src/laboratory/generated/census-lands-drift/`)
-for every per-world and per-species metric below, and (unchanged by this
-study) `census-of-the-meeting` for the null control's own name-length SMD,
-which this task also re-pins alongside the two Tongues-era rows Task 9's
-glossed compounds moved out from under. Small differences between a number
-quoted here and the 500-seed pinned figure are ordinary 500-vs-10,000-seed
-sampling variance, not drift.
+rows this page pins were measured over the two CI-drift-checked
+populations every prior campaign's calibrations already share:
+`census-lands-drift` (as it then was; now consolidated into `the-census`,
+`book/src/laboratory/generated/the-census/`) for every per-world and
+per-species metric below, and (unchanged by this study) `census-of-the-meeting`
+for the null control's own name-length SMD, which this task also re-pins
+alongside the two Tongues-era rows Task 9's glossed compounds moved out
+from under. Small differences between a number quoted here and the pinned
+figure below are ordinary sampling variance against the 10,000-seed
+headline run, not drift.
 
 **A note on preregistration.** Per ADR 0016, this page's hypotheses are
 committed **before** the metrics that measure them exist in code, and

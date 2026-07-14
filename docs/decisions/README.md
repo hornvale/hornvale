@@ -84,5 +84,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0042](0042-github-ci-is-manual-only.md) | GitHub Actions CI is manual-only (local + AWS are the gates) | Accepted |
 | [0043](0043-numbers-not-slugs.md) | Numbers, not slugs (supersedes 0026's decision-record naming) | Accepted |
 | [0044](0044-shared-units-live-in-the-kernel.md) | Shared units live in the kernel (refines 0008) | Accepted |
-| [0045](0045-entity-hood-for-collections.md) | Entity-hood for collections: collections become entities, singletons stay flat | Accepted |
-| [0046](0046-name-salt-stable-identity.md) | Procedural names are salted by stable identity, never by a global mint counter | Accepted |
+| [0045](0045-one-canonical-census.md) | One canonical census; frozen studies are evidence | Accepted |
+| [0046](0046-census-regen-is-remote-only.md) | Census regeneration is AWS-only | Accepted |
+| [0047](0047-entity-hood-for-collections.md) | Entity-hood for collections: collections become entities, singletons stay flat | Accepted |
+| [0048](0048-name-salt-stable-identity.md) | Procedural names are salted by stable identity, never by a global mint counter | Accepted |

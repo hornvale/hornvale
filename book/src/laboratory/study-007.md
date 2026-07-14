@@ -15,14 +15,14 @@ from a 10,000-seed run of `studies/census-of-eyes.study.json`, executed
 once by hand at author time, in the same arrangement Studies 001, 002, 003,
 and 006 use for their own 10,000-seed headline runs. It is **not**
 committed and **not** part of CI — `.github/workflows/ci.yml` regenerates
-only `census-lands-drift` (500 seeds) in its "Artifacts are current" step;
+only `the-census` (1,000 seeds) in its "Artifacts are current" step;
 `census-of-faiths`, `census-of-lands`, `census-of-peoples`, and
 `census-of-skies` are already author-time-only by the same precedent, and
 `census-of-eyes` joins them. The drift-checked sibling,
-`census-lands-drift` (`book/src/laboratory/generated/census-lands-drift/`),
+`the-census` (`book/src/laboratory/generated/the-census/`),
 now carries the same per-species eyes metrics this study measures at 10k;
 small differences between a number quoted here and a bar in that chart are
-sampling variance between a 500- and a 10,000-seed draw, not drift.
+sampling variance between a 1,000- and a 10,000-seed draw, not drift.
 
 **A note on preregistration.** Per ADR 0016, studies commit their
 hypotheses before running the census that tests them. The two claims below

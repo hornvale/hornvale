@@ -1,5 +1,15 @@
 # Census as Data — Implementation Plan
 
+> **STATUS: executed, 2026-07-13.** All 10 tasks complete. Task 4's
+> execution reorder (owner directive, see the note inline at that task)
+> shifted the AWS regeneration, the byte-identity equivalence check, and
+> the golden-pin re-pins to merge prep, executed there alongside this
+> plan's close; branch calibration-family tests were expected-red for the
+> intervening tasks by design, not by drift. See
+> `docs/retrospectives/census-as-data.md` for process lessons and
+> `docs/superpowers/specs/2026-07-13-census-as-data-design.md` for the
+> design this plan implements (now marked implemented).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Every subagent dispatch MUST prepend `.claude/skills/dispatching-hornvale-subagents/dispatch-preamble.md` verbatim (worktree cd + branch check first).
 
 **Goal:** One canonical, self-describing, versioned census (`the-census`: all metrics × 1000 seeds) plus a DuckDB analysis harness (`tools/census/`), per the spec `docs/superpowers/specs/2026-07-13-census-as-data-design.md`.
@@ -19,7 +29,7 @@
 - Golden pins re-pin **in the same commit** as the fixture that drifted them — never deferred.
 - Commit gate: `make gate` (fmt + clippy + nextest + doctests). Iterate cost-ordered: fmt/clippy first, then `cargo test -p hornvale-lab`, full gate last. Run once, capture output (`2>&1 | tee /tmp/hv-test.txt`), never re-run to grep a second line.
 - `cargo fmt` as the final step before every commit.
-- The 1000-seed regeneration runs ~20–40 min in release; use `run_in_background`/generous timeouts per the dispatching-hornvale-subagents skill. Never run censuses in debug.
+- **Census regeneration is AWS-ONLY** (owner directive 2026-07-13, mechanized: `regenerate-artifacts.sh` skips censuses unless `HV_CENSUS=1`, which only the AWS path sets): the CONTROLLER runs `make regen-remote` / `scripts/aws-gate/regen-git.sh` — never an implementer subagent, never locally, unless Nathan explicitly says so. Local runs are fast-tier only (8-seed probe, scoped tests, `make gate`).
 
 ---
 
@@ -456,6 +466,8 @@ git commit -m "feat(cli): lab backfill-schema — one-time manifests for frozen 
 
 ### Task 4: Promote `the-census`, freeze `branches-family` (the migration commit)
 
+> **EXECUTION REORDER (owner directive 2026-07-13):** no census regeneration until merge prep. Steps 1–2 landed as the wip commit; Steps 3–6 (AWS regen, equivalence check, re-pins, squash) execute during merge prep (Task 10), together with Task 8's golden-pins content (which needs the re-pinned values). Until then the branch's calibration-family tests are expectedly red — Tasks 5–9 verify with scoped commands that avoid the missing fixture.
+
 One atomic commit: rename + 1000 seeds + regeneration + re-pins must land together (golden-pin same-commit rule). This task runs the ~20–40 min release regeneration — dispatch with background/long-timeout discipline.
 
 **Files:**
@@ -506,12 +518,28 @@ New contents:
 git rm -r book/src/laboratory/generated/census-lands-drift
 ```
 
-- [ ] **Step 3: Regenerate everything (timed, release)**
+- [ ] **Step 3: Regenerate everything — ON AWS (owner directive 2026-07-13: censuses never regenerate locally)**
 
-Run: `make rebaseline 2>&1 | tee /tmp/hv-rebaseline.txt` — expect ~20–45 min. This regenerates all committed artifacts; only the census artifacts and the two new `schema.json` files should differ (plus `docs/timings.md` gaining a row). Verify the diff surface:
+First commit the edits so the branch carries them (artifacts pending — this commit is squashed away in Step 6):
 
-Run: `git status --short | head -30`
-Expected: new `book/src/laboratory/generated/the-census/*`, modified `census-of-the-meeting/` (schema.json added ONLY — rows.csv byte-identical), `docs/timings.md` modified, nothing else unexpected. If any OTHER artifact drifted, STOP and investigate before committing (that's a determinism bug, not noise).
+```bash
+cargo fmt && git add -A && git commit -m "wip(census): migration edits, artifacts pending (squashed in the migration commit)"
+```
+
+Then the CONTROLLER (not an implementer subagent) runs the regen on the spot box:
+
+```bash
+bash scripts/aws-gate/regen-git.sh ~/.config/superpowers/worktrees/hornvale/census-as-data 2>&1 | tee /tmp/hv-regen-aws.txt
+```
+
+This pushes the branch to a bare repo on a fresh c7a.16xlarge, runs `scripts/regenerate-artifacts.sh` there, commits the artifacts ON the branch, and fetches the commit home (box always terminated on exit; artifacts fetched before teardown). Review the fetched diff, then:
+
+```bash
+git merge --ff-only FETCH_HEAD
+git diff --stat HEAD~1 HEAD | tail -20
+```
+
+Expected diff surface: new `book/src/laboratory/generated/the-census/*`, `census-of-the-meeting/` gains schema.json ONLY (rows.csv byte-identical), nothing else unexpected. If any OTHER artifact drifted, STOP and investigate before proceeding (that's a determinism bug, not noise). No `docs/timings.md` row — timings are machine-specific and the box row would mislead; skip it.
 
 - [ ] **Step 4: One-shot equivalence check — the frozen branches-family fixture is a projection of the canonical fixture**
 
@@ -544,13 +572,18 @@ Expected: `OK`. A mismatch means metric extraction is NOT read-only observation 
 Run: `cargo nextest run -p hornvale-lab 2>&1 | tee /tmp/hv-t4.txt`
 Expected: calibration tests that pin 500-seed means/dstributions FAIL with observed-vs-pinned messages (the sample doubled). For each failure in `windows/lab/tests/calibration.rs`, replace the pinned literal with the printed observed value. Re-run once: `cargo nextest run -p hornvale-lab 2>&1 | tee /tmp/hv-t4b.txt` → PASS. The `branches_family_calibration.rs` ADR 0016 pins must NOT need changing (Step 4 proved the columns identical) — if one fails, that's the same stop-and-debug signal.
 
-- [ ] **Step 6: Probe + gate + commit**
+- [ ] **Step 6: Probe + gate + squash into the single migration commit**
+
+The branch now carries: wip-edits commit → box artifact commit → (uncommitted re-pins). Squash all of it into ONE migration commit so the golden-pin same-commit rule holds in history (branch is private and unpushed; rewriting it is safe):
 
 ```bash
 bash scripts/ci-census-probe.sh          # expected: "all 2 studies match on the first 8 seeds"
+                                         # (8-seed release probe — fast tier, allowed locally)
 make gate 2>&1 | tail -5                 # expected: green
 cargo fmt
 git add -A
+BASE=$(git log --format=%H --grep='wip(census): migration edits' -n1)
+git reset --soft "$BASE~1"
 git commit -m "feat(census)!: promote the-census (all metrics x 1000 seeds); freeze branches-family
 
 census-lands-drift renamed/doubled per census-as-data spec §1; branches-family
@@ -1166,7 +1199,7 @@ git commit -m "docs(census): laboratory tiers + The Census as Data; decision 004
 
 - [ ] **Step 1: Invoke the `closing-a-campaign` skill** and follow it: chronicle entry in `book/src/chronicle/`, one-page retrospective in `docs/retrospectives/` (decision 0020), Confidence Gradient re-score of `book/src/open-questions.md` if a bet moved (the "can we do data science on the census" bet, if listed), freshness sweep of stale chapters.
 - [ ] **Step 2: `make preflight`** from the branch; on NO-GO merge main INTO the branch, re-run `make gate`.
-- [ ] **Step 3: Final `make gate-full`** (or dispatch `make gate-remote` if the heavy tier should run in the cloud) + `make census-check`.
+- [ ] **Step 3: Final heavy-tier evidence via `make gate-remote` (the heavy tier's live 1000-world batteries do not run locally) + `make census-check`.
 - [ ] **Step 4: Merge to main** per the skill; remove the worktree.
 
 ---

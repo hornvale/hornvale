@@ -40,7 +40,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 #      failure list in one pass:
 cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file freely
 #   The census/calibration LIVE batteries (the calibration sweep, the
-#   1000-world branches-family census) are their own #[ignore]d tests with
+#   1000-world canonical census) are their own #[ignore]d tests with
 #   non-`heavy:` reasons, so `make gate-full` does NOT run them. CENSUSES ARE
 #   NEVER REGENERATED LOCALLY (the local gate stays < 5 min): censuses are
 #   opt-in via HV_CENSUS=1, which only `make regen-remote` (the AWS spot
@@ -63,11 +63,12 @@ cargo run -p hornvale -- new --seed 42 --out world.json   # plus sky pins (--sky
                                          # --supercontinent)
 cargo run -p hornvale -- scout --neighbor red-giant       # scan seeds satisfying pins
 cargo run -p hornvale -- repl --world world.json
+cargo run -p hornvale -- possess --seed 42            # walk the world (the game seam)
 cargo run -p hornvale -- almanac --world world.json
 cargo run -p hornvale -- map --world world.json --out elevation.ppm
 cargo run -p hornvale -- concepts        # registry dump (book reference page)
 cargo run -p hornvale -- streams         # stream manifest (book reference page)
-cargo run -p hornvale -- lab run studies/census-lands-drift.study.json
+cargo run -p hornvale -- lab run studies/the-census.study.json
 cargo run -p hornvale -- lab list-metrics
 
 # The type audit — a standalone tool OUTSIDE the workspace (decisions
@@ -84,7 +85,7 @@ cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/ty
 cargo run -p hornvale-kernel --example first_light
 cargo run -p hornvale -- new --seed 42 --out /tmp/hv.json
 cargo run -p hornvale -- almanac --world /tmp/hv.json > book/src/gallery/almanac-seed-42-sky.md
-cargo run -p hornvale -- lab run studies/census-lands-drift.study.json
+cargo run -p hornvale -- lab run studies/the-census.study.json
 git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/
 
 # The project book:

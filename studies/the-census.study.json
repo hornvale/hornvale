@@ -1,0 +1,5 @@
+{ "name": "the-census",
+  "description": "THE canonical census: every registered metric over 1,000 unselected worlds (seeds 0-999, default pins) — the project's queryable dataset (census-as-data spec §1) and the CI determinism guard. Subsumes the retired branches-family run column-for-column.",
+  "seeds": { "from": 0, "count": 1000 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": "all" }

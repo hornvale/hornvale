@@ -23,4 +23,5 @@ hornvale-lab = { path = "../windows/lab" }
 hornvale-historiography = { path = "../windows/historiography" }
 hornvale-locale = { path = "../windows/locale" }
 hornvale-scene = { path = "../windows/scene" }
+hornvale-vessel = { path = "../windows/vessel" }
 serde_json = { workspace = true }

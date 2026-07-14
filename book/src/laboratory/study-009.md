@@ -14,16 +14,21 @@ decisively; the null control says a people identical to the baseline does
 *not*. Only both together close the year's exit criterion.
 
 **A note on scale and provenance.** This study spans two committed
-500-seed populations, both CI-drift-checked in the "Artifacts are current"
+populations, both CI-drift-checked in the "Artifacts are current"
 step of `.github/workflows/ci.yml`. The comparative suite (the ledger below)
-is asserted over **`census-lands-drift`** — the shipped `{goblin, kobold}`
-roster, the same 500 seeds every prior drift calibration walks. The null
+is asserted over **`the-census`** — the shipped `{goblin, kobold}`
+roster, 1,000 seeds (the census-as-data consolidation's rename and
+doubling of what this page still calls `census-lands-drift` below, since
+the ledger's headline figures were first measured and pinned at that
+study's original 500-seed size and are not re-measured here). The null
 control is asserted over **`census-of-the-meeting`**
 (`studies/census-of-the-meeting.study.json`, generated summary under
 `book/src/laboratory/generated/census-of-the-meeting/`): two *solo* rosters,
-`[goblin]` and `[goblin-twin]`, over one shared seed range. The headline
-figures quoted below are the 500-seed pinned counts that `cargo test` guards
-on every build. As with Studies 006–008, a 10,000-seed author-time run of
+`[goblin]` and `[goblin-twin]`, over one shared seed range, unaffected by
+that consolidation. The headline figures quoted below are the 500-seed
+pinned counts first guarded by `cargo test`; the comparative-suite rows
+have since been re-pinned to the 1,000-seed sample (census-as-data), the
+null-control rows have not. As with Studies 006–008, a 10,000-seed author-time run of
 `census-of-the-meeting` (the same study file bumped to 10,000 seeds) was
 executed once by hand to confirm the null control holds at scale; it is
 **not** committed and **not** part of CI, and its confirmation is noted where
@@ -200,10 +205,12 @@ measured 2026-07-09:
   zero and the last the intended name-salt trace.
 
 The comparative-suite rows (1–14) are pinned in their own already-existing
-calibrations over `census-lands-drift`, reconfirmed rather than re-pinned by
-this study — the same shape of exact-count pin the Y2-1, Y2-2, and Y2-3
-calibrations use: a deterministic population asserted row-by-row in CI, never
-a threshold tuned to make a number look good.
+calibrations, then over `census-lands-drift` and reconfirmed rather than
+re-pinned by this study, now over `the-census` (census-as-data renamed and
+doubled the sample after this study closed) — the same shape of exact-count
+pin the Y2-1, Y2-2, and Y2-3 calibrations use: a deterministic population
+asserted row-by-row in CI, never a threshold tuned to make a number look
+good.
 
 ## What The Meeting added to the registry: nothing
 

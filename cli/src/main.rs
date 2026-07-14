@@ -35,6 +35,8 @@ usage:
   hornvale almanac [--world <PATH>]        render the almanac (default: world.json)
   hornvale explain --world <PATH> sky      narrate the sky's derivation from the ledger
   hornvale repl [--world <PATH>]           interrogate a world interactively
+  hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>]
+                                            walk a frozen world as its flagship settler
   hornvale map [--world <PATH>] [--out <PNG>] render the elevation map (markdown to stdout)
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
   hornvale paleo-map [--world <PATH>] [--out <PNG>] render the deep-time strata map (markdown to stdout)
@@ -56,6 +58,7 @@ usage:
   hornvale voice [--out <DIR>]             author missing phonology audio clips (espeak-ng + ffmpeg; default out: book/src/audio)
   hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
   hornvale lab diff <STUDY> <OLD_CSV> <NEW_CSV>  report which census metrics moved between two rows.csv snapshots
+  hornvale lab backfill-schema <STUDY> <CSV>  print a backfilled schema.json for a frozen study
   hornvale lab list-metrics                list every metric in the lab's registry
 
 sky flags (shared by new and scout):
@@ -90,6 +93,7 @@ fn main() -> ExitCode {
         Some("almanac") => cmd_almanac(&args),
         Some("explain") => cmd_explain(&args),
         Some("repl") => cmd_repl(&args),
+        Some("possess") => cmd_possess(&args),
         Some("map") => cmd_map(&args),
         Some("biome-map") => cmd_biome_map(&args),
         Some("paleo-map") => cmd_paleo_map(&args),
@@ -312,6 +316,73 @@ fn cmd_repl(args: &[String]) -> Result<(), String> {
     let stdin = std::io::stdin();
     let stdout = std::io::stdout();
     repl::run(&world, stdin.lock(), stdout.lock()).map_err(|e| e.to_string())
+}
+
+/// Parse and validate `--day` for `possess`: a finite, non-negative
+/// standard day (default `0.0` when the flag is absent). Rejects `inf`,
+/// `-inf`, `nan`, and negative values loudly rather than handing the vessel
+/// window a day it cannot observe.
+fn parse_possess_day(args: &[String]) -> Result<f64, String> {
+    let s = flag_value(args, "--day").unwrap_or("0");
+    let day: f64 = s.parse().map_err(|_| format!("bad --day: {s}"))?;
+    if !(day.is_finite() && day >= 0.0) {
+        return Err(format!(
+            "bad --day: {s} (must be a finite non-negative day)"
+        ));
+    }
+    Ok(day)
+}
+
+/// Possess the flagship agent and walk. `--seed` builds the world in
+/// memory through the composition root (default pins), so the metaplan's
+/// exit criterion — `hornvale possess --seed 42` — works verbatim.
+fn cmd_possess(args: &[String]) -> Result<(), String> {
+    let world = if let Some(seed) = flag_value(args, "--seed") {
+        let seed: u64 = seed
+            .parse()
+            .map_err(|e| format!("--seed must be a u64: {e}"))?;
+        let (pins, sky) = parse_sky_args(args)?;
+        let terrain_pins = parse_terrain_args(args)?;
+        let settlement_pins = parse_settlement_args(args)?;
+        world_builder::build_world(Seed(seed), &pins, sky, &terrain_pins, &settlement_pins)
+            .map_err(|e| e.to_string())?
+    } else {
+        load_world(args)?
+    };
+    let day = parse_possess_day(args)?;
+    let stdout = std::io::stdout();
+    if let Some(path) = flag_value(args, "--script") {
+        let script = std::fs::read_to_string(path).map_err(|e| format!("reading {path}: {e}"))?;
+        let mut out = stdout.lock();
+        use std::io::Write;
+        writeln!(out, "# A Possession — seed {}, day {day}\n", world.seed.0)
+            .map_err(|e| e.to_string())?;
+        writeln!(out, "```text").map_err(|e| e.to_string())?;
+        hornvale_vessel::run(
+            &world,
+            hornvale_vessel::PossessOpts {
+                day: WorldTime { day },
+                echo: true,
+            },
+            std::io::Cursor::new(script),
+            &mut out,
+        )
+        .map_err(|e| e.to_string())?;
+        writeln!(out, "```").map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        let stdin = std::io::stdin();
+        hornvale_vessel::run(
+            &world,
+            hornvale_vessel::PossessOpts {
+                day: WorldTime { day },
+                echo: false,
+            },
+            stdin.lock(),
+            stdout.lock(),
+        )
+        .map_err(|e| e.to_string())
+    }
 }
 
 /// Render the world's elevation map: a markdown page (title, land lines,
@@ -660,15 +731,16 @@ fn cmd_proto() -> Result<(), String> {
 }
 
 /// Dispatch `lab` subcommands: `run <PATH>`, `diff <STUDY> <OLD_CSV> <NEW_CSV>`,
-/// and `list-metrics`.
+/// `backfill-schema <STUDY_JSON> <ROWS_CSV>`, and `list-metrics`.
 fn cmd_lab(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("run") => cmd_lab_run(args),
         Some("diff") => cmd_lab_diff(args),
+        Some("backfill-schema") => cmd_lab_backfill_schema(args),
         Some("list-metrics") => cmd_lab_list_metrics(),
         Some(other) => Err(format!("lab: unknown subcommand '{other}'\n{}", usage())),
         None => Err(format!(
-            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|list-metrics)\n{}",
+            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics)\n{}",
             usage()
         )),
     }
@@ -718,6 +790,25 @@ fn cmd_lab_diff(args: &[String]) -> Result<(), String> {
         "{}",
         hornvale_lab::render_diff(&study, &old_csv, &new_csv).map_err(|e| e.to_string())?
     );
+    Ok(())
+}
+
+/// Generate a backfilled `schema.json` for a frozen study (census-as-data
+/// spec §2): load the study and its committed `rows.csv`, reconstruct the
+/// run, and print the manifest (marked `"backfilled": true`) on stdout —
+/// the caller redirects it into the study's generated directory, once.
+fn cmd_lab_backfill_schema(args: &[String]) -> Result<(), String> {
+    let (Some(study_path), Some(csv_path)) = (args.get(2), args.get(3)) else {
+        return Err(format!(
+            "lab backfill-schema requires <STUDY_JSON> <ROWS_CSV>\n{}",
+            usage()
+        ));
+    };
+    let study =
+        hornvale_lab::load_study(std::path::Path::new(study_path)).map_err(|e| e.to_string())?;
+    let csv = std::fs::read_to_string(csv_path).map_err(|e| format!("read {csv_path}: {e}"))?;
+    let result = hornvale_lab::load_rows(&study, &csv).map_err(|e| e.to_string())?;
+    print!("{}", hornvale_lab::render_schema(&result, &csv, true));
     Ok(())
 }
 
@@ -1055,6 +1146,20 @@ mod tests {
     fn bad_neighbor_value_yields_parse_error_text() {
         let err = parse_sky_args(&args(&["--neighbor", "green-dwarf"])).unwrap_err();
         assert!(err.contains("neighbor"), "unexpected error text: {err}");
+    }
+
+    #[test]
+    fn bad_day_value_rejects_non_finite_and_negative_spans() {
+        let err = parse_possess_day(&args(&["--day", "inf"])).unwrap_err();
+        assert!(err.contains("bad --day"), "unexpected error text: {err}");
+        let err = parse_possess_day(&args(&["--day", "-inf"])).unwrap_err();
+        assert!(err.contains("bad --day"), "unexpected error text: {err}");
+        let err = parse_possess_day(&args(&["--day", "nan"])).unwrap_err();
+        assert!(err.contains("bad --day"), "unexpected error text: {err}");
+        let err = parse_possess_day(&args(&["--day", "-1"])).unwrap_err();
+        assert!(err.contains("bad --day"), "unexpected error text: {err}");
+        assert_eq!(parse_possess_day(&args(&["--day", "5"])).unwrap(), 5.0);
+        assert_eq!(parse_possess_day(&args(&[])).unwrap(), 0.0);
     }
 
     #[test]

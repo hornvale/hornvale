@@ -19,17 +19,19 @@ from a 10,000-seed run of `studies/census-of-tongues.study.json`, executed
 once by hand at author time, in the same arrangement Studies 001, 002, 003,
 006, and 007 use for their own 10,000-seed headline runs. It is **not**
 committed and **not** part of CI — `.github/workflows/ci.yml` regenerates
-only `census-lands-drift` (500 seeds) in its "Artifacts are current" step;
+only `the-census` (1,000 seeds) in its "Artifacts are current" step;
 `census-of-skies`, `census-of-lands`, `census-of-peoples`, `census-of-faiths`,
 and `census-of-eyes` are already author-time-only by the same precedent
 (only `census-of-skies` commits its raw output, per the overview above), and
 `census-of-tongues` joins them as author-time-only too. The drift-checked
-sibling, `census-lands-drift`
-(`book/src/laboratory/generated/census-lands-drift/`), now carries the same
+sibling, `the-census`
+(`book/src/laboratory/generated/the-census/`), now carries the same
 per-species naming/voice metrics this study measures at 10k; small
 differences between a number quoted here and this study's own count are
-sampling variance between a 500- and a 10,000-seed draw, not drift — the two
-pinned calibration rows below assert the 500-seed figures exactly.
+sampling variance between a 1,000- and a 10,000-seed draw, not drift — the
+calibration suite asserts the live census's figures exactly (re-pinned at
+1,000 seeds when the consolidation doubled the sample; the 500-seed values
+quoted in this page's tables are the measurement of record).
 
 **A note on preregistration.** Per ADR 0016, studies commit their
 hypotheses before running the census that tests them. The three claims
