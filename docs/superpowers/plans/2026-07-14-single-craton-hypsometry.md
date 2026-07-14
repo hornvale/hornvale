@@ -323,88 +323,125 @@ default worlds take the byte-identical pass-through branch
 
 ---
 
-### Task 3: Calibrate `SHELF_BREAK_LAND_FACTOR` (measured, not silently retuned)
+### Task 3: The land-normalized shelf metric; pin `SHELF_BREAK_LAND_FACTOR = 1.0` on the measured evidence
+
+> **AMENDED 2026-07-14 (Nathan's decision, mid-execution).** The original
+> Task 3 ran its κ-grid calibration probe and hit its pre-registered STOP
+> rule: no κ reaches 40/40 because the whole-sphere shelf floor
+> (`shelf_fraction > 0.02` of ALL cells) is geometrically unreachable for
+> a ~3%-of-sphere continent — while bimodality passes everywhere (min D
+> 1.71 across the whole grid) and the *land-normalized* shelf at κ = 1.0
+> (median 0.17, min 0.075) overlaps and exceeds the default-world
+> population's (median 0.13, min 0.097). Measured tables:
+>
+> Absolute-bound grid (seeds 1..=40, level 4, continents=1; pass = D>1.5
+> && 0.02<shelf<0.5):
+> ```
+> kappa  passes/40  min-D   min-shelf  max-shelf
+> 0.8            0  4.160  0.0020     0.0082
+> 0.9            0  3.613  0.0027     0.0082
+> 1              0  3.144  0.0023     0.0090
+> 1.25           0  2.459  0.0027     0.0160
+> 1.5            1  2.090  0.0035     0.0457
+> 2              18  1.713  0.0078     0.0664
+> ```
+> Land-normalized shelf (shelf cells / land cells) at κ = 1.0, same sweep:
+> min 0.0750, median 0.1705, max 0.3088 (D min 3.144, median 5.533);
+> default-pins worlds seeds 0..=15: min 0.0972, median 0.1297, max 0.1649.
+>
+> Nathan's ruling: the metric's denominator, not the world, is wrong —
+> re-express the test's shelf floor land-normalized (`shelf/land > 0.05`),
+> keep `D > 1.5` and the absolute `shelf_fraction < 0.5` ceiling (which
+> still guards the original drown-into-the-abyss failure), and keep
+> `SHELF_BREAK_LAND_FACTOR = 1.0` — the physical shelf break, untuned.
 
 **Files:**
-- Modify: `domains/terrain/src/elevation.rs` (temporary probe test; then the constant's value + doc table; probe deleted before commit)
+- Modify: `domains/terrain/src/shape.rs` (new `shelf_land_ratio` + unit test)
+- Modify: `domains/terrain/src/elevation.rs` (the constant's doc: replace the calibration-pending sentence with the measured evidence above)
 
 **Interfaces:**
-- Consumes: `crate::globe::generate`, `crate::shape::{hypsometric_bimodality, shelf_fraction}`, `crust::continental_supply`, `derive_sea_level` — all existing.
-- Produces: the final value of `SHELF_BREAK_LAND_FACTOR` with its measured calibration table in the doc comment. No API change.
+- Consumes: `SHELF_BAND_M`, `CellMap<ReferenceElevation>` — all existing.
+- Produces: `pub fn shelf_land_ratio(elevation: &CellMap<ReferenceElevation>, sea_level: ReferenceElevation) -> Option<f64>` in `hornvale_terrain::shape`. Task 4's tests consume this exact signature. `SHELF_BREAK_LAND_FACTOR` stays `1.0` (value unchanged; doc updated). Do NOT register the new function as a lab metric — the census schema and the committed `lab list-metrics` reference dump are frozen.
 
-- [ ] **Step 1: Write the probe**
+- [ ] **Step 1: Write the failing test**
 
-Add to the `tests` module of `domains/terrain/src/elevation.rs`:
+Add to the `tests` module of `domains/terrain/src/shape.rs`:
 
 ```rust
 #[test]
-#[ignore = "calibration probe: run manually with --ignored --nocapture; \
-    deleted once SHELF_BREAK_LAND_FACTOR is pinned (the table lives in \
-    the constant's doc)"]
-fn shelf_break_land_factor_calibration_probe() {
-    let geo = Geosphere::new(4);
-    let pins = TerrainPins {
-        continents: Some(1),
-        ..TerrainPins::default()
-    };
-    let kappas = [0.8, 0.9, 1.0, 1.25, 1.5, 2.0];
-    // Per kappa: (passes, min D, min shelf, max shelf) over the sweep.
-    let mut rows = vec![(0u32, f64::INFINITY, f64::INFINITY, f64::NEG_INFINITY); kappas.len()];
-    for seed in 1..=40u64 {
-        // Genesis is kappa-independent: generate once, re-derive sea
-        // level per kappa.
-        let globe = crate::globe::generate(Seed(seed), &geo, &pins)
-            .expect("genesis")
-            .globe;
-        let supply = crate::crust::continental_supply(&globe.cratons);
-        for (i, kappa) in kappas.iter().enumerate() {
-            let sea = derive_sea_level(&globe.elevation, 1.0 - kappa * supply);
-            let d = crate::shape::hypsometric_bimodality(&globe.elevation, sea)
-                .expect("has land and ocean");
-            let shelf = crate::shape::shelf_fraction(&globe.elevation, sea);
-            let row = &mut rows[i];
-            if d > 1.5 && shelf > 0.02 && shelf < 0.5 {
-                row.0 += 1;
-            }
-            row.1 = row.1.min(d);
-            row.2 = row.2.min(shelf);
-            row.3 = row.3.max(shelf);
-        }
-    }
-    println!("kappa  passes/40  min-D   min-shelf  max-shelf");
-    for (kappa, (passes, min_d, min_shelf, max_shelf)) in kappas.iter().zip(&rows) {
-        println!("{kappa:<6} {passes:>9}  {min_d:<7.3}{min_shelf:<11.4}{max_shelf:<9.4}");
-    }
+fn shelf_land_ratio_normalizes_by_land_not_the_sphere() {
+    let geo = Geosphere::new(3);
+    let sea = ReferenceElevation::new(0.0).unwrap();
+    // Elevation = 1000·z: land is z >= 0 (half the sphere by area), the
+    // ±200 m band is |z| <= 0.2 (~20% of the sphere) → ratio ≈ 0.4.
+    let e = CellMap::from_fn(&geo, |c| {
+        ReferenceElevation::new(1000.0 * geo.position(c)[2]).unwrap()
+    });
+    let r = shelf_land_ratio(&e, sea).expect("has land");
+    assert!((0.25..=0.55).contains(&r), "ratio {r}");
+    // All-ocean: no land, absent.
+    let ocean = CellMap::from_fn(&geo, |_| ReferenceElevation::new(-100.0).unwrap());
+    assert_eq!(shelf_land_ratio(&ocean, sea), None);
 }
 ```
 
-- [ ] **Step 2: Run it and capture the table**
+- [ ] **Step 2: Run it to verify it fails**
 
 ```bash
-cargo test -p hornvale-terrain --lib shelf_break_land_factor_calibration_probe -- --ignored --nocapture 2>&1 | tee /tmp/hv-calibration.txt
+cargo test -p hornvale-terrain --lib shelf_land_ratio 2>&1 | tee /tmp/hv-test.txt
 ```
-Expected: the probe passes (it only measures) and prints one row per κ.
+Expected: compile error — `shelf_land_ratio` not found.
 
-- [ ] **Step 3: Apply the pre-registered decision rule**
+- [ ] **Step 3: Implement**
 
-Among κ values with **40/40 passes**, choose the one maximizing the minimum shelf margin `min(min_shelf − 0.02, 0.5 − max_shelf)`; ties break toward larger `min-D`; still tied, toward κ closest to 1.0 (the physically plain shelf break).
-
-**STOP rule:** if no κ on the grid reaches 40/40, do NOT weaken the test bounds and do NOT extend the grid ad hoc. Record the full table in the task report, keep the seed-3 test `#[ignore]`d, and halt for review — the spec's success criteria are then unreachable under route 1 as designed and the design needs revisiting.
-
-- [ ] **Step 4: Pin the constant and record the evidence**
-
-Set `SHELF_BREAK_LAND_FACTOR` to the winning κ. Replace the last sentence of its doc comment ("Calibrated in Task 3 … replaces this sentence there.") with the measured table, in the `REBALANCE_GAIN` house style, e.g.:
+In `domains/terrain/src/shape.rs`, immediately after `shelf_fraction`, add (matching `shelf_fraction`'s comparison idiom exactly):
 
 ```rust
-/// Calibrated over the single-craton sweep (seeds 1..=40, level 4,
-/// continents=1, drawn ocean fraction), grid {0.8, 0.9, 1.0, 1.25,
-/// 1.5, 2.0}, decision rule: max-min shelf margin among 40/40-pass
-/// values, ties toward min-D then toward 1.0:
-///   kappa  passes/40  min-D   min-shelf  max-shelf
-///   <paste the measured rows here>
+/// Shelf area relative to land area: cells within [`SHELF_BAND_M`] of sea
+/// level (both sides of it), over cells at or above sea level. The
+/// whole-sphere `shelf_fraction` silently assumes an Earth-scale land
+/// fraction — a small-continent world can carry a proportionally healthy
+/// shelf while clearing only a sliver of the sphere (decision 0053's
+/// measured tables). `None` when the globe has no land.
+/// type-audit: bare-ok(ratio: return)
+pub fn shelf_land_ratio(
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+) -> Option<f64> {
+    let mut shelf = 0usize;
+    let mut land = 0usize;
+    for (_, e) in elevation.iter() {
+        if (*e - sea_level).abs() <= SHELF_BAND_M {
+            shelf += 1;
+        }
+        if *e >= sea_level {
+            land += 1;
+        }
+    }
+    if land == 0 {
+        return None;
+    }
+    Some(shelf as f64 / land as f64)
+}
 ```
 
-Delete the probe test.
+- [ ] **Step 4: Update the constant's doc with the measured evidence**
+
+In `domains/terrain/src/elevation.rs`, replace the final sentence of `SHELF_BREAK_LAND_FACTOR`'s doc comment ("Calibrated in Task 3 … replaces this sentence there.") with the evidence, in the `REBALANCE_GAIN` house style:
+
+```rust
+/// Measured over the single-craton sweep (seeds 1..=40, level 4,
+/// continents=1, drawn ocean fraction), κ grid {0.8, 0.9, 1.0, 1.25,
+/// 1.5, 2.0}: no κ satisfies the whole-sphere shelf floor (best:
+/// 18/40 at κ=2.0) because a ~3%-of-sphere continent cannot put 2% of
+/// the sphere within ±200 m of sea level — while at κ = 1.0 the
+/// land-normalized shelf (shelf cells / land cells, `shelf_land_ratio`)
+/// spans 0.075–0.309 (median 0.171), overlapping and at the median
+/// exceeding the default-world population's 0.097–0.165 (median 0.130),
+/// with D in 3.14–5.5+. 1.0 is therefore retained — the physical shelf
+/// break, untuned; the test floor is land-normalized instead
+/// (decision 0053).
+```
 
 - [ ] **Step 5: Run the crate suite, fmt, clippy, commit**
 
@@ -412,11 +449,14 @@ Delete the probe test.
 cargo test -p hornvale-terrain 2>&1 | tee /tmp/hv-test.txt
 cargo fmt
 cargo clippy --workspace --all-targets -- -D warnings
-git add domains/terrain/src/elevation.rs
-git commit -m "feat(terrain): pin SHELF_BREAK_LAND_FACTOR from the 40-seed calibration sweep
+git add domains/terrain/src/shape.rs domains/terrain/src/elevation.rs
+git commit -m "feat(terrain): land-normalized shelf metric; SHELF_BREAK_LAND_FACTOR stays 1.0 on the measured evidence
 
-Measured, not silently retuned: the grid table lives in the constant's
-doc (single-craton-hypsometry plan, Task 3)."
+The whole-sphere shelf floor is geometrically unreachable for a
+~3%-of-sphere continent (0/40 at every kappa; best 18/40 at kappa=2);
+the land-normalized shelf at the physical shelf break overlaps and
+exceeds the default-world population's. Tables in the constant's doc
+(single-craton-hypsometry plan, Task 3 as amended)."
 ```
 
 ---
@@ -430,16 +470,39 @@ doc (single-craton-hypsometry plan, Task 3)."
 **Interfaces:**
 - Consumes: everything from Tasks 1–3 (`continental_supply`, `effective_ocean_target`, `SUPPLY_SHORTFALL_FACTOR`, the calibrated constant). No new API.
 
-- [ ] **Step 1: Un-ignore the seed-3 test**
+- [ ] **Step 1: Un-ignore the seed-3 test and land-normalize its shelf floor (Task 3 amendment)**
 
-In `domains/terrain/src/elevation.rs`, delete the entire `#[ignore = "Task 9 re-verification …"]` attribute (~lines 500–512), leaving the test body unchanged.
+In `domains/terrain/src/elevation.rs`, delete the entire `#[ignore = "Task 9 re-verification …"]` attribute (~lines 500–512), and replace the test body's two shelf assertions:
+
+```rust
+        let shelf = crate::shape::shelf_fraction(&globe.elevation, globe.sea_level);
+        assert!(shelf > 0.02, "no shelf band: {shelf}");
+        assert!(shelf < 0.5, "everything is shelf: {shelf}");
+```
+
+with the land-normalized floor plus the retained absolute ceiling:
+
+```rust
+        // Shelf floor is land-normalized (decision 0053): a ~3%-of-sphere
+        // continent cannot clear an absolute whole-sphere floor, but its
+        // shelf-to-land ratio matches or beats default worlds'. The
+        // absolute ceiling stays — it guards the original failure mode
+        // (sea level drowned into the abyssal plain, everything "shelf").
+        let shelf_land = crate::shape::shelf_land_ratio(&globe.elevation, globe.sea_level)
+            .expect("has land");
+        assert!(shelf_land > 0.05, "no shelf band relative to land: {shelf_land}");
+        let shelf = crate::shape::shelf_fraction(&globe.elevation, globe.sea_level);
+        assert!(shelf < 0.5, "everything is shelf: {shelf}");
+```
+
+(The `d > 1.5` bimodality assertion is unchanged.)
 
 - [ ] **Step 2: Run it to verify it now passes**
 
 ```bash
 cargo test -p hornvale-terrain --lib a_single_craton_world_has_a_shelf_and_a_bimodal_hypsometry 2>&1 | tee /tmp/hv-test.txt
 ```
-Expected: PASS. (Seed 3 is inside the calibrated sweep; if this fails, Task 3's decision rule was misapplied — go back, don't retune here.)
+Expected: PASS. (Seed 3 is inside the measured sweep — its land-normalized shelf sits within the measured 0.075–0.309 range; if this fails, Task 3's evidence was misapplied — go back, don't retune here.)
 
 - [ ] **Step 3: Rewrite the stale module-doc paragraph**
 
@@ -461,7 +524,7 @@ Add to `domains/terrain/tests/tectonic_properties.rs`:
 ```rust
 #[test]
 fn single_craton_worlds_have_shelves_and_bimodal_hypsometry_across_the_sweep() {
-    use hornvale_terrain::shape::{hypsometric_bimodality, shelf_fraction};
+    use hornvale_terrain::shape::{hypsometric_bimodality, shelf_fraction, shelf_land_ratio};
     let geo = Geosphere::new(4);
     let pins = TerrainPins {
         continents: Some(1),
@@ -481,8 +544,15 @@ fn single_craton_worlds_have_shelves_and_bimodal_hypsometry_across_the_sweep() {
         let d = hypsometric_bimodality(&globe.elevation, globe.sea_level)
             .expect("has land and ocean");
         assert!(d > 1.5, "seed {seed}: hypsometry not bimodal: D = {d}");
+        // Land-normalized floor + absolute ceiling (decision 0053): the
+        // ceiling still guards the drowned-into-the-abyss failure mode.
+        let shelf_land =
+            shelf_land_ratio(&globe.elevation, globe.sea_level).expect("has land");
+        assert!(
+            shelf_land > 0.05,
+            "seed {seed}: no shelf band relative to land: {shelf_land}"
+        );
         let shelf = shelf_fraction(&globe.elevation, globe.sea_level);
-        assert!(shelf > 0.02, "seed {seed}: no shelf band: {shelf}");
         assert!(shelf < 0.5, "seed {seed}: everything is shelf: {shelf}");
     }
 }
@@ -594,6 +664,25 @@ pinned counts sometimes), the achieved ocean fraction reported by
 `summarize` exceeds a pinned `--ocean-fraction` — the pin conditions the
 craton budget as before but the quota itself is honored only up to
 supply. Non-limited worlds are byte-identical to before this decision.
+
+**Amendment (same date): the shelf test floor is land-normalized.** The
+pre-registered κ calibration hit its STOP rule: no κ satisfies the
+whole-sphere shelf floor (`shelf_fraction > 0.02` of all cells; best
+18/40 at κ=2.0) because a ~3%-of-sphere continent cannot put 2% of the
+sphere within ±200 m of sea level — while at κ = 1.0 the land-normalized
+shelf (`shape::shelf_land_ratio`) spans 0.075–0.309 (median 0.171),
+overlapping and at the median exceeding the default-world population's
+0.097–0.165 (median 0.130), with D ≥ 3.14. Nathan ruled the metric's
+denominator, not the world, wrong: the single-craton tests assert
+`shelf_land_ratio > 0.05` plus the retained absolute
+`shelf_fraction < 0.5` ceiling (which still guards the original
+drowned-into-the-abyss failure), and `SHELF_BREAK_LAND_FACTOR` stays 1.0
+— the physical shelf break, untuned. This is a re-normalization with
+measured evidence, not the "weaken the test" route the spec rejected:
+the property "a continent has a shelf" is preserved and now scales with
+the continent. The whole-sphere `shelf_fraction` metric itself is
+unchanged (the frozen census depends on it); `shelf_land_ratio` is a new
+unregistered shape function.
 ```
 
 - [ ] **Step 2: Type-audit check (new pub items were tagged inline)**
@@ -627,7 +716,19 @@ Expected: both green.
 
 - [ ] **Step 5: Retro + spec/plan shipped markers**
 
-Write `docs/retrospectives/single-craton-hypsometry.md` (one page, process lessons only). Flip the spec's `**Status:**` line to `Shipped (2026-07-14)` and check off this plan's boxes.
+Write `docs/retrospectives/single-craton-hypsometry.md` (one page, process lessons only — the STOP-rule firing and the land-normalization ruling are the story). Flip the spec's `**Status:**` line to `Shipped (2026-07-14)`, and append an amendment note at the end of the spec's Success criteria section:
+
+```markdown
+> **Amendment at execution (2026-07-14, Nathan):** criterion 1's shelf
+> floor is land-normalized (`shape::shelf_land_ratio > 0.05`, absolute
+> `shelf_fraction < 0.5` ceiling retained) — the measured sweep showed
+> the whole-sphere 0.02 floor geometrically unreachable for a
+> ~3%-of-sphere continent whose shelf-to-land ratio nonetheless matches
+> or beats default worlds'. Evidence and ruling: decision 0053's
+> amendment; tables in `SHELF_BREAK_LAND_FACTOR`'s doc.
+```
+
+Check off this plan's boxes.
 
 - [ ] **Step 6: The full gate, then commit**
 
