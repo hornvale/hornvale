@@ -438,6 +438,68 @@ mod tests {
                 .is_none()
         );
     }
+
+    /// The Long Count: the solstice sunrise azimuth is north of east
+    /// (< 90°), mirror-symmetric across the equator, and None on locked
+    /// worlds and inside the polar circles.
+    #[test]
+    fn solstice_azimuth_geometry_holds() {
+        let cal = calendar_of(&spinning_system());
+        let t = StdDays(0.0);
+        let az = cal.solstice_rise_azimuth_at(40.0, t).unwrap();
+        assert!((0.0..90.0).contains(&az), "az {az}");
+        let south = cal.solstice_rise_azimuth_at(-40.0, t).unwrap();
+        assert!((az - south).abs() < 1e-9, "equator mirror: {az} vs {south}");
+        assert!(cal.solstice_rise_azimuth_at(89.9, t).is_none(), "polar day");
+        let locked = calendar_of(&locked_system());
+        assert!(locked.solstice_rise_azimuth_at(40.0, t).is_none());
+    }
+
+    /// The drift IS the obliquity wobble: nonzero across a half-period,
+    /// and home again after a full one.
+    #[test]
+    fn alignment_drift_is_the_obliquity_wobble() {
+        let cal = calendar_of(&generate(Seed(42), &SkyPins::default()).unwrap().system);
+        if cal.day_length().is_none() {
+            return; // a locked draw can't test drift; seed 42 spins today
+        }
+        let half = StdDays(crate::forcing::P_OBLIQUITY / 2.0);
+        let d = cal.alignment_drift_deg(40.0, StdDays(0.0), half).unwrap();
+        assert!(d.abs() > 0.0, "a wobbling sky drifts");
+        let full = StdDays(crate::forcing::P_OBLIQUITY);
+        let round = cal.alignment_drift_deg(40.0, StdDays(0.0), full).unwrap();
+        assert!(round.abs() < 1e-9, "one full period returns home: {round}");
+    }
+
+    /// The dating inverse round-trips within the nearest half-cycle, and
+    /// refuses to date an unmoving sky (zero amplitude).
+    #[test]
+    fn alignment_epoch_round_trips() {
+        let cal = calendar_of(&generate(Seed(42), &SkyPins::default()).unwrap().system);
+        if cal.day_length().is_none() {
+            return;
+        }
+        let t = StdDays(0.3 * crate::forcing::P_OBLIQUITY);
+        let az = cal.solstice_rise_azimuth_at(40.0, t).unwrap();
+        let epoch = cal
+            .alignment_epoch_of(az, 40.0, StdDays(t.0 + 1.0))
+            .unwrap();
+        assert!(
+            (epoch.0 - t.0).abs() < 1.0,
+            "epoch {} vs t {}",
+            epoch.0,
+            t.0
+        );
+        use crate::pins::{ForcingPin, RotationPin, SkyPins};
+        let pins = SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            forcing: Some(ForcingPin::Zero),
+            ..SkyPins::default()
+        };
+        let frozen = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let az0 = frozen.solstice_rise_azimuth_at(40.0, StdDays(0.0)).unwrap();
+        assert!(frozen.alignment_epoch_of(az0, 40.0, StdDays(1e6)).is_none());
+    }
 }
 
 /// The sky's brightness band at a placed moment — the one shared twilight
@@ -649,6 +711,87 @@ impl Calendar {
     /// type-audit: pending(wave-1)
     pub fn precession_offset_deg(&self, t: StdDays) -> f64 {
         (self.forcing.precession_at(t.0) - self.forcing.precession_at(0.0)).to_degrees()
+    }
+
+    /// Sunrise azimuth on the day of the sun's northern-solstice extreme
+    /// (δ = +ε(t)), degrees clockwise from north: cos(az) = sin ε / cos φ
+    /// (refraction and horizon dip ignored — declared approximation). A
+    /// retrograde world's sun rises mirrored in the west (SKY-22). `None`
+    /// on a locked world (no sunrise) and inside the polar circles
+    /// (midnight sun / polar night at the solstice). The drift of this
+    /// azimuth over kiloyears IS the obliquity wobble — the ground half
+    /// of SKY-stale-alignments (the sky half is `star_equatorial_at`).
+    /// type-audit: pending(wave-1: latitude), pending(wave-1: return)
+    pub fn solstice_rise_azimuth_at(&self, latitude: f64, t: StdDays) -> Option<f64> {
+        self.day_length()?;
+        let eps = self.forcing.obliquity_at(t.0).to_radians();
+        let phi = latitude.to_radians();
+        let x = math::sin(eps) / math::cos(phi);
+        if x.abs() > 1.0 {
+            return None;
+        }
+        let az = math::acos(x).to_degrees();
+        Some(if self.retrograde { 360.0 - az } else { az })
+    }
+
+    /// How far a solstice sightline cut at `t0` is off by `t1`, degrees
+    /// (positive = the rise point moved clockwise). Bounded by the
+    /// obliquity amplitude's azimuthal image; periodic on `P_OBLIQUITY`.
+    /// type-audit: pending(wave-1: latitude), pending(wave-1: return)
+    pub fn alignment_drift_deg(&self, latitude: f64, t0: StdDays, t1: StdDays) -> Option<f64> {
+        Some(
+            self.solstice_rise_azimuth_at(latitude, t1)?
+                - self.solstice_rise_azimuth_at(latitude, t0)?,
+        )
+    }
+
+    /// The dating inverse (the sky as archaeological clock): the most
+    /// recent epoch at or before `t_now` whose solstice sunrise azimuth
+    /// at `latitude` matches `azimuth_deg`. Multi-valued over deep time —
+    /// the wobble oscillates — so nearest-past is the contract. `None` on
+    /// a locked world, when the azimuth is unreachable at this latitude,
+    /// or when the obliquity amplitude is zero (an unmoving sky cannot be
+    /// dated).
+    /// type-audit: pending(wave-1)
+    pub fn alignment_epoch_of(
+        &self,
+        azimuth_deg: f64,
+        latitude: f64,
+        t_now: StdDays,
+    ) -> Option<StdDays> {
+        self.day_length()?;
+        if self.forcing.obliquity_amp == 0.0 {
+            return None;
+        }
+        let az = if self.retrograde {
+            360.0 - azimuth_deg
+        } else {
+            azimuth_deg
+        };
+        let x = math::cos(az.to_radians()) * math::cos(latitude.to_radians());
+        if x.abs() > 1.0 {
+            return None;
+        }
+        let eps_target = math::asin(x).to_degrees();
+        // Invert obliquity_at: sin(τt/P + φ₀) = sin φ₀ + (ε* − mean)/amp.
+        let s = math::sin(self.forcing.obliquity_phase)
+            + (eps_target - self.forcing.obliquity_mean) / self.forcing.obliquity_amp;
+        if s.abs() > 1.0 {
+            return None;
+        }
+        let a = math::asin(s);
+        let p = crate::forcing::P_OBLIQUITY;
+        let mut best: Option<f64> = None;
+        // Two solution families per period: θ = a and θ = π − a.
+        for theta in [a, std::f64::consts::PI - a] {
+            let t_base = (theta - self.forcing.obliquity_phase) / std::f64::consts::TAU * p;
+            let k = ((t_now.0 - t_base) / p).floor();
+            let t = t_base + k * p;
+            if t <= t_now.0 && best.is_none_or(|b| t > b) {
+                best = Some(t);
+            }
+        }
+        best.map(StdDays)
     }
 
     /// The sun's equatorial position at `t` (exact spherical form; the shipped
