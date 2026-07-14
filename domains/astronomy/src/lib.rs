@@ -89,10 +89,6 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "astronomy/moon-inclinations",
             "per-moon orbital-inclination draws",
         ),
-        (
-            "astronomy/moon-nodes",
-            "per-moon ascending-node longitude draws",
-        ),
         ("astronomy/wanderer-count", "how many wandering planets"),
         (
             "astronomy/wanderers",
@@ -101,6 +97,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "astronomy/starfield",
             "background starfield: count + per-star position/brightness (derived on demand)",
+        ),
+        (
+            "astronomy/moon-nodes",
+            "per-moon ascending-node longitude draws",
         ),
     ]
 }
