@@ -1,5 +1,20 @@
 # Lab Performance Implementation Plan
 
+> **Status: CLOSED 2026-07-14 — Stages 1–2 SHIPPED, Stage 3 DESCOPED, Stage 4 PARKED.**
+> Stages 1–2 (the profiler + the MAP-25 view-typed build-depth ladder, with
+> the pin_enumeration parallelization sidecar) merged to main 2026-07-13 at
+> `380eb0a`; the campaign was then left open — no chronicle, retrospective,
+> registry flips, or worktree cleanup — until this close. At close, Task 10
+> (depth-scope `pin_enumeration` to the terrain rung, ~64s → ~16s) was
+> executed, and Nathan ruled on the remainder (2026-07-14): **Stage 3 is
+> descoped** — decision 0042 (GitHub CI is manual-only) removed the per-push
+> drift regen the path-tiering targeted, and the concurrent-local-gate
+> contention the `flock` half addressed was solved by worktree timeout
+> settings, prewarm, and the fixture treatments; **Stage 4 is parked** —
+> decision 0046 (census regen is remote-only) removed the local census the
+> batteries were designed to ride; re-scoped as a registry row for a future
+> pass. Per-stage banners below carry the same verdicts.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Cut lab and CI turnaround before Sculpting by pushing worldgen's projection down (build only to the rung a study's metrics read), tiering the CI drift regen, and adding two free-riding correctness batteries — every change provably byte-identical in its outputs.
@@ -52,7 +67,7 @@ The four stages are independent (they share no state) and **B** and **C** can be
 - Modify: `windows/worldgen/src/lib.rs`
 - Test: `windows/worldgen/tests/profile.rs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```rust
 // windows/worldgen/tests/profile.rs
@@ -91,12 +106,12 @@ fn profiled_records_the_five_stages() {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cargo test -p hornvale-worldgen --test profile`
 Expected: FAIL — `BuildProfile` / `profiled` unresolved.
 
-- [ ] **Step 3: Implement the sink**
+- [x] **Step 3: Implement the sink**
 
 In `windows/worldgen/src/lib.rs`, add near the top of the module:
 
@@ -152,12 +167,12 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
 }
 ```
 
-- [ ] **Step 4: Run to verify the test now fails only on the missing stages**
+- [x] **Step 4: Run to verify the test now fails only on the missing stages**
 
 Run: `cargo test -p hornvale-worldgen --test profile`
 Expected: FAIL — labels vec is empty (spans not wired yet). This confirms `profiled` compiles and runs; Task 2 wires the spans.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add windows/worldgen/src/lib.rs windows/worldgen/tests/profile.rs
@@ -169,7 +184,7 @@ git commit -m "feat(worldgen): profiler sink (thread-local, off-path zero cost)"
 **Files:**
 - Modify: `windows/worldgen/src/lib.rs` (`build_world_with_roster`, lines ~1627–1935)
 
-- [ ] **Step 1: Wrap each pipeline stage in `stage(..)`**
+- [x] **Step 1: Wrap each pipeline stage in `stage(..)`**
 
 Wrap the existing pipeline segments in `build_world_with_roster` — do **not** move or reorder any statement; only wrap. The five spans, by current line ranges:
 
@@ -200,22 +215,22 @@ stage("terrain", || -> Result<(), BuildError> {
 
 Apply the same wrapping to the other four segments. Segments that produce values later statements need (e.g. `terrain`, `climate`, `placements`, `ids`) must return those values *out* of the closure so the outer bindings still see them — e.g. `let (terrain, climate, ids, placed, placements) = stage("climate+settlements", || { ... Ok((terrain, climate, ids, placed, placements)) })?;`. Keep the borrow structure identical; the closure is a pure lexical wrapper.
 
-- [ ] **Step 2: Run the profiler test**
+- [x] **Step 2: Run the profiler test**
 
 Run: `cargo test -p hornvale-worldgen --test profile`
 Expected: PASS — the five labels appear in order.
 
-- [ ] **Step 3: Prove byte-identity of the normal path is untouched**
+- [x] **Step 3: Prove byte-identity of the normal path is untouched**
 
 Run: `cargo test -p hornvale-worldgen`
 Expected: PASS — every existing determinism/golden test in worldgen still passes (the wrapping changed no facts). If `proto_goblinoid_golden` or any determinism test fails, a statement moved semantically — revert and re-wrap without reordering.
 
-- [ ] **Step 4: fmt + clippy**
+- [x] **Step 4: fmt + clippy**
 
 Run: `cargo fmt && cargo clippy -p hornvale-worldgen --all-targets -- -D warnings`
 Expected: clean (the scoped `#[allow]` silences the `Instant`/`Duration` bans).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add windows/worldgen/src/lib.rs
@@ -227,7 +242,7 @@ git commit -m "feat(worldgen): time the five build stages under the profiler"
 **Files:**
 - Create: `windows/worldgen/examples/profile_build.rs`
 
-- [ ] **Step 1: Write the example**
+- [x] **Step 1: Write the example**
 
 ```rust
 //! Committed build profiler (spec §7). Runs a representative seed sample,
@@ -280,12 +295,12 @@ fn main() {
 }
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run: `cargo run -p hornvale-worldgen --example profile_build -- 24`
 Expected: prints five rows with shares summing to ~100%. Record the output for Task 6.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add windows/worldgen/examples/profile_build.rs
@@ -300,7 +315,7 @@ git commit -m "feat(worldgen): profile_build example — per-stage cost shares"
 **Interfaces:**
 - Consumes: the terrain crate's public build entry (`hornvale_terrain::generate`) and per-cell readers (`thickness_at`, `age_at`, `continental_at` on `GeneratedTerrain`). Confirm exact names with `grep -n "pub fn" domains/terrain/src/lib.rs domains/terrain/src/crust.rs` before writing; adjust the calls to match.
 
-- [ ] **Step 1: Write the example**
+- [x] **Step 1: Write the example**
 
 The `strongest()`-collapse hypothesis (spec §4 conditional sibling): `thickness_at`, `age_at`, and `continental_at` each recompute the full per-cell craton sweep, so a cell read by all three pays up to 3×. This example times (a) a full terrain `generate`, and (b) the triple-read vs a single hypothetical sweep, over every cell, to decide whether the collapse is material.
 
@@ -351,12 +366,12 @@ fn main() {
 }
 ```
 
-- [ ] **Step 2: Adjust names to match the crate, then run**
+- [x] **Step 2: Adjust names to match the crate, then run**
 
 Run: `grep -n "pub fn" domains/terrain/src/lib.rs domains/terrain/src/crust.rs` and fix the imports/calls, then `cargo run -p hornvale-terrain --example profile_terrain -- 8`.
 Expected: prints the generate time and the triple-read share. Record for Task 6.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add domains/terrain/examples/profile_terrain.rs
@@ -365,21 +380,21 @@ git commit -m "feat(terrain): micro-profiler for the strongest() triple-read"
 
 ### Task 5: Full-gate green
 
-- [ ] **Step 1:** Run `make gate` (fmt + clippy + `cargo test --workspace`). Expected: PASS.
-- [ ] **Step 2:** Commit any fmt fixups.
+- [x] **Step 1:** Run `make gate` (fmt + clippy + `cargo test --workspace`). Expected: PASS.
+- [x] **Step 2:** Commit any fmt fixups.
 
 ### Task 6: Readout — answer the three questions (the fail-fast gate)
 
 **Files:**
 - Modify: this plan (append a "## Stage 1 readout" block at the end) **and** `docs/superpowers/specs/2026-07-12-lab-performance-design.md` (record the numbers next to §7's three questions).
 
-- [ ] **Step 1:** Run both profilers over a representative sample (≥24 seeds for `profile_build`, ≥8 for `profile_terrain`; release mode for realistic shares: append `--release`).
-- [ ] **Step 2:** Record the numbers and decide, explicitly:
+- [x] **Step 1:** Run both profilers over a representative sample (≥24 seeds for `profile_build`, ≥8 for `profile_terrain`; release mode for realistic shares: append `--release`).
+- [x] **Step 2:** Record the numbers and decide, explicitly:
   1. **MAP-25 premise:** is `climate+settlements` + the tail really the dominant share for a terrain census (i.e. is terrain a small fraction of a full build)? If terrain already dominates, the ladder's win shrinks — reconsider Stage 2's scope before building it.
   2. **Astronomy-split:** is `astronomy` cheap next to `terrain`? If yes (expected), keep the ladder strictly linear (Stage 2 builds astronomy before terrain). If astronomy is a material share, add the astronomy-as-incomparable-branch task to Stage 2.
   3. **`strongest()`-collapse:** is the triple-read share (Task 4) material? If yes, Stage 2 Task 8 (single-sweep collapse) is in; if not, drop it.
-- [ ] **Step 3:** Write the three decisions into the plan and spec. **This is the gate: do not start Stage 2 until this is recorded.**
-- [ ] **Step 4: Commit**
+- [x] **Step 3:** Write the three decisions into the plan and spec. **This is the gate: do not start Stage 2 until this is recorded.**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/superpowers/plans/2026-07-12-lab-performance.md docs/superpowers/specs/2026-07-12-lab-performance-design.md
@@ -451,9 +466,9 @@ The spec (§4) requires the exact rung of *every* metric in `windows/lab/src/met
 | `v.world` for settlement/culture facts (`flagship_of`, `places`, `castes_of`, `POPULATION`, `CELL_ID`, `subsistence_of`) | **Settlements** |
 | `v.world` for religion/language/species facts (`beliefs_*`, `pantheon_sig`, `lexicon_*`, `phonotactic_*`, `homophony_*`, `hue_depth`, name-gloss) | **Full** |
 
-- [ ] **Step 1:** For each metric in the registry (`registry()` in `windows/lab/src/metrics.rs`, ~90 entries), record `name → rung` in the enumeration file by reading its `extract` closure and the helper it calls. Metrics that call helpers (`pantheon_sig`, `flagship_surplus`, `phonotactic_validity`, `lexicon_regular`, …) inherit the deepest field their helper reads — read each helper once.
-- [ ] **Step 2:** Sanity-check the buckets: every `star-*`/`*-neighbor`/`moons-*`/`obliquity-*`/`year-*`/`day-*`/`tide`/`month`/`belief-kind`/`genesis-note-count` metric is Astronomy; every `*-continent*`/`plate-*`/`ocean-fraction`/`mountain-coverage`/`unrest-coverage`/`endorheic-*`/`shoreline-*`/`hypsometric-*`/`shelf-*`/`landmass-*` metric is Terrain; `band-count`/`habitable-fraction`/`dominant-land-biome`/`mean-land-temperature-c` are Climate; `settlement-count`/`mean-population`/`flagship-*` (subsistence/biome/coastal/structure/population/surplus)/`*-settlement-count` are Settlements; everything religion/language (`pantheon-*`/`cult-form-*`/`head-deity-*`/`*-flagship-roles`/`blind-attribution-*`/`phonotactic-*`/`epithet-*`/`name-length-*`/`name-collision-rate`/`name-gloss-true`/`lexicon-*`/`exposure-*`/`hue-depth-*`/`monophyly-*`/`clean-outgroup-*`/`inventory-closure-*`/`divergence-*`/`homophony-*` and the functional-load block) is Full.
-- [ ] **Step 3: Commit** the enumeration.
+- [x] **Step 1:** For each metric in the registry (`registry()` in `windows/lab/src/metrics.rs`, ~90 entries), record `name → rung` in the enumeration file by reading its `extract` closure and the helper it calls. Metrics that call helpers (`pantheon_sig`, `flagship_surplus`, `phonotactic_validity`, `lexicon_regular`, …) inherit the deepest field their helper reads — read each helper once.
+- [x] **Step 2:** Sanity-check the buckets: every `star-*`/`*-neighbor`/`moons-*`/`obliquity-*`/`year-*`/`day-*`/`tide`/`month`/`belief-kind`/`genesis-note-count` metric is Astronomy; every `*-continent*`/`plate-*`/`ocean-fraction`/`mountain-coverage`/`unrest-coverage`/`endorheic-*`/`shoreline-*`/`hypsometric-*`/`shelf-*`/`landmass-*` metric is Terrain; `band-count`/`habitable-fraction`/`dominant-land-biome`/`mean-land-temperature-c` are Climate; `settlement-count`/`mean-population`/`flagship-*` (subsistence/biome/coastal/structure/population/surplus)/`*-settlement-count` are Settlements; everything religion/language (`pantheon-*`/`cult-form-*`/`head-deity-*`/`*-flagship-roles`/`blind-attribution-*`/`phonotactic-*`/`epithet-*`/`name-length-*`/`name-collision-rate`/`name-gloss-true`/`lexicon-*`/`exposure-*`/`hue-depth-*`/`monophyly-*`/`clean-outgroup-*`/`inventory-closure-*`/`divergence-*`/`homophony-*` and the functional-load block) is Full.
+- [x] **Step 3: Commit** the enumeration.
 
 ```bash
 git add docs/superpowers/plans/lab-perf-rung-map.md
@@ -466,7 +481,7 @@ git commit -m "docs(lab-perf): per-metric rung enumeration (Stage 2 control)"
 - Modify: `windows/worldgen/src/lib.rs`
 - Test: `windows/worldgen/tests/depth.rs`
 
-- [ ] **Step 1: Write the failing test — a shallow build is a fact-prefix of the full build**
+- [x] **Step 1: Write the failing test — a shallow build is a fact-prefix of the full build**
 
 ```rust
 // windows/worldgen/tests/depth.rs
@@ -517,12 +532,12 @@ fn terrain_depth_is_a_prefix_of_full() {
 
 Refine the prefix assertion to the ledger's actual fact-iteration API (`grep -n "pub fn" kernel/src/ledger.rs`); the load-bearing claim is *facts committed at depth D equal the first N facts of the full build*.
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cargo test -p hornvale-worldgen --test depth`
 Expected: FAIL — `BuildDepth` / `build_world_to` unresolved.
 
-- [ ] **Step 3: Add `BuildDepth` and refactor the pipeline to stop early**
+- [x] **Step 3: Add `BuildDepth` and refactor the pipeline to stop early**
 
 Add the enum:
 
@@ -572,12 +587,12 @@ pub fn build_world_to(
 
 and make `build_world_with_roster` delegate with `BuildDepth::Full`.
 
-- [ ] **Step 4: Run the depth + determinism tests**
+- [x] **Step 4: Run the depth + determinism tests**
 
 Run: `cargo test -p hornvale-worldgen`
 Expected: PASS — the prefix test passes and every existing determinism/golden test still passes (Full delegates to the same statements in the same order).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add windows/worldgen/src/lib.rs windows/worldgen/tests/depth.rs
@@ -589,7 +604,7 @@ git commit -m "feat(worldgen): build_world_to(depth) — stop the pipeline at a 
 **Files:**
 - Modify: `windows/lab/src/metrics.rs`
 
-- [ ] **Step 1: Define the nested view chain**
+- [x] **Step 1: Define the nested view chain**
 
 Replace the single `WorldView` with a subset chain. Each deeper view *contains* the shallower one, so coercion is a field borrow (no recompute):
 
@@ -676,7 +691,7 @@ impl AsRef<AstronomyView> for FullView {
 }
 ```
 
-- [ ] **Step 2: Constructors that build to each rung**
+- [x] **Step 2: Constructors that build to each rung**
 
 ```rust
 impl AstronomyView {
@@ -695,14 +710,14 @@ impl AstronomyView {
 
 `TerrainView::build` calls `AstronomyView::build_to(.., BuildDepth::Terrain)` then adds `terrain_of`/`summarize`. `ClimateView::build` adds `climate_of`. `SettlementView::build` builds to `BuildDepth::Settlements`. `FullView::build` builds to `BuildDepth::Full`. Each reuses the world its inner view built — do **not** rebuild the world per rung (that would defeat the win); build once at the target depth and reconstruct the cheap derived pieces (terrain/climate reconstruction is already how the current `WorldView::build` works).
 
-- [ ] **Step 3: Keep the old `WorldView` as a `FullView` type alias temporarily** so the existing extractors and tests compile while Task 5 retypes them. Add `pub type WorldView = FullView;`? No — `FullView` has no `system`/`terrain`/`climate` fields directly. Instead, keep the current `WorldView` struct and its `build`/`build_with_roster` untouched in this task; the new views live alongside it. Task 5 migrates extractors off `WorldView`, Task 6 deletes it.
+- [x] **Step 3: Keep the old `WorldView` as a `FullView` type alias temporarily** so the existing extractors and tests compile while Task 5 retypes them. Add `pub type WorldView = FullView;`? No — `FullView` has no `system`/`terrain`/`climate` fields directly. Instead, keep the current `WorldView` struct and its `build`/`build_with_roster` untouched in this task; the new views live alongside it. Task 5 migrates extractors off `WorldView`, Task 6 deletes it.
 
-- [ ] **Step 4: Compile**
+- [x] **Step 4: Compile**
 
 Run: `cargo build -p hornvale-lab`
 Expected: clean — new types added, nothing yet consumes them.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add windows/lab/src/metrics.rs
@@ -728,7 +743,7 @@ git commit -m "feat(lab): narrowed view chain (Astronomy⊂…⊂Full) with AsRe
 **Files:**
 - Modify: `windows/lab/src/metrics.rs` (add the enum/dispatch), `windows/lab/src/lib.rs` (re-export the new public types so they aren't dead code)
 
-- [ ] **Step 1: ADD (do not yet consume) a rung-tagged extractor enum**
+- [x] **Step 1: ADD (do not yet consume) a rung-tagged extractor enum**
 
 Add `Extractor`, `BuiltView`, `Extractor::rung`, `Extractor::apply`, the `BuiltView` accessors, and a `BuiltView::build_to(seed, pins, roster, depth)` constructor (dispatches to the right view constructor and wraps in the matching variant). Re-export `Extractor` and `BuiltView` from `lib.rs`. **Do NOT change `Metric.extract` in this task** — that is Task 5's atomic swap. This task is purely additive and must compile clean.
 
@@ -767,7 +782,7 @@ impl Extractor {
 
 (The `Metric.extract` field type change and `Metric::rung()` belong to Task 5's atomic swap, NOT this task — see the SEQUENCING CORRECTION box above. This task only *adds* `Extractor`; nothing consumes it yet.)
 
-- [ ] **Step 2: Add the dispatcher — apply an `Extractor` to the deepest built view**
+- [x] **Step 2: Add the dispatcher — apply an `Extractor` to the deepest built view**
 
 The runner builds one `BuiltView` at the study's required depth:
 
@@ -819,7 +834,7 @@ impl BuiltView {
 
 Also add `BuiltView::build_to(seed, pins, roster, depth) -> Result<BuiltView, BuildError>` that matches on `depth` and calls the matching view constructor (`AstronomyView::build_with_roster`/`TerrainView::…`/…), wrapping the result in the corresponding `BuiltView` variant. Task 5's runner uses it.
 
-- [ ] **Step 3: Compile — additive, must be clean.** `cargo build -p hornvale-lab` + `cargo clippy -p hornvale-lab --all-targets -- -D warnings`. The new types are unused until Task 5, so re-export `Extractor` and `BuiltView` from `windows/lab/src/lib.rs` to avoid `dead_code` (Task 3's precedent). Commit: `feat(lab): add rung-tagged Extractor + BuiltView dispatch (additive)`.
+- [x] **Step 3: Compile — additive, must be clean.** `cargo build -p hornvale-lab` + `cargo clippy -p hornvale-lab --all-targets -- -D warnings`. The new types are unused until Task 5, so re-export `Extractor` and `BuiltView` from `windows/lab/src/lib.rs` to avoid `dead_code` (Task 3's precedent). Commit: `feat(lab): add rung-tagged Extractor + BuiltView dispatch (additive)`.
 
 ### Task 5: Retype every extractor to its rung (compiler-guided)
 
@@ -830,17 +845,17 @@ Also add `BuiltView::build_to(seed, pins, roster, depth) -> Result<BuiltView, Bu
 
 **Files:** `windows/lab/src/metrics.rs` (Metric + retype), `windows/lab/src/runner.rs` (`build_row`), `docs/superpowers/plans/lab-perf-rung-map.md` (the authoritative rung per metric).
 
-- [ ] **Step 1:** Change `Metric.extract` to `pub extract: Extractor`; add `pub fn rung(&self) -> BuildDepth { self.extract.rung() }` to `Metric`.
-- [ ] **Step 2:** For every metric, per the corrected rung map (`lab-perf-rung-map.md` — note `belief-kind` is **Full**, `hue-depth-*` are **Astronomy**), change `extract: |v| …` to `extract: Extractor::<Rung>(|v: &<Rung>View| …)` and fix the field paths:
+- [x] **Step 1:** Change `Metric.extract` to `pub extract: Extractor`; add `pub fn rung(&self) -> BuildDepth { self.extract.rung() }` to `Metric`.
+- [x] **Step 2:** For every metric, per the corrected rung map (`lab-perf-rung-map.md` — note `belief-kind` is **Full**, `hue-depth-*` are **Astronomy**), change `extract: |v| …` to `extract: Extractor::<Rung>(|v: &<Rung>View| …)` and fix the field paths:
   - Astronomy metrics: `v.system` / `v.calendar` / `v.notes` / `v.roster` (all on `AstronomyView`).
   - Terrain metrics: `v.terrain` / `v.globe`.
   - Climate metrics: `v.climate` on `ClimateView`; terrain fields via passthroughs.
   - Settlement/Full metrics: `v.world` etc. via passthrough accessors (Step 3).
-- [ ] **Step 3:** Add passthrough accessors on `ClimateView`/`SettlementView`/`FullView` (`world()`, `terrain()`, `globe()`, `climate()`, `system()`, `calendar()`, `notes()`, `roster()` as each rung needs) so the deep-rung closures read `v.world()` etc. instead of deep field chains — keeps the ~80 deep closures legible and their diffs minimal.
-- [ ] **Step 4:** In `runner.rs` `build_row`, replace `WorldView::build_with_roster(Seed(seed_value), pins, roster)` + `(m.extract)(&view)` with: build `BuiltView::Full(FullView::build_with_roster(Seed(seed_value), pins, roster)?)` (always Full for now) and `values: metrics.iter().map(|m| m.extract.apply(&built)).collect()`. Add a `pub fn run_forced_full(study) -> Result<RunResult, StudyError>` that is the current always-Full runner (Task 6's guard compares against it).
-- [ ] **Step 5: Compile — the compiler now proves the rung map.** `cargo build -p hornvale-lab`. **Every compile error here is a metric whose rung was wrong (it reads a field its view lacks) — fix the rung/the map, not by widening the view.**
-- [ ] **Step 6: Prove behavior-preserving.** `cargo test -p hornvale-lab` → PASS, **especially the calibration + fixture tests** (they assert census values against the committed `rows.csv` — an unchanged pass proves the Extractor dispatch computes byte-identical values). `cargo fmt && cargo clippy -p hornvale-lab --all-targets -- -D warnings`.
-- [ ] **Step 7: Commit** `feat(lab): swap Metric to rung-tagged Extractor; retype all 110 (runner always-Full)`.
+- [x] **Step 3:** Add passthrough accessors on `ClimateView`/`SettlementView`/`FullView` (`world()`, `terrain()`, `globe()`, `climate()`, `system()`, `calendar()`, `notes()`, `roster()` as each rung needs) so the deep-rung closures read `v.world()` etc. instead of deep field chains — keeps the ~80 deep closures legible and their diffs minimal.
+- [x] **Step 4:** In `runner.rs` `build_row`, replace `WorldView::build_with_roster(Seed(seed_value), pins, roster)` + `(m.extract)(&view)` with: build `BuiltView::Full(FullView::build_with_roster(Seed(seed_value), pins, roster)?)` (always Full for now) and `values: metrics.iter().map(|m| m.extract.apply(&built)).collect()`. Add a `pub fn run_forced_full(study) -> Result<RunResult, StudyError>` that is the current always-Full runner (Task 6's guard compares against it).
+- [x] **Step 5: Compile — the compiler now proves the rung map.** `cargo build -p hornvale-lab`. **Every compile error here is a metric whose rung was wrong (it reads a field its view lacks) — fix the rung/the map, not by widening the view.**
+- [x] **Step 6: Prove behavior-preserving.** `cargo test -p hornvale-lab` → PASS, **especially the calibration + fixture tests** (they assert census values against the committed `rows.csv` — an unchanged pass proves the Extractor dispatch computes byte-identical values). `cargo fmt && cargo clippy -p hornvale-lab --all-targets -- -D warnings`.
+- [x] **Step 7: Commit** `feat(lab): swap Metric to rung-tagged Extractor; retype all 110 (runner always-Full)`.
 
 ### Task 6: Runner builds to the required depth + metamorphic guard
 
@@ -850,7 +865,7 @@ Also add `BuiltView::build_to(seed, pins, roster, depth) -> Result<BuiltView, Bu
 - Modify: `windows/lab/src/runner.rs` (`build_row` — always-`Full` → `required` depth)
 - Test: `windows/lab/tests/depth_ladder.rs`
 
-- [ ] **Step 1: Write the metamorphic guard (the acceptance gate)**
+- [x] **Step 1: Write the metamorphic guard (the acceptance gate)**
 
 ```rust
 // windows/lab/tests/depth_ladder.rs
@@ -885,12 +900,12 @@ fn depth_scoped_metrics_match_full_build() {
 
 Add a test-only `run_forced_full` (behind `#[doc(hidden)] pub` or a `pub(crate)` re-exported for the test) that ignores the rung and always builds `FullView`, so the guard compares scoped-vs-full on identical study inputs. Keep the seed count small in the studies used, or gate this test `#[ignore]` if any study is 500+ seeds and run it in the artifact step. (Match the calibration suite's fixture-load posture — see decision `calibration-loads-the-census-fixture`.)
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cargo test -p hornvale-lab --test depth_ladder`
 Expected: FAIL — `run_forced_full` unresolved (and `build_row` still forces Full).
 
-- [ ] **Step 3: Make `build_row` build to the study's required depth**
+- [x] **Step 3: Make `build_row` build to the study's required depth**
 
 In `runner.rs`, compute the required depth once per run (max rung over selected metrics) and thread it into `build_row`:
 
@@ -915,23 +930,23 @@ match BuiltView::build_to(Seed(seed_value), pins, roster, required) {
 
 Add `BuiltView::build_to(seed, pins, roster, depth)` that dispatches to the right view constructor by `depth` and wraps it in the matching `BuiltView` variant. Add `run_forced_full` that clones the study path but forces `BuildDepth::Full`.
 
-- [ ] **Step 4: Run the guard + the calibration suite**
+- [x] **Step 4: Run the guard + the calibration suite**
 
 Run: `cargo test -p hornvale-lab`
 Expected: PASS — `depth_ladder` passes (scoped == full for every study), and the calibration/fixture tests still pass (the fixtures were produced by the full build; the scoped build must reproduce them byte-for-byte).
 
-- [ ] **Step 5: Prove the win — `census-lands-drift` builds terrain-only**
+- [x] **Step 5: Prove the win — `census-lands-drift` builds terrain-only**
 
 Run: `cargo run -p hornvale-worldgen --example profile_build` is not the check here; instead add a debug assertion or a one-off: confirm `census-lands-drift`'s `required` is `BuildDepth::Terrain` (all its metrics are Terrain-rung). Assert it in the guard test: `assert_eq!(required_depth_of("census-lands-drift"), BuildDepth::Terrain)`.
 
-- [ ] **Step 6: Delete the obsolete `WorldView`** (and its `build`/`build_with_roster`) now that nothing references it. Confirm with `grep -rn "WorldView" windows/ cli/`.
+- [x] **Step 6: Delete the obsolete `WorldView`** (and its `build`/`build_with_roster`) now that nothing references it. Confirm with `grep -rn "WorldView" windows/ cli/`.
 
-- [ ] **Step 7: Regenerate artifacts + drift check**
+- [x] **Step 7: Regenerate artifacts + drift check**
 
 Run: `make rebaseline` then `git diff --exit-code book/src/laboratory/`
 Expected: **empty diff** — the depth ladder changed *how* worlds are built, not *what* the censuses measure. Any diff is a byte-identity regression; stop and fix.
 
-- [ ] **Step 8: fmt + clippy + commit**
+- [x] **Step 8: fmt + clippy + commit**
 
 ```bash
 cargo fmt && cargo clippy -p hornvale-lab --all-targets -- -D warnings
@@ -959,7 +974,7 @@ Only do this task if Stage 1 Task 4 showed the triple-read is a material share. 
 
 ### Task 9: Stage 2 full gate
 
-- [ ] Run `make gate`. Expected: PASS. Absorb main if a stage boundary (per CLAUDE.md; not mid-measurement). Commit fmt fixups.
+- [x] Run `make gate`. Expected: PASS. Absorb main if a stage boundary (per CLAUDE.md; not mid-measurement). Commit fmt fixups.
 
 ### Task 10: Free rider — depth-scope `pin_enumeration` (gated on Task 2)
 
@@ -968,14 +983,25 @@ Only do this task if Stage 1 Task 4 showed the triple-read is a material share. 
 
 The enumerated pins (sky choice, rotation, neighbor, supercontinent) only write astronomy+terrain facts, so a terrain-depth build commits the exact fact prefix the determinism assert compares. Once Task 2's `build_world_to` exists, this test builds ~4× cheaper with an unchanged guarantee. (Parallelization across the 48 combos was landed separately as a Stage-1 sidecar commit; this task only changes build *depth*.)
 
-- [ ] **Step 1:** In `pin_enumeration.rs`'s `build(combo)`, replace `build_world(Seed(42), &sky_pins, sky_choice, &terrain_pins, &SettlementPins::default())` with `build_world_to(Seed(42), &sky_pins, sky_choice, &terrain_pins, &SettlementPins::default(), &default_roster(), BuildDepth::Terrain)`. The determinism `assert_eq!` compares two serialized ledgers — now terrain-depth ledgers, which is the correct scope for these pins.
-- [ ] **Step 2:** Run `cargo test -p hornvale-worldgen --test pin_enumeration`. Expected: PASS, and materially faster than the pre-change wall time recorded in the test's module doc (update that doc's timing note).
-- [ ] **Step 3:** Confirm the built/refused split (reported, not asserted) is unchanged from the full-build run — a terrain-depth build must refuse or succeed identically for these pins (refusals come from astronomy/terrain genesis, both inside the terrain rung).
-- [ ] **Step 4:** `cargo fmt && cargo clippy -p hornvale-worldgen --all-targets -- -D warnings`; commit.
+- [x] **Step 1:** In `pin_enumeration.rs`'s `build(combo)`, replace `build_world(Seed(42), &sky_pins, sky_choice, &terrain_pins, &SettlementPins::default())` with `build_world_to(Seed(42), &sky_pins, sky_choice, &terrain_pins, &SettlementPins::default(), &default_roster(), BuildDepth::Terrain)`. The determinism `assert_eq!` compares two serialized ledgers — now terrain-depth ledgers, which is the correct scope for these pins.
+- [x] **Step 2:** Run `cargo test -p hornvale-worldgen --test pin_enumeration`. Expected: PASS, and materially faster than the pre-change wall time recorded in the test's module doc (update that doc's timing note).
+- [x] **Step 3:** Confirm the built/refused split (reported, not asserted) is unchanged from the full-build run — a terrain-depth build must refuse or succeed identically for these pins (refusals come from astronomy/terrain genesis, both inside the terrain rung).
+- [x] **Step 4:** `cargo fmt && cargo clippy -p hornvale-worldgen --all-targets -- -D warnings`; commit.
 
 ---
 
 # Track B — Stage 3: CI path-tiering + `flock`
+
+**Status: DESCOPED (Nathan, 2026-07-14, at campaign close).** Both halves
+were mooted by work that landed while this campaign sat open. The CI
+path-tiering targeted the per-push "Artifacts are current" drift regen;
+decision 0042 made `ci.yml` `workflow_dispatch`-only, so there is no
+per-push regen left to tier — a manual run is already an explicit choice to
+pay full price. The `flock` half targeted concurrent local gates
+contending; that contention was resolved by the worktree timeout settings,
+prewarm, and fixture treatments (see the worktree-gate history), and
+`gate-fast`/nextest changed the cost profile besides. Retained below for
+the record; reopen only if CI returns to per-push triggers.
 
 **Goal:** the expensive drift regen runs only when a diff can change a drift-checked artifact; concurrent local gates serialize instead of contending.
 
@@ -1148,6 +1174,17 @@ git commit -m "feat(make): flock-serialize gate/rebaseline (gate-fast stays unlo
 
 # Track C — Stage 4: Correctness batteries
 
+**Status: PARKED (Nathan, 2026-07-14, at campaign close).** The design
+premise — invariants and pin-reaffirmation *free-riding* on worlds a census
+build already pays for — no longer describes reality: decision 0046 made
+census regeneration remote-only (AWS spot box, `HV_CENSUS=1`), so locally
+there is no census to ride, and the remote regen path has its own gate
+shape. The batteries themselves are still wanted; they need re-scoping
+against the remote-census world (ride the AWS regen? ride the depth-ladder's
+cheap shallow builds instead?). Parked as an idea-registry row (LAB-census
+correctness batteries) rather than executed stale. Retained below for the
+record.
+
 **Goal:** two free-riding batteries — O(1)-per-world census invariants and a pin-reaffirmation battery — on worlds a census already builds.
 
 **Files:**
@@ -1234,12 +1271,12 @@ git commit -m "test(lab): pin-reaffirmation battery (pin=drawn ⇒ byte-identica
 
 # Definition of Done (whole campaign)
 
-- [ ] All four stages' tasks complete; `make gate` green on the branch.
-- [ ] `make rebaseline` produces an **empty** `book/src/laboratory/` diff (byte-identity preserved end to end).
-- [ ] Book: a chronicle entry (`book/src/chronicle/`) + freshness sweep of stale chapters; re-score any Confidence Gradient bet this campaign moved (`book/src/open-questions.md`).
-- [ ] A one-page retrospective in `docs/retrospectives/` (decision 0020).
-- [ ] The Living-Globe / lab registry rows and the `lab-perf-rung-map.md` scratch enumeration reconciled (delete the scratch file once encoded in types).
-- [ ] Merge only after main is green (the pre-existing cross-platform divergence is fixed by its owners).
+- [x] All four stages' tasks complete; `make gate` green on the branch. *(Amended at close: Stages 1–2 + Task 10 complete; Stage 3 descoped and Stage 4 parked by Nathan 2026-07-14 — see the per-stage banners.)*
+- [x] `make rebaseline` produces an **empty** `book/src/laboratory/` diff (byte-identity preserved end to end). *(Verified at the 380eb0a merge; the close ships no worldgen-output change — Task 10 touches only a test.)*
+- [x] Book: a chronicle entry (`book/src/chronicle/`) + freshness sweep of stale chapters; re-score any Confidence Gradient bet this campaign moved (`book/src/open-questions.md`). *(Done at close, 2026-07-14.)*
+- [x] A one-page retrospective in `docs/retrospectives/` (decision 0020). *(Done at close, 2026-07-14.)*
+- [x] The Living-Globe / lab registry rows and the `lab-perf-rung-map.md` scratch enumeration reconciled (delete the scratch file once encoded in types). *(Rung map encoded in `Extractor` rung tags; scratch file deleted at close.)*
+- [x] Merge only after main is green (the pre-existing cross-platform divergence is fixed by its owners). *(The divergence was fixed by libm, decision 0041; main green at both the 380eb0a merge and the close.)*
 
 ---
 

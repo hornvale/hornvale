@@ -1,7 +1,7 @@
 # Lab Performance — Design
 
 **Date:** 2026-07-12
-**Status:** Approved (brainstorming session)
+**Status:** Closed (2026-07-14). §3/§4/§7 (profiler + MAP-25 depth ladder + the pin_enumeration free-riders) shipped — merged to main 2026-07-13 at `380eb0a`, the Task-10 depth-scope at close. §5 (CI tiering + flock) descoped: mooted by decision 0042 (CI is manual-only). §6 (correctness batteries) parked: reshaped by decision 0046 (census regen is remote-only); re-scoped as a registry row. Verdicts recorded in the plan's stage banners.
 **Campaign:** Lab Performance (slug-named per decision 0026)
 **Provenance:** Ratified insertion in the terrain-overhaul roadmap **before Sculpting** (Nathan, 2026-07-11 "agree absolutely"): Sculpting is another terrain epoch with another refreeze-per-commit tuning season, so every turnaround saving pays across its whole duration. Scope drawn from the twenty-item Crust-era performance brainstorm and the parallel-sessions/CI discussion, then **deduped against main** — several backlog items had already shipped in Crust/Fast Gate/TOOL-* work and were dropped. Five ideonomy pulls (three on the MAP-25 mechanism, two on the whole design) hardened the plan; their load-bearing findings are folded in and called out where they changed a decision.
 
