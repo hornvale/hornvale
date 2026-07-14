@@ -2387,12 +2387,13 @@ pub fn registry() -> Vec<Metric> {
         },
         // --- BIO-2 (Task 6): the six life-history traits (spec §4/§5), a
         // pure f(Mass, MetabolicClass) with zero draws — every row of a
-        // study reads the same value for a given roster. Bare-named
-        // (goblin implicit), matching the `flagship-*` family's convention
-        // for a single-species reading rather than duplicating per roster
-        // species (see those metrics' doc comments above). ---
+        // study reads the same value for a given roster. Registered per
+        // species (goblin, kobold), matching the `tone-count-{species}`
+        // family's convention (see above) — the campaign's headline
+        // cross-species claim (ectotherm kobold vs endotherm goblinoids)
+        // is only queryable if both species are metrics. ---
         Metric {
-            name: "species-lifespan-years",
+            name: "lifespan-years-goblin",
             doc: "Goblin's maximum lifespan in years (BIO-2 spec §4); Absent \
                    if goblin is off-roster or Ametabolic",
             summary: SummaryKind::Numeric {
@@ -2401,7 +2402,16 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(|v: &FullView| species_lifespan_metric(v, "goblin")),
         },
         Metric {
-            name: "species-age-at-maturity-years",
+            name: "lifespan-years-kobold",
+            doc: "Kobold's maximum lifespan in years (BIO-2 spec §4); Absent \
+                   if kobold is off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[20.0, 40.0, 60.0, 80.0, 100.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_lifespan_metric(v, "kobold")),
+        },
+        Metric {
+            name: "age-at-maturity-years-goblin",
             doc: "Goblin's age at first reproduction in years (BIO-2 spec §4); \
                    Absent if goblin is off-roster or Ametabolic",
             summary: SummaryKind::Numeric {
@@ -2410,7 +2420,16 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(|v: &FullView| species_age_at_maturity_metric(v, "goblin")),
         },
         Metric {
-            name: "species-basal-metabolic-rate-w",
+            name: "age-at-maturity-years-kobold",
+            doc: "Kobold's age at first reproduction in years (BIO-2 spec §4); \
+                   Absent if kobold is off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[5.0, 10.0, 15.0, 20.0, 25.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_age_at_maturity_metric(v, "kobold")),
+        },
+        Metric {
+            name: "basal-metabolic-rate-w-goblin",
             doc: "Goblin's reference-temperature basal metabolic rate in watts \
                    (BIO-2 spec §4); Absent only if goblin is off-roster",
             summary: SummaryKind::Numeric {
@@ -2421,7 +2440,18 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
-            name: "species-reproductive-tempo",
+            name: "basal-metabolic-rate-w-kobold",
+            doc: "Kobold's reference-temperature basal metabolic rate in watts \
+                   (BIO-2 spec §4); Absent only if kobold is off-roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                species_basal_metabolic_rate_metric(v, "kobold")
+            }),
+        },
+        Metric {
+            name: "reproductive-tempo-goblin",
             doc: "Goblin's reproductive output on the r-K axis, 0 (fast/prolific) \
                    ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if goblin is \
                    off-roster or Ametabolic",
@@ -2431,7 +2461,17 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(|v: &FullView| species_reproductive_tempo_metric(v, "goblin")),
         },
         Metric {
-            name: "species-generation-length-years",
+            name: "reproductive-tempo-kobold",
+            doc: "Kobold's reproductive output on the r-K axis, 0 (fast/prolific) \
+                   ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if kobold is \
+                   off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_reproductive_tempo_metric(v, "kobold")),
+        },
+        Metric {
+            name: "generation-length-years-goblin",
             doc: "Goblin's generation length in years (BIO-2 spec §5, MEM-7's \
                    handle); Absent if goblin is off-roster or Ametabolic",
             summary: SummaryKind::Numeric {
@@ -2440,7 +2480,16 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(|v: &FullView| species_generation_length_metric(v, "goblin")),
         },
         Metric {
-            name: "species-pace-of-life",
+            name: "generation-length-years-kobold",
+            doc: "Kobold's generation length in years (BIO-2 spec §5, MEM-7's \
+                   handle); Absent if kobold is off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_generation_length_metric(v, "kobold")),
+        },
+        Metric {
+            name: "pace-of-life-goblin",
             doc: "Goblin's overall life-history speed, 0 (fast) ... 1 (slow) — \
                    absolute and roster-independent (BIO-2 spec §5); Absent only \
                    if goblin is off-roster",
@@ -2448,6 +2497,16 @@ pub fn registry() -> Vec<Metric> {
                 bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
             },
             extract: Extractor::Full(|v: &FullView| species_pace_of_life_metric(v, "goblin")),
+        },
+        Metric {
+            name: "pace-of-life-kobold",
+            doc: "Kobold's overall life-history speed, 0 (fast) ... 1 (slow) — \
+                   absolute and roster-independent (BIO-2 spec §5); Absent only \
+                   if kobold is off-roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_pace_of_life_metric(v, "kobold")),
         },
     ]
 }
@@ -3898,11 +3957,14 @@ mod tests {
         // dominant-soil-order, fertile-land-fraction), +2 for The Long
         // Count (Task 6: brightening-per-gyr, alignment-drift-deg-per-kyr),
         // +1 for the coexistence stack (Task A16a: per-cell-diversity),
-        // +6 for BIO-2 (Task 6: species-lifespan-years,
-        // species-age-at-maturity-years, species-basal-metabolic-rate-w,
-        // species-reproductive-tempo, species-generation-length-years,
-        // species-pace-of-life).
-        assert_eq!(registry().len(), 131);
+        // +12 for BIO-2 (Task 6, per-species goblin+kobold pairs matching
+        // the tone-count-{species} convention: lifespan-years-{goblin,kobold},
+        // age-at-maturity-years-{goblin,kobold},
+        // basal-metabolic-rate-w-{goblin,kobold},
+        // reproductive-tempo-{goblin,kobold},
+        // generation-length-years-{goblin,kobold},
+        // pace-of-life-{goblin,kobold}).
+        assert_eq!(registry().len(), 137);
     }
 
     #[test]
@@ -4125,42 +4187,55 @@ mod tests {
             ));
         }
 
-        // BIO-2 (Task 6): the six life-history metrics, following the
-        // `tone_count_metric` per-species extractor shape but bare-named
-        // (goblin implicit, matching `flagship-*`'s convention — see those
-        // metrics' doc comments). Registered; goblin is always on the
-        // default roster and never `Ametabolic`, so these read `Number` at
-        // seed 42, but `Absent` stays a legal kind for a roster where the
-        // bare species is missing or ametabolic.
+        // BIO-2 (Task 6, review fix): the six life-history metrics,
+        // following the `tone-count-{species}` per-species PAIR convention
+        // (goblin + kobold both registered) so the campaign's headline
+        // cross-species claim (ectotherm kobold vs endotherm goblinoids) is
+        // queryable. Both species are always on the default roster and
+        // neither is `Ametabolic` (goblin is Endotherm, kobold is
+        // Ectotherm), so these read `Number` at seed 42, but `Absent` stays
+        // a legal kind for a roster where a species is missing or
+        // ametabolic.
         let names: std::collections::BTreeSet<&str> =
             registry().iter().map(|metric| metric.name).collect();
-        assert!(names.contains("species-lifespan-years"));
-        assert!(names.contains("species-age-at-maturity-years"));
-        assert!(names.contains("species-basal-metabolic-rate-w"));
-        assert!(names.contains("species-reproductive-tempo"));
-        assert!(names.contains("species-generation-length-years"));
-        assert!(names.contains("species-pace-of-life"));
-        assert!(matches!(
-            m("species-lifespan-years"),
-            MetricValue::Number(_) | MetricValue::Absent
-        ));
-        assert!(matches!(
-            m("species-age-at-maturity-years"),
-            MetricValue::Number(_) | MetricValue::Absent
-        ));
-        assert!(matches!(
-            m("species-basal-metabolic-rate-w"),
-            MetricValue::Number(_)
-        ));
-        assert!(matches!(
-            m("species-reproductive-tempo"),
-            MetricValue::Number(_) | MetricValue::Absent
-        ));
-        assert!(matches!(
-            m("species-generation-length-years"),
-            MetricValue::Number(_) | MetricValue::Absent
-        ));
-        assert!(matches!(m("species-pace-of-life"), MetricValue::Number(_)));
+        assert!(names.contains("lifespan-years-goblin"));
+        assert!(names.contains("lifespan-years-kobold"));
+        assert!(names.contains("age-at-maturity-years-goblin"));
+        assert!(names.contains("age-at-maturity-years-kobold"));
+        assert!(names.contains("basal-metabolic-rate-w-goblin"));
+        assert!(names.contains("basal-metabolic-rate-w-kobold"));
+        assert!(names.contains("reproductive-tempo-goblin"));
+        assert!(names.contains("reproductive-tempo-kobold"));
+        assert!(names.contains("generation-length-years-goblin"));
+        assert!(names.contains("generation-length-years-kobold"));
+        assert!(names.contains("pace-of-life-goblin"));
+        assert!(names.contains("pace-of-life-kobold"));
+        for species in ["goblin", "kobold"] {
+            assert!(matches!(
+                m(&format!("lifespan-years-{species}")),
+                MetricValue::Number(_) | MetricValue::Absent
+            ));
+            assert!(matches!(
+                m(&format!("age-at-maturity-years-{species}")),
+                MetricValue::Number(_) | MetricValue::Absent
+            ));
+            assert!(matches!(
+                m(&format!("basal-metabolic-rate-w-{species}")),
+                MetricValue::Number(_)
+            ));
+            assert!(matches!(
+                m(&format!("reproductive-tempo-{species}")),
+                MetricValue::Number(_) | MetricValue::Absent
+            ));
+            assert!(matches!(
+                m(&format!("generation-length-years-{species}")),
+                MetricValue::Number(_) | MetricValue::Absent
+            ));
+            assert!(matches!(
+                m(&format!("pace-of-life-{species}")),
+                MetricValue::Number(_)
+            ));
+        }
     }
 
     #[test]
