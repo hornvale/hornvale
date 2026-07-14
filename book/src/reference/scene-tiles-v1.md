@@ -53,9 +53,9 @@ Each entry in `features` is:
 | `longitude` | number | Degrees east. |
 
 `features` lists every settlement the world has placed. Exactly one of
-them — the world's capital, the single highest-suitability site any species
-placed — carries `kind: "flagship"` instead of `kind: "settlement"`, and it
-always appears last in the array. A flagship never also appears as a
+them — the world's capital, the single highest-population settlement any
+species founded — carries `kind: "flagship"` instead of `kind:
+"settlement"`, and it always appears last in the array. A flagship never also appears as a
 plain settlement; the same named place is never listed twice.
 
 An excerpt of the committed seed-42 example (arrays elided; see

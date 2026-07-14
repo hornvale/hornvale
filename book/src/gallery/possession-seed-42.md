@@ -1,44 +1,44 @@
 # A Possession — seed 42, day 0
 
 ```text
-[room 634912780, day 0]
-You stand in temperate rainforest — a fern-choked draw shaded dry in a hollow — in the lands of Zhxokngaknged. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
-Ways on: N, SW, SE.
+[room 827981825, day 0]
+You stand in temperate forest — a mossy hollow shaded dry — in the lands of Roqrraxaxoqrrak. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
+Ways on: SE, N, SW.
 > look
-[room 634912780, day 0]
-You stand in temperate rainforest — a fern-choked draw shaded dry in a hollow — in the lands of Zhxokngaknged. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
-Ways on: N, SW, SE.
+[room 827981825, day 0]
+You stand in temperate forest — a mossy hollow shaded dry — in the lands of Roqrraxaxoqrrak. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
+Ways on: SE, N, SW.
 > examine a fern-choked draw shaded dry in a hollow
-The ground here: a fern-choked draw shaded dry in a hollow (strangeness 0).
+You see no a fern-choked draw shaded dry in a hollow here.
 > examine sky
 Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
 > whoami
-A goblin of Zhxokngaknged (agent 8592989631946825404), day 0, room 634912780.
+A kobold of Roqrraxaxoqrrak (agent 15320301505168646437), day 0, room 827981825.
 > go n
-[room 634912876, day 0]
-You stand in temperate rainforest — a fern-choked draw dry on a rise — in the lands of Zhxokngaknged. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
-Ways on: NW, S, NE.
+[room 826933249, day 0]
+You stand in temperate forest — a deadfall tangle shaded damp in a hollow — in the lands of Roqrraxaxoqrrak. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
+Ways on: NE, NW, S.
 > go ne
-[room 634912812, day 0]
-You stand in temperate rainforest — a fern-choked draw sun-warmed damp in a hollow — in the lands of Zhxokngaknged. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
-Ways on: SW, SE, N.
+[room 826933345, day 0]
+You stand in temperate forest — a mossy hollow shaded dry — in the lands of Roqrraxaxoqrrak. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
+Ways on: N, SW, SE.
 > back
-[room 634912876, day 0]
-You stand in temperate rainforest — a fern-choked draw dry on a rise — in the lands of Zhxokngaknged. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
-Ways on: NW, S, NE.
+[room 826933249, day 0]
+You stand in temperate forest — a deadfall tangle shaded damp in a hollow — in the lands of Roqrraxaxoqrrak. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
+Ways on: NE, NW, S.
 > wait 90
-[room 634912876, day 90]
-You stand in temperate rainforest — a fern-choked draw dry on a rise — in the lands of Zhxokngaknged. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its last-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
-Ways on: NW, S, NE.
+[room 826933249, day 90]
+You stand in temperate forest — a deadfall tangle shaded damp in a hollow — in the lands of Roqrraxaxoqrrak. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its last-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
+Ways on: NE, NW, S.
 > examine sky
 Night. The vast moon shows its first-quarter face. The small, distant moon shows its last-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
 > knows
 5 things seen:
-  room/634912780 = {"schema":"locale/room/v2","id":634912780,"face":12,"path…
-  room/634912812 = {"schema":"locale/room/v2","id":634912812,"face":12,"path…
-  room/634912876 = {"schema":"locale/room/v2","id":634912876,"face":12,"path…
-  settlement/2/name = Zhxokngaknged
-  settlement/2/population = 356
+  room/826933249 = {"schema":"locale/room/v2","id":826933249,"face":1,"path"…
+  room/826933345 = {"schema":"locale/room/v2","id":826933345,"face":1,"path"…
+  room/827981825 = {"schema":"locale/room/v2","id":827981825,"face":1,"path"…
+  settlement/7/name = Roqrraxaxoqrrak
+  settlement/7/population = 71
 > release
 You let go.
 ```
