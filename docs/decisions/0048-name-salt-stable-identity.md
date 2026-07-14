@@ -1,10 +1,10 @@
-# 0046. Procedural names are salted by stable identity, never by a global mint counter
+# 0048. Procedural names are salted by stable identity, never by a global mint counter
 
 **Status:** Accepted (2026-07-13) · **Decider:** Nathan
 
 In the context of The Self-Describing Sky campaign minting one ledger
 entity per notable neighbor (decision
-0045), facing a defect that surfaced only
+0047), facing a defect that surfaced only
 during execution — every generated deity's name changed for every seed,
 though nothing about the world's physics had — we decided that **a
 procedural name generator must be salted by something stable about what it
@@ -77,7 +77,7 @@ different `salt` values, the exact property the old scheme violated.
 **See also.** `docs/superpowers/specs/2026-07-13-the-self-describing-sky-design.md`
 §§8–9 (the fuller narrative: how the coupling was found, the two-jobs
 diagnosis, the ideonomy pass that ruled out reordering as a fix); decision
-0045 (the neighbor epoch whose entity
+0047 (the neighbor epoch whose entity
 minting exposed this); decision
 0039 (epochs vs. tiers — why this is a
 `/v2` label, never a rename); `book/src/chronicle/the-self-describing-sky.md`.

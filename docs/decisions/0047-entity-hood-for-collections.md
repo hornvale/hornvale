@@ -1,4 +1,4 @@
-# 0045. Entity-hood for collections: collections become entities, singletons stay flat
+# 0047. Entity-hood for collections: collections become entities, singletons stay flat
 
 **Status:** Accepted (2026-07-13) · **Decider:** Nathan
 
