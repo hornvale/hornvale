@@ -948,26 +948,14 @@ pub const HELIACAL_SETTING: &str = "heliacal-setting";
 /// type-audit: bare-ok(identifier-text)
 pub const WANDERING_STAR: &str = "wandering-star";
 
-/// One angular-diameter unit (Sol from 1 AU ≈ Luna from Earth) in degrees
-/// — the shared scale of `sun_angular_diameter_rel` and a moon's
-/// `angular_diameter_rel` (declared approximation: the two units differ
-/// by under 1%).
-const ANGULAR_UNIT_DEG: f64 = 0.53;
-/// How far (degrees of lunar ecliptic latitude) past the discs' own touch
-/// an eclipse still falls somewhere on the world — the parallax allowance.
-/// Calibrated so a Luna–Sol pair at 5.14° inclination eclipses at ~19% of
-/// new moons (Earth's ~2.4 solar eclipses a year).
-const ECLIPSE_PARALLAX_DEG: f64 = 1.0;
-
 /// The fraction of new moons that eclipse the sun somewhere on the world
-/// (SKY-6): the moon's ecliptic latitude at new moon must fall inside the
-/// node threshold, and a sinusoidal latitude distribution gives
-/// P = (2/π)·asin(threshold / i), saturating at 1 for a flat orbit.
+/// (SKY-6) — the threshold and chance now live in `eclipses.rs` (Eclipse
+/// Seasons); this wrapper keeps the phenomenon path reading as before.
 fn eclipse_chance(sun_angular_rel: f64, moon_angular_rel: f64, inclination_deg: f64) -> f64 {
-    let threshold =
-        ANGULAR_UNIT_DEG * (sun_angular_rel + moon_angular_rel) / 2.0 + ECLIPSE_PARALLAX_DEG;
-    let x = (threshold / inclination_deg.max(f64::MIN_POSITIVE)).min(1.0);
-    (2.0 / std::f64::consts::PI) * math::asin(x)
+    crate::eclipses::node_crossing_chance(
+        crate::eclipses::solar_eclipse_threshold_deg(sun_angular_rel, moon_angular_rel),
+        inclination_deg,
+    )
 }
 
 fn round2(x: f64) -> f64 {
