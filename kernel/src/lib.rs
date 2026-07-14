@@ -5,7 +5,6 @@
 
 #![warn(missing_docs)]
 
-pub mod cast;
 pub mod domain;
 pub mod field;
 pub mod geosphere;
@@ -24,7 +23,6 @@ pub mod streams;
 pub mod units;
 pub mod world;
 
-pub use cast::asciinema_v2;
 pub use domain::Domain;
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
 pub use geosphere::{CellId, CellMap, GeoCoord, Geosphere, NearestCellIndex};
