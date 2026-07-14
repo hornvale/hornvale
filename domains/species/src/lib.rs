@@ -857,9 +857,10 @@ mod tests {
             assert!(s.niche.weight(hornvale_kernel::PLANT_FORAGE) > 0.0);
             assert!(s.niche.weight(hornvale_kernel::ANIMAL_PREY) > 0.0);
         }
-        // a modest, monotone mass band (bugbear largest, kobold smallest)
-        assert!(r["bugbear"].mass.kilograms() > r["goblin"].mass.kilograms());
-        assert!(r["goblin"].mass.kilograms() > r["kobold"].mass.kilograms());
+        // strict, modest, monotone mass band: kobold < goblin < hobgoblin < bugbear
+        assert!(r["kobold"].mass.kilograms() < r["goblin"].mass.kilograms());
+        assert!(r["goblin"].mass.kilograms() < r["hobgoblin"].mass.kilograms());
+        assert!(r["hobgoblin"].mass.kilograms() < r["bugbear"].mass.kilograms());
     }
 
     #[test]
