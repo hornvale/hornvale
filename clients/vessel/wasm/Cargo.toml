@@ -21,8 +21,16 @@ hornvale-astronomy = { path = "../../../domains/astronomy" }
 hornvale-terrain = { path = "../../../domains/terrain" }
 
 [profile.release]
-# opt-level is pinned by measurement in the plan's Task 2 (z vs 3, size vs
-# genesis time); "z" is the spike baseline until then.
+# Measured 2026-07-13 (Apple M1 Max, Node v24.6.0), 3 runs each, medians
+# under identical (contention-noisy) load, back-to-back:
+#   z -> 474.55 KiB raw (193.10 KiB gzip); genesis 5553/5808/5604 ms,
+#        median 5604 ms
+#   3 -> 726.19 KiB raw (268.57 KiB gzip); genesis 4708/5577/5489 ms,
+#        median 5489 ms
+# Both pass the spec's <=1 MB raw-size gate. Genesis delta is ~2% (5604 ->
+# 5489 ms), well short of the >=25% win the rule requires to justify the
+# larger binary — that's noise, not a real difference. Ties go to the
+# smaller binary, so "z" is pinned.
 opt-level = "z"
 lto = true
 codegen-units = 1
