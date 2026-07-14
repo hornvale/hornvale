@@ -195,121 +195,135 @@ pub struct ConditionNiche {
     pub elevation: ConditionResponse,
 }
 
-/// Kobold condition niche: cool, dark, subterranean highland warrens;
-/// nocturnal (shuns light). Authored within the measured seed-42 land ranges
-/// (Task C1); see the species chapter's model card for the ecological
-/// rationale.
+/// Kobold condition niche: cool HIGHLANDER — dark-adapted (consistent with
+/// cool/polar), wide/indifferent on moisture, and staked to high elevation as
+/// its exclusive, hard-excluding stronghold axis (Task B2b re-authoring: the
+/// original B2 optima wanted cold+low-light cells that are also food-poor on
+/// this world; elevation is a geographically independent axis the lowland
+/// species can't contest). Authored within the measured seed-42 land ranges;
+/// see the species chapter's model card for the ecological rationale.
 fn kobold_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
-            optimum: 2.0,
-            width: 12.0,
-            devotion: 0.90,
+            optimum: 6.0,
+            width: 14.0,
+            devotion: 0.85,
         },
-        moisture: ConditionResponse {
-            optimum: 0.40,
-            width: 0.50,
-            devotion: 0.60,
-        },
-        // strongly low-light
-        insolation: ConditionResponse {
-            optimum: 0.03,
-            width: 0.10,
-            devotion: 0.90,
-        },
-        elevation: ConditionResponse {
-            optimum: 900.0,
-            width: 1600.0,
-            devotion: 0.70,
-        },
-    }
-}
-
-/// Goblin condition niche: a warm-marginal generalist with wide tolerance on
-/// every axis (the cosmopolitan weed). Authored within the measured seed-42
-/// land ranges (Task C1); see the species chapter's model card for the
-/// ecological rationale.
-fn goblin_condition_niche() -> ConditionNiche {
-    ConditionNiche {
-        temperature: ConditionResponse {
-            optimum: 18.0,
-            width: 30.0,
-            devotion: 0.50,
-        },
+        // wide/indifferent
         moisture: ConditionResponse {
             optimum: 0.45,
             width: 0.60,
             devotion: 0.40,
         },
+        // low light — consistent with cold/polar
         insolation: ConditionResponse {
-            optimum: 0.13,
-            width: 0.30,
-            devotion: 0.40,
+            optimum: 0.04,
+            width: 0.12,
+            devotion: 0.80,
         },
+        // HIGHLANDS — its exclusive niche
         elevation: ConditionResponse {
-            optimum: 400.0,
-            width: 3000.0,
-            devotion: 0.40,
+            optimum: 2600.0,
+            width: 1200.0,
+            devotion: 0.95,
         },
     }
 }
 
-/// Hobgoblin condition niche: open temperate, agricultural lowland plains;
-/// sun-tolerant, drier. Authored within the measured seed-42 land ranges
-/// (Task C1); see the species chapter's model card for the ecological
-/// rationale.
+/// Goblin condition niche: a warm-marginal GENERALIST with wide tolerance on
+/// every axis (the cosmopolitan weed that fills margins/ecotones between the
+/// three specialists). Authored within the measured seed-42 land ranges (Task
+/// B2b re-authoring keeps this helper's shape, values retuned slightly to sit
+/// alongside the corrected specialists); see the species chapter's model card
+/// for the ecological rationale.
+fn goblin_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 18.0,
+            width: 28.0,
+            devotion: 0.45,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.50,
+            width: 0.60,
+            devotion: 0.35,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.13,
+            width: 0.30,
+            devotion: 0.35,
+        },
+        elevation: ConditionResponse {
+            optimum: 500.0,
+            width: 3000.0,
+            devotion: 0.35,
+        },
+    }
+}
+
+/// Hobgoblin condition niche: temperate, DRIER, mid-elevation open plains —
+/// moisture and elevation separate it from bugbear's wet lowlands and
+/// kobold's highlands (Task B2b re-authoring). Authored within the measured
+/// seed-42 land ranges; see the species chapter's model card for the
+/// ecological rationale.
 fn hobgoblin_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
-            optimum: 12.0,
-            width: 12.0,
+            optimum: 13.0,
+            width: 10.0,
             devotion: 0.90,
         },
+        // drier/open plains
         moisture: ConditionResponse {
             optimum: 0.35,
-            width: 0.35,
-            devotion: 0.70,
+            width: 0.30,
+            devotion: 0.80,
         },
         // open sun
         insolation: ConditionResponse {
             optimum: 0.19,
-            width: 0.12,
+            width: 0.13,
             devotion: 0.85,
         },
+        // low-mid
         elevation: ConditionResponse {
-            optimum: 250.0,
+            optimum: 600.0,
             width: 1400.0,
-            devotion: 0.80,
+            devotion: 0.70,
         },
     }
 }
 
-/// Bugbear condition niche: temperate forest — warm, wet, shaded, low
-/// valleys. Authored within the measured seed-42 land ranges (Task C1); see
-/// the species chapter's model card for the ecological rationale.
+/// Bugbear condition niche: warm-WET LOWLAND forest (rainforest); moisture is
+/// its stronghold axis, insolation stays wide/neutral so it does not fight
+/// the world's warm↔sun coupling the way the original B2 shaded-forest
+/// framing did (Task B2b re-authoring). Authored within the measured seed-42
+/// land ranges; see the species chapter's model card for the ecological
+/// rationale.
 fn bugbear_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
-            optimum: 20.0,
-            width: 10.0,
-            devotion: 0.90,
-        },
-        // wet forest
-        moisture: ConditionResponse {
-            optimum: 0.75,
-            width: 0.25,
-            devotion: 0.90,
-        },
-        // forest shade
-        insolation: ConditionResponse {
-            optimum: 0.09,
-            width: 0.12,
+            optimum: 21.0,
+            width: 11.0,
             devotion: 0.85,
         },
+        // WETTEST cells — its stronghold
+        moisture: ConditionResponse {
+            optimum: 0.82,
+            width: 0.20,
+            devotion: 0.95,
+        },
+        // wide/neutral
+        insolation: ConditionResponse {
+            optimum: 0.15,
+            width: 0.40,
+            devotion: 0.30,
+        },
+        // lowland
         elevation: ConditionResponse {
-            optimum: 200.0,
-            width: 1300.0,
-            devotion: 0.80,
+            optimum: 150.0,
+            width: 1200.0,
+            devotion: 0.70,
         },
     }
 }
