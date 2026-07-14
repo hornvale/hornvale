@@ -6,12 +6,19 @@
 //! current tectonic ranges do not make every one reachable — some are
 //! intentional (or at least currently accepted) headroom for a later terrain
 //! epoch rather than a gap. Surveyed across seeds 0..15 at `Geosphere::new(5)`
-//! (and cross-checked at `Geosphere::new(4)`), fourteen classes are realized
-//! and five are not:
+//! (and cross-checked at `Geosphere::new(4)`), and re-surveyed for the
+//! Alluvium/Coal recalibration across seeds `[1, 7, 42, 99]` at the canonical
+//! `Geosphere::new(6)`, sixteen classes are realized and three are not:
 //!
 //! - **Realized today**: Granite, Basalt, Andesite, Rhyolite, Sandstone,
 //!   Shale, Conglomerate, Evaporite, Ironstone, ReefLimestone, Slate, Schist,
-//!   Gneiss, Marble.
+//!   Gneiss, Marble, Coal, Alluvium. `Coal` and `Alluvium` were recalibrated
+//!   against the buffer's actual ranges rather than imagined absolutes: see
+//!   [`ALLUVIUM_DRAINAGE_MIN`] (drainage maxes out around 338 at level 6, not
+//!   a round number like 1000 — the gate now sits just above the observed
+//!   p90) and [`COAL_SOIL_DEPTH_MIN`]/[`COAL_GRAIN_MAX`] (waterlogged
+//!   high-soil-depth lowland, not an absolute grain floor below the
+//!   continental formula's own minimum).
 //! - **Reserved, deferred to Sculpting (v3)**: `Gabbro` — this buffer has no
 //!   intrusive-vs-extrusive (exhumation/depth-of-crystallization) axis yet,
 //!   so mafic continental cells always read as extrusive Basalt/Andesite
@@ -21,15 +28,6 @@
 //!   `induration > 0.7` inside the low-metamorphic-grade band, which the
 //!   current induration formula rarely reaches; widening the induration
 //!   range would make it reachable without a new axis.
-//! - **Currently unreachable, not yet a tracked gap**: `Coal` — `grain` never
-//!   drops below its continental floor of 0.4 (`0.4 + 0.5 * age`), so the
-//!   `grain <= 0.35` clastic branch that yields Coal can never trigger; only
-//!   the formula's floor, not a missing axis, blocks it. `Alluvium` —
-//!   requires `drainage >= 1000` (land cells upstream), but the observed
-//!   maximum in this survey was 82; the canonical grid's basins are too small
-//!   relative to that threshold at any level tried so far. Both are noted
-//!   here rather than silently left implied-reachable; neither was in this
-//!   fix pass's scope.
 
 use crate::boundaries::BoundaryKind;
 use crate::globe::TectonicGlobe;
@@ -108,6 +106,31 @@ pub struct MaterialBuffer {
 
 /// Metamorphic grade rises within this many graph hops of a boundary.
 const OROGEN_REACH: u32 = 4;
+
+/// Drainage (flow-accumulation, upstream land-cell count) above which a land
+/// cell reads as `Alluvium` rather than its ordinary clastic/igneous class.
+/// Calibrated against the real distribution, not an imagined absolute: a
+/// 4-seed (`[1, 7, 42, 99]`) survey at the canonical `Geosphere::new(6)`
+/// found land drainage maxing out at 338 (p99 47, p95 18, p90 12, p50 3) —
+/// nowhere near a round number like 1000. `20.0` sits just above p90 and
+/// selects roughly the top 4-5% of land cells by accumulation: genuinely
+/// high-flow valley bottoms, not merely-damp lowland.
+const ALLUVIUM_DRAINAGE_MIN: f64 = 20.0;
+
+/// Regolith depth (metres) above which waterlogged lowland accumulation
+/// reads as `Coal` rather than ordinary clastic sediment, paired with
+/// [`COAL_GRAIN_MAX`] so only the finer end of the grain range qualifies
+/// (coal-forming peat accumulates in fine floodplain/deltaic muck, not
+/// coarse gravel). A 4-seed survey at `Geosphere::new(6)` found roughly
+/// 0.6% of clastic-eligible land cells clear both this and the grain gate —
+/// present but appropriately rare for a biogenic, waterlogged-basin rock.
+const COAL_SOIL_DEPTH_MIN: f64 = 1.25;
+
+/// Grain ceiling paired with [`COAL_SOIL_DEPTH_MIN`]: excludes the coarse
+/// (near-`Conglomerate`) tail of the clastic range from `Coal`, keeping the
+/// two rocks' inputs (a slow, fine-sediment sink vs. relief-proximal debris)
+/// distinct even though both draw from the same `grain <= 0.6` band.
+const COAL_GRAIN_MAX: f64 = 0.55;
 
 /// The fine rock taxonomy (spec §4), a projection over the buffer.
 ///
@@ -196,7 +219,7 @@ pub fn classify_rock(
     if endorheic {
         return RockClass::Evaporite;
     }
-    if drainage >= 1000.0 {
+    if drainage >= ALLUVIUM_DRAINAGE_MIN {
         return RockClass::Alluvium;
     }
     if buf.carbonate > 0.5 {
@@ -221,13 +244,15 @@ pub fn classify_rock(
             RockClass::Gabbro
         };
     }
-    // Clastic sediments by relief proxy (grain).
+    // Clastic sediments by relief proxy (grain), with waterlogged fine
+    // lowland (deep soil, finer-than-conglomerate grain) diverted to Coal
+    // before the ordinary Sandstone/Shale split.
     if buf.grain > 0.6 {
         RockClass::Conglomerate
+    } else if buf.soil_depth.get() > COAL_SOIL_DEPTH_MIN && buf.grain < COAL_GRAIN_MAX {
+        RockClass::Coal
     } else if buf.grain > 0.35 {
         RockClass::Sandstone
-    } else if buf.soil_depth.get() > 2.0 {
-        RockClass::Coal
     } else {
         RockClass::Shale
     }
@@ -638,6 +663,41 @@ mod tests {
         let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
         let classes: BTreeSet<_> = geo.cells().map(|c| terrain.rock_at(c)).collect();
         assert!(classes.len() >= 3, "world felt monolithic: {classes:?}");
+    }
+
+    #[test]
+    fn alluvium_and_coal_are_reachable_across_seeds() {
+        use std::collections::BTreeSet;
+        let mut classes = BTreeSet::new();
+        for seed in [1u64, 7, 42, 99] {
+            let geo = Geosphere::new(6);
+            let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
+            let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
+            for cell in geo.cells() {
+                if !terrain.is_ocean(cell) {
+                    classes.insert(terrain.rock_at(cell));
+                }
+            }
+        }
+        assert!(
+            classes.contains(&RockClass::Alluvium),
+            "no Alluvium across seeds [1, 7, 42, 99] at Geosphere::new(6): {classes:?}"
+        );
+        assert!(
+            classes.contains(&RockClass::Coal),
+            "no Coal across seeds [1, 7, 42, 99] at Geosphere::new(6): {classes:?}"
+        );
+        // Guard the neighboring clastic classes the recalibration must not
+        // have starved.
+        assert!(
+            classes.contains(&RockClass::Sandstone),
+            "no Sandstone: {classes:?}"
+        );
+        assert!(classes.contains(&RockClass::Shale), "no Shale: {classes:?}");
+        assert!(
+            classes.contains(&RockClass::Conglomerate),
+            "no Conglomerate: {classes:?}"
+        );
     }
 
     #[test]
