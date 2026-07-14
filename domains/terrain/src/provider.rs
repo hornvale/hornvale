@@ -146,6 +146,16 @@ impl GeneratedTerrain {
     pub fn material_at(&self, id: CellId) -> crate::lithology::MaterialBuffer {
         *self.globe.lithology.get(id)
     }
+
+    /// The rock class at a cell (The Ground, spec §4).
+    pub fn rock_at(&self, id: CellId) -> crate::lithology::RockClass {
+        crate::lithology::classify_rock(
+            &self.material_at(id),
+            self.drainage_at(id),
+            self.is_endorheic(id),
+            self.is_ocean(id),
+        )
+    }
 }
 
 #[cfg(test)]

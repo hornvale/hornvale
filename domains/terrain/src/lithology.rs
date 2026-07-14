@@ -80,6 +80,126 @@ pub struct MaterialBuffer {
 /// Metamorphic grade rises within this many graph hops of a boundary.
 const OROGEN_REACH: u32 = 4;
 
+/// The fine rock taxonomy (spec §4), a projection over the buffer.
+///
+/// `Ord`/`PartialOrd` (declaration order below) exist only so callers can
+/// collect distinct classes into a `BTreeSet` (the project bans
+/// `HashSet`) — there is no meaningful ranking between rock classes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum RockClass {
+    /// Felsic intrusive — craton cores, collision roots.
+    Granite,
+    /// Mafic intrusive — deep oceanic/rift.
+    Gabbro,
+    /// Mafic extrusive — ridges, hotspots, ocean floor.
+    Basalt,
+    /// Intermediate extrusive — subduction arcs.
+    Andesite,
+    /// Felsic extrusive — continental arc/caldera.
+    Rhyolite,
+    /// Clastic — near-orogen lowland, coast.
+    Sandstone,
+    /// Clastic — quiet deep basin.
+    Shale,
+    /// Clastic — proximal to uplift.
+    Conglomerate,
+    /// Chemical precipitate — arid endorheic basin.
+    Evaporite,
+    /// Chemical precipitate — abyssal pelagic.
+    Chert,
+    /// Chemical precipitate that is also iron ore (round 2 bridge).
+    Ironstone,
+    /// Biogenic — warm shallow shelf.
+    ReefLimestone,
+    /// Biogenic — waterlogged organic (round 2).
+    Coal,
+    /// Metamorphic, low grade.
+    Slate,
+    /// Metamorphic, medium grade.
+    Schist,
+    /// Metamorphic, high grade — collision core.
+    Gneiss,
+    /// Metamorphic carbonate.
+    Marble,
+    /// Metamorphic sandstone.
+    Quartzite,
+    /// Unconsolidated river silt — fertile floodplains.
+    Alluvium,
+}
+
+/// Project the buffer (plus grid context) onto a rock class (spec §4).
+/// type-audit: bare-ok(count: drainage), bare-ok(flag: endorheic), bare-ok(flag: ocean)
+pub fn classify_rock(
+    buf: &MaterialBuffer,
+    drainage: f64,
+    endorheic: bool,
+    ocean: bool,
+) -> RockClass {
+    // Metamorphics: graded, carbonate parent -> marble.
+    if buf.metamorphic_grade >= 0.75 {
+        return RockClass::Gneiss;
+    }
+    if buf.metamorphic_grade >= 0.5 {
+        return if buf.carbonate > 0.5 {
+            RockClass::Marble
+        } else {
+            RockClass::Schist
+        };
+    }
+    if buf.metamorphic_grade >= 0.25 {
+        return if buf.induration > 0.7 {
+            RockClass::Quartzite
+        } else {
+            RockClass::Slate
+        };
+    }
+    if ocean {
+        // Abyssal siliceous ooze vs ridge/floor basalt vs BIF.
+        if buf.porosity < 0.2 && buf.silica > 0.5 {
+            return RockClass::Chert;
+        }
+        if buf.carbonate > 0.4 {
+            return RockClass::Ironstone; // BIF forms in shelf-adjacent anoxic water
+        }
+        return RockClass::Basalt;
+    }
+    // Land, unmetamorphosed.
+    if endorheic {
+        return RockClass::Evaporite;
+    }
+    if drainage >= 1000.0 {
+        return RockClass::Alluvium;
+    }
+    if buf.carbonate > 0.5 {
+        return RockClass::ReefLimestone;
+    }
+    // Igneous by silica/grain when hard & crystalline; else clastic.
+    if buf.grain > 0.5 && buf.induration > 0.5 {
+        return if buf.silica > 0.55 {
+            RockClass::Granite
+        } else {
+            RockClass::Gabbro
+        };
+    }
+    if matches!(buf.margin, MarginPolarity::Active) {
+        return if buf.silica > 0.55 {
+            RockClass::Rhyolite
+        } else {
+            RockClass::Andesite
+        };
+    }
+    // Clastic sediments by relief proxy (grain).
+    if buf.grain > 0.6 {
+        RockClass::Conglomerate
+    } else if buf.grain > 0.35 {
+        RockClass::Sandstone
+    } else if buf.soil_depth.get() > 2.0 {
+        RockClass::Coal
+    } else {
+        RockClass::Shale
+    }
+}
+
 /// Assemble the material buffer over the canonical grid (spec §2). Pointwise
 /// axes derive from crust age/thickness and plate motion; grid-bound terms
 /// (metamorphic grade near boundaries, soil depth from slope/drainage) use
@@ -205,6 +325,77 @@ mod tests {
     use crate::globe::generate;
     use crate::pins::TerrainPins;
     use hornvale_kernel::{Geosphere, Seed};
+
+    /// A mid-valued buffer for exercising `classify_rock` in isolation.
+    fn flat_buffer() -> MaterialBuffer {
+        MaterialBuffer {
+            silica: 0.5,
+            grain: 0.5,
+            induration: 0.5,
+            carbonate: 0.0,
+            metamorphic_grade: 0.0,
+            porosity: 0.5,
+            margin: MarginPolarity::Interior,
+            soil_depth: SoilDepth::new(1.0),
+            basement: Basement::Continental,
+            thaumic: 0.0,
+        }
+    }
+
+    #[test]
+    fn classify_covers_the_setting_diagnostics() {
+        // Metamorphic core -> gneiss.
+        let mut b = flat_buffer();
+        b.metamorphic_grade = 0.9;
+        assert_eq!(classify_rock(&b, 1.0, false, false), RockClass::Gneiss);
+        // Warm carbonate shelf -> reef limestone.
+        let mut b = flat_buffer();
+        b.carbonate = 0.8;
+        assert_eq!(
+            classify_rock(&b, 1.0, false, false),
+            RockClass::ReefLimestone
+        );
+        // Arid endorheic basin -> evaporite.
+        let b = flat_buffer();
+        assert_eq!(classify_rock(&b, 1.0, true, false), RockClass::Evaporite);
+        // High-drainage lowland -> alluvium.
+        let b = flat_buffer();
+        assert_eq!(classify_rock(&b, 5000.0, false, false), RockClass::Alluvium);
+        // Mafic ocean floor -> basalt.
+        let mut b = flat_buffer();
+        b.silica = 0.1;
+        assert_eq!(classify_rock(&b, 0.0, false, true), RockClass::Basalt);
+    }
+
+    #[test]
+    fn every_seed_produces_at_least_three_rock_classes() {
+        use std::collections::BTreeSet;
+        let geo = Geosphere::new(4);
+        let outcome = generate(Seed(7), &geo, &TerrainPins::default()).unwrap();
+        let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
+        let classes: BTreeSet<_> = geo.cells().map(|c| terrain.rock_at(c)).collect();
+        assert!(classes.len() >= 3, "world felt monolithic: {classes:?}");
+    }
+
+    #[test]
+    fn active_and_passive_margins_both_appear_across_seeds() {
+        let mut saw_active = false;
+        let mut saw_passive = false;
+        for seed in [1u64, 7, 42, 99] {
+            let geo = Geosphere::new(4);
+            let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
+            let lith = assemble_material(&geo, &outcome.globe);
+            for cell in geo.cells() {
+                match lith.get(cell).margin {
+                    MarginPolarity::Active => saw_active = true,
+                    MarginPolarity::Passive => saw_passive = true,
+                    _ => {}
+                }
+            }
+        }
+        assert!(saw_active, "no Active margin across seeds [1, 7, 42, 99]");
+        assert!(saw_passive, "no Passive margin across seeds [1, 7, 42, 99]");
+    }
 
     #[test]
     fn buffer_axes_are_bounded_and_thaumic_is_zero() {
