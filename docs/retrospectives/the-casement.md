@@ -54,3 +54,30 @@ evidence of a clean diff when the diff can silence the gate. Cheaper models
 transcribe briefs faithfully but will reach for the locally-easy escape
 hatch under warning pressure; the review round is where that gets bought
 back.
+
+**The close met parallel-campaign reality head-on.** The campaign ran spec
+to final review inside one day, so its only main-absorption boundary was
+the close itself — and main had moved 38 commits (the-gathering + the
+self-describing sky). Two collisions surfaced exactly where the preflight
+looks: the-gathering had minted decisions 0047–0051 and registry rows
+MAP-31..34 on main first, so our decision renumbered 0047→0052 and the
+four sequel rows renumbered to MAP-35..38 at merge. Both renumbers were
+mechanical because nothing else referenced the colliding IDs yet — the
+docs-consistency gate that keeps registry IDs out of the book turned out
+to be collision armor, not just style enforcement.
+
+**Byte-identity survived another campaign's physics change.** The absorb
+brought the-gathering's settlement condensation, which regenerated the
+seed-42 possession transcript. The smoke driver reads its golden from the
+committed transcript rather than a frozen string, so the merged wasm
+re-derived the new opening and matched it byte-for-byte with no re-pin.
+That design choice (Task 1) was made for rebaselines; it paid off at its
+first real merge.
+
+**Merged onto a red main, deliberately.** Main's tip already failed
+`branches_family_calibration::clean_outgroup_kobold_holds_on_every_swept_seed`
+(reproduced on pristine main; fails in 0.02 s) — most plausibly a missed
+calibration re-pin from the-gathering's placement overhaul. The Casement
+touches no workspace code, so the owner ratified merging with the red
+flagged rather than fixing another campaign's battery from this close.
+The re-pin belongs to a the-gathering follow-up.
