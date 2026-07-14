@@ -148,9 +148,34 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "apparent size of a moon relative to Luna-from-Earth",
     )?;
     registry.register_predicate(
-        facts::NOTABLE_NEIGHBOR,
-        false,
-        "a notable neighbor star visible in the night sky",
+        facts::IS_NEIGHBOR,
+        true,
+        "a minted entity is a notable neighbor star",
+    )?;
+    registry.register_predicate(
+        facts::NEIGHBOR_CLASS,
+        true,
+        "spectral-class name of a neighbor star",
+    )?;
+    registry.register_predicate(
+        facts::NEIGHBOR_DISTANCE_LY,
+        true,
+        "distance to a neighbor star in light-years",
+    )?;
+    registry.register_predicate(
+        facts::NEIGHBOR_BRIGHTNESS_REL,
+        true,
+        "apparent brightness of a neighbor, relative units (derived L/d²)",
+    )?;
+    registry.register_predicate(
+        facts::NEIGHBOR_DECLINATION_DEG,
+        true,
+        "declination of a neighbor in degrees from the celestial equator",
+    )?;
+    registry.register_predicate(
+        facts::NEIGHBOR_RA_DEG,
+        true,
+        "right ascension of a neighbor in degrees",
     )?;
     registry.register_predicate(
         facts::GENESIS_NOTE,

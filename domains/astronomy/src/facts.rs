@@ -56,10 +56,24 @@ pub const MOON_DISTANCE_MM: &str = "moon-distance-mm";
 /// Number — one per moon; derived).
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_ANGULAR_SIZE_REL: &str = "moon-angular-size-rel";
-/// A notable neighbor star visible in the night sky (non-functional, Text —
-/// one per neighbor).
+/// Flags a minted entity as a notable neighbor star (functional, Flag).
 /// type-audit: bare-ok(identifier-text)
-pub const NOTABLE_NEIGHBOR: &str = "notable-neighbor";
+pub const IS_NEIGHBOR: &str = "is-neighbor";
+/// Spectral-class name of a neighbor star (functional, Text; one per entity).
+/// type-audit: bare-ok(identifier-text)
+pub const NEIGHBOR_CLASS: &str = "neighbor-class";
+/// Distance to a neighbor star in light-years (functional, Number).
+/// type-audit: bare-ok(identifier-text)
+pub const NEIGHBOR_DISTANCE_LY: &str = "neighbor-distance-ly";
+/// Apparent brightness of a neighbor, relative units (functional, Number; derived L/d²).
+/// type-audit: bare-ok(identifier-text)
+pub const NEIGHBOR_BRIGHTNESS_REL: &str = "neighbor-brightness-rel";
+/// Declination of a neighbor in degrees from the celestial equator (functional, Number).
+/// type-audit: bare-ok(identifier-text)
+pub const NEIGHBOR_DECLINATION_DEG: &str = "neighbor-declination-deg";
+/// Right ascension of a neighbor in degrees (functional, Number).
+/// type-audit: bare-ok(identifier-text)
+pub const NEIGHBOR_RA_DEG: &str = "neighbor-ra-deg";
 /// A degradation or refusal recorded during sky genesis (non-functional,
 /// Text — one per note).
 /// type-audit: bare-ok(identifier-text)
@@ -116,8 +130,9 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
 /// Commit the generated system's headline parameters as facts about
 /// `subject` (the world entity): star class; tidally-locked flag OR
 /// day-length, depending on rotation regime; year length; obliquity;
-/// moon count; one moon-period-std per moon; one notable-neighbor per
-/// neighbor; one genesis-note per recorded degradation.
+/// moon count; one moon-period-std per moon; one neighbor entity (with its
+/// own structured facts) per neighbor; one genesis-note per recorded
+/// degradation.
 pub fn genesis(
     world: &mut World,
     subject: EntityId,
@@ -292,13 +307,44 @@ pub fn genesis(
     }
 
     for neighbor in &system.neighbors {
-        let description = format!(
-            "a {} star at {:.0} light-years",
-            neighbor.color,
-            neighbor.distance.get()
-        );
+        let id = world.ledger.mint_entity();
+        world
+            .ledger
+            .commit(fact(id, IS_NEIGHBOR, Value::Flag(true)), &world.registry)?;
         world.ledger.commit(
-            fact(subject, NOTABLE_NEIGHBOR, Value::Text(description)),
+            fact(
+                id,
+                NEIGHBOR_CLASS,
+                Value::Text(crate::neighborhood::class_name(neighbor.class).to_string()),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                id,
+                NEIGHBOR_DISTANCE_LY,
+                Value::Number(neighbor.distance.get()),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                id,
+                NEIGHBOR_BRIGHTNESS_REL,
+                Value::Number(neighbor.apparent_brightness),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                id,
+                NEIGHBOR_DECLINATION_DEG,
+                Value::Number(neighbor.declination),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(id, NEIGHBOR_RA_DEG, Value::Number(neighbor.right_ascension)),
             &world.registry,
         )?;
     }
@@ -356,11 +402,8 @@ mod tests {
             2
         );
         assert!(
-            w.ledger
-                .facts_about(subject)
-                .filter(|f| f.predicate == NOTABLE_NEIGHBOR)
-                .count()
-                >= 2
+            w.ledger.find(IS_NEIGHBOR).count() >= 2,
+            "at least two neighbor entities"
         );
         assert!(w.ledger.value_of(subject, STAR_CLASS).is_some());
         assert!(w.ledger.value_of(subject, YEAR_LENGTH_STD).is_some());
@@ -560,10 +603,30 @@ mod tests {
         let mut w = world_with(3);
         let subject = w.ledger.mint_entity();
         genesis(&mut w, subject, &outcome).unwrap();
-        assert!(
+        assert!(w.ledger.iter().all(|f| f.provenance == "astronomy"));
+    }
+
+    #[test]
+    fn genesis_mints_one_neighbor_entity_per_neighbor_with_structured_facts() {
+        let outcome = generate(Seed(3), &SkyPins::default()).unwrap();
+        let mut w = world_with(3);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+
+        let neighbor_ids: Vec<_> = w.ledger.find(IS_NEIGHBOR).map(|f| f.subject).collect();
+        assert_eq!(neighbor_ids.len(), outcome.system.neighbors.len());
+        for id in neighbor_ids {
+            assert!(w.ledger.value_of(id, NEIGHBOR_CLASS).is_some());
+            assert!(w.ledger.value_of(id, NEIGHBOR_DISTANCE_LY).is_some());
+            assert!(w.ledger.value_of(id, NEIGHBOR_BRIGHTNESS_REL).is_some());
+        }
+        // The opaque blob is gone.
+        assert_eq!(
             w.ledger
-                .facts_about(subject)
-                .all(|f| f.provenance == "astronomy")
+                .iter()
+                .filter(|f| f.predicate == "notable-neighbor")
+                .count(),
+            0
         );
     }
 
