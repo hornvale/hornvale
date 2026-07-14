@@ -73,6 +73,10 @@
 | `terrain-note` | no | a note recorded during tectonic genesis |
 | `terrain-pin` | no | a terrain scenario pin, round-trippable |
 | `tidally-locked` | yes | the anchor world is tidally locked (no local day) |
+| `wanderer-class` | no | a wanderer's kind: rock or giant |
+| `wanderer-count` | yes | how many wandering planets cross this sky |
+| `wanderer-orbit-au` | no | orbital distance of a wanderer, in AU |
+| `wanderer-period-std` | no | orbital period of a wanderer, in standard days |
 | `year-length-std` | yes | year length in standard days |
 
 ### Phenomenon kinds
@@ -87,6 +91,7 @@
 | `night-star` | a fixed star notable in the night sky |
 | `seasonal-cycle` | the annual daylight cycle |
 | `tide` | the rise and fall of the waters under the moons |
+| `wandering-star` | a bright star that will not keep its station |
 
 ### Concepts
 

@@ -32,6 +32,7 @@ pub use pins::{
 };
 pub use provider::{
     ECLIPSE, GeneratedSky, HELIACAL_RISING, HELIACAL_SETTING, NIGHT_STAR, SEASONAL_CYCLE, TIDE,
+    WANDERING_STAR,
 };
 pub use sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 pub use star::{Star, generate_star};
@@ -107,6 +108,10 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_phenomenon_kind(
         HELIACAL_SETTING,
         "a star's last evening before the sun swallows it",
+    )?;
+    registry.register_phenomenon_kind(
+        WANDERING_STAR,
+        "a bright star that will not keep its station",
     )?;
 
     registry.register_predicate(
@@ -196,6 +201,26 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         true,
         "a bright star stands within 10 degrees of the south celestial pole \
          at genesis (epoch-scoped: precession retires pole stars)",
+    )?;
+    registry.register_predicate(
+        facts::WANDERER_COUNT_FACT,
+        true,
+        "how many wandering planets cross this sky",
+    )?;
+    registry.register_predicate(
+        facts::WANDERER_ORBIT_AU,
+        false,
+        "orbital distance of a wanderer, in AU",
+    )?;
+    registry.register_predicate(
+        facts::WANDERER_PERIOD_STD,
+        false,
+        "orbital period of a wanderer, in standard days",
+    )?;
+    registry.register_predicate(
+        facts::WANDERER_CLASS,
+        false,
+        "a wanderer's kind: rock or giant",
     )?;
 
     registry.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")?;

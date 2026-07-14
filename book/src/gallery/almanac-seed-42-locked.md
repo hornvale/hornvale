@@ -18,6 +18,10 @@ Salient phenomena, most attention-demanding first:
 
 By night: a smoldering red star that does not wander; a warm yellow star that does not wander; a deep orange star that does not wander; a dim red star that does not wander; a pale white star that does not wander.
 
+A giant wanderer rounds the sun every 4248 days.
+
+A rock wanderer rounds the sun every 7527 days.
+
 ## The Calendar
 
 - This world is tidally locked: no local day exists; the year is 368.1 standard days.

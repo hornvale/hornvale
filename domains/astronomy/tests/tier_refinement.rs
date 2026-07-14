@@ -28,6 +28,13 @@ fn regimes() -> Vec<SkyPins> {
             moons: Some(MoonsPin::graded(1, 2).unwrap()),
             ..SkyPins::default()
         },
+        // Night-sky stage 2: a full wanderer complement must not disturb
+        // the sun's tier-0 rank either.
+        SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            wanderers: Some(4),
+            ..SkyPins::default()
+        },
     ]
 }
 

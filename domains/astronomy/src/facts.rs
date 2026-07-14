@@ -78,6 +78,21 @@ pub const POLE_STAR_NORTH: &str = "pole-star-north";
 /// precession retires pole stars).
 /// type-audit: bare-ok(identifier-text)
 pub const POLE_STAR_SOUTH: &str = "pole-star-south";
+/// How many wandering planets cross this sky (functional, Number).
+/// type-audit: bare-ok(identifier-text)
+pub const WANDERER_COUNT_FACT: &str = "wanderer-count";
+/// Orbital distance of a wanderer, in AU (non-functional, Number — one per
+/// wanderer, innermost order).
+/// type-audit: bare-ok(identifier-text)
+pub const WANDERER_ORBIT_AU: &str = "wanderer-orbit-au";
+/// Orbital period of a wanderer, in standard days (non-functional, Number —
+/// one per wanderer, innermost order).
+/// type-audit: bare-ok(identifier-text)
+pub const WANDERER_PERIOD_STD: &str = "wanderer-period-std";
+/// A wanderer's kind: `"rock"` or `"giant"` (non-functional, Text — one per
+/// wanderer, innermost order).
+/// type-audit: bare-ok(identifier-text)
+pub const WANDERER_CLASS: &str = "wanderer-class";
 
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     Fact {
@@ -95,8 +110,9 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
 /// day-length, depending on rotation regime; year length; obliquity;
 /// moon count; one moon-period-std per moon; one notable-neighbor per
 /// neighbor; a pole-star fact (north or south, never both) when the
-/// genesis-epoch night sky finds one; one genesis-note per recorded
-/// degradation.
+/// genesis-epoch night sky finds one; wanderer count plus one
+/// orbit/period/class trio per wanderer, innermost order; one genesis-note
+/// per recorded degradation.
 pub fn genesis(
     world: &mut World,
     subject: EntityId,
@@ -220,6 +236,41 @@ pub fn genesis(
         };
         world.ledger.commit(
             fact(subject, predicate, Value::Number(pole_star.separation_deg)),
+            &world.registry,
+        )?;
+    }
+
+    world.ledger.commit(
+        fact(
+            subject,
+            WANDERER_COUNT_FACT,
+            Value::Number(system.wanderers.len() as f64),
+        ),
+        &world.registry,
+    )?;
+    for wanderer in &system.wanderers {
+        world.ledger.commit(
+            fact(
+                subject,
+                WANDERER_ORBIT_AU,
+                Value::Number(wanderer.orbit.get()),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                subject,
+                WANDERER_PERIOD_STD,
+                Value::Number(wanderer.period.get()),
+            ),
+            &world.registry,
+        )?;
+        let class_name = match wanderer.class {
+            crate::wanderers::WandererClass::Rock => "rock",
+            crate::wanderers::WandererClass::Giant => "giant",
+        };
+        world.ledger.commit(
+            fact(subject, WANDERER_CLASS, Value::Text(class_name.to_string())),
             &world.registry,
         )?;
     }
@@ -543,5 +594,97 @@ mod tests {
                  threshold may need controller attention"
             );
         }
+    }
+
+    /// Night-sky stage 2: with two wanderers pinned, genesis commits the
+    /// count fact plus one orbit/period/class trio per wanderer, innermost
+    /// order, quantized like every numeric object on commit. Seed 118's pin
+    /// draws one rock and one giant (not two of the same class): the ledger
+    /// dedups exact-duplicate facts (`Ledger::commit`), and `wanderer-class`
+    /// carries only two possible Text values, so two same-class wanderers
+    /// would collapse to a single committed fact — a real, documented
+    /// characteristic of a bare classification predicate with no other
+    /// per-wanderer differentiator, same as any other coarse non-functional
+    /// Text fact. A mixed-class seed keeps this test meaningful without
+    /// exercising that collapse.
+    #[test]
+    fn genesis_commits_one_orbit_period_and_class_fact_per_wanderer() {
+        use crate::wanderers::WandererClass;
+
+        let pins = SkyPins {
+            wanderers: Some(2),
+            ..SkyPins::default()
+        };
+        let outcome = generate(Seed(118), &pins).unwrap();
+        assert_eq!(outcome.system.wanderers.len(), 2);
+        assert_ne!(
+            outcome.system.wanderers[0].class, outcome.system.wanderers[1].class,
+            "test setup must exercise two distinct wanderer classes"
+        );
+        let mut w = world_with(118);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+
+        assert_eq!(
+            w.ledger.value_of(subject, WANDERER_COUNT_FACT),
+            Some(&Value::Number(2.0))
+        );
+
+        let orbits: Vec<f64> = w
+            .ledger
+            .facts_about(subject)
+            .filter(|f| f.predicate == WANDERER_ORBIT_AU)
+            .filter_map(|f| match f.object {
+                Value::Number(n) => Some(n),
+                _ => None,
+            })
+            .collect();
+        let expected_orbits: Vec<f64> = outcome
+            .system
+            .wanderers
+            .iter()
+            .map(|wd| hornvale_kernel::quantize(wd.orbit.get()))
+            .collect();
+        assert_eq!(orbits, expected_orbits);
+
+        let periods: Vec<f64> = w
+            .ledger
+            .facts_about(subject)
+            .filter(|f| f.predicate == WANDERER_PERIOD_STD)
+            .filter_map(|f| match f.object {
+                Value::Number(n) => Some(n),
+                _ => None,
+            })
+            .collect();
+        let expected_periods: Vec<f64> = outcome
+            .system
+            .wanderers
+            .iter()
+            .map(|wd| hornvale_kernel::quantize(wd.period.get()))
+            .collect();
+        assert_eq!(periods, expected_periods);
+
+        let classes: Vec<String> = w
+            .ledger
+            .facts_about(subject)
+            .filter(|f| f.predicate == WANDERER_CLASS)
+            .filter_map(|f| match &f.object {
+                Value::Text(t) => Some(t.clone()),
+                _ => None,
+            })
+            .collect();
+        let expected_classes: Vec<String> = outcome
+            .system
+            .wanderers
+            .iter()
+            .map(|wd| {
+                match wd.class {
+                    WandererClass::Rock => "rock",
+                    WandererClass::Giant => "giant",
+                }
+                .to_string()
+            })
+            .collect();
+        assert_eq!(classes, expected_classes);
     }
 }

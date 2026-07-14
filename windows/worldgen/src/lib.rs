@@ -2322,14 +2322,15 @@ pub fn night_sky_line(world: &World) -> Result<Option<String>, BuildError> {
     Ok(Some(format!("By night: {}.", parts.join("; "))))
 }
 
-/// The pole star and heliacal-return lines under **The Sky** (night-sky
-/// stage 1): a pole-star sentence when the genesis-epoch night sky finds
-/// one within `POLE_STAR_MAX_SEPARATION_DEG` of either celestial pole, plus
-/// up to three heliacal-return sentences for the brightest neighbors
+/// The pole star, heliacal-return, and wanderer lines under **The Sky**
+/// (night-sky stage 1/2): a pole-star sentence when the genesis-epoch night
+/// sky finds one within `POLE_STAR_MAX_SEPARATION_DEG` of either celestial
+/// pole, up to three heliacal-return sentences for the brightest neighbors
 /// (index order), at the same flagship vantage latitude `calendar_lines`
 /// resolves its daylight-swing line at (the first known place's committed
 /// latitude; reference latitude 35.0 — a mid-temperate default — until the
-/// flagship vantage reaches the almanac, if no place resolves). `None` for
+/// flagship vantage reaches the almanac, if no place resolves), plus one
+/// sentence per wandering sibling planet, innermost order. `None` for
 /// constant-sky worlds, which have no neighborhood to describe.
 /// type-audit: bare-ok(prose: return)
 pub fn night_sky_lines(
@@ -2386,9 +2387,32 @@ pub fn night_sky_lines(
         })
         .collect();
 
+    let wanderers = system
+        .wanderers
+        .iter()
+        .map(|w| {
+            let class_word = match w.class {
+                hornvale_astronomy::WandererClass::Rock => "rock",
+                hornvale_astronomy::WandererClass::Giant => "giant",
+            };
+            let morning_evening = if w.max_elongation_deg.is_some() {
+                " — a morning and evening star"
+            } else {
+                ""
+            };
+            format!(
+                "A {} wanderer rounds the sun every {:.0} days{}.",
+                class_word,
+                w.period.get(),
+                morning_evening
+            )
+        })
+        .collect();
+
     Ok(Some(hornvale_almanac::NightSkyLines {
         pole_star,
         heliacal,
+        wanderers,
     }))
 }
 
@@ -3055,6 +3079,35 @@ mod tests {
             assert!(line.contains("returns before dawn at year-phase"));
             assert!(line.contains("days of absence"));
         }
+    }
+
+    /// Night-sky stage 2: two pinned wanderers each get their own line
+    /// under The Sky — a rock's or a giant's round of the sun, in AU-Kepler
+    /// days, with the inner (elongation-bound) wanderer flagged as a
+    /// morning-and-evening star.
+    #[test]
+    fn wanderer_lines_render_one_sentence_per_pinned_wanderer() {
+        let pins = SkyPins {
+            wanderers: Some(2),
+            ..SkyPins::default()
+        };
+        let world = build_world(
+            Seed(1),
+            &pins,
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let lines = night_sky_lines(&world).unwrap().unwrap();
+        assert_eq!(lines.wanderers.len(), 2);
+        for line in &lines.wanderers {
+            assert!(line.contains("wanderer rounds the sun every"));
+            assert!(line.contains("days"));
+        }
+
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.night_sky_lines.unwrap().wanderers, lines.wanderers);
     }
 
     #[test]

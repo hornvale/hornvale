@@ -11,6 +11,7 @@ Salient phenomena, most attention-demanding first:
 - [1.00] *celestial-body* — the sun, a yellow dwarf (G)
 - [0.90] *eclipse* — an eclipse: the vast moon devours the sun whole
 - [0.75] *eclipse* — an eclipse: the small, distant moon leaves a burning ring of the sun
+- [0.65] *wandering-star* — A rock-pale wanderer: a bright star that will not keep its station.
 - [0.64] *celestial-body* — a vast moon
 - [0.50] *tide* — the tide, rising and falling under the vast moon
 - [0.47] *celestial-body* — a small, distant moon
@@ -32,6 +33,10 @@ The warm yellow star returns before dawn at year-phase 0.15, after 39 days of ab
 
 The deep orange star returns before dawn at year-phase 0.98, after 31 days of absence.
 
+A giant wanderer rounds the sun every 4248 days.
+
+A rock wanderer rounds the sun every 7527 days.
+
 ## The Calendar
 
 - The year is 418.3 local days (368.1 standard days).
@@ -50,7 +55,7 @@ Some 11% of the surface is habitable — land with water and a tolerable season.
 - **Zhxokngaknged** — temperate-rainforest
 - **Roqrraxotrororaq** — temperate-rainforest
 - **Btoanjeonjoa** — temperate-rainforest
-- **Vngaashgvoo** — temperate-rainforest
+- **Qvaashkvao** — temperate-rainforest
 - **Xnaknedzhvek** — temperate-rainforest
 - **Roqrrarrotrroqroq** — temperate-rainforest
 - **Sfadvnok** — temperate-forest
@@ -116,14 +121,14 @@ The frost retreated: at the glacial maximum (day -243500000), ice advanced over 
 ## The People
 
 The land holds 59 settlement(s).
-The chief bugbear settlement, Vngaashgvoo, holds 298 souls amid temperate-rainforest.
+The chief bugbear settlement, Qvaashkvao, holds 298 souls amid temperate-rainforest.
 The chief goblin settlement, Zhxokngaknged, holds 356 souls amid temperate-rainforest.
 The chief hobgoblin settlement, Btoanjeonjoa, holds 421 souls amid temperate-rainforest.
 The chief kobold settlement, Roqrraxotrororaq, holds 529 souls amid temperate-rainforest.
 
-The bugbear lair of **Vngaashgvoo**, population 298.
+The bugbear lair of **Qvaashkvao**, population 298.
 
-Vngaashgvoo lives by farming.
+Qvaashkvao lives by farming.
 Its roles, lowest to highest: forager, omen-reader, headman.
 
 The goblin village of **Zhxokngaknged**, population 356.
@@ -145,53 +150,53 @@ Its roles, lowest to highest: digger, shaper, keeper, elders.
 
 An organized priesthood tends a pantheon:
 
-> Bvaash the Vngaashbvaash comes back every 15.99 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Vngaashbvaash comes back every 386.98 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+>
+> — derived from the phenomenon *wandering-star*
+
+> Bvaash the Bvaobvaash comes back every 15.99 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bvaash the Shngaoshbvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Shngaashbvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Bvaash the Bvaobvaash comes back every 32.55 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Vngaashbvaash comes back every 32.55 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bvaash the Dvaashbvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Shngoabvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Bvaash the Vngaoshbvaash comes back every 0.88 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Vngaobvaash comes back every 0.88 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bvaash the Shngooshbvaash comes back every 71.11 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Bvaashbvaash comes back every 71.11 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
 In the village of **Zhxokngaknged**, an organized priesthood tends its own pantheon:
 
-> Neb the Zhfobneb returns every 0.88 days. So it was, so it is. *(who presides)*
+> Neb the Netneb returns every 0.88 days. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Nabvngad the Sfeknetneknek returns every 71.11 days. So it was, so it is.
+> Zhvobvngab the Vngeknobxngek returns every 71.11 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Zhvobvngab the Vngeknobxngek returns every 269.79 days. So it was, so it is.
+> Fngakfnot the Nokfnakned returns every 269.79 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Neb the Fnakneb returns every 15.99 days. So it was, so it is.
+> Sxabfngekvnob the Vnebxngebxngeb returns every 386.98 days. So it was, so it is.
 >
-> — derived from the phenomenon *celestial-body*
+> — derived from the phenomenon *wandering-star*
 
-> Neb the Xngebneb is felt, not counted. So it was, so it is.
->
-> — derived from the phenomenon *tide*
-
-> Neb the Zhxabneb returns every 32.55 days. So it was, so it is.
+> Neb the Zhxabneb returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -199,47 +204,63 @@ In the village of **Zhxokngaknged**, an organized priesthood tends its own panth
 >
 > — derived from the phenomenon *tide*
 
-In the legion of **Btoanjeonjoa**, an organized priesthood tends its own pantheon:
-
-> Fee the Xaefee returns every 0.88 days. So it was, so it is. *(who presides)*
+> Neb the Svatneb returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Feavoengjea the Qqaexee returns every 71.11 days. So it was, so it is.
->
-> — derived from the phenomenon *eclipse*
-
-> Tbeaxoo the Foaktoemjee returns every 269.79 days. So it was, so it is.
->
-> — derived from the phenomenon *eclipse*
-
-> Fee the Tqaefee returns every 15.99 days. So it was, so it is.
->
-> — derived from the phenomenon *celestial-body*
-
-> Fee the Qgeofee returns every 32.55 days. So it was, so it is.
->
-> — derived from the phenomenon *celestial-body*
-
-> Fee the Xoefee is felt, not counted. So it was, so it is.
+> Neb the Zhfabneb is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Fee the Ktaofee is felt, not counted. So it was, so it is.
+In the legion of **Btoanjeonjoa**, an organized priesthood tends its own pantheon:
+
+> Fee the Ktoefee returns every 0.88 days. So it was, so it is. *(who presides)*
+>
+> — derived from the phenomenon *celestial-body*
+
+> Ngjoagboaveo the Ktoetqae returns every 71.11 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Tboektoovoo the Ngjaaqgeoqgeo returns every 269.79 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Ttaeveanjoa the Xeexoexoengjee returns every 386.98 days. So it was, so it is.
+>
+> — derived from the phenomenon *wandering-star*
+
+> Fee the Ktaofee returns every 15.99 days. So it was, so it is.
+>
+> — derived from the phenomenon *celestial-body*
+
+> Fee the Qkaofee returns every 32.55 days. So it was, so it is.
+>
+> — derived from the phenomenon *celestial-body*
+
+> Fee the Xoofee is felt, not counted. So it was, so it is.
+>
+> — derived from the phenomenon *tide*
+
+> Fee the Mjoafee is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
 In the warren of **Roqrraxotrororaq**, an organized priesthood tends its own pantheon:
 
-> Roqrra Xogrraroqrra comes back every 15.99 days. That's how it's always been. That's how it's always been. Roqrra is the highest among the gods. *(who presides)*
+> Roqrraxogrra Roqrraxogrra comes back every 15.99 days. That's how it's always been. That's how it's always been. Roqrraxogrra is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Roqrra Xogrraroqrra comes back every 32.55 days. That's how it's always been. That's how it's always been. Roqrra is a great one among the gods.
+> Xogrra Xogrra comes back every 386.98 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
+>
+> — derived from the phenomenon *wandering-star*
+
+> Roqrraxogrra Roqrraxogrra comes back every 32.55 days. That's how it's always been. That's how it's always been. Roqrraxogrra is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Xogrra Rogxa comes back every 0.88 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
+> Rogxa Xogrrarogxa comes back every 0.88 days. That's how it's always been. That's how it's always been. Rogxa is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
