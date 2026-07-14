@@ -346,4 +346,48 @@ mod tests {
             "the herbivore preys on nobody"
         );
     }
+
+    #[test]
+    fn predation_level_filter_excludes_an_equal_level_peer_in_the_mass_window() {
+        use hornvale_kernel::{ANIMAL_PREY, Mass, PLANT_FORAGE, ResourceVector};
+        let sp = vec![
+            (
+                0u32,
+                Mass::new(40.0).unwrap(),
+                ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
+            ), // low-level herbivore: in the mass window AND strictly lower level
+            (
+                1u32,
+                Mass::new(4000.0).unwrap(),
+                ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
+            ), // predator
+            (
+                2u32,
+                Mass::new(1600.0).unwrap(),
+                ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
+            ), // peer predator: same niche as 1 (so equal level), and its mass
+               // ratio to 1 (1600/4000 = 0.4) is inside the mass window — only
+               // the strict-lower-level filter can exclude it
+        ];
+
+        let projected: Vec<(u32, ResourceVector)> = sp
+            .iter()
+            .map(|(id, _mass, niche)| (*id, niche.clone()))
+            .collect();
+        let levels = trophic_levels(&projected);
+        assert!(
+            (levels[&1] - levels[&2]).abs() < 1e-9,
+            "species 1 and 2 share a niche, so they must land at the same trophic level"
+        );
+
+        let pred = predation(&sp);
+        assert!(
+            pred[&1].contains(&0),
+            "the herbivore is in the mass window and strictly lower level"
+        );
+        assert!(
+            !pred[&1].contains(&2),
+            "the peer predator fits the mass window but is equal level, not strictly lower"
+        );
+    }
 }
