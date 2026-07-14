@@ -1753,11 +1753,11 @@ git add -A && git commit -m "feat(lab): eclipse cadence, standstill, brightening
 
 ---
 
-### Task 12: Artifacts, model card, decision 0053, registry re-scores
+### Task 12: Artifacts, model card, decision 0054, registry re-scores
 
 **Files:**
 - Modify: `docs/superpowers/specs/2026-07-05-campaign-2-the-sky-design.md` (§5 model card — append rows)
-- Create: `docs/decisions/0053-no-orbital-migration.md`
+- Create: `docs/decisions/0054-no-orbital-migration.md`
 - Modify: `book/src/frontier/idea-registry.md` (five row re-scores)
 - Regenerate: `book/src/gallery/*`, `book/src/reference/*`, `book/src/laboratory/*` (via script), `docs/audits/type-audit-report.md`
 
@@ -1778,10 +1778,10 @@ git add -A && git commit -m "feat(lab): eclipse cadence, standstill, brightening
 
 and under **drawn**: `**Node longitude Ω₀** (The Long Count): uniform [0, 360) per admitted moon, stream "moon-nodes".` (If Task 4 tuned `LUNAR_SHADOW_FACTOR` off 0.64, write the shipped value.)
 
-- [ ] **Step 2: Decision 0053.** Create `docs/decisions/0053-no-orbital-migration.md` following the format of `docs/decisions/0052-deploy-built-wasm.md` (read it first; keep the same header/sections). Substance:
+- [ ] **Step 2: Decision 0054.** Parallel campaigns claim decision numbers concurrently (0053 went to single-craton hypsometry mid-plan) — **re-check `ls docs/decisions/` for the next free number before writing** and renumber this file and every reference below if 0054 is taken. Create `docs/decisions/0054-no-orbital-migration.md` following the format of `docs/decisions/0052-deploy-built-wasm.md` (read it first; keep the same header/sections). Substance:
 
 ```markdown
-# 0053 — No semi-major-axis migration
+# 0054 — No semi-major-axis migration
 
 **Status:** ratified (The Long Count)
 **Date:** 2026-07-14
@@ -1802,7 +1802,7 @@ a fresh opinion.
 - [ ] **Step 3: Registry re-scores** in `book/src/frontier/idea-registry.md` (edit rows in place, keep IDs; per `book/src/frontier/CLAUDE.md`):
   - **SKY-6** → status `shipped`, drop the "Still open" clause, note dated occurrences + lunar eclipses + standstill facts shipped in The Long Count.
   - **SKY-eclipse-seasons** → status `shipped`, note "folded into SKY-6's close-out (The Long Count): inclination + nodal regression date the seasons and the standstill cycle."
-  - **SKY-1** → status `shipped`, note brightening shipped, migration declined (decision 0053), "orbital drift beyond the triad" closed by 0053.
+  - **SKY-1** → status `shipped`, note brightening shipped, migration declined (decision 0054), "orbital drift beyond the triad" closed by 0054.
   - **SKY-stale-alignments** → status `shipped`, note the ground half (solstice azimuth drift, dating inverse, founding facts) shipped in The Long Count.
   - **SKY-23** → drop the "broader appetite remains open" clause; note the star/anchor/neighbor batteries shipped.
   - Add "enabled-by: The Long Count" notes to **SKY-tidal-braking** (standstill/eclipse machinery to kill) and **SKY-calendar-hardness** (standstill period now a census column).
@@ -1824,7 +1824,7 @@ Inspect the diff: the seed-42 almanacs gain the eclipse table + alignment line, 
 - [ ] **Step 6: Commit:**
 
 ```bash
-git add -A && git commit -m "docs(the-long-count): model card, decision 0053, registry re-scores, artifact regen"
+git add -A && git commit -m "docs(the-long-count): model card, decision 0054, registry re-scores, artifact regen"
 ```
 
 ---
