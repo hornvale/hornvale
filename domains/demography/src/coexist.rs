@@ -14,7 +14,7 @@
 use crate::footprint::home_range;
 use crate::niche::{guild_overlap, predation, trophic_levels};
 use hornvale_kernel::math::powf;
-use hornvale_kernel::{CellMap, Geosphere, Mass, ResourceVector};
+use hornvale_kernel::{ANIMAL_PREY, CellMap, Geosphere, Mass, ResourceVector, v1_basis};
 use std::collections::BTreeMap;
 
 /// The competition temperature β. AUTHORED placeholder (task A14); task A16
@@ -120,10 +120,18 @@ const SHADOW_FLOOR: f64 = 0.1;
 ///
 /// For each predator (in that order), two effects apply in sequence:
 /// 1. **Bottom-up cap** — sum the densities of its prey species that are
-///    present in `stack`, and cap the predator's own density at
-///    `PREY_SUPPORT_COEFF * prey_biomass`. A predator with no present prey
-///    (`prey_biomass == 0`) collapses to `0.0` — the dormant-apex resting
-///    state, not a special case to avoid.
+///    present in `stack`, and cap only the **carnivore-derived fraction** of
+///    the predator's own density at `PREY_SUPPORT_COEFF * prey_biomass`. Each
+///    predator's density `d` splits into `carnivore_part = cf * d` and
+///    `forage_part = (1 - cf) * d`, reading `cf` from `carnivore_frac`
+///    (defaulting to `1.0` — an obligate carnivore — for any predator id
+///    `carnivore_frac` omits); the post-cap density is
+///    `forage_part + carnivore_part.min(PREY_SUPPORT_COEFF * prey_biomass)`.
+///    An obligate carnivore (`cf == 1.0`) with no present prey
+///    (`prey_biomass == 0`) still collapses to `0.0` — the dormant-apex
+///    resting state — but an omnivore (`cf < 1.0`) keeps its uncapped
+///    `forage_part`: an animal with no eligible prey survives on what it
+///    forages, it does not starve.
 /// 2. **Top-down shadow** — using the predator's density *after* the cap
 ///    above, every present prey species' density is multiplied by
 ///    `(1 - shadow * predator_density).max(SHADOW_FLOOR)`, so an apex
@@ -133,11 +141,12 @@ const SHADOW_FLOOR: f64 = 0.1;
 /// `stack`, are skipped entirely — this function only touches species
 /// actually present in the cell.
 ///
-/// type-audit: bare-ok(index: stack), bare-ok(index: predation), bare-ok(count: stack), bare-ok(index: levels), bare-ok(ratio: levels), bare-ok(ratio: shadow)
+/// type-audit: bare-ok(index: stack), bare-ok(index: predation), bare-ok(count: stack), bare-ok(index: levels), bare-ok(ratio: levels), bare-ok(index: carnivore_frac), bare-ok(ratio: carnivore_frac), bare-ok(ratio: shadow)
 pub fn couple_trophic(
     stack: &mut BTreeMap<u32, f64>,
     predation: &BTreeMap<u32, Vec<u32>>,
     levels: &BTreeMap<u32, f64>,
+    carnivore_frac: &BTreeMap<u32, f64>,
     shadow: f64,
 ) {
     // Highest-level-first: sort the species present in `stack` by their
@@ -161,11 +170,17 @@ pub fn couple_trophic(
             continue;
         }
 
-        // Bottom-up cap: sum the present prey's densities, then clamp the
-        // predator's own density to PREY_SUPPORT_COEFF of that sum. No prey
-        // present sums to 0.0, so the predator collapses to 0.0 — dormant.
+        // Bottom-up cap: sum the present prey's densities, then clamp only
+        // the CARNIVORE-DERIVED fraction of the predator's own density to
+        // PREY_SUPPORT_COEFF of that sum. The forage fraction (1 - cf) is
+        // never capped by prey biomass — an omnivore with no eligible prey
+        // still survives on what it forages.
         let prey_biomass: f64 = prey_ids.iter().filter_map(|id| stack.get(id)).sum();
-        let capped = stack[&predator_id].min(PREY_SUPPORT_COEFF * prey_biomass);
+        let density = stack[&predator_id];
+        let cf = carnivore_frac.get(&predator_id).copied().unwrap_or(1.0);
+        let carnivore_part = cf * density;
+        let forage_part = (1.0 - cf) * density;
+        let capped = forage_part + carnivore_part.min(PREY_SUPPORT_COEFF * prey_biomass);
         stack.insert(predator_id, capped);
 
         // Top-down shadow: using the just-capped predator density, suppress
@@ -178,6 +193,30 @@ pub fn couple_trophic(
             }
         }
     }
+}
+
+/// Per-species carnivore fraction: the share of a species' sustenance that
+/// comes from [`ANIMAL_PREY`], `niche.weight(ANIMAL_PREY) / (sum of every
+/// `v1_basis` axis weight)`. An obligate carnivore (only `ANIMAL_PREY`
+/// weighted) reads `1.0`; a pure forager or autotroph reads `0.0`; an
+/// omnivore lands strictly between. The zero vector (no recorded niche, sum
+/// `0.0`) reads `0.0` rather than dividing by zero — "no recorded niche"
+/// means no animal-prey dependence to cap.
+///
+/// type-audit: bare-ok(index: species), bare-ok(ratio: return)
+fn carnivore_fraction(species: &[(u32, Mass, ResourceVector)]) -> BTreeMap<u32, f64> {
+    species
+        .iter()
+        .map(|(id, _mass, niche)| {
+            let total: f64 = v1_basis().iter().map(|axis| niche.weight(*axis)).sum();
+            let frac = if total > 0.0 {
+                niche.weight(ANIMAL_PREY) / total
+            } else {
+                0.0
+            };
+            (*id, frac)
+        })
+        .collect()
 }
 
 /// The soft-capacity overflow → emigration-pressure field: how hard crowding
@@ -247,9 +286,10 @@ pub struct CoexistStack {
 /// project from. `beta` and `floor` pass straight through to [`cell_share`].
 ///
 /// Wiring, in order:
-/// 1. **Derive once.** `overlap`, `levels`, and `predation` depend only on
-///    `species`' niche vectors and masses — never on a cell — so each is
-///    computed exactly once up front, not per cell.
+/// 1. **Derive once.** `overlap`, `levels`, `predation`, and
+///    `carnivore_frac` ([`carnivore_fraction`]) depend only on `species`'
+///    niche vectors and masses — never on a cell — so each is computed
+///    exactly once up front, not per cell.
 /// 2. **Per cell** (visiting `geo.cells()` in ascending `CellId` order):
 ///    - `present` is `(species_id, K_s(cell))` for every species with a
 ///      **strictly positive** `K` at this cell, sorted by id — a species
@@ -273,7 +313,10 @@ pub struct CoexistStack {
 ///      bodies actually standing in this one cell.
 ///    - [`couple_trophic`] then applies the bottom-up cap / top-down shadow
 ///      over that cell's density map in place, using the once-derived
-///      `predation`/`levels` and the authored [`SHADOW`] constant.
+///      `predation`/`levels`/`carnivore_frac` and the authored [`SHADOW`]
+///      constant. The bottom-up cap only clamps each predator's
+///      carnivore-derived density fraction, so an omnivore with no eligible
+///      prey still survives on its uncapped forage fraction.
 /// 3. **Emigration pressure.** `demand` is each cell's summed post-coupling
 ///    density across every species; `capacity` is each cell's summed
 ///    present-species `K` (the same quantity computed in step 2, rebuilt as
@@ -310,8 +353,8 @@ pub fn pack(
          (the masses[&id] lookup below panics otherwise)"
     );
 
-    // Derive overlap/levels/predation exactly once — they depend only on
-    // `species`, never on a cell.
+    // Derive overlap/levels/predation/carnivore_frac exactly once — they
+    // depend only on `species`, never on a cell.
     let projected_niche: Vec<(u32, ResourceVector)> = species
         .iter()
         .map(|(id, _mass, niche)| (*id, niche.clone()))
@@ -319,6 +362,7 @@ pub fn pack(
     let overlap = guild_overlap(&projected_niche);
     let levels = trophic_levels(&projected_niche);
     let predation_edges = predation(species);
+    let carnivore_frac = carnivore_fraction(species);
     let masses: BTreeMap<u32, Mass> = species.iter().map(|(id, mass, _)| (*id, *mass)).collect();
 
     // Per-cell density maps and capacities, indexed by CellId in the same
@@ -345,7 +389,13 @@ pub fn pack(
                 (id, share / home_range(mass))
             })
             .collect();
-        couple_trophic(&mut density, &predation_edges, &levels, SHADOW);
+        couple_trophic(
+            &mut density,
+            &predation_edges,
+            &levels,
+            &carnivore_frac,
+            SHADOW,
+        );
 
         per_cell_density.push(density);
         per_cell_capacity.push(capacity);
@@ -399,14 +449,15 @@ mod tests {
         let mut with_prey = BTreeMap::from([(0u32, 5.0), (1u32, 0.02)]); // prey 0, apex 1
         let pred = BTreeMap::from([(1u32, vec![0u32])]);
         let lv = BTreeMap::from([(0u32, 2.0), (1u32, 3.0)]);
-        couple_trophic(&mut with_prey, &pred, &lv, 0.1);
+        let cf = BTreeMap::from([(1u32, 1.0)]); // obligate carnivore
+        couple_trophic(&mut with_prey, &pred, &lv, &cf, 0.1);
         assert!(
             with_prey[&1] <= with_prey[&0],
             "apex density ≤ prey-supported cap"
         );
 
         let mut no_prey = BTreeMap::from([(1u32, 0.02)]); // apex alone
-        couple_trophic(&mut no_prey, &pred, &lv, 0.1);
+        couple_trophic(&mut no_prey, &pred, &lv, &cf, 0.1);
         assert!(no_prey[&1] < 1e-6, "dormant apex self-limits with no prey");
     }
 
@@ -425,9 +476,10 @@ mod tests {
         let mut stack = BTreeMap::from([(0u32, 5.0), (1u32, 1.0), (2u32, 1.0)]);
         let predation = BTreeMap::from([(1u32, vec![0u32]), (2u32, vec![1u32])]);
         let levels = BTreeMap::from([(0u32, 2.0), (1u32, 3.0), (2u32, 4.0)]);
+        let carnivore_frac = BTreeMap::from([(1u32, 1.0), (2u32, 1.0)]); // obligate carnivores
         let shadow = 0.5;
 
-        couple_trophic(&mut stack, &predation, &levels, shadow);
+        couple_trophic(&mut stack, &predation, &levels, &carnivore_frac, shadow);
 
         // Hand-trace, CORRECT apex-first (level-descending) order:
         //
@@ -505,11 +557,39 @@ mod tests {
             &mut s,
             &BTreeMap::from([(1u32, vec![0u32])]),
             &BTreeMap::from([(0u32, 2.0), (1u32, 3.0)]),
+            &BTreeMap::from([(1u32, 1.0)]), // obligate carnivore
             0.5,
         );
         assert!(
             s[&0] < base_prey && s[&0] > 0.0,
             "shadow suppresses, not zeroes"
+        );
+    }
+
+    #[test]
+    fn couple_trophic_omnivore_survives_without_prey() {
+        // An omnivore (id 1) is a "predator" (has a `predation` entry) but
+        // draws only 40% of its sustenance from ANIMAL_PREY; its listed prey
+        // (id 0) is absent from `stack`, so prey_biomass is 0. The old
+        // whole-density cap would zero it entirely; the fix caps only the
+        // carnivore-derived fraction, so the 60% forage fraction survives
+        // uncapped.
+        let original_density = 2.0;
+        let mut stack = BTreeMap::from([(1u32, original_density)]); // prey 0 absent
+        let predation = BTreeMap::from([(1u32, vec![0u32])]);
+        let levels = BTreeMap::from([(1u32, 2.0)]);
+        let carnivore_frac = BTreeMap::from([(1u32, 0.4)]); // omnivore
+        couple_trophic(&mut stack, &predation, &levels, &carnivore_frac, 0.1);
+
+        let expected_forage = 0.6 * original_density;
+        assert!(
+            stack[&1] > 0.0,
+            "omnivore with no eligible prey must not be zeroed"
+        );
+        assert!(
+            (stack[&1] - expected_forage).abs() < 1e-9,
+            "expected forage-only density {expected_forage}, got {}",
+            stack[&1]
         );
     }
 
