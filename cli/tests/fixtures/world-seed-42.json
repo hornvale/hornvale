@@ -62,6 +62,26 @@
         "functional": true,
         "doc": "mean orbital eccentricity (deep-time forcing)"
       },
+      "figure-count": {
+        "name": "figure-count",
+        "functional": true,
+        "doc": "how many star figures the reference observer's sky holds"
+      },
+      "figure-members": {
+        "name": "figure-members",
+        "functional": false,
+        "doc": "member count of a star figure"
+      },
+      "figure-on-ecliptic": {
+        "name": "figure-on-ecliptic",
+        "functional": true,
+        "doc": "a star figure stands on the sun's road (the ecliptic band)"
+      },
+      "figure-region": {
+        "name": "figure-region",
+        "functional": false,
+        "doc": "sky region of a star figure"
+      },
       "fossil-shoreline": {
         "name": "fossil-shoreline",
         "functional": false,
@@ -1525,6 +1545,56 @@
         "predicate": "wanderer-class",
         "object": {
           "Text": "rock"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "figure-count",
+        "object": {
+          "Number": 2.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "figure-members",
+        "object": {
+          "Number": 3.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "figure-region",
+        "object": {
+          "Text": "northern sky"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "figure-region",
+        "object": {
+          "Text": "the equator's road"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "figure-on-ecliptic",
+        "object": {
+          "Flag": true
         },
         "place": null,
         "day": 0.0,

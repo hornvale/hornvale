@@ -8,7 +8,7 @@
 use hornvale_almanac::AlmanacContext;
 use hornvale_astronomy::{
     CELESTIAL_BODY, ConstantSun, GeneratedSky, GenesisError, NIGHT_STAR, SEASONAL_CYCLE, SkyPins,
-    SkyReport, facts, generate, parse_pin, pin_strings,
+    SkyReport, facts, figures, generate, parse_pin, pin_strings,
 };
 use hornvale_climate::{
     AMBIENT, ClimateInputs, ClimateReport, GeneratedClimate, RotationRegime, SeafloorFeature,
@@ -2414,8 +2414,10 @@ pub fn night_sky_line(world: &World) -> Result<Option<String>, BuildError> {
 /// resolves its daylight-swing line at (the first known place's committed
 /// latitude; reference latitude 35.0 — a mid-temperate default — until the
 /// flagship vantage reaches the almanac, if no place resolves), plus one
-/// sentence per wandering sibling planet, innermost order. `None` for
-/// constant-sky worlds, which have no neighborhood to describe.
+/// sentence per wandering sibling planet, innermost order, plus a single
+/// figure count/ecliptic summary line (night-sky stage 3; omitted for a sky
+/// with no figures at all). `None` for constant-sky worlds, which have no
+/// neighborhood to describe.
 /// type-audit: bare-ok(prose: return)
 pub fn night_sky_lines(
     world: &World,
@@ -2493,10 +2495,27 @@ pub fn night_sky_lines(
         })
         .collect();
 
+    // Figures (night-sky stage 3): a single count/ecliptic summary line,
+    // never rendered for a sky with no figures at all. `world.seed` derives
+    // the same astronomy seed `system::generate` and the lab metrics use.
+    let astronomy_seed = world.seed.derive("astronomy");
+    let figs = figures(astronomy_seed, system);
+    let figure_lines = if figs.is_empty() {
+        Vec::new()
+    } else {
+        let ecliptic_count = figs.iter().filter(|f| f.on_ecliptic).count();
+        vec![format!(
+            "The sky holds {} figures; {} stand on the sun's road.",
+            figs.len(),
+            ecliptic_count
+        )]
+    };
+
     Ok(Some(hornvale_almanac::NightSkyLines {
         pole_star,
         heliacal,
         wanderers,
+        figures: figure_lines,
     }))
 }
 
@@ -3213,6 +3232,37 @@ mod tests {
 
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.night_sky_lines.unwrap().wanderers, lines.wanderers);
+    }
+
+    /// Night-sky stage 3: seed 6's default (unpinned) generation carries
+    /// several figures with at least one on the ecliptic (verified against
+    /// the astronomy-layer sweep), so its almanac line reports both a
+    /// nonzero total and a nonzero ecliptic count.
+    #[test]
+    fn seed_6_generated_default_has_a_figures_summary_line() {
+        let world = generated(6);
+        let lines = night_sky_lines(&world).unwrap().unwrap();
+        assert_eq!(lines.figures.len(), 1);
+        let line = &lines.figures[0];
+        assert!(line.starts_with("The sky holds "));
+        assert!(line.contains("figures;"));
+        assert!(line.contains("stand on the sun's road."));
+        assert!(!line.contains("holds 0 figures"));
+
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.night_sky_lines.unwrap().figures, lines.figures);
+    }
+
+    /// A sky with zero figures renders no figures line at all (never "The
+    /// sky holds 0 figures").
+    #[test]
+    fn a_sky_with_zero_figures_renders_no_figures_line() {
+        let world = generated(1);
+        let lines = night_sky_lines(&world).unwrap().unwrap();
+        assert!(
+            lines.figures.is_empty(),
+            "seed 1 has zero figures at genesis"
+        );
     }
 
     #[test]

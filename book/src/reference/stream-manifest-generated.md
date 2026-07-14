@@ -22,6 +22,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/moon-inclinations` | per-moon orbital-inclination draws |
 | `astronomy/wanderer-count` | how many wandering planets |
 | `astronomy/wanderers` | per-wanderer orbit/class draws (sequential attempts) |
+| `astronomy/starfield` | background starfield: count + per-star position/brightness (derived on demand) |
 
 ### hornvale-climate
 

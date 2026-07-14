@@ -5,6 +5,7 @@
 pub mod anchor;
 pub mod calendar;
 pub mod facts;
+pub mod figures;
 pub mod forcing;
 pub mod heliacal;
 pub mod moons;
@@ -23,6 +24,9 @@ pub mod wanderers;
 
 pub use anchor::{Anchor, Rotation, generate_anchor};
 pub use calendar::{Calendar, SkyBand, TWILIGHT_DEPTH_DEG, calendar_of};
+pub use figures::{
+    FIGURE_MAGNITUDE_FLOOR, FIGURE_MIN_MEMBERS, FIGURE_SEPARATION_DEG, Figure, describe, figures,
+};
 pub use heliacal::{HeliacalPair, arcus_visionis_deg, heliacal_events};
 pub use moons::{Moon, generate_moons, hill_radius_mm};
 pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
@@ -299,6 +303,22 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::INSOLATION_REL,
         true,
         "insolation at the anchor relative to Earth (derived L/a²)",
+    )?;
+    registry.register_predicate(
+        facts::FIGURE_COUNT,
+        true,
+        "how many star figures the reference observer's sky holds",
+    )?;
+    registry.register_predicate(
+        facts::FIGURE_MEMBERS,
+        false,
+        "member count of a star figure",
+    )?;
+    registry.register_predicate(facts::FIGURE_REGION, false, "sky region of a star figure")?;
+    registry.register_predicate(
+        facts::FIGURE_ON_ECLIPTIC,
+        true,
+        "a star figure stands on the sun's road (the ecliptic band)",
     )?;
 
     registry.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")?;

@@ -22,6 +22,8 @@ A giant wanderer rounds the sun every 4248 days.
 
 A rock wanderer rounds the sun every 7527 days.
 
+The sky holds 2 figures; 1 stand on the sun's road.
+
 ## The Calendar
 
 - This world is tidally locked: no local day exists; the year is 368.1 standard days.

@@ -64,7 +64,7 @@ pub struct PantheonBlock {
 /// brightest neighbors, and one line per wandering sibling planet. `None`
 /// for constant-sky worlds, which have no neighborhood to describe (see
 /// [`AlmanacContext::night_sky_lines`]).
-/// type-audit: bare-ok(prose: pole_star), bare-ok(prose: heliacal), bare-ok(prose: wanderers)
+/// type-audit: bare-ok(prose: pole_star), bare-ok(prose: heliacal), bare-ok(prose: wanderers), bare-ok(prose: figures)
 pub struct NightSkyLines {
     /// The pole-star sentence, if one exists at genesis.
     pub pole_star: Option<String>,
@@ -73,6 +73,9 @@ pub struct NightSkyLines {
     /// One sentence per wandering sibling planet, innermost order
     /// (night-sky stage 2).
     pub wanderers: Vec<String>,
+    /// A single figure-count/ecliptic summary line (night-sky stage 3);
+    /// empty for skies with no figures at all.
+    pub figures: Vec<String>,
 }
 
 /// Everything the almanac needs, gathered by the composition root.
@@ -153,6 +156,9 @@ pub fn render(ctx: &AlmanacContext) -> String {
             doc.push_str(&format!("{line}\n\n"));
         }
         for line in &lines.wanderers {
+            doc.push_str(&format!("{line}\n\n"));
+        }
+        for line in &lines.figures {
             doc.push_str(&format!("{line}\n\n"));
         }
     }
@@ -633,17 +639,20 @@ mod tests {
                 "A rock wanderer rounds the sun every 224 days — a morning and evening star."
                     .to_string(),
             ],
+            figures: vec!["The sky holds 4 figures; 1 stand on the sun's road.".to_string()],
         });
         let doc = render(&ctx);
         assert!(doc.contains("A blue-white star stands 3.2° from the north celestial pole"));
         assert!(doc.contains("returns before dawn at year-phase 0.42, after 70 days of absence."));
         assert!(doc.contains("A rock wanderer rounds the sun every 224 days"));
+        assert!(doc.contains("The sky holds 4 figures; 1 stand on the sun's road."));
 
         ctx.night_sky_lines = None;
         let doc = render(&ctx);
         assert!(!doc.contains("celestial pole"));
         assert!(!doc.contains("returns before dawn"));
         assert!(!doc.contains("rounds the sun"));
+        assert!(!doc.contains("The sky holds"));
     }
 
     #[test]
@@ -663,6 +672,7 @@ mod tests {
                     "A rock wanderer rounds the sun every 224 days — a morning and evening star."
                         .to_string(),
                 ],
+                figures: vec!["The sky holds 4 figures; 1 stand on the sun's road.".to_string()],
             }),
             calendar_lines: vec!["The year is 365.2 local days (365.2 standard days).".to_string()],
             ..sample_context()
@@ -674,6 +684,7 @@ mod tests {
         let pole_pos = doc.find("celestial pole").unwrap();
         let heliacal_pos = doc.find("returns before dawn").unwrap();
         let wanderer_pos = doc.find("rounds the sun").unwrap();
+        let figures_pos = doc.find("The sky holds").unwrap();
         let calendar_pos = doc.find("## The Calendar").unwrap();
 
         assert!(sky_pos < night_sky_pos, "Sky heading must come first");
@@ -690,7 +701,11 @@ mod tests {
             "wanderer lines follow the heliacal lines"
         );
         assert!(
-            wanderer_pos < calendar_pos,
+            wanderer_pos < figures_pos,
+            "figure lines follow the wanderer lines"
+        );
+        assert!(
+            figures_pos < calendar_pos,
             "the night instrument stays inside The Sky, before The Calendar"
         );
     }

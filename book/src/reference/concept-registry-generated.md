@@ -16,6 +16,10 @@
 | `deity-name-ipa` | yes | a belief's deity name (IPA transcription) |
 | `derived-from-phenomenon` | yes | phenomenon kind a belief mythologizes |
 | `eccentricity-mean` | yes | mean orbital eccentricity (deep-time forcing) |
+| `figure-count` | yes | how many star figures the reference observer's sky holds |
+| `figure-members` | no | member count of a star figure |
+| `figure-on-ecliptic` | yes | a star figure stands on the sun's road (the ecliptic band) |
+| `figure-region` | no | sky region of a star figure |
 | `fossil-shoreline` | no | a fossil shoreline left by deep-time sea-level change |
 | `frost-retreat` | no | the deep-time record of deglaciation |
 | `genesis-note` | no | a degradation or refusal recorded during sky genesis |

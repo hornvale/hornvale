@@ -141,6 +141,31 @@ pub const ANCHOR_ORBIT_AU: &str = "anchor-orbit-au";
 /// L/a², global annual mean).
 /// type-audit: bare-ok(identifier-text)
 pub const INSOLATION_REL: &str = "insolation-rel";
+/// How many star figures the reference observer's sky holds (functional,
+/// Number).
+/// type-audit: bare-ok(identifier-text)
+pub const FIGURE_COUNT: &str = "figure-count";
+/// Member count of a star figure (non-functional, Number — one per figure,
+/// output order: descending member count, then centroid right ascension
+/// ascending). Deduped: repeated member counts collapse to one committed
+/// fact, the same honest characteristic as any other coarse non-functional
+/// Number/Text fact with no other per-figure differentiator (see
+/// [`WANDERER_CLASS`]'s doc for the precedent).
+/// type-audit: bare-ok(identifier-text)
+pub const FIGURE_MEMBERS: &str = "figure-members";
+/// Sky region of a star figure: `"northern sky"` / `"southern sky"` /
+/// `"the equator's road"`, by centroid declination (non-functional, Text —
+/// one per figure, same output order and dedup characteristic as
+/// [`FIGURE_MEMBERS`]).
+/// type-audit: bare-ok(identifier-text)
+pub const FIGURE_REGION: &str = "figure-region";
+/// A star figure stands on the sun's road — the ecliptic band (functional,
+/// Flag — committed only when true, like [`TIDALLY_LOCKED`]). Because
+/// `Flag(true)` is identical across every figure, this fact records "at
+/// least one figure is on the ecliptic", not a per-figure list; a caller
+/// wanting the per-figure detail must recompute from [`crate::figures`].
+/// type-audit: bare-ok(identifier-text)
+pub const FIGURE_ON_ECLIPTIC: &str = "figure-on-ecliptic";
 
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     Fact {
@@ -161,7 +186,10 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
 /// never both) when the genesis-epoch night sky finds one; wanderer count
 /// plus one orbit and period fact per wanderer (innermost order) and the
 /// distinct wanderer kinds present (class facts dedupe — see
-/// [`WANDERER_CLASS`]); one genesis-note per recorded degradation.
+/// [`WANDERER_CLASS`]); figure count plus one members/region fact per
+/// figure (output order) and whether any figure stands on the ecliptic
+/// (dedupes — see [`FIGURE_ON_ECLIPTIC`]); one genesis-note per recorded
+/// degradation.
 pub fn genesis(
     world: &mut World,
     subject: EntityId,
@@ -429,6 +457,42 @@ pub fn genesis(
             fact(subject, WANDERER_CLASS, Value::Text(class_name.to_string())),
             &world.registry,
         )?;
+    }
+
+    // Star figures (night-sky stage 3): the reference observer's sky
+    // clusters into notable groups. `astronomy_seed` matches the same
+    // derivation genesis itself performs (`system::generate`), so the
+    // catalog `figures` clusters over is exactly the one the almanac and
+    // lab metrics see.
+    let astronomy_seed = world.seed.derive(crate::streams::ROOT);
+    let figs = crate::figures::figures(astronomy_seed, system);
+    world.ledger.commit(
+        fact(subject, FIGURE_COUNT, Value::Number(figs.len() as f64)),
+        &world.registry,
+    )?;
+    for figure in &figs {
+        world.ledger.commit(
+            fact(
+                subject,
+                FIGURE_MEMBERS,
+                Value::Number(figure.member_count as f64),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                subject,
+                FIGURE_REGION,
+                Value::Text(crate::figures::region_word(figure.centroid.dec_deg).to_string()),
+            ),
+            &world.registry,
+        )?;
+        if figure.on_ecliptic {
+            world.ledger.commit(
+                fact(subject, FIGURE_ON_ECLIPTIC, Value::Flag(true)),
+                &world.registry,
+            )?;
+        }
     }
 
     for note in &outcome.notes {
@@ -908,5 +972,119 @@ mod tests {
             })
             .collect();
         assert_eq!(classes, expected_classes);
+    }
+
+    /// Night-sky stage 3: the figure-count fact tracks `figures().len()`
+    /// exactly, quantized like every numeric object on commit, across a
+    /// seed sweep.
+    #[test]
+    fn genesis_commits_a_figure_count_fact_matching_figures_len_across_a_seed_sweep() {
+        for seed in 0..16u64 {
+            let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
+            let astronomy_seed = Seed(seed).derive("astronomy");
+            let expected = crate::figures::figures(astronomy_seed, &outcome.system).len();
+
+            let mut w = world_with(seed);
+            let subject = w.ledger.mint_entity();
+            genesis(&mut w, subject, &outcome).unwrap();
+
+            assert_eq!(
+                w.ledger.value_of(subject, FIGURE_COUNT),
+                Some(&Value::Number(hornvale_kernel::quantize(expected as f64))),
+                "seed {seed}: figure-count fact must match figures().len()"
+            );
+        }
+    }
+
+    /// `figure-members` is a coarse non-functional Number fact with no
+    /// per-figure differentiator: two figures with the same member count
+    /// collapse to one committed fact (documented honestly on
+    /// [`FIGURE_MEMBERS`], the same characteristic `wanderer-class`
+    /// carries). This asserts the dedup rather than assuming one-per-figure.
+    #[test]
+    fn figure_members_facts_dedupe_repeated_counts() {
+        // Find a seed whose figures include a repeated member count, so the
+        // dedup is actually exercised rather than vacuously true.
+        let mut found = false;
+        for seed in 0..64u64 {
+            let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
+            let astronomy_seed = Seed(seed).derive("astronomy");
+            let figs = crate::figures::figures(astronomy_seed, &outcome.system);
+            if figs.len() < 2 {
+                continue;
+            }
+            let mut counts: Vec<usize> = figs.iter().map(|f| f.member_count).collect();
+            counts.sort_unstable();
+            let has_duplicate_count = counts.windows(2).any(|w| w[0] == w[1]);
+            if !has_duplicate_count {
+                continue;
+            }
+            found = true;
+
+            let mut w = world_with(seed);
+            let subject = w.ledger.mint_entity();
+            genesis(&mut w, subject, &outcome).unwrap();
+
+            let committed: Vec<f64> = w
+                .ledger
+                .facts_about(subject)
+                .filter(|f| f.predicate == FIGURE_MEMBERS)
+                .filter_map(|f| match f.object {
+                    Value::Number(n) => Some(n),
+                    _ => None,
+                })
+                .collect();
+            let distinct_expected: std::collections::BTreeSet<u64> =
+                counts.iter().map(|&c| c as u64).collect();
+            assert_eq!(
+                committed.len(),
+                distinct_expected.len(),
+                "seed {seed}: repeated member counts must dedupe to one fact each"
+            );
+            break;
+        }
+        assert!(
+            found,
+            "BLOCKED: no seed in 0..64 produced two figures sharing a member count — \
+             the dedup claim is untested"
+        );
+    }
+
+    /// `figure-on-ecliptic` is a functional Flag committed only when true;
+    /// since `Flag(true)` is identical across every figure, at most one
+    /// fact is ever committed per subject regardless of how many figures
+    /// are on the ecliptic — assert presence tracks "any figure is",
+    /// documented honestly on [`FIGURE_ON_ECLIPTIC`].
+    #[test]
+    fn figure_on_ecliptic_flag_tracks_whether_any_figure_qualifies() {
+        for seed in 0..16u64 {
+            let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
+            let astronomy_seed = Seed(seed).derive("astronomy");
+            let figs = crate::figures::figures(astronomy_seed, &outcome.system);
+            let any_on_ecliptic = figs.iter().any(|f| f.on_ecliptic);
+
+            let mut w = world_with(seed);
+            let subject = w.ledger.mint_entity();
+            genesis(&mut w, subject, &outcome).unwrap();
+
+            let flag_present = w
+                .ledger
+                .facts_about(subject)
+                .any(|f| f.predicate == FIGURE_ON_ECLIPTIC);
+            assert_eq!(
+                flag_present, any_on_ecliptic,
+                "seed {seed}: figure-on-ecliptic fact presence must track \"any figure is\""
+            );
+            // At most one such fact, since every committed value is Flag(true).
+            let count = w
+                .ledger
+                .facts_about(subject)
+                .filter(|f| f.predicate == FIGURE_ON_ECLIPTIC)
+                .count();
+            assert!(
+                count <= 1,
+                "seed {seed}: figure-on-ecliptic must dedupe to one fact"
+            );
+        }
     }
 }
