@@ -14,6 +14,7 @@ pub mod units;
 
 pub use facts::{genesis, register_concepts};
 pub use forcing_index::caloric_summer_index;
+pub use hornvale_kernel::{TempAnomaly, Temperature};
 pub use ice::{ALBEDO_GAIN_C, IceState, integrate_ice};
 pub use strata::{EraClimate, PaleoRecord, extract, glaciated};
-pub use units::{Celsius, IceVolume, SeaLevelChange, TempAnomaly, UnitError};
+pub use units::{IceVolume, SeaLevelChange, UnitError};

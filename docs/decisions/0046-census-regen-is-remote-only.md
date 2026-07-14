@@ -1,4 +1,4 @@
-# 0045. Census regeneration is AWS-only
+# 0046. Census regeneration is AWS-only
 
 **Status:** Accepted (2026-07-13) · **Decider:** Nathan
 

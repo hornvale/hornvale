@@ -82,6 +82,9 @@ run -p hornvale -- scene system --world "$wsky" > book/src/gallery/scene-system-
 # AWS spot box (`make regen-remote` / scripts/aws-gate/regen-git.sh), which
 # invokes this script with HV_CENSUS=1. Locally the censuses are therefore
 # skipped BY DEFAULT; SKIP_CENSUS=1 (CI's fast probe path) also skips.
+# Cadence: once per campaign, just before the merge to main, with warning
+# given to Nathan first — census/validation coverage deliberately lags
+# (the local gate stays < 5 min; rapid development is the ratified trade).
 if [ "${HV_CENSUS:-0}" = 1 ] && [ "${SKIP_CENSUS:-0}" != 1 ]; then
     echo "regenerate-artifacts: lab censuses (release; HV_CENSUS=1)" >&2
     run_release -p hornvale -- lab run studies/the-census.study.json

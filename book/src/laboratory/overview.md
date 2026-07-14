@@ -62,7 +62,7 @@ attribution, within the sampling bound on every distribution. It backs
 [Study 009, the Census of the Meeting](./study-009.md), the Year-2
 capstone. Both live studies are regenerated on the remote box (`make
 regen-remote`, [decision
-0045](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0045-census-regen-is-remote-only.md)), then drift-checked and CI-probed on every build.
+0046](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0046-census-regen-is-remote-only.md)), then drift-checked and CI-probed on every build.
 
 Everything else the census family has produced is frozen, not deleted.
 `branches-family` (1,000 seeds, the goblinoid-phylogeny battery —
@@ -80,7 +80,7 @@ than an inert snapshot is that `tools/census/manifest.json` records the
 exact commit each was produced at — `branches-family` at `90fd7cc`,
 `census-of-coasts` at `15ef667`, `census-of-coasts-tuning` at `2d82a6a` —
 so `git checkout <commit> && lab run` reproduces any of them byte for byte.
-See [decision 0044](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0044-one-canonical-census.md)
+See [decision 0045](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0045-one-canonical-census.md)
 for the full ratification.
 
 ### The instrument's self-check
@@ -88,11 +88,18 @@ for the full ratification.
 Between commits, a cheap always-on probe (`windows/lab/tests/fixture_staleness.rs`)
 regenerates the live tier's first three seeds — plus a rotating three-seed
 window whose position derives from the committed fixture's own bytes, so
-successive regenerations sweep different slices of the seed range — live on
-every `cargo test` and compares them against the committed rows — so a worldgen change that moves
-the census fails locally with the regeneration instruction (`make
-rebaseline`) instead of surfacing an hour later in CI's full
-regenerate-and-diff.
+successive regenerations sweep different slices of the seed range — and
+compares them against the committed rows. It was authored as an always-on,
+few-seconds check on every `cargo test`, but as the worldgen pipeline
+deepened its cost grew to minutes, so it now runs in the heavy tier
+(`make gate-full`) rather than in the commit gate: a worldgen change that
+moves a census surfaces there and in CI's regenerate-and-diff, not on the
+developer's next local test run. The full census fixtures themselves are refreshed once
+per campaign on the remote regeneration box (`make regen-remote`),
+just before the campaign merges to `main` — never on the local machine, whose
+gate stays under five minutes by design. Between those refreshes a moved
+census is *known* (the probe fails) but its committed rows deliberately lag
+until the pre-merge regeneration.
 
 When a census *does* move, the reviewable surface is `make lab-diff
 STUDY=<name>` (wrapping `hornvale lab diff`): a per-metric report of which

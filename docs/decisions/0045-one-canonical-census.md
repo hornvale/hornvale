@@ -1,4 +1,4 @@
-# 0044. One canonical census; frozen studies are evidence
+# 0045. One canonical census; frozen studies are evidence
 
 **Status:** Accepted (2026-07-13) · **Decider:** Nathan
 

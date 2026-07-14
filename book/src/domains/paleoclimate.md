@@ -73,15 +73,20 @@ pin — not tuned to hold, but true by the shape of the equations themselves.
 
 ## Typed quantities
 
-`Celsius` (an absolute reading) and `TempAnomaly` (a difference from the
-present) are distinct types, not two uses of the same bare number: a
-`TempAnomaly` can only be produced by subtracting two `Celsius` values (or,
-inside the crate, from a computed albedo offset), so it is impossible to
-accidentally hand an absolute temperature to code that expects a
-difference, or vice versa — a mistake earlier iterations of this model
-actually made. `IceVolume` (a dimensionless fraction in `[0, 1]`) and
-`SeaLevelChange` (metres) round out the coherent quantities crossing this
-crate's boundary.
+`Temperature` (an absolute reading) and `TempAnomaly` (a difference from
+the present) are distinct types, not two uses of the same bare number: a
+`TempAnomaly` can only be produced by subtracting two `Temperature` values
+(or from a computed offset, such as the albedo cooling), so it is
+impossible to accidentally hand an absolute temperature to code that
+expects a difference, or vice versa — a mistake earlier iterations of this
+model actually made. The pair was born in this crate as
+`Celsius`/`TempAnomaly` and proved sturdy enough that it was promoted to
+the kernel as the shared temperature vocabulary every domain can speak
+([Temperature](../chronicle/temperature.md)); this crate now imports it.
+`IceVolume` (a dimensionless fraction in `[0, 1]`) and `SeaLevelChange`
+(metres of eustatic rise or fall — a deep-time delta, distinct from the
+elevation datum) remain the coherent quantities this crate keeps as its
+own.
 
 ## The model card
 

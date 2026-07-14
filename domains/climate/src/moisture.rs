@@ -8,7 +8,7 @@
 use crate::circulation::{
     RotationRegime, band_count_for, band_index, is_rising_band, prevailing_wind,
 };
-use hornvale_kernel::{CellId, CellMap, Geosphere};
+use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
 
 /// Cells traced upwind when looking for a rain-shadow barrier.
 const RAIN_SHADOW_STEPS: usize = 6;
@@ -19,7 +19,12 @@ const SUBSTELLAR: [f64; 3] = [1.0, 0.0, 0.0];
 
 /// Ocean-proximity bonus: `+0.3` if the cell itself is ocean-adjacent (or is
 /// ocean), tapering to `0.0` fully inland.
-fn ocean_bonus(geo: &Geosphere, elevation: &CellMap<f64>, sea_level: f64, cell: CellId) -> f64 {
+fn ocean_bonus(
+    geo: &Geosphere,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+    cell: CellId,
+) -> f64 {
     if *elevation.get(cell) < sea_level {
         return 0.3;
     }
@@ -38,7 +43,12 @@ fn ocean_bonus(geo: &Geosphere, elevation: &CellMap<f64>, sea_level: f64, cell: 
 /// cells upwind (each step hops to the neighbor most opposite the wind),
 /// tracking the highest elevation crossed. A barrier above the cell dries it
 /// in proportion to its height over `RAIN_SHADOW_SCALE_M`.
-fn rain_shadow(geo: &Geosphere, elevation: &CellMap<f64>, cell: CellId, wind: [f64; 3]) -> f64 {
+fn rain_shadow(
+    geo: &Geosphere,
+    elevation: &CellMap<ReferenceElevation>,
+    cell: CellId,
+    wind: [f64; 3],
+) -> f64 {
     if wind == [0.0, 0.0, 0.0] {
         return 0.0;
     }
@@ -70,11 +80,11 @@ fn rain_shadow(geo: &Geosphere, elevation: &CellMap<f64>, cell: CellId, wind: [f
 }
 
 /// Moisture per cell, `[0, 1]`. See the module doc for the model.
-/// type-audit: pending(wave-2: elevation), pending(wave-2: sea_level), bare-ok(ratio: return)
+/// type-audit: bare-ok(ratio: return)
 pub fn moisture_field(
     geo: &Geosphere,
-    elevation: &CellMap<f64>,
-    sea_level: f64,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
     regime: &RotationRegime,
 ) -> CellMap<f64> {
     match band_count_for(regime) {
@@ -111,8 +121,13 @@ mod tests {
     #[test]
     fn moisture_is_bounded_and_wetter_in_rising_bands() {
         let geo = Geosphere::new(4);
-        let elev = CellMap::from_fn(&geo, |_| 100.0); // all land, flat
-        let m = moisture_field(&geo, &elev, 0.0, &RotationRegime::Spinning { day_std: 1.0 });
+        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(100.0).unwrap()); // all land, flat
+        let m = moisture_field(
+            &geo,
+            &elev,
+            ReferenceElevation::new(0.0).unwrap(),
+            &RotationRegime::Spinning { day_std: 1.0 },
+        );
         for (_, v) in m.iter() {
             assert!((0.0..=1.0).contains(v));
         }
@@ -134,11 +149,13 @@ mod tests {
     #[test]
     fn leeward_of_a_ridge_is_drier_than_windward() {
         let geo = Geosphere::new(5);
-        let sea = 0.0;
+        let sea = ReferenceElevation::new(0.0).unwrap();
         // A single tall cell; compare its immediate upwind vs downwind neighbor.
         let ridge = geo.cells().nth(2000).unwrap();
         // Build a map via from_fn closure capturing the ridge id.
-        let elev = CellMap::from_fn(&geo, |c| if c == ridge { 5000.0 } else { 200.0 });
+        let elev = CellMap::from_fn(&geo, |c| {
+            ReferenceElevation::new(if c == ridge { 5000.0 } else { 200.0 }).unwrap()
+        });
         let regime = RotationRegime::Spinning { day_std: 1.0 };
         let bands = band_count_for(&regime).unwrap();
         let wind = prevailing_wind(&geo, ridge, bands);
@@ -173,8 +190,13 @@ mod tests {
     #[test]
     fn locked_terminator_is_wetter_than_substellar_and_antistellar() {
         let geo = Geosphere::new(4);
-        let elev = CellMap::from_fn(&geo, |_| 100.0);
-        let m = moisture_field(&geo, &elev, 0.0, &RotationRegime::Locked);
+        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(100.0).unwrap());
+        let m = moisture_field(
+            &geo,
+            &elev,
+            ReferenceElevation::new(0.0).unwrap(),
+            &RotationRegime::Locked,
+        );
         let sub = geo
             .cells()
             .max_by(|a, b| geo.position(*a)[0].total_cmp(&geo.position(*b)[0]))
