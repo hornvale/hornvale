@@ -200,6 +200,58 @@ pub fn classify_rock(
     }
 }
 
+/// Hydrogeologic behavior (spec §3, round 2 rock×water).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Hydro {
+    /// Porous, holds water: wells, oases.
+    Aquifer,
+    /// Impermeable: perched water, seeps.
+    Aquitard,
+    /// Where an aquifer meets the surface with flow.
+    Spring,
+    /// Sheds water: thin-soil runoff.
+    Runoff,
+    /// Dissolving carbonate: caves, sinkholes.
+    Karst,
+}
+
+/// Classify hydrogeology from porosity/carbonate × drainage (spec §3).
+/// type-audit: bare-ok(count: drainage), bare-ok(flag: ocean)
+pub fn hydrogeology(buf: &MaterialBuffer, drainage: f64, ocean: bool) -> Hydro {
+    if ocean {
+        return Hydro::Aquitard;
+    }
+    if buf.carbonate > 0.5 && buf.porosity > 0.4 {
+        return Hydro::Karst;
+    }
+    if buf.porosity < 0.15 {
+        return Hydro::Aquitard;
+    }
+    if buf.porosity > 0.5 {
+        return if drainage > SPRING_DRAINAGE_THRESHOLD {
+            Hydro::Spring
+        } else {
+            Hydro::Aquifer
+        };
+    }
+    Hydro::Runoff
+}
+
+/// Drainage above which a porous cell expresses as a flowing `Spring` rather
+/// than a still `Aquifer`. Shares scale with `cave_proneness`'s wetting term.
+const SPRING_DRAINAGE_THRESHOLD: f64 = 500.0;
+
+/// Void-proneness (caves/sinkholes), `[0,1]` (spec §3, negation "solid → void").
+/// Dominated by the carbonate/porosity product (dissolution needs both
+/// soluble rock and connected voids); drainage is a secondary modifier —
+/// caves also form under slow diffuse flow, so wetting nudges rather than
+/// gates the base rate.
+/// type-audit: bare-ok(ratio: return), bare-ok(count: drainage)
+pub fn cave_proneness(buf: &MaterialBuffer, drainage: f64) -> f64 {
+    let wetting = (drainage / SPRING_DRAINAGE_THRESHOLD).min(1.0);
+    (buf.carbonate * buf.porosity * (0.85 + 0.15 * wetting)).clamp(0.0, 1.0)
+}
+
 /// Assemble the material buffer over the canonical grid (spec §2). Pointwise
 /// axes derive from crust age/thickness and plate motion; grid-bound terms
 /// (metamorphic grade near boundaries, soil depth from slope/drainage) use
@@ -558,6 +610,26 @@ mod tests {
             classify_soil(RockClass::Granite, 15.0, 0.5, 400.0, &thin),
             SoilOrder::Leptosol
         );
+    }
+
+    #[test]
+    fn hydrogeology_reads_porosity_and_carbonate() {
+        // High carbonate + porosity -> karst; cave-proneness high.
+        let mut b = flat_buffer();
+        b.carbonate = 0.8;
+        b.porosity = 0.8;
+        assert_eq!(hydrogeology(&b, 10.0, false), Hydro::Karst);
+        assert!(cave_proneness(&b, 10.0) > 0.5);
+        // Porous non-carbonate + flow -> aquifer.
+        let mut b = flat_buffer();
+        b.porosity = 0.7;
+        b.carbonate = 0.05;
+        assert_eq!(hydrogeology(&b, 200.0, false), Hydro::Aquifer);
+        // Impermeable -> aquitard, near-zero cave-proneness.
+        let mut b = flat_buffer();
+        b.porosity = 0.05;
+        assert_eq!(hydrogeology(&b, 10.0, false), Hydro::Aquitard);
+        assert!(cave_proneness(&b, 10.0) < 0.1);
     }
 
     #[test]

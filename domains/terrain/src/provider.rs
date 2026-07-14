@@ -156,6 +156,21 @@ impl GeneratedTerrain {
             self.is_ocean(id),
         )
     }
+
+    /// The hydrogeologic class at a cell (The Ground, spec §3).
+    pub fn hydro_at(&self, id: CellId) -> crate::lithology::Hydro {
+        crate::lithology::hydrogeology(
+            &self.material_at(id),
+            self.drainage_at(id),
+            self.is_ocean(id),
+        )
+    }
+
+    /// Cave/karst void-proneness at a cell, `[0,1]` (The Ground, spec §3).
+    /// type-audit: bare-ok(ratio)
+    pub fn cave_proneness_at(&self, id: CellId) -> f64 {
+        crate::lithology::cave_proneness(&self.material_at(id), self.drainage_at(id))
+    }
 }
 
 #[cfg(test)]
