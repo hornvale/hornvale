@@ -23,12 +23,12 @@
 //! (exactly `ISOSTASY_REF_KM`, so an "old" craton floated at 0 m and never
 //! surfaced) to 33 (crests ~540 m). See the Task 9 report for the
 //! after-census evidence on the general (multi-craton) population this
-//! fixes. One edge case remains structurally unfixable by these two knobs:
-//! a *lone pinned* craton (`continents=1`) always clamps to exactly
-//! 0.6 rad, capping its cap area at ~8.7% of the sphere — below any
-//! achievable land quota — so
-//! `a_single_craton_world_has_a_shelf_and_a_bimodal_hypsometry` stays
-//! `#[ignore]`d with that math in its own annotation.
+//! fixes. The last edge case — a *lone pinned* craton (`continents=1`) clamps
+//! to exactly 0.6 rad, capping its cap area at ~8.7% of the sphere,
+//! below any achievable land quota — is resolved by the shelf-break
+//! fallback (`effective_ocean_target`, decision 0053): a supply-limited
+//! world keeps `SHELF_BREAK_LAND_FACTOR × supply` land, placing the
+//! percentile at the isostatic shelf break instead of the abyssal plain.
 
 use crate::boundaries::{BoundaryKind, CellBoundary};
 use crate::pins::TerrainPins;
@@ -234,6 +234,61 @@ pub fn resolve_ocean_fraction(
         notes.push(format!("pinned ocean-fraction {f:.2} (seed draws {drawn})"));
     }
     target
+}
+
+/// The shelf-break fallback activates when analytic continental supply
+/// (`crust::continental_supply`) is below this fraction of the
+/// ocean-fraction-implied land quota. The gap it bisects is wide and
+/// empty: default draws (8-14 cratons) bottom out at supply/quota ≈ 0.554
+/// over the frozen 1000-seed census (seed 558; 20/1000 below 0.6) — see
+/// `default_worlds_never_trip_the_supply_fallback` in
+/// `tectonic_properties.rs` — while a lone 0.6 rad-clamped craton sits
+/// ≲ 0.18; the 0.5 factor bisects the genuinely empty gap between ~0.55
+/// and ~0.18, so default worlds provably keep the exact-percentile path
+/// byte-identical.
+/// type-audit: bare-ok(ratio)
+pub const SUPPLY_SHORTFALL_FACTOR: f64 = 0.5;
+
+/// Land granted to a supply-limited world, as a multiple of its
+/// continental supply: 1.0 places the sea-level percentile where the
+/// crust field crosses `crust::CONTINENTAL_THRESHOLD_KM` — the isostatic
+/// shelf break. Measured over the single-craton sweep (seeds 1..=40,
+/// level 4, continents=1, drawn ocean fraction), κ grid {0.8, 0.9, 1.0,
+/// 1.25, 1.5, 2.0}: no κ satisfies the whole-sphere shelf floor (best:
+/// 18/40 at κ=2.0) because a ~3%-of-sphere continent cannot put 2% of
+/// the sphere within ±200 m of sea level — while at κ = 1.0 the
+/// land-normalized shelf (shelf cells / land cells, `shelf_land_ratio`)
+/// spans 0.075–0.309 (median 0.171), overlapping and at the median
+/// exceeding the default-world population's 0.097–0.165 (median 0.130),
+/// with D in 3.14–5.5+. 1.0 is therefore retained — the physical shelf
+/// break, untuned; the test floor is land-normalized instead
+/// (decision 0053).
+/// type-audit: bare-ok(ratio)
+pub const SHELF_BREAK_LAND_FACTOR: f64 = 1.0;
+
+/// Soften the ocean-fraction target when the crust cannot honor it
+/// (single-craton hypsometry spec, route 1): when the craton set's
+/// analytic continental supply falls below `SUPPLY_SHORTFALL_FACTOR`
+/// times the land quota `1 − target`, the exact-percentile mechanism
+/// would drown into the abyssal plain to fill the quota — a broad flat
+/// "land" with no shelf and no bimodality. Instead the world keeps
+/// `SHELF_BREAK_LAND_FACTOR × supply` land, placing the percentile at
+/// the craton's isostatic shelf break — the physically correct outcome
+/// for a small-continent world. The ocean-fraction pin is thereby a
+/// *target* a supply-limited world may not reach (decision 0053); the
+/// softening is metered in `notes` as a degradation note. Pure — no
+/// draws, so pin isolation and stream order are untouched.
+/// type-audit: bare-ok(ratio: target), bare-ok(ratio: supply), bare-ok(prose: notes), bare-ok(ratio: return)
+pub fn effective_ocean_target(target: f64, supply: f64, notes: &mut Vec<String>) -> f64 {
+    let land_quota = 1.0 - target;
+    if supply >= SUPPLY_SHORTFALL_FACTOR * land_quota {
+        return target;
+    }
+    notes.push(format!(
+        "land quota {land_quota:.2} exceeds continental supply {supply:.3}: \
+         sea level set at the shelf break (ocean-fraction target {target:.2} unmet)"
+    ));
+    1.0 - SHELF_BREAK_LAND_FACTOR * supply
 }
 
 /// Place sea level at the elevation percentile that puts exactly `target`
@@ -498,18 +553,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Task 9 re-verification (measured, not silently retuned): the \
-        area-normalization fix resolves the general multi-craton case, but \
-        a lone pinned craton (continents=1) is mathematically incapable of \
-        reaching the land quota under the directed r_i <= 0.6 rad ceiling — \
-        (1 - cos(0.6))/2 ~= 8.7% of the sphere is the hard ceiling on a \
-        single craton's cap area, versus the 20-50% ocean-fraction-implied \
-        land quota the percentile sea level always hits exactly. Verified: \
-        draw_cratons(continents=1) clamps to exactly 0.6 rad for every \
-        swept seed 1..=5, and the swept scenario (seeds 1..=40) passes \
-        0/40. Neither authorized knob (budget range, PEAK_MIN) touches \
-        footprint area, so this is outside Task 9's tuning scope — see the \
-        Task 9 report."]
     fn a_single_craton_world_has_a_shelf_and_a_bimodal_hypsometry() {
         let geo = Geosphere::new(4);
         let pins = TerrainPins {
@@ -521,8 +564,40 @@ mod tests {
         let d = crate::shape::hypsometric_bimodality(&globe.elevation, globe.sea_level)
             .expect("has land and ocean");
         assert!(d > 1.5, "hypsometry not bimodal: D = {d}");
+        // Shelf floor is land-normalized (decision 0053): a ~3%-of-sphere
+        // continent cannot clear an absolute whole-sphere floor, but its
+        // shelf-to-land ratio matches or beats default worlds'. The
+        // absolute ceiling stays — it guards the original failure mode
+        // (sea level drowned into the abyssal plain, everything "shelf").
+        let shelf_land =
+            crate::shape::shelf_land_ratio(&globe.elevation, globe.sea_level).expect("has land");
+        assert!(
+            shelf_land > 0.05,
+            "no shelf band relative to land: {shelf_land}"
+        );
         let shelf = crate::shape::shelf_fraction(&globe.elevation, globe.sea_level);
-        assert!(shelf > 0.02, "no shelf band: {shelf}");
         assert!(shelf < 0.5, "everything is shelf: {shelf}");
+    }
+
+    #[test]
+    fn effective_ocean_target_passes_ample_supply_through_silently() {
+        let mut notes = Vec::new();
+        assert_eq!(effective_ocean_target(0.65, 0.30, &mut notes), 0.65);
+        // Exactly at the activation boundary: still the plain target.
+        assert_eq!(
+            effective_ocean_target(0.65, SUPPLY_SHORTFALL_FACTOR * 0.35, &mut notes),
+            0.65
+        );
+        assert!(notes.is_empty(), "{notes:?}");
+    }
+
+    #[test]
+    fn effective_ocean_target_falls_back_to_the_shelf_break_and_meters_it() {
+        let mut notes = Vec::new();
+        let supply = 0.031;
+        let effective = effective_ocean_target(0.65, supply, &mut notes);
+        assert_eq!(effective, 1.0 - SHELF_BREAK_LAND_FACTOR * supply);
+        assert_eq!(notes.len(), 1);
+        assert!(notes[0].contains("shelf break"), "{}", notes[0]);
     }
 }
