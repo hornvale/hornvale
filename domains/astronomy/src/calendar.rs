@@ -500,6 +500,23 @@ mod tests {
         let az0 = frozen.solstice_rise_azimuth_at(40.0, StdDays(0.0)).unwrap();
         assert!(frozen.alignment_epoch_of(az0, 40.0, StdDays(1e6)).is_none());
     }
+
+    /// A NaN latitude must return `None`, not `Some(NaN)`: the domain guards
+    /// check `x.is_nan()` explicitly rather than relying on `x.abs() > 1.0`
+    /// alone, specifically because NaN comparisons are always false, so the
+    /// latter would let NaN slip through into `acos`/`asin`.
+    #[test]
+    fn nan_latitude_is_rejected_not_propagated() {
+        let cal = calendar_of(&spinning_system());
+        assert!(
+            cal.solstice_rise_azimuth_at(f64::NAN, StdDays(0.0))
+                .is_none()
+        );
+        assert!(
+            cal.alignment_epoch_of(63.0, f64::NAN, StdDays(1.0))
+                .is_none()
+        );
+    }
 }
 
 /// The sky's brightness band at a placed moment — the one shared twilight
@@ -727,7 +744,12 @@ impl Calendar {
         let eps = self.forcing.obliquity_at(t.0).to_radians();
         let phi = latitude.to_radians();
         let x = math::sin(eps) / math::cos(phi);
-        if x.abs() > 1.0 {
+        // NaN-robust: an explicit `is_nan` check first, since a plain
+        // `x.abs() > 1.0` is false for NaN (NaN comparisons are always
+        // false), which would let NaN slip through into `acos` below and
+        // surface as `Some(NaN)` (clippy forbids the equivalent negated-`<=`
+        // spelling on floats: `neg_cmp_op_on_partial_ord`).
+        if x.is_nan() || x.abs() > 1.0 {
             return None;
         }
         let az = math::acos(x).to_degrees();
@@ -769,7 +791,12 @@ impl Calendar {
             azimuth_deg
         };
         let x = math::cos(az.to_radians()) * math::cos(latitude.to_radians());
-        if x.abs() > 1.0 {
+        // NaN-robust: an explicit `is_nan` check first, since a plain
+        // `x.abs() > 1.0` is false for NaN (NaN comparisons are always
+        // false), which would let NaN slip through into `asin` below and
+        // surface as `Some(NaN)` (clippy forbids the equivalent negated-`<=`
+        // spelling on floats: `neg_cmp_op_on_partial_ord`).
+        if x.is_nan() || x.abs() > 1.0 {
             return None;
         }
         let eps_target = math::asin(x).to_degrees();

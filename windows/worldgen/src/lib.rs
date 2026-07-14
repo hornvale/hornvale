@@ -2121,6 +2121,17 @@ fn build_to(
             };
             hornvale_terrain::places(&world)
                 .iter()
+                // founding-solstice-azimuth-degrees is documented as a
+                // settlement's founding sightline; gate on IS_SETTLEMENT
+                // rather than assuming every place is one (today they all
+                // are, but a future campaign may commit non-settlement
+                // places).
+                .filter(|p| {
+                    world
+                        .ledger
+                        .value_of(p.id, hornvale_settlement::IS_SETTLEMENT)
+                        .is_some()
+                })
                 .filter_map(|p| {
                     let coord = place_coord(&world, p.id)?;
                     let az = calendar.solstice_rise_azimuth_at(
@@ -2583,7 +2594,17 @@ pub fn night_sky_lines(
     // latitude; the 35° fallback (used for heliacal events) is insufficient
     // here since it would create a lying sentence.
     let alignment = hornvale_terrain::places(world)
-        .first()
+        .into_iter()
+        // Same settlement gate as the alignments stage: the "first
+        // settlement" language below must name an actual settlement, not
+        // just the first place (today every place is a settlement, but
+        // that need not hold forever).
+        .find(|p| {
+            world
+                .ledger
+                .value_of(p.id, hornvale_settlement::IS_SETTLEMENT)
+                .is_some()
+        })
         .and_then(|p| place_coord(world, p.id))
         .map(|c| c.latitude)
         .and_then(|latitude| {
