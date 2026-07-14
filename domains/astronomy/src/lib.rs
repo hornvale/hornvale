@@ -8,6 +8,7 @@ pub mod facts;
 pub mod forcing;
 pub mod moons;
 pub mod neighborhood;
+pub mod night_sky;
 pub mod pins;
 pub mod provider;
 pub mod render;
@@ -21,6 +22,7 @@ pub use anchor::{Anchor, Rotation, generate_anchor};
 pub use calendar::{Calendar, SkyBand, TWILIGHT_DEPTH_DEG, calendar_of};
 pub use moons::{Moon, generate_moons, hill_radius_mm};
 pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
+pub use night_sky::{Hemisphere, NightSky, POLE_STAR_MAX_SEPARATION_DEG, PoleStar, night_sky_at};
 pub use pins::{
     ForcingPin, GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, SpinPin, parse_pin,
     pin_strings,

@@ -689,4 +689,9 @@ impl Calendar {
             SkyBand::Night
         })
     }
+    /// Whether the world spins retrograde (west to east).
+    /// type-audit: bare-ok(flag)
+    pub fn is_retrograde(&self) -> bool {
+        self.retrograde
+    }
 }
