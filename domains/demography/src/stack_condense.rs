@@ -174,17 +174,29 @@ fn build_settlement(
 ///    catchment) into `composition` (density-fraction shape) and `rendered`
 ///    (biomass-fraction shape, apportioned against `mass_total`).
 /// 4. **Founder floor.** Any species absent from every settlement's
-///    `composition` still founds one settlement, at the flagship attractor
-///    of its own isolated mass field (`density_s(cell) * mass_of[s]`,
-///    condensed with threshold `0.0` — the given `threshold` is deliberately
-///    bypassed here, exactly as [`crate::founder::condense_tagged`] bypasses
-///    it for its own floor). A species whose density is `0.0` everywhere has
-///    no attractor to found and is skipped — there is nothing to represent.
+///    `composition` still founds one settlement, LOCATED at the flagship
+///    attractor of its own isolated mass field (`density_s(cell) *
+///    mass_of[s]`, condensed with threshold `0.0` — the given `threshold` is
+///    deliberately bypassed here, exactly as [`crate::founder::condense_tagged`]
+///    bypasses it for its own floor). Its `mass_total`, however, is read off
+///    the WHOLE-STACK flow accumulation at that cell (`full_flow`, computed
+///    once below), not the isolated field's own population: `build_settlement`
+///    reads the whole-stack local density mix at that cell into
+///    `composition`/`rendered`, so `mass_total` must be paired with that same
+///    whole-stack basis, or another present species' biomass share gets
+///    apportioned against the floor species' (much smaller) isolated total,
+///    producing an incoherent `rendered`. A species whose density is `0.0`
+///    everywhere has no attractor to found and is skipped — there is nothing
+///    to represent.
 /// 5. **Sort.** Flagship first: `mass_total` descending (`total_cmp`), then
 ///    ascending cell id.
 ///
 /// Draws nothing from the seed; deterministic (`BTreeMap`/`Vec`/`CellMap`,
 /// `total_cmp` throughout, no `HashMap`).
+///
+/// **Contract:** `mass_of` MUST contain an entry for every species present
+/// in `stack.density`; a species missing from `mass_of` is treated as
+/// zero-mass and silently dropped from the founder floor.
 ///
 /// type-audit: bare-ok(index: mass_of), bare-ok(count: threshold)
 pub fn condense_stack(
@@ -203,6 +215,13 @@ pub fn condense_stack(
             })
             .sum()
     });
+    // The whole-stack flow accumulation, computed once: `condense` below
+    // recomputes this internally for the thresholded pass, but the founder
+    // floor (below) needs the raw accumulation at an arbitrary cell — the
+    // WHOLE-stack biomass there, not any one species' isolated total — so it
+    // stays consistent with the whole-stack `composition`/`rendered`
+    // `build_settlement` reads at that same cell.
+    let full_flow = crate::flow::flow(geo, &mass_field);
 
     let nodes: Vec<Condensation> = condense(geo, &mass_field, threshold);
     let mut settlements: Vec<StackSettlement> = nodes
@@ -225,10 +244,16 @@ pub fn condense_stack(
         let mass_kg = mass_of.get(id).map(|m| m.kilograms()).unwrap_or(0.0);
         let species_mass_field = CellMap::from_fn(geo, |c| density.get(c) * mass_kg);
         if let Some(flagship) = condense(geo, &species_mass_field, 0.0).into_iter().next() {
+            // `flagship` LOCATES the settlement (S's own strongest
+            // attractor), but `mass_total` must reflect the WHOLE stack's
+            // biomass at that cell — the same basis `build_settlement`'s
+            // `composition`/`rendered` reads there — not S's isolated
+            // (possibly much smaller) catchment total.
+            let mass_total = *full_flow.accumulation.get(flagship.cell);
             settlements.push(build_settlement(
                 flagship.cell,
                 flagship.position,
-                flagship.population,
+                mass_total,
                 stack,
                 mass_of,
             ));
@@ -319,6 +344,99 @@ mod tests {
         assert!(
             species_ids.contains(&1),
             "the outcompeted species still founds a settlement: {species_ids:?}"
+        );
+    }
+
+    #[test]
+    fn founder_floor_settlement_uses_whole_stack_mass_total() {
+        let geo = Geosphere::new(3);
+        // T (dominant) and S (weak) both peak at the SAME cell (0) --
+        // overlapping bumps, not opposite hemispheres. A finite threshold set
+        // above the combined field's total mass makes the primary
+        // condensation return nothing, so `covered` stays empty and BOTH
+        // species fall through to the founder floor. S's flagship search
+        // (over its own isolated field) lands on cell 0 too, since every
+        // field here (T's, S's, and the combined mass field) is just a
+        // scalar multiple of the same peak shape. That co-location is the
+        // bug: `build_settlement` reads the WHOLE stack's local density mix
+        // at cell 0 (both T and S) into S's founder settlement's
+        // `composition`/`rendered`, so `mass_total` must be paired with that
+        // whole-stack basis, not S's own (much smaller) isolated total.
+        let t_density = peak_at(&geo, 0, 10.0);
+        let s_density = peak_at(&geo, 0, 0.001);
+        let t_mass = 40.0;
+        let s_mass = 40.0;
+        let stack = CoexistStack {
+            density: vec![(0u32, t_density.clone()), (1u32, s_density.clone())],
+            emigration_pressure: zero_pressure(&geo),
+        };
+        let mass_of = BTreeMap::from([
+            (0u32, Mass::new(t_mass).unwrap()),
+            (1u32, Mass::new(s_mass).unwrap()),
+        ]);
+
+        let mass_field: CellMap<f64> = CellMap::from_fn(&geo, |c| {
+            t_density.get(c) * t_mass + s_density.get(c) * s_mass
+        });
+        let total_mass: f64 = geo.cells().map(|c| *mass_field.get(c)).sum();
+        let threshold = total_mass + 1.0; // finite, but excludes every normal settlement
+
+        let settlements = condense_stack(&geo, &stack, &mass_of, threshold);
+        assert_eq!(
+            settlements.len(),
+            2,
+            "the threshold excludes every normal settlement, so both T and S found their own: {settlements:?}"
+        );
+
+        // Both founder settlements land at cell 0 (every field's sole
+        // attractor here). `settlements` sorts by `mass_total` descending
+        // with a stable tie-break on insertion order, so T's entry (species
+        // 0, pushed first) sorts before S's (species 1) either way -- T's
+        // mass_total is the bigger value pre-fix, and the two tie exactly
+        // post-fix (both then read the same whole-stack accumulation).
+        let s_settlement = &settlements[1];
+        assert_eq!(
+            s_settlement.cell,
+            CellId(0),
+            "S's flagship search lands on the shared peak cell"
+        );
+
+        let composition_ids: BTreeSet<u32> =
+            s_settlement.composition.iter().map(|(id, _)| *id).collect();
+        assert_eq!(
+            composition_ids,
+            BTreeSet::from([0u32, 1u32]),
+            "S's founder settlement co-locates with T, so composition reflects both: {:?}",
+            s_settlement.composition
+        );
+        assert_eq!(
+            s_settlement.dominant, 0,
+            "T is locally denser at the shared cell, so it dominates: {:?}",
+            s_settlement.composition
+        );
+
+        let full_flow = crate::flow::flow(&geo, &mass_field);
+        let whole_stack_mass_at_c = *full_flow.accumulation.get(CellId(0));
+        let mass_field_at_c = *mass_field.get(CellId(0));
+        let s_isolated_single_cell_biomass = *s_density.get(CellId(0)) * s_mass;
+
+        assert_eq!(
+            s_settlement.mass_total, whole_stack_mass_at_c,
+            "S's founder settlement's mass_total must be the whole-stack flow accumulation \
+             at its cell, not S's own isolated catchment total"
+        );
+        assert!(
+            s_settlement.mass_total >= mass_field_at_c,
+            "mass_total must cover at least the raw combined mass at that cell: {} < {}",
+            s_settlement.mass_total,
+            mass_field_at_c
+        );
+        assert!(
+            s_settlement.mass_total > s_isolated_single_cell_biomass,
+            "mass_total must exceed S's own single-cell biomass -- it must also carry T's: \
+             {} <= {}",
+            s_settlement.mass_total,
+            s_isolated_single_cell_biomass
         );
     }
 }
