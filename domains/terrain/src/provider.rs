@@ -141,6 +141,11 @@ impl GeneratedTerrain {
     pub fn boundary_distance_at(&self, id: CellId) -> Option<u32> {
         self.globe.boundary_distance.get(id).map(|(hops, _)| hops)
     }
+
+    /// The material buffer at a cell (The Ground, spec §2).
+    pub fn material_at(&self, id: CellId) -> crate::lithology::MaterialBuffer {
+        *self.globe.lithology.get(id)
+    }
 }
 
 #[cfg(test)]

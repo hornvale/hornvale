@@ -51,6 +51,21 @@ pub struct TectonicGlobe {
     /// cell, with that boundary attributed. Recomputed at genesis, never
     /// serialized. `None` = no reachable same-plate boundary.
     pub boundary_distance: CellMap<Option<(u32, CellId)>>,
+    /// The material buffer per cell (The Ground, spec §2). Recomputed at
+    /// genesis, never serialized.
+    pub lithology: CellMap<crate::lithology::MaterialBuffer>,
+    /// Seed for lithology sub-cell patchiness hash-noise. Hash-noise only —
+    /// never consumed as a `Stream`, so it carries no draw-order/save-format
+    /// contract (see `streams::LITHOLOGY`).
+    pub lithology_seed: Seed,
+}
+
+impl TectonicGlobe {
+    /// Seed for lithology sub-cell hash-noise (no stream draws — hash-noise
+    /// only, like `coast-render`/`plate-edge`).
+    pub fn lithology_noise_seed(&self) -> Seed {
+        self.lithology_seed
+    }
 }
 
 /// What tectonic genesis produced: the globe plus degradation notes.
@@ -119,23 +134,44 @@ pub fn generate(
         notes.push("no plate boundaries at this resolution".to_string());
     }
 
-    Ok(GenesisOutcome {
-        globe: TectonicGlobe {
-            plate_of,
-            crust: crust_map,
-            crust_age: crust_age_map,
-            elevation: elevation_map,
-            unrest,
-            sea_level,
-            plates: plate_list,
-            boundary: boundary_map,
-            drainage,
-            endorheic,
-            cratons,
-            boundary_distance: distances,
-        },
-        notes,
-    })
+    // Lithology (The Ground, spec §2) is a pure function of the assembled
+    // globe's other fields, so the globe is built first with a placeholder
+    // buffer, then the real buffer is assembled and swapped in. The noise
+    // seed here is hash-noise only (`streams::LITHOLOGY`) — never consumed
+    // as a `Stream`, so this is not a new draw-order contract.
+    let lithology_seed = terrain_seed.derive(streams::LITHOLOGY);
+    let placeholder_lithology = CellMap::from_fn(geosphere, |_| crate::lithology::MaterialBuffer {
+        silica: 0.0,
+        grain: 0.0,
+        induration: 0.0,
+        carbonate: 0.0,
+        metamorphic_grade: 0.0,
+        porosity: 0.0,
+        margin: crate::lithology::MarginPolarity::Interior,
+        soil_depth: crate::lithology::SoilDepth::new(0.0),
+        basement: crate::lithology::Basement::Oceanic,
+        thaumic: 0.0,
+    });
+
+    let mut globe = TectonicGlobe {
+        plate_of,
+        crust: crust_map,
+        crust_age: crust_age_map,
+        elevation: elevation_map,
+        unrest,
+        sea_level,
+        plates: plate_list,
+        boundary: boundary_map,
+        drainage,
+        endorheic,
+        cratons,
+        boundary_distance: distances,
+        lithology: placeholder_lithology,
+        lithology_seed,
+    };
+    globe.lithology = crate::lithology::assemble_material(geosphere, &globe);
+
+    Ok(GenesisOutcome { globe, notes })
 }
 
 /// Headline numbers of a globe, for facts and the almanac.

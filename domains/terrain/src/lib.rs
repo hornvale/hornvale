@@ -9,6 +9,7 @@ pub mod drainage;
 pub mod elevation;
 pub mod facts;
 pub mod globe;
+pub mod lithology;
 pub mod pins;
 pub mod plates;
 pub mod provider;
@@ -18,6 +19,7 @@ pub mod streams;
 
 pub use boundaries::{BoundaryKind, CellBoundary};
 pub use globe::{GenesisOutcome, GlobeSummary, TectonicGlobe, generate, summarize};
+pub use lithology::{Basement, MarginPolarity, MaterialBuffer, SoilDepth};
 pub use pins::{GenesisError, TerrainPins, parse_pin, pin_strings};
 pub use plates::Plate;
 pub use provider::GeneratedTerrain;
@@ -81,6 +83,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "terrain/plate-edge",
             "plate-edge noise (hash-noise only; no stream draws)",
+        ),
+        (
+            "terrain/lithology",
+            "lithology sub-cell hash-noise (hash-noise only; no stream draws)",
         ),
     ]
 }
@@ -212,7 +218,7 @@ mod tests {
     #[test]
     fn stream_labels_are_fully_qualified_and_documented() {
         let labels = stream_labels();
-        assert_eq!(labels.len(), 11);
+        assert_eq!(labels.len(), 12);
         assert_eq!(labels[0].0, "terrain");
         for (label, doc) in &labels[1..] {
             assert!(label.starts_with("terrain/"), "unqualified label {label}");
