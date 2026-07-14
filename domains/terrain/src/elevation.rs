@@ -132,21 +132,24 @@ const FAR_FIELD_FRACTION: f64 = 0.2;
 const ARC_GATE_OCTAVES: u32 = 4;
 
 /// Per-kind boundary elevation profile (Sculpting, spec §3): crest,
-/// foothills, and a foreland trough for collision belts; gated volcanic
-/// edifices and a seaward trench for subduction (island arcs and the
-/// oceanic side of coastal ranges); the bare per-kind amplitude for
-/// everything else — rifts, ridges, transforms, and a collision-tagged
-/// boundary whose own cell reads oceanic (crust varies continuously
-/// within a plate, so a cell can drift off the continental side even
-/// though its nearest same-plate boundary was classified from a
+/// foothills, and a foreland trough for collision belts (including the
+/// continental side of a coastal range — the Andean volcanic line is ON
+/// the continent); gated volcanic edifices on an island arc's overriding
+/// side; a seaward trench on every subducting side (an island arc's
+/// non-arc side, and a coastal range's whole oceanic side — no offshore
+/// arc on a mixed margin); the bare per-kind amplitude for everything
+/// else — rifts, ridges, transforms, and a collision-tagged boundary
+/// whose own cell reads oceanic (crust varies continuously within a
+/// plate, so a cell can drift off the continental side even though its
+/// nearest same-plate boundary was classified from a
 /// continental-continental contact) — which `assemble_elevation` decays
 /// with the existing maturity-driven length exactly as it did before this
 /// profile existed (see `profile_scale`).
 ///
 /// `gate` is the along-strike hash-noise in [0, 1), sampled once per
 /// **source** boundary cell so a whole edifice shares one gate value —
-/// only meaningful for the arc/coastal-range edifice branch; other kinds
-/// ignore it.
+/// only meaningful for the island-arc edifice branch; other kinds ignore
+/// it.
 fn boundary_profile_m(
     kind: BoundaryKind,
     cell_continental: bool,
@@ -171,13 +174,21 @@ fn boundary_profile_m(
             };
             crest + foothills + foreland
         }
+        BoundaryKind::IslandArc if arc_side => {
+            // Overriding ocean plate: a volcanic edifice, present only
+            // where the along-strike gate is on.
+            let on = if gate > (1.0 - ARC_DUTY) { 1.0 } else { 0.12 };
+            base * on * math::exp(-d / ARC_EDIFICE_DECAY_CELLS)
+        }
         BoundaryKind::IslandArc | BoundaryKind::CoastalRange => {
-            if arc_side {
-                // Volcanic edifice, present only where the gate is on.
-                let on = if gate > (1.0 - ARC_DUTY) { 1.0 } else { 0.12 };
-                base * on * math::exp(-d / ARC_EDIFICE_DECAY_CELLS)
-            } else if distance <= TRENCH_HOPS {
-                // Subducting side: the trench.
+            // The subducting-side trench. For CoastalRange this arm is
+            // every oceanic cell REGARDLESS of `arc_side` (the continental
+            // side was claimed by the crest arm above): Andean-style
+            // margins carry no offshore arc — the volcanic line is on the
+            // continent — and `arc_side` is a bare plate-id tie-break
+            // with no physical meaning on a mixed margin, so it must not
+            // select an edifice here (Task 3 review fix; spec §3).
+            if distance <= TRENCH_HOPS {
                 TRENCH_DEPTH_M * math::exp(-d / TRENCH_DECAY_CELLS)
             } else {
                 base * math::exp(-d / FAR_FIELD_DECAY_CELLS) * FAR_FIELD_FRACTION
@@ -223,7 +234,10 @@ fn profile_scale(kind: BoundaryKind, cell_continental: bool, arc_side: bool) -> 
             }
         }
         BoundaryKind::CoastalRange => {
-            if cell_continental || arc_side {
+            // The oceanic side is ALWAYS the trench (no offshore arc on
+            // an Andean-style margin), so `arc_side` is irrelevant here —
+            // mirroring `boundary_profile_m`'s own arms exactly.
+            if cell_continental {
                 ProfileScale::Uplift
             } else {
                 ProfileScale::Trough
@@ -320,11 +334,11 @@ fn assemble_elevation(
                 let magnitude_scale = contact.magnitude / MAX_CLOSING_SPEED;
                 // Along-strike gate: sampled once per SOURCE boundary cell
                 // (not per `cell`) so a whole edifice shares one value;
-                // only the arc/coastal-range branch reads it.
-                let gate = if matches!(
-                    contact.kind,
-                    BoundaryKind::IslandArc | BoundaryKind::CoastalRange
-                ) {
+                // only the island-arc edifice branch reads it (coastal
+                // ranges carry no offshore arc — Task 3 review fix), and
+                // it is hash-noise (no draw-order contract), so sampling
+                // is safely skipped everywhere else.
+                let gate = if contact.kind == BoundaryKind::IslandArc {
                     crate::crust::sphere_fbm01(
                         arc_gate_seed,
                         geo.position(source),
@@ -805,6 +819,24 @@ mod tests {
         // Trench: oceanic subducting side goes deep right at the boundary.
         let trench = boundary_profile_m(BoundaryKind::IslandArc, false, false, 0, 1.0);
         assert!(trench < -1000.0, "no trench: {trench}");
+        // Coastal range, oceanic side: ALWAYS the trench, regardless of
+        // the arc_side tie-break — Andean margins have no offshore arc
+        // (the volcanic line is on the continent). The flag must be
+        // irrelevant on every oceanic CoastalRange cell, at the notch and
+        // in the residual beyond it.
+        for d in 0..=8u32 {
+            let seaward = boundary_profile_m(BoundaryKind::CoastalRange, false, false, d, 1.0);
+            let tie_broken = boundary_profile_m(BoundaryKind::CoastalRange, false, true, d, 1.0);
+            assert_eq!(
+                seaward, tie_broken,
+                "arc_side matters on an oceanic CoastalRange cell at d={d}"
+            );
+        }
+        let coastal_trench = boundary_profile_m(BoundaryKind::CoastalRange, false, true, 0, 1.0);
+        assert!(
+            coastal_trench < -1000.0,
+            "no coastal trench on the tie-broken side: {coastal_trench}"
+        );
     }
 
     /// Test-local flood fill: how many connected components `cells` forms
