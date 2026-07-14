@@ -29,7 +29,7 @@ pub use cast::asciinema_v2;
 pub use domain::Domain;
 pub use ecology::{
     ANIMAL_PREY, ConditionResponse, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE, ResourceAxis,
-    ResourceKind, ResourceVector, v1_basis,
+    ResourceKind, ResourceVector, sovereignty_floor, v1_basis,
 };
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
 pub use geosphere::{CellId, CellMap, GeoCoord, Geosphere, NearestCellIndex};
