@@ -31,8 +31,7 @@ const bytes = await readFile(wasmPath);
 
 // Empty imports object: the module may import nothing (spec guarantee).
 const { instance } = await WebAssembly.instantiate(bytes, {});
-const { hv_start, hv_in_ptr, hv_handle, hv_out_ptr, hv_out_len, memory } =
-  instance.exports;
+const { hv_start, hv_in_ptr, hv_handle, hv_out_ptr, hv_out_len, memory } = instance.exports;
 
 const readOut = () =>
   new TextDecoder().decode(
