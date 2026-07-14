@@ -745,6 +745,43 @@ mod tests {
             noon(170.5)
         );
     }
+
+    /// Night-sky stage 1: a placed observer on a spinning world sees a
+    /// heliacal rising somewhere across a year, and every heliacal
+    /// phenomenon reads below the SKY-23 top-salience invariant.
+    #[test]
+    fn a_placed_observer_sees_a_heliacal_rising_across_a_year() {
+        let s = sky(SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            ..SkyPins::default()
+        });
+        let year = s.system().anchor.year.get();
+        let mut found_rising = false;
+        for k in 0..365 {
+            let obs = ObserverContext::at_position(
+                EntityId(1),
+                WorldTime {
+                    day: k as f64 * year / 365.0,
+                },
+                GeoCoord {
+                    latitude: 35.0,
+                    longitude: 0.0,
+                },
+            );
+            for p in s.phenomena(&obs) {
+                if p.kind == HELIACAL_RISING {
+                    found_rising = true;
+                }
+                if p.kind == HELIACAL_RISING || p.kind == HELIACAL_SETTING {
+                    assert!(p.salience < 1.0, "heliacal salience must stay subordinate");
+                }
+            }
+        }
+        assert!(
+            found_rising,
+            "a year at latitude 35 must show at least one heliacal rising"
+        );
+    }
 }
 
 /// Phenomenon kind for the annual daylight cycle.
@@ -759,6 +796,12 @@ pub const TIDE: &str = "tide";
 /// Phenomenon kind for a moon crossing the face of the sun (SKY-6).
 /// type-audit: bare-ok(identifier-text)
 pub const ECLIPSE: &str = "eclipse";
+/// Phenomenon kind for a star's heliacal rising (night-sky stage 1).
+/// type-audit: bare-ok(identifier-text)
+pub const HELIACAL_RISING: &str = "heliacal-rising";
+/// Phenomenon kind for a star's heliacal setting (night-sky stage 1).
+/// type-audit: bare-ok(identifier-text)
+pub const HELIACAL_SETTING: &str = "heliacal-setting";
 
 /// One angular-diameter unit (Sol from 1 AU ≈ Luna from Earth) in degrees
 /// — the shared scale of `sun_angular_diameter_rel` and a moon's
@@ -1217,6 +1260,44 @@ impl PhenomenaSource for GeneratedSky {
                     ),
                     venue: Venue::NightSky,
                 });
+            }
+        }
+
+        // Heliacal risings/settings (night-sky stage 1): only meaningful for
+        // a placed observer on a spinning world (a locked world has no
+        // horizon-crossing local day for the star to rise or set against).
+        if let (true, Some(pos), Some(day_length)) =
+            (spinning, ctx.position, self.calendar.day_length())
+        {
+            let year = self.system.anchor.year.get();
+            let half_day_frac = 0.5 * day_length.get() / year;
+            let phase = self.calendar.year_phase(t);
+            let wrapped_dist = |a: f64, b: f64| {
+                let d = (a - b).rem_euclid(1.0);
+                d.min(1.0 - d)
+            };
+            for pair in
+                crate::heliacal::heliacal_events(&self.system, &self.calendar, pos.latitude, t)
+            {
+                let color = &self.system.neighbors[pair.neighbor].color;
+                if wrapped_dist(phase, pair.rising_frac) < half_day_frac {
+                    out.push(Phenomenon {
+                        kind: HELIACAL_RISING.to_string(),
+                        description: format!("The {} star returns before dawn.", color),
+                        period_days: Some(round2(year)),
+                        salience: 0.6,
+                        venue: Venue::NightSky,
+                    });
+                }
+                if wrapped_dist(phase, pair.setting_frac) < half_day_frac {
+                    out.push(Phenomenon {
+                        kind: HELIACAL_SETTING.to_string(),
+                        description: format!("The {} star takes its leave into the sunset.", color),
+                        period_days: Some(round2(year)),
+                        salience: 0.6,
+                        venue: Venue::NightSky,
+                    });
+                }
             }
         }
 

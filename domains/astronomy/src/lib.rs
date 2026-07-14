@@ -6,6 +6,7 @@ pub mod anchor;
 pub mod calendar;
 pub mod facts;
 pub mod forcing;
+pub mod heliacal;
 pub mod moons;
 pub mod neighborhood;
 pub mod night_sky;
@@ -20,6 +21,7 @@ pub mod units;
 
 pub use anchor::{Anchor, Rotation, generate_anchor};
 pub use calendar::{Calendar, SkyBand, TWILIGHT_DEPTH_DEG, calendar_of};
+pub use heliacal::{HeliacalPair, arcus_visionis_deg, heliacal_events};
 pub use moons::{Moon, generate_moons, hill_radius_mm};
 pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
 pub use night_sky::{Hemisphere, NightSky, POLE_STAR_MAX_SEPARATION_DEG, PoleStar, night_sky_at};
@@ -27,7 +29,9 @@ pub use pins::{
     ForcingPin, GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, SpinPin, parse_pin,
     pin_strings,
 };
-pub use provider::{ECLIPSE, GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE, TIDE};
+pub use provider::{
+    ECLIPSE, GeneratedSky, HELIACAL_RISING, HELIACAL_SETTING, NIGHT_STAR, SEASONAL_CYCLE, TIDE,
+};
 pub use sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 pub use star::{Star, generate_star};
 pub use system::{GenesisOutcome, StarSystem, generate};
@@ -89,6 +93,14 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_phenomenon_kind(NIGHT_STAR, "a fixed star notable in the night sky")?;
     registry.register_phenomenon_kind(TIDE, "the rise and fall of the waters under the moons")?;
     registry.register_phenomenon_kind(ECLIPSE, "a moon crossing the face of the sun")?;
+    registry.register_phenomenon_kind(
+        HELIACAL_RISING,
+        "a star's first dawn return from behind the sun",
+    )?;
+    registry.register_phenomenon_kind(
+        HELIACAL_SETTING,
+        "a star's last evening before the sun swallows it",
+    )?;
 
     registry.register_predicate(
         facts::STAR_CLASS,
