@@ -27,7 +27,9 @@ async function instantiate(): Promise<VesselExports> {
   const url = new URL("./vessel.wasm", scope.location.href);
   const resp = await fetch(url);
   if (!resp.ok) {
-    throw new Error(`vessel.wasm is missing (HTTP ${resp.status})`);
+    throw new Error(
+      `vessel.wasm is missing (HTTP ${resp.status}) — local build? run 'make wasm-vessel'`,
+    );
   }
   // Streaming needs an application/wasm MIME; fall back for local
   // mdbook-serve setups that mislabel it. Imports object is EMPTY —
@@ -71,6 +73,10 @@ scope.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         return;
       }
       const rc = v.hv_handle(len);
+      if (rc < 0) {
+        scope.postMessage({ type: "error", text: `The casement is dark: protocol error ${rc}.` });
+        return;
+      }
       scope.postMessage({ type: "out", text: readOut(v), released: rc === 1 });
     }
   } catch (err) {

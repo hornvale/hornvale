@@ -86,6 +86,12 @@ function mount(container: HTMLElement): void {
     }
   };
 
+  worker.onerror = () => {
+    live = false;
+    append("casement-error", "The casement is dark: its worker failed to load.");
+    setIdle("The casement is shut.");
+  };
+
   controls.onsubmit = (e) => {
     e.preventDefault();
     if (busy) return;
