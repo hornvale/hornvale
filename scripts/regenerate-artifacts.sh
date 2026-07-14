@@ -61,7 +61,18 @@ run -p hornvale -- phonology > book/src/reference/phonology.md
 run -p hornvale -- dictionary --world "$wsky" > book/src/reference/dictionary-generated.md
 run -p hornvale -- proto > book/src/reference/proto-goblinoid-generated.md
 run -p hornvale -- locale --world "$wsky" --room 1015166224 --json > book/src/reference/locale-seed-42.json
-run -p hornvale -- possess --world "$wsky" --script scripts/possession-walk.txt > book/src/gallery/possession-seed-42.md
+# The live-pane preamble is hand-authored framing (The Casement, decision
+# 0052): the possess dump replaces the whole file, so re-emit the preamble
+# here rather than losing it on every regen — it was clobbered twice by
+# earlier regen runs before this step carried it.
+possess_tmp="$(mktemp)"
+run -p hornvale -- possess --world "$wsky" --script scripts/possession-walk.txt > "$possess_tmp"
+{
+    head -n 1 "$possess_tmp"
+    printf '\n*(This transcript is frozen. [The live pane](./possession-live.md) derives\nthe same world in your browser — same crates, same bytes.)*\n'
+    tail -n +2 "$possess_tmp"
+} > book/src/gallery/possession-seed-42.md
+rm -f "$possess_tmp"
 
 echo "regenerate-artifacts: gallery maps (rendered per-cell views)" >&2
 run -p hornvale -- map --world "$wsky" --out book/src/gallery/elevation-seed-42.png \
