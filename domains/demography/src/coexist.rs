@@ -665,6 +665,54 @@ mod tests {
     }
 
     #[test]
+    fn pack_produces_spatial_structure_when_species_differ() {
+        // The anti-oatmeal guarantee: when two competing species have
+        // spatially DIFFERENT carrying capacities, their composition VARIES
+        // across space — each dominant in its own stronghold — rather than a
+        // globally-constant blend. (The shipped 4-goblinoid roster hits the
+        // constant-blend case precisely because its species have near-
+        // proportional K fields; this test proves the engine itself is not
+        // the cause — differentiated inputs yield differentiated maps.)
+        use hornvale_kernel::{Mass, PLANT_FORAGE, ResourceVector};
+
+        let geo = Geosphere::new(3);
+        let half = geo.cells().count() as u32 / 2;
+        // Anti-correlated K: species 0 rich in the low-index hemisphere,
+        // species 1 in the high-index hemisphere. Identical niche + mass ⇒
+        // pure competition, equal grain, so any spatial variation in the
+        // resulting composition is the K^β share's doing, nothing else.
+        let k0 = CellMap::from_fn(&geo, |c| if c.0 < half { 1.0 } else { 0.2 });
+        let k1 = CellMap::from_fn(&geo, |c| if c.0 < half { 0.2 } else { 1.0 });
+        let per = vec![(0u32, k0), (1u32, k1)];
+        let sp = vec![
+            (
+                0u32,
+                Mass::new(40.0).unwrap(),
+                ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
+            ),
+            (
+                1u32,
+                Mass::new(40.0).unwrap(),
+                ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
+            ),
+        ];
+        let stack = pack(&geo, &per, &sp, BETA, FLOOR);
+        let d0 = &stack.density.iter().find(|(t, _)| *t == 0).unwrap().1;
+        let d1 = &stack.density.iter().find(|(t, _)| *t == 1).unwrap().1;
+
+        let north = CellId(0);
+        let south = CellId(geo.cells().count() as u32 - 1);
+        assert!(
+            *d0.get(north) > *d1.get(north),
+            "species 0 dominates its own stronghold (composition is not spatially constant)"
+        );
+        assert!(
+            *d1.get(south) > *d0.get(south),
+            "species 1 dominates its own stronghold (composition FLIPS across space)"
+        );
+    }
+
+    #[test]
     fn more_same_guild_competitors_thin_everyone() {
         let two = cell_share(
             1.0,
