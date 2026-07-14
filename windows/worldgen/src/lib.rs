@@ -495,16 +495,25 @@ fn demography_inputs_for(
 /// Build the full coexistence-stack demography report for `world`, over
 /// `roster` (spec: the whole roster, matching the unpinned settlement-
 /// genesis path — a species-pinned world still reports every roster
-/// species' field, since no pin is reconstructed here). Reconstructs terrain
-/// and climate, then feeds [`demography_inputs_for`] into
-/// [`hornvale_demography::report`] with the SAME `BETA`/`FLOOR`/
-/// `CONDENSATION_THRESHOLD` the genesis path uses, so the report is byte-
-/// identical to the one settlement genesis built internally (task A16a: a
-/// Lab accessor for the later A16b β calibration). Deterministic: reads only
-/// already-committed facts, draws nothing new from the seed.
-pub fn demography_report(
+/// species' field, since no pin is reconstructed here), against an
+/// EXPLICITLY supplied `beta`/`floor` rather than the frozen
+/// [`hornvale_demography::BETA`]/[`hornvale_demography::FLOOR`] constants.
+/// Reconstructs terrain and climate, then feeds [`demography_inputs_for`]
+/// into [`hornvale_demography::report`] with the same `CONDENSATION_THRESHOLD`
+/// the genesis path uses. Pure and seed-free beyond the world's already-
+/// committed facts: two calls with the same `(world, roster, beta, floor)`
+/// produce byte-identical reports, so a β-sweep calibration harness (task
+/// A16b) can vary `beta` across many calls without rebuilding the world or
+/// drawing new seed state. [`demography_report`] is this function pinned to
+/// the frozen constants — the one worldgen and the settlement-genesis path
+/// actually ship.
+///
+/// type-audit: bare-ok(ratio: beta), bare-ok(count: floor)
+pub fn demography_report_with_beta(
     world: &World,
     roster: &[hornvale_species::SpeciesDef],
+    beta: f64,
+    floor: f64,
 ) -> Result<hornvale_demography::DemographyReport, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_of(world)?;
@@ -516,10 +525,29 @@ pub fn demography_report(
         geo,
         &per_species_inputs,
         &species,
-        hornvale_demography::BETA,
-        hornvale_demography::FLOOR,
+        beta,
+        floor,
         CONDENSATION_THRESHOLD,
     ))
+}
+
+/// Build the full coexistence-stack demography report for `world`, over
+/// `roster`, at the FROZEN `BETA`/`FLOOR` constants — so the report is byte-
+/// identical to the one settlement genesis built internally (task A16a: a
+/// Lab accessor for the later A16b β calibration). Delegates to
+/// [`demography_report_with_beta`]; see that function for the full wiring
+/// doc. Deterministic: reads only already-committed facts, draws nothing new
+/// from the seed.
+pub fn demography_report(
+    world: &World,
+    roster: &[hornvale_species::SpeciesDef],
+) -> Result<hornvale_demography::DemographyReport, BuildError> {
+    demography_report_with_beta(
+        world,
+        roster,
+        hornvale_demography::BETA,
+        hornvale_demography::FLOOR,
+    )
 }
 
 /// The scalar stellar inputs climate needs, derived from this world's sky.
