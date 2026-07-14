@@ -379,6 +379,19 @@ pub fn biome_class(biome: hornvale_climate::Biome) -> hornvale_culture::BiomeCla
 /// river gets", not an unbounded score.
 const DRAINAGE_REF: f64 = 200.0;
 
+/// Condensation threshold: an attractor whose catchment population clears
+/// this becomes a settlement. CALIBRATED (the-gathering, 2026-07-13): tuned
+/// against the carrying_capacity constants to a manageable seed-42
+/// settlement count. Before tuning, the placeholder 0.5 condensed 998
+/// settlements on the level-6 seed-42 world (avg catchment ~7 people); this
+/// value condenses 182 (avg catchment ~22, max 71) — low hundreds, an order
+/// of magnitude down from the placeholder and in the range of the retired
+/// spaced scatter's town count. A save-format constant from here on. Module
+/// scope (hoisted from the settlement-genesis stage closure, Task A16a) so
+/// [`demography_report`]'s Lab accessor and the genesis path share the one
+/// definition — they must never diverge.
+const CONDENSATION_THRESHOLD: f64 = 10.0;
+
 /// The bare per-cell carrying-capacity inputs, shared across species (spec
 /// §2): the same terrain/climate reads the retired suitability scatter used.
 /// Each species folds its own psychology on top via `species_carrying_input`.
@@ -466,6 +479,104 @@ pub fn species_carrying_input(
         hostility: (base.hostility * hostility_factor).clamp(0.0, 1.0),
         ..base
     }
+}
+
+/// Assemble the coexistence stack's inputs for `species_set` over `geo`:
+/// each species' per-cell carrying-capacity inputs (the shared `base_inputs`
+/// with that species' psychology folded in via [`species_carrying_input`])
+/// and the packer's `(id, mass, niche)` tuples, tag-numbered identically
+/// (species_set's index order) so the two line up the way
+/// [`hornvale_demography::report`] expects. Shared by the settlement-genesis
+/// path and [`demography_report`] (Task A16a) — the ONE place this assembly
+/// is written, so the world worldgen ships and the report the Lab measures
+/// can never diverge.
+#[allow(clippy::type_complexity)]
+fn demography_inputs_for(
+    geo: &Geosphere,
+    base_inputs: &hornvale_kernel::CellMap<hornvale_demography::CarryingInput>,
+    species_set: &[&hornvale_species::SpeciesDef],
+) -> (
+    Vec<(
+        u32,
+        hornvale_kernel::CellMap<hornvale_demography::CarryingInput>,
+    )>,
+    Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)>,
+) {
+    let per_species_inputs = species_set
+        .iter()
+        .enumerate()
+        .map(|(tag, def)| {
+            let psych = &def.psych;
+            let inputs = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+                species_carrying_input(*base_inputs.get(cell), psych)
+            });
+            (tag as u32, inputs)
+        })
+        .collect();
+    let species = species_set
+        .iter()
+        .enumerate()
+        .map(|(tag, def)| (tag as u32, def.mass, def.niche.clone()))
+        .collect();
+    (per_species_inputs, species)
+}
+
+/// Build the full coexistence-stack demography report for `world`, over
+/// `roster` (spec: the whole roster, matching the unpinned settlement-
+/// genesis path — a species-pinned world still reports every roster
+/// species' field, since no pin is reconstructed here), against an
+/// EXPLICITLY supplied `beta`/`floor` rather than the frozen
+/// [`hornvale_demography::BETA`]/[`hornvale_demography::FLOOR`] constants.
+/// Reconstructs terrain and climate, then feeds [`demography_inputs_for`]
+/// into [`hornvale_demography::report`] with the same `CONDENSATION_THRESHOLD`
+/// the genesis path uses. Pure and seed-free beyond the world's already-
+/// committed facts: two calls with the same `(world, roster, beta, floor)`
+/// produce byte-identical reports, so a β-sweep calibration harness (task
+/// A16b) can vary `beta` across many calls without rebuilding the world or
+/// drawing new seed state. [`demography_report`] is this function pinned to
+/// the frozen constants — the one worldgen and the settlement-genesis path
+/// actually ship.
+///
+/// type-audit: bare-ok(ratio: beta), bare-ok(count: floor)
+pub fn demography_report_with_beta(
+    world: &World,
+    roster: &[hornvale_species::SpeciesDef],
+    beta: f64,
+    floor: f64,
+) -> Result<hornvale_demography::DemographyReport, BuildError> {
+    let terrain = terrain_of(world)?;
+    let climate = climate_of(world)?;
+    let geo = terrain.geosphere();
+    let base_inputs = carrying_inputs_of(geo, &terrain, &climate);
+    let species_set: Vec<&hornvale_species::SpeciesDef> = roster.iter().collect();
+    let (per_species_inputs, species) = demography_inputs_for(geo, &base_inputs, &species_set);
+    Ok(hornvale_demography::report(
+        geo,
+        &per_species_inputs,
+        &species,
+        beta,
+        floor,
+        CONDENSATION_THRESHOLD,
+    ))
+}
+
+/// Build the full coexistence-stack demography report for `world`, over
+/// `roster`, at the FROZEN `BETA`/`FLOOR` constants — so the report is byte-
+/// identical to the one settlement genesis built internally (task A16a: a
+/// Lab accessor for the later A16b β calibration). Delegates to
+/// [`demography_report_with_beta`]; see that function for the full wiring
+/// doc. Deterministic: reads only already-committed facts, draws nothing new
+/// from the seed.
+pub fn demography_report(
+    world: &World,
+    roster: &[hornvale_species::SpeciesDef],
+) -> Result<hornvale_demography::DemographyReport, BuildError> {
+    demography_report_with_beta(
+        world,
+        roster,
+        hornvale_demography::BETA,
+        hornvale_demography::FLOOR,
+    )
 }
 
 /// The scalar stellar inputs climate needs, derived from this world's sky.
@@ -1706,7 +1817,7 @@ pub fn lexicon_of_in(
 ) -> Result<hornvale_language::Lexicon, BuildError> {
     let ph = language_of_in(world, roster, species);
     let exposures = exposure_of(world, species)?;
-    let def = *def_in(roster, species)?;
+    let def = def_in(roster, species)?;
     let family = def.family;
     // A family with more than one member has a proto ancestral vector in
     // `family_registry` and draws a real shared proto phonology; a
@@ -2082,16 +2193,6 @@ fn build_to(
     let terrain = terrain_of(&world)?;
     let climate = climate_of(&world)?;
     let geo = terrain.geosphere();
-    // Condensation threshold: an attractor whose catchment population clears
-    // this becomes a settlement. CALIBRATED (the-gathering, 2026-07-13):
-    // tuned against the (also frozen this task) carrying_capacity constants
-    // to a manageable seed-42 settlement count. Before tuning, the placeholder
-    // 0.5 condensed 998 settlements on the level-6 seed-42 world (avg
-    // catchment ~7 people); this value condenses 182 (avg catchment ~22, max
-    // 71) — low hundreds, an order of magnitude down from the placeholder and
-    // in the range of the retired spaced scatter's town count. A save-format
-    // constant from here on.
-    const THRESHOLD: f64 = 10.0;
 
     // The bare per-cell carrying-capacity inputs, shared across species; each
     // species folds its psychology into a per-species copy below. `carrying_
@@ -2105,22 +2206,27 @@ fn build_to(
         Some(name) => vec![def_in(roster, name)?],
     };
 
-    // Each species' carrying-capacity inputs: the shared base with its
-    // psychology folded in (spec §4). Demography condenses settlements off
+    // Each species' carrying-capacity inputs (spec §4) plus the coexistence
+    // packer's `(id, mass, niche)` tuples, both tag-numbered by `species_set`'s
+    // index order so the stack's per_species_k ids line up with the K fields
+    // `report` builds internally — the ONE shared assembly (`demography_
+    // inputs_for`), so this path and the Lab's `demography_report` accessor
+    // (Task A16a) can never diverge. Demography condenses settlements off
     // all species' fields together, flagship (largest catchment) first.
-    let per_species_inputs: Vec<(u32, hornvale_kernel::CellMap<hornvale_demography::CarryingInput>)> =
-        species_set
-            .iter()
-            .enumerate()
-            .map(|(tag, def)| {
-                let psych = &def.psych;
-                let inputs = hornvale_kernel::CellMap::from_fn(geo, |cell| {
-                    species_carrying_input(*base_inputs.get(cell), psych)
-                });
-                (tag as u32, inputs)
-            })
-            .collect();
-    let placements = hornvale_demography::report(geo, &per_species_inputs, THRESHOLD).settlements;
+    // ADDITIVE ONLY (task A14): `report` still returns `.settlements` (the
+    // `condense_tagged` path) as the field this call site consumes; the
+    // stack/byproducts/stack_settlements it also builds are not yet read by
+    // worldgen (task A15).
+    let (per_species_inputs, species) = demography_inputs_for(geo, &base_inputs, &species_set);
+    let placements = hornvale_demography::report(
+        geo,
+        &per_species_inputs,
+        &species,
+        hornvale_demography::BETA,
+        hornvale_demography::FLOOR,
+        CONDENSATION_THRESHOLD,
+    )
+    .settlements;
 
     // Each placed species' phonology, drawn once from the world seed and
     // its authored articulation vector, and a `Namer` built over it. Every
@@ -2265,6 +2371,48 @@ fn build_to(
             ))
         },
     )?;
+
+    stage("alignments", || -> Result<(), BuildError> {
+        // The Long Count: each settlement's founding sightline. Skipped
+        // wholesale on locked worlds / polar latitudes (the azimuth
+        // function returns None) and on the constant sky (no calendar).
+        // Placed before the settlement-depth early return (below) so a
+        // world built only to `BuildDepth::Settlements` still carries
+        // alignments — collecting first to avoid holding the sky borrow
+        // across commits.
+        let pairs: Vec<(EntityId, f64)> = {
+            let sky = sky_of(&world)?;
+            let Some(calendar) = sky.calendar() else {
+                return Ok(());
+            };
+            hornvale_terrain::places(&world)
+                .iter()
+                // founding-solstice-azimuth-degrees is documented as a
+                // settlement's founding sightline; gate on IS_SETTLEMENT
+                // rather than assuming every place is one (today they all
+                // are, but a future campaign may commit non-settlement
+                // places).
+                .filter(|p| {
+                    world
+                        .ledger
+                        .value_of(p.id, hornvale_settlement::IS_SETTLEMENT)
+                        .is_some()
+                })
+                .filter_map(|p| {
+                    let coord = place_coord(&world, p.id)?;
+                    let az = calendar.solstice_rise_azimuth_at(
+                        coord.latitude,
+                        hornvale_astronomy::StdDays::new(0.0).unwrap(),
+                    )?;
+                    Some((p.id, az))
+                })
+                .collect()
+        };
+        for (id, az) in pairs {
+            facts::founding_alignment(&mut world, id, az)?;
+        }
+        Ok(())
+    })?;
 
     if depth <= BuildDepth::Settlements {
         return Ok(world);
@@ -2636,26 +2784,29 @@ pub fn night_sky_lines(
     // the same fallback-free resolution `calendar_lines`' daylight-swing
     // line uses, but with a temperate default instead of the equator when
     // no place has been placed yet.
-    let latitude = hornvale_terrain::places(world)
-        .first()
-        .and_then(|p| place_coord(world, p.id))
-        .map(|c| c.latitude)
-        .unwrap_or(35.0);
-    let year_length_days = calendar.year_length().get();
-    let pairs = hornvale_astronomy::heliacal_events(system, calendar, latitude, t);
-    let heliacal = pairs
-        .iter()
-        .take(3)
-        .map(|p| {
-            let neighbor = &system.neighbors[p.neighbor];
-            format!(
-                "The {} star returns before dawn at year-phase {:.2}, after {:.0} days of absence.",
-                neighbor.color,
-                p.rising_frac,
-                p.absence_fraction() * year_length_days
-            )
-        })
-        .collect();
+    let latitude_fallback = 35.0;
+    let heliacal = {
+        let latitude = hornvale_terrain::places(world)
+            .first()
+            .and_then(|p| place_coord(world, p.id))
+            .map(|c| c.latitude)
+            .unwrap_or(latitude_fallback);
+        let year_length_days = calendar.year_length().get();
+        let pairs = hornvale_astronomy::heliacal_events(system, calendar, latitude, t);
+        pairs
+            .iter()
+            .take(3)
+            .map(|p| {
+                let neighbor = &system.neighbors[p.neighbor];
+                format!(
+                    "The {} star returns before dawn at year-phase {:.2}, after {:.0} days of absence.",
+                    neighbor.color,
+                    p.rising_frac,
+                    p.absence_fraction() * year_length_days
+                )
+            })
+            .collect()
+    };
 
     let wanderers = system
         .wanderers
@@ -2703,11 +2854,44 @@ pub fn night_sky_lines(
         )]
     };
 
+    // The founding sightline and its drift rate (The Long Count): rendered
+    // only when a real settlement exists (to ensure the "From the first
+    // settlement" language is truthful). Requires the actual first place's
+    // latitude; the 35° fallback (used for heliacal events) is insufficient
+    // here since it would create a lying sentence.
+    let alignment = hornvale_terrain::places(world)
+        .into_iter()
+        // Same settlement gate as the alignments stage: the "first
+        // settlement" language below must name an actual settlement, not
+        // just the first place (today every place is a settlement, but
+        // that need not hold forever).
+        .find(|p| {
+            world
+                .ledger
+                .value_of(p.id, hornvale_settlement::IS_SETTLEMENT)
+                .is_some()
+        })
+        .and_then(|p| place_coord(world, p.id))
+        .map(|c| c.latitude)
+        .and_then(|latitude| {
+            calendar
+                .solstice_rise_azimuth_at(latitude, t)
+                .and_then(|az| {
+                    let kyr = hornvale_astronomy::StdDays::new(t.get() + 1000.0 * 365.25).unwrap();
+                    let drift = calendar.alignment_drift_deg(latitude, t, kyr)?;
+                    Some(format!(
+                        "From the first settlement, the midsummer sun rises at azimuth {az:.1}°; the sightline drifts {:.2}° in a thousand years.",
+                        drift.abs()
+                    ))
+                })
+        });
+
     Ok(Some(hornvale_almanac::NightSkyLines {
         pole_star,
         heliacal,
         wanderers,
         figures: figure_lines,
+        alignment,
     }))
 }
 
@@ -2866,6 +3050,17 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
             })
         })
         .collect();
+    // The deep-time lines, plus the secular-brightening sentence (The Long
+    // Count) for a generated sky only — constant-sky worlds have no star to
+    // brighten.
+    let mut deep_time_lines = deep_time_lines(world)?;
+    if let Sky::Generated(sky) = sky_of(world)? {
+        let system = sky.system();
+        deep_time_lines.push(format!(
+            "The sun brightens by {:.0} parts in a hundred over a gigayear — the slow fire under every deeper clock.",
+            hornvale_astronomy::brightening_per_gyr(&system.star) * 100.0
+        ));
+    }
     Ok(AlmanacContext {
         seed: world.seed.0,
         sky: sky_report(world, WorldTime { day: 0.0 })?,
@@ -2875,7 +3070,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         land_lines: land_lines(world)?,
         biome_lines: biome_lines(world)?,
         ground_lines: ground_lines(world)?,
-        deep_time_lines: deep_time_lines(world)?,
+        deep_time_lines,
         peoples,
         pantheons: {
             let mut blocks = Vec::new();
@@ -3262,6 +3457,21 @@ mod tests {
         assert!(!ctx.peoples.is_empty());
         assert!(!ctx.pantheons.is_empty());
         assert!(!ctx.phenomena.is_empty());
+    }
+
+    /// The Long Count: a generated world's almanac context carries the
+    /// founding sightline under The Sky and the brightening deep-time line
+    /// under Deep Time.
+    #[test]
+    fn almanac_context_carries_sightline_and_slow_fire() {
+        let world = generated(42);
+        let ctx = almanac_context(&world).unwrap();
+        let lines = ctx.night_sky_lines.expect("generated sky");
+        assert!(lines.alignment.is_some());
+        assert!(
+            ctx.deep_time_lines.iter().any(|l| l.contains("slow fire")),
+            "the brightening line reaches Deep Time"
+        );
     }
 
     #[test]
@@ -3788,7 +3998,8 @@ mod tests {
         // with.
         let flagship_species = hornvale_species::species_of(&world, village.id)
             .expect("the flagship settlement has a species fact");
-        let def = hornvale_species::registry()[flagship_species.as_str()];
+        let registry = hornvale_species::registry();
+        let def = &registry[flagship_species.as_str()];
         let psych = hornvale_culture::PsychSummary {
             threat_response: def.psych.threat_response,
             time_horizon: def.psych.time_horizon,
@@ -3887,6 +4098,40 @@ mod tests {
                 "settlement {:?} committed a zero population",
                 f.subject
             );
+        }
+    }
+
+    /// The Long Count: every settlement in a spinning generated world
+    /// carries its founding solstice-sunrise azimuth; it holds already at
+    /// `BuildDepth::Settlements` — the alignments pass runs immediately
+    /// after settlement placement, before the settlement-depth early
+    /// return, so a shallow build gets alignments too (spec §4's "built to
+    /// settlement depth or deeper").
+    #[test]
+    fn settlements_carry_founding_alignments() {
+        let world = build_world_to(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+            &default_roster(),
+            BuildDepth::Settlements,
+        )
+        .unwrap();
+        let settlements: Vec<_> = world
+            .ledger
+            .find(hornvale_settlement::IS_SETTLEMENT)
+            .map(|f| f.subject)
+            .collect();
+        assert!(!settlements.is_empty());
+        for s in &settlements {
+            let n = world
+                .ledger
+                .find(facts::FOUNDING_SOLSTICE_AZIMUTH_DEGREES)
+                .filter(|f| f.subject == *s)
+                .count();
+            assert_eq!(n, 1, "settlement {s:?}");
         }
     }
 

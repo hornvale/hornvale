@@ -807,6 +807,36 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "brightening-per-gyr",
+            doc: "The star's fractional main-sequence brightening per gigayear",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.05, 0.10, 0.15, 0.20, 0.25],
+            },
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Number(hornvale_astronomy::brightening_per_gyr(&v.system.star))
+            }),
+        },
+        Metric {
+            name: "alignment-drift-deg-per-kyr",
+            doc: "Absolute solstice-sunrise azimuth drift over the first kiloyear at the \
+                   flagship settlement's latitude; Absent when locked, unplaced, or polar",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0],
+            },
+            extract: Extractor::Settlement(|v| {
+                let a: &AstronomyView = v.as_ref();
+                let Some(lat) = flagship_latitude(v) else {
+                    return MetricValue::Absent;
+                };
+                let t0 = hornvale_astronomy::StdDays::new(0.0).unwrap();
+                let t1 = hornvale_astronomy::StdDays::new(1000.0 * 365.25).unwrap();
+                match a.calendar.alignment_drift_deg(lat, t0, t1) {
+                    Some(d) => MetricValue::Number(d.abs()),
+                    None => MetricValue::Absent,
+                }
+            }),
+        },
+        Metric {
             name: "plate-count",
             doc: "Number of tectonic plates the globe drew or was pinned to",
             summary: SummaryKind::Categorical,
@@ -1176,6 +1206,41 @@ pub fn registry() -> Vec<Metric> {
                 let trop_mean = trop_sum / f64::from(trop_n);
                 let pole_mean = pole_sum / f64::from(pole_n);
                 MetricValue::Number(trop_mean / pole_mean.max(POLE_FLOOR))
+            }),
+        },
+        Metric {
+            name: "per-cell-diversity",
+            doc: "Mean per-cell species diversity of the coexistence density stack (task \
+                   A16a; feeds the A16b β calibration): the mean, over habitable land cells, \
+                   of the demography report's `byproducts.strife` field — already the \
+                   per-cell inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species \
+                   dominates a cell, →N when N species share it evenly). Recomputed via \
+                   `hornvale_worldgen::demography_report`, which reconstructs the IDENTICAL \
+                   report the settlement-genesis path builds internally (the shared-assembly \
+                   refactor of task A16a), so this measures the stack the world actually \
+                   ships, not a parallel one. Absent if the report fails to build or the \
+                   world has no habitable cells",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let Ok(report) = hornvale_worldgen::demography_report(v.world(), v.roster()) else {
+                    return MetricValue::Absent;
+                };
+                let geo = v.terrain().geosphere();
+                let habitability = v.climate().habitability();
+                let (mut sum, mut n) = (0.0_f64, 0u32);
+                for cell in geo.cells() {
+                    if *habitability.get(cell) {
+                        sum += *report.byproducts.strife.get(cell);
+                        n += 1;
+                    }
+                }
+                if n == 0 {
+                    MetricValue::Absent
+                } else {
+                    MetricValue::Number(sum / f64::from(n))
+                }
             }),
         },
         Metric {
@@ -2437,6 +2502,28 @@ fn flagship_coastal(v: &SettlementView, species: &str) -> MetricValue {
         .iter()
         .any(|n| v.terrain().is_ocean(*n));
     MetricValue::Flag(coastal)
+}
+
+/// The flagship settlement's committed latitude (the ledger's first
+/// `IS_SETTLEMENT` subject) — the alignment-drift metric's observing site.
+/// `None` if there is no settlement, or the settlement carries no latitude
+/// fact (the pre-vantage behavior, matching `place_coord` in
+/// `windows/worldgen/src/lib.rs`).
+fn flagship_latitude(v: &SettlementView) -> Option<f64> {
+    let subject = v
+        .world()
+        .ledger
+        .find(hornvale_settlement::IS_SETTLEMENT)
+        .next()?
+        .subject;
+    match v
+        .world()
+        .ledger
+        .value_of(subject, hornvale_settlement::LATITUDE)?
+    {
+        Value::Number(n) => Some(*n),
+        _ => None,
+    }
 }
 
 /// Count settlements peopled by `species`.
@@ -3732,8 +3819,28 @@ mod tests {
         // were never built), +3 for night-sky stage 3 (Task 10: figure-count,
         // largest-figure-members, ecliptic-figure-count), +5 for The Ground
         // (Task 7: dominant-rock, karst-fraction, aquifer-fraction,
-        // dominant-soil-order, fertile-land-fraction).
-        assert_eq!(registry().len(), 122);
+        // dominant-soil-order, fertile-land-fraction), +2 for The Long
+        // Count (Task 6: brightening-per-gyr, alignment-drift-deg-per-kyr),
+        // +1 for the coexistence stack (Task A16a: per-cell-diversity).
+        assert_eq!(registry().len(), 125);
+    }
+
+    #[test]
+    fn the_long_count_metrics_extract_on_seed_42() {
+        let names = ["brightening-per-gyr", "alignment-drift-deg-per-kyr"];
+        let reg = registry();
+        for name in names {
+            assert!(reg.iter().any(|m| m.name == name), "{name} registered");
+        }
+        let view = SettlementView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Settlement(view);
+        for name in names {
+            let value = extract_from(&built, name);
+            match value {
+                MetricValue::Number(_) | MetricValue::Absent => {}
+                _ => panic!("Expected Number or Absent for {name}, got {value:?}"),
+            }
+        }
     }
 
     #[test]
@@ -3840,6 +3947,37 @@ mod tests {
             m("mean-land-temperature-c"),
             MetricValue::Number(_) | MetricValue::Absent
         ));
+    }
+
+    #[test]
+    fn per_cell_diversity_is_finite_and_bounded_by_species_count_at_seed_42() {
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let n_species = view.roster().len() as f64;
+        let built = BuiltView::Full(view);
+        let m = |name: &str| extract_from(&built, name);
+        match m("per-cell-diversity") {
+            MetricValue::Number(v) => {
+                assert!(v.is_finite(), "per-cell-diversity must be finite, got {v}");
+                // `strife` is 0.0 (not >= 1.0) at a habitable-but-unclaimed
+                // cell — byproducts.rs: "a cell with zero total density...
+                // reports 0.0 rather than dividing by zero... there is no
+                // contest where nobody is contesting". Averaged over EVERY
+                // habitable cell (this metric's definition), the mean
+                // therefore ranges over [0, N_species], not [1, N_species]:
+                // measured directly (debug instrumentation, since removed)
+                // at seed 42 with today's pre-calibration BETA it reads
+                // ~0.75 — every occupied cell is currently winner-take-all
+                // (strife == 1.0 exactly, nowhere higher) and ~25% of
+                // habitable land is claimed by no roster species at all.
+                // That floor-diversity reading is exactly the signal task
+                // A16b's β calibration exists to move.
+                assert!(
+                    (0.0..=n_species).contains(&v),
+                    "per-cell-diversity {v} must lie in [0.0, {n_species}]"
+                );
+            }
+            other => panic!("expected a Number, got {other:?}"),
+        }
     }
 
     #[test]
@@ -4061,7 +4199,7 @@ mod tests {
     #[test]
     fn build_with_roster_resolves_a_renamed_solo_species() {
         use hornvale_species::SpeciesDef;
-        let goblin = hornvale_species::registry()["goblin"];
+        let goblin = hornvale_species::registry()["goblin"].clone();
         let twin = SpeciesDef {
             name: "goblin-twin",
             ..goblin

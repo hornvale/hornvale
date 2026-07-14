@@ -17,6 +17,11 @@
         "functional": true,
         "doc": "biome of a place"
       },
+      "brightening-per-gyr": {
+        "name": "brightening-per-gyr",
+        "functional": true,
+        "doc": "the star's fractional main-sequence brightening per gigayear"
+      },
       "cell-id": {
         "name": "cell-id",
         "functional": true,
@@ -86,6 +91,11 @@
         "name": "fossil-shoreline",
         "functional": false,
         "doc": "a fossil shoreline left by deep-time sea-level change"
+      },
+      "founding-solstice-azimuth-degrees": {
+        "name": "founding-solstice-azimuth-degrees",
+        "functional": true,
+        "doc": "solstice-sunrise azimuth at a settlement's founding, degrees clockwise from north"
       },
       "frost-retreat": {
         "name": "frost-retreat",
@@ -1055,6 +1065,16 @@
         "predicate": "insolation-rel",
         "object": {
           "Number": 0.74229186
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "brightening-per-gyr",
+        "object": {
+          "Number": 0.077572545
         },
         "place": null,
         "day": 0.0,
@@ -18019,6 +18039,1826 @@
         "place": null,
         "day": 0.0,
         "provenance": "worldgen"
+      },
+      {
+        "subject": 7,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.027497
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 8,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.027497
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 9,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.027497
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 10,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.027497
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 11,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040159
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 12,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039495
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 13,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040171
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 14,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040159
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 15,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040159
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 16,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039495
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 17,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039495
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 18,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.037372
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 19,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040171
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 20,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040171
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 21,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040159
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 22,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039495
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 23,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040171
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 24,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.037372
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 25,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.037372
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 26,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.037372
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 27,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.017738
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 28,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.017738
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 29,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.017738
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 30,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.017738
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 31,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.977481
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 32,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.977481
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 33,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.029802
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 34,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.032172
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 35,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.977481
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 36,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.038549
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 37,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.029802
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 38,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.029802
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 39,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040561
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 40,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.032172
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 41,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.032172
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 42,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.038549
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 43,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.038549
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 44,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.029802
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 45,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.032172
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 46,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.037345
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 47,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.038549
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 48,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040561
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 49,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040561
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 50,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.036718
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 51,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040645
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 52,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040561
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 53,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.037345
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 54,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.037345
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 55,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040248
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 56,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040645
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 57,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040645
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 58,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.037345
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 59,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.034142
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 60,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.961673
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 61,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.034142
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 62,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.034142
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 63,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040645
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 64,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040248
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 65,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.034142
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 66,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040248
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 67,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.993895
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 68,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039902
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 69,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.997524
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 70,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.993895
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 71,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.993895
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 72,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040248
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 73,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.980957
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 74,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.993895
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 75,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.036718
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 76,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039902
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 77,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.997524
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 78,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.997524
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 79,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.03205
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 80,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.997524
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 81,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.980957
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 82,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.980957
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 83,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.987728
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 84,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039902
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 85,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.005755
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 86,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.96173
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 87,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.980957
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 88,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.03205
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 89,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.987728
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 90,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.987728
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 91,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.036718
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 92,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.005755
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 93,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.005755
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 94,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.96173
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 95,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.03205
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 96,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.96173
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 97,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.03205
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 98,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.987728
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 99,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.036718
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 100,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.034097
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 101,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.005755
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 102,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.96173
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 103,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.034097
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 104,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.034097
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 105,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040561
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 106,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.034097
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 107,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039469
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 108,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.035883
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 109,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040561
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 110,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040561
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 111,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.01387
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 112,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.945285
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 113,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040561
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 114,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039469
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 115,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039514
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 116,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039469
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 117,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.034096
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 118,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.035883
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 119,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.035883
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 120,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039469
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 121,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.035768
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 122,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.01387
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 123,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.018951
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 124,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.01387
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 125,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.024438
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 126,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.945285
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 127,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.945285
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 128,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.035883
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 129,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039514
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 130,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039514
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 131,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.035768
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 132,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.035768
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 133,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.034096
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 134,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.034096
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 135,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.01387
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 136,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.03734
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 137,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.946143
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 138,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.993951
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 139,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.926571
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 140,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.018951
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 141,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.018951
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 142,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.945285
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 143,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.039514
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 144,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.035768
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 145,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.024438
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 146,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.024438
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 147,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.034096
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 148,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.021218
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 149,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.985875
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 150,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.018951
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 151,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.993951
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 152,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.993951
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 153,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.024438
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 154,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.032061
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 155,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.024284
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 156,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.926571
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 157,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.037347
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 158,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.946143
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 159,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.030039
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 160,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.993951
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 161,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.021218
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 162,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.021218
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 163,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.926571
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 164,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.985875
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 165,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.985875
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 166,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.030039
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 167,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.97834
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 168,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.946143
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 169,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.982993
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 170,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.946143
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 171,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.032061
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 172,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.032061
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 173,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.91672
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 174,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.03734
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 175,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.021218
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 176,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.024284
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 177,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.024284
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 178,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.979592
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 179,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.985875
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 180,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.037347
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 181,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.037347
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 182,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.009883
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 183,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.977481
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 184,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.97834
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 185,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.97834
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 186,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.030039
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 187,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 88.970935
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 188,
+        "predicate": "founding-solstice-azimuth-degrees",
+        "object": {
+          "Number": 89.040174
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
       },
       {
         "subject": 10,
