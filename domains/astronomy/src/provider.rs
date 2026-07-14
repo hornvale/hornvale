@@ -545,6 +545,89 @@ mod tests {
         assert!(lunar.period_days.expect("recurs") > 0.0);
     }
 
+    /// Eclipse Seasons: on an event day, a placed in-band observer gets a
+    /// dated eclipse observation (no period — it is happening, not
+    /// promised); the same observer a synodic month early gets none.
+    #[test]
+    fn an_in_band_observer_sees_the_eclipse_on_its_day() {
+        use crate::eclipses::{EclipseBody, eclipse_events, ground_track, sub_solar_longitude_deg};
+        use crate::units::StdDays;
+        let (system, calendar) = crate::eclipses::luna_sol();
+        let sky = GeneratedSky::new(crate::system::GenesisOutcome {
+            system: system.clone(),
+            notes: Vec::new(),
+        });
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let solar = events
+            .iter()
+            .find(|e| matches!(e.body, EclipseBody::Solar))
+            .unwrap();
+        let track = ground_track(&system, &calendar, solar).unwrap();
+        let ss = sub_solar_longitude_deg(&calendar, solar.day);
+        let at = |day: f64| {
+            let obs = ObserverContext::at_position(
+                EntityId(0),
+                WorldTime { day },
+                GeoCoord {
+                    latitude: track.center_lat_deg,
+                    longitude: ss,
+                },
+            );
+            sky.phenomena(&obs)
+        };
+        let on_day = at(solar.day.0);
+        assert!(
+            on_day
+                .iter()
+                .any(|p| p.kind == ECLIPSE && p.period_days.is_none()),
+            "event-day observation present"
+        );
+        let month_early = at(solar.day.0 - 29.5);
+        assert!(
+            !month_early
+                .iter()
+                .any(|p| p.kind == ECLIPSE && p.period_days.is_none()),
+            "no dated observation off the day"
+        );
+    }
+
+    /// The night side gets the blood moon on a lunar event day.
+    #[test]
+    fn the_night_side_sees_the_blood_moon_on_its_day() {
+        use crate::eclipses::{EclipseBody, eclipse_events, sub_solar_longitude_deg};
+        use crate::units::StdDays;
+        let (system, calendar) = crate::eclipses::luna_sol();
+        let sky = GeneratedSky::new(crate::system::GenesisOutcome {
+            system: system.clone(),
+            notes: Vec::new(),
+        });
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let lunar = events
+            .iter()
+            .find(|e| matches!(e.body, EclipseBody::Lunar))
+            .unwrap();
+        let ss = sub_solar_longitude_deg(&calendar, lunar.day);
+        // The antipode of `ss`, wrapped into [-180, 180): add 180 twice —
+        // once to cross to the opposite side, once as the wrap idiom's own
+        // offset — before reducing mod 360.
+        let night_lon = (ss + 360.0).rem_euclid(360.0) - 180.0;
+        let obs = ObserverContext::at_position(
+            EntityId(0),
+            WorldTime { day: lunar.day.0 },
+            GeoCoord {
+                latitude: 0.0,
+                longitude: night_lon,
+            },
+        );
+        let ph = sky.phenomena(&obs);
+        assert!(
+            ph.iter().any(|p| p.kind == ECLIPSE
+                && p.period_days.is_none()
+                && p.description.contains("bloodred")),
+            "blood-moon observation present"
+        );
+    }
+
     /// SKY-17: daylight carries the star's color — a K star's light is
     /// warm and dim, an F star's harsh and blue-edged, a G star's golden —
     /// and twilight takes the matching hue.
@@ -1446,6 +1529,77 @@ impl PhenomenaSource for GeneratedSky {
                     salience: 0.8,
                     venue: Venue::NightSky,
                 });
+            }
+        }
+
+        // Eclipse Seasons: dated, placed event-day observations. A
+        // placed observer whose day contains a syzygy event sees it (or
+        // its partial bite) at their own sight tier — no period, because
+        // it is happening, not promised.
+        if let Some(coord) = ctx.position {
+            use crate::eclipses::{
+                EclipseBody, EclipseSight, eclipse_events, lunar_eclipse_seen, solar_eclipse_sight,
+            };
+            let half_day = self
+                .calendar
+                .day_length()
+                .map(|d| d.get() / 2.0)
+                .unwrap_or(0.5);
+            let window_from = crate::units::StdDays(t.0 - half_day);
+            let window_until = crate::units::StdDays(t.0 + half_day);
+            for event in eclipse_events(&self.system, &self.calendar, window_from, window_until) {
+                let moon = &self.system.moons[event.moon];
+                match event.body {
+                    EclipseBody::Solar => {
+                        let (description, salience) = match solar_eclipse_sight(
+                            &self.system,
+                            &self.calendar,
+                            &event,
+                            coord.latitude,
+                            coord.longitude,
+                        ) {
+                            EclipseSight::WholeSun => (
+                                format!(
+                                    "the {} moon devours the sun whole",
+                                    size_word(moon.angular_diameter_rel)
+                                ),
+                                0.95,
+                            ),
+                            EclipseSight::BurningRing => (
+                                format!(
+                                    "the {} moon leaves a burning ring of the sun",
+                                    size_word(moon.angular_diameter_rel)
+                                ),
+                                0.85,
+                            ),
+                            EclipseSight::Bitten => {
+                                ("a dark bite taken from the sun's edge".to_string(), 0.6)
+                            }
+                            EclipseSight::Unseen => continue,
+                        };
+                        out.push(Phenomenon {
+                            kind: ECLIPSE.to_string(),
+                            description,
+                            period_days: None,
+                            salience,
+                            venue: Venue::DaySky,
+                        });
+                    }
+                    EclipseBody::Lunar => {
+                        if lunar_eclipse_seen(&self.calendar, &event, coord.longitude) {
+                            out.push(Phenomenon {
+                                kind: ECLIPSE.to_string(),
+                                description: format!(
+                                    "the full {} moon darkens to a bloodred coal",
+                                    size_word(moon.angular_diameter_rel)
+                                ),
+                                period_days: None,
+                                salience: 0.8,
+                                venue: Venue::NightSky,
+                            });
+                        }
+                    }
+                }
             }
         }
 
