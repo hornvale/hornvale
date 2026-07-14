@@ -18,6 +18,7 @@ pub mod footprint;
 pub mod founder;
 pub mod niche;
 pub mod render;
+pub mod stack_condense;
 pub use carrying_capacity::{CarryingInput, carrying_capacity};
 pub use condense::{Condensation, condense};
 pub use flow::{Flow, flow};
