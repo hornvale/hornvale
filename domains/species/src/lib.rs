@@ -12,7 +12,8 @@
 use std::collections::BTreeMap;
 
 use hornvale_kernel::{
-    ConceptKind, ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World,
+    ANIMAL_PREY, ConceptKind, ConceptRegistry, EntityId, Fact, LedgerError, Mass, PLANT_FORAGE,
+    RegistryError, ResourceVector, Value, World,
 };
 
 /// Predicate: a species entity's name (functional, Text).
@@ -180,7 +181,7 @@ pub struct ArticulationVector {
 /// One authored species: vector, vocabulary stopgaps (deleted by The
 /// Tongues), and a placeholder syllable pool for names.
 /// type-audit: bare-ok(identifier-text)
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SpeciesDef {
     /// The species name ("goblin", "kobold").
     pub name: &'static str,
@@ -196,6 +197,14 @@ pub struct SpeciesDef {
     pub perception: PerceptionVector,
     /// The articulation vector.
     pub articulation: ArticulationVector,
+    /// Adult individual body mass — the BIO-2 down-payment the coexistence
+    /// packer reads to convert a settlement population into a standing
+    /// biomass demand.
+    pub mass: Mass,
+    /// The species' ecological niche: a sparse utilization profile over the
+    /// resource-axis basis (`hornvale_kernel::ecology`). Feeds the packer's
+    /// Pianka overlap between coexisting species.
+    pub niche: ResourceVector,
     /// Worker-role override; `None` = the subsistence worker word.
     pub worker_override: Option<&'static str>,
     /// The warrior-rung word.
@@ -242,6 +251,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 tonality: 0.0,
                 exotic: ExoticManner::None,
             },
+            mass: Mass::new(40.0).unwrap(),
+            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.6), (ANIMAL_PREY, 0.4)]).unwrap(),
             worker_override: None,
             warrior: "warrior",
             artisan: "artisan",
@@ -277,6 +288,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 tonality: 0.0,
                 exotic: ExoticManner::Trill,
             },
+            mass: Mass::new(20.0).unwrap(),
+            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.25)]).unwrap(),
             worker_override: Some("digger"),
             warrior: "warden",
             artisan: "shaper",
@@ -312,6 +325,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 tonality: 0.0,
                 exotic: ExoticManner::None,
             },
+            mass: Mass::new(80.0).unwrap(),
+            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.35), (ANIMAL_PREY, 0.65)]).unwrap(),
             worker_override: Some("laborer"),
             warrior: "soldier",
             artisan: "smith",
@@ -347,6 +362,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 tonality: 0.0,
                 exotic: ExoticManner::None,
             },
+            mass: Mass::new(120.0).unwrap(),
+            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.2), (ANIMAL_PREY, 0.75)]).unwrap(),
             worker_override: Some("forager"),
             warrior: "mauler",
             artisan: "tanner",
@@ -827,6 +844,22 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn goblinoids_carry_mass_and_a_nonzero_omnivore_niche() {
+        let r = registry();
+        for name in ["goblin", "kobold", "hobgoblin", "bugbear"] {
+            let s = &r[name];
+            assert!(s.mass.kilograms() > 0.0, "{name} has mass");
+            assert!(!s.niche.is_zero(), "{name} eats something");
+            // omnivores: both plant-forage and animal-prey present
+            assert!(s.niche.weight(hornvale_kernel::PLANT_FORAGE) > 0.0);
+            assert!(s.niche.weight(hornvale_kernel::ANIMAL_PREY) > 0.0);
+        }
+        // a modest, monotone mass band (bugbear largest, kobold smallest)
+        assert!(r["bugbear"].mass.kilograms() > r["goblin"].mass.kilograms());
+        assert!(r["goblin"].mass.kilograms() > r["kobold"].mass.kilograms());
     }
 
     #[test]

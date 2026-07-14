@@ -3834,7 +3834,7 @@ mod tests {
     #[test]
     fn build_with_roster_resolves_a_renamed_solo_species() {
         use hornvale_species::SpeciesDef;
-        let goblin = hornvale_species::registry()["goblin"];
+        let goblin = hornvale_species::registry()["goblin"].clone();
         let twin = SpeciesDef {
             name: "goblin-twin",
             ..goblin

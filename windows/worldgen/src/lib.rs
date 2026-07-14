@@ -1546,7 +1546,7 @@ pub fn lexicon_of_in(
 ) -> Result<hornvale_language::Lexicon, BuildError> {
     let ph = language_of_in(world, roster, species);
     let exposures = exposure_of(world, species)?;
-    let def = *def_in(roster, species)?;
+    let def = def_in(roster, species)?;
     let family = def.family;
     // A family with more than one member has a proto ancestral vector in
     // `family_registry` and draws a real shared proto phonology; a
@@ -3589,7 +3589,8 @@ mod tests {
         // with.
         let flagship_species = hornvale_species::species_of(&world, village.id)
             .expect("the flagship settlement has a species fact");
-        let def = hornvale_species::registry()[flagship_species.as_str()];
+        let registry = hornvale_species::registry();
+        let def = &registry[flagship_species.as_str()];
         let psych = hornvale_culture::PsychSummary {
             threat_response: def.psych.threat_response,
             time_horizon: def.psych.time_horizon,
