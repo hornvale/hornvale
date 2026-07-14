@@ -1,7 +1,7 @@
 # The Casement — a playable possession in the project book
 
 **Date:** 2026-07-13
-**Status:** Approved (brainstorm ratified by owner)
+**Status:** SHIPPED 2026-07-14 (merged to main; chronicle: book/src/chronicle/the-casement.md)
 **Campaign:** The Casement
 
 ## What this is
