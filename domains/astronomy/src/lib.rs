@@ -117,7 +117,10 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_phenomenon_kind(SEASONAL_CYCLE, "the annual daylight cycle")?;
     registry.register_phenomenon_kind(NIGHT_STAR, "a fixed star notable in the night sky")?;
     registry.register_phenomenon_kind(TIDE, "the rise and fall of the waters under the moons")?;
-    registry.register_phenomenon_kind(ECLIPSE, "a moon crossing the face of the sun")?;
+    registry.register_phenomenon_kind(
+        ECLIPSE,
+        "a syzygy shadow: a moon crossing the sun, or the world's shadow crossing a moon",
+    )?;
     registry.register_phenomenon_kind(
         HELIACAL_RISING,
         "a star's first dawn return from behind the sun",
@@ -176,6 +179,16 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::MOON_INCLINATION_DEGREES,
         false,
         "orbital inclination of a moon to the anchor's orbital plane, in degrees",
+    )?;
+    registry.register_predicate(
+        facts::MOON_NODE_LONGITUDE_DEGREES,
+        false,
+        "ascending-node ecliptic longitude of a moon at genesis, in degrees",
+    )?;
+    registry.register_predicate(
+        facts::MOON_NODE_PERIOD_DAYS,
+        false,
+        "nodal-regression period of a moon, in standard days",
     )?;
     registry.register_predicate(
         facts::MOON_MASS_LUNAR,

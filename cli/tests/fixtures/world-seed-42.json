@@ -197,6 +197,16 @@
         "functional": false,
         "doc": "mass of a moon in lunar masses"
       },
+      "moon-node-longitude-degrees": {
+        "name": "moon-node-longitude-degrees",
+        "functional": false,
+        "doc": "ascending-node ecliptic longitude of a moon at genesis, in degrees"
+      },
+      "moon-node-period-days": {
+        "name": "moon-node-period-days",
+        "functional": false,
+        "doc": "nodal-regression period of a moon, in standard days"
+      },
       "moon-period-std": {
         "name": "moon-period-std",
         "functional": false,
@@ -471,7 +481,7 @@
     "phenomenon_kinds": {
       "ambient": "a pervasive atmospheric condition",
       "celestial-body": "a body visible in the sky",
-      "eclipse": "a moon crossing the face of the sun",
+      "eclipse": "a syzygy shadow: a moon crossing the sun, or the world's shadow crossing a moon",
       "heliacal-rising": "a star's first dawn return from behind the sun",
       "heliacal-setting": "a star's last evening before the sun swallows it",
       "night-star": "a fixed star notable in the night sky",
@@ -1092,6 +1102,26 @@
       },
       {
         "subject": 1,
+        "predicate": "moon-node-longitude-degrees",
+        "object": {
+          "Number": 1.5976041
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-node-period-days",
+        "object": {
+          "Number": 11330.555
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
         "predicate": "moon-mass-lunar",
         "object": {
           "Number": 2.2430426
@@ -1145,6 +1175,26 @@
         "predicate": "moon-inclination-degrees",
         "object": {
           "Number": 6.948374
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-node-longitude-degrees",
+        "object": {
+          "Number": 193.38776
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-node-period-days",
+        "object": {
+          "Number": 5589.1342
         },
         "place": null,
         "day": 0.0,
@@ -18094,7 +18144,7 @@
         "subject": 189,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Shngoabvaash"
+          "Text": "Qvoashbvaash"
         },
         "place": null,
         "day": 0.0,
@@ -18104,7 +18154,7 @@
         "subject": 189,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "ʃŋoabvaaʃ"
+          "Text": "qvoaʃbvaaʃ"
         },
         "place": null,
         "day": 0.0,
@@ -18132,189 +18182,189 @@
       },
       {
         "subject": 189,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "eclipse"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 189,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 190,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 190,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Bvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 190,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "bvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 190,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Tvaashbvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 190,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "tvaaʃbvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 190,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 190,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 10
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 190,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "eclipse"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 190,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 191,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 191,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Bvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 191,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "bvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 191,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Vngaashbvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 191,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "vŋaaʃbvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 191,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 191,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 10
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 191,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "wandering-star"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 189,
-        "predicate": "cult-form",
-        "object": {
-          "Text": "organized"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 190,
-        "predicate": "is-belief",
-        "object": {
-          "Flag": true
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 190,
-        "predicate": "deity-name",
-        "object": {
-          "Text": "Bvaash"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 190,
-        "predicate": "deity-name-ipa",
-        "object": {
-          "Text": "bvaaʃ"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 190,
-        "predicate": "deity-epithet",
-        "object": {
-          "Text": "Bvooshbvaash"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 190,
-        "predicate": "deity-epithet-ipa",
-        "object": {
-          "Text": "bvooʃbvaaʃ"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 190,
-        "predicate": "sentiment",
-        "object": {
-          "Text": "cyclic"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 190,
-        "predicate": "held-by",
-        "object": {
-          "Entity": 10
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 190,
-        "predicate": "derived-from-phenomenon",
-        "object": {
-          "Text": "celestial-body"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 190,
-        "predicate": "cult-form",
-        "object": {
-          "Text": "organized"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 191,
-        "predicate": "is-belief",
-        "object": {
-          "Flag": true
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 191,
-        "predicate": "deity-name",
-        "object": {
-          "Text": "Bvaash"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 191,
-        "predicate": "deity-name-ipa",
-        "object": {
-          "Text": "bvaaʃ"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 191,
-        "predicate": "deity-epithet",
-        "object": {
-          "Text": "Shngaoshbvaash"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 191,
-        "predicate": "deity-epithet-ipa",
-        "object": {
-          "Text": "ʃŋaoʃbvaaʃ"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 191,
-        "predicate": "sentiment",
-        "object": {
-          "Text": "ambient"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 191,
-        "predicate": "held-by",
-        "object": {
-          "Entity": 10
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 191,
-        "predicate": "derived-from-phenomenon",
-        "object": {
-          "Text": "tide"
         },
         "place": null,
         "day": 0.0,
@@ -18634,7 +18684,7 @@
         "subject": 195,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Shngaabvaash"
+          "Text": "Shngooshbvaash"
         },
         "place": null,
         "day": 0.0,
@@ -18644,7 +18694,7 @@
         "subject": 195,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "ʃŋaabvaaʃ"
+          "Text": "ʃŋooʃbvaaʃ"
         },
         "place": null,
         "day": 0.0,
@@ -18654,7 +18704,7 @@
         "subject": 195,
         "predicate": "sentiment",
         "object": {
-          "Text": "cyclic"
+          "Text": "ambient"
         },
         "place": null,
         "day": 0.0,
@@ -18674,7 +18724,7 @@
         "subject": 195,
         "predicate": "derived-from-phenomenon",
         "object": {
-          "Text": "eclipse"
+          "Text": "tide"
         },
         "place": null,
         "day": 0.0,
@@ -18682,6 +18732,186 @@
       },
       {
         "subject": 195,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 196,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 196,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Bvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 196,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "bvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 196,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Bvaobvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 196,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "bvaobvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 196,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 196,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 10
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 196,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 196,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 197,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 197,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Bvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 197,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "bvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 197,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Shngoobvaash"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 197,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "ʃŋoobvaaʃ"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 197,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 197,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 10
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 197,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "eclipse"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 197,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -18714,7 +18944,7 @@
         "subject": 191,
         "predicate": "name-gloss",
         "object": {
-          "Text": "gloom"
+          "Text": "shadow"
         },
         "place": null,
         "day": 0.0,
@@ -18744,7 +18974,7 @@
         "subject": 194,
         "predicate": "name-gloss",
         "object": {
-          "Text": "sun-shadow"
+          "Text": "moon-shadow"
         },
         "place": null,
         "day": 0.0,
@@ -18752,6 +18982,26 @@
       },
       {
         "subject": 195,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "gloom"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 196,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "shadow"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 197,
         "predicate": "name-gloss",
         "object": {
           "Text": "shadow"
@@ -18801,7 +19051,7 @@
         "provenance": "culture"
       },
       {
-        "subject": 196,
+        "subject": 198,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -18811,7 +19061,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 196,
+        "subject": 198,
         "predicate": "deity-name",
         "object": {
           "Text": "Neb"
@@ -18821,7 +19071,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 196,
+        "subject": 198,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "neb"
@@ -18831,7 +19081,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 196,
+        "subject": 198,
         "predicate": "deity-epithet",
         "object": {
           "Text": "Xngokneb"
@@ -18841,7 +19091,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 196,
+        "subject": 198,
         "predicate": "deity-epithet-ipa",
         "object": {
           "Text": "xŋokneb"
@@ -18851,7 +19101,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 196,
+        "subject": 198,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -18861,7 +19111,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 196,
+        "subject": 198,
         "predicate": "held-by",
         "object": {
           "Entity": 8
@@ -18871,7 +19121,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 196,
+        "subject": 198,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "celestial-body"
@@ -18881,7 +19131,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 196,
+        "subject": 198,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -18891,7 +19141,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 197,
+        "subject": 199,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -18901,7 +19151,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 197,
+        "subject": 199,
         "predicate": "deity-name",
         "object": {
           "Text": "Ngadxngak"
@@ -18911,7 +19161,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 197,
+        "subject": 199,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "ŋadxŋak"
@@ -18921,7 +19171,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 197,
+        "subject": 199,
         "predicate": "deity-epithet",
         "object": {
           "Text": "Svatvnakvnak"
@@ -18931,7 +19181,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 197,
+        "subject": 199,
         "predicate": "deity-epithet-ipa",
         "object": {
           "Text": "svatvnakvnak"
@@ -18941,7 +19191,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 197,
+        "subject": 199,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -18951,7 +19201,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 197,
+        "subject": 199,
         "predicate": "held-by",
         "object": {
           "Entity": 8
@@ -18961,7 +19211,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 197,
+        "subject": 199,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "eclipse"
@@ -18971,7 +19221,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 197,
+        "subject": 199,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -18981,7 +19231,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 198,
+        "subject": 200,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -18991,7 +19241,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 198,
+        "subject": 200,
         "predicate": "deity-name",
         "object": {
           "Text": "Zvakngek"
@@ -19001,7 +19251,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 198,
+        "subject": 200,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "zvakŋek"
@@ -19011,7 +19261,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 198,
+        "subject": 200,
         "predicate": "deity-epithet",
         "object": {
           "Text": "Nodsfobsvad"
@@ -19021,7 +19271,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 198,
+        "subject": 200,
         "predicate": "deity-epithet-ipa",
         "object": {
           "Text": "nodsfobsvad"
@@ -19031,7 +19281,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 198,
+        "subject": 200,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -19041,7 +19291,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 198,
+        "subject": 200,
         "predicate": "held-by",
         "object": {
           "Entity": 8
@@ -19051,7 +19301,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 198,
+        "subject": 200,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "eclipse"
@@ -19061,7 +19311,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 198,
+        "subject": 200,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -19071,7 +19321,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 199,
+        "subject": 201,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -19081,47 +19331,47 @@
         "provenance": "religion"
       },
       {
-        "subject": 199,
+        "subject": 201,
         "predicate": "deity-name",
         "object": {
-          "Text": "Zfatnadfnak"
+          "Text": "Vngabvngadsfeb"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 199,
+        "subject": 201,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "zfatnadfnak"
+          "Text": "vŋabvŋadsfeb"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 199,
+        "subject": 201,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Ngedngobngob"
+          "Text": "Zhxekvngotvngot"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 199,
+        "subject": 201,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "ŋedŋobŋob"
+          "Text": "ʒxekvŋotvŋot"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 199,
+        "subject": 201,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -19131,7 +19381,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 199,
+        "subject": 201,
         "predicate": "held-by",
         "object": {
           "Entity": 8
@@ -19141,7 +19391,187 @@
         "provenance": "religion"
       },
       {
-        "subject": 199,
+        "subject": 201,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "eclipse"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 201,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 202,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 202,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Nobzhxok"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 202,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "nobʒxok"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 202,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Vnetzfobzfobzhxeb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 202,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "vnetzfobzfobʒxeb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 202,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 202,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 8
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 202,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "eclipse"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 202,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 203,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 203,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Zhvakzhfeknab"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 203,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "ʒvakʒfeknab"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 203,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Fngebzhfakxngotxngot"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 203,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "fŋebʒfakxŋotxŋot"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 203,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 203,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 8
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 203,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "wandering-star"
@@ -19151,7 +19581,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 199,
+        "subject": 203,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -19161,7 +19591,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 200,
+        "subject": 204,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -19171,7 +19601,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 200,
+        "subject": 204,
         "predicate": "deity-name",
         "object": {
           "Text": "Neb"
@@ -19181,7 +19611,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 200,
+        "subject": 204,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "neb"
@@ -19191,187 +19621,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 200,
-        "predicate": "deity-epithet",
-        "object": {
-          "Text": "Ngetneb"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 200,
-        "predicate": "deity-epithet-ipa",
-        "object": {
-          "Text": "ŋetneb"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 200,
-        "predicate": "sentiment",
-        "object": {
-          "Text": "cyclic"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 200,
-        "predicate": "held-by",
-        "object": {
-          "Entity": 8
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 200,
-        "predicate": "derived-from-phenomenon",
-        "object": {
-          "Text": "celestial-body"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 200,
-        "predicate": "cult-form",
-        "object": {
-          "Text": "organized"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 201,
-        "predicate": "is-belief",
-        "object": {
-          "Flag": true
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 201,
-        "predicate": "deity-name",
-        "object": {
-          "Text": "Neb"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 201,
-        "predicate": "deity-name-ipa",
-        "object": {
-          "Text": "neb"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 201,
-        "predicate": "deity-epithet",
-        "object": {
-          "Text": "Svedneb"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 201,
-        "predicate": "deity-epithet-ipa",
-        "object": {
-          "Text": "svedneb"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 201,
-        "predicate": "sentiment",
-        "object": {
-          "Text": "ambient"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 201,
-        "predicate": "held-by",
-        "object": {
-          "Entity": 8
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 201,
-        "predicate": "derived-from-phenomenon",
-        "object": {
-          "Text": "tide"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 201,
-        "predicate": "cult-form",
-        "object": {
-          "Text": "organized"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 202,
-        "predicate": "is-belief",
-        "object": {
-          "Flag": true
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 202,
-        "predicate": "deity-name",
-        "object": {
-          "Text": "Neb"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 202,
-        "predicate": "deity-name-ipa",
-        "object": {
-          "Text": "neb"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 202,
+        "subject": 204,
         "predicate": "deity-epithet",
         "object": {
           "Text": "Zxekneb"
@@ -19381,7 +19631,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 202,
+        "subject": 204,
         "predicate": "deity-epithet-ipa",
         "object": {
           "Text": "zxekneb"
@@ -19391,7 +19641,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 202,
+        "subject": 204,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -19401,7 +19651,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 202,
+        "subject": 204,
         "predicate": "held-by",
         "object": {
           "Entity": 8
@@ -19411,7 +19661,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 202,
+        "subject": 204,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "celestial-body"
@@ -19421,7 +19671,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 202,
+        "subject": 204,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -19431,7 +19681,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 203,
+        "subject": 205,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -19441,7 +19691,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 203,
+        "subject": 205,
         "predicate": "deity-name",
         "object": {
           "Text": "Neb"
@@ -19451,7 +19701,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 203,
+        "subject": 205,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "neb"
@@ -19461,7 +19711,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 203,
+        "subject": 205,
         "predicate": "deity-epithet",
         "object": {
           "Text": "Zxadneb"
@@ -19471,7 +19721,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 203,
+        "subject": 205,
         "predicate": "deity-epithet-ipa",
         "object": {
           "Text": "zxadneb"
@@ -19481,7 +19731,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 203,
+        "subject": 205,
         "predicate": "sentiment",
         "object": {
           "Text": "ambient"
@@ -19491,7 +19741,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 203,
+        "subject": 205,
         "predicate": "held-by",
         "object": {
           "Entity": 8
@@ -19501,7 +19751,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 203,
+        "subject": 205,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "tide"
@@ -19511,7 +19761,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 203,
+        "subject": 205,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -19521,7 +19771,187 @@
         "provenance": "religion"
       },
       {
-        "subject": 196,
+        "subject": 206,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 206,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Neb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 206,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "neb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 206,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Nobneb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 206,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "nobneb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 206,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 206,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 8
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 206,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "celestial-body"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 206,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 207,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 207,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Neb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 207,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "neb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 207,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Nabneb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 207,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "nabneb"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 207,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "ambient"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 207,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 8
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 207,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "tide"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 207,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 198,
         "predicate": "name-gloss",
         "object": {
           "Text": "sun"
@@ -19531,7 +19961,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 200,
+        "subject": 204,
         "predicate": "name-gloss",
         "object": {
           "Text": "moon"
@@ -19541,7 +19971,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 201,
+        "subject": 205,
         "predicate": "name-gloss",
         "object": {
           "Text": "gloom"
@@ -19551,7 +19981,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 202,
+        "subject": 206,
         "predicate": "name-gloss",
         "object": {
           "Text": "moon"
@@ -19561,7 +19991,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 203,
+        "subject": 207,
         "predicate": "name-gloss",
         "object": {
           "Text": "gloom"
@@ -19611,7 +20041,7 @@
         "provenance": "culture"
       },
       {
-        "subject": 204,
+        "subject": 208,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -19621,7 +20051,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 204,
+        "subject": 208,
         "predicate": "deity-name",
         "object": {
           "Text": "Fee"
@@ -19631,7 +20061,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 204,
+        "subject": 208,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "fee"
@@ -19641,7 +20071,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 204,
+        "subject": 208,
         "predicate": "deity-epithet",
         "object": {
           "Text": "Xoofee"
@@ -19651,7 +20081,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 204,
+        "subject": 208,
         "predicate": "deity-epithet-ipa",
         "object": {
           "Text": "xoofee"
@@ -19661,7 +20091,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 204,
+        "subject": 208,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -19671,7 +20101,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 204,
+        "subject": 208,
         "predicate": "held-by",
         "object": {
           "Entity": 9
@@ -19681,7 +20111,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 204,
+        "subject": 208,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "celestial-body"
@@ -19691,7 +20121,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 204,
+        "subject": 208,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -19701,7 +20131,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 205,
+        "subject": 209,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -19711,7 +20141,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 205,
+        "subject": 209,
         "predicate": "deity-name",
         "object": {
           "Text": "Feonjaagbee"
@@ -19721,7 +20151,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 205,
+        "subject": 209,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "feonjaagbee"
@@ -19731,7 +20161,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 205,
+        "subject": 209,
         "predicate": "deity-epithet",
         "object": {
           "Text": "Qgoaveofoa"
@@ -19741,7 +20171,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 205,
+        "subject": 209,
         "predicate": "deity-epithet-ipa",
         "object": {
           "Text": "qgoaveofoa"
@@ -19751,7 +20181,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 205,
+        "subject": 209,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -19761,7 +20191,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 205,
+        "subject": 209,
         "predicate": "held-by",
         "object": {
           "Entity": 9
@@ -19771,7 +20201,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 205,
+        "subject": 209,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "eclipse"
@@ -19781,7 +20211,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 205,
+        "subject": 209,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -19791,7 +20221,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 206,
+        "subject": 210,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -19801,7 +20231,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 206,
+        "subject": 210,
         "predicate": "deity-name",
         "object": {
           "Text": "Kqeotgaetgeo"
@@ -19811,7 +20241,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 206,
+        "subject": 210,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "kqeotgaetgeo"
@@ -19821,7 +20251,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 206,
+        "subject": 210,
         "predicate": "deity-epithet",
         "object": {
           "Text": "Mjoeggoexeo"
@@ -19831,7 +20261,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 206,
+        "subject": 210,
         "predicate": "deity-epithet-ipa",
         "object": {
           "Text": "mjoeggoexeo"
@@ -19841,7 +20271,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 206,
+        "subject": 210,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -19851,7 +20281,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 206,
+        "subject": 210,
         "predicate": "held-by",
         "object": {
           "Entity": 9
@@ -19861,7 +20291,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 206,
+        "subject": 210,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "eclipse"
@@ -19871,7 +20301,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 206,
+        "subject": 210,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -19881,7 +20311,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 207,
+        "subject": 211,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -19891,47 +20321,47 @@
         "provenance": "religion"
       },
       {
-        "subject": 207,
+        "subject": 211,
         "predicate": "deity-name",
         "object": {
-          "Text": "Mjaexeenjoa"
+          "Text": "Ngjeektaomjao"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 207,
+        "subject": 211,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "mjaexeenjoa"
+          "Text": "ŋjeektaomjao"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 207,
+        "subject": 211,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Faengjoangjoa"
+          "Text": "Vaexea"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 207,
+        "subject": 211,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "faeŋjoaŋjoa"
+          "Text": "vaexea"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 207,
+        "subject": 211,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -19941,7 +20371,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 207,
+        "subject": 211,
         "predicate": "held-by",
         "object": {
           "Entity": 9
@@ -19951,7 +20381,187 @@
         "provenance": "religion"
       },
       {
-        "subject": 207,
+        "subject": 211,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "eclipse"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 211,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 212,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 212,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Voeveamjae"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 212,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "voeveamjae"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 212,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Vaabqaobqao"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 212,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "vaabqaobqao"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 212,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 212,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 212,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "eclipse"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 212,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 213,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 213,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Njeabtoe"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 213,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "njeabtoe"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 213,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Xeenjeo"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 213,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "xeenjeo"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 213,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 213,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 213,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "wandering-star"
@@ -19961,7 +20571,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 207,
+        "subject": 213,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -19971,7 +20581,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 208,
+        "subject": 214,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -19981,7 +20591,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 208,
+        "subject": 214,
         "predicate": "deity-name",
         "object": {
           "Text": "Fee"
@@ -19991,7 +20601,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 208,
+        "subject": 214,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "fee"
@@ -20001,27 +20611,27 @@
         "provenance": "religion"
       },
       {
-        "subject": 208,
+        "subject": 214,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Xaafee"
+          "Text": "Bkeefee"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 208,
+        "subject": 214,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "xaafee"
+          "Text": "bkeefee"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 208,
+        "subject": 214,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -20031,7 +20641,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 208,
+        "subject": 214,
         "predicate": "held-by",
         "object": {
           "Entity": 9
@@ -20041,7 +20651,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 208,
+        "subject": 214,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "celestial-body"
@@ -20051,7 +20661,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 208,
+        "subject": 214,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -20061,7 +20671,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 209,
+        "subject": 215,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -20071,7 +20681,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 209,
+        "subject": 215,
         "predicate": "deity-name",
         "object": {
           "Text": "Fee"
@@ -20081,7 +20691,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 209,
+        "subject": 215,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "fee"
@@ -20091,27 +20701,27 @@
         "provenance": "religion"
       },
       {
-        "subject": 209,
+        "subject": 215,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Kkoefee"
+          "Text": "Njoofee"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 209,
+        "subject": 215,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "kkoefee"
+          "Text": "njoofee"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 209,
+        "subject": 215,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -20121,7 +20731,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 209,
+        "subject": 215,
         "predicate": "held-by",
         "object": {
           "Entity": 9
@@ -20131,7 +20741,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 209,
+        "subject": 215,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "celestial-body"
@@ -20141,7 +20751,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 209,
+        "subject": 215,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -20151,7 +20761,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 210,
+        "subject": 216,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -20161,7 +20771,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 210,
+        "subject": 216,
         "predicate": "deity-name",
         "object": {
           "Text": "Fee"
@@ -20171,7 +20781,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 210,
+        "subject": 216,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "fee"
@@ -20181,7 +20791,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 210,
+        "subject": 216,
         "predicate": "deity-epithet",
         "object": {
           "Text": "Foafee"
@@ -20191,7 +20801,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 210,
+        "subject": 216,
         "predicate": "deity-epithet-ipa",
         "object": {
           "Text": "foafee"
@@ -20201,7 +20811,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 210,
+        "subject": 216,
         "predicate": "sentiment",
         "object": {
           "Text": "ambient"
@@ -20211,7 +20821,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 210,
+        "subject": 216,
         "predicate": "held-by",
         "object": {
           "Entity": 9
@@ -20221,7 +20831,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 210,
+        "subject": 216,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "tide"
@@ -20231,7 +20841,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 210,
+        "subject": 216,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -20241,7 +20851,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 211,
+        "subject": 217,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -20251,7 +20861,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 211,
+        "subject": 217,
         "predicate": "deity-name",
         "object": {
           "Text": "Fee"
@@ -20261,7 +20871,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 211,
+        "subject": 217,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "fee"
@@ -20271,27 +20881,27 @@
         "provenance": "religion"
       },
       {
-        "subject": 211,
+        "subject": 217,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Njoafee"
+          "Text": "Xoafee"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 211,
+        "subject": 217,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "njoafee"
+          "Text": "xoafee"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 211,
+        "subject": 217,
         "predicate": "sentiment",
         "object": {
           "Text": "ambient"
@@ -20301,7 +20911,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 211,
+        "subject": 217,
         "predicate": "held-by",
         "object": {
           "Entity": 9
@@ -20311,7 +20921,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 211,
+        "subject": 217,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "tide"
@@ -20321,7 +20931,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 211,
+        "subject": 217,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -20331,7 +20941,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 204,
+        "subject": 208,
         "predicate": "name-gloss",
         "object": {
           "Text": "sun"
@@ -20341,7 +20951,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 208,
+        "subject": 214,
         "predicate": "name-gloss",
         "object": {
           "Text": "moon"
@@ -20351,7 +20961,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 209,
+        "subject": 215,
         "predicate": "name-gloss",
         "object": {
           "Text": "moon"
@@ -20361,7 +20971,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 210,
+        "subject": 216,
         "predicate": "name-gloss",
         "object": {
           "Text": "gloom"
@@ -20371,7 +20981,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 211,
+        "subject": 217,
         "predicate": "name-gloss",
         "object": {
           "Text": "gloom"
@@ -20421,7 +21031,7 @@
         "provenance": "culture"
       },
       {
-        "subject": 212,
+        "subject": 218,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -20431,7 +21041,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 212,
+        "subject": 218,
         "predicate": "deity-name",
         "object": {
           "Text": "Roqrraxogrra"
@@ -20441,7 +21051,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 212,
+        "subject": 218,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "roqrraxogrra"
@@ -20451,7 +21061,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 212,
+        "subject": 218,
         "predicate": "deity-epithet",
         "object": {
           "Text": "Xogrra"
@@ -20461,7 +21071,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 212,
+        "subject": 218,
         "predicate": "deity-epithet-ipa",
         "object": {
           "Text": "xogrra"
@@ -20471,7 +21081,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 212,
+        "subject": 218,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -20481,7 +21091,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 212,
+        "subject": 218,
         "predicate": "held-by",
         "object": {
           "Entity": 7
@@ -20491,7 +21101,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 212,
+        "subject": 218,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "celestial-body"
@@ -20501,7 +21111,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 212,
+        "subject": 218,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -20511,7 +21121,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 213,
+        "subject": 219,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -20521,7 +21131,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 213,
+        "subject": 219,
         "predicate": "deity-name",
         "object": {
           "Text": "Xogrra"
@@ -20531,7 +21141,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 213,
+        "subject": 219,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "xogrra"
@@ -20541,7 +21151,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 213,
+        "subject": 219,
         "predicate": "deity-epithet",
         "object": {
           "Text": "Xogrra"
@@ -20551,7 +21161,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 213,
+        "subject": 219,
         "predicate": "deity-epithet-ipa",
         "object": {
           "Text": "xogrra"
@@ -20561,7 +21171,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 213,
+        "subject": 219,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -20571,7 +21181,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 213,
+        "subject": 219,
         "predicate": "held-by",
         "object": {
           "Entity": 7
@@ -20581,7 +21191,187 @@
         "provenance": "religion"
       },
       {
-        "subject": 213,
+        "subject": 219,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "eclipse"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 219,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 220,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 220,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 220,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 220,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 220,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 220,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 220,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 7
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 220,
+        "predicate": "derived-from-phenomenon",
+        "object": {
+          "Text": "eclipse"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 220,
+        "predicate": "cult-form",
+        "object": {
+          "Text": "organized"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 221,
+        "predicate": "is-belief",
+        "object": {
+          "Flag": true
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 221,
+        "predicate": "deity-name",
+        "object": {
+          "Text": "Xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 221,
+        "predicate": "deity-name-ipa",
+        "object": {
+          "Text": "xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 221,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 221,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "xogrra"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 221,
+        "predicate": "sentiment",
+        "object": {
+          "Text": "cyclic"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 221,
+        "predicate": "held-by",
+        "object": {
+          "Entity": 7
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 221,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "wandering-star"
@@ -20591,7 +21381,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 213,
+        "subject": 221,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -20601,7 +21391,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 214,
+        "subject": 222,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -20611,47 +21401,47 @@
         "provenance": "religion"
       },
       {
-        "subject": 214,
+        "subject": 222,
         "predicate": "deity-name",
         "object": {
-          "Text": "Xogrra"
+          "Text": "Xogrraroqrra"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 214,
+        "subject": 222,
         "predicate": "deity-name-ipa",
         "object": {
-          "Text": "xogrra"
+          "Text": "xogrraroqrra"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 214,
+        "subject": 222,
         "predicate": "deity-epithet",
         "object": {
-          "Text": "Roqrraxogrra"
+          "Text": "Roqrra"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 214,
+        "subject": 222,
         "predicate": "deity-epithet-ipa",
         "object": {
-          "Text": "roqrraxogrra"
+          "Text": "roqrra"
         },
         "place": null,
         "day": 0.0,
         "provenance": "religion"
       },
       {
-        "subject": 214,
+        "subject": 222,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -20661,7 +21451,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 214,
+        "subject": 222,
         "predicate": "held-by",
         "object": {
           "Entity": 7
@@ -20671,7 +21461,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 214,
+        "subject": 222,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "celestial-body"
@@ -20681,7 +21471,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 214,
+        "subject": 222,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -20691,7 +21481,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 215,
+        "subject": 223,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -20701,28 +21491,8 @@
         "provenance": "religion"
       },
       {
-        "subject": 215,
+        "subject": 223,
         "predicate": "deity-name",
-        "object": {
-          "Text": "Xogrra"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 215,
-        "predicate": "deity-name-ipa",
-        "object": {
-          "Text": "xogrra"
-        },
-        "place": null,
-        "day": 0.0,
-        "provenance": "religion"
-      },
-      {
-        "subject": 215,
-        "predicate": "deity-epithet",
         "object": {
           "Text": "Xogrrarogxa"
         },
@@ -20731,8 +21501,8 @@
         "provenance": "religion"
       },
       {
-        "subject": 215,
-        "predicate": "deity-epithet-ipa",
+        "subject": 223,
+        "predicate": "deity-name-ipa",
         "object": {
           "Text": "xogrrarogxa"
         },
@@ -20741,7 +21511,27 @@
         "provenance": "religion"
       },
       {
-        "subject": 215,
+        "subject": 223,
+        "predicate": "deity-epithet",
+        "object": {
+          "Text": "Rogxa"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 223,
+        "predicate": "deity-epithet-ipa",
+        "object": {
+          "Text": "rogxa"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "religion"
+      },
+      {
+        "subject": 223,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -20751,7 +21541,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 215,
+        "subject": 223,
         "predicate": "held-by",
         "object": {
           "Entity": 7
@@ -20761,7 +21551,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 215,
+        "subject": 223,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "celestial-body"
@@ -20771,7 +21561,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 215,
+        "subject": 223,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -20781,7 +21571,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 216,
+        "subject": 224,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -20791,7 +21581,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 216,
+        "subject": 224,
         "predicate": "deity-name",
         "object": {
           "Text": "Xogrra"
@@ -20801,7 +21591,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 216,
+        "subject": 224,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "xogrra"
@@ -20811,7 +21601,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 216,
+        "subject": 224,
         "predicate": "deity-epithet",
         "object": {
           "Text": "Xogrra"
@@ -20821,7 +21611,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 216,
+        "subject": 224,
         "predicate": "deity-epithet-ipa",
         "object": {
           "Text": "xogrra"
@@ -20831,7 +21621,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 216,
+        "subject": 224,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -20841,7 +21631,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 216,
+        "subject": 224,
         "predicate": "held-by",
         "object": {
           "Entity": 7
@@ -20851,7 +21641,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 216,
+        "subject": 224,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "eclipse"
@@ -20861,7 +21651,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 216,
+        "subject": 224,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -20871,7 +21661,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 217,
+        "subject": 225,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -20881,7 +21671,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 217,
+        "subject": 225,
         "predicate": "deity-name",
         "object": {
           "Text": "Xogrra"
@@ -20891,7 +21681,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 217,
+        "subject": 225,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "xogrra"
@@ -20901,7 +21691,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 217,
+        "subject": 225,
         "predicate": "deity-epithet",
         "object": {
           "Text": "Xogrra"
@@ -20911,7 +21701,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 217,
+        "subject": 225,
         "predicate": "deity-epithet-ipa",
         "object": {
           "Text": "xogrra"
@@ -20921,7 +21711,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 217,
+        "subject": 225,
         "predicate": "sentiment",
         "object": {
           "Text": "cyclic"
@@ -20931,7 +21721,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 217,
+        "subject": 225,
         "predicate": "held-by",
         "object": {
           "Entity": 7
@@ -20941,7 +21731,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 217,
+        "subject": 225,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "eclipse"
@@ -20951,7 +21741,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 217,
+        "subject": 225,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -20961,7 +21751,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 218,
+        "subject": 226,
         "predicate": "is-belief",
         "object": {
           "Flag": true
@@ -20971,7 +21761,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 218,
+        "subject": 226,
         "predicate": "deity-name",
         "object": {
           "Text": "Rara"
@@ -20981,7 +21771,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 218,
+        "subject": 226,
         "predicate": "deity-name-ipa",
         "object": {
           "Text": "rara"
@@ -20991,7 +21781,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 218,
+        "subject": 226,
         "predicate": "deity-epithet",
         "object": {
           "Text": "Rara"
@@ -21001,7 +21791,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 218,
+        "subject": 226,
         "predicate": "deity-epithet-ipa",
         "object": {
           "Text": "rara"
@@ -21011,7 +21801,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 218,
+        "subject": 226,
         "predicate": "sentiment",
         "object": {
           "Text": "ambient"
@@ -21021,7 +21811,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 218,
+        "subject": 226,
         "predicate": "held-by",
         "object": {
           "Entity": 7
@@ -21031,7 +21821,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 218,
+        "subject": 226,
         "predicate": "derived-from-phenomenon",
         "object": {
           "Text": "tide"
@@ -21041,7 +21831,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 218,
+        "subject": 226,
         "predicate": "cult-form",
         "object": {
           "Text": "organized"
@@ -21051,7 +21841,7 @@
         "provenance": "religion"
       },
       {
-        "subject": 212,
+        "subject": 218,
         "predicate": "name-gloss",
         "object": {
           "Text": "shadow-moon"
@@ -21061,7 +21851,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 213,
+        "subject": 219,
         "predicate": "name-gloss",
         "object": {
           "Text": "shadow"
@@ -21071,7 +21861,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 214,
+        "subject": 220,
         "predicate": "name-gloss",
         "object": {
           "Text": "shadow"
@@ -21081,7 +21871,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 215,
+        "subject": 221,
         "predicate": "name-gloss",
         "object": {
           "Text": "shadow"
@@ -21091,7 +21881,27 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 216,
+        "subject": 222,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "moon-shadow"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 223,
+        "predicate": "name-gloss",
+        "object": {
+          "Text": "sun-shadow"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "worldgen"
+      },
+      {
+        "subject": 224,
         "predicate": "name-gloss",
         "object": {
           "Text": "shadow"
@@ -21101,7 +21911,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 217,
+        "subject": 225,
         "predicate": "name-gloss",
         "object": {
           "Text": "shadow"
@@ -21111,7 +21921,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 218,
+        "subject": 226,
         "predicate": "name-gloss",
         "object": {
           "Text": "gloom"
@@ -21121,7 +21931,7 @@
         "provenance": "worldgen"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-name",
         "object": {
           "Text": "bugbear"
@@ -21131,7 +21941,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-threat-response",
         "object": {
           "Number": 0.8
@@ -21141,7 +21951,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-deliberation-latency",
         "object": {
           "Number": 0.4
@@ -21151,7 +21961,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-in-group-radius",
         "object": {
           "Number": 0.3
@@ -21161,7 +21971,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-time-horizon",
         "object": {
           "Number": 0.3
@@ -21171,7 +21981,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-sociality-mode",
         "object": {
           "Text": "communal"
@@ -21181,7 +21991,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-status-basis",
         "object": {
           "Text": "rank"
@@ -21191,7 +22001,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-activity-cycle",
         "object": {
           "Text": "nocturnal"
@@ -21201,7 +22011,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-night-vision",
         "object": {
           "Number": 0.7
@@ -21211,7 +22021,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-sky-attention",
         "object": {
           "Number": 0.3
@@ -21221,7 +22031,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-labiality",
         "object": {
           "Number": 0.5
@@ -21231,7 +22041,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-vowel-space",
         "object": {
           "Number": 0.4
@@ -21241,7 +22051,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-voicing",
         "object": {
           "Number": 0.7
@@ -21251,7 +22061,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-sibilance",
         "object": {
           "Number": 0.2
@@ -21261,7 +22071,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-voice-loudness",
         "object": {
           "Number": 0.3
@@ -21271,7 +22081,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-tonality",
         "object": {
           "Number": 0.0
@@ -21281,7 +22091,7 @@
         "provenance": "species"
       },
       {
-        "subject": 219,
+        "subject": 227,
         "predicate": "species-exotic-manner",
         "object": {
           "Text": "none"
@@ -21291,7 +22101,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-name",
         "object": {
           "Text": "goblin"
@@ -21301,7 +22111,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-threat-response",
         "object": {
           "Number": 0.5
@@ -21311,7 +22121,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-deliberation-latency",
         "object": {
           "Number": 0.5
@@ -21321,7 +22131,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-in-group-radius",
         "object": {
           "Number": 0.5
@@ -21331,7 +22141,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-time-horizon",
         "object": {
           "Number": 0.5
@@ -21341,7 +22151,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-sociality-mode",
         "object": {
           "Text": "hierarchic"
@@ -21351,7 +22161,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-status-basis",
         "object": {
           "Text": "rank"
@@ -21361,7 +22171,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-activity-cycle",
         "object": {
           "Text": "diurnal"
@@ -21371,7 +22181,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-night-vision",
         "object": {
           "Number": 0.5
@@ -21381,7 +22191,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-sky-attention",
         "object": {
           "Number": 0.5
@@ -21391,7 +22201,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-labiality",
         "object": {
           "Number": 0.5
@@ -21401,7 +22211,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-vowel-space",
         "object": {
           "Number": 0.5
@@ -21411,7 +22221,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-voicing",
         "object": {
           "Number": 0.5
@@ -21421,7 +22231,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-sibilance",
         "object": {
           "Number": 0.5
@@ -21431,7 +22241,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-voice-loudness",
         "object": {
           "Number": 0.5
@@ -21441,7 +22251,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-tonality",
         "object": {
           "Number": 0.0
@@ -21451,7 +22261,7 @@
         "provenance": "species"
       },
       {
-        "subject": 220,
+        "subject": 228,
         "predicate": "species-exotic-manner",
         "object": {
           "Text": "none"
@@ -21461,7 +22271,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-name",
         "object": {
           "Text": "hobgoblin"
@@ -21471,7 +22281,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-threat-response",
         "object": {
           "Number": 0.7
@@ -21481,7 +22291,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-deliberation-latency",
         "object": {
           "Number": 0.6
@@ -21491,7 +22301,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-in-group-radius",
         "object": {
           "Number": 0.3
@@ -21501,7 +22311,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-time-horizon",
         "object": {
           "Number": 0.5
@@ -21511,7 +22321,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-sociality-mode",
         "object": {
           "Text": "hierarchic"
@@ -21521,7 +22331,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-status-basis",
         "object": {
           "Text": "rank"
@@ -21531,7 +22341,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-activity-cycle",
         "object": {
           "Text": "diurnal"
@@ -21541,7 +22351,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-night-vision",
         "object": {
           "Number": 0.6
@@ -21551,7 +22361,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-sky-attention",
         "object": {
           "Number": 0.5
@@ -21561,7 +22371,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-labiality",
         "object": {
           "Number": 0.5
@@ -21571,7 +22381,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-vowel-space",
         "object": {
           "Number": 0.5
@@ -21581,7 +22391,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-voicing",
         "object": {
           "Number": 0.6
@@ -21591,7 +22401,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-sibilance",
         "object": {
           "Number": 0.4
@@ -21601,7 +22411,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-voice-loudness",
         "object": {
           "Number": 0.8
@@ -21611,7 +22421,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-tonality",
         "object": {
           "Number": 0.0
@@ -21621,7 +22431,7 @@
         "provenance": "species"
       },
       {
-        "subject": 221,
+        "subject": 229,
         "predicate": "species-exotic-manner",
         "object": {
           "Text": "none"
@@ -21631,7 +22441,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-name",
         "object": {
           "Text": "kobold"
@@ -21641,7 +22451,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-threat-response",
         "object": {
           "Number": 0.8
@@ -21651,7 +22461,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-deliberation-latency",
         "object": {
           "Number": 0.7
@@ -21661,7 +22471,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-in-group-radius",
         "object": {
           "Number": 0.2
@@ -21671,7 +22481,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-time-horizon",
         "object": {
           "Number": 0.8
@@ -21681,7 +22491,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-sociality-mode",
         "object": {
           "Text": "communal"
@@ -21691,7 +22501,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-status-basis",
         "object": {
           "Text": "knowledge"
@@ -21701,7 +22511,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-activity-cycle",
         "object": {
           "Text": "nocturnal"
@@ -21711,7 +22521,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-night-vision",
         "object": {
           "Number": 0.9
@@ -21721,7 +22531,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-sky-attention",
         "object": {
           "Number": 0.8
@@ -21731,7 +22541,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-labiality",
         "object": {
           "Number": 0.1
@@ -21741,7 +22551,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-vowel-space",
         "object": {
           "Number": 0.3
@@ -21751,7 +22561,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-voicing",
         "object": {
           "Number": 0.6
@@ -21761,7 +22571,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-sibilance",
         "object": {
           "Number": 0.9
@@ -21771,7 +22581,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-voice-loudness",
         "object": {
           "Number": 0.2
@@ -21781,7 +22591,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-tonality",
         "object": {
           "Number": 0.0
@@ -21791,7 +22601,7 @@
         "provenance": "species"
       },
       {
-        "subject": 222,
+        "subject": 230,
         "predicate": "species-exotic-manner",
         "object": {
           "Text": "trill"
@@ -23671,6 +24481,6 @@
         "provenance": "paleoclimate"
       }
     ],
-    "next_entity": 222
+    "next_entity": 230
   }
 }
