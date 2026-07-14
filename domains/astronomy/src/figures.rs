@@ -118,10 +118,23 @@ fn build_figure(stars: &[BrightStar], members: &[usize], obliquity_mean_deg: f64
         z += math::sin(dec);
     }
     let len = (x * x + y * y + z * z).sqrt();
-    let (cx, cy, cz) = (x / len, y / len, z / len);
-    let centroid = EquatorialCoord {
-        ra_deg: math::atan2(cy, cx).to_degrees().rem_euclid(360.0),
-        dec_deg: math::asin(cz.clamp(-1.0, 1.0)).to_degrees(),
+    // Degenerate sum (members nearly surround the sphere): fall back to the
+    // brightest member's seat (the first member in the sorted unified list —
+    // deterministic). Percolation at the frozen constants makes this
+    // practically unreachable (mean degree ~1.8 vs ~4.5 threshold), but NaN
+    // must never propagate.
+    let centroid = if len < 1e-9 {
+        let first = &stars[members[0]];
+        EquatorialCoord {
+            ra_deg: first.ra_deg,
+            dec_deg: first.dec_deg,
+        }
+    } else {
+        let (cx, cy, cz) = (x / len, y / len, z / len);
+        EquatorialCoord {
+            ra_deg: math::atan2(cy, cx).to_degrees().rem_euclid(360.0),
+            dec_deg: math::asin(cz.clamp(-1.0, 1.0)).to_degrees(),
+        }
     };
 
     let mut span_deg: f64 = 0.0;
@@ -314,6 +327,38 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// The degenerate-centroid guard: members whose unit vectors sum to
+    /// (near-)zero — three stars 120° apart around the equator — must fall
+    /// back to the first member's position, never divide by ~0 and let NaN
+    /// propagate into the centroid, region, or ecliptic answers.
+    #[test]
+    fn a_degenerate_member_sum_falls_back_to_the_first_members_seat() {
+        let stars: Vec<BrightStar> = [0.0, 120.0, 240.0]
+            .iter()
+            .map(|&ra_deg| BrightStar {
+                magnitude_class: 1,
+                ra_deg,
+                dec_deg: 0.0,
+            })
+            .collect();
+        let figure = build_figure(&stars, &[0, 1, 2], 23.5);
+        assert!(
+            figure.centroid.ra_deg.is_finite() && figure.centroid.dec_deg.is_finite(),
+            "degenerate centroid must never be NaN: {:?}",
+            figure.centroid
+        );
+        assert_eq!(figure.centroid.ra_deg, 0.0);
+        assert_eq!(figure.centroid.dec_deg, 0.0);
+        assert!(figure.span_deg.is_finite());
+        // The fallback centroid feeds the ecliptic test like any other:
+        // recompute independently and agree.
+        let ecliptic = ecliptic_of(&figure.centroid, 23.5);
+        assert_eq!(
+            figure.on_ecliptic,
+            ecliptic.lat_deg.abs() <= figure.span_deg / 2.0 + 8.0
+        );
     }
 
     /// The ecliptic-flag property, recomputed independently of `figures`'
