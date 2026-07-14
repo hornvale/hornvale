@@ -806,6 +806,36 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "brightening-per-gyr",
+            doc: "The star's fractional main-sequence brightening per gigayear",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.05, 0.10, 0.15, 0.20, 0.25],
+            },
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Number(hornvale_astronomy::brightening_per_gyr(&v.system.star))
+            }),
+        },
+        Metric {
+            name: "alignment-drift-deg-per-kyr",
+            doc: "Absolute solstice-sunrise azimuth drift over the first kiloyear at the \
+                   flagship settlement's latitude; Absent when locked, unplaced, or polar",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0],
+            },
+            extract: Extractor::Settlement(|v| {
+                let a: &AstronomyView = v.as_ref();
+                let Some(lat) = flagship_latitude(v) else {
+                    return MetricValue::Absent;
+                };
+                let t0 = hornvale_astronomy::StdDays::new(0.0).unwrap();
+                let t1 = hornvale_astronomy::StdDays::new(1000.0 * 365.25).unwrap();
+                match a.calendar.alignment_drift_deg(lat, t0, t1) {
+                    Some(d) => MetricValue::Number(d.abs()),
+                    None => MetricValue::Absent,
+                }
+            }),
+        },
+        Metric {
             name: "plate-count",
             doc: "Number of tectonic plates the globe drew or was pinned to",
             summary: SummaryKind::Categorical,
@@ -2317,6 +2347,28 @@ fn flagship_coastal(v: &SettlementView, species: &str) -> MetricValue {
     MetricValue::Flag(coastal)
 }
 
+/// The flagship settlement's committed latitude (the ledger's first
+/// `IS_SETTLEMENT` subject) — the alignment-drift metric's observing site.
+/// `None` if there is no settlement, or the settlement carries no latitude
+/// fact (the pre-vantage behavior, matching `place_coord` in
+/// `windows/worldgen/src/lib.rs`).
+fn flagship_latitude(v: &SettlementView) -> Option<f64> {
+    let subject = v
+        .world()
+        .ledger
+        .find(hornvale_settlement::IS_SETTLEMENT)
+        .next()?
+        .subject;
+    match v
+        .world()
+        .ledger
+        .value_of(subject, hornvale_settlement::LATITUDE)?
+    {
+        Value::Number(n) => Some(*n),
+        _ => None,
+    }
+}
+
 /// Count settlements peopled by `species`.
 fn species_settlement_count(v: &SettlementView, species: &str) -> f64 {
     v.world()
@@ -3550,8 +3602,27 @@ mod tests {
         // +2 more for the Task 8 review fix (total-population,
         // pop-weighted-abs-latitude — the two metrics the brief named that
         // were never built), +3 for night-sky stage 3 (Task 10: figure-count,
-        // largest-figure-members, ecliptic-figure-count).
-        assert_eq!(registry().len(), 117);
+        // largest-figure-members, ecliptic-figure-count), +2 for The Long
+        // Count (Task 6: brightening-per-gyr, alignment-drift-deg-per-kyr).
+        assert_eq!(registry().len(), 119);
+    }
+
+    #[test]
+    fn the_long_count_metrics_extract_on_seed_42() {
+        let names = ["brightening-per-gyr", "alignment-drift-deg-per-kyr"];
+        let reg = registry();
+        for name in names {
+            assert!(reg.iter().any(|m| m.name == name), "{name} registered");
+        }
+        let view = SettlementView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Settlement(view);
+        for name in names {
+            let value = extract_from(&built, name);
+            match value {
+                MetricValue::Number(_) | MetricValue::Absent => {}
+                _ => panic!("Expected Number or Absent for {name}, got {value:?}"),
+            }
+        }
     }
 
     #[test]

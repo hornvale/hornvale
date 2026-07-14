@@ -157,6 +157,11 @@ resonance; no N-body effects; seasonal daylight variation by a smooth
 sinusoid in obliquity and year phase; neighbors observational-only; no
 eclipses this campaign (angular diameters exist, so tier 3 can derive them).
 
+- **Secular brightening** (The Long Count): b = 0.10·M^2.5 per Gyr,
+  Sol-calibrated; the habitable zone stays a genesis-epoch derivation.
+- **Solstice-rise azimuth** (The Long Count): cos az = sin ε(t)/cos φ;
+  refraction and horizon dip ignored.
+
 **Drawn from seed (or pinned):** star mass; anchor orbital distance (within
 zone); rotation period/regime; obliquity; moon count, masses, distances;
 neighborhood size, classes, distances.

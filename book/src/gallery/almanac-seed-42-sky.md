@@ -39,6 +39,8 @@ A rock wanderer rounds the sun every 7527 days.
 
 The sky holds 2 figures; 1 stands on the sun's road.
 
+From the first settlement, the midsummer sun rises at azimuth 89.0°; the sightline drifts 0.02° in a thousand years.
+
 ## The Calendar
 
 - The year is 418.3 local days (368.1 standard days).
@@ -242,6 +244,7 @@ Mild and temperate. The air is warm, still, and unchanging. (18°C)
 ## Deep Time
 
 The frost retreated: at the glacial maximum (day -243500000), ice advanced over 39% of the land.
+The sun brightens by 8 parts in a hundred over a gigayear — the slow fire under every deeper clock.
 
 ## The People
 
