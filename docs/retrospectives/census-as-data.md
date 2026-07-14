@@ -83,3 +83,12 @@ One decision-numbering collision at merge resolved via the standing
 renumber-at-merge policy. One latent infrastructure bug surfaced during the
 close's own gate-remote run and was fixed in its own commit, outside the
 campaign's task sequence proper.
+
+Postscript: the close also found the runner path's deeper provisioning
+failure — a fresh gate box's userdata now dies before installing the
+toolchain (the new readiness poll reports it cleanly instead of a cryptic
+rc=127). The remote heavy-tier run was waived for this merge on Nathan's
+call; the evidence stack stood on three per-commit local gates, the merged
+939-test gate, the macOS-vs-Linux census probe, the equivalence proof, and
+census-check. Debugging the userdata belongs to the remote-gate toolkit,
+not a census campaign.
