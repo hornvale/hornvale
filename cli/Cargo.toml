@@ -17,6 +17,7 @@ hornvale-settlement = { path = "../domains/settlement" }
 hornvale-species = { path = "../domains/species" }
 hornvale-terrain = { path = "../domains/terrain" }
 hornvale-almanac = { path = "../windows/almanac" }
+hornvale-explain = { path = "../windows/explain" }
 hornvale-worldgen = { path = "../windows/worldgen" }
 hornvale-lab = { path = "../windows/lab" }
 hornvale-historiography = { path = "../windows/historiography" }

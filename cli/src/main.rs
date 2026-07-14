@@ -33,6 +33,7 @@ usage:
   hornvale scout [sky flags] [--from-seed N] [--limit K] [--max-scan M]
                                             scan seeds for ones satisfying the pins
   hornvale almanac [--world <PATH>]        render the almanac (default: world.json)
+  hornvale explain --world <PATH> sky      narrate the sky's derivation from the ledger
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale map [--world <PATH>] [--out <PNG>] render the elevation map (markdown to stdout)
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
@@ -87,6 +88,7 @@ fn main() -> ExitCode {
         Some("new") => cmd_new(&args),
         Some("scout") => cmd_scout(&args),
         Some("almanac") => cmd_almanac(&args),
+        Some("explain") => cmd_explain(&args),
         Some("repl") => cmd_repl(&args),
         Some("map") => cmd_map(&args),
         Some("biome-map") => cmd_biome_map(&args),
@@ -270,6 +272,38 @@ fn cmd_almanac(args: &[String]) -> Result<(), String> {
     let world = load_world(args)?;
     let ctx = world_builder::almanac_context(&world).map_err(|e| e.to_string())?;
     print!("{}", hornvale_almanac::render(&ctx));
+    Ok(())
+}
+
+/// The first positional (non-flag) argument after the subcommand, skipping
+/// `--world <value>` and any other `--flag`. `None` if only flags are present.
+fn positional_target(args: &[String]) -> Option<&str> {
+    let mut it = args.iter().skip(1); // skip the "explain" subcommand token
+    while let Some(a) = it.next() {
+        if a == "--world" {
+            it.next(); // consume the flag's value
+            continue;
+        }
+        if a.starts_with("--") {
+            continue;
+        }
+        return Some(a.as_str());
+    }
+    None
+}
+
+fn cmd_explain(args: &[String]) -> Result<(), String> {
+    // Only "sky" is supported this campaign; default to it when omitted.
+    let target = positional_target(args).unwrap_or("sky");
+    if target != "sky" {
+        return Err(format!(
+            "explain: unknown target '{target}' (only 'sky' is supported)"
+        ));
+    }
+    let world = load_world(args)?;
+    let out = hornvale_explain::explain_sky(&world)
+        .ok_or("this world has no generated sky to explain")?;
+    print!("{out}");
     Ok(())
 }
 
