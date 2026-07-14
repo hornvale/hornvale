@@ -319,6 +319,108 @@ fn soil_depth_at(geo: &Geosphere, globe: &TectonicGlobe, cell: CellId) -> SoilDe
     SoilDepth::new((accum - strip).max(0.0))
 }
 
+/// Soil orders (spec §4), climate-dominated and parent-modulated.
+///
+/// `Ord`/`PartialOrd` (declaration order below) exist only so callers can
+/// collect distinct orders into a `BTreeSet` (the project bans `HashSet`) —
+/// there is no meaningful ranking between soil orders.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum SoilOrder {
+    /// Hot + wet, leached.
+    Laterite,
+    /// Cold conifer, acidic.
+    Podzol,
+    /// Grassland, fertile.
+    Chernozem,
+    /// Desert; salt-flat over evaporite.
+    Aridisol,
+    /// Temperate forest, good farmland.
+    Loam,
+    /// Fresh volcanic, very fertile.
+    Andosol,
+    /// Thin rocky, steep/young peaks.
+    Leptosol,
+    /// Waterlogged organic.
+    Histosol,
+    /// Poorly-drained mineral.
+    Gley,
+}
+
+/// A soil's suitability vector (spec §3, round 1). Each `[0,1]`.
+/// type-audit: bare-ok(ratio: grain_suit), bare-ok(ratio: moisture_suit), bare-ok(ratio: depth_suit)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Fertility {
+    /// Workability from texture.
+    pub grain_suit: f64,
+    /// Moisture-holding suitability.
+    pub moisture_suit: f64,
+    /// Rooting depth suitability.
+    pub depth_suit: f64,
+}
+
+/// Classify soil order (spec §4). `slope_m` is the local elevation drop (m).
+/// type-audit: pending(wave-2: mean_temp_c), bare-ok(ratio: moisture), bare-ok(ratio: slope_m)
+pub fn classify_soil(
+    parent: RockClass,
+    mean_temp_c: f64,
+    moisture: f64,
+    slope_m: f64,
+    depth: &SoilDepth,
+) -> SoilOrder {
+    if depth.get() < 0.25 || slope_m > 300.0 {
+        return SoilOrder::Leptosol;
+    }
+    if matches!(
+        parent,
+        RockClass::Basalt | RockClass::Andesite | RockClass::Rhyolite
+    ) && mean_temp_c > 5.0
+    {
+        return SoilOrder::Andosol;
+    }
+    if moisture < 0.2 {
+        return SoilOrder::Aridisol;
+    }
+    if moisture > 0.85 {
+        return if mean_temp_c > 22.0 {
+            SoilOrder::Laterite
+        } else {
+            SoilOrder::Histosol
+        };
+    }
+    if mean_temp_c < 3.0 {
+        return SoilOrder::Podzol;
+    }
+    if mean_temp_c > 22.0 {
+        return SoilOrder::Laterite;
+    }
+    if moisture < 0.5 {
+        SoilOrder::Chernozem
+    } else if moisture > 0.7 {
+        SoilOrder::Gley
+    } else {
+        SoilOrder::Loam
+    }
+}
+
+/// The fertility vector for a soil order at a depth (spec §3).
+pub fn fertility(order: SoilOrder, depth: &SoilDepth) -> Fertility {
+    let depth_suit = (depth.get() / 2.0).clamp(0.0, 1.0);
+    let (grain_suit, moisture_suit) = match order {
+        SoilOrder::Chernozem => (0.9, 0.8),
+        SoilOrder::Loam | SoilOrder::Andosol => (0.85, 0.7),
+        SoilOrder::Gley | SoilOrder::Histosol => (0.4, 0.95),
+        SoilOrder::Podzol => (0.4, 0.5),
+        SoilOrder::Laterite => (0.3, 0.6),
+        SoilOrder::Aridisol => (0.3, 0.1),
+        SoilOrder::Leptosol => (0.2, 0.2),
+    };
+    Fertility {
+        grain_suit,
+        moisture_suit,
+        depth_suit,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -420,6 +522,42 @@ mod tests {
             );
             assert!(b.soil_depth.get() >= 0.0);
         }
+    }
+
+    #[test]
+    fn soil_orders_key_off_climate_then_parent() {
+        let d = SoilDepth::new(1.5);
+        // Hot + wet -> laterite regardless of parent.
+        assert_eq!(
+            classify_soil(RockClass::Granite, 27.0, 0.9, 5.0, &d),
+            SoilOrder::Laterite
+        );
+        // Cold + moist -> podzol.
+        assert_eq!(
+            classify_soil(RockClass::Granite, -2.0, 0.6, 5.0, &d),
+            SoilOrder::Podzol
+        );
+        // Temperate grassland moisture -> chernozem.
+        assert_eq!(
+            classify_soil(RockClass::Shale, 12.0, 0.45, 5.0, &d),
+            SoilOrder::Chernozem
+        );
+        // Arid -> aridisol.
+        assert_eq!(
+            classify_soil(RockClass::Sandstone, 22.0, 0.1, 5.0, &d),
+            SoilOrder::Aridisol
+        );
+        // Fresh volcanic parent -> andosol (fertile).
+        assert_eq!(
+            classify_soil(RockClass::Basalt, 15.0, 0.5, 5.0, &d),
+            SoilOrder::Andosol
+        );
+        // Steep/thin -> leptosol.
+        let thin = SoilDepth::new(0.1);
+        assert_eq!(
+            classify_soil(RockClass::Granite, 15.0, 0.5, 400.0, &thin),
+            SoilOrder::Leptosol
+        );
     }
 
     #[test]

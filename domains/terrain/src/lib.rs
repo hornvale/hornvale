@@ -19,7 +19,10 @@ pub mod streams;
 
 pub use boundaries::{BoundaryKind, CellBoundary};
 pub use globe::{GenesisOutcome, GlobeSummary, TectonicGlobe, generate, summarize};
-pub use lithology::{Basement, MarginPolarity, MaterialBuffer, RockClass, SoilDepth};
+pub use lithology::{
+    Basement, Fertility, MarginPolarity, MaterialBuffer, RockClass, SoilDepth, SoilOrder,
+    classify_soil, fertility,
+};
 pub use pins::{GenesisError, TerrainPins, parse_pin, pin_strings};
 pub use plates::Plate;
 pub use provider::GeneratedTerrain;

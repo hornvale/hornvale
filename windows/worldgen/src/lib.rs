@@ -410,6 +410,35 @@ pub fn carrying_inputs_of(
     })
 }
 
+/// Soil order per cell — the climate-coupled projection of The Ground
+/// (spec §4). Pure: reads terrain lithology + climate temperature/moisture.
+/// Every cell (ocean included) gets a classification from `classify_soil`;
+/// ocean floors read whatever their (irrelevant but harmless) depth/slope
+/// inputs classify to — callers that care about land only should guard
+/// with `terrain.is_ocean`.
+pub fn soil_of(
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    geo: &Geosphere,
+) -> hornvale_kernel::CellMap<hornvale_terrain::SoilOrder> {
+    hornvale_kernel::CellMap::from_fn(geo, |cell| {
+        let mat = terrain.material_at(cell);
+        let here = terrain.elevation_at(cell).get();
+        let slope = geo
+            .neighbors(cell)
+            .iter()
+            .map(|n| here - terrain.elevation_at(*n).get())
+            .fold(0.0_f64, f64::max);
+        hornvale_terrain::classify_soil(
+            terrain.rock_at(cell),
+            climate.mean_temperature_at(cell).get(),
+            climate.moisture_at(cell),
+            slope,
+            &mat.soil_depth,
+        )
+    })
+}
+
 /// Fold a species' psychology (spec §4) into its carrying-capacity inputs.
 /// The retired suitability formula scaled a people's freshwater weight by its
 /// time horizon and softened its hostility penalty by its threat response; the
@@ -3535,6 +3564,26 @@ mod tests {
         let world = constant(42);
         let climate = climate_of(&world).unwrap();
         assert!(climate.geosphere().cell_count() > 0);
+    }
+
+    #[test]
+    fn soil_of_land_cells_show_at_least_two_orders() {
+        use std::collections::BTreeSet;
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let soil = soil_of(&terrain, &climate, geo);
+        let land_orders: BTreeSet<_> = geo
+            .cells()
+            .filter(|c| !terrain.is_ocean(*c))
+            .map(|c| *soil.get(c))
+            .collect();
+        assert!(!land_orders.is_empty(), "seed 42 has no land cells");
+        assert!(
+            land_orders.len() >= 2,
+            "soil felt monolithic: {land_orders:?}"
+        );
     }
 
     /// The flagship's cell, read back from its committed `CELL_ID` fact
