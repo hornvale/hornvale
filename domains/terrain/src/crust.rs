@@ -8,16 +8,22 @@ use crate::plates::dot;
 use crate::streams;
 use hornvale_kernel::{Seed, math, noise};
 
+/// Upper bound of `CrustKm`'s validated range, km. One named bound, two
+/// consumers: `CrustKm::new`'s validation and `thickness_at`'s terrane
+/// saturation cap (stacked terrane kernels must never push a validated
+/// construction past this ceiling into a panic).
+const CRUST_KM_MAX: f64 = 100.0;
+
 /// Continental crust thickness in kilometers.
 /// type-audit: newtype
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CrustKm(f64);
 
 impl CrustKm {
-    /// Validate and wrap a thickness: finite, within [0, 100] km.
+    /// Validate and wrap a thickness: finite, within [0, `CRUST_KM_MAX`] km.
     /// type-audit: bare-ok(constructor-edge)
     pub fn new(km: f64) -> Result<CrustKm, String> {
-        if !km.is_finite() || !(0.0..=100.0).contains(&km) {
+        if !km.is_finite() || !(0.0..=CRUST_KM_MAX).contains(&km) {
             return Err(format!("crust thickness {km} km outside [0, 100]"));
         }
         Ok(CrustKm(km))
@@ -653,7 +659,12 @@ impl CrustField {
             .iter()
             .map(|t| terrane_contribution_km(t, p))
             .sum();
-        CrustKm::new(base + added).expect("kernel keeps thickness in range")
+        // Stacking terranes saturate rather than overflow (physically:
+        // accreted crust delaminates past the isostatic limit) — up to
+        // TERRANE_COUNT_MAX kernels can pile on one host (hosts are drawn
+        // with replacement; --continents 1 forces it), and 45 + 6 * 12 km
+        // would breach CrustKm's validated ceiling as a raw panic.
+        CrustKm::new((base + added).min(CRUST_KM_MAX)).expect("kernel keeps thickness in range")
     }
 
     /// Age of the winning craton at a position (oceanic floor: young, 0),
@@ -1111,6 +1122,34 @@ mod tests {
             &plates,
         );
         assert_eq!(terranes, again);
+    }
+
+    #[test]
+    fn stacked_terranes_saturate_at_the_crust_ceiling() {
+        // Deterministic worst case: a young craton (peak 45 km) with the
+        // maximum terrane count, all at maximum thickness, all centered
+        // on the craton's own peak — 45 + 6 * 12 = 117 km unclamped. The
+        // sum must saturate at CrustKm's validated ceiling, not panic.
+        let seed = Seed(42).derive(crate::streams::ROOT);
+        let center = [0.0, 0.0, 1.0];
+        let craton = Craton {
+            id: 0,
+            center,
+            radius_rad: 0.3,
+            age: 0.0,
+        };
+        let stack: Vec<Terrane> = (0..TERRANE_COUNT_MAX)
+            .map(|_| Terrane {
+                center,
+                along: [1.0, 0.0, 0.0],
+                half_len_rad: TERRANE_HALF_LEN_RAD.1,
+                half_wid_rad: TERRANE_HALF_LEN_RAD.1 * TERRANE_ASPECT,
+                age: 0.1,
+                thickness_km: TERRANE_THICKNESS_KM.1,
+            })
+            .collect();
+        let field = CrustField::new_with_terranes(seed, vec![craton], stack);
+        assert_eq!(field.thickness_at(center).get(), CRUST_KM_MAX);
     }
 
     #[test]

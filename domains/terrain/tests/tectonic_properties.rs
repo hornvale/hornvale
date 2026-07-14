@@ -327,6 +327,29 @@ fn single_craton_worlds_have_shelves_and_bimodal_hypsometry_across_the_sweep() {
 }
 
 #[test]
+fn single_craton_genesis_survives_maximal_terrane_stacking() {
+    // Terrane saturation guard (Sculpting Task 1 review): under
+    // `--continents 1` every drawn terrane hosts the same craton (hosts
+    // are drawn with replacement, bearings uniform), so up to
+    // TERRANE_COUNT_MAX kernels can pile onto one rim — unclamped, a
+    // young craton's 45 km peak plus 6 x 12 km of terrane would breach
+    // CrustKm's validated [0, 100] ceiling as a raw panic mid-genesis,
+    // not a GenesisError. The cap in `thickness_at` saturates instead;
+    // this sweep asserts full genesis returns Ok under that maximal
+    // stacking pressure. (The exact-value clamp unit test lives in
+    // crust.rs: `stacked_terranes_saturate_at_the_crust_ceiling`.)
+    let geo = Geosphere::new(4);
+    let pins = TerrainPins {
+        continents: Some(1),
+        ..TerrainPins::default()
+    };
+    for seed in 1..=40u64 {
+        let outcome = generate(Seed(seed), &geo, &pins);
+        assert!(outcome.is_ok(), "seed {seed}: {:?}", outcome.err());
+    }
+}
+
+#[test]
 fn default_worlds_never_trip_the_supply_fallback() {
     use hornvale_terrain::crust::{continental_supply, draw_cratons};
     use hornvale_terrain::elevation::{
