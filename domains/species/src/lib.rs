@@ -17,7 +17,10 @@ use hornvale_kernel::{
 };
 
 mod allometry;
-pub use allometry::{age_at_maturity, basal_metabolic_rate_w, lifespan, reproductive_tempo};
+pub use allometry::{
+    LifeHistory, age_at_maturity, basal_metabolic_rate_w, life_history, lifespan,
+    reproductive_tempo,
+};
 
 /// Predicate: a species entity's name (functional, Text).
 /// type-audit: bare-ok(identifier-text)

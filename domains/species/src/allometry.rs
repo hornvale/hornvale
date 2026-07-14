@@ -71,6 +71,68 @@ pub fn reproductive_tempo(mass: Mass, class: MetabolicClass) -> f64 {
     (raw * pace_multiplier(class)).clamp(0.0, 1.0)
 }
 
+/// Fraction of the post-maturity reproductive span at which generation length
+/// falls (spec §5). Documented constant.
+const GENERATION_FRACTION: f64 = 0.3;
+
+/// A species' derived life-history profile (spec §5). Computed on demand — not
+/// stored on `SpeciesDef`. Biological fields are `None` for `Ametabolic`
+/// (a construct has no mass-derived life-history); `pace_of_life` is a
+/// size-derived position defined for anything with mass.
+/// type-audit: bare-ok(ratio: basal_metabolic_rate_w), bare-ok(ratio: reproductive_tempo), bare-ok(ratio: pace_of_life)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LifeHistory {
+    /// Reference-temperature basal metabolic rate, watts; 0.0 if `Ametabolic`.
+    pub basal_metabolic_rate_w: f64,
+    /// Maximum lifespan; `None` if `Ametabolic`.
+    pub lifespan: Option<Years>,
+    /// Age at first reproduction; `None` if `Ametabolic`.
+    pub age_at_maturity: Option<Years>,
+    /// Reproductive output on the r–K axis, 0 fast … 1 slow; `None` if `Ametabolic`.
+    pub reproductive_tempo: Option<f64>,
+    /// Generation length (MEM-7's handle); `None` if `Ametabolic`.
+    pub generation_length: Option<Years>,
+    /// Overall life-history speed, 0 fast … 1 slow; absolute f(log mass).
+    pub pace_of_life: f64,
+}
+
+/// Overall pace-of-life: absolute, roster-independent (spec §5). Maps log-mass
+/// over a FIXED reference range (1 kg … 1000 kg) so adding a species never
+/// shifts another's value. Larger/slower → 1.
+fn pace_of_life(mass: Mass, class: MetabolicClass) -> f64 {
+    let raw = (math::log10(mass.kilograms()) / 3.0).clamp(0.0, 1.0);
+    // Ectotherms read slower on the same size.
+    (raw * pace_multiplier(class) / 1.5).clamp(0.0, 1.0)
+}
+
+/// Assemble the full life-history profile (spec §5).
+pub fn life_history(mass: Mass, class: MetabolicClass) -> LifeHistory {
+    let bmr = basal_metabolic_rate_w(mass, class);
+    let pace = pace_of_life(mass, class);
+    if class == MetabolicClass::Ametabolic {
+        return LifeHistory {
+            basal_metabolic_rate_w: bmr,
+            lifespan: None,
+            age_at_maturity: None,
+            reproductive_tempo: None,
+            generation_length: None,
+            pace_of_life: pace,
+        };
+    }
+    let life = lifespan(mass, class);
+    let mat = age_at_maturity(mass, class);
+    let generation = Years::new(mat.get() + GENERATION_FRACTION * (life.get() - mat.get()))
+        .expect("maturity ≤ lifespan, so generation length is non-negative");
+    LifeHistory {
+        basal_metabolic_rate_w: bmr,
+        lifespan: Some(life),
+        age_at_maturity: Some(mat),
+        reproductive_tempo: Some(reproductive_tempo(mass, class)),
+        generation_length: Some(generation),
+        pace_of_life: pace,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -114,5 +176,40 @@ mod tests {
     #[test]
     fn tempo_slows_with_mass() {
         assert!(reproductive_tempo(m(132.0), Endotherm) > reproductive_tempo(m(18.0), Endotherm));
+    }
+
+    #[test]
+    fn ametabolic_nulls_the_biological_traits() {
+        let lh = life_history(m(500.0), Ametabolic);
+        assert_eq!(lh.basal_metabolic_rate_w, 0.0);
+        assert!(lh.lifespan.is_none());
+        assert!(lh.age_at_maturity.is_none());
+        assert!(lh.reproductive_tempo.is_none());
+        assert!(lh.generation_length.is_none());
+    }
+
+    #[test]
+    fn living_classes_fill_every_trait() {
+        let lh = life_history(m(18.0), Endotherm);
+        assert!(lh.lifespan.is_some() && lh.generation_length.is_some());
+        // generation length sits between maturity and lifespan
+        // (`gen` is a reserved keyword in edition 2024 — see `gen` blocks)
+        let generation = lh.generation_length.unwrap().get();
+        assert!(generation > lh.age_at_maturity.unwrap().get());
+        assert!(generation < lh.lifespan.unwrap().get());
+    }
+
+    #[test]
+    fn pace_of_life_is_roster_independent() {
+        // pace depends only on this species' own mass+class, not on any registry
+        // state — computing it twice (as if the roster changed) is identical.
+        let a = life_history(m(18.0), Endotherm).pace_of_life;
+        let b = life_history(m(18.0), Endotherm).pace_of_life;
+        assert_eq!(a, b);
+        // and it is monotone in mass
+        assert!(
+            life_history(m(132.0), Endotherm).pace_of_life
+                > life_history(m(18.0), Endotherm).pace_of_life
+        );
     }
 }
