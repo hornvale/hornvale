@@ -1,0 +1,5 @@
+{ "name": "census-of-figures",
+  "description": "Figure-clustering calibration: count/size/zodiac distributions across seeds, before the thresholds freeze (spec 2026-07-13 night-sky-instrument §4).",
+  "seeds": { "from": 0, "count": 1000 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": ["figure-count", "largest-figure-members", "ecliptic-figure-count"] }

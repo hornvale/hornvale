@@ -49,6 +49,7 @@ impl MoonsPin {
 
 /// The scenario pins for sky genesis. Every field: `None` = drawn from the
 /// seed; `Some` = supplied by the experimenter and conditioned on.
+/// type-audit: bare-ok(count: wanderers)
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SkyPins {
     /// Moon request: exact or graded; None = drawn.
@@ -66,6 +67,8 @@ pub struct SkyPins {
     /// Spin direction of a spinning world (SKY-22); None = drawn.
     /// Conflicts with a locked rotation, which has no sunrise to direct.
     pub spin: Option<SpinPin>,
+    /// Wandering-planet count (0–4); None = drawn.
+    pub wanderers: Option<u32>,
 }
 
 /// Pinnable rotation regimes.
@@ -202,6 +205,10 @@ pub fn pin_strings(pins: &SkyPins) -> Vec<String> {
         None => {}
     }
 
+    if let Some(wanderers) = pins.wanderers {
+        out.push(format!("wanderers={wanderers}"));
+    }
+
     out
 }
 
@@ -280,6 +287,19 @@ pub fn parse_pin(s: &str, pins: &mut SkyPins) -> Result<(), String> {
                 other => return Err(format!("forcing: unknown value '{other}'")),
             });
         }
+        "wanderers" => {
+            let n: u32 = value
+                .parse()
+                .map_err(|_| format!("wanderers: invalid count '{value}'"))?;
+            if n > 4 {
+                return Err(GenesisError::InvalidPin {
+                    pin: "wanderers".to_string(),
+                    reason: format!("{n} wanderers requested; the legal maximum is 4"),
+                }
+                .to_string());
+            }
+            pins.wanderers = Some(n);
+        }
         other => return Err(format!("unknown pin key '{other}'")),
     }
     Ok(())
@@ -321,6 +341,7 @@ mod tests {
         assert!(pins.year_local_days.is_none());
         assert!(pins.neighbor.is_none());
         assert!(pins.forcing.is_none());
+        assert!(pins.wanderers.is_none());
     }
 
     #[test]
@@ -344,6 +365,7 @@ mod tests {
             neighbor: Some(NeighborClass::BlueGiant),
             forcing: None,
             spin: Some(SpinPin::Retrograde),
+            wanderers: Some(3),
         };
         let mut rebuilt = SkyPins::default();
         for s in pin_strings(&pins) {
@@ -363,15 +385,17 @@ mod tests {
             neighbor: Some(NeighborClass::RedGiant),
             forcing: None,
             spin: Some(SpinPin::Prograde),
+            wanderers: Some(2),
         };
         let strings = pin_strings(&pins);
-        assert_eq!(strings.len(), 6);
+        assert_eq!(strings.len(), 7);
         assert!(strings.contains(&"moons=2".to_string()));
         assert!(strings.contains(&"rotation=normal".to_string()));
         assert!(strings.contains(&"obliquity=none".to_string()));
         assert!(strings.contains(&"year-days=300".to_string()));
         assert!(strings.contains(&"neighbor=red-giant".to_string()));
         assert!(strings.contains(&"spin=prograde".to_string()));
+        assert!(strings.contains(&"wanderers=2".to_string()));
     }
 
     #[test]
@@ -501,5 +525,30 @@ mod tests {
         let mut rebuilt = SkyPins::default();
         parse_pin("forcing=zero", &mut rebuilt).unwrap();
         assert_eq!(rebuilt.forcing, Some(ForcingPin::Zero));
+    }
+
+    #[test]
+    fn wanderers_pin_round_trips() {
+        let pins = SkyPins {
+            wanderers: Some(3),
+            ..SkyPins::default()
+        };
+        let strings = pin_strings(&pins);
+        assert_eq!(strings, vec!["wanderers=3".to_string()]);
+        let mut rebuilt = SkyPins::default();
+        for s in &strings {
+            parse_pin(s, &mut rebuilt).unwrap();
+        }
+        assert_eq!(rebuilt.wanderers, Some(3));
+    }
+
+    #[test]
+    fn wanderers_pin_rejects_values_above_the_legal_maximum() {
+        let mut pins = SkyPins::default();
+        let err = parse_pin("wanderers=5", &mut pins).unwrap_err();
+        assert!(
+            err.contains("the legal maximum is 4"),
+            "unexpected error text: {err}"
+        );
     }
 }

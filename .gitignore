@@ -31,6 +31,11 @@ book/src/laboratory/generated/census-of-eyes/
 book/src/laboratory/generated/census-of-tongues/
 book/src/laboratory/generated/census-of-words/
 
+# census-of-figures: a dev-time calibration instrument (night-sky stage 3,
+# figure-threshold freeze), not a committed census fixture — the study json
+# + metrics are committed, its rows.csv/summary output is not.
+book/src/laboratory/generated/census-of-figures/
+
 # Claude Code: project skills and shared settings (Bash timeout budget) are
 # committed; personal settings.local.json and worktrees are not
 .claude/*

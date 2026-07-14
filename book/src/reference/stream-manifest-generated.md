@@ -20,6 +20,9 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/neighbor-positions` | per-neighbor celestial position draws (declination, right ascension) |
 | `astronomy/spin-direction` | spin-direction draw: prograde or retrograde |
 | `astronomy/moon-inclinations` | per-moon orbital-inclination draws |
+| `astronomy/wanderer-count` | how many wandering planets |
+| `astronomy/wanderers` | per-wanderer parameter draws, sequential |
+| `astronomy/starfield` | background starfield: count + per-star position/brightness (derived on demand) |
 
 ### hornvale-climate
 

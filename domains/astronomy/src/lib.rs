@@ -5,32 +5,49 @@
 pub mod anchor;
 pub mod calendar;
 pub mod facts;
+pub mod figures;
 pub mod forcing;
+pub mod heliacal;
 pub mod moons;
 pub mod neighborhood;
+pub mod night_sky;
 pub mod pins;
 pub mod provider;
 pub mod render;
+pub mod sky_position;
 pub mod star;
+pub mod starfield;
 pub mod streams;
 pub mod system;
 pub mod units;
+pub mod wanderers;
 
 pub use anchor::{Anchor, Rotation, generate_anchor};
-pub use calendar::{Calendar, calendar_of};
+pub use calendar::{Calendar, SkyBand, TWILIGHT_DEPTH_DEG, calendar_of};
+pub use figures::{
+    FIGURE_MAGNITUDE_FLOOR, FIGURE_MIN_MEMBERS, FIGURE_SEPARATION_DEG, Figure, describe, figures,
+};
+pub use heliacal::{HeliacalPair, arcus_visionis_deg, heliacal_events};
 pub use moons::{Moon, generate_moons, hill_radius_mm};
 pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
+pub use night_sky::{Hemisphere, NightSky, POLE_STAR_MAX_SEPARATION_DEG, PoleStar, night_sky_at};
 pub use pins::{
     ForcingPin, GenesisError, MoonsPin, NeighborClass, RotationPin, SkyPins, SpinPin, parse_pin,
     pin_strings,
 };
-pub use provider::{ECLIPSE, GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE, TIDE};
+pub use provider::{
+    ECLIPSE, GeneratedSky, HELIACAL_RISING, HELIACAL_SETTING, NIGHT_STAR, SEASONAL_CYCLE, TIDE,
+    WANDERING_STAR,
+};
+pub use sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 pub use star::{Star, generate_star, insolation_rel};
+pub use starfield::{FieldStar, starfield};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
     Au, Degrees, EarthMasses, HabitableZone, LightYears, LocalDays, LunarMasses, Megameters,
     SolarLuminosities, SolarMasses, StdDays, UnitError,
 };
+pub use wanderers::{Wanderer, WandererClass, generate_wanderers};
 
 use hornvale_kernel::{
     ConceptKind, ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, RegistryError,
@@ -72,6 +89,15 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "astronomy/moon-inclinations",
             "per-moon orbital-inclination draws",
         ),
+        ("astronomy/wanderer-count", "how many wandering planets"),
+        (
+            "astronomy/wanderers",
+            "per-wanderer parameter draws, sequential",
+        ),
+        (
+            "astronomy/starfield",
+            "background starfield: count + per-star position/brightness (derived on demand)",
+        ),
     ]
 }
 
@@ -82,6 +108,18 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_phenomenon_kind(NIGHT_STAR, "a fixed star notable in the night sky")?;
     registry.register_phenomenon_kind(TIDE, "the rise and fall of the waters under the moons")?;
     registry.register_phenomenon_kind(ECLIPSE, "a moon crossing the face of the sun")?;
+    registry.register_phenomenon_kind(
+        HELIACAL_RISING,
+        "a star's first dawn return from behind the sun",
+    )?;
+    registry.register_phenomenon_kind(
+        HELIACAL_SETTING,
+        "a star's last evening before the sun swallows it",
+    )?;
+    registry.register_phenomenon_kind(
+        WANDERING_STAR,
+        "a bright star that will not keep its station",
+    )?;
 
     registry.register_predicate(
         facts::STAR_CLASS,
@@ -200,6 +238,38 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "obliquity oscillation amplitude, degrees (moon-coupled)",
     )?;
     registry.register_predicate(
+        facts::POLE_STAR_NORTH,
+        true,
+        "a bright star stands within 10 degrees of the north celestial pole \
+         at genesis (epoch-scoped: precession retires pole stars)",
+    )?;
+    registry.register_predicate(
+        facts::POLE_STAR_SOUTH,
+        true,
+        "a bright star stands within 10 degrees of the south celestial pole \
+         at genesis (epoch-scoped: precession retires pole stars)",
+    )?;
+    registry.register_predicate(
+        facts::WANDERER_COUNT_FACT,
+        true,
+        "how many wandering planets cross this sky",
+    )?;
+    registry.register_predicate(
+        facts::WANDERER_ORBIT_AU,
+        false,
+        "orbital distance of a wanderer, in AU",
+    )?;
+    registry.register_predicate(
+        facts::WANDERER_PERIOD_STD,
+        false,
+        "orbital period of a wanderer, in standard days",
+    )?;
+    registry.register_predicate(
+        facts::WANDERER_CLASS,
+        false,
+        "a wanderer's kind: rock or giant",
+    )?;
+    registry.register_predicate(
         facts::STAR_MASS_SOLAR,
         true,
         "host star mass in solar masses",
@@ -233,6 +303,22 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::INSOLATION_REL,
         true,
         "insolation at the anchor relative to Earth (derived L/a²)",
+    )?;
+    registry.register_predicate(
+        facts::FIGURE_COUNT,
+        true,
+        "how many star figures the reference observer's sky holds",
+    )?;
+    registry.register_predicate(
+        facts::FIGURE_MEMBERS,
+        false,
+        "member count of a star figure",
+    )?;
+    registry.register_predicate(facts::FIGURE_REGION, false, "sky region of a star figure")?;
+    registry.register_predicate(
+        facts::FIGURE_ON_ECLIPTIC,
+        true,
+        "a star figure stands on the sun's road (the ecliptic band)",
     )?;
 
     registry.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")?;

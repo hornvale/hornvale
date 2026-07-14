@@ -6,6 +6,7 @@ use crate::neighborhood::{Neighbor, generate_neighbors};
 use crate::pins::{GenesisError, SkyPins};
 use crate::star::{Star, generate_star};
 use crate::streams;
+use crate::wanderers::{Wanderer, generate_wanderers};
 use hornvale_kernel::Seed;
 
 /// A complete generated star system.
@@ -21,6 +22,8 @@ pub struct StarSystem {
     pub neighbors: Vec<Neighbor>,
     /// Deep-time orbital forcing (Milankovitch triad).
     pub forcing: crate::forcing::OrbitalForcing,
+    /// Wandering sibling planets, innermost first (observational: no physical effect on the anchor — declared approximation).
+    pub wanderers: Vec<Wanderer>,
 }
 
 /// A generated system plus the notes genesis recorded along the way.
@@ -44,6 +47,7 @@ pub fn generate(world_seed: Seed, pins: &SkyPins) -> Result<GenesisOutcome, Gene
     let (moons, notes) = generate_moons(astronomy_seed, &star, &anchor, pins)?;
     let neighbors = generate_neighbors(astronomy_seed, pins);
     let forcing = crate::forcing::generate_forcing(astronomy_seed, &anchor, &moons, pins);
+    let wanderers = generate_wanderers(astronomy_seed, &star, &anchor, pins);
     Ok(GenesisOutcome {
         system: StarSystem {
             star,
@@ -51,6 +55,7 @@ pub fn generate(world_seed: Seed, pins: &SkyPins) -> Result<GenesisOutcome, Gene
             moons,
             neighbors,
             forcing,
+            wanderers,
         },
         notes,
     })
@@ -68,6 +73,7 @@ mod tests {
         assert!(system.anchor.year.get() > 0.0);
         assert!(system.moons.len() <= 3);
         assert!(!system.neighbors.is_empty());
+        assert!(system.wanderers.len() <= 4);
     }
 
     #[test]

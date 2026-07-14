@@ -11,6 +11,7 @@ Salient phenomena, most attention-demanding first:
 - [1.00] *celestial-body* — the sun, a yellow dwarf (G)
 - [0.90] *eclipse* — an eclipse: the vast moon devours the sun whole
 - [0.75] *eclipse* — an eclipse: the small, distant moon leaves a burning ring of the sun
+- [0.65] *wandering-star* — A rock-pale wanderer: a bright star that will not keep its station.
 - [0.64] *celestial-body* — a vast moon
 - [0.50] *tide* — the tide, rising and falling under the vast moon
 - [0.47] *celestial-body* — a small, distant moon
@@ -25,6 +26,18 @@ Salient phenomena, most attention-demanding first:
 - [0.01] *seasonal-cycle* — the slow swelling and shrinking of daylight
 
 By night: a smoldering red star that does not wander; a warm yellow star that does not wander; a deep orange star that does not wander; a dim red star that does not wander; a pale white star that does not wander.
+
+The smoldering red star returns before dawn at year-phase 0.31, after 58 days of absence.
+
+The warm yellow star returns before dawn at year-phase 0.11, after 11 days of absence.
+
+The deep orange star returns before dawn at year-phase 0.96, after 15 days of absence.
+
+A giant wanderer rounds the sun every 4248 days.
+
+A rock wanderer rounds the sun every 7527 days.
+
+The sky holds 2 figures; 1 stands on the sun's road.
 
 ## The Calendar
 
@@ -44,7 +57,7 @@ Some 11% of the surface is habitable — land with water and a tolerable season.
 - **Roqrraxaxoqrrak** — temperate-forest
 - **Ngebvngadxnot** — temperate-forest
 - **Gbeovee** — temperate-forest
-- **Vngaashshngaash** — temperate-forest
+- **Qvoashshngoash** — temperate-forest
 - **Roqrrarorrorrorrokxaq** — tropical-rainforest
 - **Xatxoroqrrarraqro** — temperate-forest
 - **Roqrrararo** — tropical-seasonal-forest
@@ -55,21 +68,21 @@ Some 11% of the surface is habitable — land with water and a tolerable season.
 - **Roqrraroxaqxo** — temperate-forest
 - **Btaaxaoxee** — tropical-seasonal-forest
 - **Nokxngotxngeb** — tropical-seasonal-forest
-- **Vngoashgvaash** — tropical-rainforest
-- **Vngooshshngoosh** — temperate-forest
-- **Gvaoshvngao** — tropical-seasonal-forest
+- **Dvooshvngaashvngao** — tropical-rainforest
+- **Dvaoshngoa** — temperate-forest
+- **Vngaoshvngaash** — tropical-seasonal-forest
 - **Njaokbaongjee** — temperate-forest
 - **Ngotfnob** — temperate-forest
-- **Shngaadvoa** — temperate-forest
+- **Vngaashdvoa** — temperate-forest
 - **Xatxoxatxo** — temperate-forest
 - **Vaomjaofao** — temperate-forest
 - **Xngeksfekngad** — temperate-forest
-- **Vngaashngaa** — temperate-forest
+- **Gvoashshngoashvngoosh** — temperate-forest
 - **Njeongjoomjoo** — temperate-rainforest
 - **Vngakngok** — temperate-rainforest
 - **Roqrrarorrorrarotrrok** — tropical-rainforest
 - **Xatxoxaqxoqxoq** — temperate-forest
-- **Dvoashdvoash** — temperate-rainforest
+- **Vngaashngaa** — temperate-rainforest
 - **Roqrrarorroroxat** — tropical-rainforest
 - **Ngjoonjoe** — tropical-rainforest
 - **Xngetsfok** — tropical-rainforest
@@ -78,50 +91,50 @@ Some 11% of the surface is habitable — land with water and a tolerable season.
 - **Svetvnatfngak** — temperate-forest
 - **Xeoqkeo** — tropical-rainforest
 - **Nedxngabsvob** — tropical-rainforest
-- **Shngaashqvoashtvoa** — tropical-rainforest
-- **Shngaaqvaa** — temperate-forest
+- **Vngaashvngoavngaosh** — tropical-rainforest
+- **Shngaashqvaaqvaa** — temperate-forest
 - **Rorroxoqrokrro** — tropical-rainforest
-- **Bvaashngoash** — tropical-rainforest
+- **Shngaoshgvoosh** — tropical-rainforest
 - **Njoakkoe** — temperate-forest
 - **Zhxodngotnged** — temperate-forest
 - **Ngodxnet** — temperate-forest
 - **Roqrraxatxorotrragrag** — temperate-forest
-- **Shngooshshngaosh** — temperate-forest
+- **Vngaoshngoo** — temperate-forest
 - **Ngjeengjae** — tropical-rainforest
 - **Fngakngedned** — tropical-rainforest
 - **Xatxoroqrraroqrorra** — temperate-forest
 - **Qgoongjoa** — temperate-forest
 - **Xnadnad** — temperate-forest
-- **Kvoashvngoash** — tropical-rainforest
+- **Vngoashngooshngoosh** — tropical-rainforest
 - **Xatxorogrora** — temperate-forest
 - **Xatxoroqrrarroqrroq** — temperate-forest
 - **Feenjaongjoa** — temperate-forest
 - **Vnetzfedxngat** — temperate-forest
-- **Qvoashvngooshshngoo** — temperate-forest
+- **Vngooshvngaovngoa** — temperate-forest
 - **Zxoknotxngob** — temperate-forest
-- **Vngaovngaatvoash** — temperate-forest
+- **Vngaadvoashtvoash** — temperate-forest
 - **Xoegtoa** — temperate-forest
 - **Roqrraxotroxaqrarro** — temperate-rainforest
 - **Xatxoroqrraroxo** — temperate-forest
 - **Xotrororaq** — temperate-rainforest
 - **Kteoxae** — temperate-rainforest
 - **Fngetnebfngad** — temperate-rainforest
-- **Vngoashshngao** — temperate-forest
+- **Shngoagvaosh** — temperate-forest
 - **Roqrrarrarrorrog** — temperate-rainforest
-- **Shngoashvngooshgvaa** — temperate-rainforest
+- **Gvaoshvngookvaosh** — temperate-rainforest
 - **Roqrrarrakrrok** — temperate-forest
 - **Tgaetkooqgao** — temperate-forest
 - **Xoevoo** — temperate-rainforest
 - **Zxekfnad** — temperate-rainforest
 - **Roqrrarorroraxo** — tropical-rainforest
-- **Vngaovngoosh** — temperate-rainforest
+- **Vngoashdvootvoo** — temperate-rainforest
 - **Ngjaaqqeemjoo** — temperate-rainforest
 - **Vngobxngebfngot** — temperate-rainforest
 - **Xotrorrorok** — temperate-rainforest
-- **Gvoashqvaashngoa** — temperate-forest
+- **Shngaoshshngoash** — temperate-forest
 - **Roqrraxatxorraxa** — temperate-forest
 - **Xatxorrarroxoq** — temperate-forest
-- **Vngaodvaa** — temperate-rainforest
+- **Vngaoshvngaashvngoa** — temperate-rainforest
 - **Faexoafee** — tropical-rainforest
 - **Bteafeavae** — temperate-rainforest
 - **Zfobxngakxngot** — temperate-rainforest
@@ -129,26 +142,26 @@ Some 11% of the surface is habitable — land with water and a tolerable season.
 - **Ngjoamjaebbaa** — temperate-forest
 - **Ngotzhvab** — temperate-forest
 - **Ngjeekbaa** — temperate-forest
-- **Vngoavngaosh** — tropical-rainforest
+- **Shngaoshvngaoshshngoosh** — tropical-rainforest
 - **Sfadvnok** — temperate-forest
 - **Vngeknotxnet** — tropical-rainforest
-- **Vngooshgvoovngoo** — temperate-rainforest
-- **Dvootvaash** — temperate-forest
+- **Shngooshngaavngoo** — temperate-rainforest
+- **Vngooshngaash** — temperate-forest
 - **Roqrraxatxoraxoq** — temperate-forest
-- **Shngaashvngaashqvoash** — temperate-forest
-- **Kvaashshngoo** — temperate-forest
+- **Tvooshvngaosh** — temperate-forest
+- **Shngoashvngaavngaash** — temperate-forest
 - **Njaengjaovea** — temperate-forest
 - **Zhxadxnodnab** — temperate-forest
 - **Roqrrarorroroxogxo** — tropical-rainforest
-- **Kvaashvngaashdvaosh** — temperate-forest
+- **Vngooshvngoosh** — temperate-forest
 - **Xatxoroqrrarotxo** — temperate-forest
 - **Roqrrarogxog** — temperate-forest
 - **Gteafeebkeo** — tropical-rainforest
 - **Vnadxnab** — tropical-rainforest
 - **Rorroroqrraxorraqxog** — tropical-rainforest
 - **Roqrrarorro** — temperate-forest
-- **Vngoashshngaoshshngoash** — tropical-rainforest
-- **Vngooshvngao** — temperate-forest
+- **Dvaoshshngoa** — tropical-rainforest
+- **Vngookvoosh** — temperate-forest
 - **Roroqrrarogrro** — tropical-seasonal-forest
 - **Feafeomjeo** — temperate-forest
 - **Rorrorogra** — tropical-rainforest
@@ -162,58 +175,58 @@ Some 11% of the surface is habitable — land with water and a tolerable season.
 - **Rorroroqrraraqxak** — tropical-rainforest
 - **Veaqkaaxeo** — temperate-forest
 - **Nabneb** — temperate-forest
-- **Shngaoshvngao** — temperate-forest
+- **Gvaashqvaash** — temperate-forest
 - **Mjaanjaemjee** — tropical-seasonal-forest
 - **Zhxodfnodfngeb** — tropical-seasonal-forest
 - **Vaotgae** — temperate-forest
 - **Svodsvad** — temperate-forest
 - **Ngjeomjoa** — tropical-rainforest
 - **Ngabfnadvngab** — tropical-rainforest
-- **Kvaovngoash** — tropical-rainforest
+- **Vngoashvngaosh** — tropical-rainforest
 - **Nedxngot** — tropical-seasonal-forest
 - **Roqrraxatxoxarratrro** — temperate-forest
 - **Xotroroqrrarororro** — temperate-rainforest
 - **Xatxoroqrraxakxorrat** — temperate-forest
 - **Vaogkaa** — tropical-rainforest
 - **Ngebzhvaknot** — tropical-rainforest
-- **Tvaashvngaa** — temperate-forest
-- **Shngooqvaavngoash** — tropical-seasonal-forest
-- **Shngaoshkvao** — temperate-forest
+- **Vngoashgvaoshdvao** — temperate-forest
+- **Tvooshngooshvngoosh** — tropical-seasonal-forest
+- **Shngaavngoashvngaosh** — temperate-forest
 - **Mjaobqoefeo** — tropical-rainforest
 - **Fneksvotnget** — tropical-rainforest
-- **Shngooshvngao** — tropical-rainforest
+- **Shngaogvaosh** — tropical-rainforest
 - **Roqrraxatxororrog** — temperate-forest
 - **Roqrrarroro** — temperate-rainforest
-- **Vngaoshbvaavngoosh** — tropical-rainforest
+- **Shngoashngaash** — tropical-rainforest
 - **Qbeabqoo** — temperate-rainforest
 - **Zhxatngakzhfod** — temperate-rainforest
-- **Gvooshshngaashngaash** — tropical-rainforest
+- **Shngaabvoosh** — tropical-rainforest
 - **Xatxorragrarra** — temperate-forest
 - **Roqrrarorrorroqra** — tropical-rainforest
 - **Qgeaqkoe** — temperate-forest
 - **Xatxoxoroq** — temperate-forest
 - **Ngjeavaogkoo** — temperate-forest
 - **Roroxotrraq** — tropical-seasonal-forest
-- **Dvaashvngoash** — temperate-rainforest
+- **Kvaashvngaosh** — temperate-rainforest
 - **Bgaokgaongjeo** — temperate-forest
 - **Xngetxngoksfob** — temperate-forest
-- **Vngooshshngoashngaash** — temperate-forest
+- **Shngaovngaavngaash** — temperate-forest
 - **Mjoafaavoa** — temperate-rainforest
 - **Ngatngotnget** — temperate-rainforest
 - **Svetngad** — tropical-seasonal-forest
 - **Roqrraxotraqxag** — temperate-forest
-- **Gvooshngoa** — temperate-forest
+- **Vngaoshngaosh** — temperate-forest
 - **Xotroxaxorra** — temperate-rainforest
 - **Zhfabsxet** — temperate-forest
 - **Qgaafae** — temperate-forest
 - **Nebzhvobned** — temperate-forest
 - **Fngekzxod** — temperate-forest
 - **Rorroqxa** — tropical-seasonal-forest
-- **Tvoovngoashvngaash** — temperate-forest
+- **Tvooshngooshngoo** — temperate-forest
 - **Qqoavee** — tropical-rainforest
 - **Zhfotsxob** — tropical-rainforest
 - **Xotroragxa** — temperate-rainforest
-- **Shngaashkvoa** — temperate-rainforest
+- **Vngaashkvaoshbvao** — temperate-rainforest
 - **Ngjooqgoafeo** — temperate-forest
 - **Fngebvngetxnet** — temperate-forest
 - **Xatxoroqrraxatraq** — temperate-forest
@@ -233,14 +246,14 @@ The frost retreated: at the glacial maximum (day -243500000), ice advanced over 
 ## The People
 
 The land holds 182 settlement(s).
-The chief bugbear settlement, Vngaashshngaash, holds 64 souls amid temperate-forest.
+The chief bugbear settlement, Qvoashshngoash, holds 64 souls amid temperate-forest.
 The chief goblin settlement, Ngebvngadxnot, holds 67 souls amid temperate-forest.
 The chief hobgoblin settlement, Gbeovee, holds 67 souls amid temperate-forest.
 The chief kobold settlement, Roqrraxaxoqrrak, holds 71 souls amid temperate-forest.
 
-The bugbear lair of **Vngaashshngaash**, population 64.
+The bugbear lair of **Qvoashshngoash**, population 64.
 
-Vngaashshngaash lives by farming.
+Qvoashshngoash lives by farming.
 Its roles, lowest to highest: forager, omen-reader, headman.
 
 The goblin village of **Ngebvngadxnot**, population 67.
@@ -262,23 +275,27 @@ Its roles, lowest to highest: digger, keeper, elders.
 
 An organized priesthood tends a pantheon:
 
-> Bvaash the Vngaabvaash comes back every 15.99 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Shngoabvaash comes back every 386.98 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+>
+> — derived from the phenomenon *wandering-star*
+
+> Bvaash the Bvooshbvaash comes back every 15.99 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bvaash the Shngaobvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Shngaoshbvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Bvaash the Gvooshbvaash comes back every 32.55 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Vngaashbvaash comes back every 32.55 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bvaash the Shngaabvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Gvaabvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Bvaash the Bvaabvaash comes back every 0.88 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Shngaobvaash comes back every 0.88 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -300,19 +317,23 @@ In the village of **Ngebvngadxnot**, an organized priesthood tends its own panth
 >
 > — derived from the phenomenon *eclipse*
 
-> Neb the Sxekneb returns every 15.99 days. So it was, so it is.
+> Zfatnadfnak the Ngedngobngob returns every 386.98 days. So it was, so it is.
+>
+> — derived from the phenomenon *wandering-star*
+
+> Neb the Ngetneb returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neb the Svokneb is felt, not counted. So it was, so it is.
+> Neb the Svedneb is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Neb the Nadneb returns every 32.55 days. So it was, so it is.
+> Neb the Zxekneb returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Neb the Zhfetneb is felt, not counted. So it was, so it is.
+> Neb the Zxadneb is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
@@ -330,19 +351,23 @@ In the legion of **Gbeovee**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Fee the Njaafee returns every 15.99 days. So it was, so it is.
+> Mjaexeenjoa the Faengjoangjoa returns every 386.98 days. So it was, so it is.
+>
+> — derived from the phenomenon *wandering-star*
+
+> Fee the Xaafee returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Fee the Xaafee returns every 32.55 days. So it was, so it is.
+> Fee the Kkoefee returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Fee the Bkaafee is felt, not counted. So it was, so it is.
+> Fee the Foafee is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Fee the Foafee is felt, not counted. So it was, so it is.
+> Fee the Njoafee is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
@@ -352,11 +377,15 @@ In the warren of **Roqrraxaxoqrrak**, an organized priesthood tends its own pant
 >
 > — derived from the phenomenon *celestial-body*
 
-> Xogrra Xogrra comes back every 32.55 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
+> Xogrra Xogrra comes back every 386.98 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
+>
+> — derived from the phenomenon *wandering-star*
+
+> Xogrra Roqrraxogrra comes back every 32.55 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Xogrra Rogxaxogrra comes back every 0.88 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
+> Xogrra Xogrrarogxa comes back every 0.88 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 

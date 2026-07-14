@@ -42,3 +42,13 @@ pub const SPIN_DIRECTION: &str = "spin-direction";
 /// Per-moon orbital-inclination draws (SKY-6).
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_INCLINATIONS: &str = "moon-inclinations";
+/// Wanderer count draw.
+/// type-audit: bare-ok(identifier-text)
+pub const WANDERER_COUNT: &str = "wanderer-count";
+/// Per-wanderer parameter draws, sequential (no attempts loop —
+/// `generate_wanderers` draws each wanderer's parameters once, in order).
+/// type-audit: bare-ok(identifier-text)
+pub const WANDERERS: &str = "wanderers";
+/// Background starfield draws: count, then per-star position/brightness (derived catalog — consumed on demand, never in genesis).
+/// type-audit: bare-ok(identifier-text)
+pub const STARFIELD: &str = "starfield";

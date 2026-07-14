@@ -93,6 +93,32 @@ pub const ECCENTRICITY_MEAN: &str = "eccentricity-mean";
 /// Number).
 /// type-audit: bare-ok(identifier-text)
 pub const OBLIQUITY_AMPLITUDE: &str = "obliquity-amplitude";
+/// A bright star stands within 10 degrees of the north celestial pole at
+/// genesis (functional, Number = separation degrees; epoch-scoped:
+/// precession retires pole stars).
+/// type-audit: bare-ok(identifier-text)
+pub const POLE_STAR_NORTH: &str = "pole-star-north";
+/// A bright star stands within 10 degrees of the south celestial pole at
+/// genesis (functional, Number = separation degrees; epoch-scoped:
+/// precession retires pole stars).
+/// type-audit: bare-ok(identifier-text)
+pub const POLE_STAR_SOUTH: &str = "pole-star-south";
+/// How many wandering planets cross this sky (functional, Number).
+/// type-audit: bare-ok(identifier-text)
+pub const WANDERER_COUNT_FACT: &str = "wanderer-count";
+/// Orbital distance of a wanderer, in AU (non-functional, Number — one per
+/// wanderer, innermost order).
+/// type-audit: bare-ok(identifier-text)
+pub const WANDERER_ORBIT_AU: &str = "wanderer-orbit-au";
+/// Orbital period of a wanderer, in standard days (non-functional, Number —
+/// one per wanderer, innermost order).
+/// type-audit: bare-ok(identifier-text)
+pub const WANDERER_PERIOD_STD: &str = "wanderer-period-std";
+/// A wanderer's kind: rock or giant (non-functional, Text — deduped to the
+/// distinct kinds present in this sky; NOT zippable 1:1 against wanderer
+/// index — orbit/period facts carry per-wanderer identity).
+/// type-audit: bare-ok(identifier-text)
+pub const WANDERER_CLASS: &str = "wanderer-class";
 /// Host star mass in solar masses (functional, Number; drawn).
 /// type-audit: bare-ok(identifier-text)
 pub const STAR_MASS_SOLAR: &str = "star-mass-solar";
@@ -115,6 +141,31 @@ pub const ANCHOR_ORBIT_AU: &str = "anchor-orbit-au";
 /// L/a², global annual mean).
 /// type-audit: bare-ok(identifier-text)
 pub const INSOLATION_REL: &str = "insolation-rel";
+/// How many star figures the reference observer's sky holds (functional,
+/// Number).
+/// type-audit: bare-ok(identifier-text)
+pub const FIGURE_COUNT: &str = "figure-count";
+/// Member count of a star figure (non-functional, Number — one per figure,
+/// output order: descending member count, then centroid right ascension
+/// ascending). Deduped: repeated member counts collapse to one committed
+/// fact, the same honest characteristic as any other coarse non-functional
+/// Number/Text fact with no other per-figure differentiator (see
+/// [`WANDERER_CLASS`]'s doc for the precedent).
+/// type-audit: bare-ok(identifier-text)
+pub const FIGURE_MEMBERS: &str = "figure-members";
+/// Sky region of a star figure: `"northern sky"` / `"southern sky"` /
+/// `"the equator's road"`, by centroid declination (non-functional, Text —
+/// one per figure, same output order and dedup characteristic as
+/// [`FIGURE_MEMBERS`]).
+/// type-audit: bare-ok(identifier-text)
+pub const FIGURE_REGION: &str = "figure-region";
+/// A star figure stands on the sun's road — the ecliptic band (functional,
+/// Flag — committed only when true, like [`TIDALLY_LOCKED`]). Because
+/// `Flag(true)` is identical across every figure, this fact records "at
+/// least one figure is on the ecliptic", not a per-figure list; a caller
+/// wanting the per-figure detail must recompute from [`crate::figures`].
+/// type-audit: bare-ok(identifier-text)
+pub const FIGURE_ON_ECLIPTIC: &str = "figure-on-ecliptic";
 
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     Fact {
@@ -131,7 +182,13 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
 /// `subject` (the world entity): star class; tidally-locked flag OR
 /// day-length, depending on rotation regime; year length; obliquity;
 /// moon count; one moon-period-std per moon; one neighbor entity (with its
-/// own structured facts) per neighbor; one genesis-note per recorded
+/// own structured facts) per neighbor; a pole-star fact (north or south,
+/// never both) when the genesis-epoch night sky finds one; wanderer count
+/// plus one orbit and period fact per wanderer (innermost order) and the
+/// distinct wanderer kinds present (class facts dedupe — see
+/// [`WANDERER_CLASS`]); figure count plus one members/region fact per
+/// figure (output order) and whether any figure stands on the ecliptic
+/// (dedupes — see [`FIGURE_ON_ECLIPTIC`]); one genesis-note per recorded
 /// degradation.
 pub fn genesis(
     world: &mut World,
@@ -347,6 +404,95 @@ pub fn genesis(
             fact(id, NEIGHBOR_RA_DEG, Value::Number(neighbor.right_ascension)),
             &world.registry,
         )?;
+    }
+
+    // Pole star: a system-level, latitude-independent fact of the night sky
+    // at genesis (day 0) — derive the unified view once and commit the
+    // matching predicate, never both (spec §2 epoch honesty; precession
+    // retires pole stars, so this is a genesis-epoch snapshot, not an
+    // ongoing truth).
+    let calendar = crate::calendar::calendar_of(system);
+    let sky = crate::night_sky::night_sky_at(system, &calendar, 0.0, crate::units::StdDays(0.0));
+    if let Some(pole_star) = &sky.pole_star {
+        let predicate = match pole_star.pole {
+            crate::night_sky::Hemisphere::North => POLE_STAR_NORTH,
+            crate::night_sky::Hemisphere::South => POLE_STAR_SOUTH,
+        };
+        world.ledger.commit(
+            fact(subject, predicate, Value::Number(pole_star.separation_deg)),
+            &world.registry,
+        )?;
+    }
+
+    world.ledger.commit(
+        fact(
+            subject,
+            WANDERER_COUNT_FACT,
+            Value::Number(system.wanderers.len() as f64),
+        ),
+        &world.registry,
+    )?;
+    for wanderer in &system.wanderers {
+        world.ledger.commit(
+            fact(
+                subject,
+                WANDERER_ORBIT_AU,
+                Value::Number(wanderer.orbit.get()),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                subject,
+                WANDERER_PERIOD_STD,
+                Value::Number(wanderer.period.get()),
+            ),
+            &world.registry,
+        )?;
+        let class_name = match wanderer.class {
+            crate::wanderers::WandererClass::Rock => "rock",
+            crate::wanderers::WandererClass::Giant => "giant",
+        };
+        world.ledger.commit(
+            fact(subject, WANDERER_CLASS, Value::Text(class_name.to_string())),
+            &world.registry,
+        )?;
+    }
+
+    // Star figures (night-sky stage 3): the reference observer's sky
+    // clusters into notable groups. `astronomy_seed` matches the same
+    // derivation genesis itself performs (`system::generate`), so the
+    // catalog `figures` clusters over is exactly the one the almanac and
+    // lab metrics see.
+    let astronomy_seed = world.seed.derive(crate::streams::ROOT);
+    let figs = crate::figures::figures(astronomy_seed, system);
+    world.ledger.commit(
+        fact(subject, FIGURE_COUNT, Value::Number(figs.len() as f64)),
+        &world.registry,
+    )?;
+    for figure in &figs {
+        world.ledger.commit(
+            fact(
+                subject,
+                FIGURE_MEMBERS,
+                Value::Number(figure.member_count as f64),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                subject,
+                FIGURE_REGION,
+                Value::Text(crate::figures::region_word(figure.centroid.dec_deg).to_string()),
+            ),
+            &world.registry,
+        )?;
+        if figure.on_ecliptic {
+            world.ledger.commit(
+                fact(subject, FIGURE_ON_ECLIPTIC, Value::Flag(true)),
+                &world.registry,
+            )?;
+        }
     }
 
     for note in &outcome.notes {
@@ -653,5 +799,292 @@ mod tests {
                 crate::star::insolation_rel(&outcome.system.star, &outcome.system.anchor)
             )))
         );
+    }
+
+    /// Sweep seeds 0..64, unpinned: for each, derive the night-sky view
+    /// independently of `genesis` and assert the committed facts match it
+    /// exactly — a pole-star fact present iff the view finds one, matching
+    /// hemisphere, matching quantized separation, and never both facts at
+    /// once. Also guards against a vacuous sweep (a prior review flagged
+    /// the risk): at least one seed must actually commit a pole-star fact,
+    /// or this test fails loudly with the per-seed minimum separations so
+    /// the 10-degree threshold can get controller attention.
+    #[test]
+    fn genesis_commits_pole_star_facts_matching_the_derived_view_across_a_seed_sweep() {
+        use crate::night_sky::{Hemisphere, night_sky_at};
+        use crate::sky_position::EquatorialCoord;
+        use crate::units::StdDays;
+
+        let mut any_committed = false;
+        let mut min_separations: Vec<(u64, f64)> = Vec::new();
+
+        for seed in 0..64u64 {
+            let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
+            let mut w = world_with(seed);
+            let subject = w.ledger.mint_entity();
+            genesis(&mut w, subject, &outcome).unwrap();
+
+            let calendar = crate::calendar::calendar_of(&outcome.system);
+            let sky = night_sky_at(&outcome.system, &calendar, 0.0, StdDays(0.0));
+
+            let north = w.ledger.value_of(subject, POLE_STAR_NORTH).cloned();
+            let south = w.ledger.value_of(subject, POLE_STAR_SOUTH).cloned();
+
+            match sky.pole_star {
+                Some(ps) if ps.pole == Hemisphere::North => {
+                    assert_eq!(
+                        north,
+                        Some(Value::Number(hornvale_kernel::quantize(ps.separation_deg))),
+                        "seed {seed}: north pole-star fact must match the derived view"
+                    );
+                    assert_eq!(south, None, "seed {seed}: never both pole-star facts");
+                    any_committed = true;
+                }
+                Some(ps) if ps.pole == Hemisphere::South => {
+                    assert_eq!(
+                        south,
+                        Some(Value::Number(hornvale_kernel::quantize(ps.separation_deg))),
+                        "seed {seed}: south pole-star fact must match the derived view"
+                    );
+                    assert_eq!(north, None, "seed {seed}: never both pole-star facts");
+                    any_committed = true;
+                }
+                _ => {
+                    assert_eq!(north, None, "seed {seed}: no pole star, no north fact");
+                    assert_eq!(south, None, "seed {seed}: no pole star, no south fact");
+                }
+            }
+
+            let min_sep = outcome
+                .system
+                .neighbors
+                .iter()
+                .map(|n| {
+                    let genesis_pos = EquatorialCoord {
+                        ra_deg: n.right_ascension,
+                        dec_deg: n.declination,
+                    };
+                    let pos = calendar.star_equatorial_at(&genesis_pos, StdDays(0.0));
+                    (90.0 - pos.dec_deg).min(90.0 + pos.dec_deg)
+                })
+                .fold(f64::INFINITY, f64::min);
+            min_separations.push((seed, min_sep));
+        }
+
+        if !any_committed {
+            for (seed, min_sep) in &min_separations {
+                eprintln!("seed {seed}: min pole separation {min_sep:.2} deg");
+            }
+            panic!(
+                "BLOCKED: no seed in 0..64 committed a pole-star fact — the 10-degree \
+                 threshold may need controller attention"
+            );
+        }
+    }
+
+    /// Night-sky stage 2: with two wanderers pinned, genesis commits the
+    /// count fact plus one orbit/period/class trio per wanderer, innermost
+    /// order, quantized like every numeric object on commit. Seed 118's pin
+    /// draws one rock and one giant (not two of the same class): the ledger
+    /// dedups exact-duplicate facts (`Ledger::commit`), and `wanderer-class`
+    /// carries only two possible Text values, so two same-class wanderers
+    /// would collapse to a single committed fact — a real, documented
+    /// characteristic of a bare classification predicate with no other
+    /// per-wanderer differentiator, same as any other coarse non-functional
+    /// Text fact. A mixed-class seed keeps this test meaningful without
+    /// exercising that collapse.
+    #[test]
+    fn genesis_commits_one_orbit_period_and_class_fact_per_wanderer() {
+        use crate::wanderers::WandererClass;
+
+        let pins = SkyPins {
+            wanderers: Some(2),
+            ..SkyPins::default()
+        };
+        let outcome = generate(Seed(118), &pins).unwrap();
+        assert_eq!(outcome.system.wanderers.len(), 2);
+        assert_ne!(
+            outcome.system.wanderers[0].class, outcome.system.wanderers[1].class,
+            "test setup must exercise two distinct wanderer classes"
+        );
+        let mut w = world_with(118);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+
+        assert_eq!(
+            w.ledger.value_of(subject, WANDERER_COUNT_FACT),
+            Some(&Value::Number(2.0))
+        );
+
+        let orbits: Vec<f64> = w
+            .ledger
+            .facts_about(subject)
+            .filter(|f| f.predicate == WANDERER_ORBIT_AU)
+            .filter_map(|f| match f.object {
+                Value::Number(n) => Some(n),
+                _ => None,
+            })
+            .collect();
+        let expected_orbits: Vec<f64> = outcome
+            .system
+            .wanderers
+            .iter()
+            .map(|wd| hornvale_kernel::quantize(wd.orbit.get()))
+            .collect();
+        assert_eq!(orbits, expected_orbits);
+
+        let periods: Vec<f64> = w
+            .ledger
+            .facts_about(subject)
+            .filter(|f| f.predicate == WANDERER_PERIOD_STD)
+            .filter_map(|f| match f.object {
+                Value::Number(n) => Some(n),
+                _ => None,
+            })
+            .collect();
+        let expected_periods: Vec<f64> = outcome
+            .system
+            .wanderers
+            .iter()
+            .map(|wd| hornvale_kernel::quantize(wd.period.get()))
+            .collect();
+        assert_eq!(periods, expected_periods);
+
+        let classes: Vec<String> = w
+            .ledger
+            .facts_about(subject)
+            .filter(|f| f.predicate == WANDERER_CLASS)
+            .filter_map(|f| match &f.object {
+                Value::Text(t) => Some(t.clone()),
+                _ => None,
+            })
+            .collect();
+        let expected_classes: Vec<String> = outcome
+            .system
+            .wanderers
+            .iter()
+            .map(|wd| {
+                match wd.class {
+                    WandererClass::Rock => "rock",
+                    WandererClass::Giant => "giant",
+                }
+                .to_string()
+            })
+            .collect();
+        assert_eq!(classes, expected_classes);
+    }
+
+    /// Night-sky stage 3: the figure-count fact tracks `figures().len()`
+    /// exactly, quantized like every numeric object on commit, across a
+    /// seed sweep.
+    #[test]
+    fn genesis_commits_a_figure_count_fact_matching_figures_len_across_a_seed_sweep() {
+        for seed in 0..16u64 {
+            let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
+            let astronomy_seed = Seed(seed).derive("astronomy");
+            let expected = crate::figures::figures(astronomy_seed, &outcome.system).len();
+
+            let mut w = world_with(seed);
+            let subject = w.ledger.mint_entity();
+            genesis(&mut w, subject, &outcome).unwrap();
+
+            assert_eq!(
+                w.ledger.value_of(subject, FIGURE_COUNT),
+                Some(&Value::Number(hornvale_kernel::quantize(expected as f64))),
+                "seed {seed}: figure-count fact must match figures().len()"
+            );
+        }
+    }
+
+    /// `figure-members` is a coarse non-functional Number fact with no
+    /// per-figure differentiator: two figures with the same member count
+    /// collapse to one committed fact (documented honestly on
+    /// [`FIGURE_MEMBERS`], the same characteristic `wanderer-class`
+    /// carries). This asserts the dedup rather than assuming one-per-figure.
+    #[test]
+    fn figure_members_facts_dedupe_repeated_counts() {
+        // Find a seed whose figures include a repeated member count, so the
+        // dedup is actually exercised rather than vacuously true.
+        let mut found = false;
+        for seed in 0..64u64 {
+            let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
+            let astronomy_seed = Seed(seed).derive("astronomy");
+            let figs = crate::figures::figures(astronomy_seed, &outcome.system);
+            if figs.len() < 2 {
+                continue;
+            }
+            let mut counts: Vec<usize> = figs.iter().map(|f| f.member_count).collect();
+            counts.sort_unstable();
+            let has_duplicate_count = counts.windows(2).any(|w| w[0] == w[1]);
+            if !has_duplicate_count {
+                continue;
+            }
+            found = true;
+
+            let mut w = world_with(seed);
+            let subject = w.ledger.mint_entity();
+            genesis(&mut w, subject, &outcome).unwrap();
+
+            let committed: Vec<f64> = w
+                .ledger
+                .facts_about(subject)
+                .filter(|f| f.predicate == FIGURE_MEMBERS)
+                .filter_map(|f| match f.object {
+                    Value::Number(n) => Some(n),
+                    _ => None,
+                })
+                .collect();
+            let distinct_expected: std::collections::BTreeSet<u64> =
+                counts.iter().map(|&c| c as u64).collect();
+            assert_eq!(
+                committed.len(),
+                distinct_expected.len(),
+                "seed {seed}: repeated member counts must dedupe to one fact each"
+            );
+            break;
+        }
+        assert!(
+            found,
+            "BLOCKED: no seed in 0..64 produced two figures sharing a member count — \
+             the dedup claim is untested"
+        );
+    }
+
+    /// `figure-on-ecliptic` is a functional Flag committed only when true;
+    /// since `Flag(true)` is identical across every figure, at most one
+    /// fact is ever committed per subject regardless of how many figures
+    /// are on the ecliptic — assert presence tracks "any figure is",
+    /// documented honestly on [`FIGURE_ON_ECLIPTIC`].
+    #[test]
+    fn figure_on_ecliptic_flag_tracks_whether_any_figure_qualifies() {
+        for seed in 0..16u64 {
+            let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
+            let astronomy_seed = Seed(seed).derive("astronomy");
+            let figs = crate::figures::figures(astronomy_seed, &outcome.system);
+            let any_on_ecliptic = figs.iter().any(|f| f.on_ecliptic);
+
+            let mut w = world_with(seed);
+            let subject = w.ledger.mint_entity();
+            genesis(&mut w, subject, &outcome).unwrap();
+
+            let flag_present = w
+                .ledger
+                .facts_about(subject)
+                .any(|f| f.predicate == FIGURE_ON_ECLIPTIC);
+            assert_eq!(
+                flag_present, any_on_ecliptic,
+                "seed {seed}: figure-on-ecliptic fact presence must track \"any figure is\""
+            );
+            // At most one such fact, since every committed value is Flag(true).
+            let count = w
+                .ledger
+                .facts_about(subject)
+                .filter(|f| f.predicate == FIGURE_ON_ECLIPTIC)
+                .count();
+            assert!(
+                count <= 1,
+                "seed {seed}: figure-on-ecliptic must dedupe to one fact"
+            );
+        }
     }
 }

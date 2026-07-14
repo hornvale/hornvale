@@ -16,6 +16,10 @@
 | `deity-name-ipa` | yes | a belief's deity name (IPA transcription) |
 | `derived-from-phenomenon` | yes | phenomenon kind a belief mythologizes |
 | `eccentricity-mean` | yes | mean orbital eccentricity (deep-time forcing) |
+| `figure-count` | yes | how many star figures the reference observer's sky holds |
+| `figure-members` | no | member count of a star figure |
+| `figure-on-ecliptic` | yes | a star figure stands on the sun's road (the ecliptic band) |
+| `figure-region` | no | sky region of a star figure |
 | `fossil-shoreline` | no | a fossil shoreline left by deep-time sea-level change |
 | `frost-retreat` | no | the deep-time record of deglaciation |
 | `genesis-note` | no | a degradation or refusal recorded during sky genesis |
@@ -53,6 +57,8 @@
 | `ocean-fraction` | yes | fraction of globe cells below sea level |
 | `peopled-by` | yes | the species that peoples a settlement |
 | `plate-count` | yes | how many tectonic plates the globe has |
+| `pole-star-north` | yes | a bright star stands within 10 degrees of the north celestial pole at genesis (epoch-scoped: precession retires pole stars) |
+| `pole-star-south` | yes | a bright star stands within 10 degrees of the south celestial pole at genesis (epoch-scoped: precession retires pole stars) |
 | `population` | yes | population of a settlement |
 | `refugium` | no | a place habitable through the glacial maximum |
 | `retrograde-spin` | yes | the anchor world spins backward: the sun rises in the west |
@@ -86,6 +92,10 @@
 | `terrain-note` | no | a note recorded during tectonic genesis |
 | `terrain-pin` | no | a terrain scenario pin, round-trippable |
 | `tidally-locked` | yes | the anchor world is tidally locked (no local day) |
+| `wanderer-class` | no | a wanderer's kind: rock or giant |
+| `wanderer-count` | yes | how many wandering planets cross this sky |
+| `wanderer-orbit-au` | no | orbital distance of a wanderer, in AU |
+| `wanderer-period-std` | no | orbital period of a wanderer, in standard days |
 | `year-length-std` | yes | year length in standard days |
 
 ### Phenomenon kinds
@@ -95,9 +105,12 @@
 | `ambient` | a pervasive atmospheric condition |
 | `celestial-body` | a body visible in the sky |
 | `eclipse` | a moon crossing the face of the sun |
+| `heliacal-rising` | a star's first dawn return from behind the sun |
+| `heliacal-setting` | a star's last evening before the sun swallows it |
 | `night-star` | a fixed star notable in the night sky |
 | `seasonal-cycle` | the annual daylight cycle |
 | `tide` | the rise and fall of the waters under the moons |
+| `wandering-star` | a bright star that will not keep its station |
 
 ### Concepts
 

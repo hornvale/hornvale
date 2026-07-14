@@ -100,6 +100,30 @@ fn unsatisfiable_pins_fail_loudly_with_the_physical_reason() {
     }
 }
 
+/// Save-format contract: pinning the wanderer count moves NOTHING else.
+/// The count draw still happens (then is overridden); per-wanderer draws
+/// live on their own stream, so star/anchor/moons/neighbors/forcing bytes
+/// are identical pinned vs unpinned.
+#[test]
+fn wanderers_pin_leaves_the_rest_of_the_sky_untouched() {
+    for seed in [1u64, 7, 42, 99] {
+        let unpinned = generate(Seed(seed), &SkyPins::default()).unwrap().system;
+        for n in 0..=4u32 {
+            let pins = SkyPins {
+                wanderers: Some(n),
+                ..SkyPins::default()
+            };
+            let pinned = generate(Seed(seed), &pins).unwrap().system;
+            assert_eq!(pinned.wanderers.len() as u32, n);
+            assert_eq!(unpinned.star, pinned.star);
+            assert_eq!(unpinned.anchor, pinned.anchor);
+            assert_eq!(unpinned.moons, pinned.moons);
+            assert_eq!(unpinned.neighbors, pinned.neighbors);
+            assert_eq!(unpinned.forcing, pinned.forcing);
+        }
+    }
+}
+
 #[test]
 fn pinned_worlds_differ_from_unpinned_only_downstream_of_the_pin() {
     // Same seed, moons pinned to the drawn count => identical system.

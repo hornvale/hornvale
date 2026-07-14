@@ -1,6 +1,8 @@
 //! Tier-1 metrics extractors: analyzable properties of generated worlds.
 
-use hornvale_astronomy::{Calendar, NeighborClass, Rotation, StarSystem};
+use hornvale_astronomy::{
+    Calendar, NeighborClass, Rotation, StarSystem, streams::ROOT as ASTRONOMY_STREAM_ROOT,
+};
 use hornvale_climate::GeneratedClimate;
 use hornvale_kernel::{CellId, EntityId, Phenomenon, Seed, Value, World};
 use hornvale_language::{
@@ -740,6 +742,46 @@ pub fn registry() -> Vec<Metric> {
                 } else {
                     MetricValue::Absent
                 }
+            }),
+        },
+        Metric {
+            name: "figure-count",
+            doc: "Number of star figures the reference observer's sky holds",
+            summary: SummaryKind::Categorical,
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                let astronomy_seed = v.world.seed.derive(ASTRONOMY_STREAM_ROOT);
+                MetricValue::Text(
+                    hornvale_astronomy::figures(astronomy_seed, &v.system)
+                        .len()
+                        .to_string(),
+                )
+            }),
+        },
+        Metric {
+            name: "largest-figure-members",
+            doc: "Member count of the largest star figure (0 if none)",
+            summary: SummaryKind::Categorical,
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                let astronomy_seed = v.world.seed.derive(ASTRONOMY_STREAM_ROOT);
+                let largest = hornvale_astronomy::figures(astronomy_seed, &v.system)
+                    .iter()
+                    .map(|f| f.member_count)
+                    .max()
+                    .unwrap_or(0);
+                MetricValue::Text(largest.to_string())
+            }),
+        },
+        Metric {
+            name: "ecliptic-figure-count",
+            doc: "Number of star figures standing on the ecliptic (the sun's road)",
+            summary: SummaryKind::Categorical,
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                let astronomy_seed = v.world.seed.derive(ASTRONOMY_STREAM_ROOT);
+                let count = hornvale_astronomy::figures(astronomy_seed, &v.system)
+                    .iter()
+                    .filter(|f| f.on_ecliptic)
+                    .count();
+                MetricValue::Text(count.to_string())
             }),
         },
         Metric {
@@ -3507,8 +3549,9 @@ mod tests {
         // +2 for the-gathering (Task 8: capacity-by-abs-latitude, rank-size-slope),
         // +2 more for the Task 8 review fix (total-population,
         // pop-weighted-abs-latitude — the two metrics the brief named that
-        // were never built).
-        assert_eq!(registry().len(), 114);
+        // were never built), +3 for night-sky stage 3 (Task 10: figure-count,
+        // largest-figure-members, ecliptic-figure-count).
+        assert_eq!(registry().len(), 117);
     }
 
     #[test]
