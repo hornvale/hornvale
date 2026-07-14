@@ -2507,26 +2507,29 @@ pub fn night_sky_lines(
     // the same fallback-free resolution `calendar_lines`' daylight-swing
     // line uses, but with a temperate default instead of the equator when
     // no place has been placed yet.
-    let latitude = hornvale_terrain::places(world)
-        .first()
-        .and_then(|p| place_coord(world, p.id))
-        .map(|c| c.latitude)
-        .unwrap_or(35.0);
-    let year_length_days = calendar.year_length().get();
-    let pairs = hornvale_astronomy::heliacal_events(system, calendar, latitude, t);
-    let heliacal = pairs
-        .iter()
-        .take(3)
-        .map(|p| {
-            let neighbor = &system.neighbors[p.neighbor];
-            format!(
-                "The {} star returns before dawn at year-phase {:.2}, after {:.0} days of absence.",
-                neighbor.color,
-                p.rising_frac,
-                p.absence_fraction() * year_length_days
-            )
-        })
-        .collect();
+    let latitude_fallback = 35.0;
+    let heliacal = {
+        let latitude = hornvale_terrain::places(world)
+            .first()
+            .and_then(|p| place_coord(world, p.id))
+            .map(|c| c.latitude)
+            .unwrap_or(latitude_fallback);
+        let year_length_days = calendar.year_length().get();
+        let pairs = hornvale_astronomy::heliacal_events(system, calendar, latitude, t);
+        pairs
+            .iter()
+            .take(3)
+            .map(|p| {
+                let neighbor = &system.neighbors[p.neighbor];
+                format!(
+                    "The {} star returns before dawn at year-phase {:.2}, after {:.0} days of absence.",
+                    neighbor.color,
+                    p.rising_frac,
+                    p.absence_fraction() * year_length_days
+                )
+            })
+            .collect()
+    };
 
     let wanderers = system
         .wanderers
@@ -2574,20 +2577,26 @@ pub fn night_sky_lines(
         )]
     };
 
-    // The founding sightline and its drift rate (The Long Count): the same
-    // flagship vantage latitude as the heliacal/figure lines above, surfaced
-    // directly from the calendar rather than re-derived from the
-    // worldgen-committed `founding-solstice-azimuth-degrees` fact (the
-    // `alignments` stage's own concern).
-    let alignment = calendar
-        .solstice_rise_azimuth_at(latitude, t)
-        .and_then(|az| {
-            let kyr = hornvale_astronomy::StdDays::new(t.get() + 1000.0 * 365.25).unwrap();
-            let drift = calendar.alignment_drift_deg(latitude, t, kyr)?;
-            Some(format!(
-                "From the first settlement, the midsummer sun rises at azimuth {az:.1}°; the sightline drifts {:.2}° in a thousand years.",
-                drift.abs()
-            ))
+    // The founding sightline and its drift rate (The Long Count): rendered
+    // only when a real settlement exists (to ensure the "From the first
+    // settlement" language is truthful). Requires the actual first place's
+    // latitude; the 35° fallback (used for heliacal events) is insufficient
+    // here since it would create a lying sentence.
+    let alignment = hornvale_terrain::places(world)
+        .first()
+        .and_then(|p| place_coord(world, p.id))
+        .map(|c| c.latitude)
+        .and_then(|latitude| {
+            calendar
+                .solstice_rise_azimuth_at(latitude, t)
+                .and_then(|az| {
+                    let kyr = hornvale_astronomy::StdDays::new(t.get() + 1000.0 * 365.25).unwrap();
+                    let drift = calendar.alignment_drift_deg(latitude, t, kyr)?;
+                    Some(format!(
+                        "From the first settlement, the midsummer sun rises at azimuth {az:.1}°; the sightline drifts {:.2}° in a thousand years.",
+                        drift.abs()
+                    ))
+                })
         });
 
     Ok(Some(hornvale_almanac::NightSkyLines {

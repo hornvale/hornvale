@@ -166,8 +166,7 @@ pub fn render(ctx: &AlmanacContext) -> String {
             doc.push_str(&format!("{line}\n\n"));
         }
         if let Some(alignment) = &lines.alignment {
-            doc.push_str(alignment);
-            doc.push('\n');
+            doc.push_str(&format!("{alignment}\n\n"));
         }
     }
 
