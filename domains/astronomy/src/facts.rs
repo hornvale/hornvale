@@ -68,6 +68,16 @@ pub const ECCENTRICITY_MEAN: &str = "eccentricity-mean";
 /// Number).
 /// type-audit: bare-ok(identifier-text)
 pub const OBLIQUITY_AMPLITUDE: &str = "obliquity-amplitude";
+/// A bright star stands within 10 degrees of the north celestial pole at
+/// genesis (functional, Number = separation degrees; epoch-scoped:
+/// precession retires pole stars).
+/// type-audit: bare-ok(identifier-text)
+pub const POLE_STAR_NORTH: &str = "pole-star-north";
+/// A bright star stands within 10 degrees of the south celestial pole at
+/// genesis (functional, Number = separation degrees; epoch-scoped:
+/// precession retires pole stars).
+/// type-audit: bare-ok(identifier-text)
+pub const POLE_STAR_SOUTH: &str = "pole-star-south";
 
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     Fact {
@@ -84,7 +94,9 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
 /// `subject` (the world entity): star class; tidally-locked flag OR
 /// day-length, depending on rotation regime; year length; obliquity;
 /// moon count; one moon-period-std per moon; one notable-neighbor per
-/// neighbor; one genesis-note per recorded degradation.
+/// neighbor; a pole-star fact (north or south, never both) when the
+/// genesis-epoch night sky finds one; one genesis-note per recorded
+/// degradation.
 pub fn genesis(
     world: &mut World,
     subject: EntityId,
@@ -190,6 +202,24 @@ pub fn genesis(
         );
         world.ledger.commit(
             fact(subject, NOTABLE_NEIGHBOR, Value::Text(description)),
+            &world.registry,
+        )?;
+    }
+
+    // Pole star: a system-level, latitude-independent fact of the night sky
+    // at genesis (day 0) — derive the unified view once and commit the
+    // matching predicate, never both (spec §2 epoch honesty; precession
+    // retires pole stars, so this is a genesis-epoch snapshot, not an
+    // ongoing truth).
+    let calendar = crate::calendar::calendar_of(system);
+    let sky = crate::night_sky::night_sky_at(system, &calendar, 0.0, crate::units::StdDays(0.0));
+    if let Some(pole_star) = &sky.pole_star {
+        let predicate = match pole_star.pole {
+            crate::night_sky::Hemisphere::North => POLE_STAR_NORTH,
+            crate::night_sky::Hemisphere::South => POLE_STAR_SOUTH,
+        };
+        world.ledger.commit(
+            fact(subject, predicate, Value::Number(pole_star.separation_deg)),
             &world.registry,
         )?;
     }
@@ -432,5 +462,86 @@ mod tests {
                 .facts_about(subject)
                 .all(|f| f.provenance == "astronomy")
         );
+    }
+
+    /// Sweep seeds 0..64, unpinned: for each, derive the night-sky view
+    /// independently of `genesis` and assert the committed facts match it
+    /// exactly — a pole-star fact present iff the view finds one, matching
+    /// hemisphere, matching quantized separation, and never both facts at
+    /// once. Also guards against a vacuous sweep (a prior review flagged
+    /// the risk): at least one seed must actually commit a pole-star fact,
+    /// or this test fails loudly with the per-seed minimum separations so
+    /// the 10-degree threshold can get controller attention.
+    #[test]
+    fn genesis_commits_pole_star_facts_matching_the_derived_view_across_a_seed_sweep() {
+        use crate::night_sky::{Hemisphere, night_sky_at};
+        use crate::sky_position::EquatorialCoord;
+        use crate::units::StdDays;
+
+        let mut any_committed = false;
+        let mut min_separations: Vec<(u64, f64)> = Vec::new();
+
+        for seed in 0..64u64 {
+            let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
+            let mut w = world_with(seed);
+            let subject = w.ledger.mint_entity();
+            genesis(&mut w, subject, &outcome).unwrap();
+
+            let calendar = crate::calendar::calendar_of(&outcome.system);
+            let sky = night_sky_at(&outcome.system, &calendar, 0.0, StdDays(0.0));
+
+            let north = w.ledger.value_of(subject, POLE_STAR_NORTH).cloned();
+            let south = w.ledger.value_of(subject, POLE_STAR_SOUTH).cloned();
+
+            match sky.pole_star {
+                Some(ps) if ps.pole == Hemisphere::North => {
+                    assert_eq!(
+                        north,
+                        Some(Value::Number(hornvale_kernel::quantize(ps.separation_deg))),
+                        "seed {seed}: north pole-star fact must match the derived view"
+                    );
+                    assert_eq!(south, None, "seed {seed}: never both pole-star facts");
+                    any_committed = true;
+                }
+                Some(ps) if ps.pole == Hemisphere::South => {
+                    assert_eq!(
+                        south,
+                        Some(Value::Number(hornvale_kernel::quantize(ps.separation_deg))),
+                        "seed {seed}: south pole-star fact must match the derived view"
+                    );
+                    assert_eq!(north, None, "seed {seed}: never both pole-star facts");
+                    any_committed = true;
+                }
+                _ => {
+                    assert_eq!(north, None, "seed {seed}: no pole star, no north fact");
+                    assert_eq!(south, None, "seed {seed}: no pole star, no south fact");
+                }
+            }
+
+            let min_sep = outcome
+                .system
+                .neighbors
+                .iter()
+                .map(|n| {
+                    let genesis_pos = EquatorialCoord {
+                        ra_deg: n.right_ascension,
+                        dec_deg: n.declination,
+                    };
+                    let pos = calendar.star_equatorial_at(&genesis_pos, StdDays(0.0));
+                    (90.0 - pos.dec_deg).min(90.0 + pos.dec_deg)
+                })
+                .fold(f64::INFINITY, f64::min);
+            min_separations.push((seed, min_sep));
+        }
+
+        if !any_committed {
+            for (seed, min_sep) in &min_separations {
+                eprintln!("seed {seed}: min pole separation {min_sep:.2} deg");
+            }
+            panic!(
+                "BLOCKED: no seed in 0..64 committed a pole-star fact — the 10-degree \
+                 threshold may need controller attention"
+            );
+        }
     }
 }

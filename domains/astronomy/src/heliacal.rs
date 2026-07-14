@@ -93,6 +93,11 @@ fn at_local_fraction(
 /// own rising moment); the heliacal setting is the last true-to-false edge
 /// of the evening-visibility predicate at the star's setting moment. A
 /// star visible (or invisible) at every sample all year has neither event.
+/// The circumpolar/never-rises filter is evaluated once, at `t`, rather
+/// than per-sample across the scanned year: precession and obliquity
+/// forcing operate on kiloyear timescales, so the extreme/non-extreme
+/// classification cannot flip within a single scanned year, making a
+/// per-sample re-evaluation pointless.
 /// type-audit: pending(wave-1: latitude)
 pub fn heliacal_events(
     system: &StarSystem,

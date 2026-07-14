@@ -26,6 +26,12 @@ Salient phenomena, most attention-demanding first:
 
 By night: a smoldering red star that does not wander; a warm yellow star that does not wander; a deep orange star that does not wander; a dim red star that does not wander; a pale white star that does not wander.
 
+The smoldering red star returns before dawn at year-phase 0.07, after 249 days of absence.
+
+The warm yellow star returns before dawn at year-phase 0.15, after 39 days of absence.
+
+The deep orange star returns before dawn at year-phase 0.98, after 31 days of absence.
+
 ## The Calendar
 
 - The year is 418.3 local days (368.1 standard days).

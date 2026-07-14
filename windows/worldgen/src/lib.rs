@@ -2322,6 +2322,76 @@ pub fn night_sky_line(world: &World) -> Result<Option<String>, BuildError> {
     Ok(Some(format!("By night: {}.", parts.join("; "))))
 }
 
+/// The pole star and heliacal-return lines under **The Sky** (night-sky
+/// stage 1): a pole-star sentence when the genesis-epoch night sky finds
+/// one within `POLE_STAR_MAX_SEPARATION_DEG` of either celestial pole, plus
+/// up to three heliacal-return sentences for the brightest neighbors
+/// (index order), at the same flagship vantage latitude `calendar_lines`
+/// resolves its daylight-swing line at (the first known place's committed
+/// latitude; reference latitude 35.0 — a mid-temperate default — until the
+/// flagship vantage reaches the almanac, if no place resolves). `None` for
+/// constant-sky worlds, which have no neighborhood to describe.
+/// type-audit: bare-ok(prose: return)
+pub fn night_sky_lines(
+    world: &World,
+) -> Result<Option<hornvale_almanac::NightSkyLines>, BuildError> {
+    let sky = sky_of(world)?;
+    let Sky::Generated(sky) = &sky else {
+        return Ok(None);
+    };
+    let calendar = sky.calendar();
+    let system = sky.system();
+    let t = hornvale_astronomy::StdDays::new(0.0).unwrap();
+
+    let view = hornvale_astronomy::night_sky_at(system, calendar, 0.0, t);
+    let pole_star = view.pole_star.map(|ps| {
+        let neighbor = &system.neighbors[ps.neighbor];
+        let hemisphere = match ps.pole {
+            hornvale_astronomy::Hemisphere::North => "north",
+            hornvale_astronomy::Hemisphere::South => "south",
+        };
+        let backward = if view.wheels_backward {
+            " backward, on this backward-spinning world"
+        } else {
+            ""
+        };
+        format!(
+            "A {} star stands {:.1}° from the {} celestial pole; the sky wheels around it{}.",
+            neighbor.color, ps.separation_deg, hemisphere, backward
+        )
+    });
+
+    // Reference latitude until the flagship vantage reaches the almanac —
+    // the same fallback-free resolution `calendar_lines`' daylight-swing
+    // line uses, but with a temperate default instead of the equator when
+    // no place has been placed yet.
+    let latitude = hornvale_terrain::places(world)
+        .first()
+        .and_then(|p| place_coord(world, p.id))
+        .map(|c| c.latitude)
+        .unwrap_or(35.0);
+    let year_length_days = calendar.year_length().get();
+    let pairs = hornvale_astronomy::heliacal_events(system, calendar, latitude, t);
+    let heliacal = pairs
+        .iter()
+        .take(3)
+        .map(|p| {
+            let neighbor = &system.neighbors[p.neighbor];
+            format!(
+                "The {} star returns before dawn at year-phase {:.2}, after {:.0} days of absence.",
+                neighbor.color,
+                p.rising_frac,
+                p.absence_fraction() * year_length_days
+            )
+        })
+        .collect();
+
+    Ok(Some(hornvale_almanac::NightSkyLines {
+        pole_star,
+        heliacal,
+    }))
+}
+
 /// Notes recorded during sky genesis. Empty for constant-sky worlds, which
 /// are never generated.
 /// type-audit: bare-ok(prose: return)
@@ -2525,6 +2595,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         },
         calendar_lines: calendar_lines(world)?,
         night_sky: night_sky_line(world)?,
+        night_sky_lines: night_sky_lines(world)?,
         genesis_notes: genesis_notes(world)?,
         settlement_lines: settlement_lines(world)?,
     })
@@ -2906,6 +2977,7 @@ mod tests {
         let world = constant(42);
         assert!(calendar_lines(&world).unwrap().is_empty());
         assert!(night_sky_line(&world).unwrap().is_none());
+        assert!(night_sky_lines(&world).unwrap().is_none());
         assert!(genesis_notes(&world).unwrap().is_empty());
     }
 
@@ -2952,6 +3024,37 @@ mod tests {
     fn seed_23_generated_default_has_genesis_notes() {
         let world = generated(23);
         assert!(!genesis_notes(&world).unwrap().is_empty());
+    }
+
+    /// Seed 9's default (unpinned) generation carries a north pole star at
+    /// genesis (verified against the astronomy sweep in `facts.rs`); this
+    /// pins the almanac-side wiring to a real seed rather than a
+    /// hand-built fixture.
+    #[test]
+    fn seed_9_generated_default_has_a_pole_star_line() {
+        let world = generated(9);
+        let lines = night_sky_lines(&world).unwrap().unwrap();
+        let pole_star = lines.pole_star.expect("seed 9 has a north pole star");
+        assert!(pole_star.contains("celestial pole"));
+        assert!(pole_star.contains("north"));
+
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.night_sky_lines.unwrap().pole_star, Some(pole_star));
+    }
+
+    #[test]
+    fn heliacal_lines_render_at_most_three_and_cap_the_year_phase_absence() {
+        // Seed 42's default generation has several neighbors; assert the
+        // heliacal instrument produces at least one line (or honestly
+        // none, for a system with no risings this year) and never more
+        // than three.
+        let world = generated(42);
+        let lines = night_sky_lines(&world).unwrap().unwrap();
+        assert!(lines.heliacal.len() <= 3);
+        for line in &lines.heliacal {
+            assert!(line.contains("returns before dawn at year-phase"));
+            assert!(line.contains("days of absence"));
+        }
     }
 
     #[test]
@@ -3044,6 +3147,7 @@ mod tests {
         assert_eq!(observed_phenomena(&world, 0.0).unwrap(), Vec::new());
         assert!(calendar_lines(&world).is_err());
         assert!(night_sky_line(&world).is_err());
+        assert!(night_sky_lines(&world).is_err());
         assert!(genesis_notes(&world).is_err());
         assert!(almanac_context(&world).is_err());
     }

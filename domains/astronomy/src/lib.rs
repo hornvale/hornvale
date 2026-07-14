@@ -178,6 +178,18 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         true,
         "obliquity oscillation amplitude, degrees (moon-coupled)",
     )?;
+    registry.register_predicate(
+        facts::POLE_STAR_NORTH,
+        true,
+        "a bright star stands within 10 degrees of the north celestial pole \
+         at genesis (epoch-scoped: precession retires pole stars)",
+    )?;
+    registry.register_predicate(
+        facts::POLE_STAR_SOUTH,
+        true,
+        "a bright star stands within 10 degrees of the south celestial pole \
+         at genesis (epoch-scoped: precession retires pole stars)",
+    )?;
 
     registry.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")?;
     registry.register_concept("moon", "astronomy", ConceptKind::Celestial, "a moon")?;

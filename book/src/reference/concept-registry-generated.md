@@ -40,6 +40,8 @@
 | `ocean-fraction` | yes | fraction of globe cells below sea level |
 | `peopled-by` | yes | the species that peoples a settlement |
 | `plate-count` | yes | how many tectonic plates the globe has |
+| `pole-star-north` | yes | a bright star stands within 10 degrees of the north celestial pole at genesis (epoch-scoped: precession retires pole stars) |
+| `pole-star-south` | yes | a bright star stands within 10 degrees of the south celestial pole at genesis (epoch-scoped: precession retires pole stars) |
 | `population` | yes | population of a settlement |
 | `refugium` | no | a place habitable through the glacial maximum |
 | `retrograde-spin` | yes | the anchor world spins backward: the sun rises in the west |
@@ -80,6 +82,8 @@
 | `ambient` | a pervasive atmospheric condition |
 | `celestial-body` | a body visible in the sky |
 | `eclipse` | a moon crossing the face of the sun |
+| `heliacal-rising` | a star's first dawn return from behind the sun |
+| `heliacal-setting` | a star's last evening before the sun swallows it |
 | `night-star` | a fixed star notable in the night sky |
 | `seasonal-cycle` | the annual daylight cycle |
 | `tide` | the rise and fall of the waters under the moons |
