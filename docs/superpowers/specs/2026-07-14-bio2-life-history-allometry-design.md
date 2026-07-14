@@ -112,6 +112,35 @@ k_mat (target lifespan and maturity documented in the module); every other
 species scales from mass and clade off that anchor. This keeps one authored
 number attributable and the rest derived — the minimal-axis discipline.
 
+**Clade coefficients preserve the fast–slow covariation (ideonomy pass 3).**
+The frontier's thesis is that life-history traits covary along a *single*
+axis. Independent per-trait clade coefficients could break that (a clade with
+long life but fast reproductive tempo is incoherent). Discipline: the clade
+adjustment is a **single per-class pace multiplier** applied coherently to the
+time-traits (ectotherms shift *all* of life/maturity/tempo slow together), not
+four free knobs. A test asserts the monotone covariation holds across the
+roster. (Two ideonomy methods — notation composability and a musical
+harmonic-series re-instantiation — converged on "traits are fixed ratios off
+one pace," which is what this multiplier encodes.)
+
+**Exponent scope — heterotrophs only.** The universal `p` values are validated
+for unitary heterotrophic organisms (`Endotherm`/`Ectotherm`) in the roster's
+mass range. `Autotroph` energy capture is **surface/area-limited** (light
+interception scales with area, not the 3/4 metabolic power law), so it needs a
+*different* exponent; `Ametabolic` has no metabolic law at all. Both seams
+carry this scope caveat in their doc comments — activating them is its own
+modelling decision, not a coefficient fill-in.
+
+**Lore-canonical outliers are out of baseline scope.** Real allometry makes
+humans (and, later, elves) outliers — they live several-fold longer than mass
+predicts. Today's roster (goblinoids 18–132 kg + kobold) has no such outlier,
+so pure allometry is correct *now*. But MEM-7's long-lived species will defy
+it, so `life_history` is documented as the **allometric baseline**, and a
+per-species override multiplier (a lore seam) is named as the future extension
+that the long-lived-species campaign adds — not built here. This sharpens the
+discovered-vs-calibrated split: the baseline is principled; canonical outliers
+will be explicit authored exceptions.
+
 ## 5. Derived outputs: the `LifeHistory` projection
 
 A derived view struct, **computed on demand, not stored on `SpeciesDef`**
@@ -119,12 +148,12 @@ A derived view struct, **computed on demand, not stored on `SpeciesDef`**
 
 ```rust
 pub struct LifeHistory {
-    pub basal_metabolic_rate_w: f64, // watts, reference-temp basal
-    pub lifespan: Duration,          // see §7 unit decision
-    pub age_at_maturity: Duration,
-    pub reproductive_tempo: f64,     // r–K position, 0 fast … 1 slow
-    pub generation_length: Duration, // f(maturity, lifespan); MEM-7's handle
-    pub pace_of_life: f64,           // 0 fast … 1 slow, the headline scalar
+    pub basal_metabolic_rate_w: f64,         // watts, reference-temp basal; 0.0 if Ametabolic
+    pub lifespan: Option<Duration>,          // None if Ametabolic; see §7 unit decision
+    pub age_at_maturity: Option<Duration>,   // None if Ametabolic
+    pub reproductive_tempo: Option<f64>,     // r–K position 0 fast … 1 slow; None if Ametabolic
+    pub generation_length: Option<Duration>, // f(maturity, lifespan); MEM-7's handle; None if Ametabolic
+    pub pace_of_life: f64,                   // 0 fast … 1 slow; absolute f(log mass), roster-independent
 }
 pub fn life_history(mass: Mass, class: MetabolicClass) -> LifeHistory;
 ```
@@ -133,14 +162,36 @@ pub fn life_history(mass: Mass, class: MetabolicClass) -> LifeHistory;
   decay constants to it). Defined `generation_length = age_at_maturity + c ·
   (lifespan − age_at_maturity)` with `c` a documented fraction (~0.3), so it
   sits between first and last reproduction.
-- **Pace-of-life** — a normalized fast–slow scalar (derived from lifespan or
-  log-mass, mapped to [0,1]); the frontier's "one number," now *derived*.
-  Drives the almanac headline phrase.
-- **`Autotroph`/`Ametabolic`**: `basal_metabolic_rate_w` is `0.0` for
-  `Ametabolic` (no metabolism); `Autotroph` computes a normal basal rate (it
-  still metabolizes — the difference is that its energy *source* is light, a
-  distinction the trophic layer reads, not this scalar). Time-traits derive
-  from mass for every class. No panic paths.
+- **`reproductive_tempo` vs `pace_of_life` are distinct** (they read collinear,
+  so the spec pins the difference): `reproductive_tempo` is specifically
+  reproductive output on the r–K axis (prolific ↔ sparse); `pace_of_life` is
+  the *overall* life-history speed (short-and-fast ↔ long-and-slow). A slow
+  breeder can pair with either, so they are not merged.
+- **Pace-of-life must be an ABSOLUTE function of mass, never roster-relative
+  (ideonomy pass 3 — stability).** An earlier framing ("normalize across the
+  roster") is rejected: min/max-over-the-current-roster normalization means
+  *adding a fifth species retroactively changes every existing species'
+  pace-of-life*, drifting almanac and metric output on an unrelated edit.
+  Instead `pace_of_life = f(log mass)` through a **fixed reference mass range**
+  (documented constants), so a species' value depends only on its own mass and
+  class. Adding a species never moves another's.
+- **`Ametabolic` nulls the biological traits (ideonomy pass 3 — combination).**
+  A construct/undead has no mass-derived lifespan, maturity, reproductive
+  tempo, or generation length — mass-scaling them is wrong, not just BMR.
+  `LifeHistory`'s biological fields become `Option`, `None` for `Ametabolic`
+  (BMR `0.0`); every other class fills them. `Autotroph` still ages and
+  reproduces, so it fills the time-traits normally (its BMR carries the §4
+  surface-scaling caveat). No panic paths for any class. `pace_of_life` stays a
+  plain `f64` (it is a size-derived position, defined for anything with mass),
+  but for `Ametabolic` it carries no life-history meaning and the almanac
+  suppresses the life-history block entirely when the biological traits are
+  `None` (ideonomy pass 4).
+
+Because `life_history` is a pure pointwise `f(Mass, Class)`, it is already
+**forward-compatible with BIO-4** (gene–culture coevolution): when mass later
+becomes a field evolving over era-time, the same function applied pointwise
+yields an evolving life-history — no signature change. The functions stay
+pointwise (a field is applied over them), never field-bound.
 
 ## 6. Output surfaces — read-only, strictly neutral
 
@@ -217,8 +268,17 @@ This campaign **consumes** coexistence-stack's `Mass` type and
   a test asserts no new stream label appears in the manifest.
 - **Presentation:** almanac block and each lab metric extract for seed 42
   (golden), following existing per-species metric tests.
-- **Property:** `Autotroph`/`Ametabolic` never panic; metabolic rate is `0.0`
-  for `Ametabolic`.
+- **Property:** `Autotroph`/`Ametabolic` never panic; `Ametabolic` returns
+  `None` for all four biological traits and `0.0` BMR; `Autotroph` fills the
+  time-traits.
+- **`pace_of_life` roster-independence (ideonomy pass 3):** a species' value is
+  identical whether or not other species exist in the registry — adding a
+  hypothetical fifth species does not change any existing species'
+  pace-of-life. Guards the absolute-reference requirement (§5).
+- **Fast–slow covariation (ideonomy pass 3):** across the roster and across
+  synthetic masses, `life`, `maturity`, and `tempo` move together monotonically
+  — no incoherent long-life/fast-tempo combinations; the per-class multiplier
+  shifts them coherently.
 
 ## 10. Ideonomy-surfaced items and the fidelity call
 
