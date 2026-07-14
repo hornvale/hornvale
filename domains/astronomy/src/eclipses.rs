@@ -368,7 +368,7 @@ pub struct EclipseCycle {
 /// minimizing the draconic-phase miss (ties broken toward the shorter
 /// cycle, deterministically). `None` for degenerate inputs.
 pub fn best_cycle(synodic: StdDays, draconic: StdDays) -> Option<EclipseCycle> {
-    if synodic.0 <= 0.0 || draconic.0 <= 0.0 {
+    if !synodic.0.is_finite() || synodic.0 <= 0.0 || !draconic.0.is_finite() || draconic.0 <= 0.0 {
         return None;
     }
     let ratio = synodic.0 / draconic.0;
@@ -832,6 +832,16 @@ mod tests {
         let ey = eclipse_year(StdDays(365.25), p);
         let parade = parade_days_per_year(StdDays(365.25), ey);
         assert!((15.0..25.0).contains(&parade), "parade {parade}");
+    }
+
+    /// Degenerate inputs never yield a cycle: zero, negative, and
+    /// non-finite periods are all explicitly None.
+    #[test]
+    fn best_cycle_rejects_degenerate_inputs() {
+        assert!(best_cycle(StdDays(0.0), StdDays(27.2)).is_none());
+        assert!(best_cycle(StdDays(29.5), StdDays(-1.0)).is_none());
+        assert!(best_cycle(StdDays(f64::NAN), StdDays(27.2)).is_none());
+        assert!(best_cycle(StdDays(29.5), StdDays(f64::INFINITY)).is_none());
     }
 
     /// Coincidence days: same-day events from different moons count once
