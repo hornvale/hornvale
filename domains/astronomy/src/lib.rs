@@ -40,7 +40,10 @@ pub use provider::{
     WANDERING_STAR,
 };
 pub use sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
-pub use star::{Star, generate_star, insolation_rel};
+pub use star::{
+    GYR_DAYS, Star, brightening_per_gyr, generate_star, insolation_rel, insolation_rel_at,
+    luminosity_at,
+};
 pub use starfield::{FieldStar, starfield};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
@@ -303,6 +306,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::INSOLATION_REL,
         true,
         "insolation at the anchor relative to Earth (derived L/a²)",
+    )?;
+    registry.register_predicate(
+        facts::BRIGHTENING_PER_GYR,
+        true,
+        "the star's fractional main-sequence brightening per gigayear",
     )?;
     registry.register_predicate(
         facts::FIGURE_COUNT,

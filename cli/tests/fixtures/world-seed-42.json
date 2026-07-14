@@ -17,6 +17,11 @@
         "functional": true,
         "doc": "biome of a place"
       },
+      "brightening-per-gyr": {
+        "name": "brightening-per-gyr",
+        "functional": true,
+        "doc": "the star's fractional main-sequence brightening per gigayear"
+      },
       "cell-id": {
         "name": "cell-id",
         "functional": true,
@@ -1055,6 +1060,16 @@
         "predicate": "insolation-rel",
         "object": {
           "Number": 0.74229186
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "brightening-per-gyr",
+        "object": {
+          "Number": 0.077572545
         },
         "place": null,
         "day": 0.0,

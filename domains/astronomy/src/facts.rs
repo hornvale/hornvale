@@ -141,6 +141,10 @@ pub const ANCHOR_ORBIT_AU: &str = "anchor-orbit-au";
 /// L/a², global annual mean).
 /// type-audit: bare-ok(identifier-text)
 pub const INSOLATION_REL: &str = "insolation-rel";
+/// Predicate: the star's fractional main-sequence brightening per
+/// gigayear (The Long Count).
+/// type-audit: bare-ok(identifier-text)
+pub const BRIGHTENING_PER_GYR: &str = "brightening-per-gyr";
 /// How many star figures the reference observer's sky holds (functional,
 /// Number).
 /// type-audit: bare-ok(identifier-text)
@@ -320,6 +324,14 @@ pub fn genesis(
             subject,
             INSOLATION_REL,
             Value::Number(crate::star::insolation_rel(&system.star, &system.anchor)),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            BRIGHTENING_PER_GYR,
+            Value::Number(crate::star::brightening_per_gyr(&system.star)),
         ),
         &world.registry,
     )?;
@@ -554,6 +566,13 @@ mod tests {
         assert!(w.ledger.value_of(subject, STAR_CLASS).is_some());
         assert!(w.ledger.value_of(subject, YEAR_LENGTH_STD).is_some());
         assert!(w.ledger.value_of(subject, OBLIQUITY_DEGREES).is_some());
+        assert_eq!(
+            w.ledger
+                .facts_about(subject)
+                .filter(|f| f.predicate == BRIGHTENING_PER_GYR)
+                .count(),
+            1
+        );
     }
 
     #[test]
