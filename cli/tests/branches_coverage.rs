@@ -74,7 +74,6 @@ fn assert_species_pin_isolated(species: &str) {
     let unpinned = default_generated_seed_42();
     let pinned = seed_42_with(&SettlementPins {
         species: Some(species.to_string()),
-        ..SettlementPins::default()
     });
 
     let unpinned_cells = settlements_by_cell(&unpinned, species);

@@ -308,6 +308,12 @@ impl SettlementView {
     pub fn climate(&self) -> &GeneratedClimate {
         &self.climate.climate
     }
+
+    /// The species roster this view was built from, reached through the
+    /// climate/terrain/astronomy rungs this view extends.
+    pub fn roster(&self) -> &[hornvale_species::SpeciesDef] {
+        &self.climate.terrain.astronomy.roster
+    }
 }
 
 impl AsRef<ClimateView> for SettlementView {
@@ -922,6 +928,182 @@ pub fn registry() -> Vec<Metric> {
                     MetricValue::Absent
                 } else {
                     MetricValue::Number(pops.iter().sum::<f64>() / pops.len() as f64)
+                }
+            }),
+        },
+        Metric {
+            name: "total-population",
+            doc: "Sum of every settlement's committed population fact; Absent if there are none",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let places = hornvale_terrain::places(v.world());
+                let pops: Vec<f64> = places
+                    .iter()
+                    .filter_map(|p| {
+                        match v
+                            .world()
+                            .ledger
+                            .value_of(p.id, hornvale_settlement::POPULATION)
+                        {
+                            Some(Value::Number(n)) => Some(*n),
+                            _ => None,
+                        }
+                    })
+                    .collect();
+                if pops.is_empty() {
+                    MetricValue::Absent
+                } else {
+                    MetricValue::Number(pops.iter().sum::<f64>())
+                }
+            }),
+        },
+        Metric {
+            name: "capacity-by-abs-latitude",
+            doc: "The carrying-capacity field's headline calibration (design spec §5): the \
+                   ratio of mean per-land-cell K (summed over the full species roster's \
+                   individual fields, each species' own psychology folded in) in the \
+                   low-latitude band (|latitude| < 30) to the \
+                   polar band (|latitude| > 60), the polar mean floored at POLE_FLOOR (1% of \
+                   the K formula's baseline unit) so an exactly-zero polar band — the Miami NPP \
+                   proxy's honest reading of hard cold, not a bug — reports a large-but-bounded \
+                   ratio rather than a division blowup. A field grounded in the real biomass \
+                   gradient reads well above 1 here; Absent if either band has no land cells (a \
+                   wholly ocean or wholly polar world)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[1.0, 3.0, 5.0, 10.0, 20.0, 40.0, 60.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let geo = v.terrain().geosphere();
+                let base_inputs =
+                    hornvale_worldgen::carrying_inputs_of(geo, v.terrain(), v.climate());
+                let (mut trop_sum, mut trop_n, mut pole_sum, mut pole_n) =
+                    (0.0_f64, 0u32, 0.0_f64, 0u32);
+                for def in v.roster() {
+                    let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
+                        hornvale_worldgen::species_carrying_input(*base_inputs.get(c), &def.psych)
+                    });
+                    let k = hornvale_demography::carrying_capacity(geo, &inputs);
+                    for cell in geo.cells() {
+                        if v.terrain().is_ocean(cell) {
+                            continue;
+                        }
+                        let lat = geo.coord(cell).latitude.abs();
+                        let kv = *k.get(cell);
+                        if lat < 30.0 {
+                            trop_sum += kv;
+                            trop_n += 1;
+                        } else if lat > 60.0 {
+                            pole_sum += kv;
+                            pole_n += 1;
+                        }
+                    }
+                }
+                if trop_n == 0 || pole_n == 0 {
+                    return MetricValue::Absent;
+                }
+                // A floor comparable to the smallest physically meaningful K
+                // unit (the NPP proxy's baseline scale is O(1)): an exactly-
+                // zero polar band reads as a bounded ratio, not a division
+                // blowup, while a genuinely-small-but-measured polar K (e.g.
+                // a mild subpolar cell) still moves the ratio honestly.
+                const POLE_FLOOR: f64 = 0.01;
+                let trop_mean = trop_sum / f64::from(trop_n);
+                let pole_mean = pole_sum / f64::from(pole_n);
+                MetricValue::Number(trop_mean / pole_mean.max(POLE_FLOOR))
+            }),
+        },
+        Metric {
+            name: "pop-weighted-abs-latitude",
+            doc: "The population-weighted mean absolute latitude across every settlement: \
+                   Σ(pop·|lat|) / Σ(pop), reading each settlement's committed POPULATION and \
+                   LATITUDE facts. The area-weighted mean |latitude| on a uniform sphere is \
+                   ≈32.7°; people concentrating off the poles (design spec §5) should read \
+                   below that baseline. Absent if there are no settlements with both facts",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let places = hornvale_terrain::places(v.world());
+                let (mut weighted_sum, mut pop_sum) = (0.0_f64, 0.0_f64);
+                for p in &places {
+                    let pop = match v
+                        .world()
+                        .ledger
+                        .value_of(p.id, hornvale_settlement::POPULATION)
+                    {
+                        Some(Value::Number(n)) => *n,
+                        _ => continue,
+                    };
+                    let lat = match v
+                        .world()
+                        .ledger
+                        .value_of(p.id, hornvale_settlement::LATITUDE)
+                    {
+                        Some(Value::Number(n)) => *n,
+                        _ => continue,
+                    };
+                    weighted_sum += pop * lat.abs();
+                    pop_sum += pop;
+                }
+                if pop_sum <= 0.0 {
+                    MetricValue::Absent
+                } else {
+                    MetricValue::Number(weighted_sum / pop_sum)
+                }
+            }),
+        },
+        Metric {
+            name: "rank-size-slope",
+            doc: "The OLS slope of log(population) on log(rank) across every settlement in the \
+                   world (the classic Zipf rank-size diagnostic). Recorded as an OBSERVED \
+                   metric only — this campaign's interim per-species condensation is \
+                   deliberately NOT tuned to a rank-size target (design spec §5; full Zipf \
+                   calibration is the later MAP-22 coexistence-stack campaign's job, once size \
+                   is measured by mass and composition is real). Absent if fewer than 2 \
+                   settlements exist",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let mut pops: Vec<f64> = hornvale_terrain::places(v.world())
+                    .iter()
+                    .filter_map(|p| {
+                        match v
+                            .world()
+                            .ledger
+                            .value_of(p.id, hornvale_settlement::POPULATION)
+                        {
+                            Some(Value::Number(n)) if *n > 0.0 => Some(*n),
+                            _ => None,
+                        }
+                    })
+                    .collect();
+                if pops.len() < 2 {
+                    return MetricValue::Absent;
+                }
+                // Descending by population; rank 1 is the largest. Tie order
+                // among equal populations does not affect the regression (it
+                // is a pure function of the sorted VALUES), so no further
+                // tie-break is needed for determinism.
+                pops.sort_by(|a, b| b.total_cmp(a));
+                let xs: Vec<f64> = (1..=pops.len())
+                    .map(|r| hornvale_kernel::math::ln(r as f64))
+                    .collect();
+                let ys: Vec<f64> = pops.iter().map(|p| hornvale_kernel::math::ln(*p)).collect();
+                let n = xs.len() as f64;
+                let mean_x = xs.iter().sum::<f64>() / n;
+                let mean_y = ys.iter().sum::<f64>() / n;
+                let (mut num, mut den) = (0.0_f64, 0.0_f64);
+                for (x, y) in xs.iter().zip(ys.iter()) {
+                    num += (x - mean_x) * (y - mean_y);
+                    den += (x - mean_x) * (x - mean_x);
+                }
+                if den == 0.0 {
+                    MetricValue::Absent
+                } else {
+                    MetricValue::Number(num / den)
                 }
             }),
         },
@@ -3321,8 +3503,12 @@ mod tests {
         // divergence-magnitude-{goblin,hobgoblin,bugbear}, divergence-real,
         // homophony-count-{goblin,hobgoblin,bugbear,kobold}) and the phonology epoch
         // (confusable-homophony-{goblin,hobgoblin,bugbear,kobold},
-        // tone-count-{goblin,kobold}, distinguishable-capacity-{goblin,bugbear,kobold}).
-        assert_eq!(registry().len(), 110);
+        // tone-count-{goblin,kobold}, distinguishable-capacity-{goblin,bugbear,kobold}),
+        // +2 for the-gathering (Task 8: capacity-by-abs-latitude, rank-size-slope),
+        // +2 more for the Task 8 review fix (total-population,
+        // pop-weighted-abs-latitude — the two metrics the brief named that
+        // were never built).
+        assert_eq!(registry().len(), 114);
     }
 
     #[test]
@@ -3421,20 +3607,23 @@ mod tests {
         // The four `flagship-*` metrics are documented as specifically the
         // GOBLIN flagship's data (see their own doc comments above). Since
         // the founder floor (settlement's founder-reservation pass, MAP-22
-        // K=1), goblin places its own flagship again at seed 42 — Xnebsvob,
-        // farming, temperate-rainforest, coastal, a 5-caste structure
-        // (slave, farmer, artisan, shaman, chief; see `almanac`'s seed-42
-        // output and `cli/tests/branches_identity.rs`).
+        // K=1), goblin places its own flagship again at seed 42 —
+        // farming, temperate-forest, non-coastal, a 3-caste structure
+        // (farmer, shaman, chief; see `almanac`'s seed-42 output and
+        // `cli/tests/branches_identity.rs`). The settlement condensation
+        // (campaign the-gathering) relocated the flagship: it moved off
+        // the coast, its structure shrank from 5 castes to 3, and its
+        // biome moved from temperate-rainforest to temperate-forest.
         assert_eq!(
             m("flagship-subsistence"),
             MetricValue::Text("farming".to_string())
         );
         assert_eq!(
             m("flagship-biome"),
-            MetricValue::Text("temperate-rainforest".to_string())
+            MetricValue::Text("temperate-forest".to_string())
         );
-        assert_eq!(m("flagship-coastal"), MetricValue::Flag(true));
-        assert_eq!(m("flagship-structure-size"), MetricValue::Number(5.0));
+        assert_eq!(m("flagship-coastal"), MetricValue::Flag(false));
+        assert_eq!(m("flagship-structure-size"), MetricValue::Number(3.0));
         assert!(
             matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
         );

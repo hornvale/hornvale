@@ -46,6 +46,23 @@ a 500/500 null control and a blind-attribution metric pinned honest at 0.875
 research*; it is how the research checks itself, and it is applied afresh to
 every new layer.
 
+**Population has a physically-grounded, self-checking prior.** Every
+settlement used to carry a population number a formula handed it, with no
+account of what the land could support and nothing to catch an absurd
+total. A carrying-capacity field, closed-form and seed-free, now stands
+under every settlement in every world, and its central claim — that
+supported capacity tracks the real biomass-by-latitude gradient — is
+exactly the kind of bet this chapter cares about: preregistered before the
+sweep, measured across two hundred generated worlds (the tropical-and-
+temperate band supports roughly 27× the polar band), and frozen only after
+the measurement confirmed it, not before. A second guarantee is checked
+even more tightly: settlements condense as attractors of a population flow
+over that field, so the sum of every settlement's population equals the
+sum of the field exactly, by construction, not by tuning ([The
+Gathering](./chronicle/the-gathering.md)). This is a genuine promotion, not
+a full resolution — see "The standing horizon," below, for the half that
+is still ahead.
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held
@@ -144,3 +161,24 @@ shape as before: a blind-attribution metric over many thousands of worlds,
 against a zero-forcing null control whose present must be indistinguishable
 from its own genesis. It is a bet at the top of the checkability gradient, and,
 like the two before it, it is allowed to fail.
+
+**A partial rescore, now that population has a field to vary.** The
+carrying-capacity field promoted above (see the high-confidence tier) is an
+*equilibrium* snapshot — `population = f(carrying capacity)` in closed
+form, no iteration, no clock — and equilibrium is not the same claim as
+"vary time." What remains open splits cleanly along the same
+checkability line this whole chapter runs on. Giving the field a clock —
+temporal relaxation, and the founding/growth/fission/abandonment history
+that only becomes tellable once population moves — is squarely part of the
+vary-time horizon above: it inherits that bet's shape and has not yet been
+attempted. A second, narrower piece is not a time question at all: today's
+condensation runs each species' field independently, which loosens the old
+rule keeping different peoples' settlements apart. Packing multiple
+species onto one landscape properly — footprint-scaled home ranges, a
+tunable competition temperature, predator-prey coupling — has a design
+already (the coexistence-stack spec building on this campaign's field) but
+is unbuilt, and it is architecture, not taste: closer to the moderate-
+confidence tier once it lands than to a human-judged bet. Naming both
+halves against the field that already exists is the honest state of the
+rescore — one clean win banked, two clearly-scoped debts left for the
+campaigns that inherit it.

@@ -548,10 +548,11 @@ mod tests {
         // Castes are emergent now (Campaign 4b): every settlement grows at
         // least a worker and a top rung (`structure`'s invariant), but
         // which higher roles appear depends on its actual environment.
-        // Seed 42's constant-sky flagship (entity 2, village Ngokzhvab) is
-        // peopled by goblin, so the top rung reported here is goblin's own
-        // word, "chief".
-        assert!(out.contains("chief"));
+        // The settlement condensation (campaign the-gathering) reshuffled
+        // catchments; seed 42's constant-sky flagship (entity 2, village
+        // Xatxoxorroxaq) is now peopled by kobold, so the top rung reported
+        // here is kobold's own word, "elders".
+        assert!(out.contains("elders"));
         assert!(out.contains("1."));
     }
 

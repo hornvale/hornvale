@@ -86,5 +86,8 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0044](0044-shared-units-live-in-the-kernel.md) | Shared units live in the kernel (refines 0008) | Accepted |
 | [0045](0045-one-canonical-census.md) | One canonical census; frozen studies are evidence | Accepted |
 | [0046](0046-census-regen-is-remote-only.md) | Census regeneration is AWS-only | Accepted |
-| [0047](0047-entity-hood-for-collections.md) | Entity-hood for collections: collections become entities, singletons stay flat | Accepted |
-| [0048](0048-name-salt-stable-identity.md) | Procedural names are salted by stable identity, never by a global mint counter | Accepted |
+| [0047](0047-demography-is-extracted-from-settlement.md) | A `demography` domain is extracted from `settlement` | Accepted |
+| [0048](0048-flow-condensation-replaces-the-suitability-scatter.md) | Flow-condensation replaces the suitability scatter | Accepted |
+| [0049](0049-the-founder-floor-migrates-to-demography.md) | The MAP-22 founder floor migrates to `demography` | Accepted |
+| [0050](0050-entity-hood-for-collections.md) | Entity-hood for collections: collections become entities, singletons stay flat | Accepted |
+| [0051](0051-name-salt-stable-identity.md) | Procedural names are salted by stable identity, never by a global mint counter | Accepted |
