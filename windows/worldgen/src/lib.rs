@@ -2106,6 +2106,37 @@ fn build_to(
         },
     )?;
 
+    stage("alignments", || -> Result<(), BuildError> {
+        // The Long Count: each settlement's founding sightline. Skipped
+        // wholesale on locked worlds / polar latitudes (the azimuth
+        // function returns None) and on the constant sky (no calendar).
+        // Placed before the settlement-depth early return (below) so a
+        // world built only to `BuildDepth::Settlements` still carries
+        // alignments — collecting first to avoid holding the sky borrow
+        // across commits.
+        let pairs: Vec<(EntityId, f64)> = {
+            let sky = sky_of(&world)?;
+            let Some(calendar) = sky.calendar() else {
+                return Ok(());
+            };
+            hornvale_terrain::places(&world)
+                .iter()
+                .filter_map(|p| {
+                    let coord = place_coord(&world, p.id)?;
+                    let az = calendar.solstice_rise_azimuth_at(
+                        coord.latitude,
+                        hornvale_astronomy::StdDays::new(0.0).unwrap(),
+                    )?;
+                    Some((p.id, az))
+                })
+                .collect()
+        };
+        for (id, az) in pairs {
+            facts::founding_alignment(&mut world, id, az)?;
+        }
+        Ok(())
+    })?;
+
     if depth <= BuildDepth::Settlements {
         return Ok(world);
     }
@@ -3688,6 +3719,40 @@ mod tests {
                 "settlement {:?} committed a zero population",
                 f.subject
             );
+        }
+    }
+
+    /// The Long Count: every settlement in a spinning generated world
+    /// carries its founding solstice-sunrise azimuth; it holds already at
+    /// `BuildDepth::Settlements` — the alignments pass runs immediately
+    /// after settlement placement, before the settlement-depth early
+    /// return, so a shallow build gets alignments too (spec §4's "built to
+    /// settlement depth or deeper").
+    #[test]
+    fn settlements_carry_founding_alignments() {
+        let world = build_world_to(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+            &default_roster(),
+            BuildDepth::Settlements,
+        )
+        .unwrap();
+        let settlements: Vec<_> = world
+            .ledger
+            .find(hornvale_settlement::IS_SETTLEMENT)
+            .map(|f| f.subject)
+            .collect();
+        assert!(!settlements.is_empty());
+        for s in &settlements {
+            let n = world
+                .ledger
+                .find(facts::FOUNDING_SOLSTICE_AZIMUTH_DEGREES)
+                .filter(|f| f.subject == *s)
+                .count();
+            assert_eq!(n, 1, "settlement {s:?}");
         }
     }
 

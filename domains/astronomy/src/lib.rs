@@ -328,6 +328,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         true,
         "a star figure stands on the sun's road (the ecliptic band)",
     )?;
+    registry.register_predicate(
+        facts::FOUNDING_SOLSTICE_AZIMUTH_DEGREES,
+        true,
+        "solstice-sunrise azimuth at a settlement's founding, degrees clockwise from north",
+    )?;
 
     registry.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")?;
     registry.register_concept("moon", "astronomy", ConceptKind::Celestial, "a moon")?;

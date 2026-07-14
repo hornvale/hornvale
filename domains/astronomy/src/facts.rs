@@ -170,6 +170,11 @@ pub const FIGURE_REGION: &str = "figure-region";
 /// wanting the per-figure detail must recompute from [`crate::figures`].
 /// type-audit: bare-ok(identifier-text)
 pub const FIGURE_ON_ECLIPTIC: &str = "figure-on-ecliptic";
+/// Predicate: the solstice-sunrise azimuth at a settlement's founding
+/// epoch, degrees clockwise from north (The Long Count) — the sightline
+/// whose deep-time drift makes the sky an archaeological clock.
+/// type-audit: bare-ok(identifier-text)
+pub const FOUNDING_SOLSTICE_AZIMUTH_DEGREES: &str = "founding-solstice-azimuth-degrees";
 
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     Fact {
@@ -514,6 +519,26 @@ pub fn genesis(
         )?;
     }
 
+    Ok(())
+}
+
+/// Commit a settlement's founding solstice alignment (The Long Count).
+/// Called by the composition root — the one place settlements and the
+/// calendar meet; astronomy owns the predicate and the commit shape.
+/// type-audit: pending(wave-1)
+pub fn founding_alignment(
+    world: &mut World,
+    settlement: EntityId,
+    azimuth_deg: f64,
+) -> Result<(), LedgerError> {
+    world.ledger.commit(
+        fact(
+            settlement,
+            FOUNDING_SOLSTICE_AZIMUTH_DEGREES,
+            Value::Number(azimuth_deg),
+        ),
+        &world.registry,
+    )?;
     Ok(())
 }
 
