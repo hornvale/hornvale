@@ -32,6 +32,17 @@ main() {
   ip="$(aws_runner ec2 describe-instances --instance-ids "$id" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)"
   local ssh="ssh -i $HOME/.hornvale-gate/id -o StrictHostKeyChecking=accept-new ubuntu@$ip"
   $ssh 'sudo touch /run/hvg-heartbeat && sudo chown ubuntu:ubuntu /run/hvg-heartbeat'  # refresh idle timer (root cron may have created it root-owned)
+  # instance-running != provisioned: a cold box is still apt-getting and
+  # rustup-ing for several minutes after SSH comes up. Poll for the toolchain
+  # before shipping work (the third latent gap this path has surfaced).
+  # shellcheck disable=SC2086,SC2016  # $HOME expands on the box, not here
+  for _ in $(seq 1 60); do
+    if $ssh 'command -v make >/dev/null && test -x "$HOME/.cargo/bin/cargo"' 2>/dev/null; then break; fi
+    sleep 10
+  done
+  # shellcheck disable=SC2086,SC2016  # $HOME expands on the box, not here
+  $ssh 'command -v make >/dev/null && test -x "$HOME/.cargo/bin/cargo"' \
+      || { echo "gate-remote: box never finished provisioning (userdata failed?)" >&2; exit 1; }
   rsync -az --delete --exclude target/ --filter=':- .gitignore' -e "ssh -i $HOME/.hornvale-gate/id -o StrictHostKeyChecking=accept-new" \
       "$(git rev-parse --show-toplevel)/" "ubuntu@$ip:work/"
   # Keep the heartbeat fresh during the gate: a cold build can exceed the 15-min
