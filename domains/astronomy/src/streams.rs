@@ -52,3 +52,6 @@ pub const WANDERERS: &str = "wanderers";
 /// Background starfield draws: count, then per-star position/brightness (derived catalog — consumed on demand, never in genesis).
 /// type-audit: bare-ok(identifier-text)
 pub const STARFIELD: &str = "starfield";
+/// Per-moon ascending-node longitude draws (Eclipse Seasons).
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_NODES: &str = "moon-nodes";

@@ -457,3 +457,29 @@ fn neighbor_pin_does_not_move_any_star() {
     b.sort_by(|x, y| x.0.total_cmp(&y.0).then(x.1.total_cmp(&y.1)));
     assert_eq!(a, b);
 }
+
+/// Eclipse Seasons pin isolation: pinning the moon count consumes node
+/// draws identically to the unpinned path — a pinned world with the same
+/// admitted moons carries byte-identical node longitudes.
+#[test]
+fn pinned_moon_counts_draw_identical_node_longitudes() {
+    for seed in 0..32u64 {
+        let unpinned = generate(Seed(seed), &SkyPins::default()).unwrap().system;
+        let n = unpinned.moons.len() as u32;
+        if n == 0 {
+            continue;
+        }
+        let pins = SkyPins {
+            moons: Some(MoonsPin::exact(n).unwrap()),
+            ..SkyPins::default()
+        };
+        let pinned = generate(Seed(seed), &pins).unwrap().system;
+        let a: Vec<f64> = unpinned
+            .moons
+            .iter()
+            .map(|m| m.node_longitude_deg)
+            .collect();
+        let b: Vec<f64> = pinned.moons.iter().map(|m| m.node_longitude_deg).collect();
+        assert_eq!(a, b, "seed {seed}");
+    }
+}
