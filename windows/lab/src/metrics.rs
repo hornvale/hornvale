@@ -2385,6 +2385,70 @@ pub fn registry() -> Vec<Metric> {
             },
             extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "kobold")),
         },
+        // --- BIO-2 (Task 6): the six life-history traits (spec §4/§5), a
+        // pure f(Mass, MetabolicClass) with zero draws — every row of a
+        // study reads the same value for a given roster. Bare-named
+        // (goblin implicit), matching the `flagship-*` family's convention
+        // for a single-species reading rather than duplicating per roster
+        // species (see those metrics' doc comments above). ---
+        Metric {
+            name: "species-lifespan-years",
+            doc: "Goblin's maximum lifespan in years (BIO-2 spec §4); Absent \
+                   if goblin is off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[20.0, 40.0, 60.0, 80.0, 100.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_lifespan_metric(v, "goblin")),
+        },
+        Metric {
+            name: "species-age-at-maturity-years",
+            doc: "Goblin's age at first reproduction in years (BIO-2 spec §4); \
+                   Absent if goblin is off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[5.0, 10.0, 15.0, 20.0, 25.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_age_at_maturity_metric(v, "goblin")),
+        },
+        Metric {
+            name: "species-basal-metabolic-rate-w",
+            doc: "Goblin's reference-temperature basal metabolic rate in watts \
+                   (BIO-2 spec §4); Absent only if goblin is off-roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                species_basal_metabolic_rate_metric(v, "goblin")
+            }),
+        },
+        Metric {
+            name: "species-reproductive-tempo",
+            doc: "Goblin's reproductive output on the r-K axis, 0 (fast/prolific) \
+                   ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if goblin is \
+                   off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_reproductive_tempo_metric(v, "goblin")),
+        },
+        Metric {
+            name: "species-generation-length-years",
+            doc: "Goblin's generation length in years (BIO-2 spec §5, MEM-7's \
+                   handle); Absent if goblin is off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_generation_length_metric(v, "goblin")),
+        },
+        Metric {
+            name: "species-pace-of-life",
+            doc: "Goblin's overall life-history speed, 0 (fast) ... 1 (slow) — \
+                   absolute and roster-independent (BIO-2 spec §5); Absent only \
+                   if goblin is off-roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_pace_of_life_metric(v, "goblin")),
+        },
     ]
 }
 
@@ -3397,6 +3461,76 @@ fn confusable_homophony(v: &FullView, species: &str) -> MetricValue {
     }
 }
 
+/// `species`' derived life-history profile (BIO-2 spec §5), read from the
+/// roster's own `SpeciesDef.mass`/`metabolic_class` — a pure `f(Mass,
+/// MetabolicClass)`, no draws. `None` if `species` is off-roster.
+fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species::LifeHistory> {
+    let def = v.roster().iter().find(|d| d.name == species)?;
+    Some(hornvale_species::life_history(
+        def.mass,
+        def.metabolic_class,
+    ))
+}
+
+/// `species`' maximum lifespan in years (BIO-2 spec §4/§5). `Absent` if
+/// `species` is off-roster or `Ametabolic` (a construct has no mass-derived
+/// lifespan).
+fn species_lifespan_metric(v: &FullView, species: &str) -> MetricValue {
+    match species_life_history(v, species).and_then(|lh| lh.lifespan) {
+        Some(years) => MetricValue::Number(years.get()),
+        None => MetricValue::Absent,
+    }
+}
+
+/// `species`' age at first reproduction in years (BIO-2 spec §4/§5). `Absent`
+/// if `species` is off-roster or `Ametabolic`.
+fn species_age_at_maturity_metric(v: &FullView, species: &str) -> MetricValue {
+    match species_life_history(v, species).and_then(|lh| lh.age_at_maturity) {
+        Some(years) => MetricValue::Number(years.get()),
+        None => MetricValue::Absent,
+    }
+}
+
+/// `species`' reference-temperature basal metabolic rate in watts (BIO-2
+/// spec §4). Always present — `0.0` for `Ametabolic`, never `None`. `Absent`
+/// only if `species` is off-roster.
+fn species_basal_metabolic_rate_metric(v: &FullView, species: &str) -> MetricValue {
+    match species_life_history(v, species) {
+        Some(lh) => MetricValue::Number(lh.basal_metabolic_rate_w),
+        None => MetricValue::Absent,
+    }
+}
+
+/// `species`' reproductive output on the r–K axis, 0 (fast/prolific) … 1
+/// (slow/sparse) (BIO-2 spec §4/CAP-2). `Absent` if `species` is off-roster
+/// or `Ametabolic`.
+fn species_reproductive_tempo_metric(v: &FullView, species: &str) -> MetricValue {
+    match species_life_history(v, species).and_then(|lh| lh.reproductive_tempo) {
+        Some(tempo) => MetricValue::Number(tempo),
+        None => MetricValue::Absent,
+    }
+}
+
+/// `species`' generation length in years (BIO-2 spec §5, MEM-7's handle).
+/// `Absent` if `species` is off-roster or `Ametabolic`.
+fn species_generation_length_metric(v: &FullView, species: &str) -> MetricValue {
+    match species_life_history(v, species).and_then(|lh| lh.generation_length) {
+        Some(years) => MetricValue::Number(years.get()),
+        None => MetricValue::Absent,
+    }
+}
+
+/// `species`' overall life-history speed, 0 (fast) … 1 (slow) — an absolute,
+/// roster-independent position defined for anything with mass (BIO-2 spec
+/// §5), so this is present even for `Ametabolic`. `Absent` only if `species`
+/// is off-roster.
+fn species_pace_of_life_metric(v: &FullView, species: &str) -> MetricValue {
+    match species_life_history(v, species) {
+        Some(lh) => MetricValue::Number(lh.pace_of_life),
+        None => MetricValue::Absent,
+    }
+}
+
 /// The size of `species`' realized tone inventory (spec §11): 1 for an atonal
 /// people (the shipped humanoids), >1 for a tone-capable one. `Absent` if
 /// `species` is off-roster.
@@ -3763,8 +3897,12 @@ mod tests {
         // (Task 7: dominant-rock, karst-fraction, aquifer-fraction,
         // dominant-soil-order, fertile-land-fraction), +2 for The Long
         // Count (Task 6: brightening-per-gyr, alignment-drift-deg-per-kyr),
-        // +1 for the coexistence stack (Task A16a: per-cell-diversity).
-        assert_eq!(registry().len(), 125);
+        // +1 for the coexistence stack (Task A16a: per-cell-diversity),
+        // +6 for BIO-2 (Task 6: species-lifespan-years,
+        // species-age-at-maturity-years, species-basal-metabolic-rate-w,
+        // species-reproductive-tempo, species-generation-length-years,
+        // species-pace-of-life).
+        assert_eq!(registry().len(), 131);
     }
 
     #[test]
@@ -3986,6 +4124,43 @@ mod tests {
                 MetricValue::Number(_)
             ));
         }
+
+        // BIO-2 (Task 6): the six life-history metrics, following the
+        // `tone_count_metric` per-species extractor shape but bare-named
+        // (goblin implicit, matching `flagship-*`'s convention — see those
+        // metrics' doc comments). Registered; goblin is always on the
+        // default roster and never `Ametabolic`, so these read `Number` at
+        // seed 42, but `Absent` stays a legal kind for a roster where the
+        // bare species is missing or ametabolic.
+        let names: std::collections::BTreeSet<&str> =
+            registry().iter().map(|metric| metric.name).collect();
+        assert!(names.contains("species-lifespan-years"));
+        assert!(names.contains("species-age-at-maturity-years"));
+        assert!(names.contains("species-basal-metabolic-rate-w"));
+        assert!(names.contains("species-reproductive-tempo"));
+        assert!(names.contains("species-generation-length-years"));
+        assert!(names.contains("species-pace-of-life"));
+        assert!(matches!(
+            m("species-lifespan-years"),
+            MetricValue::Number(_) | MetricValue::Absent
+        ));
+        assert!(matches!(
+            m("species-age-at-maturity-years"),
+            MetricValue::Number(_) | MetricValue::Absent
+        ));
+        assert!(matches!(
+            m("species-basal-metabolic-rate-w"),
+            MetricValue::Number(_)
+        ));
+        assert!(matches!(
+            m("species-reproductive-tempo"),
+            MetricValue::Number(_) | MetricValue::Absent
+        ));
+        assert!(matches!(
+            m("species-generation-length-years"),
+            MetricValue::Number(_) | MetricValue::Absent
+        ));
+        assert!(matches!(m("species-pace-of-life"), MetricValue::Number(_)));
     }
 
     #[test]
