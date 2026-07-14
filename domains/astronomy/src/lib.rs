@@ -133,6 +133,21 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "orbital inclination of a moon to the anchor's orbital plane, in degrees",
     )?;
     registry.register_predicate(
+        facts::MOON_MASS_LUNAR,
+        false,
+        "mass of a moon in lunar masses",
+    )?;
+    registry.register_predicate(
+        facts::MOON_DISTANCE_MM,
+        false,
+        "orbital distance of a moon in megameters",
+    )?;
+    registry.register_predicate(
+        facts::MOON_ANGULAR_SIZE_REL,
+        false,
+        "apparent size of a moon relative to Luna-from-Earth",
+    )?;
+    registry.register_predicate(
         facts::NOTABLE_NEIGHBOR,
         false,
         "a notable neighbor star visible in the night sky",

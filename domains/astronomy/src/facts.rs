@@ -45,6 +45,17 @@ pub const RETROGRADE_SPIN: &str = "retrograde-spin";
 /// (non-functional, Number — one per moon; SKY-6).
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_INCLINATION_DEGREES: &str = "moon-inclination-degrees";
+/// Mass of a moon in lunar masses (non-functional, Number — one per moon).
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_MASS_LUNAR: &str = "moon-mass-lunar";
+/// Orbital distance of a moon in megameters (non-functional, Number — one
+/// per moon).
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_DISTANCE_MM: &str = "moon-distance-mm";
+/// Apparent size of a moon relative to Luna-from-Earth (non-functional,
+/// Number — one per moon; derived).
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_ANGULAR_SIZE_REL: &str = "moon-angular-size-rel";
 /// A notable neighbor star visible in the night sky (non-functional, Text —
 /// one per neighbor).
 /// type-audit: bare-ok(identifier-text)
@@ -258,6 +269,26 @@ pub fn genesis(
             ),
             &world.registry,
         )?;
+        world.ledger.commit(
+            fact(subject, MOON_MASS_LUNAR, Value::Number(moon.mass.get())),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                subject,
+                MOON_DISTANCE_MM,
+                Value::Number(moon.distance.get()),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                subject,
+                MOON_ANGULAR_SIZE_REL,
+                Value::Number(moon.angular_diameter_rel),
+            ),
+            &world.registry,
+        )?;
     }
 
     for neighbor in &system.neighbors {
@@ -451,6 +482,30 @@ mod tests {
             .map(|m| hornvale_kernel::quantize(m.inclination_deg))
             .collect();
         assert_eq!(inclinations, expected);
+    }
+
+    /// SKY-15: mass, distance, and angular size reach the ledger — one of
+    /// each per moon.
+    #[test]
+    fn genesis_commits_mass_distance_and_size_per_moon() {
+        let pins = SkyPins {
+            moons: Some(MoonsPin::exact(2).unwrap()),
+            ..SkyPins::default()
+        };
+        let outcome = generate(Seed(1), &pins).unwrap();
+        let mut w = world_with(1);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+        for pred in [MOON_MASS_LUNAR, MOON_DISTANCE_MM, MOON_ANGULAR_SIZE_REL] {
+            assert_eq!(
+                w.ledger
+                    .facts_about(subject)
+                    .filter(|f| f.predicate == pred)
+                    .count(),
+                2,
+                "expected 2 {pred} facts"
+            );
+        }
     }
 
     /// SKY-22: a backward-spinning world says so in the ledger; an ordinary
