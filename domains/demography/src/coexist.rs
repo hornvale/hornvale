@@ -17,6 +17,15 @@ use hornvale_kernel::math::powf;
 use hornvale_kernel::{CellMap, Geosphere, Mass, ResourceVector};
 use std::collections::BTreeMap;
 
+/// The competition temperature β. AUTHORED placeholder (task A14); task A16
+/// calibrates and FREEZES this against the per-cell diversity target. Do not
+/// treat as final.
+/// type-audit: bare-ok(ratio: BETA)
+pub const BETA: f64 = 4.0;
+/// The viability floor. AUTHORED placeholder (task A14); frozen with β in A16.
+/// type-audit: bare-ok(count: FLOOR)
+pub const FLOOR: f64 = 1e-6;
+
 /// The single-cell overlap-weighted coexistence share for every species in
 /// `present`.
 ///
@@ -275,6 +284,16 @@ pub struct CoexistStack {
 /// so two calls with identical inputs produce byte-identical output (no
 /// `HashMap`, `total_cmp`-safe throughout via the functions it calls).
 ///
+/// # Panics
+///
+/// `species` must contain an entry for every species id present in
+/// `per_species_k` — the internal `masses[&id]` lookup (built from
+/// `species`) indexes on every id `per_species_k` supplies, and panics if
+/// one is missing. Callers that pass matching sets (worldgen builds both
+/// from the same species roster) never hit this; a debug build asserts the
+/// precondition explicitly so a mismatch fails loudly at the call site
+/// rather than surfacing as an opaque panic deep in the per-cell loop.
+///
 /// type-audit: bare-ok(index: per_species_k), bare-ok(index: species), bare-ok(ratio: beta), bare-ok(count: floor)
 pub fn pack(
     geo: &Geosphere,
@@ -283,6 +302,14 @@ pub fn pack(
     beta: f64,
     floor: f64,
 ) -> CoexistStack {
+    debug_assert!(
+        per_species_k
+            .iter()
+            .all(|(id, _)| species.iter().any(|(sid, _, _)| sid == id)),
+        "pack: every per_species_k id must have a matching species entry \
+         (the masses[&id] lookup below panics otherwise)"
+    );
+
     // Derive overlap/levels/predation exactly once — they depend only on
     // `species`, never on a cell.
     let projected_niche: Vec<(u32, ResourceVector)> = species

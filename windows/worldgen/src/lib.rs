@@ -1960,7 +1960,27 @@ fn build_to(
                 (tag as u32, inputs)
             })
             .collect();
-    let placements = hornvale_demography::report(geo, &per_species_inputs, THRESHOLD).settlements;
+    // The coexistence packer's `(id, mass, niche)` inputs, built from the same
+    // `species_set` roster `per_species_inputs` above draws from — the same
+    // tag numbering, so the stack's per_species_k ids line up with the K
+    // fields `report` builds internally. ADDITIVE ONLY (task A14): `report`
+    // still returns `.settlements` (the `condense_tagged` path below) as the
+    // field this call site consumes; the stack/byproducts/stack_settlements
+    // it also builds are not yet read by worldgen (task A15).
+    let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> = species_set
+        .iter()
+        .enumerate()
+        .map(|(tag, def)| (tag as u32, def.mass, def.niche.clone()))
+        .collect();
+    let placements = hornvale_demography::report(
+        geo,
+        &per_species_inputs,
+        &species,
+        hornvale_demography::BETA,
+        hornvale_demography::FLOOR,
+        THRESHOLD,
+    )
+    .settlements;
 
     // Each placed species' phonology, drawn once from the world seed and
     // its authored articulation vector, and a `Namer` built over it. Every

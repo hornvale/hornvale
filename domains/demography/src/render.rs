@@ -58,6 +58,43 @@ pub fn density_ppm(geo: &Geosphere, k: &CellMap<f64>) -> String {
     out
 }
 
+/// 72×24 ASCII density map of one chosen species' realized density within a
+/// [`crate::coexist::CoexistStack`] — the coupled, post-coexistence-packer
+/// counterpart to [`density_ppm`]'s raw (pre-competition) `K` field. Renders
+/// as all-blank if `species_id` has no entry in `stack.density` (mirrors
+/// `density_ppm`'s own all-blank behaviour on an all-zero/absent field, per
+/// [`glyph`]'s `peak <= 0.0` branch).
+/// type-audit: bare-ok(artifact), bare-ok(index: species_id)
+pub fn stack_density_ppm(
+    geo: &Geosphere,
+    stack: &crate::coexist::CoexistStack,
+    species_id: u32,
+) -> String {
+    match stack.density.iter().find(|(id, _)| *id == species_id) {
+        Some((_, k)) => density_ppm(geo, k),
+        None => density_ppm(geo, &CellMap::from_fn(geo, |_| 0.0)),
+    }
+}
+
+/// 72×24 ASCII density map of the [`crate::byproducts::strife`] field
+/// (inverse-Herfindahl composition evenness): darkest glyph at the most
+/// evenly-contested cell. Thin wrapper over [`density_ppm`] — `strife` is
+/// already the same `CellMap<f64>` shape.
+/// type-audit: bare-ok(artifact)
+pub fn strife_ppm(geo: &Geosphere, strife: &CellMap<f64>) -> String {
+    density_ppm(geo, strife)
+}
+
+/// 72×24 ASCII density map of one species' [`crate::byproducts::refugia`]
+/// field (its realized density in cells where the world's dominant species
+/// falls below the viability floor): darkest glyph at its strongest
+/// stronghold. Thin wrapper over [`density_ppm`] — a `refugia` entry is
+/// already the same `CellMap<f64>` shape.
+/// type-audit: bare-ok(artifact)
+pub fn refugia_ppm(geo: &Geosphere, refugia: &CellMap<f64>) -> String {
+    density_ppm(geo, refugia)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -98,5 +135,47 @@ mod tests {
         let k = bump_k(&geo);
         let a = density_ppm(&geo, &k);
         assert!(a.contains(*RAMP.last().unwrap()), "densest glyph appears");
+    }
+
+    fn zero_pressure(geo: &Geosphere) -> CellMap<f64> {
+        CellMap::from_fn(geo, |_| 0.0)
+    }
+
+    #[test]
+    fn stack_density_ppm_renders_a_present_species_and_blanks_an_absent_one() {
+        let geo = Geosphere::new(4);
+        let k = bump_k(&geo);
+        let stack = crate::coexist::CoexistStack {
+            density: vec![(0u32, k)],
+            emigration_pressure: zero_pressure(&geo),
+        };
+        let present = stack_density_ppm(&geo, &stack, 0);
+        assert_eq!(present.lines().count(), DENSITY_HEIGHT as usize);
+        assert!(
+            present.contains(*RAMP.last().unwrap()),
+            "present species renders its densest glyph"
+        );
+
+        let absent = stack_density_ppm(&geo, &stack, 99);
+        assert!(
+            absent.chars().all(|c| c == ' ' || c == '\n'),
+            "a species missing from the stack renders all-blank"
+        );
+    }
+
+    #[test]
+    fn strife_ppm_and_refugia_ppm_mirror_density_ppm() {
+        let geo = Geosphere::new(3);
+        let field = bump_k(&geo);
+        assert_eq!(
+            strife_ppm(&geo, &field),
+            density_ppm(&geo, &field),
+            "strife_ppm is a thin density_ppm wrapper"
+        );
+        assert_eq!(
+            refugia_ppm(&geo, &field),
+            density_ppm(&geo, &field),
+            "refugia_ppm is a thin density_ppm wrapper"
+        );
     }
 }
