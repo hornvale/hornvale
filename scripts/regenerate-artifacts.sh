@@ -24,7 +24,9 @@
 # rebaseline produces the full set.
 set -euo pipefail
 
-repo_root="$(git rev-parse --show-toplevel)"
+# Root from the script's own location, not `git rev-parse` — the remote gate
+# runs this in an rsync'd tree that is not a git repository.
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
 # Intermediate world files are throwaway; their path never enters artifact
@@ -48,6 +50,9 @@ echo "regenerate-artifacts: almanacs" >&2
 run -p hornvale -- almanac --world "$w42" > book/src/gallery/almanac-seed-42.md
 run -p hornvale -- almanac --world "$wsky" > book/src/gallery/almanac-seed-42-sky.md
 run -p hornvale -- almanac --world "$wlocked" > book/src/gallery/almanac-seed-42-locked.md
+
+echo "regenerate-artifacts: explain" >&2
+run -p hornvale -- explain --world "$wsky" sky > book/src/gallery/explain-seed-42-sky.md
 
 echo "regenerate-artifacts: reference dumps" >&2
 run -p hornvale -- concepts > book/src/reference/concept-registry-generated.md

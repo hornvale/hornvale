@@ -45,10 +45,35 @@ pub const RETROGRADE_SPIN: &str = "retrograde-spin";
 /// (non-functional, Number — one per moon; SKY-6).
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_INCLINATION_DEGREES: &str = "moon-inclination-degrees";
-/// A notable neighbor star visible in the night sky (non-functional, Text —
-/// one per neighbor).
+/// Mass of a moon in lunar masses (non-functional, Number — one per moon).
 /// type-audit: bare-ok(identifier-text)
-pub const NOTABLE_NEIGHBOR: &str = "notable-neighbor";
+pub const MOON_MASS_LUNAR: &str = "moon-mass-lunar";
+/// Orbital distance of a moon in megameters (non-functional, Number — one
+/// per moon).
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_DISTANCE_MM: &str = "moon-distance-mm";
+/// Apparent size of a moon relative to Luna-from-Earth (non-functional,
+/// Number — one per moon; derived).
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_ANGULAR_SIZE_REL: &str = "moon-angular-size-rel";
+/// Flags a minted entity as a notable neighbor star (functional, Flag).
+/// type-audit: bare-ok(identifier-text)
+pub const IS_NEIGHBOR: &str = "is-neighbor";
+/// Spectral-class name of a neighbor star (functional, Text; one per entity).
+/// type-audit: bare-ok(identifier-text)
+pub const NEIGHBOR_CLASS: &str = "neighbor-class";
+/// Distance to a neighbor star in light-years (functional, Number).
+/// type-audit: bare-ok(identifier-text)
+pub const NEIGHBOR_DISTANCE_LY: &str = "neighbor-distance-ly";
+/// Apparent brightness of a neighbor, relative units (functional, Number; derived L/d²).
+/// type-audit: bare-ok(identifier-text)
+pub const NEIGHBOR_BRIGHTNESS_REL: &str = "neighbor-brightness-rel";
+/// Declination of a neighbor in degrees from the celestial equator (functional, Number).
+/// type-audit: bare-ok(identifier-text)
+pub const NEIGHBOR_DECLINATION_DEG: &str = "neighbor-declination-deg";
+/// Right ascension of a neighbor in degrees (functional, Number).
+/// type-audit: bare-ok(identifier-text)
+pub const NEIGHBOR_RA_DEG: &str = "neighbor-ra-deg";
 /// A degradation or refusal recorded during sky genesis (non-functional,
 /// Text — one per note).
 /// type-audit: bare-ok(identifier-text)
@@ -94,6 +119,28 @@ pub const WANDERER_PERIOD_STD: &str = "wanderer-period-std";
 /// index — orbit/period facts carry per-wanderer identity).
 /// type-audit: bare-ok(identifier-text)
 pub const WANDERER_CLASS: &str = "wanderer-class";
+/// Host star mass in solar masses (functional, Number; drawn).
+/// type-audit: bare-ok(identifier-text)
+pub const STAR_MASS_SOLAR: &str = "star-mass-solar";
+/// Host star luminosity in solar units (functional, Number; derived M^3.5).
+/// type-audit: bare-ok(identifier-text)
+pub const STAR_LUMINOSITY_SOLAR: &str = "star-luminosity-solar";
+/// Habitable-zone inner bound in AU (functional, Number; derived 0.95√L).
+/// type-audit: bare-ok(identifier-text)
+pub const HAB_ZONE_INNER_AU: &str = "hab-zone-inner-au";
+/// Habitable-zone outer bound in AU (functional, Number; derived 1.37√L).
+/// type-audit: bare-ok(identifier-text)
+pub const HAB_ZONE_OUTER_AU: &str = "hab-zone-outer-au";
+/// Anchor world mass in Earth masses (functional, Number; drawn).
+/// type-audit: bare-ok(identifier-text)
+pub const ANCHOR_MASS_EARTH: &str = "anchor-mass-earth";
+/// Anchor orbital distance in AU (functional, Number; drawn or pinned).
+/// type-audit: bare-ok(identifier-text)
+pub const ANCHOR_ORBIT_AU: &str = "anchor-orbit-au";
+/// Insolation at the anchor relative to Earth (functional, Number; derived
+/// L/a², global annual mean).
+/// type-audit: bare-ok(identifier-text)
+pub const INSOLATION_REL: &str = "insolation-rel";
 
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     Fact {
@@ -109,12 +156,12 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
 /// Commit the generated system's headline parameters as facts about
 /// `subject` (the world entity): star class; tidally-locked flag OR
 /// day-length, depending on rotation regime; year length; obliquity;
-/// moon count; one moon-period-std per moon; one notable-neighbor per
-/// neighbor; a pole-star fact (north or south, never both) when the
-/// genesis-epoch night sky finds one; wanderer count plus one orbit and
-/// period fact per wanderer (innermost order) and the distinct wanderer
-/// kinds present (class facts dedupe — see [`WANDERER_CLASS`]); one
-/// genesis-note per recorded degradation.
+/// moon count; one moon-period-std per moon; one neighbor entity (with its
+/// own structured facts) per neighbor; a pole-star fact (north or south,
+/// never both) when the genesis-epoch night sky finds one; wanderer count
+/// plus one orbit and period fact per wanderer (innermost order) and the
+/// distinct wanderer kinds present (class facts dedupe — see
+/// [`WANDERER_CLASS`]); one genesis-note per recorded degradation.
 pub fn genesis(
     world: &mut World,
     subject: EntityId,
@@ -192,6 +239,62 @@ pub fn genesis(
         ),
         &world.registry,
     )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            STAR_MASS_SOLAR,
+            Value::Number(system.star.mass.get()),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            STAR_LUMINOSITY_SOLAR,
+            Value::Number(system.star.luminosity.get()),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            HAB_ZONE_INNER_AU,
+            Value::Number(system.star.habitable_zone.inner().get()),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            HAB_ZONE_OUTER_AU,
+            Value::Number(system.star.habitable_zone.outer().get()),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            ANCHOR_MASS_EARTH,
+            Value::Number(system.anchor.mass.get()),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            ANCHOR_ORBIT_AU,
+            Value::Number(system.anchor.orbit.get()),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            INSOLATION_REL,
+            Value::Number(crate::star::insolation_rel(&system.star, &system.anchor)),
+        ),
+        &world.registry,
+    )?;
 
     for moon in &system.moons {
         world.ledger.commit(
@@ -210,16 +313,67 @@ pub fn genesis(
             ),
             &world.registry,
         )?;
+        world.ledger.commit(
+            fact(subject, MOON_MASS_LUNAR, Value::Number(moon.mass.get())),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                subject,
+                MOON_DISTANCE_MM,
+                Value::Number(moon.distance.get()),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                subject,
+                MOON_ANGULAR_SIZE_REL,
+                Value::Number(moon.angular_diameter_rel),
+            ),
+            &world.registry,
+        )?;
     }
 
     for neighbor in &system.neighbors {
-        let description = format!(
-            "a {} star at {:.0} light-years",
-            neighbor.color,
-            neighbor.distance.get()
-        );
+        let id = world.ledger.mint_entity();
+        world
+            .ledger
+            .commit(fact(id, IS_NEIGHBOR, Value::Flag(true)), &world.registry)?;
         world.ledger.commit(
-            fact(subject, NOTABLE_NEIGHBOR, Value::Text(description)),
+            fact(
+                id,
+                NEIGHBOR_CLASS,
+                Value::Text(crate::neighborhood::class_name(neighbor.class).to_string()),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                id,
+                NEIGHBOR_DISTANCE_LY,
+                Value::Number(neighbor.distance.get()),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                id,
+                NEIGHBOR_BRIGHTNESS_REL,
+                Value::Number(neighbor.apparent_brightness),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                id,
+                NEIGHBOR_DECLINATION_DEG,
+                Value::Number(neighbor.declination),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(id, NEIGHBOR_RA_DEG, Value::Number(neighbor.right_ascension)),
             &world.registry,
         )?;
     }
@@ -330,11 +484,8 @@ mod tests {
             2
         );
         assert!(
-            w.ledger
-                .facts_about(subject)
-                .filter(|f| f.predicate == NOTABLE_NEIGHBOR)
-                .count()
-                >= 2
+            w.ledger.find(IS_NEIGHBOR).count() >= 2,
+            "at least two neighbor entities"
         );
         assert!(w.ledger.value_of(subject, STAR_CLASS).is_some());
         assert!(w.ledger.value_of(subject, YEAR_LENGTH_STD).is_some());
@@ -458,6 +609,30 @@ mod tests {
         assert_eq!(inclinations, expected);
     }
 
+    /// SKY-15: mass, distance, and angular size reach the ledger — one of
+    /// each per moon.
+    #[test]
+    fn genesis_commits_mass_distance_and_size_per_moon() {
+        let pins = SkyPins {
+            moons: Some(MoonsPin::exact(2).unwrap()),
+            ..SkyPins::default()
+        };
+        let outcome = generate(Seed(1), &pins).unwrap();
+        let mut w = world_with(1);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+        for pred in [MOON_MASS_LUNAR, MOON_DISTANCE_MM, MOON_ANGULAR_SIZE_REL] {
+            assert_eq!(
+                w.ledger
+                    .facts_about(subject)
+                    .filter(|f| f.predicate == pred)
+                    .count(),
+                2,
+                "expected 2 {pred} facts"
+            );
+        }
+    }
+
     /// SKY-22: a backward-spinning world says so in the ledger; an ordinary
     /// one stays silent (the flag is committed only when true, like
     /// tidally-locked).
@@ -510,10 +685,55 @@ mod tests {
         let mut w = world_with(3);
         let subject = w.ledger.mint_entity();
         genesis(&mut w, subject, &outcome).unwrap();
-        assert!(
+        assert!(w.ledger.iter().all(|f| f.provenance == "astronomy"));
+    }
+
+    #[test]
+    fn genesis_mints_one_neighbor_entity_per_neighbor_with_structured_facts() {
+        let outcome = generate(Seed(3), &SkyPins::default()).unwrap();
+        let mut w = world_with(3);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+
+        let neighbor_ids: Vec<_> = w.ledger.find(IS_NEIGHBOR).map(|f| f.subject).collect();
+        assert_eq!(neighbor_ids.len(), outcome.system.neighbors.len());
+        for id in neighbor_ids {
+            assert!(w.ledger.value_of(id, NEIGHBOR_CLASS).is_some());
+            assert!(w.ledger.value_of(id, NEIGHBOR_DISTANCE_LY).is_some());
+            assert!(w.ledger.value_of(id, NEIGHBOR_BRIGHTNESS_REL).is_some());
+        }
+        // The opaque blob is gone.
+        assert_eq!(
             w.ledger
-                .facts_about(subject)
-                .all(|f| f.provenance == "astronomy")
+                .iter()
+                .filter(|f| f.predicate == "notable-neighbor")
+                .count(),
+            0
+        );
+    }
+
+    #[test]
+    fn genesis_commits_the_star_and_anchor_numbers() {
+        let outcome = generate(Seed(42), &SkyPins::default()).unwrap();
+        let mut w = world_with(42);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+        for pred in [
+            STAR_MASS_SOLAR,
+            STAR_LUMINOSITY_SOLAR,
+            HAB_ZONE_INNER_AU,
+            HAB_ZONE_OUTER_AU,
+            ANCHOR_MASS_EARTH,
+            ANCHOR_ORBIT_AU,
+            INSOLATION_REL,
+        ] {
+            assert!(w.ledger.value_of(subject, pred).is_some(), "missing {pred}");
+        }
+        assert_eq!(
+            w.ledger.value_of(subject, INSOLATION_REL),
+            Some(&Value::Number(hornvale_kernel::quantize(
+                crate::star::insolation_rel(&outcome.system.star, &outcome.system.anchor)
+            )))
         );
     }
 

@@ -34,6 +34,7 @@ usage:
   hornvale scout [sky flags] [--from-seed N] [--limit K] [--max-scan M]
                                             scan seeds for ones satisfying the pins
   hornvale almanac [--world <PATH>]        render the almanac (default: world.json)
+  hornvale explain --world <PATH> sky      narrate the sky's derivation from the ledger
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>]
                                             walk a frozen world as its flagship settler
@@ -73,9 +74,6 @@ const TERRAIN_FLAGS: &str = "\
 ";
 
 const SETTLEMENT_FLAGS: &str = "\
-  [--min-suitability F]                    pin the settlement placement floor (0-1); each species' single
-                                           best (founder) cell bypasses it, so no floor drops a placed
-                                           species below one settlement
   --species <NAME>  place only this species (default: all known species)
 ";
 
@@ -91,6 +89,7 @@ fn main() -> ExitCode {
         Some("new") => cmd_new(&args),
         Some("scout") => cmd_scout(&args),
         Some("almanac") => cmd_almanac(&args),
+        Some("explain") => cmd_explain(&args),
         Some("repl") => cmd_repl(&args),
         Some("possess") => cmd_possess(&args),
         Some("map") => cmd_map(&args),
@@ -185,10 +184,7 @@ fn parse_terrain_args(args: &[String]) -> Result<hornvale_terrain::TerrainPins, 
 /// `parse_terrain_args`).
 fn parse_settlement_args(args: &[String]) -> Result<world_builder::SettlementPins, String> {
     let mut pins = world_builder::SettlementPins::default();
-    for (flag, key) in [
-        ("--min-suitability", "min-suitability"),
-        ("--species", "species"),
-    ] {
+    for (flag, key) in [("--species", "species")] {
         if let Some(value) = flag_value(args, flag) {
             world_builder::settlement_pins::parse_pin(&format!("{key}={value}"), &mut pins)?;
         }
@@ -276,6 +272,38 @@ fn cmd_almanac(args: &[String]) -> Result<(), String> {
     let world = load_world(args)?;
     let ctx = world_builder::almanac_context(&world).map_err(|e| e.to_string())?;
     print!("{}", hornvale_almanac::render(&ctx));
+    Ok(())
+}
+
+/// The first positional (non-flag) argument after the subcommand, skipping
+/// `--world <value>` and any other `--flag`. `None` if only flags are present.
+fn positional_target(args: &[String]) -> Option<&str> {
+    let mut it = args.iter().skip(1); // skip the "explain" subcommand token
+    while let Some(a) = it.next() {
+        if a == "--world" {
+            it.next(); // consume the flag's value
+            continue;
+        }
+        if a.starts_with("--") {
+            continue;
+        }
+        return Some(a.as_str());
+    }
+    None
+}
+
+fn cmd_explain(args: &[String]) -> Result<(), String> {
+    // Only "sky" is supported this campaign; default to it when omitted.
+    let target = positional_target(args).unwrap_or("sky");
+    if target != "sky" {
+        return Err(format!(
+            "explain: unknown target '{target}' (only 'sky' is supported)"
+        ));
+    }
+    let world = load_world(args)?;
+    let out = hornvale_explain::explain_sky(&world)
+        .ok_or("this world has no generated sky to explain")?;
+    print!("{out}");
     Ok(())
 }
 
@@ -983,9 +1011,9 @@ mod tests {
 
     #[test]
     fn settlement_flags_fold_into_pins() {
-        let a = args(&["new", "--min-suitability", "0.5"]);
+        let a = args(&["new", "--species", "kobold"]);
         let pins = parse_settlement_args(&a).unwrap();
-        assert_eq!(pins.min_suitability, Some(0.5));
+        assert_eq!(pins.species.as_deref(), Some("kobold"));
         assert_eq!(
             parse_settlement_args(&args(&["new"])).unwrap(),
             world_builder::SettlementPins::default()
@@ -1237,8 +1265,8 @@ mod tests {
     }
 
     #[test]
-    fn usage_mentions_min_suitability() {
-        assert!(usage().contains("--min-suitability"));
+    fn usage_mentions_species() {
+        assert!(usage().contains("--species"));
     }
 
     #[test]

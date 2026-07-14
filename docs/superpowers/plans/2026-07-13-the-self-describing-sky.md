@@ -827,27 +827,188 @@ git commit -m "feat(cli): hornvale explain sky verb + committed gallery artifact
 
 ---
 
-### Task 7: Book, registry, decisions, retrospective (Definition of Done)
+### Task 7: Re-source the deity name seed to semantic identity (naming epoch)
 
 **Files:**
+- Modify: `windows/worldgen/src/lib.rs` — add a pure `deity_name_seed` helper; add a `deity_seed: Seed` field to `LanguageDeityNamer`; use the helper in `LanguageDeityNamer::deity` and `::epithet`; set the field at the namer's construction site (search for `LanguageDeityNamer {`).
+- Test: `windows/worldgen/src/lib.rs` test module.
+
+**Interfaces:**
+- Consumes: `hornvale_kernel::Seed` (`.derive(&str) -> Seed`, `.stream().next_u64() -> u64`); `LanguageDeityNamer` fields (`namer`, `morph`, `lexicon`, `phenomena`, `index`, `glosses`); `Phenomenon.kind`.
+- Produces: `fn deity_name_seed(base: Seed, kind: &str, rank: usize) -> u64` (pure, entity-id-free).
+
+**Background (why):** today `LanguageDeityNamer::deity(salt)` / `::epithet(salt)` pass the belief-entity-id `salt` straight into `hornvale_language::glossed_name(kind, salt, …)`, so deity names are seeded by entity mint order and drift whenever unrelated entities (this campaign's neighbor entities) are minted earlier. This task re-seeds names from the phenomenon's semantic identity. **`salt` stays the gloss key** — `self.glosses.insert(salt, …)` and the `name_gloss_fact(EntityId(salt), …)` commit are UNCHANGED, so glosses stay attached to belief entities and `recount`/`explain` do not regress. `domains/religion` is not touched.
+
+- [ ] **Step 1: Write the failing keystone test** in the `windows/worldgen/src/lib.rs` test module:
+
+```rust
+#[test]
+fn deity_name_seed_is_pure_and_entity_id_free() {
+    use hornvale_kernel::Seed;
+    let base = Seed(42).derive("religion/deity/v2").derive("goblin");
+    // Same species-seed + kind + rank -> same name seed, no entity id involved.
+    assert_eq!(
+        deity_name_seed(base, "celestial-body", 0),
+        deity_name_seed(base, "celestial-body", 0)
+    );
+    // Rank disambiguates members that share a kind (two moons, two same-colour stars).
+    assert_ne!(
+        deity_name_seed(base, "celestial-body", 0),
+        deity_name_seed(base, "celestial-body", 1)
+    );
+    // Kind leads semantically.
+    assert_ne!(
+        deity_name_seed(base, "celestial-body", 0),
+        deity_name_seed(base, "tide", 0)
+    );
+}
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `cargo test -p hornvale-worldgen deity_name_seed_is_pure`
+Expected: FAIL — `cannot find function deity_name_seed`.
+
+- [ ] **Step 3: Add the pure helper** (near `LanguageDeityNamer`, `windows/worldgen/src/lib.rs`). Ensure `use hornvale_kernel::Seed;` is in scope (it almost certainly already is at the crate top):
+
+```rust
+/// The seed for a deity's generated name: a pure function of the per-species
+/// deity seed (`base`), the phenomenon KIND the deity is of, and the
+/// phenomenon's RANK among its pantheon's members. Deliberately carries no
+/// entity id, so deity names are invariant to entity mint order — the fix
+/// for the `/v2` naming epoch (spec §8).
+fn deity_name_seed(base: Seed, kind: &str, rank: usize) -> u64 {
+    base.derive(kind).derive(&rank.to_string()).stream().next_u64()
+}
+```
+
+- [ ] **Step 4: Run to verify the test passes**
+
+Run: `cargo test -p hornvale-worldgen deity_name_seed_is_pure`
+Expected: PASS.
+
+- [ ] **Step 5: Add the `deity_seed` field and use it.** In `LanguageDeityNamer`'s struct definition add:
+
+```rust
+    /// Per-species base seed for deity name generation (`/v2` epoch): the name
+    /// seed is derived from this + phenomenon kind + rank, never an entity id.
+    deity_seed: Seed,
+```
+
+At the construction site (`let mut deity_namer = LanguageDeityNamer {`), add the field, derived from the in-scope root world seed and the species name (`def.name`):
+
+```rust
+        deity_seed: seed.derive("religion/deity/v2").derive(def.name),
+```
+
+(Use whatever the in-scope binding for the root world `Seed` is — likely `seed`. If it is not reachable at that site, thread it in from the enclosing genesis function; do not use `world.seed` after `world` is mutably borrowed.)
+
+- [ ] **Step 6: Use the helper in `deity()`** — capture the rank before the `self.index += 1`, and pass the derived seed to `glossed_name` instead of `salt` (leave the `glosses.insert(salt, gloss)` line exactly as is):
+
+```rust
+    fn deity(&mut self, salt: u64) -> (String, String) {
+        let rank = self.index;
+        let phenomenon = self
+            .phenomena
+            .get(rank)
+            .expect("religion calls deity() once per member phenomenon, in phenomena order");
+        self.index += 1;
+        let sentiment = hornvale_religion::Sentiment::of(phenomenon);
+        let concepts = deity_site_concepts(phenomenon, sentiment);
+        let site = hornvale_language::SiteConcepts { concepts: &concepts };
+        let name_seed = deity_name_seed(self.deity_seed, &phenomenon.kind, rank);
+        let (g, gloss) = self.namer.glossed_name(
+            hornvale_language::NameKind::Deity,
+            name_seed,
+            &self.morph,
+            &site,
+            self.lexicon,
+        );
+        if !gloss.is_empty() {
+            self.glosses.insert(salt, gloss);
+        }
+        (g.roman, g.ipa)
+    }
+```
+
+- [ ] **Step 7: Use the helper in `epithet()`** — same phenomenon and rank the paired `deity()` used (`self.index - 1`), pass the derived seed to `glossed_name`:
+
+```rust
+    fn epithet(&mut self, salt: u64, sentiment: hornvale_religion::Sentiment) -> (String, String) {
+        let rank = self.index - 1;
+        let phenomenon = self
+            .phenomena
+            .get(rank)
+            .expect("deity() always runs before epithet() for the same belief");
+        let concepts = deity_site_concepts(phenomenon, sentiment);
+        let site = hornvale_language::SiteConcepts { concepts: &concepts };
+        let name_seed = deity_name_seed(self.deity_seed, &phenomenon.kind, rank);
+        let (g, _gloss) = self.namer.glossed_name(
+            hornvale_language::NameKind::Epithet,
+            name_seed,
+            &self.morph,
+            &site,
+            self.lexicon,
+        );
+        (g.roman, g.ipa)
+    }
+```
+
+The `salt` parameter is now used only as the gloss key (`deity`) and is unused in `epithet` — prefix it `_salt` in `epithet` if clippy flags it, but do NOT change the `DeityNamer` trait signature.
+
+- [ ] **Step 8: Run the worldgen suite; re-pin any in-crate tests that assert specific deity-name strings.**
+
+Run: `cargo test -p hornvale-worldgen 2>&1 | tee /tmp/hv-wg.txt`
+Expected: the new keystone test passes. Any EXISTING worldgen unit test that asserts a specific deity/epithet name string will now FAIL — the names changed deterministically (that is the epoch). For each, read the new deterministic value from the failure output and re-pin the expected string. **Do not weaken the assertion** to dodge the change; pin the new exact name. (Almanac/world *fixtures* are rebaselined later in Task 8 — this step is only the `-p hornvale-worldgen` in-crate tests.)
+
+- [ ] **Step 9: fmt + clippy, then commit**
+
+```bash
+cargo fmt
+cargo clippy -p hornvale-worldgen --all-targets -- -D warnings
+git add windows/worldgen/src/lib.rs
+git commit -m "feat(worldgen)!: seed deity names from phenomenon identity, not entity id (naming /v2 epoch)"
+```
+
+---
+
+### Task 8: Rebaseline, book, registry, decisions, retrospective (Definition of Done)
+
+**Files:**
+- Rebaseline: `cli/tests/fixtures/world-seed-42.json` (golden world ledger — new facts + stable deity names)
+- Rebaseline: `book/src/gallery/almanac-seed-42.md`, `-sky.md`, `-locked.md` (stable deity names)
+- Rebaseline: `book/src/reference/concept-registry-generated.md` (new predicates), `docs/audits/type-audit-report.md` (new constants)
 - Create: `book/src/chronicle/<next-entry>.md` (+ add to `book/src/SUMMARY.md`)
 - Modify: `book/src/frontier/idea-registry.md` (flip SKY-15, TOOL-1; note SKY-19)
-- Create: `docs/decisions/<next-number>-entity-hood-for-collections.md`
-- Modify: `book/src/reference/` sky/concept pages if the registry dump changed (regenerate `hornvale concepts`)
+- Create: `docs/decisions/<N>-entity-hood-for-collections.md` and `docs/decisions/<N+1>-name-salt-stable-identity.md`
 - Modify: `book/src/open-questions.md` (Confidence Gradient re-score, if SKY-15/TOOL-1 sits on a bet)
 - Create: `docs/retrospectives/<campaign>.md`
 
-**Interfaces:** none (docs).
+**Interfaces:** none (docs + regenerated artifacts).
 
-- [ ] **Step 1: Regenerate the reference dumps** that the new predicates touch, and confirm what moved:
+**Precondition:** Task 7 (deity-name seed) is committed, so every artifact below is regenerated ONCE with names already stable.
+
+- [ ] **Step 1: The single full rebaseline.** Regenerate every artifact this campaign drifts and confirm the ONLY changes are the intended ones (new facts, new predicates, new constants, stable-but-changed deity names — never a physics/period change):
 
 ```bash
-cargo run -p hornvale -- concepts > book/src/reference/concepts.md   # confirm exact path/name from the existing "concepts" artifact
-cargo run -p hornvale -- streams > book/src/reference/streams.md      # unchanged expected (no new streams)
-git diff book/src/reference/
+# The whole committed-artifact set (censuses skipped by default):
+bash scripts/regenerate-artifacts.sh
+# The golden world fixture the lens_purity test byte-checks (deliberate, per its module doc):
+cargo run -p hornvale -- new --seed 42 --out cli/tests/fixtures/world-seed-42.json
+# The type-audit report (new pub fact constants):
+cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
+git status   # review EVERY changed file below before staging
 ```
 
-Expected: `concepts` gains the new astronomy predicates; `streams` unchanged. Match the real committed filenames used by CI's artifact step.
+Expected drift, all intended: `world-seed-42.json` gains the star/anchor/moon/neighbor facts and loses `notable-neighbor`; the three almanacs show new deity names (periods/physics identical); `concept-registry-generated.md` gains the new predicates; `type-audit-report.md` gains the new constants; `explain-seed-42-sky.md` present (Task 6). Confirm no numeric/period value moved (that would signal a real bug, not a rebaseline). Match the real committed filenames — `git status` names them.
+
+- [ ] **Step 1b: Prove determinism + the deity-name fix held.** 
+
+```bash
+cargo run -p hornvale -- new --seed 42 --out /tmp/a.json && cargo run -p hornvale -- new --seed 42 --out /tmp/b.json && diff /tmp/a.json /tmp/b.json && echo "byte-identical"
+cargo test -p hornvale --test lens_purity   # now passes against the rebaselined fixture
+```
+Expected: byte-identical; `lens_purity` passes.
 
 - [ ] **Step 2: Write the chronicle entry** `book/src/chronicle/<slug>.md` at the project's chronicle altitude (technical, comprehensible without the code). It must record: (a) SKY-15's remaining fact surface now committed (star/anchor/moons); (b) neighbors promoted to ledger entities and the `notable-neighbor` blob retired (the epoch); (c) the new `explain sky` verb and its DAG⋈values design; (d) the single shared `insolation_rel`. Add the entry to `book/src/SUMMARY.md` under the Chronicle part. Follow the format of the most recent chronicle entry in `book/src/chronicle/`.
 
@@ -856,7 +1017,9 @@ Expected: `concepts` gains the new astronomy predicates; `streams` unchanged. Ma
   - **TOOL-1**: change status `elaborated` → `spec'd`; note the fact-reading tier shipped (the `explain sky` verb) and that the trace-replay tier remains open; add a blob-URL pointer to this spec.
   - **SKY-19**: append a note that edge-of-zone is now answerable from the ledger (hab-zone bounds + insolation facts). Do not change its status.
 
-- [ ] **Step 4: Write the decision record** `docs/decisions/<NNNN>-entity-hood-for-collections.md` (next free number; follow `docs/decisions/README.md` format). Content: **collections become ledger entities, singletons stay flat on the world entity**; neighbors and (future) moons are collections; moons are grandfathered flat this campaign to avoid a second epoch, an explicit debt. Also record the precise `insolation-rel` definition (TOA `L/a²`, Earth = 1, global annual-mean, genesis-time scalar).
+- [ ] **Step 4: Write the decision records** (next free numbers; follow `docs/decisions/README.md` format):
+  - `<N>-entity-hood-for-collections.md`: **collections become ledger entities, singletons stay flat on the world entity**; neighbors and (future) moons are collections; moons grandfathered flat this campaign, an explicit debt. Also record the precise `insolation-rel` definition (TOA `L/a²`, Earth = 1, global annual-mean, genesis-time scalar).
+  - `<N+1>-name-salt-stable-identity.md`: **procedural names must be salted by stable identity, never by a global mint counter.** Deity names were seeded by the belief entity id (mint-order-coupled); re-sourced to a semantic derivation over (species, phenomenon kind, rank) under the `religion/deity/v2` epoch. Record the general principle so future namers (and any reviewer) avoid the entity-id-salt trap. Cross-reference the neighbor-epoch that exposed it.
 
 - [ ] **Step 5: Confidence Gradient re-score.** Open `book/src/open-questions.md`; if SKY-15 or TOOL-1 is named in a bet, re-score that chapter per decision 0030. If neither appears, note in the chronicle that no gradient bet moved.
 
@@ -871,11 +1034,12 @@ cargo test -p hornvale --test docs_consistency
 
 Expected: book builds; docs-consistency passes (all registry cross-links resolve, ToC complete, IDs unique).
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Commit** (the rebaselined artifacts land with the docs — one campaign-close commit):
 
 ```bash
-git add book/ docs/decisions/ docs/retrospectives/
-git commit -m "docs(chronicle,frontier,decisions): The Self-Describing Sky close (SKY-15 shipped, TOOL-1 spec'd)"
+git add book/ docs/decisions/ docs/retrospectives/ \
+        cli/tests/fixtures/world-seed-42.json docs/audits/type-audit-report.md
+git commit -m "docs(chronicle,frontier,decisions)+rebaseline: The Self-Describing Sky close (SKY-15 shipped, TOOL-1 spec'd, deity-name /v2 epoch)"
 ```
 
 ---
@@ -883,7 +1047,8 @@ git commit -m "docs(chronicle,frontier,decisions): The Self-Describing Sky close
 ## Final verification (run before declaring the campaign done)
 
 - [ ] **Full commit gate:** `make gate` (fmt + clippy + nextest + doctests) passes.
-- [ ] **Artifact freshness:** `SKIP_CENSUS=1 ./scripts/regenerate-artifacts.sh && git diff --exit-code book/src/gallery/ book/src/reference/` clean.
+- [ ] **Artifact freshness:** `SKIP_CENSUS=1 ./scripts/regenerate-artifacts.sh && git diff --exit-code book/src/gallery/ book/src/reference/ cli/tests/fixtures/ docs/audits/` clean.
 - [ ] **Determinism spot-check:** `cargo run -p hornvale -- new --seed 42 --out /tmp/a.json && cargo run -p hornvale -- new --seed 42 --out /tmp/b.json && diff /tmp/a.json /tmp/b.json` — identical.
+- [ ] **Deity-name stability:** the seed-42 almanac deity names are unchanged by an unrelated entity-count change — spot-check that `--neighbor red-giant` (which alters a neighbor entity) leaves the flagship's deity names identical to the default run (they now depend only on phenomenon identity).
 - [ ] **Type-audit:** `cargo run --manifest-path tools/type-audit/Cargo.toml -- check` passes (all new fact constants carry `type-audit:` tags).
-- [ ] **Spec coverage:** every §2–§9 spec section maps to a task above.
+- [ ] **Spec coverage:** every §2–§10 spec section maps to a task above.

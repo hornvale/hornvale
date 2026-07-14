@@ -1,0 +1,13 @@
+{
+  "//": "Reproducible bundles require Deno 2.9.2 exactly (see decision 0023 and the vessel CI job).",
+  "tasks": {
+    "check": "deno check src/",
+    "test": "deno test src/",
+    "build": "deno bundle --platform browser --minify -o ../../book/src/gallery/vessel.js src/main.ts && deno bundle --platform browser --minify -o ../../book/src/gallery/vessel-worker.js src/worker.ts"
+  },
+  "imports": {
+    "@std/assert": "jsr:@std/assert@^1"
+  },
+  "fmt": { "lineWidth": 100 },
+  "lint": { "rules": { "tags": ["recommended"] } }
+}

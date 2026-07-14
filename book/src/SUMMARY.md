@@ -69,6 +69,9 @@
 - [Temperature](./chronicle/temperature.md)
 - [Census as Data](./chronicle/census-as-data.md)
 - [The Seam](./chronicle/the-seam.md)
+- [The Gathering](./chronicle/the-gathering.md)
+- [The Self-Describing Sky](./chronicle/the-self-describing-sky.md)
+- [The Casement](./chronicle/the-casement.md)
 
 # The Gallery
 
@@ -87,6 +90,7 @@
 - [The Atlas of Seed 42](./gallery/atlas.md)
 - [The Deep Time of Seed 42](./gallery/paleo-seed-42.md)
 - [A Possession — Seed 42](./gallery/possession-seed-42.md)
+- [A Possession, Live](./gallery/possession-live.md)
 
 # The Laboratory
 

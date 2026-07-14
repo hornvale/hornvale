@@ -1,5 +1,7 @@
 # The Casement Implementation Plan
 
+> **Status: SHIPPED 2026-07-14.** All 9 tasks executed (subagent-driven), whole-branch review + fix wave complete, merged to main. Decision renumbered 0047→0052 and registry rows MAP-31..34→MAP-35..38 at merge (the-gathering collision).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** The possess/vessel loop, compiled to WebAssembly, embedded in the project book as a live playable terminal — any seed, derived in the reader's browser, byte-identical to the native sim.

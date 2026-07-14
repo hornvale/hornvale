@@ -14,7 +14,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/obliquity` | axial tilt draw |
 | `astronomy/moon-count` | how many moons |
 | `astronomy/moons` | per-moon mass/distance draws (sequential attempts) |
-| `astronomy/neighbors` | notable-neighbor class/distance draws |
+| `astronomy/neighbors` | neighbor class/distance draws |
 | `astronomy/forcing` | deep-time orbital forcing |
 | `astronomy/phase-offsets` | per-body genesis phase offsets |
 | `astronomy/neighbor-positions` | per-neighbor celestial position draws (declination, right ascension) |
@@ -76,9 +76,9 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 |---|---|
 | `settlement` | root stream for settlement generation |
 | `settlement/name` | RETIRED (pre-Tongues): per-settlement generated name, goblin stream. Names now derive under language/<species>/name/settlement. Kept documented for legacy-save continuity; never renamed. |
-| `settlement/placement` | per-settlement population against carrying capacity |
+| `settlement/placement` | RETIRED (the-gathering): per-settlement population against carrying capacity, goblin stream. Population is now the conserved catchment readout of hornvale-demography's flow-condensation, drawing nothing from the seed. Kept documented for legacy-save continuity; never renamed. |
 | `settlement/kobold/name` | RETIRED (pre-Tongues): per-settlement generated name, kobold stream (species-qualified; goblin kept settlement/name). Names now derive under language/<species>/name/settlement. Kept documented for legacy-save continuity; never renamed. |
-| `settlement/kobold/population` | per-settlement population, kobold stream (species-qualified; goblin keeps settlement/placement) |
+| `settlement/kobold/population` | RETIRED (the-gathering): per-settlement population, kobold stream (species-qualified; goblin kept settlement/placement). Population is now the conserved catchment readout of hornvale-demography's flow-condensation, drawing nothing from the seed. Kept documented for legacy-save continuity; never renamed. |
 
 ### hornvale-species
 
