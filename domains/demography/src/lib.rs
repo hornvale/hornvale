@@ -10,6 +10,7 @@
 //! design spec's scope boundary.
 #![warn(missing_docs)]
 
+pub mod byproducts;
 pub mod carrying_capacity;
 pub mod coexist;
 pub mod condense;
@@ -19,6 +20,7 @@ pub mod founder;
 pub mod niche;
 pub mod render;
 pub mod stack_condense;
+pub use byproducts::{Byproducts, byproducts};
 pub use carrying_capacity::{CarryingInput, carrying_capacity};
 pub use condense::{Condensation, condense};
 pub use flow::{Flow, flow};
