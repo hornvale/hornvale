@@ -701,6 +701,25 @@ mod tests {
     use hornvale_kernel::Seed;
 
     #[test]
+    fn bio2_adds_no_stream_label() {
+        // The life-history layer is authored constants + pure derivations: it
+        // must introduce NO new seed-derivation stream. Species streams stay
+        // empty (species are authored, not drawn); guard against a future
+        // BIO-2-adjacent change quietly adding a life/allometry/metabolic draw.
+        let labels = stream_labels();
+        assert!(
+            labels.is_empty(),
+            "species crate must register no streams at all: {labels:?}"
+        );
+        assert!(
+            !labels.iter().any(|(k, _)| k.contains("life")
+                || k.contains("allometry")
+                || k.contains("metabolic")),
+            "BIO-2 must not register a stream: {labels:?}"
+        );
+    }
+
+    #[test]
     fn concepts_registered() {
         let mut r = ConceptRegistry::default();
         register_concepts(&mut r).unwrap();
