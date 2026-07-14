@@ -178,6 +178,26 @@ pub struct ArticulationVector {
     pub exotic: ExoticManner,
 }
 
+/// A species' metabolic strategy. Selects the allometric normalization
+/// coefficient (B₀) and the per-class pace multiplier; the scaling
+/// *exponents* are universal across classes (spec §4).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MetabolicClass {
+    /// Warm-blooded (mammal/bird analogue): high, temperature-stable basal rate.
+    Endotherm,
+    /// Cold-blooded (reptile/amphibian analogue): ~1/8 the basal rate; longer
+    /// life per kg. Realized rate couples to ambient temperature (deferred,
+    /// spec §10 CAP-1).
+    Ectotherm,
+    /// Phototroph (plant-folk/fungal analogue). Energy from light; its basal
+    /// rate is SURFACE/area-limited, so the §4 universal exponent does NOT
+    /// apply — activating this class is its own modelling decision. Unused seam.
+    Autotroph,
+    /// No metabolism (construct/undead analogue). Has no life-history: the
+    /// biological traits are `None`. Unused seam.
+    Ametabolic,
+}
+
 /// One authored species: vector, vocabulary stopgaps (deleted by The
 /// Tongues), and a placeholder syllable pool for names.
 /// type-audit: bare-ok(identifier-text)
@@ -201,6 +221,8 @@ pub struct SpeciesDef {
     /// packer reads to convert a settlement population into a standing
     /// biomass demand.
     pub mass: Mass,
+    /// Metabolic strategy — drives life-history allometry (spec BIO-2).
+    pub metabolic_class: MetabolicClass,
     /// The species' ecological niche: a sparse utilization profile over the
     /// resource-axis basis (`hornvale_kernel::ecology`). Feeds the packer's
     /// Pianka overlap between coexisting species.
@@ -259,6 +281,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 exotic: ExoticManner::None,
             },
             mass: Mass::new(18.1).unwrap(),
+            metabolic_class: MetabolicClass::Endotherm,
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.50), (ANIMAL_PREY, 0.50)]).unwrap(),
             worker_override: None,
             warrior: "warrior",
@@ -296,6 +319,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 exotic: ExoticManner::Trill,
             },
             mass: Mass::new(13.6).unwrap(),
+            metabolic_class: MetabolicClass::Ectotherm,
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
             worker_override: Some("digger"),
             warrior: "warden",
@@ -333,6 +357,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 exotic: ExoticManner::None,
             },
             mass: Mass::new(74.8).unwrap(),
+            metabolic_class: MetabolicClass::Endotherm,
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
             worker_override: Some("laborer"),
             warrior: "soldier",
@@ -370,6 +395,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 exotic: ExoticManner::None,
             },
             mass: Mass::new(132.0).unwrap(),
+            metabolic_class: MetabolicClass::Endotherm,
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.15), (ANIMAL_PREY, 0.85)]).unwrap(),
             worker_override: Some("forager"),
             warrior: "mauler",
@@ -868,6 +894,16 @@ mod tests {
         assert!(r["kobold"].mass.kilograms() < r["goblin"].mass.kilograms());
         assert!(r["goblin"].mass.kilograms() < r["hobgoblin"].mass.kilograms());
         assert!(r["hobgoblin"].mass.kilograms() < r["bugbear"].mass.kilograms());
+    }
+
+    #[test]
+    fn every_species_has_a_metabolic_class() {
+        use MetabolicClass::*;
+        let r = registry();
+        assert_eq!(r["goblin"].metabolic_class, Endotherm);
+        assert_eq!(r["hobgoblin"].metabolic_class, Endotherm);
+        assert_eq!(r["bugbear"].metabolic_class, Endotherm);
+        assert_eq!(r["kobold"].metabolic_class, Ectotherm); // reptilian/draconic SRD lineage
     }
 
     #[test]
