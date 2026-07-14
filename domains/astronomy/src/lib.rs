@@ -25,7 +25,7 @@ pub use pins::{
     pin_strings,
 };
 pub use provider::{ECLIPSE, GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE, TIDE};
-pub use star::{Star, generate_star};
+pub use star::{Star, generate_star, insolation_rel};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
     Au, Degrees, EarthMasses, HabitableZone, LightYears, LocalDays, LunarMasses, Megameters,

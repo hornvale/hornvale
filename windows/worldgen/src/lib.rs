@@ -371,10 +371,8 @@ fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64) {
         Sky::Constant(_) => (1.0, 23.5, RotationRegime::Spinning { day_std: 1.0 }, 365.25),
         Sky::Generated(generated) => {
             let system = generated.system();
-            let luminosity = system.star.luminosity.get();
-            let orbit = system.anchor.orbit.get();
-            // Insolation relative to Earth (L=1, d=1): L / d².
-            let insolation = luminosity / (orbit * orbit);
+            // Insolation relative to Earth: the single shared definition (SKY-15).
+            let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
             let obliquity = system.anchor.obliquity.get();
             let regime = match system.anchor.rotation {
                 hornvale_astronomy::Rotation::Spinning { day, .. } => {
