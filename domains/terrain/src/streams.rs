@@ -53,3 +53,13 @@ pub const LITHOLOGY: &str = "lithology";
 /// consumption order is untouched (epoch v3 save-format contract).
 /// type-audit: bare-ok(identifier-text)
 pub const TERRANES: &str = "terranes";
+/// Microcontinent draws (Sculpting, spec §3): a NEW label — a fixed
+/// candidate count (`crust::MICRO_COUNT_MAX`), then per candidate a
+/// position (two draws via `unit_vector`), a radius, and an age,
+/// sequential. Every candidate is drawn in full regardless of whether it
+/// survives the away-from-majors filter (no rejection loop, no
+/// draw-count variance — pin-isolation discipline, mirroring
+/// `TERRANES`'s own no-rejection framing for its bearing draws). Existing
+/// stream consumption order is untouched (epoch v3 save-format contract).
+/// type-audit: bare-ok(identifier-text)
+pub const MICROCONTINENTS: &str = "microcontinents";

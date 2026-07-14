@@ -295,6 +295,73 @@ pub fn draw_terranes(
         .collect()
 }
 
+/// Fixed microcontinent candidate draw count (survivors are <= this — the
+/// away-from-majors filter below can only shrink the set, never grow it).
+pub const MICRO_COUNT_MAX: u32 = 4;
+/// Microcontinent radius range, radians (~1.5°–3°: Madagascar-scale at L6,
+/// below the continent-count metric's 0.5%-of-land floor).
+pub const MICRO_RADIUS_RAD: (f64, f64) = (0.026, 0.052);
+
+/// Draw microcontinents: exactly `MICRO_COUNT_MAX` candidates — position
+/// (`unit_vector`, two draws), radius, and age, three draws' worth each —
+/// always drawn in full, in id order, regardless of which candidates
+/// survive the filter below (fixed draw count; no rejection loop, so the
+/// `MICROCONTINENTS` stream's total consumption never varies with the
+/// major-craton layout it is filtered against — pin-isolation discipline,
+/// the same shape `draw_terranes` uses for its own never-rejected bearing
+/// draws).
+///
+/// A candidate survives only if every major craton in `cratons` sits
+/// farther than `major.radius_rad + 2 * candidate.radius_rad` away —
+/// generously outside both lobed rims' plausible overlap, so a
+/// microcontinent never reads as fused onto a continent.
+///
+/// Ids continue the major sequence, assigned by *surviving* position
+/// (`cratons.len()`, `cratons.len() + 1`, ...) rather than by
+/// pre-filter candidate index: `CrustField` indexes its per-craton lobing
+/// seed as `lobing_seeds[c.id as usize]`, which is only correct when a
+/// craton's `id` equals its position in whatever list `CrustField` was
+/// built over — true for majors (`draw_cratons` assigns `id: i` by
+/// vector position) and preserved here only if survivors are
+/// renumbered contiguously post-filter; a pre-filter id would leave gaps
+/// whenever a candidate is discarded, breaking that invariant once this
+/// set is concatenated onto the majors for `CrustField::new_with_terranes`.
+///
+/// Ages are drawn in `[0.3, 0.8]`, not the majors' full `[0, 1]`: paired
+/// with the peak-thickness formula `thickness_at` shares with majors
+/// (`PEAK_MIN_KM..=PEAK_MAX_KM` from `1 - age`), this keeps every
+/// microcontinent's peak in `[35.4, 41.4]` km — comfortably above
+/// `CONTINENTAL_THRESHOLD_KM` (20 km) at its center, so a small
+/// oceanic-basin craton still reads as continental at its core. `Craton`
+/// carries no separate thickness field (unlike `Terrane`) — thickness is
+/// always this age-derived peak, for majors and microcontinents alike.
+pub fn draw_microcontinents(terrain_seed: Seed, cratons: &[Craton]) -> Vec<Craton> {
+    let mut stream = terrain_seed.derive(streams::MICROCONTINENTS).stream();
+    let next_id = cratons.len() as u32;
+    (0..MICRO_COUNT_MAX)
+        .map(|_| {
+            let center = crate::plates::unit_vector(&mut stream);
+            let radius_rad =
+                MICRO_RADIUS_RAD.0 + (MICRO_RADIUS_RAD.1 - MICRO_RADIUS_RAD.0) * stream.next_f64();
+            let age = 0.3 + 0.5 * stream.next_f64();
+            (center, radius_rad, age)
+        })
+        .filter(|(center, radius_rad, _)| {
+            cratons.iter().all(|c| {
+                math::acos(dot(*center, c.center).clamp(-1.0, 1.0))
+                    > c.radius_rad + 2.0 * radius_rad
+            })
+        })
+        .enumerate()
+        .map(|(i, (center, radius_rad, age))| Craton {
+            id: next_id + i as u32,
+            center,
+            radius_rad,
+            age,
+        })
+        .collect()
+}
+
 /// A terrane's added thickness at `p`, km: a separable Gaussian in the
 /// (along, across) tangent frame — elongated along the margin.
 fn terrane_contribution_km(t: &Terrane, p: [f64; 3]) -> f64 {
@@ -1122,6 +1189,36 @@ mod tests {
             &plates,
         );
         assert_eq!(terranes, again);
+    }
+
+    #[test]
+    fn microcontinents_are_small_oceanic_and_deterministic() {
+        let seed = Seed(7).derive(crate::streams::ROOT);
+        let pins = crate::pins::TerrainPins::default();
+        let mut notes = Vec::new();
+        let ocean_target = default_ocean_target(seed);
+        let cratons = draw_cratons(seed, &pins, ocean_target, &mut notes);
+        let micro = draw_microcontinents(seed, &cratons);
+        assert!(micro.len() <= MICRO_COUNT_MAX as usize);
+        for m in &micro {
+            assert!(m.radius_rad <= MICRO_RADIUS_RAD.1);
+            // Far from every major craton: no merger into a continent.
+            for c in &cratons {
+                let d = math::acos(dot(m.center, c.center).clamp(-1.0, 1.0));
+                assert!(
+                    d > c.radius_rad + 2.0 * m.radius_rad,
+                    "microcontinent fused to a craton"
+                );
+            }
+        }
+        assert_eq!(micro, draw_microcontinents(seed, &cratons));
+        // Ids continue the major sequence contiguously (no gaps), so a
+        // caller concatenating `[cratons, micro].concat()` gets
+        // `id == position` throughout the combined list — the invariant
+        // `CrustField`'s per-craton lobing-seed lookup depends on.
+        for (i, m) in micro.iter().enumerate() {
+            assert_eq!(m.id, cratons.len() as u32 + i as u32);
+        }
     }
 
     #[test]

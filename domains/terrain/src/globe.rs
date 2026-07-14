@@ -45,12 +45,21 @@ pub struct TectonicGlobe {
     /// Endorheic mask: land cells whose downhill path never reaches the sea.
     pub endorheic: CellMap<bool>,
     /// The drawn craton set this globe's crust field was built from
-    /// (Crust epoch, Task 8). Recomputed at genesis, never serialized.
+    /// (Crust epoch, Task 8). Majors only — microcontinents live in
+    /// `microcontinents` instead, so `continental_supply`, `--continents`
+    /// metering, and craton-census metrics keep counting majors alone.
+    /// Recomputed at genesis, never serialized.
     pub cratons: Vec<Craton>,
     /// The drawn terrane set — accreted exotic slivers welded to
     /// continental margins (Sculpting, spec §3) — this globe's crust
     /// field was built from. Recomputed at genesis, never serialized.
     pub terranes: Vec<Terrane>,
+    /// The drawn microcontinent set (Sculpting, spec §3): tiny
+    /// ocean-basin cratons sized below the continent-count metric's
+    /// floor. Folded into the crust field's craton list alongside
+    /// `cratons`, but kept in a separate list here so `cratons` keeps
+    /// meaning "majors only". Recomputed at genesis, never serialized.
+    pub microcontinents: Vec<Craton>,
     /// Graph distance from each cell to the nearest same-plate boundary
     /// cell, with that boundary attributed. Recomputed at genesis, never
     /// serialized. `None` = no reachable same-plate boundary.
@@ -101,6 +110,14 @@ pub fn generate(
     // a pinned target conditions both identically to a drawn one.
     let ocean_target = elevation::resolve_ocean_fraction(terrain_seed, pins, &mut notes);
     let cratons = crust::draw_cratons(terrain_seed, pins, ocean_target, &mut notes);
+    // Microcontinents (Sculpting, spec §3): a second new drawn set of tiny
+    // ocean-basin cratons, sized below the continent-count metric's floor.
+    // A new stream label independent of `cratons`'/`terranes`' own, so
+    // this consumes no draws the pre-Sculpting draw order relied on. Kept
+    // OUT of `cratons` (and so out of `continental_supply`, `--continents`
+    // metering, and craton-census metrics — those keep counting majors
+    // only) but folded into the crust field's craton list below.
+    let micro = crust::draw_microcontinents(terrain_seed, &cratons);
     // Terranes (Sculpting, spec §3): drawn after the craton set, since
     // placement rides on the drawn cratons' rims. A new stream label, so
     // this consumes no draws the pre-Sculpting draw order relied on.
@@ -109,8 +126,11 @@ pub fn generate(
     // shelf break instead of drowning the percentile into the abyss.
     let supply = crust::continental_supply(&cratons);
     let effective_ocean = elevation::effective_ocean_target(ocean_target, supply, &mut notes);
-    let field =
-        crust::CrustField::new_with_terranes(terrain_seed, cratons.clone(), terranes.clone());
+    let field = crust::CrustField::new_with_terranes(
+        terrain_seed,
+        [cratons.clone(), micro.clone()].concat(),
+        terranes.clone(),
+    );
     let crust_map = CellMap::from_fn(geosphere, |c| {
         field.thickness_at(geosphere.position(c)).get()
     });
@@ -179,6 +199,7 @@ pub fn generate(
         endorheic,
         cratons,
         terranes,
+        microcontinents: micro,
         boundary_distance: distances,
         lithology: placeholder_lithology,
         lithology_seed,
