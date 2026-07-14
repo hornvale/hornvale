@@ -37,5 +37,5 @@ pub use registry::{ConceptDef, ConceptKind, ConceptRegistry, PredicateDef, Regis
 pub use room::{MAX_DEPTH, RoomAddr, RoomAddrError, RoomId, RoomIdError};
 pub use seed::{Seed, Stream};
 pub use streams::stream_labels;
-pub use units::{ReferenceElevation, TempAnomaly, Temperature, UnitError};
+pub use units::{Mass, ReferenceElevation, TempAnomaly, Temperature, UnitError};
 pub use world::{NAME, World};

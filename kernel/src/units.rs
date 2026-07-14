@@ -197,6 +197,51 @@ impl Add for TempAnomaly {
     }
 }
 
+/// Mass in kilograms, as an absolute positive quantity.
+///
+/// Used across domain boundaries (ecology, species, demography); all
+/// domains normalize to this kernel-level type. Only non-negative values
+/// are physically meaningful.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Mass(
+    /// type-audit: bare-ok(mass: kilograms)
+    f64,
+);
+
+impl Mass {
+    /// Validating constructor: rejects non-finite and negative values.
+    /// type-audit: bare-ok(constructor-edge: value)
+    pub fn new(value: f64) -> Result<Self, UnitError> {
+        if !value.is_finite() {
+            return Err(UnitError {
+                unit: "mass",
+                value,
+                reason: "must be finite",
+            });
+        }
+        if value < 0.0 {
+            return Err(UnitError {
+                unit: "mass",
+                value,
+                reason: "must not be negative",
+            });
+        }
+        Ok(Self(value))
+    }
+
+    /// The raw value in kilograms.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn kilograms(self) -> f64 {
+        self.0
+    }
+
+    /// The ratio of this mass to another (self / other), dimensionless.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn ratio_to(self, other: Mass) -> f64 {
+        self.0 / other.0
+    }
+}
+
 #[cfg(test)]
 mod temperature_tests {
     use super::*;
@@ -272,5 +317,15 @@ mod tests {
         let b = ReferenceElevation::new(100.0).unwrap();
         assert!(a < b);
         assert!(b >= a);
+    }
+
+    #[test]
+    fn mass_rejects_negative_and_reports_ratio() {
+        assert!(Mass::new(-1.0).is_err());
+        assert!(Mass::new(f64::NAN).is_err());
+        let goblin = Mass::new(40.0).unwrap();
+        let dragon = Mass::new(4000.0).unwrap();
+        assert_eq!(goblin.kilograms(), 40.0);
+        assert!((dragon.ratio_to(goblin) - 100.0).abs() < 1e-9);
     }
 }
