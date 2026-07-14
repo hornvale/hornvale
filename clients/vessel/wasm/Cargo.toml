@@ -1,0 +1,30 @@
+[package]
+name = "hornvale-vessel-wasm"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "The Casement: the possess loop as a wasm cdylib for the project book."
+
+# Standalone workspace (the root Cargo.toml `exclude`s this path, like
+# tools/type-audit) so this crate can own the size-critical release profile
+# below — workspace members cannot set per-package panic/LTO.
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+hornvale-kernel = { path = "../../../kernel" }
+hornvale-worldgen = { path = "../../../windows/worldgen" }
+hornvale-vessel = { path = "../../../windows/vessel" }
+hornvale-astronomy = { path = "../../../domains/astronomy" }
+hornvale-terrain = { path = "../../../domains/terrain" }
+
+[profile.release]
+# opt-level is pinned by measurement in the plan's Task 2 (z vs 3, size vs
+# genesis time); "z" is the spike baseline until then.
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
