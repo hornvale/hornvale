@@ -3,7 +3,7 @@
 //! without that column — truthfully.
 
 use crate::anchor::Rotation;
-use crate::sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
+use crate::sky_position::{EquatorialCoord, ecliptic_of, equatorial_at};
 use crate::system::StarSystem;
 use crate::units::StdDays;
 use hornvale_kernel::math;
