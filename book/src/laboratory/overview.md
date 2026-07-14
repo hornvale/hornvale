@@ -6,6 +6,19 @@ selecting data. `hornvale lab run <study.json>` builds one world per seed,
 extracts the selected metrics from each, and publishes a CSV, a per-metric
 distribution summary, and a bar-chart SVG per metric into the book.
 
+Each world is built only as deep as the study's question requires. Every
+metric is tagged with the generation rung it reads — astronomy, terrain,
+climate, settlements, or the full pipeline — and the runner builds each
+seed's world to the deepest rung any *selected* metric needs
+(`build_world_to`, the Lab Performance campaign's depth ladder). A stopped
+build's ledger is a byte-identical prefix of the full build's, so a
+depth-scoped measurement is the same measurement, cheaper: a
+10,000-seed all-astronomy census builds 10,000 nearly-free worlds instead
+of 10,000 full ones, and terrain-only studies run about four times
+cheaper. A study selecting `"metrics": "all"` still builds full worlds. A
+metamorphic guard (`windows/lab/tests/depth_ladder.rs`) holds the
+depth-scoped and forced-full outputs byte-identical.
+
 To author a study, list its seed range, pin sets (or `[]` for the unpinned
 tier-0 path), and either `"metrics": "all"` or a named subset. Run
 `hornvale lab list-metrics` to see every metric the registry currently
