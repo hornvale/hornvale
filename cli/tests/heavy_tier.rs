@@ -3,45 +3,59 @@
 //! string, so `make gate` (which skips them) and `make gate-full` (which
 //! runs them) stay in sync and the tier is greppable, not tribal.
 
-use std::process::Command;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 /// The one reason string every heavy-tier test must use verbatim.
 const CANONICAL: &str =
     "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full";
 
-/// The workspace root. `cargo test` runs with CWD set to the package dir
-/// (`cli/`), so a bare `git grep` would only see `cli/**`; search from the
-/// toplevel instead so the whole workspace is covered.
-fn repo_root() -> String {
-    let out = Command::new("git")
-        .args(["rev-parse", "--show-toplevel"])
-        .output()
-        .expect("git rev-parse should run");
-    assert!(out.status.success(), "git rev-parse failed");
-    String::from_utf8(out.stdout)
-        .expect("git output is utf8")
-        .trim()
-        .to_string()
+/// The workspace root: the parent of this crate's manifest dir (`cli/`).
+/// Filesystem-based, not git-based — the remote gate runs the suite in an
+/// rsync'd tree that is not a git repository.
+fn repo_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("cli/ has a parent")
+        .to_path_buf()
 }
 
-/// All `#[ignore = "..."]` reason strings in the workspace's Rust sources,
-/// found via `git grep` (std-only; the pattern architecture.rs already uses).
+/// Recursively collect every `.rs` file under `dir`, skipping `target/` and
+/// dot-directories (the same source set `git grep -- '*.rs'` covered).
+fn collect_rs(dir: &Path, out: &mut Vec<PathBuf>) {
+    for entry in fs::read_dir(dir).expect("directory is readable") {
+        let entry = entry.expect("directory entry is readable");
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if path.is_dir() {
+            if name == "target" || name.starts_with('.') {
+                continue;
+            }
+            collect_rs(&path, out);
+        } else if name.ends_with(".rs") {
+            out.push(path);
+        }
+    }
+}
+
+/// All `#[ignore = "..."]` reason strings in the repo's Rust sources
+/// (std-only filesystem scan; reason strings never contain quotes).
 fn ignore_reasons() -> Vec<String> {
-    let out = Command::new("git")
-        .current_dir(repo_root())
-        .args(["grep", "-hoE", r#"#\[ignore = "[^"]*"\]"#, "--", "*.rs"])
-        .output()
-        .expect("git grep should run");
-    assert!(out.status.success(), "git grep failed");
-    String::from_utf8(out.stdout)
-        .expect("git output is utf8")
-        .lines()
-        .filter_map(|l| {
-            l.split_once("= \"")
-                .and_then(|(_, r)| r.strip_suffix("\"]"))
-        })
-        .map(str::to_string)
-        .collect()
+    let mut sources = Vec::new();
+    collect_rs(&repo_root(), &mut sources);
+    sources.sort();
+    let mut reasons = Vec::new();
+    for path in sources {
+        let text = fs::read_to_string(&path).expect("source file is utf8");
+        for line in text.lines() {
+            if let Some((_, rest)) = line.split_once("#[ignore = \"")
+                && let Some((reason, _)) = rest.split_once("\"]")
+            {
+                reasons.push(reason.to_string());
+            }
+        }
+    }
+    reasons
 }
 
 #[test]

@@ -14,6 +14,10 @@ curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o /tm
 unzip -q /tmp/awscliv2.zip -d /tmp
 /tmp/aws/install
 sudo -u ubuntu bash -lc 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
+# cargo-nextest is the gate's test runner (decision 0040); prebuilt binary,
+# arch-matched — `cargo install` would spend minutes compiling it per cold box.
+nx=linux; [ "$(uname -m)" = aarch64 ] && nx=linux-arm
+sudo -u ubuntu bash -c "curl -LsSf https://get.nexte.st/latest/$nx | tar zxf - -C /home/ubuntu/.cargo/bin"
 # sccache (shared S3 cache) is a DEFERRED optimization: until it is wired,
 # RUSTC_WRAPPER is left unset and cargo builds normally (correct, just cold).
 # TODO(sccache): install the sccache binary (NOT sccache-dist) and set
