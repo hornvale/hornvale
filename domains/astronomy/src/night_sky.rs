@@ -38,7 +38,9 @@ pub struct NightSky {
     pub circumpolar: Vec<usize>,
     /// Indices of stars that never rise at this latitude.
     pub never_rises: Vec<usize>,
-    /// The brightest star within the pole-search radius, if any.
+    /// The brightest star within the pole-search radius, if any — a
+    /// system-level fact (declination near a pole), identical from every
+    /// latitude.
     pub pole_star: Option<PoleStar>,
     /// Whether the world spins backward (sun rises in the west).
     pub wheels_backward: bool,
@@ -61,9 +63,9 @@ pub fn night_sky_at(
 ) -> NightSky {
     let frozen = calendar.day_length().is_none();
     let sun = calendar.solar_equatorial(t);
-    let mut circumpolar = Vec::new();
-    let mut never_rises = Vec::new();
-    let mut visible = Vec::new();
+    // Pole-star selection is a system-level fact (declination near a pole):
+    // a separate pass over ALL neighbors in index order (= brightness order),
+    // independent of the observer's latitude.
     let mut pole_star: Option<PoleStar> = None;
     for (i, n) in system.neighbors.iter().enumerate() {
         let genesis = EquatorialCoord {
@@ -71,31 +73,43 @@ pub fn night_sky_at(
             dec_deg: n.declination,
         };
         let pos = calendar.star_equatorial_at(&genesis, t);
+        let north_sep = 90.0 - pos.dec_deg;
+        let south_sep = 90.0 + pos.dec_deg;
+        if north_sep <= POLE_STAR_MAX_SEPARATION_DEG {
+            pole_star = Some(PoleStar {
+                neighbor: i,
+                pole: Hemisphere::North,
+                separation_deg: north_sep,
+            });
+            break;
+        } else if south_sep <= POLE_STAR_MAX_SEPARATION_DEG {
+            pole_star = Some(PoleStar {
+                neighbor: i,
+                pole: Hemisphere::South,
+                separation_deg: south_sep,
+            });
+            break;
+        }
+    }
+    let mut circumpolar = Vec::new();
+    let mut never_rises = Vec::new();
+    let mut visible = Vec::new();
+    for (i, n) in system.neighbors.iter().enumerate() {
+        let genesis = EquatorialCoord {
+            ra_deg: n.right_ascension,
+            dec_deg: n.declination,
+        };
+        let pos = calendar.star_equatorial_at(&genesis, t);
         let same_side = pos.dec_deg.signum() == latitude.signum() && latitude != 0.0;
+        let mut is_circumpolar = false;
         if same_side && pos.dec_deg.abs() > 90.0 - latitude.abs() {
             circumpolar.push(i);
+            is_circumpolar = true;
         } else if !same_side && pos.dec_deg.abs() > 90.0 - latitude.abs() {
             never_rises.push(i);
             continue;
         }
-        let north_sep = 90.0 - pos.dec_deg;
-        let south_sep = 90.0 + pos.dec_deg;
-        if pole_star.is_none() {
-            if north_sep <= POLE_STAR_MAX_SEPARATION_DEG {
-                pole_star = Some(PoleStar {
-                    neighbor: i,
-                    pole: Hemisphere::North,
-                    separation_deg: north_sep,
-                });
-            } else if south_sep <= POLE_STAR_MAX_SEPARATION_DEG {
-                pole_star = Some(PoleStar {
-                    neighbor: i,
-                    pole: Hemisphere::South,
-                    separation_deg: south_sep,
-                });
-            }
-        }
-        if circumpolar.contains(&i) {
+        if is_circumpolar {
             visible.push(i);
             continue;
         }
@@ -191,6 +205,39 @@ mod tests {
             a.visible, b.visible,
             "the locked sky is a map, not a calendar"
         );
+    }
+
+    #[test]
+    fn pole_star_is_latitude_independent() {
+        let system = spinning_system();
+        let cal = calendar_of(&system);
+        let t = StdDays(0.0);
+        let south = night_sky_at(&system, &cal, -60.0, t).pole_star;
+        let equator = night_sky_at(&system, &cal, 0.0, t).pole_star;
+        let north = night_sky_at(&system, &cal, 60.0, t).pole_star;
+        assert_eq!(south, equator, "pole star is a system fact, not a vantage");
+        assert_eq!(equator, north, "pole star is a system fact, not a vantage");
+    }
+
+    #[test]
+    fn wheels_backward_mirrors_retrograde_spin() {
+        let system_with_spin = |spin| {
+            let pins = SkyPins {
+                rotation: Some(RotationPin::PeriodHours(24.0)),
+                spin: Some(spin),
+                ..SkyPins::default()
+            };
+            generate(Seed(42), &pins).unwrap().system
+        };
+        let retro = system_with_spin(crate::pins::SpinPin::Retrograde);
+        let sky = night_sky_at(&retro, &calendar_of(&retro), 30.0, StdDays(0.0));
+        assert!(
+            sky.wheels_backward,
+            "retrograde spin wheels the sky backward"
+        );
+        let pro = system_with_spin(crate::pins::SpinPin::Prograde);
+        let sky = night_sky_at(&pro, &calendar_of(&pro), 30.0, StdDays(0.0));
+        assert!(!sky.wheels_backward, "prograde spin wheels the sky forward");
     }
 
     #[test]

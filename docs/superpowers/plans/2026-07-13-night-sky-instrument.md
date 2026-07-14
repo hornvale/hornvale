@@ -440,6 +440,8 @@ pub fn night_sky_at(system: &StarSystem, calendar: &Calendar, latitude: f64, t: 
 }
 ```
 
+Execution deviation: the plan's Step 3 code computed pole_star inside the visibility partition, making it latitude-dependent — contradicting this task's own model paragraph; implemented as a separate all-neighbors pass (latitude-independent), with pinning tests.
+
 Add the `Calendar::is_retrograde` accessor: `pub fn is_retrograde(&self) -> bool { self.retrograde }` with doc + `type-audit: bare-ok(flag)`.
 
 - [ ] **Step 4:** `cargo test -p hornvale-astronomy 2>&1 | tee /tmp/hv-t3.txt` — PASS. Fix any determinism/edge findings from the file.
