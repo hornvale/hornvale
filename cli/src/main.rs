@@ -283,6 +283,21 @@ fn cmd_repl(args: &[String]) -> Result<(), String> {
     repl::run(&world, stdin.lock(), stdout.lock()).map_err(|e| e.to_string())
 }
 
+/// Parse and validate `--day` for `possess`: a finite, non-negative
+/// standard day (default `0.0` when the flag is absent). Rejects `inf`,
+/// `-inf`, `nan`, and negative values loudly rather than handing the vessel
+/// window a day it cannot observe.
+fn parse_possess_day(args: &[String]) -> Result<f64, String> {
+    let s = flag_value(args, "--day").unwrap_or("0");
+    let day: f64 = s.parse().map_err(|_| format!("bad --day: {s}"))?;
+    if !(day.is_finite() && day >= 0.0) {
+        return Err(format!(
+            "bad --day: {s} (must be a finite non-negative day)"
+        ));
+    }
+    Ok(day)
+}
+
 /// Possess the flagship agent and walk. `--seed` builds the world in
 /// memory through the composition root (default pins), so the metaplan's
 /// exit criterion — `hornvale possess --seed 42` — works verbatim.
@@ -299,10 +314,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
     } else {
         load_world(args)?
     };
-    let day: f64 = match flag_value(args, "--day") {
-        Some(s) => s.parse().map_err(|_| format!("bad --day: {s}"))?,
-        None => 0.0,
-    };
+    let day = parse_possess_day(args)?;
     let stdout = std::io::stdout();
     if let Some(path) = flag_value(args, "--script") {
         let script = std::fs::read_to_string(path).map_err(|e| format!("reading {path}: {e}"))?;
@@ -1079,6 +1091,20 @@ mod tests {
     fn bad_neighbor_value_yields_parse_error_text() {
         let err = parse_sky_args(&args(&["--neighbor", "green-dwarf"])).unwrap_err();
         assert!(err.contains("neighbor"), "unexpected error text: {err}");
+    }
+
+    #[test]
+    fn bad_day_value_rejects_non_finite_and_negative_spans() {
+        let err = parse_possess_day(&args(&["--day", "inf"])).unwrap_err();
+        assert!(err.contains("bad --day"), "unexpected error text: {err}");
+        let err = parse_possess_day(&args(&["--day", "-inf"])).unwrap_err();
+        assert!(err.contains("bad --day"), "unexpected error text: {err}");
+        let err = parse_possess_day(&args(&["--day", "nan"])).unwrap_err();
+        assert!(err.contains("bad --day"), "unexpected error text: {err}");
+        let err = parse_possess_day(&args(&["--day", "-1"])).unwrap_err();
+        assert!(err.contains("bad --day"), "unexpected error text: {err}");
+        assert_eq!(parse_possess_day(&args(&["--day", "5"])).unwrap(), 5.0);
+        assert_eq!(parse_possess_day(&args(&[])).unwrap(), 0.0);
     }
 
     #[test]

@@ -76,7 +76,7 @@ pub fn run(
         Ok(x) => x,
         Err(e) => {
             writeln!(output, "error: {e}")?;
-            return Ok(());
+            return Err(std::io::Error::other(e.to_string()));
         }
     };
     writeln!(output, "{opening}")?;

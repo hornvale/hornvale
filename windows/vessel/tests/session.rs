@@ -117,6 +117,13 @@ fn wait_advances_the_frozen_day_without_moving_anything() {
         Turn::Out(t) => assert!(t.contains("no span of days")),
         _ => panic!(),
     }
+    match s.handle("wait inf") {
+        Turn::Out(t) => assert!(
+            t.contains("no span of days"),
+            "non-finite span refused: {t}"
+        ),
+        _ => panic!(),
+    }
 }
 
 #[test]

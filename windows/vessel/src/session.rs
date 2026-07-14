@@ -206,8 +206,8 @@ impl<'w> Session<'w> {
         let days: f64 = if arg.is_empty() {
             1.0
         } else {
-            match arg.parse() {
-                Ok(d) if d > 0.0 => d,
+            match arg.parse::<f64>() {
+                Ok(d) if d.is_finite() && d > 0.0 => d,
                 _ => return Turn::Out(format!("Wait how long? '{arg}' is no span of days.")),
             }
         };
