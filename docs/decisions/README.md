@@ -86,3 +86,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0044](0044-shared-units-live-in-the-kernel.md) | Shared units live in the kernel (refines 0008) | Accepted |
 | [0045](0045-one-canonical-census.md) | One canonical census; frozen studies are evidence | Accepted |
 | [0046](0046-census-regen-is-remote-only.md) | Census regeneration is AWS-only | Accepted |
+| [0047](0047-entity-hood-for-collections.md) | Entity-hood for collections: collections become entities, singletons stay flat | Accepted |
+| [0048](0048-name-salt-stable-identity.md) | Procedural names are salted by stable identity, never by a global mint counter | Accepted |

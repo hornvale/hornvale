@@ -2146,16 +2146,22 @@ fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
 /// those exactly as worldgen composed them — the flagship's observed
 /// phenomena in salience order pair 1:1 with its beliefs in commit order
 /// (religion's genesis names members in phenomena order), and
-/// `hornvale_worldgen::deity_site_concepts` maps each pair. The honorific
-/// affix is one template syllable drawn AFTER the site-concept picks and
-/// PREPENDED, so re-deriving the same glossed epithet with honorifics OFF
-/// yields exactly the plain word the committed epithet was built from: the
-/// committed epithet carries the honorific iff, lowercased, it ends with
-/// the lowercased plain word AND is strictly longer. `Flag(true)` iff
-/// EVERY committed epithet carries it (goblin, Rank), `Flag(false)` iff
-/// none does (kobold, Knowledge). A broken honorific pipeline — a goblin
-/// epithet committed without its affix — would equal its plain word here
-/// and flip the flag to false, which the preregistered calibration catches.
+/// `hornvale_worldgen::deity_site_concepts` maps each pair. Since The
+/// Self-Describing Sky's naming epoch (`religion/deity/v2`), the name seed
+/// itself is no longer the belief id — it is
+/// `hornvale_worldgen::deity_name_seed_for(world_seed, species,
+/// phenomenon.kind, rank)`, re-derived here with the same species/kind/rank
+/// the committed epithet was generated with, never the belief id. The
+/// honorific affix is one template syllable drawn AFTER the site-concept
+/// picks and PREPENDED, so re-deriving the same glossed epithet with
+/// honorifics OFF yields exactly the plain word the committed epithet was
+/// built from: the committed epithet carries the honorific iff, lowercased,
+/// it ends with the lowercased plain word AND is strictly longer.
+/// `Flag(true)` iff EVERY committed epithet carries it (goblin, Rank),
+/// `Flag(false)` iff none does (kobold, Knowledge). A broken honorific
+/// pipeline — a goblin epithet committed without its affix — would equal
+/// its plain word here and flip the flag to false, which the preregistered
+/// calibration catches.
 fn epithet_honorific(v: &FullView, species: &str) -> MetricValue {
     let Some(info) = flagship_of(v.world(), species) else {
         return MetricValue::Absent;
@@ -2186,9 +2192,11 @@ fn epithet_honorific(v: &FullView, species: &str) -> MetricValue {
         let site = hornvale_language::SiteConcepts {
             concepts: &concepts,
         };
+        let name_seed =
+            hornvale_worldgen::deity_name_seed_for(&v.world().seed, species, &phenomenon.kind, i);
         let (plain, _) = namer.glossed_name(
             NameKind::Epithet,
-            b.id.0,
+            name_seed,
             &MorphOptions { honorifics: false },
             &site,
             &lexicon,

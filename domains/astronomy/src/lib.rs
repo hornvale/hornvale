@@ -25,7 +25,7 @@ pub use pins::{
     pin_strings,
 };
 pub use provider::{ECLIPSE, GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE, TIDE};
-pub use star::{Star, generate_star};
+pub use star::{Star, generate_star, insolation_rel};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
     Au, Degrees, EarthMasses, HabitableZone, LightYears, LocalDays, LunarMasses, Megameters,
@@ -57,10 +57,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "astronomy/moons",
             "per-moon mass/distance draws (sequential attempts)",
         ),
-        (
-            "astronomy/neighbors",
-            "notable-neighbor class/distance draws",
-        ),
+        ("astronomy/neighbors", "neighbor class/distance draws"),
         ("astronomy/forcing", "deep-time orbital forcing"),
         ("astronomy/phase-offsets", "per-body genesis phase offsets"),
         (
@@ -133,9 +130,49 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "orbital inclination of a moon to the anchor's orbital plane, in degrees",
     )?;
     registry.register_predicate(
-        facts::NOTABLE_NEIGHBOR,
+        facts::MOON_MASS_LUNAR,
         false,
-        "a notable neighbor star visible in the night sky",
+        "mass of a moon in lunar masses",
+    )?;
+    registry.register_predicate(
+        facts::MOON_DISTANCE_MM,
+        false,
+        "orbital distance of a moon in megameters",
+    )?;
+    registry.register_predicate(
+        facts::MOON_ANGULAR_SIZE_REL,
+        false,
+        "apparent size of a moon relative to Luna-from-Earth",
+    )?;
+    registry.register_predicate(
+        facts::IS_NEIGHBOR,
+        true,
+        "a minted entity is a notable neighbor star",
+    )?;
+    registry.register_predicate(
+        facts::NEIGHBOR_CLASS,
+        true,
+        "spectral-class name of a neighbor star",
+    )?;
+    registry.register_predicate(
+        facts::NEIGHBOR_DISTANCE_LY,
+        true,
+        "distance to a neighbor star in light-years",
+    )?;
+    registry.register_predicate(
+        facts::NEIGHBOR_BRIGHTNESS_REL,
+        true,
+        "apparent brightness of a neighbor, relative units (derived L/d²)",
+    )?;
+    registry.register_predicate(
+        facts::NEIGHBOR_DECLINATION_DEG,
+        true,
+        "declination of a neighbor in degrees from the celestial equator",
+    )?;
+    registry.register_predicate(
+        facts::NEIGHBOR_RA_DEG,
+        true,
+        "right ascension of a neighbor in degrees",
     )?;
     registry.register_predicate(
         facts::GENESIS_NOTE,
@@ -161,6 +198,41 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::OBLIQUITY_AMPLITUDE,
         true,
         "obliquity oscillation amplitude, degrees (moon-coupled)",
+    )?;
+    registry.register_predicate(
+        facts::STAR_MASS_SOLAR,
+        true,
+        "host star mass in solar masses",
+    )?;
+    registry.register_predicate(
+        facts::STAR_LUMINOSITY_SOLAR,
+        true,
+        "host star luminosity in solar units (derived M^3.5)",
+    )?;
+    registry.register_predicate(
+        facts::HAB_ZONE_INNER_AU,
+        true,
+        "habitable-zone inner bound in AU (derived 0.95√L)",
+    )?;
+    registry.register_predicate(
+        facts::HAB_ZONE_OUTER_AU,
+        true,
+        "habitable-zone outer bound in AU (derived 1.37√L)",
+    )?;
+    registry.register_predicate(
+        facts::ANCHOR_MASS_EARTH,
+        true,
+        "anchor world mass in Earth masses",
+    )?;
+    registry.register_predicate(
+        facts::ANCHOR_ORBIT_AU,
+        true,
+        "anchor orbital distance in AU",
+    )?;
+    registry.register_predicate(
+        facts::INSOLATION_REL,
+        true,
+        "insolation at the anchor relative to Earth (derived L/a²)",
     )?;
 
     registry.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")?;

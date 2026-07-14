@@ -37,8 +37,8 @@ Night. The vast moon shows its first-quarter face. The small, distant moon shows
   room/634912780 = {"schema":"locale/room/v2","id":634912780,"face":12,"path…
   room/634912812 = {"schema":"locale/room/v2","id":634912812,"face":12,"path…
   room/634912876 = {"schema":"locale/room/v2","id":634912876,"face":12,"path…
-  settlement/2/name = Zhxokngaknged
-  settlement/2/population = 356
+  settlement/7/name = Zhxokngaknged
+  settlement/7/population = 356
 > release
 You let go.
 ```

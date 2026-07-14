@@ -371,10 +371,8 @@ fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64) {
         Sky::Constant(_) => (1.0, 23.5, RotationRegime::Spinning { day_std: 1.0 }, 365.25),
         Sky::Generated(generated) => {
             let system = generated.system();
-            let luminosity = system.star.luminosity.get();
-            let orbit = system.anchor.orbit.get();
-            // Insolation relative to Earth (L=1, d=1): L / d².
-            let insolation = luminosity / (orbit * orbit);
+            // Insolation relative to Earth: the single shared definition (SKY-15).
+            let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
             let obliquity = system.anchor.obliquity.get();
             let regime = match system.anchor.rotation {
                 hornvale_astronomy::Rotation::Spinning { day, .. } => {
@@ -1595,13 +1593,48 @@ struct LanguageDeityNamer<'a, 'b, 'c> {
     /// `name-gloss` facts itself; the composition root reads this map back
     /// once `genesis` returns and commits them there instead.
     glosses: std::collections::BTreeMap<u64, String>,
+    /// Per-species base seed for deity name generation (`/v2` epoch): the name
+    /// seed is derived from this + phenomenon kind + rank, never an entity id.
+    deity_seed: Seed,
+}
+
+/// The seed for a deity's generated name: a pure function of the per-species
+/// deity seed (`base`), the phenomenon KIND the deity is of, and the
+/// phenomenon's RANK among its pantheon's members. Deliberately carries no
+/// entity id, so deity names are invariant to entity mint order — the fix
+/// for the `/v2` naming epoch (spec §8).
+fn deity_name_seed(base: Seed, kind: &str, rank: usize) -> u64 {
+    base.derive(kind)
+        .derive(&rank.to_string())
+        .stream()
+        .next_u64()
+}
+
+/// The per-species base seed every deity/epithet name for `species` derives
+/// from (the `/v2` epoch label). The one place the `"religion/deity/v2"`
+/// stream label is spelled, so [`build`] (constructing a
+/// [`LanguageDeityNamer`]) and [`deity_name_seed_for`] (re-deriving the same
+/// seed from outside this crate) can never diverge.
+fn deity_base_seed(world_seed: &Seed, species: &str) -> Seed {
+    world_seed.derive("religion/deity/v2").derive(species)
+}
+
+/// Public entry point onto [`deity_name_seed`] for consumers outside this
+/// crate that need to re-derive a committed deity/epithet name's seed from
+/// the world seed directly (`windows/lab`'s `epithet_honorific` metric
+/// structurally detects the honorific affix by re-deriving the plain word
+/// the committed epithet was built from).
+/// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: kind), bare-ok(index: rank), pending(wave-3: return)
+pub fn deity_name_seed_for(world_seed: &Seed, species: &str, kind: &str, rank: usize) -> u64 {
+    deity_name_seed(deity_base_seed(world_seed, species), kind, rank)
 }
 
 impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
     fn deity(&mut self, salt: u64) -> (String, String) {
+        let rank = self.index;
         let phenomenon = self
             .phenomena
-            .get(self.index)
+            .get(rank)
             .expect("religion calls deity() once per member phenomenon, in phenomena order");
         self.index += 1;
         let sentiment = hornvale_religion::Sentiment::of(phenomenon);
@@ -1609,9 +1642,10 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
         let site = hornvale_language::SiteConcepts {
             concepts: &concepts,
         };
+        let name_seed = deity_name_seed(self.deity_seed, &phenomenon.kind, rank);
         let (g, gloss) = self.namer.glossed_name(
             hornvale_language::NameKind::Deity,
-            salt,
+            name_seed,
             &self.morph,
             &site,
             self.lexicon,
@@ -1622,24 +1656,26 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
         (g.roman, g.ipa)
     }
 
-    fn epithet(&mut self, salt: u64, sentiment: hornvale_religion::Sentiment) -> (String, String) {
+    fn epithet(&mut self, _salt: u64, sentiment: hornvale_religion::Sentiment) -> (String, String) {
         // Sentiment fits the epithet at render time (Task 11's `render_line`
         // reads it from the belief's own committed `sentiment` fact); the
         // generated word itself is glossed like any other name, over the
         // same phenomenon `deity()` just named for this same belief — only
         // the deity's own gloss is committed as a `name-gloss` fact (see
         // `glosses`), so the epithet's gloss is computed and discarded.
+        let rank = self.index - 1;
         let phenomenon = self
             .phenomena
-            .get(self.index - 1)
+            .get(rank)
             .expect("deity() always runs before epithet() for the same belief");
         let concepts = deity_site_concepts(phenomenon, sentiment);
         let site = hornvale_language::SiteConcepts {
             concepts: &concepts,
         };
+        let name_seed = deity_name_seed(self.deity_seed, &phenomenon.kind, rank);
         let (g, _gloss) = self.namer.glossed_name(
             hornvale_language::NameKind::Epithet,
-            salt,
+            name_seed,
             &self.morph,
             &site,
             self.lexicon,
@@ -2079,6 +2115,7 @@ fn build_to(
                 phenomena: &seen,
                 index: 0,
                 glosses: std::collections::BTreeMap::new(),
+                deity_seed: deity_base_seed(&seed, def.name),
             };
             hornvale_religion::genesis(&mut world, flagship, &seen, &society, &mut deity_namer)?;
             for (salt, gloss) in &deity_namer.glosses {
@@ -2533,6 +2570,27 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn deity_name_seed_is_pure_and_entity_id_free() {
+        use hornvale_kernel::Seed;
+        let base = Seed(42).derive("religion/deity/v2").derive("goblin");
+        // Same species-seed + kind + rank -> same name seed, no entity id involved.
+        assert_eq!(
+            deity_name_seed(base, "celestial-body", 0),
+            deity_name_seed(base, "celestial-body", 0)
+        );
+        // Rank disambiguates members that share a kind (two moons, two same-colour stars).
+        assert_ne!(
+            deity_name_seed(base, "celestial-body", 0),
+            deity_name_seed(base, "celestial-body", 1)
+        );
+        // Kind leads semantically.
+        assert_ne!(
+            deity_name_seed(base, "celestial-body", 0),
+            deity_name_seed(base, "tide", 0)
+        );
+    }
 
     fn constant(seed: u64) -> World {
         build_world(
