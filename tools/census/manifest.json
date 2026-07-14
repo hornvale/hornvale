@@ -1,0 +1,30 @@
+{
+  "live": [
+    { "study": "the-census",
+      "dir": "book/src/laboratory/generated/the-census",
+      "study_json": "studies/the-census.study.json" },
+    { "study": "census-of-the-meeting",
+      "dir": "book/src/laboratory/generated/census-of-the-meeting",
+      "study_json": "studies/census-of-the-meeting.study.json" }
+  ],
+  "frozen": [
+    { "study": "branches-family",
+      "dir": "book/src/laboratory/generated/branches-family",
+      "epoch": "pre-consolidation",
+      "frozen_at": "90fd7cc54362bede409c8649f79fe810a2c87e45",
+      "note": "1,000-seed family battery; subsumed column-for-column by the-census (spec §1); ADR 0016 evidence" },
+    { "study": "census-of-coasts",
+      "dir": "book/src/laboratory/generated/census-of-coasts",
+      "epoch": "pre-crust",
+      "frozen_at": "15ef6671009533d0e88be515dc4cda8cd6ea5ed2",
+      "note": "10,000-seed preregistered terrain-overhaul baseline; regenerating under current physics would falsify the record" },
+    { "study": "census-of-coasts-tuning",
+      "dir": "book/src/laboratory/generated/census-of-coasts-tuning",
+      "epoch": "crust-tuning",
+      "frozen_at": "2d82a6a6e3c5f55c8d3d0394ddc24daf50d7f3cc",
+      "note": "2,000-seed tuning-loop variant; measurement record of the Task 9 physics loop" }
+  ],
+  "sidecars": [
+    { "table": "timings", "path": "docs/timings.md", "format": "markdown-table" }
+  ]
+}

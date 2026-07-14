@@ -92,3 +92,10 @@ mass without amnesia.
   merged reality. Specs, plans, and decisions stay in `docs/`.
 - **Definition of Done** for a merged campaign includes a chronicle entry, a
   book freshness sweep, and a retrospective (decisions 0013, 0020).
+- **Non-workspace dev tools** analyze committed artifacts without joining
+  the crate graph (decisions 0027/0028): `tools/type-audit/` checks every
+  `pub`-boundary primitive carries a unit-typing verdict; `tools/census/` —
+  the census analysis harness — mounts DuckDB views over every committed
+  `rows.csv`+`schema.json` pair, git-history longitudinal extraction, and
+  canned explore/calibrate queries (`make census`, `make census-query`,
+  `make census-history`, `make census-check`).

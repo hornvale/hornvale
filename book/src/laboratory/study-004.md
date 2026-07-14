@@ -16,13 +16,13 @@ once by hand at author time, exactly as Studies 001 through 003 report their
 own 10,000-seed headline runs. It is **not** committed and **not** part of
 CI — regenerating it is this chapter's responsibility, by hand, the same
 arrangement `census-of-skies`/`census-of-lands`/`census-of-peoples` use. The
-charts embedded below are a different, smaller run: `census-lands-drift`,
-the 500-seed sibling study CI reruns and diffs on every build
-(`book/src/laboratory/generated/census-lands-drift/`), which now carries
+charts embedded below are a different, smaller run: `the-census`,
+the 1,000-seed sibling study CI reruns and diffs on every build
+(`book/src/laboratory/generated/the-census/`), which carries
 these four faith metrics alongside the sky, land, and people metrics it
 already tracked. Small numeric differences between a percentage quoted in
 this prose and a bar in a chart below are sampling variance between a
-10,000-seed and a 500-seed draw, not drift — only the `census-lands-drift`
+10,000-seed and a 1,000-seed draw, not drift — only the `the-census`
 charts are drift-checked.
 
 **A note on the two-peoples re-baseline (Campaign Y2-1).** This chapter's
@@ -54,8 +54,8 @@ structure (Campaign 4b) reaches four or more castes; anything leaner gets a
 flat pantheon of co-equal spirits. This is not a hypothesis about the
 census, it is a fact about `genesis`, so `pantheon-verticality` must equal
 that re-derivation from `flagship-structure-size` in every world —
-`windows/lab/tests/calibration.rs` asserts it row by row over the 500-seed
-`census-lands-drift` sample on every CI build, the fourth member of the
+`windows/lab/tests/calibration.rs` asserts it row by row over the 1,000-seed
+`the-census` sample on every CI build, the fourth member of the
 calibration family after belief⇔lock, band-count⇔rotation, and
 subsistence⇔biome. Across the full 10,000-world census it holds without a
 single exception, the ranked share settling back slightly under two-species
@@ -67,7 +67,7 @@ Zero mismatches, over 9,972 worlds with a pantheon — the same shift Study
 before the two-peoples re-baseline, no longer occurs at all) propagates
 exactly through this threshold, as the re-derivation guarantees it must.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-pantheon-verticality.svg}}
+{{#include generated/the-census/the-census-default-pantheon-verticality.svg}}
 
 **The head deity's tenet is not authored either; it is read straight off
 the world's rotation regime.** The most salient phenomenon a spinning world
@@ -86,7 +86,7 @@ already reports for tidally locked worlds in this same seed range, reached
 here by an entirely different metric (a pantheon's head-deity tenet, not a
 rotation flag), the same fact seen from theology instead of astronomy.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-head-deity-periodicity.svg}}
+{{#include generated/the-census/the-census-default-head-deity-periodicity.svg}}
 
 ## The first unknown number: how many gods
 
@@ -107,7 +107,7 @@ two-peoples re-baseline untouched, exactly as it should: a pantheon's
 composition, where one exists at all, is a function of observed phenomena,
 and the sky does not care where joint placement put the flagship.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-pantheon-size.svg}}
+{{#include generated/the-census/the-census-default-pantheon-size.svg}}
 
 ## The second unknown number: cult form and verticality are separate axes
 
@@ -123,7 +123,7 @@ since priesthood asks only "does a shaman caste exist," a coarser
 threshold than verticality's four-strata bar that a lean structure clears
 more easily.
 
-{{#include generated/census-lands-drift/census-lands-drift-default-cult-form.svg}}
+{{#include generated/the-census/the-census-default-cult-form.svg}}
 
 Crossing the two axes shows exactly how much room separates them: every
 flat pantheon in a folk cult (17.5% of the census) behaves as expected, and

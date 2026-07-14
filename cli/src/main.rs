@@ -57,6 +57,7 @@ usage:
   hornvale voice [--out <DIR>]             author missing phonology audio clips (espeak-ng + ffmpeg; default out: book/src/audio)
   hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
   hornvale lab diff <STUDY> <OLD_CSV> <NEW_CSV>  report which census metrics moved between two rows.csv snapshots
+  hornvale lab backfill-schema <STUDY> <CSV>  print a backfilled schema.json for a frozen study
   hornvale lab list-metrics                list every metric in the lab's registry
 
 sky flags (shared by new and scout):
@@ -696,15 +697,16 @@ fn cmd_proto() -> Result<(), String> {
 }
 
 /// Dispatch `lab` subcommands: `run <PATH>`, `diff <STUDY> <OLD_CSV> <NEW_CSV>`,
-/// and `list-metrics`.
+/// `backfill-schema <STUDY_JSON> <ROWS_CSV>`, and `list-metrics`.
 fn cmd_lab(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("run") => cmd_lab_run(args),
         Some("diff") => cmd_lab_diff(args),
+        Some("backfill-schema") => cmd_lab_backfill_schema(args),
         Some("list-metrics") => cmd_lab_list_metrics(),
         Some(other) => Err(format!("lab: unknown subcommand '{other}'\n{}", usage())),
         None => Err(format!(
-            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|list-metrics)\n{}",
+            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics)\n{}",
             usage()
         )),
     }
@@ -754,6 +756,25 @@ fn cmd_lab_diff(args: &[String]) -> Result<(), String> {
         "{}",
         hornvale_lab::render_diff(&study, &old_csv, &new_csv).map_err(|e| e.to_string())?
     );
+    Ok(())
+}
+
+/// Generate a backfilled `schema.json` for a frozen study (census-as-data
+/// spec §2): load the study and its committed `rows.csv`, reconstruct the
+/// run, and print the manifest (marked `"backfilled": true`) on stdout —
+/// the caller redirects it into the study's generated directory, once.
+fn cmd_lab_backfill_schema(args: &[String]) -> Result<(), String> {
+    let (Some(study_path), Some(csv_path)) = (args.get(2), args.get(3)) else {
+        return Err(format!(
+            "lab backfill-schema requires <STUDY_JSON> <ROWS_CSV>\n{}",
+            usage()
+        ));
+    };
+    let study =
+        hornvale_lab::load_study(std::path::Path::new(study_path)).map_err(|e| e.to_string())?;
+    let csv = std::fs::read_to_string(csv_path).map_err(|e| format!("read {csv_path}: {e}"))?;
+    let result = hornvale_lab::load_rows(&study, &csv).map_err(|e| e.to_string())?;
+    print!("{}", hornvale_lab::render_schema(&result, &csv, true));
     Ok(())
 }
 

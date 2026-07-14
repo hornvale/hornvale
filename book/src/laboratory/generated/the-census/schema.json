@@ -1,0 +1,1265 @@
+{
+  "columns": [
+    {
+      "kind": "integer",
+      "name": "seed"
+    },
+    {
+      "kind": "categorical",
+      "name": "pin_set"
+    },
+    {
+      "doc": "Spectral class of the host star",
+      "kind": "categorical",
+      "name": "star-class",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Whether the world is tidally locked to its star",
+      "kind": "flag",
+      "name": "tidally-locked",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        16.0,
+        20.0,
+        24.0,
+        28.0,
+        32.0,
+        36.0,
+        40.0
+      ],
+      "doc": "Length of the solar day in standard hours; Absent if tidally locked",
+      "kind": "numeric",
+      "name": "day-length-hours",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        200.0,
+        400.0,
+        600.0,
+        800.0,
+        1000.0,
+        1200.0,
+        1400.0
+      ],
+      "doc": "Length of the year in standard days",
+      "kind": "numeric",
+      "name": "year-std-days",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        200.0,
+        400.0,
+        600.0,
+        800.0,
+        1000.0,
+        1200.0,
+        1400.0
+      ],
+      "doc": "Length of the year in local days; Absent if tidally locked",
+      "kind": "numeric",
+      "name": "year-local-days",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        5.0,
+        10.0,
+        15.0,
+        20.0,
+        25.0,
+        30.0,
+        35.0
+      ],
+      "doc": "Axial tilt in degrees",
+      "kind": "numeric",
+      "name": "obliquity-degrees",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0
+      ],
+      "doc": "Peak-to-peak obliquity swing over one obliquity period (2× the deep-time forcing amplitude, SKY-21); a moonless world keeps the full drawn wobble, a moon damps it",
+      "kind": "numeric",
+      "name": "obliquity-range",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Number of moons in orbit",
+      "kind": "categorical",
+      "name": "moons-admitted",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Whether moon genesis recorded refusals",
+      "kind": "flag",
+      "name": "refused-a-moon",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0
+      ],
+      "doc": "Sum of all moon tidal forces",
+      "kind": "numeric",
+      "name": "total-tide",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        5.0,
+        10.0,
+        25.0,
+        50.0,
+        100.0,
+        250.0,
+        700.0
+      ],
+      "doc": "How many cycles of the nearest moon fit in one year; Absent if no moons",
+      "kind": "numeric",
+      "name": "months-per-year-innermost",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Number of notable neighbor stars",
+      "kind": "categorical",
+      "name": "neighbor-count",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Spectral class of the brightest neighbor, in kebab-case",
+      "kind": "categorical",
+      "name": "brightest-neighbor-class",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "The first belief's sentiment tag ('eternal', 'cyclic', or 'ambient'); Absent if no beliefs",
+      "kind": "categorical",
+      "name": "belief-kind",
+      "rung": "full"
+    },
+    {
+      "doc": "Number of genesis notes recorded",
+      "kind": "categorical",
+      "name": "genesis-note-count",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Number of tectonic plates the globe drew or was pinned to",
+      "kind": "categorical",
+      "name": "plate-count",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9
+      ],
+      "doc": "Fraction of globe cells below sea level",
+      "kind": "numeric",
+      "name": "ocean-fraction",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of land cells standing above 2000 m over the sea",
+      "kind": "numeric",
+      "name": "mountain-coverage",
+      "rung": "terrain"
+    },
+    {
+      "doc": "Circulation bands per hemisphere; 'locked' if tidally locked",
+      "kind": "categorical",
+      "name": "band-count",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5
+      ],
+      "doc": "Fraction of cells that are habitable (land, water, tolerable season)",
+      "kind": "numeric",
+      "name": "habitable-fraction",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.5
+      ],
+      "doc": "Fraction of cells with tectonic unrest above 0.3",
+      "kind": "numeric",
+      "name": "unrest-coverage",
+      "rung": "terrain"
+    },
+    {
+      "doc": "The most common land biome by cell count, kebab-case",
+      "kind": "categorical",
+      "name": "dominant-land-biome",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        -30.0,
+        -20.0,
+        -10.0,
+        0.0,
+        10.0,
+        20.0,
+        30.0
+      ],
+      "doc": "Annual-mean temperature averaged over land cells, °C; Absent if the world has no land",
+      "kind": "numeric",
+      "name": "mean-land-temperature-c",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        10.0,
+        20.0,
+        40.0,
+        60.0,
+        80.0,
+        120.0
+      ],
+      "doc": "Number of settlements placed in the world",
+      "kind": "numeric",
+      "name": "settlement-count",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        100.0,
+        200.0,
+        300.0,
+        400.0,
+        500.0
+      ],
+      "doc": "Mean population across every settlement's committed population fact; Absent if there are none",
+      "kind": "numeric",
+      "name": "mean-population",
+      "rung": "settlements"
+    },
+    {
+      "doc": "The goblin flagship settlement's committed subsistence mode (the pantheon's community, spec §6); Absent if there is no goblin flagship or no committed subsistence",
+      "kind": "categorical",
+      "name": "flagship-subsistence",
+      "rung": "settlements"
+    },
+    {
+      "doc": "The goblin flagship settlement's committed biome; Absent if there is no goblin flagship",
+      "kind": "categorical",
+      "name": "flagship-biome",
+      "rung": "settlements"
+    },
+    {
+      "doc": "Whether the goblin flagship settlement's cell borders an ocean cell, recomputed from the terrain provider; Absent if there is no goblin flagship",
+      "kind": "flag",
+      "name": "flagship-coastal",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "Number of castes present in the goblin flagship settlement's emergent structure (a stratification proxy, matched against the same community religion's pantheon-verticality reasons about); Absent if there is no goblin flagship",
+      "kind": "numeric",
+      "name": "flagship-structure-size",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of land cells that are endorheic (interior-draining)",
+      "kind": "numeric",
+      "name": "endorheic-coverage",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "Number of beliefs in the goblin flagship's pantheon; Absent if there are none",
+      "kind": "numeric",
+      "name": "pantheon-size",
+      "rung": "full"
+    },
+    {
+      "doc": "The goblin flagship's pantheon's shared cult form ('organized' or 'folk'); Absent if no goblin beliefs",
+      "kind": "categorical",
+      "name": "cult-form",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether the goblin flagship's pantheon is ranked (a high god presides) or flat; Absent if there is no goblin flagship pantheon",
+      "kind": "categorical",
+      "name": "pantheon-verticality",
+      "rung": "full"
+    },
+    {
+      "doc": "The sentiment tag of the goblin flagship's head deity (the most salient belief): 'eternal', 'cyclic', or 'ambient'; Absent if no goblin beliefs",
+      "kind": "categorical",
+      "name": "head-deity-periodicity",
+      "rung": "full"
+    },
+    {
+      "doc": "The goblin flagship's committed role ladder, comma-joined, lowest to highest; Absent if goblins placed no settlement",
+      "kind": "categorical",
+      "name": "goblin-flagship-roles",
+      "rung": "settlements"
+    },
+    {
+      "doc": "The kobold flagship's committed role ladder, comma-joined, lowest to highest; Absent if kobolds placed no settlement",
+      "kind": "categorical",
+      "name": "kobold-flagship-roles",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        100.0,
+        200.0,
+        300.0,
+        400.0,
+        500.0
+      ],
+      "doc": "The goblin flagship settlement's committed population; Absent if goblins placed no settlement",
+      "kind": "numeric",
+      "name": "goblin-flagship-population",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        100.0,
+        200.0,
+        300.0,
+        400.0,
+        500.0
+      ],
+      "doc": "The kobold flagship settlement's committed population; Absent if kobolds placed no settlement",
+      "kind": "numeric",
+      "name": "kobold-flagship-population",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "The goblin flagship cell's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if goblins placed no settlement",
+      "kind": "numeric",
+      "name": "goblin-flagship-surplus",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "The kobold flagship cell's subsistence surplus, recomputed from providers as fertility(biome_class) × moisture (the independent column the slave calibration needs); Absent if kobolds placed no settlement",
+      "kind": "numeric",
+      "name": "kobold-flagship-surplus",
+      "rung": "settlements"
+    },
+    {
+      "doc": "Whether the goblin flagship settlement's cell borders an ocean cell, recomputed from the terrain provider; Absent if goblins placed no settlement",
+      "kind": "flag",
+      "name": "goblin-flagship-coastal",
+      "rung": "settlements"
+    },
+    {
+      "doc": "Whether the kobold flagship settlement's cell borders an ocean cell, recomputed from the terrain provider; Absent if kobolds placed no settlement",
+      "kind": "flag",
+      "name": "kobold-flagship-coastal",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+        16.0
+      ],
+      "doc": "Number of settlements peopled by goblins",
+      "kind": "numeric",
+      "name": "goblin-settlement-count",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+        16.0
+      ],
+      "doc": "Number of settlements peopled by kobolds",
+      "kind": "numeric",
+      "name": "kobold-settlement-count",
+      "rung": "settlements"
+    },
+    {
+      "doc": "Venue domain of the goblin flagship's head deity: solar, lunar, or ambient; Absent without a goblin pantheon",
+      "kind": "categorical",
+      "name": "head-deity-domain-goblin",
+      "rung": "full"
+    },
+    {
+      "doc": "Venue domain of the kobold flagship's head deity: solar, lunar, or ambient; Absent without a kobold pantheon",
+      "kind": "categorical",
+      "name": "head-deity-domain-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "Number of deities in the goblin flagship's pantheon; Absent without one",
+      "kind": "numeric",
+      "name": "pantheon-size-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "Number of deities in the kobold flagship's pantheon; Absent without one",
+      "kind": "numeric",
+      "name": "pantheon-size-kobold",
+      "rung": "full"
+    },
+    {
+      "doc": "Cult form of the goblin flagship's pantheon (organized/folk); Absent without one",
+      "kind": "categorical",
+      "name": "cult-form-goblin",
+      "rung": "full"
+    },
+    {
+      "doc": "Cult form of the kobold flagship's pantheon (organized/folk); Absent without one",
+      "kind": "categorical",
+      "name": "cult-form-kobold",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether the fixed structural rule (lunar head, then cyclic share, then size — no lexical input) attributes the kobold pantheon correctly; Absent unless both peoples hold pantheons",
+      "kind": "flag",
+      "name": "blind-attribution-correct",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every generated name (settlement, deity, epithet) attributed to goblins in this world re-validates against the goblin phonology, independently re-derived and re-parsed from the surface string; Absent if goblins produced no names",
+      "kind": "flag",
+      "name": "phonotactic-validity-goblin",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every generated name (settlement, deity, epithet) attributed to kobolds in this world re-validates against the kobold phonology, independently re-derived and re-parsed from the surface string; Absent if kobolds produced no names",
+      "kind": "flag",
+      "name": "phonotactic-validity-kobold",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every committed goblin deity epithet carries a prepended honorific affix — DETECTED from the committed epithet content: the committed word, case-folded, must end with the independently re-derived honorific-OFF stem and be strictly longer (Rank status basis → honorifics on, spec §7); Absent if goblins hold no pantheon",
+      "kind": "flag",
+      "name": "epithet-honorific-goblin",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every committed kobold deity epithet carries a prepended honorific affix — DETECTED from the committed epithet content (see epithet-honorific-goblin); kobold's Knowledge status basis leaves honorifics off, so the committed epithet equals the plain stem and this reads false; Absent if kobolds hold no pantheon",
+      "kind": "flag",
+      "name": "epithet-honorific-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0,
+        9.0,
+        10.0
+      ],
+      "doc": "Mean character length of every generated name (settlement, deity, epithet) attributed to goblins in this world; Absent if goblins produced no names",
+      "kind": "numeric",
+      "name": "name-length-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0,
+        9.0,
+        10.0
+      ],
+      "doc": "Mean character length of every generated name (settlement, deity, epithet) attributed to kobolds in this world; Absent if kobolds produced no names",
+      "kind": "numeric",
+      "name": "name-length-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.01,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "doc": "Fraction of this world's settlement + deity names (across every species) that duplicate another name in the same world — uniqueness is de-facto, not enforced (Task 9), so this MEASURES the collision rate rather than asserting zero. Scope: settlement and deity proper nouns only; epithets are deliberately EXCLUDED (they are descriptive words expected to repeat by design, so they are not collision candidates). Absent if the world has no settlement or deity names",
+      "kind": "numeric",
+      "name": "name-collision-rate",
+      "rung": "full"
+    },
+    {
+      "doc": "Venue domain of the goblin-twin flagship's head deity (null control, spec §4); Absent without a goblin-twin pantheon",
+      "kind": "categorical",
+      "name": "head-deity-domain-goblin-twin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "Number of deities in the goblin-twin flagship's pantheon (null control); Absent without one",
+      "kind": "numeric",
+      "name": "pantheon-size-goblin-twin",
+      "rung": "full"
+    },
+    {
+      "doc": "Cult form of the goblin-twin flagship's pantheon (null control); Absent without one",
+      "kind": "categorical",
+      "name": "cult-form-goblin-twin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0,
+        9.0,
+        10.0
+      ],
+      "doc": "Mean character length of every generated name attributed to the goblin-twin (null control); Absent if it produced no names",
+      "kind": "numeric",
+      "name": "name-length-goblin-twin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of the goblin flagship pantheon's source phenomena that are periodic (the pick_kobold input the null control needs); Absent without a goblin pantheon",
+      "kind": "numeric",
+      "name": "pantheon-cyclic-share-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of the goblin-twin flagship pantheon's source phenomena that are periodic (null control); Absent without one",
+      "kind": "numeric",
+      "name": "pantheon-cyclic-share-goblin-twin",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every committed settlement name-gloss fact in this world is a truthful composition of that SAME settlement's own re-derived site concepts (biome + presiding phenomenon), independently re-derived here rather than read back from worldgen's own composition; Absent if no settlement in this world carries a gloss",
+      "kind": "flag",
+      "name": "name-gloss-true",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every goblin lexicon Root entry's recorded sound-change derivation replays byte-identically through evolve (Neogrammarian regularity, spec §9.1); Absent if the goblin lexicon minted no Root",
+      "kind": "flag",
+      "name": "lexicon-regular-goblin",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every kobold lexicon Root entry's recorded sound-change derivation replays byte-identically through evolve (Neogrammarian regularity, spec §9.1); Absent if the kobold lexicon minted no Root",
+      "kind": "flag",
+      "name": "lexicon-regular-kobold",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether the goblin lexicon is exposure-sound: no concept an INDEPENDENT re-derivation of exposure classifies Unknown ever backs a Root entry, and every committed Gap carries a non-empty reason (spec §9.2); Absent if the goblin lexicon has no entries",
+      "kind": "flag",
+      "name": "exposure-sound-goblin",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether the kobold lexicon is exposure-sound: no concept an INDEPENDENT re-derivation of exposure classifies Unknown ever backs a Root entry, and every committed Gap carries a non-empty reason (spec §9.2); Absent if the kobold lexicon has no entries",
+      "kind": "flag",
+      "name": "exposure-sound-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "The goblin hue-ladder acquisition depth (2-5) derived from its perception vector's night-vision (spec §7's pack-depth model card); Absent if goblin is not in this world's roster",
+      "kind": "numeric",
+      "name": "hue-depth-goblin",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ],
+      "doc": "The kobold hue-ladder acquisition depth (2-5) derived from its perception vector's night-vision (spec §7's pack-depth model card); Absent if kobold is not in this world's roster",
+      "kind": "numeric",
+      "name": "hue-depth-kobold",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        1.0,
+        1.5,
+        2.0,
+        2.5,
+        3.0,
+        4.0,
+        6.0
+      ],
+      "doc": "Shoreline development index: coastline length over the circumference of the circle with the land's area (1 = maximally compact); Absent without a shoreline",
+      "kind": "numeric",
+      "name": "shoreline-development",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0
+      ],
+      "doc": "Ashman's D between land and ocean elevation populations (Earth is strongly bimodal); Absent when a world lacks land or ocean",
+      "kind": "numeric",
+      "name": "hypsometric-bimodality",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of cells within the shelf band (±200 m) of sea level — the populated shelf Earth's hypsometry keeps",
+      "kind": "numeric",
+      "name": "shelf-fraction",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Connected land components at least 0.5% of the world's total land cells (Task 9 iteration 3's size floor, Earth-calibrated: Greenland is ~1.4% of Earth's land and qualifies, Iceland ~0.07% does not) — the unfloored fringe of sub-floor fragments is preserved separately by landmass-count",
+      "kind": "numeric",
+      "name": "continent-count",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        0.9
+      ],
+      "doc": "Largest land component's share of all land cells; Absent on a landless world",
+      "kind": "numeric",
+      "name": "largest-continent-share",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6
+      ],
+      "doc": "Gini coefficient over plate cell counts (Earth's plate sizes are heavy-tailed; uniform Voronoi scores low)",
+      "kind": "numeric",
+      "name": "plate-size-gini",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Every connected land component regardless of size — the unfloored companion continent-count superseded away from; reported alongside forever",
+      "kind": "numeric",
+      "name": "landmass-count",
+      "rung": "terrain"
+    },
+    {
+      "doc": "Whether every daughter's lexicon (goblin, hobgoblin, bugbear, kobold) is Neogrammarian-regular: every Root's recorded derivation replays byte-identically through evolve, checked for EVERY daughter in this world's roster (spec §9.1, generalized family-wide); Absent if no daughter minted a Root",
+      "kind": "flag",
+      "name": "lexicon-regular-family",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every goblinoid daughter's (goblin, hobgoblin, bugbear) Root derivation.proto matches an INDEPENDENT re-draw of the shared \"goblinoid\" family proto-root for that concept (spec §3: cognates share a proto ancestor) — never reading the family proto back from a sibling's own recorded derivation; Absent if no goblinoid daughter minted a Root",
+      "kind": "flag",
+      "name": "monophyly-goblinoid",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether kobold — the family with no siblings — never coincides with the goblinoid family: for every concept kobold holds as a Root, its recorded proto-root differs from an INDEPENDENT re-draw of the \"goblinoid\" family proto-root for that same concept (spec §3's clean outgroup); Absent if kobold minted no Root",
+      "kind": "flag",
+      "name": "clean-outgroup-kobold",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every goblin lexicon Root's modern form draws only segments in goblin's own drawn inventory (spec §2.2's nativization contract); Absent if goblin minted no Root",
+      "kind": "flag",
+      "name": "inventory-closure-goblin",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every hobgoblin lexicon Root's modern form draws only segments in hobgoblin's own drawn inventory (spec §2.2's nativization contract); Absent if hobgoblin minted no Root",
+      "kind": "flag",
+      "name": "inventory-closure-hobgoblin",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every bugbear lexicon Root's modern form draws only segments in bugbear's own drawn inventory (spec §2.2's nativization contract); Absent if bugbear minted no Root",
+      "kind": "flag",
+      "name": "inventory-closure-bugbear",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether every kobold lexicon Root's modern form draws only segments in kobold's own drawn inventory (spec §2.2's nativization contract); Absent if kobold minted no Root",
+      "kind": "flag",
+      "name": "inventory-closure-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Count of DISTINCT proto segments (drawn from the shared goblinoid family proto-phonology) appearing in goblin's own Root proto-roots that nativize.rs collapses onto an existing goblin inventory segment (i.e. absent from goblin's own inventory) — the measured cost of goblin's nativization under the loudness-drawn inventory (spec §3); Absent if goblin minted no Root",
+      "kind": "numeric",
+      "name": "divergence-magnitude-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Count of DISTINCT proto segments (drawn from the shared goblinoid family proto-phonology) appearing in hobgoblin's own Root proto-roots that nativize.rs collapses onto an existing hobgoblin inventory segment (i.e. absent from hobgoblin's own inventory) — the measured cost of hobgoblin's nativization under the loudness-drawn inventory (spec §3); Absent if hobgoblin minted no Root",
+      "kind": "numeric",
+      "name": "divergence-magnitude-hobgoblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Count of DISTINCT proto segments (drawn from the shared goblinoid family proto-phonology) appearing in bugbear's own Root proto-roots that nativize.rs collapses onto an existing bugbear inventory segment (i.e. absent from bugbear's own inventory) — the measured cost of bugbear's nativization under the loudness-drawn inventory (spec §3); Absent if bugbear minted no Root",
+      "kind": "numeric",
+      "name": "divergence-magnitude-bugbear",
+      "rung": "full"
+    },
+    {
+      "doc": "Whether some concept rooted in ALL THREE goblinoid daughters (goblin, hobgoblin, bugbear) has ≥2 distinct present-day forms — the seed-swept stemmatics guard (spec §3): descent is proven by shared INNOVATIONS, not a shared ancestor alone, so a degenerate family whose daughters are silent aliases of one another must read false; Absent if no concept is rooted in all three",
+      "kind": "flag",
+      "name": "divergence-real",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of distinct-concept pairs whose goblin Root.modern forms coincide (two proto-roots merged onto one surface form) — an observation, not a pass/fail invariant: homophony is legal and realistic, and this banks the confound L4's reconstruction will fight (homophones read as one word); Absent if goblin minted no Root",
+      "kind": "numeric",
+      "name": "homophony-count-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of distinct-concept pairs whose hobgoblin Root.modern forms coincide (two proto-roots merged onto one surface form) — an observation, not a pass/fail invariant; Absent if hobgoblin minted no Root",
+      "kind": "numeric",
+      "name": "homophony-count-hobgoblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of distinct-concept pairs whose bugbear Root.modern forms coincide (two proto-roots merged onto one surface form) — an observation, not a pass/fail invariant; expected highest among the goblinoid daughters, bugbear drawing the smallest family inventory; Absent if bugbear minted no Root",
+      "kind": "numeric",
+      "name": "homophony-count-bugbear",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of distinct-concept pairs whose kobold Root.modern forms coincide (two proto-roots landed on one surface form) — an observation, not a pass/fail invariant, banked for the clean-outgroup comparison; Absent if kobold minted no Root",
+      "kind": "numeric",
+      "name": "homophony-count-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of goblin homophone pairs where BOTH concepts are core vocabulary (universal + body + kin packs) — the functional-load-restricted homophony the fix drives to zero; always ≤ homophony-count-goblin; Absent if goblin minted no Root",
+      "kind": "numeric",
+      "name": "core-homophony-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of hobgoblin homophone pairs where BOTH concepts are core vocabulary (universal + body + kin packs); always ≤ homophony-count-hobgoblin; Absent if hobgoblin minted no Root",
+      "kind": "numeric",
+      "name": "core-homophony-hobgoblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of bugbear homophone pairs where BOTH concepts are core vocabulary (universal + body + kin packs); always ≤ homophony-count-bugbear; Absent if bugbear minted no Root",
+      "kind": "numeric",
+      "name": "core-homophony-bugbear",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of kobold homophone pairs where BOTH concepts are core vocabulary (universal + body + kin packs); always ≤ homophony-count-kobold; Absent if kobold minted no Root",
+      "kind": "numeric",
+      "name": "core-homophony-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of goblin colliding surface forms that are MERGERS (colliding roots carry ≥2 distinct proto-forms — the cascade or nativization made the collision after the proto) rather than draw-collisions (one shared proto); Absent if goblin has no collision (an undefined ratio, never reported as 0)",
+      "kind": "numeric",
+      "name": "homophony-merger-share-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of hobgoblin colliding surface forms that are MERGERS (≥2 distinct proto-forms) rather than draw-collisions; Absent if hobgoblin has no collision",
+      "kind": "numeric",
+      "name": "homophony-merger-share-hobgoblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of bugbear colliding surface forms that are MERGERS (≥2 distinct proto-forms) rather than draw-collisions; Absent if bugbear has no collision",
+      "kind": "numeric",
+      "name": "homophony-merger-share-bugbear",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Fraction of kobold colliding surface forms that are MERGERS (≥2 distinct proto-forms) rather than draw-collisions; Absent if kobold has no collision",
+      "kind": "numeric",
+      "name": "homophony-merger-share-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of goblin core homophone pairs that are CONFUSABLE (both concepts share a semantic domain — universal/body/kin — so they compete in one context); the same-domain subset of core-homophony-goblin, always ≤ it; the complement is FREE cross-domain homophony; Absent if goblin minted no Root",
+      "kind": "numeric",
+      "name": "confusable-homophony-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of hobgoblin core homophone pairs that are CONFUSABLE (both concepts share a semantic domain); the same-domain subset of core-homophony-hobgoblin, always ≤ it; Absent if hobgoblin minted no Root",
+      "kind": "numeric",
+      "name": "confusable-homophony-hobgoblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of bugbear core homophone pairs that are CONFUSABLE (both concepts share a semantic domain); the same-domain subset of core-homophony-bugbear, always ≤ it; Absent if bugbear minted no Root",
+      "kind": "numeric",
+      "name": "confusable-homophony-bugbear",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        5.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Count of kobold core homophone pairs that are CONFUSABLE (both concepts share a semantic domain); the same-domain subset of core-homophony-kobold, always ≤ it; Absent if kobold minted no Root",
+      "kind": "numeric",
+      "name": "confusable-homophony-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "doc": "Size of goblin's realized tone inventory (spec §11): 1 for an atonal people; >1 only for a tone-capable species; Absent if goblin is off-roster",
+      "kind": "numeric",
+      "name": "tone-count-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        1.0,
+        2.0,
+        3.0
+      ],
+      "doc": "Size of kobold's realized tone inventory (spec §11): 1 for an atonal people; Absent if kobold is off-roster",
+      "kind": "numeric",
+      "name": "tone-count-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        24.0,
+        48.0,
+        96.0,
+        192.0,
+        384.0,
+        768.0,
+        1536.0
+      ],
+      "doc": "Goblin's distinguishable-syllable capacity (spec §2.3): onset × nucleus × coda fillings, a lower bound on distinct syllables (tone folded into the nucleus); Absent if goblin is off-roster",
+      "kind": "numeric",
+      "name": "distinguishable-capacity-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        24.0,
+        48.0,
+        96.0,
+        192.0,
+        384.0,
+        768.0,
+        1536.0
+      ],
+      "doc": "Bugbear's distinguishable-syllable capacity (spec §2.3): onset × nucleus × coda fillings; bugbear draws the smallest family inventory; Absent if bugbear is off-roster",
+      "kind": "numeric",
+      "name": "distinguishable-capacity-bugbear",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        24.0,
+        48.0,
+        96.0,
+        192.0,
+        384.0,
+        768.0,
+        1536.0
+      ],
+      "doc": "Kobold's distinguishable-syllable capacity (spec §2.3): onset × nucleus × coda fillings; Absent if kobold is off-roster",
+      "kind": "numeric",
+      "name": "distinguishable-capacity-kobold",
+      "rung": "full"
+    },
+    {
+      "kind": "categorical",
+      "name": "refusal"
+    }
+  ],
+  "conventions": {
+    "float_quantization": "8-significant-digits"
+  },
+  "rows": {
+    "count": 1000,
+    "fnv1a64": "0xcf96234b55e7738e"
+  },
+  "schema_version": 1,
+  "study": {
+    "description": "THE canonical census: every registered metric over 1,000 unselected worlds (seeds 0-999, default pins) — the project's queryable dataset (census-as-data spec §1) and the CI determinism guard. Subsumes the retired branches-family run column-for-column.",
+    "name": "the-census",
+    "pin_sets": [
+      {
+        "label": "default",
+        "pins": [],
+        "roster": null
+      }
+    ],
+    "seeds": {
+      "count": 1000,
+      "from": 0
+    }
+  }
+}

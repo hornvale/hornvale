@@ -19,12 +19,12 @@ fn load_census(study_path: &str, rows_path: &str) -> RunResult {
     load_rows(&study, &csv).expect("reconstruct census from fixture")
 }
 
-/// The 500-seed drift census, loaded ONCE and shared by every calibration in
-/// this file (the shipped `{goblin, kobold}` roster).
+/// The 1,000-seed canonical census, loaded ONCE and shared by every
+/// calibration in this file (the shipped `{goblin, kobold}` roster).
 static DRIFT: LazyLock<RunResult> = LazyLock::new(|| {
     load_census(
-        "../../studies/census-lands-drift.study.json",
-        "../../book/src/laboratory/generated/census-lands-drift/rows.csv",
+        "../../studies/the-census.study.json",
+        "../../book/src/laboratory/generated/the-census/rows.csv",
     )
 });
 
@@ -39,8 +39,8 @@ static MEETING: LazyLock<RunResult> = LazyLock::new(|| {
 });
 
 /// Guard — ignored by default because it pays the full census (~450s under
-/// the test profile; release regeneration via make rebaseline is much
-/// faster): the committed fixtures reconstruct *exactly* what a live `run`
+/// the test profile; regeneration happens on the AWS box via make
+/// regen-remote — census regen is never local): the committed fixtures reconstruct *exactly* what a live `run`
 /// produces, so every other test in this file may trust the fixture. Run it
 /// explicitly after regenerating the fixtures, or in CI:
 /// `cargo test -p hornvale-lab --test calibration -- --ignored`.
@@ -49,8 +49,8 @@ static MEETING: LazyLock<RunResult> = LazyLock::new(|| {
 fn census_fixture_matches_live_run() {
     for (study_path, rows_path) in [
         (
-            "../../studies/census-lands-drift.study.json",
-            "../../book/src/laboratory/generated/census-lands-drift/rows.csv",
+            "../../studies/the-census.study.json",
+            "../../book/src/laboratory/generated/the-census/rows.csv",
         ),
         (
             "../../studies/census-of-the-meeting.study.json",
@@ -140,8 +140,8 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // that matters: a frozen sky never yields a CYCLIC first belief (the
     // tide is ambient however periodic its swell; sun and stars are
     // eternal; only a rising-and-setting body could read cyclic, and a
-    // locked world offers none). Measured over the 500-seed drift study:
-    // 23 locked worlds = 19 tide-headed (ambient) + 4 sun-headed (eternal)
+    // locked world offers none). Measured over the 1000-seed drift study:
+    // 48 locked worlds = 37 tide-headed (ambient) + 11 sun-headed (eternal)
     // + 0 cyclic, pinned per ADR 0016.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
@@ -170,7 +170,7 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     }
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (4, 19),
+        (11, 37),
         "locked-world head-belief split (eternal, ambient) drifted"
     );
     // Pinned calibration row (re-measured for the four-people world, Task
@@ -179,7 +179,7 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // nonetheless eternal (a night-star-headed bugbear pantheon, per the
     // mechanism above).
     assert_eq!(
-        spinning_eternal_exceptions, 9,
+        spinning_eternal_exceptions, 19,
         "spinning-yet-eternal exception count drifted"
     );
 }
@@ -338,7 +338,7 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // merge (2026-07-11, main into campaign-crust): the L6 grid composed with
     // the founder floor resolves seeds 172/257's goblin flagships coastal again,
     // so all 500 are coastal and inland drops to 0 (overrides the pre-merge 498/2).
-    assert_eq!(coastal, 500, "coastal flagship count drifted");
+    assert_eq!(coastal, 1000, "coastal flagship count drifted");
     assert_eq!(inland, 0, "inland flagship count drifted");
 }
 
@@ -493,11 +493,11 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // wins most nights, but a bright-enough night-star still outshines it in
     // a minority of cases.
     assert_eq!(
-        moonless_solar, 60,
+        moonless_solar, 132,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 10,
+        moonless_lunar, 18,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -565,8 +565,8 @@ fn blind_attribution_beats_chance_decisively() {
     // above chance:
     // merge (2026-07-11): L6 terrain composed with the founder floor shifts one
     // pair to a correct attribution (416 -> 417) at the same 499 attributable total.
-    assert_eq!(correct, 417, "blind-attribution count drifted");
-    assert_eq!(total, 500, "attributable-pair count drifted");
+    assert_eq!(correct, 820, "blind-attribution count drifted");
+    assert_eq!(total, 1000, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -842,15 +842,16 @@ fn name_collision_rate_is_measured_and_pinned() {
     // to most pantheons — one more name draw per culture from the same
     // lexicons, nudging the rate again (19 -> 18 zero, mean 18.25% ->
     // 19.61%). Same mechanism as SKY-5's re-pin above.
-    assert_eq!(zero, 18, "zero-collision world count drifted");
-    assert_eq!(nonzero, 482, "nonzero-collision world count drifted");
+    assert_eq!(zero, 55, "zero-collision world count drifted");
+    assert_eq!(nonzero, 945, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        // libm re-pin (decision 0041): 0.168_866_097_746 -> 0.168_816_377_846
-        (mean - 0.168_816_377_846).abs() < 1e-6,
+        // The 1000-seed canonical census re-pin: 0.168_816_377_846 (500-seed
+        // drift study) -> 0.162_252_788_362.
+        (mean - 0.162_252_788_362).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -893,11 +894,14 @@ fn name_length_distributions_are_measured_and_pinned() {
     // 10.6127954144, kobold 499 / 15.597634151903808) — one more deity
     // name draw per eclipsing moon shifts every later name salt, same
     // mechanism as the SKY-5 re-pin.
+    // The 1000-seed canonical census re-pin: both species are now present on
+    // every seed (was goblin 500 present / kobold 500 present, all-but-one
+    // pre-Branches; the founder floor's guarantee holds at the doubled
+    // sample). Means: goblin 11.254_475_200_600 -> 11.195_630_412_500,
+    // kobold 14.179_907_668_000 -> 14.100_824_828_800.
     for (species, expected_present, expected_mean) in [
-        // libm re-pin (decision 0041): goblin 11.255_035_493_600_001, kobold
-        // 14.182_334_456_399_987 -> below
-        ("goblin", 500u32, 11.254_475_200_600),
-        ("kobold", 500u32, 14.179_907_668_000),
+        ("goblin", 1000u32, 11.195_630_412_500),
+        ("kobold", 1000u32, 14.100_824_828_800),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -921,7 +925,7 @@ fn name_length_distributions_are_measured_and_pinned() {
         );
         assert_eq!(
             present + absent,
-            500,
+            1000,
             "{species} name-length row count drifted"
         );
         let mean = sum / f64::from(present);
