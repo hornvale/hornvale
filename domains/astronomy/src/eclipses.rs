@@ -334,6 +334,113 @@ pub fn lunar_eclipse_seen(calendar: &Calendar, event: &EclipseEvent, longitude: 
     lon_gap.abs() >= 90.0
 }
 
+/// The draconic month — the moon's period relative to its regressing
+/// node: frequencies add because the node moves against the motion.
+/// type-audit: pending(wave-1: inclination_deg)
+pub fn draconic_month(year: StdDays, sidereal: StdDays, inclination_deg: f64) -> StdDays {
+    let p_node = node_regression_period(year, sidereal, inclination_deg);
+    StdDays(1.0 / (1.0 / sidereal.0 + 1.0 / p_node.0))
+}
+
+/// The eclipse year — the sun's return period to the (regressing) node
+/// line: 1/(1/Y + 1/P_node). Luna check ≈ 346 days.
+pub fn eclipse_year(year: StdDays, node_period: StdDays) -> StdDays {
+    StdDays(1.0 / (1.0 / year.0 + 1.0 / node_period.0))
+}
+
+/// A near-commensurability between the synodic and draconic months: the
+/// world's saros-analog. `node_slip_deg` is the draconic-phase miss per
+/// return, in degrees — the drift that ages a series.
+/// type-audit: bare-ok(index: synodic_count), bare-ok(index: draconic_count), pending(wave-1: node_slip_deg)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EclipseCycle {
+    /// Synodic months per return.
+    pub synodic_count: u32,
+    /// Draconic months per return (the nearest integer).
+    pub draconic_count: u32,
+    /// The return period, standard days.
+    pub period: StdDays,
+    /// Node-phase slip per return, degrees.
+    pub node_slip_deg: f64,
+}
+
+/// The longest-lived eclipse cycle up to 300 synodic months: the s
+/// minimizing the draconic-phase miss (ties broken toward the shorter
+/// cycle, deterministically). `None` for degenerate inputs.
+pub fn best_cycle(synodic: StdDays, draconic: StdDays) -> Option<EclipseCycle> {
+    if synodic.0 <= 0.0 || draconic.0 <= 0.0 {
+        return None;
+    }
+    let ratio = synodic.0 / draconic.0;
+    let mut best: Option<(f64, u32, u32)> = None;
+    for s in 1..=300u32 {
+        let x = s as f64 * ratio;
+        let d = x.round();
+        let miss = (x - d).abs();
+        let better = match best {
+            None => true,
+            Some((b_miss, ..)) => miss < b_miss,
+        };
+        if better && d >= 1.0 {
+            best = Some((miss, s, d as u32));
+        }
+    }
+    let (miss, s, d) = best?;
+    Some(EclipseCycle {
+        synodic_count: s,
+        draconic_count: d,
+        period: StdDays(s as f64 * synodic.0),
+        node_slip_deg: miss * 360.0,
+    })
+}
+
+/// How many returns a series survives: the ecliptic-latitude walk per
+/// return is i·sin(slip); a series is born grazing one edge of the ±θ
+/// window and dies at the other, so it lives ≈ 2θ / Δβ returns. Slipless
+/// cycles saturate at 10,000.
+/// type-audit: pending(wave-1: threshold_deg), pending(wave-1: inclination_deg), bare-ok(index: return)
+pub fn series_returns(cycle: &EclipseCycle, threshold_deg: f64, inclination_deg: f64) -> u32 {
+    let d_beta = inclination_deg * math::sin(cycle.node_slip_deg.to_radians()).abs();
+    if d_beta <= 0.0 {
+        return 10_000;
+    }
+    ((2.0 * threshold_deg / d_beta).floor() as u32).min(10_000)
+}
+
+/// How many days per civil year the eclipse seasons migrate backward
+/// through the calendar: Y − eclipse-year. Luna check ≈ 19.
+/// type-audit: bare-ok(ratio)
+pub fn parade_days_per_year(year: StdDays, eclipse_year: StdDays) -> f64 {
+    year.0 - eclipse_year.0
+}
+
+/// How many distinct integer days in `events` carry events from two or
+/// more different moons — the grand-omen coincidence count. Zero for
+/// worlds with fewer than two moons, by construction.
+/// type-audit: bare-ok(index: return)
+pub fn coincidence_days(events: &[EclipseEvent]) -> u32 {
+    let mut days: Vec<(i64, usize)> = events
+        .iter()
+        .map(|e| (e.day.0.floor() as i64, e.moon))
+        .collect();
+    days.sort();
+    days.dedup();
+    let mut count = 0u32;
+    let mut idx = 0;
+    while idx < days.len() {
+        let day = days[idx].0;
+        let mut moons = 0;
+        while idx < days.len() && days[idx].0 == day {
+            moons += 1;
+            idx += 1;
+        }
+        if moons >= 2 {
+            count += 1;
+        }
+    }
+    count
+}
+
 /// Sol + Luna exactly: 1 M☉, 1 AU, 365.25-day year, 24-hour day, zero
 /// forcing, one moon at Luna's elements with node at 0°. The calibration
 /// fixture Tasks 3–11 reuse — module scope (not inside `mod tests`) so
@@ -666,5 +773,73 @@ mod tests {
             solar_eclipse_sight(&system, &calendar, solar, track.center_lat_deg, night_lon),
             EclipseSight::Unseen
         ));
+    }
+
+    /// Luna check: the draconic month is ~27.21 days.
+    #[test]
+    fn draconic_month_matches_the_luna_check_value() {
+        let d = draconic_month(StdDays(365.25), StdDays(27.32), 5.14);
+        assert!((d.0 - 27.21).abs() < 0.05, "draconic {}", d.0);
+    }
+
+    /// Luna check: the eclipse year is ~346 days (our approximated node
+    /// period gives ~345.9 against the true 346.62).
+    #[test]
+    fn eclipse_year_matches_the_luna_check_value() {
+        let p = node_regression_period(StdDays(365.25), StdDays(27.32), 5.14);
+        let ey = eclipse_year(StdDays(365.25), p);
+        assert!((340.0..352.0).contains(&ey.0), "eclipse year {}", ey.0);
+    }
+
+    /// Fed TRUE Luna periods, the cycle search finds the saros: 223
+    /// synodic ≈ 242 draconic ≈ 6585.3 days. (The derived pipeline's own
+    /// draconic month differs enough — 17.9 vs 18.61 yr node period —
+    /// that a world's best cycle may legitimately be an octon-class one;
+    /// this test pins the *search*, the next pins the pipeline.)
+    #[test]
+    fn the_search_finds_the_true_saros_from_true_inputs() {
+        let c = best_cycle(StdDays(29.5306), StdDays(27.2122)).unwrap();
+        assert_eq!((c.synodic_count, c.draconic_count), (223, 242));
+        assert!((c.period.0 - 6585.3).abs() < 1.0, "period {}", c.period.0);
+    }
+
+    /// The derived pipeline always yields *some* long-lived cycle: slip
+    /// small enough that the family survives at least ten returns.
+    #[test]
+    fn luna_sol_pipeline_yields_a_living_cycle() {
+        let (system, calendar) = luna_sol();
+        let moon = &system.moons[0];
+        let synodic = calendar.synodic_month(0).unwrap();
+        let d = draconic_month(calendar.year_length(), moon.period, moon.inclination_deg);
+        let c = best_cycle(synodic, d).unwrap();
+        let sun_angular = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
+        let theta = solar_eclipse_threshold_deg(sun_angular, moon.angular_diameter_rel);
+        let returns = series_returns(&c, theta, moon.inclination_deg);
+        assert!(returns >= 10, "returns {returns}");
+        // Order-of-magnitude lifetime: centuries to a few millennia.
+        let lifetime_years = returns as f64 * c.period.0 / 365.25;
+        assert!(
+            (50.0..20_000.0).contains(&lifetime_years),
+            "lifetime {lifetime_years} yr"
+        );
+    }
+
+    /// Luna check: the eclipse seasons parade backward through the civil
+    /// year at ~19 days/year.
+    #[test]
+    fn the_parade_matches_the_luna_check_value() {
+        let p = node_regression_period(StdDays(365.25), StdDays(27.32), 5.14);
+        let ey = eclipse_year(StdDays(365.25), p);
+        let parade = parade_days_per_year(StdDays(365.25), ey);
+        assert!((15.0..25.0).contains(&parade), "parade {parade}");
+    }
+
+    /// Coincidence days: same-day events from different moons count once
+    /// per day; a single-moon world scores zero.
+    #[test]
+    fn coincidence_days_needs_two_moons() {
+        let (system, calendar) = luna_sol();
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 50.0));
+        assert_eq!(coincidence_days(&events), 0);
     }
 }

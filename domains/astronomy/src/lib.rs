@@ -26,10 +26,11 @@ pub mod wanderers;
 pub use anchor::{Anchor, Rotation, generate_anchor};
 pub use calendar::{Calendar, SkyBand, TWILIGHT_DEPTH_DEG, calendar_of};
 pub use eclipses::{
-    EclipseBody, EclipseEvent, EclipseKind, EclipseSight, GroundTrack, LUNAR_SHADOW_FACTOR,
-    TRACK_HALF_WIDTH_DEG, eclipse_events, ground_track, lunar_eclipse_seen,
-    moon_ecliptic_latitude_deg, moon_ecliptic_longitude_deg, node_crossing_chance,
-    node_longitude_at, node_regression_period, solar_eclipse_sight, solar_eclipse_threshold_deg,
+    EclipseBody, EclipseCycle, EclipseEvent, EclipseKind, EclipseSight, GroundTrack,
+    LUNAR_SHADOW_FACTOR, TRACK_HALF_WIDTH_DEG, best_cycle, coincidence_days, draconic_month,
+    eclipse_events, eclipse_year, ground_track, lunar_eclipse_seen, moon_ecliptic_latitude_deg,
+    moon_ecliptic_longitude_deg, node_crossing_chance, node_longitude_at, node_regression_period,
+    parade_days_per_year, series_returns, solar_eclipse_sight, solar_eclipse_threshold_deg,
     sub_solar_longitude_deg, sun_angular_rel_at,
 };
 pub use figures::{
