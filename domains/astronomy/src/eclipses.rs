@@ -21,6 +21,14 @@ pub const ANGULAR_UNIT_DEG: f64 = 0.53;
 /// new moons (Earth's ~2.4 solar eclipses a year).
 /// type-audit: pending(wave-1)
 pub const ECLIPSE_PARALLAX_DEG: f64 = 1.0;
+/// The anchor's shadow threshold at the moon, as a fraction of the solar
+/// threshold (declared approximation, Luna–Sol-calibrated to ~1.5 umbral
+/// lunar eclipses/year — the umbra at Luna's distance is ≈ 2.6 lunar
+/// radii). Below 1.0 because the solar threshold carries the
+/// anywhere-on-the-world parallax allowance the lunar case doesn't need —
+/// the shadow is one shadow for every observer.
+/// type-audit: pending(wave-1)
+pub const LUNAR_SHADOW_FACTOR: f64 = 0.64;
 
 /// The node threshold (degrees of lunar ecliptic latitude) inside which a
 /// new moon eclipses the sun somewhere on the world: half the summed
@@ -160,7 +168,7 @@ pub fn eclipse_events(
                     solar_eclipse_threshold_deg(sun_angular, moon.angular_diameter_rel);
                 let threshold = match body {
                     EclipseBody::Solar => theta_solar,
-                    EclipseBody::Lunar => theta_solar, // Task 5 narrows this arm
+                    EclipseBody::Lunar => LUNAR_SHADOW_FACTOR * theta_solar,
                 };
                 if beta.abs() < threshold {
                     let kind = match body {
@@ -184,10 +192,9 @@ pub fn eclipse_events(
     out
 }
 
-/// The syzygy families the scan walks. Solar only until Task 5 adds the
-/// full-moon (lunar) family.
+/// The syzygy families the scan walks.
 fn syzygy_families() -> Vec<(f64, EclipseBody)> {
-    vec![(0.0, EclipseBody::Solar)]
+    vec![(0.0, EclipseBody::Solar), (0.5, EclipseBody::Lunar)]
 }
 
 /// Sol + Luna exactly: 1 M☉, 1 AU, 365.25-day year, 24-hour day, zero
@@ -331,6 +338,44 @@ mod tests {
             (1.9..=2.9).contains(&per_year),
             "solar eclipses/year {per_year}"
         );
+    }
+
+    /// Luna–Sol calibration for the shadow: ~1.5 umbral lunar
+    /// eclipses/year. (Fewer than solar — the solar count includes the
+    /// anywhere-on-the-world parallax allowance; the lunar one is the
+    /// same for every observer on the night side.)
+    #[test]
+    fn luna_sol_dates_earths_lunar_cadence() {
+        let (system, calendar) = luna_sol();
+        let years = 50.0;
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * years));
+        let lunar = events
+            .iter()
+            .filter(|e| matches!(e.body, EclipseBody::Lunar))
+            .count() as f64;
+        let per_year = lunar / years;
+        assert!(
+            (1.1..=1.9).contains(&per_year),
+            "lunar eclipses/year {per_year}"
+        );
+    }
+
+    /// Every lunar event sits at a full moon, and every lunar event is
+    /// Total (partiality grading is deferred).
+    #[test]
+    fn lunar_events_fall_at_full_moons() {
+        let (system, calendar) = luna_sol();
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 20.0));
+        let lunar: Vec<_> = events
+            .iter()
+            .filter(|e| matches!(e.body, EclipseBody::Lunar))
+            .collect();
+        assert!(!lunar.is_empty());
+        for e in lunar {
+            let phase = calendar.moon_phase(e.day, e.moon).unwrap();
+            assert!((phase - 0.5).abs() < 1e-6, "phase {phase}");
+            assert_eq!(e.kind, EclipseKind::Total);
+        }
     }
 
     /// Every dated solar event sits at a new moon and inside the node
