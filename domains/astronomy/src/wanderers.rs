@@ -179,18 +179,27 @@ mod tests {
             let anchor = generate_anchor(s, &star, &SkyPins::default()).unwrap();
             let ws = generate_wanderers(s, &star, &anchor, &SkyPins::default());
             for pair in ws.windows(2) {
-                assert!(pair[0].orbit.0 < pair[1].orbit.0, "innermost first");
-                assert!(pair[0].period.0 < pair[1].period.0, "Kepler is monotone");
+                assert!(pair[0].orbit.get() < pair[1].orbit.get(), "innermost first");
+                assert!(
+                    pair[0].period.get() < pair[1].period.get(),
+                    "Kepler is monotone"
+                );
             }
             for w in &ws {
-                let expected = 365.25 * (w.orbit.0.powi(3) / star.mass.0).sqrt();
-                assert!((w.period.0 - expected).abs() < 1e-9);
+                let expected = 365.25 * (w.orbit.get().powi(3) / star.mass.get()).sqrt();
+                assert!((w.period.get() - expected).abs() < 1e-9);
                 match w.max_elongation_deg {
                     Some(e) => {
-                        assert!(w.orbit.0 < anchor.orbit.0, "elongation-bound = inner");
+                        assert!(
+                            w.orbit.get() < anchor.orbit.get(),
+                            "elongation-bound = inner"
+                        );
                         assert!(e > 0.0 && e < 90.0, "inner elongation under 90°: {e}");
                     }
-                    None => assert!(w.orbit.0 > anchor.orbit.0, "outer loops at opposition"),
+                    None => assert!(
+                        w.orbit.get() > anchor.orbit.get(),
+                        "outer loops at opposition"
+                    ),
                 }
             }
         }
@@ -203,7 +212,7 @@ mod tests {
             let star = generate_star(s);
             let anchor = generate_anchor(s, &star, &SkyPins::default()).unwrap();
             for w in generate_wanderers(s, &star, &anchor, &SkyPins::default()) {
-                let ratio = w.orbit.0 / anchor.orbit.0;
+                let ratio = w.orbit.get() / anchor.orbit.get();
                 assert!(
                     !(0.75..=1.8).contains(&ratio),
                     "exclusion band violated: {ratio}"
