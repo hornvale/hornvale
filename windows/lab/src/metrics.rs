@@ -9,10 +9,11 @@ use hornvale_language::{
     GapReason, LexEntry, Manner, MorphOptions, NameKind, Namer, Phonology, Segment, romanize,
 };
 use hornvale_religion::beliefs_of;
-use hornvale_terrain::GlobeSummary;
+use hornvale_terrain::{GlobeSummary, Hydro, RockClass, SoilOrder, fertility};
 use hornvale_worldgen::{
     BuildDepth, BuildError, Sky, SkyChoice, build_world_to, build_world_with_roster, climate_of,
-    flagship_of, language_of_in, observed_phenomena_as_in, sky_of, terrain_of,
+    flagship_of, language_of_in, observed_phenomena_as_in, rock_class_name, sky_of, soil_of,
+    soil_order_name, terrain_of,
 };
 
 use hornvale_astronomy::SkyPins;
@@ -888,6 +889,78 @@ pub fn registry() -> Vec<Metric> {
                 })
             }),
         },
+        // --- The Ground (Task 7): rock/soil/hydrogeology census metrics,
+        // over land cells only (`terrain.is_ocean` guards each). ---
+        Metric {
+            name: "dominant-rock",
+            doc: "The most common land rock class by cell count, spec §4's fine \
+                  taxonomy (The Ground); Absent on a landless world",
+            summary: SummaryKind::Categorical,
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let mut counts: std::collections::BTreeMap<RockClass, usize> =
+                    std::collections::BTreeMap::new();
+                for cell in geo.cells() {
+                    if !v.terrain.is_ocean(cell) {
+                        *counts.entry(v.terrain.rock_at(cell)).or_insert(0) += 1;
+                    }
+                }
+                match counts.iter().max_by(|a, b| a.1.cmp(b.1).then(b.0.cmp(a.0))) {
+                    Some((&rock, _)) => MetricValue::Text(rock_class_name(rock).to_string()),
+                    None => MetricValue::Absent,
+                }
+            }),
+        },
+        Metric {
+            name: "karst-fraction",
+            doc: "Fraction of land cells whose hydrogeology classifies as karst \
+                  (The Ground, spec §3)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
+            },
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let (mut land, mut karst) = (0usize, 0usize);
+                for cell in geo.cells() {
+                    if !v.terrain.is_ocean(cell) {
+                        land += 1;
+                        if v.terrain.hydro_at(cell) == Hydro::Karst {
+                            karst += 1;
+                        }
+                    }
+                }
+                MetricValue::Number(if land == 0 {
+                    0.0
+                } else {
+                    karst as f64 / land as f64
+                })
+            }),
+        },
+        Metric {
+            name: "aquifer-fraction",
+            doc: "Fraction of land cells whose hydrogeology classifies as an \
+                  aquifer (The Ground, spec §3)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.4],
+            },
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let (mut land, mut aquifer) = (0usize, 0usize);
+                for cell in geo.cells() {
+                    if !v.terrain.is_ocean(cell) {
+                        land += 1;
+                        if v.terrain.hydro_at(cell) == Hydro::Aquifer {
+                            aquifer += 1;
+                        }
+                    }
+                }
+                MetricValue::Number(if land == 0 {
+                    0.0
+                } else {
+                    aquifer as f64 / land as f64
+                })
+            }),
+        },
         Metric {
             name: "dominant-land-biome",
             doc: "The most common land biome by cell count, kebab-case",
@@ -932,6 +1005,55 @@ pub fn registry() -> Vec<Metric> {
                 } else {
                     MetricValue::Number(sum / f64::from(count))
                 }
+            }),
+        },
+        Metric {
+            name: "dominant-soil-order",
+            doc: "The most common land soil order by cell count, spec §4's soil \
+                  taxonomy (The Ground); Absent on a landless world",
+            summary: SummaryKind::Categorical,
+            extract: Extractor::Climate(|v: &ClimateView| {
+                let geo = v.terrain().geosphere();
+                let soils = soil_of(v.terrain(), &v.climate, geo);
+                let mut counts: std::collections::BTreeMap<SoilOrder, usize> =
+                    std::collections::BTreeMap::new();
+                for cell in geo.cells() {
+                    if !v.terrain().is_ocean(cell) {
+                        *counts.entry(*soils.get(cell)).or_insert(0) += 1;
+                    }
+                }
+                match counts.iter().max_by(|a, b| a.1.cmp(b.1).then(b.0.cmp(a.0))) {
+                    Some((&order, _)) => MetricValue::Text(soil_order_name(order).to_string()),
+                    None => MetricValue::Absent,
+                }
+            }),
+        },
+        Metric {
+            name: "fertile-land-fraction",
+            doc: "Fraction of land cells whose soil fertility's grain-suitability \
+                  exceeds 0.6 (The Ground, spec §3/§4)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8],
+            },
+            extract: Extractor::Climate(|v: &ClimateView| {
+                let geo = v.terrain().geosphere();
+                let soils = soil_of(v.terrain(), &v.climate, geo);
+                let (mut land, mut fertile) = (0usize, 0usize);
+                for cell in geo.cells() {
+                    if !v.terrain().is_ocean(cell) {
+                        land += 1;
+                        let depth = v.terrain().material_at(cell).soil_depth;
+                        let f = fertility(*soils.get(cell), &depth);
+                        if f.grain_suit > 0.6 {
+                            fertile += 1;
+                        }
+                    }
+                }
+                MetricValue::Number(if land == 0 {
+                    0.0
+                } else {
+                    fertile as f64 / land as f64
+                })
             }),
         },
         Metric {
@@ -3550,8 +3672,10 @@ mod tests {
         // +2 more for the Task 8 review fix (total-population,
         // pop-weighted-abs-latitude — the two metrics the brief named that
         // were never built), +3 for night-sky stage 3 (Task 10: figure-count,
-        // largest-figure-members, ecliptic-figure-count).
-        assert_eq!(registry().len(), 117);
+        // largest-figure-members, ecliptic-figure-count), +5 for The Ground
+        // (Task 7: dominant-rock, karst-fraction, aquifer-fraction,
+        // dominant-soil-order, fertile-land-fraction).
+        assert_eq!(registry().len(), 122);
     }
 
     #[test]
@@ -3638,6 +3762,31 @@ mod tests {
             m("mean-land-temperature-c"),
             MetricValue::Number(_) | MetricValue::Absent
         ));
+    }
+
+    #[test]
+    fn ground_metrics_extract_for_seed_42() {
+        // The Ground (Task 7): rock/soil/hydrogeology census metrics, over
+        // land cells only; a landed seed like 42 must name a rock and a
+        // soil order and report every fraction inside [0, 1].
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        let m = |name: &str| extract_from(&built, name);
+        match m("dominant-rock") {
+            MetricValue::Text(name) => assert!(!name.is_empty()),
+            other => panic!("dominant-rock: {other:?}"),
+        }
+        match m("dominant-soil-order") {
+            MetricValue::Text(name) => assert!(!name.is_empty()),
+            other => panic!("dominant-soil-order: {other:?}"),
+        }
+        assert!(matches!(m("karst-fraction"), MetricValue::Number(f) if (0.0..=1.0).contains(&f)));
+        assert!(
+            matches!(m("aquifer-fraction"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
+        );
+        assert!(
+            matches!(m("fertile-land-fraction"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
+        );
     }
 
     #[test]

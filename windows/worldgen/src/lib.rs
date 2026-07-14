@@ -905,6 +905,137 @@ pub fn land_lines(world: &World) -> Result<Vec<String>, BuildError> {
     ])
 }
 
+/// Human-readable rock-class name (The Ground, spec §4): lowercase, for
+/// almanac prose and census categorical values — a pure naming projection,
+/// no new draws.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn rock_class_name(rock: hornvale_terrain::RockClass) -> &'static str {
+    use hornvale_terrain::RockClass::*;
+    match rock {
+        Granite => "granite",
+        Gabbro => "gabbro",
+        Basalt => "basalt",
+        Andesite => "andesite",
+        Rhyolite => "rhyolite",
+        Sandstone => "sandstone",
+        Shale => "shale",
+        Conglomerate => "conglomerate",
+        Evaporite => "evaporite",
+        Chert => "chert",
+        Ironstone => "ironstone",
+        ReefLimestone => "reef limestone",
+        Coal => "coal",
+        Slate => "slate",
+        Schist => "schist",
+        Gneiss => "gneiss",
+        Marble => "marble",
+        Quartzite => "quartzite",
+        Alluvium => "alluvium",
+    }
+}
+
+/// Human-readable soil-order name (The Ground, spec §4): lowercase, for
+/// almanac prose and census categorical values.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn soil_order_name(order: hornvale_terrain::SoilOrder) -> &'static str {
+    use hornvale_terrain::SoilOrder::*;
+    match order {
+        Laterite => "laterite",
+        Podzol => "podzol",
+        Chernozem => "chernozem",
+        Aridisol => "aridisol",
+        Loam => "loam",
+        Andosol => "andosol",
+        Leptosol => "leptosol",
+        Histosol => "histosol",
+        Gley => "gley",
+    }
+}
+
+/// Land-cell karst-hydrology share above which "karst country" is a notable
+/// ground feature for the almanac (The Ground, spec §3/§6) — a chosen prose
+/// threshold, not a physical constant.
+const GROUND_KARST_NOTABLE: f64 = 0.05;
+/// Land-cell andosol share above which "volcanic soils" is a notable ground
+/// feature for the almanac.
+const GROUND_ANDOSOL_NOTABLE: f64 = 0.1;
+
+/// The ground's headline lines for the almanac: the dominant rock and soil
+/// order over land, plus notable formations — karst country, salt flats,
+/// volcanic soils (The Ground, spec §3/§4/§6). A pure projection over
+/// existing terrain/climate fields: no new draws. Empty for a landless
+/// world.
+/// type-audit: bare-ok(prose: return)
+pub fn ground_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    let terrain = terrain_of(world)?;
+    let climate = climate_of(world)?;
+    let geo = terrain.geosphere();
+    let soils = soil_of(&terrain, &climate, geo);
+
+    let mut rocks: std::collections::BTreeMap<hornvale_terrain::RockClass, usize> =
+        std::collections::BTreeMap::new();
+    let mut orders: std::collections::BTreeMap<hornvale_terrain::SoilOrder, usize> =
+        std::collections::BTreeMap::new();
+    let (mut land, mut karst, mut andosol) = (0usize, 0usize, 0usize);
+    let mut salt_flats = false;
+    for cell in geo.cells() {
+        if terrain.is_ocean(cell) {
+            continue;
+        }
+        land += 1;
+        let rock = terrain.rock_at(cell);
+        *rocks.entry(rock).or_insert(0) += 1;
+        if terrain.hydro_at(cell) == hornvale_terrain::Hydro::Karst {
+            karst += 1;
+        }
+        if terrain.is_endorheic(cell) && rock == hornvale_terrain::RockClass::Evaporite {
+            salt_flats = true;
+        }
+        let order = *soils.get(cell);
+        *orders.entry(order).or_insert(0) += 1;
+        if order == hornvale_terrain::SoilOrder::Andosol {
+            andosol += 1;
+        }
+    }
+    if land == 0 {
+        return Ok(Vec::new());
+    }
+
+    // Ties break to the lower-declared variant: RockClass/SoilOrder's `Ord`
+    // exists precisely so callers can make a deterministic pick like this.
+    let dominant_rock = rocks
+        .iter()
+        .max_by(|a, b| a.1.cmp(b.1).then(b.0.cmp(a.0)))
+        .map(|(&r, _)| r)
+        .expect("land > 0 guarantees at least one rock count");
+    let dominant_soil = orders
+        .iter()
+        .max_by(|a, b| a.1.cmp(b.1).then(b.0.cmp(a.0)))
+        .map(|(&s, _)| s)
+        .expect("land > 0 guarantees at least one soil count");
+
+    let mut lines = vec![format!(
+        "The land is mostly {}, its soils mostly {}.",
+        rock_class_name(dominant_rock),
+        soil_order_name(dominant_soil)
+    )];
+
+    let mut notables = Vec::new();
+    if karst as f64 / land as f64 > GROUND_KARST_NOTABLE {
+        notables.push("karst country".to_string());
+    }
+    if salt_flats {
+        notables.push("salt flats".to_string());
+    }
+    if andosol as f64 / land as f64 > GROUND_ANDOSOL_NOTABLE {
+        notables.push("volcanic soils".to_string());
+    }
+    if !notables.is_empty() {
+        lines.push(format!("Notable: {}.", notables.join(", ")));
+    }
+    Ok(lines)
+}
+
 /// The geographic position of a place, from its committed latitude/longitude
 /// facts (each set from `Geosphere::coord` at genesis — `domains/settlement`).
 /// `None` for a place carrying no such facts (a legacy or non-settlement
@@ -2743,6 +2874,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         places: hornvale_terrain::places(world),
         land_lines: land_lines(world)?,
         biome_lines: biome_lines(world)?,
+        ground_lines: ground_lines(world)?,
         deep_time_lines: deep_time_lines(world)?,
         peoples,
         pantheons: {
@@ -3507,6 +3639,24 @@ mod tests {
         assert_eq!(lines.len(), 2);
         assert!(lines[0].contains("plates"));
         assert!(lines[1].contains("above the sea"));
+    }
+
+    #[test]
+    fn ground_lines_name_the_dominant_rock_and_soil() {
+        let world = constant(42);
+        let lines = ground_lines(&world).unwrap();
+        assert!(!lines.is_empty());
+        assert!(lines[0].contains("The land is mostly"));
+        assert!(lines[0].contains("its soils mostly"));
+    }
+
+    #[test]
+    fn ground_lines_feed_the_almanac_context() {
+        let world = constant(42);
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.ground_lines, ground_lines(&world).unwrap());
+        let doc = hornvale_almanac::render(&ctx);
+        assert!(doc.contains("## The Ground"));
     }
 
     #[test]
