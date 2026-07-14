@@ -67,6 +67,7 @@
 - [The Uncommon Ground](./chronicle/the-uncommon-ground.md)
 - [The Datum](./chronicle/the-datum.md)
 - [Temperature](./chronicle/temperature.md)
+- [The Seam](./chronicle/the-seam.md)
 
 # The Gallery
 

@@ -63,6 +63,7 @@ cargo run -p hornvale -- new --seed 42 --out world.json   # plus sky pins (--sky
                                          # --supercontinent)
 cargo run -p hornvale -- scout --neighbor red-giant       # scan seeds satisfying pins
 cargo run -p hornvale -- repl --world world.json
+cargo run -p hornvale -- possess --seed 42            # walk the world (the game seam)
 cargo run -p hornvale -- almanac --world world.json
 cargo run -p hornvale -- map --world world.json --out elevation.ppm
 cargo run -p hornvale -- concepts        # registry dump (book reference page)
