@@ -379,6 +379,19 @@ pub fn biome_class(biome: hornvale_climate::Biome) -> hornvale_culture::BiomeCla
 /// river gets", not an unbounded score.
 const DRAINAGE_REF: f64 = 200.0;
 
+/// Condensation threshold: an attractor whose catchment population clears
+/// this becomes a settlement. CALIBRATED (the-gathering, 2026-07-13): tuned
+/// against the carrying_capacity constants to a manageable seed-42
+/// settlement count. Before tuning, the placeholder 0.5 condensed 998
+/// settlements on the level-6 seed-42 world (avg catchment ~7 people); this
+/// value condenses 182 (avg catchment ~22, max 71) — low hundreds, an order
+/// of magnitude down from the placeholder and in the range of the retired
+/// spaced scatter's town count. A save-format constant from here on. Module
+/// scope (hoisted from the settlement-genesis stage closure, Task A16a) so
+/// [`demography_report`]'s Lab accessor and the genesis path share the one
+/// definition — they must never diverge.
+const CONDENSATION_THRESHOLD: f64 = 10.0;
+
 /// The bare per-cell carrying-capacity inputs, shared across species (spec
 /// §2): the same terrain/climate reads the retired suitability scatter used.
 /// Each species folds its own psychology on top via `species_carrying_input`.
@@ -466,6 +479,104 @@ pub fn species_carrying_input(
         hostility: (base.hostility * hostility_factor).clamp(0.0, 1.0),
         ..base
     }
+}
+
+/// Assemble the coexistence stack's inputs for `species_set` over `geo`:
+/// each species' per-cell carrying-capacity inputs (the shared `base_inputs`
+/// with that species' psychology folded in via [`species_carrying_input`])
+/// and the packer's `(id, mass, niche)` tuples, tag-numbered identically
+/// (species_set's index order) so the two line up the way
+/// [`hornvale_demography::report`] expects. Shared by the settlement-genesis
+/// path and [`demography_report`] (Task A16a) — the ONE place this assembly
+/// is written, so the world worldgen ships and the report the Lab measures
+/// can never diverge.
+#[allow(clippy::type_complexity)]
+fn demography_inputs_for(
+    geo: &Geosphere,
+    base_inputs: &hornvale_kernel::CellMap<hornvale_demography::CarryingInput>,
+    species_set: &[&hornvale_species::SpeciesDef],
+) -> (
+    Vec<(
+        u32,
+        hornvale_kernel::CellMap<hornvale_demography::CarryingInput>,
+    )>,
+    Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)>,
+) {
+    let per_species_inputs = species_set
+        .iter()
+        .enumerate()
+        .map(|(tag, def)| {
+            let psych = &def.psych;
+            let inputs = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+                species_carrying_input(*base_inputs.get(cell), psych)
+            });
+            (tag as u32, inputs)
+        })
+        .collect();
+    let species = species_set
+        .iter()
+        .enumerate()
+        .map(|(tag, def)| (tag as u32, def.mass, def.niche.clone()))
+        .collect();
+    (per_species_inputs, species)
+}
+
+/// Build the full coexistence-stack demography report for `world`, over
+/// `roster` (spec: the whole roster, matching the unpinned settlement-
+/// genesis path — a species-pinned world still reports every roster
+/// species' field, since no pin is reconstructed here), against an
+/// EXPLICITLY supplied `beta`/`floor` rather than the frozen
+/// [`hornvale_demography::BETA`]/[`hornvale_demography::FLOOR`] constants.
+/// Reconstructs terrain and climate, then feeds [`demography_inputs_for`]
+/// into [`hornvale_demography::report`] with the same `CONDENSATION_THRESHOLD`
+/// the genesis path uses. Pure and seed-free beyond the world's already-
+/// committed facts: two calls with the same `(world, roster, beta, floor)`
+/// produce byte-identical reports, so a β-sweep calibration harness (task
+/// A16b) can vary `beta` across many calls without rebuilding the world or
+/// drawing new seed state. [`demography_report`] is this function pinned to
+/// the frozen constants — the one worldgen and the settlement-genesis path
+/// actually ship.
+///
+/// type-audit: bare-ok(ratio: beta), bare-ok(count: floor)
+pub fn demography_report_with_beta(
+    world: &World,
+    roster: &[hornvale_species::SpeciesDef],
+    beta: f64,
+    floor: f64,
+) -> Result<hornvale_demography::DemographyReport, BuildError> {
+    let terrain = terrain_of(world)?;
+    let climate = climate_of(world)?;
+    let geo = terrain.geosphere();
+    let base_inputs = carrying_inputs_of(geo, &terrain, &climate);
+    let species_set: Vec<&hornvale_species::SpeciesDef> = roster.iter().collect();
+    let (per_species_inputs, species) = demography_inputs_for(geo, &base_inputs, &species_set);
+    Ok(hornvale_demography::report(
+        geo,
+        &per_species_inputs,
+        &species,
+        beta,
+        floor,
+        CONDENSATION_THRESHOLD,
+    ))
+}
+
+/// Build the full coexistence-stack demography report for `world`, over
+/// `roster`, at the FROZEN `BETA`/`FLOOR` constants — so the report is byte-
+/// identical to the one settlement genesis built internally (task A16a: a
+/// Lab accessor for the later A16b β calibration). Delegates to
+/// [`demography_report_with_beta`]; see that function for the full wiring
+/// doc. Deterministic: reads only already-committed facts, draws nothing new
+/// from the seed.
+pub fn demography_report(
+    world: &World,
+    roster: &[hornvale_species::SpeciesDef],
+) -> Result<hornvale_demography::DemographyReport, BuildError> {
+    demography_report_with_beta(
+        world,
+        roster,
+        hornvale_demography::BETA,
+        hornvale_demography::FLOOR,
+    )
 }
 
 /// The scalar stellar inputs climate needs, derived from this world's sky.
@@ -1706,7 +1817,7 @@ pub fn lexicon_of_in(
 ) -> Result<hornvale_language::Lexicon, BuildError> {
     let ph = language_of_in(world, roster, species);
     let exposures = exposure_of(world, species)?;
-    let def = *def_in(roster, species)?;
+    let def = def_in(roster, species)?;
     let family = def.family;
     // A family with more than one member has a proto ancestral vector in
     // `family_registry` and draws a real shared proto phonology; a
@@ -2082,16 +2193,6 @@ fn build_to(
     let terrain = terrain_of(&world)?;
     let climate = climate_of(&world)?;
     let geo = terrain.geosphere();
-    // Condensation threshold: an attractor whose catchment population clears
-    // this becomes a settlement. CALIBRATED (the-gathering, 2026-07-13):
-    // tuned against the (also frozen this task) carrying_capacity constants
-    // to a manageable seed-42 settlement count. Before tuning, the placeholder
-    // 0.5 condensed 998 settlements on the level-6 seed-42 world (avg
-    // catchment ~7 people); this value condenses 182 (avg catchment ~22, max
-    // 71) — low hundreds, an order of magnitude down from the placeholder and
-    // in the range of the retired spaced scatter's town count. A save-format
-    // constant from here on.
-    const THRESHOLD: f64 = 10.0;
 
     // The bare per-cell carrying-capacity inputs, shared across species; each
     // species folds its psychology into a per-species copy below. `carrying_
@@ -2105,22 +2206,27 @@ fn build_to(
         Some(name) => vec![def_in(roster, name)?],
     };
 
-    // Each species' carrying-capacity inputs: the shared base with its
-    // psychology folded in (spec §4). Demography condenses settlements off
+    // Each species' carrying-capacity inputs (spec §4) plus the coexistence
+    // packer's `(id, mass, niche)` tuples, both tag-numbered by `species_set`'s
+    // index order so the stack's per_species_k ids line up with the K fields
+    // `report` builds internally — the ONE shared assembly (`demography_
+    // inputs_for`), so this path and the Lab's `demography_report` accessor
+    // (Task A16a) can never diverge. Demography condenses settlements off
     // all species' fields together, flagship (largest catchment) first.
-    let per_species_inputs: Vec<(u32, hornvale_kernel::CellMap<hornvale_demography::CarryingInput>)> =
-        species_set
-            .iter()
-            .enumerate()
-            .map(|(tag, def)| {
-                let psych = &def.psych;
-                let inputs = hornvale_kernel::CellMap::from_fn(geo, |cell| {
-                    species_carrying_input(*base_inputs.get(cell), psych)
-                });
-                (tag as u32, inputs)
-            })
-            .collect();
-    let placements = hornvale_demography::report(geo, &per_species_inputs, THRESHOLD).settlements;
+    // ADDITIVE ONLY (task A14): `report` still returns `.settlements` (the
+    // `condense_tagged` path) as the field this call site consumes; the
+    // stack/byproducts/stack_settlements it also builds are not yet read by
+    // worldgen (task A15).
+    let (per_species_inputs, species) = demography_inputs_for(geo, &base_inputs, &species_set);
+    let placements = hornvale_demography::report(
+        geo,
+        &per_species_inputs,
+        &species,
+        hornvale_demography::BETA,
+        hornvale_demography::FLOOR,
+        CONDENSATION_THRESHOLD,
+    )
+    .settlements;
 
     // Each placed species' phonology, drawn once from the world seed and
     // its authored articulation vector, and a `Namer` built over it. Every
@@ -3892,7 +3998,8 @@ mod tests {
         // with.
         let flagship_species = hornvale_species::species_of(&world, village.id)
             .expect("the flagship settlement has a species fact");
-        let def = hornvale_species::registry()[flagship_species.as_str()];
+        let registry = hornvale_species::registry();
+        let def = &registry[flagship_species.as_str()];
         let psych = hornvale_culture::PsychSummary {
             threat_response: def.psych.threat_response,
             time_horizon: def.psych.time_horizon,
