@@ -14,6 +14,19 @@ statistical rate — is this campaign. An ideonomy pass (timeline organon;
 cross-domain re-instantiation) pulled in three additions: lunar eclipses, the
 event-time total/annular decision, and the recurrence ladder as readings.
 
+> **Reconciliation (2026-07-14, same day).** A parallel session approved *The
+> Long Count* (`2026-07-14-the-long-count-design.md`, committed @e4f7570,
+> thirteen minutes before this spec) claiming the same `moon-nodes` stream,
+> nodal regression, and dated solar/lunar event core. Nathan adjudicated:
+> **Eclipse Seasons owns the eclipse core**; The Long Count re-scoped to
+> secular brightening, the alignment ground half, and the SKY-23 batteries
+> (see its matching scope amendment). This spec adopts the Long Count plan's
+> naming for the shared surface so its written eclipse tasks transfer
+> verbatim: the module is `eclipses.rs` (plural, the `moons.rs` convention)
+> and the drawn field is `Moon.node_longitude_deg`. Standstill *facts* ride
+> this campaign only as the committed `moon-node-period-days` beat; the
+> standstill instrument stays the deferred follow-up row.
+
 ---
 
 ## 1. Goal
@@ -54,8 +67,8 @@ later slides under without an epoch.
 One new module, one new field, no layering changes.
 
 ```
-streams.rs                 moons.rs                      eclipse.rs  (NEW)
-MOON_NODES ── drawn ──▶ Moon.node_lon_deg ─────▶ node_at(t), regression rate
+streams.rs                 moons.rs                      eclipses.rs (NEW)
+MOON_NODES ── drawn ──▶ Moon.node_longitude_deg ──▶ node_at(t), regression rate
 (appended after         (0–360°, drawn          moon_ecliptic(t) → (λ, β)
  MOON_INCLINATIONS)      post-admission)        conjunctions t_k   — SOLAR
                                                 oppositions t_k+s/2 — LUNAR
@@ -73,10 +86,10 @@ forcing.rs ── eccentricity(t) → sun size ──▶    ground_track(Event)
                        moon)
 ```
 
-- `eclipse.rs` holds every derived quantity. It reads `moons`, `calendar`,
+- `eclipses.rs` holds every derived quantity. It reads `moons`, `calendar`,
   and `forcing`; it is read by the four consumers, none of which learns
   anything about the others (phenomena protocol).
-- The `Moon` struct gains `node_lon_deg: f64` (degrees, matching
+- The `Moon` struct gains `node_longitude_deg: f64` (degrees, matching
   `inclination_deg`'s convention, `type-audit: pending(wave-1)`). When the
   kernel's Angle family lands (the datum retrospective's named next step),
   both fields convert together — this campaign does not pioneer `Angle`.

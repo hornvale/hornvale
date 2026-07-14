@@ -44,3 +44,7 @@ pub const PLATE_WEIGHTS: &str = "plate-weights";
 /// Plate-edge noise. Hash-noise only — never consumed as a `Stream`.
 /// type-audit: bare-ok(identifier-text)
 pub const PLATE_EDGE: &str = "plate-edge";
+/// Lithology sub-cell patchiness noise (The Ground, spec §2). Hash-noise
+/// only — never consumed as a `Stream`; no draw-order/save-format contract.
+/// type-audit: bare-ok(identifier-text)
+pub const LITHOLOGY: &str = "lithology";

@@ -7,11 +7,11 @@ use crate::pins::{self, GenesisError, TerrainPins};
 use crate::plates::Plate;
 use crate::streams;
 use crate::{crust, elevation, plates};
-use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation, Seed};
+use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed};
 
 /// A generated tectonic globe over the shared Geosphere. Recomputed from
 /// the seed on demand; never serialized.
-/// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust)
+/// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust), bare-ok(ratio: crust_age), bare-ok(count: boundary_distance)
 #[derive(Debug, Clone, PartialEq)]
 pub struct TectonicGlobe {
     /// Plate index per cell (an index into `plates`).
@@ -23,6 +23,9 @@ pub struct TectonicGlobe {
     /// plain `f64` because it feeds bulk numeric assembly, not a single
     /// validated boundary crossing.
     pub crust: CellMap<f64>,
+    /// Winning-craton age per cell, in `[0, 1]` (0 on oceanic floor). Sampled
+    /// from the same `CrustField` `crust` was, at genesis; never serialized.
+    pub crust_age: CellMap<f64>,
     /// Elevation per cell, relative to the isostatic reference datum (see
     /// `hornvale_kernel::ReferenceElevation`).
     pub elevation: CellMap<ReferenceElevation>,
@@ -44,6 +47,25 @@ pub struct TectonicGlobe {
     /// The drawn craton set this globe's crust field was built from
     /// (Crust epoch, Task 8). Recomputed at genesis, never serialized.
     pub cratons: Vec<Craton>,
+    /// Graph distance from each cell to the nearest same-plate boundary
+    /// cell, with that boundary attributed. Recomputed at genesis, never
+    /// serialized. `None` = no reachable same-plate boundary.
+    pub boundary_distance: CellMap<Option<(u32, CellId)>>,
+    /// The material buffer per cell (The Ground, spec §2). Recomputed at
+    /// genesis, never serialized.
+    pub lithology: CellMap<crate::lithology::MaterialBuffer>,
+    /// Seed for lithology sub-cell patchiness hash-noise. Hash-noise only —
+    /// never consumed as a `Stream`, so it carries no draw-order/save-format
+    /// contract (see `streams::LITHOLOGY`).
+    pub lithology_seed: Seed,
+}
+
+impl TectonicGlobe {
+    /// Seed for lithology sub-cell hash-noise (no stream draws — hash-noise
+    /// only, like `coast-render`/`plate-edge`).
+    pub fn lithology_noise_seed(&self) -> Seed {
+        self.lithology_seed
+    }
 }
 
 /// What tectonic genesis produced: the globe plus degradation notes.
@@ -83,6 +105,7 @@ pub fn generate(
     let crust_map = CellMap::from_fn(geosphere, |c| {
         field.thickness_at(geosphere.position(c)).get()
     });
+    let crust_age_map = CellMap::from_fn(geosphere, |c| field.age_at(geosphere.position(c)));
     let continental = CellMap::from_fn(geosphere, |c| field.continental_at(geosphere.position(c)));
     let plate_of = plates::assign_plates(geosphere, terrain_seed, &plate_list);
     let boundary_map = boundaries::boundary_field(geosphere, &plate_of, &plate_list, &continental);
@@ -115,21 +138,44 @@ pub fn generate(
         notes.push("no plate boundaries at this resolution".to_string());
     }
 
-    Ok(GenesisOutcome {
-        globe: TectonicGlobe {
-            plate_of,
-            crust: crust_map,
-            elevation: elevation_map,
-            unrest,
-            sea_level,
-            plates: plate_list,
-            boundary: boundary_map,
-            drainage,
-            endorheic,
-            cratons,
-        },
-        notes,
-    })
+    // Lithology (The Ground, spec §2) is a pure function of the assembled
+    // globe's other fields, so the globe is built first with a placeholder
+    // buffer, then the real buffer is assembled and swapped in. The noise
+    // seed here is hash-noise only (`streams::LITHOLOGY`) — never consumed
+    // as a `Stream`, so this is not a new draw-order contract.
+    let lithology_seed = terrain_seed.derive(streams::LITHOLOGY);
+    let placeholder_lithology = CellMap::from_fn(geosphere, |_| crate::lithology::MaterialBuffer {
+        silica: 0.0,
+        grain: 0.0,
+        induration: 0.0,
+        carbonate: 0.0,
+        metamorphic_grade: 0.0,
+        porosity: 0.0,
+        margin: crate::lithology::MarginPolarity::Interior,
+        soil_depth: crate::lithology::SoilDepth::new(0.0),
+        basement: crate::lithology::Basement::Oceanic,
+        thaumic: 0.0,
+    });
+
+    let mut globe = TectonicGlobe {
+        plate_of,
+        crust: crust_map,
+        crust_age: crust_age_map,
+        elevation: elevation_map,
+        unrest,
+        sea_level,
+        plates: plate_list,
+        boundary: boundary_map,
+        drainage,
+        endorheic,
+        cratons,
+        boundary_distance: distances,
+        lithology: placeholder_lithology,
+        lithology_seed,
+    };
+    globe.lithology = crate::lithology::assemble_material(geosphere, &globe);
+
+    Ok(GenesisOutcome { globe, notes })
 }
 
 /// Headline numbers of a globe, for facts and the almanac.

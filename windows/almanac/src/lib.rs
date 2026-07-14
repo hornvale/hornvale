@@ -83,7 +83,7 @@ pub struct NightSkyLines {
 }
 
 /// Everything the almanac needs, gathered by the composition root.
-/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines)
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines)
 pub struct AlmanacContext {
     /// The world seed, for the title.
     pub seed: u64,
@@ -99,6 +99,10 @@ pub struct AlmanacContext {
     pub land_lines: Vec<String>,
     /// The globe's biome/habitability headline lines, from the composition root.
     pub biome_lines: Vec<String>,
+    /// The ground's headline lines: dominant rock/soil order over land, plus
+    /// notable formations (The Ground, spec §3/§4/§6); empty for a landless
+    /// world.
+    pub ground_lines: Vec<String>,
     /// Deep-time headline lines (the glacial history); empty for worlds with
     /// no glacial past (constant sky, or zero forcing).
     pub deep_time_lines: Vec<String>,
@@ -212,6 +216,14 @@ pub fn render(ctx: &AlmanacContext) -> String {
             "\n{} ({:.0}°C)\n\n",
             ctx.climate.description, ctx.climate.temperature_c
         ));
+    }
+
+    if !ctx.ground_lines.is_empty() {
+        doc.push_str("## The Ground\n\n");
+        for line in &ctx.ground_lines {
+            doc.push_str(&format!("{line}\n"));
+        }
+        doc.push('\n');
     }
 
     if !ctx.deep_time_lines.is_empty() {
@@ -331,6 +343,9 @@ mod tests {
                 "The globe breaks into 23 plates; the sea claims 63% of its surface.".to_string(),
             ],
             biome_lines: vec![],
+            ground_lines: vec![
+                "The land is mostly granite, its soils mostly loam.".to_string(),
+            ],
             deep_time_lines: vec![
                 "The frost retreated; ice advanced over 30% of the land at its greatest."
                     .to_string(),
@@ -379,6 +394,9 @@ mod tests {
             "23 plates",
             "the Vale",
             "temperate forest",
+            "## The Ground",
+            "granite",
+            "loam",
             "## Deep Time",
             "## The People",
             "Bolnar",
@@ -405,6 +423,42 @@ mod tests {
         assert!(render(&ctx).contains("## Deep Time"));
         ctx.deep_time_lines = vec![];
         assert!(!render(&ctx).contains("## Deep Time"));
+    }
+
+    #[test]
+    fn ground_section_names_the_dominant_rock_and_soil_and_is_skipped_when_empty() {
+        let mut ctx = sample_context();
+        ctx.ground_lines = vec![
+            "The land is mostly granite, its soils mostly loam.".to_string(),
+            "Notable: karst country, salt flats.".to_string(),
+        ];
+        let doc = render(&ctx);
+        assert!(doc.contains("## The Ground"));
+        assert!(doc.contains("mostly granite"));
+        assert!(doc.contains("mostly loam"));
+        assert!(doc.contains("karst country"));
+        assert!(doc.contains("salt flats"));
+
+        ctx.ground_lines = vec![];
+        assert!(!render(&ctx).contains("## The Ground"));
+    }
+
+    #[test]
+    fn ground_section_renders_between_land_and_deep_time() {
+        let ctx = AlmanacContext {
+            ground_lines: vec!["The land is mostly basalt, its soils mostly andosol.".to_string()],
+            deep_time_lines: vec!["The frost retreated.".to_string()],
+            ..sample_context()
+        };
+        let doc = render(&ctx);
+        let land_pos = doc.find("## The Land").unwrap();
+        let ground_pos = doc.find("## The Ground").unwrap();
+        let deep_time_pos = doc.find("## Deep Time").unwrap();
+        assert!(land_pos < ground_pos, "Ground must come after Land");
+        assert!(
+            ground_pos < deep_time_pos,
+            "Ground must come before Deep Time"
+        );
     }
 
     #[test]

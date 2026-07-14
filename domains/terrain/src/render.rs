@@ -7,6 +7,7 @@
 //! neighbors always contains it.
 
 use crate::globe::TectonicGlobe;
+use crate::lithology::RockClass;
 use crate::streams;
 use hornvale_kernel::{Geosphere, NearestCellIndex, Seed, math, noise};
 
@@ -146,26 +147,37 @@ fn color(elevation_m: f64, sea_level_m: f64) -> [u8; 3] {
     }
 }
 
-/// Raw RGB pixels of the equirectangular elevation map (row-major, top row
-/// first): longitude −180 → 180 across, latitude 90 → −90 down, pixel
-/// centers sampled. Pixels are coastal-noise-refined from the world seed,
-/// not raw cell values — see `refined_elevation`.
+/// Shared equirectangular rasterizer: samples `pixel` at every pixel's
+/// lat/lon center (row-major, top row first, longitude −180 → 180 across,
+/// latitude 90 → −90 down) and packs the resulting RGB triples. Both
+/// `elevation_png` (a refined per-pixel elevation sample) and
+/// `lithology_png` (a nearest-cell rock class) share this loop; only the
+/// per-pixel sampling differs.
+fn rasterize(width: u32, height: u32, mut pixel: impl FnMut(f64, f64) -> [u8; 3]) -> Vec<u8> {
+    let mut out = Vec::with_capacity((width * height * 3) as usize);
+    for py in 0..height {
+        let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
+        for px in 0..width {
+            let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
+            out.extend_from_slice(&pixel(latitude, longitude));
+        }
+    }
+    out
+}
+
+/// Raw RGB pixels of the equirectangular elevation map. Pixels are
+/// coastal-noise-refined from the world seed, not raw cell values — see
+/// `refined_elevation`.
 fn elevation_pixels(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) -> Vec<u8> {
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
     let index = NearestCellIndex::new(geo);
     let noise_seed = world_seed
         .derive(streams::ROOT)
         .derive(streams::COAST_RENDER);
-    let mut out = Vec::with_capacity((width * height * 3) as usize);
-    for py in 0..height {
-        let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
-        for px in 0..width {
-            let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
-            let elevation = refined_elevation(geo, &index, globe, noise_seed, latitude, longitude);
-            out.extend_from_slice(&color(elevation, globe.sea_level.get()));
-        }
-    }
-    out
+    rasterize(width, height, |latitude, longitude| {
+        let elevation = refined_elevation(geo, &index, globe, noise_seed, latitude, longitude);
+        color(elevation, globe.sea_level.get())
+    })
 }
 
 /// Render the globe as an equirectangular PNG (decision 0018). Same globe,
@@ -177,6 +189,58 @@ pub fn elevation_png(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) -
         MAP_WIDTH / 2,
         &elevation_pixels(geo, globe, world_seed),
     )
+}
+
+/// The palette color for a rock class: an exhaustive match over `RockClass`
+/// (spec §6's lithology-map legend) so a future variant without a color
+/// fails to compile rather than panicking at render time.
+fn rock_color(rock: RockClass) -> [u8; 3] {
+    match rock {
+        RockClass::Granite => [230, 120, 120],
+        RockClass::Gabbro => [80, 60, 90],
+        RockClass::Basalt => [40, 40, 50],
+        RockClass::Andesite => [150, 100, 80],
+        RockClass::Rhyolite => [220, 180, 140],
+        RockClass::Sandstone => [220, 190, 100],
+        RockClass::Shale => [110, 110, 120],
+        RockClass::Conglomerate => [180, 140, 100],
+        RockClass::Evaporite => [245, 245, 220],
+        RockClass::Chert => [160, 180, 190],
+        RockClass::Ironstone => [170, 80, 40],
+        RockClass::ReefLimestone => [130, 200, 220],
+        RockClass::Coal => [20, 20, 20],
+        RockClass::Slate => [90, 100, 110],
+        RockClass::Schist => [140, 150, 100],
+        RockClass::Gneiss => [200, 100, 150],
+        RockClass::Marble => [235, 235, 235],
+        RockClass::Quartzite => [230, 210, 180],
+        RockClass::Alluvium => [180, 160, 110],
+    }
+}
+
+/// Raw RGB pixels of the equirectangular lithology map: nearest-cell rock
+/// class, no interpolation (rock class is categorical, unlike elevation).
+fn lithology_pixels(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
+    let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
+    let index = NearestCellIndex::new(geo);
+    rasterize(width, height, |latitude, longitude| {
+        let cell = index.nearest(geo, latitude, longitude);
+        let rock = crate::lithology::classify_rock(
+            globe.lithology.get(cell),
+            *globe.drainage.get(cell),
+            *globe.endorheic.get(cell),
+            *globe.elevation.get(cell) < globe.sea_level,
+        );
+        rock_color(rock)
+    })
+}
+
+/// Render the globe's rock classes as an equirectangular PNG lens (spec
+/// §6). Same globe, same bytes — no seed, since the classifier is a pure
+/// function of already-committed fields (no coastal-noise refinement).
+/// type-audit: bare-ok(artifact)
+pub fn lithology_png(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
+    hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_WIDTH / 2, &lithology_pixels(geo, globe))
 }
 
 /// Render the globe as a 72×24 ASCII map: '~' ocean, '.' lowland, '+'
@@ -227,6 +291,55 @@ mod tests {
         // IHDR width and height, big-endian, at offsets 16 and 20.
         assert_eq!(&a[16..20], &MAP_WIDTH.to_be_bytes());
         assert_eq!(&a[20..24], &(MAP_WIDTH / 2).to_be_bytes());
+    }
+
+    #[test]
+    fn lithology_png_is_well_formed_and_byte_deterministic() {
+        let geo = Geosphere::new(4);
+        let globe = generate(Seed(42), &geo, &TerrainPins::default())
+            .unwrap()
+            .globe;
+        let a = lithology_png(&geo, &globe);
+        assert_eq!(a, lithology_png(&geo, &globe));
+        assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
+        assert_eq!(&a[16..20], &MAP_WIDTH.to_be_bytes());
+        assert_eq!(&a[20..24], &(MAP_WIDTH / 2).to_be_bytes());
+    }
+
+    /// Every `RockClass` variant, in declaration order — mirrors
+    /// `rock_color`'s match arms so the distinctness test below can enumerate
+    /// the full palette without a runtime-panicking lookup table.
+    const ALL_ROCK_CLASSES: [RockClass; 19] = [
+        RockClass::Granite,
+        RockClass::Gabbro,
+        RockClass::Basalt,
+        RockClass::Andesite,
+        RockClass::Rhyolite,
+        RockClass::Sandstone,
+        RockClass::Shale,
+        RockClass::Conglomerate,
+        RockClass::Evaporite,
+        RockClass::Chert,
+        RockClass::Ironstone,
+        RockClass::ReefLimestone,
+        RockClass::Coal,
+        RockClass::Slate,
+        RockClass::Schist,
+        RockClass::Gneiss,
+        RockClass::Marble,
+        RockClass::Quartzite,
+        RockClass::Alluvium,
+    ];
+
+    #[test]
+    fn every_rock_class_has_a_distinct_palette_color() {
+        use std::collections::BTreeSet;
+        let colors: BTreeSet<[u8; 3]> = ALL_ROCK_CLASSES.iter().map(|&r| rock_color(r)).collect();
+        assert_eq!(
+            colors.len(),
+            ALL_ROCK_CLASSES.len(),
+            "two rock classes share a palette color"
+        );
     }
 
     #[test]
