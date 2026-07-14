@@ -189,6 +189,93 @@ mod tests {
     }
 
     #[test]
+    fn couple_trophic_cascade_is_processed_apex_first() {
+        // A 3-species predator-of-a-predator cascade: prey P (id 0) <- mid-
+        // predator M (id 1) <- apex A (id 2). Trophic level is DESCENDING
+        // with id (P=2.0 < M=3.0 < A=4.0), so `BTreeMap` id-ascending
+        // iteration order (P, M, A) is the exact REVERSE of the required
+        // level-descending processing order (A, M, P). The two existing
+        // `couple_trophic` tests each use a single predator/prey pair, so
+        // they pass identically whether or not the highest-level-first sort
+        // is applied — this test exists to catch a regression to
+        // `stack.keys()` / id order, which the trace below shows produces a
+        // different (lower) result for P.
+        let mut stack = BTreeMap::from([(0u32, 5.0), (1u32, 1.0), (2u32, 1.0)]);
+        let predation = BTreeMap::from([(1u32, vec![0u32]), (2u32, vec![1u32])]);
+        let levels = BTreeMap::from([(0u32, 2.0), (1u32, 3.0), (2u32, 4.0)]);
+        let shadow = 0.5;
+
+        couple_trophic(&mut stack, &predation, &levels, shadow);
+
+        // Hand-trace, CORRECT apex-first (level-descending) order:
+        //
+        // 1. A (id 2, level 4.0) processed first. Its only present prey is
+        //    M (id 1), still at its starting density 1.0.
+        //      capped_A = min(A=1.0, PREY_SUPPORT_COEFF * prey_biomass(M)=0.2*1.0)
+        //               = min(1.0, 0.2) = 0.2
+        //    Top-down shadow onto M using A's post-cap density:
+        //      mult_A = (1.0 - shadow * 0.2).max(SHADOW_FLOOR)
+        //             = (1.0 - 0.1).max(0.1) = 0.9
+        //      M's density -> 1.0 * 0.9 = 0.9
+        //
+        // 2. M (id 1, level 3.0) processed second, now at density 0.9. Its
+        //    only present prey is P (id 0), still at 5.0 (untouched so far).
+        //      capped_M = min(M=0.9, PREY_SUPPORT_COEFF * prey_biomass(P)=0.2*5.0)
+        //               = min(0.9, 1.0) = 0.9
+        //    Top-down shadow onto P using M's post-cap density:
+        //      mult_M = (1.0 - shadow * 0.9).max(SHADOW_FLOOR)
+        //             = (1.0 - 0.45).max(0.1) = 0.55
+        //      P's density -> 5.0 * 0.55 = 2.75
+        //
+        // 3. P (id 0) has no `predation` entry, so it is skipped as a
+        //    predator.
+        //
+        // => expected P density under the CORRECT apex-first order: 2.75.
+        // Mirrors the implementation's exact arithmetic sequence (same
+        // operators, same operand order) against the real constants, rather
+        // than a bare hardcoded literal.
+        let capped_a = (1.0_f64).min(PREY_SUPPORT_COEFF * 1.0);
+        let mult_a = (1.0 - shadow * capped_a).max(SHADOW_FLOOR);
+        let m_after_a = 1.0 * mult_a;
+        let capped_m = m_after_a.min(PREY_SUPPORT_COEFF * 5.0);
+        let mult_m = (1.0 - shadow * capped_m).max(SHADOW_FLOOR);
+        let expected_correct_order = 5.0 * mult_m;
+
+        assert!(
+            (stack[&0] - expected_correct_order).abs() < 1e-9,
+            "expected P density {expected_correct_order} under apex-first order, got {}",
+            stack[&0]
+        );
+
+        // For contrast (not asserted against `stack`, just demonstrating
+        // the mechanism this test guards): what P's density WOULD be under
+        // a WRONG id-ascending order, where M (id 1) is processed before A
+        // (id 2) since 1 < 2, and P (id 0) is skipped as a non-predator
+        // regardless of position.
+        //
+        // 1. M processed first, still at density 1.0. Its prey P is still
+        //    at 5.0.
+        //      capped_M = min(1.0, 0.2 * 5.0) = min(1.0, 1.0) = 1.0
+        //      mult_M = (1.0 - 0.5 * 1.0).max(0.1) = 0.5
+        //      P's density -> 5.0 * 0.5 = 2.5
+        // 2. A processed second: it shadows M (not P), so P is unaffected
+        //    by this step.
+        //
+        // => P's density under the WRONG id-ascending order: 2.5, which
+        // differs from the correct 2.75 above — the ordering mechanism this
+        // test protects.
+        let capped_m_wrong = (1.0_f64).min(PREY_SUPPORT_COEFF * 5.0);
+        let mult_m_wrong = (1.0 - shadow * capped_m_wrong).max(SHADOW_FLOOR);
+        let expected_wrong_order = 5.0 * mult_m_wrong;
+
+        assert!(
+            (expected_correct_order - expected_wrong_order).abs() > 1e-6,
+            "test is not order-distinguishing: correct ({expected_correct_order}) and \
+             id-order ({expected_wrong_order}) traces agree"
+        );
+    }
+
+    #[test]
     fn apex_shadow_suppresses_but_never_zeroes_prey() {
         let mut s = BTreeMap::from([(0u32, 5.0), (1u32, 0.02)]);
         let base_prey = s[&0];
