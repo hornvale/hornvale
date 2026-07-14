@@ -281,16 +281,19 @@ pub fn apply_repose(
 /// convergence).
 ///
 /// Per cell: `flux = -incision[cell] + inflow` (inflow already accumulated
-/// from upstream cells processed earlier in the sweep). If the cell's own
-/// steepest neighbor drop is flatter than `params.deposit_slope_m`, a
-/// `params.deposit_fraction` share of `flux` deposits here first. The
-/// remainder then follows `downhill`: onto a land cell, it becomes that
-/// cell's inflow; onto the ocean, the *source* cell (the coastal outlet) is
-/// a river mouth and the flux is exported; with no downhill target at all
-/// (a local minimum), the remainder deposits in full — capped, for an
-/// endorheic sink, at raising the sink to its lowest rim neighbor minus 1 m
-/// (never overtopping the rim); any surplus above that cap is booked as
-/// `ocean_loss` (the playa's aquifer — books stay balanced).
+/// from upstream cells processed earlier in the sweep). If the cell has a
+/// downhill target and its own steepest neighbor drop is flatter than
+/// `params.deposit_slope_m`, a `params.deposit_fraction` share of `flux`
+/// deposits here first. The remainder then follows `downhill`: onto a land
+/// cell, it becomes that cell's inflow; onto the ocean, the *source* cell
+/// (the coastal outlet) is a river mouth and the flux is exported. With no
+/// downhill target at all (a local minimum) the flat-fraction step is
+/// skipped entirely — there is no "remainder to pass downhill", so ALL
+/// arriving flux goes through the sink branch: deposited in full, capped,
+/// for an endorheic sink, at raising the sink to its lowest rim neighbor
+/// minus 1 m (fill toward flat, **never overtop** — the cap binds the
+/// whole deposit, not an installment of it); any surplus above the cap is
+/// booked as `ocean_loss` (the playa's aquifer — books stay balanced).
 ///
 /// Returns `(deposit_m, mouths, ocean_loss)`: `deposit_m` is the
 /// non-negative floodplain/playa deposition thickness; `mouths` lists each
@@ -338,7 +341,12 @@ pub fn route_sediment(
             .iter()
             .map(|nb| here - elevation.get(*nb).get())
             .fold(0.0_f64, f64::max);
-        if drop < params.deposit_slope_m {
+        // The flat-fraction carve-out only applies where a remainder can
+        // continue downhill; at a true sink (downhill None) it would
+        // bypass the rim cap below (reviewer-measured on seed 42 L4: a
+        // 385 m uncapped flat installment against 16.6 m of rim headroom),
+        // so the sink branch handles 100% of the arriving flux instead.
+        if downhill[idx].is_some() && drop < params.deposit_slope_m {
             let flat_share = params.deposit_fraction * flux[idx];
             deposit[idx] += flat_share;
             flux[idx] -= flat_share;
@@ -587,5 +595,61 @@ mod tests {
                 "no playa fill"
             );
         }
+    }
+
+    #[test]
+    fn playa_deposit_never_overtops_the_rim_cap() {
+        // The rim cap binds the WHOLE sink deposit, not an installment:
+        // review of the first cut measured a seed-42/L4 endorheic sink
+        // taking a 385.082 m uncapped flat-fraction installment against
+        // only 16.574 m of rim headroom. Every downhill-None land cell's
+        // total deposit must respect fill-toward-flat, never-overtop.
+        let geo = Geosphere::new(4);
+        let outcome =
+            crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
+        let g = &outcome.globe;
+        let p = CarveParams::default();
+        let carbonate = CellMap::from_fn(&geo, |c| g.lithology.get(c).carbonate);
+        let incision = carve_incision(
+            &geo,
+            &g.elevation,
+            g.sea_level,
+            &g.drainage,
+            &g.induration,
+            &carbonate,
+            &p,
+        );
+        let downhill = crate::drainage::downhill_targets(&geo, &g.elevation, g.sea_level);
+        let (deposit, _mouths, _ocean_loss) = route_sediment(
+            &geo,
+            &g.elevation,
+            g.sea_level,
+            &incision,
+            &downhill,
+            &g.endorheic,
+            &p,
+        );
+        let mut sinks = 0usize;
+        for c in geo.cells() {
+            if *g.elevation.get(c) < g.sea_level || downhill[c.0 as usize].is_some() {
+                continue;
+            }
+            sinks += 1;
+            let here = g.elevation.get(c).get();
+            let rim = geo
+                .neighbors(c)
+                .iter()
+                .map(|nb| g.elevation.get(*nb).get())
+                .fold(f64::INFINITY, f64::min);
+            let cap = (rim - 1.0 - here).max(0.0);
+            assert!(
+                *deposit.get(c) <= cap + 1e-9,
+                "sink {} overtops its rim: deposit {} vs cap {}",
+                c.0,
+                deposit.get(c),
+                cap
+            );
+        }
+        assert!(sinks > 0, "seed 42 L4 must have interior sinks to test");
     }
 }
