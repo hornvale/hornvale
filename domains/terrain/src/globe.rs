@@ -75,6 +75,10 @@ pub fn generate(
     // a pinned target conditions both identically to a drawn one.
     let ocean_target = elevation::resolve_ocean_fraction(terrain_seed, pins, &mut notes);
     let cratons = crust::draw_cratons(terrain_seed, pins, ocean_target, &mut notes);
+    // Single-craton hypsometry: soften an unreachable land quota to the
+    // shelf break instead of drowning the percentile into the abyss.
+    let supply = crust::continental_supply(&cratons);
+    let effective_ocean = elevation::effective_ocean_target(ocean_target, supply, &mut notes);
     let field = crust::CrustField::new(terrain_seed, cratons.clone());
     let crust_map = CellMap::from_fn(geosphere, |c| {
         field.thickness_at(geosphere.position(c)).get()
@@ -93,7 +97,7 @@ pub fn generate(
         &crust_map,
         &continental,
     );
-    let sea_level = elevation::derive_sea_level(&elevation_map, ocean_target);
+    let sea_level = elevation::derive_sea_level(&elevation_map, effective_ocean);
     let unrest =
         elevation::generate_unrest(geosphere, &plate_list, &plate_of, &boundary_map, &distances);
     let (drainage, endorheic) =
@@ -253,5 +257,25 @@ mod tests {
         );
         let unpinned = generate(Seed(42), &geo, &TerrainPins::default()).expect("genesis");
         assert!(!unpinned.notes.iter().any(|n| n.starts_with("pinned ")));
+    }
+
+    #[test]
+    fn a_supply_limited_world_meters_the_shelf_break_fallback() {
+        let geo = Geosphere::new(3);
+        let pins = TerrainPins {
+            continents: Some(1),
+            ..TerrainPins::default()
+        };
+        let outcome = generate(Seed(3), &geo, &pins).expect("genesis");
+        assert!(
+            outcome.notes.iter().any(|n| n.contains("shelf break")),
+            "fallback never engaged: {:?}",
+            outcome.notes
+        );
+        // Default worlds never trip it — the genesis half of the
+        // byte-identity guard (the craton-level half sweeps 64 seeds in
+        // tectonic_properties.rs).
+        let default = generate(Seed(3), &geo, &TerrainPins::default()).expect("genesis");
+        assert!(!default.notes.iter().any(|n| n.contains("shelf break")));
     }
 }

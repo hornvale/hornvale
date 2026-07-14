@@ -236,6 +236,50 @@ pub fn resolve_ocean_fraction(
     target
 }
 
+/// The shelf-break fallback activates when analytic continental supply
+/// (`crust::continental_supply`) is below this fraction of the
+/// ocean-fraction-implied land quota. The gap it bisects is wide and
+/// empty: default draws (8-14 cratons) sit at supply/quota ≳ 0.7 (see
+/// `default_worlds_never_trip_the_supply_fallback` in
+/// `tectonic_properties.rs`), while a lone 0.6 rad-clamped craton sits
+/// ≲ 0.15 — so default worlds provably keep the exact-percentile path
+/// byte-identical.
+/// type-audit: bare-ok(ratio)
+pub const SUPPLY_SHORTFALL_FACTOR: f64 = 0.5;
+
+/// Land granted to a supply-limited world, as a multiple of its
+/// continental supply: 1.0 places the sea-level percentile where the
+/// crust field crosses `crust::CONTINENTAL_THRESHOLD_KM` — the isostatic
+/// shelf break. Calibrated in Task 3 of the single-craton-hypsometry
+/// plan; the measured table replaces this sentence there.
+/// type-audit: bare-ok(ratio)
+pub const SHELF_BREAK_LAND_FACTOR: f64 = 1.0;
+
+/// Soften the ocean-fraction target when the crust cannot honor it
+/// (single-craton hypsometry spec, route 1): when the craton set's
+/// analytic continental supply falls below `SUPPLY_SHORTFALL_FACTOR`
+/// times the land quota `1 − target`, the exact-percentile mechanism
+/// would drown into the abyssal plain to fill the quota — a broad flat
+/// "land" with no shelf and no bimodality. Instead the world keeps
+/// `SHELF_BREAK_LAND_FACTOR × supply` land, placing the percentile at
+/// the craton's isostatic shelf break — the physically correct outcome
+/// for a small-continent world. The ocean-fraction pin is thereby a
+/// *target* a supply-limited world may not reach (decision 0053); the
+/// softening is metered in `notes` as a degradation note. Pure — no
+/// draws, so pin isolation and stream order are untouched.
+/// type-audit: bare-ok(ratio: target), bare-ok(ratio: supply), bare-ok(prose: notes), bare-ok(ratio: return)
+pub fn effective_ocean_target(target: f64, supply: f64, notes: &mut Vec<String>) -> f64 {
+    let land_quota = 1.0 - target;
+    if supply >= SUPPLY_SHORTFALL_FACTOR * land_quota {
+        return target;
+    }
+    notes.push(format!(
+        "land quota {land_quota:.2} exceeds continental supply {supply:.3}: \
+         sea level set at the shelf break (ocean-fraction target {target:.2} unmet)"
+    ));
+    1.0 - SHELF_BREAK_LAND_FACTOR * supply
+}
+
 /// Place sea level at the elevation percentile that puts exactly `target`
 /// fraction of cells strictly below it. Pure — no draws: `target` is
 /// resolved once in `generate` via `resolve_ocean_fraction` (Task 9
@@ -524,5 +568,27 @@ mod tests {
         let shelf = crate::shape::shelf_fraction(&globe.elevation, globe.sea_level);
         assert!(shelf > 0.02, "no shelf band: {shelf}");
         assert!(shelf < 0.5, "everything is shelf: {shelf}");
+    }
+
+    #[test]
+    fn effective_ocean_target_passes_ample_supply_through_silently() {
+        let mut notes = Vec::new();
+        assert_eq!(effective_ocean_target(0.65, 0.30, &mut notes), 0.65);
+        // Exactly at the activation boundary: still the plain target.
+        assert_eq!(
+            effective_ocean_target(0.65, SUPPLY_SHORTFALL_FACTOR * 0.35, &mut notes),
+            0.65
+        );
+        assert!(notes.is_empty(), "{notes:?}");
+    }
+
+    #[test]
+    fn effective_ocean_target_falls_back_to_the_shelf_break_and_meters_it() {
+        let mut notes = Vec::new();
+        let supply = 0.031;
+        let effective = effective_ocean_target(0.65, supply, &mut notes);
+        assert_eq!(effective, 1.0 - SHELF_BREAK_LAND_FACTOR * supply);
+        assert_eq!(notes.len(), 1);
+        assert!(notes[0].contains("shelf break"), "{}", notes[0]);
     }
 }
