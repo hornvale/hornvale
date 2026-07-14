@@ -1,6 +1,8 @@
 # Census as Data — Design
 
-**Status:** approved (design), pending spec review
+**Status:** implemented (2026-07-13; see
+`docs/superpowers/plans/2026-07-13-census-as-data.md` and
+`docs/retrospectives/census-as-data.md`)
 **Date:** 2026-07-13
 **Campaign:** census-as-data (Tier 3 of the three-tier ask; Tiers 1+2 were
 fast-gate-tiers and the remote AWS gate, both merged)

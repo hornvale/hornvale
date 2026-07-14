@@ -1,5 +1,15 @@
 # Census as Data — Implementation Plan
 
+> **STATUS: executed, 2026-07-13.** All 10 tasks complete. Task 4's
+> execution reorder (owner directive, see the note inline at that task)
+> shifted the AWS regeneration, the byte-identity equivalence check, and
+> the golden-pin re-pins to merge prep, executed there alongside this
+> plan's close; branch calibration-family tests were expected-red for the
+> intervening tasks by design, not by drift. See
+> `docs/retrospectives/census-as-data.md` for process lessons and
+> `docs/superpowers/specs/2026-07-13-census-as-data-design.md` for the
+> design this plan implements (now marked implemented).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Every subagent dispatch MUST prepend `.claude/skills/dispatching-hornvale-subagents/dispatch-preamble.md` verbatim (worktree cd + branch check first).
 
 **Goal:** One canonical, self-describing, versioned census (`the-census`: all metrics × 1000 seeds) plus a DuckDB analysis harness (`tools/census/`), per the spec `docs/superpowers/specs/2026-07-13-census-as-data-design.md`.
