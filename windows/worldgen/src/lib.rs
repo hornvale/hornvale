@@ -15,6 +15,7 @@ use hornvale_climate::{
     AMBIENT, ClimateInputs, ClimateReport, GeneratedClimate, RotationRegime, SeafloorFeature,
     UniformClimate,
 };
+use hornvale_kernel::math;
 use hornvale_kernel::{
     ConceptRegistry, Domain, EntityId, Fact, GeoCoord, Geosphere, LedgerError, ObserverContext,
     PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation, RegistryError, Seed,
@@ -624,6 +625,84 @@ pub fn climate_of(world: &World) -> Result<GeneratedClimate, BuildError> {
         regime,
         year_length_std,
     }))
+}
+
+/// The four v1 environmental fields at one cell — the substrate the habitat
+/// model (The Niche) scores a species' condition niche against.
+/// type-audit: bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), bare-ok(diagnostic-value: insolation), bare-ok(diagnostic-value: elevation)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Substrate {
+    /// Mean annual temperature, °C.
+    pub temperature_c: f64,
+    /// Moisture in `[0, 1]`.
+    pub moisture: f64,
+    /// Annual-mean top-of-atmosphere insolation, relative to the planet's
+    /// global scalar (`hornvale_astronomy::insolation_rel`).
+    pub insolation: f64,
+    /// Terrain elevation scalar (meters-scale). Ocean cells included.
+    pub elevation: f64,
+}
+
+/// Annual-mean top-of-atmosphere insolation at a latitude, relative to the
+/// planet's global scalar `insolation_scalar`. Obliquity-aware: averages the
+/// standard daily-mean insolation geometric factor (Milankovitch-cycle solar
+/// forcing, the same formula climatology textbooks use for
+/// latitude-by-latitude annual insolation) over `N` uniform samples of the
+/// orbit — a static v1 approximation; seasonal `K(cell, t)` is deferred (The
+/// Niche spec §8). All transcendentals route through `hornvale_kernel::math`
+/// for cross-platform byte-identity (decision 0041).
+/// type-audit: bare-ok(diagnostic-value: latitude_deg), bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(diagnostic-value: return)
+pub fn annual_mean_insolation(
+    latitude_deg: f64,
+    obliquity_deg: f64,
+    insolation_scalar: f64,
+) -> f64 {
+    let phi = latitude_deg.to_radians();
+    let eps = obliquity_deg.to_radians();
+    const N: u32 = 48;
+    let mut sum = 0.0;
+    for k in 0..N {
+        let theta = 2.0 * std::f64::consts::PI * (k as f64) / (N as f64);
+        // Solar declination at this orbital sample.
+        let delta = math::asin(math::sin(eps) * math::sin(theta));
+        // The clamp is load-bearing: at the poles `tan(phi)` is a huge
+        // finite value (libm), so `cos_h0` saturates to ∓1 and `h0` resolves
+        // to 0 (polar night) or π (polar day) — the physically correct
+        // limit, with no pole special-casing needed.
+        let cos_h0 = (-math::tan(phi) * math::tan(delta)).clamp(-1.0, 1.0);
+        let h0 = math::acos(cos_h0);
+        // Daily-mean insolation geometric factor.
+        let f_k = (1.0 / std::f64::consts::PI)
+            * (h0 * math::sin(phi) * math::sin(delta)
+                + math::cos(phi) * math::cos(delta) * math::sin(h0));
+        sum += f_k;
+    }
+    let geom = sum / (N as f64);
+    insolation_scalar * geom
+}
+
+/// The per-cell substrate field for a built world's terrain/climate/sky — the
+/// four environmental readings The Niche's habitat model scores each
+/// species' condition niche against. Pure: draws nothing from the seed, only
+/// the world's already-committed terrain/climate/sky.
+/// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar)
+pub fn substrate_field(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    obliquity_deg: f64,
+    insolation_scalar: f64,
+) -> hornvale_kernel::CellMap<Substrate> {
+    hornvale_kernel::CellMap::from_fn(geo, |cell| Substrate {
+        temperature_c: climate.mean_temperature_at(cell).get(),
+        moisture: climate.moisture_at(cell),
+        insolation: annual_mean_insolation(
+            geo.coord(cell).latitude,
+            obliquity_deg,
+            insolation_scalar,
+        ),
+        elevation: terrain.elevation_at(cell).get(),
+    })
 }
 
 /// The deep-time window (1 Myr) and sampling, standard days. These, the era
@@ -4565,5 +4644,27 @@ mod tests {
             &daughters,
         );
         assert_eq!(lexicon_of(&world, "kobold").unwrap(), direct);
+    }
+
+    #[test]
+    fn substrate_field_is_finite_and_insolation_peaks_at_the_equator() {
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let sky = sky_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let (insolation_scalar, obliquity_deg, _regime, _year) = stellar_inputs(&sky);
+        let field = substrate_field(geo, &terrain, &climate, obliquity_deg, insolation_scalar);
+        for cell in geo.cells() {
+            let s = field.get(cell);
+            assert!(s.temperature_c.is_finite());
+            assert!((0.0..=1.0).contains(&s.moisture));
+            assert!(s.insolation.is_finite() && s.insolation >= 0.0);
+            assert!(s.elevation.is_finite());
+        }
+        // Annual-mean insolation is higher at the equator than at a pole.
+        let eq = annual_mean_insolation(0.0, obliquity_deg, insolation_scalar);
+        let pole = annual_mean_insolation(85.0, obliquity_deg, insolation_scalar);
+        assert!(eq > pole, "equator {eq} > pole {pole}");
     }
 }
