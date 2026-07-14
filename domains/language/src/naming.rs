@@ -1517,8 +1517,12 @@ mod tests {
             labiality: f(0),
             vowel_space: (f(2)).max(0.2),
             voicing: f(4),
-            sibilance: f(6),
-            voice_loudness: f(8),
+            // Bits 6/8 are always zero for seed < 64, so the last two
+            // dims reuse overlapping windows — correlated with the
+            // others, but genuinely varying (a coverage sweep needs
+            // variation, not independence).
+            sibilance: f(1),
+            voice_loudness: f(3),
             tonality: 0.0,
             exotic: ExoticSeg::None,
         }
