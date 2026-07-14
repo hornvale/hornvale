@@ -310,6 +310,44 @@ pub fn cave_proneness(buf: &MaterialBuffer, drainage: f64) -> f64 {
     (buf.carbonate * buf.porosity * (0.85 + 0.15 * wetting)).clamp(0.0, 1.0)
 }
 
+/// Induration/hardness at a cell, `[0,1]`: 0 soft (shale/soil) → 1 hard
+/// (quartzite/gneiss). The Sculpting/Ground seam (spec §4): pulled out of
+/// `assemble_material` as a standalone pre-elevation function so the globe
+/// can compute it before `generate_elevation` runs, ahead of any elevation
+/// carve that later wants to read hardness. Exact expressions mirror
+/// `assemble_material`'s `grain`/`metamorphic_grade`/`induration` locals —
+/// this function and that buffer axis must never diverge.
+///
+/// Total at the extremes (spec §4): defined for the full `[0,1]` input
+/// range; the gated metaphysics overlay may inject sentinel values later
+/// without a formula change.
+/// type-audit: bare-ok(ratio: return), bare-ok(ratio: crust_age), bare-ok(flag: continental), bare-ok(count: boundary_hops)
+pub fn induration_at(
+    crust_age: f64,
+    continental: bool,
+    boundary_kind: Option<BoundaryKind>,
+    boundary_hops: Option<u32>,
+) -> f64 {
+    // Old cratons are more evolved/coarse; young crust finer.
+    let grain = if continental {
+        0.4 + 0.5 * crust_age
+    } else {
+        0.2
+    };
+    // Boundary influence.
+    let near_orogen = matches!(
+        boundary_kind,
+        Some(BoundaryKind::ContinentalCollision) | Some(BoundaryKind::CoastalRange)
+    ) || boundary_hops.is_some_and(|h| h <= OROGEN_REACH);
+    let metamorphic_grade = if continental && near_orogen {
+        (1.0 - boundary_hops.unwrap_or(OROGEN_REACH) as f64 / OROGEN_REACH as f64).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    // Induration: metamorphics/old plutons hard; young/soft sediments low.
+    (0.35 + 0.4 * metamorphic_grade + 0.2 * grain).clamp(0.0, 1.0)
+}
+
 /// Assemble the material buffer over the canonical grid (spec §2). Pointwise
 /// axes derive from crust age/thickness and plate motion; grid-bound terms
 /// (metamorphic grade near boundaries, soil depth from slope/drainage) use
@@ -363,8 +401,10 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
             0.05
         };
 
-        // Induration: metamorphics/old plutons hard; young/soft sediments low.
-        let induration = (0.35 + 0.4 * metamorphic_grade + 0.2 * grain).clamp(0.0, 1.0);
+        // Induration: same pre-elevation function the globe computes ahead
+        // of elevation (the Sculpting/Ground seam) — kept identical here so
+        // the buffer's axis and the globe's standalone field never diverge.
+        let induration = induration_at(age, continental, boundary.map(|b| b.kind), hops);
         // Porosity: high in carbonate (karst) and young oceanic basalt, low in shale/gneiss.
         let porosity = (0.5 * carbonate + 0.3 * (1.0 - metamorphic_grade)).clamp(0.0, 1.0);
 
@@ -392,7 +432,8 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
 
 /// Active if the plate's surface motion at the cell points *outward* (leading
 /// edge), passive if inward (trailing), Interior if neither dominates.
-fn margin_polarity(
+/// `pub(crate)`: the carve (Sculpting, later task) reads this directly.
+pub(crate) fn margin_polarity(
     geo: &Geosphere,
     globe: &TectonicGlobe,
     cell: CellId,

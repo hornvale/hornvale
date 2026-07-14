@@ -11,7 +11,7 @@ use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed};
 
 /// A generated tectonic globe over the shared Geosphere. Recomputed from
 /// the seed on demand; never serialized.
-/// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust), bare-ok(ratio: crust_age), bare-ok(count: boundary_distance)
+/// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust), bare-ok(ratio: crust_age), bare-ok(count: boundary_distance), bare-ok(ratio: induration)
 #[derive(Debug, Clone, PartialEq)]
 pub struct TectonicGlobe {
     /// Plate index per cell (an index into `plates`).
@@ -64,6 +64,14 @@ pub struct TectonicGlobe {
     /// cell, with that boundary attributed. Recomputed at genesis, never
     /// serialized. `None` = no reachable same-plate boundary.
     pub boundary_distance: CellMap<Option<(u32, CellId)>>,
+    /// Induration/hardness per cell, `[0,1]` (the Sculpting/Ground seam,
+    /// spec §4). Computed before elevation from crust age,
+    /// continental-vs-oceanic, and boundary proximity — a pure function, no
+    /// new draws — so a later elevation carve can read hardness before it
+    /// runs. Agrees with `lithology`'s `induration` axis everywhere (see
+    /// `induration_field_matches_the_assembled_buffer`); recomputed at
+    /// genesis, never serialized.
+    pub induration: CellMap<f64>,
     /// The material buffer per cell (The Ground, spec §2). Recomputed at
     /// genesis, never serialized.
     pub lithology: CellMap<crate::lithology::MaterialBuffer>,
@@ -139,6 +147,20 @@ pub fn generate(
     let plate_of = plates::assign_plates(geosphere, terrain_seed, &plate_list);
     let boundary_map = boundaries::boundary_field(geosphere, &plate_of, &plate_list, &continental);
     let distances = boundaries::boundary_distance(geosphere, &plate_of, &boundary_map);
+    // Induration (the Sculpting/Ground seam, spec §4): a pure function of
+    // crust age, continental-vs-oceanic, and boundary proximity, computed
+    // here — before elevation — so a later carve pass can read hardness.
+    // `assemble_material` (below) calls the same `induration_at` function
+    // over the fully-assembled globe; the two must always agree (see
+    // `induration_field_matches_the_assembled_buffer`).
+    let induration_map = CellMap::from_fn(geosphere, |c| {
+        crate::lithology::induration_at(
+            *crust_age_map.get(c),
+            *continental.get(c),
+            boundary_map.get(c).map(|b| b.kind),
+            distances.get(c).map(|(hops, _)| hops),
+        )
+    });
     let elevation_map = elevation::generate_elevation(
         terrain_seed,
         geosphere,
@@ -201,6 +223,7 @@ pub fn generate(
         terranes,
         microcontinents: micro,
         boundary_distance: distances,
+        induration: induration_map,
         lithology: placeholder_lithology,
         lithology_seed,
     };
@@ -249,6 +272,19 @@ mod tests {
     use super::*;
     use crate::pins::{GenesisError, TerrainPins};
     use hornvale_kernel::{Geosphere, Seed};
+
+    #[test]
+    fn induration_field_matches_the_assembled_buffer() {
+        let geo = Geosphere::new(4);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        for cell in geo.cells() {
+            assert_eq!(
+                *outcome.globe.induration.get(cell),
+                outcome.globe.lithology.get(cell).induration,
+                "seam and buffer disagree at {cell:?}"
+            );
+        }
+    }
 
     #[test]
     fn genesis_is_deterministic() {

@@ -142,6 +142,14 @@ impl GeneratedTerrain {
         self.globe.boundary_distance.get(id).map(|(hops, _)| hops)
     }
 
+    /// Induration/hardness at a cell, `[0,1]` (the Sculpting/Ground seam,
+    /// spec §4). Computed before elevation; agrees with `material_at`'s
+    /// `induration` axis everywhere.
+    /// type-audit: bare-ok(ratio)
+    pub fn induration_at(&self, id: CellId) -> f64 {
+        *self.globe.induration.get(id)
+    }
+
     /// The material buffer at a cell (The Ground, spec §2).
     pub fn material_at(&self, id: CellId) -> crate::lithology::MaterialBuffer {
         *self.globe.lithology.get(id)
