@@ -1,5 +1,8 @@
 # A Possession — seed 42, day 0
 
+*(This transcript is frozen. [The live pane](./possession-live.md) derives
+the same world in your browser — same crates, same bytes.)*
+
 ```text
 [room 634912780, day 0]
 You stand in temperate rainforest — a fern-choked draw shaded dry in a hollow — in the lands of Zhxokngaknged. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
