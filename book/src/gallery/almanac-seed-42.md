@@ -285,6 +285,11 @@ Some 14% of the surface is habitable — land with water and a tolerable season.
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
+## The Ground
+
+The land is mostly shale, its soils mostly leptosol.
+Notable: karst country, salt flats.
+
 ## The People
 
 The land holds 263 settlement(s).

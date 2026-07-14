@@ -239,6 +239,11 @@ Some 11% of the surface is habitable — land with water and a tolerable season.
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
+## The Ground
+
+The land is mostly shale, its soils mostly leptosol.
+Notable: karst country, salt flats.
+
 ## Deep Time
 
 The frost retreated: at the glacial maximum (day -243500000), ice advanced over 39% of the land.

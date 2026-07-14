@@ -75,6 +75,7 @@
 - [The Casement](./chronicle/the-casement.md)
 - [The Night Sky Instrument](./chronicle/the-night-sky-instrument.md)
 - [Lab Performance](./chronicle/lab-performance.md)
+- [The Ground](./chronicle/the-ground.md)
 
 # The Gallery
 
