@@ -18,6 +18,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: clients/vessel/wasm
+      - name: Build the Casement wasm (deploy-built, never committed — decision 0047)
+        run: make wasm-vessel
       - name: Install mdBook
         uses: peaceiris/actions-mdbook@v2
         with:

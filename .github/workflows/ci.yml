@@ -106,3 +106,42 @@ jobs:
         run: |
           deno task build
           git diff --exit-code ../../book/src/gallery/orrery.js
+
+  vessel:
+    name: Vessel client (the Casement)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.2"
+      - name: Format
+        run: deno fmt --check
+        working-directory: clients/vessel
+      - name: Lint
+        run: deno lint
+        working-directory: clients/vessel
+      - name: Typecheck
+        run: deno task check
+        working-directory: clients/vessel
+      - name: Test
+        run: deno task test
+        working-directory: clients/vessel
+      - name: Bundles are current (freshness check)
+        run: |
+          deno task build
+          git diff --exit-code ../../book/src/gallery/vessel.js ../../book/src/gallery/vessel-worker.js
+        working-directory: clients/vessel
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: clients/vessel/wasm
+      - name: Wasm format + lint
+        run: |
+          cargo fmt --check --manifest-path clients/vessel/wasm/Cargo.toml
+          rustup target add wasm32-unknown-unknown
+          cargo clippy --manifest-path clients/vessel/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+      - name: Build the wasm
+        run: make wasm-vessel
+      - name: Byte-identity smoke (wasm opening == committed native transcript)
+        run: node clients/vessel/wasm/drive.mjs book/src/gallery/vessel.wasm
