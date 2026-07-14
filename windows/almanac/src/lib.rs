@@ -64,7 +64,7 @@ pub struct PantheonBlock {
 /// brightest neighbors, and one line per wandering sibling planet. `None`
 /// for constant-sky worlds, which have no neighborhood to describe (see
 /// [`AlmanacContext::night_sky_lines`]).
-/// type-audit: bare-ok(prose: pole_star), bare-ok(prose: heliacal), bare-ok(prose: wanderers), bare-ok(prose: figures)
+/// type-audit: bare-ok(prose: pole_star), bare-ok(prose: heliacal), bare-ok(prose: wanderers), bare-ok(prose: figures), bare-ok(prose: alignment)
 pub struct NightSkyLines {
     /// The pole-star sentence, if one exists at genesis.
     pub pole_star: Option<String>,
@@ -76,6 +76,10 @@ pub struct NightSkyLines {
     /// A single figure-count/ecliptic summary line (night-sky stage 3);
     /// empty for skies with no figures at all.
     pub figures: Vec<String>,
+    /// The flagship settlement's founding sightline and its drift rate
+    /// (The Long Count), when the world has both a sunrise and a
+    /// settlement.
+    pub alignment: Option<String>,
 }
 
 /// Everything the almanac needs, gathered by the composition root.
@@ -160,6 +164,10 @@ pub fn render(ctx: &AlmanacContext) -> String {
         }
         for line in &lines.figures {
             doc.push_str(&format!("{line}\n\n"));
+        }
+        if let Some(alignment) = &lines.alignment {
+            doc.push_str(alignment);
+            doc.push('\n');
         }
     }
 
@@ -640,6 +648,7 @@ mod tests {
                     .to_string(),
             ],
             figures: vec!["The sky holds 4 figures; 1 stands on the sun's road.".to_string()],
+            alignment: None,
         });
         let doc = render(&ctx);
         assert!(doc.contains("A blue-white star stands 3.2° from the north celestial pole"));
@@ -673,6 +682,7 @@ mod tests {
                         .to_string(),
                 ],
                 figures: vec!["The sky holds 4 figures; 1 stands on the sun's road.".to_string()],
+                alignment: None,
             }),
             calendar_lines: vec!["The year is 365.2 local days (365.2 standard days).".to_string()],
             ..sample_context()
@@ -708,5 +718,22 @@ mod tests {
             figures_pos < calendar_pos,
             "the night instrument stays inside The Sky, before The Calendar"
         );
+    }
+
+    #[test]
+    fn the_alignment_line_renders_under_the_sky() {
+        let mut ctx = sample_context();
+        ctx.night_sky_lines = Some(NightSkyLines {
+            pole_star: None,
+            heliacal: vec![],
+            wanderers: vec![],
+            figures: vec![],
+            alignment: Some(
+                "From the first settlement, the midsummer sun rises at azimuth 63.4°; the sightline drifts 0.21° in a thousand years.".to_string(),
+            ),
+        });
+        let doc = render(&ctx);
+        let sky = doc.split("## The Calendar").next().unwrap();
+        assert!(sky.contains("the sightline drifts"));
     }
 }

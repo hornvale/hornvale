@@ -2574,11 +2574,28 @@ pub fn night_sky_lines(
         )]
     };
 
+    // The founding sightline and its drift rate (The Long Count): the same
+    // flagship vantage latitude as the heliacal/figure lines above, surfaced
+    // directly from the calendar rather than re-derived from the
+    // worldgen-committed `founding-solstice-azimuth-degrees` fact (the
+    // `alignments` stage's own concern).
+    let alignment = calendar
+        .solstice_rise_azimuth_at(latitude, t)
+        .and_then(|az| {
+            let kyr = hornvale_astronomy::StdDays::new(t.get() + 1000.0 * 365.25).unwrap();
+            let drift = calendar.alignment_drift_deg(latitude, t, kyr)?;
+            Some(format!(
+                "From the first settlement, the midsummer sun rises at azimuth {az:.1}°; the sightline drifts {:.2}° in a thousand years.",
+                drift.abs()
+            ))
+        });
+
     Ok(Some(hornvale_almanac::NightSkyLines {
         pole_star,
         heliacal,
         wanderers,
         figures: figure_lines,
+        alignment,
     }))
 }
 
@@ -2737,6 +2754,17 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
             })
         })
         .collect();
+    // The deep-time lines, plus the secular-brightening sentence (The Long
+    // Count) for a generated sky only — constant-sky worlds have no star to
+    // brighten.
+    let mut deep_time_lines = deep_time_lines(world)?;
+    if let Sky::Generated(sky) = sky_of(world)? {
+        let system = sky.system();
+        deep_time_lines.push(format!(
+            "The sun brightens by {:.0} parts in a hundred over a gigayear — the slow fire under every deeper clock.",
+            hornvale_astronomy::brightening_per_gyr(&system.star) * 100.0
+        ));
+    }
     Ok(AlmanacContext {
         seed: world.seed.0,
         sky: sky_report(world, WorldTime { day: 0.0 })?,
@@ -2745,7 +2773,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         places: hornvale_terrain::places(world),
         land_lines: land_lines(world)?,
         biome_lines: biome_lines(world)?,
-        deep_time_lines: deep_time_lines(world)?,
+        deep_time_lines,
         peoples,
         pantheons: {
             let mut blocks = Vec::new();
@@ -3132,6 +3160,21 @@ mod tests {
         assert!(!ctx.peoples.is_empty());
         assert!(!ctx.pantheons.is_empty());
         assert!(!ctx.phenomena.is_empty());
+    }
+
+    /// The Long Count: a generated world's almanac context carries the
+    /// founding sightline under The Sky and the brightening deep-time line
+    /// under Deep Time.
+    #[test]
+    fn almanac_context_carries_sightline_and_slow_fire() {
+        let world = generated(42);
+        let ctx = almanac_context(&world).unwrap();
+        let lines = ctx.night_sky_lines.expect("generated sky");
+        assert!(lines.alignment.is_some());
+        assert!(
+            ctx.deep_time_lines.iter().any(|l| l.contains("slow fire")),
+            "the brightening line reaches Deep Time"
+        );
     }
 
     #[test]
