@@ -170,6 +170,7 @@ pub fn generate(
         &distances,
         &crust_map,
         &continental,
+        &induration_map,
     );
     let sea_level = elevation::derive_sea_level(&elevation_map, effective_ocean);
     let unrest =

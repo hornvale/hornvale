@@ -69,3 +69,10 @@ pub const MICROCONTINENTS: &str = "microcontinents";
 /// no draw-order/save-format contract (see `elevation::boundary_profile_m`).
 /// type-audit: bare-ok(identifier-text)
 pub const ARC_GATE: &str = "arc-gate";
+/// fBm relief noise (Sculpting, spec §3): zero-mean multi-octave detail
+/// added in `assemble_elevation`, amplitude scaled by induration and belt
+/// proximity (see `elevation::relief_scale`). Hash-noise only — never
+/// consumed as a `Stream`, so it carries no draw-order/save-format
+/// contract, mirroring `ARC_GATE`.
+/// type-audit: bare-ok(identifier-text)
+pub const RELIEF: &str = "relief";

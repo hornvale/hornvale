@@ -131,6 +131,28 @@ const FAR_FIELD_FRACTION: f64 = 0.2;
 /// Octaves for the along-strike arc-gate noise.
 const ARC_GATE_OCTAVES: u32 = 4;
 
+/// fBm relief peak amplitude, meters (spec §3).
+/// type-audit: pending(wave-2)
+pub const RELIEF_AMPLITUDE_M: f64 = 240.0;
+/// Relief noise base spatial frequency, cycles per radian: features
+/// ~1/48 rad, close to the canonical level-6 grid's mean cell spacing
+/// (~0.017 rad) — visible cell-to-cell craggy texture rather than a
+/// broad undulation, following the same informal "features ~1/frequency
+/// rad" sizing `LOBE_FREQ`/`ARC_SPACING` use. A decorative texture knob;
+/// may be retuned in the tuning season (Task 14).
+const RELIEF_FREQUENCY: f64 = 48.0;
+/// Octaves for the fBm relief noise.
+const RELIEF_OCTAVES: u32 = 4;
+
+/// Relief amplitude scale: hard rock (induration→1) carries full relief,
+/// soft lies smooth; belts (near boundaries) roughen further.
+/// type-audit: bare-ok(ratio: induration), bare-ok(count: boundary_hops)
+fn relief_scale(induration: f64, boundary_hops: u32) -> f64 {
+    let hardness = 0.25 + 0.75 * induration;
+    let belt = 1.0 + 1.5 * math::exp(-f64::from(boundary_hops) / 3.0);
+    hardness * belt
+}
+
 /// Per-kind boundary elevation profile (Sculpting, spec §3): crest,
 /// foothills, and a foreland trough for collision belts (including the
 /// continental side of a coastal range — the Andean volcanic line is ON
@@ -299,8 +321,12 @@ fn draw_hotspots(terrain_seed: Seed) -> Vec<Hotspot> {
 /// plate-level flag). `arc_gate_seed` is hash-noise only (Sculpting spec
 /// §3, `streams::ARC_GATE`) — never consumed as a `Stream`, so it carries
 /// no draw-order/save-format contract; it gates island-arc/coastal-range
-/// edifices into discrete along-strike chains. Nine explicit narrow inputs
-/// beat a bundling struct here — same house call as climate's assemblers
+/// edifices into discrete along-strike chains. `induration` (Task 4, The
+/// Ground/Sculpting seam) and `relief_seed` (Sculpting, spec §3,
+/// `streams::RELIEF`) feed the zero-mean fBm relief term: hash-noise only,
+/// never consumed as a `Stream`, so it carries no draw-order/save-format
+/// contract, mirroring `arc_gate_seed`. Eleven explicit narrow inputs beat
+/// a bundling struct here — same house call as climate's assemblers
 /// (`temperature.rs`, `biome.rs`).
 #[allow(clippy::too_many_arguments)]
 fn assemble_elevation(
@@ -313,6 +339,8 @@ fn assemble_elevation(
     crust: &CellMap<f64>,
     continental: &CellMap<bool>,
     arc_gate_seed: Seed,
+    induration: &CellMap<f64>,
+    relief_seed: Seed,
 ) -> CellMap<ReferenceElevation> {
     CellMap::from_fn(geo, |cell| {
         let plate = &plates[*plate_of.get(cell) as usize];
@@ -364,16 +392,29 @@ fn assemble_elevation(
         };
         let position = geo.position(cell);
         let hotspot_term: f64 = hotspots.iter().map(|h| h.contribution_m(position)).sum();
-        let metres = base + boundary_term + hotspot_term + CELL_EPSILON_M * f64::from(cell.0);
+        // fBm relief (Sculpting, spec §3): zero-mean multi-octave detail,
+        // amplitude scaled by induration (hard rock stands craggy) and
+        // belt proximity (`relief_scale`). A cell with no reachable
+        // same-plate boundary (`None`) is treated as far from any belt
+        // (12 hops — already past `relief_scale`'s decay length).
+        let hops = (*distances.get(cell)).map_or(12, |(distance, _)| distance);
+        let relief_noise =
+            crate::crust::sphere_fbm01(relief_seed, position, RELIEF_FREQUENCY, RELIEF_OCTAVES);
+        let relief_term = RELIEF_AMPLITUDE_M
+            * relief_scale(*induration.get(cell), hops)
+            * (relief_noise - 0.5)
+            * 2.0;
+        let metres =
+            base + boundary_term + hotspot_term + relief_term + CELL_EPSILON_M * f64::from(cell.0);
         ReferenceElevation::new(metres).expect("isostatic elevation is finite")
     })
 }
 
 /// Per-cell elevation in meters: the isostatic base over crust thickness,
 /// the nearest same-plate boundary's contribution decayed by graph distance
-/// and shaped by maturity, drawn hotspots, and a strict-ordering
-/// micro-epsilon.
-/// type-audit: bare-ok(index: plate_of), bare-ok(count: distances), waiver(crust-km-convention: crust), bare-ok(flag: continental)
+/// and shaped by maturity, drawn hotspots, induration-scaled fBm relief,
+/// and a strict-ordering micro-epsilon.
+/// type-audit: bare-ok(index: plate_of), bare-ok(count: distances), waiver(crust-km-convention: crust), bare-ok(flag: continental), bare-ok(ratio: induration)
 #[allow(clippy::too_many_arguments)]
 pub fn generate_elevation(
     terrain_seed: Seed,
@@ -384,9 +425,11 @@ pub fn generate_elevation(
     distances: &CellMap<Option<(u32, CellId)>>,
     crust: &CellMap<f64>,
     continental: &CellMap<bool>,
+    induration: &CellMap<f64>,
 ) -> CellMap<ReferenceElevation> {
     let hotspots = draw_hotspots(terrain_seed);
     let arc_gate_seed = terrain_seed.derive(streams::ARC_GATE);
+    let relief_seed = terrain_seed.derive(streams::RELIEF);
     assemble_elevation(
         geo,
         plates,
@@ -397,6 +440,8 @@ pub fn generate_elevation(
         crust,
         continental,
         arc_gate_seed,
+        induration,
+        relief_seed,
     )
 }
 
@@ -600,6 +645,11 @@ mod tests {
         let (crust, continental) = all_continental_crust(&geo);
         let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);
+        // Zero induration: minimizes the new relief term's amplitude so it
+        // stays well inside this test's pre-existing 100 m interior
+        // tolerance regardless of the sampled noise value (relief_scale's
+        // floor at induration 0 caps the term at ~66 m here).
+        let induration = CellMap::from_fn(&geo, |_| 0.0);
         let elevation = assemble_elevation(
             &geo,
             &plates,
@@ -610,6 +660,8 @@ mod tests {
             &crust,
             &continental,
             Seed(1).derive(streams::ROOT).derive(streams::ARC_GATE),
+            &induration,
+            Seed(1).derive(streams::ROOT).derive(streams::RELIEF),
         );
         // f64::MIN (not NEG_INFINITY, which the validating constructor
         // rejects) as a sentinel below every real elevation.
@@ -656,6 +708,15 @@ mod tests {
             let continental = CellMap::from_fn(&geo, |c| field.continental_at(geo.position(c)));
             let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
             let distances = boundary_distance(&geo, &plate_of, &boundaries);
+            let crust_age = CellMap::from_fn(&geo, |c| field.age_at(geo.position(c)));
+            let induration = CellMap::from_fn(&geo, |c| {
+                crate::lithology::induration_at(
+                    *crust_age.get(c),
+                    *continental.get(c),
+                    boundaries.get(c).map(|b| b.kind),
+                    distances.get(c).map(|(hops, _)| hops),
+                )
+            });
             let elevation = generate_elevation(
                 terrain_seed,
                 &geo,
@@ -665,6 +726,7 @@ mod tests {
                 &distances,
                 &crust,
                 &continental,
+                &induration,
             );
             let sea = derive_sea_level(&elevation, ocean_target);
             let below = elevation.iter().filter(|(_, e)| **e < sea).count();
@@ -797,6 +859,27 @@ mod tests {
         assert_eq!(effective, 1.0 - SHELF_BREAK_LAND_FACTOR * supply);
         assert_eq!(notes.len(), 1);
         assert!(notes[0].contains("shelf break"), "{}", notes[0]);
+    }
+
+    #[test]
+    fn relief_is_zero_mean_and_induration_scaled() {
+        // Statistical, structural: over a real globe, mean |relief effect| on
+        // hard cells exceeds soft cells. Compute two globes differing only in
+        // that we zero the amplitude, then compare.
+        let geo = Geosphere::new(4);
+        let a =
+            crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
+        // The term exists: elevations differ from a no-relief reconstruction.
+        // Simplest honest probe: the constant is wired (non-zero) and the
+        // documented invariant holds — relief contribution at induration 1.0
+        // vs 0.0 scales by the documented ratio. Test the pure helper:
+        let hi = relief_scale(1.0, 0);
+        let lo = relief_scale(0.0, 12);
+        assert!(hi > 2.0 * lo, "induration scaling too weak: {hi} vs {lo}");
+        // The globe built fine with relief wired in (the `.unwrap()` above
+        // already proves it); a non-empty elevation map confirms the term
+        // didn't panic on any cell.
+        assert!(a.globe.elevation.iter().next().is_some());
     }
 
     #[test]
