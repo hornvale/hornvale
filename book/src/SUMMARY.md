@@ -85,7 +85,6 @@
 - [The Almanac of Seed 42](./gallery/almanac.md)
 - [The Sky of Seed 42](./gallery/the-sky.md)
 - [The Night Sky of Seed 42](./gallery/star-chart-seed-42.md)
-- [The Orrery of Seed 42](./gallery/orrery-seed-42.md)
 - [The Land of Seed 42](./gallery/elevation-seed-42.md)
 - [The Biomes of Seed 42](./gallery/biome-seed-42.md)
 - [The Biomes of Seed 42 (tidally locked)](./gallery/biome-seed-42-locked.md)
