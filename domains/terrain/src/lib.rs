@@ -19,7 +19,9 @@ pub mod shape;
 pub mod streams;
 
 pub use boundaries::{BoundaryKind, CellBoundary};
-pub use carve::{CarveDelta, CarveParams, apply_repose, carve_incision, erodibility};
+pub use carve::{
+    CarveDelta, CarveParams, apply_repose, carve_incision, erodibility, route_sediment,
+};
 pub use globe::{GenesisOutcome, GlobeSummary, TectonicGlobe, generate, summarize};
 pub use lithology::{
     Appearance, Basement, Fertility, Hydro, MarginPolarity, MaterialBuffer, RockClass, SoilDepth,

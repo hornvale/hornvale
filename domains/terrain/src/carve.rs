@@ -272,6 +272,118 @@ pub fn apply_repose(
     CellMap::from_fn(geo, |c| total[c.0 as usize])
 }
 
+/// Route eroded volume down the drainage tree: deposit on flats, fill
+/// endorheic sinks toward playa floors, and export the rest at each
+/// coastal outlet ("mouth"). Land cells only, processed in **descending
+/// elevation order** (`total_cmp`, `CellId` ascending tiebreak) — the
+/// downhill forest guarantees every upstream cell is processed before its
+/// downstream target, so a single forward sweep suffices (no iteration to
+/// convergence).
+///
+/// Per cell: `flux = -incision[cell] + inflow` (inflow already accumulated
+/// from upstream cells processed earlier in the sweep). If the cell's own
+/// steepest neighbor drop is flatter than `params.deposit_slope_m`, a
+/// `params.deposit_fraction` share of `flux` deposits here first. The
+/// remainder then follows `downhill`: onto a land cell, it becomes that
+/// cell's inflow; onto the ocean, the *source* cell (the coastal outlet) is
+/// a river mouth and the flux is exported; with no downhill target at all
+/// (a local minimum), the remainder deposits in full — capped, for an
+/// endorheic sink, at raising the sink to its lowest rim neighbor minus 1 m
+/// (never overtopping the rim); any surplus above that cap is booked as
+/// `ocean_loss` (the playa's aquifer — books stay balanced).
+///
+/// Returns `(deposit_m, mouths, ocean_loss)`: `deposit_m` is the
+/// non-negative floodplain/playa deposition thickness; `mouths` lists each
+/// river-mouth land cell with its exported volume, sorted by volume
+/// descending (`CellId` ascending tiebreak); `ocean_loss` is the playa
+/// overflow only — the marine wedge (Task 9) adds to it separately.
+/// type-audit: pending(wave-2: incision), bare-ok(flag: endorheic), pending(wave-2: return)
+#[allow(clippy::too_many_arguments)]
+pub fn route_sediment(
+    geo: &Geosphere,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+    incision: &CellMap<f64>,
+    downhill: &[Option<CellId>],
+    endorheic: &CellMap<bool>,
+    params: &CarveParams,
+) -> (CellMap<f64>, Vec<(CellId, f64)>, f64) {
+    let n = geo.cell_count();
+    let is_land = |c: CellId| *elevation.get(c) >= sea_level;
+
+    // Descending elevation, CellId ascending tiebreak — upstream before
+    // downstream in a single forward pass.
+    let mut order: Vec<CellId> = geo.cells().filter(|c| is_land(*c)).collect();
+    order.sort_by(|a, b| {
+        elevation
+            .get(*b)
+            .total_cmp(*elevation.get(*a))
+            .then(a.0.cmp(&b.0))
+    });
+
+    let mut flux = vec![0.0_f64; n];
+    for &c in &order {
+        flux[c.0 as usize] = -*incision.get(c);
+    }
+
+    let mut deposit = vec![0.0_f64; n];
+    let mut mouths_acc = vec![0.0_f64; n];
+    let mut ocean_loss = 0.0_f64;
+
+    for &c in &order {
+        let idx = c.0 as usize;
+        let here = elevation.get(c).get();
+        let drop = geo
+            .neighbors(c)
+            .iter()
+            .map(|nb| here - elevation.get(*nb).get())
+            .fold(0.0_f64, f64::max);
+        if drop < params.deposit_slope_m {
+            let flat_share = params.deposit_fraction * flux[idx];
+            deposit[idx] += flat_share;
+            flux[idx] -= flat_share;
+        }
+        match downhill[idx] {
+            Some(target) if is_land(target) => {
+                flux[target.0 as usize] += flux[idx];
+            }
+            Some(_ocean_target) => {
+                // This cell is the coastal outlet: a river mouth.
+                mouths_acc[idx] += flux[idx];
+            }
+            None => {
+                if *endorheic.get(c) {
+                    // Playa fill: cap at the sink's lowest rim neighbor
+                    // minus 1 m (never overtop); surplus is the aquifer.
+                    let rim = geo
+                        .neighbors(c)
+                        .iter()
+                        .map(|nb| elevation.get(*nb).get())
+                        .fold(f64::INFINITY, f64::min);
+                    let cap = (rim - 1.0 - here).max(0.0);
+                    let take = flux[idx].min(cap);
+                    deposit[idx] += take;
+                    ocean_loss += flux[idx] - take;
+                } else {
+                    // A sea-level-adjacent pit, not marked endorheic:
+                    // deposit all remaining flux, no cap.
+                    deposit[idx] += flux[idx];
+                }
+            }
+        }
+    }
+
+    let deposit_m = CellMap::from_fn(geo, |c| deposit[c.0 as usize]);
+    let mut mouths: Vec<(CellId, f64)> = geo
+        .cells()
+        .filter(|c| mouths_acc[c.0 as usize] > 0.0)
+        .map(|c| (c, mouths_acc[c.0 as usize]))
+        .collect();
+    mouths.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.0.cmp(&b.0.0)));
+
+    (deposit_m, mouths, ocean_loss)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -421,6 +533,59 @@ mod tests {
         for (c, s) in delta.sediment_thickness_m.iter() {
             assert!(*s >= 0.0);
             assert_eq!(*s, repose.get(c).max(0.0));
+        }
+    }
+
+    #[test]
+    fn sediment_books_balance_and_mouths_collect_the_rest() {
+        let geo = Geosphere::new(4);
+        let outcome =
+            crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
+        let g = &outcome.globe;
+        let p = CarveParams::default();
+        let carbonate = CellMap::from_fn(&geo, |c| g.lithology.get(c).carbonate);
+        let incision = carve_incision(
+            &geo,
+            &g.elevation,
+            g.sea_level,
+            &g.drainage,
+            &g.induration,
+            &carbonate,
+            &p,
+        );
+        let downhill = crate::drainage::downhill_targets(&geo, &g.elevation, g.sea_level);
+        let (deposit, mouths, ocean_loss) = route_sediment(
+            &geo,
+            &g.elevation,
+            g.sea_level,
+            &incision,
+            &downhill,
+            &g.endorheic,
+            &p,
+        );
+        let eroded: f64 = incision.iter().map(|(_, d)| -*d).sum();
+        let deposited: f64 = deposit.iter().map(|(_, d)| *d).sum();
+        let exported: f64 = mouths.iter().map(|(_, v)| v).sum::<f64>();
+        assert!(
+            (eroded - (deposited + exported + ocean_loss)).abs() < 1e-6 * eroded.max(1.0),
+            "books: eroded {eroded} vs deposited {deposited} + exported {exported} + loss {ocean_loss}"
+        );
+        for (_, d) in deposit.iter() {
+            assert!(*d >= 0.0);
+        }
+        // Mouths sorted by exported volume descending, CellId ascending tiebreak.
+        for w in mouths.windows(2) {
+            assert!(w[0].1 > w[1].1 || (w[0].1 == w[1].1 && w[0].0 < w[1].0));
+        }
+        // Endorheic sinks received deposit (playas) on any world that has them.
+        if g.endorheic.iter().any(|(_, e)| *e) {
+            assert!(
+                g.endorheic
+                    .iter()
+                    .filter(|(_, e)| **e)
+                    .any(|(c, _)| *deposit.get(c) > 0.0),
+                "no playa fill"
+            );
         }
     }
 }

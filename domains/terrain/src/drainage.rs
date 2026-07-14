@@ -8,25 +8,21 @@
 
 use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
 
-/// Compute the drainage (flow-accumulation) field and the endorheic mask.
-/// Returns `(drainage, endorheic)`: `drainage[c]` counts the land cells
-/// upstream of and including `c` (0 on ocean cells); `endorheic[c]` is true
-/// when `c`'s downhill path ends at an interior minimum, never reaching sea.
+/// Downhill target per land cell: the strictly-lowest neighbor (elevations
+/// are strictly ordered by C3's per-cell epsilon, so there is no tie). A
+/// cell with no lower neighbor is a local minimum (a sink). `None` = ocean
+/// or local minimum (no outflow). The single owner of this computation:
+/// [`drainage_field`] and the carve's sediment router (`carve::route_sediment`)
+/// both consume it rather than re-deriving it.
 /// type-audit: bare-ok(count: return)
-pub fn drainage_field(
+pub(crate) fn downhill_targets(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-) -> (CellMap<f64>, CellMap<bool>) {
+) -> Vec<Option<CellId>> {
     let n = geo.cell_count();
     let is_land = |c: CellId| *elevation.get(c) >= sea_level;
-
-    // Downhill target per land cell: the strictly-lowest neighbor (elevations
-    // are strictly ordered by C3's per-cell epsilon, so there is no tie). A
-    // cell with no lower neighbor is a local minimum (a sink). `None` = ocean
-    // or local minimum (no outflow).
     let mut downhill: Vec<Option<CellId>> = vec![None; n];
-    let mut reaches_sea = vec![false; n];
     for c in geo.cells() {
         if !is_land(c) {
             continue;
@@ -43,6 +39,24 @@ pub fn drainage_field(
         }
         downhill[c.0 as usize] = best;
     }
+    downhill
+}
+
+/// Compute the drainage (flow-accumulation) field and the endorheic mask.
+/// Returns `(drainage, endorheic)`: `drainage[c]` counts the land cells
+/// upstream of and including `c` (0 on ocean cells); `endorheic[c]` is true
+/// when `c`'s downhill path ends at an interior minimum, never reaching sea.
+/// type-audit: bare-ok(count: return)
+pub fn drainage_field(
+    geo: &Geosphere,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+) -> (CellMap<f64>, CellMap<bool>) {
+    let n = geo.cell_count();
+    let is_land = |c: CellId| *elevation.get(c) >= sea_level;
+
+    let downhill = downhill_targets(geo, elevation, sea_level);
+    let mut reaches_sea = vec![false; n];
 
     // A land cell reaches the sea iff following downhill lands on an ocean
     // cell. Trace each land cell's path (bounded by n) once, memoizing.
