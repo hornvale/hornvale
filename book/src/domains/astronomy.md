@@ -171,8 +171,10 @@ swinging through a morning-star/evening-star cycle bounded by their
 maximum elongation, outer ones looping retrograde near opposition. And the
 fixed background itself gained texture and structure: a derived starfield
 (100–300 faint field stars, dim-heavy, never committed — pure texture) sits
-behind the notable neighbors, and `figures.rs` clusters the notable
-neighbors themselves by angular separation into named asterisms, flagging
+behind the notable neighbors, and `figures.rs` clusters the unified
+catalog — notable neighbors plus field stars at or brighter than a declared
+magnitude floor — by angular separation into unnamed figures (structural
+description only; naming is deferred to cultures, a spec non-goal), flagging
 the ones straddling the ecliptic band as the zodiac for one boolean — all
 three, like the starfield, computed on demand and committed nowhere.
 

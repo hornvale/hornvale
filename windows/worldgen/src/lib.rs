@@ -9,6 +9,7 @@ use hornvale_almanac::AlmanacContext;
 use hornvale_astronomy::{
     CELESTIAL_BODY, ConstantSun, GeneratedSky, GenesisError, NIGHT_STAR, SEASONAL_CYCLE, SkyPins,
     SkyReport, facts, figures, generate, parse_pin, pin_strings,
+    streams::ROOT as ASTRONOMY_STREAM_ROOT,
 };
 use hornvale_climate::{
     AMBIENT, ClimateInputs, ClimateReport, GeneratedClimate, RotationRegime, SeafloorFeature,
@@ -2498,16 +2499,24 @@ pub fn night_sky_lines(
     // Figures (night-sky stage 3): a single count/ecliptic summary line,
     // never rendered for a sky with no figures at all. `world.seed` derives
     // the same astronomy seed `system::generate` and the lab metrics use.
-    let astronomy_seed = world.seed.derive("astronomy");
+    let astronomy_seed = world.seed.derive(ASTRONOMY_STREAM_ROOT);
     let figs = figures(astronomy_seed, system);
     let figure_lines = if figs.is_empty() {
         Vec::new()
     } else {
         let ecliptic_count = figs.iter().filter(|f| f.on_ecliptic).count();
+        let figure_word = if figs.len() == 1 { "figure" } else { "figures" };
+        let stand_word = if ecliptic_count == 1 {
+            "stands"
+        } else {
+            "stand"
+        };
         vec![format!(
-            "The sky holds {} figures; {} stand on the sun's road.",
+            "The sky holds {} {}; {} {} on the sun's road.",
             figs.len(),
-            ecliptic_count
+            figure_word,
+            ecliptic_count,
+            stand_word
         )]
     };
 
@@ -3235,9 +3244,10 @@ mod tests {
     }
 
     /// Night-sky stage 3: seed 6's default (unpinned) generation carries
-    /// several figures with at least one on the ecliptic (verified against
-    /// the astronomy-layer sweep), so its almanac line reports both a
-    /// nonzero total and a nonzero ecliptic count.
+    /// several figures with exactly one on the ecliptic (verified against
+    /// the astronomy-layer sweep), so its almanac line reports a nonzero
+    /// total and singular ecliptic-count grammar ("1 stands", not
+    /// "1 stand").
     #[test]
     fn seed_6_generated_default_has_a_figures_summary_line() {
         let world = generated(6);
@@ -3246,7 +3256,7 @@ mod tests {
         let line = &lines.figures[0];
         assert!(line.starts_with("The sky holds "));
         assert!(line.contains("figures;"));
-        assert!(line.contains("stand on the sun's road."));
+        assert!(line.contains("1 stands on the sun's road."));
         assert!(!line.contains("holds 0 figures"));
 
         let ctx = almanac_context(&world).unwrap();

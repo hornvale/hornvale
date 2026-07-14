@@ -40,10 +40,14 @@ brighter twilight than a red dwarf tolerates — and the gap between rising
 and setting is the star's *absence*, the seed of a stellar calendar family
 standing beside the solar and lunar ones.
 
-All three read the same shared `SkyBand` (Day / Twilight / Night, split at
-a fixed depth below the horizon) that the ordinary day/night prose already
-used — one twilight definition, never duplicated, never allowed to drift
-between consumers.
+All three share the same underlying twilight geometry, not always through
+the enum itself: `night_sky_at` and the wandering-star phenomena path read
+`SkyBand` (Day / Twilight / Night, split at a fixed depth below the
+horizon) directly, while `heliacal_events` instead compares solar altitude
+against a class-graded arcus-visionis threshold that sits *inside* that
+same band (a blue giant's threshold is shallower than a red dwarf's, but
+both stay short of the full twilight depth) — one twilight geometry, read
+two ways, never allowed to drift between consumers.
 
 ## The wanderers
 

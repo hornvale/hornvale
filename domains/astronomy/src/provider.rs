@@ -839,6 +839,89 @@ mod tests {
             "expected at least one wandering-star phenomenon across two synodic periods"
         );
     }
+
+    /// Night-sky stage 2, the inner-wanderer branch: seed 42's default pair
+    /// are both outer (no morning/evening-star text, no glare skip), so that
+    /// coverage was silent. Seed 0 with `wanderers: Some(2)` draws an inner
+    /// (rock, `max_elongation_deg` = Some) wanderer at index 0 and an outer
+    /// (giant) one at index 1 — found by a one-off scan over seeds 0..64.
+    /// Scanning latitude 35 across two of the inner wanderer's synodic
+    /// periods must show (a) the morning-star/evening-star Twilight text at
+    /// least once, and (b) the glare skip (elongation < 15°, recomputed
+    /// independently with the same formula the provider uses) hides that
+    /// wanderer's phenomenon on every sample where it applies.
+    #[test]
+    fn an_inner_wanderer_shows_morning_evening_star_text_and_the_glare_skip() {
+        let seed = Seed(0);
+        let pins = SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            wanderers: Some(2),
+            ..SkyPins::default()
+        };
+        let s = GeneratedSky::new(generate(seed, &pins).unwrap());
+        assert_eq!(
+            s.system().wanderers.len(),
+            2,
+            "seed 0 with wanderers: Some(2) should draw exactly two"
+        );
+        let inner_index = s
+            .system()
+            .wanderers
+            .iter()
+            .position(|w| w.max_elongation_deg.is_some())
+            .expect("seed 0 must draw an inner wanderer for this test to mean anything");
+        let inner = &s.system().wanderers[inner_index];
+        let e_max = inner.max_elongation_deg.expect("checked above");
+        let synodic = inner.synodic_period.get();
+        let year_phase_offset = s.system().forcing.year_phase_offset;
+        let inner_class_word = match inner.class {
+            WandererClass::Rock => "rock-pale",
+            WandererClass::Giant => "giant-bright",
+        };
+
+        let span = 2.0 * synodic;
+        let samples = 80;
+        let mut saw_morning_or_evening_star = false;
+        for k in 0..samples {
+            let t = k as f64 * span / samples as f64;
+            let obs = ObserverContext::at_position(
+                EntityId(1),
+                WorldTime { day: t },
+                GeoCoord {
+                    latitude: 35.0,
+                    longitude: 0.0,
+                },
+            );
+            let phase_w =
+                (t / synodic + (year_phase_offset + inner_index as f64 * 0.37).fract()).fract();
+            let elongation = e_max * math::sin(std::f64::consts::TAU * phase_w).abs();
+
+            let inner_phenomenon = s
+                .phenomena(&obs)
+                .into_iter()
+                .find(|p| p.kind == WANDERING_STAR && p.description.contains(inner_class_word));
+
+            if elongation < 15.0 {
+                assert!(
+                    inner_phenomenon.is_none(),
+                    "t={t}: elongation {elongation:.2}° < 15° should glare-skip the inner \
+                     wanderer, got {inner_phenomenon:?}"
+                );
+            } else if let Some(p) = &inner_phenomenon
+                && (p.description.contains("morning star")
+                    || p.description.contains("evening star"))
+            {
+                saw_morning_or_evening_star = true;
+            }
+        }
+
+        assert!(
+            saw_morning_or_evening_star,
+            "expected the inner wanderer to show morning-star/evening-star Twilight text \
+             at least once across two synodic periods (seed {:?}, inner index {inner_index})",
+            seed
+        );
+    }
 }
 
 /// Phenomenon kind for the annual daylight cycle.

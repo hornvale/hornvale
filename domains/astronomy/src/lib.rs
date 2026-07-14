@@ -92,7 +92,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ("astronomy/wanderer-count", "how many wandering planets"),
         (
             "astronomy/wanderers",
-            "per-wanderer orbit/class draws (sequential attempts)",
+            "per-wanderer parameter draws, sequential",
         ),
         (
             "astronomy/starfield",

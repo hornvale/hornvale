@@ -639,13 +639,13 @@ mod tests {
                 "A rock wanderer rounds the sun every 224 days — a morning and evening star."
                     .to_string(),
             ],
-            figures: vec!["The sky holds 4 figures; 1 stand on the sun's road.".to_string()],
+            figures: vec!["The sky holds 4 figures; 1 stands on the sun's road.".to_string()],
         });
         let doc = render(&ctx);
         assert!(doc.contains("A blue-white star stands 3.2° from the north celestial pole"));
         assert!(doc.contains("returns before dawn at year-phase 0.42, after 70 days of absence."));
         assert!(doc.contains("A rock wanderer rounds the sun every 224 days"));
-        assert!(doc.contains("The sky holds 4 figures; 1 stand on the sun's road."));
+        assert!(doc.contains("The sky holds 4 figures; 1 stands on the sun's road."));
 
         ctx.night_sky_lines = None;
         let doc = render(&ctx);
@@ -672,7 +672,7 @@ mod tests {
                     "A rock wanderer rounds the sun every 224 days — a morning and evening star."
                         .to_string(),
                 ],
-                figures: vec!["The sky holds 4 figures; 1 stand on the sun's road.".to_string()],
+                figures: vec!["The sky holds 4 figures; 1 stands on the sun's road.".to_string()],
             }),
             calendar_lines: vec!["The year is 365.2 local days (365.2 standard days).".to_string()],
             ..sample_context()

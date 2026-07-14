@@ -22,7 +22,7 @@ A giant wanderer rounds the sun every 4248 days.
 
 A rock wanderer rounds the sun every 7527 days.
 
-The sky holds 2 figures; 1 stand on the sun's road.
+The sky holds 2 figures; 1 stands on the sun's road.
 
 ## The Calendar
 

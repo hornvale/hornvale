@@ -15,19 +15,20 @@ use hornvale_kernel::math;
 use std::collections::BTreeMap;
 
 /// Great-circle separation threshold (degrees) for single-link clustering:
-/// two stars closer than this join the same figure. Provisional until the
-/// census in Step 4 of the campaign plan freezes it.
+/// two stars closer than this join the same figure. Census-frozen (the
+/// `census-of-figures` study, 1000 seeds): median 6 figures per sky, 6.4%
+/// zero-figure worlds, 66.5% with at least one figure on the ecliptic.
 /// type-audit: pending(wave-1)
 pub const FIGURE_SEPARATION_DEG: f64 = 7.0;
 
 /// Magnitude-class floor (inclusive) admitted into figure clustering — the
-/// **reference-observer convention** (spec §4). Provisional until frozen by
-/// census.
+/// **reference-observer convention** (spec §4). Census-frozen alongside
+/// [`FIGURE_SEPARATION_DEG`] and [`FIGURE_MIN_MEMBERS`].
 /// type-audit: bare-ok(count)
 pub const FIGURE_MAGNITUDE_FLOOR: u8 = 4;
 
-/// Minimum cluster size to be recognized as a figure. Provisional until
-/// frozen by census.
+/// Minimum cluster size to be recognized as a figure. Census-frozen
+/// alongside [`FIGURE_SEPARATION_DEG`] and [`FIGURE_MAGNITUDE_FLOOR`].
 /// type-audit: bare-ok(count)
 pub const FIGURE_MIN_MEMBERS: usize = 3;
 
@@ -48,8 +49,12 @@ pub struct Figure {
     /// brightest tier).
     pub brightest_class: u8,
     /// Whether the figure stands on the ecliptic — the sun-and-wanderer
-    /// road: the centroid's genesis-epoch ecliptic latitude falls within
-    /// `span_deg / 2 + 8°` of the ecliptic plane.
+    /// road: the centroid's ecliptic latitude, in the **mean-obliquity**
+    /// ecliptic frame (`forcing.obliquity_mean`, not `obliquity_at(0.0)` —
+    /// the two differ by the wobble term even at genesis; this convention
+    /// is a deliberate choice so the frame is stable rather than tracking
+    /// the instantaneous nutation), falls within `span_deg / 2 + 8°` of the
+    /// ecliptic plane.
     pub on_ecliptic: bool,
 }
 
