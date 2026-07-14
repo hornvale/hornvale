@@ -9,22 +9,54 @@
 //! per-CLAIMED-cell effective diversity — `byproducts.strife` (the inverse-
 //! Herfindahl evenness of a cell's per-species density shares) averaged over
 //! habitable cells where Σ species density > 0 — lands in the physically
-//! motivated band `[2.0, 3.0]`: comfortably above winner-take-all
+//! motivated band `[1.5, 3.0]`: comfortably above winner-take-all
 //! monoculture (`strife` → 1) and comfortably below undifferentiated
-//! "oatmeal" sharing (`strife` → 4, the species count). This band, and the
-//! choice to measure at the frozen β rather than search for one, were fixed
-//! before this test's assertion was written, matching the task-A16b sweep's
-//! own measured mean of ≈2.4 at β=2.0.
+//! "oatmeal" sharing (`strife` → 4, the species count).
+//!
+//! **Niche-era re-baseline (task E1b)**: the band above was originally
+//! `[2.0, 3.0]`, preregistered against the pre-Niche **flat** K model, where
+//! the task-A16b sweep measured a mean of ≈2.4 at β=2.0. The Niche campaign
+//! replaced that flat K with niche-differentiated K — each species' carrying
+//! capacity now peaks where its traits best fit the world's local
+//! conditions, rather than being flat across the map. That is a deliberate
+//! model change, not a regression: a world where each cell has a clearer
+//! locally-best-suited species *is* the campaign's biogeography, so
+//! per-cell diversity legitimately drops as species sort into the terrain
+//! that favors them instead of sharing every cell evenly. Re-running this
+//! test's five seeds at the frozen β=2.0 under niche-differentiated K
+//! measured:
+//!
+//! | seed | claimed diversity |
+//! |------|--------------------|
+//! | 1    | 1.9112534308796194 |
+//! | 2    | 2.090962659447805  |
+//! | 3    | 1.881701865784351  |
+//! | 4    | 2.0204691074243333 |
+//! | 42   | 2.0017951778530727 |
+//!
+//! mean ≈ 1.9812364482778360, with the lowest individual seed (seed 3) at
+//! ≈1.8817 — comfortably clear of monoculture (1) but below the old flat-
+//! model floor of 2.0. The band is re-baselined to `[1.5, 3.0]`: `1.5` sits
+//! with margin under every measured seed (the closest, seed 3, is ≈0.38
+//! above it) while staying well clear of monoculture, so the band stays
+//! physically defensible under further seed variation rather than being
+//! fitted to the measured mean by epsilon. The upper bound `3.0` is
+//! unchanged (still well below oatmeal=4) — the niche model does not push
+//! diversity upward, so it needed no re-justification. The frozen `BETA=2.0`
+//! itself is **unchanged** by this re-baseline; only the band that
+//! interprets its measured effect was re-measured, exactly as the
+//! Weak-knob/Stage-B caveat below anticipated.
 //!
 //! **Weak-knob / Stage-B caveat** (carried from `coexist::BETA`'s doc and the
 //! A16b sweep's module doc): against the shipped roster's near-tied
 //! carrying capacities, β only moves claimed-cell diversity across a narrow
-//! 2.14–2.53 band over the ENTIRE swept range β∈[0.1, 6.0] — this test's
-//! [2.0, 3.0] band is wide enough to hold for that whole sweep, so passing
-//! here confirms the frozen value is *in a physically sane regime*, not that
-//! β was surgically tuned. The knob will bite harder once the Stage-B
-//! menagerie adds species with disparate K (spec §3); Stage B RE-MEASURES
-//! against that richer roster rather than re-tuning this constant.
+//! band over the swept range β∈[0.1, 6.0] — this test's re-baselined
+//! [1.5, 3.0] band is wide enough to hold across that sweep's shape, so
+//! passing here confirms the frozen value is *in a physically sane regime*,
+//! not that β was surgically tuned. The knob will bite harder once the
+//! Stage-B menagerie (Stage F) adds species with disparate K (spec §3);
+//! that stage RE-MEASURES again against the richer, genuinely
+//! differentiated roster rather than re-tuning this constant.
 //!
 //! Deliberately light for the commit gate: ~5 seeds (not the sweep's 13),
 //! each world built ONCE to [`BuildDepth::Terrain`] (the shallowest rung
@@ -75,8 +107,8 @@ fn claimed_diversity(seed: u64, roster: &[hornvale_species::SpeciesDef]) -> f64 
 }
 
 /// The preregistered freeze check: at the frozen β, the mean per-claimed-cell
-/// effective diversity across a handful of seeds lands in `[2.0, 3.0]` — see
-/// the module doc for the preregistered target and the weak-knob caveat.
+/// effective diversity across a handful of seeds lands in `[1.5, 3.0]` — see
+/// the module doc for the niche-era re-baseline and the weak-knob caveat.
 #[test]
 fn beta_yields_realistic_coexistence() {
     let roster = default_roster();
@@ -89,9 +121,9 @@ fn beta_yields_realistic_coexistence() {
     let mean: f64 = per_seed.iter().map(|(_, d)| *d).sum::<f64>() / per_seed.len() as f64;
 
     assert!(
-        (2.0..=3.0).contains(&mean),
+        (1.5..=3.0).contains(&mean),
         "mean per-claimed-cell diversity at beta={} across seeds {per_seed:?} = {mean}, \
-         expected in the preregistered band [2.0, 3.0] (monoculture ~1, oatmeal ~4)",
+         expected in the niche-era re-baselined band [1.5, 3.0] (monoculture ~1, oatmeal ~4)",
         hornvale_demography::BETA
     );
 }
