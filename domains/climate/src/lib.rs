@@ -61,6 +61,25 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     Ok(())
 }
 
+/// Climate as a registrable unit for the composition-root roster.
+/// type-audit: bare-ok(identifier-text: return)
+pub struct Climate;
+
+impl hornvale_kernel::Domain for Climate {
+    fn crate_name(&self) -> &'static str {
+        env!("CARGO_PKG_NAME")
+    }
+    fn register_concepts(
+        &self,
+        registry: &mut hornvale_kernel::ConceptRegistry,
+    ) -> Result<(), hornvale_kernel::RegistryError> {
+        crate::register_concepts(registry)
+    }
+    fn stream_labels(&self) -> Vec<(&'static str, &'static str)> {
+        crate::stream_labels()
+    }
+}
+
 /// Tier-0 climate: the same mild air everywhere.
 pub struct UniformClimate;
 

@@ -67,6 +67,10 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `locale/regime/substrate` | room substrate-detail draw |
 | `locale/strangeness/place` | world rarity-budget placement pass |
 
+### hornvale-paleoclimate
+
+*(no seed-derivation streams)*
+
 ### hornvale-religion
 
 *(no seed-derivation streams)*

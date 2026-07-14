@@ -51,3 +51,28 @@ on demand, deterministically, from those two. Saving a world means writing
 down the seed and the ledger. Loading it means trusting the mathematics to
 rebuild everything else identically. Campaign 1a's integration suite proves
 this holds: two runs from the same seed serialize to byte-identical worlds.
+
+## Adding a domain
+
+A domain joins the world through one small trait it implements and one line
+in the composition root's roster. The trait names the declarative surface
+every domain shares: the concepts and predicates it registers into the shared
+vocabulary, and — for a domain that draws on the seed — the permanent labels
+of its random streams. Its crate name, the key under which its streams appear
+in the manifest, is read from the crate itself, so it cannot drift from the
+crate it names. Registration and the stream manifest both read the one
+roster, so they can never disagree about which domains exist. The roster's
+membership is that declarative surface, not the `domains/` directory: a
+domain crate with nothing to declare — demography registers no concepts and
+draws no streams; it is a pure-function library the composition root calls
+directly — stays off the roster.
+
+What stays out of the trait is as deliberate as what goes in. *Genesis* — how
+a domain is actually generated and rebuilt from a seed — is not a trait
+member, because its inputs differ from every other domain's and wiring them
+together is exactly the composition root's job. Adding a domain therefore
+never requires editing another domain; it requires only the domain's own code
+and that single line where all domains already meet. The roster is stored in
+registration order, because one domain (language) references concepts other
+domains own and must register after them; the manifest sorts the same list
+alphabetically when it renders.

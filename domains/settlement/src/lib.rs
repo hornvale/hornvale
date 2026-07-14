@@ -113,6 +113,25 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     )
 }
 
+/// Settlement as a registrable unit for the composition-root roster.
+/// type-audit: bare-ok(identifier-text: return)
+pub struct Settlement;
+
+impl hornvale_kernel::Domain for Settlement {
+    fn crate_name(&self) -> &'static str {
+        env!("CARGO_PKG_NAME")
+    }
+    fn register_concepts(
+        &self,
+        registry: &mut hornvale_kernel::ConceptRegistry,
+    ) -> Result<(), hornvale_kernel::RegistryError> {
+        crate::register_concepts(registry)
+    }
+    fn stream_labels(&self) -> Vec<(&'static str, &'static str)> {
+        crate::stream_labels()
+    }
+}
+
 /// A settlement as this domain knows it.
 /// type-audit: bare-ok(identifier-text: name), bare-ok(count: population)
 #[derive(Debug, Clone, PartialEq)]

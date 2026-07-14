@@ -127,3 +127,22 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
     ]
 }
+
+/// Language as a registrable unit for the composition-root roster.
+/// type-audit: bare-ok(identifier-text: return)
+pub struct Language;
+
+impl hornvale_kernel::Domain for Language {
+    fn crate_name(&self) -> &'static str {
+        env!("CARGO_PKG_NAME")
+    }
+    fn register_concepts(
+        &self,
+        registry: &mut hornvale_kernel::ConceptRegistry,
+    ) -> Result<(), hornvale_kernel::RegistryError> {
+        crate::register_concepts(registry)
+    }
+    fn stream_labels(&self) -> Vec<(&'static str, &'static str)> {
+        crate::stream_labels()
+    }
+}

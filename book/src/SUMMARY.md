@@ -63,6 +63,7 @@
 - [The Fast Gate](./chronicle/the-fast-gate.md)
 - [Crust](./chronicle/crust.md)
 - [The Room Mesh](./chronicle/the-room-mesh.md)
+- [The Domain Trait](./chronicle/the-domain-trait.md)
 - [The Locale Window](./chronicle/the-locale-window.md)
 - [The Uncommon Ground](./chronicle/the-uncommon-ground.md)
 - [The Datum](./chronicle/the-datum.md)
