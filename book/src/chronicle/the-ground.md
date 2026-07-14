@@ -41,11 +41,16 @@ climate where the projection needs it — never a second source of truth.
 
 ## The taxonomy, and what water does to it
 
-The fine rock taxonomy — eighteen classes from granite and gabbro through
+The fine rock taxonomy — nineteen classes from granite and gabbro through
 reef limestone, coal, and alluvium, organized by genesis rather than
 listed flat — is the buffer's most legible projection, each class earning
 its place by meaning something different to some future consumer (ironstone
-is also iron ore; coal ties soil, climate, and deep time together). Nine
+is also iron ore; coal is meant to tie soil, climate, and deep time
+together once the ranges that produce it widen). The current tectonic
+ranges already realize most of the taxonomy across an ordinary world; a
+handful of intrusive and abyssal edges — plutonic gabbro chief among
+them — are reserved headroom, waiting on the depth axis Sculpting adds
+before buried rock can classify as buried. Nine
 soil orders sit alongside it, climate-coupled rather than parent-only:
 laterite, podzol, chernozem, aridisol, loam, andosol, leptosol, histosol,
 and gley, each carrying a small **fertility vector** — grain, moisture, and

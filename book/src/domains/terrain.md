@@ -141,7 +141,8 @@ presently-zero magical-saturation slot — derived purely from fields the
 globe already carries: crust age and thickness, boundary type and distance,
 plate motion, and drainage. Every consumer-facing reading is a projection
 over that one buffer, never a second source of truth: a fine rock taxonomy
-(granite through alluvium, eighteen classes strong) for a lithology map
+(granite through alluvium, nineteen classes strong, most already realized by
+the tectonic ranges that feed it) for a lithology map
 beside the elevation one; nine climate-coupled soil orders, each with its
 own fertility suitability, for farmland the walk can trust; a
 hydrogeology reading — aquifer, aquitard, spring, karst — wherever porosity
