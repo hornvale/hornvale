@@ -302,21 +302,25 @@ The bugbear lair of **Vngaashvngoodoagoodoodoa**, population 110.
 
 Vngaashvngoodoagoodoodoa lives by farming.
 Its roles, lowest to highest: forager, omen-reader, headman.
+The bugbear run a basal metabolism of 132 W; moderate-paced, lifespan ~81 yr, matures ~16 yr.
 
 The goblin village of **Xngotngotnoaboonoenoa**, population 115.
 
 Xngotngotnoaboonoenoa lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
+The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
 The hobgoblin legion of **Foetteefoonoenoanoagoo**, population 115.
 
 Foetteefoonoenoanoagoo lives by farming.
 Its roles, lowest to highest: laborer, augur, warlord.
+The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, matures ~14 yr.
 
 The kobold warren of **Xatxoxorroxaq**, population 123.
 
 Xatxoxorroxaq lives by farming.
 Its roles, lowest to highest: digger, keeper, elders.
+The kobold run a basal metabolism of 3 W; moderate-paced, lifespan ~69 yr, matures ~14 yr.
 
 ## The Gods
 

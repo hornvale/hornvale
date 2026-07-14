@@ -793,6 +793,14 @@ than its subject matter suggests.
   correlated consequences — and drama-as-error-correcting-code, already in
   the expressive cluster, is *downstream of the slow end's lifespan*. One
   number, and the demographic-reproductive profile and its art follow.
+  **This is now the first implemented life-history layer** ([The Pace of
+  Life](../chronicle/bio2-life-history.md), spec'd): body mass itself was
+  ceded to the coexistence stack, which had already authored it, and a
+  small `MetabolicClass` clade coefficient was added alongside the
+  allometric curve so a cold-blooded species reads coherently slower, not
+  merely metabolically different, at equal size. The lore-outlier elf end
+  named above is still baseline-only — a per-species override defying the
+  curve remains the named, unbuilt extension.
 
 - **Dimorphism and mating system are derived, not drawn.** Bateman–Trivers
   parental-investment theory: the sex investing more is choosy, the sex

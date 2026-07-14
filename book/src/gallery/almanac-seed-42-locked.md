@@ -24,6 +24,22 @@ A rock wanderer rounds the sun every 7527 days.
 
 The sky holds 2 figures; 1 stands on the sun's road.
 
+On day 86, the first moon devours the sun whole along latitude 83°.
+
+On day 94, the full first moon darkens to a bloodred coal.
+
+On day 103, the first moon devours the sun whole along latitude 11°.
+
+On day 111, the full first moon darkens to a bloodred coal.
+
+On day 116, the full second moon darkens to a bloodred coal.
+
+On day 119, the first moon devours the sun whole along latitude -62°.
+
+The eclipse seasons parade backward through the year at 12 days a year.
+
+Eclipses of the first moon repeat every 1070 days (64 months); a family of them lives about 176 years.
+
 ## The Calendar
 
 - This world is tidally locked: no local day exists; the year is 368.1 standard days.
@@ -235,21 +251,25 @@ The bugbear lair of **Vngoashngooshngooshtoadoo**, population 115.
 
 Vngoashngooshngooshtoadoo lives by farming.
 Its roles, lowest to highest: forager, omen-reader, headman.
+The bugbear run a basal metabolism of 132 W; moderate-paced, lifespan ~81 yr, matures ~16 yr.
 
 The goblin village of **Fngakngednedtoaneo**, population 120.
 
 Fngakngednedtoaneo lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
+The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
 The hobgoblin legion of **Ngjeengjaenoagootoaneo**, population 120.
 
 Ngjeengjaenoagootoaneo lives by farming.
 Its roles, lowest to highest: laborer, augur, warlord.
+The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, matures ~14 yr.
 
 The kobold warren of **Xotroxoqrokrro**, population 128.
 
 Xotroxoqrokrro lives by farming.
 Its roles, lowest to highest: digger, keeper, elders.
+The kobold run a basal metabolism of 3 W; moderate-paced, lifespan ~69 yr, matures ~14 yr.
 
 ## The Gods
 

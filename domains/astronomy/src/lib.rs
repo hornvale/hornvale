@@ -4,6 +4,7 @@
 
 pub mod anchor;
 pub mod calendar;
+pub mod eclipses;
 pub mod facts;
 pub mod figures;
 pub mod forcing;
@@ -24,6 +25,14 @@ pub mod wanderers;
 
 pub use anchor::{Anchor, Rotation, generate_anchor};
 pub use calendar::{Calendar, SkyBand, TWILIGHT_DEPTH_DEG, calendar_of};
+pub use eclipses::{
+    EclipseBody, EclipseCycle, EclipseEvent, EclipseKind, EclipseSight, GroundTrack,
+    LUNAR_SHADOW_FACTOR, TRACK_HALF_WIDTH_DEG, best_cycle, coincidence_days, draconic_month,
+    eclipse_events, eclipse_year, ground_track, lunar_eclipse_seen, moon_ecliptic_latitude_deg,
+    moon_ecliptic_longitude_deg, node_crossing_chance, node_longitude_at, node_regression_period,
+    parade_days_per_year, series_returns, solar_eclipse_sight, solar_eclipse_threshold_deg,
+    sub_solar_longitude_deg, sun_angular_rel_at,
+};
 pub use figures::{
     FIGURE_MAGNITUDE_FLOOR, FIGURE_MIN_MEMBERS, FIGURE_SEPARATION_DEG, Figure, describe, figures,
 };
@@ -101,6 +110,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "astronomy/starfield",
             "background starfield: count + per-star position/brightness (derived on demand)",
         ),
+        (
+            "astronomy/moon-nodes",
+            "per-moon ascending-node longitude draws",
+        ),
     ]
 }
 
@@ -110,7 +123,10 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_phenomenon_kind(SEASONAL_CYCLE, "the annual daylight cycle")?;
     registry.register_phenomenon_kind(NIGHT_STAR, "a fixed star notable in the night sky")?;
     registry.register_phenomenon_kind(TIDE, "the rise and fall of the waters under the moons")?;
-    registry.register_phenomenon_kind(ECLIPSE, "a moon crossing the face of the sun")?;
+    registry.register_phenomenon_kind(
+        ECLIPSE,
+        "a syzygy shadow: a moon crossing the sun, or the world's shadow crossing a moon",
+    )?;
     registry.register_phenomenon_kind(
         HELIACAL_RISING,
         "a star's first dawn return from behind the sun",
@@ -169,6 +185,16 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::MOON_INCLINATION_DEGREES,
         false,
         "orbital inclination of a moon to the anchor's orbital plane, in degrees",
+    )?;
+    registry.register_predicate(
+        facts::MOON_NODE_LONGITUDE_DEGREES,
+        false,
+        "ascending-node ecliptic longitude of a moon at genesis, in degrees",
+    )?;
+    registry.register_predicate(
+        facts::MOON_NODE_PERIOD_DAYS,
+        false,
+        "nodal-regression period of a moon, in standard days",
     )?;
     registry.register_predicate(
         facts::MOON_MASS_LUNAR,

@@ -10,6 +10,8 @@ Salient phenomena, most attention-demanding first:
 
 - [1.00] *celestial-body* — the sun, a yellow dwarf (G)
 - [0.90] *eclipse* — an eclipse: the vast moon devours the sun whole
+- [0.80] *eclipse* — an eclipse of the moon: the full small, distant moon darkens to a bloodred coal
+- [0.80] *eclipse* — an eclipse of the moon: the full vast moon darkens to a bloodred coal
 - [0.75] *eclipse* — an eclipse: the small, distant moon leaves a burning ring of the sun
 - [0.65] *wandering-star* — A rock-pale wanderer: a bright star that will not keep its station.
 - [0.64] *celestial-body* — a vast moon
@@ -38,6 +40,22 @@ A giant wanderer rounds the sun every 4248 days.
 A rock wanderer rounds the sun every 7527 days.
 
 The sky holds 2 figures; 1 stands on the sun's road.
+
+On day 86, the first moon devours the sun whole along latitude 83°.
+
+On day 94, the full first moon darkens to a bloodred coal.
+
+On day 103, the first moon devours the sun whole along latitude 11°.
+
+On day 111, the full first moon darkens to a bloodred coal.
+
+On day 116, the full second moon darkens to a bloodred coal.
+
+On day 119, the first moon devours the sun whole along latitude -62°.
+
+The eclipse seasons parade backward through the year at 12 days a year.
+
+Eclipses of the first moon repeat every 1070 days (64 months); a family of them lives about 176 years.
 
 From the first settlement, the midsummer sun rises at azimuth 89.0°; the sightline drifts 0.02° in a thousand years.
 
@@ -263,39 +281,43 @@ The bugbear lair of **Qvoashshngoashdoodoa**, population 64.
 
 Qvoashshngoashdoodoa lives by farming.
 Its roles, lowest to highest: forager, omen-reader, headman.
+The bugbear run a basal metabolism of 132 W; moderate-paced, lifespan ~81 yr, matures ~16 yr.
 
 The goblin village of **Ngebvngadxnotnoaboo**, population 67.
 
 Ngebvngadxnotnoaboo lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
+The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
 The hobgoblin legion of **Gbeoveenoenoanoagoo**, population 67.
 
 Gbeoveenoenoanoagoo lives by farming.
 Its roles, lowest to highest: laborer, augur, warlord.
+The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, matures ~14 yr.
 
 The kobold warren of **Roqrraxaxoqrrak**, population 71.
 
 Roqrraxaxoqrrak lives by farming.
 Its roles, lowest to highest: digger, keeper, elders.
+The kobold run a basal metabolism of 3 W; moderate-paced, lifespan ~69 yr, matures ~14 yr.
 
 ## The Gods
 
 An organized priesthood tends a pantheon:
 
-> Daoqao the Shngoadaoqao comes back every 386.98 days. That's how it's always been. That's how it's always been. Daoqao is a great one among the gods.
+> Daoqao the Qvoashdaoqao comes back every 423.36 days. That's how it's always been. That's how it's always been. Daoqao is a great one among the gods.
+>
+> — derived from the phenomenon *eclipse*
+
+> Daoqao the Tvaashdaoqao comes back every 112.65 days. That's how it's always been. That's how it's always been. Daoqao is a great one among the gods.
+>
+> — derived from the phenomenon *eclipse*
+
+> Daoqao the Vngaashdaoqao comes back every 386.98 days. That's how it's always been. That's how it's always been. Daoqao is a great one among the gods.
 >
 > — derived from the phenomenon *wandering-star*
 
-> Daoqao the Bvooshdaoqaotoabao comes back every 15.99 days. That's how it's always been. That's how it's always been. Daoqao is a great one among the gods.
->
-> — derived from the phenomenon *celestial-body*
-
-> Doa the Shngaoshdoa is felt more than seen. That's how it's always been. That's how it's always been. Doa is a great one among the gods.
->
-> — derived from the phenomenon *tide*
-
-> Daoqao the Vngaashdaoqaotoabao comes back every 32.55 days. That's how it's always been. That's how it's always been. Daoqao is a great one among the gods.
+> Daoqao the Vngaashdaoqaotoabao comes back every 15.99 days. That's how it's always been. That's how it's always been. Daoqao is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -303,11 +325,19 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *tide*
 
-> Doagoodaoqao the Shngaodaoqaodoagoo comes back every 0.88 days. That's how it's always been. That's how it's always been. Doagoodaoqao is a great one among the gods.
+> Toabaodaoqao the Shngaodaoqaotoabao comes back every 32.55 days. That's how it's always been. That's how it's always been. Toabaodaoqao is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Daoqao the Shngaadaoqao comes back every 71.11 days. That's how it's always been. That's how it's always been. Daoqao is a great one among the gods.
+> Doa the Shngooshdoa is felt more than seen. That's how it's always been. That's how it's always been. Doa is a great one among the gods.
+>
+> — derived from the phenomenon *tide*
+
+> Daoqao the Bvaodoagoo comes back every 0.88 days. That's how it's always been. That's how it's always been. Daoqao is a great one among the gods.
+>
+> — derived from the phenomenon *celestial-body*
+
+> Daoqao the Shngoodaoqao comes back every 71.11 days. That's how it's always been. That's how it's always been. Daoqao is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
@@ -321,27 +351,35 @@ In the village of **Ngebvngadxnotnoaboo**, an organized priesthood tends its own
 >
 > — derived from the phenomenon *eclipse*
 
-> Zvakngek the Nodsfobsvad returns every 269.79 days. So it was, so it is.
+> Zvakngek the Nodsfobsvad returns every 423.36 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Zfatnadfnak the Ngedngobngob returns every 386.98 days. So it was, so it is.
+> Vngabvngadsfeb the Zhxekvngotvngot returns every 112.65 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Nobzhxok the Vnetzfobzfobzhxeb returns every 269.79 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Zhvakzhfeknab the Fngebzhfakxngotxngot returns every 386.98 days. So it was, so it is.
 >
 > — derived from the phenomenon *wandering-star*
 
-> Teabae the Ngetteabae returns every 15.99 days. So it was, so it is.
->
-> — derived from the phenomenon *celestial-body*
-
-> Noa the Svednoa is felt, not counted. So it was, so it is.
->
-> — derived from the phenomenon *tide*
-
-> Teabae the Zxekteabae returns every 32.55 days. So it was, so it is.
+> Teabae the Zxekteabae returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
 > Noa the Zxadnoa is felt, not counted. So it was, so it is.
+>
+> — derived from the phenomenon *tide*
+
+> Teabae the Nobteabae returns every 32.55 days. So it was, so it is.
+>
+> — derived from the phenomenon *celestial-body*
+
+> Noa the Nabnoa is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
@@ -355,19 +393,27 @@ In the legion of **Gbeoveenoenoanoagoo**, an organized priesthood tends its own 
 >
 > — derived from the phenomenon *eclipse*
 
-> Kqeotgaetgeo the Mjoeggoexeo returns every 269.79 days. So it was, so it is.
+> Kqeotgaetgeo the Mjoeggoexeo returns every 423.36 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Mjaexeenjoa the Faengjoangjoa returns every 386.98 days. So it was, so it is.
+> Ngjeektaomjao the Vaexea returns every 112.65 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Voeveamjae the Vaabqaobqao returns every 269.79 days. So it was, so it is.
+>
+> — derived from the phenomenon *eclipse*
+
+> Njeabtoe the Xeenjeo returns every 386.98 days. So it was, so it is.
 >
 > — derived from the phenomenon *wandering-star*
 
-> Teabae the Xaateabae returns every 15.99 days. So it was, so it is.
+> Teabae the Bkeeteabae returns every 15.99 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Teabae the Kkoeteabae returns every 32.55 days. So it was, so it is.
+> Teabae the Njooteabae returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
@@ -375,7 +421,7 @@ In the legion of **Gbeoveenoenoanoagoo**, an organized priesthood tends its own 
 >
 > — derived from the phenomenon *tide*
 
-> Noa the Njoanoa is felt, not counted. So it was, so it is.
+> Noa the Xoanoa is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
@@ -385,15 +431,23 @@ In the warren of **Roqrraxaxoqrrak**, an organized priesthood tends its own pant
 >
 > — derived from the phenomenon *celestial-body*
 
+> Xogrra Xogrra comes back every 423.36 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
+>
+> — derived from the phenomenon *eclipse*
+
+> Xogrra Xogrra comes back every 112.65 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
+>
+> — derived from the phenomenon *eclipse*
+
 > Xogrra Xogrra comes back every 386.98 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
 >
 > — derived from the phenomenon *wandering-star*
 
-> Xogrra Roqrraxogrra comes back every 32.55 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
+> Xogrraroqrra Roqrra comes back every 32.55 days. That's how it's always been. That's how it's always been. Xogrraroqrra is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Xogrra Xogrrarogxa comes back every 0.88 days. That's how it's always been. That's how it's always been. Xogrra is a great one among the gods.
+> Xogrrarogxa Rogxa comes back every 0.88 days. That's how it's always been. That's how it's always been. Xogrrarogxa is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 

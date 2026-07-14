@@ -45,6 +45,15 @@ pub const RETROGRADE_SPIN: &str = "retrograde-spin";
 /// (non-functional, Number — one per moon; SKY-6).
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_INCLINATION_DEGREES: &str = "moon-inclination-degrees";
+/// Predicate: a moon's ascending-node ecliptic longitude at genesis, degrees
+/// (non-functional, Number — one per moon; Eclipse Seasons).
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_NODE_LONGITUDE_DEGREES: &str = "moon-node-longitude-degrees";
+/// Predicate: a moon's nodal-regression period, standard days
+/// (non-functional, Number — one per moon; Eclipse Seasons). The
+/// standstill interpretation of this beat is the deferred follow-up row.
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_NODE_PERIOD_DAYS: &str = "moon-node-period-days";
 /// Mass of a moon in lunar masses (non-functional, Number — one per moon).
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_MASS_LUNAR: &str = "moon-mass-lunar";
@@ -359,6 +368,29 @@ pub fn genesis(
             &world.registry,
         )?;
         world.ledger.commit(
+            fact(
+                subject,
+                MOON_NODE_LONGITUDE_DEGREES,
+                Value::Number(moon.node_longitude_deg),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                subject,
+                MOON_NODE_PERIOD_DAYS,
+                Value::Number(
+                    crate::eclipses::node_regression_period(
+                        system.anchor.year,
+                        moon.period,
+                        moon.inclination_deg,
+                    )
+                    .get(),
+                ),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
             fact(subject, MOON_MASS_LUNAR, Value::Number(moon.mass.get())),
             &world.registry,
         )?;
@@ -554,6 +586,18 @@ mod tests {
         let mut w = World::new(Seed(seed));
         register_concepts(&mut w.registry).unwrap();
         w
+    }
+
+    /// Shared fixture (extracted from the per-moon fact tests' shared
+    /// idiom): generate `seed`'s unpinned system, commit its genesis facts,
+    /// and hand back the world, the subject entity, and the outcome for
+    /// per-moon fact assertions.
+    fn committed_world(seed: u64) -> (World, EntityId, GenesisOutcome) {
+        let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
+        let mut w = world_with(seed);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+        (w, subject, outcome)
     }
 
     #[test]
@@ -1129,6 +1173,23 @@ mod tests {
                 count <= 1,
                 "seed {seed}: figure-on-ecliptic must dedupe to one fact"
             );
+        }
+    }
+
+    /// Eclipse Seasons: each moon commits its node longitude and its
+    /// nodal-regression period.
+    #[test]
+    fn each_moon_commits_node_facts() {
+        let (world, subject, outcome) = committed_world(42);
+        let moons = outcome.system.moons.len();
+        assert!(moons > 0);
+        for predicate in [MOON_NODE_LONGITUDE_DEGREES, MOON_NODE_PERIOD_DAYS] {
+            let count = world
+                .ledger
+                .facts_about(subject)
+                .filter(|f| f.predicate == predicate)
+                .count();
+            assert_eq!(count, moons, "{predicate}");
         }
     }
 }

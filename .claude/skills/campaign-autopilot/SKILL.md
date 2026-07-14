@@ -47,6 +47,20 @@ recommendation, adopt the improved version — the policy is "no waiting for
 ratification," not "first answer wins." Note pass count and overturns in
 the ledger entry. Promising discards feed the capture discipline.
 
+**Why run it on the obvious answers.** A pass is for *disruption*, not a
+second opinion, so it earns the most exactly when the answer feels like a
+no-brainer: it comes back "yes, of course — *and also* the X, Y, Z you
+weren't weighing," not a reversal. Overturns are rare; enrichment is the
+norm and the point. So the settledness of an answer is a reason to run a
+pass, never a reason to skip one.
+
+**"Each nontrivial `Q`" means each — not just G1, and a precedent- or
+science-grounded answer is NOT exempt.** The precedented answer is the
+*input* to a pass, not a substitute for one; run at least one. **The
+check:** a nontrivial `Q` whose ledger entry shows zero passes means you
+skipped this step — the `ideonomy passes / overturns` field is required and
+non-zero, not optional.
+
 ## Capture discipline
 
 **Invariant: no idea dies in conversation.** Before any gate auto-passes,
@@ -72,6 +86,11 @@ alternatives discarded · ideonomy passes / overturns · capture actions
 ```
 
 ## The G3 package
+
+**Before assembling the package, walk the ledger and verify every type-`Q`
+entry shows ≥1 ideonomy pass.** A zero-pass `Q` is a skipped step — go run
+the pass and update the entry before the package goes out, not after Nathan
+asks. This is the verification point for the required-slot rule above.
 
 At the spec-review stop, present one message containing, in order:
 
@@ -115,6 +134,8 @@ ratification. Re-engage only when he says so.
 | "The tangent isn't worth recording" | The invariant is unconditional: capture it or ledger its rejection with a reason. |
 | "Nathan probably wants to see this section" | That is what the G3 package is for. Proceed. |
 | "It converged after zero passes" | Convergence requires at least one ideonomy pass that came back empty. |
+| "This `Q` is science-grounded / precedent-answered, so ideonomy adds nothing" | The precedented answer is the INPUT to a pass, not a substitute for it. Run at least one. The most confident-looking `Q`s are where a pass catches the stability bug or the wrong model — skipping ideonomy on the "obvious" ones is this overlay's documented first-campaign failure. |
+| "I ran a pass at G1, so ideonomy is handled for this campaign" | Ideonomy is per-decision, not per-campaign. G1 does not bank passes for the later `Q`s. |
 | "Automating the merge too would be consistent" | G3, G6, and the carve-outs are constitutionally manual. Never automate them. |
 | "I just recommended, but Nathan hasn't weighed in — the next move isn't mine" | Under autopilot the recommendation IS the decision: run ideonomy to convergence, adopt, ledger, keep moving. Nathan reviews at G3. |
 | "Writing to the idea registry mid-brainstorm without asking feels presumptive" | Capture is pre-authorized — recording ideas without asking is this skill's core mandate. |
