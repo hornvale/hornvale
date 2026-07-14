@@ -223,6 +223,13 @@ pub struct SpeciesDef {
 /// type-audit: bare-ok(identifier-text)
 pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
     let mut reg = BTreeMap::new();
+    // Mass: D&D 5E average weights (2014 Volo's Guide / PHB tables), lb -> kg:
+    //   kobold 30 lb = 13.6 kg, goblin 40 lb = 18.1 kg,
+    //   hobgoblin 165 lb = 74.8 kg, bugbear 291 lb = 132.0 kg.
+    // Niche: 5E ecology — bugbear a carnivore (hunts, eats humanoids), hobgoblin
+    //   the most agricultural (cultivates + hunts), kobold/goblin opportunistic
+    //   omnivore-scavengers. All omnivores here (both axes > 0); the true
+    //   scavenger/autotroph/apex arrive with the Stage-B menagerie.
     reg.insert(
         "goblin",
         SpeciesDef {
@@ -251,8 +258,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 tonality: 0.0,
                 exotic: ExoticManner::None,
             },
-            mass: Mass::new(40.0).unwrap(),
-            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.6), (ANIMAL_PREY, 0.4)]).unwrap(),
+            mass: Mass::new(18.1).unwrap(),
+            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.50), (ANIMAL_PREY, 0.50)]).unwrap(),
             worker_override: None,
             warrior: "warrior",
             artisan: "artisan",
@@ -288,8 +295,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 tonality: 0.0,
                 exotic: ExoticManner::Trill,
             },
-            mass: Mass::new(20.0).unwrap(),
-            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.25)]).unwrap(),
+            mass: Mass::new(13.6).unwrap(),
+            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
             worker_override: Some("digger"),
             warrior: "warden",
             artisan: "shaper",
@@ -325,8 +332,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 tonality: 0.0,
                 exotic: ExoticManner::None,
             },
-            mass: Mass::new(80.0).unwrap(),
-            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.35), (ANIMAL_PREY, 0.65)]).unwrap(),
+            mass: Mass::new(74.8).unwrap(),
+            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
             worker_override: Some("laborer"),
             warrior: "soldier",
             artisan: "smith",
@@ -362,8 +369,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 tonality: 0.0,
                 exotic: ExoticManner::None,
             },
-            mass: Mass::new(120.0).unwrap(),
-            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.2), (ANIMAL_PREY, 0.75)]).unwrap(),
+            mass: Mass::new(132.0).unwrap(),
+            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.15), (ANIMAL_PREY, 0.85)]).unwrap(),
             worker_override: Some("forager"),
             warrior: "mauler",
             artisan: "tanner",
