@@ -191,37 +191,31 @@ pub fn elevation_png(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) -
     )
 }
 
-/// Fixed RGB per rock class, in `RockClass` declaration order — the
-/// lithology map's legend (spec §6).
-const LITHOLOGY_PALETTE: [(RockClass, [u8; 3]); 19] = [
-    (RockClass::Granite, [230, 120, 120]),
-    (RockClass::Gabbro, [80, 60, 90]),
-    (RockClass::Basalt, [40, 40, 50]),
-    (RockClass::Andesite, [150, 100, 80]),
-    (RockClass::Rhyolite, [220, 180, 140]),
-    (RockClass::Sandstone, [220, 190, 100]),
-    (RockClass::Shale, [110, 110, 120]),
-    (RockClass::Conglomerate, [180, 140, 100]),
-    (RockClass::Evaporite, [245, 245, 220]),
-    (RockClass::Chert, [160, 180, 190]),
-    (RockClass::Ironstone, [170, 80, 40]),
-    (RockClass::ReefLimestone, [130, 200, 220]),
-    (RockClass::Coal, [20, 20, 20]),
-    (RockClass::Slate, [90, 100, 110]),
-    (RockClass::Schist, [140, 150, 100]),
-    (RockClass::Gneiss, [200, 100, 150]),
-    (RockClass::Marble, [235, 235, 235]),
-    (RockClass::Quartzite, [230, 210, 180]),
-    (RockClass::Alluvium, [180, 160, 110]),
-];
-
-/// The palette color for a rock class.
+/// The palette color for a rock class: an exhaustive match over `RockClass`
+/// (spec §6's lithology-map legend) so a future variant without a color
+/// fails to compile rather than panicking at render time.
 fn rock_color(rock: RockClass) -> [u8; 3] {
-    LITHOLOGY_PALETTE
-        .iter()
-        .find(|(class, _)| *class == rock)
-        .map(|(_, rgb)| *rgb)
-        .expect("every RockClass variant has a palette entry")
+    match rock {
+        RockClass::Granite => [230, 120, 120],
+        RockClass::Gabbro => [80, 60, 90],
+        RockClass::Basalt => [40, 40, 50],
+        RockClass::Andesite => [150, 100, 80],
+        RockClass::Rhyolite => [220, 180, 140],
+        RockClass::Sandstone => [220, 190, 100],
+        RockClass::Shale => [110, 110, 120],
+        RockClass::Conglomerate => [180, 140, 100],
+        RockClass::Evaporite => [245, 245, 220],
+        RockClass::Chert => [160, 180, 190],
+        RockClass::Ironstone => [170, 80, 40],
+        RockClass::ReefLimestone => [130, 200, 220],
+        RockClass::Coal => [20, 20, 20],
+        RockClass::Slate => [90, 100, 110],
+        RockClass::Schist => [140, 150, 100],
+        RockClass::Gneiss => [200, 100, 150],
+        RockClass::Marble => [235, 235, 235],
+        RockClass::Quartzite => [230, 210, 180],
+        RockClass::Alluvium => [180, 160, 110],
+    }
 }
 
 /// Raw RGB pixels of the equirectangular lithology map: nearest-cell rock
@@ -312,13 +306,38 @@ mod tests {
         assert_eq!(&a[20..24], &(MAP_WIDTH / 2).to_be_bytes());
     }
 
+    /// Every `RockClass` variant, in declaration order — mirrors
+    /// `rock_color`'s match arms so the distinctness test below can enumerate
+    /// the full palette without a runtime-panicking lookup table.
+    const ALL_ROCK_CLASSES: [RockClass; 19] = [
+        RockClass::Granite,
+        RockClass::Gabbro,
+        RockClass::Basalt,
+        RockClass::Andesite,
+        RockClass::Rhyolite,
+        RockClass::Sandstone,
+        RockClass::Shale,
+        RockClass::Conglomerate,
+        RockClass::Evaporite,
+        RockClass::Chert,
+        RockClass::Ironstone,
+        RockClass::ReefLimestone,
+        RockClass::Coal,
+        RockClass::Slate,
+        RockClass::Schist,
+        RockClass::Gneiss,
+        RockClass::Marble,
+        RockClass::Quartzite,
+        RockClass::Alluvium,
+    ];
+
     #[test]
     fn every_rock_class_has_a_distinct_palette_color() {
         use std::collections::BTreeSet;
-        let colors: BTreeSet<[u8; 3]> = LITHOLOGY_PALETTE.iter().map(|(_, rgb)| *rgb).collect();
+        let colors: BTreeSet<[u8; 3]> = ALL_ROCK_CLASSES.iter().map(|&r| rock_color(r)).collect();
         assert_eq!(
             colors.len(),
-            LITHOLOGY_PALETTE.len(),
+            ALL_ROCK_CLASSES.len(),
             "two rock classes share a palette color"
         );
     }

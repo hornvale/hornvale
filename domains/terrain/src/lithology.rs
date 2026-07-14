@@ -1,6 +1,35 @@
 //! The material buffer (The Ground, spec §2): a per-cell petrogenetic
 //! property vector and the projections over it. Pure functions of existing
 //! terrain fields — no new draws, no new stream labels.
+//!
+//! `RockClass` declares nineteen variants (spec §4), but `classify_rock`'s
+//! current tectonic ranges do not make every one reachable — some are
+//! intentional (or at least currently accepted) headroom for a later terrain
+//! epoch rather than a gap. Surveyed across seeds 0..15 at `Geosphere::new(5)`
+//! (and cross-checked at `Geosphere::new(4)`), fourteen classes are realized
+//! and five are not:
+//!
+//! - **Realized today**: Granite, Basalt, Andesite, Rhyolite, Sandstone,
+//!   Shale, Conglomerate, Evaporite, Ironstone, ReefLimestone, Slate, Schist,
+//!   Gneiss, Marble.
+//! - **Reserved, deferred to Sculpting (v3)**: `Gabbro` — this buffer has no
+//!   intrusive-vs-extrusive (exhumation/depth-of-crystallization) axis yet,
+//!   so mafic continental cells always read as extrusive Basalt/Andesite
+//!   rather than plutonic Gabbro; that axis is Sculpting's to add. `Chert` —
+//!   gated on abyssal very-low-porosity ocean cells, a niche combination the
+//!   current ocean-floor ranges rarely produce. `Quartzite` — gated on
+//!   `induration > 0.7` inside the low-metamorphic-grade band, which the
+//!   current induration formula rarely reaches; widening the induration
+//!   range would make it reachable without a new axis.
+//! - **Currently unreachable, not yet a tracked gap**: `Coal` — `grain` never
+//!   drops below its continental floor of 0.4 (`0.4 + 0.5 * age`), so the
+//!   `grain <= 0.35` clastic branch that yields Coal can never trigger; only
+//!   the formula's floor, not a missing axis, blocks it. `Alluvium` —
+//!   requires `drainage >= 1000` (land cells upstream), but the observed
+//!   maximum in this survey was 82; the canonical grid's basins are too small
+//!   relative to that threshold at any level tried so far. Both are noted
+//!   here rather than silently left implied-reachable; neither was in this
+//!   fix pass's scope.
 
 use crate::boundaries::BoundaryKind;
 use crate::globe::TectonicGlobe;
@@ -173,19 +202,23 @@ pub fn classify_rock(
     if buf.carbonate > 0.5 {
         return RockClass::ReefLimestone;
     }
+    // Arc magmatism (active margin) is checked before the plutonic arm below:
+    // arc cells are extrusive/intermediate by genesis, so they resolve to
+    // Andesite/Rhyolite even when locally coarse and hard, never Granite/Gabbro
+    // (those stay the stable-continental-interior read).
+    if matches!(buf.margin, MarginPolarity::Active) {
+        return if buf.silica > 0.55 {
+            RockClass::Rhyolite
+        } else {
+            RockClass::Andesite
+        };
+    }
     // Igneous by silica/grain when hard & crystalline; else clastic.
     if buf.grain > 0.5 && buf.induration > 0.5 {
         return if buf.silica > 0.55 {
             RockClass::Granite
         } else {
             RockClass::Gabbro
-        };
-    }
-    if matches!(buf.margin, MarginPolarity::Active) {
-        return if buf.silica > 0.55 {
-            RockClass::Rhyolite
-        } else {
-            RockClass::Andesite
         };
     }
     // Clastic sediments by relief proxy (grain).
@@ -262,9 +295,20 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
         let continental = thickness >= crate::crust::CONTINENTAL_THRESHOLD_KM;
         let age = *globe.crust_age.get(cell);
         let p = geo.position(cell);
+        // Margin polarity is needed before silica: arc (active-margin)
+        // magmatism is intermediate, not felsic (see base_silica below).
+        let margin = margin_polarity(geo, globe, cell, continental);
 
-        // Felsic index: continental crust is felsic (granitic), oceanic mafic.
-        let base_silica = if continental { 0.7 } else { 0.15 };
+        // Felsic index: continental crust is felsic (granitic) except at
+        // active (arc) margins, where subduction magmatism is petrologically
+        // intermediate (andesitic); oceanic crust is mafic.
+        let base_silica = if !continental {
+            0.15
+        } else if matches!(margin, MarginPolarity::Active) {
+            0.5
+        } else {
+            0.7
+        };
         // Old cratons are more evolved/coarse; young crust finer.
         let grain = if continental { 0.4 + 0.5 * age } else { 0.2 };
         // Boundary influence.
@@ -299,7 +343,6 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
         // Porosity: high in carbonate (karst) and young oceanic basalt, low in shale/gneiss.
         let porosity = (0.5 * carbonate + 0.3 * (1.0 - metamorphic_grade)).clamp(0.0, 1.0);
 
-        let margin = margin_polarity(geo, globe, cell, continental);
         let soil_depth = soil_depth_at(geo, globe, cell);
         let basement = if continental {
             Basement::Continental
@@ -598,6 +641,40 @@ mod tests {
     }
 
     #[test]
+    fn andesite_is_reachable_across_seeds() {
+        use std::collections::BTreeSet;
+        let mut classes = BTreeSet::new();
+        for seed in [1u64, 7, 42, 99] {
+            let geo = Geosphere::new(4);
+            let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
+            let terrain = crate::GeneratedTerrain::new(geo.clone(), outcome);
+            for cell in geo.cells() {
+                classes.insert(terrain.rock_at(cell));
+            }
+        }
+        assert!(
+            classes.contains(&RockClass::Andesite),
+            "no Andesite across seeds [1, 7, 42, 99]: {classes:?}"
+        );
+        // Guard the neighboring classes the active-margin reorder must not
+        // have starved: Granite (stable continental interior), Basalt
+        // (oceanic floor), and Rhyolite (the felsic end of the same arc
+        // split) must all still appear.
+        assert!(
+            classes.contains(&RockClass::Granite),
+            "no Granite: {classes:?}"
+        );
+        assert!(
+            classes.contains(&RockClass::Basalt),
+            "no Basalt: {classes:?}"
+        );
+        assert!(
+            classes.contains(&RockClass::Rhyolite),
+            "no Rhyolite: {classes:?}"
+        );
+    }
+
+    #[test]
     fn active_and_passive_margins_both_appear_across_seeds() {
         let mut saw_active = false;
         let mut saw_passive = false;
@@ -696,6 +773,16 @@ mod tests {
         b.porosity = 0.05;
         assert_eq!(hydrogeology(&b, 10.0, false), Hydro::Aquitard);
         assert!(cave_proneness(&b, 10.0) < 0.1);
+    }
+
+    #[test]
+    fn high_porosity_with_flow_and_low_carbonate_reads_as_spring() {
+        // Porous, non-carbonate (so not Karst), with drainage above the
+        // spring threshold -> Spring rather than the still-water Aquifer.
+        let mut b = flat_buffer();
+        b.porosity = 0.7;
+        b.carbonate = 0.05;
+        assert_eq!(hydrogeology(&b, 600.0, false), Hydro::Spring);
     }
 
     #[test]
