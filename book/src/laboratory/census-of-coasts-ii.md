@@ -1,5 +1,8 @@
 # The Census of Coasts II
 
+*Frozen at `15ef667` (`census-of-coasts-tuning` at `2d82a6a`). A Stage-C
+10,000-seed rerun is pending; the study file itself is unchanged.*
+
 Crust's terrain overhaul lands in two measured stages on one branch (spec
 §7), so that a single before/after across both a grid-resolution bump and a
 generator change is never confounded: **Stage L** raises the canonical

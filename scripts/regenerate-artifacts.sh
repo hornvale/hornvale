@@ -56,6 +56,7 @@ run -p hornvale -- phonology > book/src/reference/phonology.md
 run -p hornvale -- dictionary --world "$wsky" > book/src/reference/dictionary-generated.md
 run -p hornvale -- proto > book/src/reference/proto-goblinoid-generated.md
 run -p hornvale -- locale --world "$wsky" --room 1015166224 --json > book/src/reference/locale-seed-42.json
+run -p hornvale -- possess --world "$wsky" --script scripts/possession-walk.txt > book/src/gallery/possession-seed-42.md
 
 echo "regenerate-artifacts: gallery maps (rendered per-cell views)" >&2
 run -p hornvale -- map --world "$wsky" --out book/src/gallery/elevation-seed-42.png \
@@ -87,9 +88,8 @@ run -p hornvale -- scene system --world "$wsky" > book/src/gallery/scene-system-
 # (the local gate stays < 5 min; rapid development is the ratified trade).
 if [ "${HV_CENSUS:-0}" = 1 ] && [ "${SKIP_CENSUS:-0}" != 1 ]; then
     echo "regenerate-artifacts: lab censuses (release; HV_CENSUS=1)" >&2
-    run_release -p hornvale -- lab run studies/census-lands-drift.study.json
+    run_release -p hornvale -- lab run studies/the-census.study.json
     run_release -p hornvale -- lab run studies/census-of-the-meeting.study.json
-    run_release -p hornvale -- lab run studies/branches-family.study.json
 else
     echo "regenerate-artifacts: censuses SKIPPED — census regeneration is AWS-only (make regen-remote); HV_CENSUS=1 only on explicit owner direction" >&2
 fi

@@ -14,7 +14,7 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 N="${CI_PROBE_SEEDS:-8}"
-STUDIES=(census-lands-drift census-of-the-meeting branches-family)
+STUDIES=(the-census census-of-the-meeting)
 
 cleanup() { for s in "${STUDIES[@]}"; do rm -rf "book/src/laboratory/generated/${s}-ciprobe"; done; }
 trap cleanup EXIT

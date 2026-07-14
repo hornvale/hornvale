@@ -1,6 +1,8 @@
 # Census as Data — Design
 
-**Status:** approved (design), pending spec review
+**Status:** implemented (2026-07-13; see
+`docs/superpowers/plans/2026-07-13-census-as-data.md` and
+`docs/retrospectives/census-as-data.md`)
 **Date:** 2026-07-13
 **Campaign:** census-as-data (Tier 3 of the three-tier ask; Tiers 1+2 were
 fast-gate-tiers and the remote AWS gate, both merged)
@@ -194,7 +196,7 @@ key order), the FNV-1a helper, one line in `publish()`, tests (§5).
 ## 3. The harness: `tools/census/`
 
 Outside the workspace, like `tools/type-audit` — the sim never depends on
-it; it consumes committed artifacts. External tools: `duckdb` and `jq`
+it; it consumes committed artifacts. External tools: `duckdb` and `python3`
 (brew), bash scripts shellcheck'd.
 
 ```
@@ -225,7 +227,7 @@ tools/census/
   database, so "did the census get slower as metrics grew" is a join, not a
   spelunk.
 
-**`build.sh`** — for each study entry: read `schema.json` (jq),
+**`build.sh`** — for each study entry: read `schema.json` (python3),
 **validate** — row count matches `rows.count`, FNV-1a64 matches, CSV header
 matches `columns` order; any mismatch is a hard error naming the file and
 the failed check — then emit `CREATE VIEW` DDL with explicit types from the
@@ -380,7 +382,9 @@ queries, golden-pins match; `shellcheck` on `build.sh` and `history.sh`.
 
 ## 8. Costs (all one-time)
 
-- One 1000-seed all-metrics regeneration (release; on the order of the
+- One 1000-seed all-metrics regeneration on the AWS spot box
+  (`make regen-remote` / regen-git.sh — census regeneration is never
+  local, owner directive 2026-07-13; release; on the order of the
   current census bill — and the retired branches-family run claws back
   roughly a third of every future rebaseline).
 - The rename ripple over the closed consumer list (§1).
