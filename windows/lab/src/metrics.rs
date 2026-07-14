@@ -932,10 +932,39 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "total-population",
+            doc: "Sum of every settlement's committed population fact; Absent if there are none",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let places = hornvale_terrain::places(v.world());
+                let pops: Vec<f64> = places
+                    .iter()
+                    .filter_map(|p| {
+                        match v
+                            .world()
+                            .ledger
+                            .value_of(p.id, hornvale_settlement::POPULATION)
+                        {
+                            Some(Value::Number(n)) => Some(*n),
+                            _ => None,
+                        }
+                    })
+                    .collect();
+                if pops.is_empty() {
+                    MetricValue::Absent
+                } else {
+                    MetricValue::Number(pops.iter().sum::<f64>())
+                }
+            }),
+        },
+        Metric {
             name: "capacity-by-abs-latitude",
             doc: "The carrying-capacity field's headline calibration (design spec §5): the \
-                   ratio of mean per-land-cell K (summed over the placed roster, each species' \
-                   own psychology folded in) in the low-latitude band (|latitude| < 30) to the \
+                   ratio of mean per-land-cell K (summed over the full species roster's \
+                   individual fields, each species' own psychology folded in) in the \
+                   low-latitude band (|latitude| < 30) to the \
                    polar band (|latitude| > 60), the polar mean floored at POLE_FLOOR (1% of \
                    the K formula's baseline unit) so an exactly-zero polar band — the Miami NPP \
                    proxy's honest reading of hard cold, not a bug — reports a large-but-bounded \
@@ -983,6 +1012,46 @@ pub fn registry() -> Vec<Metric> {
                 let trop_mean = trop_sum / f64::from(trop_n);
                 let pole_mean = pole_sum / f64::from(pole_n);
                 MetricValue::Number(trop_mean / pole_mean.max(POLE_FLOOR))
+            }),
+        },
+        Metric {
+            name: "pop-weighted-abs-latitude",
+            doc: "The population-weighted mean absolute latitude across every settlement: \
+                   Σ(pop·|lat|) / Σ(pop), reading each settlement's committed POPULATION and \
+                   LATITUDE facts. The area-weighted mean |latitude| on a uniform sphere is \
+                   ≈32.7°; people concentrating off the poles (design spec §5) should read \
+                   below that baseline. Absent if there are no settlements with both facts",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let places = hornvale_terrain::places(v.world());
+                let (mut weighted_sum, mut pop_sum) = (0.0_f64, 0.0_f64);
+                for p in &places {
+                    let pop = match v
+                        .world()
+                        .ledger
+                        .value_of(p.id, hornvale_settlement::POPULATION)
+                    {
+                        Some(Value::Number(n)) => *n,
+                        _ => continue,
+                    };
+                    let lat = match v
+                        .world()
+                        .ledger
+                        .value_of(p.id, hornvale_settlement::LATITUDE)
+                    {
+                        Some(Value::Number(n)) => *n,
+                        _ => continue,
+                    };
+                    weighted_sum += pop * lat.abs();
+                    pop_sum += pop;
+                }
+                if pop_sum <= 0.0 {
+                    MetricValue::Absent
+                } else {
+                    MetricValue::Number(weighted_sum / pop_sum)
+                }
             }),
         },
         Metric {
@@ -3427,8 +3496,11 @@ mod tests {
         // homophony-count-{goblin,hobgoblin,bugbear,kobold}) and the phonology epoch
         // (confusable-homophony-{goblin,hobgoblin,bugbear,kobold},
         // tone-count-{goblin,kobold}, distinguishable-capacity-{goblin,bugbear,kobold}),
-        // +2 for the-gathering (Task 8: capacity-by-abs-latitude, rank-size-slope).
-        assert_eq!(registry().len(), 112);
+        // +2 for the-gathering (Task 8: capacity-by-abs-latitude, rank-size-slope),
+        // +2 more for the Task 8 review fix (total-population,
+        // pop-weighted-abs-latitude — the two metrics the brief named that
+        // were never built).
+        assert_eq!(registry().len(), 114);
     }
 
     #[test]

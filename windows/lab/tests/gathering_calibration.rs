@@ -98,6 +98,43 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     );
 }
 
+/// The second preregistered hypothesis the brief names (Task 8 review): the
+/// carrying-capacity field concentrates population off the poles, so the
+/// population-weighted mean absolute latitude across settlements should read
+/// BELOW the uniform-sphere baseline — the area-weighted mean |latitude| a
+/// sphere's surface would show if population were spread with no regard to
+/// climate, ≈32.7° (the classic `arccos`-weighted uniform-sphere integral).
+#[test]
+fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
+    /// The area-weighted mean absolute latitude on a uniform sphere: a
+    /// preregistered constant, not something this census measures.
+    const UNIFORM_SPHERE_BASELINE: f64 = 32.7;
+    let result = &*GATHERING;
+    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
+    let p_i = idx("pop-weighted-abs-latitude");
+    let (mut sum, mut n) = (0.0_f64, 0u32);
+    for row in &result.rows {
+        if let MetricValue::Number(p) = row.values[p_i] {
+            sum += p;
+            n += 1;
+        }
+    }
+    assert!(n > 0, "no world reported a pop-weighted-abs-latitude");
+    let mean = sum / f64::from(n);
+    // Directional preregistration: below the uniform-sphere baseline.
+    assert!(
+        mean < UNIFORM_SPHERE_BASELINE,
+        "pop-weighted-abs-latitude mean {mean:.4} did not clear the preregistered \
+         uniform-sphere baseline of {UNIFORM_SPHERE_BASELINE}"
+    );
+    // Pinned calibration row (measured 2026-07-13, same 200-seed
+    // census-of-the-gathering fixture the gradient calibration above uses).
+    assert!(
+        (mean - 10.3411).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~10.3411)"
+    );
+}
+
 /// `rank-size-slope` is recorded, never gated to a target: this campaign's
 /// interim per-species condensation is deliberately NOT tuned to a Zipf
 /// target (design spec §5). The only structural guard here is that it is a
@@ -131,5 +168,96 @@ fn rank_size_slope_is_observed_not_tuned() {
         negative > n / 2,
         "rank-size-slope should be negative (larger settlements rarer) in most worlds; \
          observed only {negative}/{n}"
+    );
+}
+
+/// World-level conservation guard (brief Step 7 / Task 8 review): a built
+/// seed-42 world's total committed settlement population must stay bounded
+/// by, and in the same order of magnitude as, the total carrying-capacity
+/// field it was condensed from — a coarse guard against the founder-floor
+/// and threshold-culling interaction breaking outright (e.g. a double-count,
+/// a lost-population regression, or the founder floor firing far more than
+/// intended).
+///
+/// **Not a tight "≈" bound.** Recomputing Σ K directly (the same
+/// `carrying_inputs_of` / `species_carrying_input` / `carrying_capacity`
+/// formula the composition root feeds into demography, summed over every
+/// species and every cell) against seed 42's committed population shows the
+/// gap is dominated by `condense()`'s threshold *culling* mass outright, not
+/// by rounding or the founder floor: at `THRESHOLD = 10.0`, every attractor
+/// whose catchment accumulation falls below the threshold is dropped from
+/// the settlement list entirely — its mass is never reassigned to a
+/// neighbouring surviving attractor (see `condense.rs`'s module doc; only
+/// `threshold == 0.0` conserves exactly, per that module's own test). Measured
+/// once (2026-07-13): Σ K = 7187.7407, Σ committed pop = 3971 — a ratio of
+/// ≈0.552, i.e. the threshold discards roughly 45% of the field's mass as
+/// sub-threshold catchments, not "a few percent". The founder floor and
+/// `.round()` at the emit boundary are comparatively tiny (bounded by one
+/// person per settlement, ~182 here) and only ever push population UP past
+/// what its catchment alone would round to, never account for the bulk of
+/// the gap. The bounds below reflect that reality rather than assume a
+/// near-exact conservation the design does not provide at this threshold.
+#[test]
+fn world_level_population_conserves_against_total_capacity() {
+    use hornvale_kernel::{Seed, Value};
+    let world = hornvale_worldgen::build_world(
+        Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &hornvale_worldgen::SettlementPins::default(),
+    )
+    .expect("seed-42 world must build");
+    let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain");
+    let climate = hornvale_worldgen::climate_of(&world).expect("climate");
+    let geo = terrain.geosphere();
+    let base_inputs = hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate);
+    let roster = hornvale_worldgen::default_roster();
+    let mut total_k = 0.0_f64;
+    for def in &roster {
+        let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
+            hornvale_worldgen::species_carrying_input(*base_inputs.get(c), &def.psych)
+        });
+        let k = hornvale_demography::carrying_capacity(geo, &inputs);
+        total_k += geo.cells().map(|c| *k.get(c)).sum::<f64>();
+    }
+    let settlements: Vec<_> = world
+        .ledger
+        .find(hornvale_settlement::IS_SETTLEMENT)
+        .collect();
+    let total_pop: f64 = settlements
+        .iter()
+        .filter_map(|f| {
+            match world
+                .ledger
+                .value_of(f.subject, hornvale_settlement::POPULATION)
+            {
+                Some(Value::Number(n)) => Some(*n),
+                _ => None,
+            }
+        })
+        .sum();
+    let count = settlements.len();
+    assert!(
+        total_pop > 0.0,
+        "a peopled seed-42 world has positive population"
+    );
+    // Upper bound: committed population may only ever exceed Σ K by the
+    // per-settlement founder-floor/rounding allowance (never conjure mass
+    // beyond that from the field).
+    assert!(
+        total_pop <= total_k + count as f64,
+        "committed population {total_pop} exceeded Σ K {total_k} by more than the \
+         {count}-settlement founder-floor/rounding allowance"
+    );
+    // Lower bound: a generous floor (well under the measured ~0.552 ratio)
+    // that still catches a catastrophic conservation break — e.g. population
+    // collapsing toward zero — while tolerating the threshold's expected,
+    // already-documented mass culling.
+    assert!(
+        total_pop >= total_k * 0.25,
+        "committed population {total_pop} fell far below Σ K {total_k} \
+         (ratio {:.4}) — below the threshold-culling floor this guard tolerates",
+        total_pop / total_k
     );
 }

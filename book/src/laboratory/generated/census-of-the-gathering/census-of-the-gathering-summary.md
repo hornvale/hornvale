@@ -2,7 +2,7 @@
 
 ## Study: census-of-the-gathering
 
-The Census of the Gathering: the carrying-capacity field's calibration over 200 worlds — the headline biomass-by-latitude gradient (capacity-by-abs-latitude), settlement scale, and the rank-size slope recorded as an observed (not tuned) metric.
+The Census of the Gathering: the carrying-capacity field's calibration over 200 worlds — the headline biomass-by-latitude gradient (capacity-by-abs-latitude), the population-weighted mean absolute latitude (pop-weighted-abs-latitude, preregistered below the ≈32.7° uniform-sphere baseline), settlement scale (settlement-count, mean-population, total-population), and the rank-size slope recorded as an observed (not tuned) metric.
 
 Seeds 0..200 × 1 pin set(s); 200 rows; 0 refusals.
 
@@ -31,6 +31,18 @@ Seeds 0..200 × 1 pin set(s); 200 rows; 0 refusals.
 | [400, 500) | 0 | 0.0% |
 | >= 500 | 0 | 0.0% |
 
+### total-population — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 500) | 57 | 28.5% |
+| [500, 1000) | 7 | 3.5% |
+| [1000, 2000) | 10 | 5.0% |
+| [2000, 4000) | 23 | 11.5% |
+| [4000, 8000) | 42 | 21.0% |
+| >= 8000 | 61 | 30.5% |
+
 ### capacity-by-abs-latitude — default
 
 | value | count | share |
@@ -43,6 +55,19 @@ Seeds 0..200 × 1 pin set(s); 200 rows; 0 refusals.
 | [20, 40) | 50 | 25.0% |
 | [40, 60) | 70 | 35.0% |
 | >= 60 | 3 | 1.5% |
+
+### pop-weighted-abs-latitude — default
+
+| value | count | share |
+|---|---|---|
+| < 0 | 0 | 0.0% |
+| [0, 10) | 104 | 52.0% |
+| [10, 20) | 84 | 42.0% |
+| [20, 30) | 4 | 2.0% |
+| [30, 40) | 4 | 2.0% |
+| [40, 50) | 4 | 2.0% |
+| [50, 60) | 0 | 0.0% |
+| >= 60 | 0 | 0.0% |
 
 ### rank-size-slope — default
 

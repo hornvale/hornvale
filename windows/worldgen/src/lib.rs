@@ -3373,6 +3373,30 @@ mod tests {
     }
 
     #[test]
+    fn no_zero_population_settlements() {
+        // Full-pipeline regression guard for the founder-floor fix (design
+        // spec §5, "no peopleless settlements"): the domain-level unit test
+        // `founder_floor_never_places_a_zero_population_settlement`
+        // (`domains/demography/src/founder.rs`) exercises the flooring logic
+        // in isolation with a synthetic trace-K species; this asserts the
+        // same invariant end-to-end on a real built world, where the emit
+        // boundary's `.round() as u32` is what would actually commit a
+        // POPULATION == 0 fact if the domain-level floor ever regressed.
+        let world = generated(42);
+        for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
+            let pop = world
+                .ledger
+                .value_of(f.subject, hornvale_settlement::POPULATION);
+            assert_ne!(
+                pop,
+                Some(&Value::Number(0.0)),
+                "settlement {:?} committed a zero population",
+                f.subject
+            );
+        }
+    }
+
+    #[test]
     fn culture_lines_name_the_flagship_and_its_subsistence() {
         let world = generated(42);
         let village = hornvale_settlement::village_info(&world).expect("flagship settlement");
