@@ -12,8 +12,8 @@
 use std::collections::BTreeMap;
 
 use hornvale_kernel::{
-    ANIMAL_PREY, ConceptKind, ConceptRegistry, EntityId, Fact, LedgerError, Mass, PLANT_FORAGE,
-    RegistryError, ResourceVector, Value, World,
+    ANIMAL_PREY, ConceptKind, ConceptRegistry, ConditionResponse, EntityId, Fact, LedgerError,
+    Mass, PLANT_FORAGE, RegistryError, ResourceVector, Value, World,
 };
 
 /// Predicate: a species entity's name (functional, Text).
@@ -178,6 +178,53 @@ pub struct ArticulationVector {
     pub exotic: ExoticManner,
 }
 
+/// A species' condition-tolerance profile: one response curve per v1
+/// environmental axis. v1 fixes the four axes; a later campaign generalizes
+/// to an open axis registry.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ConditionNiche {
+    /// Response curve over temperature, axis value in °C.
+    pub temperature: ConditionResponse,
+    /// Response curve over moisture, axis value in the climate moisture unit.
+    pub moisture: ConditionResponse,
+    /// Response curve over insolation, axis value in the annual-mean
+    /// insolation unit.
+    pub insolation: ConditionResponse,
+    /// Response curve over elevation, axis value in the terrain elevation
+    /// unit.
+    pub elevation: ConditionResponse,
+}
+
+/// The neutral, wide, identical condition niche shared by all four registry
+/// species for this task (B1): wide widths flatten each response curve
+/// nearly level, so no species is yet biogeographically differentiated by
+/// habitat — that differentiation is Stage B2's job. This is the SINGLE edit
+/// site B2 replaces with grounded, per-species optima.
+fn neutral_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 15.0,
+            width: 40.0,
+            devotion: 0.3,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.5,
+            width: 1.0,
+            devotion: 0.3,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.5,
+            width: 1.0,
+            devotion: 0.3,
+        },
+        elevation: ConditionResponse {
+            optimum: 500.0,
+            width: 5000.0,
+            devotion: 0.3,
+        },
+    }
+}
+
 /// One authored species: vector, vocabulary stopgaps (deleted by The
 /// Tongues), and a placeholder syllable pool for names.
 /// type-audit: bare-ok(identifier-text)
@@ -205,6 +252,17 @@ pub struct SpeciesDef {
     /// resource-axis basis (`hornvale_kernel::ecology`). Feeds the packer's
     /// Pianka overlap between coexisting species.
     pub niche: ResourceVector,
+    /// The species' condition-tolerance profile over the v1 environmental
+    /// axes (temperature/moisture/insolation/elevation). Coupled to the
+    /// world's shipped fields by the worldgen K layer to place the species
+    /// in space. See [`ConditionNiche`].
+    pub condition_niche: ConditionNiche,
+    /// Magical potency (0 = a purely material creature). Raises the species'
+    /// sovereignty floor (`hornvale_kernel::sovereignty_floor`) so mighty
+    /// creatures buffer environmental constraint. The four material peoples
+    /// carry 0.
+    /// type-audit: bare-ok(ratio: potency)
+    pub potency: f64,
     /// Worker-role override; `None` = the subsistence worker word.
     pub worker_override: Option<&'static str>,
     /// The warrior-rung word.
@@ -260,6 +318,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
             },
             mass: Mass::new(18.1).unwrap(),
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.50), (ANIMAL_PREY, 0.50)]).unwrap(),
+            condition_niche: neutral_condition_niche(),
+            potency: 0.0,
             worker_override: None,
             warrior: "warrior",
             artisan: "artisan",
@@ -297,6 +357,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
             },
             mass: Mass::new(13.6).unwrap(),
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
+            condition_niche: neutral_condition_niche(),
+            potency: 0.0,
             worker_override: Some("digger"),
             warrior: "warden",
             artisan: "shaper",
@@ -334,6 +396,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
             },
             mass: Mass::new(74.8).unwrap(),
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
+            condition_niche: neutral_condition_niche(),
+            potency: 0.0,
             worker_override: Some("laborer"),
             warrior: "soldier",
             artisan: "smith",
@@ -371,6 +435,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
             },
             mass: Mass::new(132.0).unwrap(),
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.15), (ANIMAL_PREY, 0.85)]).unwrap(),
+            condition_niche: neutral_condition_niche(),
+            potency: 0.0,
             worker_override: Some("forager"),
             warrior: "mauler",
             artisan: "tanner",
@@ -868,6 +934,29 @@ mod tests {
         assert!(r["kobold"].mass.kilograms() < r["goblin"].mass.kilograms());
         assert!(r["goblin"].mass.kilograms() < r["hobgoblin"].mass.kilograms());
         assert!(r["hobgoblin"].mass.kilograms() < r["bugbear"].mass.kilograms());
+    }
+
+    #[test]
+    fn every_species_has_a_finite_condition_niche() {
+        for (name, def) in registry() {
+            for r in [
+                def.condition_niche.temperature,
+                def.condition_niche.moisture,
+                def.condition_niche.insolation,
+                def.condition_niche.elevation,
+            ] {
+                assert!(r.optimum.is_finite(), "{name} optimum finite");
+                assert!(
+                    r.width.is_finite() && r.width > 0.0,
+                    "{name} width positive"
+                );
+                assert!(r.devotion.is_finite(), "{name} devotion finite");
+            }
+            assert!(
+                def.potency >= 0.0 && def.potency.is_finite(),
+                "{name} potency >= 0"
+            );
+        }
     }
 
     #[test]
