@@ -67,6 +67,7 @@
 - [The Uncommon Ground](./chronicle/the-uncommon-ground.md)
 - [The Datum](./chronicle/the-datum.md)
 - [Temperature](./chronicle/temperature.md)
+- [The Self-Describing Sky](./chronicle/the-self-describing-sky.md)
 
 # The Gallery
 

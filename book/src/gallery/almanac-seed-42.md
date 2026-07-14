@@ -125,25 +125,25 @@ Its roles, lowest to highest: digger, shaper, keeper, elders.
 
 The people keep a folk pantheon:
 
-> Bvaash the Vngoabvaash is: Bvaash the Vngoabvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Vngaabvaash is: Bvaash the Vngaabvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
 The village of **Zhvedxngab** keeps its own folk pantheon:
 
-> Neb the Ngatneb is ever: Neb the Ngatneb watches unceasing. So it was, so it is.
+> Neb the Vnodneb is ever: Neb the Vnodneb watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
 The legion of **Voengjaongjee** keeps its own folk pantheon:
 
-> Fee the Mjoefee is ever: Fee the Mjoefee watches unceasing. So it was, so it is.
+> Fee the Ngjeafee is ever: Fee the Ngjeafee watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
 In the warren of **Rogxaxatxorarro**, an organized priesthood tends its own pantheon:
 
-> Xaxo Rogxaxaxo is: Xaxo Rogxaxaxo is always watching. That's how it's always been. That's how it's always been. Xaxo is the highest among the gods. *(who presides)*
+> Rogxaxaxo Xaxo is: Rogxaxaxo Xaxo is always watching. That's how it's always been. That's how it's always been. Rogxaxaxo is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 

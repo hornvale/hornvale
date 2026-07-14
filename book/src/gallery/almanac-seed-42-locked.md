@@ -111,69 +111,69 @@ Its roles, lowest to highest: digger, shaper, keeper, elders.
 
 An organized priesthood tends a pantheon:
 
-> Bvaash the Shngaashbvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is the highest among the gods. *(who presides)*
+> Bvaash the Vngaoshbvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *tide*
 
-> Bvaash the Kvoobvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Shngaobvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Bvaash the Vngaabvaash is: Bvaash the Vngaabvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Gvooshbvaash is: Bvaash the Gvooshbvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bvaash the Kvaobvaash comes back every 71.11 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Shngoobvaash comes back every 71.11 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
 In the village of **Zhxakzhvodngad**, an organized priesthood tends its own pantheon:
 
-> Neb the Vngebneb is ever: Neb the Vngebneb watches unceasing. So it was, so it is. *(who presides)*
+> Neb the Vnodneb is ever: Neb the Vnodneb watches unceasing. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Nakzhxob the Zhxotxngadnget returns every 71.11 days. So it was, so it is.
+> Ngadxngak the Svatvnakvnak returns every 71.11 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Xnotsfetngod the Sfadxnabnad returns every 269.79 days. So it was, so it is.
+> Zvakngek the Nodsfobsvad returns every 269.79 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Neb the Zhfakneb is felt, not counted. So it was, so it is.
+> Neb the Zhvakneb is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Neb the Ngetneb is felt, not counted. So it was, so it is.
+> Neb the Svokneb is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
 In the legion of **Feomjoa**, an organized priesthood tends its own pantheon:
 
-> Fee the Njoefee is ever: Fee the Njoefee watches unceasing. So it was, so it is. *(who presides)*
+> Fee the Ngjeafee is ever: Fee the Ngjeafee watches unceasing. So it was, so it is. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
-> Mjoafeenjee the Feoqbeaqbea returns every 71.11 days. So it was, so it is.
+> Feonjaagbee the Qgoaveofoa returns every 71.11 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Faevoo the Feafaefaengjao returns every 269.79 days. So it was, so it is.
+> Kqeotgaetgeo the Mjoeggoexeo returns every 269.79 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Fee the Njoafee is felt, not counted. So it was, so it is.
+> Fee the Tkaofee is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Fee the Njoofee is felt, not counted. So it was, so it is.
+> Fee the Bbaofee is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
 In the warren of **Rogxaxotroroxat**, an organized priesthood tends its own pantheon:
 
-> Xaxorogxa Rogxa is: Xaxorogxa Rogxa is always watching. That's how it's always been. That's how it's always been. Xaxorogxa is the highest among the gods. *(who presides)*
+> Rogxaxaxo Xaxo is: Rogxaxaxo Xaxo is always watching. That's how it's always been. That's how it's always been. Rogxaxaxo is the highest among the gods. *(who presides)*
 >
 > — derived from the phenomenon *celestial-body*
 
