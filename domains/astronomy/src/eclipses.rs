@@ -88,6 +88,108 @@ pub fn sun_angular_rel_at(system: &StarSystem, calendar: &Calendar, t: StdDays) 
     mean / (1.0 - e * math::sin(std::f64::consts::TAU * calendar.year_phase(t)))
 }
 
+/// Which body is darkened.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EclipseBody {
+    /// A moon crosses the sun at new moon.
+    Solar,
+    /// The anchor's shadow crosses a full moon.
+    Lunar,
+}
+
+/// How completely the body is darkened (binary this campaign; partiality
+/// grading is explicitly deferred).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EclipseKind {
+    /// The covering disc (or shadow) swallows the body whole.
+    Total,
+    /// The moon's disc is too small: a burning ring remains.
+    Annular,
+}
+
+/// One dated eclipse: a syzygy whose ecliptic latitude fell inside the
+/// node threshold.
+/// type-audit: bare-ok(index: moon)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EclipseEvent {
+    /// The syzygy, in absolute standard days.
+    pub day: StdDays,
+    /// Which moon (distance-sorted index into `StarSystem::moons`).
+    pub moon: usize,
+    /// Solar (new moon) or lunar (full moon).
+    pub body: EclipseBody,
+    /// Total or annular (kind read at the event's own t — a borderline
+    /// moon is total near aphelion and annular near perihelion).
+    pub kind: EclipseKind,
+}
+
+/// Every dated eclipse in `[from, until]`, day-ascending (moon index as
+/// the deterministic tie-break). Syzygies are closed-form — the synodic
+/// phase is linear in `t` — so the scan visits each new (and, Task 5,
+/// full) moon exactly, no sampling. A moon with no synodic cycle never
+/// eclipses. Thresholds and the total/annular kind are evaluated at each
+/// syzygy's own time (Task 3), never cached.
+pub fn eclipse_events(
+    system: &StarSystem,
+    calendar: &Calendar,
+    from: StdDays,
+    until: StdDays,
+) -> Vec<EclipseEvent> {
+    let mut out = Vec::new();
+    for (index, moon) in system.moons.iter().enumerate() {
+        let Some(synodic) = calendar.synodic_month(index) else {
+            continue;
+        };
+        let Some(phase0) = calendar.moon_phase(StdDays(0.0), index) else {
+            continue;
+        };
+        // Syzygy k of each family sits at t = (k + half − phase0)·synodic.
+        for (half, body) in syzygy_families() {
+            let k_min = (from.0 / synodic.0 + phase0 - half).ceil() as i64;
+            let k_max = (until.0 / synodic.0 + phase0 - half).floor() as i64;
+            for k in k_min..=k_max {
+                let t = StdDays((k as f64 + half - phase0) * synodic.0);
+                if t.0 < from.0 || t.0 > until.0 {
+                    continue;
+                }
+                let Some(beta) = moon_ecliptic_latitude_deg(calendar, moon, index, t) else {
+                    continue;
+                };
+                let sun_angular = sun_angular_rel_at(system, calendar, t);
+                let theta_solar =
+                    solar_eclipse_threshold_deg(sun_angular, moon.angular_diameter_rel);
+                let threshold = match body {
+                    EclipseBody::Solar => theta_solar,
+                    EclipseBody::Lunar => theta_solar, // Task 5 narrows this arm
+                };
+                if beta.abs() < threshold {
+                    let kind = match body {
+                        EclipseBody::Lunar => EclipseKind::Total,
+                        EclipseBody::Solar if moon.angular_diameter_rel >= sun_angular => {
+                            EclipseKind::Total
+                        }
+                        EclipseBody::Solar => EclipseKind::Annular,
+                    };
+                    out.push(EclipseEvent {
+                        day: t,
+                        moon: index,
+                        body,
+                        kind,
+                    });
+                }
+            }
+        }
+    }
+    out.sort_by(|a, b| a.day.0.total_cmp(&b.day.0).then(a.moon.cmp(&b.moon)));
+    out
+}
+
+/// The syzygy families the scan walks. Solar only until Task 5 adds the
+/// full-moon (lunar) family.
+fn syzygy_families() -> Vec<(f64, EclipseBody)> {
+    vec![(0.0, EclipseBody::Solar)]
+}
+
 /// Sol + Luna exactly: 1 M☉, 1 AU, 365.25-day year, 24-hour day, zero
 /// forcing, one moon at Luna's elements with node at 0°. The calibration
 /// fixture Tasks 3–11 reuse — module scope (not inside `mod tests`) so
@@ -209,6 +311,91 @@ mod tests {
             tide_rel: 1.0,
             inclination_deg,
             node_longitude_deg,
+        }
+    }
+
+    /// Luna–Sol calibration: the dated scan reproduces Earth's ~2.4 solar
+    /// eclipses/year over a 50-year window (the anywhere-on-the-world
+    /// count the parallax allowance is calibrated to).
+    #[test]
+    fn luna_sol_dates_earths_solar_cadence() {
+        let (system, calendar) = luna_sol();
+        let years = 50.0;
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * years));
+        let solar = events
+            .iter()
+            .filter(|e| matches!(e.body, EclipseBody::Solar))
+            .count() as f64;
+        let per_year = solar / years;
+        assert!(
+            (1.9..=2.9).contains(&per_year),
+            "solar eclipses/year {per_year}"
+        );
+    }
+
+    /// Every dated solar event sits at a new moon and inside the node
+    /// threshold — the geometry cannot lie.
+    #[test]
+    fn solar_events_fall_at_new_moons_inside_the_threshold() {
+        let (system, calendar) = luna_sol();
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 20.0));
+        assert!(!events.is_empty());
+        for e in events
+            .iter()
+            .filter(|e| matches!(e.body, EclipseBody::Solar))
+        {
+            let moon = &system.moons[e.moon];
+            let phase = calendar.moon_phase(e.day, e.moon).unwrap();
+            let off_new = phase.min(1.0 - phase);
+            assert!(off_new < 1e-6, "phase {phase} at day {}", e.day.0);
+            let beta = moon_ecliptic_latitude_deg(&calendar, moon, e.moon, e.day).unwrap();
+            let threshold = solar_eclipse_threshold_deg(
+                sun_angular_rel_at(&system, &calendar, e.day),
+                moon.angular_diameter_rel,
+            );
+            assert!(beta.abs() < threshold, "β {beta} vs θ {threshold}");
+        }
+    }
+
+    /// A flat orbit eclipses at every single new moon (SKY-6's shipped
+    /// rate limit, now dated).
+    #[test]
+    fn a_flat_orbit_eclipses_every_new_moon() {
+        let (mut system, _) = luna_sol();
+        system.moons[0].inclination_deg = 1e-9;
+        let calendar = crate::calendar::calendar_of(&system);
+        let synodic = calendar.synodic_month(0).unwrap();
+        let window = StdDays(synodic.0 * 24.0);
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), window);
+        let solar = events
+            .iter()
+            .filter(|e| matches!(e.body, EclipseBody::Solar))
+            .count();
+        assert!((23..=25).contains(&solar), "solar count {solar}");
+    }
+
+    /// Eclipse seasons exist: every solar event's sun sits within a
+    /// bounded arc of the node line (Luna scale: asin(θ/i) ≈ 17°, so 25°
+    /// with slack) — events cluster, they don't smear.
+    #[test]
+    fn solar_events_cluster_at_the_node_line() {
+        let (system, calendar) = luna_sol();
+        let moon = &system.moons[0];
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 20.0));
+        for e in events
+            .iter()
+            .filter(|e| matches!(e.body, EclipseBody::Solar))
+        {
+            let l_sun = 360.0 * calendar.year_phase(e.day);
+            let omega = node_longitude_at(moon, calendar.year_length(), e.day);
+            let arc = (l_sun - omega)
+                .rem_euclid(180.0)
+                .min(180.0 - (l_sun - omega).rem_euclid(180.0));
+            assert!(
+                arc < 25.0,
+                "sun {arc}° from the node line at day {}",
+                e.day.0
+            );
         }
     }
 }
