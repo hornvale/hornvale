@@ -167,8 +167,7 @@ pub fn render(ctx: &AlmanacContext) -> String {
             doc.push_str(&format!("{line}\n\n"));
         }
         for line in &lines.eclipses {
-            doc.push_str(line);
-            doc.push('\n');
+            doc.push_str(&format!("{line}\n\n"));
         }
     }
 
