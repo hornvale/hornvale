@@ -1,6 +1,6 @@
 # Single-Craton Hypsometry — Design
 
-**Status:** Draft (queued terrain task; not for immediate execution)
+**Status:** Shipped (2026-07-14)
 **Date:** 2026-07-13
 **Roadmap slot:** terrain overhaul, Sculpting era (after Crust) — the
 craton-loop work already flagged in the Crust retrospective.
@@ -87,6 +87,14 @@ work this spec hands to the implementer.
 5. The ocean-fraction pin's new "target, not guarantee" semantics for
    supply-limited worlds is documented (module doc + a decision note if it
    rises to a contract change).
+
+> **Amendment at execution (2026-07-14, Nathan):** criterion 1's shelf
+> floor is land-normalized (`shape::shelf_land_ratio > 0.05`, absolute
+> `shelf_fraction < 0.5` ceiling retained) — the measured sweep showed
+> the whole-sphere 0.02 floor geometrically unreachable for a
+> ~3%-of-sphere continent whose shelf-to-land ratio nonetheless matches
+> or beats default worlds'. Evidence and ruling: decision 0053's
+> amendment; tables in `SHELF_BREAK_LAND_FACTOR`'s doc.
 
 ## Out of scope
 

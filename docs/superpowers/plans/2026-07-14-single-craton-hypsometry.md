@@ -41,7 +41,7 @@
 - Consumes: existing `Craton { radius_rad, age }`, `continental_cap_fraction(peak_km) -> f64`, private consts `PEAK_MIN_KM`/`PEAK_MAX_KM`.
 - Produces: `pub fn continental_supply(cratons: &[Craton]) -> f64` — fraction of the sphere's area that is continental, in [0, 1). Task 2's `effective_ocean_target` and Task 4's separation guard consume this exact signature.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to the `tests` module of `domains/terrain/src/crust.rs` (it already has the `default_ocean_target` helper):
 
@@ -87,14 +87,14 @@ fn continental_supply_is_the_area_the_rescale_budgets() {
 }
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 cargo test -p hornvale-terrain --lib continental_supply 2>&1 | tee /tmp/hv-test.txt
 ```
 Expected: compile error — `continental_supply` not found.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `domains/terrain/src/crust.rs`, immediately after `continental_cap_fraction` (~line 261), add:
 
@@ -139,14 +139,14 @@ with:
     let continental_area: f64 = cratons.iter().map(craton_continental_steradians).sum();
 ```
 
-- [ ] **Step 4: Run the crate tests to verify green (including the byte-identity-sensitive craton batteries)**
+- [x] **Step 4: Run the crate tests to verify green (including the byte-identity-sensitive craton batteries)**
 
 ```bash
 cargo test -p hornvale-terrain 2>&1 | tee /tmp/hv-test.txt
 ```
 Expected: PASS, all tests (the existing `craton_draws_are_sequential_and_in_range`, `genesis_is_deterministic`, and pin-isolation batteries double as refactor guards).
 
-- [ ] **Step 5: fmt, clippy, commit**
+- [x] **Step 5: fmt, clippy, commit**
 
 ```bash
 cargo fmt
@@ -172,7 +172,7 @@ Task 1)."
 - Consumes: `crust::continental_supply(&[Craton]) -> f64` (Task 1).
 - Produces: `pub const SUPPLY_SHORTFALL_FACTOR: f64`, `pub const SHELF_BREAK_LAND_FACTOR: f64`, and `pub fn effective_ocean_target(target: f64, supply: f64, notes: &mut Vec<String>) -> f64` in `hornvale_terrain::elevation`. Task 3 calibrates `SHELF_BREAK_LAND_FACTOR`; Task 4's guard asserts against `SUPPLY_SHORTFALL_FACTOR` and the pass-through equality.
 
-- [ ] **Step 1: Write the failing unit tests**
+- [x] **Step 1: Write the failing unit tests**
 
 Add to the `tests` module of `domains/terrain/src/elevation.rs`:
 
@@ -200,14 +200,14 @@ fn effective_ocean_target_falls_back_to_the_shelf_break_and_meters_it() {
 }
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 ```bash
 cargo test -p hornvale-terrain --lib effective_ocean_target 2>&1 | tee /tmp/hv-test.txt
 ```
 Expected: compile error — `effective_ocean_target` not found.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `domains/terrain/src/elevation.rs`, after `resolve_ocean_fraction` (~line 237), add:
 
@@ -273,7 +273,7 @@ In `domains/terrain/src/globe.rs::generate`, thread it through — after the `dr
 
 (`draw_cratons` still receives the raw `ocean_target` — the budget semantics are a save-format contract and do not change.)
 
-- [ ] **Step 4: Write the genesis-level test**
+- [x] **Step 4: Write the genesis-level test**
 
 Add to the `tests` module of `domains/terrain/src/globe.rs`:
 
@@ -299,14 +299,14 @@ fn a_supply_limited_world_meters_the_shelf_break_fallback() {
 }
 ```
 
-- [ ] **Step 5: Run the crate suite**
+- [x] **Step 5: Run the crate suite**
 
 ```bash
 cargo test -p hornvale-terrain 2>&1 | tee /tmp/hv-test.txt
 ```
 Expected: PASS everywhere — in particular `pin_isolation_holds_at_the_globe_level`, `sea_level_hits_a_pinned_ocean_fraction`, and `every_default_globe_satisfies_every_invariant` must be untouched (they all run non-supply-limited scenarios, which take the pass-through branch).
 
-- [ ] **Step 6: fmt, clippy, commit**
+- [x] **Step 6: fmt, clippy, commit**
 
 ```bash
 cargo fmt
@@ -363,7 +363,7 @@ default worlds take the byte-identical pass-through branch
 - Consumes: `SHELF_BAND_M`, `CellMap<ReferenceElevation>` — all existing.
 - Produces: `pub fn shelf_land_ratio(elevation: &CellMap<ReferenceElevation>, sea_level: ReferenceElevation) -> Option<f64>` in `hornvale_terrain::shape`. Task 4's tests consume this exact signature. `SHELF_BREAK_LAND_FACTOR` stays `1.0` (value unchanged; doc updated). Do NOT register the new function as a lab metric — the census schema and the committed `lab list-metrics` reference dump are frozen.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to the `tests` module of `domains/terrain/src/shape.rs`:
 
@@ -385,14 +385,14 @@ fn shelf_land_ratio_normalizes_by_land_not_the_sphere() {
 }
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [x] **Step 2: Run it to verify it fails**
 
 ```bash
 cargo test -p hornvale-terrain --lib shelf_land_ratio 2>&1 | tee /tmp/hv-test.txt
 ```
 Expected: compile error — `shelf_land_ratio` not found.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `domains/terrain/src/shape.rs`, immediately after `shelf_fraction`, add (matching `shelf_fraction`'s comparison idiom exactly):
 
@@ -425,7 +425,7 @@ pub fn shelf_land_ratio(
 }
 ```
 
-- [ ] **Step 4: Update the constant's doc with the measured evidence**
+- [x] **Step 4: Update the constant's doc with the measured evidence**
 
 In `domains/terrain/src/elevation.rs`, replace the final sentence of `SHELF_BREAK_LAND_FACTOR`'s doc comment ("Calibrated in Task 3 … replaces this sentence there.") with the evidence, in the `REBALANCE_GAIN` house style:
 
@@ -443,7 +443,7 @@ In `domains/terrain/src/elevation.rs`, replace the final sentence of `SHELF_BREA
 /// (decision 0053).
 ```
 
-- [ ] **Step 5: Run the crate suite, fmt, clippy, commit**
+- [x] **Step 5: Run the crate suite, fmt, clippy, commit**
 
 ```bash
 cargo test -p hornvale-terrain 2>&1 | tee /tmp/hv-test.txt
@@ -470,7 +470,7 @@ exceeds the default-world population's. Tables in the constant's doc
 **Interfaces:**
 - Consumes: everything from Tasks 1–3 (`continental_supply`, `effective_ocean_target`, `SUPPLY_SHORTFALL_FACTOR`, the calibrated constant). No new API.
 
-- [ ] **Step 1: Un-ignore the seed-3 test and land-normalize its shelf floor (Task 3 amendment)**
+- [x] **Step 1: Un-ignore the seed-3 test and land-normalize its shelf floor (Task 3 amendment)**
 
 In `domains/terrain/src/elevation.rs`, delete the entire `#[ignore = "Task 9 re-verification …"]` attribute (~lines 500–512), and replace the test body's two shelf assertions:
 
@@ -497,14 +497,14 @@ with the land-normalized floor plus the retained absolute ceiling:
 
 (The `d > 1.5` bimodality assertion is unchanged.)
 
-- [ ] **Step 2: Run it to verify it now passes**
+- [x] **Step 2: Run it to verify it now passes**
 
 ```bash
 cargo test -p hornvale-terrain --lib a_single_craton_world_has_a_shelf_and_a_bimodal_hypsometry 2>&1 | tee /tmp/hv-test.txt
 ```
 Expected: PASS. (Seed 3 is inside the measured sweep — its land-normalized shelf sits within the measured 0.075–0.309 range; if this fails, Task 3's evidence was misapplied — go back, don't retune here.)
 
-- [ ] **Step 3: Rewrite the stale module-doc paragraph**
+- [x] **Step 3: Rewrite the stale module-doc paragraph**
 
 In the module doc of `domains/terrain/src/elevation.rs`, replace the final sentence of the "Finding" paragraph — from "One edge case remains structurally unfixable by these two knobs:" through "…with that math in its own annotation." (~lines 26–31) — with:
 
@@ -517,7 +517,7 @@ In the module doc of `domains/terrain/src/elevation.rs`, replace the final sente
 //! percentile at the isostatic shelf break instead of the abyssal plain.
 ```
 
-- [ ] **Step 4: Write the sweep and the separation guard**
+- [x] **Step 4: Write the sweep and the separation guard**
 
 Add to `domains/terrain/tests/tectonic_properties.rs`:
 
@@ -596,14 +596,14 @@ fn default_worlds_never_trip_the_supply_fallback() {
 }
 ```
 
-- [ ] **Step 5: Run the crate suite (lib + integration) and check the sweep's runtime**
+- [x] **Step 5: Run the crate suite (lib + integration) and check the sweep's runtime**
 
 ```bash
 cargo test -p hornvale-terrain 2>&1 | tee /tmp/hv-test.txt
 ```
 Expected: PASS. The 40-seed level-4 sweep should cost about what the existing 64-seed default sweep costs. If (and only if) `single_craton_worlds_have_shelves_and_bimodal_hypsometry_across_the_sweep` alone exceeds ~60 s wall, mark it `#[ignore = "heavy: 40-seed level-4 single-craton sweep (~Ns); gate-full runs it"]` and rely on the un-ignored seed-3 test in the commit gate — note the choice in the commit message.
 
-- [ ] **Step 6: fmt, clippy, commit**
+- [x] **Step 6: fmt, clippy, commit**
 
 ```bash
 cargo fmt
@@ -627,7 +627,7 @@ quota, so the fallback cannot rewrite default worlds
 - Modify: `docs/superpowers/specs/2026-07-13-single-craton-hypsometry-design.md` (status → Shipped), this plan (statuses checked)
 - Possibly modify: `docs/audits/type-audit-report.md` (regenerated)
 
-- [ ] **Step 1: Write decision 0053**
+- [x] **Step 1: Write decision 0053**
 
 `docs/decisions/0053-ocean-fraction-is-a-target-under-supply-limited-crust.md` (house format per `docs/decisions/README.md`; confirm 0053 is still the next free number with `ls docs/decisions/` and renumber if a parallel session claimed it):
 
@@ -685,7 +685,7 @@ unchanged (the frozen census depends on it); `shelf_land_ratio` is a new
 unregistered shape function.
 ```
 
-- [ ] **Step 2: Type-audit check (new pub items were tagged inline)**
+- [x] **Step 2: Type-audit check (new pub items were tagged inline)**
 
 ```bash
 cargo run --manifest-path tools/type-audit/Cargo.toml -- check
@@ -694,7 +694,7 @@ git diff --stat docs/audits/type-audit-report.md
 ```
 Expected: check passes; commit the report only if it changed.
 
-- [ ] **Step 3: Artifact-freshness proof (expect zero churn)**
+- [x] **Step 3: Artifact-freshness proof (expect zero churn)**
 
 ```bash
 SKIP_CENSUS=1 scripts/regenerate-artifacts.sh
@@ -702,7 +702,7 @@ git status --short
 ```
 Expected: **clean** — no committed artifact moves, because defaults never trip the fallback. If anything under `book/src/gallery/`, `book/src/reference/`, or `book/src/laboratory/` changed, STOP: the byte-identity guarantee is broken; revert and debug (do not rebaseline, do not touch censuses).
 
-- [ ] **Step 4: Chronicle entry + freshness sweep**
+- [x] **Step 4: Chronicle entry + freshness sweep**
 
 Write `book/src/chronicle/single-craton-hypsometry.md` in the house altitude (technical prose, comprehensible without the code — model on `book/src/chronicle/the-uncommon-ground.md`): the 8.7% cap-area ceiling, why an exact percentile digs into the abyss, the shelf-break fallback, and the target-not-guarantee semantics. Add it to `book/src/SUMMARY.md`'s chronicle list.
 
@@ -714,7 +714,7 @@ cargo test -p hornvale --test docs_consistency
 ```
 Expected: both green.
 
-- [ ] **Step 5: Retro + spec/plan shipped markers**
+- [x] **Step 5: Retro + spec/plan shipped markers**
 
 Write `docs/retrospectives/single-craton-hypsometry.md` (one page, process lessons only — the STOP-rule firing and the land-normalization ruling are the story). Flip the spec's `**Status:**` line to `Shipped (2026-07-14)`, and append an amendment note at the end of the spec's Success criteria section:
 
@@ -730,7 +730,7 @@ Write `docs/retrospectives/single-craton-hypsometry.md` (one page, process lesso
 
 Check off this plan's boxes.
 
-- [ ] **Step 6: The full gate, then commit**
+- [x] **Step 6: The full gate, then commit**
 
 ```bash
 make gate 2>&1 | tail -20
