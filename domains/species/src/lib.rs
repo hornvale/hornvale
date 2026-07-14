@@ -16,6 +16,12 @@ use hornvale_kernel::{
     Mass, PLANT_FORAGE, RegistryError, ResourceVector, Value, World,
 };
 
+mod allometry;
+pub use allometry::{
+    LifeHistory, age_at_maturity, basal_metabolic_rate_w, life_history, lifespan,
+    reproductive_tempo,
+};
+
 /// Predicate: a species entity's name (functional, Text).
 /// type-audit: bare-ok(identifier-text)
 pub const SPECIES_NAME: &str = "species-name";
@@ -328,6 +334,26 @@ fn bugbear_condition_niche() -> ConditionNiche {
     }
 }
 
+/// A species' metabolic strategy. Selects the allometric normalization
+/// coefficient (B₀) and the per-class pace multiplier; the scaling
+/// *exponents* are universal across classes (spec §4).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MetabolicClass {
+    /// Warm-blooded (mammal/bird analogue): high, temperature-stable basal rate.
+    Endotherm,
+    /// Cold-blooded (reptile/amphibian analogue): ~1/8 the basal rate; longer
+    /// life per kg. Realized rate couples to ambient temperature (deferred,
+    /// spec §10 CAP-1).
+    Ectotherm,
+    /// Phototroph (plant-folk/fungal analogue). Energy from light; its basal
+    /// rate is SURFACE/area-limited, so the §4 universal exponent does NOT
+    /// apply — activating this class is its own modelling decision. Unused seam.
+    Autotroph,
+    /// No metabolism (construct/undead analogue). Has no life-history: the
+    /// biological traits are `None`. Unused seam.
+    Ametabolic,
+}
+
 /// One authored species: vector, vocabulary stopgaps (deleted by The
 /// Tongues), and a placeholder syllable pool for names.
 /// type-audit: bare-ok(identifier-text)
@@ -351,6 +377,8 @@ pub struct SpeciesDef {
     /// packer reads to convert a settlement population into a standing
     /// biomass demand.
     pub mass: Mass,
+    /// Metabolic strategy — drives life-history allometry (spec BIO-2).
+    pub metabolic_class: MetabolicClass,
     /// The species' ecological niche: a sparse utilization profile over the
     /// resource-axis basis (`hornvale_kernel::ecology`). Feeds the packer's
     /// Pianka overlap between coexisting species.
@@ -420,6 +448,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 exotic: ExoticManner::None,
             },
             mass: Mass::new(18.1).unwrap(),
+            metabolic_class: MetabolicClass::Endotherm,
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.50), (ANIMAL_PREY, 0.50)]).unwrap(),
             condition_niche: goblin_condition_niche(),
             potency: 0.0,
@@ -459,6 +488,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 exotic: ExoticManner::Trill,
             },
             mass: Mass::new(13.6).unwrap(),
+            metabolic_class: MetabolicClass::Ectotherm,
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
             condition_niche: kobold_condition_niche(),
             potency: 0.0,
@@ -498,6 +528,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 exotic: ExoticManner::None,
             },
             mass: Mass::new(74.8).unwrap(),
+            metabolic_class: MetabolicClass::Endotherm,
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
             condition_niche: hobgoblin_condition_niche(),
             potency: 0.0,
@@ -537,6 +568,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 exotic: ExoticManner::None,
             },
             mass: Mass::new(132.0).unwrap(),
+            metabolic_class: MetabolicClass::Endotherm,
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.15), (ANIMAL_PREY, 0.85)]).unwrap(),
             condition_niche: bugbear_condition_niche(),
             potency: 0.0,
@@ -838,6 +870,25 @@ mod tests {
     use hornvale_kernel::Seed;
 
     #[test]
+    fn bio2_adds_no_stream_label() {
+        // The life-history layer is authored constants + pure derivations: it
+        // must introduce NO new seed-derivation stream. Species streams stay
+        // empty (species are authored, not drawn); guard against a future
+        // BIO-2-adjacent change quietly adding a life/allometry/metabolic draw.
+        let labels = stream_labels();
+        assert!(
+            labels.is_empty(),
+            "species crate must register no streams at all: {labels:?}"
+        );
+        assert!(
+            !labels.iter().any(|(k, _)| k.contains("life")
+                || k.contains("allometry")
+                || k.contains("metabolic")),
+            "BIO-2 must not register a stream: {labels:?}"
+        );
+    }
+
+    #[test]
     fn concepts_registered() {
         let mut r = ConceptRegistry::default();
         register_concepts(&mut r).unwrap();
@@ -1078,6 +1129,16 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn every_species_has_a_metabolic_class() {
+        use MetabolicClass::*;
+        let r = registry();
+        assert_eq!(r["goblin"].metabolic_class, Endotherm);
+        assert_eq!(r["hobgoblin"].metabolic_class, Endotherm);
+        assert_eq!(r["bugbear"].metabolic_class, Endotherm);
+        assert_eq!(r["kobold"].metabolic_class, Ectotherm); // reptilian/draconic SRD lineage
     }
 
     #[test]
