@@ -5,6 +5,7 @@
 
 use crate::calendar::Calendar;
 use crate::moons::Moon;
+use crate::system::StarSystem;
 use crate::units::StdDays;
 use hornvale_kernel::math;
 
@@ -72,6 +73,19 @@ pub fn moon_ecliptic_latitude_deg(
     let l_moon = l_sun + 360.0 * phase;
     let omega = node_longitude_at(moon, calendar.year_length(), t);
     Some(moon.inclination_deg * math::sin((l_moon - omega).to_radians()))
+}
+
+/// The sun's apparent angular diameter (Luna-units) at `t`: the mean
+/// orbital value scaled by the instantaneous star distance from the live
+/// eccentricity. First-order: r/a = 1 − e·sin(2π·year-phase) — the same
+/// perihelion convention the apsidal daylight term already uses
+/// (insolation peaks at year phase 0.25). Declared approximation (model
+/// card); evaluated at the event, never cached (the tidal-braking seam).
+/// type-audit: pending(wave-1)
+pub fn sun_angular_rel_at(system: &StarSystem, calendar: &Calendar, t: StdDays) -> f64 {
+    let mean = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
+    let e = system.forcing.eccentricity_at(t.0);
+    mean / (1.0 - e * math::sin(std::f64::consts::TAU * calendar.year_phase(t)))
 }
 
 /// Sol + Luna exactly: 1 M☉, 1 AU, 365.25-day year, 24-hour day, zero
@@ -146,6 +160,43 @@ mod tests {
             let b = moon_ecliptic_latitude_deg(&calendar, moon, 0, t).unwrap();
             assert!(b.abs() <= moon.inclination_deg + 1e-9, "β {b} at t {}", t.0);
         }
+    }
+
+    /// With zero eccentricity the event-time sun is the mean sun exactly.
+    #[test]
+    fn a_circular_orbit_keeps_the_mean_sun() {
+        let (system, calendar) = super::luna_sol();
+        let mean = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
+        for k in 0..12 {
+            let t = StdDays(k as f64 * 30.0);
+            assert_eq!(sun_angular_rel_at(&system, &calendar, t), mean);
+        }
+    }
+
+    /// Sol check: e = 0.0167 swings the apparent sun ±1.7% over the year,
+    /// perihelion-largest.
+    #[test]
+    fn eccentricity_swings_the_sun_size_sol_scale() {
+        let (mut system, _) = super::luna_sol();
+        system.forcing.ecc_mean = 0.0167;
+        system.forcing.ecc_amp = 0.0;
+        let calendar = crate::calendar::calendar_of(&system);
+        let mean = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
+        let sizes: Vec<f64> = (0..360)
+            .map(|d| sun_angular_rel_at(&system, &calendar, StdDays(d as f64)))
+            .collect();
+        let max = sizes.iter().cloned().fold(f64::MIN, f64::max);
+        let min = sizes.iter().cloned().fold(f64::MAX, f64::min);
+        assert!(
+            (max / mean - 1.017).abs() < 2e-3,
+            "max ratio {}",
+            max / mean
+        );
+        assert!(
+            (min / mean - 0.983).abs() < 2e-3,
+            "min ratio {}",
+            min / mean
+        );
     }
 
     fn test_moon(inclination_deg: f64, node_longitude_deg: f64) -> Moon {
