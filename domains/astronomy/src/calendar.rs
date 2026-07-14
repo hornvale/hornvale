@@ -678,6 +678,7 @@ impl Calendar {
 
     /// The sky band at `t` for an observer at `latitude`; `None` on a
     /// locked world, which has no solar hour.
+    /// type-audit: pending(wave-1: latitude)
     pub fn sky_band(&self, t: StdDays, latitude: f64) -> Option<SkyBand> {
         let alt = self.solar_altitude_at(t, latitude)?;
         Some(if alt > 0.0 {
