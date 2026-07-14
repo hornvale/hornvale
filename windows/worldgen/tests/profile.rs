@@ -6,7 +6,7 @@ use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{BuildProfile, SettlementPins, SkyChoice, build_world, profiled};
 
 #[test]
-fn profiled_records_the_five_stages() {
+fn profiled_records_the_six_stages() {
     let (world, profile): (_, BuildProfile) = profiled(|| {
         build_world(
             Seed(42),
@@ -24,6 +24,7 @@ fn profiled_records_the_five_stages() {
             "astronomy",
             "terrain",
             "climate+settlements",
+            "alignments",
             "culture+religion+species",
             "deep-time",
         ]

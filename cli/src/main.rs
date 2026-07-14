@@ -38,7 +38,8 @@ usage:
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>]
                                             walk a frozen world as its flagship settler
-  hornvale map [--world <PATH>] [--out <PNG>] render the elevation map (markdown to stdout)
+  hornvale map [--world <PATH>] [--out <PNG>] [--field elevation|lithology]
+                                            render the elevation or lithology map (markdown to stdout; default field: elevation)
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
   hornvale paleo-map [--world <PATH>] [--out <PNG>] render the deep-time strata map (markdown to stdout)
   hornvale settlement-map [--world <PATH>] [--out <PNG>] render the settlement map (markdown to stdout)
@@ -397,6 +398,12 @@ depend on the host math library) and are not cross-platform byte-checked; the \
 page above is deterministic.\n\n";
 
 fn cmd_map(args: &[String]) -> Result<(), String> {
+    let field = flag_value(args, "--field").unwrap_or("elevation");
+    if !matches!(field, "elevation" | "lithology") {
+        return Err(format!(
+            "unknown --field '{field}' (expected elevation|lithology)"
+        ));
+    }
     let world = load_world(args)?;
     let terrain = world_builder::terrain_of(&world).map_err(|e| e.to_string())?;
     let mut doc = format!("# The Land of Seed {}\n\n", world.seed.0);
@@ -410,11 +417,15 @@ fn cmd_map(args: &[String]) -> Result<(), String> {
     ));
     doc.push_str("```\n\n");
     if let Some(out) = flag_value(args, "--out") {
-        let png = hornvale_terrain::render::elevation_png(
-            terrain.geosphere(),
-            terrain.globe(),
-            world.seed,
-        );
+        let png = if field == "lithology" {
+            hornvale_terrain::render::lithology_png(terrain.geosphere(), terrain.globe())
+        } else {
+            hornvale_terrain::render::elevation_png(
+                terrain.geosphere(),
+                terrain.globe(),
+                world.seed,
+            )
+        };
         std::fs::write(out, png).map_err(|e| format!("writing {out}: {e}"))?;
         let name = std::path::Path::new(out)
             .file_name()

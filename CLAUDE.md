@@ -213,6 +213,13 @@ prefix is retired (decision 0017). Book prose is written at a deliberate
 altitude: technical and mathematical, comprehensible without reading the
 code it may show.
 
+**Campaign work runs under autopilot by default**: before the first
+clarifying question or approval gate of any brainstorm/spec/plan/execution
+work, invoke the `campaign-autopilot` skill — it auto-resolves the
+routine gates against Nathan's standing policy and ledgers every decision
+for his review at the spec and merge stops. Nathan saying "manual mode"
+disengages it for the session.
+
 **Campaign branches absorb main at every plan-stage boundary**, not only at
 close: run `make preflight` from the branch; on an ancestry NO-GO, merge
 main INTO the branch and re-run the gate there. Two exceptions: never

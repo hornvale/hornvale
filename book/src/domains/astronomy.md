@@ -224,12 +224,25 @@ neighbor's heliacal rising and setting fractions, from a 400-sample scan
 of the year against its class's arcus-visionis threshold — 7° for blue
 and red giants, 9° for orange giants and sun-like stars, 11° for white
 and red dwarfs (brighter surfaces cut through brighter twilight; all
-three thresholds sit inside the 12° twilight band).
+three thresholds sit inside the 12° twilight band). As of The Long
+Count, the calendar also answers the ground half of the alignment
+question: the solstice-sunrise azimuth at any latitude and epoch, its
+drift between two epochs (which *is* the obliquity wobble, seen from the
+ground), and the dating inverse — given a stale sightline, the most
+recent epoch that would have cut it — the sky as archaeological clock,
+with each settlement's founding azimuth committed as a fact.
 
 **Approximated (declared):** circular orbits **at genesis** — every world
 still starts at `t = 0` on a circular orbit, but eccentricity now oscillates
 over deep time, so "circular" is a starting condition, not a permanent one;
-no orbital evolution, resonance, or N-body effects; seasonal daylight as a
+no orbital evolution, resonance, or N-body effects (semi-major-axis
+migration is now *declined by decision 0054*, not merely unbuilt — an
+isolated habitable world's orbit has no honest reason to drift);
+secular stellar brightening at b = 0.10·M^2.5 per gigayear (Sol-calibrated,
+scaled by main-sequence lifetime; anchored so the present loses nothing,
+while the habitable zone stays a genesis-epoch derivation); the
+solstice-rise azimuth as cos az = sin ε(t)/cos φ, refraction and horizon
+dip ignored; seasonal daylight as a
 smooth sinusoid in obliquity and year phase; neighbor stars observational-only
 (no gravity, no radiation); eclipses shipped (each moon's drawn orbital
 inclination gates a total-vs-annular verdict on a derived node beat), but

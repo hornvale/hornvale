@@ -76,6 +76,8 @@
 - [The Night Sky Instrument](./chronicle/the-night-sky-instrument.md)
 - [Lab Performance](./chronicle/lab-performance.md)
 - [Single-Craton Hypsometry](./chronicle/single-craton-hypsometry.md)
+- [The Ground](./chronicle/the-ground.md)
+- [The Long Count](./chronicle/the-long-count.md)
 
 # The Gallery
 

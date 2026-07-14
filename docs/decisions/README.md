@@ -93,3 +93,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0051](0051-name-salt-stable-identity.md) | Procedural names are salted by stable identity, never by a global mint counter | Accepted |
 | [0052](0052-deploy-built-wasm.md) | The Casement's wasm is deploy-built, never committed | Accepted |
 | [0053](0053-ocean-fraction-is-a-target-under-supply-limited-crust.md) | The ocean-fraction pin is a target, not a guarantee, under supply-limited crust | Accepted |
+| [0054](0054-no-orbital-migration.md) | No semi-major-axis migration; brightening ships, migration is declined | Accepted |

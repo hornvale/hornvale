@@ -49,7 +49,10 @@ pub use provider::{
     WANDERING_STAR,
 };
 pub use sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
-pub use star::{Star, generate_star, insolation_rel};
+pub use star::{
+    GYR_DAYS, Star, brightening_per_gyr, generate_star, insolation_rel, insolation_rel_at,
+    luminosity_at,
+};
 pub use starfield::{FieldStar, starfield};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
@@ -331,6 +334,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "insolation at the anchor relative to Earth (derived L/a²)",
     )?;
     registry.register_predicate(
+        facts::BRIGHTENING_PER_GYR,
+        true,
+        "the star's fractional main-sequence brightening per gigayear",
+    )?;
+    registry.register_predicate(
         facts::FIGURE_COUNT,
         true,
         "how many star figures the reference observer's sky holds",
@@ -345,6 +353,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::FIGURE_ON_ECLIPTIC,
         true,
         "a star figure stands on the sun's road (the ecliptic band)",
+    )?;
+    registry.register_predicate(
+        facts::FOUNDING_SOLSTICE_AZIMUTH_DEGREES,
+        true,
+        "solstice-sunrise azimuth at a settlement's founding, degrees clockwise from north",
     )?;
 
     registry.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")?;

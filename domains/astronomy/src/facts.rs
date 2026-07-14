@@ -150,6 +150,10 @@ pub const ANCHOR_ORBIT_AU: &str = "anchor-orbit-au";
 /// L/a², global annual mean).
 /// type-audit: bare-ok(identifier-text)
 pub const INSOLATION_REL: &str = "insolation-rel";
+/// Predicate: the star's fractional main-sequence brightening per
+/// gigayear (The Long Count).
+/// type-audit: bare-ok(identifier-text)
+pub const BRIGHTENING_PER_GYR: &str = "brightening-per-gyr";
 /// How many star figures the reference observer's sky holds (functional,
 /// Number).
 /// type-audit: bare-ok(identifier-text)
@@ -175,6 +179,11 @@ pub const FIGURE_REGION: &str = "figure-region";
 /// wanting the per-figure detail must recompute from [`crate::figures`].
 /// type-audit: bare-ok(identifier-text)
 pub const FIGURE_ON_ECLIPTIC: &str = "figure-on-ecliptic";
+/// Predicate: the solstice-sunrise azimuth at a settlement's founding
+/// epoch, degrees clockwise from north (The Long Count) — the sightline
+/// whose deep-time drift makes the sky an archaeological clock.
+/// type-audit: bare-ok(identifier-text)
+pub const FOUNDING_SOLSTICE_AZIMUTH_DEGREES: &str = "founding-solstice-azimuth-degrees";
 
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     Fact {
@@ -329,6 +338,14 @@ pub fn genesis(
             subject,
             INSOLATION_REL,
             Value::Number(crate::star::insolation_rel(&system.star, &system.anchor)),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            BRIGHTENING_PER_GYR,
+            Value::Number(crate::star::brightening_per_gyr(&system.star)),
         ),
         &world.registry,
     )?;
@@ -537,6 +554,26 @@ pub fn genesis(
     Ok(())
 }
 
+/// Commit a settlement's founding solstice alignment (The Long Count).
+/// Called by the composition root — the one place settlements and the
+/// calendar meet; astronomy owns the predicate and the commit shape.
+/// type-audit: pending(wave-1)
+pub fn founding_alignment(
+    world: &mut World,
+    settlement: EntityId,
+    azimuth_deg: f64,
+) -> Result<(), LedgerError> {
+    world.ledger.commit(
+        fact(
+            settlement,
+            FOUNDING_SOLSTICE_AZIMUTH_DEGREES,
+            Value::Number(azimuth_deg),
+        ),
+        &world.registry,
+    )?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -598,6 +635,13 @@ mod tests {
         assert!(w.ledger.value_of(subject, STAR_CLASS).is_some());
         assert!(w.ledger.value_of(subject, YEAR_LENGTH_STD).is_some());
         assert!(w.ledger.value_of(subject, OBLIQUITY_DEGREES).is_some());
+        assert_eq!(
+            w.ledger
+                .facts_about(subject)
+                .filter(|f| f.predicate == BRIGHTENING_PER_GYR)
+                .count(),
+            1
+        );
     }
 
     #[test]

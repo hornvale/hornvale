@@ -64,7 +64,7 @@ pub struct PantheonBlock {
 /// brightest neighbors, and one line per wandering sibling planet. `None`
 /// for constant-sky worlds, which have no neighborhood to describe (see
 /// [`AlmanacContext::night_sky_lines`]).
-/// type-audit: bare-ok(prose: pole_star), bare-ok(prose: heliacal), bare-ok(prose: wanderers), bare-ok(prose: figures), bare-ok(prose: eclipses)
+/// type-audit: bare-ok(prose: pole_star), bare-ok(prose: heliacal), bare-ok(prose: wanderers), bare-ok(prose: figures), bare-ok(prose: eclipses), bare-ok(prose: alignment)
 pub struct NightSkyLines {
     /// The pole-star sentence, if one exists at genesis.
     pub pole_star: Option<String>,
@@ -81,10 +81,14 @@ pub struct NightSkyLines {
     /// Seasons). One honest no-eclipse sentence when the world has moons
     /// but no event falls in the window.
     pub eclipses: Vec<String>,
+    /// The flagship settlement's founding sightline and its drift rate
+    /// (The Long Count), when the world has both a sunrise and a
+    /// settlement.
+    pub alignment: Option<String>,
 }
 
 /// Everything the almanac needs, gathered by the composition root.
-/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines)
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines)
 pub struct AlmanacContext {
     /// The world seed, for the title.
     pub seed: u64,
@@ -100,6 +104,10 @@ pub struct AlmanacContext {
     pub land_lines: Vec<String>,
     /// The globe's biome/habitability headline lines, from the composition root.
     pub biome_lines: Vec<String>,
+    /// The ground's headline lines: dominant rock/soil order over land, plus
+    /// notable formations (The Ground, spec §3/§4/§6); empty for a landless
+    /// world.
+    pub ground_lines: Vec<String>,
     /// Deep-time headline lines (the glacial history); empty for worlds with
     /// no glacial past (constant sky, or zero forcing).
     pub deep_time_lines: Vec<String>,
@@ -169,6 +177,9 @@ pub fn render(ctx: &AlmanacContext) -> String {
         for line in &lines.eclipses {
             doc.push_str(&format!("{line}\n\n"));
         }
+        if let Some(alignment) = &lines.alignment {
+            doc.push_str(&format!("{alignment}\n\n"));
+        }
     }
 
     if !ctx.calendar_lines.is_empty() {
@@ -213,6 +224,14 @@ pub fn render(ctx: &AlmanacContext) -> String {
             "\n{} ({:.0}°C)\n\n",
             ctx.climate.description, ctx.climate.temperature_c
         ));
+    }
+
+    if !ctx.ground_lines.is_empty() {
+        doc.push_str("## The Ground\n\n");
+        for line in &ctx.ground_lines {
+            doc.push_str(&format!("{line}\n"));
+        }
+        doc.push('\n');
     }
 
     if !ctx.deep_time_lines.is_empty() {
@@ -332,6 +351,9 @@ mod tests {
                 "The globe breaks into 23 plates; the sea claims 63% of its surface.".to_string(),
             ],
             biome_lines: vec![],
+            ground_lines: vec![
+                "The land is mostly granite, its soils mostly loam.".to_string(),
+            ],
             deep_time_lines: vec![
                 "The frost retreated; ice advanced over 30% of the land at its greatest."
                     .to_string(),
@@ -380,6 +402,9 @@ mod tests {
             "23 plates",
             "the Vale",
             "temperate forest",
+            "## The Ground",
+            "granite",
+            "loam",
             "## Deep Time",
             "## The People",
             "Bolnar",
@@ -406,6 +431,42 @@ mod tests {
         assert!(render(&ctx).contains("## Deep Time"));
         ctx.deep_time_lines = vec![];
         assert!(!render(&ctx).contains("## Deep Time"));
+    }
+
+    #[test]
+    fn ground_section_names_the_dominant_rock_and_soil_and_is_skipped_when_empty() {
+        let mut ctx = sample_context();
+        ctx.ground_lines = vec![
+            "The land is mostly granite, its soils mostly loam.".to_string(),
+            "Notable: karst country, salt flats.".to_string(),
+        ];
+        let doc = render(&ctx);
+        assert!(doc.contains("## The Ground"));
+        assert!(doc.contains("mostly granite"));
+        assert!(doc.contains("mostly loam"));
+        assert!(doc.contains("karst country"));
+        assert!(doc.contains("salt flats"));
+
+        ctx.ground_lines = vec![];
+        assert!(!render(&ctx).contains("## The Ground"));
+    }
+
+    #[test]
+    fn ground_section_renders_between_land_and_deep_time() {
+        let ctx = AlmanacContext {
+            ground_lines: vec!["The land is mostly basalt, its soils mostly andosol.".to_string()],
+            deep_time_lines: vec!["The frost retreated.".to_string()],
+            ..sample_context()
+        };
+        let doc = render(&ctx);
+        let land_pos = doc.find("## The Land").unwrap();
+        let ground_pos = doc.find("## The Ground").unwrap();
+        let deep_time_pos = doc.find("## Deep Time").unwrap();
+        assert!(land_pos < ground_pos, "Ground must come after Land");
+        assert!(
+            ground_pos < deep_time_pos,
+            "Ground must come before Deep Time"
+        );
     }
 
     #[test]
@@ -649,6 +710,7 @@ mod tests {
             ],
             figures: vec!["The sky holds 4 figures; 1 stands on the sun's road.".to_string()],
             eclipses: vec![],
+            alignment: None,
         });
         let doc = render(&ctx);
         assert!(doc.contains("A blue-white star stands 3.2° from the north celestial pole"));
@@ -683,6 +745,7 @@ mod tests {
                 ],
                 figures: vec!["The sky holds 4 figures; 1 stands on the sun's road.".to_string()],
                 eclipses: vec![],
+                alignment: None,
             }),
             calendar_lines: vec!["The year is 365.2 local days (365.2 standard days).".to_string()],
             ..sample_context()
@@ -734,6 +797,7 @@ mod tests {
                     "The eclipse seasons parade backward through the year at 19 days a year."
                         .to_string(),
                 ],
+                alignment: None,
             }),
             calendar_lines: vec!["The year is 365.2 local days (365.2 standard days).".to_string()],
             ..sample_context()
@@ -742,5 +806,23 @@ mod tests {
         let sky = doc.split("## The Calendar").next().unwrap();
         assert!(sky.contains("devours the sun whole"));
         assert!(sky.contains("parade backward"));
+    }
+
+    #[test]
+    fn the_alignment_line_renders_under_the_sky() {
+        let mut ctx = sample_context();
+        ctx.night_sky_lines = Some(NightSkyLines {
+            pole_star: None,
+            heliacal: vec![],
+            wanderers: vec![],
+            figures: vec![],
+            eclipses: vec![],
+            alignment: Some(
+                "From the first settlement, the midsummer sun rises at azimuth 63.4°; the sightline drifts 0.21° in a thousand years.".to_string(),
+            ),
+        });
+        let doc = render(&ctx);
+        let sky = doc.split("## The Calendar").next().unwrap();
+        assert!(sky.contains("the sightline drifts"));
     }
 }
