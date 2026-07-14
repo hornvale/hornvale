@@ -195,32 +195,121 @@ pub struct ConditionNiche {
     pub elevation: ConditionResponse,
 }
 
-/// The neutral, wide, identical condition niche shared by all four registry
-/// species for this task (B1): wide widths flatten each response curve
-/// nearly level, so no species is yet biogeographically differentiated by
-/// habitat — that differentiation is Stage B2's job. This is the SINGLE edit
-/// site B2 replaces with grounded, per-species optima.
-fn neutral_condition_niche() -> ConditionNiche {
+/// Kobold condition niche: cool, dark, subterranean highland warrens;
+/// nocturnal (shuns light). Authored within the measured seed-42 land ranges
+/// (Task C1); see the species chapter's model card for the ecological
+/// rationale.
+fn kobold_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
-            optimum: 15.0,
-            width: 40.0,
-            devotion: 0.3,
+            optimum: 2.0,
+            width: 12.0,
+            devotion: 0.90,
         },
         moisture: ConditionResponse {
-            optimum: 0.5,
-            width: 1.0,
-            devotion: 0.3,
+            optimum: 0.40,
+            width: 0.50,
+            devotion: 0.60,
         },
+        // strongly low-light
         insolation: ConditionResponse {
-            optimum: 0.5,
-            width: 1.0,
-            devotion: 0.3,
+            optimum: 0.03,
+            width: 0.10,
+            devotion: 0.90,
         },
         elevation: ConditionResponse {
-            optimum: 500.0,
-            width: 5000.0,
-            devotion: 0.3,
+            optimum: 900.0,
+            width: 1600.0,
+            devotion: 0.70,
+        },
+    }
+}
+
+/// Goblin condition niche: a warm-marginal generalist with wide tolerance on
+/// every axis (the cosmopolitan weed). Authored within the measured seed-42
+/// land ranges (Task C1); see the species chapter's model card for the
+/// ecological rationale.
+fn goblin_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 18.0,
+            width: 30.0,
+            devotion: 0.50,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.45,
+            width: 0.60,
+            devotion: 0.40,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.13,
+            width: 0.30,
+            devotion: 0.40,
+        },
+        elevation: ConditionResponse {
+            optimum: 400.0,
+            width: 3000.0,
+            devotion: 0.40,
+        },
+    }
+}
+
+/// Hobgoblin condition niche: open temperate, agricultural lowland plains;
+/// sun-tolerant, drier. Authored within the measured seed-42 land ranges
+/// (Task C1); see the species chapter's model card for the ecological
+/// rationale.
+fn hobgoblin_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 12.0,
+            width: 12.0,
+            devotion: 0.90,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.35,
+            width: 0.35,
+            devotion: 0.70,
+        },
+        // open sun
+        insolation: ConditionResponse {
+            optimum: 0.19,
+            width: 0.12,
+            devotion: 0.85,
+        },
+        elevation: ConditionResponse {
+            optimum: 250.0,
+            width: 1400.0,
+            devotion: 0.80,
+        },
+    }
+}
+
+/// Bugbear condition niche: temperate forest — warm, wet, shaded, low
+/// valleys. Authored within the measured seed-42 land ranges (Task C1); see
+/// the species chapter's model card for the ecological rationale.
+fn bugbear_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 20.0,
+            width: 10.0,
+            devotion: 0.90,
+        },
+        // wet forest
+        moisture: ConditionResponse {
+            optimum: 0.75,
+            width: 0.25,
+            devotion: 0.90,
+        },
+        // forest shade
+        insolation: ConditionResponse {
+            optimum: 0.09,
+            width: 0.12,
+            devotion: 0.85,
+        },
+        elevation: ConditionResponse {
+            optimum: 200.0,
+            width: 1300.0,
+            devotion: 0.80,
         },
     }
 }
@@ -318,7 +407,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
             },
             mass: Mass::new(18.1).unwrap(),
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.50), (ANIMAL_PREY, 0.50)]).unwrap(),
-            condition_niche: neutral_condition_niche(),
+            condition_niche: goblin_condition_niche(),
             potency: 0.0,
             worker_override: None,
             warrior: "warrior",
@@ -357,7 +446,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
             },
             mass: Mass::new(13.6).unwrap(),
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
-            condition_niche: neutral_condition_niche(),
+            condition_niche: kobold_condition_niche(),
             potency: 0.0,
             worker_override: Some("digger"),
             warrior: "warden",
@@ -396,7 +485,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
             },
             mass: Mass::new(74.8).unwrap(),
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
-            condition_niche: neutral_condition_niche(),
+            condition_niche: hobgoblin_condition_niche(),
             potency: 0.0,
             worker_override: Some("laborer"),
             warrior: "soldier",
@@ -435,7 +524,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
             },
             mass: Mass::new(132.0).unwrap(),
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.15), (ANIMAL_PREY, 0.85)]).unwrap(),
-            condition_niche: neutral_condition_niche(),
+            condition_niche: bugbear_condition_niche(),
             potency: 0.0,
             worker_override: Some("forager"),
             warrior: "mauler",
@@ -956,6 +1045,24 @@ mod tests {
                 def.potency >= 0.0 && def.potency.is_finite(),
                 "{name} potency >= 0"
             );
+        }
+    }
+
+    #[test]
+    fn the_four_peoples_have_distinct_temperature_optima() {
+        let reg = registry();
+        let opts: Vec<f64> = ["kobold", "goblin", "hobgoblin", "bugbear"]
+            .iter()
+            .map(|n| reg[*n].condition_niche.temperature.optimum)
+            .collect();
+        // the anti-uniformity guard: all four temperature optima pairwise distinct
+        for i in 0..opts.len() {
+            for j in (i + 1)..opts.len() {
+                assert!(
+                    (opts[i] - opts[j]).abs() > 1e-6,
+                    "temperature optima {i} and {j} must differ (broke the oatmeal)"
+                );
+            }
         }
     }
 
