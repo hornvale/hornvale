@@ -127,6 +127,36 @@ pub struct AlmanacContext {
     pub pantheons: Vec<PantheonBlock>,
 }
 
+/// Render one species' life-history line for the almanac (BIO-2, spec §5/§6):
+/// its basal metabolism, plus a pace-of-life headline and lifespan/maturity
+/// figures when the species has biological traits at all. Suppressed for
+/// `Ametabolic` species (constructs, undead), which carry no mass-derived
+/// life-history to report — only the metabolic clause renders for those.
+/// type-audit: bare-ok(prose: return)
+pub fn render_life_history_line(def: &hornvale_species::SpeciesDef) -> String {
+    let history = hornvale_species::life_history(def.mass, def.metabolic_class);
+    let mut line = format!(
+        "The {} run a basal metabolism of {:.0} W",
+        def.name, history.basal_metabolic_rate_w
+    );
+    if let (Some(lifespan), Some(maturity)) = (history.lifespan, history.age_at_maturity) {
+        let headline = if history.pace_of_life < 0.33 {
+            "fast-lived and prolific"
+        } else if history.pace_of_life > 0.66 {
+            "slow, long-lived, and sparse"
+        } else {
+            "moderate-paced"
+        };
+        line.push_str(&format!(
+            "; {headline}, lifespan ~{} yr, matures ~{} yr",
+            lifespan.get().round(),
+            maturity.get().round()
+        ));
+    }
+    line.push('.');
+    line
+}
+
 /// Render the one-page world document as markdown. Deterministic: same
 /// context, same bytes.
 /// type-audit: bare-ok(artifact: return)
@@ -770,6 +800,38 @@ mod tests {
         assert!(
             figures_pos < calendar_pos,
             "the night instrument stays inside The Sky, before The Calendar"
+        );
+    }
+
+    #[test]
+    fn almanac_species_block_shows_life_history() {
+        // Model on the registry's real goblin def (BIO-2 Task 5) — the
+        // helper is a pure function of `SpeciesDef`, no world needed.
+        let registry = hornvale_species::registry();
+        let goblin = registry.get("goblin").expect("goblin is in the registry");
+        let line = render_life_history_line(goblin);
+        assert!(line.contains("lifespan"), "missing lifespan figure: {line}");
+        assert!(
+            line.contains("fast") || line.contains("slow") || line.contains("moderate"),
+            "missing pace headline: {line}"
+        );
+    }
+
+    #[test]
+    fn render_life_history_line_suppresses_the_clause_for_ametabolic_species() {
+        use hornvale_kernel::Mass;
+        use hornvale_species::MetabolicClass;
+
+        let mut construct = hornvale_species::registry()
+            .get("goblin")
+            .expect("goblin is in the registry")
+            .clone();
+        construct.metabolic_class = MetabolicClass::Ametabolic;
+        construct.mass = Mass::new(500.0).unwrap();
+        let line = render_life_history_line(&construct);
+        assert!(
+            !line.contains("lifespan"),
+            "ametabolic species must suppress the life-history clause: {line}"
         );
     }
 

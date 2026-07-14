@@ -3041,12 +3041,14 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         .iter()
         .filter_map(|(name, def)| {
             let flagship = flagship_of(world, name)?;
+            let mut lines = culture_lines(world, &flagship);
+            lines.push(hornvale_almanac::render_life_history_line(def));
             Some(hornvale_almanac::PeopleBlock {
                 species: (*name).to_string(),
                 noun: def.noun.to_string(),
                 name: flagship.name.clone(),
                 population: flagship.population,
-                culture_lines: culture_lines(world, &flagship),
+                culture_lines: lines,
             })
         })
         .collect();
