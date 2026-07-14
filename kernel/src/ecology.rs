@@ -166,6 +166,41 @@ impl ResourceVector {
     }
 }
 
+/// A per-axis condition-tolerance curve: how suitable one environmental
+/// condition axis (temperature, moisture, insolation, elevation, ...) is at
+/// a given field value, for one species. A Gaussian bump around
+/// [`ConditionResponse::optimum`], floored by the caller's supplied
+/// sovereignty so a well-defended species is never fully excluded even far
+/// from its preferred value.
+/// type-audit: bare-ok(diagnostic-value: optimum), bare-ok(diagnostic-value: width), bare-ok(ratio: devotion)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ConditionResponse {
+    /// The axis value the species most prefers.
+    pub optimum: f64,
+    /// Tolerance breadth (Gaussian sigma). Must be `> 0`.
+    pub width: f64,
+    /// Preference amplitude given freedom from any sovereignty floor;
+    /// typically in `[0, 1]`.
+    pub devotion: f64,
+}
+
+impl ConditionResponse {
+    /// Suitability of `field` under this curve, floored by the caller-
+    /// supplied `floor` (the species' sovereignty on this axis, computed
+    /// elsewhere). `floor` is expected in `[0, 1]`: `0.0` is a hard
+    /// constraint (excluded far from the optimum), `1.0` would mean fully
+    /// unconstrained. This method does not validate `floor` — that is the
+    /// caller's contract. Result is clamped to `[0.0, 1.0]` since `devotion`
+    /// may push the unclamped peak above `1.0`.
+    /// type-audit: bare-ok(diagnostic-value: field), bare-ok(ratio: floor), bare-ok(ratio: return)
+    pub fn eval(&self, field: f64, floor: f64) -> f64 {
+        let z = (field - self.optimum) / self.width;
+        let bump = crate::math::exp(-0.5 * z * z);
+        let value = floor + (1.0 - floor) * self.devotion * bump;
+        value.clamp(0.0, 1.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -192,5 +227,23 @@ mod tests {
     #[test]
     fn rejects_negative_weight() {
         assert!(ResourceVector::new(&[(MINERAL, -0.1)]).is_err());
+    }
+
+    #[test]
+    fn condition_response_floors_and_peaks() {
+        let r = ConditionResponse {
+            optimum: 20.0,
+            width: 10.0,
+            devotion: 1.0,
+        };
+        // hard (floor 0): excluded far from optimum, ~1 at optimum
+        assert!((r.eval(20.0, 0.0) - 1.0).abs() < 1e-9);
+        assert!(r.eval(80.0, 0.0) < 0.01, "hard tolerance excludes far away");
+        // soft (floor 0.7): never excluded, still peaked
+        assert!(r.eval(80.0, 0.7) >= 0.7, "sovereign floor never excludes");
+        assert!(
+            r.eval(20.0, 0.7) > r.eval(80.0, 0.7),
+            "still prefers its optimum"
+        );
     }
 }
