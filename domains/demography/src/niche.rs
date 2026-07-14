@@ -1,17 +1,32 @@
-//! Derivation of guilds (competitive assemblages) and fractional trophic
-//! levels from species' niche vectors.
+//! Derivation of guilds (competitive assemblages), fractional trophic
+//! levels, and mass-windowed predation edges from species' niche vectors.
 //!
 //! This module computes pairwise competition weights from resource-utilization
-//! vectors ([`guild_overlap`]) and the fractional trophic level each species
-//! occupies in the food web induced by those same vectors ([`trophic_levels`]).
-//! Mass-windowed predation edges (which prey a given predator can actually
-//! reach) are a separate, later derivation — this module resolves height in
-//! the food web from diet *composition* alone.
+//! vectors ([`guild_overlap`]), the fractional trophic level each species
+//! occupies in the food web induced by those same vectors ([`trophic_levels`]),
+//! and — combining that derived height with each species' body mass — the
+//! concrete predation edges a predator can actually reach ([`predation`]).
 
 use hornvale_kernel::{
-    ANIMAL_PREY, DETRITUS, PLANT_FORAGE, ResourceAxis, ResourceVector, v1_basis,
+    ANIMAL_PREY, DETRITUS, Mass, PLANT_FORAGE, ResourceAxis, ResourceVector, v1_basis,
 };
 use std::collections::{BTreeMap, BTreeSet};
+
+// CALIBRATED (coexistence-stack, Task A6): predator/prey body-mass ratio
+// band. Authored from the standard ecological rule of thumb that predators
+// rarely take prey heavier than themselves and gain little from prey too
+// tiny to be worth pursuing — a broad, permissive band (not a fitted
+// value) chosen to admit ordinary predator/prey pairs (e.g. a wolf and a
+// hare) while excluding same-order-of-magnitude "co-huge" bodies a
+// predator cannot physically subdue. A save-format constant from here on.
+/// Minimum prey/predator mass ratio admitted by [`predation`]'s window:
+/// prey lighter than this fraction of the predator's mass is treated as
+/// beneath notice rather than a real prey item.
+const MIN_PREY_RATIO: f64 = 0.001;
+/// Maximum prey/predator mass ratio admitted by [`predation`]'s window:
+/// prey heavier than this fraction of the predator's mass is treated as
+/// too large for the predator to subdue.
+const MAX_PREY_RATIO: f64 = 0.5;
 
 /// Derive pairwise competition weights (`w_ij`) from each species' resource
 /// utilization vector via Pianka symmetric niche overlap.
@@ -133,6 +148,54 @@ pub fn trophic_levels(species: &[(u32, ResourceVector)]) -> BTreeMap<u32, f64> {
     levels
 }
 
+/// Mass-windowed predation edges over the food web implied by
+/// [`trophic_levels`]: for every predator (a species whose [`ANIMAL_PREY`]
+/// niche weight is greater than `0`), the sorted list of prey species ids
+/// satisfying both:
+/// - the **mass window** — `prey_mass.ratio_to(predator_mass)` (prey over
+///   predator) falls in `[MIN_PREY_RATIO, MAX_PREY_RATIO]`, i.e. the prey's
+///   body is enough smaller than the predator's to be a plausible catch but
+///   not so tiny it is beneath notice; and
+/// - the **strictly-lower trophic level** — the prey's [`trophic_levels`]
+///   height is strictly less than the predator's, so a species never preys
+///   on something at or above its own derived height (no same-level or
+///   upward edges, even within the mass window).
+///
+/// A species with no `ANIMAL_PREY` axis at all is not a predator: it is
+/// either absent from the returned map or maps to an empty `Vec`.
+///
+/// type-audit: bare-ok(index: species), bare-ok(index: return)
+pub fn predation(species: &[(u32, Mass, ResourceVector)]) -> BTreeMap<u32, Vec<u32>> {
+    let projected: Vec<(u32, ResourceVector)> = species
+        .iter()
+        .map(|(id, _mass, niche)| (*id, niche.clone()))
+        .collect();
+    let levels = trophic_levels(&projected);
+
+    let mut result = BTreeMap::new();
+    for (predator_id, predator_mass, predator_niche) in species.iter() {
+        if predator_niche.weight(ANIMAL_PREY) <= 0.0 {
+            continue;
+        }
+        let predator_level = levels[predator_id];
+
+        let mut prey: Vec<u32> = species
+            .iter()
+            .filter(|(prey_id, _, _)| prey_id != predator_id)
+            .filter(|(prey_id, prey_mass, _)| {
+                let ratio = prey_mass.ratio_to(*predator_mass);
+                (MIN_PREY_RATIO..=MAX_PREY_RATIO).contains(&ratio)
+                    && levels[prey_id].total_cmp(&predator_level) == std::cmp::Ordering::Less
+            })
+            .map(|(prey_id, _, _)| *prey_id)
+            .collect();
+        prey.sort_unstable();
+        result.insert(*predator_id, prey);
+    }
+
+    result
+}
+
 /// One species' next-pass level, given the previous pass's levels for every
 /// species (Jacobi update — see [`trophic_levels`]).
 fn next_level(
@@ -250,5 +313,37 @@ mod tests {
         assert!(lv[&2] > 2.0 && lv[&2] < 3.0, "omnivore between integers");
         assert!(lv[&3] > lv[&1], "predator above herbivore");
         assert!(is_off_chain(&sp[4].1), "scavenger is off-chain");
+    }
+
+    #[test]
+    fn predation_respects_the_mass_window_and_level_order() {
+        use hornvale_kernel::{ANIMAL_PREY, Mass, PLANT_FORAGE, ResourceVector};
+        let sp = vec![
+            (
+                0u32,
+                Mass::new(40.0).unwrap(),
+                ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
+            ), // prey
+            (
+                1u32,
+                Mass::new(4000.0).unwrap(),
+                ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
+            ), // apex
+            (
+                2u32,
+                Mass::new(4200.0).unwrap(),
+                ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
+            ), // too big to be prey
+        ];
+        let pred = predation(&sp);
+        assert_eq!(
+            pred[&1],
+            vec![0],
+            "apex eats the small herbivore, not the co-huge grazer"
+        );
+        assert!(
+            pred.get(&0).is_none_or(|v| v.is_empty()),
+            "the herbivore preys on nobody"
+        );
     }
 }
