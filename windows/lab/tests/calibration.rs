@@ -178,8 +178,12 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // the exact count of spinning worlds whose first-minted belief is
     // nonetheless eternal (a night-star-headed bugbear pantheon, per the
     // mechanism above).
+    //
+    // Census regen (2026-07-14, the-gathering + night-sky, 1000-seed
+    // `the-census`): the night-sky campaign's new phenomena change which
+    // spinning worlds mint an eternal first belief; re-measured.
     assert_eq!(
-        spinning_eternal_exceptions, 19,
+        spinning_eternal_exceptions, 5,
         "spinning-yet-eternal exception count drifted"
     );
 }
@@ -338,8 +342,15 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // merge (2026-07-11, main into campaign-crust): the L6 grid composed with
     // the founder floor resolves seeds 172/257's goblin flagships coastal again,
     // so all 500 are coastal and inland drops to 0 (overrides the pre-merge 498/2).
-    assert_eq!(coastal, 1000, "coastal flagship count drifted");
-    assert_eq!(inland, 0, "inland flagship count drifted");
+    //
+    // Census regen (2026-07-14, the-gathering + night-sky, 1000-seed
+    // `the-census`): the-gathering's field-based settlement condensation
+    // means a goblin flagship's site preference is no longer resolved the
+    // same way on every seed — of the 1000 rows, 493 report a coastal
+    // flagship and 507 report an inland one (no `Absent` rows; every seed
+    // still condenses a flagship somewhere).
+    assert_eq!(coastal, 493, "coastal flagship count drifted");
+    assert_eq!(inland, 507, "inland flagship count drifted");
 }
 
 #[test]
@@ -492,12 +503,17 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // Task 4, 500-seed drift study): among SPINNING moonless worlds, the sun
     // wins most nights, but a bright-enough night-star still outshines it in
     // a minority of cases.
+    //
+    // Census regen (2026-07-14, the-gathering + night-sky, 1000-seed
+    // `the-census`): the night-sky campaign's new phenomena shift the
+    // sun/night-star brightness split among moonless spinning worlds; the
+    // sun's share drops sharply.
     assert_eq!(
-        moonless_solar, 132,
+        moonless_solar, 56,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 18,
+        moonless_lunar, 94,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -565,7 +581,12 @@ fn blind_attribution_beats_chance_decisively() {
     // above chance:
     // merge (2026-07-11): L6 terrain composed with the founder floor shifts one
     // pair to a correct attribution (416 -> 417) at the same 499 attributable total.
-    assert_eq!(correct, 820, "blind-attribution count drifted");
+    //
+    // Census regen (2026-07-14, the-gathering + night-sky, 1000-seed
+    // `the-census`): the night-sky campaign's new phenomena widen the
+    // attribution pool's correct share; the preregistered floor above still
+    // holds decisively (0.896 >= 0.8).
+    assert_eq!(correct, 896, "blind-attribution count drifted");
     assert_eq!(total, 1000, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
@@ -842,16 +863,21 @@ fn name_collision_rate_is_measured_and_pinned() {
     // to most pantheons — one more name draw per culture from the same
     // lexicons, nudging the rate again (19 -> 18 zero, mean 18.25% ->
     // 19.61%). Same mechanism as SKY-5's re-pin above.
-    assert_eq!(zero, 55, "zero-collision world count drifted");
-    assert_eq!(nonzero, 945, "nonzero-collision world count drifted");
+    //
+    // Census regen (2026-07-14, the-gathering + night-sky, 1000-seed
+    // `the-census`): the night-sky campaign's new phenomena mint more
+    // deities per pantheon on average (same mechanism as SKY-5/SKY-6
+    // above), further reshuffling per-culture lexicon reuse; re-measured.
+    assert_eq!(zero, 19, "zero-collision world count drifted");
+    assert_eq!(nonzero, 981, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
     assert!(
-        // The 1000-seed canonical census re-pin: 0.168_816_377_846 (500-seed
-        // drift study) -> 0.162_252_788_362.
-        (mean - 0.162_252_788_362).abs() < 1e-6,
+        // The 1000-seed canonical census re-pin (2026-07-14, the-gathering +
+        // night-sky): 0.162_252_788_362 -> 0.210_597_623_083.
+        (mean - 0.210_597_623_083).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -899,9 +925,14 @@ fn name_length_distributions_are_measured_and_pinned() {
     // pre-Branches; the founder floor's guarantee holds at the doubled
     // sample). Means: goblin 11.254_475_200_600 -> 11.195_630_412_500,
     // kobold 14.179_907_668_000 -> 14.100_824_828_800.
+    //
+    // Census regen (2026-07-14, the-gathering + night-sky, 1000-seed
+    // `the-census`): the-gathering's field-based condensation and the
+    // night-sky campaign's phenomena together reshuffle both species'
+    // per-culture lexicons before settlements draw; both means re-pinned.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 1000u32, 11.195_630_412_500),
-        ("kobold", 1000u32, 14.100_824_828_800),
+        ("goblin", 1000u32, 10.402_283_807_600),
+        ("kobold", 1000u32, 13.594_464_221_700),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1101,9 +1132,15 @@ fn null_control_name_length_smd_is_pinned() {
     // the eclipse deity's extra name draw shifts both solo builds' salts
     // identically in structure, nudging the SMD by ~0.002 — still well
     // inside the ±0.2 sampling bound.
+    //
+    // Census regen (2026-07-14, the-gathering + night-sky, 1000-seed
+    // `the-census`; `census-of-the-meeting`'s own fixture regenerated
+    // alongside it): re-measured; still comfortably inside the ±0.2
+    // sampling bound above.
     assert!(
         // libm re-pin (decision 0041): -0.082_573_510_253_099_77 -> below
-        (namelen - -0.082_524_201_701_795_61).abs() < 1e-9,
+        // Census regen (2026-07-14): -0.082_524_201_701_795_61 -> below.
+        (namelen - -0.071_825_669_752_140_97).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

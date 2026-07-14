@@ -296,10 +296,15 @@ fn homophony_count_is_measured_and_pinned() {
     // hobgoblin 1.631, bugbear 6.765, kobold 2.454).
     // libm (decision 0041, 2026-07-13): kobold re-pinned 2.509 -> 2.501; the
     // other three are unchanged to 1e-9 (Apple libm == crate libm there).
-    assert!((mg - 2.702).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 1.638).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 6.818).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 2.501).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // Census regen (2026-07-14, the-gathering + night-sky, 1000-seed
+    // `the-census`): goblin re-pinned 2.702 -> 2.273, hobgoblin 1.638 ->
+    // 1.989, bugbear 6.818 -> 8.047, kobold 2.501 -> 2.384 (the-gathering's
+    // field condensation shifts which settlements each seed fields, moving
+    // every daughter's periphery homophony draws).
+    assert!((mg - 2.273).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 1.989).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 8.047).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 2.384).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

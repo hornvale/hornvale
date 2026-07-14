@@ -11,12 +11,11 @@ use hornvale_lab::{MetricValue, RunResult, canonical_row, load_rows, load_study,
 use std::path::Path;
 use std::sync::LazyLock;
 
-// TODO(census-regen): repointed at the-census merge — census-of-the-gathering
-// folded into main's `the-census` (1000 seeds, `metrics: "all"`). The committed
-// the-census fixture is STALE for the-gathering's added field columns
-// (capacity-by-abs-latitude, total-population, pop-weighted-abs-latitude,
-// rank-size-slope), so this file's pinned gradient/latitude assertions are
-// EXPECTED to fail until the census is regenerated and these values re-pinned.
+// Repointed at the-census merge — census-of-the-gathering folded into main's
+// `the-census` (1000 seeds, `metrics: "all"`). The census has since been
+// regenerated (2026-07-14, `6ae415c`, folding in the-gathering's field
+// condensation and the night-sky campaign's phenomena) and this file's
+// gradient/latitude pins re-measured against it below.
 /// The study driving this file's fixture.
 const STUDY_PATH: &str = "../../studies/the-census.study.json";
 /// The committed, CI-drift-checked census rows this file loads from.
@@ -98,9 +97,14 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     // `carrying_capacity.rs`'s freeze note for the full measurement). The
     // placeholder K constants already reproduced the gradient decisively, so
     // no retuning was needed before freezing them.
+    //
+    // Census regen (2026-07-14, the 1000-seed `the-census`, folding in
+    // the-gathering's field condensation + the night-sky campaign's
+    // phenomena): re-measured; the preregistered floor of 3 still clears
+    // decisively.
     assert!(
-        (mean - 27.1467).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~27.1467)"
+        (mean - 26.2645).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~26.2645)"
     );
 }
 
@@ -135,9 +139,14 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     );
     // Pinned calibration row (measured 2026-07-13, same 200-seed
     // census-of-the-gathering fixture the gradient calibration above uses).
+    //
+    // Census regen (2026-07-14, the 1000-seed `the-census`, folding in
+    // the-gathering's field condensation + the night-sky campaign's
+    // phenomena): re-measured; still comfortably below the uniform-sphere
+    // baseline.
     assert!(
-        (mean - 10.3411).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~10.3411)"
+        (mean - 10.7459).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~10.7459)"
     );
 }
 
