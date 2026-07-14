@@ -466,7 +466,7 @@ here is a Lab-measurable capacity or collision count.)*
 The homophony campaign (The Words → The Branches → the phonology epoch) closed on
 a hard guarantee: no two *core* concepts share a word in any daughter, on any
 seed, reached by a merger-aware proto-assignment
-([decision](https://github.com/hornvale/hornvale/blob/main/docs/decisions/the-proto-assignment-is-merger-aware.md)).
+([decision](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0036-the-proto-assignment-is-merger-aware.md)).
 But that guarantee was won on a rich humanoid inventory. Strip the inventory down
 to a stereotyped species — a Yuan-Ti with few labials and a wall of sibilants —
 and the same pressure returns with force. The right frame is not phonology but

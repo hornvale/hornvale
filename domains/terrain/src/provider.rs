@@ -3,7 +3,7 @@
 use crate::boundaries::CellBoundary;
 use crate::globe::{GenesisOutcome, TectonicGlobe};
 use crate::plates::dot;
-use hornvale_kernel::{CellId, Geosphere};
+use hornvale_kernel::{CellId, Geosphere, ReferenceElevation, math};
 
 /// A queryable tectonic terrain provider. Owns its Geosphere so queries and
 /// the globe's CellMaps always agree on the cell space — a CellMap must
@@ -48,9 +48,9 @@ impl GeneratedTerrain {
         &self.notes
     }
 
-    /// Elevation at a cell, meters.
-    /// type-audit: waiver(elevation-convention)
-    pub fn elevation_at(&self, id: CellId) -> f64 {
+    /// Elevation at a cell, meters (relative to the isostatic reference
+    /// datum — see `hornvale_kernel::ReferenceElevation`).
+    pub fn elevation_at(&self, id: CellId) -> ReferenceElevation {
         *self.globe.elevation.get(id)
     }
 
@@ -67,8 +67,7 @@ impl GeneratedTerrain {
     }
 
     /// Sea level, meters.
-    /// type-audit: pending(wave-2)
-    pub fn sea_level(&self) -> f64 {
+    pub fn sea_level(&self) -> ReferenceElevation {
         self.globe.sea_level
     }
 
@@ -90,7 +89,11 @@ impl GeneratedTerrain {
     /// type-audit: pending(wave-2: latitude), pending(wave-2: longitude)
     pub fn nearest_cell(&self, latitude: f64, longitude: f64) -> CellId {
         let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
-        let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+        let target = [
+            math::cos(lat) * math::cos(lon),
+            math::cos(lat) * math::sin(lon),
+            math::sin(lat),
+        ];
         let mut best = CellId(0);
         let mut best_dot = f64::NEG_INFINITY;
         for cell in self.geosphere.cells() {

@@ -17,14 +17,16 @@
 #
 # Canonical numeric artifacts are byte-identical across platforms (floats are
 # quantized at every serialization boundary — decision
-# serialized-floats-are-quantized-for-cross-platform-determinism). The PNG maps
+# 0033). The PNG maps
 # and scene/tiles are rendered per-cell views whose pixels/indices come from
 # host-libm-divergent transcendentals; CI excludes those from its byte drift
 # check (see ci.yml), but this script still regenerates them so a local
 # rebaseline produces the full set.
 set -euo pipefail
 
-repo_root="$(git rev-parse --show-toplevel)"
+# Root from the script's own location, not `git rev-parse` — the remote gate
+# runs this in an rsync'd tree that is not a git repository.
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
 # Intermediate world files are throwaway; their path never enters artifact
@@ -49,12 +51,28 @@ run -p hornvale -- almanac --world "$w42" > book/src/gallery/almanac-seed-42.md
 run -p hornvale -- almanac --world "$wsky" > book/src/gallery/almanac-seed-42-sky.md
 run -p hornvale -- almanac --world "$wlocked" > book/src/gallery/almanac-seed-42-locked.md
 
+echo "regenerate-artifacts: explain" >&2
+run -p hornvale -- explain --world "$wsky" sky > book/src/gallery/explain-seed-42-sky.md
+
 echo "regenerate-artifacts: reference dumps" >&2
 run -p hornvale -- concepts > book/src/reference/concept-registry-generated.md
 run -p hornvale -- streams > book/src/reference/stream-manifest-generated.md
 run -p hornvale -- phonology > book/src/reference/phonology.md
 run -p hornvale -- dictionary --world "$wsky" > book/src/reference/dictionary-generated.md
 run -p hornvale -- proto > book/src/reference/proto-goblinoid-generated.md
+run -p hornvale -- locale --world "$wsky" --room 1015166224 --json > book/src/reference/locale-seed-42.json
+# The live-pane preamble is hand-authored framing (The Casement, decision
+# 0052): the possess dump replaces the whole file, so re-emit the preamble
+# here rather than losing it on every regen — it was clobbered twice by
+# earlier regen runs before this step carried it.
+possess_tmp="$(mktemp)"
+run -p hornvale -- possess --world "$wsky" --script scripts/possession-walk.txt > "$possess_tmp"
+{
+    head -n 1 "$possess_tmp"
+    printf '\n*(This transcript is frozen. [The live pane](./possession-live.md) derives\nthe same world in your browser — same crates, same bytes.)*\n'
+    tail -n +2 "$possess_tmp"
+} > book/src/gallery/possession-seed-42.md
+rm -f "$possess_tmp"
 
 echo "regenerate-artifacts: gallery maps (rendered per-cell views)" >&2
 run -p hornvale -- map --world "$wsky" --out book/src/gallery/elevation-seed-42.png \
@@ -76,10 +94,21 @@ echo "regenerate-artifacts: scene exports" >&2
 run -p hornvale -- scene tiles --world "$wsky" > book/src/gallery/scene-tiles-seed-42.json
 run -p hornvale -- scene system --world "$wsky" > book/src/gallery/scene-system-seed-42.json
 
-echo "regenerate-artifacts: lab censuses (release)" >&2
-run_release -p hornvale -- lab run studies/census-lands-drift.study.json
-run_release -p hornvale -- lab run studies/census-of-the-meeting.study.json
-run_release -p hornvale -- lab run studies/branches-family.study.json
+# OWNER DIRECTIVE (2026-07-13): the full censuses NEVER regenerate on a
+# local box unless Nathan explicitly says so. The sanctioned path is the
+# AWS spot box (`make regen-remote` / scripts/aws-gate/regen-git.sh), which
+# invokes this script with HV_CENSUS=1. Locally the censuses are therefore
+# skipped BY DEFAULT; SKIP_CENSUS=1 (CI's fast probe path) also skips.
+# Cadence: once per campaign, just before the merge to main, with warning
+# given to Nathan first — census/validation coverage deliberately lags
+# (the local gate stays < 5 min; rapid development is the ratified trade).
+if [ "${HV_CENSUS:-0}" = 1 ] && [ "${SKIP_CENSUS:-0}" != 1 ]; then
+    echo "regenerate-artifacts: lab censuses (release; HV_CENSUS=1)" >&2
+    run_release -p hornvale -- lab run studies/the-census.study.json
+    run_release -p hornvale -- lab run studies/census-of-the-meeting.study.json
+else
+    echo "regenerate-artifacts: censuses SKIPPED — census regeneration is AWS-only (make regen-remote); HV_CENSUS=1 only on explicit owner direction" >&2
+fi
 
 echo "regenerate-artifacts: orrery ephemeris golden" >&2
 run -p hornvale-scene --example ephemeris_golden > clients/orrery/testdata/ephemeris-seed-42.json

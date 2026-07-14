@@ -31,8 +31,23 @@ book/src/laboratory/generated/census-of-eyes/
 book/src/laboratory/generated/census-of-tongues/
 book/src/laboratory/generated/census-of-words/
 
+# census-of-figures: a dev-time calibration instrument (night-sky stage 3,
+# figure-threshold freeze), not a committed census fixture — the study json
+# + metrics are committed, its rows.csv/summary output is not.
+book/src/laboratory/generated/census-of-figures/
+
 # Claude Code: project skills and shared settings (Bash timeout budget) are
 # committed; personal settings.local.json and worktrees are not
 .claude/*
 !.claude/skills/
 !.claude/settings.json
+__pycache__/
+*.pyc
+
+# Throwaway census analysis database (tools/census/build.sh output)
+tools/census/.build/
+
+# The Casement: the .wasm is deploy-built, never committed (decision 0052);
+# the wasm crate is outside the workspace so it has its own target/.
+book/src/gallery/vessel.wasm
+clients/vessel/wasm/target/

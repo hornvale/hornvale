@@ -33,7 +33,7 @@ finding, because every icosahedron edge borders exactly two faces.
 whole planet. P2 is the opposite: lazy, per-address, local, **zero global cost**. It is the
 vehicle for arbitrarily fine *local* detail — a room at refinement depth 7 literally *is* an L7
 triangle, computed only when someone looks — without ever paying the global bill. The discipline
-that makes this sound is Crust's ratified line (`identity-computes-on-the-canonical-grid`):
+that makes this sound is Crust's ratified line (0038):
 resolution-free **fields** are sampled as finely as desired anywhere; **mesh-bound structure**
 (sea level, drainage, connectivity, placement) is fixed once on the canonical grid and only
 *rendered* finer, never re-derived.

@@ -230,7 +230,7 @@ fn the_confidence_gradient_links_resolve() {
     // not a generated artifact — nothing regenerates it, so a renamed chronicle
     // or gallery target would rot its evidence pointers silently. Link-check it
     // so at least that failure is loud (decision
-    // `the-confidence-gradient-is-re-scored-not-frozen`; DoD prompts the
+    // 0030; DoD prompts the
     // re-scoring itself, which no test can prove).
     let mut errors = Vec::new();
     check_links(&repo_root().join("book/src/open-questions.md"), &mut errors);
@@ -306,7 +306,7 @@ fn md_files(dir: &Path, out: &mut Vec<PathBuf>) {
 
 /// The merged-reality parts of the book must not cite the idea registry:
 /// The Frontier part is the registry's published home (decision
-/// `the-frontier-is-published-in-the-book`), and every other part describes
+/// 0031), and every other part describes
 /// merged reality — the recurring failure where a chronicle or domain
 /// chapter cited a registry ID (`EXP-3`) or leaked engineering-process
 /// vocabulary was caught by review twice before this check existed.

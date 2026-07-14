@@ -6,7 +6,7 @@ license = "MIT"
 publish = false
 
 # Empty table: this package is deliberately outside the main workspace
-# (decision `non-workspace-dev-tools-may-use-parser-libraries`). An empty
+# (decision 0027). An empty
 # [workspace] here (not just the main Cargo.toml's `exclude`) stops cargo's
 # ancestor search at this manifest unconditionally — without it, a checkout
 # nested under another Cargo workspace (e.g. a worktree under

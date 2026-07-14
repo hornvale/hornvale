@@ -1,0 +1,114 @@
+{
+  "schema": "locale/room/v2",
+  "id": 1015166224,
+  "face": 16,
+  "path": [
+    3,
+    2,
+    1,
+    0,
+    0,
+    1,
+    0,
+    1,
+    2,
+    2,
+    2,
+    0
+  ],
+  "depth": 12,
+  "latitude": 26.256007,
+  "longitude": -132.49414,
+  "biome": "taiga",
+  "fields": {
+    "temperature_c": -2.9519254,
+    "moisture": 0.58398593,
+    "elevation_m": -215.74608
+  },
+  "corners": [
+    {
+      "cell": 9127,
+      "weight": 121
+    },
+    {
+      "cell": 36345,
+      "weight": 58
+    },
+    {
+      "cell": 36344,
+      "weight": 13
+    }
+  ],
+  "regime": {
+    "negations": {
+      "substrate": "Ordinary",
+      "energy": "Sunlit",
+      "kingdom": "PlantAnimal",
+      "endemic": false
+    },
+    "micro": {
+      "relief": 0.19504828,
+      "aspect": 0.029023334,
+      "wetness": 0.038805085,
+      "openness": 0.66924456
+    },
+    "descriptor": "a peat hollow",
+    "strangeness": 0.0
+  },
+  "exits": [
+    {
+      "direction": {
+        "Compass": "Ne"
+      },
+      "kind": "Edge",
+      "to": 1015166320
+    },
+    {
+      "direction": {
+        "Compass": "W"
+      },
+      "kind": "Edge",
+      "to": 1015166608
+    },
+    {
+      "direction": {
+        "Compass": "Se"
+      },
+      "kind": "Edge",
+      "to": 1015167632
+    },
+    {
+      "direction": "Exit",
+      "kind": "Vertical",
+      "to": 253791568
+    },
+    {
+      "direction": {
+        "Enter": 0
+      },
+      "kind": "Vertical",
+      "to": 4060664848
+    },
+    {
+      "direction": {
+        "Enter": 1
+      },
+      "kind": "Vertical",
+      "to": 4060664880
+    },
+    {
+      "direction": {
+        "Enter": 2
+      },
+      "kind": "Vertical",
+      "to": 4060664912
+    },
+    {
+      "direction": {
+        "Enter": 3
+      },
+      "kind": "Vertical",
+      "to": 4060664944
+    }
+  ]
+}

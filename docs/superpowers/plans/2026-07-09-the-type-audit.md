@@ -2,19 +2,19 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build `tools/type-audit/` — a syn-based, non-workspace checker that makes every primitive crossing a public API boundary a judged, tagged, enforced decision — then tag every such crossing across the workspace, commit the drift-checked report, and ratify decisions 0024/0025. **No production code changes:** the only workspace-visible edits are doc-comment tag lines, CI wiring, decisions, and the book.
+**Goal:** Build `tools/type-audit/` — a syn-based, non-workspace checker that makes every primitive crossing a public API boundary a judged, tagged, enforced decision — then tag every such crossing across the workspace, commit the drift-checked report, and ratify decisions 0027/0028. **No production code changes:** the only workspace-visible edits are doc-comment tag lines, CI wiring, decisions, and the book.
 
-**Architecture:** A standalone Cargo project outside the workspace (excluded from the root manifest, own lockfile, `syn` dependency) parses each crate's `.rs` files, finds primitives at `pub` boundaries, and requires each to carry a `type-audit:` verdict in its doc comment. Two commands: `check` (default-deny — untagged, stale, or malformed tags are errors) and `report` (regenerates the committed `docs/audits/type-audit-report.md`). The sim's build graph never sees syn (decision 0024 extends 0019's boundary to offline dev tools, same posture as "models author, dice roll"). Tags are docs-only diffs; the workspace gate, world bytes, and every committed artifact are untouched.
+**Architecture:** A standalone Cargo project outside the workspace (excluded from the root manifest, own lockfile, `syn` dependency) parses each crate's `.rs` files, finds primitives at `pub` boundaries, and requires each to carry a `type-audit:` verdict in its doc comment. Two commands: `check` (default-deny — untagged, stale, or malformed tags are errors) and `report` (regenerates the committed `docs/audits/type-audit-report.md`). The sim's build graph never sees syn (decision 0027 extends 0019's boundary to offline dev tools, same posture as "models author, dice roll"). Tags are docs-only diffs; the workspace gate, world bytes, and every committed artifact are untouched.
 
 **Tech Stack:** Rust (edition 2024) for the tool, with `syn` (full + visit/extra-traits) + `proc-macro2`; the workspace stays serde-only. mdBook for the book. The audit itself is a judgment pass driven by the tool's error list.
 
 ## Global Constraints
 
-- **No production code changes.** The only new/changed files are: the tool (`tools/type-audit/`), doc-comment tag lines, the report (`docs/audits/`), decisions 0024/0025, CI wiring, CLAUDE.md, and the book. `cargo test --workspace` output, world bytes, and all committed sim artifacts are byte-identical before and after. (spec §1 Contract, §10)
+- **No production code changes.** The only new/changed files are: the tool (`tools/type-audit/`), doc-comment tag lines, the report (`docs/audits/`), decisions 0027/0028, CI wiring, CLAUDE.md, and the book. `cargo test --workspace` output, world bytes, and all committed sim artifacts are byte-identical before and after. (spec §1 Contract, §10)
 - **The tool is not a workspace member.** Root `Cargo.toml` gains `exclude = ["tools/type-audit"]`; the tool has its own `Cargo.lock`. The workspace's serde-only allowlist (decision 0004/0019) is untouched — syn lives only in the excluded tool. (spec §2)
 - **The tool is not in `cargo test --workspace`.** It is exercised by its own `cargo test` (run from `tools/type-audit/`) and by the CI drift step. The per-commit workspace gate stays fast. (spec §5)
 - **Determinism of the report.** Same tree → byte-identical `docs/audits/type-audit-report.md`: sorted output, no timestamps, no wall-clock. CI drift-checks it. (spec §8)
-- **Bare-ok classes (rubric, spec §4):** `ratio`, `count`, `index`, `constructor-edge`, `envelope`, `identifier-text`, `render-internal`, `flag`. Novel classes go to Nathan; the ratified set becomes decision 0025. Waiver reasons cite a source (`decision-0014`, `elevation-convention`).
+- **Bare-ok classes (rubric, spec §4):** `ratio`, `count`, `index`, `constructor-edge`, `envelope`, `identifier-text`, `render-internal`, `flag`. Novel classes go to Nathan; the ratified set becomes decision 0028. Waiver reasons cite a source (`decision-0014`, `elevation-convention`).
 - **No relitigation of ratified bare choices** — 0014 (`Fact.day`) and the elevation convention become `waiver` tags citing their sources; not reopened. (spec §10)
 - **Rust hygiene in the tool:** the tool sets `#![warn(missing_docs)]` on its public items to match house style, runs `cargo fmt` as the final step before each commit, and is clippy-clean (`cargo clippy -- -D warnings` from `tools/type-audit/`). No `--no-verify`.
 - **Tool run form (verbatim, used in CI and locally):**
@@ -42,8 +42,8 @@
 
 **Workspace-visible (docs-only + wiring):**
 - Modify: root `Cargo.toml` (`exclude`), `.github/workflows/ci.yml` (two lines + diff scope), `CLAUDE.md` (command block + typed-quantities pointer).
-- Create: `docs/audits/type-audit-report.md`, `docs/decisions/0024-*.md`, `docs/decisions/0025-*.md`, `book/src/chronicle/NN-the-type-audit.md`, `docs/retrospectives/campaign-27.md`.
-- Modify: doc comments across `kernel/`, `domains/*`, `windows/*`, `cli/` (tag lines only); `docs/decisions/README.md` index; `docs/vision/idea-registry.md` (REJ-1 cross-link to 0024); `book/src/SUMMARY.md` (chronicle entry) + any stale chapter the freshness sweep finds.
+- Create: `docs/audits/type-audit-report.md`, `docs/decisions/0027-*.md`, `docs/decisions/0028-*.md`, `book/src/chronicle/NN-the-type-audit.md`, `docs/retrospectives/campaign-27.md`.
+- Modify: doc comments across `kernel/`, `domains/*`, `windows/*`, `cli/` (tag lines only); `docs/decisions/README.md` index; `docs/vision/idea-registry.md` (REJ-1 cross-link to 0027); `book/src/SUMMARY.md` (chronicle entry) + any stale chapter the freshness sweep finds.
 
 **Task ordering.** Tasks 1–8 build and self-test the tool (pure TDD, all inside `tools/type-audit/`, zero workspace impact). Tasks 9–13 are the audit: tag the workspace crate by crate, `check` green per crate. Task 14 wires CI and commits the report (lands only once the whole tree is green). Tasks 15–16 close: decisions, CLAUDE.md, registry, then the book DoD.
 
@@ -764,7 +764,7 @@ git commit -m "feat(type-audit): extract enums, consts, aliases, traits, impls; 
 ```rust
 //! Parsing the `type-audit:` verdict line inside an item's doc comment.
 
-/// The ratified `bare-ok` classes (spec §4 / decision 0025).
+/// The ratified `bare-ok` classes (spec §4 / decision 0028).
 pub const BARE_OK_CLASSES: &[&str] = &[
     "ratio", "count", "index", "constructor-edge", "envelope",
     "identifier-text", "render-internal", "flag",
@@ -1493,7 +1493,7 @@ Tasks 9–13 are **judgment passes**, not code. Each tags one or more crates. Th
 1. **List the queue:** `cargo run --manifest-path tools/type-audit/Cargo.toml -- check <crate-root>` (e.g. `domains/terrain`). Each line is `crate:line: untagged primitive at <position> (<item>)`.
 2. **Classify each item** against the rubric (spec §4), adding one `/// type-audit: …` line to the item's existing doc comment (`missing_docs` guarantees the comment exists). Use the decision procedure below. For an item mixing verdicts across positions, use position qualifiers on one comma-separated line.
 3. **Record a save-format note** for every `pending` item in the task's commit message: does the value reach `Value`/world JSON serialization? (the constraint every remediation wave inherits, spec §6.2).
-4. **Batch contested/novel-class items to Nathan** — one message per crate listing the item, the position, and the proposed-but-uncertain verdict. Do not invent a new `bare-ok` class; ratified outcomes extend the rubric and are recorded for decision 0025. **Stop and wait** for the batch's resolution before committing that crate.
+4. **Batch contested/novel-class items to Nathan** — one message per crate listing the item, the position, and the proposed-but-uncertain verdict. Do not invent a new `bare-ok` class; ratified outcomes extend the rubric and are recorded for decision 0028. **Stop and wait** for the batch's resolution before committing that crate.
 5. **Green the crate:** `check <crate-root>` exits 0.
 6. **Commit** (docs-only diff): `git commit -m "docs(<crate>): type-audit tags"` with the save-format notes in the body.
 
@@ -1727,21 +1727,21 @@ git commit -m "ci(type-audit): wire check + report into the drift step"
 
 ---
 
-### Task 15: Decisions 0024 & 0025, CLAUDE.md, registry cross-link
+### Task 15: Decisions 0027 & 0028, CLAUDE.md, registry cross-link
 
 **Files:**
-- Create: `docs/decisions/0024-non-workspace-dev-tools-may-use-parser-libraries.md`
-- Create: `docs/decisions/0025-the-bare-ok-rubric.md`
+- Create: `docs/decisions/0027-non-workspace-dev-tools-may-use-parser-libraries.md`
+- Create: `docs/decisions/0028-the-bare-ok-rubric.md`
 - Modify: `docs/decisions/README.md` (index rows)
 - Modify: `CLAUDE.md` (command block + typed-quantities pointer)
 - Modify: `docs/vision/idea-registry.md` (REJ-1 cross-link)
 
 **Interfaces:** none.
 
-- [ ] **Step 1: Write decision 0024.** Create `docs/decisions/0024-non-workspace-dev-tools-may-use-parser-libraries.md` using the README template:
+- [ ] **Step 1: Write decision 0027.** Create `docs/decisions/0027-non-workspace-dev-tools-may-use-parser-libraries.md` using the README template:
 
 ```markdown
-# 0024. Non-workspace dev tools may use parser libraries
+# 0027. Non-workspace dev tools may use parser libraries
 
 **Status:** Accepted (2026-07-09) · **Decider:** Nathan
 
@@ -1768,18 +1768,18 @@ inside `cargo test --workspace`. The workspace's serde-only allowlist
 untouched. Future offline dev tools follow the same shape.
 
 **See also.** Decisions 0019, 0009, 0023, 0004, 0008; the type-audit spec
-(`docs/superpowers/specs/2026-07-09-the-type-audit-design.md`); decision 0025
+(`docs/superpowers/specs/2026-07-09-the-type-audit-design.md`); decision 0028
 (the rubric the tool enforces).
 ```
 
-- [ ] **Step 2: Write decision 0025** from the ratified rubric (fold in whatever Nathan ratified during Tasks 9–13). Create `docs/decisions/0025-the-bare-ok-rubric.md`:
+- [ ] **Step 2: Write decision 0028** from the ratified rubric (fold in whatever Nathan ratified during Tasks 9–13). Create `docs/decisions/0028-the-bare-ok-rubric.md`:
 
 ```markdown
-# 0025. The bare-ok rubric for primitives at API boundaries
+# 0028. The bare-ok rubric for primitives at API boundaries
 
 **Status:** Accepted (2026-07-09) · **Decider:** Nathan
 
-In the context of the type audit (spec, decision 0024) requiring a verdict on
+In the context of the type audit (spec, decision 0027) requiring a verdict on
 every primitive crossing a public boundary, facing the question of which bare
 primitives are *permanently* fine versus deferred newtypes, we decided the
 **bare-ok rubric**: a primitive at a public boundary is permanently acceptable
@@ -1801,21 +1801,21 @@ contested case here (supersede, never edit). Waivers cite a source
 (`decision-0014`, `elevation-convention`); an untraceable waiver is a review
 failure. The remediation waves (spec §7) convert every `pending` tag.
 
-**See also.** Decisions 0008, 0024, 0014; the type-audit spec §4; the elevation
+**See also.** Decisions 0008, 0027, 0014; the type-audit spec §4; the elevation
 convention (Campaign 3 plan).
 ```
 
 - [ ] **Step 3: Add the index rows** to `docs/decisions/README.md`'s table (after the 0023 row):
 
 ```markdown
-| [0024](0024-non-workspace-dev-tools-may-use-parser-libraries.md) | Non-workspace dev tools may use parser libraries | Accepted |
-| [0025](0025-the-bare-ok-rubric.md) | The bare-ok rubric for primitives at API boundaries | Accepted |
+| [0027](0027-non-workspace-dev-tools-may-use-parser-libraries.md) | Non-workspace dev tools may use parser libraries | Accepted |
+| [0028](0028-the-bare-ok-rubric.md) | The bare-ok rubric for primitives at API boundaries | Accepted |
 ```
 
 - [ ] **Step 4: Update `CLAUDE.md`.** In the Commands block, add under the CLI examples:
 
 ```markdown
-# The type audit (standalone tool outside the workspace; see decisions 0024/0025):
+# The type audit (standalone tool outside the workspace; see decisions 0027/0028):
 cargo run --manifest-path tools/type-audit/Cargo.toml -- check          # default-deny
 cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 ```
@@ -1823,11 +1823,11 @@ cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/ty
 In the "Typed quantities" convention bullet, append a pointer:
 
 ```markdown
-  Enforced by `tools/type-audit/` (decisions 0024/0025): every primitive at a
+  Enforced by `tools/type-audit/` (decisions 0027/0028): every primitive at a
   `pub` boundary carries a `type-audit:` verdict tag (`bare-ok`/`waiver`/`pending`).
 ```
 
-- [ ] **Step 5: Cross-link the registry.** In `docs/vision/idea-registry.md`, extend the REJ-1 row's rationale/pointer cell to note that non-workspace dev tools are carved out by decision 0024 (0019 still governs workspace crates). Keep it one line; do not renumber.
+- [ ] **Step 5: Cross-link the registry.** In `docs/vision/idea-registry.md`, extend the REJ-1 row's rationale/pointer cell to note that non-workspace dev tools are carved out by decision 0027 (0019 still governs workspace crates). Keep it one line; do not renumber.
 
 - [ ] **Step 6: Run the docs drift check** (validates every cross-link resolves — spec `docs/CLAUDE.md`).
 
@@ -1837,8 +1837,8 @@ Expected: PASS.
 - [ ] **Step 7: Commit.**
 
 ```bash
-git add docs/decisions/0024-*.md docs/decisions/0025-*.md docs/decisions/README.md CLAUDE.md docs/vision/idea-registry.md
-git commit -m "docs(decisions): ratify 0024 (dev-tool parsers) + 0025 (bare-ok rubric)"
+git add docs/decisions/0027-*.md docs/decisions/0028-*.md docs/decisions/README.md CLAUDE.md docs/vision/idea-registry.md
+git commit -m "docs(decisions): ratify 0027 (dev-tool parsers) + 0028 (bare-ok rubric)"
 ```
 
 ---
@@ -1895,7 +1895,7 @@ git commit -m "docs(book): chronicle, freshness sweep, retrospective for the typ
 - §1 goal/contract → Tasks 1–16; the no-production-code contract is a Global Constraint and re-verified in Task 13 Step 5.
 - §2 the tool (non-workspace, syn, boundary definition, tracked primitives, syntactic-honesty rule) → Tasks 1–7 (exclusion in Task 1; primitives Task 2; boundary/exclusions Tasks 3–4; type-alias-launders-primitive caught at the alias RHS in Task 4; walker exclusions Task 7).
 - §3 tag grammar (verdict forms, position qualifiers, multi-verdict, bidirectional errors, rustdoc visibility) → Task 5 (parser) + Task 6 (bidirectional coverage).
-- §4 rubric → encoded as `BARE_OK_CLASSES` (Task 5); applied in Tasks 9–13; ratified as decision 0025 (Task 15).
+- §4 rubric → encoded as `BARE_OK_CLASSES` (Task 5); applied in Tasks 9–13; ratified as decision 0028 (Task 15).
 - §5 enforcement/CI → Task 14 (two lines + diff scope; not in `cargo test --workspace`).
 - §6 audit process → the shared audit procedure + Tasks 9–13 (queue-as-worklist, per-crate classify, contested-to-Nathan batch, per-crate commit, report/decisions last).
 - §7 remediation waves → **out of scope by design** (separate campaigns); wave assignment is captured in `pending(wave-N)` tags during Tasks 9–13 and summarized by the report's pending-by-wave table.

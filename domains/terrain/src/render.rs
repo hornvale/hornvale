@@ -8,7 +8,7 @@
 
 use crate::globe::TectonicGlobe;
 use crate::streams;
-use hornvale_kernel::{Geosphere, NearestCellIndex, Seed, noise};
+use hornvale_kernel::{Geosphere, NearestCellIndex, Seed, math, noise};
 
 /// Raster image width in pixels; the image is equirectangular, so height is
 /// `MAP_WIDTH / 2`. 1024×512; pixel ≈ 0.35°, fine enough to show the
@@ -37,7 +37,11 @@ const COAST_OCTAVES: u32 = 5;
 /// kernel's `Geosphere::coord` convention).
 fn direction(latitude: f64, longitude: f64) -> [f64; 3] {
     let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
-    [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()]
+    [
+        math::cos(lat) * math::cos(lon),
+        math::cos(lat) * math::sin(lon),
+        math::sin(lat),
+    ]
 }
 
 /// Seam-free coastline noise in [−1, 1) at a unit-sphere position: the
@@ -82,8 +86,8 @@ fn interpolated_elevation(
     let mut total = 0.0;
     for cell in std::iter::once(nearest).chain(neighbors.iter().copied()) {
         let theta = angle(p, geo.position(cell));
-        let weight = (-(theta * theta) / (sigma * sigma)).exp();
-        weighted += weight * *globe.elevation.get(cell);
+        let weight = math::exp(-(theta * theta) / (sigma * sigma));
+        weighted += weight * globe.elevation.get(cell).get();
         total += weight;
     }
     weighted / total
@@ -91,9 +95,7 @@ fn interpolated_elevation(
 
 /// Angular distance between two unit vectors, radians.
 fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
-    (a[0] * b[0] + a[1] * b[1] + a[2] * b[2])
-        .clamp(-1.0, 1.0)
-        .acos()
+    math::acos((a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).clamp(-1.0, 1.0))
 }
 
 /// The refined per-pixel elevation: the interpolated prior plus bounded
@@ -108,11 +110,11 @@ fn refined_elevation(
     longitude: f64,
 ) -> f64 {
     let interp = interpolated_elevation(geo, index, globe, latitude, longitude);
-    let d = (interp - globe.sea_level) / COAST_ENVELOPE_M;
+    let d = (interp - globe.sea_level.get()) / COAST_ENVELOPE_M;
     if d.abs() > 3.0 {
         return interp;
     }
-    let envelope = (-d * d).exp();
+    let envelope = math::exp(-d * d);
     interp + COAST_AMP_M * envelope * coast_noise(noise_seed, direction(latitude, longitude))
 }
 
@@ -160,7 +162,7 @@ fn elevation_pixels(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) ->
         for px in 0..width {
             let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
             let elevation = refined_elevation(geo, &index, globe, noise_seed, latitude, longitude);
-            out.extend_from_slice(&color(elevation, globe.sea_level));
+            out.extend_from_slice(&color(elevation, globe.sea_level.get()));
         }
     }
     out
@@ -265,13 +267,14 @@ mod tests {
                     // Bounded displacement, always.
                     assert!((refined - interp).abs() <= COAST_AMP_M + 1e-9);
                     // Exactly the prior away from the coast.
-                    if (interp - globe.sea_level).abs() > 3.0 * COAST_ENVELOPE_M {
+                    if (interp - globe.sea_level.get()).abs() > 3.0 * COAST_ENVELOPE_M {
                         assert_eq!(refined, interp);
                     }
                     // A land/ocean flip only happens inside the displacement band.
-                    let flipped = (refined >= globe.sea_level) != (interp >= globe.sea_level);
+                    let flipped =
+                        (refined >= globe.sea_level.get()) != (interp >= globe.sea_level.get());
                     if flipped {
-                        assert!((interp - globe.sea_level).abs() <= COAST_AMP_M + 1e-9);
+                        assert!((interp - globe.sea_level.get()).abs() <= COAST_AMP_M + 1e-9);
                     }
                 }
             }
@@ -288,11 +291,11 @@ mod tests {
         for (latitude, longitude) in [(0.0, 0.0), (45.5, -120.25), (-67.0, 13.0), (89.0, 179.0)] {
             let interp = interpolated_elevation(&geo, &index, &globe, latitude, longitude);
             let nearest = index.nearest(&geo, latitude, longitude);
-            let mut lo = *globe.elevation.get(nearest);
+            let mut lo = globe.elevation.get(nearest).get();
             let mut hi = lo;
             for &n in geo.neighbors(nearest) {
-                lo = lo.min(*globe.elevation.get(n));
-                hi = hi.max(*globe.elevation.get(n));
+                lo = lo.min(globe.elevation.get(n).get());
+                hi = hi.max(globe.elevation.get(n).get());
             }
             assert!(
                 (lo..=hi).contains(&interp),

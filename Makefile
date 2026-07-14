@@ -5,20 +5,23 @@
 # dependency; this uses `make`, already present everywhere.
 #
 #   make quick        # cheap half: fmt --check + clippy (the pre-commit gate)
-#   make gate         # the full commit gate: fmt + clippy + workspace tests
+#   make gate         # the commit gate: fmt + clippy + nextest + doctests (heavy tier skipped)
 #   make gate-fast    # ITERATION ONLY: scope fmt/clippy/test to changed crates (make gate still gates commits)
+#   make gate-full    # full evidence: the commit gate + the cost-tagged heavy tier
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
-#   make rebaseline   # regenerate every committed generated artifact
+#   make rebaseline   # regenerate committed artifacts EXCEPT censuses (census regen is AWS-only: make regen-remote)
 #   make rebaseline-goldens # accept drifted byte-golden test fixtures
 #   make lab-diff STUDY=<name> # report which census metrics moved vs HEAD
 #   make preflight    # GO/NO-GO before integrating a campaign branch with main
 #   make doctor       # print the repo self-map (orientation for a fresh session)
 #   make install-hooks# point git at scripts/hooks (opt-in; edits local config)
+#   make gate-remote  # run the gate on this worktree's AWS spot box (scripts/aws-gate/README.md)
+#   make vessel-check  # the Casement's local gate: deno + wasm fmt/clippy + byte-identity smoke
 #
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens lab-diff preflight doctor install-hooks
+.PHONY: help quick gate gate-fast gate-full nextest-check prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -27,10 +30,14 @@ help: ## Show this help
 
 quick: fmt-check clippy ## Cheap half of the gate (fmt-check + clippy)
 
-gate: fmt-check clippy test ## The full commit gate (fmt + clippy + workspace tests)
+gate: fmt-check clippy test ## The commit gate (fmt + clippy + nextest + doctests; heavy tier #[ignore]d, ~4 min)
 
 gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)
 	@bash scripts/gate-fast.sh
+
+gate-full: gate ## Full evidence: the commit gate + the heavy tier (cost-tagged #[ignore]d tests only)
+	@bash scripts/gate-full-heavy.sh
+	@echo "reminder: 'make census-check' verifies the analysis harness (local-only, brew tools)"
 
 fmt: ## Format the workspace in place
 	cargo fmt
@@ -41,16 +48,26 @@ fmt-check: ## Verify formatting without writing
 clippy: ## Lint with warnings denied
 	cargo clippy --workspace --all-targets -- -D warnings
 
-test: ## Run the full workspace test suite
-	cargo test --workspace
+test: nextest-check ## Run the workspace tests: nextest (parallel binaries) + doctests
+	cargo nextest run --workspace
+	cargo test --workspace --doc
+
+nextest-check: ## Fail with an install hint if cargo-nextest is missing
+	@command -v cargo-nextest >/dev/null 2>&1 || { \
+		echo "cargo-nextest not found — install it (decision 0040):"; \
+		echo "  cargo install cargo-nextest   # or: brew install cargo-nextest"; \
+		exit 1; }
 
 prewarm: ## Warm a fresh worktree's caches (start in the background right after `git worktree add`)
 	cargo build --workspace --all-targets
 	cargo build --release -p hornvale
 	cargo build --manifest-path tools/type-audit/Cargo.toml
 
-rebaseline artifacts: ## Regenerate every committed generated artifact (review the diff, then commit)
-	bash scripts/regenerate-artifacts.sh
+rebaseline artifacts: ## Regenerate committed artifacts EXCEPT censuses (census regen is AWS-only: make regen-remote)
+	@bash scripts/timed.sh rebaseline -- bash scripts/regenerate-artifacts.sh
+
+timings: ## Show the timing ledger (usage: make timings [LABEL=rebaseline])
+	@bash scripts/timed.sh report $(LABEL)
 
 rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), then review the diff
 	REBASELINE=1 cargo test -q -p hornvale --test lens_purity
@@ -58,7 +75,7 @@ rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), 
 	REBASELINE=1 cargo test -q -p hornvale-worldgen --test proto_goblinoid_golden
 	REBASELINE=1 cargo test -q -p hornvale --test architecture
 
-lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STUDY=census-lands-drift)
+lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STUDY=the-census)
 	@test -n "$(STUDY)" || { echo "usage: make lab-diff STUDY=<study-name>"; exit 2; }
 	@old="$$(mktemp)"; \
 	if ! git show HEAD:book/src/laboratory/generated/$(STUDY)/rows.csv > "$$old" 2>/dev/null; then \
@@ -70,6 +87,25 @@ lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STU
 	    book/src/laboratory/generated/$(STUDY)/rows.csv; \
 	status=$$?; rm -f "$$old"; exit $$status
 
+census: ## Build the analysis DB from committed censuses and open DuckDB on it
+	@bash tools/census/build.sh
+	@duckdb tools/census/.build/census.duckdb
+
+census-query: ## One-shot census query (usage: make census-query Q="SELECT ...")
+	@test -n "$(Q)" || { echo "usage: make census-query Q=\"SELECT ...\""; exit 2; }
+	@bash tools/census/build.sh
+	@duckdb tools/census/.build/census.duckdb -c "$(Q)"
+
+census-history: ## Load a study's git history into census_history (usage: make census-history STUDY=the-census)
+	@test -n "$(STUDY)" || { echo "usage: make census-history STUDY=<study-name>"; exit 2; }
+	@bash tools/census/history.sh "$(STUDY)"
+
+census-check: ## Harness gate: mount-validate + smoke + golden-pins (local; needs duckdb+python3)
+	@bash tools/census/check.sh
+
+regen-remote: ## Regenerate ALL artifacts incl. censuses on the AWS spot box (BILLABLE; the only sanctioned census-regen path)
+	@scripts/aws-gate/regen-git.sh .
+
 preflight: ## GO/NO-GO before integrating a campaign branch with main (run from the branch)
 	@bash scripts/preflight-merge.sh
 
@@ -79,3 +115,32 @@ doctor: ## Print the repo self-map (orientation for a fresh session)
 install-hooks: ## Point git at scripts/hooks (runs `make quick` pre-commit)
 	git config core.hooksPath scripts/hooks
 	@echo "git hooks path set to scripts/hooks; 'make quick' now runs pre-commit."
+
+gate-remote: ## Run the CI gate on this worktree's AWS spot box
+	@scripts/aws-gate/gate-remote.sh
+
+gate-remote-verify: ## Local-vs-remote byte-identity acceptance test (libm go-live gate)
+	@scripts/aws-gate/gate-remote-verify.sh
+
+gate-panic: ## EMERGENCY: disable the runner and kill all gate resources
+	@scripts/aws-gate/panic.sh
+
+gate-remote-setup: ## Provision remote-gate infra (BILLABLE; confirmation-gated)
+	@scripts/aws-gate/setup.sh
+
+gate-remote-teardown: ## Remove all remote-gate infra
+	@scripts/aws-gate/teardown.sh
+
+shellcheck: ## Lint all shell scripts
+	@shellcheck scripts/*.sh scripts/aws-gate/*.sh scripts/aws-gate/test/*.sh scripts/hooks/* tools/census/*.sh
+
+wasm-vessel: ## Build the Casement wasm into book/src/gallery (deploy runs this too; never committed)
+	rustup target add wasm32-unknown-unknown 2>/dev/null || true
+	cargo build --manifest-path clients/vessel/wasm/Cargo.toml --release --target wasm32-unknown-unknown
+	cp clients/vessel/wasm/target/wasm32-unknown-unknown/release/hornvale_vessel_wasm.wasm book/src/gallery/vessel.wasm
+
+vessel-check: wasm-vessel ## The Casement's local gate: deno checks + wasm fmt/clippy + byte-identity smoke
+	cd clients/vessel && deno fmt --check && deno lint && deno task check && deno task test
+	cargo fmt --check --manifest-path clients/vessel/wasm/Cargo.toml
+	cargo clippy --manifest-path clients/vessel/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+	node clients/vessel/wasm/drive.mjs book/src/gallery/vessel.wasm

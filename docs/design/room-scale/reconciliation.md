@@ -60,7 +60,7 @@ Four states, four moves (the state-machine the reconciliation reduces to):
 ```
 
 **The one real conflict** is the ledger, resolved by [decision
-`the-room-tier-ledger-is-chunk-partitioned`](../../decisions/the-room-tier-ledger-is-chunk-partitioned.md)
+0037](../../decisions/0037-the-room-tier-ledger-is-chunk-partitioned.md)
 (re-scoped): near-term is The Walk's in-memory model; partitioning is the deferred
 out-of-RAM form §3.6 sets aside. Everything else is additive, duplicate-to-fold, or
 parked — no other contradiction.

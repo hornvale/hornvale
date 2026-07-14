@@ -68,113 +68,10 @@ impl SeaLevelChange {
     }
 }
 
-/// An absolute temperature, degrees Celsius.
-///
-/// Distinguished at the type level from [`TempAnomaly`] (decision 0008):
-/// the two were previously both bare `CellMap<f64>`, and code has twice
-/// mixed up "absolute reading" with "difference from present" when feeding
-/// the same function. A `Celsius` is a reading; it cannot be compared to a
-/// threshold meant for a difference, because there is no such comparison —
-/// only [`std::ops::Sub`] converts it into the one type that can be.
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct Celsius(f64);
-
-impl Celsius {
-    /// Validating constructor: finite (any absolute reading is physically
-    /// plausible somewhere in a simulated world, so magnitude is
-    /// unconstrained).
-    /// type-audit: bare-ok(constructor-edge)
-    pub fn new(value: f64) -> Result<Self, UnitError> {
-        if !value.is_finite() {
-            return Err(UnitError {
-                unit: "temperature",
-                value,
-                reason: "must be finite",
-            });
-        }
-        Ok(Self(value))
-    }
-    /// The raw absolute degrees Celsius.
-    /// type-audit: bare-ok(constructor-edge)
-    pub fn get(self) -> f64 {
-        self.0
-    }
-}
-
-impl std::ops::Sub for Celsius {
-    type Output = TempAnomaly;
-    /// One of the two production paths that produce a [`TempAnomaly`] (the
-    /// other is [`TempAnomaly::from_offset_c`]): subtracting two [`Celsius`]
-    /// readings. There is no other constructor that turns an absolute
-    /// temperature into an anomaly, so it is impossible to accidentally hand
-    /// an absolute reading to code that expects a difference from present
-    /// (decision 0008).
-    fn sub(self, rhs: Celsius) -> TempAnomaly {
-        TempAnomaly(self.0 - rhs.0)
-    }
-}
-
-impl std::ops::Add<TempAnomaly> for Celsius {
-    type Output = Celsius;
-    /// Apply a computed offset (e.g. the ice sheet's albedo-cooling ΔT) to
-    /// an absolute reading: `present + offset = era_temp`. The counterpart
-    /// to [`Sub`](std::ops::Sub): together they are the sole production
-    /// paths across the `Celsius`/`TempAnomaly` boundary (decision 0008,
-    /// extended for the ice-advance model).
-    fn add(self, rhs: TempAnomaly) -> Celsius {
-        Celsius(self.0 + rhs.0)
-    }
-}
-
-/// A temperature difference relative to the world's present climate,
-/// degrees Celsius (e.g. an era's reading minus the present reading at the
-/// same cell). Only producible via [`Celsius`] subtraction — see that impl.
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-pub struct TempAnomaly(f64);
-
-impl TempAnomaly {
-    /// Validating constructor: finite (sign and magnitude unconstrained).
-    ///
-    /// `pub(crate)` and `cfg(test)`, not `pub`: the whole point of this type
-    /// is that an anomaly can ONLY be produced by [`Celsius`] subtraction
-    /// (see that `Sub` impl). If this constructor were public, any external
-    /// caller could fabricate a `TempAnomaly` from a bare `f64` and bypass
-    /// that guarantee entirely. Its only callers are this crate's own unit
-    /// tests (`strata.rs`), so it is gated to test builds — a non-test build
-    /// has no legitimate caller at all, only [`Celsius`] subtraction.
-    #[cfg(test)]
-    pub(crate) fn new(value: f64) -> Result<Self, UnitError> {
-        if !value.is_finite() {
-            return Err(UnitError {
-                unit: "temperature anomaly",
-                value,
-                reason: "must be finite",
-            });
-        }
-        Ok(Self(value))
-    }
-    /// The other production path (see the [`Sub`](std::ops::Sub) impl on
-    /// [`Celsius`]): builds a `TempAnomaly` directly from a computed ΔT,
-    /// rather than from a difference of two readings. `pub(crate)`, not
-    /// `pub` — the same external-fabrication guarantee applies, so this
-    /// is only callable from within the paleoclimate crate. Its sole
-    /// caller is `ice::temp_offset`, which expresses the ice sheet's
-    /// albedo-cooling feedback as an anomaly (a computed offset, never a
-    /// reading of anything).
-    pub(crate) fn from_offset_c(value: f64) -> Self {
-        debug_assert!(value.is_finite(), "albedo offset must be finite");
-        Self(value)
-    }
-    /// The raw degrees Celsius, relative to present.
-    /// type-audit: bare-ok(constructor-edge)
-    pub fn get(self) -> f64 {
-        self.0
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hornvale_kernel::{TempAnomaly, Temperature};
 
     #[test]
     fn ice_volume_rejects_out_of_range_and_nonfinite() {
@@ -191,37 +88,16 @@ mod tests {
     }
 
     #[test]
-    fn celsius_rejects_nonfinite() {
-        assert!(Celsius::new(f64::NAN).is_err());
-        assert!(Celsius::new(f64::INFINITY).is_err());
-        assert_eq!(Celsius::new(-3.5).unwrap().get(), -3.5);
-    }
-
-    #[test]
-    fn temp_anomaly_rejects_nonfinite() {
-        assert!(TempAnomaly::new(f64::NAN).is_err());
-        assert_eq!(TempAnomaly::new(2.0).unwrap().get(), 2.0);
-    }
-
-    #[test]
-    fn celsius_subtraction_yields_the_anomaly() {
-        let era = Celsius::new(10.0).unwrap();
-        let present = Celsius::new(14.0).unwrap();
-        let anomaly = era - present;
-        assert_eq!(anomaly.get(), -4.0);
-    }
-
-    #[test]
-    fn celsius_addition_applies_an_offset() {
-        let present = Celsius::new(14.0).unwrap();
-        let offset = TempAnomaly::new(-6.0).unwrap();
-        assert_eq!((present + offset).get(), 8.0);
+    fn temperature_rejects_nonfinite() {
+        assert!(Temperature::new(f64::NAN).is_err());
+        assert!(Temperature::new(f64::INFINITY).is_err());
+        assert_eq!(Temperature::new(-3.5).unwrap().get(), -3.5);
     }
 
     #[test]
     fn addition_and_subtraction_round_trip() {
-        let present = Celsius::new(14.0).unwrap();
-        let era = Celsius::new(8.0).unwrap();
+        let present = Temperature::new(14.0).unwrap();
+        let era = Temperature::new(8.0).unwrap();
         let offset = era - present;
         assert_eq!((present + offset).get(), era.get());
     }
@@ -234,8 +110,8 @@ mod tests {
 
     #[test]
     fn temp_anomaly_orders_by_magnitude() {
-        let cold = TempAnomaly::new(-5.0).unwrap();
-        let warm = TempAnomaly::new(1.0).unwrap();
+        let cold = TempAnomaly::from_offset_c(-5.0);
+        let warm = TempAnomaly::from_offset_c(1.0);
         assert!(cold < warm);
     }
 }

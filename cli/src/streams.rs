@@ -5,15 +5,17 @@
 /// type-audit: bare-ok(artifact: return)
 pub fn render_streams() -> String {
     // Domain sections come from the single composition-root roster (DOMAINS),
-    // which stores domains in registration order; the kernel is the substrate,
-    // not a domain, so its own seed labels (room addressing) are listed
-    // explicitly alongside them. The whole list is sorted alphabetically, so
-    // `hornvale-kernel` slots between `hornvale-culture` and `hornvale-language`.
+    // which stores domains in registration order. Crates that draw streams but
+    // are not domains — the kernel (substrate: room addressing) and the
+    // windows with their own draws (locale, vessel) — are listed explicitly
+    // alongside them. The whole list is sorted alphabetically.
     let mut sources: Vec<(&str, Vec<(&'static str, &'static str)>)> = hornvale_worldgen::DOMAINS
         .iter()
         .map(|d| (d.crate_name(), d.stream_labels()))
         .collect();
     sources.push(("hornvale-kernel", hornvale_kernel::stream_labels()));
+    sources.push(("hornvale-locale", hornvale_locale::stream_labels()));
+    sources.push(("hornvale-vessel", hornvale_vessel::stream_labels()));
     sources.sort_by(|a, b| a.0.cmp(b.0));
 
     let mut doc = String::new();

@@ -11,6 +11,9 @@ markers, the zoom — is this page's own choice of presentation
 Switch layers, hover to inspect any tile, drag to pan, scroll to zoom.
 Settlements are ringed dots; the flagship village is gold.
 
+The atlas renders committed scene data; [A Possession, Live](./possession-live.md)
+goes further and runs the simulation itself in the page.
+
 <div id="atlas-holder">
   <div id="atlas-layers" style="margin-bottom: 0.5em;"></div>
   <canvas id="atlas-canvas" width="1024" height="512"

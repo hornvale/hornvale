@@ -3,13 +3,12 @@
 //! composition root. The full fields live here on the non-serialized
 //! `PaleoRecord`; only summaries become facts (see `facts`).
 
-use crate::units::Celsius;
-use hornvale_kernel::{CellMap, Geosphere};
+use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation, Temperature};
 
 /// One coarse era's climate fields, all bare kernel types, filled by the
 /// composition root after re-running climate at the era's sea level and
 /// applying the era's albedo cooling offset to the temperature field.
-/// type-audit: pending(wave-2: day), bare-ok(flag: ice), bare-ok(flag: habitable), pending(wave-2: sea_level), bare-ok(ratio: ice_fraction)
+/// type-audit: pending(wave-2: day), bare-ok(flag: ice), bare-ok(flag: habitable), bare-ok(ratio: ice_fraction)
 #[derive(Debug, Clone)]
 pub struct EraClimate {
     /// Absolute standard day of the era.
@@ -27,7 +26,7 @@ pub struct EraClimate {
     /// Habitability per cell under this era's offset climate.
     pub habitable: CellMap<bool>,
     /// Sea level this era (metres): present + eustatic change.
-    pub sea_level: f64,
+    pub sea_level: ReferenceElevation,
     /// Land fraction under ice this era (for the glacial-maximum summary).
     pub ice_fraction: f64,
 }
@@ -44,21 +43,21 @@ pub struct EraClimate {
 /// lets the same global cooling offset move a latitudinal snowline instead
 /// of flipping the whole globe at once. Callers diagnose an era's ice by
 /// first adding that era's cooling offset to the present temperature field
-/// (`Celsius`'s `Add` impl) and passing the result here; see the
+/// (`Temperature`'s `Add` impl) and passing the result here; see the
 /// composition root's `climate_at_era` for the advance-beyond-present
 /// convention this feeds.
 ///
-/// Takes a per-cell [`Celsius`], not a bare `f64` (decision 0008): an
+/// Takes a per-cell [`Temperature`], not a bare `f64` (decision 0008): an
 /// earlier version of this function accepted an anomaly and callers twice
-/// mixed up the two conventions. `Celsius` and [`crate::units::TempAnomaly`]
+/// mixed up the two conventions. `Temperature` and [`hornvale_kernel::TempAnomaly`]
 /// stay distinct types precisely so that mistake can't happen again.
-/// type-audit: pending(wave-2: elevation), pending(wave-2: sea_level), bare-ok(flag: return)
+/// type-audit: bare-ok(flag: return)
 pub fn glaciated(
     geo: &Geosphere,
-    elevation: &CellMap<f64>,
-    temperature: &CellMap<Celsius>,
-    freeze: Celsius,
-    sea_level: f64,
+    elevation: &CellMap<ReferenceElevation>,
+    temperature: &CellMap<Temperature>,
+    freeze: Temperature,
+    sea_level: ReferenceElevation,
 ) -> CellMap<bool> {
     CellMap::from_fn(geo, |cell| {
         let elev = *elevation.get(cell);
@@ -87,11 +86,10 @@ pub struct PaleoRecord {
 /// — it never re-diagnoses glaciation from temperature, so it cannot
 /// disagree with the era's own `ice_fraction` (both derive from the same
 /// mask, computed once by the composition root).
-/// type-audit: pending(wave-2: elevation), pending(wave-2: present_sea_level)
 pub fn extract(
     geo: &Geosphere,
-    elevation: &CellMap<f64>,
-    present_sea_level: f64,
+    elevation: &CellMap<ReferenceElevation>,
+    present_sea_level: ReferenceElevation,
     eras: &[EraClimate],
 ) -> PaleoRecord {
     // Sea-level band: cells sometimes shore, sometimes not, across all eras
@@ -142,13 +140,18 @@ mod tests {
     use super::*;
     use hornvale_kernel::Geosphere;
 
+    /// Test-only helper: a validated `ReferenceElevation`.
+    fn e(m: f64) -> ReferenceElevation {
+        ReferenceElevation::new(m).unwrap()
+    }
+
     #[test]
     fn glaciated_ices_land_under_a_cold_field() {
         let geo = Geosphere::new(3);
-        let elevation = CellMap::from_fn(&geo, |_| 100.0); // all land
-        let temperature = CellMap::from_fn(&geo, |_| Celsius::new(-10.0).unwrap());
-        let freeze = Celsius::new(0.0).unwrap();
-        let ice = glaciated(&geo, &elevation, &temperature, freeze, 0.0);
+        let elevation = CellMap::from_fn(&geo, |_| e(100.0)); // all land
+        let temperature = CellMap::from_fn(&geo, |_| Temperature::new(-10.0).unwrap());
+        let freeze = Temperature::new(0.0).unwrap();
+        let ice = glaciated(&geo, &elevation, &temperature, freeze, e(0.0));
         assert!(
             ice.iter().all(|(_, &b)| b),
             "land colder than the freeze threshold everywhere must all be iced"
@@ -158,10 +161,10 @@ mod tests {
     #[test]
     fn glaciated_leaves_land_bare_under_a_warm_field() {
         let geo = Geosphere::new(3);
-        let elevation = CellMap::from_fn(&geo, |_| 100.0); // all land
-        let temperature = CellMap::from_fn(&geo, |_| Celsius::new(20.0).unwrap());
-        let freeze = Celsius::new(0.0).unwrap();
-        let ice = glaciated(&geo, &elevation, &temperature, freeze, 0.0);
+        let elevation = CellMap::from_fn(&geo, |_| e(100.0)); // all land
+        let temperature = CellMap::from_fn(&geo, |_| Temperature::new(20.0).unwrap());
+        let freeze = Temperature::new(0.0).unwrap();
+        let ice = glaciated(&geo, &elevation, &temperature, freeze, e(0.0));
         assert!(
             ice.iter().all(|(_, &b)| !b),
             "land warmer than the freeze threshold everywhere must have no ice"
@@ -171,10 +174,10 @@ mod tests {
     #[test]
     fn glaciated_never_ices_ocean_regardless_of_temperature() {
         let geo = Geosphere::new(3);
-        let elevation = CellMap::from_fn(&geo, |_| -100.0); // all ocean
-        let temperature = CellMap::from_fn(&geo, |_| Celsius::new(-10.0).unwrap());
-        let freeze = Celsius::new(0.0).unwrap();
-        let ice = glaciated(&geo, &elevation, &temperature, freeze, 0.0);
+        let elevation = CellMap::from_fn(&geo, |_| e(-100.0)); // all ocean
+        let temperature = CellMap::from_fn(&geo, |_| Temperature::new(-10.0).unwrap());
+        let freeze = Temperature::new(0.0).unwrap();
+        let ice = glaciated(&geo, &elevation, &temperature, freeze, e(0.0));
         assert!(
             ice.iter().all(|(_, &b)| !b),
             "ocean cells are never marked as glaciated land"
@@ -188,12 +191,12 @@ mod tests {
         // model fixes: an anomaly-only diagnostic could only ice everything
         // or nothing at once.
         let geo = Geosphere::new(4);
-        let elevation = CellMap::from_fn(&geo, |_| 100.0); // all land
+        let elevation = CellMap::from_fn(&geo, |_| e(100.0)); // all land
         let temperature = CellMap::from_fn(&geo, |c| {
-            Celsius::new(30.0 - geo.coord(c).latitude.abs()).unwrap()
+            Temperature::new(30.0 - geo.coord(c).latitude.abs()).unwrap()
         });
-        let freeze = Celsius::new(0.0).unwrap();
-        let ice = glaciated(&geo, &elevation, &temperature, freeze, 0.0);
+        let freeze = Temperature::new(0.0).unwrap();
+        let ice = glaciated(&geo, &elevation, &temperature, freeze, e(0.0));
         assert!(
             ice.iter().any(|(_, &b)| b),
             "high latitudes must ice under this field"
@@ -209,7 +212,7 @@ mod tests {
             day,
             ice: CellMap::from_fn(geo, |_| ice_all),
             habitable: CellMap::from_fn(geo, |c| geo.coord(c).latitude.abs() < 45.0),
-            sea_level: sea,
+            sea_level: e(sea),
             ice_fraction,
         }
     }
@@ -217,12 +220,12 @@ mod tests {
     #[test]
     fn envelope_unions_cold_eras() {
         let geo = Geosphere::new(3);
-        let elev = CellMap::from_fn(&geo, |_| 100.0); // all land
+        let elev = CellMap::from_fn(&geo, |_| e(100.0)); // all land
         let eras = vec![
             era(&geo, 0.0, false, 0.0, 0.0),  // warm: no ice
             era(&geo, 1.0, true, -50.0, 0.9), // cold: all ice
         ];
-        let rec = extract(&geo, &elev, 0.0, &eras);
+        let rec = extract(&geo, &elev, e(0.0), &eras);
         assert!(
             rec.envelope.iter().all(|(_, &b)| b),
             "cold era ices every land cell"
@@ -235,9 +238,9 @@ mod tests {
     fn shoreline_is_the_swept_band() {
         let geo = Geosphere::new(3);
         // Elevation ramps with latitude so some cells fall in the band.
-        let elev = CellMap::from_fn(&geo, |c| geo.coord(c).latitude);
+        let elev = CellMap::from_fn(&geo, |c| e(geo.coord(c).latitude));
         let eras = vec![era(&geo, 0.0, false, -30.0, 0.0)];
-        let rec = extract(&geo, &elev, 0.0, &eras); // band = [-30, 0]
+        let rec = extract(&geo, &elev, e(0.0), &eras); // band = [-30, 0]
         let any = rec.shoreline.iter().any(|(_, &b)| b);
         assert!(any, "some cells must lie in the [-30,0] sea band");
     }

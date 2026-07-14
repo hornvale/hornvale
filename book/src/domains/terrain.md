@@ -123,7 +123,7 @@ reused); the drawn set now includes cratons (`terrain/cratons`), plate weights
 no draw); and the "no isostasy" line no longer holds. Two pins join the three
 above — `--continents N` (craton count) and `--globe-level 4–7` (the canonical
 grid, default 6, part of world identity per the decision
-*identity-computes-on-the-canonical-grid*) — and `--supercontinent` now
+0038) — and `--supercontinent` now
 clusters cratons rather than plates. The crust fields implement the kernel
 `Field` trait, so any grid samples the same underlying world: the
 coarse-constrains-fine boundary is drawn exactly at the graph-versus-field

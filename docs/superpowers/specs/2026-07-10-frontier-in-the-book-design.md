@@ -104,7 +104,7 @@ otherwise unchanged.
 ## 6. Ratifying the boundary change
 
 A new decision record, slug-named per decision 0026:
-`docs/decisions/the-frontier-is-published-in-the-book.md`. It records:
+`docs/decisions/0031-the-frontier-is-published-in-the-book.md`. It records:
 
 - the prior convention and where it was stated;
 - the new information (unrenderable registry tables; the book is the one

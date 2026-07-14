@@ -3,10 +3,12 @@
 //! `phenomena` — never the system or calendar directly.
 
 use crate::anchor::Rotation;
-use crate::calendar::{Calendar, calendar_of};
+use crate::calendar::{Calendar, SkyBand, calendar_of};
 use crate::system::{GenesisOutcome, StarSystem};
 use crate::units::StdDays;
+use crate::wanderers::WandererClass;
 use crate::{CELESTIAL_BODY, SkyReport};
+use hornvale_kernel::math;
 use hornvale_kernel::{ObserverContext, PhenomenaSource, Phenomenon, Venue, WorldTime};
 
 #[cfg(test)]
@@ -300,6 +302,7 @@ mod tests {
                 day_phase_offset: 0.0,
                 moon_phase_offsets: vec![0.0],
             },
+            wanderers: vec![],
         };
         let sky = GeneratedSky::new(GenesisOutcome {
             system,
@@ -362,6 +365,7 @@ mod tests {
                 day_phase_offset: 0.0,
                 moon_phase_offsets,
             },
+            wanderers: vec![],
         };
         GeneratedSky::new(GenesisOutcome {
             system,
@@ -744,6 +748,180 @@ mod tests {
             noon(170.5)
         );
     }
+
+    /// Night-sky stage 1: a placed observer on a spinning world sees a
+    /// heliacal rising somewhere across a year, and every heliacal
+    /// phenomenon reads below the SKY-23 top-salience invariant.
+    #[test]
+    fn a_placed_observer_sees_a_heliacal_rising_across_a_year() {
+        let s = sky(SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            ..SkyPins::default()
+        });
+        let year = s.system().anchor.year.get();
+        let mut found_rising = false;
+        for k in 0..365 {
+            let obs = ObserverContext::at_position(
+                EntityId(1),
+                WorldTime {
+                    day: k as f64 * year / 365.0,
+                },
+                GeoCoord {
+                    latitude: 35.0,
+                    longitude: 0.0,
+                },
+            );
+            for p in s.phenomena(&obs) {
+                if p.kind == HELIACAL_RISING {
+                    found_rising = true;
+                }
+                if p.kind == HELIACAL_RISING || p.kind == HELIACAL_SETTING {
+                    assert!(p.salience < 1.0, "heliacal salience must stay subordinate");
+                }
+            }
+        }
+        assert!(
+            found_rising,
+            "a year at latitude 35 must show at least one heliacal rising"
+        );
+    }
+
+    /// Night-sky stage 2: a placed observer on a spinning world sees a
+    /// wandering star somewhere across two synodic periods, every one
+    /// salient but subordinate to the sun, and none of them in full
+    /// daylight (the morning/evening star and the retrograde loop both
+    /// belong to twilight and full dark, never noon).
+    #[test]
+    fn a_placed_observer_sees_a_wandering_star_across_two_synodic_periods() {
+        let s = sky(SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            wanderers: Some(2),
+            ..SkyPins::default()
+        });
+        let max_synodic = s
+            .system()
+            .wanderers
+            .iter()
+            .map(|w| w.synodic_period.get())
+            .fold(0.0_f64, f64::max);
+        let span = 2.0 * max_synodic;
+        let mut found = false;
+        for k in 0..60 {
+            let t = k as f64 * span / 60.0;
+            let obs = ObserverContext::at_position(
+                EntityId(1),
+                WorldTime { day: t },
+                GeoCoord {
+                    latitude: 35.0,
+                    longitude: 0.0,
+                },
+            );
+            for p in s.phenomena(&obs) {
+                if p.kind == WANDERING_STAR {
+                    found = true;
+                    assert!(p.description.contains("wander"), "got {}", p.description);
+                    assert!(
+                        p.salience > 0.0 && p.salience < 1.0,
+                        "got salience {}",
+                        p.salience
+                    );
+                    let band = s.calendar().sky_band(StdDays(t), 35.0);
+                    assert_ne!(
+                        band,
+                        Some(SkyBand::Day),
+                        "a wandering star must never appear in full daylight"
+                    );
+                }
+            }
+        }
+        assert!(
+            found,
+            "expected at least one wandering-star phenomenon across two synodic periods"
+        );
+    }
+
+    /// Night-sky stage 2, the inner-wanderer branch: seed 42's default pair
+    /// are both outer (no morning/evening-star text, no glare skip), so that
+    /// coverage was silent. Seed 0 with `wanderers: Some(2)` draws an inner
+    /// (rock, `max_elongation_deg` = Some) wanderer at index 0 and an outer
+    /// (giant) one at index 1 — found by a one-off scan over seeds 0..64.
+    /// Scanning latitude 35 across two of the inner wanderer's synodic
+    /// periods must show (a) the morning-star/evening-star Twilight text at
+    /// least once, and (b) the glare skip (elongation < 15°, recomputed
+    /// independently with the same formula the provider uses) hides that
+    /// wanderer's phenomenon on every sample where it applies.
+    #[test]
+    fn an_inner_wanderer_shows_morning_evening_star_text_and_the_glare_skip() {
+        let seed = Seed(0);
+        let pins = SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            wanderers: Some(2),
+            ..SkyPins::default()
+        };
+        let s = GeneratedSky::new(generate(seed, &pins).unwrap());
+        assert_eq!(
+            s.system().wanderers.len(),
+            2,
+            "seed 0 with wanderers: Some(2) should draw exactly two"
+        );
+        let inner_index = s
+            .system()
+            .wanderers
+            .iter()
+            .position(|w| w.max_elongation_deg.is_some())
+            .expect("seed 0 must draw an inner wanderer for this test to mean anything");
+        let inner = &s.system().wanderers[inner_index];
+        let e_max = inner.max_elongation_deg.expect("checked above");
+        let synodic = inner.synodic_period.get();
+        let year_phase_offset = s.system().forcing.year_phase_offset;
+        let inner_class_word = match inner.class {
+            WandererClass::Rock => "rock-pale",
+            WandererClass::Giant => "giant-bright",
+        };
+
+        let span = 2.0 * synodic;
+        let samples = 80;
+        let mut saw_morning_or_evening_star = false;
+        for k in 0..samples {
+            let t = k as f64 * span / samples as f64;
+            let obs = ObserverContext::at_position(
+                EntityId(1),
+                WorldTime { day: t },
+                GeoCoord {
+                    latitude: 35.0,
+                    longitude: 0.0,
+                },
+            );
+            let phase_w =
+                (t / synodic + (year_phase_offset + inner_index as f64 * 0.37).fract()).fract();
+            let elongation = e_max * math::sin(std::f64::consts::TAU * phase_w).abs();
+
+            let inner_phenomenon = s
+                .phenomena(&obs)
+                .into_iter()
+                .find(|p| p.kind == WANDERING_STAR && p.description.contains(inner_class_word));
+
+            if elongation < 15.0 {
+                assert!(
+                    inner_phenomenon.is_none(),
+                    "t={t}: elongation {elongation:.2}° < 15° should glare-skip the inner \
+                     wanderer, got {inner_phenomenon:?}"
+                );
+            } else if let Some(p) = &inner_phenomenon
+                && (p.description.contains("morning star")
+                    || p.description.contains("evening star"))
+            {
+                saw_morning_or_evening_star = true;
+            }
+        }
+
+        assert!(
+            saw_morning_or_evening_star,
+            "expected the inner wanderer to show morning-star/evening-star Twilight text \
+             at least once across two synodic periods (seed {:?}, inner index {inner_index})",
+            seed
+        );
+    }
 }
 
 /// Phenomenon kind for the annual daylight cycle.
@@ -758,6 +936,15 @@ pub const TIDE: &str = "tide";
 /// Phenomenon kind for a moon crossing the face of the sun (SKY-6).
 /// type-audit: bare-ok(identifier-text)
 pub const ECLIPSE: &str = "eclipse";
+/// Phenomenon kind for a star's heliacal rising (night-sky stage 1).
+/// type-audit: bare-ok(identifier-text)
+pub const HELIACAL_RISING: &str = "heliacal-rising";
+/// Phenomenon kind for a star's heliacal setting (night-sky stage 1).
+/// type-audit: bare-ok(identifier-text)
+pub const HELIACAL_SETTING: &str = "heliacal-setting";
+/// Phenomenon kind for a wandering sibling planet (night-sky stage 2).
+/// type-audit: bare-ok(identifier-text)
+pub const WANDERING_STAR: &str = "wandering-star";
 
 /// One angular-diameter unit (Sol from 1 AU ≈ Luna from Earth) in degrees
 /// — the shared scale of `sun_angular_diameter_rel` and a moon's
@@ -778,15 +965,31 @@ fn eclipse_chance(sun_angular_rel: f64, moon_angular_rel: f64, inclination_deg: 
     let threshold =
         ANGULAR_UNIT_DEG * (sun_angular_rel + moon_angular_rel) / 2.0 + ECLIPSE_PARALLAX_DEG;
     let x = (threshold / inclination_deg.max(f64::MIN_POSITIVE)).min(1.0);
-    (2.0 / std::f64::consts::PI) * x.asin()
+    (2.0 / std::f64::consts::PI) * math::asin(x)
 }
 
 fn round2(x: f64) -> f64 {
     (x * 100.0).round() / 100.0
 }
 
+/// An outer wanderer's right ascension from its ecliptic longitude
+/// `lam_deg` (declared approximation, night-sky stage 2: the wanderer is
+/// modeled at ecliptic latitude 0, so this is exactly
+/// [`Calendar::solar_equatorial`]'s own `atan2(sin·cos ε, cos)` projection,
+/// reused rather than duplicated with a different derivation).
+fn ecliptic_longitude_to_ra_deg(lam_deg: f64, obliquity_deg: f64) -> f64 {
+    let lam = lam_deg.to_radians();
+    let e = obliquity_deg.to_radians();
+    math::atan2(math::sin(lam) * math::cos(e), math::cos(lam))
+        .to_degrees()
+        .rem_euclid(360.0)
+}
+
 /// How far outside the daylight window (as a fraction of the local day)
-/// the dark still reads as twilight rather than night (SKY-7).
+/// the dark still reads as twilight rather than night (SKY-7). The coarse,
+/// place-less tier of the shared twilight concept: placed consumers read
+/// [`Calendar::sky_band`] (the altitude-based [`crate::calendar::SkyBand`]
+/// thresholds); this margin serves only the position-blind prose path.
 const TWILIGHT_MARGIN: f64 = 0.05;
 
 /// The quality of a star's daylight from its spectral class (SKY-17):
@@ -878,7 +1081,7 @@ fn season_words(phase: f64) -> &'static str {
     match phase_eighth(phase) {
         2 => "The days are near their longest.",
         6 => "The days are near their shortest.",
-        _ if (std::f64::consts::TAU * phase).cos() > 0.0 => "The days are growing.",
+        _ if math::cos(std::f64::consts::TAU * phase) > 0.0 => "The days are growing.",
         _ => "The days are shrinking.",
     }
 }
@@ -1209,10 +1412,124 @@ impl PhenomenaSource for GeneratedSky {
                     description: neighbor.night_description(),
                     period_days: None,
                     salience: round2(
-                        (0.1 + 0.1 * (1.0 + neighbor.apparent_brightness).ln()).clamp(0.1, 0.6),
+                        (0.1 + 0.1 * math::ln(1.0 + neighbor.apparent_brightness)).clamp(0.1, 0.6),
                     ),
                     venue: Venue::NightSky,
                 });
+            }
+        }
+
+        // Heliacal risings/settings (night-sky stage 1): only meaningful for
+        // a placed observer on a spinning world (a locked world has no
+        // horizon-crossing local day for the star to rise or set against).
+        if let (true, Some(pos), Some(day_length)) =
+            (spinning, ctx.position, self.calendar.day_length())
+        {
+            let year = self.system.anchor.year.get();
+            let half_day_frac = 0.5 * day_length.get() / year;
+            let phase = self.calendar.year_phase(t);
+            let wrapped_dist = |a: f64, b: f64| {
+                let d = (a - b).rem_euclid(1.0);
+                d.min(1.0 - d)
+            };
+            for pair in
+                crate::heliacal::heliacal_events(&self.system, &self.calendar, pos.latitude, t)
+            {
+                let color = &self.system.neighbors[pair.neighbor].color;
+                if wrapped_dist(phase, pair.rising_frac) < half_day_frac {
+                    out.push(Phenomenon {
+                        kind: HELIACAL_RISING.to_string(),
+                        description: format!("The {} star returns before dawn.", color),
+                        period_days: Some(round2(year)),
+                        salience: 0.6,
+                        venue: Venue::NightSky,
+                    });
+                }
+                if wrapped_dist(phase, pair.setting_frac) < half_day_frac {
+                    out.push(Phenomenon {
+                        kind: HELIACAL_SETTING.to_string(),
+                        description: format!("The {} star takes its leave into the sunset.", color),
+                        period_days: Some(round2(year)),
+                        salience: 0.6,
+                        venue: Venue::NightSky,
+                    });
+                }
+            }
+        }
+
+        // Wandering stars (night-sky stage 2): same placed-and-spinning
+        // gating as the heliacal instrument above. Each wanderer's synodic
+        // phase reuses the genesis year-phase offset, rotated per wanderer
+        // index (`+ index * 0.37`) — a declared approximation that draws
+        // nothing new from the stream (model card entry at campaign
+        // close). Full daylight always drowns a wanderer out, like the
+        // fixed stars.
+        if let (true, Some(pos), Some(_day_length)) =
+            (spinning, ctx.position, self.calendar.day_length())
+        {
+            let band = self.calendar.sky_band(t, pos.latitude);
+            if !matches!(band, Some(SkyBand::Day)) {
+                let local_frac = self.calendar.local_day(t).map(|d| d.1).unwrap_or(0.0);
+                let sun = self.calendar.solar_equatorial(t);
+                let obliquity_deg = self.system.forcing.obliquity_at(t.0);
+                for (index, wanderer) in self.system.wanderers.iter().enumerate() {
+                    let phase_w = (t.0 / wanderer.synodic_period.get()
+                        + (self.system.forcing.year_phase_offset + index as f64 * 0.37).fract())
+                    .fract();
+                    let class_word = match wanderer.class {
+                        WandererClass::Rock => "rock-pale",
+                        WandererClass::Giant => "giant-bright",
+                    };
+
+                    // Inner wanderers are lost in the sun's glare below 15°
+                    // of elongation; outer wanderers are lost in it below
+                    // 15° of RA separation, and loop backward near
+                    // opposition (within 30° of it: SkyBand-independent —
+                    // the retrograde loop is a geometric fact, not a
+                    // visibility one).
+                    let text = match wanderer.max_elongation_deg {
+                        Some(e_max) => {
+                            let elongation =
+                                e_max * math::sin(std::f64::consts::TAU * phase_w).abs();
+                            if elongation < 15.0 {
+                                continue;
+                            }
+                            match band {
+                                Some(SkyBand::Twilight) if local_frac < 0.5 => {
+                                    "the morning star, low before the sun".to_string()
+                                }
+                                Some(SkyBand::Twilight) => {
+                                    "the evening star, chasing the sunset".to_string()
+                                }
+                                _ => "a bright star that will not keep its station".to_string(),
+                            }
+                        }
+                        None => {
+                            let lam_deg = (360.0 * phase_w).rem_euclid(360.0);
+                            let wanderer_ra = ecliptic_longitude_to_ra_deg(lam_deg, obliquity_deg);
+                            let sep_deg = (wanderer_ra - sun.ra_deg).rem_euclid(360.0);
+                            let min_sep = sep_deg.min(360.0 - sep_deg);
+                            if min_sep < 15.0 {
+                                continue;
+                            }
+                            if (150.0..=210.0).contains(&sep_deg) {
+                                "a bright star that will not keep its station, drifting \
+                                 backward against the stars"
+                                    .to_string()
+                            } else {
+                                "a bright star that will not keep its station".to_string()
+                            }
+                        }
+                    };
+
+                    out.push(Phenomenon {
+                        kind: WANDERING_STAR.to_string(),
+                        description: format!("A {class_word} wanderer: {text}."),
+                        period_days: Some(round2(wanderer.synodic_period.get())),
+                        salience: 0.65,
+                        venue: Venue::NightSky,
+                    });
+                }
             }
         }
 

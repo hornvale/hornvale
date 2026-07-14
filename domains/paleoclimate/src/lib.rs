@@ -14,9 +14,10 @@ pub mod units;
 
 pub use facts::{genesis, register_concepts};
 pub use forcing_index::caloric_summer_index;
+pub use hornvale_kernel::{TempAnomaly, Temperature};
 pub use ice::{ALBEDO_GAIN_C, IceState, integrate_ice};
 pub use strata::{EraClimate, PaleoRecord, extract, glaciated};
-pub use units::{Celsius, IceVolume, SeaLevelChange, TempAnomaly, UnitError};
+pub use units::{IceVolume, SeaLevelChange, UnitError};
 
 /// Paleoclimate as a registrable unit for the composition-root roster.
 /// It draws no seed streams, so it takes the empty `stream_labels` default.

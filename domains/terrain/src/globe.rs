@@ -7,28 +7,29 @@ use crate::pins::{self, GenesisError, TerrainPins};
 use crate::plates::Plate;
 use crate::streams;
 use crate::{crust, elevation, plates};
-use hornvale_kernel::{CellMap, Geosphere, Seed};
+use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation, Seed};
 
 /// A generated tectonic globe over the shared Geosphere. Recomputed from
 /// the seed on demand; never serialized.
-/// type-audit: bare-ok(index: plate_of), waiver(elevation-convention: elevation), bare-ok(ratio: unrest), pending(wave-2: sea_level), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust)
+/// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust)
 #[derive(Debug, Clone, PartialEq)]
 pub struct TectonicGlobe {
     /// Plate index per cell (an index into `plates`).
     pub plate_of: CellMap<u32>,
-    /// Crust thickness per cell, in kilometers (bare f64 by documented
-    /// convention, mirroring the elevation waiver — the field's own
-    /// `CrustKm` newtype validates at construction; the per-cell sample
-    /// here is a plain `f64` for the same reason elevation is: it feeds
-    /// bulk numeric assembly, not a single validated boundary crossing).
+    /// Crust thickness per cell, in kilometers (bare f64 under the
+    /// `crust-km-convention` type-audit waiver, its own family's future
+    /// wave — see decision 0044's roadmap). The field's own `CrustKm`
+    /// newtype validates at construction; the per-cell sample here is a
+    /// plain `f64` because it feeds bulk numeric assembly, not a single
+    /// validated boundary crossing.
     pub crust: CellMap<f64>,
-    /// Elevation per cell, in meters (bare f64 by documented convention;
-    /// see the plan's Global Constraints for the typed-quantities waiver).
-    pub elevation: CellMap<f64>,
+    /// Elevation per cell, relative to the isostatic reference datum (see
+    /// `hornvale_kernel::ReferenceElevation`).
+    pub elevation: CellMap<ReferenceElevation>,
     /// Unrest per cell, in [0, 1]. Banked for future consumers (spec §15).
     pub unrest: CellMap<f64>,
-    /// Sea level, in meters: cells strictly below it are ocean.
-    pub sea_level: f64,
+    /// Sea level: cells strictly below it are ocean.
+    pub sea_level: ReferenceElevation,
     /// The plates, indexed by `plate_of`'s values.
     pub plates: Vec<Plate>,
     /// The strongest cross-plate boundary contact per cell (`None` for plate
@@ -152,12 +153,12 @@ pub fn summarize(globe: &TectonicGlobe) -> GlobeSummary {
     let highest = globe
         .elevation
         .iter()
-        .map(|(_, e)| *e)
+        .map(|(_, e)| e.get())
         .fold(f64::NEG_INFINITY, f64::max);
     GlobeSummary {
         plate_count: globe.plates.len() as u32,
         ocean_fraction: ocean_cells as f64 / globe.elevation.len() as f64,
-        sea_level_m: globe.sea_level,
+        sea_level_m: globe.sea_level.get(),
         highest_elevation_m: highest,
     }
 }
@@ -191,7 +192,7 @@ mod tests {
         let s = summarize(&outcome.globe);
         assert_eq!(s.plate_count as usize, outcome.globe.plates.len());
         assert!((0.4..=0.8).contains(&s.ocean_fraction));
-        assert_eq!(s.sea_level_m, outcome.globe.sea_level);
+        assert_eq!(s.sea_level_m, outcome.globe.sea_level.get());
         assert!(s.highest_elevation_m > s.sea_level_m);
     }
 

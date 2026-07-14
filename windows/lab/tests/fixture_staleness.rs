@@ -1,18 +1,24 @@
-//! Always-on staleness probe for the committed census fixtures (TOOL-16,
+//! Staleness probe for the committed census fixtures (TOOL-16,
 //! TOOL-drift-scan-probes).
 //!
-//! Decision `calibration-loads-the-census-fixture` accepted one cost
-//! knowingly: a developer who changes worldgen and runs only `cargo test`
-//! sees calibration pass against the stale fixture until CI's artifact
-//! drift check catches it. This probe closes most of that gap for a few
-//! seconds' cost: it regenerates each census's first [`PROBE_SEEDS`] seeds
-//! live, PLUS a rotating [`WINDOW_SEEDS`]-seed window (see
-//! [`window_start`]), and compares both against the committed rows,
-//! canonicalized — so a worldgen change that moves the census fails HERE,
-//! with the regeneration instruction, not in CI an hour later. The window's
-//! position is a pure function of the committed fixture bytes, so
-//! successive fixture regenerations sweep different slices of seed space
-//! instead of always re-checking the same six seeds.
+//! Decision 0032 accepted one cost
+//! knowingly: a developer who changes worldgen sees calibration pass
+//! against the stale fixture until the artifact drift check catches it.
+//! This probe narrows that gap: it regenerates each census's first
+//! [`PROBE_SEEDS`] seeds live, PLUS a rotating [`WINDOW_SEEDS`]-seed window
+//! (see [`window_start`]), and compares both against the committed rows,
+//! canonicalized. The window's position is a pure function of the committed
+//! fixture bytes, so successive fixture regenerations sweep different slices
+//! of seed space instead of always re-checking the same six seeds.
+//!
+//! It was authored as an always-on, few-seconds probe for `cargo test`. As
+//! the worldgen pipeline deepened, its cost grew to minutes (measured ~15
+//! min under load, 2026-07-13), so it is now `#[ignore]`d into the heavy
+//! tier and runs in `make gate-full`, not the commit gate: a worldgen change
+//! that moves a census now surfaces there and in CI's regenerate-and-diff,
+//! not on the developer's next `cargo test`. Restoring the shift-left signal
+//! (a probe cheap enough to stay in the commit gate) waits on cheaper
+//! worldgen.
 //!
 //! Not a replacement for the full ignored guard
 //! (`census_fixture_matches_live_run`) or CI's regenerate-and-diff: a
@@ -54,21 +60,20 @@ fn window_start(csv: &str, span: u64) -> Option<u64> {
 }
 
 /// The committed, CI-drift-checked censuses (decisions
-/// `ci-checks-500-seed-censuses` and `calibration-loads-the-census-fixture`):
-/// the two 500-seed world censuses and the 1,000-seed branches family
-/// battery, each backing a fixture-loading calibration suite.
-const CENSUSES: [(&str, &str); 3] = [
+/// 0029 and 0032):
+/// the-census (the 1,000-seed canonical census) and the 500-seed
+/// census-of-the-meeting null control, each backing a fixture-loading
+/// calibration suite. `branches-family` is EXCLUDED here: it is frozen
+/// (census-as-data spec §1) — a frozen fixture is intentionally stale and
+/// must not be staleness-checked.
+const CENSUSES: [(&str, &str); 2] = [
     (
-        "../../studies/census-lands-drift.study.json",
-        "../../book/src/laboratory/generated/census-lands-drift/rows.csv",
+        "../../studies/the-census.study.json",
+        "../../book/src/laboratory/generated/the-census/rows.csv",
     ),
     (
         "../../studies/census-of-the-meeting.study.json",
         "../../book/src/laboratory/generated/census-of-the-meeting/rows.csv",
-    ),
-    (
-        "../../studies/branches-family.study.json",
-        "../../book/src/laboratory/generated/branches-family/rows.csv",
     ),
 ];
 
@@ -83,9 +88,9 @@ fn assert_fixture_fresh(live: &RunResult, fixture: &RunResult, study_path: &str,
             .unwrap_or_else(|| {
                 panic!(
                     "census fixture {rows_path} has no row for seed {} / pin set '{}' — the \
-                     fixture is stale or truncated; run `make rebaseline` (or `cargo run \
-                     --release -p hornvale -- lab run {study_path}`) and commit the diff \
-                     (decision calibration-loads-the-census-fixture)",
+                     fixture is stale or truncated; regenerate on the AWS box: `make \
+                     regen-remote` (census regen is never local; study \
+                     {study_path}) and commit the diff (decision 0032)",
                     row.seed, row.pin_set
                 )
             });
@@ -100,9 +105,9 @@ fn assert_fixture_fresh(live: &RunResult, fixture: &RunResult, study_path: &str,
             };
             panic!(
                 "worldgen changed but the census fixture {rows_path} was not regenerated (seed {} \
-                 / pin set '{}' differs). Run `make rebaseline` (or `cargo run --release -p \
-                 hornvale -- lab run {study_path}`), review the diff, and commit it WITH the \
-                 change that moved it (decision calibration-loads-the-census-fixture).{recording_note}",
+                 / pin set '{}' differs). Regenerate on the AWS box: `make regen-remote` (census \
+                 regen is never local; study {study_path}), review the diff, and commit it \
+                 WITH the change that moved it (decision 0032).{recording_note}",
                 row.seed, row.pin_set
             );
         }
@@ -110,6 +115,7 @@ fn assert_fixture_fresh(live: &RunResult, fixture: &RunResult, study_path: &str,
 }
 
 #[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn census_fixtures_match_a_probe_of_live_seeds() {
     for (study_path, rows_path) in CENSUSES {
         let study = load_study(Path::new(study_path)).expect("load study");
@@ -171,7 +177,7 @@ fn a_stale_fixture_fails_with_the_regeneration_instruction() {
         .downcast_ref::<String>()
         .expect("panic payload is a String");
     assert!(
-        msg.contains("make rebaseline"),
+        msg.contains("make regen-remote"),
         "message must name the fix: {msg}"
     );
     assert!(

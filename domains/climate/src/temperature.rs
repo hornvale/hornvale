@@ -1,4 +1,5 @@
-//! Temperature over the globe (°C, bare f64 by documented convention).
+//! Temperature over the globe (canonical °C; the kernel's `Temperature`
+//! newtype is the typed boundary — see `hornvale_kernel::Temperature`).
 //! Spinning worlds: an insolation baseline that falls with latitude and with
 //! elevation (lapse rate), plus a hemisphere-signed seasonal swing set by
 //! obliquity and damped near oceans. Tidally locked worlds: temperature is
@@ -7,7 +8,8 @@
 //! no ocean currents, smooth-sinusoid seasons, prograde-only.
 
 use crate::circulation::RotationRegime;
-use hornvale_kernel::{CellId, CellMap, Geosphere};
+use hornvale_kernel::math;
+use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, TempAnomaly, Temperature};
 
 /// Dry-adiabatic-ish lapse rate: °C lost per meter of elevation above sea level.
 const LAPSE_C_PER_M: f64 = 6.5 / 1000.0;
@@ -17,11 +19,11 @@ const SUBSTELLAR: [f64; 3] = [1.0, 0.0, 0.0];
 
 /// Continentality: `1.0` fully inland, dropping toward `0.2` as a cell gains
 /// ocean neighbors. Damps the seasonal swing (the sea is a thermal buffer).
-/// type-audit: pending(wave-2: elevation), pending(wave-2: sea_level), bare-ok(ratio: return)
+/// type-audit: bare-ok(ratio: return)
 pub fn continentality(
     geo: &Geosphere,
-    elevation: &CellMap<f64>,
-    sea_level: f64,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
     cell: CellId,
 ) -> f64 {
     let neighbors = geo.neighbors(cell);
@@ -39,26 +41,26 @@ pub fn continentality(
 /// Annual-mean temperature per cell, °C. Spinning: an insolation baseline
 /// (equator warm, poles cold) minus lapse-rate cooling above sea level.
 /// Locked: a substellar cosine, hottest at `+x` and floored on the night side.
-/// type-audit: pending(wave-2)
+/// type-audit: pending(wave-2: insolation)
 pub fn mean_temperature(
     geo: &Geosphere,
-    elevation: &CellMap<f64>,
-    sea_level: f64,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
     insolation: f64,
     regime: &RotationRegime,
-) -> CellMap<f64> {
+) -> CellMap<Temperature> {
     // Equilibrium temperature scales as S^(1/4).
-    let scale = insolation.max(0.0).powf(0.25);
+    let scale = math::powf(insolation.max(0.0), 0.25);
     CellMap::from_fn(geo, |cell| {
         let above = (*elevation.get(cell) - sea_level).max(0.0);
         let lapse = LAPSE_C_PER_M * above;
-        match regime {
+        let c = match regime {
             RotationRegime::Spinning { .. } => {
                 let lat = geo.coord(cell).latitude.to_radians();
                 // Blackbody baseline (288 K × S^(1/4)) plus a latitude term of +30 °C at the
                 // equator to -30 °C at the pole; endpoints land near +45 °C / -15 °C, area-mean ~15 °C.
                 let base_k = 288.0 * scale;
-                let lat_term = 30.0 - 60.0 * lat.sin() * lat.sin();
+                let lat_term = 30.0 - 60.0 * math::sin(lat) * math::sin(lat);
                 (base_k - 273.15) + lat_term - lapse
             }
             RotationRegime::Locked => {
@@ -66,13 +68,14 @@ pub fn mean_temperature(
                 let cos_theta = p[0] * SUBSTELLAR[0] + p[1] * SUBSTELLAR[1] + p[2] * SUBSTELLAR[2];
                 if cos_theta > 0.0 {
                     // Day side: hot at substellar, ~0 °C toward the terminator.
-                    (-18.0 + 78.0 * cos_theta.powf(0.3) * scale) - lapse
+                    (-18.0 + 78.0 * math::powf(cos_theta, 0.3) * scale) - lapse
                 } else {
                     // Night side: a deep frozen floor.
                     -60.0 - lapse
                 }
             }
-        }
+        };
+        Temperature::new(c).expect("temperature is finite")
     })
 }
 
@@ -81,8 +84,8 @@ pub fn mean_temperature(
 /// type-audit: pending(wave-2)
 pub fn seasonal_amplitude(
     geo: &Geosphere,
-    elevation: &CellMap<f64>,
-    sea_level: f64,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
     obliquity_deg: f64,
     cell: CellId,
 ) -> f64 {
@@ -96,16 +99,16 @@ pub fn seasonal_amplitude(
 /// type-audit: pending(wave-2)
 #[allow(clippy::too_many_arguments)]
 pub fn temperature_at(
-    mean: &CellMap<f64>,
+    mean: &CellMap<Temperature>,
     geo: &Geosphere,
-    elevation: &CellMap<f64>,
-    sea_level: f64,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
     obliquity_deg: f64,
     year_length_std: f64,
     regime: &RotationRegime,
     cell: CellId,
     day: f64,
-) -> f64 {
+) -> Temperature {
     let base = *mean.get(cell);
     match regime {
         RotationRegime::Locked => base,
@@ -116,7 +119,7 @@ pub fn temperature_at(
             let amp = seasonal_amplitude(geo, elevation, sea_level, obliquity_deg, cell);
             let phase = (day / year_length_std).rem_euclid(1.0);
             let hemi = geo.coord(cell).latitude.signum();
-            base + amp * hemi * (std::f64::consts::TAU * phase).sin()
+            base + TempAnomaly::from_offset_c(amp * hemi * math::sin(std::f64::consts::TAU * phase))
         }
     }
 }
@@ -126,25 +129,29 @@ mod tests {
     use super::*;
     use hornvale_kernel::Geosphere;
 
-    fn flat_ocean_then_land(geo: &Geosphere, sea: f64) -> CellMap<f64> {
+    fn flat_ocean_then_land(
+        geo: &Geosphere,
+        sea: ReferenceElevation,
+    ) -> CellMap<ReferenceElevation> {
         // Half the globe below sea level (x<0), half above — a crude land mask.
         CellMap::from_fn(geo, |c| {
-            if geo.position(c)[0] < 0.0 {
-                sea - 1000.0
+            let m = if geo.position(c)[0] < 0.0 {
+                sea.get() - 1000.0
             } else {
-                sea + 200.0
-            }
+                sea.get() + 200.0
+            };
+            ReferenceElevation::new(m).unwrap()
         })
     }
 
     #[test]
     fn temperature_falls_with_latitude_on_a_spinning_world() {
         let geo = Geosphere::new(4);
-        let elev = CellMap::from_fn(&geo, |_| 0.0);
+        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
         let mean = mean_temperature(
             &geo,
             &elev,
-            0.0,
+            ReferenceElevation::new(0.0).unwrap(),
             1.0,
             &RotationRegime::Spinning { day_std: 1.0 },
         );
@@ -175,11 +182,12 @@ mod tests {
     #[test]
     fn temperature_falls_with_altitude() {
         let geo = Geosphere::new(3);
-        let low = CellMap::from_fn(&geo, |_| 0.0);
-        let high = CellMap::from_fn(&geo, |_| 3000.0);
+        let low = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let high = CellMap::from_fn(&geo, |_| ReferenceElevation::new(3000.0).unwrap());
         let regime = RotationRegime::Spinning { day_std: 1.0 };
-        let mlow = mean_temperature(&geo, &low, 0.0, 1.0, &regime);
-        let mhigh = mean_temperature(&geo, &high, 0.0, 1.0, &regime);
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let mlow = mean_temperature(&geo, &low, sea, 1.0, &regime);
+        let mhigh = mean_temperature(&geo, &high, sea, 1.0, &regime);
         for c in geo.cells() {
             assert!(
                 mhigh.get(c) < mlow.get(c),
@@ -192,8 +200,14 @@ mod tests {
     #[test]
     fn locked_world_is_hottest_at_substellar_and_coldest_at_antistellar() {
         let geo = Geosphere::new(4);
-        let elev = CellMap::from_fn(&geo, |_| 0.0);
-        let mean = mean_temperature(&geo, &elev, 0.0, 1.0, &RotationRegime::Locked);
+        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let mean = mean_temperature(
+            &geo,
+            &elev,
+            ReferenceElevation::new(0.0).unwrap(),
+            1.0,
+            &RotationRegime::Locked,
+        );
         let sub = geo
             .cells()
             .max_by(|a, b| geo.position(*a)[0].total_cmp(&geo.position(*b)[0]))
@@ -203,7 +217,7 @@ mod tests {
             .min_by(|a, b| geo.position(*a)[0].total_cmp(&geo.position(*b)[0]))
             .unwrap();
         assert!(
-            *mean.get(sub) > *mean.get(anti) + 50.0,
+            *mean.get(sub) > *mean.get(anti) + TempAnomaly::from_offset_c(50.0),
             "substellar must tower over antistellar"
         );
     }
@@ -211,7 +225,7 @@ mod tests {
     #[test]
     fn coastal_seasonal_swing_is_smaller_than_continental() {
         let geo = Geosphere::new(4);
-        let sea = 0.0;
+        let sea = ReferenceElevation::new(0.0).unwrap();
         let elev = flat_ocean_then_land(&geo, sea);
         // A land cell touching ocean vs a land cell deep inland at similar latitude.
         let coastal = geo

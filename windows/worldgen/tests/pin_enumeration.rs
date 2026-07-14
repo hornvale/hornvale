@@ -32,12 +32,19 @@
 //! and pins yields byte-identical serialized ledgers (`World::to_json`,
 //! which routes through the quantized emit boundary).
 //!
-//! Measured wall time for the full 48-combo product (M1 Max, debug profile
-//! with the hot-crate opt-level-2 packages from TOOL-hot-crate-opt) came in
-//! well under the ~15 s gate-budget rule from the task brief, so the full
-//! product runs directly in the default gate; no `#[ignore]`d subset split
-//! was needed (see `full_pin_product_is_enumerated` below, which reports
-//! that measurement).
+//! The full 48-combo product's wall time has grown well past the task
+//! brief's ~15 s commit-gate budget as the genesis pipeline deepened (the
+//! fast-gate-tiers census, 2026-07-13, timed the sequential binary in the
+//! minutes), so the test is `#[ignore]`d into the heavy tier: it runs in
+//! `make gate-full`, not the default commit gate. The 48 combos are
+//! independent -- each build depends only on `(Seed(42), combo's pins)` --
+//! so the sweep runs one scoped thread per combo (`std::thread::scope`)
+//! rather than sequentially, cutting the heavy-tier wall time from ~505 s
+//! to ~64 s (M1 Max, 10 logical CPUs, debug profile) without touching the
+//! determinism guarantee (see `full_pin_product_is_enumerated` below).
+//! Depth-scoping the builds to `BuildDepth::Terrain` (MAP-25 Task 10, the
+//! enumerated pins never reach past the terrain rung) cut it again, ~64 s
+//! to ~16 s on the same machine.
 //!
 //! Measured at authoring (2026-07-11, seed 42): 48 built, 0 refused --
 //! reported, not asserted; the split may legitimately move with physics
@@ -50,7 +57,9 @@
 use hornvale_astronomy::{NeighborClass, RotationPin, SkyPins};
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{BuildError, SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{
+    BuildDepth, BuildError, SettlementPins, SkyChoice, build_world_to, default_roster,
+};
 
 /// Every discrete value of the four enumerated pins, in a stable order.
 fn sky_choices() -> [SkyChoice; 2] {
@@ -107,7 +116,11 @@ fn full_product() -> Vec<Combo> {
     out
 }
 
-/// Build the world for one combo, at seed 42.
+/// Build the world for one combo, at seed 42. Built to `BuildDepth::Terrain`
+/// (MAP-25 Task 10): the enumerated pins only write astronomy+terrain facts,
+/// and a depth-scoped build commits a byte-identical prefix of the full
+/// build's ledger, so the determinism compare below keeps its exact scope
+/// while skipping the ~75% of build cost that lives above the terrain rung.
 fn build(combo: &Combo) -> Result<hornvale_kernel::World, BuildError> {
     let sky_pins = SkyPins {
         rotation: Some(combo.rotation.clone()),
@@ -118,12 +131,14 @@ fn build(combo: &Combo) -> Result<hornvale_kernel::World, BuildError> {
         supercontinent: Some(combo.supercontinent),
         ..TerrainPins::default()
     };
-    build_world(
+    build_world_to(
         Seed(42),
         &sky_pins,
         combo.sky,
         &terrain_pins,
         &SettlementPins::default(),
+        &default_roster(),
+        BuildDepth::Terrain,
     )
 }
 
@@ -155,21 +170,48 @@ fn check_combo(combo: &Combo) -> bool {
     }
 }
 
-/// The full 48-combo product, run directly in the default gate: measured
-/// wall time on an M1 Max (debug profile, hot-crate opt-level-2 packages
-/// already in effect) came in well under the task brief's ~15 s runtime
-/// rule, so no representative-subset/`#[ignore]` split was necessary. This
-/// IS `full_pin_product_is_enumerated` in spirit -- the brief's named
-/// ignored test is only required when the full product does not fit the
-/// gate budget.
+/// The full 48-combo product, `#[ignore]`d into the heavy tier (fast-gate-tiers
+/// spec): even parallelized its wall time exceeds the ~15 s commit-gate budget
+/// as the genesis pipeline deepened, so it runs in `make gate-full`, not the
+/// default commit gate. The 48 combos are independent -- each `check_combo`
+/// builds worlds purely from `(Seed(42), combo's pins)` and shares no mutable
+/// state -- so the sweep runs one scoped thread per combo (`std::thread::scope`,
+/// std only, modeled on `windows/lab/src/runner.rs`'s `run_pin_set`) instead of
+/// a sequential loop, cutting the heavy-tier wall time from ~505 s to ~64 s (M1
+/// Max, 10 logical CPUs, debug profile); terrain-depth builds (MAP-25 Task 10)
+/// cut it again to ~16 s. It still asserts total certainty over
+/// the product -- every combo builds or loudly refuses, and every `Ok` is
+/// byte-deterministic (each `check_combo` builds its combo twice and compares
+/// serialized ledgers on its own thread) -- just off the per-commit path.
 #[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn full_pin_product_is_enumerated() {
     let combos = full_product();
 
+    // One scoped thread per combo. `check_combo` contains the test's real
+    // failure signals (the determinism `assert_eq!` and the second-build
+    // `panic!`), so a panicking worker's payload is re-raised on the main
+    // thread with `resume_unwind` (not `.unwrap()`/`.expect()`) to preserve
+    // the original panic message instead of masking it behind a generic
+    // "thread panicked" one.
+    let results: Vec<bool> = std::thread::scope(|scope| {
+        let handles: Vec<_> = combos
+            .iter()
+            .map(|combo| scope.spawn(move || check_combo(combo)))
+            .collect();
+        handles
+            .into_iter()
+            .map(|handle| match handle.join() {
+                Ok(built) => built,
+                Err(payload) => std::panic::resume_unwind(payload),
+            })
+            .collect()
+    });
+
     let mut built = 0usize;
     let mut refused = 0usize;
-    for combo in &combos {
-        if check_combo(combo) {
+    for was_built in results {
+        if was_built {
             built += 1;
         } else {
             refused += 1;

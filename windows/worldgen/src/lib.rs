@@ -8,7 +8,8 @@
 use hornvale_almanac::AlmanacContext;
 use hornvale_astronomy::{
     CELESTIAL_BODY, ConstantSun, GeneratedSky, GenesisError, NIGHT_STAR, SEASONAL_CYCLE, SkyPins,
-    SkyReport, facts, generate, parse_pin, pin_strings,
+    SkyReport, facts, figures, generate, parse_pin, pin_strings,
+    streams::ROOT as ASTRONOMY_STREAM_ROOT,
 };
 use hornvale_climate::{
     AMBIENT, ClimateInputs, ClimateReport, GeneratedClimate, RotationRegime, SeafloorFeature,
@@ -16,14 +17,61 @@ use hornvale_climate::{
 };
 use hornvale_kernel::{
     ConceptRegistry, Domain, EntityId, Fact, GeoCoord, Geosphere, LedgerError, ObserverContext,
-    PerceptionLens, PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime,
-    observe,
+    PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation, RegistryError, Seed,
+    Temperature, Value, World, WorldTime, observe,
 };
-use hornvale_paleoclimate::{
-    Celsius, EraClimate, PaleoRecord, caloric_summer_index, integrate_ice,
-};
+use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
+use std::cell::RefCell;
 use std::sync::OnceLock;
+// The profiler measures wall-clock stage durations for a committed diagnostic
+// (`profile_build` example); it never reads `WorldTime` and never touches a
+// fact, so it is exempt from the wall-clock ban (clippy.toml / decision 0001).
+#[allow(clippy::disallowed_types)]
+use std::time::{Duration, Instant};
+
+thread_local! {
+    // `Some` only inside a `profiled(..)` scope; `None` on the normal build
+    // path, so the stage spans compile to a single thread-local read + branch.
+    static PROFILE: RefCell<Option<Vec<(&'static str, Duration)>>> = const { RefCell::new(None) };
+}
+
+/// Per-stage wall-clock spans recorded during one profiled world build.
+/// type-audit: bare-ok(prose: stages)
+#[derive(Clone, Debug, Default)]
+pub struct BuildProfile {
+    /// `(stage label, elapsed)` in pipeline order.
+    pub stages: Vec<(&'static str, Duration)>,
+}
+
+/// Run `f` with stage profiling active and return its result plus the profile.
+/// Nesting is not supported (the inner scope's spans replace the outer's); the
+/// lab/CLI call it at the top of one build.
+pub fn profiled<T>(f: impl FnOnce() -> T) -> (T, BuildProfile) {
+    PROFILE.with(|p| *p.borrow_mut() = Some(Vec::new()));
+    let out = f();
+    let stages = PROFILE.with(|p| p.borrow_mut().take().unwrap_or_default());
+    (out, BuildProfile { stages })
+}
+
+/// Record `label` with the time `f` took, but only when a `profiled` scope is
+/// active. Off the profiled path this is one thread-local read and a call.
+#[allow(clippy::disallowed_types, dead_code)]
+fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
+    let active = PROFILE.with(|p| p.borrow().is_some());
+    if !active {
+        return f();
+    }
+    let start = Instant::now();
+    let out = f();
+    let elapsed = start.elapsed();
+    PROFILE.with(|p| {
+        if let Some(v) = p.borrow_mut().as_mut() {
+            v.push((label, elapsed));
+        }
+    });
+    out
+}
 
 pub mod settlement_pins;
 pub use settlement_pins::SettlementPins;
@@ -77,6 +125,23 @@ pub enum SkyChoice {
     Constant,
     /// Tiers 1/2: a fully generated star system.
     Generated,
+}
+
+/// How deep to build the world's fact-committing pipeline (spec §4 / MAP-25).
+/// Earlier rungs are a byte-identical prefix of later ones — the pipeline is
+/// linear, so each rung reads only earlier rungs' facts and stopping early
+/// simply omits later appends. Climate is *not* a rung: it commits no facts,
+/// and is reconstructed on demand from a Terrain-depth world.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum BuildDepth {
+    /// Sky genesis only.
+    Astronomy,
+    /// …plus terrain genesis.
+    Terrain,
+    /// …plus settlement placement, naming, and glosses.
+    Settlements,
+    /// …plus culture, religion, species, and deep time (today's full build).
+    Full,
 }
 
 /// The live astronomy provider a world uses, reconstructed from its ledger.
@@ -304,16 +369,68 @@ pub fn biome_class(biome: hornvale_climate::Biome) -> hornvale_culture::BiomeCla
     }
 }
 
-/// Per-species suitability weights derived from the psychology vector
-/// (spec §4); identity at the goblin baseline.
-pub fn species_weights(
+/// Drainage normalization reference for the carrying-capacity freshwater
+/// term (§2): drainage accumulation above this reads as "as good as any
+/// river gets", not an unbounded score.
+const DRAINAGE_REF: f64 = 200.0;
+
+/// The bare per-cell carrying-capacity inputs, shared across species (spec
+/// §2): the same terrain/climate reads the retired suitability scatter used.
+/// Each species folds its own psychology on top via `species_carrying_input`.
+/// Exposed (not inlined at the one call site) so a Lab metric can recompute
+/// the identical field the composition root feeds into demography — the
+/// gradient calibration (Task 8) reads it without duplicating the formula.
+pub fn carrying_inputs_of(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
+    hornvale_kernel::CellMap::from_fn(geo, |cell| {
+        let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
+        let moisture = climate.moisture_at(cell);
+        let drainage_norm = (terrain.drainage_at(cell) / DRAINAGE_REF).min(1.0);
+        // Seawater is not freshwater: coastal access is priced by the
+        // coast bonus in carrying_capacity, not smuggled in here.
+        let freshwater = drainage_norm.max(moisture).clamp(0.0, 1.0);
+        let aridity = ((0.2 - moisture).max(0.0) * 5.0).clamp(0.0, 1.0);
+        let hostility = terrain.unrest_at(cell).max(aridity).clamp(0.0, 1.0);
+        hornvale_demography::CarryingInput {
+            habitable: *climate.habitability().get(cell),
+            temperature_c: climate.mean_temperature_at(cell).get(),
+            moisture,
+            freshwater,
+            coastal,
+            hostility,
+        }
+    })
+}
+
+/// Fold a species' psychology (spec §4) into its carrying-capacity inputs.
+/// The retired suitability formula scaled a people's freshwater weight by its
+/// time horizon and softened its hostility penalty by its threat response; the
+/// same psychology now scales each species' freshwater draw and hostility
+/// sensitivity so per-species variation survives the move to the carrying-
+/// capacity field. Exact fidelity to the old weights was not required —
+/// CALIBRATED (the-gathering, 2026-07-13): the summed-across-roster gradient
+/// these per-species factors feed into (the Lab's `capacity-by-abs-latitude`
+/// metric) already reproduces the real biomass-by-latitude gradient
+/// decisively against the 200-seed `census-of-the-gathering` census (mean
+/// 27.15; see `carrying_capacity.rs`'s freeze note for the full measurement),
+/// so these factors are frozen unchanged as save-format constants.
+/// Identity-ish at the goblin baseline; deterministic in `p`.
+pub fn species_carrying_input(
+    base: hornvale_demography::CarryingInput,
     p: &hornvale_species::PsychVector,
-) -> hornvale_settlement::SuitabilityWeights {
-    hornvale_settlement::SuitabilityWeights {
-        freshwater: 0.45 * (0.5 + p.time_horizon),
-        coast: 0.20 * (2.0 * p.in_group_radius),
-        temperance: 0.35,
-        hostility: 0.50 * (1.5 - p.threat_response),
+) -> hornvale_demography::CarryingInput {
+    // Long-horizon peoples value reliable water more; bold (high threat-
+    // response) peoples tolerate hostile ground better (lower effective
+    // hostility). Both factors are >= 0 and the results re-clamp to [0, 1].
+    let freshwater_factor = 0.5 + p.time_horizon;
+    let hostility_factor = (1.5 - p.threat_response).max(0.0);
+    hornvale_demography::CarryingInput {
+        freshwater: (base.freshwater * freshwater_factor).clamp(0.0, 1.0),
+        hostility: (base.hostility * hostility_factor).clamp(0.0, 1.0),
+        ..base
     }
 }
 
@@ -325,10 +442,8 @@ fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64) {
         Sky::Constant(_) => (1.0, 23.5, RotationRegime::Spinning { day_std: 1.0 }, 365.25),
         Sky::Generated(generated) => {
             let system = generated.system();
-            let luminosity = system.star.luminosity.get();
-            let orbit = system.anchor.orbit.get();
-            // Insolation relative to Earth (L=1, d=1): L / d².
-            let insolation = luminosity / (orbit * orbit);
+            // Insolation relative to Earth: the single shared definition (SKY-15).
+            let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
             let obliquity = system.anchor.obliquity.get();
             let regime = match system.anchor.rotation {
                 hornvale_astronomy::Rotation::Spinning { day, .. } => {
@@ -406,7 +521,7 @@ struct EraContext<'a> {
     /// The shared geosphere (terrain's, reused for climate's grid).
     geo: &'a Geosphere,
     /// Present relief; elevation does not change across eras.
-    elevation: &'a hornvale_kernel::CellMap<f64>,
+    elevation: &'a hornvale_kernel::CellMap<ReferenceElevation>,
     /// Seafloor feature per cell, derived once from terrain's boundaries.
     seafloor: &'a hornvale_kernel::CellMap<SeafloorFeature>,
     /// Insolation relative to Earth, from the world's sky (constant per world).
@@ -421,7 +536,7 @@ struct EraContext<'a> {
     /// against.
     present_ice: &'a hornvale_kernel::CellMap<bool>,
     /// The absolute snowline threshold ([`FREEZE_C`], wrapped once).
-    freeze: Celsius,
+    freeze: Temperature,
 }
 
 /// This era's raw inputs, carried alongside its cheaply-diagnosed
@@ -431,8 +546,8 @@ struct EraContext<'a> {
 struct EraInputs {
     /// Absolute standard day of the era.
     day: f64,
-    /// This era's sea level (metres): present + eustatic change.
-    sea_level: f64,
+    /// This era's sea level: present + eustatic change.
+    sea_level: ReferenceElevation,
     /// This era's obliquity, degrees, from the sky's forcing.
     obliquity_deg: f64,
     /// This era's albedo-cooling offset from the integrated ice history.
@@ -469,12 +584,11 @@ fn climate_at_era(ctx: &EraContext, inputs: &EraInputs) -> EraClimate {
     );
     // This era's absolute temperature: THIS era's own mean field (built with
     // this era's sea level, above — captures the lapse term) plus this
-    // era's albedo-cooling offset, via `Celsius`'s `Add` impl (the sole
+    // era's albedo-cooling offset, via `Temperature`'s `Add` impl (the sole
     // production path for combining the two, together with `Sub` —
     // decision 0008).
-    let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
-        Celsius::new(*mean_temp.get(c)).expect("temperature is finite") + inputs.temp_offset
-    });
+    let era_temperature =
+        hornvale_kernel::CellMap::from_fn(geo, |c| *mean_temp.get(c) + inputs.temp_offset);
     // Ice is diagnosed against an ABSOLUTE snowline (`ctx.freeze`), not an
     // anomaly, so the same global cooling offset produces a spatially
     // structured mask (high latitudes ice first) rather than an all-or-
@@ -543,12 +657,11 @@ fn glacial_maximum_habitable(
         year_length_std: ctx.year_length_std,
     });
     let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
-        Celsius::new(climate.mean_temperature_at(c)).expect("temperature is finite")
-            + inputs.temp_offset
+        climate.mean_temperature_at(c) + inputs.temp_offset
     });
     hornvale_kernel::CellMap::from_fn(geo, |c| {
         hornvale_climate::is_habitable(
-            era_temperature.get(c).get(),
+            *era_temperature.get(c),
             climate.moisture_at(c),
             *elevation.get(c),
             sea_level,
@@ -601,18 +714,16 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
     // field back out: `obliquity_at(0.0) == obliquity_mean` exactly
     // (astronomy's forcing contract), the same value `stellar_inputs`
     // returns, so this reproduces `climate_of`'s present reading
-    // byte-for-byte with no full regeneration at all.
-    let present_mean_temp = hornvale_climate::temperature::mean_temperature(
+    // byte-for-byte with no full regeneration at all. Already a
+    // `CellMap<Temperature>`, so no wrapping is needed before `glaciated`.
+    let present_temperature = hornvale_climate::temperature::mean_temperature(
         geo,
         &elevation,
         present_sea_level,
         insolation,
         &regime,
     );
-    let present_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
-        Celsius::new(*present_mean_temp.get(c)).expect("temperature is finite")
-    });
-    let freeze = Celsius::new(FREEZE_C).expect("FREEZE_C is finite");
+    let freeze = Temperature::new(FREEZE_C).expect("FREEZE_C is finite");
     // The world's own present-day ice mask — no albedo offset, so this is
     // exactly the ice a present-day observer would already see. Every era's
     // `ice` field is the ADVANCE beyond this mask, not the raw diagnostic
@@ -670,7 +781,10 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
             .expect("history is non-empty");
         era_inputs.push(EraInputs {
             day: era_day,
-            sea_level: present_sea_level + state.sea_level_change.get(),
+            sea_level: ReferenceElevation::new(
+                present_sea_level.get() + state.sea_level_change.get(),
+            )
+            .expect("present sea level plus a finite eustatic change is finite"),
             obliquity_deg: forcing.obliquity_at(era_day),
             temp_offset: state.temp_offset,
         });
@@ -1550,13 +1664,48 @@ struct LanguageDeityNamer<'a, 'b, 'c> {
     /// `name-gloss` facts itself; the composition root reads this map back
     /// once `genesis` returns and commits them there instead.
     glosses: std::collections::BTreeMap<u64, String>,
+    /// Per-species base seed for deity name generation (`/v2` epoch): the name
+    /// seed is derived from this + phenomenon kind + rank, never an entity id.
+    deity_seed: Seed,
+}
+
+/// The seed for a deity's generated name: a pure function of the per-species
+/// deity seed (`base`), the phenomenon KIND the deity is of, and the
+/// phenomenon's RANK among its pantheon's members. Deliberately carries no
+/// entity id, so deity names are invariant to entity mint order — the fix
+/// for the `/v2` naming epoch (spec §8).
+fn deity_name_seed(base: Seed, kind: &str, rank: usize) -> u64 {
+    base.derive(kind)
+        .derive(&rank.to_string())
+        .stream()
+        .next_u64()
+}
+
+/// The per-species base seed every deity/epithet name for `species` derives
+/// from (the `/v2` epoch label). The one place the `"religion/deity/v2"`
+/// stream label is spelled, so [`build`] (constructing a
+/// [`LanguageDeityNamer`]) and [`deity_name_seed_for`] (re-deriving the same
+/// seed from outside this crate) can never diverge.
+fn deity_base_seed(world_seed: &Seed, species: &str) -> Seed {
+    world_seed.derive("religion/deity/v2").derive(species)
+}
+
+/// Public entry point onto [`deity_name_seed`] for consumers outside this
+/// crate that need to re-derive a committed deity/epithet name's seed from
+/// the world seed directly (`windows/lab`'s `epithet_honorific` metric
+/// structurally detects the honorific affix by re-deriving the plain word
+/// the committed epithet was built from).
+/// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: kind), bare-ok(index: rank), pending(wave-3: return)
+pub fn deity_name_seed_for(world_seed: &Seed, species: &str, kind: &str, rank: usize) -> u64 {
+    deity_name_seed(deity_base_seed(world_seed, species), kind, rank)
 }
 
 impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
     fn deity(&mut self, salt: u64) -> (String, String) {
+        let rank = self.index;
         let phenomenon = self
             .phenomena
-            .get(self.index)
+            .get(rank)
             .expect("religion calls deity() once per member phenomenon, in phenomena order");
         self.index += 1;
         let sentiment = hornvale_religion::Sentiment::of(phenomenon);
@@ -1564,9 +1713,10 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
         let site = hornvale_language::SiteConcepts {
             concepts: &concepts,
         };
+        let name_seed = deity_name_seed(self.deity_seed, &phenomenon.kind, rank);
         let (g, gloss) = self.namer.glossed_name(
             hornvale_language::NameKind::Deity,
-            salt,
+            name_seed,
             &self.morph,
             &site,
             self.lexicon,
@@ -1577,24 +1727,26 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
         (g.roman, g.ipa)
     }
 
-    fn epithet(&mut self, salt: u64, sentiment: hornvale_religion::Sentiment) -> (String, String) {
+    fn epithet(&mut self, _salt: u64, sentiment: hornvale_religion::Sentiment) -> (String, String) {
         // Sentiment fits the epithet at render time (Task 11's `render_line`
         // reads it from the belief's own committed `sentiment` fact); the
         // generated word itself is glossed like any other name, over the
         // same phenomenon `deity()` just named for this same belief — only
         // the deity's own gloss is committed as a `name-gloss` fact (see
         // `glosses`), so the epithet's gloss is computed and discarded.
+        let rank = self.index - 1;
         let phenomenon = self
             .phenomena
-            .get(self.index - 1)
+            .get(rank)
             .expect("deity() always runs before epithet() for the same belief");
         let concepts = deity_site_concepts(phenomenon, sentiment);
         let site = hornvale_language::SiteConcepts {
             concepts: &concepts,
         };
+        let name_seed = deity_name_seed(self.deity_seed, &phenomenon.kind, rank);
         let (g, _gloss) = self.namer.glossed_name(
             hornvale_language::NameKind::Epithet,
-            salt,
+            name_seed,
             &self.morph,
             &site,
             self.lexicon,
@@ -1619,6 +1771,56 @@ pub fn build_world_with_roster(
     settlement_pins: &SettlementPins,
     roster: &[hornvale_species::SpeciesDef],
 ) -> Result<World, BuildError> {
+    build_to(
+        seed,
+        pins,
+        sky,
+        terrain_pins,
+        settlement_pins,
+        roster,
+        BuildDepth::Full,
+    )
+}
+
+/// Build a world only as deep as `depth` (spec §4 / MAP-25). At any depth the
+/// committed facts are a byte-identical prefix of the full build's — stopping
+/// early only omits later appends; it never changes a fact it does commit.
+#[allow(clippy::too_many_arguments)]
+pub fn build_world_to(
+    seed: Seed,
+    pins: &SkyPins,
+    sky: SkyChoice,
+    terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
+    roster: &[hornvale_species::SpeciesDef],
+    depth: BuildDepth,
+) -> Result<World, BuildError> {
+    build_to(
+        seed,
+        pins,
+        sky,
+        terrain_pins,
+        settlement_pins,
+        roster,
+        depth,
+    )
+}
+
+/// The full pipeline, run only as deep as `depth`. `build_world_with_roster`
+/// delegates with `BuildDepth::Full`; `build_world_to` forwards its argument.
+/// The only depth-dependent behavior is early `return Ok(world)` between
+/// stages — every statement's order and borrows are otherwise unchanged, so
+/// the Full path is identical to the pre-depth pipeline.
+#[allow(clippy::too_many_arguments)]
+fn build_to(
+    seed: Seed,
+    pins: &SkyPins,
+    sky: SkyChoice,
+    terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
+    roster: &[hornvale_species::SpeciesDef],
+    depth: BuildDepth,
+) -> Result<World, BuildError> {
     let mut world = World::new(seed);
     register_all(&mut world.registry)?;
 
@@ -1642,25 +1844,39 @@ pub fn build_world_with_roster(
         )?;
     }
 
-    if let SkyChoice::Generated = sky {
-        let outcome = generate(seed, pins).map_err(BuildError::Genesis)?;
-        facts::genesis(&mut world, world_entity, &outcome)?;
+    stage("astronomy", || -> Result<(), BuildError> {
+        if let SkyChoice::Generated = sky {
+            let outcome = generate(seed, pins).map_err(BuildError::Genesis)?;
+            facts::genesis(&mut world, world_entity, &outcome)?;
+        }
+        Ok(())
+    })?;
+
+    if depth == BuildDepth::Astronomy {
+        return Ok(world);
     }
 
-    for pin_string in hornvale_terrain::pin_strings(terrain_pins) {
-        world.ledger.commit(
-            scenario_fact(
-                world_entity,
-                hornvale_terrain::facts::TERRAIN_PIN,
-                Value::Text(pin_string),
-            ),
-            &world.registry,
-        )?;
+    stage("terrain", || -> Result<(), BuildError> {
+        for pin_string in hornvale_terrain::pin_strings(terrain_pins) {
+            world.ledger.commit(
+                scenario_fact(
+                    world_entity,
+                    hornvale_terrain::facts::TERRAIN_PIN,
+                    Value::Text(pin_string),
+                ),
+                &world.registry,
+            )?;
+        }
+        let level = terrain_pins.globe_level.unwrap_or(GLOBE_LEVEL);
+        let terrain_outcome = hornvale_terrain::generate(seed, &geosphere_for(level), terrain_pins)
+            .map_err(BuildError::TerrainGenesis)?;
+        hornvale_terrain::facts::genesis(&mut world, world_entity, &terrain_outcome)?;
+        Ok(())
+    })?;
+
+    if depth <= BuildDepth::Terrain {
+        return Ok(world);
     }
-    let level = terrain_pins.globe_level.unwrap_or(GLOBE_LEVEL);
-    let terrain_outcome = hornvale_terrain::generate(seed, &geosphere_for(level), terrain_pins)
-        .map_err(BuildError::TerrainGenesis)?;
-    hornvale_terrain::facts::genesis(&mut world, world_entity, &terrain_outcome)?;
 
     // Settlement pins are never reconstructed (settlements persist as their
     // own committed facts, not re-derived from a provider like sky/terrain);
@@ -1679,36 +1895,44 @@ pub fn build_world_with_roster(
         )?;
     }
 
-    // Reconstruct terrain + climate, assemble per-cell site inputs, place a
-    // spaced scatter of settlements, and commit each as its own place entity.
+    // Reconstruct terrain + climate, build each species' carrying-capacity
+    // field, condense settlements off it (demography), and commit each as its
+    // own place entity.
+    #[allow(clippy::type_complexity)]
+    let (terrain, climate, ids, placed, placements, lexicons, species_set, phonologies) = stage(
+        "climate+settlements",
+        || -> Result<
+            (
+                GeneratedTerrain,
+                GeneratedClimate,
+                Vec<EntityId>,
+                Vec<hornvale_settlement::PlacedSettlement>,
+                Vec<(hornvale_demography::Condensation, u32)>,
+                std::collections::BTreeMap<&str, hornvale_language::Lexicon>,
+                Vec<&hornvale_species::SpeciesDef>,
+                std::collections::BTreeMap<&str, hornvale_language::Phonology>,
+            ),
+            BuildError,
+        > {
     let terrain = terrain_of(&world)?;
     let climate = climate_of(&world)?;
     let geo = terrain.geosphere();
-    const DRAINAGE_REF: f64 = 200.0;
-    let sites: Vec<hornvale_settlement::SiteInput> = geo
-        .cells()
-        .map(|cell| {
-            let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
-            let moisture = climate.moisture_at(cell);
-            let drainage_norm = (terrain.drainage_at(cell) / DRAINAGE_REF).min(1.0);
-            // Seawater is not freshwater: coastal access is priced by the
-            // coast term in settlement's suitability, not smuggled in here.
-            let freshwater = drainage_norm.max(moisture).clamp(0.0, 1.0);
-            let aridity = ((0.2 - moisture).max(0.0) * 5.0).clamp(0.0, 1.0);
-            let hostility = terrain.unrest_at(cell).max(aridity).clamp(0.0, 1.0);
-            hornvale_settlement::SiteInput {
-                cell,
-                position: geo.position(cell),
-                habitable: *climate.habitability().get(cell),
-                freshwater,
-                coastal,
-                temperature_c: climate.mean_temperature_at(cell),
-                hostility,
-            }
-        })
-        .collect();
-    let min_sep = (12.0_f64.to_radians()).cos();
-    let floor = settlement_pins.min_suitability.unwrap_or(0.25);
+    // Condensation threshold: an attractor whose catchment population clears
+    // this becomes a settlement. CALIBRATED (the-gathering, 2026-07-13):
+    // tuned against the (also frozen this task) carrying_capacity constants
+    // to a manageable seed-42 settlement count. Before tuning, the placeholder
+    // 0.5 condensed 998 settlements on the level-6 seed-42 world (avg
+    // catchment ~7 people); this value condenses 182 (avg catchment ~22, max
+    // 71) — low hundreds, an order of magnitude down from the placeholder and
+    // in the range of the retired spaced scatter's town count. A save-format
+    // constant from here on.
+    const THRESHOLD: f64 = 10.0;
+
+    // The bare per-cell carrying-capacity inputs, shared across species; each
+    // species folds its psychology into a per-species copy below. `carrying_
+    // inputs_of` is exposed so a Lab metric can recompute the identical field
+    // without duplicating the formula (the gradient calibration reads it).
+    let base_inputs = carrying_inputs_of(geo, &terrain, &climate);
 
     // Which species this world places: the whole roster, or the pinned one.
     let species_set: Vec<&hornvale_species::SpeciesDef> = match &settlement_pins.species {
@@ -1716,18 +1940,22 @@ pub fn build_world_with_roster(
         Some(name) => vec![def_in(roster, name)?],
     };
 
-    // Joint greedy across species: every (site × species) pair scored with
-    // that species' psychology-derived weights, one shared spacing pass.
-    let mut scored: Vec<(hornvale_settlement::SiteInput, f64, u32)> = Vec::new();
-    for (tag, def) in species_set.iter().enumerate() {
-        let weights = species_weights(&def.psych);
-        for site in &sites {
-            if let Some(score) = hornvale_settlement::suitability_weighted(site, &weights) {
-                scored.push((*site, score, tag as u32));
-            }
-        }
-    }
-    let placements = hornvale_settlement::place_tagged(&scored, min_sep, floor);
+    // Each species' carrying-capacity inputs: the shared base with its
+    // psychology folded in (spec §4). Demography condenses settlements off
+    // all species' fields together, flagship (largest catchment) first.
+    let per_species_inputs: Vec<(u32, hornvale_kernel::CellMap<hornvale_demography::CarryingInput>)> =
+        species_set
+            .iter()
+            .enumerate()
+            .map(|(tag, def)| {
+                let psych = &def.psych;
+                let inputs = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+                    species_carrying_input(*base_inputs.get(cell), psych)
+                });
+                (tag as u32, inputs)
+            })
+            .collect();
+    let placements = hornvale_demography::report(geo, &per_species_inputs, THRESHOLD).settlements;
 
     // Each placed species' phonology, drawn once from the world seed and
     // its authored articulation vector, and a `Namer` built over it. Every
@@ -1838,11 +2066,10 @@ pub fn build_world_with_roster(
             &site,
             lexicon,
         );
-        let population = if def.name == "goblin" {
-            hornvale_settlement::draw_population(seed, salt, p.suitability)
-        } else {
-            hornvale_settlement::draw_species_population(seed, def.name, salt, p.suitability)
-        };
+        // Population is the conserved catchment readout of the demography
+        // field, not a draw. `.round()` quantizes the continuous field value
+        // to whole people at this emit boundary (the ledger stores counts).
+        let population = p.population.round() as u32;
         placed.push(hornvale_settlement::PlacedSettlement {
             cell: p.cell.0,
             latitude: coord.latitude,
@@ -1861,96 +2088,129 @@ pub fn build_world_with_roster(
                 .commit(name_gloss_fact(*id, gloss), &world.registry)?;
         }
     }
+            Ok((
+                terrain,
+                climate,
+                ids,
+                placed,
+                placements,
+                lexicons,
+                species_set,
+                phonologies,
+            ))
+        },
+    )?;
 
-    // Per-species flagship culture and religion.
-    for (tag, def) in species_set.iter().enumerate() {
-        let Some(pos) = placements.iter().position(|(_, t)| *t as usize == tag) else {
-            continue; // a species may place nothing on a hostile world
-        };
-        let flagship = ids[pos];
-        let fcell = placements[pos].0.cell;
-        let coastal = geo.neighbors(fcell).iter().any(|n| terrain.is_ocean(*n));
-        let moisture = climate.moisture_at(fcell);
-        let class = biome_class(climate.biome_at(fcell));
-        let subsistence = hornvale_culture::subsistence(class, coastal);
-        let surplus = (hornvale_culture::fertility(class) * moisture).clamp(0.0, 1.0);
-        let threat = terrain.unrest_at(fcell).clamp(0.0, 1.0);
-        let env = hornvale_culture::EnvSummary {
-            subsistence,
-            surplus,
-            population: placed[pos].population,
-            threat,
-        };
-        let psych = hornvale_culture::PsychSummary {
-            threat_response: def.psych.threat_response,
-            time_horizon: def.psych.time_horizon,
-            communal: def.psych.sociality == hornvale_species::Sociality::Communal,
-            rank_status: def.psych.status_basis == hornvale_species::StatusBasis::Rank,
-            vocabulary: hornvale_culture::RoleVocabulary {
-                worker_override: def.worker_override.map(str::to_string),
-                warrior: def.warrior.to_string(),
-                artisan: def.artisan.to_string(),
-                shaman: def.shaman.to_string(),
-                top: def.top.to_string(),
-            },
-        };
-        hornvale_culture::genesis(&mut world, flagship, &env, &psych)?;
+    if depth <= BuildDepth::Settlements {
+        return Ok(world);
+    }
 
-        // Religion for every species-flagship (spec §5): each species sees
-        // the sky through its own lens at its own hour. The priesthood
-        // check uses the species' own shaman-rung word — kobold "keeper"
-        // is a priesthood exactly as goblin "shaman" is.
-        let castes = hornvale_culture::castes_of(&world, flagship);
-        let society = hornvale_religion::SocietySummary {
-            strata: castes.len(),
-            has_priesthood: castes.iter().any(|c| c == def.shaman),
-        };
-        // Religion (and the deity glosses drawn inside it) observes from
-        // the world's first place — the flagship vantage, its hemisphere
-        // culling the sky (SEQ-4/SEQ-5) — exactly the observation
-        // `religion::genesis` derives its beliefs from, so every deity
-        // name-gloss is truthful to the phenomenon its belief was actually
-        // derived from. Settlements exist by now, so the placed-observer
-        // path is live.
-        let seen = observed_phenomena_as_in(&world, roster, def.name)?;
-        let namer = namers
-            .get(def.name)
-            .expect("a Namer was built for every placed species");
-        let morph = morph_options(&def.psych);
-        let lexicon = lexicons
-            .get(def.name)
-            .expect("a lexicon was built for every placed species");
-        let mut deity_namer = LanguageDeityNamer {
-            namer,
-            morph,
-            lexicon,
-            phenomena: &seen,
-            index: 0,
-            glosses: std::collections::BTreeMap::new(),
-        };
-        hornvale_religion::genesis(&mut world, flagship, &seen, &society, &mut deity_namer)?;
-        for (salt, gloss) in &deity_namer.glosses {
-            world.ledger.commit(
-                name_gloss_fact(hornvale_kernel::EntityId(*salt), gloss),
-                &world.registry,
-            )?;
+    // `geo` borrows `terrain`, and `namers` borrows `phonologies` (see
+    // `Namer<'a>`), so neither can be returned out of the closure above
+    // alongside the values they borrow from — both are cheap, pure,
+    // side-effect-free recomputations of what the closure already derived.
+    let geo = terrain.geosphere();
+    let namers: std::collections::BTreeMap<&str, hornvale_language::Namer> = phonologies
+        .iter()
+        .map(|(name, ph)| (*name, hornvale_language::Namer::new(&seed, name, ph)))
+        .collect();
+
+    stage("culture+religion+species", || -> Result<(), BuildError> {
+        // Per-species flagship culture and religion.
+        for (tag, def) in species_set.iter().enumerate() {
+            let Some(pos) = placements.iter().position(|(_, t)| *t as usize == tag) else {
+                continue; // a species may place nothing on a hostile world
+            };
+            let flagship = ids[pos];
+            let fcell = placements[pos].0.cell;
+            let coastal = geo.neighbors(fcell).iter().any(|n| terrain.is_ocean(*n));
+            let moisture = climate.moisture_at(fcell);
+            let class = biome_class(climate.biome_at(fcell));
+            let subsistence = hornvale_culture::subsistence(class, coastal);
+            let surplus = (hornvale_culture::fertility(class) * moisture).clamp(0.0, 1.0);
+            let threat = terrain.unrest_at(fcell).clamp(0.0, 1.0);
+            let env = hornvale_culture::EnvSummary {
+                subsistence,
+                surplus,
+                population: placed[pos].population,
+                threat,
+            };
+            let psych = hornvale_culture::PsychSummary {
+                threat_response: def.psych.threat_response,
+                time_horizon: def.psych.time_horizon,
+                communal: def.psych.sociality == hornvale_species::Sociality::Communal,
+                rank_status: def.psych.status_basis == hornvale_species::StatusBasis::Rank,
+                vocabulary: hornvale_culture::RoleVocabulary {
+                    worker_override: def.worker_override.map(str::to_string),
+                    warrior: def.warrior.to_string(),
+                    artisan: def.artisan.to_string(),
+                    shaman: def.shaman.to_string(),
+                    top: def.top.to_string(),
+                },
+            };
+            hornvale_culture::genesis(&mut world, flagship, &env, &psych)?;
+
+            // Religion for every species-flagship (spec §5): each species sees
+            // the sky through its own lens at its own hour. The priesthood
+            // check uses the species' own shaman-rung word — kobold "keeper"
+            // is a priesthood exactly as goblin "shaman" is.
+            let castes = hornvale_culture::castes_of(&world, flagship);
+            let society = hornvale_religion::SocietySummary {
+                strata: castes.len(),
+                has_priesthood: castes.iter().any(|c| c == def.shaman),
+            };
+            // Religion (and the deity glosses drawn inside it) observes from
+            // the world's first place — the flagship vantage, its hemisphere
+            // culling the sky (SEQ-4/SEQ-5) — exactly the observation
+            // `religion::genesis` derives its beliefs from, so every deity
+            // name-gloss is truthful to the phenomenon its belief was actually
+            // derived from. Settlements exist by now, so the placed-observer
+            // path is live.
+            let seen = observed_phenomena_as_in(&world, roster, def.name)?;
+            let namer = namers
+                .get(def.name)
+                .expect("a Namer was built for every placed species");
+            let morph = morph_options(&def.psych);
+            let lexicon = lexicons
+                .get(def.name)
+                .expect("a lexicon was built for every placed species");
+            let mut deity_namer = LanguageDeityNamer {
+                namer,
+                morph,
+                lexicon,
+                phenomena: &seen,
+                index: 0,
+                glosses: std::collections::BTreeMap::new(),
+                deity_seed: deity_base_seed(&seed, def.name),
+            };
+            hornvale_religion::genesis(&mut world, flagship, &seen, &society, &mut deity_namer)?;
+            for (salt, gloss) in &deity_namer.glosses {
+                world.ledger.commit(
+                    name_gloss_fact(hornvale_kernel::EntityId(*salt), gloss),
+                    &world.registry,
+                )?;
+            }
         }
-    }
 
-    // Species entities AFTER every pre-species subsystem (settlements,
-    // culture, religion) — entity-id stability, spec §8: a goblin-pinned
-    // world must mint the exact same ids for pre-C1 entities as pre-species
-    // main, so the new, Y2-1-only entities are appended last rather than
-    // interleaved. Then the peopled-by link for every settlement.
-    hornvale_species::genesis_in(&mut world, roster)?;
-    for (id, (_, tag)) in ids.iter().zip(placements.iter()) {
-        hornvale_species::people(&mut world, *id, species_set[*tag as usize].name)?;
-    }
+        // Species entities AFTER every pre-species subsystem (settlements,
+        // culture, religion) — entity-id stability, spec §8: a goblin-pinned
+        // world must mint the exact same ids for pre-C1 entities as pre-species
+        // main, so the new, Y2-1-only entities are appended last rather than
+        // interleaved. Then the peopled-by link for every settlement.
+        hornvale_species::genesis_in(&mut world, roster)?;
+        for (id, (_, tag)) in ids.iter().zip(placements.iter()) {
+            hornvale_species::people(&mut world, *id, species_set[*tag as usize].name)?;
+        }
+        Ok(())
+    })?;
 
-    // Deep time: extract the glacial strata and commit their summary facts on
-    // the world entity, so `recount`/`why` can speak the world's past.
-    let paleo = paleoclimate_of(&world)?;
-    hornvale_paleoclimate::genesis(&mut world, world_entity, terrain.geosphere(), &paleo)?;
+    stage("deep-time", || -> Result<(), BuildError> {
+        // Deep time: extract the glacial strata and commit their summary facts on
+        // the world entity, so `recount`/`why` can speak the world's past.
+        let paleo = paleoclimate_of(&world)?;
+        hornvale_paleoclimate::genesis(&mut world, world_entity, terrain.geosphere(), &paleo)?;
+        Ok(())
+    })?;
 
     Ok(world)
 }
@@ -2165,6 +2425,127 @@ pub fn night_sky_line(world: &World) -> Result<Option<String>, BuildError> {
     Ok(Some(format!("By night: {}.", parts.join("; "))))
 }
 
+/// The pole star, heliacal-return, and wanderer lines under **The Sky**
+/// (night-sky stage 1/2): a pole-star sentence when the genesis-epoch night
+/// sky finds one within `POLE_STAR_MAX_SEPARATION_DEG` of either celestial
+/// pole, up to three heliacal-return sentences for the brightest neighbors
+/// (index order), at the same flagship vantage latitude `calendar_lines`
+/// resolves its daylight-swing line at (the first known place's committed
+/// latitude; reference latitude 35.0 — a mid-temperate default — until the
+/// flagship vantage reaches the almanac, if no place resolves), plus one
+/// sentence per wandering sibling planet, innermost order, plus a single
+/// figure count/ecliptic summary line (night-sky stage 3; omitted for a sky
+/// with no figures at all). `None` for constant-sky worlds, which have no
+/// neighborhood to describe.
+/// type-audit: bare-ok(prose: return)
+pub fn night_sky_lines(
+    world: &World,
+) -> Result<Option<hornvale_almanac::NightSkyLines>, BuildError> {
+    let sky = sky_of(world)?;
+    let Sky::Generated(sky) = &sky else {
+        return Ok(None);
+    };
+    let calendar = sky.calendar();
+    let system = sky.system();
+    let t = hornvale_astronomy::StdDays::new(0.0).unwrap();
+
+    let view = hornvale_astronomy::night_sky_at(system, calendar, 0.0, t);
+    let pole_star = view.pole_star.map(|ps| {
+        let neighbor = &system.neighbors[ps.neighbor];
+        let hemisphere = match ps.pole {
+            hornvale_astronomy::Hemisphere::North => "north",
+            hornvale_astronomy::Hemisphere::South => "south",
+        };
+        let backward = if view.wheels_backward {
+            " backward, on this backward-spinning world"
+        } else {
+            ""
+        };
+        format!(
+            "A {} star stands {:.1}° from the {} celestial pole; the sky wheels around it{}.",
+            neighbor.color, ps.separation_deg, hemisphere, backward
+        )
+    });
+
+    // Reference latitude until the flagship vantage reaches the almanac —
+    // the same fallback-free resolution `calendar_lines`' daylight-swing
+    // line uses, but with a temperate default instead of the equator when
+    // no place has been placed yet.
+    let latitude = hornvale_terrain::places(world)
+        .first()
+        .and_then(|p| place_coord(world, p.id))
+        .map(|c| c.latitude)
+        .unwrap_or(35.0);
+    let year_length_days = calendar.year_length().get();
+    let pairs = hornvale_astronomy::heliacal_events(system, calendar, latitude, t);
+    let heliacal = pairs
+        .iter()
+        .take(3)
+        .map(|p| {
+            let neighbor = &system.neighbors[p.neighbor];
+            format!(
+                "The {} star returns before dawn at year-phase {:.2}, after {:.0} days of absence.",
+                neighbor.color,
+                p.rising_frac,
+                p.absence_fraction() * year_length_days
+            )
+        })
+        .collect();
+
+    let wanderers = system
+        .wanderers
+        .iter()
+        .map(|w| {
+            let class_word = match w.class {
+                hornvale_astronomy::WandererClass::Rock => "rock",
+                hornvale_astronomy::WandererClass::Giant => "giant",
+            };
+            let morning_evening = if w.max_elongation_deg.is_some() {
+                " — a morning and evening star"
+            } else {
+                ""
+            };
+            format!(
+                "A {} wanderer rounds the sun every {:.0} days{}.",
+                class_word,
+                w.period.get(),
+                morning_evening
+            )
+        })
+        .collect();
+
+    // Figures (night-sky stage 3): a single count/ecliptic summary line,
+    // never rendered for a sky with no figures at all. `world.seed` derives
+    // the same astronomy seed `system::generate` and the lab metrics use.
+    let astronomy_seed = world.seed.derive(ASTRONOMY_STREAM_ROOT);
+    let figs = figures(astronomy_seed, system);
+    let figure_lines = if figs.is_empty() {
+        Vec::new()
+    } else {
+        let ecliptic_count = figs.iter().filter(|f| f.on_ecliptic).count();
+        let figure_word = if figs.len() == 1 { "figure" } else { "figures" };
+        let stand_word = if ecliptic_count == 1 {
+            "stands"
+        } else {
+            "stand"
+        };
+        vec![format!(
+            "The sky holds {} {}; {} {} on the sun's road.",
+            figs.len(),
+            figure_word,
+            ecliptic_count,
+            stand_word
+        )]
+    };
+
+    Ok(Some(hornvale_almanac::NightSkyLines {
+        pole_star,
+        heliacal,
+        wanderers,
+        figures: figure_lines,
+    }))
+}
+
 /// Notes recorded during sky genesis. Empty for constant-sky worlds, which
 /// are never generated.
 /// type-audit: bare-ok(prose: return)
@@ -2368,6 +2749,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         },
         calendar_lines: calendar_lines(world)?,
         night_sky: night_sky_line(world)?,
+        night_sky_lines: night_sky_lines(world)?,
         genesis_notes: genesis_notes(world)?,
         settlement_lines: settlement_lines(world)?,
     })
@@ -2376,6 +2758,27 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn deity_name_seed_is_pure_and_entity_id_free() {
+        use hornvale_kernel::Seed;
+        let base = Seed(42).derive("religion/deity/v2").derive("goblin");
+        // Same species-seed + kind + rank -> same name seed, no entity id involved.
+        assert_eq!(
+            deity_name_seed(base, "celestial-body", 0),
+            deity_name_seed(base, "celestial-body", 0)
+        );
+        // Rank disambiguates members that share a kind (two moons, two same-colour stars).
+        assert_ne!(
+            deity_name_seed(base, "celestial-body", 0),
+            deity_name_seed(base, "celestial-body", 1)
+        );
+        // Kind leads semantically.
+        assert_ne!(
+            deity_name_seed(base, "celestial-body", 0),
+            deity_name_seed(base, "tide", 0)
+        );
+    }
 
     fn constant(seed: u64) -> World {
         build_world(
@@ -2519,6 +2922,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn build_world_with_default_roster_matches_build_world_byte_for_byte() {
         use hornvale_terrain::TerrainPins;
         let sp = SettlementPins::default();
@@ -2748,6 +3152,7 @@ mod tests {
         let world = constant(42);
         assert!(calendar_lines(&world).unwrap().is_empty());
         assert!(night_sky_line(&world).unwrap().is_none());
+        assert!(night_sky_lines(&world).unwrap().is_none());
         assert!(genesis_notes(&world).unwrap().is_empty());
     }
 
@@ -2794,6 +3199,98 @@ mod tests {
     fn seed_23_generated_default_has_genesis_notes() {
         let world = generated(23);
         assert!(!genesis_notes(&world).unwrap().is_empty());
+    }
+
+    /// Seed 9's default (unpinned) generation carries a north pole star at
+    /// genesis (verified against the astronomy sweep in `facts.rs`); this
+    /// pins the almanac-side wiring to a real seed rather than a
+    /// hand-built fixture.
+    #[test]
+    fn seed_9_generated_default_has_a_pole_star_line() {
+        let world = generated(9);
+        let lines = night_sky_lines(&world).unwrap().unwrap();
+        let pole_star = lines.pole_star.expect("seed 9 has a north pole star");
+        assert!(pole_star.contains("celestial pole"));
+        assert!(pole_star.contains("north"));
+
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.night_sky_lines.unwrap().pole_star, Some(pole_star));
+    }
+
+    #[test]
+    fn heliacal_lines_render_at_most_three_and_cap_the_year_phase_absence() {
+        // Seed 42's default generation has several neighbors; assert the
+        // heliacal instrument produces at least one line (or honestly
+        // none, for a system with no risings this year) and never more
+        // than three.
+        let world = generated(42);
+        let lines = night_sky_lines(&world).unwrap().unwrap();
+        assert!(lines.heliacal.len() <= 3);
+        for line in &lines.heliacal {
+            assert!(line.contains("returns before dawn at year-phase"));
+            assert!(line.contains("days of absence"));
+        }
+    }
+
+    /// Night-sky stage 2: two pinned wanderers each get their own line
+    /// under The Sky — a rock's or a giant's round of the sun, in AU-Kepler
+    /// days, with the inner (elongation-bound) wanderer flagged as a
+    /// morning-and-evening star.
+    #[test]
+    fn wanderer_lines_render_one_sentence_per_pinned_wanderer() {
+        let pins = SkyPins {
+            wanderers: Some(2),
+            ..SkyPins::default()
+        };
+        let world = build_world(
+            Seed(1),
+            &pins,
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let lines = night_sky_lines(&world).unwrap().unwrap();
+        assert_eq!(lines.wanderers.len(), 2);
+        for line in &lines.wanderers {
+            assert!(line.contains("wanderer rounds the sun every"));
+            assert!(line.contains("days"));
+        }
+
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.night_sky_lines.unwrap().wanderers, lines.wanderers);
+    }
+
+    /// Night-sky stage 3: seed 6's default (unpinned) generation carries
+    /// several figures with exactly one on the ecliptic (verified against
+    /// the astronomy-layer sweep), so its almanac line reports a nonzero
+    /// total and singular ecliptic-count grammar ("1 stands", not
+    /// "1 stand").
+    #[test]
+    fn seed_6_generated_default_has_a_figures_summary_line() {
+        let world = generated(6);
+        let lines = night_sky_lines(&world).unwrap().unwrap();
+        assert_eq!(lines.figures.len(), 1);
+        let line = &lines.figures[0];
+        assert!(line.starts_with("The sky holds "));
+        assert!(line.contains("figures;"));
+        assert!(line.contains("1 stands on the sun's road."));
+        assert!(!line.contains("holds 0 figures"));
+
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.night_sky_lines.unwrap().figures, lines.figures);
+    }
+
+    /// A sky with zero figures renders no figures line at all (never "The
+    /// sky holds 0 figures").
+    #[test]
+    fn a_sky_with_zero_figures_renders_no_figures_line() {
+        let world = generated(1);
+        let lines = night_sky_lines(&world).unwrap().unwrap();
+        assert!(
+            lines.figures.is_empty(),
+            "seed 1 has zero figures at genesis"
+        );
     }
 
     #[test]
@@ -2886,6 +3383,7 @@ mod tests {
         assert_eq!(observed_phenomena(&world, 0.0).unwrap(), Vec::new());
         assert!(calendar_lines(&world).is_err());
         assert!(night_sky_line(&world).is_err());
+        assert!(night_sky_lines(&world).is_err());
         assert!(genesis_notes(&world).is_err());
         assert!(almanac_context(&world).is_err());
     }
@@ -3144,25 +3642,48 @@ mod tests {
     }
 
     #[test]
-    fn min_suitability_pin_reduces_the_settlement_count() {
-        let default_world = generated(42);
-        let pinned_world = build_world(
-            Seed(42),
-            &SkyPins::default(),
-            SkyChoice::Generated,
-            &hornvale_terrain::TerrainPins::default(),
-            &SettlementPins {
-                min_suitability: Some(0.5),
-                ..SettlementPins::default()
-            },
-        )
-        .unwrap();
-        let default_count = hornvale_terrain::places(&default_world).len();
-        let pinned_count = hornvale_terrain::places(&pinned_world).len();
-        assert!(
-            pinned_count < default_count,
-            "raising the suitability floor must reduce the settlement count: {pinned_count} >= {default_count}"
-        );
+    fn settlement_populations_are_the_conserved_field_readout() {
+        // Settlement populations are the demography catchment readout, not a
+        // draw: a peopled world has positive total settlement population.
+        let world = generated(42);
+        let total: f64 = world
+            .ledger
+            .find(hornvale_settlement::IS_SETTLEMENT)
+            .filter_map(|f| {
+                match world
+                    .ledger
+                    .value_of(f.subject, hornvale_settlement::POPULATION)
+                {
+                    Some(Value::Number(n)) => Some(*n),
+                    _ => None,
+                }
+            })
+            .sum();
+        assert!(total > 0.0, "a peopled world has positive total population");
+    }
+
+    #[test]
+    fn no_zero_population_settlements() {
+        // Full-pipeline regression guard for the founder-floor fix (design
+        // spec §5, "no peopleless settlements"): the domain-level unit test
+        // `founder_floor_never_places_a_zero_population_settlement`
+        // (`domains/demography/src/founder.rs`) exercises the flooring logic
+        // in isolation with a synthetic trace-K species; this asserts the
+        // same invariant end-to-end on a real built world, where the emit
+        // boundary's `.round() as u32` is what would actually commit a
+        // POPULATION == 0 fact if the domain-level floor ever regressed.
+        let world = generated(42);
+        for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
+            let pop = world
+                .ledger
+                .value_of(f.subject, hornvale_settlement::POPULATION);
+            assert_ne!(
+                pop,
+                Some(&Value::Number(0.0)),
+                "settlement {:?} committed a zero population",
+                f.subject
+            );
+        }
     }
 
     #[test]

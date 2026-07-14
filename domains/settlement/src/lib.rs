@@ -3,14 +3,9 @@
 #![warn(missing_docs)]
 
 pub mod genesis;
-pub mod placement;
 pub mod render;
 
 pub use genesis::{PlacedSettlement, genesis};
-pub use placement::{
-    BASELINE_WEIGHTS, Placement, SiteInput, SuitabilityWeights, place, place_tagged, suitability,
-    suitability_weighted,
-};
 
 use hornvale_kernel::{ConceptKind, ConceptRegistry, EntityId, RegistryError, Value, World};
 
@@ -44,28 +39,22 @@ pub const LONGITUDE: &str = "longitude";
 /// type-audit: bare-ok(identifier-text)
 pub const SETTLEMENT_PIN: &str = "settlement-pin";
 
-/// Seed-derivation labels used by this crate. Labels are permanent
-/// save-format contracts (spec §3); regeneration uses epoch suffixes.
-mod streams {
-    /// Root stream label for settlement.
-    /// type-audit: bare-ok(identifier-text)
-    pub const ROOT: &str = "settlement";
-    /// Per-settlement placement draws (population against carrying
-    /// capacity).
-    /// type-audit: bare-ok(identifier-text)
-    pub const PLACEMENT: &str = "placement";
-}
-
 /// Every seed-derivation label (or pattern) this crate uses, with docs.
 /// Slash-joined paths document derivation chains; the manifest renders them.
 /// `settlement/name` and `settlement/kobold/name` are retired as live
 /// generation paths (The Tongues moves settlement-name generation to
 /// `hornvale-language`, which owns the real `language/<species>/name/...`
 /// derivation labels, since this domain cannot depend on another domain
-/// crate — spec §7) but stay documented here forever, never renamed (ADR
-/// 0006). No new label is minted here for the move: nothing under
-/// `settlement/*` derives a name any longer, so publishing a phantom
-/// `settlement/name/v2` would only mislead a reader of the manifest.
+/// crate — spec §7); `settlement/placement` and `settlement/kobold/population`
+/// are retired as live generation paths for the same reason the-gathering
+/// (MAP-7) gives (settlement population is now a `demography` catchment
+/// readout, drawn from nothing — see `hornvale_demography::condense` — so
+/// this crate's placement/population streams draw nothing either). All four
+/// stay documented here forever, never renamed (ADR 0006). No new label is
+/// minted here for either move: nothing under `settlement/*` derives a name
+/// or a population any longer, so publishing phantom `settlement/name/v2` /
+/// `settlement/placement/v2` labels would only mislead a reader of the
+/// manifest.
 /// type-audit: bare-ok(identifier-text)
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     vec![
@@ -78,7 +67,11 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "settlement/placement",
-            "per-settlement population against carrying capacity",
+            "RETIRED (the-gathering): per-settlement population against \
+             carrying capacity, goblin stream. Population is now the conserved \
+             catchment readout of hornvale-demography's flow-condensation, \
+             drawing nothing from the seed. Kept documented for legacy-save \
+             continuity; never renamed.",
         ),
         (
             "settlement/kobold/name",
@@ -89,7 +82,11 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "settlement/kobold/population",
-            "per-settlement population, kobold stream (species-qualified; goblin keeps settlement/placement)",
+            "RETIRED (the-gathering): per-settlement population, kobold \
+             stream (species-qualified; goblin kept settlement/placement). \
+             Population is now the conserved catchment readout of \
+             hornvale-demography's flow-condensation, drawing nothing from the \
+             seed. Kept documented for legacy-save continuity; never renamed.",
         ),
     ]
 }
@@ -147,41 +144,6 @@ pub struct VillageInfo {
     pub population: u32,
 }
 
-/// Draw a population against a carrying capacity from suitability, seeded per
-/// settlement: `floor + (span x suitability)` jittered by a per-salt draw.
-/// type-audit: pending(wave-3: salt), bare-ok(ratio: suitability), bare-ok(count: return)
-pub fn draw_population(seed: hornvale_kernel::Seed, salt: u64, suitability: f64) -> u32 {
-    let mut stream = seed
-        .derive(streams::ROOT)
-        .derive(streams::PLACEMENT)
-        .derive(&salt.to_string())
-        .stream();
-    let base = 40.0 + 460.0 * suitability.clamp(0.0, 1.0); // 40..500 by suitability
-    let jitter = 0.75 + 0.5 * stream.next_f64(); // x[0.75, 1.25]
-    (base * jitter).round() as u32
-}
-
-/// Draw a non-goblin settlement's population from its species-qualified
-/// stream (`settlement/<species>/population`), same capacity curve as the
-/// goblin draw.
-/// type-audit: bare-ok(identifier-text: species), pending(wave-3: salt), bare-ok(ratio: suitability), bare-ok(count: return)
-pub fn draw_species_population(
-    seed: hornvale_kernel::Seed,
-    species: &str,
-    salt: u64,
-    suitability: f64,
-) -> u32 {
-    let mut stream = seed
-        .derive(streams::ROOT)
-        .derive(species)
-        .derive("population")
-        .derive(&salt.to_string())
-        .stream();
-    let base = 40.0 + 460.0 * suitability.clamp(0.0, 1.0);
-    let jitter = 0.75 + 0.5 * stream.next_f64();
-    (base * jitter).round() as u32
-}
-
 /// Every settlement in the world, in commit order (element 0 is the
 /// flagship — the first `is-settlement` fact, per settlement genesis).
 pub fn all_settlements(world: &World) -> Vec<VillageInfo> {
@@ -233,7 +195,7 @@ mod tests {
         w
     }
 
-    fn flagship(seed: Seed, salt: u64) -> PlacedSettlement {
+    fn flagship(_seed: Seed, salt: u64) -> PlacedSettlement {
         PlacedSettlement {
             cell: salt as u32,
             latitude: 0.0,
@@ -241,9 +203,11 @@ mod tests {
             biome: "temperate-forest".to_string(),
             // Name generation itself now lives in hornvale-language (spec
             // §7, wired at the composition root); a fixed test name keeps
-            // this crate's own tests independent of that domain.
+            // this crate's own tests independent of that domain. Population is
+            // now the demography catchment readout (composition root), so this
+            // crate's own tests use a fixed count.
             name: "Testville".to_string(),
-            population: draw_population(seed, salt, 0.5),
+            population: 100,
         }
     }
 
@@ -268,13 +232,6 @@ mod tests {
         let ib = village_info(&b).unwrap();
         assert_eq!(ia.name, ib.name);
         assert_eq!(ia.population, ib.population);
-    }
-
-    #[test]
-    fn populations_vary_with_suitability() {
-        let low = draw_population(Seed(3), 0, 0.0);
-        let high = draw_population(Seed(3), 0, 1.0);
-        assert!(high > low);
     }
 
     #[test]
@@ -316,18 +273,6 @@ mod tests {
             !labels.contains(&"settlement/name/v2"),
             "settlement/name/v2 is a phantom label — real name derivation lives in language/*"
         );
-    }
-
-    #[test]
-    fn species_population_is_deterministic_and_species_scoped() {
-        let a = draw_species_population(Seed(3), "kobold", 5, 0.5);
-        let b = draw_species_population(Seed(3), "kobold", 5, 0.5);
-        let g = draw_population(Seed(3), 5, 0.5);
-        assert_eq!(a, b);
-        // Different labeled stream ⇒ (almost surely) different jitter; assert
-        // determinism and range, not inequality with the goblin draw.
-        assert!((30..=625).contains(&a));
-        let _ = g;
     }
 
     #[test]

@@ -14,12 +14,15 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/obliquity` | axial tilt draw |
 | `astronomy/moon-count` | how many moons |
 | `astronomy/moons` | per-moon mass/distance draws (sequential attempts) |
-| `astronomy/neighbors` | notable-neighbor class/distance draws |
+| `astronomy/neighbors` | neighbor class/distance draws |
 | `astronomy/forcing` | deep-time orbital forcing |
 | `astronomy/phase-offsets` | per-body genesis phase offsets |
 | `astronomy/neighbor-positions` | per-neighbor celestial position draws (declination, right ascension) |
 | `astronomy/spin-direction` | spin-direction draw: prograde or retrograde |
 | `astronomy/moon-inclinations` | per-moon orbital-inclination draws |
+| `astronomy/wanderer-count` | how many wandering planets |
+| `astronomy/wanderers` | per-wanderer parameter draws, sequential |
+| `astronomy/starfield` | background starfield: count + per-star position/brightness (derived on demand) |
 
 ### hornvale-climate
 
@@ -55,6 +58,15 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/<species>/lexicon/cascade` | the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root |
 | `language/<species>/lexicon/headedness` | the species' drawn compound-joining order (HeadFirst/HeadLast), gating LexEntry::Compound component order |
 
+### hornvale-locale
+
+| Label | Meaning |
+|---|---|
+| `locale/regime/micro` | room sub-cell micro-field |
+| `locale/regime/variety` | room descriptor variety draw |
+| `locale/regime/substrate` | room substrate-detail draw |
+| `locale/strangeness/place` | world rarity-budget placement pass |
+
 ### hornvale-paleoclimate
 
 *(no seed-derivation streams)*
@@ -69,9 +81,9 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 |---|---|
 | `settlement` | root stream for settlement generation |
 | `settlement/name` | RETIRED (pre-Tongues): per-settlement generated name, goblin stream. Names now derive under language/<species>/name/settlement. Kept documented for legacy-save continuity; never renamed. |
-| `settlement/placement` | per-settlement population against carrying capacity |
+| `settlement/placement` | RETIRED (the-gathering): per-settlement population against carrying capacity, goblin stream. Population is now the conserved catchment readout of hornvale-demography's flow-condensation, drawing nothing from the seed. Kept documented for legacy-save continuity; never renamed. |
 | `settlement/kobold/name` | RETIRED (pre-Tongues): per-settlement generated name, kobold stream (species-qualified; goblin kept settlement/name). Names now derive under language/<species>/name/settlement. Kept documented for legacy-save continuity; never renamed. |
-| `settlement/kobold/population` | per-settlement population, kobold stream (species-qualified; goblin keeps settlement/placement) |
+| `settlement/kobold/population` | RETIRED (the-gathering): per-settlement population, kobold stream (species-qualified; goblin kept settlement/placement). Population is now the conserved catchment readout of hornvale-demography's flow-condensation, drawing nothing from the seed. Kept documented for legacy-save continuity; never renamed. |
 
 ### hornvale-species
 
@@ -92,6 +104,13 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/cratons` | margin draw (scales the ocean-fraction-derived budget, Task 9 iteration 3'), craton count, then per-craton center/radius/age |
 | `terrain/plate-weights` | per-plate heavy-tailed Voronoi weight draws |
 | `terrain/plate-edge` | plate-edge noise (hash-noise only; no stream draws) |
+
+### hornvale-vessel
+
+| Label | Meaning |
+|---|---|
+| `vessel/agent` | minted agent id draw |
+| `vessel/walk` | walker-battery deterministic walk |
 
 ### hornvale-kernel (internal)
 

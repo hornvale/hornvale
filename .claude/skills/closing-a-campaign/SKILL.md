@@ -35,7 +35,7 @@ not done until every one is checked or explicitly N/A.
      `make rebaseline`, not by hand.
    - **Confidence Gradient** — if the campaign resolved or moved a bet in
      `book/src/open-questions.md`, re-score that chapter (decision
-     `the-confidence-gradient-is-re-scored-not-frozen`).
+     0030).
    - **Registry flips** — idea-registry rows the campaign shipped,
      spec'd, or rejected flip status and repoint **Where**; never delete
      a row.
@@ -69,7 +69,7 @@ not done until every one is checked or explicitly N/A.
 | Chronicle entry | `book/src/chronicle/<slug>.md` + SUMMARY | decision 0013 |
 | Retrospective | `docs/retrospectives/<slug>.md` | decision 0020 |
 | Freshness sweep | every chapter the campaign staled | decision 0013 |
-| Gradient re-score | `book/src/open-questions.md` (if a bet moved) | decision `the-confidence-gradient-is-re-scored-not-frozen` |
+| Gradient re-score | `book/src/open-questions.md` (if a bet moved) | decision 0030 |
 | Registry flips | `book/src/frontier/idea-registry.md` | registry header rules |
 | Keystone refreeze | `cli/tests/fixtures/` etc., from main's tip | merge-time discipline |
 

@@ -1230,7 +1230,7 @@ Create the next-numbered `book/src/chronicle/<n>-the-room-mesh.md` (check the di
 
 - [ ] **Step 4: Freshness sweep + Confidence Gradient**
 
-Sweep `book/` for chapters that now lag reality (the geosphere/spatial chapters). If this campaign moved a bet on `book/src/open-questions.md` (the room-scale / coarse-constrains-fine bets), re-score that chapter (decision `the-confidence-gradient-is-re-scored-not-frozen`).
+Sweep `book/` for chapters that now lag reality (the geosphere/spatial chapters). If this campaign moved a bet on `book/src/open-questions.md` (the room-scale / coarse-constrains-fine bets), re-score that chapter (decision 0030).
 
 - [ ] **Step 5: Flip the MAP-28 registry row**
 

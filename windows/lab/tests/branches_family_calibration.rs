@@ -1,42 +1,45 @@
-//! Calibration for The Branches (Task 10): the family battery, run once over
-//! the 1,000-seed `branches-family` study and pinned per ADR 0016 —
-//! directions preregistered before the sweep ran (see each test's doc
-//! comment), exact measured values pinned after, never tuned to pass.
+//! Calibration for The Branches (Task 10): the family battery, pinned per
+//! ADR 0016 — directions preregistered before the sweep ran (see each
+//! test's doc comment), exact measured values pinned after, never tuned to
+//! pass. `branches-family` itself is frozen (census-as-data spec §1): the
+//! battery now reads its 32 columns from the canonical census fixture
+//! (`the-census`, 1,000 seeds, `metrics: "all"`) instead of its own
+//! retired study/fixture pair; ADR 0016 pins are unchanged (same seeds,
+//! same values — Task 4's equivalence check proved the columns identical).
 use hornvale_lab::{
     MetricValue, RunResult, canonical_row, load_rows, load_study, record_failure, run,
 };
 use std::path::Path;
 use std::sync::LazyLock;
 
-/// The 1,000-seed family-battery census, loaded ONCE from its committed
+/// The 1,000-seed canonical census, loaded ONCE from its committed
 /// `rows.csv` fixture and shared by every calibration in this file (mirrors
 /// `calibration.rs`'s `DRIFT`/`MEETING` per decision
-/// `calibration-loads-the-census-fixture`). The fixture is published by
+/// 0032). The fixture is published by
 /// `lab run` and regenerated + drift-checked in CI's "Artifacts are current"
 /// step; `branches_fixture_matches_live_run` below pins fixture == live.
-/// Loading instead of recomputing keeps the ~209s (debug) sweep off every
+/// Loading instead of recomputing keeps the full live sweep off every
 /// local `cargo test`. Init panics on a load error (a test-setup failure,
 /// not a calibration).
 static BRANCHES: LazyLock<RunResult> = LazyLock::new(|| {
-    let study = load_study(Path::new("../../studies/branches-family.study.json"))
-        .expect("load branches-family study");
-    let csv =
-        std::fs::read_to_string("../../book/src/laboratory/generated/branches-family/rows.csv")
-            .expect("read branches-family fixture");
-    load_rows(&study, &csv).expect("reconstruct branches-family census from fixture")
+    let study = load_study(Path::new("../../studies/the-census.study.json"))
+        .expect("load the-census study");
+    let csv = std::fs::read_to_string("../../book/src/laboratory/generated/the-census/rows.csv")
+        .expect("read the-census fixture");
+    load_rows(&study, &csv).expect("reconstruct the-census from fixture")
 });
 
-/// Guard — ignored by default because it pays the full ~209s (debug) sweep:
-/// the committed fixture reconstructs *exactly* what a live `run` produces,
-/// so every other test in this file may trust the fixture. Run it after
+/// Guard — ignored by default because it pays the full live sweep: the
+/// committed fixture reconstructs *exactly* what a live `run` produces, so
+/// every other test in this file may trust the fixture. Run it after
 /// regenerating the fixture, or explicitly:
 /// `cargo test -p hornvale-lab --test branches_family_calibration -- --ignored`.
 #[test]
-#[ignore = "runs the full ~209s (debug) family sweep; the fixture is drift-checked in CI"]
+#[ignore = "runs the full live census sweep; the fixture is drift-checked in CI"]
 fn branches_fixture_matches_live_run() {
-    let study = load_study(Path::new("../../studies/branches-family.study.json"))
-        .expect("load branches-family study");
-    let live = run(&study).expect("run branches-family study");
+    let study = load_study(Path::new("../../studies/the-census.study.json"))
+        .expect("load the-census study");
+    let live = run(&study).expect("run the-census study");
     // Canonicalize live Numbers before comparing: the fixture's floats passed
     // the quantizing serialization boundary (`render_csv`), the live run's
     // have not (shared helper: `hornvale_lab::canonical_row`).
@@ -45,14 +48,13 @@ fn branches_fixture_matches_live_run() {
         metric_names: live.metric_names.clone(),
         rows: live.rows.iter().map(canonical_row).collect(),
     };
-    let csv =
-        std::fs::read_to_string("../../book/src/laboratory/generated/branches-family/rows.csv")
-            .expect("read branches-family fixture");
+    let csv = std::fs::read_to_string("../../book/src/laboratory/generated/the-census/rows.csv")
+        .expect("read the-census fixture");
     let loaded = load_rows(&study, &csv).expect("reconstruct census from fixture");
     assert_eq!(
         loaded, live,
         "fixture diverged from a live run — regenerate with \
-         `lab run studies/branches-family.study.json`"
+         `lab run studies/the-census.study.json`"
     );
 }
 
@@ -292,10 +294,17 @@ fn homophony_count_is_measured_and_pinned() {
     // code — the L6 terrain relocates settlements and reshapes each people's
     // naming draws, shifting the family homophony means (was goblin 2.589,
     // hobgoblin 1.631, bugbear 6.765, kobold 2.454).
-    assert!((mg - 2.702).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 1.638).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 6.818).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 2.509).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // libm (decision 0041, 2026-07-13): kobold re-pinned 2.509 -> 2.501; the
+    // other three are unchanged to 1e-9 (Apple libm == crate libm there).
+    // Census regen (2026-07-14, the-gathering + night-sky, 1000-seed
+    // `the-census`): goblin re-pinned 2.702 -> 2.273, hobgoblin 1.638 ->
+    // 1.989, bugbear 6.818 -> 8.047, kobold 2.501 -> 2.384 (the-gathering's
+    // field condensation shifts which settlements each seed fields, moving
+    // every daughter's periphery homophony draws).
+    assert!((mg - 2.273).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 1.989).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 8.047).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 2.384).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

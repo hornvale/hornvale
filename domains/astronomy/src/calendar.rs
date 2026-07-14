@@ -3,8 +3,10 @@
 //! without that column — truthfully.
 
 use crate::anchor::Rotation;
+use crate::sky_position::{EquatorialCoord, ecliptic_of, equatorial_at};
 use crate::system::StarSystem;
 use crate::units::StdDays;
+use hornvale_kernel::math;
 
 #[cfg(test)]
 mod tests {
@@ -369,7 +371,92 @@ mod tests {
         assert!(cal.moon_phase(StdDays(1.0), 0).is_none());
         assert!(cal.months_per_year(0).is_none());
     }
+
+    /// The exact solar position agrees with the shipped small-angle declination
+    /// at the equinoxes and solstices, and its RA advances a full turn per year.
+    #[test]
+    fn solar_equatorial_agrees_at_the_cardinal_phases() {
+        let pins = SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            obliquity: Some(Degrees::new(23.5).unwrap()),
+            forcing: Some(crate::pins::ForcingPin::Zero),
+            ..SkyPins::default()
+        };
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let year = cal.year_length().get();
+        let at_phase = |p: f64| StdDays((p - cal.forcing.year_phase_offset).rem_euclid(1.0) * year);
+        assert!(cal.solar_equatorial(at_phase(0.0)).dec_deg.abs() < 1e-6);
+        assert!((cal.solar_equatorial(at_phase(0.25)).dec_deg - 23.5).abs() < 1e-6);
+        assert!((cal.solar_equatorial(at_phase(0.25)).ra_deg - 90.0).abs() < 1e-6);
+        assert!((cal.solar_equatorial(at_phase(0.75)).dec_deg + 23.5).abs() < 1e-6);
+    }
+
+    /// SKY-stale-alignments (sky half): precession finally has a reader — a
+    /// star's apparent position drifts between epochs kiloyears apart.
+    #[test]
+    fn star_positions_drift_under_precession() {
+        let cal = calendar_of(&spinning_system());
+        let genesis = crate::sky_position::EquatorialCoord {
+            ra_deg: 10.0,
+            dec_deg: 40.0,
+        };
+        let now = cal.star_equatorial_at(&genesis, StdDays(0.0));
+        let later = cal.star_equatorial_at(&genesis, StdDays(crate::forcing::P_PRECESSION / 4.0));
+        assert!(
+            (now.ra_deg - genesis.ra_deg).abs() < 1e-9,
+            "epoch 0 is the genesis frame"
+        );
+        assert!(
+            (later.ra_deg - now.ra_deg).abs() > 1.0,
+            "RA must drift over kiloyears"
+        );
+    }
+
+    /// The shared twilight thresholds (spec §2): Day above the horizon,
+    /// Twilight to −12°, Night below. Locked worlds have no band.
+    #[test]
+    fn sky_band_partitions_the_day_by_solar_altitude() {
+        let pins = SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            obliquity: Some(Degrees::new(0.0).unwrap()),
+            forcing: Some(crate::pins::ForcingPin::Zero),
+            ..SkyPins::default()
+        };
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let at_fraction =
+            |f: f64| StdDays(10.0 + (f - cal.forcing.day_phase_offset).rem_euclid(1.0));
+        assert_eq!(cal.sky_band(at_fraction(0.5), 0.0), Some(SkyBand::Day));
+        assert_eq!(cal.sky_band(at_fraction(0.0), 0.0), Some(SkyBand::Night));
+        // Just past sunset (fraction 0.76 ≈ sun ~3.6° below on a zero-tilt equator).
+        assert_eq!(
+            cal.sky_band(at_fraction(0.76), 0.0),
+            Some(SkyBand::Twilight)
+        );
+        assert!(
+            calendar_of(&locked_system())
+                .sky_band(StdDays(5.0), 0.0)
+                .is_none()
+        );
+    }
 }
+
+/// The sky's brightness band at a placed moment — the one shared twilight
+/// definition (spec §2): heliacal visibility, the morning/evening star, and
+/// the prose renderer all read this, none owns it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SkyBand {
+    /// The sun is above the horizon.
+    Day,
+    /// The sun is below the horizon but within `TWILIGHT_DEPTH_DEG` of it.
+    Twilight,
+    /// Full dark: the sun is deeper than the twilight band.
+    Night,
+}
+
+/// How far below the horizon the sun still lights the sky, degrees
+/// (model card; the classical astronomical-twilight midpoint).
+/// type-audit: pending(wave-1)
+pub const TWILIGHT_DEPTH_DEG: f64 = 12.0;
 
 /// A world's cycles, derived once from its star system.
 #[derive(Debug, Clone, PartialEq)]
@@ -437,8 +524,8 @@ impl Calendar {
         let obliquity = self.forcing.obliquity_at(t.0);
         let ecc = self.forcing.eccentricity_at(t.0);
         let phase = self.year_phase(t);
-        let tilt_term = (obliquity / 90.0) * 0.5 * (std::f64::consts::TAU * phase).sin();
-        let apsidal_term = ecc * 0.5 * (std::f64::consts::TAU * phase).sin();
+        let tilt_term = (obliquity / 90.0) * 0.5 * math::sin(std::f64::consts::TAU * phase);
+        let apsidal_term = ecc * 0.5 * math::sin(std::f64::consts::TAU * phase);
         Some((0.5 + tilt_term + apsidal_term).clamp(0.0, 1.0))
     }
     /// Daylight fraction of the local day at a latitude (SKY-8): the standard
@@ -452,13 +539,13 @@ impl Calendar {
         // Solar declination: the sub-solar latitude oscillates over the year,
         // its amplitude the (time-varying) obliquity.
         let obliquity = self.forcing.obliquity_at(t.0).to_radians();
-        let declination = obliquity * (std::f64::consts::TAU * self.year_phase(t)).sin();
+        let declination = obliquity * math::sin(std::f64::consts::TAU * self.year_phase(t));
         let phi = latitude.to_radians();
         // cos H0 = −tan φ · tan δ; the clamp yields polar day (−1 → H0 = π,
         // fraction 1) and polar night (1 → H0 = 0, fraction 0) past the polar
         // circles.
-        let cos_h0 = (-phi.tan() * declination.tan()).clamp(-1.0, 1.0);
-        Some(cos_h0.acos() / std::f64::consts::PI)
+        let cos_h0 = (-math::tan(phi) * math::tan(declination)).clamp(-1.0, 1.0);
+        Some(math::acos(cos_h0) / std::f64::consts::PI)
     }
     /// The sub-solar latitude at `t`, in degrees (SKY-7): the solar
     /// declination, oscillating over the year with amplitude the
@@ -466,7 +553,7 @@ impl Calendar {
     /// daylight model already uses.
     /// type-audit: pending(wave-1)
     pub fn solar_declination(&self, t: StdDays) -> f64 {
-        self.forcing.obliquity_at(t.0) * (std::f64::consts::TAU * self.year_phase(t)).sin()
+        self.forcing.obliquity_at(t.0) * math::sin(std::f64::consts::TAU * self.year_phase(t))
     }
 
     /// Hour angle (radians, 0 at local solar noon), declination and
@@ -491,9 +578,11 @@ impl Calendar {
     pub fn solar_altitude_at(&self, t: StdDays, latitude: f64) -> Option<f64> {
         let (h, delta, phi) = self.solar_geometry(t, latitude)?;
         Some(
-            (phi.sin() * delta.sin() + phi.cos() * delta.cos() * h.cos())
-                .asin()
-                .to_degrees(),
+            math::asin(
+                math::sin(phi) * math::sin(delta)
+                    + math::cos(phi) * math::cos(delta) * math::cos(h),
+            )
+            .to_degrees(),
         )
     }
 
@@ -506,7 +595,10 @@ impl Calendar {
         let (h, delta, phi) = self.solar_geometry(t, latitude)?;
         // atan2 form measured from south, westward positive; shift to
         // compass convention.
-        let from_south = h.sin().atan2(h.cos() * phi.sin() - delta.tan() * phi.cos());
+        let from_south = math::atan2(
+            math::sin(h),
+            math::cos(h) * math::sin(phi) - math::tan(delta) * math::cos(phi),
+        );
         Some((from_south.to_degrees() + 180.0).rem_euclid(360.0))
     }
 
@@ -550,5 +642,56 @@ impl Calendar {
     pub fn months_per_year(&self, index: usize) -> Option<f64> {
         let synodic = self.synodic_month(index)?;
         Some(self.year.0 / synodic.0)
+    }
+
+    /// Degrees the equinox has precessed since genesis (epoch 0) — the first
+    /// reader `precession_at` has ever had.
+    /// type-audit: pending(wave-1)
+    pub fn precession_offset_deg(&self, t: StdDays) -> f64 {
+        (self.forcing.precession_at(t.0) - self.forcing.precession_at(0.0)).to_degrees()
+    }
+
+    /// The sun's equatorial position at `t` (exact spherical form; the shipped
+    /// small-angle `solar_declination` is the coarse tier of the same object).
+    pub fn solar_equatorial(&self, t: StdDays) -> EquatorialCoord {
+        let lam = (360.0 * self.year_phase(t)).to_radians();
+        let e = self.forcing.obliquity_at(t.0).to_radians();
+        EquatorialCoord {
+            ra_deg: math::atan2(math::sin(lam) * math::cos(e), math::cos(lam))
+                .to_degrees()
+                .rem_euclid(360.0),
+            dec_deg: math::asin(math::sin(e) * math::sin(lam)).to_degrees(),
+        }
+    }
+
+    /// A fixed star's apparent equatorial position at `t`: genesis coordinates
+    /// through the genesis ecliptic, drifted by precession, re-projected at the
+    /// epoch's obliquity.
+    pub fn star_equatorial_at(&self, genesis: &EquatorialCoord, t: StdDays) -> EquatorialCoord {
+        let ecl = ecliptic_of(genesis, self.forcing.obliquity_at(0.0));
+        equatorial_at(
+            &ecl,
+            self.forcing.obliquity_at(t.0),
+            self.precession_offset_deg(t),
+        )
+    }
+
+    /// The sky band at `t` for an observer at `latitude`; `None` on a
+    /// locked world, which has no solar hour.
+    /// type-audit: pending(wave-1: latitude)
+    pub fn sky_band(&self, t: StdDays, latitude: f64) -> Option<SkyBand> {
+        let alt = self.solar_altitude_at(t, latitude)?;
+        Some(if alt > 0.0 {
+            SkyBand::Day
+        } else if alt > -TWILIGHT_DEPTH_DEG {
+            SkyBand::Twilight
+        } else {
+            SkyBand::Night
+        })
+    }
+    /// Whether the world spins retrograde (west to east).
+    /// type-audit: bare-ok(flag)
+    pub fn is_retrograde(&self) -> bool {
+        self.retrograde
     }
 }

@@ -27,7 +27,7 @@ It is the scannable index of every speculative idea the project holds.
 
 The frontier essays and the idea registry live at `book/src/frontier/` —
 the book's one clearly-marked speculative part (decision
-`the-frontier-is-published-in-the-book`). Their editing discipline (IDs are
+0031). Their editing discipline (IDs are
 permanent, ToC completeness, status flips, link conventions) lives beside
 them in [`book/src/frontier/CLAUDE.md`](../book/src/frontier/CLAUDE.md).
 The old `docs/vision/` paths hold redirect stubs so historical links
@@ -35,8 +35,8 @@ resolve; do not add new content under `docs/vision/`.
 
 ## The drift-check enforces the above
 
-`cli/tests/docs_consistency.rs` runs inside the normal `cargo test --workspace`
-gate and asserts three invariants:
+`cli/tests/docs_consistency.rs` runs inside the normal commit gate (`make
+gate`, via `cargo nextest run --workspace`) and asserts three invariants:
 
 1. every `## ` section in the frontier is listed in the Contents ToC;
 2. registry IDs are unique;
@@ -59,7 +59,7 @@ deliberately and say why, exactly as with any other invariant.)
 
 - **The book's merged-reality contract is per-part.** The frontier and
   registry are published as the book's clearly-marked Frontier part
-  (decision `the-frontier-is-published-in-the-book`); every other part of
+  (decision 0031); every other part of
   the book describes merged reality — do not surface speculative material
   anywhere else in `book/`, and do not cite registry IDs outside
   `book/src/frontier/` (the drift-check enforces this). Specs, plans, and

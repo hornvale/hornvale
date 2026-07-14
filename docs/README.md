@@ -43,7 +43,7 @@ An idea moves left to right; the store that owns it changes as it matures.
 
 (The registry and frontier live in the book — `book/src/frontier/`, the
 published Frontier part — since decision
-`the-frontier-is-published-in-the-book`; the pipeline itself is unchanged.)
+0031; the pipeline itself is unchanged.)
 
 The registry entry never dies — as an idea drains rightward, its **row flips
 status and its pointer follows** (`elaborated` → `spec'd` → `shipped`). The
@@ -88,7 +88,14 @@ mass without amnesia.
   a holding pen, not an archive.
 - **The book's merged-reality contract is per-part.** The frontier and
   registry are published as the book's marked Frontier part (decision
-  `the-frontier-is-published-in-the-book`); every other part of the book is
+  0031); every other part of the book is
   merged reality. Specs, plans, and decisions stay in `docs/`.
 - **Definition of Done** for a merged campaign includes a chronicle entry, a
   book freshness sweep, and a retrospective (decisions 0013, 0020).
+- **Non-workspace dev tools** analyze committed artifacts without joining
+  the crate graph (decisions 0027/0028): `tools/type-audit/` checks every
+  `pub`-boundary primitive carries a unit-typing verdict; `tools/census/` —
+  the census analysis harness — mounts DuckDB views over every committed
+  `rows.csv`+`schema.json` pair, git-history longitudinal extraction, and
+  canned explore/calibrate queries (`make census`, `make census-query`,
+  `make census-history`, `make census-check`).

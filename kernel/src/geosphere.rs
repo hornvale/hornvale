@@ -5,6 +5,7 @@
 //! `Field`. This is the spatial substrate the terrain and climate domains
 //! compute over.
 
+use crate::math;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Identifier for a cell — an index into the mesh's vertices.
@@ -239,14 +240,45 @@ impl Geosphere {
     pub fn coord(&self, id: CellId) -> GeoCoord {
         let [x, y, z] = self.positions[id.0 as usize];
         GeoCoord {
-            latitude: z.asin().to_degrees(),
-            longitude: y.atan2(x).to_degrees(),
+            latitude: math::asin(z).to_degrees(),
+            longitude: math::atan2(y, x).to_degrees(),
         }
     }
 
     /// The cells adjacent to `id`, in ascending `CellId` order.
     pub fn neighbors(&self, id: CellId) -> &[CellId] {
         &self.neighbors[id.0 as usize]
+    }
+
+    /// Bounded breadth-first hop distance between two cells over the neighbour
+    /// graph. `Some(hops)` if `b` is within `max` hops of `a` (0 if `a == b`),
+    /// else `None`. Integer-only, deterministic (no transcendentals).
+    /// type-audit: bare-ok(count)
+    pub fn hops_between(&self, a: CellId, b: CellId, max: u32) -> Option<u32> {
+        if a == b {
+            return Some(0);
+        }
+        let mut visited: std::collections::BTreeSet<CellId> = std::collections::BTreeSet::new();
+        visited.insert(a);
+        let mut frontier: Vec<CellId> = vec![a];
+        for depth in 1..=max {
+            let mut next: Vec<CellId> = Vec::new();
+            for &c in &frontier {
+                for &n in self.neighbors(c) {
+                    if n == b {
+                        return Some(depth);
+                    }
+                    if visited.insert(n) {
+                        next.push(n);
+                    }
+                }
+            }
+            if next.is_empty() {
+                break;
+            }
+            frontier = next;
+        }
+        None
     }
 }
 
@@ -287,7 +319,11 @@ impl NearestCellIndex {
     /// type-audit: pending(wave-1)
     pub fn nearest(&self, geo: &Geosphere, latitude: f64, longitude: f64) -> CellId {
         let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
-        let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+        let target = [
+            math::cos(lat) * math::cos(lon),
+            math::cos(lat) * math::sin(lon),
+            math::sin(lat),
+        ];
         let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
         let lo = band.saturating_sub(1);
         let hi = (band + 1).min(BAND_COUNT - 1);
@@ -310,7 +346,7 @@ impl NearestCellIndex {
     /// this returns that exact vertex (self-dot = 1.0 wins).
     /// type-audit: pending(wave-1)
     pub fn nearest_to_position(&self, geo: &Geosphere, pos: [f64; 3]) -> CellId {
-        let latitude = pos[2].asin().to_degrees();
+        let latitude = math::asin(pos[2]).to_degrees();
         let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
         let lo = band.saturating_sub(1);
         let hi = (band + 1).min(BAND_COUNT - 1);
@@ -368,6 +404,26 @@ mod tests {
                 "cell {id:?} not unit-length: {len}"
             );
         }
+    }
+
+    #[test]
+    fn hops_between_is_bounded_bfs() {
+        let geo = Geosphere::new(5);
+        let c = geo.cells().next().unwrap();
+        let n = geo.neighbors(c)[0];
+        assert_eq!(geo.hops_between(c, c, 3), Some(0));
+        assert_eq!(geo.hops_between(c, n, 3), Some(1));
+        assert_eq!(
+            geo.hops_between(c, n, 0),
+            None,
+            "neighbour is beyond a 0-hop bound"
+        );
+        let two = *geo
+            .neighbors(n)
+            .iter()
+            .find(|&&x| x != c && !geo.neighbors(c).contains(&x))
+            .expect("a 2-hop cell exists");
+        assert_eq!(geo.hops_between(c, two, 3), Some(2));
     }
 
     #[test]
@@ -477,7 +533,11 @@ mod tests {
         for (latitude, longitude) in [(0.0, 0.0), (89.0, 10.0), (-89.0, -170.0), (45.5, 179.5)] {
             let banded = index.nearest(&geo, latitude, longitude);
             let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
-            let target = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()];
+            let target = [
+                super::math::cos(lat) * super::math::cos(lon),
+                super::math::cos(lat) * super::math::sin(lon),
+                super::math::sin(lat),
+            ];
             let mut best = CellId(0);
             let mut best_dot = f64::NEG_INFINITY;
             for cell in geo.cells() {

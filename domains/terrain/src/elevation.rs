@@ -34,7 +34,7 @@ use crate::boundaries::{BoundaryKind, CellBoundary};
 use crate::pins::TerrainPins;
 use crate::plates::{Plate, dot, unit_vector};
 use crate::streams;
-use hornvale_kernel::{CellId, CellMap, Geosphere, Seed};
+use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed, math};
 
 /// Airy isostasy: meters of elevation per kilometer of crust thickness.
 /// type-audit: pending(wave-2)
@@ -104,8 +104,9 @@ const HOTSPOT_SIGMA_RAD: f64 = 0.05;
 impl Hotspot {
     /// Gaussian dome contribution at a unit-sphere position, meters.
     fn contribution_m(&self, position: [f64; 3]) -> f64 {
-        let angle = dot(self.position, position).clamp(-1.0, 1.0).acos();
-        self.strength_m * (-(angle * angle) / (2.0 * HOTSPOT_SIGMA_RAD * HOTSPOT_SIGMA_RAD)).exp()
+        let angle = math::acos(dot(self.position, position).clamp(-1.0, 1.0));
+        self.strength_m
+            * math::exp(-(angle * angle) / (2.0 * HOTSPOT_SIGMA_RAD * HOTSPOT_SIGMA_RAD))
     }
 }
 
@@ -144,7 +145,7 @@ fn assemble_elevation(
     hotspots: &[Hotspot],
     crust: &CellMap<f64>,
     continental: &CellMap<bool>,
-) -> CellMap<f64> {
+) -> CellMap<ReferenceElevation> {
     CellMap::from_fn(geo, |cell| {
         let plate = &plates[*plate_of.get(cell) as usize];
         let cell_continental = *continental.get(cell);
@@ -163,12 +164,13 @@ fn assemble_elevation(
                 amplitude
                     * (contact.magnitude / MAX_CLOSING_SPEED)
                     * factor
-                    * (-f64::from(distance) / decay_cells).exp()
+                    * math::exp(-f64::from(distance) / decay_cells)
             }
         };
         let position = geo.position(cell);
         let hotspot_term: f64 = hotspots.iter().map(|h| h.contribution_m(position)).sum();
-        base + boundary_term + hotspot_term + CELL_EPSILON_M * f64::from(cell.0)
+        let metres = base + boundary_term + hotspot_term + CELL_EPSILON_M * f64::from(cell.0);
+        ReferenceElevation::new(metres).expect("isostatic elevation is finite")
     })
 }
 
@@ -176,7 +178,7 @@ fn assemble_elevation(
 /// the nearest same-plate boundary's contribution decayed by graph distance
 /// and shaped by maturity, drawn hotspots, and a strict-ordering
 /// micro-epsilon.
-/// type-audit: bare-ok(index: plate_of), bare-ok(count: distances), waiver(crust-km-convention: crust), bare-ok(flag: continental), waiver(elevation-convention: return)
+/// type-audit: bare-ok(index: plate_of), bare-ok(count: distances), waiver(crust-km-convention: crust), bare-ok(flag: continental)
 #[allow(clippy::too_many_arguments)]
 pub fn generate_elevation(
     terrain_seed: Seed,
@@ -187,7 +189,7 @@ pub fn generate_elevation(
     distances: &CellMap<Option<(u32, CellId)>>,
     crust: &CellMap<f64>,
     continental: &CellMap<bool>,
-) -> CellMap<f64> {
+) -> CellMap<ReferenceElevation> {
     let hotspots = draw_hotspots(terrain_seed);
     assemble_elevation(
         geo,
@@ -240,10 +242,13 @@ pub fn resolve_ocean_fraction(
 /// iteration 3') and shared with `crust::draw_cratons`. Sort uses
 /// `total_cmp` — elevations are finite and strictly ordered by
 /// construction.
-/// type-audit: waiver(elevation-convention: elevation), pending(wave-2: return), bare-ok(ratio: target)
-pub fn derive_sea_level(elevation: &CellMap<f64>, target: f64) -> f64 {
-    let mut sorted: Vec<f64> = elevation.iter().map(|(_, e)| *e).collect();
-    sorted.sort_by(|a, b| a.total_cmp(b));
+/// type-audit: bare-ok(ratio: target)
+pub fn derive_sea_level(
+    elevation: &CellMap<ReferenceElevation>,
+    target: f64,
+) -> ReferenceElevation {
+    let mut sorted: Vec<ReferenceElevation> = elevation.iter().map(|(_, e)| *e).collect();
+    sorted.sort_by(|a, b| a.total_cmp(*b));
     let index = ((target * sorted.len() as f64) as usize).min(sorted.len() - 1);
     sorted[index]
 }
@@ -285,7 +290,7 @@ pub fn generate_unrest(
         let raw = intensity(contact.kind)
             * (contact.magnitude / MAX_CLOSING_SPEED)
             * youth
-            * (-f64::from(distance) / UNREST_DECAY_CELLS).exp();
+            * math::exp(-f64::from(distance) / UNREST_DECAY_CELLS);
         raw.clamp(0.0, 1.0)
     })
 }
@@ -353,7 +358,9 @@ mod tests {
             &crust,
             &continental,
         );
-        let mut peak = f64::NEG_INFINITY;
+        // f64::MIN (not NEG_INFINITY, which the validating constructor
+        // rejects) as a sentinel below every real elevation.
+        let mut peak = ReferenceElevation::new(f64::MIN).expect("sentinel is finite");
         for (cell, contact) in boundaries.iter() {
             if let Some(c) = contact
                 && c.kind == BoundaryKind::ContinentalCollision
@@ -361,13 +368,13 @@ mod tests {
                 peak = peak.max(*elevation.get(cell));
             }
         }
-        assert!(peak > 3000.0, "collision peak {peak} too low");
+        assert!(peak.get() > 3000.0, "collision peak {} too low", peak.get());
         let base = isostatic_m(TEST_CRUST_KM);
         for (cell, entry) in distances.iter() {
             if let Some((distance, _)) = entry
                 && *distance >= 8
             {
-                let e = *elevation.get(cell);
+                let e = elevation.get(cell).get();
                 assert!(
                     (e - base).abs() < 100.0,
                     "cell {} interior elevation {e} strays from base {base}",

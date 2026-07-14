@@ -1,9 +1,11 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  # Manual-only (decision 0042): a solo project whose dev machine outpaces the
+  # free 2-core runners, so per-push CI added latency without value. The local
+  # gate + the AWS Linux runs (scripts/aws-gate/) are the gates; run this by
+  # hand (Actions tab -> Run workflow) for an on-demand Linux check.
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -27,20 +29,24 @@ jobs:
           # Regenerate every committed generated artifact via the single
           # source of truth `make rebaseline` also calls, so CI and local
           # regeneration cannot silently diverge (TOOL-15). Generation only;
-          # the verification tail below stays here.
-          bash scripts/regenerate-artifacts.sh
+          # the verification tail below stays here. SKIP_CENSUS=1: the full
+          # 1000-world censuses take ~1-2 h on a 2-core runner and are
+          # author-time evidence; per-push CI cross-platform-checks them with a
+          # fast seed probe instead (cross-platform drift is systematic).
+          SKIP_CENSUS=1 bash scripts/regenerate-artifacts.sh
+          bash scripts/ci-census-probe.sh
           # Verification tail (not artifact generation). The debug/release
           # cross-check ratifies that both build byte-identical worlds before
           # we trust the release-mode censuses the script ran; only the
           # 500-seed drift family is regenerated (10k censuses are author-time-
-          # only — decision ci-checks-500-seed-censuses). The type-audit check
+          # only — decision 0029). The type-audit check
           # is default-deny over pub-boundary primitives (its report is
           # regenerated inside the script).
           cargo test -p hornvale --test release_determinism -- --ignored
           cargo run --manifest-path tools/type-audit/Cargo.toml -- check
           # Canonical numeric artifacts are byte-identical across platforms
           # (floats quantized at every serialization boundary — decision
-          # serialized-floats-are-quantized-for-cross-platform-determinism), so
+          # 0033), so
           # they are strictly drift-checked. The PNG maps and scene/tiles are
           # *rendered per-cell views*: their pixel colors / biome indices come
           # from classifications thresholded on the host libm's last-ULP-
@@ -50,7 +56,8 @@ jobs:
           # world.json and the censuses).
           git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ clients/orrery/testdata/ docs/audits/ \
             ':(exclude)book/src/gallery/*.png' \
-            ':(exclude)book/src/gallery/scene-tiles-seed-42.json'
+            ':(exclude)book/src/gallery/scene-tiles-seed-42.json' \
+            ':(exclude)book/src/reference/locale-seed-42.json'
 
   atlas:
     name: Atlas client
@@ -99,3 +106,42 @@ jobs:
         run: |
           deno task build
           git diff --exit-code ../../book/src/gallery/orrery.js
+
+  vessel:
+    name: Vessel client (the Casement)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.2"
+      - name: Format
+        run: deno fmt --check
+        working-directory: clients/vessel
+      - name: Lint
+        run: deno lint
+        working-directory: clients/vessel
+      - name: Typecheck
+        run: deno task check
+        working-directory: clients/vessel
+      - name: Test
+        run: deno task test
+        working-directory: clients/vessel
+      - name: Bundles are current (freshness check)
+        run: |
+          deno task build
+          git diff --exit-code ../../book/src/gallery/vessel.js ../../book/src/gallery/vessel-worker.js
+        working-directory: clients/vessel
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: clients/vessel/wasm
+      - name: Wasm format + lint
+        run: |
+          cargo fmt --check --manifest-path clients/vessel/wasm/Cargo.toml
+          rustup target add wasm32-unknown-unknown
+          cargo clippy --manifest-path clients/vessel/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+      - name: Build the wasm
+        run: make wasm-vessel
+      - name: Byte-identity smoke (wasm opening == committed native transcript)
+        run: node clients/vessel/wasm/drive.mjs book/src/gallery/vessel.wasm
