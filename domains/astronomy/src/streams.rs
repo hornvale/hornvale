@@ -42,3 +42,9 @@ pub const SPIN_DIRECTION: &str = "spin-direction";
 /// Per-moon orbital-inclination draws (SKY-6).
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_INCLINATIONS: &str = "moon-inclinations";
+/// Wanderer count draw.
+/// type-audit: bare-ok(identifier-text)
+pub const WANDERER_COUNT: &str = "wanderer-count";
+/// Per-wanderer parameter draws (one stream reused across attempts).
+/// type-audit: bare-ok(identifier-text)
+pub const WANDERERS: &str = "wanderers";

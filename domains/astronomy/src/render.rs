@@ -652,6 +652,7 @@ mod tests {
                 day_phase_offset: 0.0,
                 moon_phase_offsets: vec![0.0],
             },
+            wanderers: vec![],
         }
     }
 

@@ -18,6 +18,7 @@ pub mod star;
 pub mod streams;
 pub mod system;
 pub mod units;
+pub mod wanderers;
 
 pub use anchor::{Anchor, Rotation, generate_anchor};
 pub use calendar::{Calendar, SkyBand, TWILIGHT_DEPTH_DEG, calendar_of};
@@ -39,6 +40,7 @@ pub use units::{
     Au, Degrees, EarthMasses, HabitableZone, LightYears, LocalDays, LunarMasses, Megameters,
     SolarLuminosities, SolarMasses, StdDays, UnitError,
 };
+pub use wanderers::{Wanderer, WandererClass, generate_wanderers};
 
 use hornvale_kernel::{
     ConceptKind, ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, RegistryError,
@@ -82,6 +84,11 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "astronomy/moon-inclinations",
             "per-moon orbital-inclination draws",
+        ),
+        ("astronomy/wanderer-count", "how many wandering planets"),
+        (
+            "astronomy/wanderers",
+            "per-wanderer orbit/class draws (sequential attempts)",
         ),
     ]
 }
