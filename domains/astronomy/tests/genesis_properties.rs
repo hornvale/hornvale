@@ -458,6 +458,32 @@ fn neighbor_pin_does_not_move_any_star() {
     assert_eq!(a, b);
 }
 
+/// Eclipse Seasons pin isolation: pinning the moon count consumes node
+/// draws identically to the unpinned path — a pinned world with the same
+/// admitted moons carries byte-identical node longitudes.
+#[test]
+fn pinned_moon_counts_draw_identical_node_longitudes() {
+    for seed in 0..32u64 {
+        let unpinned = generate(Seed(seed), &SkyPins::default()).unwrap().system;
+        let n = unpinned.moons.len() as u32;
+        if n == 0 {
+            continue;
+        }
+        let pins = SkyPins {
+            moons: Some(MoonsPin::exact(n).unwrap()),
+            ..SkyPins::default()
+        };
+        let pinned = generate(Seed(seed), &pins).unwrap().system;
+        let a: Vec<f64> = unpinned
+            .moons
+            .iter()
+            .map(|m| m.node_longitude_deg)
+            .collect();
+        let b: Vec<f64> = pinned.moons.iter().map(|m| m.node_longitude_deg).collect();
+        assert_eq!(a, b, "seed {seed}");
+    }
+}
+
 /// SKY-23 close-out, star battery: over 256 seeds, the drawn mass stays
 /// in range and every derivation is monotone in it (luminosity, HZ,
 /// brightening).

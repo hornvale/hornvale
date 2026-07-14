@@ -375,6 +375,7 @@ mod tests {
                 angular_diameter_rel: 1.0,
                 tide_rel: 1.0,
                 inclination_deg: 5.14,
+                node_longitude_deg: 0.0,
             }],
             neighbors: vec![],
             forcing: crate::forcing::OrbitalForcing {

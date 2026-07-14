@@ -219,10 +219,27 @@ while the habitable zone stays a genesis-epoch derivation); the
 solstice-rise azimuth as cos az = sin ε(t)/cos φ, refraction and horizon
 dip ignored; seasonal daylight as a
 smooth sinusoid in obliquity and year phase; neighbor stars observational-only
-(no gravity, no radiation); eclipses shipped (each moon's drawn orbital
-inclination gates a total-vs-annular verdict on a derived node beat), but
-without nodal precession, so today's recurrence is a rate, not a dated
-occurrence, and lunar eclipses remain unbuilt; the Milankovitch drift laws themselves (slow
+(no gravity, no radiation); as of Eclipse Seasons, dated solar and lunar
+eclipses read off a regressing node line — the nodal regression period from
+the lunar-theory leading term, `P_node = (4/3)·Y²/(P_sid·cos i)` (Earth
+check: ~17.9 yr against the true 18.61, the leading term alone, no higher
+harmonics); the moon's ecliptic latitude at any syzygy from the small-angle
+inclined-orbit form, `β = i·sin(L_moon − Ω)`; the event-time sun's angular
+size from a first-order apsidal scaling of the mean diameter, evaluated
+live rather than cached; the lunar shadow threshold as a declared fraction
+of the solar one (`LUNAR_SHADOW_FACTOR = 0.64`, Luna–Sol-calibrated to
+~1.5 umbral lunar eclipses/year, shipped untuned); a solar eclipse's ground
+track, whose center latitude maps the ecliptic-latitude miss onto the
+sub-solar latitude and whose half-width is a declared constant
+(`TRACK_HALF_WIDTH_DEG = 2.0`); and the recurrence ladder — draconic month,
+eclipse year (Luna check ≈ 346 days), the best synodic/draconic
+near-commensurability up to 300 synodic months (fed TRUE Luna inputs the
+search recovers the saros, 223 synodic ≈ 242 draconic ≈ 6585.3 days, though
+a generated world's own derived node period may honestly land its best
+cycle on an octon-class commensurability instead), how many returns a
+cycle's family survives before the drifting node walks it out of the
+eclipse window, and the parade — how many days a year the eclipse seasons
+migrate backward through the calendar (Luna check ≈ 19); the Milankovitch drift laws themselves (slow
 sinusoids at fixed, near-real periods, with no coupled climate feedback
 driving them); ever-visible hemisphere culling (a body is up or down with
 the observer's hemisphere, never placed at an altitude); the substellar
@@ -239,7 +256,9 @@ Firm Ground II — each forcing element's mean, amplitude, and phase
 (obliquity's amplitude and phase, eccentricity's mean, amplitude, and phase,
 precession's phase) and each body's genesis phase offset (the year, the
 day, and each moon's), all on their own labeled streams so every draw above
-is untouched.
+is untouched; and — as of Eclipse Seasons — each moon's ascending-node
+longitude, on its own labeled stream (`astronomy/moon-nodes`) appended
+after every existing draw.
 
 Promoting a drawn quantity to a derived one is an **epoch bump**, never a
 silent change — saved worlds must keep the skies they were born under.

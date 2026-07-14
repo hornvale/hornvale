@@ -31,4 +31,7 @@ fn seed_42_default_system_matches_the_pre_retrofit_golden_values() {
 
     assert_eq!(s.neighbors.len(), 5);
     assert_eq!(s.neighbors[0].distance.get(), 68.2322807078267);
+
+    let nodes: Vec<f64> = s.moons.iter().map(|m| m.node_longitude_deg).collect();
+    assert_eq!(nodes, vec![1.5976040701539285, 193.38775501078135]);
 }

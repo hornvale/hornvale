@@ -78,6 +78,7 @@
 - [Single-Craton Hypsometry](./chronicle/single-craton-hypsometry.md)
 - [The Ground](./chronicle/the-ground.md)
 - [The Long Count](./chronicle/the-long-count.md)
+- [Eclipse Seasons](./chronicle/eclipse-seasons.md)
 
 # The Gallery
 
