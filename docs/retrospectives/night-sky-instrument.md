@@ -35,6 +35,20 @@ task thought to test; an unreachable-in-practice edge case still needs an
 explicit guard, because "practically unreachable" is not "provably
 unreachable."
 
+**Implementer-claimed gate results were twice false; pasted evidence is
+the fix that held.** Task 1 shipped reporting "clippy zero warnings" while
+an unused `EclipticCoord` import failed `-D warnings` (fixed `4f642b4`);
+Task 2 shipped missing the `type-audit:` tag on `sky_band`'s latitude
+parameter, failing the default-deny audit (fixed `3849dc9`). Both claims
+were made in good faith — the runs were skipped or stale, not fabricated —
+and both got through because a report *asserting* a gate passed is
+indistinguishable from one where it actually ran. The dispatch discipline
+that stopped the recurrence was requiring pasted command output (the exit
+line, not a summary sentence) per gate in every subsequent brief; no gate
+claim after that change turned out false. Trust the artifact, not the
+assertion — the rule the drift-checked book already applies to generated
+prose, applied to subagent reports.
+
 **Two wrong-checkout near-misses, both caught by the dispatch preamble,
 neither landing in a commit.** Task 2's first edit attempt wrote to the
 main checkout instead of the worktree — the implementer had copied a file

@@ -206,7 +206,23 @@ sidereal period itself; moon angular diameters; relative tidal strengths
 geometry from rotation, obliquity, and season, now resolved to the
 observer's own day/night hemisphere rather than a planet-wide clock; the
 moon-coupling of the obliquity amplitude (a large stabilizing moon damps
-the wobble); latitude daylight from the sunrise equation.
+the wobble); latitude daylight from the sunrise equation; and — as of the
+Night Sky Instrument — each wanderer's orbital period (Kepler III,
+`P = 365.25 · √(a³/M)` from its drawn semi-major axis and the star's mass)
+and its synodic period against the anchor (`1/P_syn = |1/P_w − 1/P_anchor|`);
+every fixed star's *apparent* equatorial position at any epoch (genesis
+coordinates carried through the genesis ecliptic, drifted by the equinox
+offset `Δψ(t) = precession_at(t) − precession_at(0)`, re-projected at the
+epoch's own obliquity); the pole-star verdict (the brightest star within
+10° of either celestial pole — `POLE_STAR_MAX_SEPARATION_DEG` — a
+system-level fact, identical from every latitude); the sky band (Day above
+the horizon, Twilight down to 12° below it — `TWILIGHT_DEPTH_DEG`, the
+classical astronomical-twilight midpoint — Night deeper); and each
+neighbor's heliacal rising and setting fractions, from a 400-sample scan
+of the year against its class's arcus-visionis threshold — 7° for blue
+and red giants, 9° for orange giants and sun-like stars, 11° for white
+and red dwarfs (brighter surfaces cut through brighter twilight; all
+three thresholds sit inside the 12° twilight band).
 
 **Approximated (declared):** circular orbits **at genesis** — every world
 still starts at `t = 0` on a circular orbit, but eccentricity now oscillates
@@ -233,13 +249,7 @@ Firm Ground II — each forcing element's mean, amplitude, and phase
 (obliquity's amplitude and phase, eccentricity's mean, amplitude, and phase,
 precession's phase) and each body's genesis phase offset (the year, the
 day, and each moon's), all on their own labeled streams so every draw above
-is untouched; and — as of the Night Sky Instrument — each wanderer's
-orbital period (Kepler III, from its drawn semi-major axis and the star's
-mass) and synodic period against the anchor, apparent equatorial
-coordinates re-projected each query through `precession_at` and the
-epoch's obliquity (the coordinate/precession model above), and the
-heliacal rising/setting fractions each neighbor gets from a 400-sample
-scan of the year against its class's arcus-visionis threshold.
+is untouched.
 
 Promoting a drawn quantity to a derived one is an **epoch bump**, never a
 silent change — saved worlds must keep the skies they were born under.
@@ -258,15 +268,27 @@ forcing move on kiloyear timescales and cannot flip that classification
 within one year; and the derived starfield and figures are pure
 background texture — sphere-uniform, magnitude-graded, clustered by
 angular separation — never committed, never a genesis draw the way a
-notable neighbor is.
+notable neighbor is. The figure-clustering thresholds are a declared
+**reference-observer convention**, frozen by a 1000-seed census rather
+than picked: a 7.0° single-link separation (`FIGURE_SEPARATION_DEG`), a
+magnitude-class-4 brightness floor for admission
+(`FIGURE_MAGNITUDE_FLOOR`), and a three-member minimum
+(`FIGURE_MIN_MEMBERS`), which the census reads out as a median of 6
+figures per sky, 6.4% of worlds with no figure at all, 66.5% with at
+least one figure straddling the ecliptic, and a largest observed figure
+of 13 members.
 
-**Drawn, added by the Night Sky Instrument:** wanderer count (0–4, drawn or
-pinned via `--wanderers`), each wanderer's region (inner/outer), orbital
-semi-major axis, class (rock or giant), and albedo; the background
-starfield's count (100–300) and each field star's declination, right
-ascension, and magnitude class — all on their own labeled streams
-(`wanderer-count`, `wanderers`, `starfield`), appended after every existing
-draw so no previously generated sky moves.
+**Drawn, added by the Night Sky Instrument:** wanderer count (0–4, at
+authored weights 10/25/30/25/10% for 0 through 4, or pinned via
+`--wanderers`); each wanderer's region (inner at 40%, outer at 60%),
+semi-major axis (inner: uniform over 0.25–0.75 of the anchor's orbit;
+outer: log-uniform over 1.8–20× it), class (inner always rock; outer
+giant 60% / rock 40%), and Bond albedo (uniform 0.1–0.7); the background
+starfield's count (uniform 100–300) and each field star's declination
+(sphere-uniform), right ascension (uniform), and magnitude class (1
+brightest through 5 faintest, dim-heavy at 5/10/20/30/35%) — all on their
+own labeled streams (`wanderer-count`, `wanderers`, `starfield`), appended
+after every existing draw so no previously generated sky moves.
 
 **Derived from placement:** the observer's position — the flagship's cell
 coordinate — is not drawn at all; it falls out of wherever settlement placed

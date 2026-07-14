@@ -214,22 +214,27 @@ fn epoch_drift_moves_the_equinox_referenced_and_spares_the_orbital() {
             }
         }
 
-        // The orbital-mechanical quantities carry no `t` parameter — they
-        // cannot drift with epoch by construction. This pins that contract
-        // against a future regression that threads epoch into them.
-        assert_eq!(
-            calendar.year_length(),
-            calendar.year_length(),
-            "seed {seed}: year_length must be epoch-invariant"
+        // The orbital-mechanical quantities are epoch-free by construction:
+        // neither `year_length()` nor `Wanderer::period` takes a `t`
+        // parameter, so the type system already forbids epoch drift. What
+        // CAN be pinned is the derived relationship itself — each period is
+        // Kepler III of its own orbit and the star's mass, the formula both
+        // anchor.rs and wanderers.rs declare. A future regression that
+        // threads epoch (or anything else) into these derivations breaks
+        // this recomputation.
+        let kepler = |orbit_au: f64| 365.25 * (orbit_au.powi(3) / system.star.mass.get()).sqrt();
+        assert!(
+            (calendar.year_length().get() - kepler(system.anchor.orbit.get())).abs() < 1e-9,
+            "seed {seed}: year_length must be Kepler III of the anchor's orbit"
         );
         assert!(
             !system.wanderers.is_empty(),
             "seed {seed}: wanderers: Some(2) pin must be non-vacuous"
         );
         for (i, w) in system.wanderers.iter().enumerate() {
-            assert_eq!(
-                w.period, w.period,
-                "seed {seed} wanderer {i}: period must be epoch-invariant"
+            assert!(
+                (w.period.get() - kepler(w.orbit.get())).abs() < 1e-9,
+                "seed {seed} wanderer {i}: period must be Kepler III of its orbit"
             );
         }
     }
