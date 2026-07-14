@@ -89,8 +89,9 @@ pub const WANDERER_ORBIT_AU: &str = "wanderer-orbit-au";
 /// one per wanderer, innermost order).
 /// type-audit: bare-ok(identifier-text)
 pub const WANDERER_PERIOD_STD: &str = "wanderer-period-std";
-/// A wanderer's kind: `"rock"` or `"giant"` (non-functional, Text — one per
-/// wanderer, innermost order).
+/// A wanderer's kind: rock or giant (non-functional, Text — deduped to the
+/// distinct kinds present in this sky; NOT zippable 1:1 against wanderer
+/// index — orbit/period facts carry per-wanderer identity).
 /// type-audit: bare-ok(identifier-text)
 pub const WANDERER_CLASS: &str = "wanderer-class";
 
@@ -110,9 +111,10 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
 /// day-length, depending on rotation regime; year length; obliquity;
 /// moon count; one moon-period-std per moon; one notable-neighbor per
 /// neighbor; a pole-star fact (north or south, never both) when the
-/// genesis-epoch night sky finds one; wanderer count plus one
-/// orbit/period/class trio per wanderer, innermost order; one genesis-note
-/// per recorded degradation.
+/// genesis-epoch night sky finds one; wanderer count plus one orbit and
+/// period fact per wanderer (innermost order) and the distinct wanderer
+/// kinds present (class facts dedupe — see [`WANDERER_CLASS`]); one
+/// genesis-note per recorded degradation.
 pub fn genesis(
     world: &mut World,
     subject: EntityId,
