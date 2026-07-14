@@ -17,11 +17,12 @@
 #   make install-hooks# point git at scripts/hooks (opt-in; edits local config)
 #   make gate-remote  # run the gate on this worktree's AWS spot box (scripts/aws-gate/README.md)
 #   make vessel-check  # the Casement's local gate: deno + wasm fmt/clippy + byte-identity smoke
+#   make world-check  # the world catalog's local gate: fmt/clippy + byte-identity smoke + size gate
 #
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast gate-full nextest-check prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check
+.PHONY: help quick gate gate-fast gate-full nextest-check prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check wasm-world world-check
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -144,3 +145,22 @@ vessel-check: wasm-vessel ## The Casement's local gate: deno checks + wasm fmt/c
 	cargo fmt --check --manifest-path clients/vessel/wasm/Cargo.toml
 	cargo clippy --manifest-path clients/vessel/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 	node clients/vessel/wasm/drive.mjs book/src/gallery/vessel.wasm
+
+wasm-world: ## Build the world catalog wasm (external clients consume this; never committed)
+	rustup target add wasm32-unknown-unknown 2>/dev/null || true
+	cargo build --manifest-path clients/world-wasm/Cargo.toml --release --target wasm32-unknown-unknown
+
+world-check: wasm-world ## The catalog's local gate: lint + golden byte-identity smoke + size gate
+	cargo fmt --check --manifest-path clients/world-wasm/Cargo.toml
+	cargo clippy --manifest-path clients/world-wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+	cargo run -p hornvale -- new --seed 42 --out /tmp/hv-wc.json
+	cargo run -p hornvale -- scene system --world /tmp/hv-wc.json > /tmp/hv-wc-system.json
+	cargo run -p hornvale -- scene tiles --world /tmp/hv-wc.json --width 256 > /tmp/hv-wc-tiles.json
+	cargo run -p hornvale -- new --seed 42 --plates 12 --out /tmp/hv-wc-pinned.json
+	cargo run -p hornvale -- scene tiles --world /tmp/hv-wc-pinned.json --width 256 > /tmp/hv-wc-pinned-tiles.json
+	node clients/world-wasm/drive.mjs \
+	  clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm \
+	  /tmp/hv-wc-system.json /tmp/hv-wc-tiles.json 256 /tmp/hv-wc-pinned-tiles.json
+	@size=$$(wc -c < clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm); \
+	  echo "world wasm size: $$size bytes"; \
+	  [ $$size -le 1048576 ] || { echo "SIZE GATE FAILED: > 1 MiB"; exit 1; }

@@ -148,8 +148,15 @@ pub extern "C" fn hw_new(seed: u64) -> i32 {
 /// Build the world for `seed` with pins read as JSON (`len` bytes) from
 /// the input buffer. Returns like `hw_new`, plus -1 (len exceeds the
 /// buffer), -2 (not UTF-8), -3 (bad pins JSON / unknown pin, envelope set).
+///
+/// Clears the prior world *before* parsing, even on the -1/-2/-3 early
+/// returns: any `hw_new*` call invalidates the prior world, full stop —
+/// a caller must never be able to observe a stale world surviving a
+/// refused pinned call.
 #[unsafe(no_mangle)]
 pub extern "C" fn hw_new_pinned(seed: u64, len: usize) -> i32 {
+    let world_ptr = &raw mut WORLD;
+    unsafe { *world_ptr = None };
     let inbuf_ptr = &raw const INBUF;
     let buf = unsafe { &*inbuf_ptr };
     if len > buf.len() {
