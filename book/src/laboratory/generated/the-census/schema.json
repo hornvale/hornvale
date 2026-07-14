@@ -155,6 +155,24 @@
       "rung": "astronomy"
     },
     {
+      "doc": "Number of star figures the reference observer's sky holds",
+      "kind": "categorical",
+      "name": "figure-count",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Member count of the largest star figure (0 if none)",
+      "kind": "categorical",
+      "name": "largest-figure-members",
+      "rung": "astronomy"
+    },
+    {
+      "doc": "Number of star figures standing on the ecliptic (the sun's road)",
+      "kind": "categorical",
+      "name": "ecliptic-figure-count",
+      "rung": "astronomy"
+    },
+    {
       "doc": "The first belief's sentiment tag ('eternal', 'cyclic', or 'ambient'); Absent if no beliefs",
       "kind": "categorical",
       "name": "belief-kind",
@@ -284,6 +302,65 @@
       "doc": "Mean population across every settlement's committed population fact; Absent if there are none",
       "kind": "numeric",
       "name": "mean-population",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        500.0,
+        1000.0,
+        2000.0,
+        4000.0,
+        8000.0
+      ],
+      "doc": "Sum of every settlement's committed population fact; Absent if there are none",
+      "kind": "numeric",
+      "name": "total-population",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        1.0,
+        3.0,
+        5.0,
+        10.0,
+        20.0,
+        40.0,
+        60.0
+      ],
+      "doc": "The carrying-capacity field's headline calibration (design spec §5): the ratio of mean per-land-cell K (summed over the full species roster's individual fields, each species' own psychology folded in) in the low-latitude band (|latitude| < 30) to the polar band (|latitude| > 60), the polar mean floored at POLE_FLOOR (1% of the K formula's baseline unit) so an exactly-zero polar band — the Miami NPP proxy's honest reading of hard cold, not a bug — reports a large-but-bounded ratio rather than a division blowup. A field grounded in the real biomass gradient reads well above 1 here; Absent if either band has no land cells (a wholly ocean or wholly polar world)",
+      "kind": "numeric",
+      "name": "capacity-by-abs-latitude",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        10.0,
+        20.0,
+        30.0,
+        40.0,
+        50.0,
+        60.0
+      ],
+      "doc": "The population-weighted mean absolute latitude across every settlement: Σ(pop·|lat|) / Σ(pop), reading each settlement's committed POPULATION and LATITUDE facts. The area-weighted mean |latitude| on a uniform sphere is ≈32.7°; people concentrating off the poles (design spec §5) should read below that baseline. Absent if there are no settlements with both facts",
+      "kind": "numeric",
+      "name": "pop-weighted-abs-latitude",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        -2.0,
+        -1.5,
+        -1.0,
+        -0.5,
+        0.0,
+        0.5,
+        1.0
+      ],
+      "doc": "The OLS slope of log(population) on log(rank) across every settlement in the world (the classic Zipf rank-size diagnostic). Recorded as an OBSERVED metric only — this campaign's interim per-species condensation is deliberately NOT tuned to a rank-size target (design spec §5; full Zipf calibration is the later MAP-22 coexistence-stack campaign's job, once size is measured by mass and composition is real). Absent if fewer than 2 settlements exist",
+      "kind": "numeric",
+      "name": "rank-size-slope",
       "rung": "settlements"
     },
     {
@@ -1244,7 +1321,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0xcf96234b55e7738e"
+    "fnv1a64": "0x2f403f5809d9ded4"
   },
   "schema_version": 1,
   "study": {
