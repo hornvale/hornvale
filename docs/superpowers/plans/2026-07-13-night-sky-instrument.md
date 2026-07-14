@@ -1,6 +1,6 @@
 # The Night Sky Instrument — Implementation Plan
 
-> **Status: All 11 tasks executed (subagent-driven) 2026-07-14** — the
+> **Status: SHIPPED — merged to main 2026-07-14.** All 11 tasks executed (subagent-driven) — the
 > derivation trio (precession's first reader, `night_sky_at`, heliacal
 > events), wanderers + the `--wanderers` pin, the derived starfield and
 > census-calibrated figures, and the regime × epoch battery all shipped on
