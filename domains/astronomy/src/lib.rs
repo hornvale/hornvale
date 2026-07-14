@@ -15,6 +15,7 @@ pub mod provider;
 pub mod render;
 pub mod sky_position;
 pub mod star;
+pub mod starfield;
 pub mod streams;
 pub mod system;
 pub mod units;
@@ -36,6 +37,7 @@ pub use provider::{
 };
 pub use sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 pub use star::{Star, generate_star, insolation_rel};
+pub use starfield::{FieldStar, starfield};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
     Au, Degrees, EarthMasses, HabitableZone, LightYears, LocalDays, LunarMasses, Megameters,
@@ -87,6 +89,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "astronomy/wanderers",
             "per-wanderer orbit/class draws (sequential attempts)",
+        ),
+        (
+            "astronomy/starfield",
+            "background starfield: count + per-star position/brightness (derived on demand)",
         ),
     ]
 }

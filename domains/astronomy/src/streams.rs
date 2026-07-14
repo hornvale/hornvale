@@ -48,3 +48,6 @@ pub const WANDERER_COUNT: &str = "wanderer-count";
 /// Per-wanderer parameter draws (one stream reused across attempts).
 /// type-audit: bare-ok(identifier-text)
 pub const WANDERERS: &str = "wanderers";
+/// Background starfield draws: count, then per-star position/brightness (derived catalog — consumed on demand, never in genesis).
+/// type-audit: bare-ok(identifier-text)
+pub const STARFIELD: &str = "starfield";
