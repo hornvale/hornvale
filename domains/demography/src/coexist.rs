@@ -12,6 +12,7 @@
 //! coexistence lives at a finite, calibrated `β` between those extremes.
 
 use hornvale_kernel::math::powf;
+use hornvale_kernel::{CellMap, Geosphere};
 use std::collections::BTreeMap;
 
 /// The single-cell overlap-weighted coexistence share for every species in
@@ -168,9 +169,55 @@ pub fn couple_trophic(
     }
 }
 
+/// The soft-capacity overflow → emigration-pressure field: how hard crowding
+/// in one cell pushes population toward its neighbours, the field the
+/// history campaign reads for displacement.
+///
+/// Per cell, the raw overshoot is the logistic excess `max(0, demand -
+/// capacity)` — crowding beyond what the cell's carrying capacity supports;
+/// a cell at or under capacity contributes nothing. That overshoot field is
+/// then **spilled to neighbours by reusing the existing flow hydrology**
+/// ([`crate::flow::flow`]) rather than a new diffusion kernel: `flow` was
+/// built to route a per-cell quantity up-gradient to its locally-highest
+/// neighbour and accumulate it there (originally for population climbing the
+/// K-gradient toward attractors); applied to the overshoot field instead of
+/// K, the same up-gradient walk routes crowding pressure toward the
+/// locally-most-crowded cell in its neighbourhood and accumulates it there,
+/// which is exactly the "spill toward the pressure peak" semantics
+/// emigration pressure needs — a crowded cell's excess concentrates at (and
+/// downstream-accumulates through) local overshoot maxima rather than
+/// vanishing at the cell it originated in. The field returned is that
+/// [`crate::flow::Flow::accumulation`], not the raw overshoot.
+///
+/// type-audit: bare-ok(count: demand), bare-ok(count: capacity), bare-ok(count: return)
+pub fn emigration_pressure(
+    geo: &Geosphere,
+    demand: &CellMap<f64>,
+    capacity: &CellMap<f64>,
+) -> CellMap<f64> {
+    let overshoot = CellMap::from_fn(geo, |c| (demand.get(c) - capacity.get(c)).max(0.0));
+    crate::flow::flow(geo, &overshoot).accumulation
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hornvale_kernel::CellId;
+
+    #[test]
+    fn overflow_is_zero_under_capacity_and_positive_when_crowded() {
+        let geo = Geosphere::new(3);
+        let cap = CellMap::from_fn(&geo, |_| 1.0);
+        let under = CellMap::from_fn(&geo, |_| 0.5);
+        let over = CellMap::from_fn(&geo, |c| if c.0 == 0 { 5.0 } else { 0.5 });
+        let p_under = emigration_pressure(&geo, &under, &cap);
+        let p_over = emigration_pressure(&geo, &over, &cap);
+        assert!(
+            geo.cells().all(|c| *p_under.get(c) == 0.0),
+            "no pressure under capacity"
+        );
+        assert!(*p_over.get(CellId(0)) > 0.0, "crowding makes pressure");
+    }
 
     #[test]
     fn apex_is_capped_by_prey_and_dormant_without_it() {
