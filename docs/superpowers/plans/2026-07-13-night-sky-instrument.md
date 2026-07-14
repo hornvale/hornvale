@@ -315,9 +315,9 @@ impl Calendar {
 }
 ```
 
-- [ ] **Step 4: Provider adoption.** In `provider.rs`, find the placed-night twilight decision (the `let twilight = ...` near line 1026, inside the branch where `ctx.position` is `Some`): replace the daylight-window fraction-margin test with `matches!(self.calendar.sky_band(StdDays(time.day), position.latitude), Some(SkyBand::Twilight))` (the position is the `GeoCoord` already in scope from the SEQ-5 culling match at ~line 1059's pattern; `position.latitude` is a public field). The position-blind path (`ctx.position == None`) keeps `TWILIGHT_MARGIN` unchanged — it is the coarse, place-less tier of the same concept; extend `TWILIGHT_MARGIN`'s doc comment to say so.
+- [ ] **Step 4: Provider adoption — deviation recorded during execution.** provider.rs has no placed twilight decision (`sky_at` is placeless; phenomena culling is ever-visibility, not brightness). SkyBand therefore ships with its thresholds on `Calendar` and the prose path documented as the coarse tier (TWILIGHT_MARGIN doc extension); the first placed consumers are Task 4's heliacal machinery and Task 8's morning/evening star, per spec §2. No provider behavior change; zero fixture drift expected.
 - [ ] **Step 5:** Run the crate suite once: `cargo test -p hornvale-astronomy 2>&1 | tee /tmp/hv-t2.txt`. If any provider prose fixture drifted, update the frozen strings **in this commit** (run-once-capture; inspect `/tmp/hv-t2.txt`, don't re-run to grep).
-- [ ] **Step 6:** Check downstream fixtures: `cargo nextest run --workspace 2>&1 | tee /tmp/hv-t2w.txt`; if seed-42 almanac/gallery artifacts drifted, regenerate (`SKIP_CENSUS=1 scripts/regenerate-artifacts.sh`) and commit the rebaseline together with the code. `cargo fmt`, clippy, commit: `feat(astronomy): SkyBand — twilight thresholds become shared infrastructure (night-sky stage 1)`.
+- [ ] **Step 6:** Check downstream fixtures: `cargo nextest run --workspace 2>&1 | tee /tmp/hv-t2w.txt` — no artifact drift expected (Step 4's deviation means no provider behavior change); if the workspace run shows ANY drift, that's a bug — report it. `cargo fmt`, clippy, commit: `feat(astronomy): SkyBand — twilight thresholds become shared infrastructure (night-sky stage 1)`.
 
 ### Task 3: `NightSky::at` — the unified derived view
 

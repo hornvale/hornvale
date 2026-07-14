@@ -411,7 +411,52 @@ mod tests {
             "RA must drift over kiloyears"
         );
     }
+
+    /// The shared twilight thresholds (spec §2): Day above the horizon,
+    /// Twilight to −12°, Night below. Locked worlds have no band.
+    #[test]
+    fn sky_band_partitions_the_day_by_solar_altitude() {
+        let pins = SkyPins {
+            rotation: Some(RotationPin::PeriodHours(24.0)),
+            obliquity: Some(Degrees::new(0.0).unwrap()),
+            forcing: Some(crate::pins::ForcingPin::Zero),
+            ..SkyPins::default()
+        };
+        let cal = calendar_of(&generate(Seed(42), &pins).unwrap().system);
+        let at_fraction =
+            |f: f64| StdDays(10.0 + (f - cal.forcing.day_phase_offset).rem_euclid(1.0));
+        assert_eq!(cal.sky_band(at_fraction(0.5), 0.0), Some(SkyBand::Day));
+        assert_eq!(cal.sky_band(at_fraction(0.0), 0.0), Some(SkyBand::Night));
+        // Just past sunset (fraction 0.76 ≈ sun ~3.6° below on a zero-tilt equator).
+        assert_eq!(
+            cal.sky_band(at_fraction(0.76), 0.0),
+            Some(SkyBand::Twilight)
+        );
+        assert!(
+            calendar_of(&locked_system())
+                .sky_band(StdDays(5.0), 0.0)
+                .is_none()
+        );
+    }
 }
+
+/// The sky's brightness band at a placed moment — the one shared twilight
+/// definition (spec §2): heliacal visibility, the morning/evening star, and
+/// the prose renderer all read this, none owns it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SkyBand {
+    /// The sun is above the horizon.
+    Day,
+    /// The sun is below the horizon but within `TWILIGHT_DEPTH_DEG` of it.
+    Twilight,
+    /// Full dark: the sun is deeper than the twilight band.
+    Night,
+}
+
+/// How far below the horizon the sun still lights the sky, degrees
+/// (model card; the classical astronomical-twilight midpoint).
+/// type-audit: pending(wave-1)
+pub const TWILIGHT_DEPTH_DEG: f64 = 12.0;
 
 /// A world's cycles, derived once from its star system.
 #[derive(Debug, Clone, PartialEq)]
@@ -629,5 +674,18 @@ impl Calendar {
             self.forcing.obliquity_at(t.0),
             self.precession_offset_deg(t),
         )
+    }
+
+    /// The sky band at `t` for an observer at `latitude`; `None` on a
+    /// locked world, which has no solar hour.
+    pub fn sky_band(&self, t: StdDays, latitude: f64) -> Option<SkyBand> {
+        let alt = self.solar_altitude_at(t, latitude)?;
+        Some(if alt > 0.0 {
+            SkyBand::Day
+        } else if alt > -TWILIGHT_DEPTH_DEG {
+            SkyBand::Twilight
+        } else {
+            SkyBand::Night
+        })
     }
 }

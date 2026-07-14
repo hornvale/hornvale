@@ -787,7 +787,10 @@ fn round2(x: f64) -> f64 {
 }
 
 /// How far outside the daylight window (as a fraction of the local day)
-/// the dark still reads as twilight rather than night (SKY-7).
+/// the dark still reads as twilight rather than night (SKY-7). The coarse,
+/// place-less tier of the shared twilight concept: placed consumers read
+/// [`Calendar::sky_band`] (the altitude-based [`crate::calendar::SkyBand`]
+/// thresholds); this margin serves only the position-blind prose path.
 const TWILIGHT_MARGIN: f64 = 0.05;
 
 /// The quality of a star's daylight from its spectral class (SKY-17):

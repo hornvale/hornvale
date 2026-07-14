@@ -18,7 +18,7 @@ pub mod system;
 pub mod units;
 
 pub use anchor::{Anchor, Rotation, generate_anchor};
-pub use calendar::{Calendar, calendar_of};
+pub use calendar::{Calendar, SkyBand, TWILIGHT_DEPTH_DEG, calendar_of};
 pub use moons::{Moon, generate_moons, hill_radius_mm};
 pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
 pub use pins::{
