@@ -1,7 +1,7 @@
 # Campaign Autopilot — design
 
 **Date:** 2026-07-14
-**Status:** Approved (brainstorm complete)
+**Status:** Implemented (merged 2026-07-14; retro waived by Nathan, chronicle N/A per §9 and sibling-skill precedent)
 **Scope:** Hornvale only, deliberately — graduation to a global skill is a
 copy-and-generalize after it proves itself here.
 

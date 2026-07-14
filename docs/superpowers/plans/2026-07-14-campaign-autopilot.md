@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-07-14-campaign-autopilot-design.md` (approved 2026-07-14).
 
+**Status:** Complete — all 4 tasks executed 2026-07-14 (RED baselines; skill 4877472; GREEN 4/4 first run, no refactor commit; pointer dde4760) + final-review fix wave 7135323.
+
 ## Global Constraints
 
 - Never modify any file under `~/.claude/plugins/cache/claude-plugins-official/superpowers/` (spec §2: overlay, not replacement).
