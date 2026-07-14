@@ -297,9 +297,11 @@ pub fn draw_terranes(
 
 /// Fixed microcontinent candidate draw count (survivors are <= this — the
 /// away-from-majors filter below can only shrink the set, never grow it).
+/// type-audit: bare-ok(count)
 pub const MICRO_COUNT_MAX: u32 = 4;
 /// Microcontinent radius range, radians (~1.5°–3°: Madagascar-scale at L6,
 /// below the continent-count metric's 0.5%-of-land floor).
+/// type-audit: pending(wave-2)
 pub const MICRO_RADIUS_RAD: (f64, f64) = (0.026, 0.052);
 
 /// Draw microcontinents: exactly `MICRO_COUNT_MAX` candidates — position
