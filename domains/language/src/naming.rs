@@ -560,6 +560,7 @@ fn conforms(segments: &[Segment], ph: &Phonology, attested: &[Vec<Segment>]) -> 
             return true;
         }
         for word in attested {
+            debug_assert!(!word.is_empty(), "attested forms must be non-empty");
             if segments[pos..].starts_with(word.as_slice())
                 && from(segments, pos + word.len(), ph, attested)
             {
@@ -709,6 +710,7 @@ fn repair_phonotactics(
     for i in (0..n).rev() {
         let mut chosen: Option<(u32, RepairStep)> = None;
         for word in attested {
+            debug_assert!(!word.is_empty(), "attested forms must be non-empty");
             if segments[i..].starts_with(word.as_slice()) {
                 let cost = cost_at(&best, i + word.len());
                 if chosen.as_ref().is_none_or(|(c, _)| cost < *c) {
@@ -1208,6 +1210,30 @@ mod tests {
             repair_phonotactics(seam, &ph, &attested),
             vec![t, a, n, t, a, t, a],
         );
+    }
+
+    #[test]
+    fn an_attested_span_survives_verbatim_inside_a_sequence_needing_repair() {
+        // The DP branch proper (not the conforms short-circuit): "nat" is
+        // attested but canon-illegal; "nat" + "tta" does NOT conform even
+        // with the tier (tt is an illegal cluster), so the DP must run and
+        // its plan must keep the attested span verbatim while epenthesis
+        // breaks the residue: nat.ta.ta exactly.
+        let ph = toy_repair_ph();
+        let (a, t, n) = toy_segments();
+        let attested = vec![vec![n, a, t]];
+        let seam = vec![n, a, t, t, t, a];
+        assert!(
+            !conforms(&seam, &ph, &attested),
+            "test premise: the sequence must not conform even with the tier"
+        );
+        let repaired = repair_phonotactics(seam, &ph, &attested);
+        assert_eq!(
+            repaired,
+            vec![n, a, t, t, a, t, a],
+            "the attested span must survive verbatim and the residue gain one epenthetic vowel"
+        );
+        assert!(conforms(&repaired, &ph, &attested));
     }
 
     #[test]
