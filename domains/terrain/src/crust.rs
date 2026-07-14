@@ -134,6 +134,197 @@ pub struct Craton {
     pub age: f64,
 }
 
+/// An accreted exotic sliver welded to a continental leading margin
+/// (Sculpting, spec §3): an anisotropic (elongated) crust kernel.
+/// type-audit: bare-ok(ratio: center), bare-ok(ratio: along), pending(wave-2: half_len_rad), pending(wave-2: half_wid_rad), bare-ok(ratio: age), waiver(crust-km-convention: thickness_km)
+#[derive(Debug, Clone, PartialEq)]
+pub struct Terrane {
+    /// Kernel center, a unit vector on the craton's rim.
+    pub center: [f64; 3],
+    /// Unit tangent along the margin (the elongation direction).
+    pub along: [f64; 3],
+    /// Angular half-length along the margin, radians.
+    pub half_len_rad: f64,
+    /// Angular half-width across the margin, radians.
+    pub half_wid_rad: f64,
+    /// Terrane age in [0,1] — young exotic crust, distinct from its host.
+    pub age: f64,
+    /// Peak added thickness, km.
+    pub thickness_km: f64,
+}
+
+/// Terrane count lower bound (global knob, spec §5).
+/// type-audit: bare-ok(count)
+pub const TERRANE_COUNT_MIN: u32 = 2;
+/// Terrane count upper bound.
+/// type-audit: bare-ok(count)
+pub const TERRANE_COUNT_MAX: u32 = 6;
+/// Terrane angular half-length range, radians (~6°–14°).
+/// type-audit: pending(wave-2)
+pub const TERRANE_HALF_LEN_RAD: (f64, f64) = (0.10, 0.24);
+/// Width is this fraction of length (elongation).
+/// type-audit: bare-ok(ratio)
+pub const TERRANE_ASPECT: f64 = 0.35;
+/// Peak added thickness range, km.
+/// type-audit: waiver(crust-km-convention)
+pub const TERRANE_THICKNESS_KM: (f64, f64) = (6.0, 12.0);
+
+/// Two unit tangent vectors orthogonal to `p` (and to each other),
+/// forming an orthonormal frame for the tangent plane at `p` on the unit
+/// sphere. Picks an arbitrary reference axis not nearly parallel to `p`
+/// to keep the first cross product well-conditioned.
+pub(crate) fn tangent_basis(p: [f64; 3]) -> ([f64; 3], [f64; 3]) {
+    let reference = if p[0].abs() < 0.9 {
+        [1.0, 0.0, 0.0]
+    } else {
+        [0.0, 1.0, 0.0]
+    };
+    let e1 = crate::plates::normalize(crate::plates::cross(p, reference));
+    let e2 = crate::plates::normalize(crate::plates::cross(p, e1));
+    (e1, e2)
+}
+
+/// Move `p` by `angle` radians toward unit tangent `dir` (orthogonal to
+/// `p`), staying on the unit sphere exactly: the great-circle analogue of
+/// stepping in direction `dir`.
+pub(crate) fn rotate_toward(p: [f64; 3], dir: [f64; 3], angle: f64) -> [f64; 3] {
+    let (c, s) = (math::cos(angle), math::sin(angle));
+    crate::plates::normalize([
+        p[0] * c + dir[0] * s,
+        p[1] * c + dir[1] * s,
+        p[2] * c + dir[2] * s,
+    ])
+}
+
+/// Fixed-size scan used by `find_margin_point`: not a stream draw, so
+/// the terrane draw count and order stay independent of the craton
+/// field's noise (pin isolation).
+const MARGIN_SEARCH_SAMPLES: u32 = 200;
+
+/// Search outward from `host.center` along tangent direction `dir` (a
+/// unit vector orthogonal to `host.center`) for the point whose lobed
+/// envelope best matches the craton's own continental-threshold envelope
+/// (`continental_threshold_envelope`) — i.e. the point that actually sits
+/// on the margin. A nominal step of exactly `host.radius_rad` is not
+/// reliable on its own: the lobed rim (`lobed_envelope`) wanders between
+/// 0.5x and 1.5x that nominal radius depending on direction, so a fixed
+/// step can land deep in open ocean (rim shrunk below the step) or deep
+/// in the continental interior (rim expanded well past it). This is a
+/// fixed-size numeric scan over the (deterministic, noise-based, drawless)
+/// envelope function along the ray — no stream draws, so it perturbs
+/// neither the terrane draw count nor its order.
+fn find_margin_point(lobing_seed: Seed, host: &Craton, dir: [f64; 3]) -> [f64; 3] {
+    let peak = PEAK_MIN_KM + (PEAK_MAX_KM - PEAK_MIN_KM) * (1.0 - host.age);
+    let target = continental_threshold_envelope(peak);
+    let mut best_point = host.center;
+    let mut best_diff = f64::INFINITY;
+    for i in 1..=MARGIN_SEARCH_SAMPLES {
+        // Sweep just short of the hard 1.5x cutoff in `lobed_envelope`.
+        let t = host.radius_rad * 1.45 * (i as f64) / (MARGIN_SEARCH_SAMPLES as f64);
+        let p = rotate_toward(host.center, dir, t);
+        let envelope = lobed_envelope(lobing_seed, host.center, p, host.radius_rad);
+        let diff = (envelope - target).abs();
+        if diff < best_diff {
+            best_diff = diff;
+            best_point = p;
+        }
+    }
+    best_point
+}
+
+/// Draw the terrane set from the `terranes` stream: count, then per
+/// terrane (host craton index, rim bearing, length, thickness, age),
+/// sequentially. Placement: on the host craton's continental margin, at
+/// a drawn bearing — drawn bearings are never rejected (no draw-count
+/// variance, pin-isolation discipline), so the "leading margin" framing
+/// is a doc description of the typical outcome (leading edges carry more
+/// arc, hence more rim to land on), not an enforced constraint.
+pub fn draw_terranes(
+    terrain_seed: Seed,
+    cratons: &[Craton],
+    plates: &[crate::plates::Plate],
+) -> Vec<Terrane> {
+    let _ = plates;
+    if cratons.is_empty() {
+        return Vec::new();
+    }
+    let lobing_root = terrain_seed.derive(streams::CRATONS).derive("lobing");
+    let mut stream = terrain_seed.derive(streams::TERRANES).stream();
+    let count = stream.range_u32(TERRANE_COUNT_MIN, TERRANE_COUNT_MAX);
+    (0..count)
+        .map(|_| {
+            let host = &cratons[stream.range_u32(0, cratons.len() as u32 - 1) as usize];
+            let bearing = stream.next_f64() * core::f64::consts::TAU;
+            let half_len_rad = TERRANE_HALF_LEN_RAD.0
+                + (TERRANE_HALF_LEN_RAD.1 - TERRANE_HALF_LEN_RAD.0) * stream.next_f64();
+            let thickness_km = TERRANE_THICKNESS_KM.0
+                + (TERRANE_THICKNESS_KM.1 - TERRANE_THICKNESS_KM.0) * stream.next_f64();
+            let age = 0.05 + 0.25 * stream.next_f64();
+            // Radial direction: rotate an arbitrary tangent at the craton
+            // center by `bearing`.
+            let (e1, e2) = tangent_basis(host.center);
+            let dir = [
+                e1[0] * math::cos(bearing) + e2[0] * math::sin(bearing),
+                e1[1] * math::cos(bearing) + e2[1] * math::sin(bearing),
+                e1[2] * math::cos(bearing) + e2[2] * math::sin(bearing),
+            ];
+            // Margin point: search along `dir` for where this host's
+            // actual (lobed) rim crosses the continental threshold —
+            // not a fixed step, since the lobed rim itself varies with
+            // direction (see `find_margin_point`'s doc).
+            let lobing_seed = lobing_root.derive(&format!("craton-{}", host.id));
+            let center = find_margin_point(lobing_seed, host, dir);
+            // Margin tangent: perpendicular to the radial direction at `center`.
+            let radial = dir;
+            let along = crate::plates::normalize(crate::plates::cross(center, radial));
+            Terrane {
+                center,
+                along,
+                half_len_rad,
+                half_wid_rad: half_len_rad * TERRANE_ASPECT,
+                age,
+                thickness_km,
+            }
+        })
+        .collect()
+}
+
+/// A terrane's added thickness at `p`, km: a separable Gaussian in the
+/// (along, across) tangent frame — elongated along the margin.
+fn terrane_contribution_km(t: &Terrane, p: [f64; 3]) -> f64 {
+    let angle = math::acos(crate::plates::dot(t.center, p).clamp(-1.0, 1.0));
+    if angle > 4.0 * t.half_len_rad {
+        return 0.0; // beyond support
+    }
+    // At the center itself the tangent-plane offset direction is
+    // undefined (the radial projection is the zero vector, which
+    // `normalize` cannot divide by) — but along/across are both exactly
+    // 0 there by construction, so the contribution is the bare peak.
+    if angle < 1e-12 {
+        return t.thickness_km;
+    }
+    // Decompose the offset into along/across components in the tangent plane.
+    let offset = crate::plates::normalize(crate::plates::sub(
+        p,
+        crate::plates::scale(t.center, crate::plates::dot(t.center, p)),
+    ));
+    let along_c = crate::plates::dot(offset, t.along) * angle;
+    let across_c = (angle * angle - along_c * along_c).max(0.0).sqrt();
+    t.thickness_km
+        * math::exp(-(along_c * along_c) / (2.0 * t.half_len_rad * t.half_len_rad))
+        * math::exp(-(across_c * across_c) / (2.0 * t.half_wid_rad * t.half_wid_rad))
+}
+
+/// A terrane's own envelope at `p`, in [0, 1]: its contribution
+/// normalized by its own peak thickness, directly comparable to a
+/// craton's `lobed_envelope` for the `age_at` winner comparison.
+fn terrane_envelope(t: &Terrane, p: [f64; 3]) -> f64 {
+    if t.thickness_km <= 0.0 {
+        return 0.0;
+    }
+    terrane_contribution_km(t, p) / t.thickness_km
+}
+
 /// How far each non-anchor craton slides toward craton 0 when
 /// `--supercontinent` clusters them: 0 leaves it in place, 1 collapses it
 /// onto the anchor exactly.
@@ -250,14 +441,21 @@ pub fn draw_cratons(
     cratons
 }
 
+/// The lobed-envelope value `e` at which crust thickness exactly crosses
+/// `CONTINENTAL_THRESHOLD_KM`, given a craton's age-derived peak
+/// thickness (see `draw_cratons`'s doc for the full derivation). Shared
+/// by `continental_cap_fraction` (the area-normalization rescale) and
+/// `find_margin_point` (terrane placement): both need the same envelope
+/// value that marks "the margin" for a craton of this peak.
+fn continental_threshold_envelope(peak_km: f64) -> f64 {
+    (CONTINENTAL_THRESHOLD_KM - OCEANIC_KM) / (peak_km - OCEANIC_KM)
+}
+
 /// The continental fraction of a craton's nominal cap: `1 - sqrt(e)`,
-/// where `e` is the envelope value at which crust thickness exactly
-/// crosses `CONTINENTAL_THRESHOLD_KM` (see `draw_cratons`'s doc for the
-/// derivation). `peak_km` is the same age-derived peak `thickness_at`
-/// computes.
+/// where `e` is `continental_threshold_envelope(peak_km)`. `peak_km` is
+/// the same age-derived peak `thickness_at` computes.
 fn continental_cap_fraction(peak_km: f64) -> f64 {
-    let e = (CONTINENTAL_THRESHOLD_KM - OCEANIC_KM) / (peak_km - OCEANIC_KM);
-    1.0 - e.sqrt()
+    1.0 - continental_threshold_envelope(peak_km).sqrt()
 }
 
 /// Continental cap area of one craton, steradians: the spherical-cap
@@ -399,11 +597,22 @@ pub struct CrustField {
     /// (millions of calls at the canonical grid) allocates and hashes
     /// nothing per craton. Byte-identical to the per-sample derivation.
     lobing_seeds: Vec<Seed>,
+    /// The drawn terrane set (empty when built via `new`).
+    terranes: Vec<Terrane>,
 }
 
 impl CrustField {
-    /// Assemble the field over a drawn craton set.
+    /// Assemble the field over a drawn craton set, with no terranes.
     pub fn new(terrain_seed: Seed, cratons: Vec<Craton>) -> CrustField {
+        CrustField::new_with_terranes(terrain_seed, cratons, Vec::new())
+    }
+
+    /// Assemble the field over a drawn craton set and terrane set.
+    pub fn new_with_terranes(
+        terrain_seed: Seed,
+        cratons: Vec<Craton>,
+        terranes: Vec<Terrane>,
+    ) -> CrustField {
         let lobing_root = terrain_seed.derive(streams::CRATONS).derive("lobing");
         let lobing_seeds = cratons
             .iter()
@@ -412,6 +621,7 @@ impl CrustField {
         CrustField {
             cratons,
             lobing_seeds,
+            terranes,
         }
     }
 
@@ -426,25 +636,44 @@ impl CrustField {
             .max_by(|(a, ca), (b, cb)| a.total_cmp(b).then(cb.id.cmp(&ca.id)))
     }
 
-    /// Crust thickness at a unit-sphere position, km.
+    /// Crust thickness at a unit-sphere position, km: the winning
+    /// craton's contribution plus every terrane's (kernels are additive
+    /// summands, so thickness stays a pure pointwise function of `p`).
     /// type-audit: bare-ok(ratio: p)
     pub fn thickness_at(&self, p: [f64; 3]) -> CrustKm {
-        let t = match self.strongest(p) {
+        let base = match self.strongest(p) {
             None => OCEANIC_KM,
             Some((envelope, c)) => {
                 let peak = PEAK_MIN_KM + (PEAK_MAX_KM - PEAK_MIN_KM) * (1.0 - c.age);
                 OCEANIC_KM + (peak - OCEANIC_KM) * envelope
             }
         };
-        CrustKm::new(t).expect("kernel keeps thickness in range")
+        let added: f64 = self
+            .terranes
+            .iter()
+            .map(|t| terrane_contribution_km(t, p))
+            .sum();
+        CrustKm::new(base + added).expect("kernel keeps thickness in range")
     }
 
-    /// Age of the winning craton at a position (oceanic floor: young, 0).
+    /// Age of the winning craton at a position (oceanic floor: young, 0),
+    /// unless a terrane's own kernel dominates there — a terrane is
+    /// younger, distinct exotic crust, so its age wins wherever its
+    /// envelope is stronger than the winning craton's.
     /// type-audit: bare-ok(ratio)
     pub fn age_at(&self, p: [f64; 3]) -> f64 {
-        match self.strongest(p) {
-            Some((envelope, c)) if envelope > 0.0 => c.age,
-            _ => 0.0,
+        let (craton_envelope, craton_age) = match self.strongest(p) {
+            Some((envelope, c)) if envelope > 0.0 => (envelope, c.age),
+            _ => (0.0, 0.0),
+        };
+        let terrane_winner = self
+            .terranes
+            .iter()
+            .map(|t| (terrane_envelope(t, p), t.age))
+            .max_by(|(a, _), (b, _)| a.total_cmp(b));
+        match terrane_winner {
+            Some((envelope, age)) if envelope > craton_envelope => age,
+            _ => craton_age,
         }
     }
 
@@ -838,6 +1067,50 @@ mod tests {
         ];
         use hornvale_kernel::Field;
         assert_eq!(field.sample(pos, time), field.thickness_at(p).get());
+    }
+
+    #[test]
+    fn terranes_are_drawn_on_continental_margins_and_thicken_crust() {
+        let seed = Seed(42).derive(crate::streams::ROOT);
+        let mut notes = Vec::new();
+        let pins = crate::pins::TerrainPins::default();
+        let plates = crate::plates::generate_plates(seed, &pins, &mut notes);
+        let ocean_target = 0.65;
+        let cratons = draw_cratons(seed, &pins, ocean_target, &mut notes);
+        let terranes = draw_terranes(seed, &cratons, &plates);
+        assert!(
+            (2..=6).contains(&terranes.len()),
+            "count: {}",
+            terranes.len()
+        );
+        let plain = CrustField::new(seed, cratons.clone());
+        let with = CrustField::new_with_terranes(seed, cratons, terranes.clone());
+        for t in &terranes {
+            // A terrane thickens crust at its own center...
+            assert!(with.thickness_at(t.center).get() > plain.thickness_at(t.center).get());
+            // ...and sits at a continental margin: near the continental
+            // threshold in the plain field (rim, not deep interior/abyss).
+            let base = plain.thickness_at(t.center).get();
+            assert!(
+                base > OCEANIC_KM && base < CONTINENTAL_THRESHOLD_KM + 12.0,
+                "terrane not on a margin: base {base}"
+            );
+            // Elongated: at one half-length along `along`, still thickened;
+            // at the same distance across, contribution has fallen off harder.
+            assert!(t.half_len_rad > t.half_wid_rad);
+        }
+        // Determinism.
+        let again = draw_terranes(
+            Seed(42).derive(crate::streams::ROOT),
+            &draw_cratons(
+                Seed(42).derive(crate::streams::ROOT),
+                &pins,
+                ocean_target,
+                &mut Vec::new(),
+            ),
+            &plates,
+        );
+        assert_eq!(terranes, again);
     }
 
     #[test]

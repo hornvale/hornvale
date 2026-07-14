@@ -2,7 +2,7 @@
 //! a seed plus a ledger — the globe is never serialized, always re-derived.
 
 use crate::boundaries::{self, CellBoundary};
-use crate::crust::Craton;
+use crate::crust::{Craton, Terrane};
 use crate::pins::{self, GenesisError, TerrainPins};
 use crate::plates::Plate;
 use crate::streams;
@@ -47,6 +47,10 @@ pub struct TectonicGlobe {
     /// The drawn craton set this globe's crust field was built from
     /// (Crust epoch, Task 8). Recomputed at genesis, never serialized.
     pub cratons: Vec<Craton>,
+    /// The drawn terrane set — accreted exotic slivers welded to
+    /// continental margins (Sculpting, spec §3) — this globe's crust
+    /// field was built from. Recomputed at genesis, never serialized.
+    pub terranes: Vec<Terrane>,
     /// Graph distance from each cell to the nearest same-plate boundary
     /// cell, with that boundary attributed. Recomputed at genesis, never
     /// serialized. `None` = no reachable same-plate boundary.
@@ -97,11 +101,16 @@ pub fn generate(
     // a pinned target conditions both identically to a drawn one.
     let ocean_target = elevation::resolve_ocean_fraction(terrain_seed, pins, &mut notes);
     let cratons = crust::draw_cratons(terrain_seed, pins, ocean_target, &mut notes);
+    // Terranes (Sculpting, spec §3): drawn after the craton set, since
+    // placement rides on the drawn cratons' rims. A new stream label, so
+    // this consumes no draws the pre-Sculpting draw order relied on.
+    let terranes = crust::draw_terranes(terrain_seed, &cratons, &plate_list);
     // Single-craton hypsometry: soften an unreachable land quota to the
     // shelf break instead of drowning the percentile into the abyss.
     let supply = crust::continental_supply(&cratons);
     let effective_ocean = elevation::effective_ocean_target(ocean_target, supply, &mut notes);
-    let field = crust::CrustField::new(terrain_seed, cratons.clone());
+    let field =
+        crust::CrustField::new_with_terranes(terrain_seed, cratons.clone(), terranes.clone());
     let crust_map = CellMap::from_fn(geosphere, |c| {
         field.thickness_at(geosphere.position(c)).get()
     });
@@ -169,6 +178,7 @@ pub fn generate(
         drainage,
         endorheic,
         cratons,
+        terranes,
         boundary_distance: distances,
         lithology: placeholder_lithology,
         lithology_seed,

@@ -48,3 +48,8 @@ pub const PLATE_EDGE: &str = "plate-edge";
 /// only — never consumed as a `Stream`; no draw-order/save-format contract.
 /// type-audit: bare-ok(identifier-text)
 pub const LITHOLOGY: &str = "lithology";
+/// Terrane draws (Sculpting, spec §3): count, then per terrane a host
+/// craton index, rim bearing, size, age. A NEW label — existing stream
+/// consumption order is untouched (epoch v3 save-format contract).
+/// type-audit: bare-ok(identifier-text)
+pub const TERRANES: &str = "terranes";
