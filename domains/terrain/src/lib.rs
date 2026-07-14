@@ -20,8 +20,8 @@ pub mod streams;
 pub use boundaries::{BoundaryKind, CellBoundary};
 pub use globe::{GenesisOutcome, GlobeSummary, TectonicGlobe, generate, summarize};
 pub use lithology::{
-    Basement, Fertility, Hydro, MarginPolarity, MaterialBuffer, RockClass, SoilDepth, SoilOrder,
-    cave_proneness, classify_soil, fertility, hydrogeology,
+    Appearance, Basement, Fertility, Hydro, MarginPolarity, MaterialBuffer, RockClass, SoilDepth,
+    SoilOrder, appearance, cave_proneness, classify_soil, fertility, hydrogeology, prospectivity,
 };
 pub use pins::{GenesisError, TerrainPins, parse_pin, pin_strings};
 pub use plates::Plate;

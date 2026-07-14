@@ -454,6 +454,72 @@ pub fn classify_soil(
     }
 }
 
+/// Walk-facing appearance vector (spec §3, round 1 paint/color). Each `[0,1]`.
+/// type-audit: bare-ok(ratio: albedo), bare-ok(ratio: hue), bare-ok(ratio: coarseness), bare-ok(ratio: hardness)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Appearance {
+    /// Lightness under foot: 0 black basalt → 1 white chalk.
+    pub albedo: f64,
+    /// Hue proxy: 0 grey/black → 1 red/ochre (iron).
+    pub hue: f64,
+    /// Grain visible under foot.
+    pub coarseness: f64,
+    /// Hardness under foot.
+    pub hardness: f64,
+}
+
+/// Rock classes that read fine-grained underfoot regardless of the buffer's
+/// noise term: extrusive/glassy igneous (rapid cooling suppresses crystal
+/// growth) and fine clastic/chemical rocks. `appearance` halves their
+/// coarseness so a fast-cooled basalt never reads as coarse as a slow-cooled
+/// granite even when the buffer's `grain` axis happens to agree.
+fn reads_fine_grained(rock: RockClass) -> bool {
+    matches!(
+        rock,
+        RockClass::Basalt
+            | RockClass::Andesite
+            | RockClass::Rhyolite
+            | RockClass::Chert
+            | RockClass::Shale
+            | RockClass::Evaporite
+            | RockClass::Slate
+    )
+}
+
+/// Project appearance from the buffer + class (spec §3).
+pub fn appearance(buf: &MaterialBuffer, rock: RockClass) -> Appearance {
+    let albedo = (0.25 + 0.6 * buf.silica + 0.3 * buf.carbonate).clamp(0.0, 1.0);
+    let hue = match rock {
+        RockClass::Ironstone => 0.9,
+        RockClass::Basalt | RockClass::Gabbro => 0.1,
+        _ => 0.4,
+    };
+    let coarseness = if reads_fine_grained(rock) {
+        buf.grain * 0.5
+    } else {
+        buf.grain
+    };
+    Appearance {
+        albedo,
+        hue,
+        coarseness,
+        hardness: buf.induration,
+    }
+}
+
+/// Mineral prospectivity (spec §3, round 1 distribution). The deposits
+/// campaign turns this field into point bodies; here it is a probability.
+/// type-audit: bare-ok(ratio: return), bare-ok(ratio: unrest)
+pub fn prospectivity(buf: &MaterialBuffer, boundary: Option<BoundaryKind>, unrest: f64) -> f64 {
+    let setting = match boundary {
+        Some(BoundaryKind::IslandArc) | Some(BoundaryKind::CoastalRange) => 0.7,
+        Some(BoundaryKind::ContinentalRift) | Some(BoundaryKind::OceanicRidge) => 0.5,
+        Some(BoundaryKind::ContinentalCollision) => 0.4,
+        _ => 0.1,
+    };
+    (0.6 * setting + 0.3 * unrest + 0.1 * buf.metamorphic_grade).clamp(0.0, 1.0)
+}
+
 /// The fertility vector for a soil order at a depth (spec §3).
 pub fn fertility(order: SoilOrder, depth: &SoilDepth) -> Fertility {
     let depth_suit = (depth.get() / 2.0).clamp(0.0, 1.0);
@@ -630,6 +696,36 @@ mod tests {
         b.porosity = 0.05;
         assert_eq!(hydrogeology(&b, 10.0, false), Hydro::Aquitard);
         assert!(cave_proneness(&b, 10.0) < 0.1);
+    }
+
+    #[test]
+    fn appearance_tracks_the_material_and_prospectivity_favors_arcs() {
+        // Basalt reads dark (low albedo), fine, hard.
+        let ap = appearance(
+            &{
+                let mut b = flat_buffer();
+                b.silica = 0.1;
+                b
+            },
+            RockClass::Basalt,
+        );
+        assert!(ap.albedo < 0.4 && ap.coarseness < 0.5);
+        // Granite reads pale, coarse.
+        let ap = appearance(
+            &{
+                let mut b = flat_buffer();
+                b.silica = 0.8;
+                b.grain = 0.8;
+                b
+            },
+            RockClass::Granite,
+        );
+        assert!(ap.albedo > 0.5 && ap.coarseness > 0.5);
+        // Prospectivity: island-arc + unrest scores higher than quiet interior.
+        let b = flat_buffer();
+        let arc = prospectivity(&b, Some(BoundaryKind::IslandArc), 0.8);
+        let quiet = prospectivity(&b, None, 0.0);
+        assert!(arc > quiet);
     }
 
     #[test]

@@ -171,6 +171,22 @@ impl GeneratedTerrain {
     pub fn cave_proneness_at(&self, id: CellId) -> f64 {
         crate::lithology::cave_proneness(&self.material_at(id), self.drainage_at(id))
     }
+
+    /// Walk-facing appearance vector at a cell (The Ground, spec §3).
+    pub fn appearance_at(&self, id: CellId) -> crate::lithology::Appearance {
+        crate::lithology::appearance(&self.material_at(id), self.rock_at(id))
+    }
+
+    /// Mineral prospectivity at a cell, `[0,1]` (The Ground, spec §3; the
+    /// deferred deposits campaign's down-payment).
+    /// type-audit: bare-ok(ratio)
+    pub fn prospectivity_at(&self, id: CellId) -> f64 {
+        crate::lithology::prospectivity(
+            &self.material_at(id),
+            self.boundary_at(id).map(|b| b.kind),
+            self.unrest_at(id),
+        )
+    }
 }
 
 #[cfg(test)]
