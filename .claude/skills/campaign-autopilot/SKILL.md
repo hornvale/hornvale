@@ -23,7 +23,7 @@ instead of gate-by-gate ratification.
 | G3 | **Spec review before planning** | **HARD STOP — present the G3 package, wait for Nathan** |
 | G4 | Plan review before execution | Self-review against the approved spec; proceed; ledger entry |
 | G5 | Per-task execution checkpoints | Existing subagent review machinery; auto-continue on green; the 3-attempt rule still stops on red |
-| G6 | **Merge / campaign close** | **HARD STOP — `closing-a-campaign`, unchanged** |
+| G6 | **Merge / campaign close** | **HARD STOP — present the post-G3 ledger digest, wait for Nathan; then `closing-a-campaign`, unchanged** |
 
 ## Clarifying questions: answer from precedent
 
@@ -54,7 +54,9 @@ route everything raised — including promising ideonomy discards:
 
 - Speculative directions → idea-registry rows
   (`book/src/frontier/idea-registry.md`).
-- Actionable followups → the campaign followup register.
+- Actionable followups → the campaign followup register
+  (`.superpowers/sdd/followups.md` in the worktree; promoted into the
+  campaign retrospective's follow-up section at close).
 - Process lessons → retro / memory.
 - Rejected branches → ledger, with the reason.
 
@@ -94,7 +96,9 @@ not the durable record.
   publishing.
 
 Save-format / epoch / determinism-contract decisions do not hard-stop
-mid-brainstorm but always lead the G3 flagged section.
+mid-brainstorm but always lead the G3 flagged section. Entries ledgered
+after G3 (during plan or execution) are presented as a digest at G6, with
+save-format / epoch / determinism-contract entries leading it.
 
 ## Manual mode
 

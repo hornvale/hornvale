@@ -44,7 +44,7 @@ auditable decision ledger.
 | G3 | **Spec review before planning** | **HARD STOP — Nathan reviews the G3 package (§6)** |
 | G4 | Plan review before execution | Self-review against approved spec; proceed; ledger entry |
 | G5 | Per-task execution checkpoints | Existing subagent review machinery; auto-continue on green; the 3-attempt rule still stops on red |
-| G6 | **Merge / campaign close** | **HARD STOP — `closing-a-campaign` unchanged, Nathan-gated** |
+| G6 | **Merge / campaign close** | **HARD STOP — post-G3 ledger digest, then `closing-a-campaign` unchanged, Nathan-gated** |
 
 **Clarifying questions** are answered from precedent instead of asked, in
 priority order: decision log (`docs/decisions/`) → specs → idea registry →
@@ -117,6 +117,9 @@ the durable record.
 
 Save-format / epoch / determinism-contract decisions do not hard-stop
 mid-brainstorm but always appear at the top of the G3 flagged section.
+Entries ledgered after G3 (during plan or execution) are presented as a
+digest at G6, with save-format / epoch / determinism-contract entries
+leading it.
 
 ## 8. Validation
 
