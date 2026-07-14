@@ -203,10 +203,7 @@ impl Add for TempAnomaly {
 /// domains normalize to this kernel-level type. Only non-negative values
 /// are physically meaningful.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Mass(
-    /// type-audit: bare-ok(mass: kilograms)
-    f64,
-);
+pub struct Mass(f64);
 
 impl Mass {
     /// Validating constructor: rejects non-finite and negative values.
