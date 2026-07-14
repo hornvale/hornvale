@@ -317,25 +317,25 @@ Its roles, lowest to highest: digger, keeper, elders.
 
 An organized priesthood tends a pantheon:
 
-> Bvaash the Vngaashbvaash is: Bvaash the Vngaashbvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Vngaabvaash is: Bvaash the Vngaabvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
 In the village of **Xngotngot**, an organized priesthood tends its own pantheon:
 
-> Neb the Sxatneb is ever: Neb the Sxatneb watches unceasing. So it was, so it is.
+> Neb the Vnodneb is ever: Neb the Vnodneb watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
 In the legion of **Foetteefoo**, an organized priesthood tends its own pantheon:
 
-> Fee the Ngjeofee is ever: Fee the Ngjeofee watches unceasing. So it was, so it is.
+> Fee the Ngjeafee is ever: Fee the Ngjeafee watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
 In the warren of **Xatxoxorroxaq**, an organized priesthood tends its own pantheon:
 
-> Rogxaxaxo Rogxaxaxo is: Rogxaxaxo Rogxaxaxo is always watching. That's how it's always been. That's how it's always been. Rogxaxaxo is a great one among the gods.
+> Rogxaxaxo Xaxo is: Rogxaxaxo Xaxo is always watching. That's how it's always been. That's how it's always been. Rogxaxaxo is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 

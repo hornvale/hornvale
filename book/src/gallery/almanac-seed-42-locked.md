@@ -243,69 +243,69 @@ Its roles, lowest to highest: digger, keeper, elders.
 
 An organized priesthood tends a pantheon:
 
-> Bvaash the Gvaashbvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Vngaoshbvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Bvaash the Shngaoshbvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Shngaobvaash is felt more than seen. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *tide*
 
-> Bvaash the Vngoashbvaash is: Bvaash the Vngoashbvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Gvooshbvaash is: Bvaash the Gvooshbvaash is always watching. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bvaash the Vngoashbvaash comes back every 71.11 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
+> Bvaash the Shngoobvaash comes back every 71.11 days. That's how it's always been. That's how it's always been. Bvaash is a great one among the gods.
 >
 > — derived from the phenomenon *eclipse*
 
 In the village of **Fngakngedned**, an organized priesthood tends its own pantheon:
 
-> Neb the Vngobneb is ever: Neb the Vngobneb watches unceasing. So it was, so it is.
+> Neb the Vnodneb is ever: Neb the Vnodneb watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Xnekzhxakxnab the Nodfngekfngek returns every 71.11 days. So it was, so it is.
+> Ngadxngak the Svatvnakvnak returns every 71.11 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Sfedzhveb the Ngadngobfnak returns every 269.79 days. So it was, so it is.
+> Zvakngek the Nodsfobsvad returns every 269.79 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Neb the Fngadneb is felt, not counted. So it was, so it is.
+> Neb the Zhvakneb is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Neb the Xnobneb is felt, not counted. So it was, so it is.
+> Neb the Svokneb is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
 In the legion of **Ngjeengjae**, an organized priesthood tends its own pantheon:
 
-> Fee the Tgeafee is ever: Fee the Tgeafee watches unceasing. So it was, so it is.
+> Fee the Ngjeafee is ever: Fee the Ngjeafee watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Xaetbae the Qkoabkeobkeo returns every 71.11 days. So it was, so it is.
+> Feonjaagbee the Qgoaveofoa returns every 71.11 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Gkaoxeoxoa the Faokgoakgoa returns every 269.79 days. So it was, so it is.
+> Kqeotgaetgeo the Mjoeggoexeo returns every 269.79 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Fee the Xoafee is felt, not counted. So it was, so it is.
+> Fee the Tkaofee is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Fee the Kgeafee is felt, not counted. So it was, so it is.
+> Fee the Bbaofee is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
 In the warren of **Xotroxoqrokrro**, an organized priesthood tends its own pantheon:
 
-> Rogxaxaxo Rogxaxaxo is: Rogxaxaxo Rogxaxaxo is always watching. That's how it's always been. That's how it's always been. Rogxaxaxo is a great one among the gods.
+> Rogxaxaxo Xaxo is: Rogxaxaxo Xaxo is always watching. That's how it's always been. That's how it's always been. Rogxaxaxo is a great one among the gods.
 >
 > — derived from the phenomenon *celestial-body*
 
