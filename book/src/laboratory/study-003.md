@@ -17,13 +17,13 @@ hand at author time, exactly as Studies 001 and 002 report their own
 10,000-seed headline runs. It is **not** committed and **not** part of CI —
 regenerating it is this chapter's responsibility, by hand, the same
 arrangement `census-of-lands`/`census-of-skies` use. The charts embedded
-below are a different, smaller run: `census-lands-drift`, the 500-seed
+below are a different, smaller run: `the-census`, the 1,000-seed
 sibling study CI reruns and diffs on every build
-(`book/src/laboratory/generated/census-lands-drift/`), which now carries the
+(`book/src/laboratory/generated/the-census/`), which carries the
 same seven People metrics alongside the sky and land metrics it already
 tracked. Small numeric differences between a percentage quoted in this prose
 and a bar in a chart below are sampling variance between a 10,000-seed and a
-500-seed draw, not drift — only the `census-lands-drift` charts are
+1,000-seed draw, not drift — only the `the-census` charts are
 drift-checked.
 
 **A note on the two-peoples re-baseline.** This chapter's numbers were
@@ -46,7 +46,7 @@ settlements forage or herd inland, but fish if the coast rescues them. This
 is not a hypothesis about the census, it is a fact about the function, so
 `flagship-subsistence` must equal that re-derivation from `flagship-biome`
 and `flagship-coastal` in every world — and `windows/lab/tests/calibration.rs`
-asserts it row by row, over the 500-seed `census-lands-drift` sample, on
+asserts it row by row, over the 1,000-seed `the-census` sample, on
 every CI build, the sociology sibling of the band-count calibration Study
 002 reported.
 

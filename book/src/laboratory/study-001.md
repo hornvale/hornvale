@@ -35,7 +35,7 @@ and all 9,543 believe in a cyclic heaven.
 sky-only); its chart no longer regenerates here. The cross-domain
 calibration this section describes was captured once, historically, at the
 original 10,000-seed sky census and is retold in prose above — the same
-equality now lives on as a live assertion over `census-lands-drift`
+equality now lives on as a live assertion over `the-census`
 (`eternal_beliefs_coincide_exactly_with_tidal_locking`,
 `windows/lab/tests/calibration.rs`), so the instrument is still kept
 honest, just no longer illustrated on this historical page. -->

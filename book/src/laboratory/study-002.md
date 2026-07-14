@@ -15,13 +15,13 @@ what it doesn't; and one that had no answer until this run existed.
 from a 10,000-seed run of `studies/census-of-lands.study.json`, executed
 once by hand at author time — at that size it is not part of CI, the same
 arrangement Study 001 uses for `census-of-skies`. The charts embedded below
-are *not* that run; they come from `census-lands-drift`, the 500-seed
-sibling study CI reruns and diffs on every build (`book/src/laboratory/generated/census-lands-drift/`).
+are *not* that run; they come from `the-census`, the 1,000-seed sibling
+study CI reruns and diffs on every build (`book/src/laboratory/generated/the-census/`).
 The two studies measure the same generator and land on the same shape at
 different sample sizes — small numeric differences between a percentage
 quoted in this prose and a bar in a chart below (e.g. 79.5% vs. 80.6% of
 worlds landing on three circulation bands) are sampling variance between a
-10,000-seed and a 500-seed draw, not drift. Only the `census-lands-drift`
+10,000-seed and a 500-seed draw, not drift. Only the `the-census`
 charts are drift-checked; if this chapter's 10,000-world numbers ever look
 stale next to a future drift chart, that staleness is real but is *this
 chapter's* problem to fix by hand, not CI's to catch — the 10k run is

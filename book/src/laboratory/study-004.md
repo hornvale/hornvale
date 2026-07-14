@@ -16,13 +16,13 @@ once by hand at author time, exactly as Studies 001 through 003 report their
 own 10,000-seed headline runs. It is **not** committed and **not** part of
 CI — regenerating it is this chapter's responsibility, by hand, the same
 arrangement `census-of-skies`/`census-of-lands`/`census-of-peoples` use. The
-charts embedded below are a different, smaller run: `census-lands-drift`,
-the 500-seed sibling study CI reruns and diffs on every build
-(`book/src/laboratory/generated/census-lands-drift/`), which now carries
+charts embedded below are a different, smaller run: `the-census`,
+the 1,000-seed sibling study CI reruns and diffs on every build
+(`book/src/laboratory/generated/the-census/`), which carries
 these four faith metrics alongside the sky, land, and people metrics it
 already tracked. Small numeric differences between a percentage quoted in
 this prose and a bar in a chart below are sampling variance between a
-10,000-seed and a 500-seed draw, not drift — only the `census-lands-drift`
+10,000-seed and a 1,000-seed draw, not drift — only the `the-census`
 charts are drift-checked.
 
 **A note on the two-peoples re-baseline (Campaign Y2-1).** This chapter's
@@ -54,8 +54,8 @@ structure (Campaign 4b) reaches four or more castes; anything leaner gets a
 flat pantheon of co-equal spirits. This is not a hypothesis about the
 census, it is a fact about `genesis`, so `pantheon-verticality` must equal
 that re-derivation from `flagship-structure-size` in every world —
-`windows/lab/tests/calibration.rs` asserts it row by row over the 500-seed
-`census-lands-drift` sample on every CI build, the fourth member of the
+`windows/lab/tests/calibration.rs` asserts it row by row over the 1,000-seed
+`the-census` sample on every CI build, the fourth member of the
 calibration family after belief⇔lock, band-count⇔rotation, and
 subsistence⇔biome. Across the full 10,000-world census it holds without a
 single exception, the ranked share settling back slightly under two-species
