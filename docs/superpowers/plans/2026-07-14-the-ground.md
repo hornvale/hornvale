@@ -164,8 +164,9 @@ Define `MaterialBuffer` and its axes, the pointwise `LithologyField` (the crust-
 **Interfaces:**
 - Consumes: Task 1's provider/globe crust + boundary-distance data; `plates::Plate` (Euler pole via `plate.euler_axis`, `plate.rate`, `plate.seed_position`), `plates::velocity_at`, `crust::CrustField`, `hornvale_kernel::{Field, Position, WorldTime, CellMap, noise::fbm_2d, math}`.
 - Produces:
-  - `pub struct MaterialBuffer { silica, grain, induration, carbonate, metamorphic_grade, porosity: f64, margin: MarginPolarity, soil_depth: SoilDepth, thaumic: f64 }` (all `f64` in `[0,1]` unless noted; `Clone, Copy, Debug, PartialEq`)
+  - `pub struct MaterialBuffer { silica, grain, induration, carbonate, metamorphic_grade, porosity: f64, margin: MarginPolarity, soil_depth: SoilDepth, basement: Basement, thaumic: f64 }` (all `f64` in `[0,1]` unless noted; `Clone, Copy, Debug, PartialEq`)
   - `pub enum MarginPolarity { Active, Passive, Interior, Oceanic }`
+  - `pub enum Basement { Continental, Oceanic }` — the shallow 2-layer column (spec §2, round 4): the rock *beneath* the surface cover (`Continental` = granite/gneiss basement, `Oceanic` = gabbro floor), derived from `is_continental_at`. Serves deep mining / well depth / the underdark. The "cover" is the surface `rock_at` (Task 3); only the basement layer needs a buffer slot.
   - `pub struct SoilDepth(f64)` metres, `new`/`get`, `type-audit: newtype`
   - `pub fn assemble_material(geo, globe) -> CellMap<MaterialBuffer>` — the grid assembler (called by `generate`)
   - `TectonicGlobe.lithology: CellMap<MaterialBuffer>`
@@ -253,6 +254,17 @@ impl SoilDepth {
     }
 }
 
+/// The rock beneath the surface cover — the shallow 2-layer column
+/// (spec §2, round 4). Derived from crust thickness; serves deep mining,
+/// well depth, and the underdark vertical axis.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Basement {
+    /// Continental basement: granite/gneiss.
+    Continental,
+    /// Oceanic floor: gabbro/basalt.
+    Oceanic,
+}
+
 /// Continental-margin polarity relative to plate motion (spec §2, round 3).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MarginPolarity {
@@ -286,6 +298,8 @@ pub struct MaterialBuffer {
     pub margin: MarginPolarity,
     /// Regolith thickness.
     pub soil_depth: SoilDepth,
+    /// The rock beneath the cover — shallow 2-layer column.
+    pub basement: Basement,
     /// Thaumic saturation. Reserved (spec §2/§8); identically 0 in the
     /// metaphysically-inert tier this campaign builds.
     pub thaumic: f64,
@@ -339,6 +353,7 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
 
         let margin = margin_polarity(geo, globe, cell, continental);
         let soil_depth = soil_depth_at(geo, globe, cell);
+        let basement = if continental { Basement::Continental } else { Basement::Oceanic };
 
         MaterialBuffer {
             silica,
@@ -349,6 +364,7 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
             porosity,
             margin,
             soil_depth,
+            basement,
             thaumic: 0.0,
         }
     })
@@ -1166,10 +1182,8 @@ Invoke the `closing-a-campaign` skill: run the AWS census regen (`make regen-rem
 - §5 no-epoch/determinism (no new streams; hash-noise patchiness; `lens_purity` green) → Global Constraints + T2 + T7 close. ✓
 - §6 surface latent tectonic fields → T1; provider queries → T1–T6; lithology/soil map lens → T3 (soil map: fold into T3's lens or add a `--field soil` variant); almanac section → T7; census metrics → T7; book/retro → T7. ✓
 - §7 sequencing → tasks are in spec order. ✓
-- §8 non-goals: no consumer rewiring, ore point-deposits (prospectivity only, T6), full stratigraphy (2-layer `column` deferred — **note:** the `column` axis was described in spec §2 but is banked in §8's full-stratigraphy line; this plan omits the 2-layer cover/basement axis from the buffer to keep Task 2 tight — if it is wanted now, add it as a T2 sub-step reading `is_continental_at` for basement vs cover). Metaphysics-gated thaumic → reserved slot only (T2). ✓
+- §8 non-goals: no consumer rewiring, ore point-deposits (prospectivity only, T6), **full** stratigraphy deferred while the cheap 2-layer `Basement` column ships (T2, per spec §2). Metaphysics-gated thaumic → reserved slot only (T2). ✓
 - §9 ideonomy provenance → documentation, no task. ✓
-
-**Gap flagged:** the spec §2 lists a `column` (2-layer cover/basement) axis; the plan defers it (see §8 note above) to avoid over-loading Task 2. **Decision for the executor/user:** include it in Task 2 (cheap — `basement = is_continental_at`, `cover = rock class) or bank with the rest. Left as an explicit choice rather than silently dropped.
 
 **Placeholder scan:** all classifier thresholds are concrete numbers; all test bodies are complete; all commands are runnable. The soil map lens and the exact CLI `map --field` wiring reference "follow the existing pattern" — acceptable because the pattern (`elevation_png`, the `map` handler) is named with a file path, but the executor must read those before implementing.
 
