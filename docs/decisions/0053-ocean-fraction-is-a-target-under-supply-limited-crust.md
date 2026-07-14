@@ -20,9 +20,12 @@ bimodality. Raising the 0.6 rad clamp was rejected (it exists for
 directed lobing; Sculpting owns that redesign), as was weakening the
 test (a continent's shelf is a real property). Supply is analytic and
 grid-free, so coarse-constrains-fine holds exactly; default worlds
-(8-14 cratons) sit far above the activation threshold — the separation
-guard (`default_worlds_never_trip_the_supply_fallback`) proves the
-fallback cannot rewrite them, so committed artifacts and the frozen
+(8-14 cratons) bottom out at a measured supply/quota floor of ≈ 0.554
+over the frozen 1000-seed census population, versus the 0.5 activation
+threshold and the lone craton's ≲ 0.18 — a true ~11% worst-case headroom,
+not a comfortable margin. The separation guard
+(`default_worlds_never_trip_the_supply_fallback`) proves the fallback
+cannot rewrite default worlds, so committed artifacts and the frozen
 censuses are untouched.
 
 **Consequence.** For supply-limited worlds (a lone craton always; small

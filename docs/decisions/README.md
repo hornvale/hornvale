@@ -91,4 +91,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0049](0049-the-founder-floor-migrates-to-demography.md) | The MAP-22 founder floor migrates to `demography` | Accepted |
 | [0050](0050-entity-hood-for-collections.md) | Entity-hood for collections: collections become entities, singletons stay flat | Accepted |
 | [0051](0051-name-salt-stable-identity.md) | Procedural names are salted by stable identity, never by a global mint counter | Accepted |
+| [0052](0052-deploy-built-wasm.md) | The Casement's wasm is deploy-built, never committed | Accepted |
 | [0053](0053-ocean-fraction-is-a-target-under-supply-limited-crust.md) | The ocean-fraction pin is a target, not a guarantee, under supply-limited crust | Accepted |

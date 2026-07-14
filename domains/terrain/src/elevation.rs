@@ -239,10 +239,12 @@ pub fn resolve_ocean_fraction(
 /// The shelf-break fallback activates when analytic continental supply
 /// (`crust::continental_supply`) is below this fraction of the
 /// ocean-fraction-implied land quota. The gap it bisects is wide and
-/// empty: default draws (8-14 cratons) sit at supply/quota ≳ 0.7 (see
+/// empty: default draws (8-14 cratons) bottom out at supply/quota ≈ 0.554
+/// over the frozen 1000-seed census (seed 558; 20/1000 below 0.6) — see
 /// `default_worlds_never_trip_the_supply_fallback` in
-/// `tectonic_properties.rs`), while a lone 0.6 rad-clamped craton sits
-/// ≲ 0.15 — so default worlds provably keep the exact-percentile path
+/// `tectonic_properties.rs` — while a lone 0.6 rad-clamped craton sits
+/// ≲ 0.18; the 0.5 factor bisects the genuinely empty gap between ~0.55
+/// and ~0.18, so default worlds provably keep the exact-percentile path
 /// byte-identical.
 /// type-audit: bare-ok(ratio)
 pub const SUPPLY_SHORTFALL_FACTOR: f64 = 0.5;

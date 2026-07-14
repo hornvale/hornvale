@@ -335,8 +335,10 @@ fn default_worlds_never_trip_the_supply_fallback() {
     // Craton-level (no genesis): cheap, and grid-free by construction —
     // this is the byte-identity proof that the fallback cannot rewrite
     // default worlds (whose frozen census fixtures and seed-42 artifacts
-    // must not drift).
-    for seed in 0..64u64 {
+    // must not drift). The sweep covers the frozen 1000-seed census
+    // population (seeds 0..999, `studies/the-census.study.json`) — the
+    // exact population whose byte-identity this guard proves.
+    for seed in 0..1000u64 {
         let terrain_seed = Seed(seed).derive(streams::ROOT);
         let ocean_target =
             resolve_ocean_fraction(terrain_seed, &TerrainPins::default(), &mut Vec::new());

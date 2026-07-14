@@ -64,9 +64,9 @@ target unmet") in its genesis notes, so the trade-off is visible in the
 world's own record rather than silent.
 
 The gap the `SUPPLY_SHORTFALL_FACTOR` threshold bisects turns out to be
-wide and empty, not a knife-edge: default worlds (8–14 cratons) sit at
-supply/quota ratios above 0.7, while a lone 0.6 rad-clamped craton sits
-below 0.15. A dedicated separation guard
+wide and empty, not a knife-edge: default worlds (8–14 cratons) bottom out
+at a supply/quota ratio of ≈ 0.554 over the frozen 1000-seed census, while a
+lone 0.6 rad-clamped craton sits ≲ 0.18. A dedicated separation guard
 (`default_worlds_never_trip_the_supply_fallback`) proves the fallback cannot
 activate on any default draw, which is why this campaign leaves every
 committed artifact and the frozen census untouched — confirmed by a clean
