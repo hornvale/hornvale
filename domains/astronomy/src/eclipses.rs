@@ -197,6 +197,143 @@ fn syzygy_families() -> Vec<(f64, EclipseBody)> {
     vec![(0.0, EclipseBody::Solar), (0.5, EclipseBody::Lunar)]
 }
 
+/// Half-width of the full-omen band, degrees of latitude (declared
+/// approximation, model card: real totality bands are ~1° of latitude;
+/// ours is slightly generous so a band is findable at room scale).
+/// type-audit: pending(wave-1)
+pub const TRACK_HALF_WIDTH_DEG: f64 = 2.0;
+
+/// The moon's ecliptic longitude at `t`, degrees in [0, 360): the sun's
+/// longitude plus the synodic phase (Eclipse Seasons — the positional
+/// ephemeris half transits and standstills will reuse). `None` if the
+/// moon has no synodic cycle.
+/// type-audit: bare-ok(index: index), pending(wave-1: return)
+pub fn moon_ecliptic_longitude_deg(calendar: &Calendar, index: usize, t: StdDays) -> Option<f64> {
+    let phase = calendar.moon_phase(t, index)?;
+    Some((360.0 * calendar.year_phase(t) + 360.0 * phase).rem_euclid(360.0))
+}
+
+/// The sub-solar longitude at `t`, degrees in [−180, 180): local noon of
+/// the position-blind observer (day fraction 0.5) sits at longitude 0,
+/// matching the locked convention (substellar point = prime meridian);
+/// the sun sweeps westward on a prograde world, eastward on a retrograde
+/// one (SKY-22). A locked world's sun is fixed at 0.
+/// type-audit: pending(wave-1)
+pub fn sub_solar_longitude_deg(calendar: &Calendar, t: StdDays) -> f64 {
+    let Some((_, fraction)) = calendar.local_day(t) else {
+        return 0.0;
+    };
+    let direction = if calendar.is_retrograde() { 1.0 } else { -1.0 };
+    (direction * (fraction - 0.5) * 360.0 + 180.0).rem_euclid(360.0) - 180.0
+}
+
+/// A solar eclipse's shadow geometry: a latitude band swept across
+/// longitudes as the world turns under the shadow.
+/// type-audit: pending(wave-1: center_lat_deg), pending(wave-1: half_width_deg), pending(wave-1: start_lon_deg), pending(wave-1: end_lon_deg), pending(wave-1: duration_days)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GroundTrack {
+    /// Latitude of the band's center at mid-event, degrees: the sub-solar
+    /// latitude displaced poleward by the ecliptic-latitude miss.
+    pub center_lat_deg: f64,
+    /// Half-width of the full-omen band, degrees of latitude.
+    pub half_width_deg: f64,
+    /// Sub-solar longitude when the crossing begins, degrees [−180, 180).
+    pub start_lon_deg: f64,
+    /// Sub-solar longitude when the crossing ends, degrees [−180, 180).
+    pub end_lon_deg: f64,
+    /// Crossing duration, standard days (the moon's synodic drift across
+    /// the combined discs).
+    pub duration_days: f64,
+}
+
+/// The ground track of a dated solar eclipse; `None` for a lunar event —
+/// the anchor's shadow is one shadow for the whole night side. The
+/// latitude mapping is a declared approximation (model card): center =
+/// solar declination + (β/θ)·(90° − |declination|), so a central pass
+/// tracks the sub-solar latitude and a threshold-grazing one exits at a
+/// pole.
+pub fn ground_track(
+    system: &StarSystem,
+    calendar: &Calendar,
+    event: &EclipseEvent,
+) -> Option<GroundTrack> {
+    if event.body == EclipseBody::Lunar {
+        return None;
+    }
+    let moon = &system.moons[event.moon];
+    let beta = moon_ecliptic_latitude_deg(calendar, moon, event.moon, event.day)?;
+    let sun_angular = sun_angular_rel_at(system, calendar, event.day);
+    let theta = solar_eclipse_threshold_deg(sun_angular, moon.angular_diameter_rel);
+    let dec = calendar.solar_declination(event.day);
+    let center_lat_deg = (dec + (beta / theta) * (90.0 - dec.abs())).clamp(-90.0, 90.0);
+    let synodic = calendar.synodic_month(event.moon)?;
+    let combined_deg = ANGULAR_UNIT_DEG * (sun_angular + moon.angular_diameter_rel);
+    let duration_days = combined_deg / (360.0 / synodic.0);
+    let start_lon_deg =
+        sub_solar_longitude_deg(calendar, StdDays(event.day.0 - duration_days / 2.0));
+    let end_lon_deg = sub_solar_longitude_deg(calendar, StdDays(event.day.0 + duration_days / 2.0));
+    Some(GroundTrack {
+        center_lat_deg,
+        half_width_deg: TRACK_HALF_WIDTH_DEG,
+        start_lon_deg,
+        end_lon_deg,
+        duration_days,
+    })
+}
+
+/// What a placed observer sees of a dated solar eclipse.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EclipseSight {
+    /// Inside the band under a covering moon: the sun devoured whole.
+    WholeSun,
+    /// Inside the band under a too-small moon: the burning ring.
+    BurningRing,
+    /// On the day side but outside the band: the sun is bitten.
+    Bitten,
+    /// On the night side: nothing.
+    Unseen,
+}
+
+/// Which tier of the omen an observer at (`latitude`, `longitude`) sees
+/// for a dated solar `event`. Day-side membership is the equatorial
+/// half-day approximation: within 90° of the sub-solar longitude
+/// (declared; matches the locked-culling geometry).
+/// type-audit: pending(wave-1: latitude), pending(wave-1: longitude)
+pub fn solar_eclipse_sight(
+    system: &StarSystem,
+    calendar: &Calendar,
+    event: &EclipseEvent,
+    latitude: f64,
+    longitude: f64,
+) -> EclipseSight {
+    let ss = sub_solar_longitude_deg(calendar, event.day);
+    let lon_gap = (longitude - ss + 180.0).rem_euclid(360.0) - 180.0;
+    if lon_gap.abs() >= 90.0 {
+        return EclipseSight::Unseen;
+    }
+    let Some(track) = ground_track(system, calendar, event) else {
+        return EclipseSight::Unseen;
+    };
+    if (latitude - track.center_lat_deg).abs() <= track.half_width_deg {
+        match event.kind {
+            EclipseKind::Total => EclipseSight::WholeSun,
+            EclipseKind::Annular => EclipseSight::BurningRing,
+        }
+    } else {
+        EclipseSight::Bitten
+    }
+}
+
+/// Whether an observer at `longitude` has the full moon in their sky for
+/// a dated lunar `event`: the night side, the complement of the solar
+/// half-day window.
+/// type-audit: pending(wave-1: longitude), bare-ok(flag: return)
+pub fn lunar_eclipse_seen(calendar: &Calendar, event: &EclipseEvent, longitude: f64) -> bool {
+    let ss = sub_solar_longitude_deg(calendar, event.day);
+    let lon_gap = (longitude - ss + 180.0).rem_euclid(360.0) - 180.0;
+    lon_gap.abs() >= 90.0
+}
+
 /// Sol + Luna exactly: 1 M☉, 1 AU, 365.25-day year, 24-hour day, zero
 /// forcing, one moon at Luna's elements with node at 0°. The calibration
 /// fixture Tasks 3–11 reuse — module scope (not inside `mod tests`) so
@@ -442,5 +579,92 @@ mod tests {
                 e.day.0
             );
         }
+    }
+
+    /// A central eclipse (β = 0) tracks the sub-solar latitude; a
+    /// threshold-grazing one runs toward a pole.
+    #[test]
+    fn track_latitude_runs_from_subsolar_to_polar_with_beta() {
+        let (system, calendar) = luna_sol();
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 30.0));
+        let moon = &system.moons[0];
+        for e in events
+            .iter()
+            .filter(|e| matches!(e.body, EclipseBody::Solar))
+        {
+            let track = ground_track(&system, &calendar, e).unwrap();
+            let beta = moon_ecliptic_latitude_deg(&calendar, moon, e.moon, e.day).unwrap();
+            let dec = calendar.solar_declination(e.day);
+            if beta.abs() < 0.1 {
+                assert!((track.center_lat_deg - dec).abs() < 5.0, "central near dec");
+            }
+            assert!((-90.0..=90.0).contains(&track.center_lat_deg));
+        }
+    }
+
+    /// Luna check: the shadow crossing lasts hours, not minutes or days.
+    #[test]
+    fn track_duration_is_hours_luna_scale() {
+        let (system, calendar) = luna_sol();
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let solar = events
+            .iter()
+            .find(|e| matches!(e.body, EclipseBody::Solar))
+            .unwrap();
+        let track = ground_track(&system, &calendar, solar).unwrap();
+        assert!(
+            (0.03..0.3).contains(&track.duration_days),
+            "duration {} days",
+            track.duration_days
+        );
+    }
+
+    /// Lunar events have no track — every night-side observer sees them.
+    #[test]
+    fn lunar_events_have_no_track_and_night_visibility() {
+        let (system, calendar) = luna_sol();
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let lunar = events
+            .iter()
+            .find(|e| matches!(e.body, EclipseBody::Lunar))
+            .unwrap();
+        assert!(ground_track(&system, &calendar, lunar).is_none());
+        let ss = sub_solar_longitude_deg(&calendar, lunar.day);
+        let night_lon = if ss >= 0.0 { ss - 180.0 } else { ss + 180.0 };
+        assert!(lunar_eclipse_seen(&calendar, lunar, night_lon));
+        assert!(!lunar_eclipse_seen(&calendar, lunar, ss));
+    }
+
+    /// Sight tiers: in-band day-side sees the full omen, off-band day-side
+    /// sees a bite, the night side sees nothing.
+    #[test]
+    fn sight_tiers_partition_the_globe() {
+        let (system, calendar) = luna_sol();
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let solar = events
+            .iter()
+            .find(|e| matches!(e.body, EclipseBody::Solar))
+            .unwrap();
+        let track = ground_track(&system, &calendar, solar).unwrap();
+        let ss = sub_solar_longitude_deg(&calendar, solar.day);
+        let in_band = solar_eclipse_sight(&system, &calendar, solar, track.center_lat_deg, ss);
+        assert!(matches!(
+            in_band,
+            EclipseSight::WholeSun | EclipseSight::BurningRing
+        ));
+        let off_band_lat = if track.center_lat_deg > 0.0 {
+            track.center_lat_deg - track.half_width_deg - 20.0
+        } else {
+            track.center_lat_deg + track.half_width_deg + 20.0
+        };
+        assert!(matches!(
+            solar_eclipse_sight(&system, &calendar, solar, off_band_lat, ss),
+            EclipseSight::Bitten
+        ));
+        let night_lon = if ss >= 0.0 { ss - 180.0 } else { ss + 180.0 };
+        assert!(matches!(
+            solar_eclipse_sight(&system, &calendar, solar, track.center_lat_deg, night_lon),
+            EclipseSight::Unseen
+        ));
     }
 }
