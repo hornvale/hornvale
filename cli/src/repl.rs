@@ -24,6 +24,7 @@ commands:
   word <concept>   every species' word for a concept, or its reasoned gap
   phenomena [day] [--as <species>] — salient phenomena, optionally through a species' eyes
   facts <id>       every fact about entity id
+  possess          walk the world as its flagship settler ('release' returns)
   quit             leave
 ";
 
@@ -34,7 +35,8 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
         "hornvale repl — world of seed {} ('help' for commands)",
         world.seed.0
     )?;
-    for line in input.lines() {
+    let mut lines = input.lines();
+    while let Some(line) = lines.next() {
         let line = line?;
         let mut parts = line.split_whitespace();
         let command = parts.next().unwrap_or("");
@@ -125,7 +127,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                                 "cell {}: biome {} — {:.0}°C, moisture {:.2}",
                                 cell.0,
                                 climate.biome_at(cell).name(),
-                                climate.mean_temperature_at(cell),
+                                climate.mean_temperature_at(cell).get(),
                                 climate.moisture_at(cell)
                             )?;
                         }
@@ -333,6 +335,32 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     None => writeln!(output, "usage: facts <entity-id>")?,
                 }
             }
+            "possess" => {
+                let opts = hornvale_vessel::PossessOpts {
+                    day: WorldTime { day: 0.0 },
+                    echo: false,
+                };
+                match hornvale_vessel::Session::start(world, &opts) {
+                    Err(e) => writeln!(output, "error: {e}")?,
+                    Ok((mut session, opening)) => {
+                        writeln!(output, "{opening}")?;
+                        for inner in lines.by_ref() {
+                            let inner = inner?;
+                            match session.handle(&inner) {
+                                hornvale_vessel::Turn::Out(s) => {
+                                    if !s.is_empty() {
+                                        writeln!(output, "{s}")?;
+                                    }
+                                }
+                                hornvale_vessel::Turn::Released(s) => {
+                                    writeln!(output, "{s}")?;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             other => writeln!(output, "unknown command '{other}' — try 'help'")?,
         }
     }
@@ -411,6 +439,23 @@ mod tests {
         let mut out = Vec::new();
         run(&world, commands.as_bytes(), &mut out).unwrap();
         String::from_utf8(out).unwrap()
+    }
+
+    #[test]
+    fn possess_hands_off_and_release_returns_to_the_scholar_loop() {
+        let world = constant_world();
+        let input = b"possess\nlook\nrelease\nvillage\nquit\n" as &[u8];
+        let mut output = Vec::new();
+        run(&world, input, &mut output).unwrap();
+        let text = String::from_utf8(output).unwrap();
+        assert!(text.contains("You stand in"), "possession opened");
+        assert!(text.contains("You let go."), "release ended the possession");
+        let released_at = text.find("You let go.").unwrap();
+        let village_out = &text[released_at..];
+        assert!(
+            village_out.lines().count() > 1,
+            "the scholar loop answered 'village' after release"
+        );
     }
 
     #[test]

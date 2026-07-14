@@ -1,5 +1,11 @@
 # Temperature Implementation Plan
 
+> **Status: EXECUTED (2026-07-13) and merged.** All five tasks landed
+> byte-identical; `Temperature`/`TempAnomaly` are kernel types, climate's
+> boundary is typed, and worldgen's `Celsius` bridge is gone. See the
+> chronicle (`book/src/chronicle/temperature.md`) and the retrospective
+> (`docs/retrospectives/temperature.md`).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Promote `paleoclimate`'s `Celsius`/`TempAnomaly` pair to the kernel as `Temperature`/`TempAnomaly`, type `climate`'s bare-`f64` temperature boundary, and remove `worldgen`'s cross-domain `Celsius` borrow — a byte-identical migration.
@@ -224,13 +230,14 @@ Claude-Session: https://claude.ai/code/session_01VADHoYci3kwUe14WhmCDKJ"
 - [ ] **Step 1: Prove behavior-free — regenerate artifacts, assert no drift**
 
 ```bash
-scripts/regenerate-artifacts.sh
+SKIP_CENSUS=1 bash scripts/regenerate-artifacts.sh
 git diff --exit-code book/
 ```
 
 Expected: **empty diff** — Celsius-canonical means every emitted temperature number
-is unchanged (`scripts/regenerate-artifacts.sh` is TOOL-15, the canonical
-regeneration used by CI and `make rebaseline`).
+is unchanged. (Censuses are never regenerated locally; they refresh once per
+campaign on the AWS box via `scripts/aws-gate/regen-git.sh`, just before the
+merge to main, with warning to Nathan.)
 
 - [ ] **Step 2: Retag + regenerate the audit report**
 

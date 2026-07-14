@@ -11,10 +11,16 @@ use hornvale_lab::{MetricValue, RunResult, canonical_row, load_rows, load_study,
 use std::path::Path;
 use std::sync::LazyLock;
 
+// TODO(census-regen): repointed at the-census merge — census-of-the-gathering
+// folded into main's `the-census` (1000 seeds, `metrics: "all"`). The committed
+// the-census fixture is STALE for the-gathering's added field columns
+// (capacity-by-abs-latitude, total-population, pop-weighted-abs-latitude,
+// rank-size-slope), so this file's pinned gradient/latitude assertions are
+// EXPECTED to fail until the census is regenerated and these values re-pinned.
 /// The study driving this file's fixture.
-const STUDY_PATH: &str = "../../studies/census-of-the-gathering.study.json";
+const STUDY_PATH: &str = "../../studies/the-census.study.json";
 /// The committed, CI-drift-checked census rows this file loads from.
-const ROWS_PATH: &str = "../../book/src/laboratory/generated/census-of-the-gathering/rows.csv";
+const ROWS_PATH: &str = "../../book/src/laboratory/generated/the-census/rows.csv";
 
 /// The 200-seed gradient census, loaded ONCE from its committed `rows.csv`
 /// fixture and shared by every calibration in this file (mirrors

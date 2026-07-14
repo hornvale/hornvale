@@ -1,0 +1,129 @@
+{
+  "backfilled": true,
+  "columns": [
+    {
+      "kind": "integer",
+      "name": "seed"
+    },
+    {
+      "kind": "categorical",
+      "name": "pin_set"
+    },
+    {
+      "buckets": [
+        1.0,
+        1.5,
+        2.0,
+        2.5,
+        3.0,
+        4.0,
+        6.0
+      ],
+      "doc": "Shoreline development index: coastline length over the circumference of the circle with the land's area (1 = maximally compact); Absent without a shoreline",
+      "kind": "numeric",
+      "name": "shoreline-development",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0
+      ],
+      "doc": "Ashman's D between land and ocean elevation populations (Earth is strongly bimodal); Absent when a world lacks land or ocean",
+      "kind": "numeric",
+      "name": "hypsometric-bimodality",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of cells within the shelf band (±200 m) of sea level — the populated shelf Earth's hypsometry keeps",
+      "kind": "numeric",
+      "name": "shelf-fraction",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0,
+        12.0
+      ],
+      "doc": "Connected land components at least 0.5% of the world's total land cells (Task 9 iteration 3's size floor, Earth-calibrated: Greenland is ~1.4% of Earth's land and qualifies, Iceland ~0.07% does not) — the unfloored fringe of sub-floor fragments is preserved separately by landmass-count",
+      "kind": "numeric",
+      "name": "continent-count",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        0.9
+      ],
+      "doc": "Largest land component's share of all land cells; Absent on a landless world",
+      "kind": "numeric",
+      "name": "largest-continent-share",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6
+      ],
+      "doc": "Gini coefficient over plate cell counts (Earth's plate sizes are heavy-tailed; uniform Voronoi scores low)",
+      "kind": "numeric",
+      "name": "plate-size-gini",
+      "rung": "terrain"
+    },
+    {
+      "kind": "categorical",
+      "name": "refusal"
+    }
+  ],
+  "conventions": {
+    "float_quantization": "8-significant-digits"
+  },
+  "rows": {
+    "count": 10000,
+    "fnv1a64": "0xe25f6c78af18e93f"
+  },
+  "schema_version": 1,
+  "study": {
+    "description": "The Census of Coasts: continental-shape metrics over 10,000 worlds — the preregistered baseline the terrain overhaul (Crust, Sculpting) must move.",
+    "name": "census-of-coasts",
+    "pin_sets": [
+      {
+        "label": "default",
+        "pins": [],
+        "roster": null
+      }
+    ],
+    "seeds": {
+      "count": 10000,
+      "from": 0
+    }
+  }
+}

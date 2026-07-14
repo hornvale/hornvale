@@ -59,8 +59,10 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 | Label | Meaning |
 |---|---|
-| `locale/aspect` | room aspect draw |
-| `locale/jitter` | room relief jitter |
+| `locale/regime/micro` | room sub-cell micro-field |
+| `locale/regime/variety` | room descriptor variety draw |
+| `locale/regime/substrate` | room substrate-detail draw |
+| `locale/strangeness/place` | world rarity-budget placement pass |
 
 ### hornvale-religion
 
@@ -95,6 +97,13 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/cratons` | margin draw (scales the ocean-fraction-derived budget, Task 9 iteration 3'), craton count, then per-craton center/radius/age |
 | `terrain/plate-weights` | per-plate heavy-tailed Voronoi weight draws |
 | `terrain/plate-edge` | plate-edge noise (hash-noise only; no stream draws) |
+
+### hornvale-vessel
+
+| Label | Meaning |
+|---|---|
+| `vessel/agent` | minted agent id draw |
+| `vessel/walk` | walker-battery deterministic walk |
 
 ### hornvale-kernel (internal)
 

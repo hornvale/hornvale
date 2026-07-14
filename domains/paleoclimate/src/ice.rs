@@ -6,7 +6,8 @@
 //! albedo cooling offset and an eustatic sea-level fall. Derived from forcing —
 //! no RNG draws.
 
-use crate::units::{IceVolume, SeaLevelChange, TempAnomaly};
+use crate::units::{IceVolume, SeaLevelChange};
+use hornvale_kernel::TempAnomaly;
 
 /// Index below which ice grows.
 const GROWTH_THRESHOLD: f64 = -0.5;
@@ -31,14 +32,14 @@ const DAYS_PER_KYR: f64 = 1_000.0 * 365.25;
 
 /// Global cooling offset (≤ 0) from an ice-volume fraction, as a
 /// [`TempAnomaly`] — the albedo-cooling ΔT applied to the world's present
-/// temperature field to get an era's absolute reading (see `Celsius`'s
-/// `Add` impl). Built via [`TempAnomaly::from_offset_c`], the in-crate
-/// production path for a computed (not measured) anomaly. `pub(crate)`, not
-/// `pub`: this is the sole way to fabricate a `TempAnomaly` from a bare
-/// `f64`, so exposing it outside the crate would defeat the newtype's
-/// external-fabrication guarantee (see `TempAnomaly::from_offset_c`).
-/// Callers outside this crate read `IceState.temp_offset` from the
-/// integrated history instead.
+/// temperature field to get an era's absolute reading (see `Temperature`'s
+/// `Add` impl). Built via [`TempAnomaly::from_offset_c`] (a kernel-public
+/// constructor: see `hornvale_kernel::units`), expressing the ice sheet's
+/// feedback as a computed (not measured) anomaly. `pub(crate)`, not `pub`:
+/// this function is this crate's own convenience wrapper around that
+/// constructor, not a fabrication boundary — callers outside this crate
+/// read `IceState.temp_offset` from the integrated history instead of
+/// computing their own offset here.
 pub(crate) fn temp_offset(volume: f64) -> TempAnomaly {
     TempAnomaly::from_offset_c(-ALBEDO_GAIN_C * volume)
 }
@@ -58,7 +59,7 @@ pub struct IceState {
     /// Global ice volume fraction at this day.
     pub volume: IceVolume,
     /// Global temperature offset from albedo feedback (≤ 0), as an anomaly
-    /// applied to the world's present temperature via `Celsius`'s `Add`.
+    /// applied to the world's present temperature via `Temperature`'s `Add`.
     pub temp_offset: TempAnomaly,
     /// Eustatic sea-level change (metres, ≤ 0).
     pub sea_level_change: SeaLevelChange,

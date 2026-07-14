@@ -9,7 +9,7 @@
 #   make gate-fast    # ITERATION ONLY: scope fmt/clippy/test to changed crates (make gate still gates commits)
 #   make gate-full    # full evidence: the commit gate + the cost-tagged heavy tier
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
-#   make rebaseline   # regenerate every committed generated artifact
+#   make rebaseline   # regenerate committed artifacts EXCEPT censuses (census regen is AWS-only: make regen-remote)
 #   make rebaseline-goldens # accept drifted byte-golden test fixtures
 #   make lab-diff STUDY=<name> # report which census metrics moved vs HEAD
 #   make preflight    # GO/NO-GO before integrating a campaign branch with main
@@ -20,7 +20,7 @@
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast gate-full nextest-check prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck
+.PHONY: help quick gate gate-fast gate-full nextest-check prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -36,6 +36,7 @@ gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`ma
 
 gate-full: gate ## Full evidence: the commit gate + the heavy tier (cost-tagged #[ignore]d tests only)
 	@bash scripts/gate-full-heavy.sh
+	@echo "reminder: 'make census-check' verifies the analysis harness (local-only, brew tools)"
 
 fmt: ## Format the workspace in place
 	cargo fmt
@@ -73,7 +74,7 @@ rebaseline-goldens: ## Accept drifted byte-golden test fixtures (REBASELINE=1), 
 	REBASELINE=1 cargo test -q -p hornvale-worldgen --test proto_goblinoid_golden
 	REBASELINE=1 cargo test -q -p hornvale --test architecture
 
-lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STUDY=census-lands-drift)
+lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STUDY=the-census)
 	@test -n "$(STUDY)" || { echo "usage: make lab-diff STUDY=<study-name>"; exit 2; }
 	@old="$$(mktemp)"; \
 	if ! git show HEAD:book/src/laboratory/generated/$(STUDY)/rows.csv > "$$old" 2>/dev/null; then \
@@ -84,6 +85,22 @@ lab-diff: ## Report which census metrics moved vs HEAD (usage: make lab-diff STU
 	cargo run -q -p hornvale -- lab diff studies/$(STUDY).study.json "$$old" \
 	    book/src/laboratory/generated/$(STUDY)/rows.csv; \
 	status=$$?; rm -f "$$old"; exit $$status
+
+census: ## Build the analysis DB from committed censuses and open DuckDB on it
+	@bash tools/census/build.sh
+	@duckdb tools/census/.build/census.duckdb
+
+census-query: ## One-shot census query (usage: make census-query Q="SELECT ...")
+	@test -n "$(Q)" || { echo "usage: make census-query Q=\"SELECT ...\""; exit 2; }
+	@bash tools/census/build.sh
+	@duckdb tools/census/.build/census.duckdb -c "$(Q)"
+
+census-history: ## Load a study's git history into census_history (usage: make census-history STUDY=the-census)
+	@test -n "$(STUDY)" || { echo "usage: make census-history STUDY=<study-name>"; exit 2; }
+	@bash tools/census/history.sh "$(STUDY)"
+
+census-check: ## Harness gate: mount-validate + smoke + golden-pins (local; needs duckdb+python3)
+	@bash tools/census/check.sh
 
 regen-remote: ## Regenerate ALL artifacts incl. censuses on the AWS spot box (BILLABLE; the only sanctioned census-regen path)
 	@scripts/aws-gate/regen-git.sh .
@@ -114,4 +131,4 @@ gate-remote-teardown: ## Remove all remote-gate infra
 	@scripts/aws-gate/teardown.sh
 
 shellcheck: ## Lint all shell scripts
-	@shellcheck scripts/*.sh scripts/aws-gate/*.sh scripts/aws-gate/test/*.sh scripts/hooks/*
+	@shellcheck scripts/*.sh scripts/aws-gate/*.sh scripts/aws-gate/test/*.sh scripts/hooks/* tools/census/*.sh

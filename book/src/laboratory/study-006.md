@@ -12,11 +12,11 @@ shift, recorded.
 from a 10,000-seed run of `studies/census-of-peoples.study.json`, executed
 once by hand at author time, in the same arrangement Study 003 used for the
 single-species baseline. It is **not** committed and **not** part of CI.
-The drift-checked sibling, `census-lands-drift` (500 seeds,
-`book/src/laboratory/generated/census-lands-drift/`), now carries the same
+The drift-checked sibling, `the-census` (1,000 seeds,
+`book/src/laboratory/generated/the-census/`), now carries the same
 per-species metrics this study measures at 10k; small differences between a
 number quoted here and a bar in that chart are sampling variance between a
-500- and a 10,000-seed draw, not drift.
+1,000- and a 10,000-seed draw, not drift.
 
 **A note on preregistration.** Per ADR 0016, studies commit their
 hypotheses before running the census that tests them. The three hypotheses
@@ -105,8 +105,8 @@ literal presence of `"slave"` in `goblin-flagship-roles`: of 9,972 goblin
 flagships checked, **6,851 have a slave rung and 6,851 satisfy
 surplus > 0.6 ∧ population > 300 — zero mismatches in either direction**.
 H2 holds exactly at 10k, the same exactness `windows/lab/tests/
-calibration.rs` already asserts on every CI build over the 500-seed
-sample.
+calibration.rs` already asserts on every CI build over the 1,000-seed
+`the-census` sample.
 
 **H3: the structural ceiling.** Across every kobold flagship in the census
 (9,977 present, five distinct role-ladder shapes — `digger,elders`;

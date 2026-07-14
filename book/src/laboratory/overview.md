@@ -42,47 +42,93 @@ Census of Coasts II](./census-of-coasts-ii.md) rather than a new numbered
 study, since it is the same study file and the same ten thousand seeds —
 only the pins under test change.
 
+### The census family: live and frozen
+
+One study is canonical. `the-census` walks every metric the unified
+registry knows — sky and land alike — over 1,000 unselected worlds (seeds
+0 through 999, default pins): the project's queryable dataset and CI's
+determinism guard in one instrument. It is `census-lands-drift` promoted
+and renamed (named `census-drift` through Campaign 3b, `census-lands-drift`
+from Campaign 3c's land-metrics addition, `the-census` from the
+census-as-data campaign — the same continuously-run instrument throughout,
+its seed count raised 500 to 1,000 at the rename) — so prior history
+recorded under those two names still describes today's `the-census`. A
+second committed study shares the live tier: `census-of-the-meeting` (500
+seeds), the **null control**. It walks two *solo* rosters — `[goblin]` and
+`[goblin-twin]`, a species carrying the goblin's exact vectors — over one
+shared seed range, and its calibrations assert that the twin is
+structurally indistinguishable from the goblin: at chance on blind
+attribution, within the sampling bound on every distribution. It backs
+[Study 009, the Census of the Meeting](./study-009.md), the Year-2
+capstone. Both live studies are regenerated on the remote box (`make
+regen-remote`, [decision
+0046](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0046-census-regen-is-remote-only.md)), then drift-checked and CI-probed on every build.
+
+Everything else the census family has produced is frozen, not deleted.
+`branches-family` (1,000 seeds, the goblinoid-phylogeny battery —
+Neogrammarian regularity, monophyly, inventory closure, real divergence,
+the loudness ordering, the homophony ledger) froze at the consolidation:
+`the-census` subsumes its columns exactly, so its own run retired, but its
+committed rows remain the evidence [decision 0016](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0016-studies-preregister-hypotheses.md)'s
+preregistrations point at. `census-of-coasts` and `census-of-coasts-tuning`
+— the preregistered terrain-overhaul baselines behind [The Census of Coasts
+II](./census-of-coasts-ii.md) — are frozen the same way. None of the three
+is ever regenerated: rerunning a frozen study under moved physics would
+falsify the record it exists to preserve, since a frozen study is evidence,
+not an instrument. What keeps each one a *reproducible* citation rather
+than an inert snapshot is that `tools/census/manifest.json` records the
+exact commit each was produced at — `branches-family` at `90fd7cc`,
+`census-of-coasts` at `15ef667`, `census-of-coasts-tuning` at `2d82a6a` —
+so `git checkout <commit> && lab run` reproduces any of them byte for byte.
+See [decision 0045](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0045-one-canonical-census.md)
+for the full ratification.
+
 ### The instrument's self-check
 
-`census-lands-drift` is a small, fast study (500 seeds, every metric the
-unified registry knows — sky and land alike) that CI reruns on every build.
-Its outputs are committed artifacts: if the generator's behavior ever
-drifts from what's checked in, the rerun produces different numbers and the
-diff fails the build. The instrument is honest because it re-proves itself
-every time. (It was named `census-drift` through Campaign 3b, before the
-land metrics arrived; the Campaign 3c rename is a label change only — the
-same one study, still the CI-checked half of every census.)
-
-A second committed, CI-drift-checked study joined it in The Meeting:
-`census-of-the-meeting` (500 seeds), the year's **null control**. It walks
-two *solo* rosters — `[goblin]` and `[goblin-twin]`, a species carrying the
-goblin's exact vectors — over one shared seed range, and its calibrations
-assert that the twin is structurally indistinguishable from the goblin: at
-chance on blind attribution, within the sampling bound on every distribution.
-It backs [Study 009, the Census of the Meeting](./study-009.md), the Year-2
-capstone, and like `census-lands-drift` it is re-run and drift-checked on
-every build.
-
-The Branches added a third: `branches-family` (1,000 seeds), the family
-battery behind the goblinoid phylogeny — Neogrammarian regularity,
-monophyly, inventory closure, real divergence, the loudness ordering, and
-the homophony ledger. Its calibration suite loads the committed rows the
-same way the census calibrations do, keeping a roughly 200-second sweep
-off every local `cargo test`, and it is re-run and drift-checked on every
-build like the other two.
-
 Between commits, a cheap always-on probe (`windows/lab/tests/fixture_staleness.rs`)
-regenerates each census's first three seeds — plus a rotating three-seed
+regenerates the live tier's first three seeds — plus a rotating three-seed
 window whose position derives from the committed fixture's own bytes, so
-successive regenerations sweep different slices of the seed range — live on
-every `cargo test` and compares them against the committed rows — so a worldgen change that moves
-the census fails locally with the regeneration instruction (`make
-rebaseline`) instead of surfacing an hour later in CI's full
-regenerate-and-diff.
+successive regenerations sweep different slices of the seed range — and
+compares them against the committed rows. It was authored as an always-on,
+few-seconds check on every `cargo test`, but as the worldgen pipeline
+deepened its cost grew to minutes, so it now runs in the heavy tier
+(`make gate-full`) rather than in the commit gate: a worldgen change that
+moves a census surfaces there and in CI's regenerate-and-diff, not on the
+developer's next local test run. The full census fixtures themselves are refreshed once
+per campaign on the remote regeneration box (`make regen-remote`),
+just before the campaign merges to `main` — never on the local machine, whose
+gate stays under five minutes by design. Between those refreshes a moved
+census is *known* (the probe fails) but its committed rows deliberately lag
+until the pre-merge regeneration.
 
 When a census *does* move, the reviewable surface is `make lab-diff
 STUDY=<name>` (wrapping `hornvale lab diff`): a per-metric report of which
 distribution moved and by how much — count deltas per value bucket and the
 numeric mean shift — rather than a raw CSV diff.
 
-{{#include generated/census-lands-drift/census-lands-drift-summary.md}}
+### The Census as Data
+
+Every published study — live or frozen — carries a co-generated
+`schema.json` alongside its `rows.csv`: typed, documented columns, the
+quantization convention its floats were serialized under, a row count, and
+an FNV-1a64 content hash binding the two files together, so a study's data
+and its schema can never silently drift apart. `tools/census/` (outside
+the workspace, like the type audit — decisions 0027/0028's pattern) turns
+that commitment into a queryable instrument: `make census` builds a
+throwaway DuckDB database from every committed study — typed wide views
+per study plus a unified `census_long` long view — and opens a session on
+it; `make census-query Q="…"` is the one-shot, non-interactive form, for a
+script or a session that wants an answer rather than a REPL; `make
+census-history STUDY=…` walks that study's `rows.csv` back through git
+history and loads a longitudinal table, so "what did this metric look like
+as of the Crust close" is a `WHERE` clause. The doctrine governing all of
+it is graduation: an ad-hoc query that finds something worth keeping
+graduates to a committed canned query under `tools/census/queries/explore/`,
+and, if it keeps earning its keep, to a metric in the registry or a new
+preregistered study — and a question you find yourself *unable* to write as
+a query marks a missing metric, not a dead end. `golden-pins.sql` is the
+harness's pin-provenance report: every pinned calibration constant in the
+codebase is reproducible as a query against the committed fixture, so a
+calibration is never just a number someone once computed and typed in.
+
+{{#include generated/the-census/the-census-summary.md}}

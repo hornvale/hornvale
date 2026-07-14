@@ -5,6 +5,8 @@
 //! are never committed as facts (spec §3, §6) — the tier-0 `biome` fact stays
 //! with the Vale.
 
+use hornvale_kernel::{ReferenceElevation, Temperature};
+
 /// A seafloor tectonic feature at an ocean cell (climate-owned; the
 /// composition root maps `terrain::BoundaryKind` into this so climate imports
 /// no domain).
@@ -282,34 +284,38 @@ impl Biome {
 
 /// Classify a land cell. Specials first (ice below `ICE_C`, alpine above the
 /// tree line), then a Whittaker lookup on (annual-mean temperature, moisture).
-/// type-audit: pending(wave-2: temp_c), bare-ok(ratio: moisture), pending(wave-2: elevation_m), pending(wave-2: sea_level_m), pending(wave-2: latitude_deg)
+/// type-audit: bare-ok(ratio: moisture), pending(wave-2: latitude_deg)
 pub fn classify_land(
-    temp_c: f64,
+    temp_c: Temperature,
     moisture: f64,
-    elevation_m: f64,
-    sea_level_m: f64,
+    elevation_m: ReferenceElevation,
+    sea_level_m: ReferenceElevation,
     latitude_deg: f64,
 ) -> Biome {
-    if temp_c < ICE_C {
+    let ice_c = Temperature::new(ICE_C).expect("ice threshold is finite");
+    if temp_c < ice_c {
         return Biome::Ice;
     }
     if elevation_m - sea_level_m > tree_line_m(latitude_deg) {
         return Biome::Alpine;
     }
-    if temp_c < 0.0 {
+    let freeze_c = Temperature::new(0.0).expect("freeze threshold is finite");
+    let taiga_c = Temperature::new(7.0).expect("taiga threshold is finite");
+    let temperate_c = Temperature::new(20.0).expect("temperate threshold is finite");
+    if temp_c < freeze_c {
         // Cold: dry tundra, wetter taiga.
         if moisture < 0.35 {
             Biome::Tundra
         } else {
             Biome::Taiga
         }
-    } else if temp_c < 7.0 {
+    } else if temp_c < taiga_c {
         if moisture < 0.3 {
             Biome::Tundra
         } else {
             Biome::Taiga
         }
-    } else if temp_c < 20.0 {
+    } else if temp_c < temperate_c {
         // Temperate.
         if moisture < 0.25 {
             Biome::TemperateGrassland
@@ -339,14 +345,15 @@ const SEA_ICE_C: f64 = -2.0;
 
 /// Classify a marine cell by depth, surface temperature, seafloor feature,
 /// and upwelling, in precedence order (see the task's interface note).
-/// type-audit: pending(wave-2: depth_m), pending(wave-2: sst_c), bare-ok(flag: upwelling)
+/// type-audit: pending(wave-2: depth_m), bare-ok(flag: upwelling)
 pub fn classify_marine(
     depth_m: f64,
-    sst_c: f64,
+    sst_c: Temperature,
     feature: SeafloorFeature,
     upwelling: bool,
 ) -> Biome {
-    if sst_c < SEA_ICE_C {
+    let sea_ice_c = Temperature::new(SEA_ICE_C).expect("sea-ice threshold is finite");
+    if sst_c < sea_ice_c {
         return Biome::SeaIce;
     }
     if feature == SeafloorFeature::Trench && depth_m > 6000.0 {
@@ -356,10 +363,12 @@ pub fn classify_marine(
         return Biome::HydrothermalVent;
     }
     if depth_m < 200.0 {
-        if sst_c > 20.0 {
+        let reef_c = Temperature::new(20.0).expect("reef threshold is finite");
+        if sst_c > reef_c {
             return Biome::CoralReef;
         }
-        if sst_c < 12.0 {
+        let kelp_c = Temperature::new(12.0).expect("kelp threshold is finite");
+        if sst_c < kelp_c {
             return Biome::KelpForest;
         }
     }
@@ -381,14 +390,14 @@ pub fn classify_marine(
 
 /// Classify any cell: marine when below sea level (depth = sea_level − elev),
 /// otherwise land. `sst_c` is the surface temperature used for marine cells.
-/// type-audit: pending(wave-2: temp_c), bare-ok(ratio: moisture), pending(wave-2: sst_c), pending(wave-2: elevation_m), pending(wave-2: sea_level_m), pending(wave-2: latitude_deg), bare-ok(flag: upwelling)
+/// type-audit: bare-ok(ratio: moisture), pending(wave-2: latitude_deg), bare-ok(flag: upwelling)
 #[allow(clippy::too_many_arguments)]
 pub fn classify(
-    temp_c: f64,
+    temp_c: Temperature,
     moisture: f64,
-    sst_c: f64,
-    elevation_m: f64,
-    sea_level_m: f64,
+    sst_c: Temperature,
+    elevation_m: ReferenceElevation,
+    sea_level_m: ReferenceElevation,
     latitude_deg: f64,
     feature: SeafloorFeature,
     upwelling: bool,
@@ -412,29 +421,51 @@ mod tests {
         assert_eq!(names.len(), catalog.len(), "duplicate biome in catalog");
     }
 
+    /// Test-only helper: a validated `ReferenceElevation`.
+    fn e(m: f64) -> ReferenceElevation {
+        ReferenceElevation::new(m).unwrap()
+    }
+
+    /// Test-only helper: a validated `Temperature`.
+    fn t(c: f64) -> Temperature {
+        Temperature::new(c).unwrap()
+    }
+
     #[test]
     fn whittaker_hits_known_corners() {
         // Hot & wet → tropical rainforest; hot & dry → desert.
         assert_eq!(
-            classify_land(27.0, 0.9, 300.0, 0.0, 0.0),
+            classify_land(t(27.0), 0.9, e(300.0), e(0.0), 0.0),
             Biome::TropicalRainforest
         );
-        assert_eq!(classify_land(27.0, 0.05, 300.0, 0.0, 10.0), Biome::Desert);
+        assert_eq!(
+            classify_land(t(27.0), 0.05, e(300.0), e(0.0), 10.0),
+            Biome::Desert
+        );
         // Temperate mid-moisture → temperate forest.
         assert_eq!(
-            classify_land(12.0, 0.5, 200.0, 0.0, 45.0),
+            classify_land(t(12.0), 0.5, e(200.0), e(0.0), 45.0),
             Biome::TemperateForest
         );
         // Cold → taiga/tundra.
-        assert_eq!(classify_land(-2.0, 0.4, 100.0, 0.0, 60.0), Biome::Taiga);
+        assert_eq!(
+            classify_land(t(-2.0), 0.4, e(100.0), e(0.0), 60.0),
+            Biome::Taiga
+        );
     }
 
     #[test]
     fn specials_take_precedence() {
         // Below the ice threshold → Ice regardless of moisture.
-        assert_eq!(classify_land(-25.0, 0.8, 100.0, 0.0, 80.0), Biome::Ice);
+        assert_eq!(
+            classify_land(t(-25.0), 0.8, e(100.0), e(0.0), 80.0),
+            Biome::Ice
+        );
         // Above the tree line → Alpine.
-        assert_eq!(classify_land(5.0, 0.5, 4500.0, 0.0, 0.0), Biome::Alpine);
+        assert_eq!(
+            classify_land(t(5.0), 0.5, e(4500.0), e(0.0), 0.0),
+            Biome::Alpine
+        );
     }
 
     #[test]
@@ -457,39 +488,39 @@ mod tests {
     fn marine_precedence_is_correct() {
         // Warm shallow → reef; cold shallow → kelp.
         assert_eq!(
-            classify_marine(50.0, 25.0, SeafloorFeature::None, false),
+            classify_marine(50.0, t(25.0), SeafloorFeature::None, false),
             Biome::CoralReef
         );
         assert_eq!(
-            classify_marine(50.0, 8.0, SeafloorFeature::None, false),
+            classify_marine(50.0, t(8.0), SeafloorFeature::None, false),
             Biome::KelpForest
         );
         // Frozen surface beats everything.
         assert_eq!(
-            classify_marine(50.0, -3.0, SeafloorFeature::Ridge, false),
+            classify_marine(50.0, t(-3.0), SeafloorFeature::Ridge, false),
             Biome::SeaIce
         );
         // Ridge → vent; ocean-ocean trench (deep) → hadal.
         assert_eq!(
-            classify_marine(3000.0, 4.0, SeafloorFeature::Ridge, false),
+            classify_marine(3000.0, t(4.0), SeafloorFeature::Ridge, false),
             Biome::HydrothermalVent
         );
         assert_eq!(
-            classify_marine(7000.0, 2.0, SeafloorFeature::Trench, false),
+            classify_marine(7000.0, t(2.0), SeafloorFeature::Trench, false),
             Biome::HadalTrench
         );
         // Upwelling on a productive shelf.
         assert_eq!(
-            classify_marine(300.0, 15.0, SeafloorFeature::None, true),
+            classify_marine(300.0, t(15.0), SeafloorFeature::None, true),
             Biome::Upwelling
         );
         // Plain depth zones.
         assert_eq!(
-            classify_marine(500.0, 10.0, SeafloorFeature::None, false),
+            classify_marine(500.0, t(10.0), SeafloorFeature::None, false),
             Biome::Mesopelagic
         );
         assert_eq!(
-            classify_marine(5000.0, 3.0, SeafloorFeature::None, false),
+            classify_marine(5000.0, t(3.0), SeafloorFeature::None, false),
             Biome::Abyssal
         );
     }
@@ -498,11 +529,11 @@ mod tests {
     fn classify_dispatches_land_and_sea() {
         // Below sea level → marine.
         let m = classify(
-            10.0,
+            t(10.0),
             0.5,
-            22.0,
-            -50.0,
-            0.0,
+            t(22.0),
+            e(-50.0),
+            e(0.0),
             20.0,
             SeafloorFeature::None,
             false,
@@ -510,11 +541,11 @@ mod tests {
         assert!(m.is_marine());
         // Above sea level → land.
         let l = classify(
-            25.0,
+            t(25.0),
             0.9,
-            25.0,
-            300.0,
-            0.0,
+            t(25.0),
+            e(300.0),
+            e(0.0),
             0.0,
             SeafloorFeature::None,
             false,

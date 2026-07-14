@@ -16,12 +16,10 @@ use hornvale_climate::{
 };
 use hornvale_kernel::{
     ConceptRegistry, EntityId, Fact, GeoCoord, Geosphere, LedgerError, ObserverContext,
-    PerceptionLens, PhenomenaSource, Phenomenon, RegistryError, Seed, Value, World, WorldTime,
-    observe,
+    PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation, RegistryError, Seed,
+    Temperature, Value, World, WorldTime, observe,
 };
-use hornvale_paleoclimate::{
-    Celsius, EraClimate, PaleoRecord, caloric_summer_index, integrate_ice,
-};
+use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
 use std::cell::RefCell;
 use std::sync::OnceLock;
@@ -379,7 +377,7 @@ pub fn carrying_inputs_of(
         let hostility = terrain.unrest_at(cell).max(aridity).clamp(0.0, 1.0);
         hornvale_demography::CarryingInput {
             habitable: *climate.habitability().get(cell),
-            temperature_c: climate.mean_temperature_at(cell),
+            temperature_c: climate.mean_temperature_at(cell).get(),
             moisture,
             freshwater,
             coastal,
@@ -506,7 +504,7 @@ struct EraContext<'a> {
     /// The shared geosphere (terrain's, reused for climate's grid).
     geo: &'a Geosphere,
     /// Present relief; elevation does not change across eras.
-    elevation: &'a hornvale_kernel::CellMap<f64>,
+    elevation: &'a hornvale_kernel::CellMap<ReferenceElevation>,
     /// Seafloor feature per cell, derived once from terrain's boundaries.
     seafloor: &'a hornvale_kernel::CellMap<SeafloorFeature>,
     /// Insolation relative to Earth, from the world's sky (constant per world).
@@ -521,7 +519,7 @@ struct EraContext<'a> {
     /// against.
     present_ice: &'a hornvale_kernel::CellMap<bool>,
     /// The absolute snowline threshold ([`FREEZE_C`], wrapped once).
-    freeze: Celsius,
+    freeze: Temperature,
 }
 
 /// This era's raw inputs, carried alongside its cheaply-diagnosed
@@ -531,8 +529,8 @@ struct EraContext<'a> {
 struct EraInputs {
     /// Absolute standard day of the era.
     day: f64,
-    /// This era's sea level (metres): present + eustatic change.
-    sea_level: f64,
+    /// This era's sea level: present + eustatic change.
+    sea_level: ReferenceElevation,
     /// This era's obliquity, degrees, from the sky's forcing.
     obliquity_deg: f64,
     /// This era's albedo-cooling offset from the integrated ice history.
@@ -569,12 +567,11 @@ fn climate_at_era(ctx: &EraContext, inputs: &EraInputs) -> EraClimate {
     );
     // This era's absolute temperature: THIS era's own mean field (built with
     // this era's sea level, above — captures the lapse term) plus this
-    // era's albedo-cooling offset, via `Celsius`'s `Add` impl (the sole
+    // era's albedo-cooling offset, via `Temperature`'s `Add` impl (the sole
     // production path for combining the two, together with `Sub` —
     // decision 0008).
-    let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
-        Celsius::new(*mean_temp.get(c)).expect("temperature is finite") + inputs.temp_offset
-    });
+    let era_temperature =
+        hornvale_kernel::CellMap::from_fn(geo, |c| *mean_temp.get(c) + inputs.temp_offset);
     // Ice is diagnosed against an ABSOLUTE snowline (`ctx.freeze`), not an
     // anomaly, so the same global cooling offset produces a spatially
     // structured mask (high latitudes ice first) rather than an all-or-
@@ -643,12 +640,11 @@ fn glacial_maximum_habitable(
         year_length_std: ctx.year_length_std,
     });
     let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
-        Celsius::new(climate.mean_temperature_at(c)).expect("temperature is finite")
-            + inputs.temp_offset
+        climate.mean_temperature_at(c) + inputs.temp_offset
     });
     hornvale_kernel::CellMap::from_fn(geo, |c| {
         hornvale_climate::is_habitable(
-            era_temperature.get(c).get(),
+            *era_temperature.get(c),
             climate.moisture_at(c),
             *elevation.get(c),
             sea_level,
@@ -701,18 +697,16 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
     // field back out: `obliquity_at(0.0) == obliquity_mean` exactly
     // (astronomy's forcing contract), the same value `stellar_inputs`
     // returns, so this reproduces `climate_of`'s present reading
-    // byte-for-byte with no full regeneration at all.
-    let present_mean_temp = hornvale_climate::temperature::mean_temperature(
+    // byte-for-byte with no full regeneration at all. Already a
+    // `CellMap<Temperature>`, so no wrapping is needed before `glaciated`.
+    let present_temperature = hornvale_climate::temperature::mean_temperature(
         geo,
         &elevation,
         present_sea_level,
         insolation,
         &regime,
     );
-    let present_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
-        Celsius::new(*present_mean_temp.get(c)).expect("temperature is finite")
-    });
-    let freeze = Celsius::new(FREEZE_C).expect("FREEZE_C is finite");
+    let freeze = Temperature::new(FREEZE_C).expect("FREEZE_C is finite");
     // The world's own present-day ice mask — no albedo offset, so this is
     // exactly the ice a present-day observer would already see. Every era's
     // `ice` field is the ADVANCE beyond this mask, not the raw diagnostic
@@ -770,7 +764,10 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
             .expect("history is non-empty");
         era_inputs.push(EraInputs {
             day: era_day,
-            sea_level: present_sea_level + state.sea_level_change.get(),
+            sea_level: ReferenceElevation::new(
+                present_sea_level.get() + state.sea_level_change.get(),
+            )
+            .expect("present sea level plus a finite eustatic change is finite"),
             obliquity_deg: forcing.obliquity_at(era_day),
             temp_offset: state.temp_offset,
         });
