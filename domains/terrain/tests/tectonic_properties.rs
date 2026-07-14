@@ -291,3 +291,75 @@ fn convergent_boundaries_stand_above_continental_interiors_on_average() {
         mean(&interior)
     );
 }
+
+#[test]
+fn single_craton_worlds_have_shelves_and_bimodal_hypsometry_across_the_sweep() {
+    use hornvale_terrain::shape::{hypsometric_bimodality, shelf_fraction, shelf_land_ratio};
+    let geo = Geosphere::new(4);
+    let pins = TerrainPins {
+        continents: Some(1),
+        ..TerrainPins::default()
+    };
+    for seed in 1..=40u64 {
+        let outcome =
+            generate(Seed(seed), &geo, &pins).unwrap_or_else(|e| panic!("seed {seed}: {e}"));
+        // The fallback must actually engage — a vacuous pass through the
+        // percentile path would mean the activation condition drifted.
+        assert!(
+            outcome.notes.iter().any(|n| n.contains("shelf break")),
+            "seed {seed}: fallback never engaged: {:?}",
+            outcome.notes
+        );
+        let globe = &outcome.globe;
+        let d =
+            hypsometric_bimodality(&globe.elevation, globe.sea_level).expect("has land and ocean");
+        assert!(d > 1.5, "seed {seed}: hypsometry not bimodal: D = {d}");
+        // Land-normalized floor + absolute ceiling (decision 0053): the
+        // ceiling still guards the drowned-into-the-abyss failure mode.
+        let shelf_land = shelf_land_ratio(&globe.elevation, globe.sea_level).expect("has land");
+        assert!(
+            shelf_land > 0.05,
+            "seed {seed}: no shelf band relative to land: {shelf_land}"
+        );
+        let shelf = shelf_fraction(&globe.elevation, globe.sea_level);
+        assert!(shelf < 0.5, "seed {seed}: everything is shelf: {shelf}");
+    }
+}
+
+#[test]
+fn default_worlds_never_trip_the_supply_fallback() {
+    use hornvale_terrain::crust::{continental_supply, draw_cratons};
+    use hornvale_terrain::elevation::{
+        SUPPLY_SHORTFALL_FACTOR, effective_ocean_target, resolve_ocean_fraction,
+    };
+    // Craton-level (no genesis): cheap, and grid-free by construction —
+    // this is the byte-identity proof that the fallback cannot rewrite
+    // default worlds (whose frozen census fixtures and seed-42 artifacts
+    // must not drift).
+    for seed in 0..64u64 {
+        let terrain_seed = Seed(seed).derive(streams::ROOT);
+        let ocean_target =
+            resolve_ocean_fraction(terrain_seed, &TerrainPins::default(), &mut Vec::new());
+        let cratons = draw_cratons(
+            terrain_seed,
+            &TerrainPins::default(),
+            ocean_target,
+            &mut Vec::new(),
+        );
+        let supply = continental_supply(&cratons);
+        let quota = 1.0 - ocean_target;
+        assert!(
+            supply >= SUPPLY_SHORTFALL_FACTOR * quota,
+            "seed {seed}: default draw is supply-limited (supply {supply:.3} vs quota \
+             {quota:.3}) — the fallback would rewrite default worlds and drift every \
+             committed artifact"
+        );
+        let mut notes = Vec::new();
+        assert_eq!(
+            effective_ocean_target(ocean_target, supply, &mut notes),
+            ocean_target,
+            "seed {seed}: effective target diverged from the pinned-percentile path"
+        );
+        assert!(notes.is_empty(), "seed {seed}: {notes:?}");
+    }
+}

@@ -23,12 +23,12 @@
 //! (exactly `ISOSTASY_REF_KM`, so an "old" craton floated at 0 m and never
 //! surfaced) to 33 (crests ~540 m). See the Task 9 report for the
 //! after-census evidence on the general (multi-craton) population this
-//! fixes. One edge case remains structurally unfixable by these two knobs:
-//! a *lone pinned* craton (`continents=1`) always clamps to exactly
-//! 0.6 rad, capping its cap area at ~8.7% of the sphere — below any
-//! achievable land quota — so
-//! `a_single_craton_world_has_a_shelf_and_a_bimodal_hypsometry` stays
-//! `#[ignore]`d with that math in its own annotation.
+//! fixes. The last edge case — a *lone pinned* craton (`continents=1`) clamps
+//! to exactly 0.6 rad, capping its cap area at ~8.7% of the sphere,
+//! below any achievable land quota — is resolved by the shelf-break
+//! fallback (`effective_ocean_target`, decision 0053): a supply-limited
+//! world keeps `SHELF_BREAK_LAND_FACTOR × supply` land, placing the
+//! percentile at the isostatic shelf break instead of the abyssal plain.
 
 use crate::boundaries::{BoundaryKind, CellBoundary};
 use crate::pins::TerrainPins;
@@ -551,18 +551,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Task 9 re-verification (measured, not silently retuned): the \
-        area-normalization fix resolves the general multi-craton case, but \
-        a lone pinned craton (continents=1) is mathematically incapable of \
-        reaching the land quota under the directed r_i <= 0.6 rad ceiling — \
-        (1 - cos(0.6))/2 ~= 8.7% of the sphere is the hard ceiling on a \
-        single craton's cap area, versus the 20-50% ocean-fraction-implied \
-        land quota the percentile sea level always hits exactly. Verified: \
-        draw_cratons(continents=1) clamps to exactly 0.6 rad for every \
-        swept seed 1..=5, and the swept scenario (seeds 1..=40) passes \
-        0/40. Neither authorized knob (budget range, PEAK_MIN) touches \
-        footprint area, so this is outside Task 9's tuning scope — see the \
-        Task 9 report."]
     fn a_single_craton_world_has_a_shelf_and_a_bimodal_hypsometry() {
         let geo = Geosphere::new(4);
         let pins = TerrainPins {
@@ -574,8 +562,18 @@ mod tests {
         let d = crate::shape::hypsometric_bimodality(&globe.elevation, globe.sea_level)
             .expect("has land and ocean");
         assert!(d > 1.5, "hypsometry not bimodal: D = {d}");
+        // Shelf floor is land-normalized (decision 0053): a ~3%-of-sphere
+        // continent cannot clear an absolute whole-sphere floor, but its
+        // shelf-to-land ratio matches or beats default worlds'. The
+        // absolute ceiling stays — it guards the original failure mode
+        // (sea level drowned into the abyssal plain, everything "shelf").
+        let shelf_land =
+            crate::shape::shelf_land_ratio(&globe.elevation, globe.sea_level).expect("has land");
+        assert!(
+            shelf_land > 0.05,
+            "no shelf band relative to land: {shelf_land}"
+        );
         let shelf = crate::shape::shelf_fraction(&globe.elevation, globe.sea_level);
-        assert!(shelf > 0.02, "no shelf band: {shelf}");
         assert!(shelf < 0.5, "everything is shelf: {shelf}");
     }
 
