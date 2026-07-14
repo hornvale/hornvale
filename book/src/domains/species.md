@@ -133,6 +133,18 @@ again sitting alongside the other two on the same `SpeciesDef`. See
 [Language](./language.md) for the vector itself and what it let every name
 in the world become.
 
+**In-group radius went idle, the reverse direction.** Where deliberation
+latency and nocturnality were banked *before* a consumer existed, in-group
+radius lost its only consumer: it used to scale the coastal term of the
+settlement-placement suitability formula, and *The Gathering* retired that
+formula outright in favor of a carrying-capacity field whose coastal bonus
+is a fixed constant, not psychology-scaled. The dimension stays authored
+and committed to the ledger — nothing about the vector's shape changed —
+but nothing reads it today. It is captured here rather than silently
+dropped, exactly the discipline this chapter already applies to dimensions
+banked before their time; a future consumer (a coexistence-stack home-range
+term is the natural candidate) can pick it back up without re-authoring it.
+
 **The ontology-trap posture.** This closedness is a stance, not an
 oversight. The frontier map warns, more than once, against traits that grow
 without a designer choosing to grow them — an inheritance hierarchy here, an
@@ -154,10 +166,10 @@ the two differ for one row, called out below the table.
 
 | Vector | Dimension | Type | Goblin | Kobold | Consumer |
 |---|---|---|---|---|---|
-| Psychology | Threat response (flee ↔ stand) | authored, scalar `[0,1]` | 0.5 | 0.8 | culture's warrior-rung threshold; settlement's hostility-suitability weight |
+| Psychology | Threat response (flee ↔ stand) | authored, scalar `[0,1]` | 0.5 | 0.8 | culture's warrior-rung threshold; demography's hostility factor (carrying-capacity field) |
 | Psychology | Deliberation latency | authored, scalar `[0,1]` | 0.5 | 0.7 | language's formality voice knob (partial — see below) |
-| Psychology | In-group radius | authored, scalar `[0,1]` | 0.5 | 0.2 | settlement's coast-suitability weight |
-| Psychology | Time horizon | authored, scalar `[0,1]` | 0.5 | 0.8 | culture's artisan-rung threshold; settlement's freshwater-suitability weight |
+| Psychology | In-group radius | authored, scalar `[0,1]` | 0.5 | 0.2 | idle since *The Gathering* — see below |
+| Psychology | Time horizon | authored, scalar `[0,1]` | 0.5 | 0.8 | culture's artisan-rung threshold; demography's freshwater factor (carrying-capacity field) |
 | Psychology | Sociality mode | authored, enum | Hierarchic | Communal | language's repetition voice knob |
 | Psychology | Status basis | authored, enum | Rank | Knowledge | culture's slave-rung gate; language's formality/epithet-density knobs and honorific gate |
 | Perception | Activity cycle | authored, enum | Diurnal | Nocturnal | perception's characteristic hour and lens activity factor (Crepuscular idle — see below) |
@@ -190,10 +202,13 @@ draws that make two peoples sound and settle differently are real, but they
 belong to the domains that consume this vector, not to species itself:
 `domains/language` draws a phoneme inventory and syllable phonotactics
 *under* the articulation envelope above (see [Language](./language.md)'s own
-model card), and `domains/settlement` draws population size under a
-suitability weighting these psychology scalars help compute. A species is
-the fixed point those draws are taken with respect to, never a distribution
-of its own.
+model card), and `domains/demography` folds threat response and time
+horizon into the carrying-capacity field each species reads (see
+[Settlement](./settlement.md)) — no draw at all any more, since *The
+Gathering* moved population from a per-site draw to a field readout, but
+still a real per-species divergence these two psychology scalars produce. A
+species is the fixed point those draws (and, now, this one field) are taken
+with respect to, never a distribution of its own.
 
 **The peoples ahead:** deliberation latency's still-unspent half — the
 salience or negotiation rule that would read a people's decisiveness

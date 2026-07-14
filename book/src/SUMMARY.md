@@ -69,6 +69,7 @@
 - [Temperature](./chronicle/temperature.md)
 - [Census as Data](./chronicle/census-as-data.md)
 - [The Seam](./chronicle/the-seam.md)
+- [The Gathering](./chronicle/the-gathering.md)
 
 # The Gallery
 
