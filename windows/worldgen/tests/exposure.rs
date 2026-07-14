@@ -134,7 +134,6 @@ fn an_unplaced_species_still_gets_a_total_reasoned_exposure_map() {
         &hornvale_terrain::TerrainPins::default(),
         &SettlementPins {
             species: Some("goblin".to_string()),
-            ..SettlementPins::default()
         },
     )
     .unwrap();

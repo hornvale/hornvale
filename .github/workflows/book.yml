@@ -22,7 +22,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: clients/vessel/wasm
-      - name: Build the Casement wasm (deploy-built, never committed — decision 0047)
+      - name: Build the Casement wasm (deploy-built, never committed — decision 0052)
         run: make wasm-vessel
       - name: Install mdBook
         uses: peaceiris/actions-mdbook@v2

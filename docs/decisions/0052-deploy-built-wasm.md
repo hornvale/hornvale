@@ -1,6 +1,8 @@
-# 0047. The Casement's wasm is deploy-built, never committed
+# 0052. The Casement's wasm is deploy-built, never committed
 
 **Status:** Accepted (2026-07-13) · **Decider:** Nathan
+
+*(Renumbered from 0047 at merge: the-gathering claimed 0047-0051 on main first.)*
 
 In the context of the Casement (the possess loop as a live wasm exhibit in
 the project book) and the established committed-bundle pattern (atlas.js /

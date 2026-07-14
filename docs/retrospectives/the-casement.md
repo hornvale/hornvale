@@ -33,7 +33,7 @@ so had to be named explicitly in every downstream brief.
 
 **The deploy-built divergence caused no review friction.** The worry going
 in was that "the artifact CI runs is not the artifact in the repo" (decision
-0047) would confuse reviewers — a whole class of "where does the wasm come
+0052) would confuse reviewers — a whole class of "where does the wasm come
 from" questions. It did not, and the reason is worth recording: identity is
 asserted against something reviewers *can* see. The CI smoke checks the
 module against the committed transcript, which is itself drift-checked, so a

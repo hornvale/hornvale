@@ -42,7 +42,7 @@ __pycache__/
 # Throwaway census analysis database (tools/census/build.sh output)
 tools/census/.build/
 
-# The Casement: the .wasm is deploy-built, never committed (decision 0047);
+# The Casement: the .wasm is deploy-built, never committed (decision 0052);
 # the wasm crate is outside the workspace so it has its own target/.
 book/src/gallery/vessel.wasm
 clients/vessel/wasm/target/

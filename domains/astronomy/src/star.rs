@@ -52,6 +52,16 @@ pub fn sun_angular_diameter_rel(star: &Star, orbit: Au) -> f64 {
     math::powf(star.mass.0, 0.8) / orbit.0
 }
 
+/// Top-of-atmosphere stellar flux at the anchor's orbit, relative to Earth's
+/// (L / a², Earth = 1). Global annual mean; a genesis-time scalar that does
+/// not carry the seasonal (obliquity) or deep-time (eccentricity) variation
+/// the forcing parameters model. This is the single definition of insolation
+/// the whole workspace shares (SKY-15).
+/// type-audit: pending(wave-1)
+pub fn insolation_rel(star: &Star, anchor: &crate::anchor::Anchor) -> f64 {
+    star.luminosity.0 / (anchor.orbit.0 * anchor.orbit.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,6 +104,16 @@ mod tests {
         };
         let expected = math::powf(1.4_f64, 0.8) / 1.2;
         assert!((sun_angular_diameter_rel(&heavy, Au::new(1.2).unwrap()) - expected).abs() < 1e-12);
+    }
+
+    #[test]
+    fn insolation_is_luminosity_over_orbit_squared() {
+        use crate::anchor::generate_anchor;
+        use crate::pins::SkyPins;
+        let star = generate_star(Seed(42));
+        let anchor = generate_anchor(Seed(42), &star, &SkyPins::default()).unwrap();
+        let expected = star.luminosity.get() / (anchor.orbit.get() * anchor.orbit.get());
+        assert!((insolation_rel(&star, &anchor) - expected).abs() < 1e-12);
     }
 
     #[test]

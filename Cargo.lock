@@ -10,6 +10,7 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-climate",
  "hornvale-culture",
+ "hornvale-explain",
  "hornvale-historiography",
  "hornvale-kernel",
  "hornvale-lab",
@@ -61,6 +62,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-demography"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-explain"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-historiography"
 version = "0.1.0"
 dependencies = [
@@ -83,6 +99,7 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-climate",
  "hornvale-culture",
+ "hornvale-demography",
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-religion",
@@ -185,6 +202,7 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-climate",
  "hornvale-culture",
+ "hornvale-demography",
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-paleoclimate",

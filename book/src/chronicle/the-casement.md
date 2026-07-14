@@ -60,7 +60,7 @@ promise in prose but the shape of the artifact.
 
 ## Deploy-built, and identity held by CI, not by frozen bytes
 
-The wasm binary is **never committed** (decision 0047). It is built on
+The wasm binary is **never committed** (decision 0052). It is built on
 deploy — `make wasm-vessel` in the book workflow — and the repository
 carries only its Rust source and the Deno client. A binary in git would be
 a second source of truth for the same world, drift-prone and reviewable by

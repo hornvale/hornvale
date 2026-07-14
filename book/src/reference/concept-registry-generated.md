@@ -4,6 +4,8 @@
 
 | Predicate | Functional | Meaning |
 |---|---|---|
+| `anchor-mass-earth` | yes | anchor world mass in Earth masses |
+| `anchor-orbit-au` | yes | anchor orbital distance in AU |
 | `biome` | yes | biome of a place |
 | `cell-id` | yes | Geosphere cell id a settlement sits on |
 | `cult-form` | yes | the cult form of a belief (organized or folk) |
@@ -18,23 +20,34 @@
 | `frost-retreat` | no | the deep-time record of deglaciation |
 | `genesis-note` | no | a degradation or refusal recorded during sky genesis |
 | `glacial-maximum-era` | yes | standard day of peak ice extent |
+| `hab-zone-inner-au` | yes | habitable-zone inner bound in AU (derived 0.95√L) |
+| `hab-zone-outer-au` | yes | habitable-zone outer bound in AU (derived 1.37√L) |
 | `has-caste` | no | a caste present in a settlement |
 | `held-by` | no | a community holding a belief |
 | `high-god` | yes | the presiding deity of a ranked pantheon |
 | `highest-elevation-m` | yes | highest globe cell elevation in meters |
+| `insolation-rel` | yes | insolation at the anchor relative to Earth (derived L/a²) |
 | `is-belief` | yes | subject is a belief |
+| `is-neighbor` | yes | a minted entity is a notable neighbor star |
 | `is-place` | yes | subject is a traversable place |
 | `is-settlement` | yes | subject is a settlement |
 | `latitude` | yes | settlement latitude, degrees |
 | `longitude` | yes | settlement longitude, degrees |
 | `max-ice-fraction` | yes | land fraction under ice at the glacial maximum |
+| `moon-angular-size-rel` | no | apparent size of a moon relative to Luna-from-Earth |
 | `moon-count` | yes | how many moons the anchor world has |
+| `moon-distance-mm` | no | orbital distance of a moon in megameters |
 | `moon-inclination-degrees` | no | orbital inclination of a moon to the anchor's orbital plane, in degrees |
+| `moon-mass-lunar` | no | mass of a moon in lunar masses |
 | `moon-period-std` | no | orbital period of a moon, in standard days |
 | `moon-tide-rel` | no | tidal strength of a moon, relative to Luna on Earth |
 | `name` | yes | canonical name of an entity |
 | `name-gloss` | yes | the glossed meaning of an entity's generated name |
-| `notable-neighbor` | no | a notable neighbor star visible in the night sky |
+| `neighbor-brightness-rel` | yes | apparent brightness of a neighbor, relative units (derived L/d²) |
+| `neighbor-class` | yes | spectral-class name of a neighbor star |
+| `neighbor-declination-deg` | yes | declination of a neighbor in degrees from the celestial equator |
+| `neighbor-distance-ly` | yes | distance to a neighbor star in light-years |
+| `neighbor-ra-deg` | yes | right ascension of a neighbor in degrees |
 | `obliquity-amplitude` | yes | obliquity oscillation amplitude, degrees (moon-coupled) |
 | `obliquity-degrees` | yes | axial tilt of the anchor world, in degrees |
 | `ocean-fraction` | yes | fraction of globe cells below sea level |
@@ -66,6 +79,8 @@
 | `species-voicing` | yes | voicing emphasis, 0-1 |
 | `species-vowel-space` | yes | vowel-space size, 0-1 |
 | `star-class` | yes | the host star's descriptive spectral class |
+| `star-luminosity-solar` | yes | host star luminosity in solar units (derived M^3.5) |
+| `star-mass-solar` | yes | host star mass in solar masses |
 | `subsistence` | yes | a settlement's subsistence mode |
 | `tenet` | yes | the tenet text of a belief |
 | `terrain-note` | no | a note recorded during tectonic genesis |
