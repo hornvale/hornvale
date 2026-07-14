@@ -1610,6 +1610,25 @@ fn deity_name_seed(base: Seed, kind: &str, rank: usize) -> u64 {
         .next_u64()
 }
 
+/// The per-species base seed every deity/epithet name for `species` derives
+/// from (the `/v2` epoch label). The one place the `"religion/deity/v2"`
+/// stream label is spelled, so [`build`] (constructing a
+/// [`LanguageDeityNamer`]) and [`deity_name_seed_for`] (re-deriving the same
+/// seed from outside this crate) can never diverge.
+fn deity_base_seed(world_seed: &Seed, species: &str) -> Seed {
+    world_seed.derive("religion/deity/v2").derive(species)
+}
+
+/// Public entry point onto [`deity_name_seed`] for consumers outside this
+/// crate that need to re-derive a committed deity/epithet name's seed from
+/// the world seed directly (`windows/lab`'s `epithet_honorific` metric
+/// structurally detects the honorific affix by re-deriving the plain word
+/// the committed epithet was built from).
+/// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: kind), bare-ok(index: rank), pending(wave-3: return)
+pub fn deity_name_seed_for(world_seed: &Seed, species: &str, kind: &str, rank: usize) -> u64 {
+    deity_name_seed(deity_base_seed(world_seed, species), kind, rank)
+}
+
 impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
     fn deity(&mut self, salt: u64) -> (String, String) {
         let rank = self.index;
@@ -2096,7 +2115,7 @@ fn build_to(
                 phenomena: &seen,
                 index: 0,
                 glosses: std::collections::BTreeMap::new(),
-                deity_seed: seed.derive("religion/deity/v2").derive(def.name),
+                deity_seed: deity_base_seed(&seed, def.name),
             };
             hornvale_religion::genesis(&mut world, flagship, &seen, &society, &mut deity_namer)?;
             for (salt, gloss) in &deity_namer.glosses {

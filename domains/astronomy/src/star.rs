@@ -57,6 +57,7 @@ pub fn sun_angular_diameter_rel(star: &Star, orbit: Au) -> f64 {
 /// not carry the seasonal (obliquity) or deep-time (eccentricity) variation
 /// the forcing parameters model. This is the single definition of insolation
 /// the whole workspace shares (SKY-15).
+/// type-audit: pending(wave-1)
 pub fn insolation_rel(star: &Star, anchor: &crate::anchor::Anchor) -> f64 {
     star.luminosity.0 / (anchor.orbit.0 * anchor.orbit.0)
 }

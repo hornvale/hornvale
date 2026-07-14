@@ -33,6 +33,7 @@ fn text(world: &World, subject: EntityId, predicate: &str) -> Option<String> {
 /// `None` if the world has no generated sky. Each node is tagged with its
 /// provenance in the derivation DAG (rolled / derived / pinned) and its value
 /// read from the ledger; the join of DAG and values is the explanation.
+/// type-audit: bare-ok(artifact: return)
 pub fn explain_sky(world: &World) -> Option<String> {
     let e = world_entity(world)?;
     let class = text(world, e, facts::STAR_CLASS)?;
