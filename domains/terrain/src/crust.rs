@@ -190,18 +190,6 @@ pub(crate) fn tangent_basis(p: [f64; 3]) -> ([f64; 3], [f64; 3]) {
     (e1, e2)
 }
 
-/// Move `p` by `angle` radians toward unit tangent `dir` (orthogonal to
-/// `p`), staying on the unit sphere exactly: the great-circle analogue of
-/// stepping in direction `dir`.
-pub(crate) fn rotate_toward(p: [f64; 3], dir: [f64; 3], angle: f64) -> [f64; 3] {
-    let (c, s) = (math::cos(angle), math::sin(angle));
-    crate::plates::normalize([
-        p[0] * c + dir[0] * s,
-        p[1] * c + dir[1] * s,
-        p[2] * c + dir[2] * s,
-    ])
-}
-
 /// Fixed-size scan used by `find_margin_point`: not a stream draw, so
 /// the terrane draw count and order stay independent of the craton
 /// field's noise (pin isolation).
@@ -227,7 +215,7 @@ fn find_margin_point(lobing_seed: Seed, host: &Craton, dir: [f64; 3]) -> [f64; 3
     for i in 1..=MARGIN_SEARCH_SAMPLES {
         // Sweep just short of the hard 1.5x cutoff in `lobed_envelope`.
         let t = host.radius_rad * 1.45 * (i as f64) / (MARGIN_SEARCH_SAMPLES as f64);
-        let p = rotate_toward(host.center, dir, t);
+        let p = crate::plates::rotate_toward(host.center, dir, t);
         let envelope = lobed_envelope(lobing_seed, host.center, p, host.radius_rad);
         let diff = (envelope - target).abs();
         if diff < best_diff {

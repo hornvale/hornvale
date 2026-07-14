@@ -3,6 +3,7 @@
 
 use crate::boundaries::{self, CellBoundary};
 use crate::crust::{Craton, Terrane};
+use crate::elevation::TrailSeamount;
 use crate::pins::{self, GenesisError, TerrainPins};
 use crate::plates::Plate;
 use crate::streams;
@@ -72,6 +73,13 @@ pub struct TectonicGlobe {
     /// `induration_field_matches_the_assembled_buffer`); recomputed at
     /// genesis, never serialized.
     pub induration: CellMap<f64>,
+    /// Hotspot trail seamounts (Sculpting Task 6): each drawn hotspot
+    /// smeared into an age-progressive chain along its plate's local
+    /// velocity, upstream. `age_index == 0` entries are the live hotspot
+    /// domes themselves. Retained for Task 9's atolls. Recomputed at
+    /// genesis (from the existing hotspot draws — no new draws), never
+    /// serialized.
+    pub trail_seamounts: Vec<TrailSeamount>,
     /// The material buffer per cell (The Ground, spec §2). Recomputed at
     /// genesis, never serialized.
     pub lithology: CellMap<crate::lithology::MaterialBuffer>,
@@ -161,6 +169,13 @@ pub fn generate(
             distances.get(c).map(|(hops, _)| hops),
         )
     });
+    // Hotspot trails (Sculpting Task 6): smear each drawn hotspot into an
+    // age-progressive seamount chain along its plate's local velocity, from
+    // the SAME hotspot draws `generate_elevation` used to make internally —
+    // computed here (not inside `generate_elevation`) because it needs
+    // `plate_of`, which this function already holds.
+    let trail_seamounts_list =
+        elevation::trail_seamounts(terrain_seed, &plate_list, &plate_of, geosphere);
     let elevation_map = elevation::generate_elevation(
         terrain_seed,
         geosphere,
@@ -168,6 +183,7 @@ pub fn generate(
         &plate_of,
         &boundary_map,
         &distances,
+        &trail_seamounts_list,
         &crust_map,
         &continental,
         &induration_map,
@@ -225,6 +241,7 @@ pub fn generate(
         microcontinents: micro,
         boundary_distance: distances,
         induration: induration_map,
+        trail_seamounts: trail_seamounts_list,
         lithology: placeholder_lithology,
         lithology_seed,
     };

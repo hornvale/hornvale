@@ -175,6 +175,20 @@ pub fn velocity_at(plate: &Plate, position: [f64; 3]) -> [f64; 3] {
     cross(scale(plate.euler_axis, plate.rate), position)
 }
 
+/// Move `p` by `angle` radians toward unit tangent `dir` (orthogonal to
+/// `p`), staying on the unit sphere exactly: the great-circle analogue of
+/// stepping in direction `dir`. Shared by `crust::find_margin_point`
+/// (terrane placement) and `elevation::trail_seamounts` (hotspot trails,
+/// Sculpting Task 6) — one copy of the great-circle step, not two.
+pub(crate) fn rotate_toward(p: [f64; 3], dir: [f64; 3], angle: f64) -> [f64; 3] {
+    let (c, s) = (math::cos(angle), math::sin(angle));
+    normalize([
+        p[0] * c + dir[0] * s,
+        p[1] * c + dir[1] * s,
+        p[2] * c + dir[2] * s,
+    ])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

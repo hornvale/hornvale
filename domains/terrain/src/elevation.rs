@@ -34,7 +34,9 @@ use crate::boundaries::{BoundaryKind, CellBoundary};
 use crate::pins::TerrainPins;
 use crate::plates::{Plate, dot, unit_vector};
 use crate::streams;
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed, math};
+use hornvale_kernel::{
+    CellId, CellMap, Geosphere, NearestCellIndex, ReferenceElevation, Seed, math,
+};
 
 /// Airy isostasy: meters of elevation per kilometer of crust thickness.
 /// type-audit: pending(wave-2)
@@ -287,13 +289,18 @@ struct Hotspot {
 /// level 5).
 const HOTSPOT_SIGMA_RAD: f64 = 0.05;
 
-impl Hotspot {
-    /// Gaussian dome contribution at a unit-sphere position, meters.
-    fn contribution_m(&self, position: [f64; 3]) -> f64 {
-        let angle = math::acos(dot(self.position, position).clamp(-1.0, 1.0));
-        self.strength_m
-            * math::exp(-(angle * angle) / (2.0 * HOTSPOT_SIGMA_RAD * HOTSPOT_SIGMA_RAD))
-    }
+/// Gaussian dome contribution at a unit-sphere position, meters (Sculpting
+/// Task 6): generalizes the old `Hotspot::contribution_m` to any dome
+/// center/strength, not only the live hotspot — a `TrailSeamount`'s
+/// `age_index == 0` entry carries the SAME `position`/`strength_m` a plain
+/// `Hotspot` would, so calling this with those fields reproduces the
+/// pre-trails contribution byte-for-bit (see
+/// `dome_m_matches_the_original_hotspot_formula_for_age_zero`); trail
+/// entries (`age_index >= 1`) are additional calls of the same function
+/// that add their (decayed) contribution on top.
+fn dome_m(position: [f64; 3], strength_m: f64, at: [f64; 3]) -> f64 {
+    let angle = math::acos(dot(position, at).clamp(-1.0, 1.0));
+    strength_m * math::exp(-(angle * angle) / (2.0 * HOTSPOT_SIGMA_RAD * HOTSPOT_SIGMA_RAD))
 }
 
 /// Draw 3–8 hotspots from the hotspots stream: count first, then position
@@ -313,21 +320,101 @@ fn draw_hotspots(terrain_seed: Seed) -> Vec<Hotspot> {
         .collect()
 }
 
-/// Pure elevation assembly over explicit inputs (hotspots included), so
-/// tests can pin the hotspot list. See the module doc for the formula.
-/// `crust` is each cell's crust thickness in km (the isostatic base
-/// input); `continental` is each cell's crust flag (feeds the boundary
-/// amplitude's side selection, unchanged in shape from the retired
-/// plate-level flag). `arc_gate_seed` is hash-noise only (Sculpting spec
-/// §3, `streams::ARC_GATE`) — never consumed as a `Stream`, so it carries
-/// no draw-order/save-format contract; it gates island-arc/coastal-range
-/// edifices into discrete along-strike chains. `induration` (Task 4, The
-/// Ground/Sculpting seam) and `relief_seed` (Sculpting, spec §3,
-/// `streams::RELIEF`) feed the zero-mean fBm relief term: hash-noise only,
-/// never consumed as a `Stream`, so it carries no draw-order/save-format
-/// contract, mirroring `arc_gate_seed`. Eleven explicit narrow inputs beat
-/// a bundling struct here — same house call as climate's assemblers
-/// (`temperature.rs`, `biome.rs`).
+/// One seamount in a hotspot trail (Sculpting, spec §3): the drawn hotspot
+/// smeared along its plate's local velocity, age-progressive. Retained on
+/// `TectonicGlobe` for Task 9's atolls.
+/// type-audit: bare-ok(ratio: position), pending(wave-2: strength_m), bare-ok(count: age_index)
+#[derive(Debug, Clone, PartialEq)]
+pub struct TrailSeamount {
+    /// Dome center, unit vector.
+    pub position: [f64; 3],
+    /// Peak uplift, meters (decays along the chain).
+    pub strength_m: f64,
+    /// Steps upstream from the live hotspot (0 = the hotspot itself).
+    pub age_index: u32,
+}
+
+/// Maximum angular length of a hotspot trail, radians (~20°).
+/// type-audit: bare-ok(ratio)
+pub const TRAIL_LENGTH_RAD: f64 = 0.35;
+/// Number of trail steps upstream of the live hotspot dome.
+/// type-audit: bare-ok(count)
+pub const TRAIL_STEPS: u32 = 6;
+/// Per-step strength decay multiplier along a trail.
+/// type-audit: bare-ok(ratio)
+pub const TRAIL_DECAY: f64 = 0.55;
+
+/// Derive trail chains from the existing hotspot draws (no new draws):
+/// step upstream against the plate's surface velocity at each point,
+/// `TRAIL_STEPS` steps of `TRAIL_LENGTH_RAD`/`TRAIL_STEPS` radians each,
+/// strength decaying by `TRAIL_DECAY` per step. Chain length thus scales
+/// with plate speed direction only (fixed arc length; a stationary plate
+/// still gets a stubby stack — harmless, it reads as a large volcanic
+/// massif). Every hotspot contributes exactly `TRAIL_STEPS + 1` entries
+/// (the live dome plus `TRAIL_STEPS` trail steps) unless the plate's
+/// velocity at some point along the chain underflows to numerically zero
+/// (the rotation-axis poles), in which case the chain stops early.
+/// type-audit: bare-ok(index: plate_of)
+pub fn trail_seamounts(
+    terrain_seed: Seed,
+    plates: &[Plate],
+    plate_of: &CellMap<u32>,
+    geo: &Geosphere,
+) -> Vec<TrailSeamount> {
+    let hotspots = draw_hotspots(terrain_seed);
+    let index = NearestCellIndex::new(geo);
+    let step = TRAIL_LENGTH_RAD / f64::from(TRAIL_STEPS);
+    let mut out = Vec::new();
+    for h in &hotspots {
+        let mut pos = h.position;
+        let mut strength = h.strength_m;
+        out.push(TrailSeamount {
+            position: pos,
+            strength_m: strength,
+            age_index: 0,
+        });
+        for i in 1..=TRAIL_STEPS {
+            let cell = index.nearest_to_position(geo, pos);
+            let plate = &plates[*plate_of.get(cell) as usize];
+            let v = crate::plates::velocity_at(plate, pos);
+            let speed = crate::plates::norm(v);
+            if speed < 1e-9 {
+                break;
+            }
+            // Upstream = where the plate came FROM = -v direction.
+            let dir = crate::plates::normalize(crate::plates::scale(v, -1.0 / speed));
+            pos = crate::plates::rotate_toward(pos, dir, step);
+            strength *= TRAIL_DECAY;
+            out.push(TrailSeamount {
+                position: pos,
+                strength_m: strength,
+                age_index: i,
+            });
+        }
+    }
+    out
+}
+
+/// Pure elevation assembly over explicit inputs (hotspot trail seamounts
+/// included), so tests can pin the seamount list. See the module doc for
+/// the formula. `crust` is each cell's crust thickness in km (the
+/// isostatic base input); `continental` is each cell's crust flag (feeds
+/// the boundary amplitude's side selection, unchanged in shape from the
+/// retired plate-level flag). `arc_gate_seed` is hash-noise only
+/// (Sculpting spec §3, `streams::ARC_GATE`) — never consumed as a
+/// `Stream`, so it carries no draw-order/save-format contract; it gates
+/// island-arc/coastal-range edifices into discrete along-strike chains.
+/// `induration` (Task 4, The Ground/Sculpting seam) and `relief_seed`
+/// (Sculpting, spec §3, `streams::RELIEF`) feed the zero-mean fBm relief
+/// term: hash-noise only, never consumed as a `Stream`, so it carries no
+/// draw-order/save-format contract, mirroring `arc_gate_seed`. `seamounts`
+/// (Sculpting Task 6) replaces the old bare hotspot-dome list: its
+/// `age_index == 0` entries carry each drawn hotspot's own position and
+/// strength, so their `dome_m` contribution reproduces the pre-trails
+/// hotspot term byte-for-bit; trail entries (`age_index >= 1`) are
+/// additional (weaker) domes that add on top. Eleven explicit narrow
+/// inputs beat a bundling struct here — same house call as climate's
+/// assemblers (`temperature.rs`, `biome.rs`).
 #[allow(clippy::too_many_arguments)]
 fn assemble_elevation(
     geo: &Geosphere,
@@ -335,7 +422,7 @@ fn assemble_elevation(
     plate_of: &CellMap<u32>,
     boundaries: &CellMap<Option<CellBoundary>>,
     distances: &CellMap<Option<(u32, CellId)>>,
-    hotspots: &[Hotspot],
+    seamounts: &[TrailSeamount],
     crust: &CellMap<f64>,
     continental: &CellMap<bool>,
     arc_gate_seed: Seed,
@@ -391,7 +478,10 @@ fn assemble_elevation(
             }
         };
         let position = geo.position(cell);
-        let hotspot_term: f64 = hotspots.iter().map(|h| h.contribution_m(position)).sum();
+        let hotspot_term: f64 = seamounts
+            .iter()
+            .map(|s| dome_m(s.position, s.strength_m, position))
+            .sum();
         // fBm relief (Sculpting, spec §3): zero-mean multi-octave detail,
         // amplitude scaled by induration (hard rock stands craggy) and
         // belt proximity (`relief_scale`). A cell with no reachable
@@ -412,8 +502,12 @@ fn assemble_elevation(
 
 /// Per-cell elevation in meters: the isostatic base over crust thickness,
 /// the nearest same-plate boundary's contribution decayed by graph distance
-/// and shaped by maturity, drawn hotspots, induration-scaled fBm relief,
-/// and a strict-ordering micro-epsilon.
+/// and shaped by maturity, drawn hotspot trail seamounts, induration-scaled
+/// fBm relief, and a strict-ordering micro-epsilon. `seamounts` is
+/// `trail_seamounts`'s output (Sculpting Task 6) — computed by the caller
+/// (`globe::generate`, which already holds `plate_of`) from the SAME
+/// hotspot draws this function used to make on its own, so the hotspots
+/// stream's draw order/count is unchanged.
 /// type-audit: bare-ok(index: plate_of), bare-ok(count: distances), waiver(crust-km-convention: crust), bare-ok(flag: continental), bare-ok(ratio: induration)
 #[allow(clippy::too_many_arguments)]
 pub fn generate_elevation(
@@ -423,11 +517,11 @@ pub fn generate_elevation(
     plate_of: &CellMap<u32>,
     boundaries: &CellMap<Option<CellBoundary>>,
     distances: &CellMap<Option<(u32, CellId)>>,
+    seamounts: &[TrailSeamount],
     crust: &CellMap<f64>,
     continental: &CellMap<bool>,
     induration: &CellMap<f64>,
 ) -> CellMap<ReferenceElevation> {
-    let hotspots = draw_hotspots(terrain_seed);
     let arc_gate_seed = terrain_seed.derive(streams::ARC_GATE);
     let relief_seed = terrain_seed.derive(streams::RELIEF);
     assemble_elevation(
@@ -436,7 +530,7 @@ pub fn generate_elevation(
         plate_of,
         boundaries,
         distances,
-        &hotspots,
+        seamounts,
         crust,
         continental,
         arc_gate_seed,
@@ -717,6 +811,7 @@ mod tests {
                     distances.get(c).map(|(hops, _)| hops),
                 )
             });
+            let seamounts = trail_seamounts(terrain_seed, &plates, &plate_of, &geo);
             let elevation = generate_elevation(
                 terrain_seed,
                 &geo,
@@ -724,6 +819,7 @@ mod tests {
                 &plate_of,
                 &boundaries,
                 &distances,
+                &seamounts,
                 &crust,
                 &continental,
                 &induration,
@@ -973,5 +1069,97 @@ mod tests {
                 arc_land.len()
             );
         }
+    }
+
+    #[test]
+    fn dome_m_matches_the_original_hotspot_formula_for_age_zero() {
+        // The removed `Hotspot::contribution_m` computed exactly this
+        // expression. `dome_m` must stay byte-identical for the live-hotspot
+        // (age_index == 0) case so hotspot trails only ADD trail entries on
+        // top, never perturb the trunk dome's own contribution.
+        let position = crate::plates::normalize([0.3, -0.5, 0.8]);
+        let at = crate::plates::normalize([0.31, -0.49, 0.79]);
+        let strength_m = 1800.0;
+        let angle = math::acos(dot(position, at).clamp(-1.0, 1.0));
+        let expected = strength_m
+            * math::exp(-(angle * angle) / (2.0 * HOTSPOT_SIGMA_RAD * HOTSPOT_SIGMA_RAD));
+        assert_eq!(dome_m(position, strength_m, at), expected);
+
+        // End-to-end: an `assemble_elevation` call fed a single
+        // `TrailSeamount { age_index: 0, .. }` must land on the identical
+        // elevation an equivalent single-`Hotspot` call landed on before
+        // this task — same formula, same inputs, reconstructed inline
+        // since `Hotspot`/`contribution_m` are gone.
+        let geo = Geosphere::new(3);
+        let plates = hemisphere_plates(0.0);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
+        let (crust, continental) = all_continental_crust(&geo);
+        let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
+        let distances = boundary_distance(&geo, &plate_of, &boundaries);
+        let induration = CellMap::from_fn(&geo, |_| 0.0);
+        let hotspot_position = [0.0, 1.0, 0.0];
+        let hotspot_strength_m = 2200.0;
+        let seamounts = [TrailSeamount {
+            position: hotspot_position,
+            strength_m: hotspot_strength_m,
+            age_index: 0,
+        }];
+        let elevation = assemble_elevation(
+            &geo,
+            &plates,
+            &plate_of,
+            &boundaries,
+            &distances,
+            &seamounts,
+            &crust,
+            &continental,
+            Seed(1).derive(streams::ROOT).derive(streams::ARC_GATE),
+            &induration,
+            Seed(1).derive(streams::ROOT).derive(streams::RELIEF),
+        );
+        let baseline = assemble_elevation(
+            &geo,
+            &plates,
+            &plate_of,
+            &boundaries,
+            &distances,
+            &[],
+            &crust,
+            &continental,
+            Seed(1).derive(streams::ROOT).derive(streams::ARC_GATE),
+            &induration,
+            Seed(1).derive(streams::ROOT).derive(streams::RELIEF),
+        );
+        for cell in geo.cells() {
+            let position = geo.position(cell);
+            let expected_dome = dome_m(hotspot_position, hotspot_strength_m, position);
+            let expected_e = baseline.get(cell).get() + expected_dome;
+            assert!(
+                (elevation.get(cell).get() - expected_e).abs() < 1e-9,
+                "cell {} did not add exactly the dome contribution",
+                cell.0
+            );
+        }
+    }
+
+    #[test]
+    fn trails_are_age_ordered_chains_upstream_of_plate_motion() {
+        let seed = Seed(42).derive(crate::streams::ROOT);
+        let geo = Geosphere::new(4);
+        let pins = crate::pins::TerrainPins::default();
+        let mut notes = Vec::new();
+        let plates = crate::plates::generate_plates(seed, &pins, &mut notes);
+        let plate_of = crate::plates::assign_plates(&geo, seed, &plates);
+        let seamounts = trail_seamounts(seed, &plates, &plate_of, &geo);
+        // Every hotspot contributes TRAIL_STEPS+1 entries, age-ordered,
+        // strength strictly decaying along each chain.
+        assert!(seamounts.len().is_multiple_of(TRAIL_STEPS as usize + 1) && !seamounts.is_empty());
+        for chain in seamounts.chunks(TRAIL_STEPS as usize + 1) {
+            for pair in chain.windows(2) {
+                assert!(pair[1].age_index == pair[0].age_index + 1);
+                assert!(pair[1].strength_m < pair[0].strength_m);
+            }
+        }
+        assert_eq!(seamounts, trail_seamounts(seed, &plates, &plate_of, &geo));
     }
 }
