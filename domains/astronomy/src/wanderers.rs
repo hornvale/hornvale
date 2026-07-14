@@ -40,24 +40,28 @@ pub enum WandererClass {
 }
 
 /// Generate wandering sibling planets: drawn on fixed order with no redraw,
-/// sorted by orbit (innermost first).
+/// sorted by orbit (innermost first). The count roll always happens (so the
+/// per-wanderer stream's draws stay byte-identical pinned vs unpinned);
+/// `pins.wanderers` then overrides the mapped count (spec §8, mirrors the
+/// moons pin's save-format discipline).
 pub fn generate_wanderers(
     astronomy_seed: Seed,
     star: &Star,
     anchor: &Anchor,
-    _pins: &SkyPins,
+    pins: &SkyPins,
 ) -> Vec<Wanderer> {
     let count_roll = astronomy_seed
         .derive(streams::WANDERER_COUNT)
         .stream()
         .range_u32(1, 100);
-    let count = match count_roll {
+    let drawn_count = match count_roll {
         1..=10 => 0,
         11..=35 => 1,
         36..=65 => 2,
         66..=90 => 3,
         _ => 4,
     };
+    let count = pins.wanderers.unwrap_or(drawn_count);
 
     let mut wanderers: Vec<Wanderer> = Vec::new();
     let mut stream = astronomy_seed.derive(streams::WANDERERS).stream();
@@ -202,6 +206,26 @@ mod tests {
                     ),
                 }
             }
+        }
+    }
+
+    #[test]
+    fn wanderer_count_pin_is_honored_for_every_legal_value() {
+        let star = generate_star(Seed(42).derive(crate::streams::ROOT));
+        let anchor = generate_anchor(
+            Seed(42).derive(crate::streams::ROOT),
+            &star,
+            &SkyPins::default(),
+        )
+        .unwrap();
+        for count in 0..=4u32 {
+            let pins = SkyPins {
+                wanderers: Some(count),
+                ..SkyPins::default()
+            };
+            let wanderers =
+                generate_wanderers(Seed(42).derive(crate::streams::ROOT), &star, &anchor, &pins);
+            assert_eq!(wanderers.len() as u32, count);
         }
     }
 

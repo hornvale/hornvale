@@ -17,6 +17,7 @@ use std::process::ExitCode;
 const SKY_FLAGS: &str =
     "  [--sky constant|generated]               sky provider (default: generated)
   [--moons N|MIN+K]                        pin the moon count, exact or graded
+  [--wanderers N]                          pin the wandering-planet count (0-4)
   [--rotation normal|locked]               pin the rotation regime
   [--day-hours F]                          pin the solar day length, in standard hours
   [--obliquity none|F]                     pin axial tilt in degrees
@@ -144,6 +145,7 @@ fn parse_sky_args(args: &[String]) -> Result<(SkyPins, world_builder::SkyChoice)
     let mut pins = SkyPins::default();
     for (flag, key) in [
         ("--moons", "moons"),
+        ("--wanderers", "wanderers"),
         ("--rotation", "rotation"),
         ("--day-hours", "day-hours"),
         ("--obliquity", "obliquity"),
@@ -1063,6 +1065,21 @@ mod tests {
     }
 
     #[test]
+    fn wanderers_flag_parses() {
+        let (pins, _) = parse_sky_args(&args(&["--wanderers", "3"])).unwrap();
+        assert_eq!(pins.wanderers, Some(3));
+    }
+
+    #[test]
+    fn wanderers_exceeding_the_legal_maximum_yields_constructor_error_text() {
+        let err = parse_sky_args(&args(&["--wanderers", "5"])).unwrap_err();
+        assert!(
+            err.contains("legal maximum"),
+            "unexpected error text: {err}"
+        );
+    }
+
+    #[test]
     fn all_flags_combine_into_one_pin_set() {
         let (pins, sky) = parse_sky_args(&args(&[
             "--sky",
@@ -1215,6 +1232,7 @@ mod tests {
         let full = usage();
         assert!(full.contains("--sky"));
         assert!(full.contains("--moons"));
+        assert!(full.contains("--wanderers"));
         assert!(full.contains("--neighbor"));
     }
 
