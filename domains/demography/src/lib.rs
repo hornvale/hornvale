@@ -11,6 +11,7 @@
 #![warn(missing_docs)]
 
 pub mod carrying_capacity;
+pub mod coexist;
 pub mod condense;
 pub mod flow;
 pub mod footprint;
