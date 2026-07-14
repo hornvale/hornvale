@@ -7,6 +7,7 @@
 
 pub mod cast;
 pub mod domain;
+pub mod ecology;
 pub mod field;
 pub mod geosphere;
 pub mod golden;
@@ -26,6 +27,10 @@ pub mod world;
 
 pub use cast::asciinema_v2;
 pub use domain::Domain;
+pub use ecology::{
+    ANIMAL_PREY, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE, ResourceAxis, ResourceKind,
+    ResourceVector, v1_basis,
+};
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
 pub use geosphere::{CellId, CellMap, GeoCoord, Geosphere, NearestCellIndex};
 pub use ledger::{EntityId, Fact, Ledger, LedgerError, Value};
@@ -37,5 +42,5 @@ pub use registry::{ConceptDef, ConceptKind, ConceptRegistry, PredicateDef, Regis
 pub use room::{MAX_DEPTH, RoomAddr, RoomAddrError, RoomId, RoomIdError};
 pub use seed::{Seed, Stream};
 pub use streams::stream_labels;
-pub use units::{ReferenceElevation, TempAnomaly, Temperature, UnitError};
+pub use units::{Mass, ReferenceElevation, TempAnomaly, Temperature, UnitError};
 pub use world::{NAME, World};

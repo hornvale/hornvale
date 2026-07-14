@@ -12,7 +12,8 @@
 use std::collections::BTreeMap;
 
 use hornvale_kernel::{
-    ConceptKind, ConceptRegistry, EntityId, Fact, LedgerError, RegistryError, Value, World,
+    ANIMAL_PREY, ConceptKind, ConceptRegistry, EntityId, Fact, LedgerError, Mass, PLANT_FORAGE,
+    RegistryError, ResourceVector, Value, World,
 };
 
 /// Predicate: a species entity's name (functional, Text).
@@ -180,7 +181,7 @@ pub struct ArticulationVector {
 /// One authored species: vector, vocabulary stopgaps (deleted by The
 /// Tongues), and a placeholder syllable pool for names.
 /// type-audit: bare-ok(identifier-text)
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SpeciesDef {
     /// The species name ("goblin", "kobold").
     pub name: &'static str,
@@ -196,6 +197,14 @@ pub struct SpeciesDef {
     pub perception: PerceptionVector,
     /// The articulation vector.
     pub articulation: ArticulationVector,
+    /// Adult individual body mass — the BIO-2 down-payment the coexistence
+    /// packer reads to convert a settlement population into a standing
+    /// biomass demand.
+    pub mass: Mass,
+    /// The species' ecological niche: a sparse utilization profile over the
+    /// resource-axis basis (`hornvale_kernel::ecology`). Feeds the packer's
+    /// Pianka overlap between coexisting species.
+    pub niche: ResourceVector,
     /// Worker-role override; `None` = the subsistence worker word.
     pub worker_override: Option<&'static str>,
     /// The warrior-rung word.
@@ -214,6 +223,13 @@ pub struct SpeciesDef {
 /// type-audit: bare-ok(identifier-text)
 pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
     let mut reg = BTreeMap::new();
+    // Mass: D&D 5E average weights (2014 Volo's Guide / PHB tables), lb -> kg:
+    //   kobold 30 lb = 13.6 kg, goblin 40 lb = 18.1 kg,
+    //   hobgoblin 165 lb = 74.8 kg, bugbear 291 lb = 132.0 kg.
+    // Niche: 5E ecology — bugbear a carnivore (hunts, eats humanoids), hobgoblin
+    //   the most agricultural (cultivates + hunts), kobold/goblin opportunistic
+    //   omnivore-scavengers. All omnivores here (both axes > 0); the true
+    //   scavenger/autotroph/apex arrive with the Stage-B menagerie.
     reg.insert(
         "goblin",
         SpeciesDef {
@@ -242,6 +258,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 tonality: 0.0,
                 exotic: ExoticManner::None,
             },
+            mass: Mass::new(18.1).unwrap(),
+            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.50), (ANIMAL_PREY, 0.50)]).unwrap(),
             worker_override: None,
             warrior: "warrior",
             artisan: "artisan",
@@ -277,6 +295,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 tonality: 0.0,
                 exotic: ExoticManner::Trill,
             },
+            mass: Mass::new(13.6).unwrap(),
+            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
             worker_override: Some("digger"),
             warrior: "warden",
             artisan: "shaper",
@@ -312,6 +332,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 tonality: 0.0,
                 exotic: ExoticManner::None,
             },
+            mass: Mass::new(74.8).unwrap(),
+            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
             worker_override: Some("laborer"),
             warrior: "soldier",
             artisan: "smith",
@@ -347,6 +369,8 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 tonality: 0.0,
                 exotic: ExoticManner::None,
             },
+            mass: Mass::new(132.0).unwrap(),
+            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.15), (ANIMAL_PREY, 0.85)]).unwrap(),
             worker_override: Some("forager"),
             warrior: "mauler",
             artisan: "tanner",
@@ -827,6 +851,23 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn goblinoids_carry_mass_and_a_nonzero_omnivore_niche() {
+        let r = registry();
+        for name in ["goblin", "kobold", "hobgoblin", "bugbear"] {
+            let s = &r[name];
+            assert!(s.mass.kilograms() > 0.0, "{name} has mass");
+            assert!(!s.niche.is_zero(), "{name} eats something");
+            // omnivores: both plant-forage and animal-prey present
+            assert!(s.niche.weight(hornvale_kernel::PLANT_FORAGE) > 0.0);
+            assert!(s.niche.weight(hornvale_kernel::ANIMAL_PREY) > 0.0);
+        }
+        // strict, modest, monotone mass band: kobold < goblin < hobgoblin < bugbear
+        assert!(r["kobold"].mass.kilograms() < r["goblin"].mass.kilograms());
+        assert!(r["goblin"].mass.kilograms() < r["hobgoblin"].mass.kilograms());
+        assert!(r["hobgoblin"].mass.kilograms() < r["bugbear"].mass.kilograms());
     }
 
     #[test]
