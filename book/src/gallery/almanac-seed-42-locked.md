@@ -24,6 +24,22 @@ A rock wanderer rounds the sun every 7527 days.
 
 The sky holds 2 figures; 1 stands on the sun's road.
 
+On day 86, the first moon devours the sun whole along latitude 83°.
+
+On day 94, the full first moon darkens to a bloodred coal.
+
+On day 103, the first moon devours the sun whole along latitude 11°.
+
+On day 111, the full first moon darkens to a bloodred coal.
+
+On day 116, the full second moon darkens to a bloodred coal.
+
+On day 119, the first moon devours the sun whole along latitude -62°.
+
+The eclipse seasons parade backward through the year at 12 days a year.
+
+Eclipses of the first moon repeat every 1070 days (64 months); a family of them lives about 176 years.
+
 ## The Calendar
 
 - This world is tidally locked: no local day exists; the year is 368.1 standard days.
