@@ -63,3 +63,9 @@ pub const TERRANES: &str = "terranes";
 /// stream consumption order is untouched (epoch v3 save-format contract).
 /// type-audit: bare-ok(identifier-text)
 pub const MICROCONTINENTS: &str = "microcontinents";
+/// Along-strike arc gating noise (Sculpting, spec §3): gates island-arc
+/// and coastal-range edifices into discrete chains instead of continuous
+/// walls. Hash-noise only — never consumed as a `Stream`, so it carries
+/// no draw-order/save-format contract (see `elevation::boundary_profile_m`).
+/// type-audit: bare-ok(identifier-text)
+pub const ARC_GATE: &str = "arc-gate";

@@ -89,6 +89,156 @@ fn boundary_amplitude_m(kind: BoundaryKind, continental: bool, arc_side: bool) -
     }
 }
 
+/// Foreland-basin trough depth, m (Sculpting spec §3: belt anatomy).
+/// type-audit: pending(wave-2)
+pub const FORELAND_DEPTH_M: f64 = -350.0;
+/// Foreland trough band, in boundary graph hops (continental side).
+/// type-audit: bare-ok(count)
+pub const FORELAND_HOPS: (u32, u32) = (3, 6);
+/// Trench trough depth, m, at the subducting-side boundary cell.
+/// type-audit: pending(wave-2)
+pub const TRENCH_DEPTH_M: f64 = -2800.0;
+/// Trench half-width, hops.
+/// type-audit: bare-ok(count)
+pub const TRENCH_HOPS: u32 = 1;
+/// Arc edifice spacing wavelength (in gate-noise cycles per radian).
+/// type-audit: pending(wave-2)
+pub const ARC_SPACING: f64 = 9.0;
+/// Fraction of the arc that is edifice (gate above this is "on").
+/// type-audit: bare-ok(ratio)
+pub const ARC_DUTY: f64 = 0.45;
+
+/// Collision-belt crest decay length, cells: the sharp core.
+const CREST_DECAY_CELLS: f64 = 1.0;
+/// Foothills amplitude, as a fraction of the belt's peak amplitude. Kept
+/// small (not the more "visually broad" fraction a first sketch might
+/// reach for) so the shoulder's own tail has died down well below
+/// `FORELAND_DEPTH_M` — a fixed depth, independent of belt strength — by
+/// the time the foreland band starts; otherwise a strong belt's foothills
+/// alone swamp the trough and it never goes negative. See the Task 3
+/// report for the numeric sweep that picked this value.
+const FOOTHILLS_FRACTION: f64 = 0.1;
+/// Foothills decay length, cells: broader than the crest's apron.
+const FOOTHILLS_DECAY_CELLS: f64 = 4.0;
+/// Island-arc volcanic-edifice decay length, cells.
+const ARC_EDIFICE_DECAY_CELLS: f64 = 1.5;
+/// Trench-notch decay length, cells: the sharp seaward deep.
+const TRENCH_DECAY_CELLS: f64 = 1.0;
+/// Decay length beyond the trench notch, cells.
+const FAR_FIELD_DECAY_CELLS: f64 = 3.0;
+/// Residual amplitude fraction beyond the trench notch.
+const FAR_FIELD_FRACTION: f64 = 0.2;
+/// Octaves for the along-strike arc-gate noise.
+const ARC_GATE_OCTAVES: u32 = 4;
+
+/// Per-kind boundary elevation profile (Sculpting, spec §3): crest,
+/// foothills, and a foreland trough for collision belts; gated volcanic
+/// edifices and a seaward trench for subduction (island arcs and the
+/// oceanic side of coastal ranges); the bare per-kind amplitude for
+/// everything else — rifts, ridges, transforms, and a collision-tagged
+/// boundary whose own cell reads oceanic (crust varies continuously
+/// within a plate, so a cell can drift off the continental side even
+/// though its nearest same-plate boundary was classified from a
+/// continental-continental contact) — which `assemble_elevation` decays
+/// with the existing maturity-driven length exactly as it did before this
+/// profile existed (see `profile_scale`).
+///
+/// `gate` is the along-strike hash-noise in [0, 1), sampled once per
+/// **source** boundary cell so a whole edifice shares one gate value —
+/// only meaningful for the arc/coastal-range edifice branch; other kinds
+/// ignore it.
+fn boundary_profile_m(
+    kind: BoundaryKind,
+    cell_continental: bool,
+    arc_side: bool,
+    distance: u32,
+    gate: f64,
+) -> f64 {
+    let base = boundary_amplitude_m(kind, cell_continental, arc_side);
+    let d = f64::from(distance);
+    match kind {
+        BoundaryKind::ContinentalCollision | BoundaryKind::CoastalRange if cell_continental => {
+            let crest = base * math::exp(-d / CREST_DECAY_CELLS);
+            let foothills = FOOTHILLS_FRACTION * base * math::exp(-d / FOOTHILLS_DECAY_CELLS);
+            let (f0, f1) = FORELAND_HOPS;
+            let foreland = if distance >= f0 && distance <= f1 {
+                FORELAND_DEPTH_M
+                    * math::sin(
+                        core::f64::consts::PI * (d - f64::from(f0)) / f64::from(f1 - f0).max(1.0),
+                    )
+            } else {
+                0.0
+            };
+            crest + foothills + foreland
+        }
+        BoundaryKind::IslandArc | BoundaryKind::CoastalRange => {
+            if arc_side {
+                // Volcanic edifice, present only where the gate is on.
+                let on = if gate > (1.0 - ARC_DUTY) { 1.0 } else { 0.12 };
+                base * on * math::exp(-d / ARC_EDIFICE_DECAY_CELLS)
+            } else if distance <= TRENCH_HOPS {
+                // Subducting side: the trench.
+                TRENCH_DEPTH_M * math::exp(-d / TRENCH_DECAY_CELLS)
+            } else {
+                base * math::exp(-d / FAR_FIELD_DECAY_CELLS) * FAR_FIELD_FRACTION
+            }
+        }
+        _ => base, // rifts/ridges/transform, unchanged in shape (caller decays it)
+    }
+}
+
+/// Whether `assemble_elevation` should apply the maturity amplitude
+/// `factor` (young plates rise higher, old plates worn down) to
+/// `boundary_profile_m`'s output, and whether it should also re-apply the
+/// maturity-driven `exp(-d/decay_cells)` falloff length on top.
+enum ProfileScale {
+    /// Pre-Sculpting behavior, bit-for-bit: `factor * exp(-d/decay_cells)`.
+    /// `boundary_profile_m` returned the bare amplitude for this branch.
+    Unchanged,
+    /// A belt/arc uplift part (crest+foothills+foreland combined for
+    /// collision belts, since they share one profile value; or a gated
+    /// volcanic edifice): `factor` applies, but the profile's own fixed
+    /// decay lengths replace `decay_cells` — no double falloff.
+    Uplift,
+    /// A trough (trench, and the residual subduction depression beyond
+    /// it): `factor` does NOT apply — old belts keep their basins.
+    Trough,
+}
+
+/// Classify a boundary contact for `ProfileScale`, mirroring
+/// `boundary_profile_m`'s own branch structure exactly (kept as a
+/// separate small function, rather than threading a scale enum out of
+/// `boundary_profile_m` itself, so the profile's public contract stays a
+/// plain `f64` per the interface `boundary_profile_m` is tested against).
+fn profile_scale(kind: BoundaryKind, cell_continental: bool, arc_side: bool) -> ProfileScale {
+    match kind {
+        BoundaryKind::ContinentalRift | BoundaryKind::OceanicRidge | BoundaryKind::Transform => {
+            ProfileScale::Unchanged
+        }
+        BoundaryKind::ContinentalCollision => {
+            if cell_continental {
+                ProfileScale::Uplift
+            } else {
+                ProfileScale::Unchanged
+            }
+        }
+        BoundaryKind::CoastalRange => {
+            if cell_continental || arc_side {
+                ProfileScale::Uplift
+            } else {
+                ProfileScale::Trough
+            }
+        }
+        BoundaryKind::IslandArc => {
+            if arc_side {
+                ProfileScale::Uplift
+            } else {
+                ProfileScale::Trough
+            }
+        }
+    }
+}
+
 /// A mantle hotspot: a fixed Gaussian dome of uplift.
 struct Hotspot {
     /// Dome center, a unit vector.
@@ -132,9 +282,12 @@ fn draw_hotspots(terrain_seed: Seed) -> Vec<Hotspot> {
 /// `crust` is each cell's crust thickness in km (the isostatic base
 /// input); `continental` is each cell's crust flag (feeds the boundary
 /// amplitude's side selection, unchanged in shape from the retired
-/// plate-level flag). Eight explicit narrow inputs beat a bundling struct
-/// here — same house call as climate's assemblers (`temperature.rs`,
-/// `biome.rs`).
+/// plate-level flag). `arc_gate_seed` is hash-noise only (Sculpting spec
+/// §3, `streams::ARC_GATE`) — never consumed as a `Stream`, so it carries
+/// no draw-order/save-format contract; it gates island-arc/coastal-range
+/// edifices into discrete along-strike chains. Nine explicit narrow inputs
+/// beat a bundling struct here — same house call as climate's assemblers
+/// (`temperature.rs`, `biome.rs`).
 #[allow(clippy::too_many_arguments)]
 fn assemble_elevation(
     geo: &Geosphere,
@@ -145,6 +298,7 @@ fn assemble_elevation(
     hotspots: &[Hotspot],
     crust: &CellMap<f64>,
     continental: &CellMap<bool>,
+    arc_gate_seed: Seed,
 ) -> CellMap<ReferenceElevation> {
     CellMap::from_fn(geo, |cell| {
         let plate = &plates[*plate_of.get(cell) as usize];
@@ -155,16 +309,43 @@ fn assemble_elevation(
             Some((distance, source)) => {
                 let contact = (*boundaries.get(source)).expect("BFS sources are boundary cells");
                 let arc_side = plate.id > contact.other_plate;
-                let amplitude = boundary_amplitude_m(contact.kind, cell_continental, arc_side);
                 // Young plates (maturity 0): 1.5x amplitude, sharp 1.5-cell
                 // falloff. Old plates (maturity 1): 0.5x amplitude, worn
-                // 4.5-cell falloff.
+                // 4.5-cell falloff. Only `ProfileScale::Unchanged` (rifts,
+                // ridges, transforms, and an off-continent collision cell)
+                // still uses `decay_cells` — the belt/arc anatomy bakes its
+                // own fixed decay lengths into `boundary_profile_m` instead.
                 let factor = 1.5 - plate.maturity;
                 let decay_cells = 1.5 + 3.0 * plate.maturity;
-                amplitude
-                    * (contact.magnitude / MAX_CLOSING_SPEED)
-                    * factor
-                    * math::exp(-f64::from(distance) / decay_cells)
+                let magnitude_scale = contact.magnitude / MAX_CLOSING_SPEED;
+                // Along-strike gate: sampled once per SOURCE boundary cell
+                // (not per `cell`) so a whole edifice shares one value;
+                // only the arc/coastal-range branch reads it.
+                let gate = if matches!(
+                    contact.kind,
+                    BoundaryKind::IslandArc | BoundaryKind::CoastalRange
+                ) {
+                    crate::crust::sphere_fbm01(
+                        arc_gate_seed,
+                        geo.position(source),
+                        ARC_SPACING,
+                        ARC_GATE_OCTAVES,
+                    )
+                } else {
+                    0.0
+                };
+                let profile =
+                    boundary_profile_m(contact.kind, cell_continental, arc_side, distance, gate);
+                match profile_scale(contact.kind, cell_continental, arc_side) {
+                    ProfileScale::Unchanged => {
+                        profile
+                            * magnitude_scale
+                            * factor
+                            * math::exp(-f64::from(distance) / decay_cells)
+                    }
+                    ProfileScale::Uplift => profile * magnitude_scale * factor,
+                    ProfileScale::Trough => profile * magnitude_scale,
+                }
             }
         };
         let position = geo.position(cell);
@@ -191,6 +372,7 @@ pub fn generate_elevation(
     continental: &CellMap<bool>,
 ) -> CellMap<ReferenceElevation> {
     let hotspots = draw_hotspots(terrain_seed);
+    let arc_gate_seed = terrain_seed.derive(streams::ARC_GATE);
     assemble_elevation(
         geo,
         plates,
@@ -200,6 +382,7 @@ pub fn generate_elevation(
         &hotspots,
         crust,
         continental,
+        arc_gate_seed,
     )
 }
 
@@ -412,6 +595,7 @@ mod tests {
             &[],
             &crust,
             &continental,
+            Seed(1).derive(streams::ROOT).derive(streams::ARC_GATE),
         );
         // f64::MIN (not NEG_INFINITY, which the validating constructor
         // rejects) as a sentinel below every real elevation.
@@ -599,5 +783,80 @@ mod tests {
         assert_eq!(effective, 1.0 - SHELF_BREAK_LAND_FACTOR * supply);
         assert_eq!(notes.len(), 1);
         assert!(notes[0].contains("shelf break"), "{}", notes[0]);
+    }
+
+    #[test]
+    fn boundary_profiles_have_anatomy() {
+        // Collision, continental side: crest at d=0 positive; foreland
+        // trough negative somewhere in FORELAND_HOPS; recovery beyond.
+        let crest = boundary_profile_m(BoundaryKind::ContinentalCollision, true, false, 0, 1.0);
+        assert!(crest > 0.0);
+        let trough = (FORELAND_HOPS.0..=FORELAND_HOPS.1)
+            .map(|d| boundary_profile_m(BoundaryKind::ContinentalCollision, true, false, d, 1.0))
+            .fold(f64::INFINITY, f64::min);
+        assert!(trough < 0.0, "no foreland trough: {trough}");
+        // Island arc: the gate switches edifices on and off along strike.
+        let on = boundary_profile_m(BoundaryKind::IslandArc, false, true, 0, 1.0);
+        let off = boundary_profile_m(BoundaryKind::IslandArc, false, true, 0, 0.0);
+        assert!(
+            on > 0.0 && off < on * 0.25,
+            "arc not discrete: on {on} off {off}"
+        );
+        // Trench: oceanic subducting side goes deep right at the boundary.
+        let trench = boundary_profile_m(BoundaryKind::IslandArc, false, false, 0, 1.0);
+        assert!(trench < -1000.0, "no trench: {trench}");
+    }
+
+    /// Test-local flood fill: how many connected components `cells` forms
+    /// under the geosphere's neighbor adjacency, restricted to `cells`
+    /// itself (a neighbor outside the set does not link two components).
+    fn count_components(
+        geo: &Geosphere,
+        cells: &std::collections::BTreeSet<hornvale_kernel::CellId>,
+    ) -> usize {
+        let mut unvisited = cells.clone();
+        let mut components = 0;
+        while let Some(&start) = unvisited.iter().next() {
+            components += 1;
+            unvisited.remove(&start);
+            let mut stack = vec![start];
+            while let Some(cell) = stack.pop() {
+                for &neighbor in geo.neighbors(cell) {
+                    if unvisited.remove(&neighbor) {
+                        stack.push(neighbor);
+                    }
+                }
+            }
+        }
+        components
+    }
+
+    #[test]
+    fn arcs_are_chains_not_walls_on_a_real_globe() {
+        use std::collections::BTreeSet;
+        let geo = Geosphere::new(5);
+        let outcome =
+            crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
+        let g = &outcome.globe;
+        // Above-sea arc cells at IslandArc boundaries form >1 connected
+        // component somewhere (discreteness), across land at arc boundaries.
+        let arc_land: BTreeSet<hornvale_kernel::CellId> = geo
+            .cells()
+            .filter(|c| {
+                matches!(
+                    g.boundary.get(*c).map(|b| b.kind),
+                    Some(crate::boundaries::BoundaryKind::IslandArc)
+                ) && *g.elevation.get(*c) >= g.sea_level
+            })
+            .collect();
+        // Weak structural check: arc land exists but is not one giant blob.
+        if arc_land.len() >= 6 {
+            let components = count_components(&geo, &arc_land);
+            assert!(
+                components >= 2,
+                "arc land is one wall: {} cells, {components} component(s)",
+                arc_land.len()
+            );
+        }
     }
 }
