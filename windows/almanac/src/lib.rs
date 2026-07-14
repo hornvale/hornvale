@@ -64,7 +64,7 @@ pub struct PantheonBlock {
 /// brightest neighbors, and one line per wandering sibling planet. `None`
 /// for constant-sky worlds, which have no neighborhood to describe (see
 /// [`AlmanacContext::night_sky_lines`]).
-/// type-audit: bare-ok(prose: pole_star), bare-ok(prose: heliacal), bare-ok(prose: wanderers), bare-ok(prose: figures)
+/// type-audit: bare-ok(prose: pole_star), bare-ok(prose: heliacal), bare-ok(prose: wanderers), bare-ok(prose: figures), bare-ok(prose: eclipses)
 pub struct NightSkyLines {
     /// The pole-star sentence, if one exists at genesis.
     pub pole_star: Option<String>,
@@ -76,6 +76,11 @@ pub struct NightSkyLines {
     /// A single figure-count/ecliptic summary line (night-sky stage 3);
     /// empty for skies with no figures at all.
     pub figures: Vec<String>,
+    /// Dated-eclipse sentences for the next two years (at most six,
+    /// day-ascending) followed by the recurrence-ladder lines (Eclipse
+    /// Seasons). One honest no-eclipse sentence when the world has moons
+    /// but no event falls in the window.
+    pub eclipses: Vec<String>,
 }
 
 /// Everything the almanac needs, gathered by the composition root.
@@ -160,6 +165,10 @@ pub fn render(ctx: &AlmanacContext) -> String {
         }
         for line in &lines.figures {
             doc.push_str(&format!("{line}\n\n"));
+        }
+        for line in &lines.eclipses {
+            doc.push_str(line);
+            doc.push('\n');
         }
     }
 
@@ -640,6 +649,7 @@ mod tests {
                     .to_string(),
             ],
             figures: vec!["The sky holds 4 figures; 1 stands on the sun's road.".to_string()],
+            eclipses: vec![],
         });
         let doc = render(&ctx);
         assert!(doc.contains("A blue-white star stands 3.2° from the north celestial pole"));
@@ -673,6 +683,7 @@ mod tests {
                         .to_string(),
                 ],
                 figures: vec!["The sky holds 4 figures; 1 stands on the sun's road.".to_string()],
+                eclipses: vec![],
             }),
             calendar_lines: vec!["The year is 365.2 local days (365.2 standard days).".to_string()],
             ..sample_context()
@@ -708,5 +719,29 @@ mod tests {
             figures_pos < calendar_pos,
             "the night instrument stays inside The Sky, before The Calendar"
         );
+    }
+
+    #[test]
+    fn eclipse_lines_render_under_the_sky() {
+        let ctx = AlmanacContext {
+            night_sky_lines: Some(NightSkyLines {
+                pole_star: None,
+                heliacal: vec![],
+                wanderers: vec![],
+                figures: vec![],
+                eclipses: vec![
+                    "On day 213, the great moon devours the sun whole along latitude 23°."
+                        .to_string(),
+                    "The eclipse seasons parade backward through the year at 19 days a year."
+                        .to_string(),
+                ],
+            }),
+            calendar_lines: vec!["The year is 365.2 local days (365.2 standard days).".to_string()],
+            ..sample_context()
+        };
+        let doc = render(&ctx);
+        let sky = doc.split("## The Calendar").next().unwrap();
+        assert!(sky.contains("devours the sun whole"));
+        assert!(sky.contains("parade backward"));
     }
 }
