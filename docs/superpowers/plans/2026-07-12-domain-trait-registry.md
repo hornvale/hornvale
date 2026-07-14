@@ -1,5 +1,7 @@
 # The Domain Trait & Registry Implementation Plan
 
+**Status: SHIPPED** — all 5 tasks complete 2026-07-12, full gate green (1030/1030) at close, merged to main 2026-07-14 (the close lagged completion; see the retrospective).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Introduce a kernel `Domain` trait and a single worldgen roster so concept registration and the streams manifest iterate one list instead of two hand-maintained per-crate lists.

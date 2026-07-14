@@ -1,7 +1,7 @@
 # The Domain Trait & Registry — design
 
 **Date:** 2026-07-12
-**Status:** Approved (brainstorming session)
+**Status:** SHIPPED 2026-07-14 (complete 2026-07-12; see `book/src/chronicle/the-domain-trait.md` and `docs/retrospectives/the-domain-trait.md`)
 **Scope:** Refactoring proposal **A1** from the 2026-07-12 design examination. Introduce a
 kernel `Domain` trait and a single composition-root roster, replacing the two
 independently-maintained per-domain lists (`register_all` in worldgen; the streams

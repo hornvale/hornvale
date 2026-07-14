@@ -1,6 +1,19 @@
 # The Domain Trait — retrospective
 
-**Completed:** 2026-07-12 — written at branch completion; merge pending owner review.
+**Completed:** 2026-07-12 — written at branch completion; merged 2026-07-14.
+
+**The close lagged the completion.** The branch finished on 07-12 and then
+sat unmerged for two days while 277 commits landed on main (The Datum's
+kernel `Temperature`, The Seam's vessel streams, The Gathering's demography
+crate, three sky campaigns, lab-performance). It was rediscovered by a
+worktree triage, not by the process. The absorb at close was therefore a
+semantic reconciliation — demography had to be *ruled out* of the roster
+(it registers no concepts and draws no streams; a pure-function library the
+composition root calls directly), and the manifest had to regain main's
+locale/vessel sections — where a same-day close would have been a
+fast-forward. A finished branch is the most perishable artifact in the
+process: run the close walk at completion, or file the branch's existence
+somewhere the process reads.
 
 **Recurring findings.** The fmt/clippy gate held clean this campaign (the
 canonical recurring skip did not recur). The one recurring-in-spirit finding

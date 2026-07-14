@@ -61,7 +61,11 @@ vocabulary, and — for a domain that draws on the seed — the permanent labels
 of its random streams. Its crate name, the key under which its streams appear
 in the manifest, is read from the crate itself, so it cannot drift from the
 crate it names. Registration and the stream manifest both read the one
-roster, so they can never disagree about which domains exist.
+roster, so they can never disagree about which domains exist. The roster's
+membership is that declarative surface, not the `domains/` directory: a
+domain crate with nothing to declare — demography registers no concepts and
+draws no streams; it is a pure-function library the composition root calls
+directly — stays off the roster.
 
 What stays out of the trait is as deliberate as what goes in. *Genesis* — how
 a domain is actually generated and rebuilt from a seed — is not a trait

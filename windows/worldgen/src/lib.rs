@@ -208,6 +208,11 @@ pub const NAME_GLOSS: &str = "name-gloss";
 /// manifest sorts by crate name. Adding a domain is one line here plus its
 /// `Domain` impl — respecting this order only if it lends/borrows stratum
 /// concepts.
+///
+/// Membership is the *declarative* surface, not the `domains/` directory:
+/// `hornvale-demography` registers no concepts and draws no streams (a
+/// pure-function library this root calls directly), so it has nothing to
+/// declare and stays off the roster.
 pub const DOMAINS: &[&dyn Domain] = &[
     &hornvale_astronomy::Astronomy,
     &hornvale_climate::Climate,
