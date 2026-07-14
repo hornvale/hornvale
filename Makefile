@@ -16,11 +16,12 @@
 #   make doctor       # print the repo self-map (orientation for a fresh session)
 #   make install-hooks# point git at scripts/hooks (opt-in; edits local config)
 #   make gate-remote  # run the gate on this worktree's AWS spot box (scripts/aws-gate/README.md)
+#   make vessel-check  # the Casement's local gate: deno + wasm fmt/clippy + byte-identity smoke
 #
 # Cost-ordered by design: fmt and clippy are cheapest and the most common
 # review finding, so they run first; `--workspace` tests are the final step.
 
-.PHONY: help quick gate gate-fast gate-full nextest-check prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check
+.PHONY: help quick gate gate-fast gate-full nextest-check prewarm fmt fmt-check clippy test rebaseline artifacts rebaseline-goldens regen-remote lab-diff timings preflight doctor install-hooks gate-remote gate-remote-verify gate-panic gate-remote-setup gate-remote-teardown shellcheck census census-query census-history census-check wasm-vessel vessel-check
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -132,3 +133,14 @@ gate-remote-teardown: ## Remove all remote-gate infra
 
 shellcheck: ## Lint all shell scripts
 	@shellcheck scripts/*.sh scripts/aws-gate/*.sh scripts/aws-gate/test/*.sh scripts/hooks/* tools/census/*.sh
+
+wasm-vessel: ## Build the Casement wasm into book/src/gallery (deploy runs this too; never committed)
+	rustup target add wasm32-unknown-unknown 2>/dev/null || true
+	cargo build --manifest-path clients/vessel/wasm/Cargo.toml --release --target wasm32-unknown-unknown
+	cp clients/vessel/wasm/target/wasm32-unknown-unknown/release/hornvale_vessel_wasm.wasm book/src/gallery/vessel.wasm
+
+vessel-check: wasm-vessel ## The Casement's local gate: deno checks + wasm fmt/clippy + byte-identity smoke
+	cd clients/vessel && deno fmt --check && deno lint && deno task check && deno task test
+	cargo fmt --check --manifest-path clients/vessel/wasm/Cargo.toml
+	cargo clippy --manifest-path clients/vessel/wasm/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+	node clients/vessel/wasm/drive.mjs book/src/gallery/vessel.wasm
