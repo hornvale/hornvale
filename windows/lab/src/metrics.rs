@@ -600,6 +600,24 @@ impl Metric {
     }
 }
 
+/// The 100-year dated-eclipse scan shared by the cadence metrics — fixed
+/// in standard days (a schedule constant, never a function of the drawn
+/// year, so cost and precision are seed-independent).
+fn scan_century(v: &AstronomyView) -> Vec<hornvale_astronomy::EclipseEvent> {
+    hornvale_astronomy::eclipse_events(
+        &v.system,
+        &v.calendar,
+        hornvale_astronomy::StdDays::new(0.0).unwrap(),
+        hornvale_astronomy::StdDays::new(100.0 * 365.25).unwrap(),
+    )
+}
+
+/// Count `scan_century`'s dated events of one body, as a metric value.
+fn century_cadence(v: &AstronomyView, body: hornvale_astronomy::EclipseBody) -> MetricValue {
+    let n = scan_century(v).iter().filter(|e| e.body == body).count();
+    MetricValue::Number(n as f64)
+}
+
 /// Build the registry of tier-1 metrics.
 pub fn registry() -> Vec<Metric> {
     vec![
@@ -807,6 +825,26 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "eclipse-year-days",
+            doc: "Eclipse year (the sun's return to the innermost moon's node line), standard days; Absent if moonless",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 100.0, 200.0, 300.0, 400.0, 600.0, 1000.0],
+            },
+            extract: Extractor::Astronomy(|v: &AstronomyView| match v.system.moons.first() {
+                None => MetricValue::Absent,
+                Some(m) => {
+                    let p = hornvale_astronomy::node_regression_period(
+                        v.system.anchor.year,
+                        m.period,
+                        m.inclination_deg,
+                    );
+                    MetricValue::Number(
+                        hornvale_astronomy::eclipse_year(v.system.anchor.year, p).get(),
+                    )
+                }
+            }),
+        },
+        Metric {
             name: "brightening-per-gyr",
             doc: "The star's fractional main-sequence brightening per gigayear",
             summary: SummaryKind::Numeric {
@@ -834,6 +872,36 @@ pub fn registry() -> Vec<Metric> {
                     Some(d) => MetricValue::Number(d.abs()),
                     None => MetricValue::Absent,
                 }
+            }),
+        },
+        Metric {
+            name: "solar-eclipses-per-century",
+            doc: "Dated solar eclipses anywhere on the world across a 100-year scan",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50.0, 100.0, 200.0, 400.0, 800.0, 1600.0],
+            },
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                century_cadence(v, hornvale_astronomy::EclipseBody::Solar)
+            }),
+        },
+        Metric {
+            name: "lunar-eclipses-per-century",
+            doc: "Dated lunar eclipses across a 100-year scan",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 50.0, 100.0, 200.0, 400.0, 800.0, 1600.0],
+            },
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                century_cadence(v, hornvale_astronomy::EclipseBody::Lunar)
+            }),
+        },
+        Metric {
+            name: "coincidence-days-per-century",
+            doc: "Days in a 100-year scan carrying eclipse events from two or more different moons; zero for 0–1-moon worlds",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 5.0, 10.0, 25.0, 50.0],
+            },
+            extract: Extractor::Astronomy(|v: &AstronomyView| {
+                MetricValue::Number(hornvale_astronomy::coincidence_days(&scan_century(v)) as f64)
             }),
         },
         Metric {
@@ -3952,11 +4020,14 @@ mod tests {
         // +2 more for the Task 8 review fix (total-population,
         // pop-weighted-abs-latitude — the two metrics the brief named that
         // were never built), +3 for night-sky stage 3 (Task 10: figure-count,
-        // largest-figure-members, ecliptic-figure-count), +5 for The Ground
-        // (Task 7: dominant-rock, karst-fraction, aquifer-fraction,
-        // dominant-soil-order, fertile-land-fraction), +2 for The Long
-        // Count (Task 6: brightening-per-gyr, alignment-drift-deg-per-kyr),
-        // +1 for the coexistence stack (Task A16a: per-cell-diversity),
+        // largest-figure-members, ecliptic-figure-count), +4 for Eclipse
+        // Seasons (Task 11: eclipse-year-days, solar-eclipses-per-century,
+        // lunar-eclipses-per-century, coincidence-days-per-century), +5 for
+        // The Ground (Task 7: dominant-rock, karst-fraction,
+        // aquifer-fraction, dominant-soil-order, fertile-land-fraction),
+        // +2 for The Long Count (Task 6: brightening-per-gyr,
+        // alignment-drift-deg-per-kyr), +1 for the coexistence stack
+        // (Task A16a: per-cell-diversity),
         // +12 for BIO-2 (Task 6, per-species goblin+kobold pairs matching
         // the tone-count-{species} convention: lifespan-years-{goblin,kobold},
         // age-at-maturity-years-{goblin,kobold},
@@ -3964,7 +4035,31 @@ mod tests {
         // reproductive-tempo-{goblin,kobold},
         // generation-length-years-{goblin,kobold},
         // pace-of-life-{goblin,kobold}).
-        assert_eq!(registry().len(), 137);
+        assert_eq!(registry().len(), 141);
+    }
+
+    #[test]
+    fn the_eclipse_seasons_metrics_extract_on_seed_42() {
+        let names = [
+            "eclipse-year-days",
+            "solar-eclipses-per-century",
+            "lunar-eclipses-per-century",
+            "coincidence-days-per-century",
+        ];
+        let reg = registry();
+        for name in names {
+            assert!(reg.iter().any(|m| m.name == name), "{name} registered");
+        }
+        let view = AstronomyView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Astronomy(view);
+        let m = |name: &str| extract_from(&built, name);
+        assert!(matches!(
+            m("eclipse-year-days"),
+            MetricValue::Number(_) | MetricValue::Absent
+        ));
+        assert!(matches!(m("solar-eclipses-per-century"), MetricValue::Number(n) if n >= 0.0));
+        assert!(matches!(m("lunar-eclipses-per-century"), MetricValue::Number(n) if n >= 0.0));
+        assert!(matches!(m("coincidence-days-per-century"), MetricValue::Number(n) if n >= 0.0));
     }
 
     #[test]

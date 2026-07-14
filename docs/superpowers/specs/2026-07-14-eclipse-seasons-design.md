@@ -1,7 +1,8 @@
 # Eclipse Seasons — Design
 
 **Date:** 2026-07-14
-**Status:** Approved (brainstorming session)
+**Status:** Shipped (all 12 plan tasks complete; close artifacts landed
+2026-07-14)
 **Parent spec:** `2026-07-05-campaign-2-the-sky-design.md` (§5 model card
 governs; Constitution §2 binds)
 **Registry rows:** ships `SKY-eclipse-seasons`; refines `SKY-6`; leaves named

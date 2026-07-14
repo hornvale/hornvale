@@ -1,5 +1,12 @@
 # Eclipse Seasons Implementation Plan
 
+> **Closed 2026-07-14.** All 12 tasks complete (progress ledger:
+> `.superpowers/sdd/progress.md`); the final whole-branch review (opus,
+> `334faa1..0785e54`) came back Approved — ready to merge, only the
+> pre-authorized AWS census regen standing between the tree and fully green.
+> Close (Definition of Done) artifacts — chronicle entry, retrospective,
+> registry flips, freshness sweep — land in this same commit.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Turn SKY-6's statistical eclipse rate into dated solar and lunar eclipse events with node geometry, ground tracks, the recurrence ladder (eclipse year / saros / exeligmos / series / parade), placed possess prose, ledger facts, an almanac Eclipses section, and four census metrics.

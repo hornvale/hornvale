@@ -45,6 +45,8 @@
 | `moon-distance-mm` | no | orbital distance of a moon in megameters |
 | `moon-inclination-degrees` | no | orbital inclination of a moon to the anchor's orbital plane, in degrees |
 | `moon-mass-lunar` | no | mass of a moon in lunar masses |
+| `moon-node-longitude-degrees` | no | ascending-node ecliptic longitude of a moon at genesis, in degrees |
+| `moon-node-period-days` | no | nodal-regression period of a moon, in standard days |
 | `moon-period-std` | no | orbital period of a moon, in standard days |
 | `moon-tide-rel` | no | tidal strength of a moon, relative to Luna on Earth |
 | `name` | yes | canonical name of an entity |
@@ -106,7 +108,7 @@
 |---|---|
 | `ambient` | a pervasive atmospheric condition |
 | `celestial-body` | a body visible in the sky |
-| `eclipse` | a moon crossing the face of the sun |
+| `eclipse` | a syzygy shadow: a moon crossing the sun, or the world's shadow crossing a moon |
 | `heliacal-rising` | a star's first dawn return from behind the sun |
 | `heliacal-setting` | a star's last evening before the sun swallows it |
 | `night-star` | a fixed star notable in the night sky |
