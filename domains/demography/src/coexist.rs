@@ -17,12 +17,28 @@ use hornvale_kernel::math::powf;
 use hornvale_kernel::{ANIMAL_PREY, CellMap, Geosphere, Mass, ResourceVector, v1_basis};
 use std::collections::BTreeMap;
 
-/// The competition temperature β. AUTHORED placeholder (task A14); task A16
-/// calibrates and FREEZES this against the per-cell diversity target. Do not
-/// treat as final.
+// CALIBRATED (coexistence-stack, task A16): the competition-temperature
+// exponent, chosen by the controller from the task-A16b β-sweep
+// (`windows/worldgen/tests/beta_calibration_sweep.rs`, 13 seeds × 10 β
+// values in [0.1, 6.0], the shipped 4-goblinoid roster). At β=2.0 the mean
+// per-CLAIMED-cell effective diversity (`byproducts.strife`, averaged over
+// habitable cells with Σ density > 0) reads ≈2.4 — a clear dominant with
+// graded rivals, above winner-take-all monoculture (~1) and below
+// undifferentiated "oatmeal" sharing (~4). The sweep also showed this knob
+// is intentionally WEAK against the shipped roster: near-tied goblinoid
+// carrying capacities keep the claimed-cell diversity in a narrow 2.14-2.53
+// band across the entire swept range β∈[0.1, 6.0], so β=2.0 is not a sharp
+// optimum so much as a representative point in a flat response — the dial
+// will bite harder once the Stage-B menagerie adds species with disparate
+// K (spec §3). Stage B therefore RE-MEASURES against that richer roster
+// rather than re-tuning this constant from scratch. A save-format constant
+// from here on.
 /// type-audit: bare-ok(ratio: BETA)
-pub const BETA: f64 = 4.0;
-/// The viability floor. AUTHORED placeholder (task A14); frozen with β in A16.
+pub const BETA: f64 = 2.0;
+/// AUTHORED prior (task A14): the viability floor below which a share is
+/// reported as absence rather than ecological noise. Not swept or fit
+/// against any calibration target — an authored order-of-magnitude choice,
+/// frozen alongside β as a save-format constant.
 /// type-audit: bare-ok(count: FLOOR)
 pub const FLOOR: f64 = 1e-6;
 

@@ -12,7 +12,7 @@ use hornvale_kernel::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 
-// CALIBRATED (coexistence-stack, Task A6): predator/prey body-mass ratio
+// AUTHORED prior (coexistence-stack, Task A6): predator/prey body-mass ratio
 // band. Authored from the standard ecological rule of thumb that predators
 // rarely take prey heavier than themselves and gain little from prey too
 // tiny to be worth pursuing — a broad, permissive band (not a fitted

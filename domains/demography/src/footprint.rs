@@ -8,18 +8,18 @@
 use hornvale_kernel::Mass;
 use hornvale_kernel::math;
 
-// CALIBRATED (none yet, placeholder authored): a super-linear Kleiber-like
-// home-range exponent (2/3 power in metabolic scaling is sub-linear; home
-// range biology suggests 1.0–1.5 exponent depending on ecology). Chosen 1.25
-// as a middle ground: measurably super-linear (100 kg ratio → 314× range at
-// this exponent), leaving room for variation with habitat type (plains vs
-// forest, pursuit vs ambush).
+// AUTHORED prior (not swept/calibrated against any census): a super-linear
+// Kleiber-like home-range exponent (2/3 power in metabolic scaling is
+// sub-linear; home range biology suggests 1.0–1.5 exponent depending on
+// ecology). Chosen 1.25 as a middle ground: measurably super-linear (100 kg
+// ratio → 314× range at this exponent), leaving room for variation with
+// habitat type (plains vs forest, pursuit vs ambush).
 const EXPONENT: f64 = 1.25;
 
-// CALIBRATED (none yet, placeholder authored): scale constant chosen so a
-// mid-body (e.g. 40 kg, goblin-sized) lands near 1 cell/individual (the
-// transition between high-density small species and low-density large ones).
-// Formula: 1 / (40^EXPONENT) ≈ 0.01.
+// AUTHORED prior (not swept/calibrated against any census): scale constant
+// chosen so a mid-body (e.g. 40 kg, goblin-sized) lands near 1 cell/
+// individual (the transition between high-density small species and
+// low-density large ones). Formula: 1 / (40^EXPONENT) ≈ 0.01.
 const A: f64 = 0.01;
 
 /// Home range in cells per individual (Kleiber super-linear allometry in mass).
