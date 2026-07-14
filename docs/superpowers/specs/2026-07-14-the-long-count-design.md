@@ -12,6 +12,21 @@ machinery*; nothing opens a new regime (SKY-16 binaries, SKY-moon-world, and
 kin stay open rows). The name is the theme: eclipse dating, alignment dating,
 and stellar aging are all the sky working as a long clock.
 
+> **Scope amendment (2026-07-14, post-approval).** A parallel session
+> approved *Eclipse Seasons*
+> (`2026-07-14-eclipse-seasons-design.md`, committed @83efb1f, thirteen
+> minutes after this spec) claiming the same `moon-nodes` stream, nodal
+> regression, and dated solar/lunar event core — and going deeper there
+> (positional moon ephemeris, shadow ground tracks, the saros recurrence
+> ladder) while deferring standstills. Nathan adjudicated the collision the
+> same day: **Eclipse Seasons owns the eclipse core.** The Long Count
+> re-scopes to the non-overlapping residuals — secular brightening (§4, with
+> the §5 migration decline), the alignment ground half (§6), and the SKY-23
+> batteries (§7, minus the node/eclipse rows) — plus their §10 metrics and
+> almanac surfacing. The standstill facts move to a follow-up riding Eclipse
+> Seasons' explicitly-deferred standstills seam. §3 is retained below for
+> the record but **does not govern**; this campaign draws no new stream.
+
 ---
 
 ## 1. Goal
