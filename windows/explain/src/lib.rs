@@ -46,14 +46,24 @@ pub fn explain_sky(world: &World) -> Option<String> {
     let insolation = num(world, e, facts::INSOLATION_REL)?;
 
     // Was the orbit pinned? The DAG's orbit leaf is pinned iff a year-days
-    // scenario-pin was committed.
+    // scenario-pin was committed. `pin_strings` (domains/astronomy/src/pins.rs)
+    // renders that pin as "year-days={value}" — the only pin string
+    // containing "year" — and anchor.rs derives the orbit from it via
+    // Kepler's third law, so this branch activates under a `--year-days`
+    // style pin (unexercised by seed 42's default, unpinned build).
     let pinned_orbit = world.ledger.facts_about(e).any(|f| {
         f.predicate == facts::SCENARIO_PIN
             && matches!(&f.object, Value::Text(t) if t.contains("year"))
     });
     let orbit_tag = if pinned_orbit { "pinned" } else { "rolled" };
 
-    let edge = if orbit < (zone_in + zone_out) / 2.0 {
+    // Edge wording is computed from the same 2-decimal-rounded values the
+    // prose displays (via {:.2}), so a reader doing mental math on the shown
+    // figures never sees a midpoint call that looks inconsistent with them.
+    let rounded_zone_in = (zone_in * 100.0).round() / 100.0;
+    let rounded_zone_out = (zone_out * 100.0).round() / 100.0;
+    let rounded_orbit = (orbit * 100.0).round() / 100.0;
+    let edge = if rounded_orbit < (rounded_zone_in + rounded_zone_out) / 2.0 {
         "the warm edge"
     } else {
         "the cool edge"

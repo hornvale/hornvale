@@ -57,10 +57,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "astronomy/moons",
             "per-moon mass/distance draws (sequential attempts)",
         ),
-        (
-            "astronomy/neighbors",
-            "notable-neighbor class/distance draws",
-        ),
+        ("astronomy/neighbors", "neighbor class/distance draws"),
         ("astronomy/forcing", "deep-time orbital forcing"),
         ("astronomy/phase-offsets", "per-body genesis phase offsets"),
         (
