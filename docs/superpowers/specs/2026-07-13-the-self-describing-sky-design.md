@@ -113,8 +113,81 @@ Values are labeled **"genesis / annual-mean"** where the underlying quantity act
 - **The neighbor epoch** is a deliberate representation change, recorded in the chronicle and as a decision. No stream draws move (positions and classes are already drawn; only their *committal* changes), so every existing world's *generation* is byte-preserved; only the serialized fact representation changes.
 - **The entity-hood rule (new decision).** Collections become entities; singletons stay flat on the world entity. One star, one anchor ⇒ flat facts. Many neighbors, many moons ⇒ entities. This campaign applies the rule to neighbors (a clean-slate redesign) but **grandfathers moons flat** to avoid a second epoch on already-shipped moon facts (`moon-period`/`moon-tide`/`moon-inclination`). The debt is explicit: a future campaign may promote moons to entities under an epoch. The spec records this so the flat-moons/entity-neighbors asymmetry is a documented choice, not an accident.
 
-## 8. Testing
+## 8. The deity-name salt epoch (scope addition, 2026-07-13)
 
+**What surfaced during execution.** §5 claimed the neighbor epoch drifts no
+rendered artifact. That was wrong. Minting one entity per neighbor inside
+astronomy genesis bumps the ledger's monotonic entity-id counter, and the
+belief entity's id is used to **seed deity-name generation** in
+`windows/worldgen`'s `LanguageDeityNamer` (it passes the id straight into
+`hornvale_language::glossed_name(kind, salt, …)`). Because astronomy genesis
+runs *before* religion genesis, the extra neighbor mints shift every belief
+id, so deity names change for every seed — a name-only drift (periods and all
+physics identical) visible in the seed-42 almanacs. The world stays fully
+deterministic; the fragility is that deity *names* were coupled to global
+mint *order*.
+
+**The precise defect: the belief id is doing two jobs.** (1) It **keys** the
+committed `name-gloss` fact to the belief entity (worldgen commits
+`name_gloss_fact(EntityId(salt), gloss)`) — this is *correct*; the gloss
+belongs on the belief so `recount`/`explain` find it. (2) It **seeds the
+name** passed to `glossed_name` — this is the bug. The fix separates the two:
+keep the belief id as the gloss key, give the name generator a semantic seed.
+
+**The root fix (ratified by Nathan, ideonomy-guided).** In
+`LanguageDeityNamer` (`windows/worldgen`), derive the per-name seed from the
+belief's **semantic identity** instead of the passed belief id. A
+periodic-grid pass (salt-source × invariance) showed a global counter cannot
+be made invariant — only re-sourcing can. The namer already holds the
+phenomenon and a per-species context, so it computes:
+
+```
+name_seed = seed.derive("religion/deity/v2")
+                .derive(species)            // per-species namer context
+                .derive(&phenomenon.kind)   // what the deity is OF
+                .derive(&index.to_string()) // rank among this call's members
+                .stream().next_u64()
+```
+
+and passes `name_seed` (not the belief id) to `glossed_name` for both the
+deity and its epithet. The belief id keeps keying the gloss fact — the
+gloss→belief linkage is preserved automatically, so nothing in `recount` /
+`explain` regresses.
+
+- **Invariant** to entity-minting order (no entity id in the name seed) — the fix.
+- **Unique** per belief within a call: the namer is species-specific
+  (lexicon/morphology), and `phenomenon.kind` + `index` separates this call's
+  members; `index` (rank in the physics-derived salience list) disambiguates
+  members sharing a kind (two moons, two same-colour neighbours) and is stable
+  under entity-id shifts because the phenomena list is derived from the
+  providers, not the ledger.
+- **Truthful:** the name now derives from what the deity is *about* — the
+  property `worldgen`'s deity-naming comment already says it wants.
+- **`description` is deliberately excluded** to avoid coupling names to any
+  float a description might format (a cross-platform-quantization surface);
+  `kind` + `index` carries meaning and uniqueness without that risk.
+
+**This is a deliberate naming epoch.** Deity names change for every seed. The
+derivation label carries the `/v2` epoch suffix (never a rename, per the
+save-format contract). The change is localized to `windows/worldgen`'s namer
+(and its tests); `domains/religion::genesis` is untouched (it still passes the
+belief id, now used only as the gloss key), and the `DeityNamer` trait
+signature is unchanged. It gets its own decision record (§10). Sequenced
+**before** the artifact rebaseline so names are already stable when every
+artifact is regenerated once.
+
+## 9. Testing
+
+- **Deity-name invariance (the epoch's keystone test), in `windows/worldgen`:**
+  the deity name a `LanguageDeityNamer` produces for a phenomenon must be
+  **independent of the belief id passed as `salt`** — call the namer for the
+  same phenomenon/rank with two different `salt` values and assert identical
+  names. This is the property the old entity-id seeding violated and the new
+  semantic seed restores. (`domains/religion`'s
+  `each_deity_is_salted_by_its_own_belief_id` is untouched: religion still
+  passes the belief id as the gloss key, and its test uses a test-double
+  namer that keys on `salt` — the gloss-keying contract it checks still
+  holds.)
 - **Fact presence & value (per new predicate):** `facts.rs` unit tests assert each new fact is committed with the quantized value of its source, for both locked and spinning, single- and multi-moon worlds.
 - **Neighbor entities:** assert one `is-neighbor` entity per generated neighbor, in brightest-first order, each carrying the five neighbor facts; assert `notable-neighbor` is absent.
 - **Insolation single-source:** a test asserting `insolation_rel(star, anchor)` equals `worldgen`'s threaded insolation for a sample of seeds (the two can never diverge because they are one function).
@@ -122,12 +195,18 @@ Values are labeled **"genesis / annual-mean"** where the underlying quantity act
 - **Determinism:** the existing `genesis_is_deterministic` / byte-identity tests extend to cover the new facts; a re-frozen golden world snapshot if one exists.
 - **Provenance:** every new astronomy-committed fact (including those on neighbor entities) carries `"astronomy"` provenance.
 
-## 9. Book & Definition of Done
+## 10. Book & Definition of Done
 
-- **Chronicle entry** (`book/src/chronicle/`) recording the campaign: the completed fact surface, the neighbor epoch, the `explain` verb.
+- **Chronicle entry** (`book/src/chronicle/`) recording the campaign: the completed fact surface, the neighbor epoch, the `explain` verb, and the deity-salt re-sourcing (§8).
 - **Registry flips:** SKY-15 → `shipped`; TOOL-1 → `spec'd` (fact-reading tier delivered; the trace-replay tier remains open, pointed at this spec). Add a note on SKY-19's row that edge-of-zone is now answerable from the ledger (hab-zone facts + insolation).
 - **Confidence Gradient re-score** of any bet in `open-questions.md` that SKY-15 or TOOL-1 sits on (decision 0030), as part of the freshness sweep.
 - **Freshness sweep** of the sky chapter(s) and the concept-registry chapter (new predicates) so the book never lags merged reality.
-- **Decision record** (`docs/decisions/`) for the entity-hood rule (collections → entities, singletons → flat) and the precise `insolation-rel` definition.
-- **Retrospective** (`docs/retrospectives/`) — process lessons.
-- **Artifacts** regenerated and drift-checked (the new `explain-seed-42-sky.md`; `world.json` fact content; CI's artifact step updated for the new command).
+- **Decision records** (`docs/decisions/`): (a) the entity-hood rule (collections → entities, singletons → flat) and the precise `insolation-rel` definition; (b) the deity-name salt re-sourcing (semantic identity, not mint order) with its `/v2` epoch and the general principle that **procedural names must be salted by stable identity, never by a global mint counter**.
+- **Retrospective** (`docs/retrospectives/`) — process lessons, including the entity-id-salt fragility the neighbor epoch exposed and the ideonomy pass that re-sourced it.
+- **The single full rebaseline** (run once, after the deity-salt fix, so names are already stable). Every artifact this campaign drifts, regenerated and drift-checked in one pass:
+  - `cli/tests/fixtures/world-seed-42.json` — the golden world ledger the `lens_purity` test byte-checks (now carries the new star/anchor/moon/neighbor facts). This is the deliberate, reviewed regeneration the test's own module doc demands.
+  - the three almanacs (`almanac-seed-42{,-sky,-locked}.md`) — deity names now stable and regenerated once.
+  - `book/src/reference/concept-registry-generated.md` — the new predicates.
+  - `docs/audits/type-audit-report.md` — the new pub fact constants (already tagged).
+  - `book/src/gallery/explain-seed-42-sky.md` — the new artifact (Task 6).
+  - CI regenerates all of these via `scripts/regenerate-artifacts.sh`; no `ci.yml` change is needed (it already calls the script and diffs the trees).
