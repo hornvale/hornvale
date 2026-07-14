@@ -121,3 +121,17 @@ jobs:
         run: make wasm-vessel
       - name: Byte-identity smoke (wasm opening == committed native transcript)
         run: node clients/vessel/wasm/drive.mjs book/src/gallery/vessel.wasm
+
+  world:
+    name: World catalog (world-wasm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            clients/world-wasm
+      - name: Catalog gate (lint + golden smoke + size)
+        run: make world-check
