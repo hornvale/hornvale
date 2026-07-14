@@ -1,7 +1,7 @@
 # The Long Count — Design
 
 **Date:** 2026-07-14
-**Status:** Approved (brainstorming session)
+**Status:** Complete — merged to main 2026-07-14 (re-scoped; see the scope amendment below). Chronicle: `book/src/chronicle/the-long-count.md`; retrospective: `docs/retrospectives/the-long-count.md`.
 **Campaign:** The Long Count (slug-named per decision 0026)
 **Provenance:** The close-out of the astronomy residuals — the four leftovers
 on shipped registry rows identified in the 2026-07-08 sky audit and its

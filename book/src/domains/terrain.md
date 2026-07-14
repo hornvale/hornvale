@@ -132,6 +132,31 @@ canonical grid; the pointwise crust is resampled at any resolution). Erosion,
 sediment, and the coastline texture Crust's census left outside its bands are
 Sculpting's (v3) mandate; see [Crust](../chronicle/crust.md).
 
+**The Ground — what the land is made of.** Crust answers *how high*; The
+Ground answers *what it's made of*. Rather than a single rock-class enum, a
+per-cell **material buffer** carries a handful of continuous petrogenetic
+axes — a felsic/mafic index, grain size, hardness, carbonate content,
+metamorphic grade, porosity, a soil-depth accumulation, and a reserved,
+presently-zero magical-saturation slot — derived purely from fields the
+globe already carries: crust age and thickness, boundary type and distance,
+plate motion, and drainage. Every consumer-facing reading is a projection
+over that one buffer, never a second source of truth: a fine rock taxonomy
+(granite through alluvium, nineteen classes strong, most already realized by
+the tectonic ranges that feed it) for a lithology map
+beside the elevation one; nine climate-coupled soil orders, each with its
+own fertility suitability, for farmland the walk can trust; a
+hydrogeology reading — aquifer, aquitard, spring, karst — wherever porosity
+and drainage cross; a cave/karst void-proneness reading where carbonate and
+water meet; a walk-facing appearance vector (albedo, hue, grain, hardness
+underfoot); and a mineral-prospectivity field standing in for ore bodies a
+later campaign will place. None of it commits a new fact or draws a new
+stream — the seed-to-world mapping this campaign touches is byte-for-byte
+what Crust left it, so the ground gained texture without gaining an epoch.
+The almanac now names the dominant rock and soil beneath a world's feet in
+their own section, and the census counts karst, aquifers, and fertile land
+the same way it counts everything else; see
+[The Ground](../chronicle/the-ground.md).
+
 **The tier ladder ahead:** place names that feel authored rather than
 generated, and eventually the region-graph refinement that gives a
 habitable cell a walk-around interior. The anti-repetition mandate from the

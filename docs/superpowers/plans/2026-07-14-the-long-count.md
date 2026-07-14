@@ -1,5 +1,7 @@
 # The Long Count Implementation Plan (re-scoped)
 
+> **Status: COMPLETE.** All six tasks executed, reviewed, and merged 2026-07-14. The census-fixture staleness (32 tests) clears with the shared AWS regen after Eclipse Seasons merges.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 > **Re-scope note (2026-07-14):** the original 12-task plan included the
