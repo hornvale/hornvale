@@ -144,6 +144,51 @@ placed at an altitude and azimuth the way a real horizon would place it.
 That refinement, and how meaning-making reacts to a real vantage point at
 all, is later work.
 
+## The night sky becomes an instrument (Night Sky Instrument)
+
+Everything above tells an observer *that* a body is up; this campaign gives
+the fixed stars a placed, epoch-honest position and adds two new kinds of
+body that actually move against them. Three pieces land as one derivation
+trio. `sky_position.rs` gives `precession_at` — computed since Firm Ground
+II, read by nothing — its first reader: apparent coordinates now drift
+between epochs, re-projected each time through the epoch's own obliquity,
+so a star's charted position and its position twenty thousand years later
+genuinely differ. `night_sky_at` is the unified derived view a placed
+observer's night now holds in one query — which neighbors are visible,
+which never set (circumpolar) or never rise, and whether a pole star
+currently exists (a system-level fact, independent of the observer's
+latitude, since precession retires and crowns pole stars as the epoch
+turns). And `heliacal_events` recovers the oldest naked-eye instrument
+there is: a star's annual disappearance behind the sun's glare and its
+reappearance at dawn, gated by a class-graded arcus-visionis threshold (a
+blue giant surfaces through brighter twilight than a red dwarf), founding a
+stellar calendar family beside the solar and lunar ones.
+
+The sky also stops being fixed-stars-only. Wandering siblings — 0 to 4
+Kepler-orbiting worlds, drawn on their own stream or pinned with
+`--wanderers` — trace real orbits against the fixed background, inner ones
+swinging through a morning-star/evening-star cycle bounded by their
+maximum elongation, outer ones looping retrograde near opposition. And the
+fixed background itself gained texture and structure: a derived starfield
+(100–300 faint field stars, dim-heavy, never committed — pure texture) sits
+behind the notable neighbors, and `figures.rs` clusters the notable
+neighbors themselves by angular separation into named asterisms, flagging
+the ones straddling the ecliptic band as the zodiac for one boolean — all
+three, like the starfield, computed on demand and committed nowhere.
+
+Every one of these is an instance of the same law: a derivation must answer
+*honestly* for the regime it is asked about, never quietly substitute a
+coarser default. A locked world has no local day, so its sky is frozen, its
+heliacal events are empty, and it has no sky band at all — not an
+approximation of one. Spin direction flips which way the sky wheels but
+never touches a single heliacal date. And precession moves the
+epoch-referenced half of the sky (apparent coordinates, pole-star
+standing) while leaving the orbital-mechanical half (wanderer periods, the
+year itself) exactly as it was — because those quantities take no epoch as
+an argument at all. `domains/astronomy/tests/night_sky_regimes.rs` pins
+this regime × feature matrix directly: three seeds, four regimes, cheap
+enough for the commit gate.
+
 ## The model card
 
 Every quantity the generator touches sits in exactly one column — mirrored
@@ -168,8 +213,10 @@ still starts at `t = 0` on a circular orbit, but eccentricity now oscillates
 over deep time, so "circular" is a starting condition, not a permanent one;
 no orbital evolution, resonance, or N-body effects; seasonal daylight as a
 smooth sinusoid in obliquity and year phase; neighbor stars observational-only
-(no gravity, no radiation); no eclipses yet (the angular diameters exist, so
-tier 3 can derive them); the Milankovitch drift laws themselves (slow
+(no gravity, no radiation); eclipses shipped (each moon's drawn orbital
+inclination gates a total-vs-annular verdict on a derived node beat), but
+without nodal precession, so today's recurrence is a rate, not a dated
+occurrence, and lunar eclipses remain unbuilt; the Milankovitch drift laws themselves (slow
 sinusoids at fixed, near-real periods, with no coupled climate feedback
 driving them); ever-visible hemisphere culling (a body is up or down with
 the observer's hemisphere, never placed at an altitude); the substellar
@@ -186,10 +233,40 @@ Firm Ground II — each forcing element's mean, amplitude, and phase
 (obliquity's amplitude and phase, eccentricity's mean, amplitude, and phase,
 precession's phase) and each body's genesis phase offset (the year, the
 day, and each moon's), all on their own labeled streams so every draw above
-is untouched.
+is untouched; and — as of the Night Sky Instrument — each wanderer's
+orbital period (Kepler III, from its drawn semi-major axis and the star's
+mass) and synodic period against the anchor, apparent equatorial
+coordinates re-projected each query through `precession_at` and the
+epoch's obliquity (the coordinate/precession model above), and the
+heliacal rising/setting fractions each neighbor gets from a 400-sample
+scan of the year against its class's arcus-visionis threshold.
 
 Promoting a drawn quantity to a derived one is an **epoch bump**, never a
 silent change — saved worlds must keep the skies they were born under.
+
+**Approximated, added by the Night Sky Instrument:** a wanderer's apparent
+brightness is Bond albedo times cross-section over squared distance
+(inverse-square, real), but its varying elongation-phase angle is not
+Kepler-integrated per query — a declared sinusoidal stand-in
+(`phase = (t / synodic_period + year_phase_offset + index · 0.37) mod 1`,
+the `0.37` an arbitrary per-wanderer rotation that draws nothing new from
+the stream) that gives each wanderer a plausible synodic beat without a
+second orbital integration; the heliacal scan's circumpolar/never-rises
+classification is evaluated once per neighbor at the query epoch rather
+than per sample across the scanned year, since precession and obliquity
+forcing move on kiloyear timescales and cannot flip that classification
+within one year; and the derived starfield and figures are pure
+background texture — sphere-uniform, magnitude-graded, clustered by
+angular separation — never committed, never a genesis draw the way a
+notable neighbor is.
+
+**Drawn, added by the Night Sky Instrument:** wanderer count (0–4, drawn or
+pinned via `--wanderers`), each wanderer's region (inner/outer), orbital
+semi-major axis, class (rock or giant), and albedo; the background
+starfield's count (100–300) and each field star's declination, right
+ascension, and magnitude class — all on their own labeled streams
+(`wanderer-count`, `wanderers`, `starfield`), appended after every existing
+draw so no previously generated sky moves.
 
 **Derived from placement:** the observer's position — the flagship's cell
 coordinate — is not drawn at all; it falls out of wherever settlement placed
@@ -198,13 +275,16 @@ the flagship, deterministic because placement is.
 **The tier ladder ahead:**
 
 3. Realistic multi-body configurations: binary suns, moons in resonance,
-   eclipses (the angular diameters already exist), wanderers, rings,
-   constellations as perceived from the surface, and each neighbor's
-   coordinates plotted as seen from a real place rather than an idealized
-   one — plus the observer's own per-body altitude and azimuth (so a body
-   is placed at a point in the sky, not merely up or down with a
-   hemisphere), and twilight. Physics promotions (drawn → derived) continue
-   arriving as epoch bumps.
+   rings, and each neighbor's coordinates plotted as seen from a real place
+   rather than an idealized one — plus the observer's own per-body altitude
+   and azimuth (so a body is placed at a point in the sky, not merely up or
+   down with a hemisphere). Physics promotions (drawn → derived) continue
+   arriving as epoch bumps. (Wandering siblings and named star figures
+   shipped this campaign — see above; twilight, as the shared `SkyBand`
+   threshold the heliacal instrument and the day/night prose both read
+   from, shipped alongside them. A wanderer-synodic calendar family,
+   wanderer transits, and per-species figure catalogs are the open
+   deepenings the [idea registry](../frontier/idea-registry.md) tracks.)
 
 At every tier the query stays the same; only the richness of the answer
 changes. A world configured with the tier-0 provider remains a valid,
