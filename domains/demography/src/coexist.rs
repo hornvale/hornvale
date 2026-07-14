@@ -11,8 +11,10 @@
 //! single fittest species per guild (winner-take-all monoculture). Realistic
 //! coexistence lives at a finite, calibrated `β` between those extremes.
 
+use crate::footprint::home_range;
+use crate::niche::{guild_overlap, predation, trophic_levels};
 use hornvale_kernel::math::powf;
-use hornvale_kernel::{CellMap, Geosphere};
+use hornvale_kernel::{CellMap, Geosphere, Mass, ResourceVector};
 use std::collections::BTreeMap;
 
 /// The single-cell overlap-weighted coexistence share for every species in
@@ -199,6 +201,152 @@ pub fn emigration_pressure(
     crate::flow::flow(geo, &overshoot).accumulation
 }
 
+// AUTHORED prior (task A11, 2026-07-14): the top-down shadow strength fed to
+// [`couple_trophic`] by the whole-stack packer. No calibration study exists
+// yet for this campaign, so 0.3 is a deliberately moderate single authored
+// guess — strong enough that an apex predator visibly suppresses its prey
+// (unlike `couple_trophic`'s own unit tests, which probe 0.1/0.5 as
+// endpoints), but well short of `couple_trophic`'s hard-clamped
+// `SHADOW_FLOOR` so ordinary prey never collapses from this coupling alone.
+// Re-pin with a provenance-updated comment once a calibration study exists.
+const SHADOW: f64 = 0.3;
+
+/// The assembled per-cell density stack for every species over a `Geosphere`:
+/// the end-to-end product of [`pack`], and the surface downstream consumers
+/// (settlement condensation, migration) read.
+///
+/// type-audit: bare-ok(index: density), bare-ok(count: density), bare-ok(count: emigration_pressure)
+#[derive(Clone, Debug, PartialEq)]
+pub struct CoexistStack {
+    /// Each species' realized per-cell individual density, tagged by species
+    /// id, in the same order as the `species` slice `pack` was called with.
+    pub density: Vec<(u32, CellMap<f64>)>,
+    /// The soft-capacity overflow field (see [`emigration_pressure`]),
+    /// summed across every species' realized density against the pooled
+    /// per-cell carrying capacity.
+    pub emigration_pressure: CellMap<f64>,
+}
+
+/// Assemble the whole per-cell coexistence density stack: the integration
+/// keystone wiring together every prior task in this campaign.
+///
+/// `per_species_k` is each species' carrying-capacity field `K_s` (one
+/// `CellMap` per species id, e.g. from [`crate::carrying_capacity`]).
+/// `species` is `(species_id, body_mass, niche)` for the same species —
+/// the shared, kernel-level shape [`crate::niche::guild_overlap`],
+/// [`crate::niche::trophic_levels`], and [`crate::niche::predation`] all
+/// project from. `beta` and `floor` pass straight through to [`cell_share`].
+///
+/// Wiring, in order:
+/// 1. **Derive once.** `overlap`, `levels`, and `predation` depend only on
+///    `species`' niche vectors and masses — never on a cell — so each is
+///    computed exactly once up front, not per cell.
+/// 2. **Per cell** (visiting `geo.cells()` in ascending `CellId` order):
+///    - `present` is `(species_id, K_s(cell))` for every species with a
+///      **strictly positive** `K` at this cell, sorted by id — a species
+///      absent from a cell (`K == 0`) contributes nothing to that cell's
+///      competition and is dropped before `cell_share` ever sees it.
+///    - `capacity` is the **sum of `present`'s K values**: the cell's total
+///      carrying capacity, competitively repartitioned among whichever
+///      species are actually there, rather than a fixed external cap. This
+///      is also reused, unchanged, as the same cell's contribution to the
+///      `capacity` field step 3 hands `emigration_pressure`, so both
+///      pressure and share read one consistent notion of "how much this
+///      cell can support."
+///    - `cell_share` turns that `(capacity, present, overlap, beta, floor)`
+///      into an overlap-weighted share per present species.
+///    - Each share is converted from a capacity count to a **per-cell
+///      individual density** by dividing by [`home_range`]: a species with
+///      a small home range (many individuals fit in one cell) keeps most of
+///      its share as density; a species with a large home range (an
+///      individual spans many cells) is scaled down to a fractional
+///      per-cell density, since a share of "capacity" is not yet a count of
+///      bodies actually standing in this one cell.
+///    - [`couple_trophic`] then applies the bottom-up cap / top-down shadow
+///      over that cell's density map in place, using the once-derived
+///      `predation`/`levels` and the authored [`SHADOW`] constant.
+/// 3. **Emigration pressure.** `demand` is each cell's summed post-coupling
+///    density across every species; `capacity` is each cell's summed
+///    present-species `K` (the same quantity computed in step 2, rebuilt as
+///    a field). [`emigration_pressure`] turns `(demand, capacity)` into the
+///    spilled crowding-pressure field.
+///
+/// Draws nothing from the seed: `pack` is a pure function of its arguments,
+/// so two calls with identical inputs produce byte-identical output (no
+/// `HashMap`, `total_cmp`-safe throughout via the functions it calls).
+///
+/// type-audit: bare-ok(index: per_species_k), bare-ok(index: species), bare-ok(ratio: beta), bare-ok(count: floor)
+pub fn pack(
+    geo: &Geosphere,
+    per_species_k: &[(u32, CellMap<f64>)],
+    species: &[(u32, Mass, ResourceVector)],
+    beta: f64,
+    floor: f64,
+) -> CoexistStack {
+    // Derive overlap/levels/predation exactly once — they depend only on
+    // `species`, never on a cell.
+    let projected_niche: Vec<(u32, ResourceVector)> = species
+        .iter()
+        .map(|(id, _mass, niche)| (*id, niche.clone()))
+        .collect();
+    let overlap = guild_overlap(&projected_niche);
+    let levels = trophic_levels(&projected_niche);
+    let predation_edges = predation(species);
+    let masses: BTreeMap<u32, Mass> = species.iter().map(|(id, mass, _)| (*id, *mass)).collect();
+
+    // Per-cell density maps and capacities, indexed by CellId in the same
+    // ascending order `Geosphere::cells()` and `CellMap::from_fn` both use,
+    // so the later per-species `CellMap` rebuild reads them back correctly.
+    let mut per_cell_density: Vec<BTreeMap<u32, f64>> = Vec::new();
+    let mut per_cell_capacity: Vec<f64> = Vec::new();
+
+    for cell in geo.cells() {
+        let mut present: Vec<(u32, f64)> = per_species_k
+            .iter()
+            .map(|(id, k)| (*id, *k.get(cell)))
+            .filter(|(_, k)| *k > 0.0)
+            .collect();
+        present.sort_by_key(|(id, _)| *id);
+
+        let capacity: f64 = present.iter().map(|(_, k)| *k).sum();
+        let shares = cell_share(capacity, &present, &overlap, beta, floor);
+
+        let mut density: BTreeMap<u32, f64> = shares
+            .into_iter()
+            .map(|(id, share)| {
+                let mass = masses[&id];
+                (id, share / home_range(mass))
+            })
+            .collect();
+        couple_trophic(&mut density, &predation_edges, &levels, SHADOW);
+
+        per_cell_density.push(density);
+        per_cell_capacity.push(capacity);
+    }
+
+    let density: Vec<(u32, CellMap<f64>)> = species
+        .iter()
+        .map(|(id, _, _)| {
+            let map = CellMap::from_fn(geo, |c| {
+                per_cell_density[c.0 as usize]
+                    .get(id)
+                    .copied()
+                    .unwrap_or(0.0)
+            });
+            (*id, map)
+        })
+        .collect();
+
+    let demand = CellMap::from_fn(geo, |c| per_cell_density[c.0 as usize].values().sum());
+    let capacity_field = CellMap::from_fn(geo, |c| per_cell_capacity[c.0 as usize]);
+    let spillover = emigration_pressure(geo, &demand, &capacity_field);
+
+    CoexistStack {
+        density,
+        emigration_pressure: spillover,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -359,6 +507,38 @@ mod tests {
         let ratio_low = low[&0] / low[&1];
         assert!(ratio_low < 2.5, "low β shares broadly (oatmeal)");
         assert!(high[&1] < 1e-3 && high[&0] > 0.9, "high β → monoculture");
+    }
+
+    #[test]
+    fn pack_yields_coexistence_not_exclusion_and_is_deterministic() {
+        use hornvale_kernel::{Mass, PLANT_FORAGE, ResourceVector};
+
+        let geo = Geosphere::new(3);
+        let k0 = CellMap::from_fn(&geo, |_| 1.0);
+        let k1 = CellMap::from_fn(&geo, |_| 0.6);
+        let per = vec![(0u32, k0), (1u32, k1)];
+        let sp = vec![
+            (
+                0u32,
+                Mass::new(40.0).unwrap(),
+                ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
+            ),
+            (
+                1u32,
+                Mass::new(30.0).unwrap(),
+                ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
+            ),
+        ];
+        let a = pack(&geo, &per, &sp, 4.0, 1e-6);
+        let b = pack(&geo, &per, &sp, 4.0, 1e-6);
+        assert_eq!(a.density, b.density, "byte-identical repack");
+        let c = geo.cells().next().unwrap();
+        let d0 = a.density.iter().find(|(t, _)| *t == 0).unwrap().1.get(c);
+        let d1 = a.density.iter().find(|(t, _)| *t == 1).unwrap().1.get(c);
+        assert!(
+            *d0 > *d1 && *d1 > 0.0,
+            "dominant leads but rival persists (coexistence)"
+        );
     }
 
     #[test]
