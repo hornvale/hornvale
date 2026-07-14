@@ -13,12 +13,14 @@
 pub mod carrying_capacity;
 pub mod condense;
 pub mod flow;
+pub mod footprint;
 pub mod founder;
 pub mod niche;
 pub mod render;
 pub use carrying_capacity::{CarryingInput, carrying_capacity};
 pub use condense::{Condensation, condense};
 pub use flow::{Flow, flow};
+pub use footprint::home_range;
 pub use founder::condense_tagged;
 pub use render::density_ppm;
 
