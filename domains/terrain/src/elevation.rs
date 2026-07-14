@@ -250,8 +250,17 @@ pub const SUPPLY_SHORTFALL_FACTOR: f64 = 0.5;
 /// Land granted to a supply-limited world, as a multiple of its
 /// continental supply: 1.0 places the sea-level percentile where the
 /// crust field crosses `crust::CONTINENTAL_THRESHOLD_KM` — the isostatic
-/// shelf break. Calibrated in Task 3 of the single-craton-hypsometry
-/// plan; the measured table replaces this sentence there.
+/// shelf break. Measured over the single-craton sweep (seeds 1..=40,
+/// level 4, continents=1, drawn ocean fraction), κ grid {0.8, 0.9, 1.0,
+/// 1.25, 1.5, 2.0}: no κ satisfies the whole-sphere shelf floor (best:
+/// 18/40 at κ=2.0) because a ~3%-of-sphere continent cannot put 2% of
+/// the sphere within ±200 m of sea level — while at κ = 1.0 the
+/// land-normalized shelf (shelf cells / land cells, `shelf_land_ratio`)
+/// spans 0.075–0.309 (median 0.171), overlapping and at the median
+/// exceeding the default-world population's 0.097–0.165 (median 0.130),
+/// with D in 3.14–5.5+. 1.0 is therefore retained — the physical shelf
+/// break, untuned; the test floor is land-normalized instead
+/// (decision 0053).
 /// type-audit: bare-ok(ratio)
 pub const SHELF_BREAK_LAND_FACTOR: f64 = 1.0;
 

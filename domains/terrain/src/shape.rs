@@ -70,6 +70,33 @@ pub fn shelf_fraction(
     within as f64 / elevation.len() as f64
 }
 
+/// Shelf area relative to land area: cells within [`SHELF_BAND_M`] of sea
+/// level (both sides of it), over cells at or above sea level. The
+/// whole-sphere `shelf_fraction` silently assumes an Earth-scale land
+/// fraction — a small-continent world can carry a proportionally healthy
+/// shelf while clearing only a sliver of the sphere (decision 0053's
+/// measured tables). `None` when the globe has no land.
+/// type-audit: bare-ok(ratio: return)
+pub fn shelf_land_ratio(
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+) -> Option<f64> {
+    let mut shelf = 0usize;
+    let mut land = 0usize;
+    for (_, e) in elevation.iter() {
+        if (*e - sea_level).abs() <= SHELF_BAND_M {
+            shelf += 1;
+        }
+        if *e >= sea_level {
+            land += 1;
+        }
+    }
+    if land == 0 {
+        return None;
+    }
+    Some(shelf as f64 / land as f64)
+}
+
 /// Ashman's D between the land and ocean elevation populations:
 /// `|mean_land - mean_ocean| / sqrt((var_land + var_ocean) / 2)` with
 /// population variance. Earth's hypsometry is strongly bimodal (high D).
@@ -227,6 +254,22 @@ mod tests {
         assert!((0.12..=0.28).contains(&f), "shelf fraction {f}");
         let flat = CellMap::from_fn(&geo, |_| ReferenceElevation::new(50.0).unwrap());
         assert_eq!(shelf_fraction(&flat, sea), 1.0);
+    }
+
+    #[test]
+    fn shelf_land_ratio_normalizes_by_land_not_the_sphere() {
+        let geo = Geosphere::new(3);
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        // Elevation = 1000·z: land is z >= 0 (half the sphere by area), the
+        // ±200 m band is |z| <= 0.2 (~20% of the sphere) → ratio ≈ 0.4.
+        let e = CellMap::from_fn(&geo, |c| {
+            ReferenceElevation::new(1000.0 * geo.position(c)[2]).unwrap()
+        });
+        let r = shelf_land_ratio(&e, sea).expect("has land");
+        assert!((0.25..=0.55).contains(&r), "ratio {r}");
+        // All-ocean: no land, absent.
+        let ocean = CellMap::from_fn(&geo, |_| ReferenceElevation::new(-100.0).unwrap());
+        assert_eq!(shelf_land_ratio(&ocean, sea), None);
     }
 
     #[test]
