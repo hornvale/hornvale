@@ -40,9 +40,12 @@ frozen world that re-describes as you move* — not printing one line.
    bound the choice was protecting (no fresh derivation surface) is
    realized by *scale*, not area: the walk stays at the canonical walk
    depth (`globe_level + 6`, the locale CLI's default), lateral compass
-   exits traverse freely, and the **vertical** `Enter`/`Exit` exits
-   (`ExitKind::Vertical`, the actual seams) render diegetically but
-   refuse. Scale travel is a later chunk.
+   exits traverse freely, and the **nesting** `Enter`/`Exit` exits
+   (`ExitKind::Vertical` in the shipped locale — the code name misleads:
+   they nest scales, they don't climb) are held back from the rendered
+   ways-on entirely; the `enter` and `exit` verbs meet a diegetic refusal
+   rather than a listed door (ratified at close, 2026-07-13). Scale
+   travel is a later chunk.
 5. **Layering: window-first, graduate later** — all five interfaces and
    their tier-0 implementations are born in one new window crate. Nothing
    touches the kernel or any domain. When The Vessel (Milestone I)
@@ -179,9 +182,9 @@ anything, so the verb-chemistry engine (frontier MAP-27) is correctly
 
 - `look` — re-render the current vantage through the focalizer.
 - `go <direction>` — traverse a lateral compass exit and re-focalize.
-  Vertical `Enter`/`Exit` exits render diegetically but refuse to
-  traverse ("the grain of the world resists" — wording is the
-  implementer's).
+  The nesting `Enter`/`Exit` exits are not listed among the ways on;
+  the `enter` and `exit` verbs meet a diegetic refusal ("the grain of
+  the world resists" — wording is the implementer's).
 - `examine <thing>` — **the examine contract**: the examinable nouns are
   exactly the vantage's named constituents, and the focalized line is
   their catalog — *if `look` mentions it, you can examine it.* No hidden
@@ -256,7 +259,7 @@ emit boundaries only, as everywhere.
 - **No liveness, no events, no time-stepping** — `--day` and the `wait`
   verb parameterize the freeze; they do not thaw it. Milestone IV/V.
 - **No scale travel** — the walk stays at the canonical walk depth;
-  vertical `Enter`/`Exit` exits refuse diegetically.
+  the nesting `Enter`/`Exit` exits stay unlisted and refuse diegetically.
 - **No prose variety** — The Uncommon Ground's job; it runs independently
   (feeds, not blockers) and absorbs into the Focalizer surface.
 - **No anti-phenomenon reads, no sense-verbs** (`listen`/`smell`/`touch`)

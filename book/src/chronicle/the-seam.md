@@ -100,9 +100,10 @@ lateral walking is globally lazy and uniform in cost — so the bound the
 choice meant to protect (no fresh derivation surface) is realized by
 **scale**, not area. The walk stays at the canonical walk depth
 (`globe_level + 6`); lateral compass exits traverse freely; and the
-**vertical** `Enter`/`Exit` exits — the actual seams between scales — render
-diegetically but *refuse* to traverse. Scale travel is a later chunk, and
-the world says so in the second person rather than hiding the door.
+**nesting** `Enter`/`Exit` exits — the actual seams between scales — do not
+appear among the ways on at all; a walker who tries to `enter` or `exit`
+meets a courteous refusal in the second person. Scale travel is a later
+chunk, and for now the doors between scales stay unlisted.
 
 Time enters at flag cost and never becomes a clock. `--day D` and the `wait
 [N]` verb both move the possession's `WorldTime`, but that time is a
@@ -147,7 +148,7 @@ possess` subcommand and a repl `possess`/`release` round-trip, so `possess
 The Seam is a floor, and its scope discipline is mostly a map of what it
 refuses so a later campaign inherits the seam cleanly. **Liveness, events,
 time-stepping** — the world stays frozen; `wait` parameterizes, it does not
-thaw (Milestone IV/V). **Scale travel** — vertical exits refuse diegetically
+thaw (Milestone IV/V). **Scale travel** — nesting exits refuse diegetically
 until a later chunk earns them. **Prose variety** — The Uncommon Ground's
 job, running independently and absorbing into the Focalizer surface (and, as
 above, already doing so). **Projection beyond identity** — fog, inference,
