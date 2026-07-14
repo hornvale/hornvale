@@ -47,6 +47,12 @@ pub fn cell_share(
     beta: f64,
     floor: f64,
 ) -> BTreeMap<u32, f64> {
+    // Sort by species id so the result is a pure function of the (id, K) SET,
+    // independent of caller-supplied order (float addition is non-associative;
+    // determinism is constitutional).
+    let mut present: Vec<(u32, f64)> = present.to_vec();
+    present.sort_by_key(|a| a.0);
+
     let floor_pow = powf(floor, beta);
 
     // Precompute K_j^β for every present species once; every species' own
