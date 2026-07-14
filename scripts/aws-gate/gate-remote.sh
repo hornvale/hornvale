@@ -36,11 +36,11 @@ main() {
   # before shipping work (the third latent gap this path has surfaced).
   # shellcheck disable=SC2086,SC2016  # $HOME expands on the box, not here
   for _ in $(seq 1 60); do
-    if $ssh 'command -v make >/dev/null && test -x "$HOME/.cargo/bin/cargo"' 2>/dev/null; then break; fi
+    if $ssh 'command -v make >/dev/null && test -x "$HOME/.cargo/bin/cargo" && test -x "$HOME/.cargo/bin/cargo-nextest"' 2>/dev/null; then break; fi
     sleep 10
   done
   # shellcheck disable=SC2086,SC2016  # $HOME expands on the box, not here
-  $ssh 'command -v make >/dev/null && test -x "$HOME/.cargo/bin/cargo"' \
+  $ssh 'command -v make >/dev/null && test -x "$HOME/.cargo/bin/cargo" && test -x "$HOME/.cargo/bin/cargo-nextest"' \
       || { echo "gate-remote: box never finished provisioning (userdata failed?)" >&2; exit 1; }
   # Refresh the idle timer only AFTER the readiness poll: touching right at
   # instance-running raced sshd on a cold box (sshd isn't up yet) and set -e
@@ -54,9 +54,15 @@ main() {
   # shellcheck disable=SC2086
   ( while sleep 300; do $ssh 'touch /run/hvg-heartbeat' 2>/dev/null || break; done ) &
   local hb_pid=$!
-  # shellcheck disable=SC2086
   local rc=0
-  $ssh 'cd work && make gate && scripts/regenerate-artifacts.sh && git -c core.fileMode=false diff --exit-code -- book/' || rc=$?
+  # Non-interactive SSH never runs rustup's .profile/.bashrc PATH hooks, so
+  # source cargo's env explicitly (same pattern as regen-git.sh and bench-*.sh).
+  # Drift is asserted by snapshot + diff -r, not `git diff`: the rsync'd tree
+  # is not a git repository (a linked worktree's .git pointer is dead on the
+  # box). Same verdict — regen changed nothing relative to the shipped tree —
+  # and unlike `git diff` it also catches regen-created new files.
+  # shellcheck disable=SC2086,SC2016  # $HOME expands on the box, not here
+  $ssh 'source "$HOME/.cargo/env" && cd work && rm -rf /tmp/hvg-book-pre && cp -a book /tmp/hvg-book-pre && make gate && scripts/regenerate-artifacts.sh && diff -r book /tmp/hvg-book-pre' || rc=$?
   kill "$hb_pid" 2>/dev/null || true
   # Sync any regenerated artifacts back so legitimate changes can be committed locally.
   rsync -az -e "ssh -i $HOME/.hornvale-gate/id -o StrictHostKeyChecking=accept-new" "ubuntu@$ip:work/book/" "$(git rev-parse --show-toplevel)/book/"

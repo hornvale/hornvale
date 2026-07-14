@@ -24,7 +24,9 @@
 # rebaseline produces the full set.
 set -euo pipefail
 
-repo_root="$(git rev-parse --show-toplevel)"
+# Root from the script's own location, not `git rev-parse` — the remote gate
+# runs this in an rsync'd tree that is not a git repository.
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
 # Intermediate world files are throwaway; their path never enters artifact
