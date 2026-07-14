@@ -1,0 +1,11 @@
+look
+examine a fern-choked draw shaded dry in a hollow
+examine sky
+whoami
+go n
+go ne
+back
+wait 90
+examine sky
+knows
+release
