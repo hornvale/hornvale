@@ -19,3 +19,4 @@ Its low `cpu_ratio` (3.6 on a 10-core box) is the contention signature.
 | when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | commit | branch | host | cores |
 |---|---|---|---|---|---|---|---|---|---|
 | 2026-07-13T00:00:00Z | suite-full (pre-tiering, backfilled) | 2610.89 | 9246.93 | 36.88 | 3.56 | a2d39fa | main | m1max | 10 |
+| 2026-07-14T00:37:32Z | rebaseline | 127.335 | 107.127 | 0.957 | 0.85 | 4bf24d6 | the-gathering | MacBookPro | 10 |

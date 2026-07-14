@@ -3599,20 +3599,23 @@ mod tests {
         // The four `flagship-*` metrics are documented as specifically the
         // GOBLIN flagship's data (see their own doc comments above). Since
         // the founder floor (settlement's founder-reservation pass, MAP-22
-        // K=1), goblin places its own flagship again at seed 42 — Xnebsvob,
-        // farming, temperate-rainforest, coastal, a 5-caste structure
-        // (slave, farmer, artisan, shaman, chief; see `almanac`'s seed-42
-        // output and `cli/tests/branches_identity.rs`).
+        // K=1), goblin places its own flagship again at seed 42 —
+        // farming, temperate-forest, non-coastal, a 3-caste structure
+        // (farmer, shaman, chief; see `almanac`'s seed-42 output and
+        // `cli/tests/branches_identity.rs`). The settlement condensation
+        // (campaign the-gathering) relocated the flagship: it moved off
+        // the coast, its structure shrank from 5 castes to 3, and its
+        // biome moved from temperate-rainforest to temperate-forest.
         assert_eq!(
             m("flagship-subsistence"),
             MetricValue::Text("farming".to_string())
         );
         assert_eq!(
             m("flagship-biome"),
-            MetricValue::Text("temperate-rainforest".to_string())
+            MetricValue::Text("temperate-forest".to_string())
         );
-        assert_eq!(m("flagship-coastal"), MetricValue::Flag(true));
-        assert_eq!(m("flagship-structure-size"), MetricValue::Number(5.0));
+        assert_eq!(m("flagship-coastal"), MetricValue::Flag(false));
+        assert_eq!(m("flagship-structure-size"), MetricValue::Number(3.0));
         assert!(
             matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
         );
