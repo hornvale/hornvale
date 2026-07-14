@@ -11,6 +11,7 @@ pub mod neighborhood;
 pub mod pins;
 pub mod provider;
 pub mod render;
+pub mod sky_position;
 pub mod star;
 pub mod streams;
 pub mod system;
@@ -25,6 +26,7 @@ pub use pins::{
     pin_strings,
 };
 pub use provider::{ECLIPSE, GeneratedSky, NIGHT_STAR, SEASONAL_CYCLE, TIDE};
+pub use sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 pub use star::{Star, generate_star};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
