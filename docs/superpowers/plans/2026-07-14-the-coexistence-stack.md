@@ -72,7 +72,7 @@ fn mass_rejects_negative_and_reports_ratio() {
 }
 ```
 - [ ] **Step 2: Run it, verify it fails.** `cargo test -p hornvale-kernel mass_rejects_negative` → FAIL (`Mass` undefined).
-- [ ] **Step 3: Implement `Mass`** following the `Temperature` block (validating constructor, `UnitError` on non-finite/negative, doc comments on the type and its field, `#[derive(Clone, Copy, Debug, PartialEq)]`). Add the `type-audit: bare-ok(mass: kilograms)` tag on the wrapped field. Re-export from `lib.rs`.
+- [ ] **Step 3: Implement `Mass`** following the `Temperature` block (validating constructor, `UnitError` on non-finite/negative, doc comments on the type and its field, `#[derive(Clone, Copy, Debug, PartialEq)]`). The wrapped `f64` field is **private** (like `Temperature`'s), so it needs no `type-audit:` tag; tag the constructor/accessor edges `bare-ok(constructor-edge: ...)` as `Temperature`/`ReferenceElevation` do. Re-export from `lib.rs`.
 - [ ] **Step 4: Run tests, verify pass.** `cargo test -p hornvale-kernel mass_` → PASS.
 - [ ] **Step 5: Type-audit + fmt + commit.**
 ```bash
@@ -123,7 +123,7 @@ mod tests {
 }
 ```
 - [ ] **Step 2: Run, verify fail.** `cargo test -p hornvale-kernel -- ecology::` → FAIL.
-- [ ] **Step 3: Implement `ecology.rs`.** Pianka overlap: `Σ_i p_i q_i / sqrt(Σ_i p_i² · Σ_i q_i²)`, iterating the union of axis ids from the two `BTreeMap`s; return `0.0` if either denominator factor is `0.0`. Route `sqrt` through `hornvale_kernel::math::sqrt`. Doc-comment every public item/variant/field. Type-audit tags: `bare-ok(ratio: weight)` on the map value, `bare-ok(identifier: id)` on axis id.
+- [ ] **Step 3: Implement `ecology.rs`.** Pianka overlap: `Σ_i p_i q_i / sqrt(Σ_i p_i² · Σ_i q_i²)`, iterating the union of axis ids from the two `BTreeMap`s; return `0.0` if either denominator factor is `0.0`. Route `sqrt` through `hornvale_kernel::math::sqrt`. Doc-comment every public item/variant/field. Type-audit: use ONLY ratified `bare-ok` classes (consult `tools/type-audit/src/tag.rs` — never invent one). Keep tuple-struct/map internals private where possible (no tag needed); for `pub` primitives use `bare-ok(ratio: weight)` on a weight and `bare-ok(index: id)` on the axis id (`index`, not `identifier`). Verify with `-- check`.
 - [ ] **Step 4: Run, verify pass.** `cargo test -p hornvale-kernel -- ecology::` → PASS.
 - [ ] **Step 5: Type-audit + fmt + commit.**
 ```bash
