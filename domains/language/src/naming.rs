@@ -283,14 +283,15 @@ impl<'a> Namer<'a> {
         // structural invariant "every name well-formed for its language").
         // The attested tier (The Speakable) is how that gap closes for
         // material that is itself one of the language's own words — no
-        // template edit needed, just verbatim admission — but this call
-        // site still passes `&[]` (Task 1's scope is the mechanism only;
-        // Task 3 wires the lexicon's attested forms through here). The
-        // honorific prefix below is a freshly drawn template syllable —
-        // conformant by construction — so prefixing it onto a repaired word
-        // keeps the whole name conformant. Repair changes sound, never
-        // meaning: the gloss is computed from `chosen` alone.
-        let mut segments = repair_phonotactics(segments, self.ph, &[]);
+        // template edit needed, just verbatim admission: repair runs over
+        // the canon templates plus the lexicon's attested tier, so it is
+        // the identity for native compounds by construction. The honorific
+        // prefix below is a freshly drawn template syllable — conformant by
+        // construction — so prefixing it onto a repaired word keeps the
+        // whole name conformant. Repair changes sound, never meaning: the
+        // gloss is computed from `chosen` alone.
+        let attested = attested_forms(lexicon);
+        let mut segments = repair_phonotactics(segments, self.ph, &attested);
         if kind == NameKind::Epithet && morph.honorifics {
             let affix = self.draw_syllable(&mut stream, false);
             let mut prefixed: Vec<Segment> = affix.segments().copied().collect();
@@ -525,10 +526,9 @@ fn match_manner_seq(segments: &[Segment], pos: usize, template: &[Manner]) -> Op
 /// repair DP's first-match tie-break is deterministic. Draw-free and
 /// pure; Gaps and Compounds contribute nothing (a compound's segments
 /// are its two roots in sequence, each already attested).
-// Not yet called from production code: `glossed_name` still passes `&[]`
-// to `repair_phonotactics`/`conforms` (Task 1's scope is the mechanism
-// only). Task 3 wires this in; exercised by this module's tests until then.
-#[allow(dead_code)]
+/// Wired into [`Namer::glossed_name`] (The Speakable Task 3), which
+/// computes this once per name and passes it to
+/// [`repair_phonotactics`]/[`conforms`] as the attested tier.
 pub(crate) fn attested_forms(lexicon: &Lexicon) -> Vec<Vec<Segment>> {
     let mut forms: Vec<Vec<Segment>> = lexicon
         .entries()
@@ -1253,6 +1253,39 @@ mod tests {
     }
 
     #[test]
+    fn glossed_names_surface_their_site_words_verbatim() {
+        // The Speakable's core invariant: a glossed name CONTAINS each
+        // glossed concept's modern form as a contiguous segment run —
+        // audible words, not repair residue. Checked at the roman level
+        // via the same render path the committed fact uses.
+        let ph = wordy_ph();
+        let lex = two_word_lexicon(9);
+        let site = SiteConcepts {
+            concepts: &["water", "fire"],
+        };
+        let morph = MorphOptions { honorifics: false };
+        let namer = Namer::new(&Seed(9), "test", &ph);
+        for salt in 0..20u64 {
+            for kind in [NameKind::Settlement, NameKind::Deity] {
+                let (name, gloss) = namer.glossed_name(kind, salt, &morph, &site, &lex);
+                for concept in gloss.split('-').filter(|c| !c.is_empty()) {
+                    let word = match lex.entry(concept) {
+                        Some(LexEntry::Root { derivation, .. }) => {
+                            render_views(&derivation.modern).roman.to_lowercase()
+                        }
+                        other => panic!("gloss concept {concept} must be a root, got {other:?}"),
+                    };
+                    assert!(
+                        name.roman.to_lowercase().contains(&word),
+                        "salt {salt} {kind:?}: name {:?} must audibly contain {concept} = {word:?}",
+                        name.roman
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn settlement_names_carry_a_per_salt_stem_beyond_the_site_words() {
         // The collision fix (Task 12's census exposed an 86% in-world
         // collision rate): a settlement's glossed name compounds its site
@@ -1268,10 +1301,11 @@ mod tests {
         let morph = MorphOptions { honorifics: false };
         let namer = Namer::new(&Seed(9), "test", &ph);
 
+        let attested = attested_forms(&lex);
         let plain = render_views(&repair_phonotactics(
             concept_segments(&lex, "water"),
             &ph,
-            &[],
+            &attested,
         ))
         .roman;
 
