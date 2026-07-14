@@ -1,6 +1,7 @@
 # The Seam — Design
 
-**Status:** Ratified by brainstorm 2026-07-13
+**Status:** SHIPPED 2026-07-13 (ratified by brainstorm the same day; see
+`book/src/chronicle/the-seam.md` and `docs/retrospectives/the-seam.md`)
 **Date:** 2026-07-13
 **Roadmap slot:** The Walk metaplan, Chunk 0 ("The Game Seam",
 `2026-07-11-the-walk-metaplan-design.md` §9), widened to the walkable
