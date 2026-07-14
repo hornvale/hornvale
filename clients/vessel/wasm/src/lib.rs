@@ -33,15 +33,15 @@ static mut OUT: String = String::new();
 static mut INBUF: [u8; 4096] = [0; 4096];
 
 /// Replace the output text.
-#[allow(clippy::deref_addrof)]
 fn set_out(text: String) {
-    unsafe { *(&raw mut OUT) = text }
+    let out_ptr = &raw mut OUT;
+    unsafe { *out_ptr = text }
 }
 
 /// Tear down the current possession: session first, then its world.
-#[allow(clippy::deref_addrof)]
 fn teardown() {
-    if let Some(p) = unsafe { (*(&raw mut STATE)).take() } {
+    let state_ptr = &raw mut STATE;
+    if let Some(p) = unsafe { (*state_ptr).take() } {
         let Possession { world, session } = p;
         drop(session);
         // SAFETY: `world` came from Box::into_raw in hv_start, and the
@@ -56,7 +56,6 @@ fn teardown() {
 /// the output buffer and 1 (genesis refused) or 2 (possession failed) is
 /// returned. Any prior possession is torn down first — never leaked.
 #[unsafe(no_mangle)]
-#[allow(clippy::deref_addrof)]
 pub extern "C" fn hv_start(seed: u64) -> i32 {
     teardown();
     let world = match build_world(
@@ -82,7 +81,8 @@ pub extern "C" fn hv_start(seed: u64) -> i32 {
     };
     match Session::start(world_ref, &opts) {
         Ok((session, opening)) => {
-            unsafe { *(&raw mut STATE) = Some(Possession { world, session }) };
+            let state_ptr = &raw mut STATE;
+            unsafe { *state_ptr = Some(Possession { world, session }) };
             set_out(opening);
             0
         }
@@ -106,16 +106,17 @@ pub extern "C" fn hv_in_ptr() -> *mut u8 {
 /// (possession continues), 1 (released), or a negative protocol error:
 /// -1 length exceeds the buffer, -2 not UTF-8, -3 no live possession.
 #[unsafe(no_mangle)]
-#[allow(clippy::deref_addrof)]
 pub extern "C" fn hv_handle(len: usize) -> i32 {
-    let buf = unsafe { &*(&raw const INBUF) };
+    let inbuf_ptr = &raw const INBUF;
+    let buf = unsafe { &*inbuf_ptr };
     if len > buf.len() {
         return -1;
     }
     let Ok(line) = core::str::from_utf8(&buf[..len]) else {
         return -2;
     };
-    let Some(p) = (unsafe { (&mut *(&raw mut STATE)).as_mut() }) else {
+    let state_ptr = &raw mut STATE;
+    let Some(p) = (unsafe { (&mut *state_ptr).as_mut() }) else {
         return -3;
     };
     match p.session.handle(line) {
@@ -132,14 +133,14 @@ pub extern "C" fn hv_handle(len: usize) -> i32 {
 
 /// Pointer to the current output text (UTF-8, `hv_out_len` bytes).
 #[unsafe(no_mangle)]
-#[allow(clippy::deref_addrof)]
 pub extern "C" fn hv_out_ptr() -> *const u8 {
-    unsafe { (&(*(&raw const OUT))).as_ptr() }
+    let out_ptr = &raw const OUT;
+    unsafe { (&(*out_ptr)).as_ptr() }
 }
 
 /// Length in bytes of the current output text.
 #[unsafe(no_mangle)]
-#[allow(clippy::deref_addrof)]
 pub extern "C" fn hv_out_len() -> usize {
-    unsafe { (&(*(&raw const OUT))).len() }
+    let out_ptr = &raw const OUT;
+    unsafe { (&(*out_ptr)).len() }
 }
