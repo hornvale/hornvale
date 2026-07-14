@@ -7,11 +7,11 @@ use crate::pins::{self, GenesisError, TerrainPins};
 use crate::plates::Plate;
 use crate::streams;
 use crate::{crust, elevation, plates};
-use hornvale_kernel::{CellMap, Geosphere, ReferenceElevation, Seed};
+use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed};
 
 /// A generated tectonic globe over the shared Geosphere. Recomputed from
 /// the seed on demand; never serialized.
-/// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust)
+/// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust), bare-ok(ratio: crust_age), bare-ok(count: boundary_distance)
 #[derive(Debug, Clone, PartialEq)]
 pub struct TectonicGlobe {
     /// Plate index per cell (an index into `plates`).
@@ -23,6 +23,9 @@ pub struct TectonicGlobe {
     /// plain `f64` because it feeds bulk numeric assembly, not a single
     /// validated boundary crossing.
     pub crust: CellMap<f64>,
+    /// Winning-craton age per cell, in `[0, 1]` (0 on oceanic floor). Sampled
+    /// from the same `CrustField` `crust` was, at genesis; never serialized.
+    pub crust_age: CellMap<f64>,
     /// Elevation per cell, relative to the isostatic reference datum (see
     /// `hornvale_kernel::ReferenceElevation`).
     pub elevation: CellMap<ReferenceElevation>,
@@ -44,6 +47,10 @@ pub struct TectonicGlobe {
     /// The drawn craton set this globe's crust field was built from
     /// (Crust epoch, Task 8). Recomputed at genesis, never serialized.
     pub cratons: Vec<Craton>,
+    /// Graph distance from each cell to the nearest same-plate boundary
+    /// cell, with that boundary attributed. Recomputed at genesis, never
+    /// serialized. `None` = no reachable same-plate boundary.
+    pub boundary_distance: CellMap<Option<(u32, CellId)>>,
 }
 
 /// What tectonic genesis produced: the globe plus degradation notes.
@@ -79,6 +86,7 @@ pub fn generate(
     let crust_map = CellMap::from_fn(geosphere, |c| {
         field.thickness_at(geosphere.position(c)).get()
     });
+    let crust_age_map = CellMap::from_fn(geosphere, |c| field.age_at(geosphere.position(c)));
     let continental = CellMap::from_fn(geosphere, |c| field.continental_at(geosphere.position(c)));
     let plate_of = plates::assign_plates(geosphere, terrain_seed, &plate_list);
     let boundary_map = boundaries::boundary_field(geosphere, &plate_of, &plate_list, &continental);
@@ -115,6 +123,7 @@ pub fn generate(
         globe: TectonicGlobe {
             plate_of,
             crust: crust_map,
+            crust_age: crust_age_map,
             elevation: elevation_map,
             unrest,
             sea_level,
@@ -123,6 +132,7 @@ pub fn generate(
             drainage,
             endorheic,
             cratons,
+            boundary_distance: distances,
         },
         notes,
     })

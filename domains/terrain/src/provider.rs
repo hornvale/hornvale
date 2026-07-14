@@ -117,6 +117,30 @@ impl GeneratedTerrain {
     pub fn is_endorheic(&self, id: CellId) -> bool {
         *self.globe.endorheic.get(id)
     }
+
+    /// Crust thickness at a cell, km.
+    /// type-audit: bare-ok(ratio)
+    pub fn crust_thickness_at(&self, id: CellId) -> f64 {
+        *self.globe.crust.get(id)
+    }
+
+    /// Winning-craton age at a cell, `[0,1]` (0 on oceanic floor).
+    /// type-audit: bare-ok(ratio)
+    pub fn crust_age_at(&self, id: CellId) -> f64 {
+        *self.globe.crust_age.get(id)
+    }
+
+    /// Whether a cell's crust clears the continental threshold.
+    /// type-audit: bare-ok(flag)
+    pub fn is_continental_at(&self, id: CellId) -> bool {
+        self.crust_thickness_at(id) >= crate::crust::CONTINENTAL_THRESHOLD_KM
+    }
+
+    /// Graph hops to the nearest same-plate boundary cell (`None` = none reachable).
+    /// type-audit: bare-ok(count)
+    pub fn boundary_distance_at(&self, id: CellId) -> Option<u32> {
+        self.globe.boundary_distance.get(id).map(|(hops, _)| hops)
+    }
 }
 
 #[cfg(test)]
@@ -193,5 +217,34 @@ mod tests {
         // Land cells accumulate at least themselves.
         let land = geo.cells().find(|c| !terrain.is_ocean(*c)).unwrap();
         assert!(terrain.drainage_at(land) >= 1.0);
+    }
+
+    #[test]
+    fn provider_exposes_crust_and_boundary_distance() {
+        let geo = Geosphere::new(3);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let terrain = GeneratedTerrain::new(geo.clone(), outcome.clone());
+        for cell in geo.cells() {
+            assert_eq!(
+                terrain.crust_thickness_at(cell),
+                *outcome.globe.crust.get(cell)
+            );
+            assert_eq!(
+                terrain.is_continental_at(cell),
+                *outcome.globe.crust.get(cell) >= crate::crust::CONTINENTAL_THRESHOLD_KM
+            );
+            // Age is 0 on oceanic floor, in [0,1] everywhere.
+            let age = terrain.crust_age_at(cell);
+            assert!((0.0..=1.0).contains(&age));
+            assert_eq!(
+                terrain.crust_age_at(cell),
+                *outcome.globe.crust_age.get(cell)
+            );
+        }
+        // Some cell is within finite graph distance of a boundary.
+        assert!(
+            geo.cells()
+                .any(|c| terrain.boundary_distance_at(c).is_some())
+        );
     }
 }
