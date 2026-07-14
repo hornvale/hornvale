@@ -1507,4 +1507,64 @@ mod tests {
             name.espeak
         );
     }
+
+    /// An envelope swept from seed bits so the 64-seed battery crosses the
+    /// full phonotactic regime space — including the cluster-heavy draws
+    /// that caused the collapse (spec §6).
+    fn swept_envelope(seed: u64) -> Envelope {
+        let f = |k: u64| ((seed >> k) & 3) as f64 / 3.0;
+        Envelope {
+            labiality: f(0),
+            vowel_space: (f(2)).max(0.2),
+            voicing: f(4),
+            sibilance: f(6),
+            voice_loudness: f(8),
+            tonality: 0.0,
+            exotic: ExoticSeg::None,
+        }
+    }
+
+    #[test]
+    fn attested_compounds_repair_to_identity_across_the_seed_sweep() {
+        // Spec §6: for 64 seeds, with the lexicon descending from a DIFFERENT
+        // (permissive) proto phonology than the daughter's own drawn one —
+        // the exact mismatch that caused the collapse — every root conforms
+        // under its own (phonology, attested) pair and every 1-2-concept
+        // compound repairs to itself.
+        for seed in 0..64u64 {
+            let proto = wordy_ph();
+            let ph = draw_phonology(&Seed(seed), "swept", &swept_envelope(seed));
+            let mut exposures = BTreeMap::new();
+            for c in ["water", "fire", "moon", "shadow"] {
+                exposures.insert(c.to_string(), ExposureClass::Steeped);
+            }
+            // ph is the daughter's own drawn phonology (evolution target),
+            // proto is the DIFFERENT permissive family-level proto phonology
+            // (the draw source) — see build_lexicon's doc comment on
+            // (ph, proto_ph) at lexicon.rs:237, and NOT the fixture's usual
+            // ph == proto_ph collapse.
+            let lex = build_lexicon(&Seed(seed), "fam", "swept", &ph, &proto, &exposures, &[]);
+            let attested = attested_forms(&lex);
+            for chosen in [
+                vec!["water"],
+                vec!["moon"],
+                vec!["water", "fire"],
+                vec!["shadow", "moon"],
+            ] {
+                if !chosen.iter().all(|c| holds_word(&lex, c)) {
+                    continue; // exposure may still gap a concept; skip, don't fake
+                }
+                let raw = compound_segments(&lex, &chosen);
+                assert!(
+                    conforms(&raw, &ph, &attested),
+                    "seed {seed}: compound {chosen:?} must conform under its own attested tier"
+                );
+                assert_eq!(
+                    repair_phonotactics(raw.clone(), &ph, &attested),
+                    raw,
+                    "seed {seed}: repair of native compound {chosen:?} must be the identity"
+                );
+            }
+        }
+    }
 }
