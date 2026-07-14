@@ -239,6 +239,58 @@ impl Mass {
     }
 }
 
+/// A non-negative absolute duration in Julian years (365.25 standard days).
+/// The coarse biological/historical span type — distinct from astronomy's
+/// `StdDays` sub-day time-point, and reachable from any domain because it
+/// lives in the kernel. Used by life-history allometry (lifespan,
+/// age-at-maturity, generation length).
+/// type-audit: bare-ok(duration: years)
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub struct Years(f64);
+
+impl Years {
+    /// Standard days per Julian year.
+    pub const DAYS_PER_YEAR: f64 = 365.25;
+
+    /// Validating constructor: rejects non-finite and negative values.
+    /// type-audit: bare-ok(constructor-edge: value)
+    pub fn new(value: f64) -> Result<Self, UnitError> {
+        if !value.is_finite() {
+            return Err(UnitError {
+                unit: "years",
+                value,
+                reason: "must be finite",
+            });
+        }
+        if value < 0.0 {
+            return Err(UnitError {
+                unit: "years",
+                value,
+                reason: "must not be negative",
+            });
+        }
+        Ok(Self(value))
+    }
+
+    /// Build from a span in standard days.
+    /// type-audit: bare-ok(constructor-edge: days)
+    pub fn from_days(days: f64) -> Result<Self, UnitError> {
+        Years::new(days / Self::DAYS_PER_YEAR)
+    }
+
+    /// The span in years.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn get(self) -> f64 {
+        self.0
+    }
+
+    /// The span in standard days.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn days(self) -> f64 {
+        self.0 * Self::DAYS_PER_YEAR
+    }
+}
+
 #[cfg(test)]
 mod temperature_tests {
     use super::*;
@@ -324,5 +376,16 @@ mod tests {
         let dragon = Mass::new(4000.0).unwrap();
         assert_eq!(goblin.kilograms(), 40.0);
         assert!((dragon.ratio_to(goblin) - 100.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn years_construct_and_convert() {
+        assert!(Years::new(-1.0).is_err());
+        assert!(Years::new(f64::NAN).is_err());
+        let life = Years::new(80.0).unwrap();
+        assert_eq!(life.get(), 80.0);
+        // 1 year == 365.25 standard days
+        assert!((Years::new(1.0).unwrap().days() - 365.25).abs() < 1e-9);
+        assert!((Years::from_days(365.25).unwrap().get() - 1.0).abs() < 1e-9);
     }
 }
