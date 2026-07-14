@@ -28,8 +28,10 @@ sibling, `the-census`
 (`book/src/laboratory/generated/the-census/`), now carries the same
 per-species naming/voice metrics this study measures at 10k; small
 differences between a number quoted here and this study's own count are
-sampling variance between a 1,000- and a 10,000-seed draw, not drift — the two
-pinned calibration rows below assert the 500-seed figures exactly.
+sampling variance between a 1,000- and a 10,000-seed draw, not drift — the
+calibration suite asserts the live census's figures exactly (re-pinned at
+1,000 seeds when the consolidation doubled the sample; the 500-seed values
+quoted in this page's tables are the measurement of record).
 
 **A note on preregistration.** Per ADR 0016, studies commit their
 hypotheses before running the census that tests them. The three claims
