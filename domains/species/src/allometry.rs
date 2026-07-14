@@ -18,13 +18,20 @@ const ANCHOR_MATURITY_YR: f64 = 12.0;
 const B0_ENDOTHERM: f64 = 3.4;
 const ECTOTHERM_METABOLIC_FRACTION: f64 = 1.0 / 8.0;
 
+/// The largest value `pace_multiplier` returns (the ectotherm shift). Naming it
+/// keeps the `pace_of_life` normalizer provably coupled to it: if a future
+/// class needs a larger multiplier, this constant — and the ceiling it defines
+/// — must move with it, rather than silently exceeding 1.0 and being masked by
+/// the clamp.
+const MAX_PACE_MULTIPLIER: f64 = 1.5;
+
 /// Single per-class pace multiplier: shifts lifespan, maturity, and tempo
 /// together so the fast–slow covariation stays coherent (spec §4). Ectotherms
 /// are slower on every axis at once.
 fn pace_multiplier(class: MetabolicClass) -> f64 {
     match class {
         MetabolicClass::Endotherm => 1.0,
-        MetabolicClass::Ectotherm => 1.5,
+        MetabolicClass::Ectotherm => MAX_PACE_MULTIPLIER,
         MetabolicClass::Autotroph => 1.0,
         // Ametabolic never reaches the time laws (handled in life_history).
         MetabolicClass::Ametabolic => 1.0,
@@ -102,7 +109,7 @@ pub struct LifeHistory {
 fn pace_of_life(mass: Mass, class: MetabolicClass) -> f64 {
     let raw = (math::log10(mass.kilograms()) / 3.0).clamp(0.0, 1.0);
     // Ectotherms read slower on the same size.
-    (raw * pace_multiplier(class) / 1.5).clamp(0.0, 1.0)
+    (raw * pace_multiplier(class) / MAX_PACE_MULTIPLIER).clamp(0.0, 1.0)
 }
 
 /// Assemble the full life-history profile (spec §5).

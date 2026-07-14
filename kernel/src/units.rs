@@ -244,7 +244,6 @@ impl Mass {
 /// `StdDays` sub-day time-point, and reachable from any domain because it
 /// lives in the kernel. Used by life-history allometry (lifespan,
 /// age-at-maturity, generation length).
-/// type-audit: bare-ok(duration: years)
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Years(f64);
 

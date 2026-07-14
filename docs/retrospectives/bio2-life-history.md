@@ -128,3 +128,18 @@ did not decide matters more than the campaign's product.
   baseline, not a replacement for it. Designed-for in the spec's framing
   (`life_history` is documented as the baseline, not the final word) but
   not built; belongs to the long-lived-species campaign.
+
+### Seam-maintainability notes (from the final whole-branch review)
+
+- **Autotroph metabolic exponent.** `basal_metabolic_rate_w` currently applies
+  the endotherm 0.75 exponent to the `Autotroph` class, but that class's own
+  doc says its energy capture is surface/area-limited (a different exponent).
+  Harmless today (no autotroph on-roster); when the seam is activated, either
+  guard it like `Ametabolic` or give it its own law. Pairs with the `Mesotherm`
+  follow-up as "unfinished `MetabolicClass` seams."
+- **`reproductive_tempo` vs `pace_of_life` are on different scales.** Both are
+  documented 0…1 "slowness" scalars, but `pace_of_life` is divisor-normalized
+  by `MAX_PACE_MULTIPLIER` (so 1.0 is reserved for the slowest class) while
+  `reproductive_tempo` is not — so an endotherm's `pace_of_life` ceiling is
+  ~0.667. Correct by design (the field doc could note the per-class ceiling),
+  but a reader should not assume the two scalars are directly comparable.
