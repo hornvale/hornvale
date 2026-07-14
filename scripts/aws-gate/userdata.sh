@@ -16,7 +16,7 @@ sudo -u ubuntu bash -lc 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.
 cat >/usr/local/bin/hvg-idle-check <<'EOS'
 #!/usr/bin/env bash
 hb=/run/hvg-heartbeat; idle_min=15
-[ -f "$hb" ] || touch "$hb"
+[ -f "$hb" ] || { touch "$hb"; chown ubuntu:ubuntu "$hb"; }
 if [ "$(( ($(date +%s) - $(stat -c %Y "$hb")) / 60 ))" -ge "$idle_min" ]; then
   # IMDSv2 token (works whether or not the instance enforces it).
   tok=$(curl -sX PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 60")

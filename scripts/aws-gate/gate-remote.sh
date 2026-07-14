@@ -31,7 +31,7 @@ main() {
   aws_runner ec2 wait instance-running --instance-ids "$id"
   ip="$(aws_runner ec2 describe-instances --instance-ids "$id" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)"
   local ssh="ssh -i $HOME/.hornvale-gate/id -o StrictHostKeyChecking=accept-new ubuntu@$ip"
-  $ssh 'touch /run/hvg-heartbeat'                       # refresh idle timer
+  $ssh 'sudo touch /run/hvg-heartbeat && sudo chown ubuntu:ubuntu /run/hvg-heartbeat'  # refresh idle timer (root cron may have created it root-owned)
   rsync -az --delete --exclude target/ --filter=':- .gitignore' -e "ssh -i $HOME/.hornvale-gate/id -o StrictHostKeyChecking=accept-new" \
       "$(git rev-parse --show-toplevel)/" "ubuntu@$ip:work/"
   # Keep the heartbeat fresh during the gate: a cold build can exceed the 15-min
