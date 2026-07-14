@@ -52,8 +52,14 @@ construction.
   prior every later layer reads from. It is calibrated to the **real
   biomass-by-latitude/biome gradient** (the campaign's headline
   calibration-checked claim).
-- Settlements whose population is a **readout of the field**, not a draw:
-  `Σ settlement populations == Σ carrying capacity`, per species, exactly.
+- Settlements whose population is a **readout of the field**, not a draw.
+  Conservation is exact at the *field* level: summed over **all** attractors
+  (threshold 0), `Σ population == Σ K` per species (a demography unit test).
+  At the operational threshold the discrete settlements capture the
+  **above-threshold** catchment mass; the sub-threshold remainder (~45% at the
+  tuned threshold) is **dispersed / rural population** not condensed into a
+  named place — realistic (pre-industrial populations were mostly rural), not
+  a leak. A world-level guard bounds this.
 - A **deliberately-simple interim condensation** (per-species flow attractors
   with the founder floor), tuned only to a **sane settlement count** that
   keeps committed artifacts and censuses manageable. The realistic
@@ -276,10 +282,17 @@ MAP-7 is calibration-checked; checks are preregistered before the sweep
   band, capacity below a uniform-sphere baseline at the poles) before the
   sweep; the K constants are tuned **once** to land it, then frozen. Negative
   results are published like any other (the book's laboratory pages).
-- **Conservation invariant (unit test; the strongest guard).**
-  `Σ settlement populations == Σ K over catchment cells`, per species, to
-  within quantization. Exact by construction; catches any accumulation or
-  catchment-partition bug immediately.
+- **Conservation invariant (the strongest guard) — two levels.** At the
+  *field* level (threshold 0, every attractor kept), `Σ population == Σ K`
+  exactly, per species — a `demography` unit test, exact by construction,
+  catching any accumulation or catchment-partition bug. At the *world* level
+  (operational threshold), thresholding culls sub-threshold attractors and
+  drops their mass (the dispersed rural remainder), so committed population is
+  a fraction of Σ K (~0.55 at the tuned threshold). A world-level guard test
+  bounds it: `Σ committed pop ≤ Σ K + settlement_count` (the founder-floor /
+  rounding allowance — catches inflation and double-counting) and
+  `Σ committed pop ≥ 0.25 · Σ K` (catches a collapse toward zero). The tight
+  "exact" claim belongs only to the threshold-0 field level.
 - **Sane interim settlement count (not Zipf).** The threshold `T` is tuned so
   the interim per-species condensation yields a **manageable settlement
   count** — enough to people the world, few enough to keep `world.json`, the
