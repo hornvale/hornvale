@@ -31,10 +31,20 @@ Two deliverables, one on each side of a new seam:
    (the planet with its real elevation, biomes, and terminator) — for any
    seed given in the URL.
 
-The existing in-book exhibits (orrery.js, atlas.js, the ANSI orrery, the
-`.cast` animations) are untouched: they are the book's deterministic
-engravings; the book links out to the live instrument once it deploys.
-Whether the old orrery exhibit ever retires is a separate, later decision.
+And one removal, ruled by Nathan at G3: **the old orrery dies in this
+campaign.** The terminal orrery (the `hornvale orrery` CLI verb, the ANSI
+renderer and its unicode/emoji glyph sets, the `.cast` animations) and the
+in-book live orrery (`clients/orrery/`, the committed `orrery.js` bundle,
+the gallery pages and committed scene example, the CI `orrery` job and its
+drift-check entries) are all removed — "it was never a great fit."
+Goldengrove is the orrery now. Survivors, explicitly: the **star chart**
+(a different artifact serving the sky chapters), the **atlas** (a
+different instrument), and the **`scene/system/v1` kind itself** (built
+for the old client, but it is exactly the catalog's food — the schema
+outlives its first consumer). The kernel cast encoder goes only if the
+removal orphans it (the repl may consume it; plan-level check). The
+removal is render-layer only: no streams, facts, or save-format surface
+is touched, so no determinism contract moves.
 
 ## 2. Design principles
 
@@ -148,6 +158,46 @@ chapter gains a link to the live instrument as part of the campaign's
 close (the book never lags merged reality — the link lands only once the
 deploy is real).
 
+## 4½. Are the existing APIs sufficient?
+
+Asked directly at G3; answered concretely. **For v1 as scoped: yes,
+nothing new is required.** The evidence, per rung:
+
+- **Genesis in the browser** is proven: the Casement's vessel wasm runs
+  full worldgen (kernel + worldgen + terrain) at 474 KiB / ~5.6 s for
+  seed 42 (decision 0052's measurements). The catalog adds only
+  `hornvale-scene` on top.
+- **The system view** is fully payable from `scene/system/v1`: star class
+  and luminosity (color derivable client-side), the HZ band, the world's
+  `orbit_au` / `year_days` / `year_phase_offset`, and per-moon periods,
+  phase offsets, distances, and angular sizes. Orbits render as circles
+  traversed uniformly — which is the *scene kind's* lie, not the sim's
+  (`forcing.rs` holds live eccentricity that the schema omits;
+  ORRERY-ellipse-truth). v1 inherits it knowingly.
+- **The terminator** — the subtle one — is already payable and *correct*:
+  `obliquity_deg` + `year_phase_offset` + `day_length_days` locate the
+  subsolar point for any scrubbed world time. Locked worlds
+  (`day_length_days: null`) get a frozen terminator, truthfully.
+- **The globe** is payable from `scene/tiles/v1` at up to 1024×512
+  (~40 km/tile at the equator): elevation, ocean mask, biome + legend,
+  plates, unrest, features. Ample for an orbital view; it is not
+  ground-level fidelity and does not pretend to be.
+
+Where the APIs run out — the honest list, all pre-registered or noted,
+none blocking v1:
+
+1. **Eccentricity** (ORRERY-ellipse-truth): the first widening worth
+   making; additive field, but it extends the two-language golden
+   contract, so it is a deliberate sequel, not a v1 rider.
+2. **Neighbor stars** absent from the scene (ORRERY-starfield-backdrop).
+3. **Planet radius** is not exposed anywhere, so true-scale relief is
+   unpayable; v1 uses declared relief exaggeration (which every real
+   globe render does anyway — true-scale relief is invisible).
+4. **Resolution ceiling** at `MAX_WIDTH = 1024`: a close-zoom globe or
+   regional sampling API is future widening territory.
+5. **Moon appearance** is a gray disc of `size_rel`
+   (ORRERY-moon-character awaits moon individuation).
+
 ## 5. Error handling
 
 - Genesis and pin failures cross the ABI as the `GenesisError` JSON
@@ -179,8 +229,9 @@ output) is not golden-tested; it is licensed glamour.
   neighbors today (ORRERY-starfield-backdrop).
 - **Living-globe animation** — winds/currents/migrations stay MAP-23
   (raw).
-- **Retiring the in-book orrery exhibit** — separate decision, later.
 - **npm publication of the catalog** — GitHub release assets only.
+- **Removing the star chart or atlas** — only the orrery dies; its
+  removal is in scope (§1), their survival is explicit.
 - **The old mythopoetic goldengrove scope** — the name returns; that
   charter does not.
 
