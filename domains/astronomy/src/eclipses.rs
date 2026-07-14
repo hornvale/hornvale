@@ -12,11 +12,13 @@ use hornvale_kernel::math;
 /// — the shared scale of `sun_angular_diameter_rel` and a moon's
 /// `angular_diameter_rel` (declared approximation: the two units differ
 /// by under 1%). Moved here from `provider.rs` (Eclipse Seasons).
+/// type-audit: pending(wave-1)
 pub const ANGULAR_UNIT_DEG: f64 = 0.53;
 /// How far (degrees of lunar ecliptic latitude) past the discs' own touch
 /// an eclipse still falls somewhere on the world — the parallax allowance.
 /// Calibrated so a Luna–Sol pair at 5.14° inclination eclipses at ~19% of
 /// new moons (Earth's ~2.4 solar eclipses a year).
+/// type-audit: pending(wave-1)
 pub const ECLIPSE_PARALLAX_DEG: f64 = 1.0;
 
 /// The node threshold (degrees of lunar ecliptic latitude) inside which a
