@@ -1244,6 +1244,46 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "composition-variance",
+            doc: "Spatial heterogeneity of settlement composition (The Niche): the sum \
+                   over roster species of the variance, across the demography report's \
+                   `stack_settlements`, of each species' composition fraction. 0.0 iff \
+                   every settlement has the identical species mix (the pre-Niche \
+                   'oatmeal' — one flat blend worldwide); > 0 when composition varies \
+                   across space (species dominant in different strongholds). Recomputed \
+                   via `hornvale_worldgen::demography_report` (the niche-differentiated \
+                   coexistence shadow). Absent if the report fails to build or the world \
+                   has fewer than 2 settlements",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.005, 0.01, 0.02, 0.05, 0.1],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let Ok(report) = hornvale_worldgen::demography_report(v.world(), v.roster()) else {
+                    return MetricValue::Absent;
+                };
+                let settlements = &report.stack_settlements;
+                if settlements.len() < 2 {
+                    return MetricValue::Absent;
+                }
+                let n = settlements.len() as f64;
+                let mut total_var = 0.0_f64;
+                for sid in 0..v.roster().len() as u32 {
+                    // this species' fraction in each settlement (0.0 if absent from the mix)
+                    let fracs = settlements.iter().map(|s| {
+                        s.composition
+                            .iter()
+                            .find(|(id, _)| *id == sid)
+                            .map(|(_, f)| *f)
+                            .unwrap_or(0.0)
+                    });
+                    let mean = fracs.clone().sum::<f64>() / n;
+                    let var = fracs.map(|f| (f - mean) * (f - mean)).sum::<f64>() / n;
+                    total_var += var;
+                }
+                MetricValue::Number(total_var)
+            }),
+        },
+        Metric {
             name: "pop-weighted-abs-latitude",
             doc: "The population-weighted mean absolute latitude across every settlement: \
                    Σ(pop·|lat|) / Σ(pop), reading each settlement's committed POPULATION and \
@@ -3763,8 +3803,9 @@ mod tests {
         // (Task 7: dominant-rock, karst-fraction, aquifer-fraction,
         // dominant-soil-order, fertile-land-fraction), +2 for The Long
         // Count (Task 6: brightening-per-gyr, alignment-drift-deg-per-kyr),
-        // +1 for the coexistence stack (Task A16a: per-cell-diversity).
-        assert_eq!(registry().len(), 125);
+        // +1 for the coexistence stack (Task A16a: per-cell-diversity),
+        // +1 for The Niche (composition-variance).
+        assert_eq!(registry().len(), 126);
     }
 
     #[test]
@@ -3900,6 +3941,55 @@ mod tests {
             }
             other => panic!("expected a Number, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn composition_varies_across_settlements_at_seed_42() {
+        // The Niche's headline: refutes the task-C "oatmeal" (identical
+        // composition in all 276 settlements). Composition now VARIES and
+        // strife is spatially structured. (Per Nathan's E2 call: 2-way
+        // differentiation is sufficient — NOT asserting 4 strongholds or
+        // refugia>0; the menagerie supplies those.)
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        let m = |name: &str| extract_from(&built, name);
+
+        // composition-variance > 0 (the metric)
+        match m("composition-variance") {
+            MetricValue::Number(cv) => {
+                assert!(cv > 0.0, "composition varies across settlements: {cv}")
+            }
+            other => panic!("composition-variance should be a Number, got {other:?}"),
+        }
+
+        // More than one species dominates somewhere, and strife is
+        // non-flat. Build the seed-42 report directly for these structural
+        // asserts (the built view above no longer exposes its fields).
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let report = hornvale_worldgen::demography_report(view.world(), view.roster()).unwrap();
+        let dominants: std::collections::BTreeSet<u32> = report
+            .stack_settlements
+            .iter()
+            .map(|s| s.dominant)
+            .collect();
+        assert!(
+            dominants.len() >= 2,
+            "more than one species dominates: {dominants:?}"
+        );
+
+        let geo = view.settlement.terrain().geosphere();
+        let mut strife: Vec<f64> = geo
+            .cells()
+            .map(|c| *report.byproducts.strife.get(c))
+            .filter(|x| *x > 0.0)
+            .collect();
+        assert!(strife.len() > 10, "enough cells have strife");
+        strife.sort_by(f64::total_cmp);
+        let (lo, hi) = (strife.first().unwrap(), strife.last().unwrap());
+        assert!(
+            hi - lo > 1e-3,
+            "strife is spatially structured, not flat: lo={lo} hi={hi}"
+        );
     }
 
     #[test]
