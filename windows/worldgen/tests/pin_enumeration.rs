@@ -42,6 +42,9 @@
 //! rather than sequentially, cutting the heavy-tier wall time from ~505 s
 //! to ~64 s (M1 Max, 10 logical CPUs, debug profile) without touching the
 //! determinism guarantee (see `full_pin_product_is_enumerated` below).
+//! Depth-scoping the builds to `BuildDepth::Terrain` (MAP-25 Task 10, the
+//! enumerated pins never reach past the terrain rung) cut it again, ~64 s
+//! to ~16 s on the same machine.
 //!
 //! Measured at authoring (2026-07-11, seed 42): 48 built, 0 refused --
 //! reported, not asserted; the split may legitimately move with physics
@@ -54,7 +57,9 @@
 use hornvale_astronomy::{NeighborClass, RotationPin, SkyPins};
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{BuildError, SettlementPins, SkyChoice, build_world};
+use hornvale_worldgen::{
+    BuildDepth, BuildError, SettlementPins, SkyChoice, build_world_to, default_roster,
+};
 
 /// Every discrete value of the four enumerated pins, in a stable order.
 fn sky_choices() -> [SkyChoice; 2] {
@@ -111,7 +116,11 @@ fn full_product() -> Vec<Combo> {
     out
 }
 
-/// Build the world for one combo, at seed 42.
+/// Build the world for one combo, at seed 42. Built to `BuildDepth::Terrain`
+/// (MAP-25 Task 10): the enumerated pins only write astronomy+terrain facts,
+/// and a depth-scoped build commits a byte-identical prefix of the full
+/// build's ledger, so the determinism compare below keeps its exact scope
+/// while skipping the ~75% of build cost that lives above the terrain rung.
 fn build(combo: &Combo) -> Result<hornvale_kernel::World, BuildError> {
     let sky_pins = SkyPins {
         rotation: Some(combo.rotation.clone()),
@@ -122,12 +131,14 @@ fn build(combo: &Combo) -> Result<hornvale_kernel::World, BuildError> {
         supercontinent: Some(combo.supercontinent),
         ..TerrainPins::default()
     };
-    build_world(
+    build_world_to(
         Seed(42),
         &sky_pins,
         combo.sky,
         &terrain_pins,
         &SettlementPins::default(),
+        &default_roster(),
+        BuildDepth::Terrain,
     )
 }
 
@@ -167,7 +178,8 @@ fn check_combo(combo: &Combo) -> bool {
 /// state -- so the sweep runs one scoped thread per combo (`std::thread::scope`,
 /// std only, modeled on `windows/lab/src/runner.rs`'s `run_pin_set`) instead of
 /// a sequential loop, cutting the heavy-tier wall time from ~505 s to ~64 s (M1
-/// Max, 10 logical CPUs, debug profile). It still asserts total certainty over
+/// Max, 10 logical CPUs, debug profile); terrain-depth builds (MAP-25 Task 10)
+/// cut it again to ~16 s. It still asserts total certainty over
 /// the product -- every combo builds or loudly refuses, and every `Ok` is
 /// byte-deterministic (each `check_combo` builds its combo twice and compares
 /// serialized ledgers on its own thread) -- just off the per-commit path.
