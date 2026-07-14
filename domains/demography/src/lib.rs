@@ -14,6 +14,7 @@ pub mod carrying_capacity;
 pub mod condense;
 pub mod flow;
 pub mod founder;
+pub mod niche;
 pub mod render;
 pub use carrying_capacity::{CarryingInput, carrying_capacity};
 pub use condense::{Condensation, condense};
