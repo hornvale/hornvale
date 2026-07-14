@@ -61,4 +61,6 @@ fix passes, one final whole-branch review, all clean.
 Carried in the worktree's `.superpowers/sdd/followups.md`, headline items:
 standstill facts on Eclipse Seasons' seam; retrograde-mirror and skip-path
 tests; sightline-display unification onto the committed fact; the
-Degrees-family type-audit adoption point (wave-1 debt grew 139→148).
+Degrees-family type-audit adoption point (wave-1 debt grew 139→148); and a
+doc nit — `alignment_drift_deg`'s sign convention inverts on retrograde
+worlds (every shipped consumer takes `.abs()`).
