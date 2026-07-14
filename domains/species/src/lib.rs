@@ -16,6 +16,9 @@ use hornvale_kernel::{
     RegistryError, ResourceVector, Value, World,
 };
 
+mod allometry;
+pub use allometry::{age_at_maturity, basal_metabolic_rate_w, lifespan, reproductive_tempo};
+
 /// Predicate: a species entity's name (functional, Text).
 /// type-audit: bare-ok(identifier-text)
 pub const SPECIES_NAME: &str = "species-name";
