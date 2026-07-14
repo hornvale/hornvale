@@ -260,6 +260,31 @@ fn continental_cap_fraction(peak_km: f64) -> f64 {
     1.0 - e.sqrt()
 }
 
+/// Continental cap area of one craton, steradians: the spherical-cap
+/// area `2π(1 − cos r)` times the fraction of that cap actually crossing
+/// `CONTINENTAL_THRESHOLD_KM` (see `continental_cap_fraction`). One
+/// arithmetic, two callers: the `draw_cratons` rescale sums it over
+/// pre-rescale radii; `continental_supply` over the final set.
+fn craton_continental_steradians(c: &Craton) -> f64 {
+    let peak = PEAK_MIN_KM + (PEAK_MAX_KM - PEAK_MIN_KM) * (1.0 - c.age);
+    std::f64::consts::TAU * (1.0 - math::cos(c.radius_rad)) * continental_cap_fraction(peak)
+}
+
+/// Analytic continental supply of a craton set: the fraction of the
+/// sphere's area whose crust crosses `CONTINENTAL_THRESHOLD_KM`, summed
+/// over the final (post-rescale, post-repulsion) radii. Cap overlaps are
+/// not deducted — an upper estimate, consistent with the rescale's own
+/// accounting. Grid-free and draw-free: a pure function of the drawn
+/// set, so every grid level sees the same supply.
+/// type-audit: bare-ok(ratio: return)
+pub fn continental_supply(cratons: &[Craton]) -> f64 {
+    cratons
+        .iter()
+        .map(craton_continental_steradians)
+        .sum::<f64>()
+        / (4.0 * std::f64::consts::PI)
+}
+
 /// Everything in `draw_cratons` except the final repulsion pass: the draws,
 /// the area-normalization rescale, and the `--supercontinent` transform.
 /// Split out so the repulsion test can measure the pre-pass geometry.
@@ -291,13 +316,7 @@ fn draw_cratons_unrepelled(
             }
         })
         .collect();
-    let continental_area: f64 = cratons
-        .iter()
-        .map(|c| {
-            let peak = PEAK_MIN_KM + (PEAK_MAX_KM - PEAK_MIN_KM) * (1.0 - c.age);
-            std::f64::consts::TAU * (1.0 - math::cos(c.radius_rad)) * continental_cap_fraction(peak)
-        })
-        .sum();
+    let continental_area: f64 = cratons.iter().map(craton_continental_steradians).sum();
     if continental_area > 0.0 {
         let scale = ((budget * 4.0 * std::f64::consts::PI) / continental_area).sqrt();
         for c in cratons.iter_mut() {
@@ -819,5 +838,45 @@ mod tests {
         ];
         use hornvale_kernel::Field;
         assert_eq!(field.sample(pos, time), field.thickness_at(p).get());
+    }
+
+    #[test]
+    fn continental_supply_is_the_area_the_rescale_budgets() {
+        // Empty set: no supply.
+        assert_eq!(continental_supply(&[]), 0.0);
+        // A lone pinned craton clamps at 0.6 rad: supply is capped below the
+        // 0.6 rad cap area (1 - cos 0.6)/2 ~= 8.73% of the sphere times the
+        // best-case (young, peak 45 km) continental fraction ~0.415 ~= 3.63%.
+        for seed in 1..=8u64 {
+            let terrain_seed = Seed(seed).derive(streams::ROOT);
+            let ocean_target = default_ocean_target(terrain_seed);
+            let pins = TerrainPins {
+                continents: Some(1),
+                ..TerrainPins::default()
+            };
+            let cratons = draw_cratons(terrain_seed, &pins, ocean_target, &mut Vec::new());
+            let supply = continental_supply(&cratons);
+            assert!(
+                supply > 0.0 && supply < 0.037,
+                "seed {seed}: supply {supply}"
+            );
+        }
+        // Default draws (8-14 cratons): supply sits near the land budget,
+        // an order of magnitude above the single-craton ceiling.
+        for seed in 0..16u64 {
+            let terrain_seed = Seed(seed).derive(streams::ROOT);
+            let ocean_target = default_ocean_target(terrain_seed);
+            let cratons = draw_cratons(
+                terrain_seed,
+                &TerrainPins::default(),
+                ocean_target,
+                &mut Vec::new(),
+            );
+            let supply = continental_supply(&cratons);
+            assert!(
+                (0.15..=0.60).contains(&supply),
+                "seed {seed}: supply {supply}"
+            );
+        }
     }
 }

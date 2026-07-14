@@ -423,6 +423,35 @@ pub fn carrying_inputs_of(
     })
 }
 
+/// Soil order per cell — the climate-coupled projection of The Ground
+/// (spec §4). Pure: reads terrain lithology + climate temperature/moisture.
+/// Every cell (ocean included) gets a classification from `classify_soil`;
+/// ocean floors read whatever their (irrelevant but harmless) depth/slope
+/// inputs classify to — callers that care about land only should guard
+/// with `terrain.is_ocean`.
+pub fn soil_of(
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    geo: &Geosphere,
+) -> hornvale_kernel::CellMap<hornvale_terrain::SoilOrder> {
+    hornvale_kernel::CellMap::from_fn(geo, |cell| {
+        let mat = terrain.material_at(cell);
+        let here = terrain.elevation_at(cell).get();
+        let slope = geo
+            .neighbors(cell)
+            .iter()
+            .map(|n| here - terrain.elevation_at(*n).get())
+            .fold(0.0_f64, f64::max);
+        hornvale_terrain::classify_soil(
+            terrain.rock_at(cell),
+            climate.mean_temperature_at(cell).get(),
+            climate.moisture_at(cell),
+            slope,
+            &mat.soil_depth,
+        )
+    })
+}
+
 /// Fold a species' psychology (spec §4) into its carrying-capacity inputs.
 /// The retired suitability formula scaled a people's freshwater weight by its
 /// time horizon and softened its hostility penalty by its threat response; the
@@ -985,6 +1014,137 @@ pub fn land_lines(world: &World) -> Result<Vec<String>, BuildError> {
             summary.highest_elevation_m - summary.sea_level_m
         ),
     ])
+}
+
+/// Human-readable rock-class name (The Ground, spec §4): lowercase, for
+/// almanac prose and census categorical values — a pure naming projection,
+/// no new draws.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn rock_class_name(rock: hornvale_terrain::RockClass) -> &'static str {
+    use hornvale_terrain::RockClass::*;
+    match rock {
+        Granite => "granite",
+        Gabbro => "gabbro",
+        Basalt => "basalt",
+        Andesite => "andesite",
+        Rhyolite => "rhyolite",
+        Sandstone => "sandstone",
+        Shale => "shale",
+        Conglomerate => "conglomerate",
+        Evaporite => "evaporite",
+        Chert => "chert",
+        Ironstone => "ironstone",
+        ReefLimestone => "reef limestone",
+        Coal => "coal",
+        Slate => "slate",
+        Schist => "schist",
+        Gneiss => "gneiss",
+        Marble => "marble",
+        Quartzite => "quartzite",
+        Alluvium => "alluvium",
+    }
+}
+
+/// Human-readable soil-order name (The Ground, spec §4): lowercase, for
+/// almanac prose and census categorical values.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn soil_order_name(order: hornvale_terrain::SoilOrder) -> &'static str {
+    use hornvale_terrain::SoilOrder::*;
+    match order {
+        Laterite => "laterite",
+        Podzol => "podzol",
+        Chernozem => "chernozem",
+        Aridisol => "aridisol",
+        Loam => "loam",
+        Andosol => "andosol",
+        Leptosol => "leptosol",
+        Histosol => "histosol",
+        Gley => "gley",
+    }
+}
+
+/// Land-cell karst-hydrology share above which "karst country" is a notable
+/// ground feature for the almanac (The Ground, spec §3/§6) — a chosen prose
+/// threshold, not a physical constant.
+const GROUND_KARST_NOTABLE: f64 = 0.05;
+/// Land-cell andosol share above which "volcanic soils" is a notable ground
+/// feature for the almanac.
+const GROUND_ANDOSOL_NOTABLE: f64 = 0.1;
+
+/// The ground's headline lines for the almanac: the dominant rock and soil
+/// order over land, plus notable formations — karst country, salt flats,
+/// volcanic soils (The Ground, spec §3/§4/§6). A pure projection over
+/// existing terrain/climate fields: no new draws. Empty for a landless
+/// world.
+/// type-audit: bare-ok(prose: return)
+pub fn ground_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    let terrain = terrain_of(world)?;
+    let climate = climate_of(world)?;
+    let geo = terrain.geosphere();
+    let soils = soil_of(&terrain, &climate, geo);
+
+    let mut rocks: std::collections::BTreeMap<hornvale_terrain::RockClass, usize> =
+        std::collections::BTreeMap::new();
+    let mut orders: std::collections::BTreeMap<hornvale_terrain::SoilOrder, usize> =
+        std::collections::BTreeMap::new();
+    let (mut land, mut karst, mut andosol) = (0usize, 0usize, 0usize);
+    let mut salt_flats = false;
+    for cell in geo.cells() {
+        if terrain.is_ocean(cell) {
+            continue;
+        }
+        land += 1;
+        let rock = terrain.rock_at(cell);
+        *rocks.entry(rock).or_insert(0) += 1;
+        if terrain.hydro_at(cell) == hornvale_terrain::Hydro::Karst {
+            karst += 1;
+        }
+        if terrain.is_endorheic(cell) && rock == hornvale_terrain::RockClass::Evaporite {
+            salt_flats = true;
+        }
+        let order = *soils.get(cell);
+        *orders.entry(order).or_insert(0) += 1;
+        if order == hornvale_terrain::SoilOrder::Andosol {
+            andosol += 1;
+        }
+    }
+    if land == 0 {
+        return Ok(Vec::new());
+    }
+
+    // Ties break to the lower-declared variant: RockClass/SoilOrder's `Ord`
+    // exists precisely so callers can make a deterministic pick like this.
+    let dominant_rock = rocks
+        .iter()
+        .max_by(|a, b| a.1.cmp(b.1).then(b.0.cmp(a.0)))
+        .map(|(&r, _)| r)
+        .expect("land > 0 guarantees at least one rock count");
+    let dominant_soil = orders
+        .iter()
+        .max_by(|a, b| a.1.cmp(b.1).then(b.0.cmp(a.0)))
+        .map(|(&s, _)| s)
+        .expect("land > 0 guarantees at least one soil count");
+
+    let mut lines = vec![format!(
+        "The land is mostly {}, its soils mostly {}.",
+        rock_class_name(dominant_rock),
+        soil_order_name(dominant_soil)
+    )];
+
+    let mut notables = Vec::new();
+    if karst as f64 / land as f64 > GROUND_KARST_NOTABLE {
+        notables.push("karst country".to_string());
+    }
+    if salt_flats {
+        notables.push("salt flats".to_string());
+    }
+    if andosol as f64 / land as f64 > GROUND_ANDOSOL_NOTABLE {
+        notables.push("volcanic soils".to_string());
+    }
+    if !notables.is_empty() {
+        lines.push(format!("Notable: {}.", notables.join(", ")));
+    }
+    Ok(lines)
 }
 
 /// The geographic position of a place, from its committed latitude/longitude
@@ -2212,6 +2372,48 @@ fn build_to(
         },
     )?;
 
+    stage("alignments", || -> Result<(), BuildError> {
+        // The Long Count: each settlement's founding sightline. Skipped
+        // wholesale on locked worlds / polar latitudes (the azimuth
+        // function returns None) and on the constant sky (no calendar).
+        // Placed before the settlement-depth early return (below) so a
+        // world built only to `BuildDepth::Settlements` still carries
+        // alignments — collecting first to avoid holding the sky borrow
+        // across commits.
+        let pairs: Vec<(EntityId, f64)> = {
+            let sky = sky_of(&world)?;
+            let Some(calendar) = sky.calendar() else {
+                return Ok(());
+            };
+            hornvale_terrain::places(&world)
+                .iter()
+                // founding-solstice-azimuth-degrees is documented as a
+                // settlement's founding sightline; gate on IS_SETTLEMENT
+                // rather than assuming every place is one (today they all
+                // are, but a future campaign may commit non-settlement
+                // places).
+                .filter(|p| {
+                    world
+                        .ledger
+                        .value_of(p.id, hornvale_settlement::IS_SETTLEMENT)
+                        .is_some()
+                })
+                .filter_map(|p| {
+                    let coord = place_coord(&world, p.id)?;
+                    let az = calendar.solstice_rise_azimuth_at(
+                        coord.latitude,
+                        hornvale_astronomy::StdDays::new(0.0).unwrap(),
+                    )?;
+                    Some((p.id, az))
+                })
+                .collect()
+        };
+        for (id, az) in pairs {
+            facts::founding_alignment(&mut world, id, az)?;
+        }
+        Ok(())
+    })?;
+
     if depth <= BuildDepth::Settlements {
         return Ok(world);
     }
@@ -2582,26 +2784,29 @@ pub fn night_sky_lines(
     // the same fallback-free resolution `calendar_lines`' daylight-swing
     // line uses, but with a temperate default instead of the equator when
     // no place has been placed yet.
-    let latitude = hornvale_terrain::places(world)
-        .first()
-        .and_then(|p| place_coord(world, p.id))
-        .map(|c| c.latitude)
-        .unwrap_or(35.0);
-    let year_length_days = calendar.year_length().get();
-    let pairs = hornvale_astronomy::heliacal_events(system, calendar, latitude, t);
-    let heliacal = pairs
-        .iter()
-        .take(3)
-        .map(|p| {
-            let neighbor = &system.neighbors[p.neighbor];
-            format!(
-                "The {} star returns before dawn at year-phase {:.2}, after {:.0} days of absence.",
-                neighbor.color,
-                p.rising_frac,
-                p.absence_fraction() * year_length_days
-            )
-        })
-        .collect();
+    let latitude_fallback = 35.0;
+    let heliacal = {
+        let latitude = hornvale_terrain::places(world)
+            .first()
+            .and_then(|p| place_coord(world, p.id))
+            .map(|c| c.latitude)
+            .unwrap_or(latitude_fallback);
+        let year_length_days = calendar.year_length().get();
+        let pairs = hornvale_astronomy::heliacal_events(system, calendar, latitude, t);
+        pairs
+            .iter()
+            .take(3)
+            .map(|p| {
+                let neighbor = &system.neighbors[p.neighbor];
+                format!(
+                    "The {} star returns before dawn at year-phase {:.2}, after {:.0} days of absence.",
+                    neighbor.color,
+                    p.rising_frac,
+                    p.absence_fraction() * year_length_days
+                )
+            })
+            .collect()
+    };
 
     let wanderers = system
         .wanderers
@@ -2649,11 +2854,44 @@ pub fn night_sky_lines(
         )]
     };
 
+    // The founding sightline and its drift rate (The Long Count): rendered
+    // only when a real settlement exists (to ensure the "From the first
+    // settlement" language is truthful). Requires the actual first place's
+    // latitude; the 35° fallback (used for heliacal events) is insufficient
+    // here since it would create a lying sentence.
+    let alignment = hornvale_terrain::places(world)
+        .into_iter()
+        // Same settlement gate as the alignments stage: the "first
+        // settlement" language below must name an actual settlement, not
+        // just the first place (today every place is a settlement, but
+        // that need not hold forever).
+        .find(|p| {
+            world
+                .ledger
+                .value_of(p.id, hornvale_settlement::IS_SETTLEMENT)
+                .is_some()
+        })
+        .and_then(|p| place_coord(world, p.id))
+        .map(|c| c.latitude)
+        .and_then(|latitude| {
+            calendar
+                .solstice_rise_azimuth_at(latitude, t)
+                .and_then(|az| {
+                    let kyr = hornvale_astronomy::StdDays::new(t.get() + 1000.0 * 365.25).unwrap();
+                    let drift = calendar.alignment_drift_deg(latitude, t, kyr)?;
+                    Some(format!(
+                        "From the first settlement, the midsummer sun rises at azimuth {az:.1}°; the sightline drifts {:.2}° in a thousand years.",
+                        drift.abs()
+                    ))
+                })
+        });
+
     Ok(Some(hornvale_almanac::NightSkyLines {
         pole_star,
         heliacal,
         wanderers,
         figures: figure_lines,
+        alignment,
     }))
 }
 
@@ -2812,6 +3050,17 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
             })
         })
         .collect();
+    // The deep-time lines, plus the secular-brightening sentence (The Long
+    // Count) for a generated sky only — constant-sky worlds have no star to
+    // brighten.
+    let mut deep_time_lines = deep_time_lines(world)?;
+    if let Sky::Generated(sky) = sky_of(world)? {
+        let system = sky.system();
+        deep_time_lines.push(format!(
+            "The sun brightens by {:.0} parts in a hundred over a gigayear — the slow fire under every deeper clock.",
+            hornvale_astronomy::brightening_per_gyr(&system.star) * 100.0
+        ));
+    }
     Ok(AlmanacContext {
         seed: world.seed.0,
         sky: sky_report(world, WorldTime { day: 0.0 })?,
@@ -2820,7 +3069,8 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         places: hornvale_terrain::places(world),
         land_lines: land_lines(world)?,
         biome_lines: biome_lines(world)?,
-        deep_time_lines: deep_time_lines(world)?,
+        ground_lines: ground_lines(world)?,
+        deep_time_lines,
         peoples,
         pantheons: {
             let mut blocks = Vec::new();
@@ -3209,6 +3459,21 @@ mod tests {
         assert!(!ctx.phenomena.is_empty());
     }
 
+    /// The Long Count: a generated world's almanac context carries the
+    /// founding sightline under The Sky and the brightening deep-time line
+    /// under Deep Time.
+    #[test]
+    fn almanac_context_carries_sightline_and_slow_fire() {
+        let world = generated(42);
+        let ctx = almanac_context(&world).unwrap();
+        let lines = ctx.night_sky_lines.expect("generated sky");
+        assert!(lines.alignment.is_some());
+        assert!(
+            ctx.deep_time_lines.iter().any(|l| l.contains("slow fire")),
+            "the brightening line reaches Deep Time"
+        );
+    }
+
     #[test]
     fn sky_and_climate_reports_come_from_the_composition_root() {
         let world = constant(42);
@@ -3587,6 +3852,24 @@ mod tests {
     }
 
     #[test]
+    fn ground_lines_name_the_dominant_rock_and_soil() {
+        let world = constant(42);
+        let lines = ground_lines(&world).unwrap();
+        assert!(!lines.is_empty());
+        assert!(lines[0].contains("The land is mostly"));
+        assert!(lines[0].contains("its soils mostly"));
+    }
+
+    #[test]
+    fn ground_lines_feed_the_almanac_context() {
+        let world = constant(42);
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.ground_lines, ground_lines(&world).unwrap());
+        let doc = hornvale_almanac::render(&ctx);
+        assert!(doc.contains("## The Ground"));
+    }
+
+    #[test]
     fn climate_reconstructs_deterministically_and_maps_biomes() {
         let world = generated(42);
         let a = climate_of(&world).unwrap();
@@ -3641,6 +3924,26 @@ mod tests {
         let world = constant(42);
         let climate = climate_of(&world).unwrap();
         assert!(climate.geosphere().cell_count() > 0);
+    }
+
+    #[test]
+    fn soil_of_land_cells_show_at_least_two_orders() {
+        use std::collections::BTreeSet;
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let soil = soil_of(&terrain, &climate, geo);
+        let land_orders: BTreeSet<_> = geo
+            .cells()
+            .filter(|c| !terrain.is_ocean(*c))
+            .map(|c| *soil.get(c))
+            .collect();
+        assert!(!land_orders.is_empty(), "seed 42 has no land cells");
+        assert!(
+            land_orders.len() >= 2,
+            "soil felt monolithic: {land_orders:?}"
+        );
     }
 
     /// The flagship's cell, read back from its committed `CELL_ID` fact
@@ -3795,6 +4098,40 @@ mod tests {
                 "settlement {:?} committed a zero population",
                 f.subject
             );
+        }
+    }
+
+    /// The Long Count: every settlement in a spinning generated world
+    /// carries its founding solstice-sunrise azimuth; it holds already at
+    /// `BuildDepth::Settlements` — the alignments pass runs immediately
+    /// after settlement placement, before the settlement-depth early
+    /// return, so a shallow build gets alignments too (spec §4's "built to
+    /// settlement depth or deeper").
+    #[test]
+    fn settlements_carry_founding_alignments() {
+        let world = build_world_to(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+            &default_roster(),
+            BuildDepth::Settlements,
+        )
+        .unwrap();
+        let settlements: Vec<_> = world
+            .ledger
+            .find(hornvale_settlement::IS_SETTLEMENT)
+            .map(|f| f.subject)
+            .collect();
+        assert!(!settlements.is_empty());
+        for s in &settlements {
+            let n = world
+                .ledger
+                .find(facts::FOUNDING_SOLSTICE_AZIMUTH_DEGREES)
+                .filter(|f| f.subject == *s)
+                .count();
+            assert_eq!(n, 1, "settlement {s:?}");
         }
     }
 
