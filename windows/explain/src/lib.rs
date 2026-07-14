@@ -73,23 +73,19 @@ pub fn explain_sky(world: &World) -> Option<String> {
          of the zone.\n"
     ));
 
-    // Moons: parallel lists on the world entity, distance-sorted.
-    let masses: Vec<f64> = world
-        .ledger
-        .facts_about(e)
-        .filter(|f| f.predicate == facts::MOON_MASS_LUNAR)
-        .filter_map(|f| match f.object {
-            Value::Number(n) => Some(n),
-            _ => None,
-        })
-        .collect();
-    if masses.is_empty() {
+    // Moons: the committed count fact on the world entity.
+    let moon_count = match num(world, e, facts::MOON_COUNT) {
+        Some(n) => n.round() as usize,
+        None => world
+            .ledger
+            .facts_about(e)
+            .filter(|f| f.predicate == facts::MOON_MASS_LUNAR)
+            .count(),
+    };
+    if moon_count == 0 {
         out.push_str("It has no moons.\n");
     } else {
-        out.push_str(&format!(
-            "It has {} moon(s) (rolled count).\n",
-            masses.len()
-        ));
+        out.push_str(&format!("It has {moon_count} moon(s) (rolled count).\n"));
     }
 
     // Neighbors: one entity each, discovered by the is-neighbor flag.
@@ -124,7 +120,20 @@ mod tests {
         let text = explain_sky(&w).expect("a world with sky facts explains");
         assert!(text.contains("sunlight") || text.contains("insolation"));
         assert!(text.contains("luminosity"));
-        assert!(text.contains("M"), "names the star mass");
+        let e = w
+            .ledger
+            .find(facts::STAR_MASS_SOLAR)
+            .next()
+            .unwrap()
+            .subject;
+        let mass = match w.ledger.value_of(e, facts::STAR_MASS_SOLAR) {
+            Some(Value::Number(n)) => *n,
+            _ => panic!("star mass fact present"),
+        };
+        assert!(
+            text.contains(&format!("{mass:.2}")),
+            "narration names the star mass figure {mass:.2}: {text}"
+        );
         // The narration is derived purely from committed facts.
     }
 

@@ -60,6 +60,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-explain"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-historiography"
 version = "0.1.0"
 dependencies = [
