@@ -162,6 +162,41 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         true,
         "obliquity oscillation amplitude, degrees (moon-coupled)",
     )?;
+    registry.register_predicate(
+        facts::STAR_MASS_SOLAR,
+        true,
+        "host star mass in solar masses",
+    )?;
+    registry.register_predicate(
+        facts::STAR_LUMINOSITY_SOLAR,
+        true,
+        "host star luminosity in solar units (derived M^3.5)",
+    )?;
+    registry.register_predicate(
+        facts::HAB_ZONE_INNER_AU,
+        true,
+        "habitable-zone inner bound in AU (derived 0.95√L)",
+    )?;
+    registry.register_predicate(
+        facts::HAB_ZONE_OUTER_AU,
+        true,
+        "habitable-zone outer bound in AU (derived 1.37√L)",
+    )?;
+    registry.register_predicate(
+        facts::ANCHOR_MASS_EARTH,
+        true,
+        "anchor world mass in Earth masses",
+    )?;
+    registry.register_predicate(
+        facts::ANCHOR_ORBIT_AU,
+        true,
+        "anchor orbital distance in AU",
+    )?;
+    registry.register_predicate(
+        facts::INSOLATION_REL,
+        true,
+        "insolation at the anchor relative to Earth (derived L/a²)",
+    )?;
 
     registry.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")?;
     registry.register_concept("moon", "astronomy", ConceptKind::Celestial, "a moon")?;

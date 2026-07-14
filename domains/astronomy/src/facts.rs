@@ -68,6 +68,28 @@ pub const ECCENTRICITY_MEAN: &str = "eccentricity-mean";
 /// Number).
 /// type-audit: bare-ok(identifier-text)
 pub const OBLIQUITY_AMPLITUDE: &str = "obliquity-amplitude";
+/// Host star mass in solar masses (functional, Number; drawn).
+/// type-audit: bare-ok(identifier-text)
+pub const STAR_MASS_SOLAR: &str = "star-mass-solar";
+/// Host star luminosity in solar units (functional, Number; derived M^3.5).
+/// type-audit: bare-ok(identifier-text)
+pub const STAR_LUMINOSITY_SOLAR: &str = "star-luminosity-solar";
+/// Habitable-zone inner bound in AU (functional, Number; derived 0.95√L).
+/// type-audit: bare-ok(identifier-text)
+pub const HAB_ZONE_INNER_AU: &str = "hab-zone-inner-au";
+/// Habitable-zone outer bound in AU (functional, Number; derived 1.37√L).
+/// type-audit: bare-ok(identifier-text)
+pub const HAB_ZONE_OUTER_AU: &str = "hab-zone-outer-au";
+/// Anchor world mass in Earth masses (functional, Number; drawn).
+/// type-audit: bare-ok(identifier-text)
+pub const ANCHOR_MASS_EARTH: &str = "anchor-mass-earth";
+/// Anchor orbital distance in AU (functional, Number; drawn or pinned).
+/// type-audit: bare-ok(identifier-text)
+pub const ANCHOR_ORBIT_AU: &str = "anchor-orbit-au";
+/// Insolation at the anchor relative to Earth (functional, Number; derived
+/// L/a², global annual mean).
+/// type-audit: bare-ok(identifier-text)
+pub const INSOLATION_REL: &str = "insolation-rel";
 
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     Fact {
@@ -159,6 +181,62 @@ pub fn genesis(
             subject,
             OBLIQUITY_AMPLITUDE,
             Value::Number(system.forcing.obliquity_amp),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            STAR_MASS_SOLAR,
+            Value::Number(system.star.mass.get()),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            STAR_LUMINOSITY_SOLAR,
+            Value::Number(system.star.luminosity.get()),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            HAB_ZONE_INNER_AU,
+            Value::Number(system.star.habitable_zone.inner().get()),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            HAB_ZONE_OUTER_AU,
+            Value::Number(system.star.habitable_zone.outer().get()),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            ANCHOR_MASS_EARTH,
+            Value::Number(system.anchor.mass.get()),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            ANCHOR_ORBIT_AU,
+            Value::Number(system.anchor.orbit.get()),
+        ),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            INSOLATION_REL,
+            Value::Number(crate::star::insolation_rel(&system.star, &system.anchor)),
         ),
         &world.registry,
     )?;
@@ -431,6 +509,31 @@ mod tests {
             w.ledger
                 .facts_about(subject)
                 .all(|f| f.provenance == "astronomy")
+        );
+    }
+
+    #[test]
+    fn genesis_commits_the_star_and_anchor_numbers() {
+        let outcome = generate(Seed(42), &SkyPins::default()).unwrap();
+        let mut w = world_with(42);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+        for pred in [
+            STAR_MASS_SOLAR,
+            STAR_LUMINOSITY_SOLAR,
+            HAB_ZONE_INNER_AU,
+            HAB_ZONE_OUTER_AU,
+            ANCHOR_MASS_EARTH,
+            ANCHOR_ORBIT_AU,
+            INSOLATION_REL,
+        ] {
+            assert!(w.ledger.value_of(subject, pred).is_some(), "missing {pred}");
+        }
+        assert_eq!(
+            w.ledger.value_of(subject, INSOLATION_REL),
+            Some(&Value::Number(hornvale_kernel::quantize(
+                crate::star::insolation_rel(&outcome.system.star, &outcome.system.anchor)
+            )))
         );
     }
 }
