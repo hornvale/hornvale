@@ -309,6 +309,29 @@ fn mass_balance_holds() {
 /// and with low drainage/slope (a real physical confound the incision
 /// formula does not control for), so a little local noise is expected, but
 /// the trend itself must be strong.
+///
+/// Statistic re-derived for tuning iteration 1 (ledger #6, land-only
+/// incision slope) — two coupled changes, both forced by the same measured
+/// confound:
+/// - **Population**: cells with a POSITIVE LAND DROP only. The land-only
+///   slope term structurally zeroes incision where no lower land neighbor
+///   exists, and those cells are overwhelmingly SOFT — coastal/lowland
+///   sediment (seed 42/L4 pre-carve: 53%/51%/31% of the three softest
+///   induration deciles have no lower land neighbor, vs 3-9% of every
+///   other decile). Including them makes rho measure coastal geometry, not
+///   the induration response (raw rho flipped to +0.32).
+/// - **Slope-normalized incision**: per-cell `|incision| / (S/S0)^n`
+///   rather than raw `|incision|`. Under ledger #6 the slope term itself
+///   became strongly induration-correlated at the soft end (soft coastal
+///   flats have small LAND drops where they once had huge cliff drops), so
+///   even over the positive-drop population raw rho collapsed to a weak,
+///   seed-flickering -0.36..0.09 (8-seed survey). Dividing out the known
+///   slope factor removes exactly the confound the law change introduced
+///   and restores the battery to what it always measured: erodibility's
+///   effect, drainage confound included. Post-change survey over seeds
+///   [42, 1, 7, 99, 3, 5, 11, 2]: slope-normalized rho -0.891 / -0.552 /
+///   -0.915 / -0.903 / -0.903 / -0.867 / -0.988 / -0.903 — the original
+///   `-0.7` threshold keeps real margin on seed 42 (-0.891).
 #[test]
 fn harder_rock_cuts_less() {
     let geo = Geosphere::new(4);
@@ -325,9 +348,20 @@ fn harder_rock_cuts_less() {
         &CarveParams::default(),
     );
 
+    let p = CarveParams::default();
+    // Max drop to a LAND neighbor — the slope the incision law itself uses
+    // post-ledger-#6 (see `carve_incision`'s doc).
+    let land_drop = |c: CellId| -> f64 {
+        let here = rebuilt.elevation_pre.get(c).get();
+        geo.neighbors(c)
+            .iter()
+            .filter(|nb| *rebuilt.elevation_pre.get(**nb) >= rebuilt.sea_pre)
+            .map(|nb| here - rebuilt.elevation_pre.get(*nb).get())
+            .fold(0.0_f64, f64::max)
+    };
     let mut land: Vec<CellId> = geo
         .cells()
-        .filter(|&c| *rebuilt.elevation_pre.get(c) >= rebuilt.sea_pre)
+        .filter(|&c| *rebuilt.elevation_pre.get(c) >= rebuilt.sea_pre && land_drop(c) > 0.0)
         .collect();
     assert!(
         land.len() >= 100,
@@ -346,7 +380,8 @@ fn harder_rock_cuts_less() {
     let mut buckets: Vec<Vec<f64>> = vec![Vec::new(); DECILES];
     for (i, &cell) in land.iter().enumerate() {
         let bucket = (i * DECILES / n).min(DECILES - 1);
-        buckets[bucket].push(incision.get(cell).abs());
+        let s_pow = math::powf(land_drop(cell) / p.slope_ref_m, p.slope_exponent);
+        buckets[bucket].push(incision.get(cell).abs() / s_pow);
     }
     let medians: Vec<f64> = buckets
         .iter_mut()
@@ -358,8 +393,8 @@ fn harder_rock_cuts_less() {
     let rho = spearman(&decile_index, &medians);
     assert!(
         rho <= -0.7,
-        "seed {seed}: induration-decile |incision| medians not strongly rank-decreasing \
-         (softest→hardest): rho = {rho:.3} (want <= -0.7), medians: {medians:?}"
+        "seed {seed}: induration-decile slope-normalized |incision| medians not strongly \
+         rank-decreasing (softest→hardest): rho = {rho:.3} (want <= -0.7), medians: {medians:?}"
     );
 }
 
