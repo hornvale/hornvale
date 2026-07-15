@@ -83,6 +83,7 @@
 - [The Niche](./chronicle/the-niche.md)
 - [The Speakable](./chronicle/the-speakable.md)
 - [Goldengrove](./chronicle/goldengrove.md)
+- [The Helm](./chronicle/the-helm.md)
 
 # The Gallery
 
