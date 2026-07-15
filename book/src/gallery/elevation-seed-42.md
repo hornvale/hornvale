@@ -2,6 +2,7 @@
 
 The globe breaks into 16 plates; the sea claims 73% of its surface.
 The highest land stands 5305 m above the sea.
+Notable: the Great Delta, salt flats.
 
 ```text
 ~~~~~~~~~~~~~~~~~~~....+++^^^^^^^^^^^^^^^^^^^^^^^++++++....~~~~~~~~~~~~~

@@ -50,6 +50,7 @@ The sky holds 2 figures; 1 stands on the sun's road.
 
 The globe breaks into 16 plates; the sea claims 73% of its surface.
 The highest land stands 5305 m above the sea.
+Notable: the Great Delta, salt flats.
 
 The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 8 marine biomes cover the globe.
 Some 11% of the surface is habitable — land with water and a tolerable season.

@@ -419,6 +419,24 @@ mod tests {
     }
 
     #[test]
+    fn land_section_names_point_observation_notables_when_present() {
+        // The Land section itself is never skipped; only the trailing
+        // notable line is conditional (Sculpting Task 11, spec §5) —
+        // mirrors The Ground's own notable-emission pattern one section up.
+        let mut ctx = sample_context();
+        ctx.land_lines = vec![
+            "The globe breaks into 23 plates; the sea claims 63% of its surface.".to_string(),
+            "The highest land stands 4000 m above the sea.".to_string(),
+            "Notable: the Great Falls, the Great Delta, salt flats.".to_string(),
+        ];
+        let doc = render(&ctx);
+        assert!(doc.contains("## The Land"));
+        assert!(doc.contains("the Great Falls"));
+        assert!(doc.contains("the Great Delta"));
+        assert!(doc.contains("salt flats"));
+    }
+
+    #[test]
     fn ground_section_names_the_dominant_rock_and_soil_and_is_skipped_when_empty() {
         let mut ctx = sample_context();
         ctx.ground_lines = vec![

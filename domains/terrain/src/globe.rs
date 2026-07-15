@@ -101,6 +101,11 @@ pub struct TectonicGlobe {
     /// carbonate to a reef-building high value regardless of the ordinary
     /// shallow-shelf test. Recomputed at genesis, never serialized.
     pub atoll_cells: Vec<CellId>,
+    /// Waterfall (knickpoint) sites the carve found (Sculpting Task 11, spec
+    /// §5): land cells where a high-drainage watercourse crosses a sharp
+    /// PRE-carve induration step. Sorted ascending `CellId`. Recomputed at
+    /// genesis, never serialized.
+    pub waterfall_sites: Vec<CellId>,
     /// The material buffer per cell (The Ground, spec §2). Recomputed at
     /// genesis, never serialized.
     pub lithology: CellMap<crate::lithology::MaterialBuffer>,
@@ -312,6 +317,7 @@ pub fn generate(
         carve_delta_m: cd.delta_m,
         delta_cells: cd.delta_cells,
         atoll_cells: cd.atoll_cells,
+        waterfall_sites: cd.waterfall_sites,
         lithology: placeholder_lithology,
         lithology_seed,
     };

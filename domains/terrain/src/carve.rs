@@ -140,7 +140,12 @@ pub struct CarveDelta {
     /// Cells an atoll rim capped (Task 9). Empty until [`carve`] runs; feeds
     /// lithology's carbonate override (Task 10).
     pub atoll_cells: Vec<CellId>,
-    /// Waterfall sites. Always empty in this task — Task 11 fills it.
+    /// Waterfall (knickpoint) sites the carve found (spec §5): land cells
+    /// where a high-drainage watercourse crosses a sharp induration step,
+    /// evaluated on the PRE-carve surface — "where the carve worked
+    /// hardest against contrast". Sorted ascending `CellId`. Filled by
+    /// [`carve`] via [`find_waterfalls`]; empty from
+    /// [`CarveDelta::from_incision_and_repose`] alone.
     pub waterfall_sites: Vec<CellId>,
 }
 
@@ -185,6 +190,71 @@ impl CarveDelta {
             waterfall_sites: Vec::new(),
         }
     }
+}
+
+/// Where a landform came from (spec §5, fantasy hook): an OPEN enum —
+/// `Process` is the only member this campaign; `Mythic` is banked (gated
+/// overlay), landing additively later. Phenomena never reveal their
+/// producing system, so future mythic members are indistinguishable to
+/// consumers by construction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Provenance {
+    /// Formed by ordinary geologic process.
+    Process,
+}
+
+/// Minimum drainage (upstream land-cell count) a cell must carry to be
+/// waterfall-eligible: a knickpoint needs a real watercourse, not a
+/// trickle. Spec §5's chosen threshold.
+/// type-audit: bare-ok(count)
+pub const WATERFALL_MIN_DRAINAGE: f64 = 80.0;
+
+/// Minimum induration drop, in induration units `[0,1]`, from a candidate
+/// waterfall cell down to its downhill neighbor: the hard lip over the
+/// soft plunge pool that makes the step a knickpoint rather than an
+/// ordinary slope. Spec §5's chosen threshold.
+/// type-audit: bare-ok(ratio)
+pub const WATERFALL_INDURATION_STEP: f64 = 0.35;
+
+/// Waterfall (knickpoint) detection (spec §5, "derived point observations"):
+/// a land cell whose drainage exceeds `WATERFALL_MIN_DRAINAGE` and whose
+/// downhill neighbor is softer by more than `WATERFALL_INDURATION_STEP` in
+/// induration terms — a hard lip over a soft plunge pool, exactly where the
+/// carve worked hardest against a contrast. A cell with no downhill target
+/// (a local minimum) is never a waterfall. Land-only: `elevation` and
+/// `sea_level` gate the source cell; the downhill target's induration is
+/// read regardless of its own land/ocean status (a river dropping straight
+/// into the sea over resistant rock is a real waterfall). Output sorted
+/// ascending `CellId` (cell iteration is already ascending; sorted
+/// defensively, matching the house style elsewhere in this module).
+/// type-audit: bare-ok(count: drainage), bare-ok(ratio: induration)
+pub fn find_waterfalls(
+    geo: &Geosphere,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+    drainage: &CellMap<f64>,
+    induration: &CellMap<f64>,
+    downhill: &[Option<CellId>],
+) -> Vec<CellId> {
+    let mut sites: Vec<CellId> = geo
+        .cells()
+        .filter(|&c| {
+            if *elevation.get(c) < sea_level {
+                return false; // land cells only
+            }
+            if *drainage.get(c) < WATERFALL_MIN_DRAINAGE {
+                return false;
+            }
+            match downhill[c.0 as usize] {
+                Some(target) => {
+                    *induration.get(c) - *induration.get(target) > WATERFALL_INDURATION_STEP
+                }
+                None => false, // a local minimum has no downhill lip to fall over
+            }
+        })
+        .collect();
+    sites.sort_by_key(|c| c.0);
+    sites
 }
 
 /// Erodibility: how fast material yields (spec §4). Soft (low induration)
@@ -783,6 +853,12 @@ pub fn carve(
     let repose = apply_repose(geo, &elevation_after_incision, sea_level, params);
 
     let mut delta = CarveDelta::from_incision_and_repose(geo, &incision, &repose);
+    // Waterfall sites (Task 11): PRE-carve elevation/drainage/induration —
+    // this function's own `elevation`/`drainage`/`induration`/`downhill`
+    // parameters are exactly that, unmodified by incision/repose/routing —
+    // "where the carve worked hardest against contrast".
+    delta.waterfall_sites =
+        find_waterfalls(geo, elevation, sea_level, drainage, induration, downhill);
 
     let (routing_deposit, mouths, routing_ocean_loss) = route_sediment(
         geo, elevation, sea_level, &incision, downhill, endorheic, params,
@@ -827,7 +903,7 @@ pub fn carve(
     delta.eroded_total_m3 += atoll_total;
     delta.delta_cells = delta_cells;
     delta.atoll_cells = atoll_cells;
-    // delta.waterfall_sites stays empty; Task 11 fills it.
+    // delta.waterfall_sites was already set above, from the pre-carve fields.
 
     delta
 }
@@ -1366,5 +1442,99 @@ mod tests {
                 assert_eq!(*fill.get(c), 0.0);
             }
         }
+    }
+
+    #[test]
+    fn find_waterfalls_flags_a_high_drainage_hard_over_soft_step() {
+        // Synthetic knickpoint: source is land, high drainage, hard
+        // (induration 0.9); its downhill neighbor is soft (0.3) — a
+        // 0.6 induration step, well past WATERFALL_INDURATION_STEP (0.35).
+        let geo = Geosphere::new(3);
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let source = CellId(0);
+        let target = geo.neighbors(source)[0];
+        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(100.0).unwrap());
+        let induration = CellMap::from_fn(&geo, |c| {
+            if c == source {
+                0.9
+            } else if c == target {
+                0.3
+            } else {
+                0.5
+            }
+        });
+        let n = geo.cell_count();
+        let mut downhill: Vec<Option<CellId>> = vec![None; n];
+        downhill[source.0 as usize] = Some(target);
+
+        let high_drainage = CellMap::from_fn(&geo, |c| {
+            if c == source {
+                WATERFALL_MIN_DRAINAGE + 1.0
+            } else {
+                0.0
+            }
+        });
+        let sites = find_waterfalls(
+            &geo,
+            &elevation,
+            sea,
+            &high_drainage,
+            &induration,
+            &downhill,
+        );
+        assert_eq!(sites, vec![source], "the hard-over-soft step must be found");
+
+        // A low-drainage clone (same induration step) must NOT be found.
+        let low_drainage = CellMap::from_fn(&geo, |c| {
+            if c == source {
+                WATERFALL_MIN_DRAINAGE - 1.0
+            } else {
+                0.0
+            }
+        });
+        let sites = find_waterfalls(&geo, &elevation, sea, &low_drainage, &induration, &downhill);
+        assert!(
+            sites.is_empty(),
+            "a sub-threshold-drainage clone must not be a waterfall: {sites:?}"
+        );
+    }
+
+    #[test]
+    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+    fn waterfalls_exist_across_a_seed_sweep() {
+        // Existence probe (spec §8), not a per-world assertion: waterfall
+        // sites are sparse — a single seed can easily land with none — so
+        // this asserts the UNION across a small seed sweep is non-empty.
+        // Promoted to the Task 13 battery file verbatim.
+        //
+        // **Deviation from the brief's "L5"**: measured directly (seeds
+        // 1..=20, `WATERFALL_MIN_DRAINAGE`/`WATERFALL_INDURATION_STEP` at
+        // their brief-specified defaults) — at `Geosphere::new(5)` the
+        // largest watershed on any of the 20 worlds tops out at 85 upstream
+        // land cells (`WATERFALL_MIN_DRAINAGE` is 80), leaving at most one
+        // drainage-eligible candidate cell per world and ZERO waterfalls
+        // across the whole sweep: the induration-step threshold has
+        // essentially no candidate population to act on. At the canonical
+        // `Geosphere::new(6)` (`GLOBE_LEVEL`, ~4x the cells) the same
+        // watersheds resolve to a max drainage of 126-353 land cells,
+        // 15-77 candidates per world, and seeds 3/5/8 alone (well inside
+        // 1..=8) each clear the induration step. L5's watershed resolution
+        // is simply too coarse for these thresholds to ever fire — a real
+        // resolution-dependent effect, not a logic defect (`find_waterfalls`
+        // itself is exercised directly, resolution-independent, by
+        // `find_waterfalls_flags_a_high_drainage_hard_over_soft_step`
+        // above). The canonical level here matches how every real world is
+        // actually generated (`GLOBE_LEVEL`); L5 remains the right choice
+        // for this file's OTHER tests, which probe algorithmic properties
+        // speed-first, not this feature's real occurrence rate.
+        let geo = Geosphere::new(crate::GLOBE_LEVEL);
+        let mut total = 0usize;
+        for seed in 1..=8u64 {
+            let outcome =
+                crate::globe::generate(Seed(seed), &geo, &crate::pins::TerrainPins::default())
+                    .unwrap();
+            total += outcome.globe.waterfall_sites.len();
+        }
+        assert!(total > 0, "no waterfalls found across seeds 1..=8 at L6");
     }
 }

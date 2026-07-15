@@ -887,12 +887,16 @@ pub fn deep_time_lines(world: &World) -> Result<Vec<String>, BuildError> {
 }
 
 /// The land's headline lines for the almanac: plates and ocean coverage,
-/// then the highest land above the sea.
+/// the highest land above the sea, then the carve's derived point-
+/// observation notables (Sculpting Task 11, spec §5) — waterfalls, deltas,
+/// playas — the moment the provider reports at least one of a class: these
+/// are sparse walk-scale landmarks, so "any" is the bar, not a share
+/// (mirrors The Ground's `ground_lines` notable-emission pattern).
 /// type-audit: bare-ok(prose: return)
 pub fn land_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let terrain = terrain_of(world)?;
     let summary = hornvale_terrain::summarize(terrain.globe());
-    Ok(vec![
+    let mut lines = vec![
         format!(
             "The globe breaks into {} plates; the sea claims {:.0}% of its surface.",
             summary.plate_count,
@@ -902,7 +906,22 @@ pub fn land_lines(world: &World) -> Result<Vec<String>, BuildError> {
             "The highest land stands {:.0} m above the sea.",
             summary.highest_elevation_m - summary.sea_level_m
         ),
-    ])
+    ];
+
+    let mut notables = Vec::new();
+    if !terrain.waterfalls().is_empty() {
+        notables.push("the Great Falls".to_string());
+    }
+    if !terrain.deltas().is_empty() {
+        notables.push("the Great Delta".to_string());
+    }
+    if !terrain.playas().is_empty() {
+        notables.push("salt flats".to_string());
+    }
+    if !notables.is_empty() {
+        lines.push(format!("Notable: {}.", notables.join(", ")));
+    }
+    Ok(lines)
 }
 
 /// Human-readable rock-class name (The Ground, spec §4): lowercase, for
@@ -3636,9 +3655,31 @@ mod tests {
     fn land_lines_describe_the_globe() {
         let world = constant(42);
         let lines = land_lines(&world).unwrap();
-        assert_eq!(lines.len(), 2);
+        // Seed 42's default canonical-level globe carries a delta lobe and
+        // playa fill but no waterfall (measured directly against the
+        // terrain domain): the third line is the point-observation
+        // notable.
+        assert_eq!(lines.len(), 3);
         assert!(lines[0].contains("plates"));
         assert!(lines[1].contains("above the sea"));
+        assert_eq!(lines[2], "Notable: the Great Delta, salt flats.");
+    }
+
+    #[test]
+    fn land_lines_name_point_observation_notables_when_present() {
+        let world = constant(42);
+        let terrain = terrain_of(&world).unwrap();
+        // Ground truth the notable line against the provider directly,
+        // rather than re-asserting the exact seed-42 bytes twice.
+        assert!(terrain.waterfalls().is_empty());
+        assert!(!terrain.deltas().is_empty());
+        assert!(!terrain.playas().is_empty());
+
+        let lines = land_lines(&world).unwrap();
+        let notable = lines.last().unwrap();
+        assert!(!notable.contains("the Great Falls"), "no waterfalls exist");
+        assert!(notable.contains("the Great Delta"));
+        assert!(notable.contains("salt flats"));
     }
 
     #[test]

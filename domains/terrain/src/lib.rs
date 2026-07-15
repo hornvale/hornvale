@@ -20,7 +20,8 @@ pub mod streams;
 
 pub use boundaries::{BoundaryKind, CellBoundary};
 pub use carve::{
-    CarveDelta, CarveParams, apply_repose, carve_incision, erodibility, route_sediment,
+    CarveDelta, CarveParams, Provenance, apply_repose, carve_incision, erodibility,
+    find_waterfalls, route_sediment,
 };
 pub use globe::{GenesisOutcome, GlobeSummary, TectonicGlobe, generate, summarize};
 pub use lithology::{
