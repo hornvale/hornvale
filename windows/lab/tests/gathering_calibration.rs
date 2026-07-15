@@ -229,7 +229,11 @@ fn world_level_population_conserves_against_total_capacity() {
     let base_inputs = hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate);
     let roster = hornvale_worldgen::default_roster();
     let mut total_k = 0.0_f64;
-    for def in &roster {
+    // Settlement population is peopled-only, so conserve it against the
+    // peopled species' capacity; fauna (peopled: None) hold habitat capacity
+    // but found no settlements and carry no psychology to modulate the flat
+    // carrying input.
+    for def in roster.iter().filter(|d| d.peopled.is_some()) {
         let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
             hornvale_worldgen::species_carrying_input(
                 *base_inputs.get(c),
