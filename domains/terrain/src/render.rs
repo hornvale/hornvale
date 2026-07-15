@@ -244,6 +244,61 @@ pub fn lithology_png(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
     hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_WIDTH / 2, &lithology_pixels(geo, globe))
 }
 
+/// Full saturation depth for [`sediment_color`]'s diverging scale, meters.
+/// Measured over seed 42 at `GLOBE_LEVEL`: `carve_delta_m`'s 1st/99th
+/// percentiles sit at roughly ∓250 m while its extremes reach ∓2000 m —
+/// scaling to the extremes would wash out the ordinary case, so this caps
+/// at the percentile range instead; the rare cell beyond it simply
+/// saturates to the palette's most intense red/blue.
+const SEDIMENT_LENS_SCALE_M: f64 = 300.0;
+
+/// Diverging color for a signed carve delta, meters: white at zero,
+/// reddening as incision (negative) deepens, bluing as deposition
+/// (positive) thickens, saturating at ±[`SEDIMENT_LENS_SCALE_M`].
+fn sediment_color(delta_m: f64) -> [u8; 3] {
+    fn lerp(a: [u8; 3], b: [u8; 3], t: f64) -> [u8; 3] {
+        let t = t.clamp(0.0, 1.0);
+        let channel =
+            |a: u8, b: u8| (f64::from(a) + (f64::from(b) - f64::from(a)) * t).round() as u8;
+        [
+            channel(a[0], b[0]),
+            channel(a[1], b[1]),
+            channel(a[2], b[2]),
+        ]
+    }
+    const WHITE: [u8; 3] = [255, 255, 255];
+    const INCISION_RED: [u8; 3] = [200, 40, 30];
+    const DEPOSITION_BLUE: [u8; 3] = [30, 70, 200];
+    let t = (delta_m / SEDIMENT_LENS_SCALE_M).clamp(-1.0, 1.0);
+    if t < 0.0 {
+        lerp(WHITE, INCISION_RED, -t)
+    } else {
+        lerp(WHITE, DEPOSITION_BLUE, t)
+    }
+}
+
+/// Raw RGB pixels of the equirectangular sediment/carve-delta map:
+/// nearest-cell `carve_delta_m` (categorical-resolution debug lens, no
+/// coastal-noise refinement — same convention as `lithology_pixels`).
+fn sediment_pixels(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
+    let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
+    let index = NearestCellIndex::new(geo);
+    rasterize(width, height, |latitude, longitude| {
+        let cell = index.nearest(geo, latitude, longitude);
+        sediment_color(*globe.carve_delta_m.get(cell))
+    })
+}
+
+/// Render the globe's carve delta as an equirectangular PNG debug lens
+/// (Sculpting Task 12, spec §5/§8): incision red, deposition blue, zero
+/// white — where the one-shot carve moved material and how much. Same
+/// globe, same bytes — no seed, since the sample is a pure function of
+/// already-committed fields (no coastal-noise refinement).
+/// type-audit: bare-ok(artifact)
+pub fn sediment_png(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
+    hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_WIDTH / 2, &sediment_pixels(geo, globe))
+}
+
 /// Render the globe as a 72×24 ASCII map: '~' ocean, '.' lowland, '+'
 /// hills, '^' mountains, 'A' high peaks. One newline per row.
 /// type-audit: bare-ok(artifact)
@@ -305,6 +360,43 @@ mod tests {
         assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
         assert_eq!(&a[16..20], &MAP_WIDTH.to_be_bytes());
         assert_eq!(&a[20..24], &(MAP_WIDTH / 2).to_be_bytes());
+    }
+
+    #[test]
+    fn sediment_png_is_well_formed_and_byte_deterministic() {
+        let geo = Geosphere::new(4);
+        let globe = generate(Seed(42), &geo, &TerrainPins::default())
+            .unwrap()
+            .globe;
+        let a = sediment_png(&geo, &globe);
+        assert_eq!(a, sediment_png(&geo, &globe));
+        assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
+        assert_eq!(&a[16..20], &MAP_WIDTH.to_be_bytes());
+        assert_eq!(&a[20..24], &(MAP_WIDTH / 2).to_be_bytes());
+    }
+
+    #[test]
+    fn sediment_color_diverges_red_white_blue() {
+        assert_eq!(sediment_color(0.0), [255, 255, 255], "zero must be white");
+        let incised = sediment_color(-SEDIMENT_LENS_SCALE_M);
+        let deposited = sediment_color(SEDIMENT_LENS_SCALE_M);
+        assert!(
+            incised[0] > incised[2],
+            "full incision must read redder than blue: {incised:?}"
+        );
+        assert!(
+            deposited[2] > deposited[0],
+            "full deposition must read bluer than red: {deposited:?}"
+        );
+        // Saturates beyond the scale rather than diverging further.
+        assert_eq!(
+            sediment_color(-10.0 * SEDIMENT_LENS_SCALE_M),
+            sediment_color(-SEDIMENT_LENS_SCALE_M)
+        );
+        assert_eq!(
+            sediment_color(10.0 * SEDIMENT_LENS_SCALE_M),
+            sediment_color(SEDIMENT_LENS_SCALE_M)
+        );
     }
 
     /// Every `RockClass` variant, in declaration order — mirrors

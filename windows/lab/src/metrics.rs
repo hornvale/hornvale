@@ -9,7 +9,9 @@ use hornvale_language::{
     GapReason, LexEntry, Manner, MorphOptions, NameKind, Namer, Phonology, Segment, romanize,
 };
 use hornvale_religion::beliefs_of;
-use hornvale_terrain::{GlobeSummary, Hydro, RockClass, SoilOrder, fertility};
+use hornvale_terrain::{
+    CarveParams, GlobeSummary, Hydro, MarginPolarity, RockClass, SoilOrder, fertility,
+};
 use hornvale_worldgen::{
     BuildDepth, BuildError, Sky, SkyChoice, build_world_to, build_world_with_roster, climate_of,
     flagship_of, language_of_in, observed_phenomena_as_in, rock_class_name, sky_of, soil_of,
@@ -1974,6 +1976,97 @@ pub fn registry() -> Vec<Metric> {
                 )
             }),
         },
+        // --- Sculpting (Task 12): the carve's own census columns — shelf
+        // width by margin polarity, sediment volume, waterfall/delta
+        // counts, and the A→B→C escalation diagnostic (spec §8). ---
+        Metric {
+            name: "shelf-width-passive-median",
+            doc: "Median shelf width over PASSIVE-margin coast land cells \
+                  (Passive/Interior/Oceanic, mirroring the carve's own \
+                  wedge-reach margin split): hops seaward from the coast \
+                  cell, each hop to the deepest ocean neighbor, until \
+                  depth first exceeds twice the sediment wedge's freeboard \
+                  cap or 8 hops are spent — spec §8's passive/active shelf \
+                  asymmetry battery (passive median should exceed active); \
+                  Absent if the world has no passive-margin coast",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0],
+            },
+            extract: Extractor::Terrain(|v: &TerrainView| shelf_width_median(v, false)),
+        },
+        Metric {
+            name: "shelf-width-active-median",
+            doc: "Median shelf width over ACTIVE-margin coast land cells: \
+                  hops seaward from the coast cell, each hop to the \
+                  deepest ocean neighbor, until depth first exceeds twice \
+                  the sediment wedge's freeboard cap or 8 hops are spent — \
+                  spec §8's passive/active shelf asymmetry battery (active \
+                  median should be narrower than passive); Absent if the \
+                  world has no active-margin coast",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0],
+            },
+            extract: Extractor::Terrain(|v: &TerrainView| shelf_width_median(v, true)),
+        },
+        Metric {
+            name: "sediment-volume",
+            doc: "Total deposited sediment volume proxy: Σ sediment \
+                  thickness (meters) over every cell, one cell-area unit \
+                  per cell — the carve's own volume-proxy convention (spec \
+                  §5): repose's receiver-side gains, routing's floodplain/ \
+                  playa deposit, the marine wedge/delta fill, and atoll \
+                  cap material, all summed",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1e5, 2e5, 4e5, 8e5, 1.6e6, 3.2e6],
+            },
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let globe = v.terrain.globe();
+                MetricValue::Number(globe.sediment_thickness.iter().map(|(_, s)| *s).sum())
+            }),
+        },
+        Metric {
+            name: "waterfall-count",
+            doc: "Count of waterfall (knickpoint) sites the carve found: \
+                  land cells where a high-drainage watercourse crosses a \
+                  sharp PRE-carve induration step (spec §5's derived point \
+                  observations)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
+            },
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                MetricValue::Number(v.terrain.waterfalls().len() as f64)
+            }),
+        },
+        Metric {
+            name: "delta-count",
+            doc: "Count of cells a river-mouth delta lobe raised above sea \
+                  level (spec §5's top-K discrete deltas) — a cell count, \
+                  not a mouth count: each of the top-K mouths can raise the \
+                  mouth cell itself plus up to two adjacent hop-1 ocean \
+                  cells",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 1.0, 2.0, 4.0, 8.0, 16.0],
+            },
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                MetricValue::Number(v.terrain.deltas().len() as f64)
+            }),
+        },
+        Metric {
+            name: "rerouted-flow-fraction",
+            doc: "The A→B→C escalation diagnostic (spec §8, preregistered, \
+                  a permanent census column): the flux-weighted fraction of \
+                  the world's 20 largest pre-carve rivers' mainstem cells \
+                  whose downhill target changed across the carve. \
+                  Thresholds: < 0.10 engine A self-consistent; 0.10-0.30 \
+                  flag, Nathan decides; > 0.30 A rejected as sole engine, \
+                  engine B enters evaluation",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.05, 0.1, 0.2, 0.3, 0.5],
+            },
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                MetricValue::Number(v.terrain.globe().carve_reroute_fraction)
+            }),
+        },
         // --- The Branches (Task 10): the family battery, seed-swept —
         // regularity, monophyly, clean outgroup, inventory closure,
         // divergence magnitude/reality, and merger-induced homophony over
@@ -2321,6 +2414,92 @@ pub fn registry() -> Vec<Metric> {
             extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "kobold")),
         },
     ]
+}
+
+/// The median of `values` (sorted in place by `total_cmp`); `None` when
+/// empty. An even-length input averages its two middle values.
+fn median(values: &mut [f64]) -> Option<f64> {
+    if values.is_empty() {
+        return None;
+    }
+    values.sort_by(f64::total_cmp);
+    let n = values.len();
+    Some(if n % 2 == 1 {
+        values[n / 2]
+    } else {
+        (values[n / 2 - 1] + values[n / 2]) / 2.0
+    })
+}
+
+/// Shelf width (Sculpting Task 12, spec §8) from a single coast land cell:
+/// hops seaward, each hop stepping to the current cell's deepest ocean
+/// neighbor (`CellId`-ascending tiebreak among equally deep candidates),
+/// until a stepped-to cell's depth first exceeds `cap_depth_m`, or 8 hops
+/// are spent. A coast cell always has at least one ocean neighbor by
+/// definition; a dead end thereafter (an ocean cell with no further ocean
+/// neighbor — a landlocked single-cell inlet) returns however many hops
+/// were completed.
+fn shelf_width_hops(v: &TerrainView, coast: CellId, cap_depth_m: f64) -> u32 {
+    let geo = v.terrain.geosphere();
+    let mut cur = coast;
+    for hop in 1..=8u32 {
+        let mut candidates: Vec<CellId> = geo
+            .neighbors(cur)
+            .iter()
+            .copied()
+            .filter(|&n| v.terrain.is_ocean(n))
+            .collect();
+        if candidates.is_empty() {
+            return hop - 1;
+        }
+        candidates.sort_by(|a, b| {
+            v.terrain
+                .elevation_at(*a)
+                .get()
+                .total_cmp(&v.terrain.elevation_at(*b).get())
+                .then(a.0.cmp(&b.0))
+        });
+        let next = candidates[0];
+        let depth = v.terrain.sea_level().get() - v.terrain.elevation_at(next).get();
+        if depth > cap_depth_m {
+            return hop;
+        }
+        cur = next;
+    }
+    8
+}
+
+/// Median shelf width (`shelf_width_hops`) over every coast land cell
+/// (a land cell with at least one ocean neighbor) whose own `MarginPolarity`
+/// is Active (`active_only == true`) or not (`Passive`/`Interior`/
+/// `Oceanic`, mirroring `deposit_wedge`'s own margin split, `active_only ==
+/// false`). The cap depth is twice `CarveParams::wedge_freeboard_m` — the
+/// carve's own physical shelf cap, doubled so a coast sitting right at the
+/// cap still registers a nonzero width; tracks any future retuning of
+/// `wedge_freeboard_m` automatically rather than duplicating the constant.
+/// `Absent` when the requested margin group has no coast cells at all.
+fn shelf_width_median(v: &TerrainView, active_only: bool) -> MetricValue {
+    let geo = v.terrain.geosphere();
+    let cap_depth_m = 2.0 * CarveParams::default().wedge_freeboard_m;
+    let mut widths: Vec<f64> = Vec::new();
+    for cell in geo.cells() {
+        if v.terrain.is_ocean(cell) {
+            continue;
+        }
+        let is_coast = geo.neighbors(cell).iter().any(|&n| v.terrain.is_ocean(n));
+        if !is_coast {
+            continue;
+        }
+        let is_active = matches!(v.terrain.material_at(cell).margin, MarginPolarity::Active);
+        if is_active != active_only {
+            continue;
+        }
+        widths.push(f64::from(shelf_width_hops(v, cell, cap_depth_m)));
+    }
+    match median(&mut widths) {
+        Some(m) => MetricValue::Number(m),
+        None => MetricValue::Absent,
+    }
 }
 
 /// A flagship pantheon's structural signature — every lexical channel
@@ -3674,8 +3853,26 @@ mod tests {
         // were never built), +3 for night-sky stage 3 (Task 10: figure-count,
         // largest-figure-members, ecliptic-figure-count), +5 for The Ground
         // (Task 7: dominant-rock, karst-fraction, aquifer-fraction,
-        // dominant-soil-order, fertile-land-fraction).
-        assert_eq!(registry().len(), 122);
+        // dominant-soil-order, fertile-land-fraction), +6 for Sculpting
+        // (Task 12: shelf-width-passive-median, shelf-width-active-median,
+        // sediment-volume, waterfall-count, delta-count,
+        // rerouted-flow-fraction).
+        assert_eq!(registry().len(), 128);
+    }
+
+    #[test]
+    fn sculpting_metrics_are_registered() {
+        let list = render_metric_list();
+        for name in [
+            "shelf-width-passive-median",
+            "shelf-width-active-median",
+            "sediment-volume",
+            "waterfall-count",
+            "delta-count",
+            "rerouted-flow-fraction",
+        ] {
+            assert!(list.contains(name), "{name} missing from the metric list");
+        }
     }
 
     #[test]
@@ -3960,6 +4157,12 @@ mod tests {
             "largest-continent-share",
             "plate-size-gini",
             "landmass-count",
+            "shelf-width-passive-median",
+            "shelf-width-active-median",
+            "sediment-volume",
+            "waterfall-count",
+            "delta-count",
+            "rerouted-flow-fraction",
         ];
         let registry = registry();
         let a =

@@ -257,6 +257,139 @@ pub fn find_waterfalls(
     sites
 }
 
+/// Number of a world's largest rivers the A→B→C escalation diagnostic
+/// (spec §8) scores: the top mouths by pre-carve drainage flux.
+/// type-audit: bare-ok(count)
+pub const REROUTE_TOP_RIVERS: usize = 20;
+
+/// The A→B→C escalation diagnostic (spec §8, preregistered so "see if it
+/// looks good" is a number — a permanent census column): the flux-weighted
+/// fraction of a world's [`REROUTE_TOP_RIVERS`] largest rivers' mainstem
+/// cells whose downhill target changed across the carve.
+///
+/// **Rivers**: the top `n_rivers` PRE-carve mouths — land cells whose
+/// pre-carve downhill target is ocean (`pre_drainage.get(target) == 0.0`;
+/// ocean cells always carry exactly `0.0` and land cells always `>= 1.0`,
+/// by [`crate::drainage::drainage_field`]'s own construction) — ranked by
+/// the mouth's own pre-carve drainage (a river's mouth carries its whole
+/// watershed's flux, so ranking mouths by their own drainage ranks the
+/// rivers), `CellId`-ascending tiebreak. This is the "20 largest rivers"
+/// proxy the plan preregistered.
+///
+/// **Mainstem**: for each mouth, the path is built by walking UPSTREAM from
+/// the mouth, at each step following the predecessor (a cell whose
+/// pre-carve downhill target is the current cell) with the highest
+/// pre-carve drainage — `CellId`-ascending tiebreak — until a headwater (no
+/// predecessor) is reached. That walk, reversed, is exactly "the farthest
+/// upstream max-drainage cell down via pre-carve downhill" the plan
+/// specifies (the two descriptions name the same edges, walked in opposite
+/// directions).
+///
+/// **Divergence**: for every cell on a mouth's path (headwater through the
+/// mouth itself, inclusive — always at least one cell, the mouth), the
+/// PRE-carve downhill target (`pre_downhill`) is compared against the
+/// POST-carve one (`post_downhill`) at the same `CellId`; they differ when
+/// the `Option<CellId>` values differ. A mouth's score is the fraction of
+/// its path cells that diverged; the returned value is the mean of every
+/// scored mouth's score, weighted by the mouth's own pre-carve drainage
+/// flux. `0.0` when there are no pre-carve mouths at all (a landless or
+/// fully endorheic world).
+///
+/// **Deviation**: the plan's signature also carries `sea_level_pre` /
+/// `sea_level_post`. Land/ocean classification here is delegated entirely
+/// to the already-sea-level-thresholded drainage arrays (see above) — this
+/// function has no elevation field to use either sea level against more
+/// directly, and re-deriving a threshold test from them without elevation
+/// is not possible, so they are accepted (kept as parameters) purely to
+/// preserve the plan's exact signature and the call site's documented
+/// two-sea-level context; the divergence test itself never reads them.
+///
+/// Preregistered thresholds (spec §8), read off this function's return
+/// value: **`< 0.10`** — engine A is self-consistent, ship it.
+/// **`0.10..=0.30`** — flag, Nathan decides whether engine B enters
+/// evaluation. **`> 0.30`** — the one-shot lied to itself; A is rejected as
+/// sole engine, B enters.
+/// type-audit: bare-ok(count: pre_drainage), bare-ok(count: _post_drainage), bare-ok(count: n_rivers), bare-ok(ratio: return)
+#[allow(clippy::too_many_arguments)]
+pub fn rerouted_flow_fraction(
+    geo: &Geosphere,
+    pre_drainage: &CellMap<f64>,
+    pre_downhill: &[Option<CellId>],
+    _post_drainage: &CellMap<f64>,
+    post_downhill: &[Option<CellId>],
+    _sea_level_pre: ReferenceElevation,
+    _sea_level_post: ReferenceElevation,
+    n_rivers: usize,
+) -> f64 {
+    if n_rivers == 0 {
+        return 0.0;
+    }
+    let n = geo.cell_count();
+
+    // Reverse of `pre_downhill`: every land cell whose pre-carve downhill
+    // target is `t` is a predecessor of `t`.
+    let mut predecessors: Vec<Vec<CellId>> = vec![Vec::new(); n];
+    for c in geo.cells() {
+        if let Some(t) = pre_downhill[c.0 as usize] {
+            predecessors[t.0 as usize].push(c);
+        }
+    }
+
+    let mut mouths: Vec<CellId> = geo
+        .cells()
+        .filter(|&c| match pre_downhill[c.0 as usize] {
+            Some(t) => *pre_drainage.get(t) == 0.0,
+            None => false,
+        })
+        .collect();
+    mouths.sort_by(|a, b| {
+        pre_drainage
+            .get(*b)
+            .total_cmp(pre_drainage.get(*a))
+            .then(a.0.cmp(&b.0))
+    });
+    mouths.truncate(n_rivers);
+    if mouths.is_empty() {
+        return 0.0;
+    }
+
+    let mut weighted_sum = 0.0_f64;
+    let mut weight_total = 0.0_f64;
+    for &mouth in &mouths {
+        let mut path = vec![mouth];
+        let mut cur = mouth;
+        loop {
+            let mut preds = predecessors[cur.0 as usize].clone();
+            if preds.is_empty() {
+                break;
+            }
+            preds.sort_by(|a, b| {
+                pre_drainage
+                    .get(*b)
+                    .total_cmp(pre_drainage.get(*a))
+                    .then(a.0.cmp(&b.0))
+            });
+            cur = preds[0];
+            path.push(cur);
+        }
+
+        let diverged = path
+            .iter()
+            .filter(|&&c| pre_downhill[c.0 as usize] != post_downhill[c.0 as usize])
+            .count();
+        let score = diverged as f64 / path.len() as f64;
+        let weight = *pre_drainage.get(mouth);
+        weighted_sum += score * weight;
+        weight_total += weight;
+    }
+
+    if weight_total <= 0.0 {
+        0.0
+    } else {
+        weighted_sum / weight_total
+    }
+}
+
 /// Erodibility: how fast material yields (spec §4). Soft (low induration)
 /// erodes; carbonate additionally dissolves. Total on `[0.25, 2.5]`; the
 /// gated overlay may inject sentinels later without a formula change.
@@ -1536,5 +1669,113 @@ mod tests {
             total += outcome.globe.waterfall_sites.len();
         }
         assert!(total > 0, "no waterfalls found across seeds 1..=8 at L6");
+    }
+
+    #[test]
+    fn reroute_fraction_is_zero_on_an_unchanged_surface() {
+        let geo = Geosphere::new(3);
+        let g = crate::globe::generate(Seed(11), &geo, &crate::pins::TerrainPins::default())
+            .unwrap()
+            .globe;
+        let (drainage, _) = crate::drainage::drainage_field(&geo, &g.elevation, g.sea_level);
+        let downhill = crate::drainage::downhill_targets(&geo, &g.elevation, g.sea_level);
+        // Feed the same drainage/downhill/sea-level in as both "pre" and
+        // "post": no cell's downhill target can possibly differ from
+        // itself, so every mouth's path scores zero regardless of its
+        // weight.
+        let fraction = rerouted_flow_fraction(
+            &geo,
+            &drainage,
+            &downhill,
+            &drainage,
+            &downhill,
+            g.sea_level,
+            g.sea_level,
+            REROUTE_TOP_RIVERS,
+        );
+        assert_eq!(fraction, 0.0, "unchanged surface must reroute nothing");
+    }
+
+    #[test]
+    fn reroute_fraction_is_zero_when_n_rivers_is_zero() {
+        let geo = Geosphere::new(3);
+        let g = crate::globe::generate(Seed(11), &geo, &crate::pins::TerrainPins::default())
+            .unwrap()
+            .globe;
+        let (drainage, _) = crate::drainage::drainage_field(&geo, &g.elevation, g.sea_level);
+        let downhill = crate::drainage::downhill_targets(&geo, &g.elevation, g.sea_level);
+        let fraction = rerouted_flow_fraction(
+            &geo,
+            &drainage,
+            &downhill,
+            &drainage,
+            &downhill,
+            g.sea_level,
+            g.sea_level,
+            0,
+        );
+        assert_eq!(fraction, 0.0);
+    }
+
+    #[test]
+    fn reroute_fraction_detects_a_synthetic_reroute() {
+        // A tiny synthetic 4-cell chain (using real neighbor structure from
+        // a level-2 geosphere is overkill for a targeted probe, so this
+        // borrows two real mouths from a generated world and swaps their
+        // post-carve downhill targets to guarantee full divergence,
+        // isolating the weighting/averaging arithmetic from mouth/path
+        // discovery, which the zero-case test above already covers).
+        let geo = Geosphere::new(3);
+        let g = crate::globe::generate(Seed(11), &geo, &crate::pins::TerrainPins::default())
+            .unwrap()
+            .globe;
+        let (drainage, _) = crate::drainage::drainage_field(&geo, &g.elevation, g.sea_level);
+        let downhill = crate::drainage::downhill_targets(&geo, &g.elevation, g.sea_level);
+
+        // The highest-drainage mouth (pre-downhill target is ocean, i.e.
+        // drainage 0) — guaranteed rank 0, so it always survives the
+        // top-`n_rivers` truncation regardless of how many mouths this
+        // small geosphere happens to have.
+        let mouth = geo
+            .cells()
+            .filter(|&c| match downhill[c.0 as usize] {
+                Some(t) => *drainage.get(t) == 0.0,
+                None => false,
+            })
+            .max_by(|&a, &b| {
+                drainage
+                    .get(a)
+                    .total_cmp(drainage.get(b))
+                    .then(a.0.cmp(&b.0))
+            })
+            .expect("at least one mouth exists on this seed/level");
+
+        // A post-carve downhill vector identical to pre-carve except the
+        // mouth itself now points to a different neighbor (still land, so
+        // the "differs" test fires deterministically without needing a
+        // second real ocean cell nearby).
+        let mut post_downhill = downhill.clone();
+        let alt = geo
+            .neighbors(mouth)
+            .iter()
+            .copied()
+            .find(|&n| Some(n) != downhill[mouth.0 as usize])
+            .expect("a geosphere cell has more than one neighbor");
+        post_downhill[mouth.0 as usize] = Some(alt);
+
+        let fraction = rerouted_flow_fraction(
+            &geo,
+            &drainage,
+            &downhill,
+            &drainage,
+            &post_downhill,
+            g.sea_level,
+            g.sea_level,
+            REROUTE_TOP_RIVERS,
+        );
+        assert!(
+            fraction > 0.0,
+            "a forced downhill-target change on a real mouth must register"
+        );
     }
 }

@@ -12,7 +12,7 @@ use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed, math
 
 /// A generated tectonic globe over the shared Geosphere. Recomputed from
 /// the seed on demand; never serialized.
-/// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust), bare-ok(ratio: crust_age), bare-ok(count: boundary_distance), bare-ok(ratio: induration), pending(wave-2: sediment_thickness), pending(wave-2: carve_delta_m)
+/// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust), bare-ok(ratio: crust_age), bare-ok(count: boundary_distance), bare-ok(ratio: induration), pending(wave-2: sediment_thickness), pending(wave-2: carve_delta_m), bare-ok(ratio: carve_reroute_fraction)
 #[derive(Debug, Clone, PartialEq)]
 pub struct TectonicGlobe {
     /// Plate index per cell (an index into `plates`).
@@ -106,6 +106,18 @@ pub struct TectonicGlobe {
     /// PRE-carve induration step. Sorted ascending `CellId`. Recomputed at
     /// genesis, never serialized.
     pub waterfall_sites: Vec<CellId>,
+    /// The A→B→C escalation diagnostic (Sculpting Task 12, spec §8,
+    /// preregistered — a permanent census column): the flux-weighted
+    /// fraction of this world's [`crate::carve::REROUTE_TOP_RIVERS`]
+    /// largest pre-carve rivers' mainstem cells whose downhill target
+    /// changed across the carve (see
+    /// [`crate::carve::rerouted_flow_fraction`]). Diagnostic-only —
+    /// recomputed at genesis, never serialized. Preregistered thresholds:
+    /// **`< 0.10`** engine A is self-consistent, ship it; **`0.10..=0.30`**
+    /// flag, Nathan decides whether engine B enters evaluation; **`> 0.30`**
+    /// the one-shot lied to itself, A is rejected as sole engine and B
+    /// enters.
+    pub carve_reroute_fraction: f64,
     /// The material buffer per cell (The Ground, spec §2). Recomputed at
     /// genesis, never serialized.
     pub lithology: CellMap<crate::lithology::MaterialBuffer>,
@@ -264,6 +276,26 @@ pub fn generate(
     // globe retains for every consumer.
     let (drainage, endorheic) =
         crate::drainage::drainage_field(geosphere, &elevation_map, sea_level);
+    // The A→B→C escalation diagnostic (Sculpting Task 12, spec §8): both
+    // drainage trees are already in scope here, so the fraction is folded
+    // in now and only the number retained (`carve_reroute_fraction`), not a
+    // second drainage `CellMap` — cheaper, and the globe never needs the
+    // pre-carve tree again once this line runs. `downhill_targets` is cheap
+    // relative to `drainage_field`, which the line above already paid for
+    // to get `drainage`/`endorheic`; calling it once more on the final
+    // surface is simpler than plumbing the internal downhill vector out of
+    // `drainage_field` itself.
+    let post_downhill = crate::drainage::downhill_targets(geosphere, &elevation_map, sea_level);
+    let carve_reroute_fraction = crate::carve::rerouted_flow_fraction(
+        geosphere,
+        &drainage_pre,
+        &downhill,
+        &drainage,
+        &post_downhill,
+        sea_pre,
+        sea_level,
+        crate::carve::REROUTE_TOP_RIVERS,
+    );
 
     let mut populated = vec![false; plate_list.len()];
     for (_, plate) in plate_of.iter() {
@@ -318,6 +350,7 @@ pub fn generate(
         delta_cells: cd.delta_cells,
         atoll_cells: cd.atoll_cells,
         waterfall_sites: cd.waterfall_sites,
+        carve_reroute_fraction,
         lithology: placeholder_lithology,
         lithology_seed,
     };
