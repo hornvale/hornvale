@@ -13,9 +13,15 @@ use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
 /// cell with no lower neighbor is a local minimum (a sink). `None` = ocean
 /// or local minimum (no outflow). The single owner of this computation:
 /// [`drainage_field`] and the carve's sediment router (`carve::route_sediment`)
-/// both consume it rather than re-deriving it.
+/// both consume it rather than re-deriving it. `pub` (widened from
+/// `pub(crate)`, Sculpting Task 13): the property batteries reconstruct
+/// `globe::generate`'s pre-carve pipeline from outside the crate (mirroring
+/// `generate_elevation`/`derive_sea_level`, already `pub` for the same
+/// reason) to recover the full `CarveDelta` (mass-balance totals)
+/// `TectonicGlobe` does not retain, rather than re-deriving this same
+/// single-owner logic a second time in a test.
 /// type-audit: bare-ok(count: return)
-pub(crate) fn downhill_targets(
+pub fn downhill_targets(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,

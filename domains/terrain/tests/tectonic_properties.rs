@@ -77,6 +77,88 @@ fn pin_isolation_holds_at_the_globe_level() {
 }
 
 #[test]
+fn pin_isolation_extends_to_new_streams() {
+    // Sculpting Task 13: terranes (`terrain/terranes`) and microcontinents
+    // (`terrain/microcontinents`) are new drawn sets with their own stream
+    // labels (spec §6). Neither is itself pinnable (no CLI knob draws
+    // them directly), but each is drawn from the SAME terrain-seed-derived
+    // stream regardless of whether the four upstream pins that condition
+    // the crust field (plates, ocean-fraction, supercontinent, continents)
+    // are set — so re-affirming any of those four must leave terranes and
+    // microcontinents byte-identical to the unpinned path, not merely the
+    // whole globe (which `pin_isolation_holds_at_the_globe_level` above
+    // already asserts implicitly): the house pin-isolation pattern,
+    // mirrored exactly, but naming the two new sets explicitly so a future
+    // terrane-specific pin cannot silently start reading a different
+    // stream position without a test noticing.
+    let geo = Geosphere::new(4);
+    let default = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+
+    let plates_pin = TerrainPins {
+        plates: Some(default.globe.plates.len() as u32),
+        ..TerrainPins::default()
+    };
+    let pinned = generate(Seed(42), &geo, &plates_pin).unwrap();
+    assert_eq!(
+        pinned.globe.terranes, default.globe.terranes,
+        "plates pin perturbed terranes"
+    );
+    assert_eq!(
+        pinned.globe.microcontinents, default.globe.microcontinents,
+        "plates pin perturbed microcontinents"
+    );
+
+    let drawn_ocean = 0.5
+        + 0.25
+            * Seed(42)
+                .derive(streams::ROOT)
+                .derive(streams::OCEAN_FRACTION)
+                .stream()
+                .next_f64();
+    let ocean_pin = TerrainPins {
+        ocean_fraction: Some(drawn_ocean),
+        ..TerrainPins::default()
+    };
+    let pinned = generate(Seed(42), &geo, &ocean_pin).unwrap();
+    assert_eq!(
+        pinned.globe.terranes, default.globe.terranes,
+        "ocean-fraction pin perturbed terranes"
+    );
+    assert_eq!(
+        pinned.globe.microcontinents, default.globe.microcontinents,
+        "ocean-fraction pin perturbed microcontinents"
+    );
+
+    let super_pin = TerrainPins {
+        supercontinent: Some(false),
+        ..TerrainPins::default()
+    };
+    let pinned = generate(Seed(42), &geo, &super_pin).unwrap();
+    assert_eq!(
+        pinned.globe.terranes, default.globe.terranes,
+        "supercontinent pin perturbed terranes"
+    );
+    assert_eq!(
+        pinned.globe.microcontinents, default.globe.microcontinents,
+        "supercontinent pin perturbed microcontinents"
+    );
+
+    let continents_pin = TerrainPins {
+        continents: Some(default.globe.cratons.len() as u32),
+        ..TerrainPins::default()
+    };
+    let pinned = generate(Seed(42), &geo, &continents_pin).unwrap();
+    assert_eq!(
+        pinned.globe.terranes, default.globe.terranes,
+        "continents pin perturbed terranes"
+    );
+    assert_eq!(
+        pinned.globe.microcontinents, default.globe.microcontinents,
+        "continents pin perturbed microcontinents"
+    );
+}
+
+#[test]
 fn ocean_fraction_pin_conditions_cratons_but_not_the_plate_skeleton() {
     // Task 9 iteration 3': the ocean-fraction target now feeds the
     // craton-area budget too (see `hornvale_terrain::crust::draw_cratons`'s
