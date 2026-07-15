@@ -50,13 +50,22 @@
 //!    one settlement name. Pinned here as an invariant of the shipped
 //!    world, not merely of the algorithm's unit tests.
 
+use std::collections::{BTreeMap, BTreeSet};
+
 use hornvale_kernel::{Seed, Value, World};
 use hornvale_language::LexEntry;
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
 fn default_generated_seed_42() -> World {
+    generated_world_at(42)
+}
+
+/// Same pins as [`default_generated_seed_42`], parameterized by seed — the
+/// readout battery walks many seeds to measure the fix's shape, not just
+/// pin it at 42.
+fn generated_world_at(seed: u64) -> World {
     build_world(
-        Seed(42),
+        Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
         SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
@@ -274,4 +283,133 @@ fn every_goblinoid_words_root_is_in_its_own_daughters_inventory() {
         "seed 42 should mint at least one Root lexicon entry across the \
          goblinoid family"
     );
+}
+
+/// (8) The Speakable's exit regression (spec §8.1): before the attested
+/// tier, phonotactic repair collapsed every glossed word for a species to
+/// one fallback syllable, so EVERY bugbear deity at seed 42 was named
+/// "Bvaash" (goblin "Neb", hobgoblin "Fee") regardless of what its belief
+/// glossed. Pinned by mechanism, never by exact name string: within one
+/// species' pantheon, two beliefs glossing DIFFERENT things must never
+/// carry the SAME deity name. Two beliefs sharing one gloss may still
+/// legitimately share a name (same word, same rendering) — only
+/// cross-gloss collisions are the regression this probe forbids.
+#[test]
+fn deities_with_distinct_glosses_carry_distinct_names_at_seed_42() {
+    let world = default_generated_seed_42();
+    let mut checked = 0u32;
+    for species in ["bugbear", "goblin", "hobgoblin", "kobold"] {
+        let Some(village) = hornvale_worldgen::flagship_of(&world, species) else {
+            continue;
+        };
+        let beliefs = hornvale_religion::beliefs_held_by(&world, village.id);
+
+        // gloss -> set of deity names carrying it (skip empty-gloss beliefs).
+        let mut by_gloss: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+        for belief in &beliefs {
+            let Some(gloss) = world
+                .ledger
+                .text_of(belief.id, hornvale_worldgen::NAME_GLOSS)
+            else {
+                continue;
+            };
+            if gloss.is_empty() {
+                continue;
+            }
+            by_gloss
+                .entry(gloss.to_string())
+                .or_default()
+                .insert(belief.deity.clone());
+        }
+
+        let glosses: Vec<&String> = by_gloss.keys().collect();
+        for i in 0..glosses.len() {
+            for j in (i + 1)..glosses.len() {
+                let a = glosses[i];
+                let b = glosses[j];
+                let inter: Vec<&String> = by_gloss[a].intersection(&by_gloss[b]).collect();
+                assert!(
+                    inter.is_empty(),
+                    "{species}: glosses {a:?} and {b:?} share deity name(s) \
+                     {inter:?} — the pre-fix all-collapse-to-one-fallback \
+                     regression"
+                );
+                checked += 1;
+            }
+        }
+    }
+    assert!(
+        checked > 0,
+        "no cross-gloss pairs checked — probe is vacuous"
+    );
+}
+
+/// The Bvaash fix, pinned by mechanism not by string: some bugbear deity
+/// glossing exactly "shadow" (a single site concept, not a compound gloss
+/// like "sun-shadow") carries the bugbear language's own shadow word
+/// audibly inside its committed name — repair no longer discards the
+/// glossed word's identity down to a fallback syllable.
+#[test]
+fn the_shadow_gods_name_is_audibly_the_shadow_word_at_seed_42() {
+    let world = default_generated_seed_42();
+
+    let lex = hornvale_worldgen::lexicon_of(&world, "bugbear")
+        .unwrap_or_else(|e| panic!("lexicon_of(bugbear) failed: {e:?}"));
+    let shadow_word = match lex.entry("shadow") {
+        Some(LexEntry::Root { views, .. }) => views.roman.to_lowercase(),
+        other => panic!("bugbear lexicon must root the \"shadow\" concept, got {other:?}"),
+    };
+
+    let village = hornvale_worldgen::flagship_of(&world, "bugbear")
+        .expect("bugbear must place a flagship settlement at seed 42");
+    let shadow_gods: Vec<String> = hornvale_religion::beliefs_held_by(&world, village.id)
+        .into_iter()
+        .filter(|belief| {
+            world
+                .ledger
+                .text_of(belief.id, hornvale_worldgen::NAME_GLOSS)
+                == Some("shadow")
+        })
+        .map(|belief| belief.deity)
+        .collect();
+
+    assert!(
+        !shadow_gods.is_empty(),
+        "seed 42 must carry at least one bugbear belief glossing exactly \
+         \"shadow\" — probe is vacuous otherwise"
+    );
+    assert!(
+        shadow_gods
+            .iter()
+            .any(|name| name.to_lowercase().contains(&shadow_word)),
+        "a bugbear deity glossing exactly \"shadow\" must carry the bugbear \
+         shadow word {shadow_word:?} audibly in its committed name; got \
+         {shadow_gods:?}"
+    );
+}
+
+/// Readout, not a regression guard: per species over seeds 0..20, prints
+/// `{seed} {species}: {distinct-deity-name-count}/{deity-count}`. (Trimmed
+/// from the brief's 50 seeds to 20 — 50 live world builds ran ~14.5
+/// minutes, over the brief's ~10-minute ceiling; 20 is representative and
+/// fast enough to re-run.) Pre-fix, every collapsed species reads 1/N
+/// regardless of N; the post-fix table (quoted in the chronicle entry) is
+/// this campaign's measured evidence that distinct glosses now yield
+/// distinct names in the general case, not merely at seed 42. Ignored —
+/// nextest must never run it; invoke manually with `--ignored --nocapture`.
+#[test]
+#[ignore = "readout: chronicle evidence, run manually with --nocapture"]
+fn deity_name_distinctness_readout() {
+    for seed in 0..20u64 {
+        let world = generated_world_at(seed);
+        for species in ["bugbear", "goblin", "hobgoblin", "kobold"] {
+            let Some(village) = hornvale_worldgen::flagship_of(&world, species) else {
+                continue;
+            };
+            let beliefs = hornvale_religion::beliefs_held_by(&world, village.id);
+            let total = beliefs.len();
+            let distinct: BTreeSet<String> = beliefs.into_iter().map(|b| b.deity).collect();
+            println!("{seed} {species}: {}/{total}", distinct.len());
+        }
+    }
 }

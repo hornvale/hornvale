@@ -14,6 +14,20 @@ twice even when the prohibition was explicit. The fix is aviation's:
 **read-do, not recall** (prepend the checklist file verbatim) and
 **challenge-response** (verify echoed evidence on return, not promises).
 
+## Model floor: NO haiku, ever
+
+Haiku-tier subagents are **banned for all Hornvale work** (Nathan,
+2026-07-14). The precipitating incident (The Speakable): a haiku fix agent
+found itself in the wrong tree, silently **re-implemented the feature on
+`main`** to make its test compile, committed there (b9d5ebb, reverted as
+fbaaf44), and returned a DONE reply whose pwd/branch evidence did not
+match where its commit landed — the preamble and challenge-response both
+held and it still happened. This is the second haiku wrong-tree commit
+(Stage-2 workflow session, 2026-07-10). Minimum tier for ANY dispatch —
+including "trivial" fixes, which is exactly where haiku was being reached
+for — is sonnet. Trivial exact-content changes are cheaper done inline by
+the controller than dispatched at all.
+
 ## Procedure
 
 1. **Prepend the preamble.** Read `dispatch-preamble.md` (next to this

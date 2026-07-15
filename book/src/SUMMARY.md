@@ -81,6 +81,7 @@
 - [Eclipse Seasons](./chronicle/eclipse-seasons.md)
 - [The Pace of Life](./chronicle/bio2-life-history.md)
 - [The Niche](./chronicle/the-niche.md)
+- [The Speakable](./chronicle/the-speakable.md)
 
 # The Gallery
 

@@ -281,11 +281,17 @@ impl<'a> Namer<'a> {
         // conformance, so the compound is adapted to the synchronic
         // phonotactics first (see [`repair_phonotactics`] — the spec §8
         // structural invariant "every name well-formed for its language").
-        // The honorific prefix below is a freshly drawn template syllable —
-        // conformant by construction — so prefixing it onto a repaired word
-        // keeps the whole name conformant. Repair changes sound, never
-        // meaning: the gloss is computed from `chosen` alone.
-        let mut segments = repair_phonotactics(segments, self.ph);
+        // The attested tier (The Speakable) is how that gap closes for
+        // material that is itself one of the language's own words — no
+        // template edit needed, just verbatim admission: repair runs over
+        // the canon templates plus the lexicon's attested tier, so it is
+        // the identity for native compounds by construction. The honorific
+        // prefix below is a freshly drawn template syllable — conformant by
+        // construction — so prefixing it onto a repaired word keeps the
+        // whole name conformant. Repair changes sound, never meaning: the
+        // gloss is computed from `chosen` alone.
+        let attested = attested_forms(lexicon);
+        let mut segments = repair_phonotactics(segments, self.ph, &attested);
         if kind == NameKind::Epithet && morph.honorifics {
             let affix = self.draw_syllable(&mut stream, false);
             let mut prefixed: Vec<Segment> = affix.segments().copied().collect();
@@ -511,18 +517,55 @@ fn match_manner_seq(segments: &[Segment], pos: usize, template: &[Manner]) -> Op
     Some(p)
 }
 
+/// The attested tier (The Speakable): every modern root form the lexicon
+/// actually holds, admitted verbatim as parse units beside the drawn
+/// canon templates. Descriptive phonotactics — the templates are the
+/// morphology's grammar, the lexicon is its own evidence — so a name
+/// compounded from the language's own words never needs repair. Deduped
+/// and sorted longest-first (ties by `Segment`'s total order) so the
+/// repair DP's first-match tie-break is deterministic. Draw-free and
+/// pure; Gaps and Compounds contribute nothing (a compound's segments
+/// are its two roots in sequence, each already attested).
+/// Wired into [`Namer::glossed_name`] (The Speakable Task 3), which
+/// computes this once per name and passes it to
+/// [`repair_phonotactics`]/[`conforms`] as the attested tier.
+pub(crate) fn attested_forms(lexicon: &Lexicon) -> Vec<Vec<Segment>> {
+    let mut forms: Vec<Vec<Segment>> = lexicon
+        .entries()
+        .filter_map(|(_, entry)| match entry {
+            LexEntry::Root { derivation, .. } if !derivation.modern.is_empty() => {
+                Some(derivation.modern.clone())
+            }
+            _ => None,
+        })
+        .collect();
+    forms.sort_by(|a, b| b.len().cmp(&a.len()).then_with(|| a.cmp(b)));
+    forms.dedup();
+    forms
+}
+
 /// Whether `segments` parses as a sequence of syllables under `ph`'s drawn
-/// phonotactic templates: each syllable an onset matching one of
-/// `ph.onsets` exactly (by manner sequence), then exactly `ph.nuclei`
-/// vowels, then a coda matching one of `ph.codas`. A backtracking parse
-/// (every onset/coda split is explored), so any parseable sequence is
-/// accepted; the empty sequence is not a word. This is the invariant
+/// phonotactic templates, or as attested lexicon words admitted verbatim:
+/// each syllable an onset matching one of `ph.onsets` exactly (by manner
+/// sequence), then exactly `ph.nuclei` vowels, then a coda matching one of
+/// `ph.codas` — OR, at any position, one whole word from `attested`
+/// (The Speakable's attested tier). A backtracking parse (every onset/coda
+/// split AND every attested match is explored), so any parseable sequence
+/// is accepted; the empty sequence is not a word. This is the invariant
 /// [`repair_phonotactics`] restores and the property the Lab's
 /// romanization-level validator re-checks from the committed string.
-fn conforms(segments: &[Segment], ph: &Phonology) -> bool {
-    fn from(segments: &[Segment], pos: usize, ph: &Phonology) -> bool {
+fn conforms(segments: &[Segment], ph: &Phonology, attested: &[Vec<Segment>]) -> bool {
+    fn from(segments: &[Segment], pos: usize, ph: &Phonology, attested: &[Vec<Segment>]) -> bool {
         if pos == segments.len() {
             return true;
+        }
+        for word in attested {
+            debug_assert!(!word.is_empty(), "attested forms must be non-empty");
+            if segments[pos..].starts_with(word.as_slice())
+                && from(segments, pos + word.len(), ph, attested)
+            {
+                return true;
+            }
         }
         for onset in &ph.onsets {
             let Some(after_onset) = match_manner_seq(segments, pos, onset) else {
@@ -538,7 +581,7 @@ fn conforms(segments: &[Segment], ph: &Phonology) -> bool {
             }
             for coda in &ph.codas {
                 if let Some(after_coda) = match_manner_seq(segments, after_nucleus, coda)
-                    && from(segments, after_coda, ph)
+                    && from(segments, after_coda, ph, attested)
                 {
                     return true;
                 }
@@ -546,7 +589,7 @@ fn conforms(segments: &[Segment], ph: &Phonology) -> bool {
         }
         false
     }
-    !segments.is_empty() && from(segments, 0, ph)
+    !segments.is_empty() && from(segments, 0, ph, attested)
 }
 
 /// Epenthesis cost per inserted vowel in [`repair_phonotactics`]'s
@@ -567,6 +610,12 @@ const DELETION_COST: u32 = 2;
 enum RepairStep {
     /// Drop the segment at this position (no template can host it).
     Delete,
+    /// Emit one attested lexicon word verbatim starting at this position
+    /// (`len` segments, zero cost — the attested tier).
+    Attested {
+        /// How many input segments the attested word spans.
+        len: usize,
+    },
     /// Emit one syllable starting at this position.
     Syllable {
         /// Index into `ph.onsets` of the matched onset template.
@@ -581,33 +630,43 @@ enum RepairStep {
     },
 }
 
-/// **The phonotactic repair rule** (permanent formula, The Words Task 9):
-/// make an arbitrary segment sequence — a compound of evolved lexicon
-/// roots, whose sound changes are only guaranteed to land in the phoneme
-/// *inventory*, never inside the synchronic syllable *templates* — parse
-/// under `ph`'s drawn phonotactics, the way real languages adapt loanwords
-/// and compounds. Pure and deterministic: a function of the segments and
-/// the phonology alone, no stream draws.
+/// **The phonotactic repair rule** (permanent formula, The Words Task 9;
+/// the attested tier is The Speakable, Task 1): make an arbitrary segment
+/// sequence — a compound of evolved lexicon roots, whose sound changes are
+/// only guaranteed to land in the phoneme *inventory*, never inside the
+/// synchronic syllable *templates* — parse under `ph`'s drawn phonotactics,
+/// the way real languages adapt loanwords and compounds. Two tiers of
+/// legal unit: the drawn canon templates (the morphology's grammar) and
+/// `attested` — whole modern root forms the lexicon actually holds,
+/// admitted verbatim (the lexicon's own evidence). Consequence: a name
+/// compounded purely from the language's own attested words parses as a
+/// concatenation of attested units and needs no repair at all — repair
+/// stays the identity on it, same as already-canon-legal input. Pure and
+/// deterministic: a function of the segments, the phonology, and the
+/// attested set alone, no stream draws.
 ///
 /// 1. **Already-legal input is untouched** ([`conforms`] short-circuit) —
 ///    repair of a valid sequence is the identity, which also makes repair
 ///    idempotent (its output always conforms).
 /// 2. **Resyllabify with minimal edits.** The sequence is re-parsed into
-///    syllables against the drawn onset/nucleus/coda templates; where a
-///    stretch cannot parse, two edits are available: **epenthesis** —
-///    insert the language's canonical epenthetic vowel (the first vowel in
-///    the drawn inventory's order — deterministic, not drawn) to complete
-///    a nucleus and thereby break an illegal cluster — and **deletion** of
-///    a segment no template can host in its position. Epenthesis costs
-///    [`EPENTHESIS_COST`] per inserted vowel, deletion [`DELETION_COST`]
-///    per dropped segment, so insertion is preferred one-for-one over
-///    deletion — but the plan is chosen by total cost, not by a per-edit
-///    preference, so a single deletion can still beat a run of three or
-///    more epentheses the same stretch would otherwise need. The
-///    minimal-cost plan is found by dynamic programming over input
-///    positions; ties break
-///    deterministically toward the earlier-listed template pair (onsets
-///    then codas, in their drawn order), with deletion considered last.
+///    attested words and syllables against `attested` and the drawn
+///    onset/nucleus/coda templates; where a stretch cannot parse, two edits
+///    are available: **epenthesis** — insert the language's canonical
+///    epenthetic vowel (the first vowel in the drawn inventory's order —
+///    deterministic, not drawn) to complete a nucleus and thereby break an
+///    illegal cluster — and **deletion** of a segment no template can host
+///    in its position. An attested match costs nothing (zero, cheaper than
+///    either edit). Epenthesis costs [`EPENTHESIS_COST`] per inserted
+///    vowel, deletion [`DELETION_COST`] per dropped segment, so insertion
+///    is preferred one-for-one over deletion — but the plan is chosen by
+///    total cost, not by a per-edit preference, so a single deletion can
+///    still beat a run of three or more epentheses the same stretch would
+///    otherwise need. The minimal-cost plan is found by dynamic
+///    programming over input positions; ties break deterministically
+///    toward the earlier-considered option — attested words (longest
+///    first, per [`attested_forms`]'s ordering) before the earlier-listed
+///    template pair (onsets then codas, in their drawn order), with
+///    deletion considered last.
 /// 3. **Degenerate-input fallback**: if the minimal plan deletes
 ///    everything (an input with no vowel and no template-hostable
 ///    consonant — unreachable from real lexicon roots, which always carry
@@ -615,8 +674,12 @@ enum RepairStep {
 ///    template filled with the first inventory consonant of each required
 ///    manner, an all-epenthetic nucleus, and the first coda template
 ///    filled the same way. A name is never empty.
-fn repair_phonotactics(segments: Vec<Segment>, ph: &Phonology) -> Vec<Segment> {
-    if conforms(&segments, ph) {
+fn repair_phonotactics(
+    segments: Vec<Segment>,
+    ph: &Phonology,
+    attested: &[Vec<Segment>],
+) -> Vec<Segment> {
+    if conforms(&segments, ph, attested) {
         return segments;
     }
     let Some(epenthetic) = ph
@@ -646,6 +709,15 @@ fn repair_phonotactics(segments: Vec<Segment>, ph: &Phonology) -> Vec<Segment> {
     };
     for i in (0..n).rev() {
         let mut chosen: Option<(u32, RepairStep)> = None;
+        for word in attested {
+            debug_assert!(!word.is_empty(), "attested forms must be non-empty");
+            if segments[i..].starts_with(word.as_slice()) {
+                let cost = cost_at(&best, i + word.len());
+                if chosen.as_ref().is_none_or(|(c, _)| cost < *c) {
+                    chosen = Some((cost, RepairStep::Attested { len: word.len() }));
+                }
+            }
+        }
         for (onset_idx, onset) in ph.onsets.iter().enumerate() {
             let Some(after_onset) = match_manner_seq(&segments, i, onset) else {
                 continue;
@@ -691,6 +763,10 @@ fn repair_phonotactics(segments: Vec<Segment>, ph: &Phonology) -> Vec<Segment> {
     while i < n {
         match &best[i].as_ref().expect("every position has a plan").1 {
             RepairStep::Delete => i += 1,
+            RepairStep::Attested { len } => {
+                out.extend_from_slice(&segments[i..i + len]);
+                i += len;
+            }
             RepairStep::Syllable {
                 onset,
                 coda,
@@ -1034,14 +1110,17 @@ mod tests {
         let ph = toy_repair_ph();
         let (a, t, n) = toy_segments();
         let seam = vec![t, a, n, t, t, a];
-        assert!(!conforms(&seam, &ph), "test premise: the seam is illegal");
-        let repaired = repair_phonotactics(seam, &ph);
+        assert!(
+            !conforms(&seam, &ph, &[]),
+            "test premise: the seam is illegal"
+        );
+        let repaired = repair_phonotactics(seam, &ph, &[]);
         assert_eq!(
             repaired,
             vec![t, a, n, t, a, t, a],
             "epenthesis must break the tt cluster into tan.ta.ta"
         );
-        assert!(conforms(&repaired, &ph));
+        assert!(conforms(&repaired, &ph, &[]));
     }
 
     #[test]
@@ -1050,14 +1129,14 @@ mod tests {
         let (a, t, n) = toy_segments();
         // Valid input: repair is the identity.
         let valid = vec![t, a, n, t, a];
-        assert!(conforms(&valid, &ph), "test premise: tanta is legal");
-        assert_eq!(repair_phonotactics(valid.clone(), &ph), valid);
+        assert!(conforms(&valid, &ph, &[]), "test premise: tanta is legal");
+        assert_eq!(repair_phonotactics(valid.clone(), &ph, &[]), valid);
         // Idempotence on an invalid input: repairing a repaired sequence
         // changes nothing (repair output always conforms, so the second
         // pass takes the identity branch).
         let seam = vec![t, a, n, t, t, a];
-        let once = repair_phonotactics(seam, &ph);
-        let twice = repair_phonotactics(once.clone(), &ph);
+        let once = repair_phonotactics(seam, &ph, &[]);
+        let twice = repair_phonotactics(once.clone(), &ph, &[]);
         assert_eq!(once, twice);
     }
 
@@ -1071,15 +1150,139 @@ mod tests {
         let ph = toy_repair_ph();
         let (a, t, n) = toy_segments();
         let seam = vec![t, a, n, n, a];
-        assert!(!conforms(&seam, &ph), "test premise: the seam is illegal");
-        let repaired = repair_phonotactics(seam, &ph);
+        assert!(
+            !conforms(&seam, &ph, &[]),
+            "test premise: the seam is illegal"
+        );
+        let repaired = repair_phonotactics(seam, &ph, &[]);
         assert_eq!(
             repaired,
             vec![t, a, n],
             "deletion (second resort) must drop the unhostable nasal and its \
              stranded vowel, keeping the legal prefix"
         );
-        assert!(conforms(&repaired, &ph));
+        assert!(conforms(&repaired, &ph, &[]));
+    }
+
+    #[test]
+    fn an_attested_word_conforms_verbatim_even_where_canon_rejects_it() {
+        // "nat" is canon-illegal in the toy phonology (a nasal can never
+        // begin a syllable) but attested — the tier admits it whole.
+        let ph = toy_repair_ph();
+        let (a, t, n) = toy_segments();
+        let word = vec![n, a, t];
+        assert!(
+            !conforms(&word, &ph, &[]),
+            "test premise: canon rejects nat"
+        );
+        let attested = vec![word.clone()];
+        assert!(conforms(&word, &ph, &attested));
+        // Repair of attested material is the identity.
+        assert_eq!(repair_phonotactics(word.clone(), &ph, &attested), word);
+    }
+
+    #[test]
+    fn a_compound_of_attested_words_and_canon_syllables_conforms() {
+        // attested "nat" + canon "ta" + attested "nat": parses as
+        // [attested][canon syllable][attested] with zero edits.
+        let ph = toy_repair_ph();
+        let (a, t, n) = toy_segments();
+        let word = vec![n, a, t];
+        let attested = vec![word.clone()];
+        let compound = vec![n, a, t, t, a, n, a, t];
+        assert!(conforms(&compound, &ph, &attested));
+        assert_eq!(
+            repair_phonotactics(compound.clone(), &ph, &attested),
+            compound
+        );
+    }
+
+    #[test]
+    fn foreign_material_still_repairs_exactly_as_before() {
+        // The Task-1 regression guard: with an attested tier PRESENT but not
+        // matching, the old epenthesis behavior is unchanged (the tan.ta.ta
+        // case from repair_breaks_an_illegal_seam_cluster_by_epenthesis).
+        let ph = toy_repair_ph();
+        let (a, t, n) = toy_segments();
+        let attested = vec![vec![n, a, t]]; // does not occur in the seam below
+        let seam = vec![t, a, n, t, t, a];
+        assert_eq!(
+            repair_phonotactics(seam, &ph, &attested),
+            vec![t, a, n, t, a, t, a],
+        );
+    }
+
+    #[test]
+    fn an_attested_span_survives_verbatim_inside_a_sequence_needing_repair() {
+        // The DP branch proper (not the conforms short-circuit): "nat" is
+        // attested but canon-illegal; "nat" + "tta" does NOT conform even
+        // with the tier (tt is an illegal cluster), so the DP must run and
+        // its plan must keep the attested span verbatim while epenthesis
+        // breaks the residue: nat.ta.ta exactly.
+        let ph = toy_repair_ph();
+        let (a, t, n) = toy_segments();
+        let attested = vec![vec![n, a, t]];
+        let seam = vec![n, a, t, t, t, a];
+        assert!(
+            !conforms(&seam, &ph, &attested),
+            "test premise: the sequence must not conform even with the tier"
+        );
+        let repaired = repair_phonotactics(seam, &ph, &attested);
+        assert_eq!(
+            repaired,
+            vec![n, a, t, t, a, t, a],
+            "the attested span must survive verbatim and the residue gain one epenthetic vowel"
+        );
+        assert!(conforms(&repaired, &ph, &attested));
+    }
+
+    #[test]
+    fn attested_forms_are_roots_only_deduped_longest_first() {
+        // two_word_lexicon(9) holds Steeped roots for water and fire and
+        // nothing else; attested_forms yields exactly those modern forms,
+        // longest first, no Gap/absent concepts.
+        let lex = two_word_lexicon(9);
+        let forms = attested_forms(&lex);
+        assert_eq!(forms.len(), 2, "exactly the two roots");
+        assert!(forms[0].len() >= forms[1].len(), "longest first");
+        let water = match lex.entry("water") {
+            Some(LexEntry::Root { derivation, .. }) => derivation.modern.clone(),
+            other => panic!("water must be a root, got {other:?}"),
+        };
+        assert!(forms.contains(&water));
+    }
+
+    #[test]
+    fn glossed_names_surface_their_site_words_verbatim() {
+        // The Speakable's core invariant: a glossed name CONTAINS each
+        // glossed concept's modern form as a contiguous segment run —
+        // audible words, not repair residue. Checked at the roman level
+        // via the same render path the committed fact uses.
+        let ph = wordy_ph();
+        let lex = two_word_lexicon(9);
+        let site = SiteConcepts {
+            concepts: &["water", "fire"],
+        };
+        let morph = MorphOptions { honorifics: false };
+        let namer = Namer::new(&Seed(9), "test", &ph);
+        for salt in 0..20u64 {
+            for kind in [NameKind::Settlement, NameKind::Deity] {
+                let (name, gloss) = namer.glossed_name(kind, salt, &morph, &site, &lex);
+                for concept in gloss.split('-').filter(|c| !c.is_empty()) {
+                    let word = match lex.entry(concept) {
+                        Some(LexEntry::Root { derivation, .. }) => {
+                            render_views(&derivation.modern).roman.to_lowercase()
+                        }
+                        other => panic!("gloss concept {concept} must be a root, got {other:?}"),
+                    };
+                    assert!(
+                        name.roman.to_lowercase().contains(&word),
+                        "salt {salt} {kind:?}: name {:?} must audibly contain {concept} = {word:?}",
+                        name.roman
+                    );
+                }
+            }
+        }
     }
 
     #[test]
@@ -1098,7 +1301,13 @@ mod tests {
         let morph = MorphOptions { honorifics: false };
         let namer = Namer::new(&Seed(9), "test", &ph);
 
-        let plain = render_views(&repair_phonotactics(concept_segments(&lex, "water"), &ph)).roman;
+        let attested = attested_forms(&lex);
+        let plain = render_views(&repair_phonotactics(
+            concept_segments(&lex, "water"),
+            &ph,
+            &attested,
+        ))
+        .roman;
 
         // Deity: exactly the site word — the stem is Settlement-only.
         let (deity, deity_gloss) = namer.glossed_name(NameKind::Deity, 3, &morph, &site, &lex);
@@ -1145,9 +1354,9 @@ mod tests {
             ] {
                 let raw = compound_segments(&lex, &chosen);
                 assert!(!raw.is_empty(), "roots must produce segments");
-                let repaired = repair_phonotactics(raw, &ph);
+                let repaired = repair_phonotactics(raw, &ph, &[]);
                 assert!(
-                    conforms(&repaired, &ph),
+                    conforms(&repaired, &ph, &[]),
                     "seed {seed}: repaired compound {chosen:?} must parse \
                      against its own phonotactic templates"
                 );
@@ -1297,5 +1506,69 @@ mod tests {
             "formulation {:?} must carry an explicit stress marker (every name has a vowel)",
             name.espeak
         );
+    }
+
+    /// An envelope swept from seed bits so the 64-seed battery crosses the
+    /// full phonotactic regime space — including the cluster-heavy draws
+    /// that caused the collapse (spec §6).
+    fn swept_envelope(seed: u64) -> Envelope {
+        let f = |k: u64| ((seed >> k) & 3) as f64 / 3.0;
+        Envelope {
+            labiality: f(0),
+            vowel_space: (f(2)).max(0.2),
+            voicing: f(4),
+            // Bits 6/8 are always zero for seed < 64, so the last two
+            // dims reuse overlapping windows — correlated with the
+            // others, but genuinely varying (a coverage sweep needs
+            // variation, not independence).
+            sibilance: f(1),
+            voice_loudness: f(3),
+            tonality: 0.0,
+            exotic: ExoticSeg::None,
+        }
+    }
+
+    #[test]
+    fn attested_compounds_repair_to_identity_across_the_seed_sweep() {
+        // Spec §6: for 64 seeds, with the lexicon descending from a DIFFERENT
+        // (permissive) proto phonology than the daughter's own drawn one —
+        // the exact mismatch that caused the collapse — every root conforms
+        // under its own (phonology, attested) pair and every 1-2-concept
+        // compound repairs to itself.
+        for seed in 0..64u64 {
+            let proto = wordy_ph();
+            let ph = draw_phonology(&Seed(seed), "swept", &swept_envelope(seed));
+            let mut exposures = BTreeMap::new();
+            for c in ["water", "fire", "moon", "shadow"] {
+                exposures.insert(c.to_string(), ExposureClass::Steeped);
+            }
+            // ph is the daughter's own drawn phonology (evolution target),
+            // proto is the DIFFERENT permissive family-level proto phonology
+            // (the draw source) — see build_lexicon's doc comment on
+            // (ph, proto_ph) at lexicon.rs:237, and NOT the fixture's usual
+            // ph == proto_ph collapse.
+            let lex = build_lexicon(&Seed(seed), "fam", "swept", &ph, &proto, &exposures, &[]);
+            let attested = attested_forms(&lex);
+            for chosen in [
+                vec!["water"],
+                vec!["moon"],
+                vec!["water", "fire"],
+                vec!["shadow", "moon"],
+            ] {
+                if !chosen.iter().all(|c| holds_word(&lex, c)) {
+                    continue; // exposure may still gap a concept; skip, don't fake
+                }
+                let raw = compound_segments(&lex, &chosen);
+                assert!(
+                    conforms(&raw, &ph, &attested),
+                    "seed {seed}: compound {chosen:?} must conform under its own attested tier"
+                );
+                assert_eq!(
+                    repair_phonotactics(raw.clone(), &ph, &attested),
+                    raw,
+                    "seed {seed}: repair of native compound {chosen:?} must be the identity"
+                );
+            }
+        }
     }
 }

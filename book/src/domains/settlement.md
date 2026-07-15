@@ -172,8 +172,9 @@ peoples (goblin, hobgoblin, bugbear, and kobold, since [The
 Branches](../chronicle/the-branches.md) gave the goblinoids two new
 members); the world flagship, the kobold settlement **Roqrraxaxoqrrak**,
 holds 71 souls in temperate forest, with each other species' own chief
-settlement close behind (goblin's **Ngebvngadxnot** and hobgoblin's
-**Gbeovee** both at 67, bugbear's **Vngaashshngaash** at 64) — real,
+settlement close behind (goblin's **Ngebvngadxnotnoaboo** and hobgoblin's
+**Gbeoveenoenoanoagoo** both at 67, bugbear's **Qvoashshngoashdoodoa** at
+64) — real,
 phonology-drawn names (Campaign Y2-3, The Tongues; Campaign 27, The Words),
 where earlier campaigns' editions of this same page named the pair from a
 syllable pool instead. The gallery holds the exit-demo pair: [The Peoples

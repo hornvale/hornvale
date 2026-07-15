@@ -2794,7 +2794,14 @@ fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
         return MetricValue::Absent;
     }
     let ph = language_of_in(v.world(), v.roster(), species);
-    MetricValue::Flag(names.iter().all(|n| is_phonotactically_valid(n, &ph)))
+    let attested = hornvale_worldgen::lexicon_of(v.world(), species)
+        .map(|lex| attested_roman_forms(&lex))
+        .unwrap_or_default();
+    MetricValue::Flag(
+        names
+            .iter()
+            .all(|n| is_phonotactically_valid(n, &ph, &attested)),
+    )
 }
 
 /// Whether every committed deity epithet of `species`' flagship pantheon
@@ -3737,32 +3744,83 @@ fn homophony_merger_share(v: &FullView, species: &str) -> MetricValue {
     }
 }
 
-/// Whether `name` parses as a legal sequence of syllables under `ph`,
-/// independently of `hornvale_language::naming`'s generation code path: this
-/// walks the SURFACE STRING back into [`Segment`]s and re-checks
-/// phonotactic legality from scratch — every syllable's onset/coda
-/// manner-sequence must match one of `ph.onsets`/`ph.codas` (the very
-/// templates `draw_phonology` drew), its nucleus must be exactly
-/// `ph.nuclei` vowels, and every segment consumed must be a member of
-/// `ph.inventory`. Several romanizations are literal PREFIXES of others
-/// sharing the same manner (`z`/`zh`, `s`/`sh`, `n`/`ng`, `k`/`kx`), so a
-/// single greedy match per slot is unsound (a "z" false-match can swallow
-/// what was really a "zh"); every matcher below returns every reachable
-/// position and `parse_syllables` backtracks over the full cross product of
-/// segment choice and template choice.
-fn is_phonotactically_valid(name: &str, ph: &Phonology) -> bool {
-    let chars: Vec<char> = name.to_lowercase().chars().collect();
-    !chars.is_empty() && parse_syllables(&chars, 0, ph)
+/// The attested tier at the roman level (The Speakable): the lowercased
+/// roman rendering of every modern root form `lexicon` holds, deduped,
+/// longest-first. The surface-string twin of
+/// `hornvale_language`'s segment-level attested tier, so this validator
+/// accepts exactly the names `glossed_name` now emits.
+fn attested_roman_forms(lexicon: &hornvale_language::Lexicon) -> Vec<String> {
+    let mut forms: Vec<String> = lexicon
+        .entries()
+        .filter_map(|(_, entry)| match entry {
+            hornvale_language::LexEntry::Root { derivation, .. }
+                if !derivation.modern.is_empty() =>
+            {
+                Some(
+                    hornvale_language::render_views(&derivation.modern)
+                        .roman
+                        .to_lowercase(),
+                )
+            }
+            _ => None,
+        })
+        .collect();
+    forms.sort_by(|a, b| {
+        b.chars()
+            .count()
+            .cmp(&a.chars().count())
+            .then_with(|| a.cmp(b))
+    });
+    forms.dedup();
+    forms
 }
 
-/// Recursively consume one syllable at a time from `chars[pos..]`; true iff
-/// the remainder parses as a sequence of legal syllables. The base case
-/// (`pos == chars.len()`) is only reachable after a caller has already
-/// consumed at least one syllable, so an empty name never validates (see
-/// [`is_phonotactically_valid`]'s explicit empty check).
-fn parse_syllables(chars: &[char], pos: usize, ph: &Phonology) -> bool {
+/// Whether `name` parses as a legal sequence of syllables under `ph`, OR is
+/// exactly an attested word from `attested_roman`, independently of
+/// `hornvale_language::naming`'s generation code path: this walks the
+/// SURFACE STRING back into [`Segment`]s and re-checks phonotactic legality
+/// from scratch — every syllable's onset/coda manner-sequence must match
+/// one of `ph.onsets`/`ph.codas` (the very templates `draw_phonology`
+/// drew), its nucleus must be exactly `ph.nuclei` vowels, and every segment
+/// consumed must be a member of `ph.inventory`. Several romanizations are
+/// literal PREFIXES of others sharing the same manner (`z`/`zh`, `s`/`sh`,
+/// `n`/`ng`, `k`/`kx`), so a single greedy match per slot is unsound (a "z"
+/// false-match can swallow what was really a "zh"); every matcher below
+/// returns every reachable position and `parse_syllables` backtracks over
+/// the full cross product of segment choice, template choice, and attested
+/// word choice. Two tiers, both admissible: the canon template tier (every
+/// syllable legally built from `ph`) and the attested tier (a whole word
+/// lifted verbatim from `attested_roman`, mirroring the segment-level
+/// attested tier `domains/language` gained first) — a name may mix both,
+/// consuming attested words and template syllables in any order. Callers
+/// deriving `attested_roman` from a lexicon must resolve `species` within
+/// the roster first, same as every other lexicon-derived caller in this
+/// module (see the caveat at [`in_roster`]'s doc, and `phonotactic_validity`
+/// for the pattern: `language_of_in`/`lexicon_of` together against
+/// `v.roster()`).
+fn is_phonotactically_valid(name: &str, ph: &Phonology, attested_roman: &[String]) -> bool {
+    let chars: Vec<char> = name.to_lowercase().chars().collect();
+    !chars.is_empty() && parse_syllables(&chars, 0, ph, attested_roman)
+}
+
+/// Recursively consume one syllable — or one attested word from
+/// `attested_roman` — at a time from `chars[pos..]`; true iff the
+/// remainder parses as a sequence of legal syllables and/or attested
+/// words. The base case (`pos == chars.len()`) is only reachable after a
+/// caller has already consumed at least one syllable or word, so an empty
+/// name never validates (see [`is_phonotactically_valid`]'s explicit empty
+/// check).
+fn parse_syllables(chars: &[char], pos: usize, ph: &Phonology, attested_roman: &[String]) -> bool {
     if pos == chars.len() {
         return true;
+    }
+    for word in attested_roman {
+        let w: Vec<char> = word.chars().collect();
+        if chars[pos..].starts_with(&w[..])
+            && parse_syllables(chars, pos + w.len(), ph, attested_roman)
+        {
+            return true;
+        }
     }
     let mut onsets: Vec<&Vec<Manner>> = ph.onsets.iter().collect();
     onsets.sort();
@@ -3775,7 +3833,7 @@ fn parse_syllables(chars: &[char], pos: usize, ph: &Phonology) -> bool {
             for after_nucleus in match_nucleus(chars, after_onset, ph.nuclei, ph) {
                 for coda in &codas {
                     for after_coda in match_manner_run(chars, after_nucleus, coda, ph) {
-                        if parse_syllables(chars, after_coda, ph) {
+                        if parse_syllables(chars, after_coda, ph, attested_roman) {
                             return true;
                         }
                     }
@@ -4140,9 +4198,12 @@ mod tests {
         let view = FullView::build(Seed(0), &SkyPins::default()).unwrap();
         for species in ["goblin", "kobold"] {
             let ph = hornvale_worldgen::language_of(view.world(), species);
+            let attested = hornvale_worldgen::lexicon_of(view.world(), species)
+                .map(|lex| attested_roman_forms(&lex))
+                .unwrap_or_default();
             for n in species_generated_names(&view, species) {
                 assert!(
-                    is_phonotactically_valid(&n, &ph),
+                    is_phonotactically_valid(&n, &ph, &attested),
                     "{species} name {n:?} failed its own phonotactics"
                 );
             }
@@ -4182,11 +4243,28 @@ mod tests {
     fn phonotactic_validator_rejects_garbage_and_empty_strings() {
         let view = AstronomyView::build(Seed(0), &SkyPins::default()).unwrap();
         let ph = hornvale_worldgen::language_of(&view.world, "goblin");
-        assert!(!is_phonotactically_valid("", &ph));
+        assert!(!is_phonotactically_valid("", &ph, &[]));
         // "qw" (uvular stop q + labial approximant w): q is never a Stop
         // candidate in this drawn inventory (only p/t/d/g appear, per the
         // seed-0 debug dump), so this must not parse.
-        assert!(!is_phonotactically_valid("qw", &ph));
+        assert!(!is_phonotactically_valid("qw", &ph, &[]));
+    }
+
+    #[test]
+    fn attested_roman_words_validate_where_canon_rejects_them() {
+        // A name that is exactly an attested word must validate even when
+        // no canon template hosts it; a name that is neither canon-parseable
+        // nor attested must still fail. "qw" is this fixture's known-
+        // unparseable string (see the test above: q is never a Stop
+        // candidate in this drawn inventory), so it doubles as the bare
+        // sequence the fixture's templates cannot parse — attest it
+        // directly rather than inventing a new one.
+        let view = AstronomyView::build(Seed(0), &SkyPins::default()).unwrap();
+        let ph = hornvale_worldgen::language_of(&view.world, "goblin");
+        let attested = vec!["qw".to_string()];
+        assert!(is_phonotactically_valid("Qw", &ph, &attested));
+        assert!(!is_phonotactically_valid("Qw", &ph, &[]));
+        assert!(!is_phonotactically_valid("qq", &ph, &attested));
     }
 
     #[test]
