@@ -490,7 +490,8 @@ pub fn species_carrying_input(
 /// [`hornvale_demography::report`] expects. Shared by the settlement-genesis
 /// path and [`demography_report`] (Task A16a) — the ONE place this assembly
 /// is written, so the world worldgen ships and the report the Lab measures
-/// can never diverge.
+/// can never diverge. `species_set` must already be filtered to peopled
+/// species — the psychology fold ([`peopled`]) panics on a fauna kind.
 #[allow(clippy::type_complexity)]
 fn demography_inputs_for(
     geo: &Geosphere,
@@ -507,7 +508,7 @@ fn demography_inputs_for(
         .iter()
         .enumerate()
         .map(|(tag, def)| {
-            let psych = &def.psych;
+            let psych = &peopled(def).psych;
             let inputs = hornvale_kernel::CellMap::from_fn(geo, |cell| {
                 species_carrying_input(*base_inputs.get(cell), psych)
             });
@@ -517,7 +518,7 @@ fn demography_inputs_for(
     let species = species_set
         .iter()
         .enumerate()
-        .map(|(tag, def)| (tag as u32, def.mass, def.niche.clone()))
+        .map(|(tag, def)| (tag as u32, def.biosphere.mass, def.biosphere.niche.clone()))
         .collect();
     (per_species_inputs, species)
 }
@@ -556,10 +557,11 @@ pub fn niche_per_species_k(
         .map(|(tag, def)| {
             let total_uptake: f64 = hornvale_kernel::v1_basis()
                 .iter()
-                .map(|axis| def.niche.weight(*axis))
+                .map(|axis| def.biosphere.niche.weight(*axis))
                 .sum();
-            let floor_buf = hornvale_kernel::sovereignty_floor(def.mass, def.potency);
-            let cn = &def.condition_niche;
+            let floor_buf =
+                hornvale_kernel::sovereignty_floor(def.biosphere.mass, def.biosphere.potency);
+            let cn = &def.biosphere.condition_niche;
             let k = hornvale_kernel::CellMap::from_fn(geo, |cell| {
                 let s = substrate.get(cell);
                 let supply = base_carrying.get(cell) * total_uptake;
@@ -619,7 +621,7 @@ pub fn demography_report_with_beta(
     let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> = species_set
         .iter()
         .enumerate()
-        .map(|(tag, def)| (tag as u32, def.mass, def.niche.clone()))
+        .map(|(tag, def)| (tag as u32, def.biosphere.mass, def.biosphere.niche.clone()))
         .collect();
 
     let settlements =
@@ -1439,6 +1441,20 @@ fn def_in<'a>(
     })
 }
 
+/// Borrow `def`'s peopled component, for passes gated to settling,
+/// speaking species (settlement genesis, phonology, perception, naming).
+/// Panics if called on a fauna kind (a `SpeciesDef` with no
+/// `PeopledTraits`) — every call site here is reached only after a
+/// `peopled.is_some()` filter at the pass boundary, so a panic means that
+/// invariant broke, not that fauna are a normal input. Public so the Lab
+/// and vessel windows (both compose worlds through this crate) share the
+/// same guard instead of re-deriving it.
+pub fn peopled(def: &hornvale_species::SpeciesDef) -> &hornvale_species::PeopledTraits {
+    def.peopled
+        .as_ref()
+        .unwrap_or_else(|| panic!("peopled pass over a fauna kind: '{}'", def.name))
+}
+
 /// The phenomena a species (resolved within `roster`) observes.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn observed_phenomena_as_in(
@@ -1500,7 +1516,8 @@ fn observed_phenomena_from(
     place: EntityId,
     position: Option<GeoCoord>,
 ) -> Result<Vec<Phenomenon>, BuildError> {
-    let day = observation_time(world, def.perception.activity)?;
+    let perception = &peopled(def).perception;
+    let day = observation_time(world, perception.activity)?;
     let sky = sky_of(world)?;
     let climate = UniformClimate;
     let sources: [&dyn PhenomenaSource; 2] = [&sky, &climate];
@@ -1509,7 +1526,7 @@ fn observed_phenomena_from(
         &ObserverContext {
             place,
             time: WorldTime { day },
-            lens: perception_lens(&def.perception),
+            lens: perception_lens(perception),
             position,
         },
     ))
@@ -1609,7 +1626,11 @@ pub fn language_of_in(
     species: &str,
 ) -> hornvale_language::Phonology {
     let def = def_in(roster, species).unwrap_or_else(|e| panic!("language_of_in: {e}"));
-    hornvale_language::draw_phonology(&world.seed, species, &envelope_of(&def.articulation))
+    hornvale_language::draw_phonology(
+        &world.seed,
+        species,
+        &envelope_of(&peopled(def).articulation),
+    )
 }
 
 /// Draw a species' phonology, resolving `species` within the shipped
@@ -1839,7 +1860,8 @@ fn exposure_of_impl(
     };
 
     let species = def.name;
-    let depths = pack_depths(&def.perception);
+    let perception = &peopled(def).perception;
+    let depths = pack_depths(perception);
     let geo = terrain.geosphere();
 
     let mut classes: std::collections::BTreeMap<String, ExposureClass> =
@@ -1860,7 +1882,7 @@ fn exposure_of_impl(
                 reason: GapReason::Perceptual(perceptual_reason(
                     entry,
                     &depths,
-                    def.perception.night_vision,
+                    perception.night_vision,
                 )),
             }
         };
@@ -2364,8 +2386,14 @@ fn build_to(
     let base_inputs = carrying_inputs_of(geo, &terrain, &climate);
 
     // Which species this world places: the whole roster, or the pinned one.
+    // Settlement genesis is a peopled-only pass (only settling, speaking
+    // species place villages); a biosphere-only (fauna) kind is filtered out
+    // here, at the one point `species_set` is assembled, so every pass below
+    // that reads `.psych`/`.perception`/`.articulation`/etc via `peopled(def)`
+    // never sees a fauna kind. The current roster is all-peopled, so this
+    // filter is a no-op today (byte-identical).
     let species_set: Vec<&hornvale_species::SpeciesDef> = match &settlement_pins.species {
-        None => roster.iter().collect(),
+        None => roster.iter().filter(|d| d.peopled.is_some()).collect(),
         Some(name) => vec![def_in(roster, name)?],
     };
 
@@ -2472,7 +2500,7 @@ fn build_to(
         let namer = namers
             .get(def.name)
             .expect("a Namer was built for every placed species");
-        let morph = morph_options(&def.psych);
+        let morph = morph_options(&peopled(def).psych);
         let lexicon = lexicons
             .get(def.name)
             .expect("a lexicon was built for every placed species");
@@ -2611,17 +2639,18 @@ fn build_to(
                 population: placed[pos].population,
                 threat,
             };
+            let peopled_def = peopled(def);
             let psych = hornvale_culture::PsychSummary {
-                threat_response: def.psych.threat_response,
-                time_horizon: def.psych.time_horizon,
-                communal: def.psych.sociality == hornvale_species::Sociality::Communal,
-                rank_status: def.psych.status_basis == hornvale_species::StatusBasis::Rank,
+                threat_response: peopled_def.psych.threat_response,
+                time_horizon: peopled_def.psych.time_horizon,
+                communal: peopled_def.psych.sociality == hornvale_species::Sociality::Communal,
+                rank_status: peopled_def.psych.status_basis == hornvale_species::StatusBasis::Rank,
                 vocabulary: hornvale_culture::RoleVocabulary {
-                    worker_override: def.worker_override.map(str::to_string),
-                    warrior: def.warrior.to_string(),
-                    artisan: def.artisan.to_string(),
-                    shaman: def.shaman.to_string(),
-                    top: def.top.to_string(),
+                    worker_override: peopled_def.worker_override.map(str::to_string),
+                    warrior: peopled_def.warrior.to_string(),
+                    artisan: peopled_def.artisan.to_string(),
+                    shaman: peopled_def.shaman.to_string(),
+                    top: peopled_def.top.to_string(),
                 },
             };
             hornvale_culture::genesis(&mut world, flagship, &env, &psych)?;
@@ -2633,7 +2662,7 @@ fn build_to(
             let castes = hornvale_culture::castes_of(&world, flagship);
             let society = hornvale_religion::SocietySummary {
                 strata: castes.len(),
-                has_priesthood: castes.iter().any(|c| c == def.shaman),
+                has_priesthood: castes.iter().any(|c| c == peopled_def.shaman),
             };
             // Religion (and the deity glosses drawn inside it) observes from
             // the world's first place — the flagship vantage, its hemisphere
@@ -2646,7 +2675,7 @@ fn build_to(
             let namer = namers
                 .get(def.name)
                 .expect("a Namer was built for every placed species");
-            let morph = morph_options(&def.psych);
+            let morph = morph_options(&peopled_def.psych);
             let lexicon = lexicons
                 .get(def.name)
                 .expect("a lexicon was built for every placed species");
@@ -3227,7 +3256,10 @@ fn rendered_pantheon_of(
         return Ok(None);
     }
     let phenomena = observed_phenomena_as(world, species)?;
-    let voice = voice_params(&def.psych);
+    // Reached only once `flagship_of` above returned `Some`: only peopled
+    // species place settlements/flagships, so `def` is guaranteed peopled
+    // here.
+    let voice = voice_params(&peopled(def).psych);
     let tenets = tenets_for(&beliefs, &phenomena, &voice);
     Ok(Some((v, beliefs.into_iter().zip(tenets).collect())))
 }
@@ -3291,7 +3323,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
             lines.push(hornvale_almanac::render_life_history_line(def));
             Some(hornvale_almanac::PeopleBlock {
                 species: (*name).to_string(),
-                noun: def.noun.to_string(),
+                noun: peopled(def).noun.to_string(),
                 name: flagship.name.clone(),
                 population: flagship.population,
                 culture_lines: lines,
@@ -3326,7 +3358,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
                 if let Some((v, rendered)) = rendered_pantheon_of(world, name, &def)? {
                     blocks.push(hornvale_almanac::PantheonBlock {
                         species: name.to_string(),
-                        noun: def.noun.to_string(),
+                        noun: peopled(&def).noun.to_string(),
                         settlement: v.name.clone(),
                         cult_form: hornvale_religion::cult_form_held_by(world, v.id),
                         beliefs: rendered
@@ -4262,17 +4294,18 @@ mod tests {
             .expect("the flagship settlement has a species fact");
         let registry = hornvale_species::registry();
         let def = &registry[flagship_species.as_str()];
+        let peopled_def = peopled(def);
         let psych = hornvale_culture::PsychSummary {
-            threat_response: def.psych.threat_response,
-            time_horizon: def.psych.time_horizon,
-            communal: def.psych.sociality == hornvale_species::Sociality::Communal,
-            rank_status: def.psych.status_basis == hornvale_species::StatusBasis::Rank,
+            threat_response: peopled_def.psych.threat_response,
+            time_horizon: peopled_def.psych.time_horizon,
+            communal: peopled_def.psych.sociality == hornvale_species::Sociality::Communal,
+            rank_status: peopled_def.psych.status_basis == hornvale_species::StatusBasis::Rank,
             vocabulary: hornvale_culture::RoleVocabulary {
-                worker_override: def.worker_override.map(str::to_string),
-                warrior: def.warrior.to_string(),
-                artisan: def.artisan.to_string(),
-                shaman: def.shaman.to_string(),
-                top: def.top.to_string(),
+                worker_override: peopled_def.worker_override.map(str::to_string),
+                warrior: peopled_def.warrior.to_string(),
+                artisan: peopled_def.artisan.to_string(),
+                shaman: peopled_def.shaman.to_string(),
+                top: peopled_def.top.to_string(),
             },
         };
 
@@ -4397,6 +4430,42 @@ mod tests {
         }
     }
 
+    /// Task 3 (The Seam): a biosphere-only (fauna) kind carries no
+    /// `PeopledTraits` and must never reach settlement genesis — only
+    /// settling, speaking species place villages. The fixture is a goblin
+    /// biosphere clone with `peopled: None` (Task 4 mints the real
+    /// menagerie; this is a minimal stand-in for the guard alone).
+    #[test]
+    fn fauna_are_skipped_by_settlement_genesis() {
+        let goblin = hornvale_species::registry()["goblin"].clone();
+        let fauna = hornvale_species::SpeciesDef {
+            name: "test-beast",
+            family: "test-beast",
+            peopled: None,
+            ..goblin
+        };
+        assert!(fauna.peopled.is_none());
+
+        let world = build_world_to(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+            &[fauna],
+            BuildDepth::Settlements,
+        )
+        .unwrap();
+        assert!(
+            world
+                .ledger
+                .find(hornvale_settlement::IS_SETTLEMENT)
+                .next()
+                .is_none(),
+            "a fauna-only roster must place no settlements"
+        );
+    }
+
     #[test]
     fn culture_lines_name_the_flagship_and_its_subsistence() {
         let world = generated(42);
@@ -4470,13 +4539,13 @@ mod tests {
     #[test]
     fn goblin_lens_is_exactly_identity() {
         let reg = hornvale_species::registry();
-        assert!(perception_lens(&reg["goblin"].perception).is_identity());
+        assert!(perception_lens(&peopled(&reg["goblin"]).perception).is_identity());
     }
 
     #[test]
     fn kobold_lens_matches_the_spec_derivation() {
         let reg = hornvale_species::registry();
-        let lens = perception_lens(&reg["kobold"].perception);
+        let lens = perception_lens(&peopled(&reg["kobold"]).perception);
         assert!((lens.day_sky - 0.52).abs() < 1e-12);
         assert!((lens.night_sky - 1.82).abs() < 1e-12);
         assert!((lens.ambient - 0.70).abs() < 1e-12);
@@ -4537,7 +4606,7 @@ mod tests {
     #[test]
     fn goblin_voice_params_are_the_baseline() {
         let reg = hornvale_species::registry();
-        let v = voice_params(&reg["goblin"].psych);
+        let v = voice_params(&peopled(&reg["goblin"]).psych);
         assert!((v.formality - 0.5).abs() < 1e-12 && (v.epithet_density - 0.5).abs() < 1e-12);
     }
 

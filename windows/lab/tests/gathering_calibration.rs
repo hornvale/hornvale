@@ -231,7 +231,10 @@ fn world_level_population_conserves_against_total_capacity() {
     let mut total_k = 0.0_f64;
     for def in &roster {
         let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
-            hornvale_worldgen::species_carrying_input(*base_inputs.get(c), &def.psych)
+            hornvale_worldgen::species_carrying_input(
+                *base_inputs.get(c),
+                &hornvale_worldgen::peopled(def).psych,
+            )
         });
         let k = hornvale_demography::carrying_capacity(geo, &inputs);
         total_k += geo.cells().map(|c| *k.get(c)).sum::<f64>();

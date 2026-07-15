@@ -1243,8 +1243,9 @@ pub fn registry() -> Vec<Metric> {
                 let (mut trop_sum, mut trop_n, mut pole_sum, mut pole_n) =
                     (0.0_f64, 0u32, 0.0_f64, 0u32);
                 for def in v.roster() {
+                    let psych = &hornvale_worldgen::peopled(def).psych;
                     let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
-                        hornvale_worldgen::species_carrying_input(*base_inputs.get(c), &def.psych)
+                        hornvale_worldgen::species_carrying_input(*base_inputs.get(c), psych)
                     });
                     let k = hornvale_demography::carrying_capacity(geo, &inputs);
                     for cell in geo.cells() {
@@ -3057,7 +3058,7 @@ fn independently_steeped_concepts(
     species: &str,
 ) -> Option<std::collections::BTreeSet<String>> {
     let def = v.roster().iter().find(|d| d.name == species)?;
-    let depths = hornvale_worldgen::pack_depths(&def.perception);
+    let depths = hornvale_worldgen::pack_depths(&hornvale_worldgen::peopled(def).perception);
     let mut steeped: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
 
     for entry in hornvale_language::universal_stratum() {
@@ -3166,7 +3167,7 @@ fn exposure_sound(v: &FullView, species: &str) -> MetricValue {
 fn hue_depth(v: &AstronomyView, species: &str) -> MetricValue {
     match v.roster.iter().find(|d| d.name == species) {
         Some(def) => MetricValue::Number(f64::from(
-            hornvale_worldgen::pack_depths(&def.perception).hue,
+            hornvale_worldgen::pack_depths(&hornvale_worldgen::peopled(def).perception).hue,
         )),
         None => MetricValue::Absent,
     }
@@ -3641,8 +3642,8 @@ fn confusable_homophony(v: &FullView, species: &str) -> MetricValue {
 fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species::LifeHistory> {
     let def = v.roster().iter().find(|d| d.name == species)?;
     Some(hornvale_species::life_history(
-        def.mass,
-        def.metabolic_class,
+        def.biosphere.mass,
+        def.biosphere.metabolic_class,
     ))
 }
 

@@ -139,7 +139,7 @@ pub struct AlmanacContext {
 /// life-history to report — only the metabolic clause renders for those.
 /// type-audit: bare-ok(prose: return)
 pub fn render_life_history_line(def: &hornvale_species::SpeciesDef) -> String {
-    let history = hornvale_species::life_history(def.mass, def.metabolic_class);
+    let history = hornvale_species::life_history(def.biosphere.mass, def.biosphere.metabolic_class);
     let mut line = format!(
         "The {} run a basal metabolism of {:.0} W",
         def.name, history.basal_metabolic_rate_w
@@ -836,8 +836,8 @@ mod tests {
             .get("goblin")
             .expect("goblin is in the registry")
             .clone();
-        construct.metabolic_class = MetabolicClass::Ametabolic;
-        construct.mass = Mass::new(500.0).unwrap();
+        construct.biosphere.metabolic_class = MetabolicClass::Ametabolic;
+        construct.biosphere.mass = Mass::new(500.0).unwrap();
         let line = render_life_history_line(&construct);
         assert!(
             !line.contains("lifespan"),

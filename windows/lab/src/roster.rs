@@ -28,14 +28,21 @@ pub fn goblin_twin_solo_roster() -> Vec<SpeciesDef> {
 /// (spec §9); tone is for the future bestiary.
 pub fn serpent_tonal_solo_roster() -> Vec<SpeciesDef> {
     let goblin = hornvale_species::registry()["goblin"].clone();
+    let goblin_peopled = goblin
+        .peopled
+        .clone()
+        .expect("the shipped goblin carries peopled traits");
     vec![SpeciesDef {
         name: "serpent",
         family: "serpent",
-        articulation: hornvale_species::ArticulationVector {
-            tonality: 1.0,
-            vowel_space: 0.3,
-            ..goblin.articulation
-        },
+        peopled: Some(hornvale_species::PeopledTraits {
+            articulation: hornvale_species::ArticulationVector {
+                tonality: 1.0,
+                vowel_space: 0.3,
+                ..goblin_peopled.articulation
+            },
+            ..goblin_peopled
+        }),
         ..goblin
     }]
 }

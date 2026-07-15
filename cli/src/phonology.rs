@@ -96,7 +96,7 @@ pub(crate) fn sample_names_for(
 ) -> Vec<(&'static str, GeneratedName)> {
     let phonology = world_builder::language_of(world, species);
     let namer = Namer::new(&world.seed, species, &phonology);
-    let morph = world_builder::morph_options(&def.psych);
+    let morph = world_builder::morph_options(&world_builder::peopled(def).psych);
     let mut samples = Vec::new();
     for salt in 0..SETTLEMENT_SAMPLES {
         samples.push(("Settlement", namer.name(NameKind::Settlement, salt, &morph)));
@@ -230,7 +230,7 @@ mod tests {
         let (species, def) = registry.iter().next().expect("at least one species");
         let phonology = world_builder::language_of(&world, species);
         let namer = Namer::new(&world.seed, species, &phonology);
-        let morph = world_builder::morph_options(&def.psych);
+        let morph = world_builder::morph_options(&world_builder::peopled(def).psych);
         let name = namer.name(NameKind::Settlement, 0, &morph);
         assert!(!name.roman.is_empty(), "romanization must not be empty");
         assert!(!name.ipa.is_empty(), "IPA transcription must not be empty");

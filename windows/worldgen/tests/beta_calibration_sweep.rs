@@ -53,7 +53,7 @@ use hornvale_kernel::{CellMap, Mass, ResourceVector, Seed};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BuildDepth, SettlementPins, SkyChoice, build_world_to, carrying_inputs_of, climate_of,
-    default_roster, species_carrying_input, terrain_of,
+    default_roster, peopled, species_carrying_input, terrain_of,
 };
 use std::collections::BTreeMap;
 
@@ -127,7 +127,7 @@ fn build_fixture(seed: u64, roster: &[hornvale_species::SpeciesDef]) -> SeedFixt
         .enumerate()
         .map(|(tag, def)| {
             let inputs = CellMap::from_fn(&geo, |cell| {
-                species_carrying_input(*base_inputs.get(cell), &def.psych)
+                species_carrying_input(*base_inputs.get(cell), &peopled(def).psych)
             });
             (tag as u32, inputs)
         })
@@ -135,7 +135,7 @@ fn build_fixture(seed: u64, roster: &[hornvale_species::SpeciesDef]) -> SeedFixt
     let species: Vec<(u32, Mass, ResourceVector)> = roster
         .iter()
         .enumerate()
-        .map(|(tag, def)| (tag as u32, def.mass, def.niche.clone()))
+        .map(|(tag, def)| (tag as u32, def.biosphere.mass, def.biosphere.niche.clone()))
         .collect();
 
     let per_species_k: Vec<(u32, CellMap<f64>)> = per_species_inputs
