@@ -1,7 +1,8 @@
 # The Helm — Design
 
 **Date:** 2026-07-14
-**Status:** Draft — awaiting G3 review
+**Status:** Approved at G3 (2026-07-14). Nathan's ruling: rename the
+client **Orrery** (`hornvale/orrery`); everything else as specified.
 **Kind:** Campaign spec.
 **Parent spec:** `2026-07-14-goldengrove-design.md` (the catalog/planetarium
 seam; decisions 0022, 0023, 0055 govern). This campaign is Goldengrove's
@@ -198,7 +199,14 @@ be clickable."
 
 ## 10. The name (G3 decision — Nathan's call)
 
-Nathan is inclined to rename the client **Orrery**. Analysis (ideonomy
+**Ruled at G3: the client is renamed Orrery** — repo `hornvale/orrery`,
+Pages at `hornvale.github.io/orrery`, executed inside this campaign
+(repo rename, Vite base path, package name, README, every live link in
+the book and docs; the local checkout moves to
+`~/Projects/hornvale/orrery`). The analysis that framed the choice is
+kept below as written.
+
+Nathan was inclined to rename the client **Orrery**. Analysis (ideonomy
 pass, dimension-identification + timeline):
 
 - **Now is the cheapest this rename will ever be.** The client is one
