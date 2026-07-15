@@ -72,7 +72,10 @@ and instead took a cleaner road — the semantic query surface, where the sim
 emits quantities and the client renders them ([The Scene
 Window](./chronicle/21-the-scene-window.md)). The interface is more general
 than feared; it is also not the only interface, and that turned out to be the
-right shape.
+right shape. The scene seam has since crossed a repository boundary: an
+external client now consumes the same documents through a versioned wasm
+catalog, byte-identical across platforms
+([Goldengrove](./chronicle/goldengrove.md), decision 0055).
 
 ## Precedented but nontrivial (moderate confidence)
 

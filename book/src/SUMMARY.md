@@ -82,6 +82,7 @@
 - [The Pace of Life](./chronicle/bio2-life-history.md)
 - [The Niche](./chronicle/the-niche.md)
 - [The Speakable](./chronicle/the-speakable.md)
+- [Goldengrove](./chronicle/goldengrove.md)
 
 # The Gallery
 
