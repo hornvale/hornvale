@@ -354,25 +354,11 @@ pub enum MetabolicClass {
     Ametabolic,
 }
 
-/// One authored species: vector, vocabulary stopgaps (deleted by The
-/// Tongues), and a placeholder syllable pool for names.
+/// The biosphere component: every entity has one. The packer and the
+/// habitat/niche-K layer read only these traits.
 /// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Debug, PartialEq)]
-pub struct SpeciesDef {
-    /// The species name ("goblin", "kobold").
-    pub name: &'static str,
-    /// The family this species descends from ("goblinoid", "kobold"); a
-    /// singleton family's name equals its lone member's name. Looked up in
-    /// [`family_registry`] for the family's proto ancestral vector.
-    pub family: &'static str,
-    /// The settlement noun ("village", "warren").
-    pub noun: &'static str,
-    /// The psychology vector.
-    pub psych: PsychVector,
-    /// The perception vector.
-    pub perception: PerceptionVector,
-    /// The articulation vector.
-    pub articulation: ArticulationVector,
+pub struct BiosphereTraits {
     /// Adult individual body mass — the BIO-2 down-payment the coexistence
     /// packer reads to convert a settlement population into a standing
     /// biomass demand.
@@ -394,6 +380,20 @@ pub struct SpeciesDef {
     /// carry 0.
     /// type-audit: bare-ok(ratio: potency)
     pub potency: f64,
+}
+
+/// The peopled component: present only for settling, speaking peoples.
+/// type-audit: bare-ok(identifier-text)
+#[derive(Clone, Debug, PartialEq)]
+pub struct PeopledTraits {
+    /// The settlement noun ("village", "warren").
+    pub noun: &'static str,
+    /// The psychology vector.
+    pub psych: PsychVector,
+    /// The perception vector.
+    pub perception: PerceptionVector,
+    /// The articulation vector.
+    pub articulation: ArticulationVector,
     /// Worker-role override; `None` = the subsistence worker word.
     pub worker_override: Option<&'static str>,
     /// The warrior-rung word.
@@ -404,6 +404,23 @@ pub struct SpeciesDef {
     pub shaman: &'static str,
     /// The top-rung word ("chief", "elders").
     pub top: &'static str,
+}
+
+/// One authored species: vector, vocabulary stopgaps (deleted by The
+/// Tongues), and a placeholder syllable pool for names.
+/// type-audit: bare-ok(identifier-text)
+#[derive(Clone, Debug, PartialEq)]
+pub struct SpeciesDef {
+    /// The species name ("goblin", "kobold").
+    pub name: &'static str,
+    /// The family this species descends from ("goblinoid", "kobold"); a
+    /// singleton family's name equals its lone member's name. Looked up in
+    /// [`family_registry`] for the family's proto ancestral vector.
+    pub family: &'static str,
+    /// The universal biosphere component: every entity has one.
+    pub biosphere: BiosphereTraits,
+    /// The peopled component: present only for settling, speaking peoples.
+    pub peopled: Option<PeopledTraits>,
 }
 
 /// The authored species registry, ordered alphabetically by name (`BTreeMap`
@@ -424,39 +441,43 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         SpeciesDef {
             name: "goblin",
             family: "goblinoid",
-            noun: "village",
-            psych: PsychVector {
-                threat_response: 0.5,
-                deliberation_latency: 0.5,
-                in_group_radius: 0.5,
-                time_horizon: 0.5,
-                sociality: Sociality::Hierarchic,
-                status_basis: StatusBasis::Rank,
+            biosphere: BiosphereTraits {
+                mass: Mass::new(18.1).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.50), (ANIMAL_PREY, 0.50)]).unwrap(),
+                condition_niche: goblin_condition_niche(),
+                potency: 0.0,
             },
-            perception: PerceptionVector {
-                activity: ActivityCycle::Diurnal,
-                night_vision: 0.5,
-                sky_attention: 0.5,
-            },
-            articulation: ArticulationVector {
-                labiality: 0.5,
-                vowel_space: 0.5,
-                voicing: 0.5,
-                sibilance: 0.5,
-                voice_loudness: 0.5,
-                tonality: 0.0,
-                exotic: ExoticManner::None,
-            },
-            mass: Mass::new(18.1).unwrap(),
-            metabolic_class: MetabolicClass::Endotherm,
-            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.50), (ANIMAL_PREY, 0.50)]).unwrap(),
-            condition_niche: goblin_condition_niche(),
-            potency: 0.0,
-            worker_override: None,
-            warrior: "warrior",
-            artisan: "artisan",
-            shaman: "shaman",
-            top: "chief",
+            peopled: Some(PeopledTraits {
+                noun: "village",
+                psych: PsychVector {
+                    threat_response: 0.5,
+                    deliberation_latency: 0.5,
+                    in_group_radius: 0.5,
+                    time_horizon: 0.5,
+                    sociality: Sociality::Hierarchic,
+                    status_basis: StatusBasis::Rank,
+                },
+                perception: PerceptionVector {
+                    activity: ActivityCycle::Diurnal,
+                    night_vision: 0.5,
+                    sky_attention: 0.5,
+                },
+                articulation: ArticulationVector {
+                    labiality: 0.5,
+                    vowel_space: 0.5,
+                    voicing: 0.5,
+                    sibilance: 0.5,
+                    voice_loudness: 0.5,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+                worker_override: None,
+                warrior: "warrior",
+                artisan: "artisan",
+                shaman: "shaman",
+                top: "chief",
+            }),
         },
     );
     reg.insert(
@@ -464,39 +485,43 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         SpeciesDef {
             name: "kobold",
             family: "kobold",
-            noun: "warren",
-            psych: PsychVector {
-                threat_response: 0.8,
-                deliberation_latency: 0.7,
-                in_group_radius: 0.2,
-                time_horizon: 0.8,
-                sociality: Sociality::Communal,
-                status_basis: StatusBasis::Knowledge,
+            biosphere: BiosphereTraits {
+                mass: Mass::new(13.6).unwrap(),
+                metabolic_class: MetabolicClass::Ectotherm,
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
+                condition_niche: kobold_condition_niche(),
+                potency: 0.0,
             },
-            perception: PerceptionVector {
-                activity: ActivityCycle::Nocturnal,
-                night_vision: 0.9,
-                sky_attention: 0.8,
-            },
-            articulation: ArticulationVector {
-                labiality: 0.1,
-                vowel_space: 0.3,
-                voicing: 0.6,
-                sibilance: 0.9,
-                voice_loudness: 0.2,
-                tonality: 0.0,
-                exotic: ExoticManner::Trill,
-            },
-            mass: Mass::new(13.6).unwrap(),
-            metabolic_class: MetabolicClass::Ectotherm,
-            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
-            condition_niche: kobold_condition_niche(),
-            potency: 0.0,
-            worker_override: Some("digger"),
-            warrior: "warden",
-            artisan: "shaper",
-            shaman: "keeper",
-            top: "elders",
+            peopled: Some(PeopledTraits {
+                noun: "warren",
+                psych: PsychVector {
+                    threat_response: 0.8,
+                    deliberation_latency: 0.7,
+                    in_group_radius: 0.2,
+                    time_horizon: 0.8,
+                    sociality: Sociality::Communal,
+                    status_basis: StatusBasis::Knowledge,
+                },
+                perception: PerceptionVector {
+                    activity: ActivityCycle::Nocturnal,
+                    night_vision: 0.9,
+                    sky_attention: 0.8,
+                },
+                articulation: ArticulationVector {
+                    labiality: 0.1,
+                    vowel_space: 0.3,
+                    voicing: 0.6,
+                    sibilance: 0.9,
+                    voice_loudness: 0.2,
+                    tonality: 0.0,
+                    exotic: ExoticManner::Trill,
+                },
+                worker_override: Some("digger"),
+                warrior: "warden",
+                artisan: "shaper",
+                shaman: "keeper",
+                top: "elders",
+            }),
         },
     );
     reg.insert(
@@ -504,39 +529,43 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         SpeciesDef {
             name: "hobgoblin",
             family: "goblinoid",
-            noun: "legion",
-            psych: PsychVector {
-                threat_response: 0.7,
-                deliberation_latency: 0.6,
-                in_group_radius: 0.3,
-                time_horizon: 0.5,
-                sociality: Sociality::Hierarchic,
-                status_basis: StatusBasis::Rank,
+            biosphere: BiosphereTraits {
+                mass: Mass::new(74.8).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
+                condition_niche: hobgoblin_condition_niche(),
+                potency: 0.0,
             },
-            perception: PerceptionVector {
-                activity: ActivityCycle::Diurnal,
-                night_vision: 0.6,
-                sky_attention: 0.5,
-            },
-            articulation: ArticulationVector {
-                labiality: 0.5,
-                vowel_space: 0.5,
-                voicing: 0.6,
-                sibilance: 0.4,
-                voice_loudness: 0.8,
-                tonality: 0.0,
-                exotic: ExoticManner::None,
-            },
-            mass: Mass::new(74.8).unwrap(),
-            metabolic_class: MetabolicClass::Endotherm,
-            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
-            condition_niche: hobgoblin_condition_niche(),
-            potency: 0.0,
-            worker_override: Some("laborer"),
-            warrior: "soldier",
-            artisan: "smith",
-            shaman: "augur",
-            top: "warlord",
+            peopled: Some(PeopledTraits {
+                noun: "legion",
+                psych: PsychVector {
+                    threat_response: 0.7,
+                    deliberation_latency: 0.6,
+                    in_group_radius: 0.3,
+                    time_horizon: 0.5,
+                    sociality: Sociality::Hierarchic,
+                    status_basis: StatusBasis::Rank,
+                },
+                perception: PerceptionVector {
+                    activity: ActivityCycle::Diurnal,
+                    night_vision: 0.6,
+                    sky_attention: 0.5,
+                },
+                articulation: ArticulationVector {
+                    labiality: 0.5,
+                    vowel_space: 0.5,
+                    voicing: 0.6,
+                    sibilance: 0.4,
+                    voice_loudness: 0.8,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+                worker_override: Some("laborer"),
+                warrior: "soldier",
+                artisan: "smith",
+                shaman: "augur",
+                top: "warlord",
+            }),
         },
     );
     reg.insert(
@@ -544,39 +573,43 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         SpeciesDef {
             name: "bugbear",
             family: "goblinoid",
-            noun: "lair",
-            psych: PsychVector {
-                threat_response: 0.8,
-                deliberation_latency: 0.4,
-                in_group_radius: 0.3,
-                time_horizon: 0.3,
-                sociality: Sociality::Communal,
-                status_basis: StatusBasis::Rank,
+            biosphere: BiosphereTraits {
+                mass: Mass::new(132.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 0.15), (ANIMAL_PREY, 0.85)]).unwrap(),
+                condition_niche: bugbear_condition_niche(),
+                potency: 0.0,
             },
-            perception: PerceptionVector {
-                activity: ActivityCycle::Nocturnal,
-                night_vision: 0.7,
-                sky_attention: 0.3,
-            },
-            articulation: ArticulationVector {
-                labiality: 0.5,
-                vowel_space: 0.4,
-                voicing: 0.7,
-                sibilance: 0.2,
-                voice_loudness: 0.3,
-                tonality: 0.0,
-                exotic: ExoticManner::None,
-            },
-            mass: Mass::new(132.0).unwrap(),
-            metabolic_class: MetabolicClass::Endotherm,
-            niche: ResourceVector::new(&[(PLANT_FORAGE, 0.15), (ANIMAL_PREY, 0.85)]).unwrap(),
-            condition_niche: bugbear_condition_niche(),
-            potency: 0.0,
-            worker_override: Some("forager"),
-            warrior: "mauler",
-            artisan: "tanner",
-            shaman: "omen-reader",
-            top: "headman",
+            peopled: Some(PeopledTraits {
+                noun: "lair",
+                psych: PsychVector {
+                    threat_response: 0.8,
+                    deliberation_latency: 0.4,
+                    in_group_radius: 0.3,
+                    time_horizon: 0.3,
+                    sociality: Sociality::Communal,
+                    status_basis: StatusBasis::Rank,
+                },
+                perception: PerceptionVector {
+                    activity: ActivityCycle::Nocturnal,
+                    night_vision: 0.7,
+                    sky_attention: 0.3,
+                },
+                articulation: ArticulationVector {
+                    labiality: 0.5,
+                    vowel_space: 0.4,
+                    voicing: 0.7,
+                    sibilance: 0.2,
+                    voice_loudness: 0.3,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+                worker_override: Some("forager"),
+                warrior: "mauler",
+                artisan: "tanner",
+                shaman: "omen-reader",
+                top: "headman",
+            }),
         },
     );
     reg
@@ -697,131 +730,137 @@ pub fn genesis_in(
     for def in roster {
         let name = def.name;
         let id = world.ledger.mint_entity();
-        let p = def.psych;
-        let sociality = match p.sociality {
-            Sociality::Hierarchic => "hierarchic",
-            Sociality::Communal => "communal",
-        };
-        let status = match p.status_basis {
-            StatusBasis::Rank => "rank",
-            StatusBasis::Knowledge => "knowledge",
-            StatusBasis::Generosity => "generosity",
-        };
         world.ledger.commit(
             fact(id, SPECIES_NAME, Value::Text(name.to_string())),
             &world.registry,
         )?;
-        world.ledger.commit(
-            fact(id, THREAT_RESPONSE, Value::Number(p.threat_response)),
-            &world.registry,
-        )?;
-        world.ledger.commit(
-            fact(
-                id,
-                DELIBERATION_LATENCY,
-                Value::Number(p.deliberation_latency),
-            ),
-            &world.registry,
-        )?;
-        world.ledger.commit(
-            fact(id, IN_GROUP_RADIUS, Value::Number(p.in_group_radius)),
-            &world.registry,
-        )?;
-        world.ledger.commit(
-            fact(id, TIME_HORIZON, Value::Number(p.time_horizon)),
-            &world.registry,
-        )?;
-        world.ledger.commit(
-            fact(id, SOCIALITY_MODE, Value::Text(sociality.to_string())),
-            &world.registry,
-        )?;
-        world.ledger.commit(
-            fact(id, STATUS_BASIS, Value::Text(status.to_string())),
-            &world.registry,
-        )?;
-        let activity = match def.perception.activity {
-            ActivityCycle::Diurnal => "diurnal",
-            ActivityCycle::Nocturnal => "nocturnal",
-            ActivityCycle::Crepuscular => "crepuscular",
-        };
-        world.ledger.commit(
-            fact(
-                id,
-                SPECIES_ACTIVITY_CYCLE,
-                Value::Text(activity.to_string()),
-            ),
-            &world.registry,
-        )?;
-        world.ledger.commit(
-            fact(
-                id,
-                SPECIES_NIGHT_VISION,
-                Value::Number(def.perception.night_vision),
-            ),
-            &world.registry,
-        )?;
-        world.ledger.commit(
-            fact(
-                id,
-                SPECIES_SKY_ATTENTION,
-                Value::Number(def.perception.sky_attention),
-            ),
-            &world.registry,
-        )?;
-        let exotic = match def.articulation.exotic {
-            ExoticManner::None => "none",
-            ExoticManner::Trill => "trill",
-            ExoticManner::Click => "click",
-            ExoticManner::Ejective => "ejective",
-        };
-        world.ledger.commit(
-            fact(
-                id,
-                SPECIES_LABIALITY,
-                Value::Number(def.articulation.labiality),
-            ),
-            &world.registry,
-        )?;
-        world.ledger.commit(
-            fact(
-                id,
-                SPECIES_VOWEL_SPACE,
-                Value::Number(def.articulation.vowel_space),
-            ),
-            &world.registry,
-        )?;
-        world.ledger.commit(
-            fact(id, SPECIES_VOICING, Value::Number(def.articulation.voicing)),
-            &world.registry,
-        )?;
-        world.ledger.commit(
-            fact(
-                id,
-                SPECIES_SIBILANCE,
-                Value::Number(def.articulation.sibilance),
-            ),
-            &world.registry,
-        )?;
-        world.ledger.commit(
-            fact(
-                id,
-                SPECIES_VOICE_LOUDNESS,
-                Value::Number(def.articulation.voice_loudness),
-            ),
-            &world.registry,
-        )?;
-        world.ledger.commit(
-            fact(
-                id,
-                SPECIES_TONALITY,
-                Value::Number(def.articulation.tonality),
-            ),
-            &world.registry,
-        )?;
-        world.ledger.commit(
-            fact(id, SPECIES_EXOTIC_MANNER, Value::Text(exotic.to_string())),
-            &world.registry,
-        )?;
+        if let Some(peopled) = &def.peopled {
+            let p = peopled.psych;
+            let sociality = match p.sociality {
+                Sociality::Hierarchic => "hierarchic",
+                Sociality::Communal => "communal",
+            };
+            let status = match p.status_basis {
+                StatusBasis::Rank => "rank",
+                StatusBasis::Knowledge => "knowledge",
+                StatusBasis::Generosity => "generosity",
+            };
+            world.ledger.commit(
+                fact(id, THREAT_RESPONSE, Value::Number(p.threat_response)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                fact(
+                    id,
+                    DELIBERATION_LATENCY,
+                    Value::Number(p.deliberation_latency),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                fact(id, IN_GROUP_RADIUS, Value::Number(p.in_group_radius)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                fact(id, TIME_HORIZON, Value::Number(p.time_horizon)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                fact(id, SOCIALITY_MODE, Value::Text(sociality.to_string())),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                fact(id, STATUS_BASIS, Value::Text(status.to_string())),
+                &world.registry,
+            )?;
+            let activity = match peopled.perception.activity {
+                ActivityCycle::Diurnal => "diurnal",
+                ActivityCycle::Nocturnal => "nocturnal",
+                ActivityCycle::Crepuscular => "crepuscular",
+            };
+            world.ledger.commit(
+                fact(
+                    id,
+                    SPECIES_ACTIVITY_CYCLE,
+                    Value::Text(activity.to_string()),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                fact(
+                    id,
+                    SPECIES_NIGHT_VISION,
+                    Value::Number(peopled.perception.night_vision),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                fact(
+                    id,
+                    SPECIES_SKY_ATTENTION,
+                    Value::Number(peopled.perception.sky_attention),
+                ),
+                &world.registry,
+            )?;
+            let exotic = match peopled.articulation.exotic {
+                ExoticManner::None => "none",
+                ExoticManner::Trill => "trill",
+                ExoticManner::Click => "click",
+                ExoticManner::Ejective => "ejective",
+            };
+            world.ledger.commit(
+                fact(
+                    id,
+                    SPECIES_LABIALITY,
+                    Value::Number(peopled.articulation.labiality),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                fact(
+                    id,
+                    SPECIES_VOWEL_SPACE,
+                    Value::Number(peopled.articulation.vowel_space),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                fact(
+                    id,
+                    SPECIES_VOICING,
+                    Value::Number(peopled.articulation.voicing),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                fact(
+                    id,
+                    SPECIES_SIBILANCE,
+                    Value::Number(peopled.articulation.sibilance),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                fact(
+                    id,
+                    SPECIES_VOICE_LOUDNESS,
+                    Value::Number(peopled.articulation.voice_loudness),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                fact(
+                    id,
+                    SPECIES_TONALITY,
+                    Value::Number(peopled.articulation.tonality),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                fact(id, SPECIES_EXOTIC_MANNER, Value::Text(exotic.to_string())),
+                &world.registry,
+            )?;
+        }
         ids.insert(name.to_string(), id);
     }
     Ok(ids)
@@ -909,7 +948,7 @@ mod tests {
     #[test]
     fn goblin_is_the_baseline_vector() {
         let reg = registry();
-        let g = &reg["goblin"].psych;
+        let g = &reg["goblin"].peopled.as_ref().unwrap().psych;
         for v in [
             g.threat_response,
             g.deliberation_latency,
@@ -927,12 +966,12 @@ mod tests {
         let reg = registry();
         let names: Vec<&str> = reg.keys().copied().collect();
         assert_eq!(names, vec!["bugbear", "goblin", "hobgoblin", "kobold"]);
-        let k = &reg["kobold"].psych;
+        let k = &reg["kobold"].peopled.as_ref().unwrap().psych;
         assert_eq!(k.sociality, Sociality::Communal);
         assert_eq!(k.status_basis, StatusBasis::Knowledge);
         assert!(k.in_group_radius < 0.5 && k.time_horizon > 0.5 && k.threat_response > 0.5);
-        assert_eq!(reg["kobold"].noun, "warren");
-        assert_eq!(reg["kobold"].top, "elders");
+        assert_eq!(reg["kobold"].peopled.as_ref().unwrap().noun, "warren");
+        assert_eq!(reg["kobold"].peopled.as_ref().unwrap().top, "elders");
     }
 
     #[test]
@@ -972,11 +1011,11 @@ mod tests {
     #[test]
     fn goblin_perception_is_the_baseline_and_kobold_contrasts() {
         let reg = registry();
-        let g = &reg["goblin"].perception;
+        let g = &reg["goblin"].peopled.as_ref().unwrap().perception;
         assert_eq!(g.activity, ActivityCycle::Diurnal);
         assert_eq!(g.night_vision, 0.5);
         assert_eq!(g.sky_attention, 0.5);
-        let k = &reg["kobold"].perception;
+        let k = &reg["kobold"].peopled.as_ref().unwrap().perception;
         assert_eq!(k.activity, ActivityCycle::Nocturnal);
         assert!(k.night_vision > 0.5 && k.sky_attention > 0.5);
     }
@@ -1001,11 +1040,11 @@ mod tests {
     #[test]
     fn goblin_articulation_is_baseline_kobold_hisses_and_is_quiet() {
         let reg = registry();
-        let g = &reg["goblin"].articulation;
+        let g = &reg["goblin"].peopled.as_ref().unwrap().articulation;
         assert_eq!(g.labiality, 0.5);
         assert_eq!(g.voice_loudness, 0.5);
         assert_eq!(g.exotic, ExoticManner::None);
-        let k = &reg["kobold"].articulation;
+        let k = &reg["kobold"].peopled.as_ref().unwrap().articulation;
         assert!(k.sibilance > 0.5 && k.labiality < 0.5 && k.voice_loudness < 0.5);
         assert_eq!(k.exotic, ExoticManner::Trill);
     }
@@ -1036,7 +1075,7 @@ mod tests {
     #[test]
     fn family_divides_along_voice_loudness() {
         let r = registry();
-        let l = |n: &str| r[n].articulation.voice_loudness;
+        let l = |n: &str| r[n].peopled.as_ref().unwrap().articulation.voice_loudness;
         assert!(l("bugbear") < l("goblin") && l("goblin") < l("hobgoblin"));
     }
 
@@ -1045,7 +1084,11 @@ mod tests {
         let proto = family_registry()["goblinoid"];
         let r = registry();
         for d in ["goblin", "hobgoblin", "bugbear"] {
-            assert_ne!(proto, r[d].articulation, "proto must differ from {d}");
+            assert_ne!(
+                proto,
+                r[d].peopled.as_ref().unwrap().articulation,
+                "proto must differ from {d}"
+            );
         }
     }
 
@@ -1078,26 +1121,28 @@ mod tests {
         let r = registry();
         for name in ["goblin", "kobold", "hobgoblin", "bugbear"] {
             let s = &r[name];
-            assert!(s.mass.kilograms() > 0.0, "{name} has mass");
-            assert!(!s.niche.is_zero(), "{name} eats something");
+            assert!(s.biosphere.mass.kilograms() > 0.0, "{name} has mass");
+            assert!(!s.biosphere.niche.is_zero(), "{name} eats something");
             // omnivores: both plant-forage and animal-prey present
-            assert!(s.niche.weight(hornvale_kernel::PLANT_FORAGE) > 0.0);
-            assert!(s.niche.weight(hornvale_kernel::ANIMAL_PREY) > 0.0);
+            assert!(s.biosphere.niche.weight(hornvale_kernel::PLANT_FORAGE) > 0.0);
+            assert!(s.biosphere.niche.weight(hornvale_kernel::ANIMAL_PREY) > 0.0);
         }
         // strict, modest, monotone mass band: kobold < goblin < hobgoblin < bugbear
-        assert!(r["kobold"].mass.kilograms() < r["goblin"].mass.kilograms());
-        assert!(r["goblin"].mass.kilograms() < r["hobgoblin"].mass.kilograms());
-        assert!(r["hobgoblin"].mass.kilograms() < r["bugbear"].mass.kilograms());
+        assert!(r["kobold"].biosphere.mass.kilograms() < r["goblin"].biosphere.mass.kilograms());
+        assert!(r["goblin"].biosphere.mass.kilograms() < r["hobgoblin"].biosphere.mass.kilograms());
+        assert!(
+            r["hobgoblin"].biosphere.mass.kilograms() < r["bugbear"].biosphere.mass.kilograms()
+        );
     }
 
     #[test]
     fn every_species_has_a_finite_condition_niche() {
         for (name, def) in registry() {
             for r in [
-                def.condition_niche.temperature,
-                def.condition_niche.moisture,
-                def.condition_niche.insolation,
-                def.condition_niche.elevation,
+                def.biosphere.condition_niche.temperature,
+                def.biosphere.condition_niche.moisture,
+                def.biosphere.condition_niche.insolation,
+                def.biosphere.condition_niche.elevation,
             ] {
                 assert!(r.optimum.is_finite(), "{name} optimum finite");
                 assert!(
@@ -1107,7 +1152,7 @@ mod tests {
                 assert!(r.devotion.is_finite(), "{name} devotion finite");
             }
             assert!(
-                def.potency >= 0.0 && def.potency.is_finite(),
+                def.biosphere.potency >= 0.0 && def.biosphere.potency.is_finite(),
                 "{name} potency >= 0"
             );
         }
@@ -1118,7 +1163,7 @@ mod tests {
         let reg = registry();
         let opts: Vec<f64> = ["kobold", "goblin", "hobgoblin", "bugbear"]
             .iter()
-            .map(|n| reg[*n].condition_niche.temperature.optimum)
+            .map(|n| reg[*n].biosphere.condition_niche.temperature.optimum)
             .collect();
         // the anti-uniformity guard: all four temperature optima pairwise distinct
         for i in 0..opts.len() {
@@ -1135,10 +1180,26 @@ mod tests {
     fn every_species_has_a_metabolic_class() {
         use MetabolicClass::*;
         let r = registry();
-        assert_eq!(r["goblin"].metabolic_class, Endotherm);
-        assert_eq!(r["hobgoblin"].metabolic_class, Endotherm);
-        assert_eq!(r["bugbear"].metabolic_class, Endotherm);
-        assert_eq!(r["kobold"].metabolic_class, Ectotherm); // reptilian/draconic SRD lineage
+        assert_eq!(r["goblin"].biosphere.metabolic_class, Endotherm);
+        assert_eq!(r["hobgoblin"].biosphere.metabolic_class, Endotherm);
+        assert_eq!(r["bugbear"].biosphere.metabolic_class, Endotherm);
+        assert_eq!(r["kobold"].biosphere.metabolic_class, Ectotherm); // reptilian/draconic SRD lineage
+    }
+
+    #[test]
+    fn split_preserves_biosphere_and_peopled_presence() {
+        let reg = registry();
+        let goblin = &reg["goblin"];
+        // biosphere moved intact
+        assert_eq!(goblin.biosphere.mass, Mass::new(18.1).unwrap());
+        assert_eq!(goblin.biosphere.potency, 0.0);
+        // the four peoples all speak/settle
+        for name in ["goblin", "kobold", "hobgoblin", "bugbear"] {
+            assert!(
+                reg[name].peopled.is_some(),
+                "{name} must carry PeopledTraits"
+            );
+        }
     }
 
     #[test]
