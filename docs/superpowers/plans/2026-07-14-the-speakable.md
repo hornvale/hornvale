@@ -64,7 +64,7 @@ generated output — the production call site passes `&[]` until Task 3).
 - Consumes: `Lexicon::entries()` (`lexicon.rs:155`), `LexEntry::Root`'s
   `derivation.modern: Vec<Segment>`, `Segment: Ord`.
 
-- [ ] **Step 1: Write the failing tests** (in `naming.rs`'s existing
+- [x] **Step 1: Write the failing tests** (in `naming.rs`'s existing
   `#[cfg(test)] mod tests`, using the existing `toy_repair_ph()` /
   `toy_segments()` fixtures — one vowel `a`, stop `t`, nasal `n`; onsets
   `[[Stop]]`, nuclei 1, codas `[[Nasal], []]`):
@@ -129,13 +129,13 @@ fn attested_forms_are_roots_only_deduped_longest_first() {
 }
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `cargo test -p hornvale-language an_attested_word 2>&1 | tail -5`
 Expected: COMPILE FAILURE (`conforms` takes 2 arguments, `attested_forms`
 not found) — a compile-level red is the failing state here.
 
-- [ ] **Step 3: Implement.** Add the helper (near `holds_word`, which it
+- [x] **Step 3: Implement.** Add the helper (near `holds_word`, which it
   mirrors in spirit):
 
 ```rust
@@ -232,13 +232,13 @@ that gap is closed. Update ALL existing call sites — the production one at
 Task 3) and every test call (`conforms(&x, &ph)` → `conforms(&x, &ph, &[])`
 etc.).
 
-- [ ] **Step 4: Run the crate's tests**
+- [x] **Step 4: Run the crate's tests**
 
 Run: `cargo test -p hornvale-language 2>&1 | tail -5`
 Expected: PASS (all pre-existing tests green with `&[]`; four new tests
 green).
 
-- [ ] **Step 5: fmt, clippy, gate, commit**
+- [x] **Step 5: fmt, clippy, gate, commit**
 
 ```bash
 cargo fmt && cargo clippy -p hornvale-language --all-targets -- -D warnings 2>&1 | tail -3
@@ -275,7 +275,7 @@ so this commit also changes no outputs.
   (both private to metrics.rs; Task 3's flip relies on this validator
   accepting the new names, and the seed-0 module probe proves it live).
 
-- [ ] **Step 1: Write the failing test** (module tests at the bottom of
+- [x] **Step 1: Write the failing test** (module tests at the bottom of
   `metrics.rs`, near the existing `is_phonotactically_valid` tests — those
   build a `Phonology` by hand; reuse whatever local fixture they use):
 
@@ -298,13 +298,13 @@ letter sequence the fixture's templates cannot parse, e.g. a bare coda
 consonant, and attest it. The three assertions are the contract:
 attested ⇒ valid, unattested+canon-illegal ⇒ invalid, junk ⇒ invalid.)
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `cargo test -p hornvale-lab attested_roman 2>&1 | tail -5`
 Expected: COMPILE FAILURE (arity) — then after mechanical arity fixes in
 old tests, the new test fails on the first assertion until Step 3 lands.
 
-- [ ] **Step 3: Implement.**
+- [x] **Step 3: Implement.**
 
 ```rust
 /// The attested tier at the roman level (The Speakable): the lowercased
@@ -367,12 +367,12 @@ comment (two tiers; note the lexicon-derivation caveat at metrics.rs:2864
 applies — resolve species within the roster exactly as the caller at
 2473 does via `language_of_in`/`lexicon_of` together).
 
-- [ ] **Step 4: Run the crate's tests**
+- [x] **Step 4: Run the crate's tests**
 
 Run: `cargo test -p hornvale-lab 2>&1 | tail -5`
 Expected: PASS.
 
-- [ ] **Step 5: fmt, clippy, gate, commit**
+- [x] **Step 5: fmt, clippy, gate, commit**
 
 ```bash
 cargo fmt && make gate 2>&1 | tail -5
@@ -405,7 +405,7 @@ The behavior change and its rebaseline land in ONE commit.
 - Produces: the new committed names. Tasks 4–6 assert against this
   behavior.
 
-- [ ] **Step 1: Write the failing test** (naming.rs module tests):
+- [x] **Step 1: Write the failing test** (naming.rs module tests):
 
 ```rust
 #[test]
@@ -440,7 +440,7 @@ fn glossed_names_surface_their_site_words_verbatim() {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `cargo test -p hornvale-language glossed_names_surface 2>&1 | tail -8`
 Expected: FAIL for at least one salt/kind (wordy_ph's drawn templates
@@ -449,7 +449,7 @@ battery in Task 4 sweeps 64 seeds — but verify the red by temporarily
 asserting over `two_word_lexicon(seed)` for seeds 0..12 in a scratch run
 and keep whichever seed reds in the committed test).
 
-- [ ] **Step 3: Implement the flip.** In `glossed_name`, after the
+- [x] **Step 3: Implement the flip.** In `glossed_name`, after the
   candidate filtering and before the fallback branch (both paths repair —
   only the compound path has attested material, but computing the tier
   once at the top is simplest and pure):
@@ -485,7 +485,7 @@ Check the other module tests' expectations still hold (they assert
 structure — purity, gloss subsets, epithet keying — not repaired shapes,
 so they should pass untouched).
 
-- [ ] **Step 4: Test the crate, then the workspace**
+- [x] **Step 4: Test the crate, then the workspace**
 
 ```bash
 cargo test -p hornvale-language 2>&1 | tail -5
@@ -496,7 +496,7 @@ Expected: language green. Workspace: worldgen/lab/cli byte-identity and
 artifact-comparison tests may red against stale committed artifacts —
 inspect /tmp/hv-speakable-t3.txt; ONLY name-bearing expectations may move.
 
-- [ ] **Step 5: Regenerate committed artifacts**
+- [x] **Step 5: Regenerate committed artifacts**
 
 ```bash
 SKIP_CENSUS=1 bash scripts/regenerate-artifacts.sh 2>&1 | tail -5
@@ -510,7 +510,7 @@ byte-identical (spec §8.4 — if any of those five moves, STOP: a stream or
 lexicon changed, which this campaign must not do; investigate before
 committing).
 
-- [ ] **Step 6: Full gate + commit (flip + rebaseline together)**
+- [x] **Step 6: Full gate + commit (flip + rebaseline together)**
 
 ```bash
 cargo fmt && make gate 2>&1 | tail -5
@@ -526,7 +526,7 @@ manifest pages byte-identical as required. Census fixtures lag until the
 pre-merge AWS regen (standing posture)."
 ```
 
-- [ ] **Step 7: `make preflight`** (post-flip stage boundary). On
+- [x] **Step 7: `make preflight`** (post-flip stage boundary). On
   ancestry NO-GO: merge main into the branch, re-run `make gate`.
 
 ---
@@ -549,7 +549,7 @@ pre-merge AWS regen (standing posture)."
   doc comment).
 - Produces: the spec §6 evidence battery; nothing downstream consumes it.
 
-- [ ] **Step 1: Write the segment-level battery** (module tests; fails
+- [x] **Step 1: Write the segment-level battery** (module tests; fails
   only if the Task 1–3 machinery is wrong, so expect green — the red was
   Task 3's Step 2):
 
@@ -616,7 +616,7 @@ fn attested_compounds_repair_to_identity_across_the_seed_sweep() {
 exactly. If `wordy_ph()`/fixture names differ, reuse the module's
 existing fixtures rather than inventing new ones.)
 
-- [ ] **Step 2: Write the string-level battery**
+- [x] **Step 2: Write the string-level battery**
   (`domains/language/tests/speakable_properties.rs`, public API only) —
   the "names are audibly made of words" property, Task 3's unit test
   generalized over the sweep, plus per-salt settlement distinctness:
@@ -654,7 +654,7 @@ mechanical given the module battery — build the same fixtures, assert the
 two properties). If a public export is missing for any needed item, add
 the re-export in `lib.rs` with a doc comment in this same task.
 
-- [ ] **Step 3: Run both batteries**
+- [x] **Step 3: Run both batteries**
 
 ```bash
 cargo test -p hornvale-language 2>&1 | tail -5
@@ -662,7 +662,7 @@ cargo test -p hornvale-language 2>&1 | tail -5
 Expected: PASS, total runtime well under a minute (64 lexicon builds are
 cheap; if the file exceeds ~60s it must be split or trimmed, not ignored).
 
-- [ ] **Step 4: fmt, gate, commit**
+- [x] **Step 4: fmt, gate, commit**
 
 ```bash
 cargo fmt && make gate 2>&1 | tail -5
@@ -688,7 +688,7 @@ git commit -m "test(language): 64-seed speakability batteries (The Speakable Tas
 - Produces: the merged-world regression + the chronicle's measured
   readout.
 
-- [ ] **Step 1: Write the failing-before test** (it PASSES now, post-flip;
+- [x] **Step 1: Write the failing-before test** (it PASSES now, post-flip;
   its value is as a permanent probe — the probe-library posture from
   TOOL-13):
 
@@ -738,7 +738,7 @@ Fill both bodies against the file's existing helpers; keep assertions on
 mechanism (containment, distinctness), never on exact name strings — the
 `goblin_names_are_rebaselined_not_frozen` posture in the same file.
 
-- [ ] **Step 2: Add the readout** (ignored, run manually once for the
+- [x] **Step 2: Add the readout** (ignored, run manually once for the
   chronicle):
 
 ```rust
@@ -755,7 +755,7 @@ fn deity_name_distinctness_readout() {
 }
 ```
 
-- [ ] **Step 3: Run**
+- [x] **Step 3: Run**
 
 ```bash
 cargo test -p hornvale --test branches_identity 2>&1 | tail -5
@@ -765,7 +765,7 @@ Expected: probes PASS; readout prints ~200 lines — save the file, the
 chronicle task quotes it. (50 world builds is minutes, not hours; if it
 runs long, trim to 20 seeds rather than parallelizing.)
 
-- [ ] **Step 4: fmt, gate, commit**
+- [x] **Step 4: fmt, gate, commit**
 
 ```bash
 cargo fmt && make gate 2>&1 | tail -5
@@ -800,21 +800,21 @@ git commit -m "test(cli): seed-42 speakability probes + distinctness readout (Th
   regenerated artifacts from Task 3, the decision ledger + followups in
   `.superpowers/sdd/` (the retro promotes the followup register).
 
-- [ ] **Step 1: Chronicle entry.** Cover: the Bvaash investigation (what
+- [x] **Step 1: Chronicle entry.** Cover: the Bvaash investigation (what
   a reader sees: seven gods, one name), the mechanism (independent draws:
   templates vs descent; deletion-only repair; the constant fallback), the
   fix (descriptive phonotactics, the attested tier, identity by
   construction), the ideonomy overturn (negation surfaced
   templates-bend-to-words), and the measured readout table. Book
   altitude: technical, comprehensible without the code.
-- [ ] **Step 2: Freshness sweep.** The three book pages above; also grep
+- [x] **Step 2: Freshness sweep.** The three book pages above; also grep
   the book for quoted collapsed names to catch stragglers:
   `grep -rn "Bvaash\|the Neb\|the Fee" book/src/ --include="*.md"` and fix
   every stale quote (mind false positives — read each hit).
-- [ ] **Step 3: Registry flip + retro.** One-line status flip; retro from
+- [x] **Step 3: Registry flip + retro.** One-line status flip; retro from
   the ledger (what autopilot resolved, the overturn, what the next
   campaign inherits — LANG-33, exonym repair).
-- [ ] **Step 4: Build the book, run docs consistency**
+- [x] **Step 4: Build the book, run docs consistency**
 
 ```bash
 mdbook build book 2>&1 | tail -3
@@ -822,7 +822,7 @@ cargo test -p hornvale --test docs_consistency 2>&1 | tail -3
 ```
 Expected: both green.
 
-- [ ] **Step 5: fmt (no-op for docs), gate, commit**
+- [x] **Step 5: fmt (no-op for docs), gate, commit**
 
 ```bash
 make gate 2>&1 | tail -5
@@ -838,3 +838,13 @@ git commit -m "docs(book): The Speakable chronicle + freshness sweep + retro (Ta
 post-G3 ledger digest to Nathan (determinism entries first), the census
 re-pin warning (collision-rate pin + census fixtures at the AWS regen),
 then merge per his call. LANG-32 ships; followups promote into the retro.
+
+---
+
+**COMPLETE (2026-07-14).** All six tasks executed, reviewed, and merged;
+final whole-branch review: ready to merge. Deviations from plan recorded
+in the retrospective (haiku stray-commit incident; two plan-snippet bugs
+caught in review: build_lexicon arg order, envelope bit windows; the-gods
+page rewrite scope). Census fixtures + name-collision-rate pin lag until
+the next authorized AWS regen (standing posture; NO AWS run this close per
+Nathan).

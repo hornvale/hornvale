@@ -184,3 +184,9 @@ byte-identical.
   the root-cause remodels, named in LANG-32's row.
 - Deity descriptor breadth — LANG-33, the sequel campaign.
 - Any change to nucleus counts, tone, or the capacity floor.
+
+---
+
+**SHIPPED (2026-07-14).** Implemented as planned (attested tier;
+rebaseline-not-epoch); measured outcome in the chronicle
+(`book/src/chronicle/the-speakable.md`). LANG-32 flipped to shipped.
