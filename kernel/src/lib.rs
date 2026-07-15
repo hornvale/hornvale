@@ -26,8 +26,8 @@ pub mod world;
 
 pub use domain::Domain;
 pub use ecology::{
-    ANIMAL_PREY, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE, ResourceAxis, ResourceKind,
-    ResourceVector, v1_basis,
+    ANIMAL_PREY, ConditionResponse, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE, ResourceAxis,
+    ResourceKind, ResourceVector, sovereignty_floor, v1_basis,
 };
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
 pub use geosphere::{CellId, CellMap, GeoCoord, Geosphere, NearestCellIndex};
@@ -40,5 +40,5 @@ pub use registry::{ConceptDef, ConceptKind, ConceptRegistry, PredicateDef, Regis
 pub use room::{MAX_DEPTH, RoomAddr, RoomAddrError, RoomId, RoomIdError};
 pub use seed::{Seed, Stream};
 pub use streams::stream_labels;
-pub use units::{Mass, ReferenceElevation, TempAnomaly, Temperature, UnitError};
+pub use units::{Mass, ReferenceElevation, TempAnomaly, Temperature, UnitError, Years};
 pub use world::{NAME, World};

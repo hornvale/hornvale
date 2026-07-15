@@ -12,8 +12,14 @@
 use std::collections::BTreeMap;
 
 use hornvale_kernel::{
-    ANIMAL_PREY, ConceptKind, ConceptRegistry, EntityId, Fact, LedgerError, Mass, PLANT_FORAGE,
-    RegistryError, ResourceVector, Value, World,
+    ANIMAL_PREY, ConceptKind, ConceptRegistry, ConditionResponse, EntityId, Fact, LedgerError,
+    Mass, PLANT_FORAGE, RegistryError, ResourceVector, Value, World,
+};
+
+mod allometry;
+pub use allometry::{
+    LifeHistory, age_at_maturity, basal_metabolic_rate_w, life_history, lifespan,
+    reproductive_tempo,
 };
 
 /// Predicate: a species entity's name (functional, Text).
@@ -178,6 +184,176 @@ pub struct ArticulationVector {
     pub exotic: ExoticManner,
 }
 
+/// A species' condition-tolerance profile: one response curve per v1
+/// environmental axis. v1 fixes the four axes; a later campaign generalizes
+/// to an open axis registry.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ConditionNiche {
+    /// Response curve over temperature, axis value in °C.
+    pub temperature: ConditionResponse,
+    /// Response curve over moisture, axis value in the climate moisture unit.
+    pub moisture: ConditionResponse,
+    /// Response curve over insolation, axis value in the annual-mean
+    /// insolation unit.
+    pub insolation: ConditionResponse,
+    /// Response curve over elevation, axis value in the terrain elevation
+    /// unit.
+    pub elevation: ConditionResponse,
+}
+
+/// Kobold condition niche: cool HIGHLANDER — dark-adapted (consistent with
+/// cool/polar), wide/indifferent on moisture, and staked to high elevation as
+/// its exclusive, hard-excluding stronghold axis (Task B2b re-authoring: the
+/// original B2 optima wanted cold+low-light cells that are also food-poor on
+/// this world; elevation is a geographically independent axis the lowland
+/// species can't contest). Authored within the measured seed-42 land ranges;
+/// see the species chapter's model card for the ecological rationale.
+fn kobold_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 6.0,
+            width: 14.0,
+            devotion: 0.85,
+        },
+        // wide/indifferent
+        moisture: ConditionResponse {
+            optimum: 0.45,
+            width: 0.60,
+            devotion: 0.40,
+        },
+        // low light — consistent with cold/polar
+        insolation: ConditionResponse {
+            optimum: 0.04,
+            width: 0.12,
+            devotion: 0.80,
+        },
+        // HIGHLANDS — its exclusive niche
+        elevation: ConditionResponse {
+            optimum: 2600.0,
+            width: 1200.0,
+            devotion: 0.95,
+        },
+    }
+}
+
+/// Goblin condition niche: a warm-marginal GENERALIST with wide tolerance on
+/// every axis (the cosmopolitan weed that fills margins/ecotones between the
+/// three specialists). Authored within the measured seed-42 land ranges (Task
+/// B2b re-authoring keeps this helper's shape, values retuned slightly to sit
+/// alongside the corrected specialists); see the species chapter's model card
+/// for the ecological rationale.
+fn goblin_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 18.0,
+            width: 28.0,
+            devotion: 0.45,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.50,
+            width: 0.60,
+            devotion: 0.35,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.13,
+            width: 0.30,
+            devotion: 0.35,
+        },
+        elevation: ConditionResponse {
+            optimum: 500.0,
+            width: 3000.0,
+            devotion: 0.35,
+        },
+    }
+}
+
+/// Hobgoblin condition niche: temperate, DRIER, mid-elevation open plains —
+/// moisture and elevation separate it from bugbear's wet lowlands and
+/// kobold's highlands (Task B2b re-authoring). Authored within the measured
+/// seed-42 land ranges; see the species chapter's model card for the
+/// ecological rationale.
+fn hobgoblin_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 13.0,
+            width: 10.0,
+            devotion: 0.90,
+        },
+        // drier/open plains
+        moisture: ConditionResponse {
+            optimum: 0.35,
+            width: 0.30,
+            devotion: 0.80,
+        },
+        // open sun
+        insolation: ConditionResponse {
+            optimum: 0.19,
+            width: 0.13,
+            devotion: 0.85,
+        },
+        // low-mid
+        elevation: ConditionResponse {
+            optimum: 600.0,
+            width: 1400.0,
+            devotion: 0.70,
+        },
+    }
+}
+
+/// Bugbear condition niche: warm-WET LOWLAND forest (rainforest); moisture is
+/// its stronghold axis, insolation stays wide/neutral so it does not fight
+/// the world's warm↔sun coupling the way the original B2 shaded-forest
+/// framing did (Task B2b re-authoring). Authored within the measured seed-42
+/// land ranges; see the species chapter's model card for the ecological
+/// rationale.
+fn bugbear_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 21.0,
+            width: 11.0,
+            devotion: 0.85,
+        },
+        // WETTEST cells — its stronghold
+        moisture: ConditionResponse {
+            optimum: 0.82,
+            width: 0.20,
+            devotion: 0.95,
+        },
+        // wide/neutral
+        insolation: ConditionResponse {
+            optimum: 0.15,
+            width: 0.40,
+            devotion: 0.30,
+        },
+        // lowland
+        elevation: ConditionResponse {
+            optimum: 150.0,
+            width: 1200.0,
+            devotion: 0.70,
+        },
+    }
+}
+
+/// A species' metabolic strategy. Selects the allometric normalization
+/// coefficient (B₀) and the per-class pace multiplier; the scaling
+/// *exponents* are universal across classes (spec §4).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MetabolicClass {
+    /// Warm-blooded (mammal/bird analogue): high, temperature-stable basal rate.
+    Endotherm,
+    /// Cold-blooded (reptile/amphibian analogue): ~1/8 the basal rate; longer
+    /// life per kg. Realized rate couples to ambient temperature (deferred,
+    /// spec §10 CAP-1).
+    Ectotherm,
+    /// Phototroph (plant-folk/fungal analogue). Energy from light; its basal
+    /// rate is SURFACE/area-limited, so the §4 universal exponent does NOT
+    /// apply — activating this class is its own modelling decision. Unused seam.
+    Autotroph,
+    /// No metabolism (construct/undead analogue). Has no life-history: the
+    /// biological traits are `None`. Unused seam.
+    Ametabolic,
+}
+
 /// One authored species: vector, vocabulary stopgaps (deleted by The
 /// Tongues), and a placeholder syllable pool for names.
 /// type-audit: bare-ok(identifier-text)
@@ -201,10 +377,23 @@ pub struct SpeciesDef {
     /// packer reads to convert a settlement population into a standing
     /// biomass demand.
     pub mass: Mass,
+    /// Metabolic strategy — drives life-history allometry (spec BIO-2).
+    pub metabolic_class: MetabolicClass,
     /// The species' ecological niche: a sparse utilization profile over the
     /// resource-axis basis (`hornvale_kernel::ecology`). Feeds the packer's
     /// Pianka overlap between coexisting species.
     pub niche: ResourceVector,
+    /// The species' condition-tolerance profile over the v1 environmental
+    /// axes (temperature/moisture/insolation/elevation). Coupled to the
+    /// world's shipped fields by the worldgen K layer to place the species
+    /// in space. See [`ConditionNiche`].
+    pub condition_niche: ConditionNiche,
+    /// Magical potency (0 = a purely material creature). Raises the species'
+    /// sovereignty floor (`hornvale_kernel::sovereignty_floor`) so mighty
+    /// creatures buffer environmental constraint. The four material peoples
+    /// carry 0.
+    /// type-audit: bare-ok(ratio: potency)
+    pub potency: f64,
     /// Worker-role override; `None` = the subsistence worker word.
     pub worker_override: Option<&'static str>,
     /// The warrior-rung word.
@@ -259,7 +448,10 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 exotic: ExoticManner::None,
             },
             mass: Mass::new(18.1).unwrap(),
+            metabolic_class: MetabolicClass::Endotherm,
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.50), (ANIMAL_PREY, 0.50)]).unwrap(),
+            condition_niche: goblin_condition_niche(),
+            potency: 0.0,
             worker_override: None,
             warrior: "warrior",
             artisan: "artisan",
@@ -296,7 +488,10 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 exotic: ExoticManner::Trill,
             },
             mass: Mass::new(13.6).unwrap(),
+            metabolic_class: MetabolicClass::Ectotherm,
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
+            condition_niche: kobold_condition_niche(),
+            potency: 0.0,
             worker_override: Some("digger"),
             warrior: "warden",
             artisan: "shaper",
@@ -333,7 +528,10 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 exotic: ExoticManner::None,
             },
             mass: Mass::new(74.8).unwrap(),
+            metabolic_class: MetabolicClass::Endotherm,
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
+            condition_niche: hobgoblin_condition_niche(),
+            potency: 0.0,
             worker_override: Some("laborer"),
             warrior: "soldier",
             artisan: "smith",
@@ -370,7 +568,10 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
                 exotic: ExoticManner::None,
             },
             mass: Mass::new(132.0).unwrap(),
+            metabolic_class: MetabolicClass::Endotherm,
             niche: ResourceVector::new(&[(PLANT_FORAGE, 0.15), (ANIMAL_PREY, 0.85)]).unwrap(),
+            condition_niche: bugbear_condition_niche(),
+            potency: 0.0,
             worker_override: Some("forager"),
             warrior: "mauler",
             artisan: "tanner",
@@ -669,6 +870,25 @@ mod tests {
     use hornvale_kernel::Seed;
 
     #[test]
+    fn bio2_adds_no_stream_label() {
+        // The life-history layer is authored constants + pure derivations: it
+        // must introduce NO new seed-derivation stream. Species streams stay
+        // empty (species are authored, not drawn); guard against a future
+        // BIO-2-adjacent change quietly adding a life/allometry/metabolic draw.
+        let labels = stream_labels();
+        assert!(
+            labels.is_empty(),
+            "species crate must register no streams at all: {labels:?}"
+        );
+        assert!(
+            !labels.iter().any(|(k, _)| k.contains("life")
+                || k.contains("allometry")
+                || k.contains("metabolic")),
+            "BIO-2 must not register a stream: {labels:?}"
+        );
+    }
+
+    #[test]
     fn concepts_registered() {
         let mut r = ConceptRegistry::default();
         register_concepts(&mut r).unwrap();
@@ -868,6 +1088,57 @@ mod tests {
         assert!(r["kobold"].mass.kilograms() < r["goblin"].mass.kilograms());
         assert!(r["goblin"].mass.kilograms() < r["hobgoblin"].mass.kilograms());
         assert!(r["hobgoblin"].mass.kilograms() < r["bugbear"].mass.kilograms());
+    }
+
+    #[test]
+    fn every_species_has_a_finite_condition_niche() {
+        for (name, def) in registry() {
+            for r in [
+                def.condition_niche.temperature,
+                def.condition_niche.moisture,
+                def.condition_niche.insolation,
+                def.condition_niche.elevation,
+            ] {
+                assert!(r.optimum.is_finite(), "{name} optimum finite");
+                assert!(
+                    r.width.is_finite() && r.width > 0.0,
+                    "{name} width positive"
+                );
+                assert!(r.devotion.is_finite(), "{name} devotion finite");
+            }
+            assert!(
+                def.potency >= 0.0 && def.potency.is_finite(),
+                "{name} potency >= 0"
+            );
+        }
+    }
+
+    #[test]
+    fn the_four_peoples_have_distinct_temperature_optima() {
+        let reg = registry();
+        let opts: Vec<f64> = ["kobold", "goblin", "hobgoblin", "bugbear"]
+            .iter()
+            .map(|n| reg[*n].condition_niche.temperature.optimum)
+            .collect();
+        // the anti-uniformity guard: all four temperature optima pairwise distinct
+        for i in 0..opts.len() {
+            for j in (i + 1)..opts.len() {
+                assert!(
+                    (opts[i] - opts[j]).abs() > 1e-6,
+                    "temperature optima {i} and {j} must differ (broke the oatmeal)"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn every_species_has_a_metabolic_class() {
+        use MetabolicClass::*;
+        let r = registry();
+        assert_eq!(r["goblin"].metabolic_class, Endotherm);
+        assert_eq!(r["hobgoblin"].metabolic_class, Endotherm);
+        assert_eq!(r["bugbear"].metabolic_class, Endotherm);
+        assert_eq!(r["kobold"].metabolic_class, Ectotherm); // reptilian/draconic SRD lineage
     }
 
     #[test]

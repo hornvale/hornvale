@@ -1312,6 +1312,46 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "composition-variance",
+            doc: "Spatial heterogeneity of settlement composition (The Niche): the sum \
+                   over roster species of the variance, across the demography report's \
+                   `stack_settlements`, of each species' composition fraction. 0.0 iff \
+                   every settlement has the identical species mix (the pre-Niche \
+                   'oatmeal' — one flat blend worldwide); > 0 when composition varies \
+                   across space (species dominant in different strongholds). Recomputed \
+                   via `hornvale_worldgen::demography_report` (the niche-differentiated \
+                   coexistence shadow). Absent if the report fails to build or the world \
+                   has fewer than 2 settlements",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.005, 0.01, 0.02, 0.05, 0.1],
+            },
+            extract: Extractor::Settlement(|v: &SettlementView| {
+                let Ok(report) = hornvale_worldgen::demography_report(v.world(), v.roster()) else {
+                    return MetricValue::Absent;
+                };
+                let settlements = &report.stack_settlements;
+                if settlements.len() < 2 {
+                    return MetricValue::Absent;
+                }
+                let n = settlements.len() as f64;
+                let mut total_var = 0.0_f64;
+                for sid in 0..v.roster().len() as u32 {
+                    // this species' fraction in each settlement (0.0 if absent from the mix)
+                    let fracs = settlements.iter().map(|s| {
+                        s.composition
+                            .iter()
+                            .find(|(id, _)| *id == sid)
+                            .map(|(_, f)| *f)
+                            .unwrap_or(0.0)
+                    });
+                    let mean = fracs.clone().sum::<f64>() / n;
+                    let var = fracs.map(|f| (f - mean) * (f - mean)).sum::<f64>() / n;
+                    total_var += var;
+                }
+                MetricValue::Number(total_var)
+            }),
+        },
+        Metric {
             name: "pop-weighted-abs-latitude",
             doc: "The population-weighted mean absolute latitude across every settlement: \
                    Σ(pop·|lat|) / Σ(pop), reading each settlement's committed POPULATION and \
@@ -2453,6 +2493,129 @@ pub fn registry() -> Vec<Metric> {
             },
             extract: Extractor::Full(|v: &FullView| distinguishable_capacity_metric(v, "kobold")),
         },
+        // --- BIO-2 (Task 6): the six life-history traits (spec §4/§5), a
+        // pure f(Mass, MetabolicClass) with zero draws — every row of a
+        // study reads the same value for a given roster. Registered per
+        // species (goblin, kobold), matching the `tone-count-{species}`
+        // family's convention (see above) — the campaign's headline
+        // cross-species claim (ectotherm kobold vs endotherm goblinoids)
+        // is only queryable if both species are metrics. ---
+        Metric {
+            name: "lifespan-years-goblin",
+            doc: "Goblin's maximum lifespan in years (BIO-2 spec §4); Absent \
+                   if goblin is off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[20.0, 40.0, 60.0, 80.0, 100.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_lifespan_metric(v, "goblin")),
+        },
+        Metric {
+            name: "lifespan-years-kobold",
+            doc: "Kobold's maximum lifespan in years (BIO-2 spec §4); Absent \
+                   if kobold is off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[20.0, 40.0, 60.0, 80.0, 100.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_lifespan_metric(v, "kobold")),
+        },
+        Metric {
+            name: "age-at-maturity-years-goblin",
+            doc: "Goblin's age at first reproduction in years (BIO-2 spec §4); \
+                   Absent if goblin is off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[5.0, 10.0, 15.0, 20.0, 25.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_age_at_maturity_metric(v, "goblin")),
+        },
+        Metric {
+            name: "age-at-maturity-years-kobold",
+            doc: "Kobold's age at first reproduction in years (BIO-2 spec §4); \
+                   Absent if kobold is off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[5.0, 10.0, 15.0, 20.0, 25.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_age_at_maturity_metric(v, "kobold")),
+        },
+        Metric {
+            name: "basal-metabolic-rate-w-goblin",
+            doc: "Goblin's reference-temperature basal metabolic rate in watts \
+                   (BIO-2 spec §4); Absent only if goblin is off-roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                species_basal_metabolic_rate_metric(v, "goblin")
+            }),
+        },
+        Metric {
+            name: "basal-metabolic-rate-w-kobold",
+            doc: "Kobold's reference-temperature basal metabolic rate in watts \
+                   (BIO-2 spec §4); Absent only if kobold is off-roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                species_basal_metabolic_rate_metric(v, "kobold")
+            }),
+        },
+        Metric {
+            name: "reproductive-tempo-goblin",
+            doc: "Goblin's reproductive output on the r-K axis, 0 (fast/prolific) \
+                   ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if goblin is \
+                   off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_reproductive_tempo_metric(v, "goblin")),
+        },
+        Metric {
+            name: "reproductive-tempo-kobold",
+            doc: "Kobold's reproductive output on the r-K axis, 0 (fast/prolific) \
+                   ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if kobold is \
+                   off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_reproductive_tempo_metric(v, "kobold")),
+        },
+        Metric {
+            name: "generation-length-years-goblin",
+            doc: "Goblin's generation length in years (BIO-2 spec §5, MEM-7's \
+                   handle); Absent if goblin is off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_generation_length_metric(v, "goblin")),
+        },
+        Metric {
+            name: "generation-length-years-kobold",
+            doc: "Kobold's generation length in years (BIO-2 spec §5, MEM-7's \
+                   handle); Absent if kobold is off-roster or Ametabolic",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[10.0, 20.0, 30.0, 40.0, 50.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_generation_length_metric(v, "kobold")),
+        },
+        Metric {
+            name: "pace-of-life-goblin",
+            doc: "Goblin's overall life-history speed, 0 (fast) ... 1 (slow) — \
+                   absolute and roster-independent (BIO-2 spec §5); Absent only \
+                   if goblin is off-roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_pace_of_life_metric(v, "goblin")),
+        },
+        Metric {
+            name: "pace-of-life-kobold",
+            doc: "Kobold's overall life-history speed, 0 (fast) ... 1 (slow) — \
+                   absolute and roster-independent (BIO-2 spec §5); Absent only \
+                   if kobold is off-roster",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.2, 0.4, 0.6, 0.8, 1.0],
+            },
+            extract: Extractor::Full(|v: &FullView| species_pace_of_life_metric(v, "kobold")),
+        },
     ]
 }
 
@@ -2631,7 +2794,14 @@ fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
         return MetricValue::Absent;
     }
     let ph = language_of_in(v.world(), v.roster(), species);
-    MetricValue::Flag(names.iter().all(|n| is_phonotactically_valid(n, &ph)))
+    let attested = hornvale_worldgen::lexicon_of(v.world(), species)
+        .map(|lex| attested_roman_forms(&lex))
+        .unwrap_or_default();
+    MetricValue::Flag(
+        names
+            .iter()
+            .all(|n| is_phonotactically_valid(n, &ph, &attested)),
+    )
 }
 
 /// Whether every committed deity epithet of `species`' flagship pantheon
@@ -3465,6 +3635,76 @@ fn confusable_homophony(v: &FullView, species: &str) -> MetricValue {
     }
 }
 
+/// `species`' derived life-history profile (BIO-2 spec §5), read from the
+/// roster's own `SpeciesDef.mass`/`metabolic_class` — a pure `f(Mass,
+/// MetabolicClass)`, no draws. `None` if `species` is off-roster.
+fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species::LifeHistory> {
+    let def = v.roster().iter().find(|d| d.name == species)?;
+    Some(hornvale_species::life_history(
+        def.mass,
+        def.metabolic_class,
+    ))
+}
+
+/// `species`' maximum lifespan in years (BIO-2 spec §4/§5). `Absent` if
+/// `species` is off-roster or `Ametabolic` (a construct has no mass-derived
+/// lifespan).
+fn species_lifespan_metric(v: &FullView, species: &str) -> MetricValue {
+    match species_life_history(v, species).and_then(|lh| lh.lifespan) {
+        Some(years) => MetricValue::Number(years.get()),
+        None => MetricValue::Absent,
+    }
+}
+
+/// `species`' age at first reproduction in years (BIO-2 spec §4/§5). `Absent`
+/// if `species` is off-roster or `Ametabolic`.
+fn species_age_at_maturity_metric(v: &FullView, species: &str) -> MetricValue {
+    match species_life_history(v, species).and_then(|lh| lh.age_at_maturity) {
+        Some(years) => MetricValue::Number(years.get()),
+        None => MetricValue::Absent,
+    }
+}
+
+/// `species`' reference-temperature basal metabolic rate in watts (BIO-2
+/// spec §4). Always present — `0.0` for `Ametabolic`, never `None`. `Absent`
+/// only if `species` is off-roster.
+fn species_basal_metabolic_rate_metric(v: &FullView, species: &str) -> MetricValue {
+    match species_life_history(v, species) {
+        Some(lh) => MetricValue::Number(lh.basal_metabolic_rate_w),
+        None => MetricValue::Absent,
+    }
+}
+
+/// `species`' reproductive output on the r–K axis, 0 (fast/prolific) … 1
+/// (slow/sparse) (BIO-2 spec §4/CAP-2). `Absent` if `species` is off-roster
+/// or `Ametabolic`.
+fn species_reproductive_tempo_metric(v: &FullView, species: &str) -> MetricValue {
+    match species_life_history(v, species).and_then(|lh| lh.reproductive_tempo) {
+        Some(tempo) => MetricValue::Number(tempo),
+        None => MetricValue::Absent,
+    }
+}
+
+/// `species`' generation length in years (BIO-2 spec §5, MEM-7's handle).
+/// `Absent` if `species` is off-roster or `Ametabolic`.
+fn species_generation_length_metric(v: &FullView, species: &str) -> MetricValue {
+    match species_life_history(v, species).and_then(|lh| lh.generation_length) {
+        Some(years) => MetricValue::Number(years.get()),
+        None => MetricValue::Absent,
+    }
+}
+
+/// `species`' overall life-history speed, 0 (fast) … 1 (slow) — an absolute,
+/// roster-independent position defined for anything with mass (BIO-2 spec
+/// §5), so this is present even for `Ametabolic`. `Absent` only if `species`
+/// is off-roster.
+fn species_pace_of_life_metric(v: &FullView, species: &str) -> MetricValue {
+    match species_life_history(v, species) {
+        Some(lh) => MetricValue::Number(lh.pace_of_life),
+        None => MetricValue::Absent,
+    }
+}
+
 /// The size of `species`' realized tone inventory (spec §11): 1 for an atonal
 /// people (the shipped humanoids), >1 for a tone-capable one. `Absent` if
 /// `species` is off-roster.
@@ -3504,32 +3744,83 @@ fn homophony_merger_share(v: &FullView, species: &str) -> MetricValue {
     }
 }
 
-/// Whether `name` parses as a legal sequence of syllables under `ph`,
-/// independently of `hornvale_language::naming`'s generation code path: this
-/// walks the SURFACE STRING back into [`Segment`]s and re-checks
-/// phonotactic legality from scratch — every syllable's onset/coda
-/// manner-sequence must match one of `ph.onsets`/`ph.codas` (the very
-/// templates `draw_phonology` drew), its nucleus must be exactly
-/// `ph.nuclei` vowels, and every segment consumed must be a member of
-/// `ph.inventory`. Several romanizations are literal PREFIXES of others
-/// sharing the same manner (`z`/`zh`, `s`/`sh`, `n`/`ng`, `k`/`kx`), so a
-/// single greedy match per slot is unsound (a "z" false-match can swallow
-/// what was really a "zh"); every matcher below returns every reachable
-/// position and `parse_syllables` backtracks over the full cross product of
-/// segment choice and template choice.
-fn is_phonotactically_valid(name: &str, ph: &Phonology) -> bool {
-    let chars: Vec<char> = name.to_lowercase().chars().collect();
-    !chars.is_empty() && parse_syllables(&chars, 0, ph)
+/// The attested tier at the roman level (The Speakable): the lowercased
+/// roman rendering of every modern root form `lexicon` holds, deduped,
+/// longest-first. The surface-string twin of
+/// `hornvale_language`'s segment-level attested tier, so this validator
+/// accepts exactly the names `glossed_name` now emits.
+fn attested_roman_forms(lexicon: &hornvale_language::Lexicon) -> Vec<String> {
+    let mut forms: Vec<String> = lexicon
+        .entries()
+        .filter_map(|(_, entry)| match entry {
+            hornvale_language::LexEntry::Root { derivation, .. }
+                if !derivation.modern.is_empty() =>
+            {
+                Some(
+                    hornvale_language::render_views(&derivation.modern)
+                        .roman
+                        .to_lowercase(),
+                )
+            }
+            _ => None,
+        })
+        .collect();
+    forms.sort_by(|a, b| {
+        b.chars()
+            .count()
+            .cmp(&a.chars().count())
+            .then_with(|| a.cmp(b))
+    });
+    forms.dedup();
+    forms
 }
 
-/// Recursively consume one syllable at a time from `chars[pos..]`; true iff
-/// the remainder parses as a sequence of legal syllables. The base case
-/// (`pos == chars.len()`) is only reachable after a caller has already
-/// consumed at least one syllable, so an empty name never validates (see
-/// [`is_phonotactically_valid`]'s explicit empty check).
-fn parse_syllables(chars: &[char], pos: usize, ph: &Phonology) -> bool {
+/// Whether `name` parses as a legal sequence of syllables under `ph`, OR is
+/// exactly an attested word from `attested_roman`, independently of
+/// `hornvale_language::naming`'s generation code path: this walks the
+/// SURFACE STRING back into [`Segment`]s and re-checks phonotactic legality
+/// from scratch — every syllable's onset/coda manner-sequence must match
+/// one of `ph.onsets`/`ph.codas` (the very templates `draw_phonology`
+/// drew), its nucleus must be exactly `ph.nuclei` vowels, and every segment
+/// consumed must be a member of `ph.inventory`. Several romanizations are
+/// literal PREFIXES of others sharing the same manner (`z`/`zh`, `s`/`sh`,
+/// `n`/`ng`, `k`/`kx`), so a single greedy match per slot is unsound (a "z"
+/// false-match can swallow what was really a "zh"); every matcher below
+/// returns every reachable position and `parse_syllables` backtracks over
+/// the full cross product of segment choice, template choice, and attested
+/// word choice. Two tiers, both admissible: the canon template tier (every
+/// syllable legally built from `ph`) and the attested tier (a whole word
+/// lifted verbatim from `attested_roman`, mirroring the segment-level
+/// attested tier `domains/language` gained first) — a name may mix both,
+/// consuming attested words and template syllables in any order. Callers
+/// deriving `attested_roman` from a lexicon must resolve `species` within
+/// the roster first, same as every other lexicon-derived caller in this
+/// module (see the caveat at [`in_roster`]'s doc, and `phonotactic_validity`
+/// for the pattern: `language_of_in`/`lexicon_of` together against
+/// `v.roster()`).
+fn is_phonotactically_valid(name: &str, ph: &Phonology, attested_roman: &[String]) -> bool {
+    let chars: Vec<char> = name.to_lowercase().chars().collect();
+    !chars.is_empty() && parse_syllables(&chars, 0, ph, attested_roman)
+}
+
+/// Recursively consume one syllable — or one attested word from
+/// `attested_roman` — at a time from `chars[pos..]`; true iff the
+/// remainder parses as a sequence of legal syllables and/or attested
+/// words. The base case (`pos == chars.len()`) is only reachable after a
+/// caller has already consumed at least one syllable or word, so an empty
+/// name never validates (see [`is_phonotactically_valid`]'s explicit empty
+/// check).
+fn parse_syllables(chars: &[char], pos: usize, ph: &Phonology, attested_roman: &[String]) -> bool {
     if pos == chars.len() {
         return true;
+    }
+    for word in attested_roman {
+        let w: Vec<char> = word.chars().collect();
+        if chars[pos..].starts_with(&w[..])
+            && parse_syllables(chars, pos + w.len(), ph, attested_roman)
+        {
+            return true;
+        }
     }
     let mut onsets: Vec<&Vec<Manner>> = ph.onsets.iter().collect();
     onsets.sort();
@@ -3542,7 +3833,7 @@ fn parse_syllables(chars: &[char], pos: usize, ph: &Phonology) -> bool {
             for after_nucleus in match_nucleus(chars, after_onset, ph.nuclei, ph) {
                 for coda in &codas {
                     for after_coda in match_manner_run(chars, after_nucleus, coda, ph) {
-                        if parse_syllables(chars, after_coda, ph) {
+                        if parse_syllables(chars, after_coda, ph, attested_roman) {
                             return true;
                         }
                     }
@@ -3834,8 +4125,16 @@ mod tests {
         // aquifer-fraction, dominant-soil-order, fertile-land-fraction),
         // +2 for The Long Count (Task 6: brightening-per-gyr,
         // alignment-drift-deg-per-kyr), +1 for the coexistence stack
-        // (Task A16a: per-cell-diversity).
-        assert_eq!(registry().len(), 129);
+        // (Task A16a: per-cell-diversity),
+        // +12 for BIO-2 (Task 6, per-species goblin+kobold pairs matching
+        // the tone-count-{species} convention: lifespan-years-{goblin,kobold},
+        // age-at-maturity-years-{goblin,kobold},
+        // basal-metabolic-rate-w-{goblin,kobold},
+        // reproductive-tempo-{goblin,kobold},
+        // generation-length-years-{goblin,kobold},
+        // pace-of-life-{goblin,kobold}),
+        // +1 for The Niche (composition-variance).
+        assert_eq!(registry().len(), 142);
     }
 
     #[test]
@@ -3899,9 +4198,12 @@ mod tests {
         let view = FullView::build(Seed(0), &SkyPins::default()).unwrap();
         for species in ["goblin", "kobold"] {
             let ph = hornvale_worldgen::language_of(view.world(), species);
+            let attested = hornvale_worldgen::lexicon_of(view.world(), species)
+                .map(|lex| attested_roman_forms(&lex))
+                .unwrap_or_default();
             for n in species_generated_names(&view, species) {
                 assert!(
-                    is_phonotactically_valid(&n, &ph),
+                    is_phonotactically_valid(&n, &ph, &attested),
                     "{species} name {n:?} failed its own phonotactics"
                 );
             }
@@ -3941,11 +4243,28 @@ mod tests {
     fn phonotactic_validator_rejects_garbage_and_empty_strings() {
         let view = AstronomyView::build(Seed(0), &SkyPins::default()).unwrap();
         let ph = hornvale_worldgen::language_of(&view.world, "goblin");
-        assert!(!is_phonotactically_valid("", &ph));
+        assert!(!is_phonotactically_valid("", &ph, &[]));
         // "qw" (uvular stop q + labial approximant w): q is never a Stop
         // candidate in this drawn inventory (only p/t/d/g appear, per the
         // seed-0 debug dump), so this must not parse.
-        assert!(!is_phonotactically_valid("qw", &ph));
+        assert!(!is_phonotactically_valid("qw", &ph, &[]));
+    }
+
+    #[test]
+    fn attested_roman_words_validate_where_canon_rejects_them() {
+        // A name that is exactly an attested word must validate even when
+        // no canon template hosts it; a name that is neither canon-parseable
+        // nor attested must still fail. "qw" is this fixture's known-
+        // unparseable string (see the test above: q is never a Stop
+        // candidate in this drawn inventory), so it doubles as the bare
+        // sequence the fixture's templates cannot parse — attest it
+        // directly rather than inventing a new one.
+        let view = AstronomyView::build(Seed(0), &SkyPins::default()).unwrap();
+        let ph = hornvale_worldgen::language_of(&view.world, "goblin");
+        let attested = vec!["qw".to_string()];
+        assert!(is_phonotactically_valid("Qw", &ph, &attested));
+        assert!(!is_phonotactically_valid("Qw", &ph, &[]));
+        assert!(!is_phonotactically_valid("qq", &ph, &attested));
     }
 
     #[test]
@@ -3995,6 +4314,55 @@ mod tests {
             }
             other => panic!("expected a Number, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn composition_varies_across_settlements_at_seed_42() {
+        // The Niche's headline: refutes the task-C "oatmeal" (identical
+        // composition in all 276 settlements). Composition now VARIES and
+        // strife is spatially structured. (Per Nathan's E2 call: 2-way
+        // differentiation is sufficient — NOT asserting 4 strongholds or
+        // refugia>0; the menagerie supplies those.)
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        let m = |name: &str| extract_from(&built, name);
+
+        // composition-variance > 0 (the metric)
+        match m("composition-variance") {
+            MetricValue::Number(cv) => {
+                assert!(cv > 0.0, "composition varies across settlements: {cv}")
+            }
+            other => panic!("composition-variance should be a Number, got {other:?}"),
+        }
+
+        // More than one species dominates somewhere, and strife is
+        // non-flat. Build the seed-42 report directly for these structural
+        // asserts (the built view above no longer exposes its fields).
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let report = hornvale_worldgen::demography_report(view.world(), view.roster()).unwrap();
+        let dominants: std::collections::BTreeSet<u32> = report
+            .stack_settlements
+            .iter()
+            .map(|s| s.dominant)
+            .collect();
+        assert!(
+            dominants.len() >= 2,
+            "more than one species dominates: {dominants:?}"
+        );
+
+        let geo = view.settlement.terrain().geosphere();
+        let mut strife: Vec<f64> = geo
+            .cells()
+            .map(|c| *report.byproducts.strife.get(c))
+            .filter(|x| *x > 0.0)
+            .collect();
+        assert!(strife.len() > 10, "enough cells have strife");
+        strife.sort_by(f64::total_cmp);
+        let (lo, hi) = (strife.first().unwrap(), strife.last().unwrap());
+        assert!(
+            hi - lo > 1e-3,
+            "strife is spatially structured, not flat: lo={lo} hi={hi}"
+        );
     }
 
     #[test]
@@ -4078,6 +4446,56 @@ mod tests {
             ));
             assert!(matches!(
                 m(&format!("{species}-settlement-count")),
+                MetricValue::Number(_)
+            ));
+        }
+
+        // BIO-2 (Task 6, review fix): the six life-history metrics,
+        // following the `tone-count-{species}` per-species PAIR convention
+        // (goblin + kobold both registered) so the campaign's headline
+        // cross-species claim (ectotherm kobold vs endotherm goblinoids) is
+        // queryable. Both species are always on the default roster and
+        // neither is `Ametabolic` (goblin is Endotherm, kobold is
+        // Ectotherm), so these read `Number` at seed 42, but `Absent` stays
+        // a legal kind for a roster where a species is missing or
+        // ametabolic.
+        let names: std::collections::BTreeSet<&str> =
+            registry().iter().map(|metric| metric.name).collect();
+        assert!(names.contains("lifespan-years-goblin"));
+        assert!(names.contains("lifespan-years-kobold"));
+        assert!(names.contains("age-at-maturity-years-goblin"));
+        assert!(names.contains("age-at-maturity-years-kobold"));
+        assert!(names.contains("basal-metabolic-rate-w-goblin"));
+        assert!(names.contains("basal-metabolic-rate-w-kobold"));
+        assert!(names.contains("reproductive-tempo-goblin"));
+        assert!(names.contains("reproductive-tempo-kobold"));
+        assert!(names.contains("generation-length-years-goblin"));
+        assert!(names.contains("generation-length-years-kobold"));
+        assert!(names.contains("pace-of-life-goblin"));
+        assert!(names.contains("pace-of-life-kobold"));
+        for species in ["goblin", "kobold"] {
+            assert!(matches!(
+                m(&format!("lifespan-years-{species}")),
+                MetricValue::Number(_) | MetricValue::Absent
+            ));
+            assert!(matches!(
+                m(&format!("age-at-maturity-years-{species}")),
+                MetricValue::Number(_) | MetricValue::Absent
+            ));
+            assert!(matches!(
+                m(&format!("basal-metabolic-rate-w-{species}")),
+                MetricValue::Number(_)
+            ));
+            assert!(matches!(
+                m(&format!("reproductive-tempo-{species}")),
+                MetricValue::Number(_) | MetricValue::Absent
+            ));
+            assert!(matches!(
+                m(&format!("generation-length-years-{species}")),
+                MetricValue::Number(_) | MetricValue::Absent
+            ));
+            assert!(matches!(
+                m(&format!("pace-of-life-{species}")),
                 MetricValue::Number(_)
             ));
         }

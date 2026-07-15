@@ -15,6 +15,7 @@ use hornvale_climate::{
     AMBIENT, ClimateInputs, ClimateReport, GeneratedClimate, RotationRegime, SeafloorFeature,
     UniformClimate,
 };
+use hornvale_kernel::math;
 use hornvale_kernel::{
     ConceptRegistry, Domain, EntityId, Fact, GeoCoord, Geosphere, LedgerError, ObserverContext,
     PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation, RegistryError, Seed,
@@ -521,21 +522,77 @@ fn demography_inputs_for(
     (per_species_inputs, species)
 }
 
+/// Per-species niche-differentiated carrying-capacity K = resource-supply ×
+/// condition-response (The Niche). Pure; seed-free. Replaces the flat-NPP K
+/// for the coexistence stack. `species_set` index order tags the fields.
+///
+/// For each species and cell: `saturate(base_carrying(cell) *
+/// total_uptake_s)` (the resource-supply term — the shared, psychology-free
+/// NPP proxy scaled by the species' summed niche weight over
+/// [`hornvale_kernel::v1_basis`], Type-II-saturated so intake plateaus)
+/// multiplied by the four condition-response terms
+/// (temperature/moisture/insolation/elevation), each
+/// [`hornvale_kernel::ConditionResponse::eval`]'d against that cell's
+/// [`substrate_field`] reading. Temperature/moisture/insolation are
+/// buffer-able (floored by the species'
+/// [`hornvale_kernel::sovereignty_floor`]); elevation is hard (floor 0.0) —
+/// sovereignty buffers physiology but not geometry.
+/// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(index: return)
+pub fn niche_per_species_k(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    obliquity_deg: f64,
+    insolation_scalar: f64,
+    species_set: &[&hornvale_species::SpeciesDef],
+) -> Vec<(u32, hornvale_kernel::CellMap<f64>)> {
+    let base_inputs = carrying_inputs_of(geo, terrain, climate);
+    let base_carrying = hornvale_demography::carrying_capacity(geo, &base_inputs);
+    let substrate = substrate_field(geo, terrain, climate, obliquity_deg, insolation_scalar);
+
+    species_set
+        .iter()
+        .enumerate()
+        .map(|(tag, def)| {
+            let total_uptake: f64 = hornvale_kernel::v1_basis()
+                .iter()
+                .map(|axis| def.niche.weight(*axis))
+                .sum();
+            let floor_buf = hornvale_kernel::sovereignty_floor(def.mass, def.potency);
+            let cn = &def.condition_niche;
+            let k = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+                let s = substrate.get(cell);
+                let supply = base_carrying.get(cell) * total_uptake;
+                let saturated = supply / (1.0 + supply);
+                saturated
+                    * cn.temperature.eval(s.temperature_c, floor_buf)
+                    * cn.moisture.eval(s.moisture, floor_buf)
+                    * cn.insolation.eval(s.insolation, floor_buf)
+                    * cn.elevation.eval(s.elevation, 0.0)
+            });
+            (tag as u32, k)
+        })
+        .collect()
+}
+
 /// Build the full coexistence-stack demography report for `world`, over
 /// `roster` (spec: the whole roster, matching the unpinned settlement-
 /// genesis path — a species-pinned world still reports every roster
 /// species' field, since no pin is reconstructed here), against an
 /// EXPLICITLY supplied `beta`/`floor` rather than the frozen
 /// [`hornvale_demography::BETA`]/[`hornvale_demography::FLOOR`] constants.
-/// Reconstructs terrain and climate, then feeds [`demography_inputs_for`]
-/// into [`hornvale_demography::report`] with the same `CONDENSATION_THRESHOLD`
-/// the genesis path uses. Pure and seed-free beyond the world's already-
-/// committed facts: two calls with the same `(world, roster, beta, floor)`
-/// produce byte-identical reports, so a β-sweep calibration harness (task
-/// A16b) can vary `beta` across many calls without rebuilding the world or
-/// drawing new seed state. [`demography_report`] is this function pinned to
-/// the frozen constants — the one worldgen and the settlement-genesis path
-/// actually ship.
+/// Reconstructs terrain and climate, then assembles the report from
+/// [`niche_per_species_k`] (The Niche's differentiated K — the *shadow*
+/// path this accessor observes; settlement genesis still ships flat K
+/// unchanged) using demography's pub building blocks, mirroring
+/// [`hornvale_demography::report`]'s body. Pure and seed-free beyond the
+/// world's already-committed facts: two calls with the same `(world,
+/// roster, beta, floor)` produce byte-identical reports, so a β-sweep
+/// calibration harness (task A16b) can vary `beta` across many calls
+/// without rebuilding the world or drawing new seed state.
+/// [`demography_report`] is this function pinned to the frozen constants —
+/// the Lab accessor worldgen ships (settlement genesis is unaffected: it
+/// still calls [`hornvale_demography::report`] directly with flat K).
 ///
 /// type-audit: bare-ok(ratio: beta), bare-ok(count: floor)
 pub fn demography_report_with_beta(
@@ -546,18 +603,46 @@ pub fn demography_report_with_beta(
 ) -> Result<hornvale_demography::DemographyReport, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_of(world)?;
+    let sky = sky_of(world)?;
     let geo = terrain.geosphere();
-    let base_inputs = carrying_inputs_of(geo, &terrain, &climate);
+    let (insolation_scalar, obliquity_deg, _regime, _year) = stellar_inputs(&sky);
     let species_set: Vec<&hornvale_species::SpeciesDef> = roster.iter().collect();
-    let (per_species_inputs, species) = demography_inputs_for(geo, &base_inputs, &species_set);
-    Ok(hornvale_demography::report(
+
+    let per_species_k = niche_per_species_k(
         geo,
-        &per_species_inputs,
-        &species,
-        beta,
-        floor,
+        &terrain,
+        &climate,
+        obliquity_deg,
+        insolation_scalar,
+        &species_set,
+    );
+    let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> = species_set
+        .iter()
+        .enumerate()
+        .map(|(tag, def)| (tag as u32, def.mass, def.niche.clone()))
+        .collect();
+
+    let settlements =
+        hornvale_demography::condense_tagged(&per_species_k, geo, CONDENSATION_THRESHOLD);
+    let stack = hornvale_demography::coexist::pack(geo, &per_species_k, &species, beta, floor);
+    let mass_map: std::collections::BTreeMap<u32, hornvale_kernel::Mass> =
+        species.iter().map(|(id, m, _)| (*id, *m)).collect();
+    let stack_settlements = hornvale_demography::stack_condense::condense_stack(
+        geo,
+        &stack,
+        &mass_map,
         CONDENSATION_THRESHOLD,
-    ))
+    );
+    let byproducts =
+        hornvale_demography::byproducts::byproducts(geo, &stack, &per_species_k, floor);
+
+    Ok(hornvale_demography::DemographyReport {
+        per_species_k,
+        settlements,
+        stack,
+        stack_settlements,
+        byproducts,
+    })
 }
 
 /// Build the full coexistence-stack demography report for `world`, over
@@ -624,6 +709,84 @@ pub fn climate_of(world: &World) -> Result<GeneratedClimate, BuildError> {
         regime,
         year_length_std,
     }))
+}
+
+/// The four v1 environmental fields at one cell — the substrate the habitat
+/// model (The Niche) scores a species' condition niche against.
+/// type-audit: bare-ok(diagnostic-value: temperature_c), bare-ok(ratio: moisture), bare-ok(diagnostic-value: insolation), bare-ok(diagnostic-value: elevation)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Substrate {
+    /// Mean annual temperature, °C.
+    pub temperature_c: f64,
+    /// Moisture in `[0, 1]`.
+    pub moisture: f64,
+    /// Annual-mean top-of-atmosphere insolation, relative to the planet's
+    /// global scalar (`hornvale_astronomy::insolation_rel`).
+    pub insolation: f64,
+    /// Terrain elevation scalar (meters-scale). Ocean cells included.
+    pub elevation: f64,
+}
+
+/// Annual-mean top-of-atmosphere insolation at a latitude, relative to the
+/// planet's global scalar `insolation_scalar`. Obliquity-aware: averages the
+/// standard daily-mean insolation geometric factor (Milankovitch-cycle solar
+/// forcing, the same formula climatology textbooks use for
+/// latitude-by-latitude annual insolation) over `N` uniform samples of the
+/// orbit — a static v1 approximation; seasonal `K(cell, t)` is deferred (The
+/// Niche spec §8). All transcendentals route through `hornvale_kernel::math`
+/// for cross-platform byte-identity (decision 0041).
+/// type-audit: bare-ok(diagnostic-value: latitude_deg), bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(diagnostic-value: return)
+pub fn annual_mean_insolation(
+    latitude_deg: f64,
+    obliquity_deg: f64,
+    insolation_scalar: f64,
+) -> f64 {
+    let phi = latitude_deg.to_radians();
+    let eps = obliquity_deg.to_radians();
+    const N: u32 = 48;
+    let mut sum = 0.0;
+    for k in 0..N {
+        let theta = 2.0 * std::f64::consts::PI * (k as f64) / (N as f64);
+        // Solar declination at this orbital sample.
+        let delta = math::asin(math::sin(eps) * math::sin(theta));
+        // The clamp is load-bearing: at the poles `tan(phi)` is a huge
+        // finite value (libm), so `cos_h0` saturates to ∓1 and `h0` resolves
+        // to 0 (polar night) or π (polar day) — the physically correct
+        // limit, with no pole special-casing needed.
+        let cos_h0 = (-math::tan(phi) * math::tan(delta)).clamp(-1.0, 1.0);
+        let h0 = math::acos(cos_h0);
+        // Daily-mean insolation geometric factor.
+        let f_k = (1.0 / std::f64::consts::PI)
+            * (h0 * math::sin(phi) * math::sin(delta)
+                + math::cos(phi) * math::cos(delta) * math::sin(h0));
+        sum += f_k;
+    }
+    let geom = sum / (N as f64);
+    insolation_scalar * geom
+}
+
+/// The per-cell substrate field for a built world's terrain/climate/sky — the
+/// four environmental readings The Niche's habitat model scores each
+/// species' condition niche against. Pure: draws nothing from the seed, only
+/// the world's already-committed terrain/climate/sky.
+/// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar)
+pub fn substrate_field(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    obliquity_deg: f64,
+    insolation_scalar: f64,
+) -> hornvale_kernel::CellMap<Substrate> {
+    hornvale_kernel::CellMap::from_fn(geo, |cell| Substrate {
+        temperature_c: climate.mean_temperature_at(cell).get(),
+        moisture: climate.moisture_at(cell),
+        insolation: annual_mean_insolation(
+            geo.coord(cell).latitude,
+            obliquity_deg,
+            insolation_scalar,
+        ),
+        elevation: terrain.elevation_at(cell).get(),
+    })
 }
 
 /// The deep-time window (1 Myr) and sampling, standard days. These, the era
@@ -3124,12 +3287,14 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         .iter()
         .filter_map(|(name, def)| {
             let flagship = flagship_of(world, name)?;
+            let mut lines = culture_lines(world, &flagship);
+            lines.push(hornvale_almanac::render_life_history_line(def));
             Some(hornvale_almanac::PeopleBlock {
                 species: (*name).to_string(),
                 noun: def.noun.to_string(),
                 name: flagship.name.clone(),
                 population: flagship.population,
-                culture_lines: culture_lines(world, &flagship),
+                culture_lines: lines,
             })
         })
         .collect();
@@ -4662,5 +4827,78 @@ mod tests {
             &daughters,
         );
         assert_eq!(lexicon_of(&world, "kobold").unwrap(), direct);
+    }
+
+    #[test]
+    fn substrate_field_is_finite_and_insolation_peaks_at_the_equator() {
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let sky = sky_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let (insolation_scalar, obliquity_deg, _regime, _year) = stellar_inputs(&sky);
+        let field = substrate_field(geo, &terrain, &climate, obliquity_deg, insolation_scalar);
+        for cell in geo.cells() {
+            let s = field.get(cell);
+            assert!(s.temperature_c.is_finite());
+            assert!((0.0..=1.0).contains(&s.moisture));
+            assert!(s.insolation.is_finite() && s.insolation >= 0.0);
+            assert!(s.elevation.is_finite());
+        }
+        // Annual-mean insolation is higher at the equator than at a pole.
+        let eq = annual_mean_insolation(0.0, obliquity_deg, insolation_scalar);
+        let pole = annual_mean_insolation(85.0, obliquity_deg, insolation_scalar);
+        assert!(eq > pole, "equator {eq} > pole {pole}");
+    }
+
+    #[test]
+    fn niche_k_differentiates_species_with_different_temperature_optima() {
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let sky = sky_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let (insolation_scalar, obliquity_deg, _regime, _year) = stellar_inputs(&sky);
+
+        let roster = default_roster();
+        let set: Vec<&hornvale_species::SpeciesDef> = roster.iter().collect();
+        let ks = niche_per_species_k(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &set,
+        );
+
+        // default_roster() = registry().into_values() (BTreeMap key order):
+        // alphabetical -> bugbear, goblin, hobgoblin, kobold.
+        let kobold_tag = set
+            .iter()
+            .position(|d| d.name == "kobold")
+            .expect("kobold in roster") as u32;
+        let bugbear_tag = set
+            .iter()
+            .position(|d| d.name == "bugbear")
+            .expect("bugbear in roster") as u32;
+        let k_cool = &ks.iter().find(|(tag, _)| *tag == kobold_tag).unwrap().1;
+        let k_warm = &ks.iter().find(|(tag, _)| *tag == bugbear_tag).unwrap().1;
+
+        // Over cells where both are positive, the ratio k_cool/k_warm is NOT
+        // constant — the direct refutation of flat-NPP proportionality.
+        let mut ratios: Vec<f64> = geo
+            .cells()
+            .filter_map(|c| {
+                let (a, b) = (*k_cool.get(c), *k_warm.get(c));
+                (a > 0.0 && b > 0.0).then_some(a / b)
+            })
+            .collect();
+        assert!(ratios.len() > 10, "need enough co-occupied cells");
+        ratios.sort_by(f64::total_cmp);
+        let (lo, hi) = (ratios.first().unwrap(), ratios.last().unwrap());
+        assert!(
+            hi / lo > 1.5,
+            "K fields are niche-differentiated, not proportional: lo={lo} hi={hi}"
+        );
     }
 }

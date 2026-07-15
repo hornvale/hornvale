@@ -175,10 +175,19 @@ attempted. A second, narrower piece is not a time question at all: today's
 condensation runs each species' field independently, which loosens the old
 rule keeping different peoples' settlements apart. Packing multiple
 species onto one landscape properly — footprint-scaled home ranges, a
-tunable competition temperature, predator-prey coupling — has a design
-already (the coexistence-stack spec building on this campaign's field) but
-is unbuilt, and it is architecture, not taste: closer to the moderate-
-confidence tier once it lands than to a human-judged bet. Naming both
+tunable competition temperature, predator-prey coupling — **has now
+landed**: the coexistence stack packs a multi-species density stack (with a
+frozen competition temperature), and *The Niche* gave each species a
+niche-differentiated carrying-capacity field, so composition varies across
+space rather than resolving to one global blend — seed-42's
+identical-everywhere settlements broke into distinct regions with
+structured strife along their ecotones. It resolved to the
+moderate-confidence tier as predicted; it was architecture, not taste. The
+goblinoid roster also showed the model's honest limit: same-resource
+species differentiate only ~two ways on climate alone, so the fuller payoff
+(strongholds, refugia, a creature that owns the cold) waits on a roster with
+distinct resource niches — deferred, with the menagerie, into the
+entity-component program the model's own success surfaced. Naming both
 halves against the field that already exists is the honest state of the
-rescore — one clean win banked, two clearly-scoped debts left for the
-campaigns that inherit it.
+rescore — the packing win now banked alongside the field, the vary-time
+debt still open.
