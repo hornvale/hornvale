@@ -12,6 +12,7 @@ dependencies = [
  "hornvale-kernel",
  "hornvale-religion",
  "hornvale-settlement",
+ "hornvale-species",
  "hornvale-terrain",
 ]
 
