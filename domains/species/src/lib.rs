@@ -12,8 +12,9 @@
 use std::collections::BTreeMap;
 
 use hornvale_kernel::{
-    ANIMAL_PREY, ConceptKind, ConceptRegistry, ConditionResponse, EntityId, Fact, LedgerError,
-    Mass, PLANT_FORAGE, RegistryError, ResourceVector, Value, World,
+    ANIMAL_PREY, ConceptKind, ConceptRegistry, ConditionResponse, DETRITUS, EntityId, Fact,
+    LedgerError, MINERAL, Mass, PHOTOSYNTHATE, PLANT_FORAGE, RegistryError, ResourceVector, Value,
+    World,
 };
 
 mod allometry;
@@ -334,6 +335,360 @@ fn bugbear_condition_niche() -> ConditionNiche {
     }
 }
 
+/// Treant condition niche: temperate FOREST autotroph; moderate warmth and
+/// moisture, shaded (low-mid insolation), lowland-to-mid elevation. Mighty
+/// (potency > 0), so its sovereignty floor already buffers climate — the
+/// curve stays a genuine preference (moderate devotion), not a hard fence.
+/// Authored within the measured seed-42 land ranges.
+fn treant_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 14.0,
+            width: 12.0,
+            devotion: 0.75,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.55,
+            width: 0.25,
+            devotion: 0.70,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.12,
+            width: 0.10,
+            devotion: 0.50,
+        },
+        elevation: ConditionResponse {
+            optimum: 400.0,
+            width: 1500.0,
+            devotion: 0.50,
+        },
+    }
+}
+
+/// Twig blight condition niche: the same temperate-forest tile as its
+/// treant kin, at understory scale — no potency, so it is more tightly
+/// environment-placed (higher devotion on the axes that matter). Authored
+/// within the measured seed-42 land ranges.
+fn twig_blight_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 15.0,
+            width: 10.0,
+            devotion: 0.70,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.55,
+            width: 0.20,
+            devotion: 0.75,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.10,
+            width: 0.08,
+            devotion: 0.55,
+        },
+        elevation: ConditionResponse {
+            optimum: 350.0,
+            width: 1200.0,
+            devotion: 0.55,
+        },
+    }
+}
+
+/// Giant elk condition niche: temperate open woodland/plains grazer —
+/// cooler and drier than the treant's shaded forest, wide-open sun.
+/// Authored within the measured seed-42 land ranges.
+fn giant_elk_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 10.0,
+            width: 15.0,
+            devotion: 0.60,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.40,
+            width: 0.35,
+            devotion: 0.50,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.16,
+            width: 0.15,
+            devotion: 0.50,
+        },
+        elevation: ConditionResponse {
+            optimum: 600.0,
+            width: 1600.0,
+            devotion: 0.40,
+        },
+    }
+}
+
+/// Woolly mammoth condition niche: COLD tundra plains — a deep-cold
+/// specialist (near the measured floor) at LOW elevation, distinguishing it
+/// from the giant goat's high-mountain cold. Authored within the measured
+/// seed-42 land ranges.
+fn woolly_mammoth_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: -25.0,
+            width: 20.0,
+            devotion: 0.85,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.30,
+            width: 0.30,
+            devotion: 0.40,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.05,
+            width: 0.08,
+            devotion: 0.60,
+        },
+        elevation: ConditionResponse {
+            optimum: 200.0,
+            width: 1000.0,
+            devotion: 0.50,
+        },
+    }
+}
+
+/// Giant goat condition niche: ALPINE/HIGHLAND — its exclusive, hard-
+/// excluding stronghold axis is elevation (mirrors the kobold's highlander
+/// shape), cool mountain temperature rather than arctic cold. Authored
+/// within the measured seed-42 land ranges.
+fn giant_goat_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: -5.0,
+            width: 15.0,
+            devotion: 0.70,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.35,
+            width: 0.30,
+            devotion: 0.40,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.10,
+            width: 0.12,
+            devotion: 0.50,
+        },
+        // HIGH MOUNTAIN — its exclusive niche, near the measured ceiling.
+        elevation: ConditionResponse {
+            optimum: 3000.0,
+            width: 900.0,
+            devotion: 0.90,
+        },
+    }
+}
+
+/// Otyugh condition niche: warm, WET LOWLAND (swamp/refuse) detritivore —
+/// the wettest, lowest-elevation tile, warmer than the bugbear's rainforest.
+/// Authored within the measured seed-42 land ranges.
+fn otyugh_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 23.0,
+            width: 10.0,
+            devotion: 0.80,
+        },
+        // WETTEST cells — its stronghold, near the measured ceiling.
+        moisture: ConditionResponse {
+            optimum: 0.83,
+            width: 0.15,
+            devotion: 0.90,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.10,
+            width: 0.30,
+            devotion: 0.30,
+        },
+        // near sea level — its exclusive lowland niche.
+        elevation: ConditionResponse {
+            optimum: 50.0,
+            width: 800.0,
+            devotion: 0.70,
+        },
+    }
+}
+
+/// Xorn condition niche: subterranean/mineral — an elemental that burrows
+/// through solid earth, so it reads as nearly climate-indifferent on the
+/// surface axes (low devotion everywhere); mighty (potency > 0) already
+/// buys most of its sovereignty floor. Authored within the measured seed-42
+/// land ranges.
+fn xorn_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 0.0,
+            width: 40.0,
+            devotion: 0.10,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.40,
+            width: 0.60,
+            devotion: 0.10,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.05,
+            width: 0.20,
+            devotion: 0.20,
+        },
+        elevation: ConditionResponse {
+            optimum: 0.0,
+            width: 3500.0,
+            devotion: 0.10,
+        },
+    }
+}
+
+/// Rust monster condition niche: subterranean/cave mineral-eater — no
+/// potency, so unlike the xorn it is genuinely environment-placed, with a
+/// strong low-insolation (cave-dark) preference and a low-elevation lean.
+/// Authored within the measured seed-42 land ranges.
+fn rust_monster_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 8.0,
+            width: 20.0,
+            devotion: 0.50,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.45,
+            width: 0.40,
+            devotion: 0.30,
+        },
+        // avoids surface light — cave-dark preference.
+        insolation: ConditionResponse {
+            optimum: 0.03,
+            width: 0.06,
+            devotion: 0.60,
+        },
+        elevation: ConditionResponse {
+            optimum: -500.0,
+            width: 1500.0,
+            devotion: 0.60,
+        },
+    }
+}
+
+/// White dragon condition niche: an obligate apex that owns the cold;
+/// mighty (buffers climate). The worked example from the task brief.
+fn white_dragon_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: -20.0,
+            width: 25.0,
+            devotion: 0.9,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.4,
+            width: 0.5,
+            devotion: 0.3,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.05,
+            width: 0.15,
+            devotion: 0.2,
+        },
+        elevation: ConditionResponse {
+            optimum: 1500.0,
+            width: 3000.0,
+            devotion: 0.4,
+        },
+    }
+}
+
+/// Red dragon condition niche: warm/volcanic apex — arid, high-sun, high
+/// mountain terrain; the mightiest of the three chromatics, so its floor
+/// dominates and this curve stays a soft preference. Authored within the
+/// measured seed-42 land ranges.
+fn red_dragon_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 20.0,
+            width: 20.0,
+            devotion: 0.85,
+        },
+        // arid/volcanic — dry.
+        moisture: ConditionResponse {
+            optimum: 0.10,
+            width: 0.25,
+            devotion: 0.60,
+        },
+        // open volcanic terrain — high sun.
+        insolation: ConditionResponse {
+            optimum: 0.20,
+            width: 0.10,
+            devotion: 0.60,
+        },
+        // volcanic peaks.
+        elevation: ConditionResponse {
+            optimum: 2200.0,
+            width: 2500.0,
+            devotion: 0.50,
+        },
+    }
+}
+
+/// Black dragon condition niche: swamp/wet apex — the wettest, lowest-
+/// elevation chromatic, mighty like its white kin. Authored within the
+/// measured seed-42 land ranges.
+fn black_dragon_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 22.0,
+            width: 12.0,
+            devotion: 0.80,
+        },
+        // wettest cells — its stronghold, like the otyugh's swamp.
+        moisture: ConditionResponse {
+            optimum: 0.80,
+            width: 0.18,
+            devotion: 0.85,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.10,
+            width: 0.25,
+            devotion: 0.30,
+        },
+        // lowland swamp.
+        elevation: ConditionResponse {
+            optimum: 50.0,
+            width: 700.0,
+            devotion: 0.60,
+        },
+    }
+}
+
+/// Owlbear condition niche: temperate forest predator — the treant's forest
+/// tile, read from a predator's (not an autotroph's) tolerance shape; no
+/// potency, so it is genuinely environment-placed. Authored within the
+/// measured seed-42 land ranges.
+fn owlbear_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 12.0,
+            width: 14.0,
+            devotion: 0.60,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.55,
+            width: 0.30,
+            devotion: 0.50,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.12,
+            width: 0.15,
+            devotion: 0.40,
+        },
+        elevation: ConditionResponse {
+            optimum: 500.0,
+            width: 1800.0,
+            devotion: 0.40,
+        },
+    }
+}
+
 /// A species' metabolic strategy. Selects the allometric normalization
 /// coefficient (B₀) and the per-class pace multiplier; the scaling
 /// *exponents* are universal across classes (spec §4).
@@ -612,6 +967,196 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
             }),
         },
     );
+    // The menagerie (Task 4, decision-ledger #26): the first non-peopled
+    // (biosphere-only, `peopled: None`) kinds the world holds — fauna, not
+    // peoples. Mass is D&D 5E canon (kg), fixed by #26; niche is a single
+    // dominant resource axis per creature so the twelve genuinely PARTITION
+    // the resource-axis basis rather than reading as four more omnivores
+    // (photosynthate: treant/twig-blight; plant-forage: giant-elk/woolly-
+    // mammoth/giant-goat; animal-prey: the three dragons + owlbear; detritus:
+    // otyugh; mineral: xorn/rust-monster). Potency > 0 only for the mighty
+    // (dragons, treant, xorn); see each `*_condition_niche` helper above for
+    // the climate-tile rationale.
+    reg.insert(
+        "treant",
+        SpeciesDef {
+            name: "treant",
+            family: "plant",
+            biosphere: BiosphereTraits {
+                mass: Mass::new(1800.0).unwrap(),
+                metabolic_class: MetabolicClass::Autotroph,
+                niche: ResourceVector::new(&[(PHOTOSYNTHATE, 1.0)]).unwrap(),
+                condition_niche: treant_condition_niche(),
+                potency: 0.6,
+            },
+            peopled: None,
+        },
+    );
+    reg.insert(
+        "twig-blight",
+        SpeciesDef {
+            name: "twig-blight",
+            family: "plant",
+            biosphere: BiosphereTraits {
+                mass: Mass::new(5.0).unwrap(),
+                metabolic_class: MetabolicClass::Autotroph,
+                niche: ResourceVector::new(&[(PHOTOSYNTHATE, 1.0)]).unwrap(),
+                condition_niche: twig_blight_condition_niche(),
+                potency: 0.0,
+            },
+            peopled: None,
+        },
+    );
+    reg.insert(
+        "giant-elk",
+        SpeciesDef {
+            name: "giant-elk",
+            family: "giant-elk",
+            biosphere: BiosphereTraits {
+                mass: Mass::new(450.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
+                condition_niche: giant_elk_condition_niche(),
+                potency: 0.0,
+            },
+            peopled: None,
+        },
+    );
+    reg.insert(
+        "woolly-mammoth",
+        SpeciesDef {
+            name: "woolly-mammoth",
+            family: "woolly-mammoth",
+            biosphere: BiosphereTraits {
+                mass: Mass::new(6000.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
+                condition_niche: woolly_mammoth_condition_niche(),
+                potency: 0.0,
+            },
+            peopled: None,
+        },
+    );
+    reg.insert(
+        "giant-goat",
+        SpeciesDef {
+            name: "giant-goat",
+            family: "giant-goat",
+            biosphere: BiosphereTraits {
+                mass: Mass::new(140.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
+                condition_niche: giant_goat_condition_niche(),
+                potency: 0.0,
+            },
+            peopled: None,
+        },
+    );
+    reg.insert(
+        "otyugh",
+        SpeciesDef {
+            name: "otyugh",
+            family: "otyugh",
+            biosphere: BiosphereTraits {
+                mass: Mass::new(260.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(DETRITUS, 1.0)]).unwrap(),
+                condition_niche: otyugh_condition_niche(),
+                potency: 0.0,
+            },
+            peopled: None,
+        },
+    );
+    reg.insert(
+        "xorn",
+        SpeciesDef {
+            name: "xorn",
+            family: "xorn",
+            biosphere: BiosphereTraits {
+                mass: Mass::new(55.0).unwrap(),
+                metabolic_class: MetabolicClass::Ametabolic,
+                niche: ResourceVector::new(&[(MINERAL, 1.0)]).unwrap(),
+                condition_niche: xorn_condition_niche(),
+                potency: 0.5,
+            },
+            peopled: None,
+        },
+    );
+    reg.insert(
+        "rust-monster",
+        SpeciesDef {
+            name: "rust-monster",
+            family: "rust-monster",
+            biosphere: BiosphereTraits {
+                mass: Mass::new(90.0).unwrap(),
+                metabolic_class: MetabolicClass::Ectotherm,
+                niche: ResourceVector::new(&[(MINERAL, 1.0)]).unwrap(),
+                condition_niche: rust_monster_condition_niche(),
+                potency: 0.0,
+            },
+            peopled: None,
+        },
+    );
+    reg.insert(
+        "white-dragon",
+        SpeciesDef {
+            name: "white-dragon",
+            family: "draconic",
+            biosphere: BiosphereTraits {
+                mass: Mass::new(2200.0).unwrap(), // 5E adult white dragon
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(), // obligate apex
+                condition_niche: white_dragon_condition_niche(),
+                potency: 0.85, // mighty
+            },
+            peopled: None,
+        },
+    );
+    reg.insert(
+        "red-dragon",
+        SpeciesDef {
+            name: "red-dragon",
+            family: "draconic",
+            biosphere: BiosphereTraits {
+                mass: Mass::new(2700.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
+                condition_niche: red_dragon_condition_niche(),
+                potency: 0.95, // mightiest of the three chromatics
+            },
+            peopled: None,
+        },
+    );
+    reg.insert(
+        "black-dragon",
+        SpeciesDef {
+            name: "black-dragon",
+            family: "draconic",
+            biosphere: BiosphereTraits {
+                mass: Mass::new(2200.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
+                condition_niche: black_dragon_condition_niche(),
+                potency: 0.85,
+            },
+            peopled: None,
+        },
+    );
+    reg.insert(
+        "owlbear",
+        SpeciesDef {
+            name: "owlbear",
+            family: "owlbear",
+            biosphere: BiosphereTraits {
+                mass: Mass::new(450.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
+                condition_niche: owlbear_condition_niche(),
+                potency: 0.0,
+            },
+            peopled: None,
+        },
+    );
     reg
 }
 
@@ -629,6 +1174,36 @@ pub fn family_registry() -> BTreeMap<&'static str, ArticulationVector> {
             voicing: 0.55,
             sibilance: 0.45,
             voice_loudness: 0.55,
+            tonality: 0.0,
+            exotic: ExoticManner::None,
+        },
+    );
+    // Fauna families (Task 4): the three chromatic dragons and the two plant
+    // kinds are `peopled: None` and never speak, so this proto vector is
+    // inert data today — it exists solely to satisfy the same-shaped
+    // consistency guard every multi-member family carries
+    // (`every_multi_member_family_has_a_proto`), keeping a future language
+    // extension to fauna a data change rather than a new invariant.
+    m.insert(
+        "draconic",
+        ArticulationVector {
+            labiality: 0.3,
+            vowel_space: 0.6,
+            voicing: 0.7,
+            sibilance: 0.6,
+            voice_loudness: 0.8,
+            tonality: 0.0,
+            exotic: ExoticManner::None,
+        },
+    );
+    m.insert(
+        "plant",
+        ArticulationVector {
+            labiality: 0.5,
+            vowel_space: 0.4,
+            voicing: 0.4,
+            sibilance: 0.3,
+            voice_loudness: 0.3,
             tonality: 0.0,
             exotic: ExoticManner::None,
         },
@@ -965,7 +1540,29 @@ mod tests {
     fn registry_is_ordered_alphabetically_and_kobold_contrasts() {
         let reg = registry();
         let names: Vec<&str> = reg.keys().copied().collect();
-        assert_eq!(names, vec!["bugbear", "goblin", "hobgoblin", "kobold"]);
+        // The roster grew with the Task 4 menagerie (12 biosphere-only fauna
+        // alongside the four peoples); BTreeMap key order is lexicographic.
+        assert_eq!(
+            names,
+            vec![
+                "black-dragon",
+                "bugbear",
+                "giant-elk",
+                "giant-goat",
+                "goblin",
+                "hobgoblin",
+                "kobold",
+                "otyugh",
+                "owlbear",
+                "red-dragon",
+                "rust-monster",
+                "treant",
+                "twig-blight",
+                "white-dragon",
+                "woolly-mammoth",
+                "xorn",
+            ]
+        );
         let k = &reg["kobold"].peopled.as_ref().unwrap().psych;
         assert_eq!(k.sociality, Sociality::Communal);
         assert_eq!(k.status_basis, StatusBasis::Knowledge);
@@ -980,7 +1577,9 @@ mod tests {
         register_concepts(&mut w.registry).unwrap();
         let settlement = w.ledger.mint_entity();
         let ids = genesis(&mut w).unwrap();
-        assert_eq!(ids.len(), 4);
+        // 4 peoples + the Task 4 menagerie's 12 biosphere-only fauna: genesis
+        // mints an entity per species in the roster regardless of `peopled`.
+        assert_eq!(ids.len(), 16);
         people(&mut w, settlement, "kobold").unwrap();
         assert_eq!(species_of(&w, settlement).as_deref(), Some("kobold"));
         // The species entity carries its vector under species predicates.
@@ -1219,6 +1818,98 @@ mod tests {
         assert_eq!(
             fa, fb,
             "genesis_in over the registry slice must be byte-identical to genesis"
+        );
+    }
+
+    #[test]
+    fn menagerie_is_biosphere_only_and_spans_axes() {
+        let reg = registry();
+        for name in [
+            "treant",
+            "twig-blight",
+            "giant-elk",
+            "woolly-mammoth",
+            "giant-goat",
+            "otyugh",
+            "xorn",
+            "rust-monster",
+            "white-dragon",
+            "red-dragon",
+            "black-dragon",
+            "owlbear",
+        ] {
+            let d = &reg[name];
+            assert!(d.peopled.is_none(), "{name} is fauna: no PeopledTraits");
+            // `Mass` has no PartialOrd, so read the raw kilograms rather
+            // than comparing against `Mass::new(0.0)`.
+            assert!(d.biosphere.mass.kilograms() > 0.0, "{name} has mass");
+        }
+        // mighty creatures carry potency
+        assert!(reg["red-dragon"].biosphere.potency > 0.0);
+        assert!(reg["treant"].biosphere.potency > 0.0);
+        assert!(reg["xorn"].biosphere.potency > 0.0);
+        // the material, non-mighty fauna carry none
+        assert_eq!(reg["owlbear"].biosphere.potency, 0.0);
+        assert_eq!(reg["rust-monster"].biosphere.potency, 0.0);
+
+        // resource niches are partitioned, not four omnivores: the distinct
+        // dominant axis differs across creatures. `ResourceVector::overlap`
+        // is the packer's Pianka overlap; disjoint axes overlap 0.
+        let overlap = reg["treant"]
+            .biosphere
+            .niche
+            .overlap(&reg["white-dragon"].biosphere.niche);
+        assert!(
+            overlap < 0.5,
+            "photosynthate vs apex niches must barely overlap"
+        );
+
+        // Directly assert the basis-constant partition the brief calls for.
+        assert_eq!(reg["treant"].biosphere.niche.weight(PHOTOSYNTHATE), 1.0);
+        assert_eq!(
+            reg["twig-blight"].biosphere.niche.weight(PHOTOSYNTHATE),
+            1.0
+        );
+        for name in ["giant-elk", "woolly-mammoth", "giant-goat"] {
+            assert_eq!(reg[name].biosphere.niche.weight(PLANT_FORAGE), 1.0);
+        }
+        for name in ["white-dragon", "red-dragon", "black-dragon", "owlbear"] {
+            assert_eq!(reg[name].biosphere.niche.weight(ANIMAL_PREY), 1.0);
+        }
+        assert_eq!(reg["otyugh"].biosphere.niche.weight(DETRITUS), 1.0);
+        for name in ["xorn", "rust-monster"] {
+            assert_eq!(reg[name].biosphere.niche.weight(MINERAL), 1.0);
+        }
+    }
+
+    #[test]
+    fn menagerie_families_registered_and_climate_tiles_distinct() {
+        // The three chromatics and the two plant kinds are multi-member
+        // families; `every_multi_member_family_has_a_proto` already guards
+        // this generically, but pin the two new families explicitly so a
+        // future edit that deletes one fails loudly here too.
+        let fams = family_registry();
+        assert!(fams.contains_key("draconic"));
+        assert!(fams.contains_key("plant"));
+
+        let reg = registry();
+        for name in ["white-dragon", "red-dragon", "black-dragon"] {
+            assert_eq!(reg[name].family, "draconic");
+        }
+        for name in ["treant", "twig-blight"] {
+            assert_eq!(reg[name].family, "plant");
+        }
+
+        // The three chromatics claim distinct climate tiles even though they
+        // share the animal-prey axis: white owns the cold, and red/black —
+        // both warm — separate on moisture (volcanic-arid vs. swamp-wet).
+        let temp = |n: &str| reg[n].biosphere.condition_niche.temperature.optimum;
+        let moisture = |n: &str| reg[n].biosphere.condition_niche.moisture.optimum;
+        assert!(temp("white-dragon") < temp("red-dragon"));
+        assert!(temp("white-dragon") < temp("black-dragon"));
+        assert!(
+            moisture("red-dragon") < moisture("black-dragon") - 0.3,
+            "volcanic-arid red must sit well below swamp-wet black on moisture"
         );
     }
 }
