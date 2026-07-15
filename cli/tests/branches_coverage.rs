@@ -162,7 +162,16 @@ fn derivations_replay() {
     let world = default_generated_seed_42();
     let mut checked = 0;
 
-    for def in hornvale_worldgen::default_roster() {
+    // Language/lexicon coverage is a peopled-only concern (fauna carry no
+    // `PeopledTraits` and never speak); the Task 4 menagerie grew
+    // `default_roster()` to include biosphere-only kinds, so this loop
+    // filters to the settling, speaking species — matching the same
+    // `peopled.is_some()` boundary `windows/worldgen`'s settlement-genesis
+    // pass applies before it ever calls `peopled(def)`.
+    for def in hornvale_worldgen::default_roster()
+        .into_iter()
+        .filter(|d| d.peopled.is_some())
+    {
         let species = def.name;
         let ph = hornvale_worldgen::language_of(&world, species);
         let cascade = hornvale_language::draw_cascade(&world.seed, species);
@@ -198,7 +207,16 @@ fn every_concept_resolves_once() {
     let concept_count = world.registry.concepts().count();
     assert!(concept_count > 0, "the registry should hold concepts");
 
-    for def in hornvale_worldgen::default_roster() {
+    // Language/lexicon coverage is a peopled-only concern (fauna carry no
+    // `PeopledTraits` and never speak); the Task 4 menagerie grew
+    // `default_roster()` to include biosphere-only kinds, so this loop
+    // filters to the settling, speaking species — matching the same
+    // `peopled.is_some()` boundary `windows/worldgen`'s settlement-genesis
+    // pass applies before it ever calls `peopled(def)`.
+    for def in hornvale_worldgen::default_roster()
+        .into_iter()
+        .filter(|d| d.peopled.is_some())
+    {
         let lex = hornvale_worldgen::lexicon_of(&world, def.name)
             .unwrap_or_else(|e| panic!("lexicon_of({}) failed: {e:?}", def.name));
         for concept in world.registry.concepts() {
@@ -238,7 +256,16 @@ fn gaps_have_reasons() {
         "needs",
     ];
 
-    for def in hornvale_worldgen::default_roster() {
+    // Language/lexicon coverage is a peopled-only concern (fauna carry no
+    // `PeopledTraits` and never speak); the Task 4 menagerie grew
+    // `default_roster()` to include biosphere-only kinds, so this loop
+    // filters to the settling, speaking species — matching the same
+    // `peopled.is_some()` boundary `windows/worldgen`'s settlement-genesis
+    // pass applies before it ever calls `peopled(def)`.
+    for def in hornvale_worldgen::default_roster()
+        .into_iter()
+        .filter(|d| d.peopled.is_some())
+    {
         let lex = hornvale_worldgen::lexicon_of(&world, def.name)
             .unwrap_or_else(|e| panic!("lexicon_of({}) failed: {e:?}", def.name));
         for (concept, entry) in lex.entries() {

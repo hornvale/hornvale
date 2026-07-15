@@ -2390,11 +2390,23 @@ fn build_to(
     // species place villages); a biosphere-only (fauna) kind is filtered out
     // here, at the one point `species_set` is assembled, so every pass below
     // that reads `.psych`/`.perception`/`.articulation`/etc via `peopled(def)`
-    // never sees a fauna kind. The current roster is all-peopled, so this
-    // filter is a no-op today (byte-identical).
+    // never sees a fauna kind. The unpinned path's roster is all-peopled, so
+    // that filter is a no-op today (byte-identical). A `--species` pin,
+    // though, can now name one of the Task 4 menagerie's fauna kinds — those
+    // never settle, so pinning one must fail loudly with the physical reason
+    // (constitution: "pins fail loudly") rather than reach `peopled(def)`
+    // downstream and panic.
     let species_set: Vec<&hornvale_species::SpeciesDef> = match &settlement_pins.species {
         None => roster.iter().filter(|d| d.peopled.is_some()).collect(),
-        Some(name) => vec![def_in(roster, name)?],
+        Some(name) => {
+            let def = def_in(roster, name)?;
+            if def.peopled.is_none() {
+                return Err(BuildError::Pins(format!(
+                    "'{name}' is not a settling people (a biosphere-only fauna kind)"
+                )));
+            }
+            vec![def]
+        }
     };
 
     // Each species' carrying-capacity inputs (spec §4) plus the coexistence
@@ -4014,6 +4026,38 @@ mod tests {
             )
             .unwrap();
         assert!(matches!(sky_of(&world), Err(BuildError::Pins(_))));
+    }
+
+    #[test]
+    fn pinning_a_fauna_species_fails_loudly_instead_of_panicking() {
+        // The Task 4 menagerie (windows/worldgen fold-in): a `--species`
+        // pin naming a biosphere-only (fauna) kind must never reach
+        // `peopled(def)` downstream — that call panics on a `SpeciesDef`
+        // with no `PeopledTraits`. Fauna never settle, so the pin must fail
+        // loudly with the physical reason (constitution: "pins fail
+        // loudly"), the same `BuildError::Pins` shape `def_in` already uses
+        // for an unknown name.
+        let result = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins {
+                species: Some("white-dragon".to_string()),
+            },
+        );
+        assert!(result.is_err(), "a fauna pin must never build a world");
+        let err = result.err().unwrap();
+        assert!(
+            matches!(err, BuildError::Pins(_)),
+            "expected a graceful BuildError::Pins, got {err}"
+        );
+        if let BuildError::Pins(reason) = err {
+            assert!(
+                reason.contains("white-dragon"),
+                "reason should name the offending species: {reason}"
+            );
+        }
     }
 
     #[test]

@@ -299,7 +299,14 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     if world.registry.concept(concept).is_none() {
                         writeln!(output, "unknown concept '{concept}'")?;
                     } else {
-                        for species in hornvale_species::registry().keys() {
+                        // peopled-only: fauna never speak, so `lexicon_of`
+                        // is undefined for them (Task 4 widened
+                        // `registry()` to include biosphere-only kinds).
+                        for species in hornvale_species::registry()
+                            .iter()
+                            .filter(|(_, def)| def.peopled.is_some())
+                            .map(|(name, _)| name)
+                        {
                             match world_builder::lexicon_of(world, species) {
                                 Ok(lexicon) => match lexicon.entry(concept) {
                                     Some(entry) => writeln!(

@@ -111,7 +111,18 @@ fn claimed_diversity(seed: u64, roster: &[hornvale_species::SpeciesDef]) -> f64 
 /// the module doc for the niche-era re-baseline and the weak-knob caveat.
 #[test]
 fn beta_yields_realistic_coexistence() {
-    let roster = default_roster();
+    // This freeze is preregistered against "the shipped 4-goblinoid roster"
+    // (module doc, top). Task 4 (the canonical-5E menagerie) widened
+    // `default_roster()` with 12 biosphere-only fauna, but those are not
+    // yet folded into the coexistence packer's competition — that cutover
+    // is Task 5's (niche-K), which re-measures this band against the
+    // richer roster per the module doc's own Stage-B caveat. Scope this
+    // read to the peopled species so it keeps measuring what it always
+    // measured until that re-measurement lands.
+    let roster: Vec<hornvale_species::SpeciesDef> = default_roster()
+        .into_iter()
+        .filter(|d| d.peopled.is_some())
+        .collect();
 
     let per_seed: Vec<(u64, f64)> = SEEDS
         .iter()
