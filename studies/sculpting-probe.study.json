@@ -1,0 +1,5 @@
+{ "name": "sculpting-probe",
+  "description": "Sculpting (epoch v3) tuning probe — spec §8 bands + escalation diagnostic. Not a census; never committed as fixtures.",
+  "seeds": { "from": 0, "count": 100 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": [ "shoreline-development", "hypsometric-bimodality", "shelf-fraction", "continent-count", "largest-continent-share", "plate-size-gini", "rerouted-flow-fraction", "shelf-width-passive-median", "shelf-width-active-median", "sediment-volume", "waterfall-count", "delta-count" ] }
