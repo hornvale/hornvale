@@ -59,6 +59,11 @@ struct Rebuilt {
     /// pre-carve inputs above — carries the mass-balance totals
     /// `TectonicGlobe` does not retain.
     delta: CarveDelta,
+    /// Sea level resolved on the carved-but-untrimmed surface — generate's
+    /// FIRST solve (`sea_1` in ruling #5c's solve→trim→solve sequence).
+    /// The globe's own `sea_level` is the second (final) solve; the gap
+    /// between the two is the bounded residual the re-cap test tolerates.
+    sea_carved: ReferenceElevation,
 }
 
 fn rebuild(seed: u64, geo: &Geosphere) -> Rebuilt {
@@ -104,6 +109,11 @@ fn rebuild(seed: u64, geo: &Geosphere) -> Rebuilt {
         &g.trail_seamounts,
         &CarveParams::default(),
     );
+    let carved = CellMap::from_fn(geo, |c| {
+        ReferenceElevation::new(elevation_pre.get(c).get() + delta.delta_m.get(c))
+            .expect("carved elevation finite")
+    });
+    let sea_carved = elevation::derive_sea_level(&carved, effective_ocean);
     Rebuilt {
         outcome,
         elevation_pre,
@@ -111,6 +121,7 @@ fn rebuild(seed: u64, geo: &Geosphere) -> Rebuilt {
         drainage_pre,
         carbonate,
         delta,
+        sea_carved,
     }
 }
 
@@ -251,7 +262,10 @@ fn shelf_width_hops(
 /// identity on four seeds via a fresh full `carve()` composition (see
 /// `Rebuilt`'s doc) — the same tolerance `carve.rs`'s own
 /// `sediment_books_balance_and_mouths_collect_the_rest` uses for the
-/// routing-only sub-identity.
+/// routing-only sub-identity. This identity is about `carve()` ALONE: the
+/// sea-trim (ruling #5c, `trim_to_sea`) is booked at the generate level —
+/// generate-level composition is carve + trim, and the trimmed volume is
+/// additional oceanic loss on top of these carve-internal books.
 #[test]
 fn mass_balance_holds() {
     let geo = Geosphere::new(4);
@@ -350,16 +364,16 @@ fn harder_rock_cuts_less() {
 }
 
 /// Atoll placement (spec §8, Task 9): every `atoll_cells` member (a) sits
-/// below `atoll_max_abs_lat`, (b) composes close to sea level (the same
-/// generous bound `carve.rs`'s own
-/// `the_wedge_builds_a_shelf_mode_wide_on_passive_margins` uses — atoll
-/// eligibility reads POST-wedge depth, and the percentile-exact sea-level
-/// re-solve moves the reference an atoll cell reads against by up to
-/// `wedge_freeboard_m`, so this is deliberately generous, not a
-/// double-count regression's hundreds-of-meters overshoot), and (c) maps
-/// back to a real trail seamount with `age_index >= 2` — old enough to
-/// have drifted off the live hotspot dome and cooled into reef-building
-/// range (`cap_atolls`'s own eligibility rule).
+/// below `atoll_max_abs_lat`, (b) composes close to (and, post-trim, at
+/// most the bounded solve-2 residual above) the final atoll cap — ruling
+/// #5c's sea-trim re-caps every atoll cell to `sea_1 - atoll_freeboard_m`,
+/// and the final solve lands at most `wedge_freeboard_m` below `sea_1`, so
+/// the ceiling here is `sea_final - atoll_freeboard_m + wedge_freeboard_m`
+/// (a double-count regression's hundreds-of-meters overshoot still fails
+/// loudly), and (c) maps back to a real trail seamount with
+/// `age_index >= 2` — old enough to have drifted off the live hotspot dome
+/// and cooled into reef-building range (`cap_atolls`'s own eligibility
+/// rule).
 #[test]
 fn atolls_only_on_warm_submerged_seamounts() {
     let geo = Geosphere::new(4);
@@ -369,7 +383,8 @@ fn atolls_only_on_warm_submerged_seamounts() {
         let outcome = generate(Seed(seed), &geo, &TerrainPins::default()).unwrap();
         let g = &outcome.globe;
         let index = NearestCellIndex::new(&geo);
-        let ceiling = g.sea_level.get() + params.wedge_freeboard_m + params.atoll_freeboard_m + 1.0;
+        let ceiling =
+            g.sea_level.get() - params.atoll_freeboard_m + params.wedge_freeboard_m + 1e-6;
         let floor = g.sea_level.get() - params.atoll_max_depth_m - params.wedge_freeboard_m - 1.0;
         for &c in &g.atoll_cells {
             let lat = math::asin(geo.position(c)[2].clamp(-1.0, 1.0)).abs();
@@ -401,6 +416,65 @@ fn atolls_only_on_warm_submerged_seamounts() {
         total_atolls > 0,
         "no atolls at all across seeds [1, 7, 42, 99] — the feature never fires"
     );
+}
+
+/// The re-cap holds after the final solve (ruling #5c, the sea-trim):
+/// post-generate, NO atoll cell sits above `sea_final - atoll_freeboard_m`
+/// and no non-delta marine-sediment cell above
+/// `sea_final - wedge_freeboard_m`, up to the honest measured tolerance —
+/// the `sea_1 → sea_final` shift of the bounded solve→trim→solve sequence
+/// (`sea_1` recomputed here via `Rebuilt`, so the tolerance is the actual
+/// per-world shift, not a guessed constant). The shift is structurally
+/// bounded by `wedge_freeboard_m`: the trim parks a wide tied shelf block
+/// at `sea_1 - wedge_freeboard_m`, and the second solve's rank walk floors
+/// on that block's top (measured: 14.8 m at L5 seed 42; 20-38 m at L4 and
+/// 7-28 m at L6 across seeds [1, 7, 42, 99]). Exactly one trim, exactly
+/// two solves, then stop — the residual is accepted by ruling, and this
+/// test both asserts the bound and REPORTS the measured shift in its
+/// failure messages.
+#[test]
+fn trim_recaps_hold_after_the_final_solve() {
+    let geo = Geosphere::new(5);
+    let rebuilt = rebuild(42, &geo);
+    let g = &rebuilt.outcome.globe;
+    let p = CarveParams::default();
+    let sea_1 = rebuilt.sea_carved;
+    let sea_final = g.sea_level;
+    let shift = sea_1.get() - sea_final.get();
+    assert!(
+        (0.0..=CarveParams::default().wedge_freeboard_m + 1e-9).contains(&shift),
+        "sea_1 -> sea_final shift {shift} outside the structural bound \
+         [0, wedge_freeboard_m] (sea_1 {}, sea_final {})",
+        sea_1.get(),
+        sea_final.get()
+    );
+    let tol = shift.max(0.0) + 1e-6;
+    let atoll_cap = sea_final.get() - p.atoll_freeboard_m;
+    for &c in &g.atoll_cells {
+        assert!(
+            g.elevation.get(c).get() <= atoll_cap + tol,
+            "atoll cell {} at {} above sea_final - atoll_freeboard ({atoll_cap}) beyond the \
+             measured shift tolerance {tol} (shift {shift})",
+            c.0,
+            g.elevation.get(c).get()
+        );
+    }
+    let wedge_cap = sea_final.get() - p.wedge_freeboard_m;
+    for (c, sed) in g.sediment_thickness.iter() {
+        if *sed > 0.0
+            && *g.elevation.get(c) < sea_final
+            && !g.delta_cells.contains(&c)
+            && !g.atoll_cells.contains(&c)
+        {
+            assert!(
+                g.elevation.get(c).get() <= wedge_cap + tol,
+                "marine sediment cell {} at {} above sea_final - wedge_freeboard ({wedge_cap}) \
+                 beyond the measured shift tolerance {tol} (shift {shift})",
+                c.0,
+                g.elevation.get(c).get()
+            );
+        }
+    }
 }
 
 /// Trail existence (spec §8, Task 6): the retained `trail_seamounts` on a
@@ -475,17 +549,18 @@ fn arcs_are_discrete() {
 
 /// Shelf-width asymmetry (spec §8): passive-margin coasts build wider
 /// shelves than active-margin coasts. Heavy: full genesis at L5 over 40
-/// seeds, coast cells pooled across the whole sweep (not per-world medians
-/// averaged) — Task 12's review found medians TIE at 1.0 on seed 42 alone,
-/// with the asymmetry visible only in the tail, so a pooled distribution
-/// was this battery's best chance to actually separate the two medians.
-/// **Measured**: it still ties even pooled (passive n=32849 median=1,
-/// active n=7885 median=1 across seeds 1-40 @ L5) — so this DOES fall back
-/// to the plan's documented alternative every time, not just occasionally:
-/// passive-tail dominance (more passive coast cells reach the 8-hop cap
-/// than active ones). Report this fallback engagement to Nathan prominently
-/// (Task 13 report) — the primary median criterion from spec §8 has never
-/// yet been observed to hold, only the fallback.
+/// seeds, coast cells pooled across the whole sweep.
+///
+/// **The PRIMARY criterion is tail dominance** (ruling #5d): the rate of
+/// passive coast cells whose shelf walk reaches the 8-hop cap must be at
+/// least 1.5× the active rate. The spec §8 median criterion (passive
+/// median > active median) is **superseded** — recorded openly, not
+/// reframed: pooled medians TIE at 1.0 (passive n=32849, active n=7885
+/// across seeds 1-40 @ L5; Task 12 review measured the same tie per-world),
+/// because at this resolution most coast walks terminate in one hop on
+/// both margins and the asymmetry lives entirely in the tail. The median
+/// criterion has never been observed to hold; tail dominance is what the
+/// physics actually produces, and Census-III will carry this note.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn shelf_width_asymmetry() {
@@ -519,26 +594,25 @@ fn shelf_width_asymmetry() {
         !passive.is_empty() && !active.is_empty(),
         "no coast cells found on either margin"
     );
-    let mut passive_sorted = passive.clone();
-    let mut active_sorted = active.clone();
-    let passive_median = median(&mut passive_sorted).unwrap();
-    let active_median = median(&mut active_sorted).unwrap();
-    if passive_median > active_median {
-        // The primary criterion cleared: no fallback needed.
-        return;
-    }
-    // Fallback (plan-documented, Task 12 review): passive-tail dominance —
-    // more passive coast cells reach the 8-hop cap than active ones. A
-    // failure here (not just the primary median tie) is a real finding for
-    // Nathan's package, not something to paper over.
+    // Primary (ruling #5d): tail dominance as a RATE ratio — the share of
+    // passive coast cells at the 8-hop cap is at least 1.5× the active
+    // share. Rates, not raw counts: passive coast is ~4× more plentiful,
+    // and a count comparison would pass on abundance alone.
     let passive_at_cap = passive.iter().filter(|&&w| w >= 8.0).count();
     let active_at_cap = active.iter().filter(|&&w| w >= 8.0).count();
+    let passive_rate = passive_at_cap as f64 / passive.len() as f64;
+    let active_rate = active_at_cap as f64 / active.len() as f64;
     assert!(
-        passive_at_cap > active_at_cap,
-        "primary median check tied (passive {passive_median} <= active {active_median}) AND \
-         the fallback tail-dominance check failed: passive-at-cap {passive_at_cap} <= \
-         active-at-cap {active_at_cap} — shelf-width asymmetry did not materialize by either \
-         measure"
+        passive_at_cap > 0,
+        "no passive coast cell ever reaches the 8-hop cap — no tail to dominate"
+    );
+    assert!(
+        passive_rate >= 1.5 * active_rate,
+        "tail dominance failed: passive-at-cap rate {passive_rate:.5} ({passive_at_cap}/{}) \
+         < 1.5 x active rate {active_rate:.5} ({active_at_cap}/{}) — shelf-width asymmetry \
+         did not materialize under the primary (ruling #5d) criterion",
+        passive.len(),
+        active.len()
     );
 }
 

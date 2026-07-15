@@ -87,6 +87,10 @@ run -p hornvale -- settlement-map --world "$wlocked" --out book/src/gallery/sett
     > book/src/gallery/settlement-seed-42-locked.md
 run -p hornvale -- paleo-map --world "$wsky" --out book/src/gallery/paleo-seed-42.png \
     > book/src/gallery/paleo-seed-42.md
+# The sediment/carve-delta lens (Sculpting): PNG only — no committed .md
+# sibling yet, so the markdown goes to /dev/null.
+run -p hornvale -- map --world "$wsky" --out book/src/gallery/sediment-seed-42.png \
+    --field sediment > /dev/null
 run -p hornvale -- star-chart --world "$wsky" --out book/src/gallery/star-chart-seed-42.png \
     > book/src/gallery/star-chart-seed-42.md
 

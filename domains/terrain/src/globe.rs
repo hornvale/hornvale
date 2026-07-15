@@ -83,15 +83,18 @@ pub struct TectonicGlobe {
     /// Deposited sediment thickness per cell, metres (≥ 0; the carve,
     /// Sculpting spec §5/§2 stage 8): repose's receiver-side gains,
     /// routing's floodplain/playa deposit, the marine wedge/delta fill, and
-    /// atoll cap material, all summed. Feeds `lithology`'s `soil_depth` and
-    /// the `Alluvium` gate (see `crate::lithology::soil_depth_at` /
-    /// `classify_rock`). Recomputed at genesis, never serialized.
+    /// atoll cap material, all summed — NET of the sea-trim (ruling #5c: a
+    /// trimmed cell's sediment shrinks by the trimmed meters, floored at
+    /// 0). Feeds `lithology`'s `soil_depth` and the `Alluvium` gate (see
+    /// `crate::lithology::soil_depth_at` / `classify_rock`). Recomputed at
+    /// genesis, never serialized.
     pub sediment_thickness: CellMap<f64>,
-    /// The carve's net elevation delta per cell, metres (± — incision
-    /// subtracts, repose/deposition/wedge/delta/atoll all add). Already
-    /// folded into `elevation`; retained separately so consumers can see
-    /// how much of a cell's relief the carve moved. Recomputed at genesis,
-    /// never serialized.
+    /// The generate-level net elevation delta per cell, metres (± —
+    /// incision subtracts, repose/deposition/wedge/delta/atoll all add,
+    /// the sea-trim of ruling #5c subtracts again): the full carve + trim
+    /// composition, so `elevation == elevation_pre + carve_delta_m` is an
+    /// identity. Retained so consumers can see how much of a cell's relief
+    /// the carve moved. Recomputed at genesis, never serialized.
     pub carve_delta_m: CellMap<f64>,
     /// Cells a river-mouth delta lobe raised above sea level (the carve,
     /// Sculpting Task 9). Recomputed at genesis, never serialized.
@@ -248,6 +251,7 @@ pub fn generate(
         let plate = &plate_list[*plate_of.get(c) as usize];
         crate::lithology::margin_polarity(plate, geosphere.position(c), *continental.get(c))
     });
+    let carve_params = crate::carve::CarveParams::default();
     let cd = crate::carve::carve(
         geosphere,
         &elevation_pre,
@@ -261,19 +265,59 @@ pub fn generate(
         &boundary_map,
         &plate_of,
         &trail_seamounts_list,
-        &crate::carve::CarveParams::default(),
+        &carve_params,
     );
-    let elevation_map = CellMap::from_fn(geosphere, |c| {
+    let elevation_carved = CellMap::from_fn(geosphere, |c| {
         ReferenceElevation::new(elevation_pre.get(c).get() + cd.delta_m.get(c))
             .expect("carved elevation finite")
     });
-    // Percentile-exact re-solve (decision 0053 unchanged): the SAME
-    // `effective_ocean` target the pre-carve sea level used above.
+    // The bounded solve→trim→solve sequence (ruling #5c; decision 0053's
+    // percentile-exact discipline unchanged — both solves use the SAME
+    // `effective_ocean` target the pre-carve sea level used above).
+    // Exactly one trim, exactly two solves, then STOP — a fixed sequence,
+    // never iterated to convergence (the one-shot doctrine, like repose's
+    // fixed sweep budget).
+    //
+    // Solve 1: sea level on the carved surface.
+    let sea_1 = elevation::derive_sea_level(&elevation_carved, effective_ocean);
+    // Trim: re-cap the carve's marine fill against sea_1 (wedge cells to
+    // sea_1 - wedge_freeboard_m, atoll cells to sea_1 - atoll_freeboard_m,
+    // delta lobes exempt). Generate-level composition = carve + trim: the
+    // trim applies to elevation AND sediment together (sediment floored at
+    // 0), and the trimmed volume is booked as OCEANIC LOSS at this level —
+    // `cd`'s own books stay internally exact for the carve alone (the
+    // mass-balance battery in tests/carve_properties.rs asserts them; its
+    // doc carries the generate-level booking note).
+    let (trim_delta, _trim_ocean_loss_m3) = crate::carve::trim_to_sea(
+        geosphere,
+        &elevation_carved,
+        &cd.sediment_thickness_m,
+        &cd.delta_cells,
+        &cd.atoll_cells,
+        sea_1,
+        &carve_params,
+    );
+    let elevation_map = CellMap::from_fn(geosphere, |c| {
+        ReferenceElevation::new(elevation_carved.get(c).get() + trim_delta.get(c))
+            .expect("trimmed elevation finite")
+    });
+    let sediment_final = CellMap::from_fn(geosphere, |c| {
+        (cd.sediment_thickness_m.get(c) + trim_delta.get(c)).max(0.0)
+    });
+    // Solve 2 (final): sea level on the trimmed surface. The second solve
+    // typically lands a little BELOW sea_1 (the trimmed shelf block that
+    // straddled sea_1's rank slides out from under it), by a residual that
+    // is structurally bounded by `wedge_freeboard_m` (the block's new top
+    // floors the rank walk; measured 20-38 m at L4, 15 m at L5 seed 42,
+    // 7-28 m at L6 across seeds [1, 7, 42, 99]). That residual is ACCEPTED
+    // — the sequence stops here by ruling; see
+    // `trim_recaps_hold_after_the_final_solve` (tests/carve_properties.rs)
+    // for the tolerance this bounds.
     let sea_level = elevation::derive_sea_level(&elevation_map, effective_ocean);
     let unrest =
         elevation::generate_unrest(geosphere, &plate_list, &plate_of, &boundary_map, &distances);
-    // Final drainage/endorheic, re-derived on the carved surface — what the
-    // globe retains for every consumer.
+    // Final drainage/endorheic, re-derived on the trimmed surface with the
+    // final sea level — what the globe retains for every consumer.
     let (drainage, endorheic) =
         crate::drainage::drainage_field(geosphere, &elevation_map, sea_level);
     // The A→B→C escalation diagnostic (Sculpting Task 12, spec §8): both
@@ -345,8 +389,11 @@ pub fn generate(
         boundary_distance: distances,
         induration: induration_map,
         trail_seamounts: trail_seamounts_list,
-        sediment_thickness: cd.sediment_thickness_m,
-        carve_delta_m: cd.delta_m,
+        sediment_thickness: sediment_final,
+        // The retained delta is the FULL generate-level composition
+        // (carve + trim), so `elevation == elevation_pre + carve_delta_m`
+        // stays an identity for consumers.
+        carve_delta_m: CellMap::from_fn(geosphere, |c| *cd.delta_m.get(c) + *trim_delta.get(c)),
         delta_cells: cd.delta_cells,
         atoll_cells: cd.atoll_cells,
         waterfall_sites: cd.waterfall_sites,
