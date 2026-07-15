@@ -182,8 +182,16 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // Census regen (2026-07-14, the-gathering + night-sky, 1000-seed
     // `the-census`): the night-sky campaign's new phenomena change which
     // spinning worlds mint an eternal first belief; re-measured.
+    //
+    // Census regen (2026-07-14 #2, the merged campaign stack — Eclipse
+    // Seasons + The Long Count + The Speakable + BIO-2 + The Ground + the
+    // Niche): Eclipse Seasons re-derives the pantheon on every mooned seed
+    // (eclipse phenomena join the first-belief contest), changing which
+    // spinning worlds mint an eternal first belief; re-measured (5 -> 2).
+    // The locked-world split above is untouched — locked worlds have no
+    // eclipse cycle to observe.
     assert_eq!(
-        spinning_eternal_exceptions, 5,
+        spinning_eternal_exceptions, 2,
         "spinning-yet-eternal exception count drifted"
     );
 }
@@ -868,8 +876,16 @@ fn name_collision_rate_is_measured_and_pinned() {
     // `the-census`): the night-sky campaign's new phenomena mint more
     // deities per pantheon on average (same mechanism as SKY-5/SKY-6
     // above), further reshuffling per-culture lexicon reuse; re-measured.
-    assert_eq!(zero, 19, "zero-collision world count drifted");
-    assert_eq!(nonzero, 981, "nonzero-collision world count drifted");
+    //
+    // Census regen (2026-07-14 #2, the merged campaign stack): The
+    // Speakable's LANG-32 makes repair the identity for attested native
+    // words, so sound change no longer collapses distinct lexicon entries
+    // into homographs — names stay more distinct and collisions fall
+    // (19 -> 62 zero-collision worlds, mean 19.61% -> 15.53%); Eclipse
+    // Seasons' pantheon re-derivation on mooned seeds reshuffles the
+    // deity-name draws feeding the same lexicons.
+    assert_eq!(zero, 62, "zero-collision world count drifted");
+    assert_eq!(nonzero, 938, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -877,7 +893,8 @@ fn name_collision_rate_is_measured_and_pinned() {
     assert!(
         // The 1000-seed canonical census re-pin (2026-07-14, the-gathering +
         // night-sky): 0.162_252_788_362 -> 0.210_597_623_083.
-        (mean - 0.210_597_623_083).abs() < 1e-6,
+        // Census regen (2026-07-14 #2): -> 0.155_266_538_742.
+        (mean - 0.155_266_538_742).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -930,9 +947,16 @@ fn name_length_distributions_are_measured_and_pinned() {
     // `the-census`): the-gathering's field-based condensation and the
     // night-sky campaign's phenomena together reshuffle both species'
     // per-culture lexicons before settlements draw; both means re-pinned.
+    //
+    // Census regen (2026-07-14 #2, the merged campaign stack): The
+    // Speakable's LANG-32 (repair is the identity for attested native
+    // words) stops sound change from eroding compound names, so names run
+    // LONGER (goblin 10.40 -> 14.94, kobold 13.59 -> 14.42) — the same
+    // mechanism that dropped the collision rate above: longer, less-
+    // repeated compounds. Present counts hold at every seed for both.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 1000u32, 10.402_283_807_600),
-        ("kobold", 1000u32, 13.594_464_221_700),
+        ("goblin", 1000u32, 14.941_726_710_4),
+        ("kobold", 1000u32, 14.415_525_512_5),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1137,10 +1161,17 @@ fn null_control_name_length_smd_is_pinned() {
     // `the-census`; `census-of-the-meeting`'s own fixture regenerated
     // alongside it): re-measured; still comfortably inside the ±0.2
     // sampling bound above.
+    //
+    // Census regen (2026-07-14 #2, the merged campaign stack): The
+    // Speakable's LANG-32 reshapes both solo builds' generated names
+    // identically in structure (see the name-length re-pin in
+    // `calibration.rs`'s drift battery); the SMD moves with the new
+    // distribution and stays comfortably inside the ±0.2 sampling bound.
     assert!(
         // libm re-pin (decision 0041): -0.082_573_510_253_099_77 -> below
         // Census regen (2026-07-14): -0.082_524_201_701_795_61 -> below.
-        (namelen - -0.071_825_669_752_140_97).abs() < 1e-9,
+        // Census regen (2026-07-14 #2): -0.071_825_669_752_140_97 -> below.
+        (namelen - -0.055_225_720_597_668_71).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
