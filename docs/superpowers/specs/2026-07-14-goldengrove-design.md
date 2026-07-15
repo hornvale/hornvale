@@ -1,7 +1,7 @@
 # Goldengrove — Design
 
 **Date:** 2026-07-14
-**Status:** Executed and merged (2026-07-14); client live at hornvale.github.io/goldengrove
+**Status:** Executed and merged (2026-07-14); client live at hornvale.github.io/orrery (renamed from goldengrove, The Helm G3)
 **Kind:** Campaign spec.
 **Parent spec:** `2026-07-09-rendering-strategy-design.md` (the observation
 stack; decisions 0022, 0023, 0052 govern). This campaign opens Ring 3 —

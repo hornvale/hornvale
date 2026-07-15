@@ -14,7 +14,7 @@ be small, deterministic, and dependency-free, and "serious eyecandy" keeps
 pulling the other way. The tension was resolved by moving the picture out
 of the house.
 
-Where it moved is [Goldengrove](https://hornvale.github.io/goldengrove/) —
+Where it moved is [Goldengrove (since renamed Orrery)](https://hornvale.github.io/orrery/) —
 a separate repository in the organization, the first true external client
 the sim has ever had. The arrangement is the observatory and the
 planetarium: the observatory grinds the mirror and publishes a catalog;
