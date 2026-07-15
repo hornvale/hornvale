@@ -185,6 +185,95 @@
       "rung": "astronomy"
     },
     {
+      "buckets": [
+        0.0,
+        100.0,
+        200.0,
+        300.0,
+        400.0,
+        600.0,
+        1000.0
+      ],
+      "doc": "Eclipse year (the sun's return to the innermost moon's node line), standard days; Absent if moonless",
+      "kind": "numeric",
+      "name": "eclipse-year-days",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.25
+      ],
+      "doc": "The star's fractional main-sequence brightening per gigayear",
+      "kind": "numeric",
+      "name": "brightening-per-gyr",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.5,
+        1.0
+      ],
+      "doc": "Absolute solstice-sunrise azimuth drift over the first kiloyear at the flagship settlement's latitude; Absent when locked, unplaced, or polar",
+      "kind": "numeric",
+      "name": "alignment-drift-deg-per-kyr",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        50.0,
+        100.0,
+        200.0,
+        400.0,
+        800.0,
+        1600.0
+      ],
+      "doc": "Dated solar eclipses anywhere on the world across a 100-year scan",
+      "kind": "numeric",
+      "name": "solar-eclipses-per-century",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        50.0,
+        100.0,
+        200.0,
+        400.0,
+        800.0,
+        1600.0
+      ],
+      "doc": "Dated lunar eclipses across a 100-year scan",
+      "kind": "numeric",
+      "name": "lunar-eclipses-per-century",
+      "rung": "astronomy"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        5.0,
+        10.0,
+        25.0,
+        50.0
+      ],
+      "doc": "Days in a 100-year scan carrying eclipse events from two or more different moons; zero for 0–1-moon worlds",
+      "kind": "numeric",
+      "name": "coincidence-days-per-century",
+      "rung": "astronomy"
+    },
+    {
       "doc": "Number of tectonic plates the globe drew or was pinned to",
       "kind": "categorical",
       "name": "plate-count",
@@ -255,6 +344,40 @@
       "rung": "terrain"
     },
     {
+      "doc": "The most common land rock class by cell count, spec §4's fine taxonomy (The Ground); Absent on a landless world",
+      "kind": "categorical",
+      "name": "dominant-rock",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of land cells whose hydrogeology classifies as karst (The Ground, spec §3)",
+      "kind": "numeric",
+      "name": "karst-fraction",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.4
+      ],
+      "doc": "Fraction of land cells whose hydrogeology classifies as an aquifer (The Ground, spec §3)",
+      "kind": "numeric",
+      "name": "aquifer-fraction",
+      "rung": "terrain"
+    },
+    {
       "doc": "The most common land biome by cell count, kebab-case",
       "kind": "categorical",
       "name": "dominant-land-biome",
@@ -273,6 +396,27 @@
       "doc": "Annual-mean temperature averaged over land cells, °C; Absent if the world has no land",
       "kind": "numeric",
       "name": "mean-land-temperature-c",
+      "rung": "terrain"
+    },
+    {
+      "doc": "The most common land soil order by cell count, spec §4's soil taxonomy (The Ground); Absent on a landless world",
+      "kind": "categorical",
+      "name": "dominant-soil-order",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.6,
+        0.8
+      ],
+      "doc": "Fraction of land cells whose soil fertility's grain-suitability exceeds 0.6 (The Ground, spec §3/§4)",
+      "kind": "numeric",
+      "name": "fertile-land-fraction",
       "rung": "terrain"
     },
     {
@@ -331,6 +475,35 @@
       "doc": "The carrying-capacity field's headline calibration (design spec §5): the ratio of mean per-land-cell K (summed over the full species roster's individual fields, each species' own psychology folded in) in the low-latitude band (|latitude| < 30) to the polar band (|latitude| > 60), the polar mean floored at POLE_FLOOR (1% of the K formula's baseline unit) so an exactly-zero polar band — the Miami NPP proxy's honest reading of hard cold, not a bug — reports a large-but-bounded ratio rather than a division blowup. A field grounded in the real biomass gradient reads well above 1 here; Absent if either band has no land cells (a wholly ocean or wholly polar world)",
       "kind": "numeric",
       "name": "capacity-by-abs-latitude",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        1.0,
+        1.5,
+        2.0,
+        3.0,
+        4.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Mean per-cell species diversity of the coexistence density stack (task A16a; feeds the A16b β calibration): the mean, over habitable land cells, of the demography report's `byproducts.strife` field — already the per-cell inverse-Herfindahl diversity 1/Σ frac_s² (1.0 when one species dominates a cell, →N when N species share it evenly). Recomputed via `hornvale_worldgen::demography_report`, which reconstructs the IDENTICAL report the settlement-genesis path builds internally (the shared-assembly refactor of task A16a), so this measures the stack the world actually ships, not a parallel one. Absent if the report fails to build or the world has no habitable cells",
+      "kind": "numeric",
+      "name": "per-cell-diversity",
+      "rung": "settlements"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.005,
+        0.01,
+        0.02,
+        0.05,
+        0.1
+      ],
+      "doc": "Spatial heterogeneity of settlement composition (The Niche): the sum over roster species of the variance, across the demography report's `stack_settlements`, of each species' composition fraction. 0.0 iff every settlement has the identical species mix (the pre-Niche 'oatmeal' — one flat blend worldwide); > 0 when composition varies across space (species dominant in different strongholds). Recomputed via `hornvale_worldgen::demography_report` (the niche-differentiated coexistence shadow). Absent if the report fails to build or the world has fewer than 2 settlements",
+      "kind": "numeric",
+      "name": "composition-variance",
       "rung": "settlements"
     },
     {
@@ -1312,6 +1485,162 @@
       "rung": "full"
     },
     {
+      "buckets": [
+        20.0,
+        40.0,
+        60.0,
+        80.0,
+        100.0
+      ],
+      "doc": "Goblin's maximum lifespan in years (BIO-2 spec §4); Absent if goblin is off-roster or Ametabolic",
+      "kind": "numeric",
+      "name": "lifespan-years-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        20.0,
+        40.0,
+        60.0,
+        80.0,
+        100.0
+      ],
+      "doc": "Kobold's maximum lifespan in years (BIO-2 spec §4); Absent if kobold is off-roster or Ametabolic",
+      "kind": "numeric",
+      "name": "lifespan-years-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        5.0,
+        10.0,
+        15.0,
+        20.0,
+        25.0
+      ],
+      "doc": "Goblin's age at first reproduction in years (BIO-2 spec §4); Absent if goblin is off-roster or Ametabolic",
+      "kind": "numeric",
+      "name": "age-at-maturity-years-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        5.0,
+        10.0,
+        15.0,
+        20.0,
+        25.0
+      ],
+      "doc": "Kobold's age at first reproduction in years (BIO-2 spec §4); Absent if kobold is off-roster or Ametabolic",
+      "kind": "numeric",
+      "name": "age-at-maturity-years-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        10.0,
+        20.0,
+        30.0,
+        40.0,
+        50.0
+      ],
+      "doc": "Goblin's reference-temperature basal metabolic rate in watts (BIO-2 spec §4); Absent only if goblin is off-roster",
+      "kind": "numeric",
+      "name": "basal-metabolic-rate-w-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        10.0,
+        20.0,
+        30.0,
+        40.0,
+        50.0
+      ],
+      "doc": "Kobold's reference-temperature basal metabolic rate in watts (BIO-2 spec §4); Absent only if kobold is off-roster",
+      "kind": "numeric",
+      "name": "basal-metabolic-rate-w-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Goblin's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if goblin is off-roster or Ametabolic",
+      "kind": "numeric",
+      "name": "reproductive-tempo-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Kobold's reproductive output on the r-K axis, 0 (fast/prolific) ... 1 (slow/sparse) (BIO-2 spec §4/CAP-2); Absent if kobold is off-roster or Ametabolic",
+      "kind": "numeric",
+      "name": "reproductive-tempo-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        10.0,
+        20.0,
+        30.0,
+        40.0,
+        50.0
+      ],
+      "doc": "Goblin's generation length in years (BIO-2 spec §5, MEM-7's handle); Absent if goblin is off-roster or Ametabolic",
+      "kind": "numeric",
+      "name": "generation-length-years-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        10.0,
+        20.0,
+        30.0,
+        40.0,
+        50.0
+      ],
+      "doc": "Kobold's generation length in years (BIO-2 spec §5, MEM-7's handle); Absent if kobold is off-roster or Ametabolic",
+      "kind": "numeric",
+      "name": "generation-length-years-kobold",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Goblin's overall life-history speed, 0 (fast) ... 1 (slow) — absolute and roster-independent (BIO-2 spec §5); Absent only if goblin is off-roster",
+      "kind": "numeric",
+      "name": "pace-of-life-goblin",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "doc": "Kobold's overall life-history speed, 0 (fast) ... 1 (slow) — absolute and roster-independent (BIO-2 spec §5); Absent only if kobold is off-roster",
+      "kind": "numeric",
+      "name": "pace-of-life-kobold",
+      "rung": "full"
+    },
+    {
       "kind": "categorical",
       "name": "refusal"
     }
@@ -1321,7 +1650,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x2f403f5809d9ded4"
+    "fnv1a64": "0xcc577c221169dcf6"
   },
   "schema_version": 1,
   "study": {
