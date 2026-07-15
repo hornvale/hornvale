@@ -230,6 +230,7 @@ fn lithology_pixels(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
             *globe.drainage.get(cell),
             *globe.endorheic.get(cell),
             *globe.elevation.get(cell) < globe.sea_level,
+            *globe.sediment_thickness.get(cell),
         );
         rock_color(rock)
     })

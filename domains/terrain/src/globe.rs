@@ -8,11 +8,11 @@ use crate::pins::{self, GenesisError, TerrainPins};
 use crate::plates::Plate;
 use crate::streams;
 use crate::{crust, elevation, plates};
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed};
+use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed, math};
 
 /// A generated tectonic globe over the shared Geosphere. Recomputed from
 /// the seed on demand; never serialized.
-/// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust), bare-ok(ratio: crust_age), bare-ok(count: boundary_distance), bare-ok(ratio: induration)
+/// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust), bare-ok(ratio: crust_age), bare-ok(count: boundary_distance), bare-ok(ratio: induration), pending(wave-2: sediment_thickness), pending(wave-2: carve_delta_m)
 #[derive(Debug, Clone, PartialEq)]
 pub struct TectonicGlobe {
     /// Plate index per cell (an index into `plates`).
@@ -80,6 +80,27 @@ pub struct TectonicGlobe {
     /// genesis (from the existing hotspot draws — no new draws), never
     /// serialized.
     pub trail_seamounts: Vec<TrailSeamount>,
+    /// Deposited sediment thickness per cell, metres (≥ 0; the carve,
+    /// Sculpting spec §5/§2 stage 8): repose's receiver-side gains,
+    /// routing's floodplain/playa deposit, the marine wedge/delta fill, and
+    /// atoll cap material, all summed. Feeds `lithology`'s `soil_depth` and
+    /// the `Alluvium` gate (see `crate::lithology::soil_depth_at` /
+    /// `classify_rock`). Recomputed at genesis, never serialized.
+    pub sediment_thickness: CellMap<f64>,
+    /// The carve's net elevation delta per cell, metres (± — incision
+    /// subtracts, repose/deposition/wedge/delta/atoll all add). Already
+    /// folded into `elevation`; retained separately so consumers can see
+    /// how much of a cell's relief the carve moved. Recomputed at genesis,
+    /// never serialized.
+    pub carve_delta_m: CellMap<f64>,
+    /// Cells a river-mouth delta lobe raised above sea level (the carve,
+    /// Sculpting Task 9). Recomputed at genesis, never serialized.
+    pub delta_cells: Vec<CellId>,
+    /// Cells an atoll rim capped over a drowned seamount (the carve,
+    /// Sculpting Task 9); `assemble_material` overrides these cells'
+    /// carbonate to a reef-building high value regardless of the ordinary
+    /// shallow-shelf test. Recomputed at genesis, never serialized.
+    pub atoll_cells: Vec<CellId>,
     /// The material buffer per cell (The Ground, spec §2). Recomputed at
     /// genesis, never serialized.
     pub lithology: CellMap<crate::lithology::MaterialBuffer>,
@@ -176,7 +197,9 @@ pub fn generate(
     // `plate_of`, which this function already holds.
     let trail_seamounts_list =
         elevation::trail_seamounts(terrain_seed, &plate_list, &plate_of, geosphere);
-    let elevation_map = elevation::generate_elevation(
+    // v3 pipeline (spec §2): induration precedes elevation (Task 4);
+    // elevation carries decorations (Tasks 1–6); then the carve.
+    let elevation_pre = elevation::generate_elevation(
         terrain_seed,
         geosphere,
         &plate_list,
@@ -188,9 +211,52 @@ pub fn generate(
         &continental,
         &induration_map,
     );
+    let sea_pre = elevation::derive_sea_level(&elevation_pre, effective_ocean);
+    let (drainage_pre, endorheic_pre) =
+        crate::drainage::drainage_field(geosphere, &elevation_pre, sea_pre);
+    let downhill = crate::drainage::downhill_targets(geosphere, &elevation_pre, sea_pre);
+    // Carbonate and margin polarity, pre-elevation (mirroring induration's
+    // extraction, Task 4): pointwise functions of fields already in hand
+    // (continental flag, crust thickness, latitude, plate/position), so the
+    // carve can read them before its own elevation output exists.
+    // `assemble_material` (below, over the carved globe) calls the same
+    // two functions, so the pre-carve fields and the assembled buffer's
+    // `carbonate`/`margin` axes can never diverge (barring the atoll
+    // carbonate override, which only applies post-carve).
+    let carbonate_pre = CellMap::from_fn(geosphere, |c| {
+        let lat = math::asin(geosphere.position(c)[2].clamp(-1.0, 1.0)).abs();
+        crate::lithology::carbonate_at(*continental.get(c), *crust_map.get(c), lat)
+    });
+    let margins = CellMap::from_fn(geosphere, |c| {
+        let plate = &plate_list[*plate_of.get(c) as usize];
+        crate::lithology::margin_polarity(plate, geosphere.position(c), *continental.get(c))
+    });
+    let cd = crate::carve::carve(
+        geosphere,
+        &elevation_pre,
+        sea_pre,
+        &drainage_pre,
+        &endorheic_pre,
+        &downhill,
+        &induration_map,
+        &carbonate_pre,
+        &margins,
+        &boundary_map,
+        &plate_of,
+        &trail_seamounts_list,
+        &crate::carve::CarveParams::default(),
+    );
+    let elevation_map = CellMap::from_fn(geosphere, |c| {
+        ReferenceElevation::new(elevation_pre.get(c).get() + cd.delta_m.get(c))
+            .expect("carved elevation finite")
+    });
+    // Percentile-exact re-solve (decision 0053 unchanged): the SAME
+    // `effective_ocean` target the pre-carve sea level used above.
     let sea_level = elevation::derive_sea_level(&elevation_map, effective_ocean);
     let unrest =
         elevation::generate_unrest(geosphere, &plate_list, &plate_of, &boundary_map, &distances);
+    // Final drainage/endorheic, re-derived on the carved surface — what the
+    // globe retains for every consumer.
     let (drainage, endorheic) =
         crate::drainage::drainage_field(geosphere, &elevation_map, sea_level);
 
@@ -242,6 +308,10 @@ pub fn generate(
         boundary_distance: distances,
         induration: induration_map,
         trail_seamounts: trail_seamounts_list,
+        sediment_thickness: cd.sediment_thickness_m,
+        carve_delta_m: cd.delta_m,
+        delta_cells: cd.delta_cells,
+        atoll_cells: cd.atoll_cells,
         lithology: placeholder_lithology,
         lithology_seed,
     };
@@ -388,6 +458,39 @@ mod tests {
         );
         let unpinned = generate(Seed(42), &geo, &TerrainPins::default()).expect("genesis");
         assert!(!unpinned.notes.iter().any(|n| n.starts_with("pinned ")));
+    }
+
+    #[test]
+    fn the_carved_globe_has_a_shelf_mode_and_consistent_drainage() {
+        let geo = Geosphere::new(5);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let g = &outcome.globe;
+        // Shelf: some ocean cells sit in the near-sea band the wedge builds.
+        let band = g
+            .elevation
+            .iter()
+            .filter(|(_, e)| {
+                let d = g.sea_level.get() - e.get();
+                (0.0..=200.0).contains(&d)
+            })
+            .count();
+        assert!(band > 0, "no near-sea-level marine band");
+        // Final drainage was computed on the final surface: every land cell's
+        // downhill neighbor relationship is consistent with final elevations.
+        // (drainage_field already guarantees this; assert its determinism:)
+        let (d2, _) = crate::drainage::drainage_field(&geo, &g.elevation, g.sea_level);
+        assert_eq!(g.drainage, d2);
+        // Sediment field is retained and non-negative.
+        assert!(g.sediment_thickness.iter().all(|(_, s)| *s >= 0.0));
+        // Soil depth reads real sediment: on the max-sediment land cell,
+        // soil depth is positive.
+        let (c, _) = g
+            .sediment_thickness
+            .iter()
+            .filter(|(c, _)| *g.elevation.get(*c) >= g.sea_level)
+            .max_by(|a, b| a.1.total_cmp(b.1).then(b.0.cmp(&a.0)))
+            .unwrap();
+        assert!(g.lithology.get(c).soil_depth.get() > 0.0);
     }
 
     #[test]

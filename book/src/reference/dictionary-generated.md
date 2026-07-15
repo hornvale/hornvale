@@ -10,7 +10,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 |---|---|---|---|---|---|
 | `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
-| `bathypelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'bathypelagic' |
+| `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `blood` | the circulating fluid of a body | Doo | /doo/ | Neo | Neo → no change → Doo |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.7 |
 | `bone` | the rigid frame of a body | Kao | /kao/ | Kae | Kae → no change → Kao |
@@ -86,7 +86,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 |---|---|---|---|---|---|
 | `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
-| `bathypelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'bathypelagic' |
+| `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `blood` | the circulating fluid of a body | Neo | /neo/ | Neo | Neo → no change → Neo |
 | `blue` | the color term for blue | Taotao | /taotao/ | Taoqao | Taoqao → no change → Taotao |
 | `bone` | the rigid frame of a body | Kae | /kae/ | Kae | Kae → no change → Kae |
@@ -113,7 +113,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | Noobee | /noobee/ | Noopee | Noopee → no change → Noobee |
 | `hobgoblin-kind` | a hobgoblin | Taaboe | /taaboe/ | Qaagoe | Qaagoe → no change → Taaboe |
 | `home` | one's dwelling | Nee | /nee/ | Nee | Nee → no change → Nee |
-| `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
+| `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no compound recipe for 'hydrothermal-vent' |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
 | `kobold-kind` | a kobold | Dea | /dea/ | Dea | Dea → no change → Dea |
@@ -162,7 +162,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 |---|---|---|---|---|---|
 | `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
-| `bathypelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'bathypelagic' |
+| `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `blood` | the circulating fluid of a body | Neo | /neo/ | Neo | Neo → no change → Neo |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6 |
 | `bone` | the rigid frame of a body | Gae | /gae/ | Kae | Kae → lenition → Gae |
@@ -189,7 +189,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | Noobee | /noobee/ | Noopee | Noopee → lenition → Noobee |
 | `hobgoblin-kind` | a hobgoblin | Qaagoe | /qaagoe/ | Qaagoe | Qaagoe → no change → Qaagoe |
 | `home` | one's dwelling | Nee | /nee/ | Nee | Nee → no change → Nee |
-| `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
+| `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no compound recipe for 'hydrothermal-vent' |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
 | `kobold-kind` | a kobold | Bea | /bea/ | Dea | Dea → no change → Bea |
@@ -238,7 +238,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 |---|---|---|---|---|---|
 | `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
-| `bathypelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'bathypelagic' |
+| `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `blood` | the circulating fluid of a body | Ra | /ra/ | Rag | Rag → finalloss → Ra |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
 | `bone` | the rigid frame of a body | Xo | /xo/ | Xo | Xo → no change → Xo |

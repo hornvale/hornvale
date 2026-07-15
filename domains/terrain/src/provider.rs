@@ -162,7 +162,26 @@ impl GeneratedTerrain {
             self.drainage_at(id),
             self.is_endorheic(id),
             self.is_ocean(id),
+            self.sediment_thickness_at(id),
         )
+    }
+
+    /// The carve's deposited sediment thickness at a cell, metres (≥ 0;
+    /// Sculpting Task 10). Retained on the globe post-carve: repose's
+    /// receiver-side gains, routing's floodplain/playa deposit, the marine
+    /// wedge/delta fill, and atoll cap material, all summed.
+    /// type-audit: bare-ok(ratio)
+    pub fn sediment_thickness_at(&self, id: CellId) -> f64 {
+        *self.globe.sediment_thickness.get(id)
+    }
+
+    /// The carve's net elevation delta at a cell, metres (± — Sculpting
+    /// Task 10): incision subtracts, repose/deposition/wedge/delta/atoll
+    /// all add. Already folded into `elevation_at`; retained separately so
+    /// consumers can see how much of a cell's relief the carve moved.
+    /// type-audit: bare-ok(ratio)
+    pub fn carve_delta_at(&self, id: CellId) -> f64 {
+        *self.globe.carve_delta_m.get(id)
     }
 
     /// The hydrogeologic class at a cell (The Ground, spec §3).

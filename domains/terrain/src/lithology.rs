@@ -31,7 +31,7 @@
 
 use crate::boundaries::BoundaryKind;
 use crate::globe::TectonicGlobe;
-use crate::plates::{dot, normalize, sub, velocity_at};
+use crate::plates::{Plate, dot, normalize, sub, velocity_at};
 use hornvale_kernel::{CellId, CellMap, Geosphere, math, noise::fbm_2d};
 
 /// Regolith thickness in metres.
@@ -117,6 +117,14 @@ const OROGEN_REACH: u32 = 4;
 /// high-flow valley bottoms, not merely-damp lowland.
 const ALLUVIUM_DRAINAGE_MIN: f64 = 20.0;
 
+/// Carve-deposited sediment thickness (metres) above which a land cell
+/// reads as `Alluvium` regardless of drainage (spec §2 stage 8, Sculpting
+/// Task 10): a cell the carve's routing/wedge/delta buried under real
+/// alluvium is alluvial even when its flow accumulation alone would not
+/// clear [`ALLUVIUM_DRAINAGE_MIN`] — a floodplain a river no longer
+/// actively occupies still reads as its deposit.
+const ALLUVIUM_SEDIMENT_MIN_M: f64 = 2.0;
+
 /// Regolith depth (metres) above which waterlogged lowland accumulation
 /// reads as `Coal` rather than ordinary clastic sediment, paired with
 /// [`COAL_GRAIN_MAX`] so only the finer end of the grain range qualifies
@@ -180,12 +188,16 @@ pub enum RockClass {
 }
 
 /// Project the buffer (plus grid context) onto a rock class (spec §4).
-/// type-audit: bare-ok(count: drainage), bare-ok(flag: endorheic), bare-ok(flag: ocean)
+/// `sediment_m` is the carve's deposited sediment thickness at the cell
+/// (Sculpting Task 10): a cell the carve buried under real alluvium reads
+/// as `Alluvium` even below the ordinary drainage gate.
+/// type-audit: bare-ok(count: drainage), bare-ok(flag: endorheic), bare-ok(flag: ocean), bare-ok(ratio: sediment_m)
 pub fn classify_rock(
     buf: &MaterialBuffer,
     drainage: f64,
     endorheic: bool,
     ocean: bool,
+    sediment_m: f64,
 ) -> RockClass {
     // Metamorphics: graded, carbonate parent -> marble.
     if buf.metamorphic_grade >= 0.75 {
@@ -219,7 +231,7 @@ pub fn classify_rock(
     if endorheic {
         return RockClass::Evaporite;
     }
-    if drainage >= ALLUVIUM_DRAINAGE_MIN {
+    if drainage >= ALLUVIUM_DRAINAGE_MIN || sediment_m > ALLUVIUM_SEDIMENT_MIN_M {
         return RockClass::Alluvium;
     }
     if buf.carbonate > 0.5 {
@@ -348,6 +360,25 @@ pub fn induration_at(
     (0.35 + 0.4 * metamorphic_grade + 0.2 * grain).clamp(0.0, 1.0)
 }
 
+/// Carbonate content at a cell, `[0,1]` (spec §2/§4 pre-elevation seam,
+/// mirroring [`induration_at`]): favors warm shallow shelves —
+/// approximated by shallow continental crust (within 6 km of the
+/// continental threshold) at low absolute latitude. Pointwise inputs only
+/// (continental flag, crust thickness, latitude), all available before
+/// elevation runs, so the globe can build a `carbonate_pre` field the carve
+/// reads ahead of the carve's own elevation output. `assemble_material`
+/// calls the same function so the buffer's `carbonate` axis and the pre-carve
+/// field can never diverge.
+/// type-audit: bare-ok(flag: continental), bare-ok(ratio: thickness_km), bare-ok(ratio: lat), bare-ok(ratio: return)
+pub(crate) fn carbonate_at(continental: bool, thickness_km: f64, lat: f64) -> f64 {
+    let shallow_shelf = continental && thickness_km < crate::crust::CONTINENTAL_THRESHOLD_KM + 6.0;
+    if shallow_shelf && lat < 0.6 {
+        0.7
+    } else {
+        0.05
+    }
+}
+
 /// Assemble the material buffer over the canonical grid (spec §2). Pointwise
 /// axes derive from crust age/thickness and plate motion; grid-bound terms
 /// (metamorphic grade near boundaries, soil depth from slope/drainage) use
@@ -360,7 +391,8 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
         let p = geo.position(cell);
         // Margin polarity is needed before silica: arc (active-margin)
         // magmatism is intermediate, not felsic (see base_silica below).
-        let margin = margin_polarity(geo, globe, cell, continental);
+        let plate = &globe.plates[*globe.plate_of.get(cell) as usize];
+        let margin = margin_polarity(plate, p, continental);
 
         // Felsic index: continental crust is felsic (granitic) except at
         // active (arc) margins, where subduction magmatism is petrologically
@@ -391,14 +423,18 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
         let patch = fbm_2d(globe.lithology_noise_seed(), p[0] * 6.0, p[1] * 6.0, 3) - 0.5;
         let silica = (base_silica + 0.15 * patch).clamp(0.0, 1.0);
 
-        // Carbonate favors warm shallow shelves — approximated here by
-        // shallow continental cells at low absolute latitude.
+        // Carbonate favors warm shallow shelves — same pre-elevation
+        // function the globe computes ahead of the carve (the Sculpting/
+        // Ground seam) — kept identical here so the buffer's axis and the
+        // pre-carve field never diverge. Atoll cells (Sculpting Task 9/10:
+        // reef caps grown over a drowned seamount the carve capped) always
+        // override to a high carbonate reading, a biogenic reef regardless
+        // of the pointwise shelf test.
         let lat = math::asin(p[2].clamp(-1.0, 1.0)).abs();
-        let shallow_shelf = continental && thickness < crate::crust::CONTINENTAL_THRESHOLD_KM + 6.0;
-        let carbonate = if shallow_shelf && lat < 0.6 {
-            0.7
+        let carbonate = if globe.atoll_cells.contains(&cell) {
+            0.9
         } else {
-            0.05
+            carbonate_at(continental, thickness, lat)
         };
 
         // Induration: same pre-elevation function the globe computes ahead
@@ -408,7 +444,8 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
         // Porosity: high in carbonate (karst) and young oceanic basalt, low in shale/gneiss.
         let porosity = (0.5 * carbonate + 0.3 * (1.0 - metamorphic_grade)).clamp(0.0, 1.0);
 
-        let soil_depth = soil_depth_at(geo, globe, cell);
+        let sediment_m = *globe.sediment_thickness.get(cell);
+        let soil_depth = soil_depth_at(geo, globe, cell, sediment_m);
         let basement = if continental {
             Basement::Continental
         } else {
@@ -432,18 +469,17 @@ pub fn assemble_material(geo: &Geosphere, globe: &TectonicGlobe) -> CellMap<Mate
 
 /// Active if the plate's surface motion at the cell points *outward* (leading
 /// edge), passive if inward (trailing), Interior if neither dominates.
-/// `pub(crate)`: the carve (Sculpting, later task) reads this directly.
-pub(crate) fn margin_polarity(
-    geo: &Geosphere,
-    globe: &TectonicGlobe,
-    cell: CellId,
-    continental: bool,
-) -> MarginPolarity {
+/// Pointwise inputs only (mirroring [`induration_at`]/[`carbonate_at`]): a
+/// plate reference and a cell position, both available before elevation
+/// runs, so the globe can build a `margins` field the carve reads ahead of
+/// the carve's own elevation output. `assemble_material` calls the same
+/// function so the buffer's `margin` axis and the pre-carve field can never
+/// diverge. `pub(crate)`: the carve (Sculpting) reads this directly.
+/// type-audit: bare-ok(flag: continental)
+pub(crate) fn margin_polarity(plate: &Plate, pos: [f64; 3], continental: bool) -> MarginPolarity {
     if !continental {
         return MarginPolarity::Oceanic;
     }
-    let plate = &globe.plates[*globe.plate_of.get(cell) as usize];
-    let pos = geo.position(cell);
     let vel = velocity_at(plate, pos);
     let speed = (vel[0] * vel[0] + vel[1] * vel[1] + vel[2] * vel[2]).sqrt();
     if speed < 1e-6 {
@@ -461,9 +497,18 @@ pub(crate) fn margin_polarity(
     }
 }
 
-/// Regolith thickness: accumulates in high-drainage lowlands, strips on steep
-/// slopes. Metres. Pure function of drainage and local elevation range.
-fn soil_depth_at(geo: &Geosphere, globe: &TectonicGlobe, cell: CellId) -> SoilDepth {
+/// Regolith thickness: accumulates in high-drainage lowlands and wherever
+/// the carve deposited real sediment, strips on steep slopes. Metres. Pure
+/// function of drainage, the carve's `sediment_m` (spec §2 stage 8's
+/// coordinated Ground formula change — Sculpting Task 10), and local
+/// elevation range.
+/// type-audit: bare-ok(ratio: sediment_m)
+fn soil_depth_at(
+    geo: &Geosphere,
+    globe: &TectonicGlobe,
+    cell: CellId,
+    sediment_m: f64,
+) -> SoilDepth {
     if *globe.elevation.get(cell) < globe.sea_level {
         return SoilDepth::new(0.0);
     }
@@ -474,8 +519,9 @@ fn soil_depth_at(geo: &Geosphere, globe: &TectonicGlobe, cell: CellId) -> SoilDe
         .map(|n| here - globe.elevation.get(*n).get())
         .fold(0.0_f64, f64::max);
     let drainage = *globe.drainage.get(cell);
-    // Accumulation ~ log(drainage); stripping ~ local relief.
-    let accum = 0.5 * math::ln(1.0 + drainage);
+    // Accumulation ~ log(drainage) plus the carve's real deposited sediment
+    // (capped at 10 m so an extreme delta/wedge fill doesn't dominate).
+    let accum = 0.5 * math::ln(1.0 + drainage) + 0.8 * sediment_m.min(10.0);
     let strip = (max_drop / 300.0).min(3.0);
     SoilDepth::new((accum - strip).max(0.0))
 }
@@ -676,24 +722,48 @@ mod tests {
         // Metamorphic core -> gneiss.
         let mut b = flat_buffer();
         b.metamorphic_grade = 0.9;
-        assert_eq!(classify_rock(&b, 1.0, false, false), RockClass::Gneiss);
+        assert_eq!(classify_rock(&b, 1.0, false, false, 0.0), RockClass::Gneiss);
         // Warm carbonate shelf -> reef limestone.
         let mut b = flat_buffer();
         b.carbonate = 0.8;
         assert_eq!(
-            classify_rock(&b, 1.0, false, false),
+            classify_rock(&b, 1.0, false, false, 0.0),
             RockClass::ReefLimestone
         );
         // Arid endorheic basin -> evaporite.
         let b = flat_buffer();
-        assert_eq!(classify_rock(&b, 1.0, true, false), RockClass::Evaporite);
+        assert_eq!(
+            classify_rock(&b, 1.0, true, false, 0.0),
+            RockClass::Evaporite
+        );
         // High-drainage lowland -> alluvium.
         let b = flat_buffer();
-        assert_eq!(classify_rock(&b, 5000.0, false, false), RockClass::Alluvium);
+        assert_eq!(
+            classify_rock(&b, 5000.0, false, false, 0.0),
+            RockClass::Alluvium
+        );
         // Mafic ocean floor -> basalt.
         let mut b = flat_buffer();
         b.silica = 0.1;
-        assert_eq!(classify_rock(&b, 0.0, false, true), RockClass::Basalt);
+        assert_eq!(classify_rock(&b, 0.0, false, true, 0.0), RockClass::Basalt);
+    }
+
+    #[test]
+    fn heavy_carve_sediment_reads_as_alluvium_even_below_the_drainage_gate() {
+        // Low drainage, no carbonate/metamorphism — would otherwise resolve
+        // to Sandstone/Shale/Conglomerate by grain alone — but the carve
+        // buried it deep, so it reads as Alluvium (spec §2 stage 8).
+        let b = flat_buffer();
+        assert_eq!(
+            classify_rock(&b, 1.0, false, false, 3.0),
+            RockClass::Alluvium
+        );
+        // At the gate boundary (not strictly above it), the ordinary
+        // classification still applies.
+        assert_ne!(
+            classify_rock(&b, 1.0, false, false, 2.0),
+            RockClass::Alluvium
+        );
     }
 
     #[test]

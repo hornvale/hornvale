@@ -627,12 +627,25 @@ pub fn effective_ocean_target(target: f64, supply: f64, notes: &mut Vec<String>)
     1.0 - SHELF_BREAK_LAND_FACTOR * supply
 }
 
-/// Place sea level at the elevation percentile that puts exactly `target`
-/// fraction of cells strictly below it. Pure — no draws: `target` is
-/// resolved once in `generate` via `resolve_ocean_fraction` (Task 9
-/// iteration 3') and shared with `crust::draw_cratons`. Sort uses
-/// `total_cmp` — elevations are finite and strictly ordered by
-/// construction.
+/// Place sea level at the elevation percentile that puts as close to
+/// `target` fraction of cells strictly below it as the field's ties allow.
+/// Pure — no draws: `target` is resolved once in `generate` via
+/// `resolve_ocean_fraction` (Task 9 iteration 3') and shared with
+/// `crust::draw_cratons`. Sort uses `total_cmp`.
+///
+/// Pre-Sculpting, elevations were continuous fBm-derived values with no
+/// meaningful duplicates, so the naive order-statistic pick (`sorted[index]`)
+/// hit the target fraction exactly. The carve (Sculpting spec §5) can now
+/// deposit many cells to the *exact same* elevation — the marine wedge caps
+/// a whole shelf at one shared value — so a wide tie can straddle the
+/// target rank; since `is_ocean` is strict-less-than, the WHOLE tied block
+/// reads as land or ocean together; the naive pick can then miss the target
+/// fraction by the tie's width instead of by at most one cell. When a tie
+/// wider than one cell straddles the rank, this picks whichever of the two
+/// distinct boundary values (below the tie vs. through it) lands the
+/// achieved "cells strictly below" count closer to the target — a narrow
+/// (one-cell, the ordinary no-duplicate) tie changes nothing, so every
+/// pre-Sculpting call site is byte-identical.
 /// type-audit: bare-ok(ratio: target)
 pub fn derive_sea_level(
     elevation: &CellMap<ReferenceElevation>,
@@ -640,8 +653,18 @@ pub fn derive_sea_level(
 ) -> ReferenceElevation {
     let mut sorted: Vec<ReferenceElevation> = elevation.iter().map(|(_, e)| *e).collect();
     sorted.sort_by(|a, b| a.total_cmp(*b));
-    let index = ((target * sorted.len() as f64) as usize).min(sorted.len() - 1);
-    sorted[index]
+    let n = sorted.len();
+    let index = ((target * n as f64) as usize).min(n - 1);
+    let value = sorted[index];
+    let lo = sorted.partition_point(|v| v.total_cmp(value) == std::cmp::Ordering::Less);
+    let hi = sorted.partition_point(|v| v.total_cmp(value) != std::cmp::Ordering::Greater);
+    if hi > lo + 1 && hi < n {
+        let raw_target = target * n as f64;
+        if (hi as f64 - raw_target).abs() < (lo as f64 - raw_target).abs() {
+            return sorted[hi];
+        }
+    }
+    value
 }
 
 /// Relative restlessness of each boundary kind.
