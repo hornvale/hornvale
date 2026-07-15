@@ -420,60 +420,157 @@ fn atolls_only_on_warm_submerged_seamounts() {
 
 /// The re-cap holds after the final solve (ruling #5c, the sea-trim):
 /// post-generate, NO atoll cell sits above `sea_final - atoll_freeboard_m`
-/// and no non-delta marine-sediment cell above
-/// `sea_final - wedge_freeboard_m`, up to the honest measured tolerance —
-/// the `sea_1 → sea_final` shift of the bounded solve→trim→solve sequence
-/// (`sea_1` recomputed here via `Rebuilt`, so the tolerance is the actual
-/// per-world shift, not a guessed constant). The shift is structurally
-/// bounded by `wedge_freeboard_m`: the trim parks a wide tied shelf block
-/// at `sea_1 - wedge_freeboard_m`, and the second solve's rank walk floors
-/// on that block's top (measured: 14.8 m at L5 seed 42; 20-38 m at L4 and
-/// 7-28 m at L6 across seeds [1, 7, 42, 99]). Exactly one trim, exactly
-/// two solves, then stop — the residual is accepted by ruling, and this
-/// test both asserts the bound and REPORTS the measured shift in its
-/// failure messages.
+/// and no cell the wedge deposited on — **ocean by `sea_pre`, the
+/// classification under which the wedge ran, NOT by its final elevation**
+/// (review Critical 1: gating on final elevation silently exempted the
+/// emergent wedge-filled cells the ruling exists to fix; seed 34 L4 held
+/// 40 such cells at exactly sea level carrying 49-344 m of wedge sediment
+/// on dry land, and this battery was verified RED on that exact world
+/// against the un-fixed gate) — above `sea_final - wedge_freeboard_m`, up
+/// to the honest measured tolerance: the `sea_1 → sea_final` shift of the
+/// bounded solve→trim→solve sequence (`sea_1` recomputed per-world via
+/// `Rebuilt`, so the tolerance is the actual shift, not a guessed
+/// constant). Only `shift >= 0` is structural (the trim only lowers
+/// cells); the `<= wedge_freeboard_m` half of the asserted bound is
+/// EMPIRICAL — max observed 39.957 m across a 120-world review sweep
+/// (L4/L5/L6 × seeds 1..=40; worst margin 0.043 m, L5 seed 18) — so any
+/// tuning that changes the freeboards or shelf density must re-verify it.
+/// Exactly one trim, exactly two solves, then stop — the residual is
+/// accepted by ruling, and this test both asserts the bound and REPORTS
+/// the measured shift in its failure messages. Worlds probed: seed 42 L5
+/// (the campaign flagship) and seed 34 L4 (the review's emergent-shelf
+/// counterexample).
 #[test]
 fn trim_recaps_hold_after_the_final_solve() {
-    let geo = Geosphere::new(5);
-    let rebuilt = rebuild(42, &geo);
-    let g = &rebuilt.outcome.globe;
-    let p = CarveParams::default();
-    let sea_1 = rebuilt.sea_carved;
-    let sea_final = g.sea_level;
-    let shift = sea_1.get() - sea_final.get();
-    assert!(
-        (0.0..=CarveParams::default().wedge_freeboard_m + 1e-9).contains(&shift),
-        "sea_1 -> sea_final shift {shift} outside the structural bound \
-         [0, wedge_freeboard_m] (sea_1 {}, sea_final {})",
-        sea_1.get(),
-        sea_final.get()
-    );
-    let tol = shift.max(0.0) + 1e-6;
-    let atoll_cap = sea_final.get() - p.atoll_freeboard_m;
-    for &c in &g.atoll_cells {
+    for (level, seed) in [(5u32, 42u64), (4, 34)] {
+        let geo = Geosphere::new(level);
+        let rebuilt = rebuild(seed, &geo);
+        let g = &rebuilt.outcome.globe;
+        let p = CarveParams::default();
+        let sea_1 = rebuilt.sea_carved;
+        let sea_final = g.sea_level;
+        let shift = sea_1.get() - sea_final.get();
         assert!(
-            g.elevation.get(c).get() <= atoll_cap + tol,
-            "atoll cell {} at {} above sea_final - atoll_freeboard ({atoll_cap}) beyond the \
-             measured shift tolerance {tol} (shift {shift})",
-            c.0,
-            g.elevation.get(c).get()
+            (0.0..=p.wedge_freeboard_m + 1e-9).contains(&shift),
+            "seed {seed} L{level}: sea_1 -> sea_final shift {shift} outside \
+             [0, wedge_freeboard_m] (>= 0 structural, <= empirical — see doc) \
+             (sea_1 {}, sea_final {})",
+            sea_1.get(),
+            sea_final.get()
         );
-    }
-    let wedge_cap = sea_final.get() - p.wedge_freeboard_m;
-    for (c, sed) in g.sediment_thickness.iter() {
-        if *sed > 0.0
-            && *g.elevation.get(c) < sea_final
-            && !g.delta_cells.contains(&c)
-            && !g.atoll_cells.contains(&c)
-        {
+        let tol = shift.max(0.0) + 1e-6;
+        let atoll_cap = sea_final.get() - p.atoll_freeboard_m;
+        for &c in &g.atoll_cells {
             assert!(
-                g.elevation.get(c).get() <= wedge_cap + tol,
-                "marine sediment cell {} at {} above sea_final - wedge_freeboard ({wedge_cap}) \
-                 beyond the measured shift tolerance {tol} (shift {shift})",
+                g.elevation.get(c).get() <= atoll_cap + tol,
+                "seed {seed} L{level}: atoll cell {} at {} above sea_final - atoll_freeboard \
+                 ({atoll_cap}) beyond the measured shift tolerance {tol} (shift {shift})",
                 c.0,
                 g.elevation.get(c).get()
             );
         }
+        // The wedge-cap bound, gated on the membership the wedge actually
+        // deposited under: ocean by sea_pre with retained sediment. Atoll
+        // cells are excluded from this WEDGE bound only because their own
+        // (tighter-freeboard) cap is asserted above; delta lobes are
+        // exempt by ruling.
+        let wedge_cap = sea_final.get() - p.wedge_freeboard_m;
+        for (c, sed) in g.sediment_thickness.iter() {
+            if *sed > 0.0
+                && *rebuilt.elevation_pre.get(c) < rebuilt.sea_pre
+                && !g.delta_cells.contains(&c)
+                && !g.atoll_cells.contains(&c)
+            {
+                assert!(
+                    g.elevation.get(c).get() <= wedge_cap + tol,
+                    "seed {seed} L{level}: wedge-deposited cell {} (ocean by sea_pre, sediment \
+                     {sed}) at {} above sea_final - wedge_freeboard ({wedge_cap}) beyond the \
+                     measured shift tolerance {tol} (shift {shift})",
+                    c.0,
+                    g.elevation.get(c).get()
+                );
+            }
+        }
+    }
+}
+
+/// The generate-level books (ruling #5c's booking requirement): the
+/// composed carve + trim state the globe actually RETAINS accounts for
+/// every eroded unit. The carve's own two-term identity
+/// (`eroded ≈ deposited + ocean_loss`) is asserted by `mass_balance_holds`
+/// over a fresh `CarveDelta`; this test closes the loop over the retained
+/// fields: recompute the trim from the same replayed inputs, split its
+/// volume into the sediment it removed vs. the pre-existing seabed it cut
+/// (`basement`), and assert
+///
+/// ```text
+/// Σ sediment_thickness (retained, net of trim)
+///   + carve ocean_loss + trim_ocean_loss_m3 (retained)
+///   ≈ carve eroded + basement
+/// ```
+///
+/// exactly (1e-6 relative). The `basement` term is a paired source+sink,
+/// the same convention atoll carbonate already uses (spec §5's tier-aware
+/// mass balance): where the trim cuts below the carve's own deposit it
+/// erodes NEW pre-existing seabed straight into oceanic loss, so that
+/// volume appears on BOTH sides — without it the naive three-term form
+/// (`Σ sediment + losses ≈ eroded`) silently over-counts the loss side by
+/// whatever basement the re-cap shaved. Also asserts the retained
+/// `trim_ocean_loss_m3` equals the replayed trim's volume — the booking is
+/// real, not a doc claim (review Critical 2).
+#[test]
+fn generate_level_books_account_for_every_eroded_unit() {
+    let geo = Geosphere::new(4);
+    for seed in [1u64, 7, 42, 99] {
+        let rebuilt = rebuild(seed, &geo);
+        let g = &rebuilt.outcome.globe;
+        let d = &rebuilt.delta;
+        let carved = CellMap::from_fn(&geo, |c| {
+            ReferenceElevation::new(rebuilt.elevation_pre.get(c).get() + d.delta_m.get(c))
+                .expect("carved elevation finite")
+        });
+        let (trim, trim_volume) = hornvale_terrain::carve::trim_to_sea(
+            &geo,
+            &carved,
+            &rebuilt.elevation_pre,
+            &d.sediment_thickness_m,
+            &d.delta_cells,
+            &d.atoll_cells,
+            rebuilt.sea_pre,
+            rebuilt.sea_carved,
+            &CarveParams::default(),
+        );
+        // The retained booking equals the replayed trim's volume.
+        assert!(
+            (g.trim_ocean_loss_m3 - trim_volume).abs() < 1e-6 * trim_volume.max(1.0),
+            "seed {seed}: retained trim_ocean_loss_m3 {} != replayed trim volume {trim_volume}",
+            g.trim_ocean_loss_m3
+        );
+        // Split the trim into carve-sediment removed vs. basement cut.
+        let mut sediment_removed = 0.0_f64;
+        let mut basement = 0.0_f64;
+        for (c, t) in trim.iter() {
+            let cut = -t;
+            let sed = *d.sediment_thickness_m.get(c);
+            sediment_removed += cut.min(sed);
+            basement += (cut - sed).max(0.0);
+        }
+        assert!(
+            (sediment_removed + basement - trim_volume).abs() < 1e-6 * trim_volume.max(1.0),
+            "seed {seed}: trim split does not sum: {sediment_removed} + {basement} vs {trim_volume}"
+        );
+        // The retained-state identity, basement as paired source+sink.
+        let retained_sediment: f64 = g.sediment_thickness.iter().map(|(_, s)| *s).sum();
+        let lhs = retained_sediment + d.ocean_loss_m3 + g.trim_ocean_loss_m3;
+        let rhs = d.eroded_total_m3 + basement;
+        assert!(
+            (lhs - rhs).abs() < 1e-6 * rhs.max(1.0),
+            "seed {seed}: generate-level books: retained sediment {retained_sediment} + carve \
+             loss {} + trim loss {} = {lhs} vs eroded {} + basement {basement} = {rhs}",
+            d.ocean_loss_m3,
+            g.trim_ocean_loss_m3,
+            d.eroded_total_m3
+        );
     }
 }
 

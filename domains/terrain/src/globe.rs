@@ -12,7 +12,7 @@ use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed, math
 
 /// A generated tectonic globe over the shared Geosphere. Recomputed from
 /// the seed on demand; never serialized.
-/// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust), bare-ok(ratio: crust_age), bare-ok(count: boundary_distance), bare-ok(ratio: induration), pending(wave-2: sediment_thickness), pending(wave-2: carve_delta_m), bare-ok(ratio: carve_reroute_fraction)
+/// type-audit: bare-ok(index: plate_of), bare-ok(ratio: unrest), bare-ok(count: drainage), bare-ok(flag: endorheic), waiver(crust-km-convention: crust), bare-ok(ratio: crust_age), bare-ok(count: boundary_distance), bare-ok(ratio: induration), pending(wave-2: sediment_thickness), pending(wave-2: carve_delta_m), bare-ok(ratio: carve_reroute_fraction), pending(wave-2: trim_ocean_loss_m3)
 #[derive(Debug, Clone, PartialEq)]
 pub struct TectonicGlobe {
     /// Plate index per cell (an index into `plates`).
@@ -121,6 +121,16 @@ pub struct TectonicGlobe {
     /// the one-shot lied to itself, A is rejected as sole engine and B
     /// enters.
     pub carve_reroute_fraction: f64,
+    /// The sea-trim's booked oceanic loss (ruling #5c): the total volume
+    /// proxy `trim_to_sea` removed re-capping marine fill against `sea_1`
+    /// (Σ of the per-cell trims' magnitudes, one unit area per cell — the
+    /// same volume convention every other carve book uses). Generate-level
+    /// composition is carve + trim, so the composed books are the carve's
+    /// own totals plus this loss (asserted by
+    /// `generate_level_books_account_for_every_eroded_unit` in
+    /// tests/carve_properties.rs). Recomputed at genesis, never
+    /// serialized.
+    pub trim_ocean_loss_m3: f64,
     /// The material buffer per cell (The Ground, spec §2). Recomputed at
     /// genesis, never serialized.
     pub lithology: CellMap<crate::lithology::MaterialBuffer>,
@@ -280,20 +290,26 @@ pub fn generate(
     //
     // Solve 1: sea level on the carved surface.
     let sea_1 = elevation::derive_sea_level(&elevation_carved, effective_ocean);
-    // Trim: re-cap the carve's marine fill against sea_1 (wedge cells to
-    // sea_1 - wedge_freeboard_m, atoll cells to sea_1 - atoll_freeboard_m,
-    // delta lobes exempt). Generate-level composition = carve + trim: the
-    // trim applies to elevation AND sediment together (sediment floored at
-    // 0), and the trimmed volume is booked as OCEANIC LOSS at this level —
-    // `cd`'s own books stay internally exact for the carve alone (the
-    // mass-balance battery in tests/carve_properties.rs asserts them; its
-    // doc carries the generate-level booking note).
-    let (trim_delta, _trim_ocean_loss_m3) = crate::carve::trim_to_sea(
+    // Trim: re-cap the carve's marine fill against sea_1 (cells the wedge
+    // deposited on — ocean by sea_pre, the classification the carve ran
+    // with — to sea_1 - wedge_freeboard_m; atoll cells to
+    // sea_1 - atoll_freeboard_m; delta lobes exempt). Generate-level
+    // composition = carve + trim: the trim applies to elevation AND
+    // sediment together (sediment floored at 0), and the trimmed volume is
+    // booked as OCEANIC LOSS at this level — retained on the globe as
+    // `trim_ocean_loss_m3` — while `cd`'s own books stay internally exact
+    // for the carve alone (the mass-balance battery in
+    // tests/carve_properties.rs asserts them, and
+    // `generate_level_books_account_for_every_eroded_unit` asserts the
+    // composed generate-level identity over the retained state).
+    let (trim_delta, trim_ocean_loss_m3) = crate::carve::trim_to_sea(
         geosphere,
         &elevation_carved,
+        &elevation_pre,
         &cd.sediment_thickness_m,
         &cd.delta_cells,
         &cd.atoll_cells,
+        sea_pre,
         sea_1,
         &carve_params,
     );
@@ -306,11 +322,13 @@ pub fn generate(
     });
     // Solve 2 (final): sea level on the trimmed surface. The second solve
     // typically lands a little BELOW sea_1 (the trimmed shelf block that
-    // straddled sea_1's rank slides out from under it), by a residual that
-    // is structurally bounded by `wedge_freeboard_m` (the block's new top
-    // floors the rank walk; measured 20-38 m at L4, 15 m at L5 seed 42,
-    // 7-28 m at L6 across seeds [1, 7, 42, 99]). That residual is ACCEPTED
-    // — the sequence stops here by ruling; see
+    // straddled sea_1's rank slides out from under it). Only `shift >= 0`
+    // is structural (the trim only lowers cells); the residual staying
+    // `<= wedge_freeboard_m` is EMPIRICAL — max observed 39.957 m across a
+    // 120-world review sweep (L4/L5/L6 × seeds 1..=40, worst margin
+    // 0.043 m at L5 seed 18) — so tuning that changes the freeboards or
+    // shelf density must re-verify it. The residual is ACCEPTED — the
+    // sequence stops here by ruling; see
     // `trim_recaps_hold_after_the_final_solve` (tests/carve_properties.rs)
     // for the tolerance this bounds.
     let sea_level = elevation::derive_sea_level(&elevation_map, effective_ocean);
@@ -398,6 +416,7 @@ pub fn generate(
         atoll_cells: cd.atoll_cells,
         waterfall_sites: cd.waterfall_sites,
         carve_reroute_fraction,
+        trim_ocean_loss_m3,
         lithology: placeholder_lithology,
         lithology_seed,
     };

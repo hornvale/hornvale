@@ -886,8 +886,10 @@ pub fn deposit_wedge(
 /// emergent) is now closed by the sea-trim ([`trim_to_sea`], ruling #5c):
 /// `globe::generate` re-caps every atoll cell to the re-solved
 /// `sea_1 - atoll_freeboard_m` between its two solves, leaving only the
-/// second solve's bounded residual (≤ `wedge_freeboard_m`; measured
-/// ~7-38 m across seeds and levels). Only trail
+/// second solve's residual (only `>= 0` is structural; staying
+/// `<= wedge_freeboard_m` is EMPIRICAL — max observed 39.957 m across a
+/// 120-world review sweep, worst margin 0.043 m — so freeboard/shelf
+/// tuning must re-verify it). Only trail
 /// entries with `age_index >= 2` are old enough to have drifted off the
 /// live hotspot dome and cooled into reef-building range; each maps to its
 /// nearest cell (no interpolation — a seamount and a grid cell are both
@@ -949,14 +951,19 @@ pub fn cap_atolls(
 /// ~`wedge_freeboard_m` below it, so uncorrected fill reads shallower (or,
 /// for atolls, emergent) relative to the resolved sea. Pure and one-shot:
 ///
-/// - every wedge-raised marine cell (ocean by `sea_1`, carrying deposited
-///   sediment) trims down to `sea_1 - wedge_freeboard_m`;
+/// - every wedge-raised marine cell trims down to
+///   `sea_1 - wedge_freeboard_m`. Marine membership is the classification
+///   the wedge DEPOSITED under: ocean by `sea_pre` against the PRE-carve
+///   elevation, carrying deposited sediment. It is deliberately NOT the
+///   carved-elevation-vs-`sea_1` test (review Critical 1): a wedge-filled
+///   cell already emergent relative to `sea_1` is exactly the class this
+///   trim exists to re-cap, and the final-elevation test exempted it;
 /// - every atoll cell trims down to `sea_1 - atoll_freeboard_m` (its own,
 ///   shallower freeboard — a reef breaks closer to the surface than the
 ///   shelf does);
 /// - delta lobes are EXEMPT (subaerial by design);
-/// - LAND sediment (floodplain/playa deposit) is not marine and is never
-///   trimmed — the gate is ocean-by-`sea_1` or atoll membership;
+/// - LAND sediment (floodplain/playa deposit — land by `sea_pre`) is not
+///   marine and is never trimmed;
 /// - a natural shallow bank (no sediment) is untouched: only what the
 ///   carve raised is re-capped.
 ///
@@ -966,12 +973,15 @@ pub fn cap_atolls(
 /// cell — the same volume convention every other carve book uses), which
 /// the caller books as oceanic loss at the generate level.
 /// type-audit: pending(wave-2: sediment_thickness), pending(wave-2: return)
+#[allow(clippy::too_many_arguments)]
 pub fn trim_to_sea(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
+    elevation_pre: &CellMap<ReferenceElevation>,
     sediment_thickness: &CellMap<f64>,
     delta_cells: &[CellId],
     atoll_cells: &[CellId],
+    sea_pre: ReferenceElevation,
     sea_1: ReferenceElevation,
     params: &CarveParams,
 ) -> (CellMap<f64>, f64) {
@@ -983,9 +993,16 @@ pub fn trim_to_sea(
             return 0.0;
         }
         let e = elevation.get(c).get();
+        // Marine membership is the classification the wedge DEPOSITED
+        // under — ocean by sea_pre against the PRE-carve elevation — never
+        // the carved-elevation-vs-sea_1 test (review Critical 1: that test
+        // exempted exactly the emergent wedge-filled cells this trim
+        // exists to re-cap; 233 such cells measured across a 120-world
+        // sweep, seed 34 L4 alone holding 40 at sea level under 49-344 m
+        // of wedge sediment).
         let cap = if atoll_cells.contains(&c) {
             atoll_cap
-        } else if *elevation.get(c) < sea_1 && *sediment_thickness.get(c) > 0.0 {
+        } else if *elevation_pre.get(c) < sea_pre && *sediment_thickness.get(c) > 0.0 {
             wedge_cap
         } else {
             return 0.0;
@@ -1396,12 +1413,12 @@ mod tests {
         // sediment cell was re-capped by `trim_to_sea` to exactly
         // `sea_1 - wedge_freeboard_m` (or already sat below it), where
         // sea_1 is generate's first (pre-trim) solve. The final sea level
-        // (the second solve) lands somewhere in `[sea_1 -
-        // wedge_freeboard_m, sea_1]` — the trimmed block's own top floors
-        // the rank walk — so relative to the FINAL sea level the shelf top
-        // sits within `wedge_freeboard_m` of the nominal cap (measured
-        // residual at L4: 20-38 m across seeds [1, 7, 42, 99]). The
-        // structural signature this asserts: a WIDE TIED BLOCK — the
+        // (the second solve) lands at or below sea_1 (structural: the trim
+        // only lowers cells), and staying within `wedge_freeboard_m` of it
+        // is EMPIRICAL — max observed shift 39.957 m across a 120-world
+        // review sweep (worst margin 0.043 m; L4 residuals 20-38 m across
+        // seeds [1, 7, 42, 99]); freeboard/shelf tuning must re-verify.
+        // The structural signature this asserts: a WIDE TIED BLOCK — the
         // trimmed shelf top is one exact shared elevation carried by many
         // cells, and it is the maximum of the marine sediment surface.
         // The exact sea_final-relative bound lives in
@@ -1431,7 +1448,8 @@ mod tests {
             "the trimmed shelf top is not a wide tied block: only {at_top} cells at {top}"
         );
         // The block top stays submerged (within wedge_freeboard_m of the
-        // final cap, per the bounded-residual argument above).
+        // final cap, per the empirical residual bound above — re-verify on
+        // any freeboard/shelf retune).
         assert!(
             top <= g.sea_level.get() - p.wedge_freeboard_m + p.wedge_freeboard_m + 1e-9,
             "shelf top {top} above final sea level {}",
@@ -1824,26 +1842,45 @@ mod tests {
     #[test]
     fn trim_recaps_marine_fill_to_the_resolved_sea_level() {
         // Ruling #5c (the re-cap after re-solve): every wedge-raised marine
-        // cell trims to sea_1 - wedge_freeboard_m, every atoll cell to
-        // sea_1 - atoll_freeboard_m; delta lobes and LAND sediment
-        // (floodplain/playa) are exempt; natural shallow banks (no
-        // sediment) are untouched; a trimmed cell's sediment shrinks by
-        // the same meters, floored at 0.
+        // cell — marine under the classification the wedge DEPOSITED with,
+        // i.e. ocean by sea_pre, NOT by its carved elevation (an emergent
+        // cell the wedge filled to or above sea_1 is exactly the class the
+        // ruling exists to fix — review Critical 1) — trims to
+        // sea_1 - wedge_freeboard_m, every atoll cell to
+        // sea_1 - atoll_freeboard_m; delta lobes and LAND-by-sea_pre
+        // sediment (floodplain/playa) are exempt; natural shallow banks
+        // (no sediment) are untouched; a trimmed cell's sediment shrinks
+        // by the same meters, floored at 0.
         let geo = Geosphere::new(2);
         let p = CarveParams::default();
+        let sea_pre = ReferenceElevation::new(5.0).unwrap();
         let sea_1 = ReferenceElevation::new(0.0).unwrap();
-        let wedge_cell = CellId(1); // ocean, sediment, above the wedge cap
+        let wedge_cell = CellId(1); // ocean-by-sea_pre, sediment, above the wedge cap
         let atoll_cell = CellId(2); // atoll, above the atoll cap
         let delta_cell = CellId(3); // delta lobe, subaerial: exempt
-        let playa_cell = CellId(4); // LAND sediment: exempt
+        let playa_cell = CellId(4); // LAND-by-sea_pre sediment: exempt
         let bank_cell = CellId(5); // ocean, shallow, NO sediment: untouched
+        let emergent_cell = CellId(6); // ocean-by-sea_pre, wedge-filled to ABOVE sea_1
+        let elevation_pre = CellMap::from_fn(&geo, |c| {
+            ReferenceElevation::new(match c {
+                c if c == wedge_cell => -20.0,
+                c if c == atoll_cell => -30.0,
+                c if c == delta_cell => -20.0,
+                c if c == playa_cell => 6.0,
+                c if c == bank_cell => -10.0,
+                c if c == emergent_cell => -20.0,
+                _ => -500.0,
+            })
+            .unwrap()
+        });
         let elevation = CellMap::from_fn(&geo, |c| {
             ReferenceElevation::new(match c {
                 c if c == wedge_cell => -10.0,
                 c if c == atoll_cell => -1.0,
                 c if c == delta_cell => 10.0,
-                c if c == playa_cell => 2.0,
+                c if c == playa_cell => 6.0,
                 c if c == bank_cell => -10.0,
+                c if c == emergent_cell => 3.0,
                 _ => -500.0,
             })
             .unwrap()
@@ -1853,14 +1890,17 @@ mod tests {
             c if c == atoll_cell => 6.0,
             c if c == delta_cell => 8.0,
             c if c == playa_cell => 6.0,
+            c if c == emergent_cell => 50.0,
             _ => 0.0,
         });
         let (trim, volume) = trim_to_sea(
             &geo,
             &elevation,
+            &elevation_pre,
             &sediment,
             &[delta_cell],
             &[atoll_cell],
+            sea_pre,
             sea_1,
             &p,
         );
@@ -1875,6 +1915,16 @@ mod tests {
             (*sediment.get(wedge_cell) + *trim.get(wedge_cell)).max(0.0),
             0.0
         );
+        // The EMERGENT cell (review Critical 1): carved elevation +3 sits
+        // above sea_1, but it was ocean when the wedge deposited (pre
+        // elevation -20 < sea_pre) and carries wedge sediment — it MUST be
+        // re-capped like any other wedge cell, to exactly
+        // sea_1 - wedge_freeboard_m.
+        assert_eq!(
+            elevation.get(emergent_cell).get() + trim.get(emergent_cell),
+            sea_1.get() - p.wedge_freeboard_m,
+            "emergent wedge-filled cell escaped the trim"
+        );
         // Atoll cell: re-capped to exactly sea_1 - atoll_freeboard_m.
         assert_eq!(
             elevation.get(atoll_cell).get() + trim.get(atoll_cell),
@@ -1885,12 +1935,10 @@ mod tests {
         assert_eq!(*trim.get(delta_cell), 0.0);
         assert_eq!(*trim.get(playa_cell), 0.0);
         assert_eq!(*trim.get(bank_cell), 0.0);
-        // Every trim is <= 0, and the trimmed volume books their sum.
+        // Every trim is <= 0, and the trimmed volume books their sum:
+        // wedge -10 -> -40 is 30 m; emergent +3 -> -40 is 43 m; atoll
+        // -1 -> -5 is 4 m.
         assert!(trim.iter().all(|(_, t)| *t <= 0.0));
-        let expected_volume = (0.0 - (-10.0) + (sea_1.get() - p.wedge_freeboard_m) - 0.0).abs()
-            + ((-1.0) - (sea_1.get() - p.atoll_freeboard_m)).abs();
-        // wedge: -10 -> -40 is 30 m; atoll: -1 -> -5 is 4 m.
-        assert!((expected_volume - 34.0).abs() < 1e-12);
-        assert!((volume - expected_volume).abs() < 1e-9, "volume {volume}");
+        assert!((volume - 77.0).abs() < 1e-9, "volume {volume}");
     }
 }
