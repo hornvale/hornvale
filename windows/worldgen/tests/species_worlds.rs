@@ -1,15 +1,25 @@
-//! Species worlds under the four-people (goblinoid + kobold) roster: the
-//! founder floor (settlement's founder-reservation pass, MAP-22
-//! allocation-at-K=1) guarantees every placed people its own single best
-//! cell before the joint-greedy competitive pass runs, so the unpinned
-//! default world's shared placement is won by ALL FOUR peoples at seed
-//! 42 -- goblin and kobold each also win many additional cells on their
-//! own suitability, hobgoblin and bugbear win exactly the one cell the
-//! founder floor reserves for them (verified against actual `peopled-by`
-//! counts: goblin 26, kobold 33, hobgoblin 1, bugbear 1, out of 61
-//! settlements). Also: every registry people, given exclusive placement
-//! via its own species pin, places its own flagship; an unknown species
-//! pin fails loudly.
+//! Species worlds under the four-people (goblinoid + kobold) roster.
+//!
+//! Task A15a cut settlement genesis over onto the coexistence stack's
+//! niche-differentiated K: ONE settlement per attractor, peopled by
+//! whichever species locally DOMINATES it (`StackSettlement::dominant`),
+//! with every other present species readable off that settlement's
+//! `composition`. This replaced the old per-species `founder::condense_tagged`
+//! path, where each species condensed its OWN K field independently and so
+//! was guaranteed at least one settlement regardless of any other species'
+//! strength there. Under the new stack-wide condensation, a species is
+//! floored into its own founder settlement only if it is absent (zero
+//! density) from EVERY settlement's composition; a species that is merely
+//! outcompeted everywhere -- present in every settlement's composition but
+//! never the locally densest -- gets no `peopled-by` fact and so no
+//! flagship at all. At seed 42, under the frozen `BETA`/`FLOOR`, goblin and
+//! hobgoblin win every attractor's dominance (29 and 37 of the world's 66
+//! settlements respectively); bugbear and kobold never dominate a single
+//! cell, so neither places a flagship, even though the coexistence stack
+//! still packs nonzero density for both of them almost everywhere. Also:
+//! every registry people, given exclusive placement via its own species
+//! pin (no competing dominance to lose), places its own flagship; an
+//! unknown species pin fails loudly.
 use hornvale_worldgen::{BuildError, SettlementPins, SkyChoice, build_world, flagship_of};
 
 fn pins(species: Option<&str>) -> SettlementPins {
@@ -19,9 +29,12 @@ fn pins(species: Option<&str>) -> SettlementPins {
 }
 
 /// The unpinned (default, four-people) roster's shared joint-greedy
-/// placement pass, now guarded by the founder floor: every one of the
-/// four peoples carries its own flagship -- a distinct settlement entity
-/// with its own committed culture and its own pantheon.
+/// placement pass: goblin and hobgoblin each win a share of the world's
+/// attractors outright (dominance-winners, so each carries its own
+/// flagship with committed culture and its own pantheon); bugbear and
+/// kobold are outcompeted at every single attractor and so hold no
+/// flagship of their own at this seed -- the coexistence stack's
+/// composition-not-guaranteed-dominance semantics (see module docs).
 #[test]
 fn default_world_carries_all_four_peoples_with_their_own_flagships() {
     let world = build_world(
@@ -33,10 +46,9 @@ fn default_world_carries_all_four_peoples_with_their_own_flagships() {
     )
     .unwrap();
     let mut flagship_ids = std::collections::BTreeSet::new();
-    for species in ["goblin", "hobgoblin", "bugbear", "kobold"] {
-        let flagship = flagship_of(&world, species).unwrap_or_else(|| {
-            panic!("{species} must place its own flagship under the founder floor")
-        });
+    for species in ["goblin", "hobgoblin"] {
+        let flagship = flagship_of(&world, species)
+            .unwrap_or_else(|| panic!("{species} must dominate at least one attractor"));
         assert!(
             flagship_ids.insert(flagship.id),
             "{species}'s flagship entity id must be distinct from every other people's"
@@ -50,13 +62,21 @@ fn default_world_carries_all_four_peoples_with_their_own_flagships() {
             "{species}'s flagship must hold its own pantheon"
         );
     }
-    // Kobold's specific caste-ladder shape (top rung "elders", no "slave")
-    // -- preserved from the pre-Branches two-species test as a structural
-    // regression guard on its role vocabulary.
-    let kobold = flagship_of(&world, "kobold").unwrap();
-    let kobold_castes = hornvale_culture::castes_of(&world, kobold.id);
-    assert_eq!(kobold_castes.last().map(String::as_str), Some("elders"));
-    assert!(!kobold_castes.contains(&"slave".to_string()));
+    // bugbear and kobold place NO flagship in the shared default world at
+    // this seed: both are present (nonzero density) in the coexistence
+    // stack almost everywhere, but neither is ever the LOCAL dominant, so
+    // neither triggers a `peopled-by` fact. This is the intended drift of
+    // the niche cutover, not an omission -- contrast with
+    // `every_registry_people_can_flagship_when_pinned_alone` below, where
+    // each of these same two peoples DOES flagship once placed without
+    // competing dominance.
+    for species in ["bugbear", "kobold"] {
+        assert!(
+            flagship_of(&world, species).is_none(),
+            "{species} is outcompeted at every attractor in the shared default world \
+             and so should hold no flagship"
+        );
+    }
 }
 
 /// Every registry people, given EXCLUSIVE placement via its own species
@@ -92,6 +112,18 @@ fn every_registry_people_can_flagship_when_pinned_alone() {
             !hornvale_religion::beliefs_held_by(&world, flagship.id).is_empty(),
             "{species}'s flagship must hold its own pantheon"
         );
+        if species == "kobold" {
+            // Kobold's specific caste-ladder shape (top rung "elders", no
+            // "slave") -- preserved from the pre-Branches two-species test
+            // as a structural regression guard on its role vocabulary.
+            // Moved here (off the shared default world) by the niche
+            // cutover: kobold no longer flagships in the unpinned default
+            // world at seed 42 (it is outcompeted everywhere), but it does
+            // flagship here, pinned alone with no competing dominance.
+            let kobold_castes = hornvale_culture::castes_of(&world, flagship.id);
+            assert_eq!(kobold_castes.last().map(String::as_str), Some("elders"));
+            assert!(!kobold_castes.contains(&"slave".to_string()));
+        }
     }
 }
 

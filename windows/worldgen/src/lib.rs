@@ -482,47 +482,6 @@ pub fn species_carrying_input(
     }
 }
 
-/// Assemble the coexistence stack's inputs for `species_set` over `geo`:
-/// each species' per-cell carrying-capacity inputs (the shared `base_inputs`
-/// with that species' psychology folded in via [`species_carrying_input`])
-/// and the packer's `(id, mass, niche)` tuples, tag-numbered identically
-/// (species_set's index order) so the two line up the way
-/// [`hornvale_demography::report`] expects. Shared by the settlement-genesis
-/// path and [`demography_report`] (Task A16a) — the ONE place this assembly
-/// is written, so the world worldgen ships and the report the Lab measures
-/// can never diverge. `species_set` must already be filtered to peopled
-/// species — the psychology fold ([`peopled`]) panics on a fauna kind.
-#[allow(clippy::type_complexity)]
-fn demography_inputs_for(
-    geo: &Geosphere,
-    base_inputs: &hornvale_kernel::CellMap<hornvale_demography::CarryingInput>,
-    species_set: &[&hornvale_species::SpeciesDef],
-) -> (
-    Vec<(
-        u32,
-        hornvale_kernel::CellMap<hornvale_demography::CarryingInput>,
-    )>,
-    Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)>,
-) {
-    let per_species_inputs = species_set
-        .iter()
-        .enumerate()
-        .map(|(tag, def)| {
-            let psych = &peopled(def).psych;
-            let inputs = hornvale_kernel::CellMap::from_fn(geo, |cell| {
-                species_carrying_input(*base_inputs.get(cell), psych)
-            });
-            (tag as u32, inputs)
-        })
-        .collect();
-    let species = species_set
-        .iter()
-        .enumerate()
-        .map(|(tag, def)| (tag as u32, def.biosphere.mass, def.biosphere.niche.clone()))
-        .collect();
-    (per_species_inputs, species)
-}
-
 /// Per-species niche-differentiated carrying-capacity K = resource-supply ×
 /// condition-response (The Niche). Pure; seed-free. Replaces the flat-NPP K
 /// for the coexistence stack. `species_set` index order tags the fields.
@@ -2368,7 +2327,7 @@ fn build_to(
                 GeneratedClimate,
                 Vec<EntityId>,
                 Vec<hornvale_settlement::PlacedSettlement>,
-                Vec<(hornvale_demography::Condensation, u32)>,
+                Vec<hornvale_demography::StackSettlement>,
                 std::collections::BTreeMap<&str, hornvale_language::Lexicon>,
                 Vec<&hornvale_species::SpeciesDef>,
                 std::collections::BTreeMap<&str, hornvale_language::Phonology>,
@@ -2378,12 +2337,6 @@ fn build_to(
     let terrain = terrain_of(&world)?;
     let climate = climate_of(&world)?;
     let geo = terrain.geosphere();
-
-    // The bare per-cell carrying-capacity inputs, shared across species; each
-    // species folds its psychology into a per-species copy below. `carrying_
-    // inputs_of` is exposed so a Lab metric can recompute the identical field
-    // without duplicating the formula (the gradient calibration reads it).
-    let base_inputs = carrying_inputs_of(geo, &terrain, &climate);
 
     // Which species this world places: the whole roster, or the pinned one.
     // Settlement genesis is a peopled-only pass (only settling, speaking
@@ -2409,27 +2362,52 @@ fn build_to(
         }
     };
 
-    // Each species' carrying-capacity inputs (spec §4) plus the coexistence
-    // packer's `(id, mass, niche)` tuples, both tag-numbered by `species_set`'s
-    // index order so the stack's per_species_k ids line up with the K fields
-    // `report` builds internally — the ONE shared assembly (`demography_
-    // inputs_for`), so this path and the Lab's `demography_report` accessor
-    // (Task A16a) can never diverge. Demography condenses settlements off
-    // all species' fields together, flagship (largest catchment) first.
-    // ADDITIVE ONLY (task A14): `report` still returns `.settlements` (the
-    // `condense_tagged` path) as the field this call site consumes; the
-    // stack/byproducts/stack_settlements it also builds are not yet read by
-    // worldgen (task A15).
-    let (per_species_inputs, species) = demography_inputs_for(geo, &base_inputs, &species_set);
-    let placements = hornvale_demography::report(
+    // Task A15a: settlement genesis is cut over onto the coexistence stack's
+    // niche-differentiated K (`niche_per_species_k`, The Niche) rather than
+    // the flat, psychology-only path `hornvale_demography::report` built its
+    // K from. This mirrors the SAME pipeline `demography_report_with_beta`
+    // (the Lab's shadow accessor) already builds, pinned to the frozen
+    // `BETA`/`FLOOR` constants, so worldgen and the Lab can never diverge.
+    // The peopled-only `species_set` above keeps the settlement stack
+    // peopled-only — no fauna kind ever reaches this pipeline, so no
+    // fauna-peopled settlement is possible (the full 16-species habitat
+    // stack, fauna included, is a separate observable for a later task).
+    //
+    // `placements` is now ONE [`hornvale_demography::StackSettlement`] per
+    // attractor — peopled by whichever species locally DOMINATES it
+    // (`.dominant`), with every present-but-not-dominant species still
+    // readable off `.composition` — replacing the interim `condense_tagged`
+    // path (task A14: one settlement PER SPECIES, tag-per-settlement).
+    let sky = sky_of(&world)?;
+    let (insolation_scalar, obliquity_deg, _regime, _year) = stellar_inputs(&sky);
+    let per_species_k = niche_per_species_k(
         geo,
-        &per_species_inputs,
+        &terrain,
+        &climate,
+        obliquity_deg,
+        insolation_scalar,
+        &species_set,
+    );
+    let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> = species_set
+        .iter()
+        .enumerate()
+        .map(|(tag, def)| (tag as u32, def.biosphere.mass, def.biosphere.niche.clone()))
+        .collect();
+    let stack = hornvale_demography::coexist::pack(
+        geo,
+        &per_species_k,
         &species,
         hornvale_demography::BETA,
         hornvale_demography::FLOOR,
+    );
+    let mass_map: std::collections::BTreeMap<u32, hornvale_kernel::Mass> =
+        species.iter().map(|(id, m, _)| (*id, *m)).collect();
+    let placements = hornvale_demography::stack_condense::condense_stack(
+        geo,
+        &stack,
+        &mass_map,
         CONDENSATION_THRESHOLD,
-    )
-    .settlements;
+    );
 
     // Each placed species' phonology, drawn once from the world seed and
     // its authored articulation vector, and a `Namer` built over it. Every
@@ -2459,17 +2437,35 @@ fn build_to(
     let mut lexicons: std::collections::BTreeMap<&str, hornvale_language::Lexicon> =
         std::collections::BTreeMap::new();
     for (tag, def) in species_set.iter().enumerate() {
+        // "Settled" now means PRESENT, not merely dominant: species `tag` is
+        // settled at every stack settlement whose composition lists it with
+        // a strictly positive density fraction, even at a settlement where
+        // another species out-densities it and so becomes the settlement's
+        // `dominant` (and thus its peopling species, below).
         let settled_now: Vec<hornvale_kernel::CellId> = placements
             .iter()
-            .filter(|(_, t)| *t as usize == tag)
-            .map(|(p, _)| p.cell)
+            .filter(|s| {
+                s.composition
+                    .iter()
+                    .any(|(id, frac)| *id as usize == tag && *frac > 0.0)
+            })
+            .map(|s| s.cell)
             .collect();
         // `exposure_of_impl` alone owns the "coexisting counts only once the
-        // querying species has settled" rule.
+        // querying species has settled" rule. `coexisting_now` spans every
+        // species appearing in ANY settlement's composition (present, not
+        // necessarily dominant) — the same presence test as `settled_now`
+        // above, just unfiltered by `tag`.
         let coexisting_now: std::collections::BTreeSet<String> = species_set
             .iter()
             .enumerate()
-            .filter(|(i, _)| placements.iter().any(|(_, t)| *t as usize == *i))
+            .filter(|(i, _)| {
+                placements.iter().any(|s| {
+                    s.composition
+                        .iter()
+                        .any(|(id, frac)| *id as usize == *i && *frac > 0.0)
+                })
+            })
             .map(|(_, d)| d.name.to_string())
             .collect();
         let exposures = exposure_of_impl(
@@ -2505,10 +2501,11 @@ fn build_to(
     let mut placed: Vec<hornvale_settlement::PlacedSettlement> =
         Vec::with_capacity(placements.len());
     let mut glosses: Vec<String> = Vec::with_capacity(placements.len());
-    for (p, tag) in &placements {
-        let def = species_set[*tag as usize];
-        let coord = geo.coord(p.cell);
-        let salt = u64::from(p.cell.0);
+    for s in &placements {
+        let tag = s.dominant;
+        let def = species_set[tag as usize];
+        let coord = geo.coord(s.cell);
+        let salt = u64::from(s.cell.0);
         let namer = namers
             .get(def.name)
             .expect("a Namer was built for every placed species");
@@ -2516,7 +2513,7 @@ fn build_to(
         let lexicon = lexicons
             .get(def.name)
             .expect("a lexicon was built for every placed species");
-        let biome_concept = climate.biome_at(p.cell).concept_name();
+        let biome_concept = climate.biome_at(s.cell).concept_name();
         // The presiding phenomenon is observed from THIS settlement's own
         // cell coordinate — its hemisphere culls the sky (SEQ-5), so the
         // committed gloss is truthful to the sky this settlement actually
@@ -2540,15 +2537,34 @@ fn build_to(
             &site,
             lexicon,
         );
-        // Population is the conserved catchment readout of the demography
-        // field, not a draw. `.round()` quantizes the continuous field value
-        // to whole people at this emit boundary (the ledger stores counts).
-        let population = p.population.round() as u32;
+        // Population is the DOMINANT species' rendered headcount at this
+        // settlement (not `mass_total`, which is the whole settlement's
+        // biomass across every present species): `Count(n)` reads straight
+        // through; `Lone` becomes `1` — a settlement still houses at least
+        // one person, preserving the "no zero-population settlement"
+        // invariant `condense`'s own floor used to guarantee via
+        // `Condensation`; `Colony(x)` (reserved, not yet fired by any
+        // Stage-A species) rounds to whole people under the same floor.
+        let population = s
+            .rendered
+            .iter()
+            .find(|(id, _)| *id == tag)
+            .map(|(_, render)| match render {
+                hornvale_demography::stack_condense::HeadcountRender::Count(n) => *n,
+                hornvale_demography::stack_condense::HeadcountRender::Lone => 1,
+                hornvale_demography::stack_condense::HeadcountRender::Colony(x) => {
+                    x.round().max(1.0) as u32
+                }
+            })
+            .expect(
+                "the dominant species is present (by construction) in its own \
+                 settlement's rendered vec",
+            );
         placed.push(hornvale_settlement::PlacedSettlement {
-            cell: p.cell.0,
+            cell: s.cell.0,
             latitude: coord.latitude,
             longitude: coord.longitude,
-            biome: climate.biome_at(p.cell).name().to_string(),
+            biome: climate.biome_at(s.cell).name().to_string(),
             name: generated.roman,
             population,
         });
@@ -2634,11 +2650,11 @@ fn build_to(
     stage("culture+religion+species", || -> Result<(), BuildError> {
         // Per-species flagship culture and religion.
         for (tag, def) in species_set.iter().enumerate() {
-            let Some(pos) = placements.iter().position(|(_, t)| *t as usize == tag) else {
+            let Some(pos) = placements.iter().position(|s| s.dominant as usize == tag) else {
                 continue; // a species may place nothing on a hostile world
             };
             let flagship = ids[pos];
-            let fcell = placements[pos].0.cell;
+            let fcell = placements[pos].cell;
             let coastal = geo.neighbors(fcell).iter().any(|n| terrain.is_ocean(*n));
             let moisture = climate.moisture_at(fcell);
             let class = biome_class(climate.biome_at(fcell));
@@ -2715,8 +2731,8 @@ fn build_to(
         // main, so the new, Y2-1-only entities are appended last rather than
         // interleaved. Then the peopled-by link for every settlement.
         hornvale_species::genesis_in(&mut world, roster)?;
-        for (id, (_, tag)) in ids.iter().zip(placements.iter()) {
-            hornvale_species::people(&mut world, *id, species_set[*tag as usize].name)?;
+        for (id, s) in ids.iter().zip(placements.iter()) {
+            hornvale_species::people(&mut world, *id, species_set[s.dominant as usize].name)?;
         }
         Ok(())
     })?;
@@ -3507,7 +3523,18 @@ mod tests {
         );
         // The flagship carries a settlement + population.
         let village = hornvale_settlement::village_info(&world).expect("flagship settlement");
-        assert!(village.population >= 40);
+        // Task A15a's niche cutover changed what "population" means: it is
+        // now the DOMINANT species' own rendered headcount (biomass share
+        // divided by its own body mass), not the old flat-K catchment's
+        // conserved population unit -- a much smaller, physically grounded
+        // number. At seed 42 the world's largest coexistence attractor
+        // (`village_info`'s first, highest-`mass_total` settlement) is a
+        // hobgoblin flagship of 17; the old `>= 40` threshold measured the
+        // pre-cutover scale and no longer applies.
+        assert_eq!(
+            village.population, 17,
+            "the world's largest attractor is a hobgoblin flagship of 17 at this seed"
+        );
         // The cascade still runs on the flagship.
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
         assert!(!hornvale_religion::beliefs_of(&world).is_empty());
@@ -4365,12 +4392,15 @@ mod tests {
 
     #[test]
     fn locked_rotation_changes_the_flagship_cascade() {
-        // Seed 7 (not 42: at 42 the globally best cell happens to land in
-        // the same class under both regimes, so the cascade coincides).
+        // Seed 1 (not 42 or 7: task A15a's niche cutover moved the
+        // world's dominant coexistence attractor onto a joint mass-weighted
+        // optimum rather than any one species' own independent best cell,
+        // so the seed that happens to coincide across rotation regimes
+        // shifted too — 7 now coincides post-cutover; 1 still separates).
         use hornvale_astronomy::RotationPin;
-        let spinning = generated(7);
+        let spinning = generated(1);
         let locked = build_world(
-            Seed(7),
+            Seed(1),
             &SkyPins {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
@@ -4524,10 +4554,15 @@ mod tests {
 
     #[test]
     fn the_pantheon_reorganizes_between_spinning_and_locked() {
+        // Seed 1 (not 42: task A15a's niche cutover moved the world's
+        // dominant coexistence attractor — see below — so the seed that
+        // best illustrates the two regimes' different religions shifted
+        // too; 1 still separates cleanly, matching
+        // `locked_rotation_changes_the_flagship_cascade`).
         use hornvale_astronomy::RotationPin;
-        let spinning = generated(42);
+        let spinning = generated(1);
         let locked = build_world(
-            Seed(42),
+            Seed(1),
             &SkyPins {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
@@ -4542,14 +4577,21 @@ mod tests {
                 .first()
                 .map(|b| b.sentiment)
         };
-        // The head deity reorganizes with the sun's rotation regime. Since
-        // SKY-5 the locked head is the felt tide (Ambient): on a frozen sky
-        // the low-sky-attention first observer ranks the swelling water
-        // above the motionless sun — SEQ-1's locked-world religion.
+        // The head deity reorganizes with the sun's rotation regime, but
+        // task A15a's niche cutover flipped WHICH sentiment the locked
+        // regime yields. Unlike the old flat carrying-capacity field, the
+        // niche-differentiated K (`niche_per_species_k`) multiplies in an
+        // explicit insolation response term, so the coexistence stack's
+        // dominant (highest joint-mass) attractor now correlates with solar
+        // exposure. On a locked world that pulls the flagship toward the
+        // substellar point, where the fixed, ever-present sun dominates
+        // observation — the felt-tide "Ambient" default SEQ-1 established
+        // pre-cutover no longer holds; the locked head is now the
+        // unchanging sun (Eternal).
         assert_eq!(
             head_sentiment(&locked),
-            Some(hornvale_religion::Sentiment::Ambient),
-            "locked world: the tide heads the pantheon"
+            Some(hornvale_religion::Sentiment::Eternal),
+            "locked world (post niche-cutover): the fixed sun heads the pantheon"
         );
         assert_ne!(
             head_sentiment(&spinning),

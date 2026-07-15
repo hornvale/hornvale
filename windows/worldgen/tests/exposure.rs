@@ -6,13 +6,17 @@ use hornvale_language::{ExposureClass, GapReason, LexEntry};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world, exposure_of, lexicon_of};
 
 /// The seed-42, generated-sky, default-pins (full four-people roster)
-/// world `species_worlds.rs` builds. Since the founder floor (settlement's
-/// founder-reservation pass, MAP-22 K=1), all four peoples coexist in this
-/// world's shared joint-greedy placement pass (goblin and kobold each win
-/// many cells on their own suitability; hobgoblin and bugbear win exactly
-/// the one cell the founder floor reserves for them). The coexistence
-/// test below uses goblin and kobold, mirroring the pre-Branches
-/// two-species test this file descends from.
+/// world `species_worlds.rs` builds. Task A15a cut settlement genesis over
+/// onto the coexistence stack's niche-differentiated K: a settlement is
+/// `peopled-by` whichever species locally DOMINATES its attractor, so
+/// "placed" now means "dominates at least one settlement," not merely
+/// "present in the stack somewhere." At seed 42, under the frozen
+/// `BETA`/`FLOOR`, goblin and hobgoblin each dominate a share of the
+/// world's attractors and so are both "placed" in this sense; bugbear and
+/// kobold are outcompeted at every attractor (present in the coexistence
+/// stack almost everywhere, but never locally densest) and so are NOT
+/// placed, even though nothing pins them out. The coexistence test below
+/// uses goblin and hobgoblin, the two peoples this seed actually places.
 fn world() -> hornvale_kernel::World {
     build_world(
         hornvale_kernel::Seed(42),
@@ -61,18 +65,35 @@ fn kobold_blue_is_a_perceptual_gap_and_goblin_blue_is_not() {
 #[test]
 fn each_placed_species_holds_a_root_for_every_placed_species_kind() {
     // Spec §3: "each language will hold its own words for goblin-kind and
-    // kobold-kind — endonym and exonym fall out free." Coexistence in one
-    // shared world is exposure: both peoples place, so each is Steeped in
-    // the other's kind and each lexicon roots both. Since the founder
-    // floor, goblin and kobold both coexist in this world (see `world()`'s
-    // doc comment) exactly as the pre-Branches two-species world did.
-    let w = world();
+    // hobgoblin-kind — endonym and exonym fall out free." Coexistence in
+    // one shared world is exposure: both peoples place (dominate at least
+    // one attractor), so each is Steeped in the other's kind and each
+    // lexicon roots both. Goblin and hobgoblin, not goblin and kobold: the
+    // niche cutover (task A15a) means kobold no longer dominates any
+    // attractor in the shared default world (see `world()`'s doc comment),
+    // so it is no longer "placed" in the `peopled-by` sense this exposure
+    // rule reads. Seed 1, not the shared `world()`'s 42: at 42 goblin and
+    // hobgoblin's exonym/endonym for "goblin-kind" happen to render
+    // identically (both goblinoid-family, sharing a proto-phonology, so
+    // occasional root collisions on a shared-family concept are expected)
+    // -- 1 is also the witness seed `locked_rotation_changes_the_flagship_
+    // cascade`/`the_pantheon_reorganizes_between_spinning_and_locked`
+    // already use post-cutover, for the same reason (seed 42's dominant
+    // coexistence attractor moved under the niche cutover).
+    let w = build_world(
+        hornvale_kernel::Seed(1),
+        &hornvale_astronomy::SkyPins::default(),
+        SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &SettlementPins::default(),
+    )
+    .unwrap();
     let goblin = lexicon_of(&w, "goblin").unwrap();
-    let kobold = lexicon_of(&w, "kobold").unwrap();
+    let hobgoblin = lexicon_of(&w, "hobgoblin").unwrap();
 
     let mut romans = Vec::new();
-    for (lex, species) in [(&goblin, "goblin"), (&kobold, "kobold")] {
-        for concept in ["goblin-kind", "kobold-kind"] {
+    for (lex, species) in [(&goblin, "goblin"), (&hobgoblin, "hobgoblin")] {
+        for concept in ["goblin-kind", "hobgoblin-kind"] {
             match lex.entry(concept) {
                 Some(LexEntry::Root { views, .. }) => romans.push(views.roman.clone()),
                 other => panic!("{species}'s '{concept}' should be a Root, got {other:?}"),
@@ -83,11 +104,11 @@ fn each_placed_species_holds_a_root_for_every_placed_species_kind() {
     // draws its word for either kind from its own phonology.
     assert_ne!(
         romans[0], romans[2],
-        "goblin and kobold words for goblin-kind should differ"
+        "goblin and hobgoblin words for goblin-kind should differ"
     );
     assert_ne!(
         romans[1], romans[3],
-        "goblin and kobold words for kobold-kind should differ"
+        "goblin and hobgoblin words for hobgoblin-kind should differ"
     );
 }
 
