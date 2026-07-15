@@ -447,12 +447,17 @@ pub fn route_sediment(
 ///   `wedge_reach_passive` otherwise (`margins.get(mouth)`; Oceanic/
 ///   Interior treated as passive). Every reachable cell (trench cells
 ///   included) gets a weight `exp(-hops/1.5)`; the mouth's remaining
-///   export splits across them proportional to weight. A trench cell
-///   (boundary kind `IslandArc`/`CoastalRange`) has zero fill capacity —
-///   modeled as an ordinary cap of `0.0` rather than a hard BFS wall, so
-///   its computed share flows through the same cap-overflow machinery
-///   every other capped cell uses — and blocks further BFS propagation
-///   past it (the trench is a barrier, not a permeable cell). Each cell's
+///   export splits across them proportional to weight. A trench cell —
+///   the whole oceanic side of a `CoastalRange` contact (an Andean margin
+///   carries no offshore arc, so its entire seaward flank is the trench;
+///   a5ba274 adjudication), or the SUBDUCTING side only of an `IslandArc`
+///   contact (the overriding/arc side takes normal wedge fill; side test
+///   identical to `elevation.rs`'s `arc_side = plate.id >
+///   contact.other_plate`) — has zero fill capacity — modeled as an
+///   ordinary cap of `0.0` rather than a hard BFS wall, so its computed
+///   share flows through the same cap-overflow machinery every other
+///   capped cell uses — and blocks further BFS propagation past it (the
+///   trench is a barrier, not a permeable cell). Each cell's
 ///   cap is the shelf freeboard headroom *remaining after every earlier
 ///   mouth in this same call* (`cap_m` reads the shared `fill` buffer), so
 ///   two mouths whose reach overlaps one shelf cell can never jointly
@@ -461,7 +466,7 @@ pub fn route_sediment(
 ///   first pass; whatever still doesn't fit is `ocean_loss` (no third
 ///   pass).
 ///
-/// type-audit: pending(wave-2: mouths), pending(wave-2: return)
+/// type-audit: pending(wave-2: mouths), bare-ok(index: plate_of), pending(wave-2: return)
 #[allow(clippy::too_many_arguments)]
 pub fn deposit_wedge(
     geo: &Geosphere,
@@ -470,15 +475,25 @@ pub fn deposit_wedge(
     mouths: &[(CellId, f64)],
     margins: &CellMap<MarginPolarity>,
     boundary: &CellMap<Option<CellBoundary>>,
+    plate_of: &CellMap<u32>,
     params: &CarveParams,
 ) -> (CellMap<f64>, Vec<CellId>, f64) {
     let n = geo.cell_count();
     let is_ocean = |c: CellId| *elevation.get(c) < sea_level;
-    let is_trench = |c: CellId| {
-        matches!(
-            boundary.get(c).map(|b| b.kind),
-            Some(BoundaryKind::IslandArc) | Some(BoundaryKind::CoastalRange)
-        )
+    // The trench is the SUBDUCTING side only: a CoastalRange contact's
+    // whole oceanic side (no offshore arc on an Andean margin; a5ba274
+    // adjudication), or an IslandArc cell on the non-arc side — the side
+    // test replicates `elevation.rs`'s `arc_side = plate.id >
+    // contact.other_plate` (a plate's `id` equals its index, so
+    // `plate_of` carries it directly); `arc_side` true is the overriding
+    // plate, which takes normal wedge fill.
+    let is_trench = |c: CellId| match boundary.get(c) {
+        Some(b) => match b.kind {
+            BoundaryKind::CoastalRange => true,
+            BoundaryKind::IslandArc => *plate_of.get(c) <= b.other_plate,
+            _ => false,
+        },
+        None => false,
     };
     // Headroom below the shelf cap, meters, net of whatever this call has
     // already filled at `c` (by an earlier mouth, or this mouth's own
@@ -716,8 +731,11 @@ pub fn cap_atolls(
 }
 
 /// The full engine-A carve (spec §2 seam): incision → repose (on
-/// elevation+incision) → routing → wedge → deltas → atolls, composed into
-/// one `CarveDelta`. Still not wired into `generate` (Task 10 does that) —
+/// elevation+incision) → routing → wedge → deltas → atolls (on
+/// elevation+wedge, so a reef caps the seabed the wedge already built —
+/// the composed atoll cell ends exactly at `sea_level - atoll_freeboard_m`,
+/// never above it), composed into one `CarveDelta`. Still not wired into
+/// `generate` (Task 10 does that) —
 /// every input is a plain reference the caller already has (or builds
 /// exactly as Task 10's wiring will; see the tests), so this function adds
 /// no new draws and changes no world byte on its own.
@@ -733,7 +751,7 @@ pub fn cap_atolls(
 /// not a separate top-level bucket: `deposit_wedge` fully consumes each
 /// mouth's export into wedge/delta deposit or its own `ocean_loss`, so the
 /// two-term identity `eroded ≈ deposited + ocean_loss` holds end to end.
-/// type-audit: bare-ok(count: drainage), bare-ok(flag: endorheic), bare-ok(ratio: induration), bare-ok(ratio: carbonate)
+/// type-audit: bare-ok(count: drainage), bare-ok(flag: endorheic), bare-ok(ratio: induration), bare-ok(ratio: carbonate), bare-ok(index: plate_of)
 #[allow(clippy::too_many_arguments)]
 pub fn carve(
     geo: &Geosphere,
@@ -746,6 +764,7 @@ pub fn carve(
     carbonate: &CellMap<f64>,
     margins: &CellMap<MarginPolarity>,
     boundary: &CellMap<Option<CellBoundary>>,
+    plate_of: &CellMap<u32>,
     trail_seamounts: &[TrailSeamount],
     params: &CarveParams,
 ) -> CarveDelta {
@@ -764,9 +783,26 @@ pub fn carve(
         geo, elevation, sea_level, &incision, downhill, endorheic, params,
     );
     let (marine_deposit, delta_cells, wedge_ocean_loss) = deposit_wedge(
-        geo, elevation, sea_level, &mouths, margins, boundary, params,
+        geo, elevation, sea_level, &mouths, margins, boundary, plate_of, params,
     );
-    let (atoll_fill, atoll_cells) = cap_atolls(geo, elevation, sea_level, trail_seamounts, params);
+    // Atolls cap the seabed the wedge already built, not the raw pre-wedge
+    // floor — the same fold-forward the incision→repose seam uses above.
+    // Without it, wedge fill and atoll fill each capped against raw
+    // elevation independently and their SUM overtopped the atoll freeboard
+    // (review-measured on seed 42/L4: CellId(1965) composed to
+    // sea_level + 222.322 m from raw -2713.534 + wedge 227.322 + atoll
+    // 296.707).
+    let elevation_after_wedge = CellMap::from_fn(geo, |c| {
+        ReferenceElevation::new(elevation.get(c).get() + *marine_deposit.get(c))
+            .expect("elevation plus wedge fill is finite")
+    });
+    let (atoll_fill, atoll_cells) = cap_atolls(
+        geo,
+        &elevation_after_wedge,
+        sea_level,
+        trail_seamounts,
+        params,
+    );
 
     let routing_total: f64 = routing_deposit.iter().map(|(_, d)| *d).sum();
     let marine_total: f64 = marine_deposit.iter().map(|(_, d)| *d).sum();
@@ -1074,6 +1110,7 @@ mod tests {
             &carbonate,
             &margins,
             &g.boundary,
+            &g.plate_of,
             &g.trail_seamounts,
             &p,
         );
@@ -1112,6 +1149,22 @@ mod tests {
                 "delta lobe stayed submerged"
             );
         }
+        // Atolls: the COMPOSED post-carve elevation of every atoll cell must
+        // respect the atoll's own freeboard — the cap must bind the final
+        // pipeline output, not the raw pre-wedge elevation (review finding:
+        // seed 42/L4 CellId(1965) once ended +222 m ABOVE sea level because
+        // wedge fill and atoll fill each capped against raw elevation
+        // independently).
+        let atoll_cap = g.sea_level.get() - p.atoll_freeboard_m;
+        for c in &delta.atoll_cells {
+            assert!(
+                g.elevation.get(*c).get() + delta.delta_m.get(*c) <= atoll_cap + 1e-9,
+                "atoll cell {} composed above its freeboard: {} vs cap {}",
+                c.0,
+                g.elevation.get(*c).get() + delta.delta_m.get(*c),
+                atoll_cap
+            );
+        }
         // Books, full pipeline.
         assert!(
             (delta.eroded_total_m3 - (delta.deposited_total_m3 + delta.ocean_loss_m3)).abs()
@@ -1122,10 +1175,11 @@ mod tests {
     #[test]
     fn trench_cells_get_zero_reach_and_their_share_is_lost() {
         // Synthetic probe: every one of a single mouth's ocean neighbors
-        // sits on a subducting-side boundary (trench). With every reachable
-        // cell capped at zero and nowhere uncapped to redistribute to, the
-        // mouth's whole export must land in ocean_loss, and no trench cell
-        // may receive any fill.
+        // sits on the SUBDUCTING side of an island-arc boundary (own plate
+        // 0 vs other_plate 1: arc_side false → trench). With every
+        // reachable cell capped at zero and nowhere uncapped to
+        // redistribute to, the mouth's whole export must land in
+        // ocean_loss, and no trench cell may receive any fill.
         let geo = Geosphere::new(3);
         let sea = ReferenceElevation::new(0.0).unwrap();
         let mouth = CellId(0);
@@ -1144,13 +1198,15 @@ mod tests {
                 other_plate: 1,
             })
         });
+        let plate_of = CellMap::from_fn(&geo, |_| 0u32); // 0 <= 1: subducting side
         let p = CarveParams {
             delta_count: 0, // isolate the wedge/trench mechanic from deltas
             ..CarveParams::default()
         };
         let mouths = vec![(mouth, 1000.0)];
-        let (marine_deposit, delta_cells, ocean_loss) =
-            deposit_wedge(&geo, &elevation, sea, &mouths, &margins, &boundary, &p);
+        let (marine_deposit, delta_cells, ocean_loss) = deposit_wedge(
+            &geo, &elevation, sea, &mouths, &margins, &boundary, &plate_of, &p,
+        );
         assert!(delta_cells.is_empty());
         for &nb in geo.neighbors(mouth) {
             assert_eq!(
@@ -1163,6 +1219,66 @@ mod tests {
         assert!(
             (ocean_loss - 1000.0).abs() < 1e-6,
             "every reachable cell is a trench: the whole export must be lost, got {ocean_loss}"
+        );
+    }
+
+    #[test]
+    fn island_arc_trench_takes_only_the_subducting_side() {
+        // Same island-arc contact everywhere, but the mouth's ocean
+        // neighbors are split between the two plates: cells on plate 2
+        // (arc_side: 2 > 1, the overriding plate) must receive normal
+        // wedge fill; cells on plate 0 (0 <= 1, the subducting plate) are
+        // the trench and must receive none.
+        let geo = Geosphere::new(3);
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let mouth = CellId(0);
+        let elevation = CellMap::from_fn(&geo, |c| {
+            if c == mouth {
+                ReferenceElevation::new(50.0).unwrap()
+            } else {
+                ReferenceElevation::new(-500.0).unwrap()
+            }
+        });
+        let margins = CellMap::from_fn(&geo, |_| MarginPolarity::Passive);
+        let boundary = CellMap::from_fn(&geo, |_| {
+            Some(CellBoundary {
+                kind: BoundaryKind::IslandArc,
+                magnitude: 1.0,
+                other_plate: 1,
+            })
+        });
+        // Alternate the mouth's neighbors between the overriding plate (2)
+        // and the subducting plate (0), by parity of CellId.
+        let plate_of = CellMap::from_fn(&geo, |c| if c.0 % 2 == 0 { 2u32 } else { 0u32 });
+        let p = CarveParams {
+            delta_count: 0, // isolate the wedge/trench mechanic from deltas
+            ..CarveParams::default()
+        };
+        let mouths = vec![(mouth, 1000.0)];
+        let (marine_deposit, _delta_cells, _ocean_loss) = deposit_wedge(
+            &geo, &elevation, sea, &mouths, &margins, &boundary, &plate_of, &p,
+        );
+        let mut overriding_filled = 0usize;
+        for &nb in geo.neighbors(mouth) {
+            if *plate_of.get(nb) > 1 {
+                assert!(
+                    *marine_deposit.get(nb) > 0.0,
+                    "overriding-side cell {} got no wedge fill",
+                    nb.0
+                );
+                overriding_filled += 1;
+            } else {
+                assert_eq!(
+                    *marine_deposit.get(nb),
+                    0.0,
+                    "subducting-side cell {} got fill",
+                    nb.0
+                );
+            }
+        }
+        assert!(
+            overriding_filled > 0,
+            "the probe needs at least one overriding-side neighbor"
         );
     }
 
