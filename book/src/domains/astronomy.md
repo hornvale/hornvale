@@ -40,9 +40,10 @@ artifact, regenerated and drift-checked on every build.
 
 **The moving sky in color.** The system view — the star in its spectral
 tint, the habitable zone, the world on its orbit, each moon at its synodic
-phase and lit limb — now lives in Goldengrove, an external 3D client built
-against the same committed `scene/system/v1` and `scene/tiles/v1` documents
-(decision 0022 — the sim emits bytes, clients render pixels).
+phase and lit limb — now lives in [Goldengrove](https://hornvale.github.io/goldengrove/),
+an external 3D client built against the same committed `scene/system/v1`
+and `scene/tiles/v1` documents (decision 0022 — the sim emits bytes,
+clients render pixels).
 
 ## The moving sky (Firm Ground II)
 
