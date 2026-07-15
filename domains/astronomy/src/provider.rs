@@ -1196,8 +1196,8 @@ const PHASE_WORDS: [&str; 8] = [
 /// Which eighth of a cycle `phase` (in [0,1)) falls in, with windows
 /// *centered* on the phases they name: full spans [7/16, 9/16) around 0.5,
 /// new wraps around 0 (SKY-14 — the full window used to start at 0.5
-/// instead of straddling it). `render.rs`'s phase strip and orrery faces
-/// sample these same bands.
+/// instead of straddling it). `render.rs`'s phase strip samples these same
+/// bands.
 pub(crate) fn phase_eighth(phase: f64) -> usize {
     ((phase * 8.0).round() as usize) % 8
 }

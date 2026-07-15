@@ -82,6 +82,7 @@
 - [The Pace of Life](./chronicle/bio2-life-history.md)
 - [The Niche](./chronicle/the-niche.md)
 - [The Speakable](./chronicle/the-speakable.md)
+- [Goldengrove](./chronicle/goldengrove.md)
 
 # The Gallery
 
@@ -89,7 +90,6 @@
 - [The Almanac of Seed 42](./gallery/almanac.md)
 - [The Sky of Seed 42](./gallery/the-sky.md)
 - [The Night Sky of Seed 42](./gallery/star-chart-seed-42.md)
-- [The Orrery of Seed 42](./gallery/orrery-seed-42.md)
 - [The Land of Seed 42](./gallery/elevation-seed-42.md)
 - [The Biomes of Seed 42](./gallery/biome-seed-42.md)
 - [The Biomes of Seed 42 (tidally locked)](./gallery/biome-seed-42-locked.md)

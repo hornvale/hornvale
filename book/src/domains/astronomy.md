@@ -38,36 +38,12 @@ phase-cycle strip per moon. [The Night Sky of Seed
 42](../gallery/star-chart-seed-42.md) is the domain's committed gallery
 artifact, regenerated and drift-checked on every build.
 
-**The orrery, and the moving sky in color (The Orrery).** Two renders join
-the chart. The night sky gains a *palette*: each star is tinted by its
-spectral class, hot blue-white through cool red — a choice the renderer owns,
-never the domain (a star stays a "smoldering red" *word* for the almanac while
-the chart chooses its *hue*). `hornvale orrery` draws the system from
-above in the terminal — the star at center in its class color, the habitable
-zone as a dotted ring, the world on its orbit at the year's phase, each moon
-placed where its synodic phase puts it — new between world and star, full
-opposite — and its half-lit face turned so the bright limb faces the star, so
-a moon's position and the light it wears never disagree (single-width Unicode
-by default; with `--glyphs emoji`, a two-column grid whose moons are the phase
-emoji `🌑🌓🌕🌗`, an experiment that meets emoji's fixed double-width head-on
-rather than fighting it). It remains an in-process render (it reads the world
-directly) and can still write its frames to a synthetic-timed `.cast`
-recording for offline viewing.
-
-The book's gallery has moved past that static playback. [The Orrery of Seed
-42](../gallery/orrery-seed-42.md) is now a live browser client, standing
-beside the atlas in the same posture (decision 0022 — the sim emits bytes,
-clients render pixels): a dependency-free browser page (`clients/orrery/`)
-that fetches two committed documents — `scene/system/v1` (the orbital
-elements) and `scene/tiles/v1` (the world's real terrain) — and computes
-the animation itself, live, from an
-ephemeris pinned against `hornvale orrery`'s own phases. The star glows in its
-tint; each moon's phase and lit limb agree with the terminal render; and the
-world is drawn as its own spinning globe, textured with the generated
-continents and a moving terminator — a display convention of the globe's
-rotation, not a claim about the sim's civil day/night, which remains the
-almanac's domain. Play/pause, scrub, and speed controls let a reader step
-through the year at will rather than only watch a fixed loop.
+**The moving sky in color.** The system view — the star in its spectral
+tint, the habitable zone, the world on its orbit, each moon at its synodic
+phase and lit limb — now lives in [Goldengrove (since renamed Orrery)](https://hornvale.github.io/orrery/),
+an external 3D client built against the same committed `scene/system/v1`
+and `scene/tiles/v1` documents (decision 0022 — the sim emits bytes,
+clients render pixels).
 
 ## The moving sky (Firm Ground II)
 

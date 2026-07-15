@@ -5,7 +5,6 @@
 
 #![warn(missing_docs)]
 
-pub mod cast;
 pub mod domain;
 pub mod ecology;
 pub mod field;
@@ -25,7 +24,6 @@ pub mod streams;
 pub mod units;
 pub mod world;
 
-pub use cast::asciinema_v2;
 pub use domain::Domain;
 pub use ecology::{
     ANIMAL_PREY, ConditionResponse, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE, ResourceAxis,

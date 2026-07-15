@@ -1,6 +1,7 @@
 //! Emit the ephemeris golden contract for seed 42: the authoritative orbital
 //! phase, moon synodic phases, and world rotation phase at sample days, which
-//! the orrery client's `ephemeris.ts` must reproduce from the emitted elements.
+//! goldengrove (the external three.js client, hornvale/goldengrove) must
+//! reproduce from the emitted elements.
 use hornvale_astronomy::units::StdDays;
 use hornvale_kernel::Seed;
 use hornvale_worldgen::{SkyChoice, build_world, sky_of};

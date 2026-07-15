@@ -54,7 +54,7 @@ jobs:
           # across platforms. They are excluded here (byte-identity is
           # platform-local; a real worldgen change still surfaces loudly in
           # world.json and the censuses).
-          git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ clients/orrery/testdata/ docs/audits/ \
+          git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ \
             ':(exclude)book/src/gallery/*.png' \
             ':(exclude)book/src/gallery/scene-tiles-seed-42.json' \
             ':(exclude)book/src/reference/locale-seed-42.json'
@@ -82,30 +82,6 @@ jobs:
         run: |
           deno task build
           git diff --exit-code ../../book/src/gallery/atlas.js
-
-  orrery:
-    name: Orrery client
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: clients/orrery
-    steps:
-      - uses: actions/checkout@v4
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: "2.9.2"
-      - name: Format
-        run: deno fmt --check
-      - name: Lint
-        run: deno lint
-      - name: Typecheck
-        run: deno task check
-      - name: Test
-        run: deno task test
-      - name: Bundle is current (freshness check)
-        run: |
-          deno task build
-          git diff --exit-code ../../book/src/gallery/orrery.js
 
   vessel:
     name: Vessel client (the Casement)
@@ -145,3 +121,17 @@ jobs:
         run: make wasm-vessel
       - name: Byte-identity smoke (wasm opening == committed native transcript)
         run: node clients/vessel/wasm/drive.mjs book/src/gallery/vessel.wasm
+
+  world:
+    name: World catalog (world-wasm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            clients/world-wasm
+      - name: Catalog gate (lint + golden smoke + size)
+        run: make world-check

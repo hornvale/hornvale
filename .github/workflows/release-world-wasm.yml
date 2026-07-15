@@ -1,0 +1,22 @@
+name: Release world-wasm
+on:
+  push:
+    tags: ["world-wasm-v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Gate, then build the asset
+        run: make world-check
+      - name: Package + checksum
+        run: |
+          cp clients/world-wasm/target/wasm32-unknown-unknown/release/hornvale_world_wasm.wasm hornvale_world.wasm
+          shasum -a 256 hornvale_world.wasm > hornvale_world.wasm.sha256
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: 'gh release create "$GITHUB_REF_NAME" hornvale_world.wasm hornvale_world.wasm.sha256 --title "$GITHUB_REF_NAME" --notes "The world catalog: hornvale as a wasm library (spec 2026-07-14-goldengrove-design.md). Scene JSON is byte-identical to the native CLI at this commit."'
