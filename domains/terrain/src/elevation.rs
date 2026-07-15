@@ -645,7 +645,11 @@ pub fn effective_ocean_target(target: f64, supply: f64, notes: &mut Vec<String>)
 /// distinct boundary values (below the tie vs. through it) lands the
 /// achieved "cells strictly below" count closer to the target — a narrow
 /// (one-cell, the ordinary no-duplicate) tie changes nothing, so every
-/// pre-Sculpting call site is byte-identical.
+/// pre-Sculpting call site is byte-identical. Note the tie-aware pick can
+/// land on EITHER side of the raw target (the naive pick could only
+/// undershoot): under a wide tie it takes whichever boundary is closer,
+/// so the achieved ocean fraction may overshoot the target — this fix is
+/// closest-approach, not strictly conservative.
 /// type-audit: bare-ok(ratio: target)
 pub fn derive_sea_level(
     elevation: &CellMap<ReferenceElevation>,

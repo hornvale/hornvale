@@ -676,7 +676,12 @@ pub fn deposit_wedge(
 }
 
 /// Atoll caps (Task 9, spec §5): warm, shallow-submerged trail seamounts
-/// (Task 6) grow a carbonate rim to just under the surface. Only trail
+/// (Task 6) grow a carbonate rim to just under the surface — relative to
+/// the sea level this function is GIVEN; the wired pipeline (Task 10)
+/// passes the provisional pre-carve sea level, and the final re-solve
+/// typically lands ~`wedge_freeboard_m` below it, so composed atoll cells
+/// can sit above the globe's final sea level (see `globe::generate` /
+/// the Task 13 design question). Only trail
 /// entries with `age_index >= 2` are old enough to have drifted off the
 /// live hotspot dome and cooled into reef-building range; each maps to its
 /// nearest cell (no interpolation — a seamount and a grid cell are both
@@ -829,6 +834,21 @@ pub fn carve(
 
 #[cfg(test)]
 mod tests {
+    //! NOTE (Task 10 wiring): every test here that builds a real globe via
+    //! `globe::generate` now receives an ALREADY-CARVED surface —
+    //! `g.elevation`/`g.drainage`/`g.sea_level` have the full carve folded
+    //! in — so re-invoking a carve stage on them exercises a
+    //! double-application (`incision_is_monotone_in_erodibility_and_capped`,
+    //! `repose_conserves_mass_and_respects_the_critical_drop`,
+    //! `carve_delta_assembles_from_incision_and_repose_only`,
+    //! `sediment_books_balance_and_mouths_collect_the_rest`,
+    //! `playa_deposit_never_overtops_the_rim_cap`). Verified harmless
+    //! today: each asserts stage-local invariants (monotonicity, mass
+    //! conservation, caps, book balance) that hold on ANY valid surface,
+    //! carved or raw. But it is a latent trap — do not add assertions here
+    //! that assume the input surface is pre-carve (e.g. pinning incision
+    //! depths or expecting virgin drainage); build a synthetic field
+    //! instead, as the deposit_wedge/cap_atolls probes below do.
     use super::*;
     use hornvale_kernel::{Geosphere, Seed};
 
