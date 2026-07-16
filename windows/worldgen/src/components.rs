@@ -4,7 +4,8 @@
 //! domain's canonical registry; `from_stores` builds a validated set from
 //! explicit per-domain stores (Lab's synthetic kinds, composed from the
 //! canonical registries with per-kind overrides). Both enforce referential
-//! integrity (the load-time invariant that replaces `Option<PeopledTraits>`).
+//! integrity (the load-time invariant that replaces the old optional peopled
+//! component: a psyche/perception key with no biosphere row is rejected).
 #![warn(missing_docs)]
 
 use hornvale_kernel::{ComponentStore, KindId};

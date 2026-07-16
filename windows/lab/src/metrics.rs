@@ -4460,7 +4460,7 @@ mod tests {
         // see `bugbear_and_kobold_are_present_in_settlement_composition` in
         // `cli/tests/branches_identity.rs`), so `religion::genesis` never
         // fires for kobold this seed: hobgoblin is Rank-status (per
-        // `hornvale_species::registry`) and still places, so it still
+        // `hornvale_species::psyche_registry`) and still places, so it still
         // commits honorific-bearing epithets — this metric is per-species
         // and does not depend on which OTHER Rank-status people (goblin)
         // also places. kobold is the roster's ONLY Knowledge-status
@@ -4561,9 +4561,9 @@ mod tests {
 
     #[test]
     fn capacity_metric_skips_fauna_kinds_at_seed_42() {
-        // Regression (2026-07-16): the menagerie put fauna kinds (no
-        // `PeopledTraits`) into `default_roster()`, and this metric's
-        // roster loop called `peopled()` unguarded — panicking at census
+        // Regression (2026-07-16): the menagerie put fauna kinds (no psyche
+        // component) into the roster, and this metric's roster loop assumed
+        // a peopled component unguarded — panicking at census
         // scale only, because its calibration battery is heavy-tier and
         // the commit gate never evaluated the metric. This test keeps the
         // evaluation in the commit gate.

@@ -33,23 +33,17 @@ pub fn render_dictionary(world: &World) -> Result<String, String> {
          the same world can differ in which rows are roots, compounds, or gaps.\n\n",
     );
 
-    // Lexicons are a speaking-peoples concept (fauna carry no
-    // `PeopledTraits` and never speak); the Task 4 menagerie widened
-    // `registry()` to include biosphere-only kinds, so both passes here
-    // filter to `peopled.is_some()` before ever reaching `lexicon_of`.
+    // Lexicons are a speaking-peoples concept (fauna carry no psyche and never
+    // speak); `psyche_registry()` is keyed by exactly the four peoples, so
+    // iterating it filters to the speaking kinds before ever reaching
+    // `lexicon_of`.
     let mut lexicons: BTreeMap<&str, Lexicon> = BTreeMap::new();
-    for (species, def) in hornvale_species::registry() {
-        if def.peopled.is_none() {
-            continue;
-        }
+    for species in hornvale_species::psyche_registry().ids() {
         let lexicon = world_builder::lexicon_of(world, species.0).map_err(|e| e.to_string())?;
         lexicons.insert(species.0, lexicon);
     }
 
-    for (species, def) in hornvale_species::registry() {
-        if def.peopled.is_none() {
-            continue;
-        }
+    for species in hornvale_species::psyche_registry().ids() {
         let lexicon = &lexicons[species.0];
 
         doc.push_str(&format!("## {}\n\n", capitalize(species.0)));
@@ -75,8 +69,8 @@ pub fn render_dictionary(world: &World) -> Result<String, String> {
 }
 
 /// The "## Cognates" section: for every family shared by more than one
-/// registered species ([`hornvale_species::family_registry`]'s entries —
-/// currently just goblinoid), one table per family of every concept rooted
+/// registered species ([`hornvale_language::family_proto`]'s entries —
+/// currently just goblinoid among the peoples), one table per family of every concept rooted
 /// (spec §3–4, `LexEntry::Root`) in *all* of that family's daughters —
 /// their shared proto-form (identical across daughters by construction,
 /// since `build_lexicon` draws it once at the family level) beside each
@@ -84,7 +78,7 @@ pub fn render_dictionary(world: &World) -> Result<String, String> {
 /// never inherited as a root (a gap or compound instead), is silently
 /// excluded rather than padded — every surviving row is a genuine,
 /// three-way-attested cognate set. Kobold belongs to its own singleton
-/// family (absent from `family_registry`, spec §3) and so never enters
+/// family (absent from `family_proto`, spec §3) and so never enters
 /// this loop: excluded by construction, not filtered out, so it can never
 /// render here as a false cognate.
 fn render_cognates(world: &World, lexicons: &BTreeMap<&str, Lexicon>) -> String {
@@ -100,16 +94,17 @@ fn render_cognates(world: &World, lexicons: &BTreeMap<&str, Lexicon>) -> String 
          its own section above instead.\n\n",
     );
 
-    let registry = hornvale_species::registry();
-    for family in hornvale_species::family_registry().keys() {
-        // `def.peopled.is_some()` excludes fauna families (draconic, plant)
-        // — they carry no lexicon (`lexicons` above was built peopled-only),
-        // so this leaves the goblinoid triad the only family that clears
-        // the `daughters.len() < 2` guard below.
-        let daughters: Vec<&str> = registry
-            .iter()
-            .filter(|(_, def)| def.family == family.0 && def.peopled.is_some())
-            .map(|(name, _)| name.0)
+    let family_of = hornvale_species::family_of();
+    let psyche = hornvale_species::psyche_registry();
+    for family in hornvale_language::family_proto().ids() {
+        // The `psyche.contains` filter excludes fauna families (draconic,
+        // plant) — they carry no lexicon (`lexicons` above was built
+        // peopled-only), so this leaves the goblinoid triad the only family
+        // that clears the `daughters.len() < 2` guard below.
+        let daughters: Vec<&str> = family_of
+            .ids()
+            .filter(|kind| family_of.get(kind) == Some(&family.0) && psyche.contains(kind))
+            .map(|kind| kind.0)
             .collect();
         if daughters.len() < 2 {
             // A family entry with fewer than two peopled daughters (e.g. a
@@ -303,11 +298,7 @@ mod tests {
         assert!(doc.contains("| Concept | Gloss | Word | IPA | Proto | Derivation |"));
         // peopled-only: fauna never speak, so `lexicon_of` is undefined for
         // them (Task 4 widened `registry()` to include biosphere-only kinds).
-        for species in hornvale_species::registry()
-            .iter()
-            .filter(|(_, def)| def.peopled.is_some())
-            .map(|(name, _)| name.0)
-        {
+        for species in hornvale_species::psyche_registry().ids().map(|k| k.0) {
             assert!(doc.contains(&capitalize(species)), "missing {species}");
             let lexicon = world_builder::lexicon_of(&world, species).unwrap();
             for (concept, _) in lexicon.entries() {
@@ -327,11 +318,7 @@ mod tests {
         let mut saw_gap = false;
         // peopled-only: fauna never speak, so `lexicon_of` is undefined for
         // them (Task 4 widened `registry()` to include biosphere-only kinds).
-        for species in hornvale_species::registry()
-            .iter()
-            .filter(|(_, def)| def.peopled.is_some())
-            .map(|(name, _)| name.0)
-        {
+        for species in hornvale_species::psyche_registry().ids().map(|k| k.0) {
             let lexicon = world_builder::lexicon_of(&world, species).unwrap();
             for (_, entry) in lexicon.entries() {
                 match entry {
@@ -413,11 +400,7 @@ mod tests {
         let world = reference_world();
         // peopled-only: fauna never speak, so `lexicon_of` is undefined for
         // them (Task 4 widened `registry()` to include biosphere-only kinds).
-        for species in hornvale_species::registry()
-            .iter()
-            .filter(|(_, def)| def.peopled.is_some())
-            .map(|(name, _)| name.0)
-        {
+        for species in hornvale_species::psyche_registry().ids().map(|k| k.0) {
             let lexicon = world_builder::lexicon_of(&world, species).unwrap();
             for (_, entry) in lexicon.entries() {
                 let line = word_line(entry);

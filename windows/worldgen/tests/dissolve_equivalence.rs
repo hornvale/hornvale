@@ -5,6 +5,8 @@
 //! byte-identity oracle; this file keeps only the cross-crate coherence the
 //! oracle does not directly witness. Lives in worldgen because only a window
 //! may depend on more than one domain.
+use std::collections::BTreeMap;
+
 use hornvale_worldgen::components::WorldComponents;
 
 #[test]
@@ -69,5 +71,31 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
             members > 1,
             "family proto {family_kind:?} must have more than one member"
         );
+    }
+}
+
+#[test]
+fn every_multi_member_family_has_a_proto() {
+    // The converse of the check above: every family label shared by two or
+    // more kinds (peopled or fauna) must have a proto vector. Without this,
+    // a future edit could add a second member to a fauna-only family and
+    // forget its proto — fauna don't speak, so nothing panics, and the
+    // daughters would silently become isolated languages instead of
+    // inheriting from a shared family.
+    let family_of = hornvale_species::family_of();
+    let proto = hornvale_language::family_proto();
+
+    let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
+    for (_, family) in family_of.iter() {
+        *counts.entry(*family).or_insert(0) += 1;
+    }
+
+    for (family, count) in &counts {
+        if *count >= 2 {
+            assert!(
+                proto.contains(&hornvale_kernel::KindId(family)),
+                "family {family:?} has {count} members but no family_proto entry"
+            );
+        }
     }
 }

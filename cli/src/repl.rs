@@ -300,13 +300,9 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                         writeln!(output, "unknown concept '{concept}'")?;
                     } else {
                         // peopled-only: fauna never speak, so `lexicon_of`
-                        // is undefined for them (Task 4 widened
-                        // `registry()` to include biosphere-only kinds).
-                        for species in hornvale_species::registry()
-                            .iter()
-                            .filter(|(_, def)| def.peopled.is_some())
-                            .map(|(name, _)| name.0)
-                        {
+                        // is undefined for them. `psyche_registry()` is keyed
+                        // by exactly the four speaking peoples.
+                        for species in hornvale_species::psyche_registry().ids().map(|k| k.0) {
                             match world_builder::lexicon_of(world, species) {
                                 Ok(lexicon) => match lexicon.entry(concept) {
                                     Some(entry) => writeln!(
@@ -795,9 +791,9 @@ mod tests {
             .and_then(|s| s.parse().ok())
             .expect("beliefs lists at least one id");
         let recounted = drive_generated(&format!("why {first_id}\n"));
-        // `default_roster()` walks `hornvale_species::registry()` (a
-        // `BTreeMap`) in alphabetical order, and worldgen commits each
-        // species' pantheon in that same roster order — so the pantheon
+        // Worldgen walks the canonical kind registries (keyed by `KindId`,
+        // alphabetical) in that order, and commits each species' pantheon in
+        // that same roster order — so the pantheon
         // committed first, and thus first in `beliefs`' listing, is
         // whichever DOMINANT species sorts first alphabetically. Under the
         // niche-differentiated-K coexistence-stack cutover (The Niche),

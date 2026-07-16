@@ -56,7 +56,8 @@ pub use register::{LineContent, LineSentiment, VoiceParams, render_line};
 
 /// The speech cluster (ECS c3): the phonology envelope type
 /// ([`speech::ArticulationVector`]) and the stopgap social vocabulary
-/// ([`speech::Lexicon`]), moved here from `species::PeopledTraits` — the
+/// ([`speech::Lexicon`]), moved here from the former species peopled
+/// component (ECS c3) — the
 /// phonology component's owner is language. A nested module (not a sibling
 /// file) because its own [`speech::Lexicon`] would otherwise collide with
 /// the generated-vocabulary [`Lexicon`] re-exported from [`lexicon`] at this
@@ -108,7 +109,7 @@ pub mod speech {
     }
 
     /// The peopled social lexicon (stopgap vocabulary The Tongues will
-    /// generate). Moved here from `species::PeopledTraits` (ECS c3).
+    /// generate). Moved here from the former species peopled component (ECS c3).
     /// type-audit: bare-ok(identifier-text)
     #[derive(Clone, Debug, PartialEq)]
     pub struct Lexicon {
@@ -130,8 +131,8 @@ pub mod speech {
     impl Component for Lexicon {}
 
     /// Peopled phonology, one per speaking kind. Values are the
-    /// byte-identical articulation vectors formerly on
-    /// `species::PeopledTraits`.
+    /// byte-identical articulation vectors formerly on the species peopled
+    /// component.
     /// type-audit: bare-ok(identifier-text)
     pub fn articulation_registry() -> ComponentStore<KindId, ArticulationVector> {
         [
@@ -189,7 +190,7 @@ pub mod speech {
     }
 
     /// Peopled lexicon, one per speaking kind. Byte-identical to the former
-    /// `species::PeopledTraits` noun + rung words.
+    /// species peopled component's noun + rung words.
     /// type-audit: bare-ok(identifier-text)
     pub fn lexicon_registry() -> ComponentStore<KindId, Lexicon> {
         [
@@ -243,7 +244,7 @@ pub mod speech {
     }
 
     /// Proto ancestral articulation vectors keyed by family (goblinoid/
-    /// draconic/plant) — moved from `species::family_registry`.
+    /// draconic/plant) — moved here from species (ECS c3).
     /// type-audit: bare-ok(identifier-text)
     pub fn family_proto() -> ComponentStore<KindId, ArticulationVector> {
         [

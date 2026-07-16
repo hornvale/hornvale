@@ -19,7 +19,7 @@ use hornvale_worldgen as world_builder;
 pub(crate) const REFERENCE_SEED: u64 = 42;
 
 /// The one family this page documents: the campaign's only multi-member
-/// family today ([`hornvale_species::family_registry`]). A second family
+/// family today ([`hornvale_language::family_proto`]). A second family
 /// would need either a second page or this function generalized to take a
 /// family argument — deferred until that need is real.
 pub(crate) const FAMILY: &str = "goblinoid";
@@ -27,7 +27,7 @@ pub(crate) const FAMILY: &str = "goblinoid";
 /// Render proto-goblinoid's phoneme inventory, phonotactics, and full
 /// proto-root table as markdown for the book's reference section.
 /// Deterministic: a pure function of the reference seed, the (fixed,
-/// committed) family-registry envelope, and the concept registry
+/// committed) family-proto envelope, and the concept registry
 /// [`world_builder::register_all`] builds fresh — no terrain/settlement
 /// genesis is involved, so this never fails.
 /// type-audit: bare-ok(artifact: return)
@@ -43,7 +43,7 @@ pub fn render_proto() -> Result<String, String> {
         "The shared ancestral language goblin, hobgoblin, and bugbear all descend from (spec \
          §3–4): a phonology with no speakers of its own, drawn once at the family level from \
          reference seed {REFERENCE_SEED} and the family's authored ancestral articulation \
-         vector (`hornvale_species::family_registry`). Every registered concept's proto-root \
+         vector (`hornvale_language::family_proto`). Every registered concept's proto-root \
          below is assigned injectively over the whole concept universe from this inventory \
          (`hornvale_language::assign_proto_roots`, epoch `root/v3` — merger-aware, so no two \
          core concepts collide even after a daughter's cascade), \

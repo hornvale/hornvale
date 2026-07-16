@@ -1427,12 +1427,6 @@ pub fn observation_time(
     Ok(0.0) // pathological all-daylight window: fall back deterministically
 }
 
-/// The shipped species roster — the whole authored registry, in key order.
-/// The default every shipped verb builds with (spec §3).
-pub fn default_roster() -> Vec<hornvale_species::SpeciesDef> {
-    hornvale_species::registry().into_values().collect()
-}
-
 /// Resolve `species` to its canonical `'static` `KindId` label within `wc`,
 /// or fail loudly with the known kinds. A kind's identity is its `KindId`, not
 /// a god-struct — the composition root resolves names against the component
@@ -1449,20 +1443,6 @@ fn resolve_kind(wc: &WorldComponents, species: &str) -> Result<&'static str, Bui
                 known.join(", ")
             ))
         })
-}
-
-/// Borrow `def`'s peopled component, for passes gated to settling,
-/// speaking species (settlement genesis, phonology, perception, naming).
-/// Panics if called on a fauna kind (a `SpeciesDef` with no
-/// `PeopledTraits`) — every call site here is reached only after a
-/// `peopled.is_some()` filter at the pass boundary, so a panic means that
-/// invariant broke, not that fauna are a normal input. Public so the Lab
-/// and vessel windows (both compose worlds through this crate) share the
-/// same guard instead of re-deriving it.
-pub fn peopled(def: &hornvale_species::SpeciesDef) -> &hornvale_species::PeopledTraits {
-    def.peopled
-        .as_ref()
-        .unwrap_or_else(|| panic!("peopled pass over a fauna kind: '{}'", def.name))
 }
 
 /// The phenomena a species (resolved within `wc`) observes.
@@ -1679,10 +1659,10 @@ pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology
 
 /// Draw a `family`'s proto phonology from this world's seed and the
 /// family's authored proto ancestral vector
-/// ([`hornvale_species::family_registry`]) — the family name occupies the
+/// ([`hornvale_language::family_proto`]) — the family name occupies the
 /// species slot in the seed-derivation (e.g. `draw_phonology(seed,
 /// "goblinoid", env)`), a language with no speakers of its own, only
-/// daughters. Panics if `family` is not in `family_registry` (a singleton
+/// daughters. Panics if `family` is not in `family_proto` (a singleton
 /// family has no entry there and never reaches this function — see
 /// `lexicon_of`'s resolution).
 /// type-audit: bare-ok(identifier-text: family)
@@ -3093,9 +3073,9 @@ pub fn settlement_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let places = hornvale_terrain::places(world);
     let mut lines = vec![format!("The land holds {} settlement(s).", places.len())];
 
-    let registry = hornvale_species::registry();
-    let flagships: Vec<(&str, hornvale_settlement::VillageInfo)> = registry
-        .keys()
+    let biosphere = hornvale_species::biosphere_registry();
+    let flagships: Vec<(&str, hornvale_settlement::VillageInfo)> = biosphere
+        .ids()
         .filter_map(|name| flagship_of(world, name.0).map(|v| (name.0, v)))
         .collect();
     let multi_species = flagships.len() > 1;
@@ -3923,7 +3903,7 @@ mod tests {
 
     #[test]
     #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
-    fn build_world_with_default_roster_matches_build_world_byte_for_byte() {
+    fn build_world_from_assembled_components_matches_build_world_byte_for_byte() {
         use hornvale_terrain::TerrainPins;
         let sp = SettlementPins::default();
         for seed in [Seed(7), Seed(42), Seed(1000)] {
@@ -4705,24 +4685,24 @@ mod tests {
         // with.
         let flagship_species = hornvale_species::species_of(&world, village.id)
             .expect("the flagship settlement has a species fact");
-        let registry = hornvale_species::registry();
-        // `flagship_species` is free text read from the ledger (a committed
-        // `Value::Text`), not a `KindId` — resolve it against the registry by
-        // its `name` label.
-        let def = registry
-            .values()
-            .find(|d| d.name == flagship_species.as_str())
-            .expect("flagship species must be in the registry");
         // Reconstruct mind + speech through the same canonical component set
         // the production path (`build_to`) now uses (ECS c3).
         let wc = WorldComponents::assemble().expect("well-formed canonical registries");
+        // `flagship_species` is free text read from the ledger (a committed
+        // `Value::Text`), not a `KindId` — resolve it to its canonical
+        // `'static` label within the component set.
+        let kind = *wc
+            .biosphere
+            .ids()
+            .find(|k| k.0 == flagship_species.as_str())
+            .expect("flagship species must be in the registry");
         let psych_v = wc
             .psyche
-            .get(&KindId(def.name))
+            .get(&kind)
             .expect("peopled pass over a fauna kind");
         let lex = wc
             .lexicon
-            .get(&KindId(def.name))
+            .get(&kind)
             .expect("peopled pass over a fauna kind");
         let psych = hornvale_culture::PsychSummary {
             threat_response: psych_v.threat_response,

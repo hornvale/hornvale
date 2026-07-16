@@ -144,7 +144,7 @@ fn peopled_components() -> WorldComponents {
 fn beta_yields_realistic_coexistence() {
     // This freeze is preregistered against "the shipped 4-goblinoid roster"
     // (module doc, top). Task 4 (the canonical-5E menagerie) widened
-    // `default_roster()` with 12 biosphere-only fauna, but those are not
+    // the roster with 12 biosphere-only fauna, but those are not
     // yet folded into the coexistence packer's competition — that cutover
     // is Task 5's (niche-K), which re-measures this band against the
     // richer roster per the module doc's own Stage-B caveat. Scope this
