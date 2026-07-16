@@ -209,10 +209,11 @@ landmarks the anti-repetition mandate asks for.
 Crust-era semantics; the two new drawn streams append strictly after every
 existing draw, so pinned and unpinned paths still consume identical draws
 and every prior save-format contract holds untouched. Judged against Census
-II's baseline, five of Crust's six bands stayed inside across the tuning
+II's baseline, four of Crust's six bands stayed inside across the tuning
 season (hypsometric-bimodality, continent-count, largest-continent-share,
-plate-size-gini never wavered) and the sixth, shelf-fraction, came inside
-for the first time (0.048 → ~0.09, wave-cut erosion's doing).
+plate-size-gini never wavered), and shelf-fraction came inside for the
+first time (0.048 → ~0.09, wave-cut erosion's doing) — five of six inside
+at close.
 Shoreline-development moved a real +8% and still sits below its floor — an
 open verdict, handed to the banked **rift-and-fit coda** alongside
 a diagnostic finding that the floor's own anchor was partly built on
