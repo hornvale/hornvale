@@ -85,6 +85,7 @@
 - [Goldengrove](./chronicle/goldengrove.md)
 - [The Helm](./chronicle/the-helm.md)
 - [The Menagerie](./chronicle/the-menagerie.md)
+- [The Isotherm](./chronicle/the-isotherm.md)
 
 # The Gallery
 

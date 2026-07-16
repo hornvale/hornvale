@@ -1,7 +1,7 @@
 # The Isotherm — Design
 
 **Date:** 2026-07-16
-**Status:** Draft (autopilot G3 pending)
+**Status:** Shipped (merged 2026-07-16; chronicle `book/src/chronicle/the-isotherm.md`, retrospective `docs/retrospectives/the-isotherm.md`). Post-spec addition at final review: `temperature_grid` (producer per-tile temperature at a day) — the contract-test ground truth (see the retrospective + decision-ledger).
 **Tickets:** [hornvale#2](https://github.com/hornvale/hornvale/issues/2) (seasonal ice), the rainfall/temperature/winds core of [hornvale#5](https://github.com/hornvale/hornvale/issues/5); consumer proof in hornvale/orrery.
 **Parent contracts:** `2026-07-09-scene-protocol-design.md` (schema discipline), `2026-07-14-goldengrove-design.md` §§3, 5 + decision 0055 (the wasm catalog and the cross-repo contract boundary), decision 0022 (sim emits data, clients render).
 **Provenance:** Nathan's standing priority for this arc: *"the more explicit and precise we can make these API contracts, the better; really well-documented APIs and contract tests are my main priority."* This campaign extends `scene/tiles/v1` with the climate layers the orrery needs, and hardens the cross-repo contract discipline every later ticket will flow through.

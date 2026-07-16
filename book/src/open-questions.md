@@ -75,7 +75,14 @@ than feared; it is also not the only interface, and that turned out to be the
 right shape. The scene seam has since crossed a repository boundary: an
 external client now consumes the same documents through a versioned wasm
 catalog, byte-identical across platforms
-([Goldengrove](./chronicle/goldengrove.md), decision 0055).
+([Goldengrove](./chronicle/goldengrove.md), decision 0055). It has also
+started carrying *parameterized* quantities the client evaluates over time —
+per-tile temperature elements a viewer reconstructs across the year, with
+the seasonal evaluator documented normatively in one place and pinned by a
+producer-sourced contract test on both sides of the boundary
+([The Isotherm](./chronicle/the-isotherm.md)). The seam holds not just for
+static quantities but for the small closed-form functions of them, which is
+the more demanding form of the same bet.
 
 ## Precedented but nontrivial (moderate confidence)
 
