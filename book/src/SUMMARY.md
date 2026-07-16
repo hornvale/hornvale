@@ -87,6 +87,7 @@
 - [The Menagerie](./chronicle/the-menagerie.md)
 - [The Isotherm](./chronicle/the-isotherm.md)
 - [Sculpting](./chronicle/sculpting.md)
+- [The True Name](./chronicle/the-true-name.md)
 
 # The Gallery
 

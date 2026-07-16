@@ -43,12 +43,14 @@ pub fn mint_flagship(world: &World, ctx: &LocaleContext) -> Result<Agent, Vessel
     let village = village_info(world).ok_or(VesselError::NoSettlement)?;
     let species = species_of(world, village.id)
         .ok_or_else(|| VesselError::NoSpecies(village.name.clone()))?;
-    let perception = hornvale_worldgen::peopled(
-        registry()
-            .get(species.as_str())
-            .ok_or_else(|| VesselError::NoSpecies(species.clone()))?,
-    )
-    .perception;
+    // `species` is free text read from the ledger (a committed `Value::Text`),
+    // not a `KindId` — resolve it against the registry by its `name` label,
+    // failing loudly if unknown.
+    let species_def = registry()
+        .into_values()
+        .find(|d| d.name == species.as_str())
+        .ok_or_else(|| VesselError::NoSpecies(species.clone()))?;
+    let perception = hornvale_worldgen::peopled(&species_def).perception;
     let lat = number_fact(world, village.id, LATITUDE)?;
     let lon = number_fact(world, village.id, LONGITUDE)?;
     let (la, lo) = (lat.to_radians(), lon.to_radians());

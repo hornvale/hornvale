@@ -12,19 +12,19 @@
 <text x="96.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">&lt; 0</text>
 <text x="177.7" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="177.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[0, 1)</text>
-<rect x="224.4" y="188.0" width="69.0" height="48.0" fill="#5b8dd9" rx="2" />
-<text x="258.9" y="184.0" font-size="11" fill="currentColor" text-anchor="middle">120</text>
+<rect x="224.4" y="202.0" width="69.0" height="34.0" fill="#5b8dd9" rx="2" />
+<text x="258.9" y="198.0" font-size="11" fill="currentColor" text-anchor="middle">85</text>
 <text x="258.9" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[1, 2)</text>
-<rect x="305.5" y="231.6" width="69.0" height="4.4" fill="#5b8dd9" rx="2" />
-<text x="340.0" y="227.6" font-size="11" fill="currentColor" text-anchor="middle">11</text>
+<rect x="305.5" y="224.4" width="69.0" height="11.6" fill="#5b8dd9" rx="2" />
+<text x="340.0" y="220.4" font-size="11" fill="currentColor" text-anchor="middle">29</text>
 <text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[2, 4)</text>
-<rect x="386.7" y="231.2" width="69.0" height="4.8" fill="#5b8dd9" rx="2" />
-<text x="421.1" y="227.2" font-size="11" fill="currentColor" text-anchor="middle">12</text>
+<rect x="386.7" y="226.0" width="69.0" height="10.0" fill="#5b8dd9" rx="2" />
+<text x="421.1" y="222.0" font-size="11" fill="currentColor" text-anchor="middle">25</text>
 <text x="421.1" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[4, 8)</text>
-<rect x="467.8" y="229.2" width="69.0" height="6.8" fill="#5b8dd9" rx="2" />
-<text x="502.3" y="225.2" font-size="11" fill="currentColor" text-anchor="middle">17</text>
+<rect x="467.8" y="226.0" width="69.0" height="10.0" fill="#5b8dd9" rx="2" />
+<text x="502.3" y="222.0" font-size="11" fill="currentColor" text-anchor="middle">25</text>
 <text x="502.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[8, 16)</text>
-<rect x="548.9" y="100.0" width="69.0" height="136.0" fill="#5b8dd9" rx="2" />
-<text x="583.4" y="96.0" font-size="11" fill="currentColor" text-anchor="middle">340</text>
+<rect x="548.9" y="101.6" width="69.0" height="134.4" fill="#5b8dd9" rx="2" />
+<text x="583.4" y="97.6" font-size="11" fill="currentColor" text-anchor="middle">336</text>
 <text x="583.4" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">&gt;= 16</text>
 </svg>

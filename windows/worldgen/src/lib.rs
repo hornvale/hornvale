@@ -17,9 +17,9 @@ use hornvale_climate::{
 };
 use hornvale_kernel::math;
 use hornvale_kernel::{
-    ConceptRegistry, Domain, EntityId, Fact, GeoCoord, Geosphere, LedgerError, ObserverContext,
-    PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation, RegistryError, Seed,
-    Temperature, Value, World, WorldTime, observe,
+    ConceptRegistry, Domain, EntityId, Fact, GeoCoord, Geosphere, KindId, LedgerError,
+    ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation,
+    RegistryError, Seed, Temperature, Value, World, WorldTime, observe,
 };
 use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
@@ -486,6 +486,20 @@ pub fn species_carrying_input(
 /// condition-response (The Niche). Pure; seed-free. Replaces the flat-NPP K
 /// for the coexistence stack. `species_set` index order tags the fields.
 ///
+/// **The returned `u32` is a build-local dense index, not identity.** It is
+/// `species_set`'s 0-based position for this one call, derived by
+/// enumerating a `KindId`-ordered roster/registry slice; it is valid only
+/// within this build and is **never serialized**. A kind's durable,
+/// serialized identity is its [`KindId`](hornvale_kernel::KindId) label
+/// (committed as the `SPECIES_NAME` `Value::Text` fact), never this index —
+/// decision 0015: a name is its own key. Inserting or removing a kind
+/// upstream can renumber every downstream `u32`, but never changes any
+/// other kind's label. Callers that pair this index with other per-call
+/// tuples (`species` below, `mass_map`, `.composition` tags) must rebuild
+/// all of them together from the same `species_set` ordering; none of it
+/// survives a save/load boundary. The other `.enumerate()` sites in this
+/// file that mint a `(tag as u32, ..)` pair share this exact contract.
+///
 /// For each species and cell: `saturate(base_carrying(cell) *
 /// total_uptake_s)` (the resource-supply term — the shared, psychology-free
 /// NPP proxy scaled by the species' summed niche weight over
@@ -577,6 +591,8 @@ pub fn demography_report_with_beta(
         insolation_scalar,
         &species_set,
     );
+    // `tag as u32` here is the same build-local dense index documented on
+    // `niche_per_species_k` — never serialized, never identity.
     let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> = species_set
         .iter()
         .enumerate()
@@ -1627,11 +1643,11 @@ pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology
 /// family has no entry there and never reaches this function — see
 /// `lexicon_of`'s resolution).
 /// type-audit: bare-ok(identifier-text: family)
-pub fn proto_phonology_of(world: &World, family: &str) -> hornvale_language::Phonology {
+pub fn proto_phonology_of(world: &World, family: &'static str) -> hornvale_language::Phonology {
     hornvale_language::draw_phonology(
         &world.seed,
         family,
-        &envelope_of(&hornvale_species::family_registry()[family]),
+        &envelope_of(&hornvale_species::family_registry()[&KindId(family)]),
     )
 }
 
@@ -1987,7 +2003,7 @@ pub fn lexicon_of_in(
     // singleton family (e.g. kobold) is absent there, so it stays its own
     // family label and its own phonology stands in for its proto — the
     // pre-family draw, preserved exactly.
-    let (fam_label, proto_ph) = match hornvale_species::family_registry().get(family) {
+    let (fam_label, proto_ph) = match hornvale_species::family_registry().get(&KindId(family)) {
         Some(_) => (family, proto_phonology_of(world, family)),
         None => (def.name, ph.clone()),
     };
@@ -2407,6 +2423,8 @@ fn build_to(
         insolation_scalar,
         &species_set,
     );
+    // `tag as u32` here is the same build-local dense index documented on
+    // `niche_per_species_k` — never serialized, never identity.
     let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> = species_set
         .iter()
         .enumerate()
@@ -2504,7 +2522,8 @@ fn build_to(
         // singleton family (e.g. kobold) is absent there, so it stays its
         // own family label and its own phonology stands in for its proto —
         // the pre-family draw, preserved exactly.
-        let (fam_label, proto_ph) = match hornvale_species::family_registry().get(family) {
+        let (fam_label, proto_ph) = match hornvale_species::family_registry().get(&KindId(family))
+        {
             Some(_) => (family, proto_phonology_of(&world, family)),
             None => (def.name, ph.clone()),
         };
@@ -2822,7 +2841,7 @@ pub fn settlement_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let registry = hornvale_species::registry();
     let flagships: Vec<(&str, hornvale_settlement::VillageInfo)> = registry
         .keys()
-        .filter_map(|name| flagship_of(world, name).map(|v| (*name, v)))
+        .filter_map(|name| flagship_of(world, name.0).map(|v| (name.0, v)))
         .collect();
     let multi_species = flagships.len() > 1;
 
@@ -3348,7 +3367,7 @@ pub fn rendered_beliefs(
 ) -> Result<Vec<(hornvale_religion::Belief, String)>, BuildError> {
     let mut out = Vec::new();
     for (name, def) in hornvale_species::registry() {
-        if let Some((_, rendered)) = rendered_pantheon_of(world, name, &def)? {
+        if let Some((_, rendered)) = rendered_pantheon_of(world, name.0, &def)? {
             out.extend(rendered);
         }
     }
@@ -3365,11 +3384,11 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     let peoples = registry
         .iter()
         .filter_map(|(name, def)| {
-            let flagship = flagship_of(world, name)?;
+            let flagship = flagship_of(world, name.0)?;
             let mut lines = culture_lines(world, &flagship);
             lines.push(hornvale_almanac::render_life_history_line(def));
             Some(hornvale_almanac::PeopleBlock {
-                species: (*name).to_string(),
+                species: name.0.to_string(),
                 noun: peopled(def).noun.to_string(),
                 name: flagship.name.clone(),
                 population: flagship.population,
@@ -3402,9 +3421,9 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         pantheons: {
             let mut blocks = Vec::new();
             for (name, def) in hornvale_species::registry() {
-                if let Some((v, rendered)) = rendered_pantheon_of(world, name, &def)? {
+                if let Some((v, rendered)) = rendered_pantheon_of(world, name.0, &def)? {
                     blocks.push(hornvale_almanac::PantheonBlock {
-                        species: name.to_string(),
+                        species: name.0.to_string(),
                         noun: peopled(&def).noun.to_string(),
                         settlement: v.name.clone(),
                         cult_form: hornvale_religion::cult_form_held_by(world, v.id),
@@ -4405,7 +4424,13 @@ mod tests {
         let flagship_species = hornvale_species::species_of(&world, village.id)
             .expect("the flagship settlement has a species fact");
         let registry = hornvale_species::registry();
-        let def = &registry[flagship_species.as_str()];
+        // `flagship_species` is free text read from the ledger (a committed
+        // `Value::Text`), not a `KindId` — resolve it against the registry by
+        // its `name` label.
+        let def = registry
+            .values()
+            .find(|d| d.name == flagship_species.as_str())
+            .expect("flagship species must be in the registry");
         let peopled_def = peopled(def);
         let psych = hornvale_culture::PsychSummary {
             threat_response: peopled_def.psych.threat_response,
@@ -4552,7 +4577,7 @@ mod tests {
     /// menagerie; this is a minimal stand-in for the guard alone).
     #[test]
     fn fauna_are_skipped_by_settlement_genesis() {
-        let goblin = hornvale_species::registry()["goblin"].clone();
+        let goblin = hornvale_species::registry()[&KindId("goblin")].clone();
         let fauna = hornvale_species::SpeciesDef {
             name: "test-beast",
             family: "test-beast",
@@ -4666,13 +4691,13 @@ mod tests {
     #[test]
     fn goblin_lens_is_exactly_identity() {
         let reg = hornvale_species::registry();
-        assert!(perception_lens(&peopled(&reg["goblin"]).perception).is_identity());
+        assert!(perception_lens(&peopled(&reg[&KindId("goblin")]).perception).is_identity());
     }
 
     #[test]
     fn kobold_lens_matches_the_spec_derivation() {
         let reg = hornvale_species::registry();
-        let lens = perception_lens(&peopled(&reg["kobold"]).perception);
+        let lens = perception_lens(&peopled(&reg[&KindId("kobold")]).perception);
         assert!((lens.day_sky - 0.52).abs() < 1e-12);
         assert!((lens.night_sky - 1.82).abs() < 1e-12);
         assert!((lens.ambient - 0.70).abs() < 1e-12);
@@ -4733,7 +4758,7 @@ mod tests {
     #[test]
     fn goblin_voice_params_are_the_baseline() {
         let reg = hornvale_species::registry();
-        let v = voice_params(&peopled(&reg["goblin"]).psych);
+        let v = voice_params(&peopled(&reg[&KindId("goblin")]).psych);
         assert!((v.formality - 0.5).abs() < 1e-12 && (v.epithet_density - 0.5).abs() < 1e-12);
     }
 

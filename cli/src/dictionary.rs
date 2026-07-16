@@ -42,17 +42,17 @@ pub fn render_dictionary(world: &World) -> Result<String, String> {
         if def.peopled.is_none() {
             continue;
         }
-        let lexicon = world_builder::lexicon_of(world, species).map_err(|e| e.to_string())?;
-        lexicons.insert(species, lexicon);
+        let lexicon = world_builder::lexicon_of(world, species.0).map_err(|e| e.to_string())?;
+        lexicons.insert(species.0, lexicon);
     }
 
     for (species, def) in hornvale_species::registry() {
         if def.peopled.is_none() {
             continue;
         }
-        let lexicon = &lexicons[species];
+        let lexicon = &lexicons[species.0];
 
-        doc.push_str(&format!("## {}\n\n", capitalize(species)));
+        doc.push_str(&format!("## {}\n\n", capitalize(species.0)));
         doc.push_str(
             "| Concept | Gloss | Word | IPA | Proto | Derivation |\n|---|---|---|---|---|---|\n",
         );
@@ -108,8 +108,8 @@ fn render_cognates(world: &World, lexicons: &BTreeMap<&str, Lexicon>) -> String 
         // the `daughters.len() < 2` guard below.
         let daughters: Vec<&str> = registry
             .iter()
-            .filter(|(_, def)| def.family == *family && def.peopled.is_some())
-            .map(|(name, _)| *name)
+            .filter(|(_, def)| def.family == family.0 && def.peopled.is_some())
+            .map(|(name, _)| name.0)
             .collect();
         if daughters.len() < 2 {
             // A family entry with fewer than two peopled daughters (e.g. a
@@ -119,7 +119,7 @@ fn render_cognates(world: &World, lexicons: &BTreeMap<&str, Lexicon>) -> String 
             continue;
         }
 
-        doc.push_str(&format!("### {}\n\n", capitalize(family)));
+        doc.push_str(&format!("### {}\n\n", capitalize(family.0)));
         doc.push_str("| Concept | Gloss | Proto |");
         for daughter in &daughters {
             doc.push_str(&format!(" {} |", capitalize(daughter)));
@@ -306,7 +306,7 @@ mod tests {
         for species in hornvale_species::registry()
             .iter()
             .filter(|(_, def)| def.peopled.is_some())
-            .map(|(name, _)| name)
+            .map(|(name, _)| name.0)
         {
             assert!(doc.contains(&capitalize(species)), "missing {species}");
             let lexicon = world_builder::lexicon_of(&world, species).unwrap();
@@ -330,7 +330,7 @@ mod tests {
         for species in hornvale_species::registry()
             .iter()
             .filter(|(_, def)| def.peopled.is_some())
-            .map(|(name, _)| name)
+            .map(|(name, _)| name.0)
         {
             let lexicon = world_builder::lexicon_of(&world, species).unwrap();
             for (_, entry) in lexicon.entries() {
@@ -416,7 +416,7 @@ mod tests {
         for species in hornvale_species::registry()
             .iter()
             .filter(|(_, def)| def.peopled.is_some())
-            .map(|(name, _)| name)
+            .map(|(name, _)| name.0)
         {
             let lexicon = world_builder::lexicon_of(&world, species).unwrap();
             for (_, entry) in lexicon.entries() {
