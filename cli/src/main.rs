@@ -746,9 +746,11 @@ fn cmd_lab_list_metrics() -> Result<(), String> {
 }
 
 /// Emit a scene description as JSON on stdout: `scene tiles` renders the
-/// cartographic tile lattice (scene/tiles/v1), and `scene system` renders the
-/// system's orbital elements for the orrery (scene/system/v1). Deterministic;
-/// CI drift-checks the committed example scene.
+/// cartographic tile lattice (scene/tiles/v1), `scene tiles-region` renders one
+/// cube-sphere quadtree tile's footprint at higher on-tile density
+/// (scene/tiles-region/v1), and `scene system` renders the system's orbital
+/// elements for the orrery (scene/system/v1). Deterministic; CI drift-checks
+/// the committed example scene.
 fn cmd_scene(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("tiles") => {
