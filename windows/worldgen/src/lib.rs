@@ -5056,4 +5056,137 @@ mod tests {
             "K fields are niche-differentiated, not proportional: lo={lo} hi={hi}"
         );
     }
+
+    /// The Seam's behavioral exit criterion (Task 6, ledger #48): does the
+    /// full 16-species HABITAT stack (fauna included — distinct from the
+    /// peopled-only SETTLEMENT stack `species_pin_isolation` etc. probe)
+    /// show the menagerie breaking the goblinoid "oatmeal"? Packs the whole
+    /// roster through the exact `niche_per_species_k` -> `coexist::pack`
+    /// pipeline settlement genesis and `demography_report` share (same
+    /// frozen `BETA`/`FLOOR`), then reads the per-cell DOMINANT species —
+    /// the greatest realized individual density, tie-broken to the lowest
+    /// species id (`report.stack.density` is already tag-ascending, so
+    /// "replace only on strictly greater" keeps the first-seen id on an
+    /// exact tie, matching `total_cmp`'s determinism).
+    ///
+    /// CALIBRATION FINDING (2026-07-16, seed 42): this does NOT emerge.
+    /// Exactly 2 distinct dominants (`twig-blight`: 1801 cells, `rust-
+    /// monster`: 1685 cells) sweep all 3486 dominated land cells; every one
+    /// of the other 14 species (the 4 peoples AND the 10 other fauna,
+    /// including `treant`, `xorn`, and all three chromatic dragons) is
+    /// PRESENT with positive density at nearly every land cell but never
+    /// the local arg-max, so each holds zero strongholds. This is not
+    /// richer than the peopled-only 2-way split (goblin/hobgoblin,
+    /// `beta_calibration_freeze`/Task 5) — it is the SAME shape, just with
+    /// two different (smaller-bodied) winners.
+    ///
+    /// Root cause (traced, not guessed): `coexist::pack` converts a
+    /// species' competition SHARE to a per-individual DENSITY by dividing
+    /// by `footprint::home_range(mass)`, which scales super-linearly in
+    /// body mass (Kleiber exponent 1.25). `treant` (1800 kg) vs its
+    /// understory cousin `twig-blight` (5 kg) is a 360x mass ratio ->
+    /// ~1568x home-range ratio; `white/red/black-dragon` (2200-2700 kg) vs
+    /// `owlbear` (450 kg) is a ~5-6x mass ratio -> ~7x home-range ratio.
+    /// Observed max per-cell density confirms the direction: `treant`
+    /// 0.00728 vs `twig-blight` 0.613 (~84x), `xorn` 0.0367 vs
+    /// `rust-monster` 0.307 (~8x) — the mighty specialists' resource-share
+    /// advantage (potency-bought sovereignty floor, obligate niche fit)
+    /// never closes a mass gap this large in a per-INDIVIDUAL metric. This
+    /// is exactly the lever Task 4's report flagged forward to Task 6
+    /// ("Mass flags... calibrate if biogeography-emerges needs it") and
+    /// the kind of authored-value retune the B2b precedent handles — a
+    /// controller/Nathan calibration call (fauna mass and/or sovereignty/
+    /// devotion coefficients), not something this task retunes unilaterally.
+    ///
+    /// The assertions below are written to the SPEC's real target (not
+    /// weakened to the observed 2) and are `#[ignore]`d rather than forced
+    /// or deleted, so they stand ready to re-run once a calibration pass
+    /// lands. Full breakdown, per-species max-density trace, and the
+    /// calibration writeup: `.superpowers/sdd/task-6-report.md`.
+    #[test]
+    #[ignore = "CALIBRATION FINDING (task 6, 2026-07-16, ledger #48): seed-42 \
+                full-roster per-cell dominant-density count is 2, not richer \
+                than the peopled-only 2-way split; treant/xorn/all three \
+                chromatic dragons hold zero strongholds (Kleiber home-range \
+                scaling swamps their resource-share advantage in a per- \
+                individual density metric). Awaiting controller calibration \
+                (fauna mass / sovereignty-devotion retune) before re-\
+                asserting the campaign's exit criterion — see \
+                .superpowers/sdd/task-6-report.md."]
+    fn menagerie_fauna_hold_resource_partitioned_strongholds() {
+        let world = generated(42);
+        let roster = default_roster();
+        // Reuse the exact pack params (BETA/FLOOR) genesis and
+        // `demography_report` share — no bespoke beta/floor here.
+        let report = demography_report(&world, &roster).expect("demography report");
+
+        let terrain = terrain_of(&world).unwrap();
+        let geo = terrain.geosphere();
+
+        // Per-cell dominant species id: greatest density wins; deterministic
+        // tie-break to the lowest species id.
+        let mut dominant_counts: std::collections::BTreeMap<u32, usize> =
+            std::collections::BTreeMap::new();
+        for cell in geo.cells() {
+            let mut best: Option<(u32, f64)> = None;
+            for (id, density) in &report.stack.density {
+                let d = *density.get(cell);
+                if d <= 0.0 {
+                    continue;
+                }
+                best = match best {
+                    None => Some((*id, d)),
+                    Some((_, bd)) if d.total_cmp(&bd) == std::cmp::Ordering::Greater => {
+                        Some((*id, d))
+                    }
+                    other => other,
+                };
+            }
+            if let Some((id, _)) = best {
+                *dominant_counts.entry(id).or_insert(0) += 1;
+            }
+        }
+
+        let name_of = |id: u32| roster[id as usize].name;
+        let mut breakdown: Vec<(&str, usize)> = dominant_counts
+            .iter()
+            .map(|(id, count)| (name_of(*id), *count))
+            .collect();
+        breakdown.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+
+        let distinct_dominants = dominant_counts.len();
+        // Substantially richer than the peopled-only 2-way split — the
+        // campaign's stated target (spec's illustrative floor shape:
+        // observe, then pin well below it). NOT weakened to match today's
+        // observed 2.
+        assert!(
+            distinct_dominants >= 6,
+            "expected a broad, resource-partitioned biogeography (>= 6 distinct \
+             dominants, well above the peopled-only 2-way split), got \
+             {distinct_dominants}: {breakdown:?}"
+        );
+
+        let dominates_a_cell = |name: &str| {
+            let id = roster
+                .iter()
+                .position(|d| d.name == name)
+                .expect("species in roster") as u32;
+            dominant_counts.get(&id).copied().unwrap_or(0) > 0
+        };
+
+        assert!(
+            dominates_a_cell("treant"),
+            "the photosynthate specialist (treant) should hold a stronghold: {breakdown:?}"
+        );
+        assert!(
+            dominates_a_cell("xorn"),
+            "the mineral specialist (xorn) should hold a stronghold: {breakdown:?}"
+        );
+        assert!(
+            dominates_a_cell("white-dragon")
+                || dominates_a_cell("red-dragon")
+                || dominates_a_cell("black-dragon"),
+            "at least one chromatic dragon (mighty apex) should hold a stronghold: {breakdown:?}"
+        );
+    }
 }
