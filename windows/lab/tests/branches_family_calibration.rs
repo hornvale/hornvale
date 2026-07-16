@@ -228,9 +228,14 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     let (mg, mh, mb) = (mean(&goblin), mean(&hobgoblin), mean(&bugbear));
 
     // The aggregate ordering: pinned exact means.
-    assert!((mg - 3.058).abs() < 1e-9, "goblin mean drifted: {mg}");
+    //
+    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
+    // regen, commit 1c954d0): re-measured (goblin 3.058 -> 3.057).
+    assert!((mg - 3.057).abs() < 1e-9, "goblin mean drifted: {mg}");
     assert!((mh - 2.485).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 4.482).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
+    // regen, commit 1c954d0): re-measured (bugbear 4.482 -> 4.481).
+    assert!((mb - 4.481).abs() < 1e-9, "bugbear mean drifted: {mb}");
     assert!(
         mb >= mg && mg >= mh,
         "loudness ordering failed in aggregate: bugbear {mb} >= goblin {mg} >= hobgoblin {mh}"
@@ -246,9 +251,11 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     let chain = (0..n)
         .filter(|&i| bugbear[i] >= goblin[i] && goblin[i] >= hobgoblin[i])
         .count();
+    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
+    // regen, commit 1c954d0): per-seed rates re-measured below.
     assert_eq!(bg, 859, "bugbear>=goblin rate drifted: {bg}/{n}");
     assert_eq!(gh, 718, "goblin>=hobgoblin rate drifted: {gh}/{n}");
-    assert_eq!(bh, 909, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
+    assert_eq!(bh, 907, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
     assert_eq!(chain, 586, "full-chain per-seed rate drifted: {chain}/{n}");
 }
 
@@ -301,10 +308,15 @@ fn homophony_count_is_measured_and_pinned() {
     // 1.989, bugbear 6.818 -> 8.047, kobold 2.501 -> 2.384 (the-gathering's
     // field condensation shifts which settlements each seed fields, moving
     // every daughter's periphery homophony draws).
-    assert!((mg - 2.273).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 1.989).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 8.047).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 2.384).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
+    // regen, commit 1c954d0): goblin re-pinned 2.273 -> 1.852, hobgoblin
+    // 1.989 -> 1.755, bugbear 8.047 -> 3.007, kobold 2.384 -> 1.006 (the
+    // true-name/KindId work reshapes each daughter's periphery homophony
+    // draws).
+    assert!((mg - 1.852).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 1.755).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 3.007).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 1.006).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

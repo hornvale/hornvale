@@ -168,9 +168,16 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
             spinning_eternal_exceptions += 1;
         }
     }
+    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
+    // regen, commit 1c954d0): belief-kind `ambient` went extinct across the
+    // regenerated census (69 -> 0 occurrences); every locked world now mints
+    // an eternal first belief instead. The ambient-extinction / attribution-
+    // pool collapse is under a named investigation (rift-and-fit campaign
+    // ledger #14/#19); this pin records the measured canonical value, not a
+    // verdict that the movement is correct.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (11, 37),
+        (48, 0),
         "locked-world head-belief split (eternal, ambient) drifted"
     );
     // Pinned calibration row (re-measured for the four-people world, Task
@@ -190,8 +197,12 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // spinning worlds mint an eternal first belief; re-measured (5 -> 2).
     // The locked-world split above is untouched — locked worlds have no
     // eclipse cycle to observe.
+    //
+    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
+    // regen, commit 1c954d0): re-measured (2 -> 0); this exception count is
+    // part of the same ambient-extinction movement pinned above.
     assert_eq!(
-        spinning_eternal_exceptions, 2,
+        spinning_eternal_exceptions, 0,
         "spinning-yet-eternal exception count drifted"
     );
 }
@@ -357,8 +368,14 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // same way on every seed — of the 1000 rows, 493 report a coastal
     // flagship and 507 report an inland one (no `Absent` rows; every seed
     // still condenses a flagship somewhere).
-    assert_eq!(coastal, 493, "coastal flagship count drifted");
-    assert_eq!(inland, 507, "inland flagship count drifted");
+    //
+    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
+    // regen, commit 1c954d0): the sculpting v3 terrain epoch reshapes
+    // coastline geometry, shifting which sites condense a goblin flagship;
+    // re-measured (493 -> 353 coastal, 507 -> 643 inland; the remaining 4
+    // seeds report neither flag).
+    assert_eq!(coastal, 353, "coastal flagship count drifted");
+    assert_eq!(inland, 643, "inland flagship count drifted");
 }
 
 #[test]
@@ -516,12 +533,17 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // `the-census`): the night-sky campaign's new phenomena shift the
     // sun/night-star brightness split among moonless spinning worlds; the
     // sun's share drops sharply.
+    //
+    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
+    // regen, commit 1c954d0): re-measured; the sun/night-star brightness
+    // split among moonless spinning worlds shifts again (56 -> 13 solar,
+    // 94 -> 19 lunar).
     assert_eq!(
-        moonless_solar, 56,
+        moonless_solar, 13,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 94,
+        moonless_lunar, 19,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -594,8 +616,16 @@ fn blind_attribution_beats_chance_decisively() {
     // `the-census`): the night-sky campaign's new phenomena widen the
     // attribution pool's correct share; the preregistered floor above still
     // holds decisively (0.896 >= 0.8).
-    assert_eq!(correct, 896, "blind-attribution count drifted");
-    assert_eq!(total, 1000, "attributable-pair count drifted");
+    //
+    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
+    // regen, commit 1c954d0): the attributable-pair pool collapses sharply
+    // (1000 -> 224 pairs; 896 -> 188 correct, accuracy 0.839, still above
+    // the 0.8 floor asserted above). The ambient-extinction / attribution-
+    // pool collapse is under a named investigation (rift-and-fit campaign
+    // ledger #14/#19); this pin records the measured canonical value, not a
+    // verdict that the movement is correct.
+    assert_eq!(correct, 188, "blind-attribution count drifted");
+    assert_eq!(total, 224, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -884,8 +914,13 @@ fn name_collision_rate_is_measured_and_pinned() {
     // (19 -> 62 zero-collision worlds, mean 19.61% -> 15.53%); Eclipse
     // Seasons' pantheon re-derivation on mooned seeds reshuffles the
     // deity-name draws feeding the same lexicons.
-    assert_eq!(zero, 62, "zero-collision world count drifted");
-    assert_eq!(nonzero, 938, "nonzero-collision world count drifted");
+    //
+    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
+    // regen, commit 1c954d0): the true-name/KindId work changes how
+    // settlement names draw from each culture's lexicon, sharply reducing
+    // reuse (62 -> 272 zero-collision worlds).
+    assert_eq!(zero, 272, "zero-collision world count drifted");
+    assert_eq!(nonzero, 728, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -894,7 +929,9 @@ fn name_collision_rate_is_measured_and_pinned() {
         // The 1000-seed canonical census re-pin (2026-07-14, the-gathering +
         // night-sky): 0.162_252_788_362 -> 0.210_597_623_083.
         // Census regen (2026-07-14 #2): -> 0.155_266_538_742.
-        (mean - 0.155_266_538_742).abs() < 1e-6,
+        // Census regen (2026-07-16, post-sculpting/isotherm/true-name):
+        // -> 0.066_086_440_963_100.
+        (mean - 0.066_086_440_963_100).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -954,9 +991,16 @@ fn name_length_distributions_are_measured_and_pinned() {
     // LONGER (goblin 10.40 -> 14.94, kobold 13.59 -> 14.42) — the same
     // mechanism that dropped the collision rate above: longer, less-
     // repeated compounds. Present counts hold at every seed for both.
+    //
+    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
+    // regen, commit 1c954d0): the true-name/KindId work changes settlement
+    // naming; goblin drops 4 present rows (1000 -> 996, mean 14.94 -> 14.02)
+    // and kobold drops sharply (1000 -> 225 present, mean 14.42 -> 9.72) —
+    // the sculpting v3 terrain epoch's coastline/hypsometry changes shift
+    // which seeds field a kobold settlement at all. Re-measured below.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 1000u32, 14.941_726_710_4),
-        ("kobold", 1000u32, 14.415_525_512_5),
+        ("goblin", 996u32, 14.017_905_514_759_04),
+        ("kobold", 225u32, 9.719_762_956_444_445),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1171,7 +1215,9 @@ fn null_control_name_length_smd_is_pinned() {
         // libm re-pin (decision 0041): -0.082_573_510_253_099_77 -> below
         // Census regen (2026-07-14): -0.082_524_201_701_795_61 -> below.
         // Census regen (2026-07-14 #2): -0.071_825_669_752_140_97 -> below.
-        (namelen - -0.055_225_720_597_668_71).abs() < 1e-9,
+        // Census regen (2026-07-16, post-sculpting/isotherm/true-name
+        // 1000-seed regen, commit 1c954d0): -> -0.062_795_250_861_151_92.
+        (namelen - -0.062_795_250_861_151_92).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
