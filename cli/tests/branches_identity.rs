@@ -167,9 +167,14 @@ fn kobold_lexicon_is_the_singleton_build_lexicon_call() {
 #[test]
 fn kobold_phonology_is_a_pure_function_of_seed_and_envelope() {
     let world = default_generated_seed_42();
-    let registry = hornvale_species::registry();
-    let kobold_articulation =
-        &hornvale_worldgen::peopled(&registry[&KindId("kobold")]).articulation;
+    // `envelope_of` now takes language's own articulation type (ECS c3); the
+    // kobold row of the canonical articulation registry is byte-identical to
+    // the god-struct's `peopled(kobold).articulation` (proved by
+    // `dissolve_equivalence`), so the drawn phonology is unchanged.
+    let articulation = hornvale_language::articulation_registry();
+    let kobold_articulation = articulation
+        .get(&KindId("kobold"))
+        .expect("kobold has an articulation row");
     let envelope = hornvale_worldgen::envelope_of(kobold_articulation);
     let direct = hornvale_language::draw_phonology(&world.seed, "kobold", &envelope);
     assert_eq!(

@@ -5,6 +5,7 @@
 //! where the application composes them (Constitution §2.6).
 #![warn(missing_docs)]
 
+use crate::components::WorldComponents;
 use hornvale_almanac::AlmanacContext;
 use hornvale_astronomy::{
     CELESTIAL_BODY, ConstantSun, GeneratedSky, GenesisError, NIGHT_STAR, SEASONAL_CYCLE, SkyPins,
@@ -1515,7 +1516,14 @@ fn observed_phenomena_from(
     place: EntityId,
     position: Option<GeoCoord>,
 ) -> Result<Vec<Phenomenon>, BuildError> {
-    let perception = &peopled(def).perception;
+    // Source the kind's perception from a roster-derived component set rather
+    // than `peopled(def)` (ECS c3). `def`'s own single-kind roster suffices —
+    // its perception row is byte-identical to the full-roster component set.
+    let wc = WorldComponents::from_roster(std::slice::from_ref(def))?;
+    let perception = wc
+        .perception
+        .get(&KindId(def.name))
+        .expect("peopled pass over a fauna kind");
     let day = observation_time(world, perception.activity)?;
     let sky = sky_of(world)?;
     let climate = UniformClimate;
@@ -1590,12 +1598,13 @@ pub fn observed_phenomena_as(world: &World, species: &str) -> Result<Vec<Phenome
     observed_phenomena_as_in(world, &default_roster(), species)
 }
 
-/// Map a species' articulation vector onto language's own `Envelope` copy
-/// (spec §7): every scalar dimension is a direct 1:1 carry — both vectors
+/// Map a kind's (language-owned) articulation vector onto language's own
+/// `Envelope` (spec §7): every scalar dimension is a direct 1:1 carry — both
 /// share the same 0–1 scale and semantics — and `ExoticManner` maps onto
-/// language's own `ExoticSeg` one variant at a time. This is the only place
-/// either vector is ever converted; language never imports species.
-pub fn envelope_of(art: &hornvale_species::ArticulationVector) -> hornvale_language::Envelope {
+/// `ExoticSeg` one variant at a time. The composition root now sources the
+/// articulation from a roster-derived `WorldComponents` (already the language
+/// type), so no species→language conversion remains here.
+pub fn envelope_of(art: &hornvale_language::ArticulationVector) -> hornvale_language::Envelope {
     hornvale_language::Envelope {
         labiality: art.labiality,
         vowel_space: art.vowel_space,
@@ -1604,10 +1613,10 @@ pub fn envelope_of(art: &hornvale_species::ArticulationVector) -> hornvale_langu
         voice_loudness: art.voice_loudness,
         tonality: art.tonality,
         exotic: match art.exotic {
-            hornvale_species::ExoticManner::None => hornvale_language::ExoticSeg::None,
-            hornvale_species::ExoticManner::Trill => hornvale_language::ExoticSeg::Trill,
-            hornvale_species::ExoticManner::Click => hornvale_language::ExoticSeg::Click,
-            hornvale_species::ExoticManner::Ejective => hornvale_language::ExoticSeg::Ejective,
+            hornvale_language::ExoticManner::None => hornvale_language::ExoticSeg::None,
+            hornvale_language::ExoticManner::Trill => hornvale_language::ExoticSeg::Trill,
+            hornvale_language::ExoticManner::Click => hornvale_language::ExoticSeg::Click,
+            hornvale_language::ExoticManner::Ejective => hornvale_language::ExoticSeg::Ejective,
         },
     }
 }
@@ -1624,12 +1633,18 @@ pub fn language_of_in(
     roster: &[hornvale_species::SpeciesDef],
     species: &str,
 ) -> hornvale_language::Phonology {
+    // The kind's phonology is sourced from a roster-derived component set
+    // (the language-typed articulation), not `peopled(def)` directly — a
+    // synthetic roster carries its own translated values (ECS c3). `def_in`
+    // resolves `species` to its `'static` name (the `KindId` key); building
+    // the component set re-runs the integrity check over `roster`.
     let def = def_in(roster, species).unwrap_or_else(|e| panic!("language_of_in: {e}"));
-    hornvale_language::draw_phonology(
-        &world.seed,
-        species,
-        &envelope_of(&peopled(def).articulation),
-    )
+    let wc = WorldComponents::from_roster(roster)
+        .unwrap_or_else(|e| panic!("language_of_in: malformed roster: {e:?}"));
+    let art = wc.articulation.get(&KindId(def.name)).unwrap_or_else(|| {
+        panic!("language_of_in: '{species}' is not a speaking kind in the roster")
+    });
+    hornvale_language::draw_phonology(&world.seed, species, &envelope_of(art))
 }
 
 /// Draw a species' phonology, resolving `species` within the shipped
@@ -1649,11 +1664,14 @@ pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology
 /// `lexicon_of`'s resolution).
 /// type-audit: bare-ok(identifier-text: family)
 pub fn proto_phonology_of(world: &World, family: &'static str) -> hornvale_language::Phonology {
-    hornvale_language::draw_phonology(
-        &world.seed,
-        family,
-        &envelope_of(&hornvale_species::family_registry()[&KindId(family)]),
-    )
+    // The proto vector comes from language's canonical family-proto store
+    // (`WorldComponents::family_proto`), keyed by family label; a singleton
+    // family has no entry there and never reaches this function.
+    let proto = hornvale_language::family_proto();
+    let art = proto
+        .get(&KindId(family))
+        .unwrap_or_else(|| panic!("proto_phonology_of: family '{family}' has no proto vector"));
+    hornvale_language::draw_phonology(&world.seed, family, &envelope_of(art))
 }
 
 /// Map a species' perception vector onto the color pack's two acquisition
@@ -1859,7 +1877,13 @@ fn exposure_of_impl(
     };
 
     let species = def.name;
-    let perception = &peopled(def).perception;
+    // Source perception from a roster-derived component set (ECS c3); `def`'s
+    // own single-kind roster gives the byte-identical perception row.
+    let wc = WorldComponents::from_roster(std::slice::from_ref(def))?;
+    let perception = wc
+        .perception
+        .get(&KindId(def.name))
+        .expect("peopled pass over a fauna kind");
     let depths = pack_depths(perception);
     let geo = terrain.geosphere();
 
@@ -2003,12 +2027,12 @@ pub fn lexicon_of_in(
     let exposures = exposure_of(world, species)?;
     let def = def_in(roster, species)?;
     let family = def.family;
-    // A family with more than one member has a proto ancestral vector in
-    // `family_registry` and draws a real shared proto phonology; a
+    // A family with more than one member has a proto ancestral vector in the
+    // canonical family-proto store and draws a real shared proto phonology; a
     // singleton family (e.g. kobold) is absent there, so it stays its own
     // family label and its own phonology stands in for its proto — the
     // pre-family draw, preserved exactly.
-    let (fam_label, proto_ph) = match hornvale_species::family_registry().get(&KindId(family)) {
+    let (fam_label, proto_ph) = match hornvale_language::family_proto().get(&KindId(family)) {
         Some(_) => (family, proto_phonology_of(world, family)),
         None => (def.name, ph.clone()),
     };
@@ -2355,6 +2379,14 @@ fn build_to(
         )?;
     }
 
+    // The roster-derived component set (ECS c3): every mind (psyche,
+    // perception) and speech (articulation, lexicon, family proto) read below
+    // sources from `wc`, keyed by `KindId(def.name)`, rather than reaching
+    // `peopled(def)`. Built from the ACTUAL roster (a synthetic Lab roster
+    // carries its own translated values), and integrity-checked once here.
+    // Biosphere reads and `species::genesis` stay on `def` this task (Task 6).
+    let wc = WorldComponents::from_roster(roster)?;
+
     // Reconstruct terrain + climate, build each species' carrying-capacity
     // field, condense settlements off it (demography), and commit each as its
     // own place entity.
@@ -2523,12 +2555,11 @@ fn build_to(
             .expect("a phonology was built for every placed species");
         let family = def.family;
         // A family with more than one member has a proto ancestral vector
-        // in `family_registry` and draws a real shared proto phonology; a
-        // singleton family (e.g. kobold) is absent there, so it stays its
-        // own family label and its own phonology stands in for its proto —
-        // the pre-family draw, preserved exactly.
-        let (fam_label, proto_ph) = match hornvale_species::family_registry().get(&KindId(family))
-        {
+        // in the canonical family-proto store and draws a real shared proto
+        // phonology; a singleton family (e.g. kobold) is absent there, so it
+        // stays its own family label and its own phonology stands in for its
+        // proto — the pre-family draw, preserved exactly.
+        let (fam_label, proto_ph) = match wc.family_proto.get(&KindId(family)) {
             Some(_) => (family, proto_phonology_of(&world, family)),
             None => (def.name, ph.clone()),
         };
@@ -2552,7 +2583,11 @@ fn build_to(
         let namer = namers
             .get(def.name)
             .expect("a Namer was built for every placed species");
-        let morph = morph_options(&peopled(def).psych);
+        let morph = morph_options(
+            wc.psyche
+                .get(&KindId(def.name))
+                .expect("peopled pass over a fauna kind"),
+        );
         let lexicon = lexicons
             .get(def.name)
             .expect("a lexicon was built for every placed species");
@@ -2710,18 +2745,28 @@ fn build_to(
                 population: placed[pos].population,
                 threat,
             };
-            let peopled_def = peopled(def);
+            // Mind + speech sourced from the roster-derived component set (ECS
+            // c3): psychology from `wc.psyche`, the role vocabulary from
+            // `wc.lexicon`, both keyed by `KindId(def.name)`.
+            let psych_v = wc
+                .psyche
+                .get(&KindId(def.name))
+                .expect("peopled pass over a fauna kind");
+            let lex = wc
+                .lexicon
+                .get(&KindId(def.name))
+                .expect("peopled pass over a fauna kind");
             let psych = hornvale_culture::PsychSummary {
-                threat_response: peopled_def.psych.threat_response,
-                time_horizon: peopled_def.psych.time_horizon,
-                communal: peopled_def.psych.sociality == hornvale_species::Sociality::Communal,
-                rank_status: peopled_def.psych.status_basis == hornvale_species::StatusBasis::Rank,
+                threat_response: psych_v.threat_response,
+                time_horizon: psych_v.time_horizon,
+                communal: psych_v.sociality == hornvale_species::Sociality::Communal,
+                rank_status: psych_v.status_basis == hornvale_species::StatusBasis::Rank,
                 vocabulary: hornvale_culture::RoleVocabulary {
-                    worker_override: peopled_def.worker_override.map(str::to_string),
-                    warrior: peopled_def.warrior.to_string(),
-                    artisan: peopled_def.artisan.to_string(),
-                    shaman: peopled_def.shaman.to_string(),
-                    top: peopled_def.top.to_string(),
+                    worker_override: lex.worker_override.map(str::to_string),
+                    warrior: lex.warrior.to_string(),
+                    artisan: lex.artisan.to_string(),
+                    shaman: lex.shaman.to_string(),
+                    top: lex.top.to_string(),
                 },
             };
             hornvale_culture::genesis(&mut world, flagship, &env, &psych)?;
@@ -2733,7 +2778,7 @@ fn build_to(
             let castes = hornvale_culture::castes_of(&world, flagship);
             let society = hornvale_religion::SocietySummary {
                 strata: castes.len(),
-                has_priesthood: castes.iter().any(|c| c == peopled_def.shaman),
+                has_priesthood: castes.iter().any(|c| c == lex.shaman),
             };
             // Religion (and the deity glosses drawn inside it) observes from
             // the world's first place — the flagship vantage, its hemisphere
@@ -2746,7 +2791,7 @@ fn build_to(
             let namer = namers
                 .get(def.name)
                 .expect("a Namer was built for every placed species");
-            let morph = morph_options(&peopled_def.psych);
+            let morph = morph_options(psych_v);
             let lexicon = lexicons
                 .get(def.name)
                 .expect("a lexicon was built for every placed species");
@@ -3329,8 +3374,13 @@ fn rendered_pantheon_of(
     let phenomena = observed_phenomena_as(world, species)?;
     // Reached only once `flagship_of` above returned `Some`: only peopled
     // species place settlements/flagships, so `def` is guaranteed peopled
-    // here.
-    let voice = voice_params(&peopled(def).psych);
+    // here. Psychology sourced from a roster-derived component set (ECS c3).
+    let wc = WorldComponents::from_roster(std::slice::from_ref(def))?;
+    let voice = voice_params(
+        wc.psyche
+            .get(&KindId(def.name))
+            .expect("peopled pass over a fauna kind"),
+    );
     let tenets = tenets_for(&beliefs, &phenomena, &voice);
     Ok(Some((v, beliefs.into_iter().zip(tenets).collect())))
 }
@@ -3386,6 +3436,9 @@ pub fn rendered_beliefs(
 /// tier-0 providers.
 pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     let registry = hornvale_species::registry();
+    // Speech (the settlement noun) sourced from the canonical component set
+    // (ECS c3); the life-history line still reads `def` (biosphere, Task 6).
+    let wc = WorldComponents::assemble()?;
     let peoples = registry
         .iter()
         .filter_map(|(name, def)| {
@@ -3394,7 +3447,12 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
             lines.push(hornvale_almanac::render_life_history_line(def));
             Some(hornvale_almanac::PeopleBlock {
                 species: name.0.to_string(),
-                noun: peopled(def).noun.to_string(),
+                noun: wc
+                    .lexicon
+                    .get(name)
+                    .expect("a peopled kind with a flagship has a lexicon")
+                    .noun
+                    .to_string(),
                 name: flagship.name.clone(),
                 population: flagship.population,
                 culture_lines: lines,
@@ -3429,7 +3487,12 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
                 if let Some((v, rendered)) = rendered_pantheon_of(world, name.0, &def)? {
                     blocks.push(hornvale_almanac::PantheonBlock {
                         species: name.0.to_string(),
-                        noun: peopled(&def).noun.to_string(),
+                        noun: wc
+                            .lexicon
+                            .get(&name)
+                            .expect("a peopled kind with a flagship has a lexicon")
+                            .noun
+                            .to_string(),
                         settlement: v.name.clone(),
                         cult_form: hornvale_religion::cult_form_held_by(world, v.id),
                         beliefs: rendered
@@ -4436,18 +4499,29 @@ mod tests {
             .values()
             .find(|d| d.name == flagship_species.as_str())
             .expect("flagship species must be in the registry");
-        let peopled_def = peopled(def);
+        // Reconstruct mind + speech through the same roster-derived component
+        // set the production path (`build_to`) now uses (ECS c3).
+        let wc = crate::components::WorldComponents::from_roster(std::slice::from_ref(def))
+            .expect("well-formed single-kind roster");
+        let psych_v = wc
+            .psyche
+            .get(&KindId(def.name))
+            .expect("peopled pass over a fauna kind");
+        let lex = wc
+            .lexicon
+            .get(&KindId(def.name))
+            .expect("peopled pass over a fauna kind");
         let psych = hornvale_culture::PsychSummary {
-            threat_response: peopled_def.psych.threat_response,
-            time_horizon: peopled_def.psych.time_horizon,
-            communal: peopled_def.psych.sociality == hornvale_species::Sociality::Communal,
-            rank_status: peopled_def.psych.status_basis == hornvale_species::StatusBasis::Rank,
+            threat_response: psych_v.threat_response,
+            time_horizon: psych_v.time_horizon,
+            communal: psych_v.sociality == hornvale_species::Sociality::Communal,
+            rank_status: psych_v.status_basis == hornvale_species::StatusBasis::Rank,
             vocabulary: hornvale_culture::RoleVocabulary {
-                worker_override: peopled_def.worker_override.map(str::to_string),
-                warrior: peopled_def.warrior.to_string(),
-                artisan: peopled_def.artisan.to_string(),
-                shaman: peopled_def.shaman.to_string(),
-                top: peopled_def.top.to_string(),
+                worker_override: lex.worker_override.map(str::to_string),
+                warrior: lex.warrior.to_string(),
+                artisan: lex.artisan.to_string(),
+                shaman: lex.shaman.to_string(),
+                top: lex.top.to_string(),
             },
         };
 
