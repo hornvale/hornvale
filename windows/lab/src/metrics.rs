@@ -2041,6 +2041,24 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "coast-roughness-slope",
+            doc: "Multi-scale coastline-roughness slope, unbanded: the \
+                  least-squares slope of ln(shoreline development) against \
+                  mesh level, measured at L4/L5/L6 by projecting each \
+                  level's cells onto the canonical L6 land/ocean truth \
+                  (NearestCellIndex). A companion to shoreline-development, \
+                  not a replacement — that estimator is unchanged. Positive \
+                  means roughness concentrates at fine scales, which makes \
+                  this slope immune to the single-hex land/ocean \
+                  alternation exploit that inflates shoreline-development \
+                  without changing the coast's coarse shape; Absent if any \
+                  of the three levels has no shoreline",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.5, 0.0, 0.25, 0.5, 1.0, 1.5],
+            },
+            extract: Extractor::Terrain(coast_roughness_slope),
+        },
+        Metric {
             name: "hypsometric-bimodality",
             doc: "Ashman's D between land and ocean elevation populations \
                   (Earth is strongly bimodal); Absent when a world lacks land \
@@ -2803,6 +2821,59 @@ fn shelf_width_median(v: &TerrainView, active_only: bool) -> MetricValue {
     match median(&mut widths) {
         Some(m) => MetricValue::Number(m),
         None => MetricValue::Absent,
+    }
+}
+
+/// Multi-scale coastline-roughness slope (rift-and-fit spec §7): a
+/// companion to `shoreline-development`, not a replacement — that estimator
+/// is unchanged. Builds the level 4/5/6 `Geosphere`s and, for each, derives
+/// a land mask by looking up each cell's NEAREST canonical L6 cell (by
+/// unit-sphere position, `NearestCellIndex::nearest_to_position` — the same
+/// projection the scene/region window uses to sample canonical truth from a
+/// coarser or finer mesh) and testing that L6 cell's elevation against the
+/// world's sea level; at k = 6 every cell is its own nearest, so the mapping
+/// is the identity. `D_k = shoreline_development_of_mask` at each level,
+/// then the function returns the least-squares slope of `ln D_k` regressed
+/// on `k` (three points, k = 4, 5, 6). A positive slope means roughness
+/// concentrates at fine scales; a single-hex land/ocean alternation (the
+/// exploit that inflates the plain `shoreline-development` index without
+/// changing the coast's coarse shape) reads as a steep positive slope here,
+/// since `D_4`/`D_5` stay modest while `D_6` spikes. `Absent` if any of the
+/// three levels has no shoreline (`shoreline_development_of_mask` returns
+/// `None` there).
+fn coast_roughness_slope(v: &TerrainView) -> MetricValue {
+    let l6_geo = v.terrain.geosphere();
+    let globe = v.terrain.globe();
+    let l6_index = hornvale_kernel::NearestCellIndex::new(l6_geo);
+    let mut ks: Vec<f64> = Vec::new();
+    let mut ys: Vec<f64> = Vec::new();
+    for k in [4u32, 5, 6] {
+        let geo_k = hornvale_kernel::Geosphere::new(k);
+        let land = hornvale_kernel::CellMap::from_fn(&geo_k, |cell| {
+            let pos = geo_k.position(cell);
+            let l6_cell = l6_index.nearest_to_position(l6_geo, pos);
+            *globe.elevation.get(l6_cell) >= globe.sea_level
+        });
+        match hornvale_terrain::shape::shoreline_development_of_mask(&geo_k, &land) {
+            Some(d) => {
+                ks.push(k as f64);
+                ys.push(hornvale_kernel::math::ln(d));
+            }
+            None => return MetricValue::Absent,
+        }
+    }
+    let n = ks.len() as f64;
+    let mean_k = ks.iter().sum::<f64>() / n;
+    let mean_y = ys.iter().sum::<f64>() / n;
+    let (mut num, mut den) = (0.0_f64, 0.0_f64);
+    for (k, y) in ks.iter().zip(ys.iter()) {
+        num += (k - mean_k) * (y - mean_y);
+        den += (k - mean_k) * (k - mean_k);
+    }
+    if den == 0.0 {
+        MetricValue::Absent
+    } else {
+        MetricValue::Number(num / den)
     }
 }
 
@@ -4337,8 +4408,9 @@ mod tests {
         // +1 for The Niche (composition-variance), +6 for Sculpting
         // (Task 12: shelf-width-passive-median, shelf-width-active-median,
         // sediment-volume, waterfall-count, delta-count,
-        // rerouted-flow-fraction).
-        assert_eq!(registry().len(), 148);
+        // rerouted-flow-fraction), +1 for rift-and-fit (Task 9:
+        // coast-roughness-slope).
+        assert_eq!(registry().len(), 149);
     }
 
     #[test]
@@ -4872,6 +4944,7 @@ mod tests {
     fn shape_metrics_are_present_deterministic_and_sane() {
         let names = [
             "shoreline-development",
+            "coast-roughness-slope",
             "hypsometric-bimodality",
             "shelf-fraction",
             "continent-count",
@@ -4901,6 +4974,17 @@ mod tests {
             if let MetricValue::Number(x) = va {
                 assert!(x.is_finite(), "{name} not finite: {x}");
             }
+        }
+    }
+
+    #[test]
+    fn seed_42_coast_roughness_slope_is_finite() {
+        let view = TerrainView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Terrain(view);
+        let value = extract_from(&built, "coast-roughness-slope");
+        match value {
+            MetricValue::Number(x) => assert!(x.is_finite(), "slope not finite: {x}"),
+            other => panic!("expected a finite Number, got {other:?}"),
         }
     }
 
