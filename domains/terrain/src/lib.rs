@@ -15,6 +15,7 @@ pub mod pins;
 pub mod plates;
 pub mod provider;
 pub mod render;
+pub mod rift;
 pub mod shape;
 pub mod streams;
 
