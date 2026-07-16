@@ -1,7 +1,10 @@
-//! Cross-crate equivalence guardrail for the SpeciesDef dissolution: the
-//! component registries (possibly in different crates) reassemble the same
-//! kind data the god-struct held. Lives in worldgen because only a window may
-//! depend on more than one domain.
+//! Cross-crate coherence guardrail for the dissolved god-struct: the component
+//! registries (possibly in different crates) agree on one entity set and one
+//! peopled key-set. The Task-4 transcription this once compared field-by-field
+//! against the god-struct is now permanently locked by the seed-42
+//! byte-identity oracle; this file keeps only the cross-crate coherence the
+//! oracle does not directly witness. Lives in worldgen because only a window
+//! may depend on more than one domain.
 use hornvale_worldgen::components::WorldComponents;
 
 #[test]
@@ -24,81 +27,47 @@ fn assemble_holds_every_kind_and_passes_integrity() {
 }
 
 #[test]
-fn language_speech_registries_equal_the_god_struct_speech() {
-    let god = hornvale_species::registry();
+fn language_speech_registries_cover_exactly_the_peopled_kinds() {
+    let wc = WorldComponents::assemble().expect("well-formed roster");
     let art = hornvale_language::articulation_registry();
     let lex = hornvale_language::lexicon_registry();
-    for (kind, def) in god.iter() {
-        match &def.peopled {
-            Some(p) => {
-                let a = art.get(kind).expect("peopled kind has articulation");
-                // field-by-field equality across the crate boundary
-                assert_eq!(a.labiality, p.articulation.labiality, "labiality {kind:?}");
-                assert_eq!(a.vowel_space, p.articulation.vowel_space);
-                assert_eq!(a.voicing, p.articulation.voicing);
-                assert_eq!(a.sibilance, p.articulation.sibilance);
-                assert_eq!(a.voice_loudness, p.articulation.voice_loudness);
-                assert_eq!(a.tonality, p.articulation.tonality);
-                assert_eq!(a.exotic as u8, p.articulation.exotic as u8);
-                let l = lex.get(kind).expect("peopled kind has lexicon");
-                assert_eq!(l.noun, p.noun, "noun {kind:?}");
-                assert_eq!(
-                    l.worker_override, p.worker_override,
-                    "worker_override {kind:?}"
-                );
-                assert_eq!(l.warrior, p.warrior, "warrior {kind:?}");
-                assert_eq!(l.artisan, p.artisan, "artisan {kind:?}");
-                assert_eq!(l.shaman, p.shaman, "shaman {kind:?}");
-                assert_eq!(l.top, p.top, "top {kind:?}");
-            }
-            None => {
-                assert!(
-                    art.get(kind).is_none(),
-                    "fauna {kind:?} has no articulation"
-                );
-                assert!(lex.get(kind).is_none(), "fauna {kind:?} has no lexicon");
-            }
+    // Articulation and lexicon are keyed to exactly the peopled kinds — the
+    // same key-set as psyche — and to nothing else.
+    let peopled: Vec<_> = wc.psyche.ids().collect();
+    assert_eq!(
+        art.ids().collect::<Vec<_>>(),
+        peopled,
+        "articulation must key exactly the peopled kinds"
+    );
+    assert_eq!(
+        lex.ids().collect::<Vec<_>>(),
+        peopled,
+        "lexicon must key exactly the peopled kinds"
+    );
+    // Fauna (biosphere rows without a psyche row) carry neither.
+    for kind in wc.biosphere.ids() {
+        if !wc.psyche.contains(kind) {
+            assert!(
+                art.get(kind).is_none(),
+                "fauna {kind:?} has no articulation"
+            );
+            assert!(lex.get(kind).is_none(), "fauna {kind:?} has no lexicon");
         }
     }
-    // family protos: every multi-member family, all 7 articulation fields.
+    // Every family proto belongs to a family with more than one member across
+    // the full entity set (a singleton family's proto is itself and is absent
+    // from the store); members may be peopled or fauna.
     let proto = hornvale_language::family_proto();
-    let families = hornvale_species::family_registry();
-    assert_eq!(
-        proto.len(),
-        families.len(),
-        "family_proto and family_registry must have the same entries"
-    );
-    for (family_kind, species_proto) in families.iter() {
-        let lang_proto = proto
-            .get(family_kind)
-            .unwrap_or_else(|| panic!("family {family_kind:?} has a language proto"));
-        assert_eq!(
-            lang_proto.labiality, species_proto.labiality,
-            "labiality {family_kind:?}"
-        );
-        assert_eq!(
-            lang_proto.vowel_space, species_proto.vowel_space,
-            "vowel_space {family_kind:?}"
-        );
-        assert_eq!(
-            lang_proto.voicing, species_proto.voicing,
-            "voicing {family_kind:?}"
-        );
-        assert_eq!(
-            lang_proto.sibilance, species_proto.sibilance,
-            "sibilance {family_kind:?}"
-        );
-        assert_eq!(
-            lang_proto.voice_loudness, species_proto.voice_loudness,
-            "voice_loudness {family_kind:?}"
-        );
-        assert_eq!(
-            lang_proto.tonality, species_proto.tonality,
-            "tonality {family_kind:?}"
-        );
-        assert_eq!(
-            lang_proto.exotic as u8, species_proto.exotic as u8,
-            "exotic {family_kind:?}"
+    let family_of = hornvale_species::family_of();
+    assert!(!proto.is_empty(), "at least one multi-member family exists");
+    for family_kind in proto.ids() {
+        let members = family_of
+            .iter()
+            .filter(|(_, f)| **f == family_kind.0)
+            .count();
+        assert!(
+            members > 1,
+            "family proto {family_kind:?} must have more than one member"
         );
     }
 }

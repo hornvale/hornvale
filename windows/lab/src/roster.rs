@@ -6,7 +6,7 @@
 //! ECS c3: each control is a single-kind [`WorldComponents`] composed from the
 //! canonical `species`/`language` registries (goblin's own components),
 //! re-keyed under a fresh `KindId` and, for the serpent, with an articulation
-//! override. Byte-identical to composing the equivalent `SpeciesDef` roster.
+//! override. Byte-identical to composing the equivalent component-set roster.
 
 use hornvale_kernel::{ComponentStore, KindId};
 use hornvale_language::ArticulationVector;
@@ -16,7 +16,8 @@ use hornvale_worldgen::WorldComponents;
 /// re-keyed under `key`, with taxonomy `family` and — for the serpent — an
 /// `articulation` override (the canonical goblin articulation otherwise). The
 /// family-proto store stays canonical; a singleton family (`serpent`) simply
-/// has no proto row, the same as an unknown family did under `from_roster`.
+/// has no proto row, the same as an unknown family does when composed
+/// component-first.
 fn goblin_derived(
     key: &'static str,
     family: &'static str,

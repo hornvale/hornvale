@@ -962,7 +962,7 @@ mod tests {
     }
 
     #[test]
-    fn goblin_twin_solo_roster_builds_and_populates_twin_metrics() {
+    fn goblin_twin_solo_components_build_and_populate_twin_metrics() {
         let study = Study {
             name: "t".into(),
             description: "d".into(),

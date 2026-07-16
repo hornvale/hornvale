@@ -3830,7 +3830,7 @@ fn confusable_homophony(v: &FullView, species: &str) -> MetricValue {
 }
 
 /// `species`' derived life-history profile (BIO-2 spec §5), read from the
-/// roster's own `SpeciesDef.mass`/`metabolic_class` — a pure `f(Mass,
+/// biosphere component's `mass`/`metabolic_class` — a pure `f(Mass,
 /// MetabolicClass)`, no draws. `None` if `species` is off-roster.
 fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species::LifeHistory> {
     let bio = v
@@ -4923,7 +4923,7 @@ mod tests {
     }
 
     #[test]
-    fn build_with_roster_resolves_a_renamed_solo_species() {
+    fn build_with_components_resolves_a_renamed_solo_species() {
         // The twin is a goblin clone re-keyed as `goblin-twin` (NOT in the
         // global registry) — it resolves only through the view's own
         // component set.

@@ -1434,9 +1434,9 @@ pub fn default_roster() -> Vec<hornvale_species::SpeciesDef> {
 }
 
 /// Resolve `species` to its canonical `'static` `KindId` label within `wc`,
-/// or fail loudly with the known kinds. A kind's identity is its `KindId`,
-/// not a `SpeciesDef` — the composition root resolves names against the
-/// component set the world was built from.
+/// or fail loudly with the known kinds. A kind's identity is its `KindId`, not
+/// a god-struct — the composition root resolves names against the component
+/// set the world was built from.
 fn resolve_kind(wc: &WorldComponents, species: &str) -> Result<&'static str, BuildError> {
     wc.biosphere
         .ids()
@@ -2878,7 +2878,7 @@ fn build_to(
 }
 
 /// Mint one species entity per kind in `wc` and commit its authored vector as
-/// facts, reading the composed [`WorldComponents`] rather than a `&SpeciesDef`
+/// facts, reading the composed [`WorldComponents`] rather than a god-struct
 /// roster (the composition-root relocation of `species::genesis_in`, ECS c3).
 ///
 /// **Mint order is byte-identity-critical:** entities are minted in ascending
@@ -3568,7 +3568,6 @@ fn rendered_pantheon_of(
     world: &World,
     wc: &WorldComponents,
     species: &str,
-    def: &hornvale_species::SpeciesDef,
 ) -> Result<Option<RenderedPantheon>, BuildError> {
     let Some(v) = flagship_of(world, species) else {
         return Ok(None);
@@ -3579,11 +3578,14 @@ fn rendered_pantheon_of(
     }
     let phenomena = observed_phenomena_as(world, species)?;
     // Reached only once `flagship_of` above returned `Some`: only peopled
-    // species place settlements/flagships, so `def` is guaranteed peopled
-    // here. Psychology sourced from the ALREADY-built component set (ECS c3).
+    // species place settlements/flagships, so `species` is guaranteed peopled
+    // here. Psychology sourced from the ALREADY-built component set (ECS c3),
+    // matched by its `KindId` label (the free-text `species` is not `'static`).
     let voice = voice_params(
         wc.psyche
-            .get(&KindId(def.name))
+            .iter()
+            .find(|(k, _)| k.0 == species)
+            .map(|(_, p)| p)
             .expect("peopled pass over a fauna kind"),
     );
     let tenets = tenets_for(&beliefs, &phenomena, &voice);
@@ -3630,8 +3632,8 @@ pub fn rendered_beliefs(
     // (ECS c3): every species here is a canonical registry kind, so `assemble`
     // gives the byte-identical psyche rows a per-def rebuild would.
     let wc = WorldComponents::assemble()?;
-    for (name, def) in hornvale_species::registry() {
-        if let Some((_, rendered)) = rendered_pantheon_of(world, &wc, name.0, &def)? {
+    for name in wc.biosphere.ids() {
+        if let Some((_, rendered)) = rendered_pantheon_of(world, &wc, name.0)? {
             out.extend(rendered);
         }
     }
@@ -3644,16 +3646,19 @@ pub fn rendered_beliefs(
 /// Gather everything the almanac renders, reconstructing the stateless
 /// tier-0 providers.
 pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
-    let registry = hornvale_species::registry();
-    // Speech (the settlement noun) sourced from the canonical component set
-    // (ECS c3); the life-history line still reads `def` (biosphere, Task 6).
+    // Speech (the settlement noun) and the life-history line's biosphere both
+    // sourced from the canonical component set (ECS c3): every entity is a
+    // biosphere row, iterated in `KindId`-ascending order (byte-identity).
     let wc = WorldComponents::assemble()?;
-    let peoples = registry
+    let peoples = wc
+        .biosphere
         .iter()
-        .filter_map(|(name, def)| {
+        .filter_map(|(name, biosphere)| {
             let flagship = flagship_of(world, name.0)?;
             let mut lines = culture_lines(world, &flagship);
-            lines.push(hornvale_almanac::render_life_history_line(def));
+            lines.push(hornvale_almanac::render_life_history_line(
+                name.0, biosphere,
+            ));
             Some(hornvale_almanac::PeopleBlock {
                 species: name.0.to_string(),
                 noun: wc
@@ -3692,13 +3697,13 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         peoples,
         pantheons: {
             let mut blocks = Vec::new();
-            for (name, def) in hornvale_species::registry() {
-                if let Some((v, rendered)) = rendered_pantheon_of(world, &wc, name.0, &def)? {
+            for name in wc.biosphere.ids() {
+                if let Some((v, rendered)) = rendered_pantheon_of(world, &wc, name.0)? {
                     blocks.push(hornvale_almanac::PantheonBlock {
                         species: name.0.to_string(),
                         noun: wc
                             .lexicon
-                            .get(&name)
+                            .get(name)
                             .expect("a peopled kind with a flagship has a lexicon")
                             .noun
                             .to_string(),
@@ -4374,9 +4379,9 @@ mod tests {
     #[test]
     fn pinning_a_fauna_species_fails_loudly_instead_of_panicking() {
         // The Task 4 menagerie (windows/worldgen fold-in): a `--species`
-        // pin naming a biosphere-only (fauna) kind must never reach
-        // `peopled(def)` downstream — that call panics on a `SpeciesDef`
-        // with no `PeopledTraits`. Fauna never settle, so the pin must fail
+        // pin naming a biosphere-only (fauna) kind must never reach the
+        // peopled pass downstream — that pass has no psyche row for a fauna
+        // kind. Fauna never settle, so the pin must fail
         // loudly with the physical reason (constitution: "pins fail
         // loudly"), the same `BuildError::Pins` shape `def_in` already uses
         // for an unknown name.
@@ -4989,14 +4994,14 @@ mod tests {
 
     #[test]
     fn goblin_lens_is_exactly_identity() {
-        let reg = hornvale_species::registry();
-        assert!(perception_lens(&peopled(&reg[&KindId("goblin")]).perception).is_identity());
+        let per = hornvale_species::perception_registry();
+        assert!(perception_lens(per.get(&KindId("goblin")).unwrap()).is_identity());
     }
 
     #[test]
     fn kobold_lens_matches_the_spec_derivation() {
-        let reg = hornvale_species::registry();
-        let lens = perception_lens(&peopled(&reg[&KindId("kobold")]).perception);
+        let per = hornvale_species::perception_registry();
+        let lens = perception_lens(per.get(&KindId("kobold")).unwrap());
         assert!((lens.day_sky - 0.52).abs() < 1e-12);
         assert!((lens.night_sky - 1.82).abs() < 1e-12);
         assert!((lens.ambient - 0.70).abs() < 1e-12);
@@ -5056,8 +5061,8 @@ mod tests {
 
     #[test]
     fn goblin_voice_params_are_the_baseline() {
-        let reg = hornvale_species::registry();
-        let v = voice_params(&peopled(&reg[&KindId("goblin")]).psych);
+        let psy = hornvale_species::psyche_registry();
+        let v = voice_params(psy.get(&KindId("goblin")).unwrap());
         assert!((v.formality - 0.5).abs() < 1e-12 && (v.epithet_density - 0.5).abs() < 1e-12);
     }
 

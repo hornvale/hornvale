@@ -108,8 +108,8 @@ fn claimed_diversity(seed: u64, wc: &WorldComponents) -> f64 {
 
 /// The 4-goblinoid peopled component set: the canonical registries scoped to
 /// the peopled kinds (the `psyche` key-set — fauna are biosphere-only, so they
-/// carry no psyche row). Byte-identical to composing the four goblinoid
-/// `SpeciesDef`s, which the freeze was originally preregistered against.
+/// carry no psyche row). Byte-identical to the four-goblinoid component set the
+/// freeze was originally preregistered against.
 fn peopled_components() -> WorldComponents {
     use hornvale_kernel::{ComponentStore, KindId};
     let psyche = hornvale_species::psyche_registry();
