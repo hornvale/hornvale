@@ -272,3 +272,47 @@ hypothesis that crenulation would recover the fit-clip's shelf regression is
 recovery needs its own mechanism (a shelf-widening / wave-cut-style lever, as
 Sculpting used), or the shelf-fraction floor — never Earth-anchored, and
 missed here by 0.2% — is a band-definition question for the season close.
+
+## Resolution — the season's verdict, and shoreline's demotion from gate to floor
+
+**Nathan's ruling (2026-07-16, G6): adopt the Earth-anchored band [5.13, 13.14]
+as a *sanity floor*, not an acceptance gate.** The season closes here.
+
+Shipped v4 (iteration 2, 100-seed probe medians): shoreline-development
+**6.8686**, shelf-fraction **0.0841**, rerouted-flow-fraction **0.0796**. The
+four stayers and the single-craton `shelf_land_ratio > 0.05` floor held
+throughout; the conjugate-fit battery is green.
+
+| band | shipped | legacy floor | Earth-anchor | verdict |
+|---|---:|---|---|---|
+| shoreline-development | 6.8686 | 9.51 (fails) | [5.13, 13.14] (passes) | **inside the Earth-anchor floor** |
+| shelf-fraction | 0.0841 | [0.08, 0.22] | — | **inside (recovered)** |
+
+**The honest headline.** rift-and-fit did not raise shoreline-development —
+it shipped it *lower* than v3 (7.32 → 6.87). This is not a failure of the
+season; it is the season *confirming* the diagnostic. The campaign's
+signature — conjugate-margin fit — is large-scale geometry, and the estimator
+is near-blind to large-scale geometry; the only lever that moves D is
+cell-scale crenulation, which hits a hard fit-battery amplitude ceiling
+(~0.175) and, worse, is undone by the very shelf-recovery taper the season
+also needed. Shoreline and shelf are antagonistic through the coast. So the
+campaign's real contribution to the shoreline *question* was never a better
+number — it was the **Earth-mask decontamination evidence**: Earth's own
+coastline, measured through Hornvale's unchanged estimator at the canonical
+mesh, scores **D=8.21 — below the 9.51 floor**. A floor no real planet clears
+is the contaminated anchor Census III flagged, and single-scale
+shoreline-development is now demoted from the campaign's headline verdict (a
+category error — the fit was never going to move it) to a mere "the coastline
+is not degenerate" tripwire.
+
+**What the coastline variable should become (banked in the frontier, not
+built here).** The band decision felt arbitrary because a pass/fail floor is
+the wrong shape for this variable: you band a thing you hold constant, not a
+thing whose job is to vary and drive downstream systems. Three directions
+carry that forward, recorded among the project's speculative ideas:
+`coast-roughness-slope` promoted from companion to the primary coast measure;
+coastline complexity re-instantiated as a *culture driver* — littoral
+carrying-capacity and a maritime-vs-continental cultural axis, the
+thalassocracy thesis; and coastline *provenance* — the conjugate-rift versus
+active-margin age this campaign already draws, read back as coastal character.
+The number was never the point; the driver is.
