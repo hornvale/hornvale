@@ -260,12 +260,15 @@ now smooth across the tile because the two layers are interpolated.
   value (`nearest_to_position`); at a node coincident with a cell center the
   barycentric layers equal that cell's value exactly (interpolation is exact at
   the vertices).
-- **Commutation (the §3.4 property)**: `temperature_grid_region(addr, day)`
-  equals `t_mean_c[i] + t_swing_c[i]·sin(τ·frac(day/period))` over all nodes ×
-  sampled days, to full-precision f64 equality on the pre-quantization provider
-  values — the same arithmetic, restated. A client reads the *quantized* layers
-  and so reproduces it only to ~8 significant digits; the page states both
-  bounds (The Isotherm's precision discipline).
+- **Commutation (the §3.4 property)**: `interp(temperature_at)` (form A) equals
+  `interp(mean) + interp(swing)·sin(τ·frac(day/period))` (form B) over all nodes
+  × sampled days. The two forms are equal in *real* arithmetic (the period is
+  global, so `θ` factors out of the weighted sum) but differ by float rounding
+  because the weighted sums reduce in a different order — so the test asserts
+  **tight-approximate** equality (relative ~1e-9), not bit-exact. (Only the
+  nearest-cell degenerate case is bit-exact, as in The Isotherm.) A client reads
+  the *quantized* layers and reproduces it to ~8 significant digits; the page
+  states these bounds so no consumer mistakes one precision for another.
 - **Locked / zero-obliquity**: `t_swing_c` all-zero, `circulation_bands`
   absent, evaluator degenerates to the mean.
 - **Golden**: a committed `scene-tiles-region-seed-42-*.json` at a fixed
