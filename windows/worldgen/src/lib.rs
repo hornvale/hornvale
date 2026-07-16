@@ -74,11 +74,12 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
     out
 }
 
+pub mod components;
 pub mod settlement_pins;
 pub use settlement_pins::SettlementPins;
 
 /// Errors from building a world.
-/// type-audit: bare-ok(prose: Pins.0)
+/// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)
 #[derive(Debug)]
 pub enum BuildError {
     /// A concept registration conflicted.
@@ -91,6 +92,9 @@ pub enum BuildError {
     Pins(String),
     /// Terrain genesis refused a pin.
     TerrainGenesis(hornvale_terrain::GenesisError),
+    /// A kind's component-set is malformed (referential-integrity failure at
+    /// assembly): e.g. a peopled kind missing a biosphere or a speech row.
+    MalformedKind(String),
 }
 
 impl std::fmt::Display for BuildError {
@@ -101,6 +105,7 @@ impl std::fmt::Display for BuildError {
             BuildError::Genesis(e) => write!(f, "sky genesis: {e}"),
             BuildError::Pins(reason) => write!(f, "pins: {reason}"),
             BuildError::TerrainGenesis(e) => write!(f, "terrain genesis: {e}"),
+            BuildError::MalformedKind(reason) => write!(f, "malformed kind: {reason}"),
         }
     }
 }
