@@ -52,4 +52,4 @@ if (!JSON.parse(out()).error) fail("unknown pin", "no error envelope");
 // A refused/errored pinned call cleared the world: scenes must refuse too.
 if (e.hw_scene_system() !== -3) fail("scene after cleared world", "expected -3");
 
-console.log("world-wasm smoke OK (system + tiles + pinned byte-identical; error envelopes sound)");
+console.log("world-wasm smoke OK (system + tiles + tiles-region + pinned byte-identical; error envelopes sound)");
