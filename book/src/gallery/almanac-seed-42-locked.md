@@ -49,79 +49,78 @@ Eclipses of the first moon repeat every 1070 days (64 months); a family of them 
 ## The Land
 
 The globe breaks into 16 plates; the sea claims 73% of its surface.
-The highest land stands 5521 m above the sea.
+The highest land stands 5534 m above the sea.
 Notable: the Great Delta, salt flats.
 
 The air organizes into a single day–night overturning (tidally locked); 9 land biomes and 7 marine biomes cover the globe.
 Some 10% of the surface is habitable — land with water and a tolerable season.
 
+- **Veamjeattaonoagoo** — temperate-forest
 - **Njeomjeoxaanoagoo** — alpine
 - **Xoomjoeboe** — alpine
-- **Ngjaexoakteanoagoo** — temperate-forest
 - **Voaveaboe** — alpine
-- **Veamjeattaonoagoo** — temperate-forest
 - **Kbaefoegqoenoagooboe** — alpine
 - **Mjoeqteobtaeboenoagoo** — alpine
-- **Vaonjoonoagooboe** — alpine
 - **Njootgoenoagoo** — alpine
+- **Vaonjoonoagooboe** — alpine
 - **Ktoakgeaxeaboe** — alpine
 - **Voangjaenoagooboe** — alpine
 - **Veevoaqqaaboenoagoo** — alpine
+- **Njoevoenoagoo** — alpine
 - **Bqeangjeenjooboenoagoo** — alpine
 - **Faafeofaonoagoo** — alpine
 - **Mjoomjoaktoenoagoo** — alpine
-- **Njoevoenoagoo** — alpine
-- **Njeaveebqaenoenoanoagoo** — temperate-forest
+- **Njeaveebqaeboenoagoo** — alpine
 - **Tbaekteeboenoagoo** — alpine
 - **Xaexeekbeoboe** — alpine
 - **Ngjoemjeemjeenoagoo** — alpine
 - **Njaongjeenoagooboe** — alpine
 - **Njeokqoomjoeboenoagoo** — alpine
-- **Xaengjeetgaaboe** — alpine
 - **Gtoekkoangjaenoagoo** — temperate-forest
 - **Foaqbeangjoanoagoo** — alpine
+- **Tteofaangjeanoagoo** — savanna
 - **Veofeabgaanoenoa** — temperate-forest
 - **Njeamjookgaanoagooboe** — alpine
-- **Tteofaangjeanoagoo** — savanna
 - **Fooveanoagooboe** — alpine
 - **Xoenjoanoagooboe** — alpine
 - **Ngjaoxooxooboe** — alpine
 - **Bqaobkoanoagooboe** — alpine
-- **Veetgeovaeboe** — alpine
 - **Faangjeemjoaboenoagoo** — alpine
+- **Veetgeovaeboe** — alpine
 - **Veofeenoagoonaabae** — savanna
+- **Njaaxoafoenoagooboe** — alpine
 - **Kkaovoenoagoo** — alpine
 - **Tteongjeongjoaboe** — alpine
 - **Ngjaogboobqoanoagooboe** — alpine
 - **Xeekbaekqoenaabaenoagoo** — savanna
 - **Njeogqoanoagooboe** — alpine
+- **Feengjeoboe** — alpine
 - **Xaavaeboe** — alpine
 - **Njeakkoenoagoo** — alpine
 - **Gkoevoenoenoa** — temperate-forest
 - **Njeexaanoagoo** — savanna
 - **Xaobgaoxoenoagoo** — alpine
 - **Ngjaonjeanoagoo** — alpine
-- **Gkoaqgeobtaegeetao** — tropical-seasonal-forest
+- **Xaengjeetgaaboe** — alpine
 - **Mjaonjaexaeboe** — alpine
 - **Vnokngokvnotbeetaonoaboo** — tropical-seasonal-forest
+- **Gkoaqgeobtaegeetao** — tropical-seasonal-forest
 - **Tboavaanoagoonaabae** — savanna
 - **Voenjaaboenoagoo** — alpine
-- **Fnebvnobzxadnoaboo** — temperate-forest
 - **Xaemjeenoagooboe** — alpine
 - **Feekkaamjoenaabae** — savanna
 - **Tgeenjaofeonoagooboe** — alpine
 - **Voavoatteanoagoonaabae** — savanna
-- **Fnaksvotnoaboo** — temperate-forest
 - **Fnetsvakfngodbeetao** — tropical-seasonal-forest
+- **Fnaksvotnoaboo** — temperate-forest
 - **Btoangjeotkaenoagoo** — tropical-seasonal-forest
 - **Nokxnekxngabnoaboo** — temperate-forest
 - **Tkeaqqoomjeonoagooboe** — alpine
 - **Mjoangjoekkoaboe** — alpine
 - **Svadvngatnoenoanoaboo** — temperate-forest
 - **Qboavaanoagooboe** — alpine
+- **Sfekzhfobzhxetnoaboonoenoa** — temperate-forest
 - **Ngjaotkeenoagoonaabae** — savanna
-- **Qteonjoegteenoagooboe** — alpine
-- **Njeexaeboenoagoo** — alpine
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -137,9 +136,9 @@ The sun brightens by 8 parts in a hundred over a gigayear — the slow fire unde
 
 ## The People
 
-The land holds 67 settlement(s).
+The land holds 66 settlement(s).
 The chief goblin settlement, Vnokngokvnotbeetaonoaboo, holds 1 souls amid tropical-seasonal-forest.
-The chief hobgoblin settlement, Njeomjeoxaanoagoo, holds 12 souls amid alpine.
+The chief hobgoblin settlement, Veamjeattaonoagoo, holds 16 souls amid temperate-forest.
 
 The goblin village of **Vnokngokvnotbeetaonoaboo**, population 1.
 
@@ -147,10 +146,10 @@ Vnokngokvnotbeetaonoaboo lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
-The hobgoblin legion of **Njeomjeoxaanoagoo**, population 12.
+The hobgoblin legion of **Veamjeattaonoagoo**, population 16.
 
-Njeomjeoxaanoagoo lives by foraging.
-Its roles, lowest to highest: laborer, warlord.
+Veamjeattaonoagoo lives by farming.
+Its roles, lowest to highest: laborer, augur, warlord.
 The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, matures ~14 yr.
 
 ## The Gods
@@ -177,7 +176,7 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *tide*
 
-The legion of **Njeomjeoxaanoagoo** keeps its own folk pantheon:
+In the legion of **Veamjeattaonoagoo**, an organized priesthood tends its own pantheon:
 
 > Toeqea the Ngjeanoagoo is ever: Toeqea the Ngjeanoagoo watches unceasing. So it was, so it is.
 >

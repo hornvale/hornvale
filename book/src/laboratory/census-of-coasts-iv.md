@@ -190,3 +190,43 @@ whether v3 already passes.
 Per spec §7 and ledger #11: **the multipliers were committed in the spec
 before the mask existed; adoption of this band is Nathan's ruling, reserved
 to the season close.**
+
+## The tuning season (Stage 3)
+
+Kin to Census of Coasts III's tuning table, on the same 100-seed instrument
+(`studies/sculpting-probe.study.json`, seeds 0..=99, default pins, L6,
+release). Iteration 0 is the v4 fit core *untuned* (before any Stage-3 knob
+fires); each subsequent row activates one banked mechanism and re-measures.
+
+Two bands are open this season, not one. Shoreline-development was already
+open below its floor at v3 (Census III closed at 7.3202 vs the contested 9.51
+floor). Shelf-fraction was *closed* at v3 (0.0916, inside `[0.08, 0.22]`) but
+the v4 fit clip regressed it back out (iteration-0 baseline 0.0794) — the
+Sculpting shape in reverse: there Crust handed shelf out-of-band and Sculpting
+closed it via wave-cut; here the v4 fit opened it and this season must close
+it. Both are **movers** driven by the tuning; the hard-stop **guards** are the
+four stayers (hypsometric-bimodality 2–8, continent-count 3–12,
+largest-continent-share 0.25–0.65, plate-size-gini 0.45–0.75),
+rerouted-flow-fraction < 0.10, and the single-craton `shelf_land_ratio > 0.05`
+floor.
+
+| # | knob / mechanism | shoreline | shelf | reroute (median) | four stayers | single-craton floor | verdict |
+|---|---|---:|---:|---:|---|---|---|
+| 0 (baseline) | v4 fit core, untuned (no crenulation) | 6.8647 | 0.0794 | 0.0840 | all inside (3.17 / 8 / 0.278 / 0.706) | battery green | shoreline open below floor; **shelf regressed out of band** (v3 closed 0.0916 → 0.0794) |
+| 1 (shipped) | cell-scale fracture crenulation activated: `CRENULATION_AMP` = 0.175 (`FRACTURE_AMP` × 0.5, first probe), `CRENULATION_FREQ` = 48.0, 1 octave, distinct hash-derived seed | **7.2334** (+0.369) | 0.0799 (+0.0004, flat) | 0.0806 | all inside (3.16 / 8 / 0.277 / 0.706) | battery green | guards held; shoreline moved toward floor; **crenulation does not recover shelf-fraction** |
+
+Iteration-1 reading. Crenulation is a real shoreline-development mover: at the
+first-probe amplitude it closes roughly **14%** of the 6.8647 → 9.51 gap in one
+step (+0.369), with every guard holding and reroute actually easing (0.0840 →
+0.0806 — crenulation reshapes coastline geometry, not the fluvial network, as
+expected). But it leaves shelf-fraction essentially untouched (+0.0004, still
+52/100 seeds below the 0.08 floor). The mechanism explains this: crenulation
+alternates land/ocean at cell scale along the margin, multiplying coastline
+*perimeter* while conserving near-sea-level *area* (it flips cells in both
+directions). Shelf-fraction counts the fraction of cells in a shallow band
+around sea level — an area measure crenulation does not feed. So the
+hypothesis that crenulation would recover the fit-clip's shelf regression is
+**falsified**: shoreline and shelf are near-orthogonal to this lever. Shelf
+recovery needs its own mechanism (a shelf-widening / wave-cut-style lever, as
+Sculpting used), or the shelf-fraction floor — never Earth-anchored, and
+missed here by 0.2% — is a band-definition question for the season close.

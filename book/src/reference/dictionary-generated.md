@@ -205,7 +205,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `parent` | one's father or mother | Goatee | /goatee/ | Goatee | Goatee → no change → Goatee |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): hobgoblin has no exposure to 'rain' |
 | `red` | the color term for red | Noe | /noe/ | Noe | Noe → no change → Noe |
-| `savanna` | a biome class | — | — | — | gap (experiential): no compound recipe for 'savanna' |
+| `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `sea` | a body of salt water | Neoboabaogaa | /neoboabaogaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.6 |

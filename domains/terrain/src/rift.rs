@@ -30,8 +30,10 @@ pub const SEAM_SLACK: f64 = 0.02;
 /// Amplitude of the fracture-noise term blended into `seam_side`: the
 /// margin is not a perfect great-circle arc between the two plain
 /// envelopes, but wobbles by up to this much (the noise term ranges over
-/// `[-FRACTURE_AMP/2, FRACTURE_AMP/2]`). Multi-cell-scale crenulation
-/// (a second, finer octave band) is Task 10's banked knob, not this one.
+/// `[-FRACTURE_AMP/2, FRACTURE_AMP/2]`). This is the multi-cell-scale
+/// wobble; the finer, cell-scale crenulation octave is a separate band
+/// with its own amplitude (`CRENULATION_AMP`), added in Task 10's tuning
+/// season.
 /// type-audit: bare-ok(ratio)
 pub const FRACTURE_AMP: f64 = 0.35;
 
@@ -42,6 +44,32 @@ pub const FRACTURE_FREQ: f64 = 6.0;
 /// fBm octaves for the fracture noise (matches `crust::LOBE_OCTAVES`'s
 /// shape; kept private — not a knob Task 10 exposes yet).
 const FRACTURE_OCTAVES: u32 = 4;
+
+/// Amplitude of the cell-scale crenulation octave blended into `seam_side`
+/// on top of the fracture wobble (Task 10 tuning season, spec §5; the
+/// Stage-0 probe's co-top shoreline-development lever, Census of Coasts IV).
+/// A finer, higher-frequency band that alternates land/ocean at roughly
+/// cell scale along every rifted margin — the texture the
+/// shoreline-development estimator rewards. First-probe value
+/// `FRACTURE_AMP * 0.5`: the Stage-0 readout ranks crenulation's leverage by
+/// injected coastal-cell fraction, not by a seam-space amplitude, so no
+/// direct mapping exists; this is the iteration-1 starting amplitude, tuned
+/// by the probe.
+/// type-audit: bare-ok(ratio)
+pub const CRENULATION_AMP: f64 = FRACTURE_AMP * 0.5;
+
+/// Base spatial frequency of the crenulation octave — eight times the
+/// fracture base (`FRACTURE_FREQ`), i.e. cell-scale on the canonical L6 mesh
+/// (~1° cells), so the octave alternates over roughly single cells rather
+/// than the multi-cell fracture wobble. A first-probe frequency (Task 10);
+/// tunable alongside `CRENULATION_AMP`.
+/// type-audit: bare-ok(ratio)
+pub const CRENULATION_FREQ: f64 = 48.0;
+
+/// fBm octaves for the crenulation noise: one — a single high-frequency
+/// octave ("one higher-frequency octave on the existing seam curve", spec
+/// §5). Kept private, matching `FRACTURE_OCTAVES`.
+const CRENULATION_OCTAVES: u32 = 1;
 
 /// Lower bound of the drawn spreading-rate range, rad-per-unit-age. A
 /// narrative scalar only — nothing yet converts it to a physical rate;
@@ -73,6 +101,15 @@ pub struct Seam {
     /// (e.g. a different craton layout) without perturbing any other
     /// seam's noise.
     pub noise_seed: Seed,
+    /// Hash-derived seed for this seam's cell-scale crenulation octave
+    /// (`{noise_seed}::crenulation`) — the finer, higher-frequency band
+    /// (`CRENULATION_AMP`/`CRENULATION_FREQ`) layered on top of the fracture
+    /// wobble. Distinct from `noise_seed` so the crenulation octave is
+    /// decorrelated from the fracture fBm rather than aliasing its top
+    /// octave. Precomputed here (not per-sample) to keep hashing out of the
+    /// clip hot path; hash-derived off `noise_seed`, so it draws no stream
+    /// and stays a pure function of `(a, b)`.
+    pub cren_seed: Seed,
 }
 
 /// The drawn rift history over one craton set (spec §3.2/§3.4): the
@@ -127,7 +164,13 @@ pub fn draw_rift(terrain_seed: Seed, cratons: &[Craton]) -> RiftHistory {
                 (cratons[j].id, cratons[i].id)
             };
             let noise_seed = rift_root.derive(&format!("seam-{a}-{b}"));
-            seams.push(Seam { a, b, noise_seed });
+            let cren_seed = noise_seed.derive("crenulation");
+            seams.push(Seam {
+                a,
+                b,
+                noise_seed,
+                cren_seed,
+            });
         }
     }
     // Canonicalize enumeration order: the nested loop above already visits
@@ -171,12 +214,16 @@ fn plain_envelope(center: [f64; 3], radius_rad: f64, p: [f64; 3]) -> f64 {
 }
 
 /// Signed margin function shared by both sides of `seam`: positive on
-/// craton `a`'s side, negative on `b`'s. Defined as
-/// `env_a(p) - env_b(p) + FRACTURE_AMP * (fbm01(seam.noise_seed, p) - 0.5)`,
+/// craton `a`'s side, negative on `b`'s. Defined as `env_a(p) - env_b(p)`
+/// plus `FRACTURE_AMP * (fbm01(seam.noise_seed, p) - 0.5)` plus
+/// `CRENULATION_AMP * (fbm01(seam.cren_seed, p) - 0.5)`,
 /// where `env_x` is the plain envelope (`plain_envelope`) of craton `x`
 /// evaluated against its ASSEMBLY center (not its drawn center) — the
-/// contact-configuration geometry `draw_rift` seamed against. The fBm term
-/// is sampled at the 3-D point `p` itself (spherical fBm at the
+/// contact-configuration geometry `draw_rift` seamed against. The first fBm
+/// term is the multi-cell fracture wobble; the second is the finer,
+/// cell-scale crenulation octave (Task 10), added on top with its own seed
+/// and amplitude. Each fBm term is sampled at the 3-D point `p` itself
+/// (spherical fBm at the
 /// assembly-frame position, `crust::sphere_fbm01`'s house pattern) rather
 /// than along a 1-D parameterization of the seam's arc-length: simpler and
 /// rotation-stable, since it needs no arc-length parameterization that
@@ -189,7 +236,8 @@ pub fn seam_side(seam: &Seam, cratons: &[Craton], assembly: &[[f64; 3]], p: [f64
     let env_a = plain_envelope(assembly[ia], cratons[ia].radius_rad, p);
     let env_b = plain_envelope(assembly[ib], cratons[ib].radius_rad, p);
     let fracture = sphere_fbm01(seam.noise_seed, p, FRACTURE_FREQ, FRACTURE_OCTAVES);
-    env_a - env_b + FRACTURE_AMP * (fracture - 0.5)
+    let cren = sphere_fbm01(seam.cren_seed, p, CRENULATION_FREQ, CRENULATION_OCTAVES);
+    env_a - env_b + FRACTURE_AMP * (fracture - 0.5) + CRENULATION_AMP * (cren - 0.5)
 }
 
 /// The Euler pole and angle carrying `assembly_center` to `final_center`
@@ -295,16 +343,19 @@ const NOISE_ESCAPE_MARGIN: f64 = 1e-9;
 
 /// The plain-envelope difference (toward self) at or above which a seam's
 /// clip contribution is EXACTLY 1.0 regardless of the fracture noise, so
-/// the (expensive, 12-eval) `sphere_fbm01` sample can be skipped
-/// bit-identically: `side_toward_self = env_diff_toward_self +
-/// FRACTURE_AMP * (fbm01 - 0.5)` with `fbm01` in [0, 1) (+/- rounding, see
-/// `NOISE_ESCAPE_MARGIN`), so `side >= env_diff - FRACTURE_AMP * (0.5 +
-/// NOISE_ESCAPE_MARGIN)`; and `smoothstep(0.5 + side / (2 * CLIP_TAPER))`
-/// clamps to exactly 1.0 for every `side >= CLIP_TAPER` (the clamp lands
-/// on exactly 1.0, where `3.0 - 2.0 = 1.0` is exact), while a min-fold
-/// with an exactly-1.0 contribution is the identity. Threshold:
-/// `CLIP_TAPER + FRACTURE_AMP * (0.5 + NOISE_ESCAPE_MARGIN)` ~ 0.255.
-const SATURATION_SKIP_ENV_DIFF: f64 = CLIP_TAPER + FRACTURE_AMP * (0.5 + NOISE_ESCAPE_MARGIN);
+/// the (expensive) `sphere_fbm01` samples (now two: the fracture wobble and
+/// the crenulation octave) can be skipped bit-identically: `side_toward_self
+/// = env_diff_toward_self + FRACTURE_AMP * (fbm01 - 0.5) + CRENULATION_AMP *
+/// (fbm01 - 0.5)` with each `fbm01` in [0, 1) (+/- rounding, see
+/// `NOISE_ESCAPE_MARGIN`), so `side >= env_diff - (FRACTURE_AMP +
+/// CRENULATION_AMP) * (0.5 + NOISE_ESCAPE_MARGIN)`; and `smoothstep(0.5 +
+/// side / (2 * CLIP_TAPER))` clamps to exactly 1.0 for every `side >=
+/// CLIP_TAPER` (the clamp lands on exactly 1.0, where `3.0 - 2.0 = 1.0` is
+/// exact), while a min-fold with an exactly-1.0 contribution is the
+/// identity. Threshold: `CLIP_TAPER + (FRACTURE_AMP + CRENULATION_AMP) *
+/// (0.5 + NOISE_ESCAPE_MARGIN)` ~ 0.343.
+const SATURATION_SKIP_ENV_DIFF: f64 =
+    CLIP_TAPER + (FRACTURE_AMP + CRENULATION_AMP) * (0.5 + NOISE_ESCAPE_MARGIN);
 
 /// The clip evaluation proper, over a precomputed seam-index subset (every
 /// seam touching `craton_id`, in seam order — `seam_indices_for`'s output).
@@ -354,9 +405,16 @@ pub(crate) fn clip_over_seams(
             continue;
         }
         // Slow path: `seam_side`'s own expression, bit-for-bit
-        // (`env_a - env_b + FRACTURE_AMP * (fracture - 0.5)`).
+        // (`env_a - env_b + FRACTURE_AMP * (fracture - 0.5)
+        //  + CRENULATION_AMP * (cren - 0.5)`), same term order.
         let fracture = sphere_fbm01(seam.noise_seed, p_assembly, FRACTURE_FREQ, FRACTURE_OCTAVES);
-        let raw = env_a - env_b + FRACTURE_AMP * (fracture - 0.5);
+        let cren = sphere_fbm01(
+            seam.cren_seed,
+            p_assembly,
+            CRENULATION_FREQ,
+            CRENULATION_OCTAVES,
+        );
+        let raw = env_a - env_b + FRACTURE_AMP * (fracture - 0.5) + CRENULATION_AMP * (cren - 0.5);
         let side_toward_self = if seam.a == craton_id { raw } else { -raw };
         clip = clip.min(smoothstep(0.5 + side_toward_self / (2.0 * CLIP_TAPER)));
     }
