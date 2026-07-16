@@ -124,7 +124,9 @@ no draw); and the "no isostasy" line no longer holds. Two pins join the three
 above — `--continents N` (craton count) and `--globe-level 4–7` (the canonical
 grid, default 6, part of world identity per the decision
 0038) — and `--supercontinent` now
-clusters cratons rather than plates. The crust fields implement the kernel
+holds the world at its pre-breakup assembly (a sutured supercontinent whose
+rift seams are drawn but never opened; terrain epoch v4), superseding the
+earlier craton-clustering transform. The crust fields implement the kernel
 `Field` trait, so any grid samples the same underlying world: the
 coarse-constrains-fine boundary is drawn exactly at the graph-versus-field
 line (mesh-bound sea level, drainage, and placement compute once on the
