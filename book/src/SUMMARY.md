@@ -123,6 +123,7 @@
 - [Study 011: The Census of Words](./laboratory/study-011.md)
 - [The Census of Coasts II](./laboratory/census-of-coasts-ii.md)
 - [The Census of Coasts III](./laboratory/census-of-coasts-iii.md)
+- [The Census of Coasts IV](./laboratory/census-of-coasts-iv.md)
 
 # Reference
 
