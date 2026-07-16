@@ -547,6 +547,46 @@ enrichment in the domain.
 | SKY-equation-of-time | With eccentricity and obliquity both live, true noon and mean noon diverge by a computable annual curve (the analemma — a per-world fingerprint): the first benign, subtle falsehood a measuring culture can discover, the sundial that lies — UNI-1’s cheapest anomaly | raw | high | this conversation; ideonomy session |
 | SKY-authored-sky | A third provider whose sky is deliberately non-physical but internally coherent (dome and chariot; Ptolemaic clockwork) — consumers must never learn which system produced a phenomenon, and an authored sky is the strongest possible test of that promise; comparing the religions grown under a true sky vs an authored one is UNI-2’s controlled-science move applied to astronomy itself | raw | med | this conversation; ideonomy session |
 
+### Exotic system architectures — the cells the model does not occupy
+
+A 2026-07-16 sweep of **real, observed** system architectures against the
+shape of astronomy's draw. The finding is uncomfortable, and worth stating
+once rather than thirteen times: **reality is stranger than the model**.
+Hornvale generates exactly one cell of the configuration space — one star,
+one terrestrial anchor, N small regular prograde moons — while nearly every
+row below is a configuration the solar system or the Kepler catalogue
+*already ships*. "Strange new worlds" is therefore not a licence to
+fabricate; it is a mandate to catch up, and the rows are stated as deficits
+against observed fact, not as invention.
+
+Each row names **what it costs the model**, which is the part a future
+reader actually needs. The tier boundary is the load-bearing distinction:
+
+- **Additive** — new draws and streams behind existing shapes, no spine
+  change; pin-grade work of the kind SKY-22 already proved.
+- **Spine-breaking** — attacks `Anchor` being singular and `sky_of(world)`
+  assuming one world with one sky. These are a **program**, not a campaign,
+  and must never be costed as one.
+
+Six of the thirteen configurations swept were **already banked** and are
+deliberately not re-filed: rings and their Roche-limit origin
+(`SKY-rings`), the circumbinary/Tatooine regime (SKY-16), the habitable
+moon (`SKY-moon-world`), extreme obliquity (`SKY-extreme-obliquity`), and
+retrograde rotation (SKY-22 — not merely banked but *shipped*). **Conf**
+reads as in the atlas above: *how cheap and clearly-correct the work is* —
+never how real the phenomenon is, since the physics of every row below is
+observed.
+
+| ID | Idea | Status | Conf | Where |
+| -- | ---- | ------ | ---- | ----- |
+| SKY-binary-planet | Two comparable-mass worlds about a barycenter **outside both bodies** — real: Pluto–Charon, which makes this configuration not exotic but simply absent. Mutually tidally locked, so each hangs *permanently motionless* in the other's sky, a disc close enough to show weather crossing it: a second inhabited surface you can watch a storm move over, and never once see rise. **Spine-breaking, and the sharpest case of it** — `Anchor` is singular by construction and `sky_of(world)` assumes one world with one sky, so this needs two anchors, a shared barycentric orbit, and a sky that knows which surface it is seen from. The tide, calendar, and eclipse machinery (SKY-5, SKY-6) all become two-ended. A program, not a campaign | raw | low | [frontier §map](frontier.md#the-frontier-map) |
+| SKY-trojan-world | A second world sharing the anchor's orbit exactly, librating about L4/L5 sixty degrees ahead or behind — **observed at moon scale**: Tethys keeps both Telesto and Calypso. A sibling world at *identical* insolation and period that never approaches and never recedes. `SKY-resonances` already banks the 1:1 case as a *companion body* hanging sixty degrees from the sun; this row is its escalation — the co-orbital is a **world**, which is what makes it **spine-breaking** rather than one more wanderer draw (SKY-9). Two anchors again, but unlike `SKY-binary-planet` the two skies are near-identical and the two climates are the same climate, which makes this the cheapest honest probe of a two-anchor model | raw | low | [frontier §map](frontier.md#the-frontier-map) |
+| SKY-horseshoe-pair | Co-orbitals that periodically **exchange orbits** — real, and not rare: Janus and Epimetheus trade every four years, the inner one catching the outer, swapping angular momentum, and becoming it. A neighbour world that closes for years, swaps places with you, then recedes for years: a clock nobody designed and no culture would have chosen, which is precisely the intercalation nightmare `SKY-calendar-hardness` exists to score. Additive if the co-orbital is a body (a wanderer whose distance beats on a decades-scale cycle); spine-breaking if it is a second anchor, as in `SKY-trojan-world`. **Names a real tension with the Lorenz guard-rail**: co-orbital horseshoe dynamics are chaotic on long horizons, so this can never be a forward integrator seeded from quantized ledger floats — it needs either a closed-form libration evaluated at t (the model card's evaluate-at-t rule) or a full-precision checkpoint format of its own | raw | low | [frontier §map](frontier.md#the-frontier-map) |
+| SKY-quasi-satellite | A body in *stellar* orbit that nonetheless **appears to circle the world**, for millennia, without ever being gravitationally bound to it — real: 3753 Cruithne is Earth's. A "moon" that is not a moon: present in the sky, absent from the gravity model, raising no tide (SKY-5) and obeying no Kepler period about the anchor. Additive and cheap, being a sky-appearance draw rather than a dynamics change — and it is the sharpest *epistemic* body the domain could hold: a measuring culture that assumes everything circling it is bound derives a mass that does not exist. UNI-1's anomaly move (kin to `SKY-equation-of-time`'s lying sundial) handed a body instead of a curve | raw | med | [frontier §map](frontier.md#the-frontier-map) |
+| SKY-submoon | A moon of a moon — the one row here with **no observed instance**, though the dynamics are unobjectionable inside a narrow stability window (a large, distant primary moon holding a small, close submoon; the window is real but tight, which is the likeliest reason none has been found). Adds a **level to the hierarchy**: `moons.rs` draws a flat list keyed to the anchor, so a submoon needs the satellite tree to nest — the same shape change `SKY-moon-world` makes at the top of the tree, made at the bottom. The payoff is a sky where one moon visibly holds another, and phases within phases; the risk is that an honest stability window almost never yields one, making it a draw that rarely fires | raw | med | [frontier §map](frontier.md#the-frontier-map) |
+| SKY-minimoon | Temporary capture — a body held for a few orbits and then lost; real and recurrent, with 2006 RH120 and 2020 CD3 each Earth's for roughly a year. **A moon with an expiry date**: the only body in the domain whose existence is a function of *when you look* — a satellite your grandchildren will not have and your grandparents did not. Additive (a drawn capture epoch and duration over the shipped moon machinery) but it breaks one quiet assumption worth naming: the moon roster is a genesis-time constant today, not a function of `WorldTime`. Kin to `SKY-guest-stars` in event-shape (the transient that happens once) but satellite-grade, and the natural companion to `SKY-moon-individuation`'s captured-origin draw — which banks capture as a *permanent* origin story, never as a thing that un-happens | raw | med | [frontier §map](frontier.md#the-frontier-map) |
+| SKY-s-type-binary | The world orbits **one** star of a binary while the companion hangs in the sky as an intensely bright non-sun — real, and the nearest system to us: the α Centauri configuration. Distinct from SKY-16, whose picture is the circumbinary/Tatooine regime (two suns, doubled shadows, a compound day, the host itself binary). Here the host stays single and the companion is a *second light source*, not a second primary: bright enough to cast a shadow and to kill true night for part of the year, never bright enough to be a sun. That makes it **additive where SKY-16 is spine-breaking** — a drawn companion mass and separation feeding brightness and a long orbital beat, with no second host and no compound day. The cheapest real entry into binarity, and the row that most changes the value of night (`SKY-diffuse-sky`, `SKY-galactic-situation`) | raw | med | [frontier §map](frontier.md#the-frontier-map) |
+
 ---
 
 ## The climate domain — enrichment directions
