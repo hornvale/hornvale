@@ -96,7 +96,6 @@ run -p hornvale -- star-chart --world "$wsky" --out book/src/gallery/star-chart-
 
 echo "regenerate-artifacts: scene exports" >&2
 run -p hornvale -- scene tiles --world "$wsky" > book/src/gallery/scene-tiles-seed-42.json
-run -p hornvale -- scene system --world "$wsky" > book/src/gallery/scene-system-seed-42.json
 
 # OWNER DIRECTIVE (2026-07-13): the full censuses NEVER regenerate on a
 # local box unless Nathan explicitly says so. The sanctioned path is the
@@ -113,9 +112,6 @@ if [ "${HV_CENSUS:-0}" = 1 ] && [ "${SKIP_CENSUS:-0}" != 1 ]; then
 else
     echo "regenerate-artifacts: censuses SKIPPED — census regeneration is AWS-only (make regen-remote); HV_CENSUS=1 only on explicit owner direction" >&2
 fi
-
-echo "regenerate-artifacts: orrery ephemeris golden" >&2
-run -p hornvale-scene --example ephemeris_golden > clients/orrery/testdata/ephemeris-seed-42.json
 
 echo "regenerate-artifacts: type-audit report" >&2
 run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md

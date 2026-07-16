@@ -154,12 +154,53 @@ square), day/night geometry from rotation + obliquity + season.
 
 **Approximated (declared):** circular orbits; no orbital evolution or
 resonance; no N-body effects; seasonal daylight variation by a smooth
-sinusoid in obliquity and year phase; neighbors observational-only; no
-eclipses this campaign (angular diameters exist, so tier 3 can derive them).
+sinusoid in obliquity and year phase; neighbors observational-only; eclipses
+shipped in Eclipse Seasons (angular diameters existed since genesis; the
+node/shadow geometry below is what tier 3 derives from them).
+
+- **Secular brightening** (The Long Count): b = 0.10·M^2.5 per Gyr,
+  Sol-calibrated; the habitable zone stays a genesis-epoch derivation.
+- **Solstice-rise azimuth** (The Long Count): cos az = sin ε(t)/cos φ;
+  refraction and horizon dip ignored.
+- **Nodal regression period** (Eclipse Seasons): the lunar-theory leading
+  term, P_node = (4/3)·Y²/(P_sid·cos i). Earth check: ~17.9 yr against the
+  true 18.61 — the leading term alone, no higher harmonics.
+- **Moon ecliptic latitude** (Eclipse Seasons): small-angle inclined-orbit
+  form, β = i·sin(L_moon − Ω), exact at the syzygies where it is consumed.
+- **Event-time sun angular size** (Eclipse Seasons): first-order apsidal
+  scaling of the mean angular diameter, r/a = 1 − e·sin(2π·year-phase),
+  evaluated live at each event rather than cached (reuses the daylight
+  term's perihelion convention).
+- **Lunar shadow factor** (Eclipse Seasons): the anchor's shadow threshold
+  at the moon, a declared fraction of the solar threshold —
+  `LUNAR_SHADOW_FACTOR = 0.64`, Luna–Sol-calibrated to ~1.5 umbral lunar
+  eclipses/year; shipped untuned, the calibration target was already met.
+- **Ground-track latitude mapping** (Eclipse Seasons): center = solar
+  declination + (β/θ)·(90° − |declination|), so a central pass tracks the
+  sub-solar latitude and a threshold-grazing one exits at a pole.
+- **Track half-width** (Eclipse Seasons): declared constant
+  `TRACK_HALF_WIDTH_DEG = 2.0`; real totality bands run ~1° of latitude,
+  ours is slightly generous so a band is findable at room scale.
+
+**Derived, continued (Eclipse Seasons):** draconic month (1/(1/P_sid +
+1/P_node), frequencies add because the node regresses against the moon's
+motion); eclipse year (1/(1/Y + 1/P_node), Luna check ≈ 346 days); best
+cycle (the synodic/draconic near-commensurability minimizing draconic-phase
+miss up to 300 synodic months — fed TRUE Luna inputs the search recovers
+the saros, 223 synodic ≈ 242 draconic ≈ 6585.3 days; the derived pipeline's
+own node period differs enough from the true value, 17.9 vs 18.61 yr, that
+a generated world's best cycle may honestly land on an octon-class cycle
+instead of a saros-class one — both are genuine long-lived commensurabilities,
+just different ones); series returns (a cycle's lifetime in returns,
+2θ/(i·sin(node slip)) — how many returns before the drifting node walks the
+family out of the eclipse window); parade (how many days a year the eclipse
+seasons migrate backward through the calendar, Y − eclipse-year; Luna check
+≈ 19).
 
 **Drawn from seed (or pinned):** star mass; anchor orbital distance (within
 zone); rotation period/regime; obliquity; moon count, masses, distances;
-neighborhood size, classes, distances.
+neighborhood size, classes, distances; each moon's ascending-node longitude
+(Eclipse Seasons).
 
 ## 6. Two clocks
 

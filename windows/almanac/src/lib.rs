@@ -64,7 +64,7 @@ pub struct PantheonBlock {
 /// brightest neighbors, and one line per wandering sibling planet. `None`
 /// for constant-sky worlds, which have no neighborhood to describe (see
 /// [`AlmanacContext::night_sky_lines`]).
-/// type-audit: bare-ok(prose: pole_star), bare-ok(prose: heliacal), bare-ok(prose: wanderers), bare-ok(prose: figures)
+/// type-audit: bare-ok(prose: pole_star), bare-ok(prose: heliacal), bare-ok(prose: wanderers), bare-ok(prose: figures), bare-ok(prose: eclipses), bare-ok(prose: alignment)
 pub struct NightSkyLines {
     /// The pole-star sentence, if one exists at genesis.
     pub pole_star: Option<String>,
@@ -76,6 +76,15 @@ pub struct NightSkyLines {
     /// A single figure-count/ecliptic summary line (night-sky stage 3);
     /// empty for skies with no figures at all.
     pub figures: Vec<String>,
+    /// Dated-eclipse sentences for the next two years (at most six,
+    /// day-ascending) followed by the recurrence-ladder lines (Eclipse
+    /// Seasons). One honest no-eclipse sentence when the world has moons
+    /// but no event falls in the window.
+    pub eclipses: Vec<String>,
+    /// The flagship settlement's founding sightline and its drift rate
+    /// (The Long Count), when the world has both a sunrise and a
+    /// settlement.
+    pub alignment: Option<String>,
 }
 
 /// Everything the almanac needs, gathered by the composition root.
@@ -123,6 +132,36 @@ pub struct AlmanacContext {
     pub pantheons: Vec<PantheonBlock>,
 }
 
+/// Render one species' life-history line for the almanac (BIO-2, spec §5/§6):
+/// its basal metabolism, plus a pace-of-life headline and lifespan/maturity
+/// figures when the species has biological traits at all. Suppressed for
+/// `Ametabolic` species (constructs, undead), which carry no mass-derived
+/// life-history to report — only the metabolic clause renders for those.
+/// type-audit: bare-ok(prose: return)
+pub fn render_life_history_line(def: &hornvale_species::SpeciesDef) -> String {
+    let history = hornvale_species::life_history(def.biosphere.mass, def.biosphere.metabolic_class);
+    let mut line = format!(
+        "The {} run a basal metabolism of {:.0} W",
+        def.name, history.basal_metabolic_rate_w
+    );
+    if let (Some(lifespan), Some(maturity)) = (history.lifespan, history.age_at_maturity) {
+        let headline = if history.pace_of_life < 0.33 {
+            "fast-lived and prolific"
+        } else if history.pace_of_life > 0.66 {
+            "slow, long-lived, and sparse"
+        } else {
+            "moderate-paced"
+        };
+        line.push_str(&format!(
+            "; {headline}, lifespan ~{} yr, matures ~{} yr",
+            lifespan.get().round(),
+            maturity.get().round()
+        ));
+    }
+    line.push('.');
+    line
+}
+
 /// Render the one-page world document as markdown. Deterministic: same
 /// context, same bytes.
 /// type-audit: bare-ok(artifact: return)
@@ -164,6 +203,12 @@ pub fn render(ctx: &AlmanacContext) -> String {
         }
         for line in &lines.figures {
             doc.push_str(&format!("{line}\n\n"));
+        }
+        for line in &lines.eclipses {
+            doc.push_str(&format!("{line}\n\n"));
+        }
+        if let Some(alignment) = &lines.alignment {
+            doc.push_str(&format!("{alignment}\n\n"));
         }
     }
 
@@ -712,6 +757,8 @@ mod tests {
                     .to_string(),
             ],
             figures: vec!["The sky holds 4 figures; 1 stands on the sun's road.".to_string()],
+            eclipses: vec![],
+            alignment: None,
         });
         let doc = render(&ctx);
         assert!(doc.contains("A blue-white star stands 3.2° from the north celestial pole"));
@@ -745,6 +792,8 @@ mod tests {
                         .to_string(),
                 ],
                 figures: vec!["The sky holds 4 figures; 1 stands on the sun's road.".to_string()],
+                eclipses: vec![],
+                alignment: None,
             }),
             calendar_lines: vec!["The year is 365.2 local days (365.2 standard days).".to_string()],
             ..sample_context()
@@ -780,5 +829,80 @@ mod tests {
             figures_pos < calendar_pos,
             "the night instrument stays inside The Sky, before The Calendar"
         );
+    }
+
+    #[test]
+    fn almanac_species_block_shows_life_history() {
+        // Model on the registry's real goblin def (BIO-2 Task 5) — the
+        // helper is a pure function of `SpeciesDef`, no world needed.
+        let registry = hornvale_species::registry();
+        let goblin = registry.get("goblin").expect("goblin is in the registry");
+        let line = render_life_history_line(goblin);
+        assert!(line.contains("lifespan"), "missing lifespan figure: {line}");
+        assert!(
+            line.contains("fast") || line.contains("slow") || line.contains("moderate"),
+            "missing pace headline: {line}"
+        );
+    }
+
+    #[test]
+    fn render_life_history_line_suppresses_the_clause_for_ametabolic_species() {
+        use hornvale_kernel::Mass;
+        use hornvale_species::MetabolicClass;
+
+        let mut construct = hornvale_species::registry()
+            .get("goblin")
+            .expect("goblin is in the registry")
+            .clone();
+        construct.biosphere.metabolic_class = MetabolicClass::Ametabolic;
+        construct.biosphere.mass = Mass::new(500.0).unwrap();
+        let line = render_life_history_line(&construct);
+        assert!(
+            !line.contains("lifespan"),
+            "ametabolic species must suppress the life-history clause: {line}"
+        );
+    }
+
+    #[test]
+    fn eclipse_lines_render_under_the_sky() {
+        let ctx = AlmanacContext {
+            night_sky_lines: Some(NightSkyLines {
+                pole_star: None,
+                heliacal: vec![],
+                wanderers: vec![],
+                figures: vec![],
+                eclipses: vec![
+                    "On day 213, the great moon devours the sun whole along latitude 23°."
+                        .to_string(),
+                    "The eclipse seasons parade backward through the year at 19 days a year."
+                        .to_string(),
+                ],
+                alignment: None,
+            }),
+            calendar_lines: vec!["The year is 365.2 local days (365.2 standard days).".to_string()],
+            ..sample_context()
+        };
+        let doc = render(&ctx);
+        let sky = doc.split("## The Calendar").next().unwrap();
+        assert!(sky.contains("devours the sun whole"));
+        assert!(sky.contains("parade backward"));
+    }
+
+    #[test]
+    fn the_alignment_line_renders_under_the_sky() {
+        let mut ctx = sample_context();
+        ctx.night_sky_lines = Some(NightSkyLines {
+            pole_star: None,
+            heliacal: vec![],
+            wanderers: vec![],
+            figures: vec![],
+            eclipses: vec![],
+            alignment: Some(
+                "From the first settlement, the midsummer sun rises at azimuth 63.4°; the sightline drifts 0.21° in a thousand years.".to_string(),
+            ),
+        });
+        let doc = render(&ctx);
+        let sky = doc.split("## The Calendar").next().unwrap();
+        assert!(sky.contains("the sightline drifts"));
     }
 }

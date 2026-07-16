@@ -82,7 +82,8 @@ fn refinement_adds_structure_only_beneath_the_sun() {
         for seed in 0..32u64 {
             let sky = GeneratedSky::new(generate(Seed(seed), &pins).unwrap());
             for t in [0.0, 10.5, 100.75] {
-                for p in sky.phenomena(&ctx(t)) {
+                let phenomena = sky.phenomena(&ctx(t));
+                for p in &phenomena {
                     if p.venue == Venue::DaySky && p.kind == CELESTIAL_BODY {
                         continue;
                     }
@@ -92,6 +93,9 @@ fn refinement_adds_structure_only_beneath_the_sun() {
                         p.description,
                         p.salience
                     );
+                }
+                for p in phenomena.iter().filter(|p| p.kind == "eclipse") {
+                    assert!(p.salience < 1.0, "an eclipse never outranks the sun");
                 }
             }
         }

@@ -457,3 +457,154 @@ fn neighbor_pin_does_not_move_any_star() {
     b.sort_by(|x, y| x.0.total_cmp(&y.0).then(x.1.total_cmp(&y.1)));
     assert_eq!(a, b);
 }
+
+/// Eclipse Seasons pin isolation: pinning the moon count consumes node
+/// draws identically to the unpinned path — a pinned world with the same
+/// admitted moons carries byte-identical node longitudes.
+#[test]
+fn pinned_moon_counts_draw_identical_node_longitudes() {
+    for seed in 0..32u64 {
+        let unpinned = generate(Seed(seed), &SkyPins::default()).unwrap().system;
+        let n = unpinned.moons.len() as u32;
+        if n == 0 {
+            continue;
+        }
+        let pins = SkyPins {
+            moons: Some(MoonsPin::exact(n).unwrap()),
+            ..SkyPins::default()
+        };
+        let pinned = generate(Seed(seed), &pins).unwrap().system;
+        let a: Vec<f64> = unpinned
+            .moons
+            .iter()
+            .map(|m| m.node_longitude_deg)
+            .collect();
+        let b: Vec<f64> = pinned.moons.iter().map(|m| m.node_longitude_deg).collect();
+        assert_eq!(a, b, "seed {seed}");
+    }
+}
+
+/// SKY-23 close-out, star battery: over 256 seeds, the drawn mass stays
+/// in range and every derivation is monotone in it (luminosity, HZ,
+/// brightening).
+#[test]
+fn star_battery_mass_bounds_and_monotone_derivations() {
+    use hornvale_astronomy::{brightening_per_gyr, generate_star};
+    let mut last: Option<(f64, f64, f64, f64, f64)> = None;
+    let mut stars: Vec<_> = (0..256u64)
+        .map(|s| generate_star(hornvale_kernel::Seed(s).derive("astronomy")))
+        .collect();
+    stars.sort_by(|a, b| a.mass.get().total_cmp(&b.mass.get()));
+    for s in &stars {
+        assert!((0.6..=1.4).contains(&s.mass.get()));
+        assert!(s.habitable_zone.inner().get() < s.habitable_zone.outer().get());
+        let row = (
+            s.mass.get(),
+            s.luminosity.get(),
+            s.habitable_zone.inner().get(),
+            s.habitable_zone.outer().get(),
+            brightening_per_gyr(s),
+        );
+        if let Some(prev) = last {
+            assert!(
+                row.1 >= prev.1 && row.2 >= prev.2 && row.3 >= prev.3 && row.4 >= prev.4,
+                "derivations must be monotone in mass: {prev:?} -> {row:?}"
+            );
+        }
+        last = Some(row);
+    }
+}
+
+/// SKY-23 close-out, anchor battery: over 256 seeds the orbit sits inside
+/// the habitable zone, the Kepler relation holds, and locked worlds never
+/// have a solar hour.
+#[test]
+fn anchor_battery_orbit_kepler_and_rotation_invariants() {
+    use hornvale_astronomy::{Rotation, SkyPins, calendar_of, generate};
+    let mut saw_locked = false;
+    let mut saw_spinning = false;
+    let mut saw_retrograde = false;
+    for seed in 0..256u64 {
+        let outcome = generate(hornvale_kernel::Seed(seed), &SkyPins::default()).unwrap();
+        let s = &outcome.system;
+        let zone = s.star.habitable_zone;
+        assert!(
+            (zone.inner().get()..=zone.outer().get()).contains(&s.anchor.orbit.get()),
+            "seed {seed}: orbit outside the zone"
+        );
+        // Kepler III in the model card's own units: Y = 365.25·√(a³/M).
+        let expected_year = 365.25 * (s.anchor.orbit.get().powi(3) / s.star.mass.get()).sqrt();
+        assert!(
+            (s.anchor.year.get() - expected_year).abs() < 1e-6,
+            "seed {seed}: year {} vs Kepler {expected_year}",
+            s.anchor.year.get()
+        );
+        // Obliquity drawn in range 0–35 degrees.
+        assert!((0.0..=35.0).contains(&s.anchor.obliquity.get()));
+        let calendar = calendar_of(s);
+        match s.anchor.rotation {
+            Rotation::Locked => {
+                saw_locked = true;
+                assert!(calendar.day_length().is_none());
+            }
+            Rotation::Spinning { retrograde, .. } => {
+                saw_spinning = true;
+                saw_retrograde |= retrograde;
+                assert!(calendar.day_length().is_some());
+            }
+        }
+    }
+    assert!(
+        saw_locked && saw_spinning && saw_retrograde,
+        "every regime reachable"
+    );
+}
+
+/// SKY-23 close-out, neighbors battery: over 256 seeds the count stays in
+/// 2–5, every position is a legal sky coordinate, distances are positive,
+/// and regeneration is byte-identical.
+#[test]
+fn neighbor_battery_counts_coordinates_and_determinism() {
+    use hornvale_astronomy::{SkyPins, generate};
+    for seed in 0..256u64 {
+        let a = generate(hornvale_kernel::Seed(seed), &SkyPins::default()).unwrap();
+        let b = generate(hornvale_kernel::Seed(seed), &SkyPins::default()).unwrap();
+        assert_eq!(a, b, "seed {seed}: regeneration must be byte-identical");
+        let n = &a.system.neighbors;
+        assert!(
+            (2..=5).contains(&n.len()),
+            "seed {seed}: {} neighbors",
+            n.len()
+        );
+        for x in n {
+            assert!((0.0..360.0).contains(&x.right_ascension));
+            assert!((-90.0..=90.0).contains(&x.declination));
+            assert!(x.distance.get() > 0.0);
+        }
+    }
+}
+
+/// The Long Count, alignment battery: the dating inverse round-trips
+/// across seeds and latitudes.
+#[test]
+fn alignment_battery_dating_round_trip() {
+    use hornvale_astronomy::{Rotation, SkyPins, StdDays, calendar_of, generate};
+    for seed in 0..128u64 {
+        let outcome = generate(hornvale_kernel::Seed(seed), &SkyPins::default()).unwrap();
+        let s = &outcome.system;
+        if matches!(s.anchor.rotation, Rotation::Locked) || s.forcing.obliquity_amp == 0.0 {
+            continue;
+        }
+        let calendar = calendar_of(s);
+        for lat in [-55.0, -20.0, 20.0, 55.0] {
+            let t = StdDays::new(0.27 * hornvale_astronomy::forcing::P_OBLIQUITY).unwrap();
+            let Some(az) = calendar.solstice_rise_azimuth_at(lat, t) else {
+                continue;
+            };
+            let epoch = calendar
+                .alignment_epoch_of(az, lat, StdDays::new(t.get() + 1.0).unwrap())
+                .expect("a wobbling sky dates its own alignments");
+            assert!((epoch.get() - t.get()).abs() < 1.0, "seed {seed} lat {lat}");
+        }
+    }
+}

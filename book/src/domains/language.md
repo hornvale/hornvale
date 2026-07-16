@@ -21,11 +21,13 @@ gave it eyes; this campaign, the third of Year 2's spine, gives it **mouths**
 consequence of who is speaking it rather than a pool an author happened to
 seed. Every proper noun the world mints now — a settlement, a deity, a
 deity's epithet — is a real generated sound: seed 42's goblin flagship is
-**Xnebsvob** (`/xnebsvob/`), whose head god is **Neb the Ngobneb**;
-its kobold neighbor is **Raxaxokroxog** (`/raxaxokroxog/`), whose own
-head god is **Raxarro Rro**. (These are the names the world renders today;
+**Ngebvngadxnotnoaboo**, whose highest god is **Noaboo the Xngoknoaboo**;
+its kobold neighbor is **Roqrraxaxoqrrak**, whose own highest god is
+**Roqrraxogrra Xogrra**. (These are the names the world renders today;
 [The Branches](../chronicle/the-branches.md) re-baselined every one of them
-when goblin joined a language family — see "The first family," below, for
+when goblin joined a language family, and The Speakable moved them again
+where a name had been quietly crushed by phonotactic repair — see "The
+first family" and "Phonotactics as a description, not a filter," below, for
 why a proper name is not held byte-stable across that kind of change.) See
 [Religion](./religion.md) for how a belief now carries that name as
 committed content rather than a frozen sentence.
@@ -682,3 +684,48 @@ constraint, not built as one. A family has an ancestor now, and three lines
 that can prove they share it. It does not yet have a history of change
 within any one line, a memory of contact between lines, or an ear capable
 of reconstructing either without being told.
+
+**Phonotactics as a description, not a filter.** The family tree above
+exposed a fault that had been latent since the mouth was first drawn. A
+name is assembled from a species' **synchronic phonotactics** — its onset,
+nucleus, and coda templates — and those templates are drawn from the
+phonology stream entirely independently of the lexicon, which descends by
+its own line through the sound-change cascade. Nothing tied the shapes a
+name must fit to the shapes the words actually take, and the two disagree
+often: roughly half of all drawn phonologies land in a regime where a
+template set rejects its own language's evolved words outright — a draw that
+admits only two-consonant onsets cannot parse a single CV-shaped root. When
+a glossed name compounded such a language's own words, the naming pipeline
+reached for the **repair** pass it had always carried for foreign shapes —
+an epenthesis-and-deletion dynamic program with a small constant table and a
+minimal-syllable fallback — and that pass, being deletion-heavy, erased
+every unparsable native word down to the same constant syllable. A whole
+pantheon's gods, each glossing a distinct phenomenon and each carrying a
+truthful and distinct meaning, collapsed onto one sound: seed 42's seven
+bugbear deities were all *Bvaash*, goblin's all *Neb*, hobgoblin's all
+*Fee*. The glosses never lied; the surface had simply lost the distinctions
+the meanings still held.
+
+The repair was correct. It was pointed at the wrong material. In a real
+language, phonotactics is a **generalization over the lexicon** — the
+description a linguist writes after surveying what the words do, not a law
+the words must satisfy to exist. So the admitted parse set for a glossed
+name is now the drawn canon templates **plus the lexicon's own modern root
+forms, admitted verbatim** — an *attested tier* standing beside the
+canonical one. A name built from a language's own words parses with zero
+edits, by construction, and surfaces those words unchanged: seed 42's
+bugbear shadow-god is now literally *Daoqao*, the bugbear dictionary's word
+for shadow. Repair is thereby the **identity function for a native
+compound** — not by a special case, but because a language's own words are,
+definitionally, well-formed in that language. The structural invariant The
+Words froze is not dropped but redefined: "well-formed" now reads
+canon-*or*-attested. The canon tier remains the morphology's grammar, the
+templates a *new* stem is drawn to fit; the attested tier is the language's
+own standing evidence of what it may say. And repair keeps its whole
+apparatus intact and idle, waiting for the one job it was always right for —
+genuinely foreign material, the exonyms and loanwords a later campaign will
+render through a native phonology for the first time, where a stranger's
+word really must bend to a native shape. The change draws nothing: repair
+and the attested admission are pure functions over already-drawn material,
+so it rebaselines the names it moves rather than retiring a stream, and
+every previously-conformant name is byte-identical.

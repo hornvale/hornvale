@@ -7,6 +7,7 @@
 | `anchor-mass-earth` | yes | anchor world mass in Earth masses |
 | `anchor-orbit-au` | yes | anchor orbital distance in AU |
 | `biome` | yes | biome of a place |
+| `brightening-per-gyr` | yes | the star's fractional main-sequence brightening per gigayear |
 | `cell-id` | yes | Geosphere cell id a settlement sits on |
 | `cult-form` | yes | the cult form of a belief (organized or folk) |
 | `day-length-std` | yes | solar day length in standard days, for spinning worlds |
@@ -21,6 +22,7 @@
 | `figure-on-ecliptic` | yes | a star figure stands on the sun's road (the ecliptic band) |
 | `figure-region` | no | sky region of a star figure |
 | `fossil-shoreline` | no | a fossil shoreline left by deep-time sea-level change |
+| `founding-solstice-azimuth-degrees` | yes | solstice-sunrise azimuth at a settlement's founding, degrees clockwise from north |
 | `frost-retreat` | no | the deep-time record of deglaciation |
 | `genesis-note` | no | a degradation or refusal recorded during sky genesis |
 | `glacial-maximum-era` | yes | standard day of peak ice extent |
@@ -43,6 +45,8 @@
 | `moon-distance-mm` | no | orbital distance of a moon in megameters |
 | `moon-inclination-degrees` | no | orbital inclination of a moon to the anchor's orbital plane, in degrees |
 | `moon-mass-lunar` | no | mass of a moon in lunar masses |
+| `moon-node-longitude-degrees` | no | ascending-node ecliptic longitude of a moon at genesis, in degrees |
+| `moon-node-period-days` | no | nodal-regression period of a moon, in standard days |
 | `moon-period-std` | no | orbital period of a moon, in standard days |
 | `moon-tide-rel` | no | tidal strength of a moon, relative to Luna on Earth |
 | `name` | yes | canonical name of an entity |
@@ -104,7 +108,7 @@
 |---|---|
 | `ambient` | a pervasive atmospheric condition |
 | `celestial-body` | a body visible in the sky |
-| `eclipse` | a moon crossing the face of the sun |
+| `eclipse` | a syzygy shadow: a moon crossing the sun, or the world's shadow crossing a moon |
 | `heliacal-rising` | a star's first dawn return from behind the sun |
 | `heliacal-setting` | a star's last evening before the sun swallows it |
 | `night-star` | a fixed star notable in the night sky |

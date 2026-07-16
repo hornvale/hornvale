@@ -22,7 +22,13 @@ pub(crate) fn cmd_voice(args: &[String]) -> Result<(), String> {
     fs::create_dir_all(out_dir).map_err(|e| format!("creating {}: {e}", out_dir.display()))?;
     let world = World::new(Seed(crate::phonology::REFERENCE_SEED));
     let (mut written, mut kept) = (0u32, 0u32);
+    // peopled-only: fauna never speak, so `sample_names_for` (which reaches
+    // `peopled(def)`) is undefined for them (Task 4 widened `registry()` to
+    // include biosphere-only kinds).
     for (species, def) in hornvale_species::registry() {
+        if def.peopled.is_none() {
+            continue;
+        }
         for (_, name) in crate::phonology::sample_names_for(&world, species, &def) {
             let path = out_dir.join(audio_filename(&name.espeak));
             if path.exists() {

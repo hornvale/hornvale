@@ -155,9 +155,15 @@ varies goblin-to-goblin rather than only goblin-to-kobold, is real work with
 its own design principles; it does not arrive as a quiet addition to a
 struct that happened to have room.
 
-**The full species model card.** `SpeciesDef` carries three closed vectors
-now — psychology (6), perception (3), articulation (6) — fifteen dimensions
-in all, and every one of them is **authored**. Nothing in this table is
+**The full species model card.** Since *The Menagerie* (the entity-component
+program's first campaign), `SpeciesDef` is split: a universal `BiosphereTraits`
+(mass, metabolic class, resource niche, condition niche, potency — the
+component every kind carries and the packer and habitat model read) and an
+`Option<PeopledTraits>` present only for a people that settles and speaks. The
+three closed vectors below — psychology (6), perception (3), articulation (6),
+fifteen dimensions — now live in `PeopledTraits`; the biosphere-only fauna of
+the menagerie (dragons, treant, xorn, …) carry `peopled: None` and none of
+this table. Every dimension here is still **authored**. Nothing in this table is
 drawn, fit, or measured; species is data written once by a person reading a
 corpus, the same posture each of the three sub-vector chapters keeps on its
 own. The "consumer" column names the actual formula that reads each

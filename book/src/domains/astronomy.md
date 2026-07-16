@@ -38,36 +38,12 @@ phase-cycle strip per moon. [The Night Sky of Seed
 42](../gallery/star-chart-seed-42.md) is the domain's committed gallery
 artifact, regenerated and drift-checked on every build.
 
-**The orrery, and the moving sky in color (The Orrery).** Two renders join
-the chart. The night sky gains a *palette*: each star is tinted by its
-spectral class, hot blue-white through cool red — a choice the renderer owns,
-never the domain (a star stays a "smoldering red" *word* for the almanac while
-the chart chooses its *hue*). `hornvale orrery` draws the system from
-above in the terminal — the star at center in its class color, the habitable
-zone as a dotted ring, the world on its orbit at the year's phase, each moon
-placed where its synodic phase puts it — new between world and star, full
-opposite — and its half-lit face turned so the bright limb faces the star, so
-a moon's position and the light it wears never disagree (single-width Unicode
-by default; with `--glyphs emoji`, a two-column grid whose moons are the phase
-emoji `🌑🌓🌕🌗`, an experiment that meets emoji's fixed double-width head-on
-rather than fighting it). It remains an in-process render (it reads the world
-directly) and can still write its frames to a synthetic-timed `.cast`
-recording for offline viewing.
-
-The book's gallery has moved past that static playback. [The Orrery of Seed
-42](../gallery/orrery-seed-42.md) is now a live browser client, standing
-beside the atlas in the same posture (decision 0022 — the sim emits bytes,
-clients render pixels): a dependency-free browser page (`clients/orrery/`)
-that fetches two committed documents — `scene/system/v1` (the orbital
-elements) and `scene/tiles/v1` (the world's real terrain) — and computes
-the animation itself, live, from an
-ephemeris pinned against `hornvale orrery`'s own phases. The star glows in its
-tint; each moon's phase and lit limb agree with the terminal render; and the
-world is drawn as its own spinning globe, textured with the generated
-continents and a moving terminator — a display convention of the globe's
-rotation, not a claim about the sim's civil day/night, which remains the
-almanac's domain. Play/pause, scrub, and speed controls let a reader step
-through the year at will rather than only watch a fixed loop.
+**The moving sky in color.** The system view — the star in its spectral
+tint, the habitable zone, the world on its orbit, each moon at its synodic
+phase and lit limb — now lives in [Goldengrove (since renamed Orrery)](https://hornvale.github.io/orrery/),
+an external 3D client built against the same committed `scene/system/v1`
+and `scene/tiles/v1` documents (decision 0022 — the sim emits bytes,
+clients render pixels).
 
 ## The moving sky (Firm Ground II)
 
@@ -224,17 +200,47 @@ neighbor's heliacal rising and setting fractions, from a 400-sample scan
 of the year against its class's arcus-visionis threshold — 7° for blue
 and red giants, 9° for orange giants and sun-like stars, 11° for white
 and red dwarfs (brighter surfaces cut through brighter twilight; all
-three thresholds sit inside the 12° twilight band).
+three thresholds sit inside the 12° twilight band). As of The Long
+Count, the calendar also answers the ground half of the alignment
+question: the solstice-sunrise azimuth at any latitude and epoch, its
+drift between two epochs (which *is* the obliquity wobble, seen from the
+ground), and the dating inverse — given a stale sightline, the most
+recent epoch that would have cut it — the sky as archaeological clock,
+with each settlement's founding azimuth committed as a fact.
 
 **Approximated (declared):** circular orbits **at genesis** — every world
 still starts at `t = 0` on a circular orbit, but eccentricity now oscillates
 over deep time, so "circular" is a starting condition, not a permanent one;
-no orbital evolution, resonance, or N-body effects; seasonal daylight as a
+no orbital evolution, resonance, or N-body effects (semi-major-axis
+migration is now *declined by decision 0054*, not merely unbuilt — an
+isolated habitable world's orbit has no honest reason to drift);
+secular stellar brightening at b = 0.10·M^2.5 per gigayear (Sol-calibrated,
+scaled by main-sequence lifetime; anchored so the present loses nothing,
+while the habitable zone stays a genesis-epoch derivation); the
+solstice-rise azimuth as cos az = sin ε(t)/cos φ, refraction and horizon
+dip ignored; seasonal daylight as a
 smooth sinusoid in obliquity and year phase; neighbor stars observational-only
-(no gravity, no radiation); eclipses shipped (each moon's drawn orbital
-inclination gates a total-vs-annular verdict on a derived node beat), but
-without nodal precession, so today's recurrence is a rate, not a dated
-occurrence, and lunar eclipses remain unbuilt; the Milankovitch drift laws themselves (slow
+(no gravity, no radiation); as of Eclipse Seasons, dated solar and lunar
+eclipses read off a regressing node line — the nodal regression period from
+the lunar-theory leading term, `P_node = (4/3)·Y²/(P_sid·cos i)` (Earth
+check: ~17.9 yr against the true 18.61, the leading term alone, no higher
+harmonics); the moon's ecliptic latitude at any syzygy from the small-angle
+inclined-orbit form, `β = i·sin(L_moon − Ω)`; the event-time sun's angular
+size from a first-order apsidal scaling of the mean diameter, evaluated
+live rather than cached; the lunar shadow threshold as a declared fraction
+of the solar one (`LUNAR_SHADOW_FACTOR = 0.64`, Luna–Sol-calibrated to
+~1.5 umbral lunar eclipses/year, shipped untuned); a solar eclipse's ground
+track, whose center latitude maps the ecliptic-latitude miss onto the
+sub-solar latitude and whose half-width is a declared constant
+(`TRACK_HALF_WIDTH_DEG = 2.0`); and the recurrence ladder — draconic month,
+eclipse year (Luna check ≈ 346 days), the best synodic/draconic
+near-commensurability up to 300 synodic months (fed TRUE Luna inputs the
+search recovers the saros, 223 synodic ≈ 242 draconic ≈ 6585.3 days, though
+a generated world's own derived node period may honestly land its best
+cycle on an octon-class commensurability instead), how many returns a
+cycle's family survives before the drifting node walks it out of the
+eclipse window, and the parade — how many days a year the eclipse seasons
+migrate backward through the calendar (Luna check ≈ 19); the Milankovitch drift laws themselves (slow
 sinusoids at fixed, near-real periods, with no coupled climate feedback
 driving them); ever-visible hemisphere culling (a body is up or down with
 the observer's hemisphere, never placed at an altitude); the substellar
@@ -251,7 +257,9 @@ Firm Ground II — each forcing element's mean, amplitude, and phase
 (obliquity's amplitude and phase, eccentricity's mean, amplitude, and phase,
 precession's phase) and each body's genesis phase offset (the year, the
 day, and each moon's), all on their own labeled streams so every draw above
-is untouched.
+is untouched; and — as of Eclipse Seasons — each moon's ascending-node
+longitude, on its own labeled stream (`astronomy/moon-nodes`) appended
+after every existing draw.
 
 Promoting a drawn quantity to a derived one is an **epoch bump**, never a
 silent change — saved worlds must keep the skies they were born under.

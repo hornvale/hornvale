@@ -42,21 +42,38 @@
 //!    `every_goblinoid_word_is_in_its_inventory`): every goblinoid
 //!    daughter's every `Root` lexicon entry's evolved/nativized form draws
 //!    only from that daughter's own phonology inventory, never a cousin's.
-//! 7. `hobgoblin_and_bugbear_each_hold_at_least_one_committed_settlement_name`
-//!    — the founder floor's world-level guarantee (settlement's
-//!    founder-reservation pass, MAP-22 allocation-at-K=1): every placed
-//!    people, however weak its suitability score against its
-//!    competitors, wins at least one cell and therefore commits at least
-//!    one settlement name. Pinned here as an invariant of the shipped
-//!    world, not merely of the algorithm's unit tests.
+//! 7. `bugbear_and_kobold_are_present_in_settlement_composition`
+//!    — reframed after the niche-differentiated-K cutover (windows/worldgen
+//!    build_to now packs the coexistence stack competitively): bugbear and
+//!    kobold no longer win any settlement's dominance (goblin and hobgoblin
+//!    win them all at seed 42), so the founder-floor "every people commits
+//!    at least one settlement name" guarantee this test used to check no
+//!    longer holds for them — a `peopled-by`/settlement-`name` fact is
+//!    committed only for a cell's DOMINANT species. What remains true, and
+//!    is asserted here instead: bugbear and kobold are still PRESENT — a
+//!    strictly positive density fraction in at least one settlement's
+//!    composition — matching The Niche's accepted 2-way coexistence
+//!    result. Recomputes the same coexistence stack genesis built
+//!    (`hornvale_worldgen::demography_report`, the pure/deterministic
+//!    accessor mirroring genesis's own pipeline byte-for-byte), since
+//!    composition, unlike dominance, commits no ledger fact of its own.
+
+use std::collections::{BTreeMap, BTreeSet};
 
 use hornvale_kernel::{Seed, Value, World};
 use hornvale_language::LexEntry;
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
 fn default_generated_seed_42() -> World {
+    generated_world_at(42)
+}
+
+/// Same pins as [`default_generated_seed_42`], parameterized by seed — the
+/// readout battery walks many seeds to measure the fix's shape, not just
+/// pin it at 42.
+fn generated_world_at(seed: u64) -> World {
     build_world(
-        Seed(42),
+        Seed(seed),
         &hornvale_astronomy::SkyPins::default(),
         SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),
@@ -151,7 +168,7 @@ fn kobold_lexicon_is_the_singleton_build_lexicon_call() {
 fn kobold_phonology_is_a_pure_function_of_seed_and_envelope() {
     let world = default_generated_seed_42();
     let registry = hornvale_species::registry();
-    let kobold_articulation = &registry["kobold"].articulation;
+    let kobold_articulation = &hornvale_worldgen::peopled(&registry["kobold"]).articulation;
     let envelope = hornvale_worldgen::envelope_of(kobold_articulation);
     let direct = hornvale_language::draw_phonology(&world.seed, "kobold", &envelope);
     assert_eq!(
@@ -219,22 +236,53 @@ fn goblin_names_are_rebaselined_not_frozen() {
     );
 }
 
-/// (7) Founder-floor world invariant: hobgoblin and bugbear — the two
-/// peoples weakest under the current suitability-scoring formula — each
-/// still hold at least one committed settlement name in the shared,
-/// unpinned seed-42 world. This is the founder floor's guarantee
-/// (settlement's founder-reservation pass, MAP-22 allocation-at-K=1)
-/// pinned as a fact about the shipped world, not merely about the
-/// algorithm's own unit tests (`domains/settlement/src/placement.rs`).
+/// (7) Coexistence-stack world invariant, reframed post-cutover: bugbear
+/// and kobold — the two peoples that never win a settlement's dominance
+/// under the niche-differentiated-K coexistence stack — are still PRESENT
+/// (a strictly positive density fraction) in at least one settlement's
+/// composition in the shared, unpinned seed-42 world. Composition commits
+/// no ledger fact of its own (only a settlement's dominant species does,
+/// via `peopled-by`), so this recomputes the same coexistence stack
+/// genesis built via `hornvale_worldgen::demography_report` — the pure,
+/// deterministic accessor that mirrors genesis's own
+/// `niche_per_species_k` → `coexist::pack` → `stack_condense::condense_stack`
+/// pipeline byte-for-byte at the frozen `BETA`/`FLOOR` constants — over the
+/// same peopled-only roster filter genesis's unpinned path applies.
 #[test]
-fn hobgoblin_and_bugbear_each_hold_at_least_one_committed_settlement_name() {
+fn bugbear_and_kobold_are_present_in_settlement_composition() {
     let world = default_generated_seed_42();
-    for species in ["hobgoblin", "bugbear"] {
-        let names = settlement_names_of_species(&world, species);
+    let roster: Vec<hornvale_species::SpeciesDef> = hornvale_worldgen::default_roster()
+        .into_iter()
+        .filter(|d| d.peopled.is_some())
+        .collect();
+    let report = hornvale_worldgen::demography_report(&world, &roster)
+        .expect("demography_report must recompute over an already-built world's committed facts");
+
+    let tag_of = |species: &str| -> u32 {
+        roster
+            .iter()
+            .position(|d| d.name == species)
+            .unwrap_or_else(|| panic!("{species} must be in the peopled roster")) as u32
+    };
+
+    for species in ["bugbear", "kobold"] {
+        let tag = tag_of(species);
         assert!(
-            !names.is_empty(),
-            "{species} must hold at least one committed settlement name \
-             under the founder floor; got none"
+            !report.stack_settlements.iter().any(|s| s.dominant == tag),
+            "{species} must never win a settlement's dominance under the \
+             niche-differentiated-K coexistence stack at seed 42 — The \
+             Niche's accepted 2-way result (goblin/hobgoblin dominate,\
+             bugbear/kobold never do); if this now fails, the coexistence \
+             balance shifted and this test's premise needs revisiting"
+        );
+        assert!(
+            report.stack_settlements.iter().any(|s| s
+                .composition
+                .iter()
+                .any(|(id, frac)| *id == tag && *frac > 0.0)),
+            "{species} must hold a strictly positive density fraction in \
+             at least one settlement's composition — present even though \
+             never dominant; got none"
         );
     }
 }
@@ -274,4 +322,159 @@ fn every_goblinoid_words_root_is_in_its_own_daughters_inventory() {
         "seed 42 should mint at least one Root lexicon entry across the \
          goblinoid family"
     );
+}
+
+/// (8) The Speakable's exit regression (spec §8.1): before the attested
+/// tier, phonotactic repair collapsed every glossed word for a species to
+/// one fallback syllable, so EVERY bugbear deity at seed 42 was named
+/// "Bvaash" (goblin "Neb", hobgoblin "Fee") regardless of what its belief
+/// glossed. Pinned by mechanism, never by exact name string: within one
+/// species' pantheon, two beliefs glossing DIFFERENT things must never
+/// carry the SAME deity name. Two beliefs sharing one gloss may still
+/// legitimately share a name (same word, same rendering) — only
+/// cross-gloss collisions are the regression this probe forbids.
+#[test]
+fn deities_with_distinct_glosses_carry_distinct_names_at_seed_42() {
+    let world = default_generated_seed_42();
+    let mut checked = 0u32;
+    for species in ["bugbear", "goblin", "hobgoblin", "kobold"] {
+        let Some(village) = hornvale_worldgen::flagship_of(&world, species) else {
+            continue;
+        };
+        let beliefs = hornvale_religion::beliefs_held_by(&world, village.id);
+
+        // gloss -> set of deity names carrying it (skip empty-gloss beliefs).
+        let mut by_gloss: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+        for belief in &beliefs {
+            let Some(gloss) = world
+                .ledger
+                .text_of(belief.id, hornvale_worldgen::NAME_GLOSS)
+            else {
+                continue;
+            };
+            if gloss.is_empty() {
+                continue;
+            }
+            by_gloss
+                .entry(gloss.to_string())
+                .or_default()
+                .insert(belief.deity.clone());
+        }
+
+        let glosses: Vec<&String> = by_gloss.keys().collect();
+        for i in 0..glosses.len() {
+            for j in (i + 1)..glosses.len() {
+                let a = glosses[i];
+                let b = glosses[j];
+                let inter: Vec<&String> = by_gloss[a].intersection(&by_gloss[b]).collect();
+                assert!(
+                    inter.is_empty(),
+                    "{species}: glosses {a:?} and {b:?} share deity name(s) \
+                     {inter:?} — the pre-fix all-collapse-to-one-fallback \
+                     regression"
+                );
+                checked += 1;
+            }
+        }
+    }
+    assert!(
+        checked > 0,
+        "no cross-gloss pairs checked — probe is vacuous"
+    );
+}
+
+/// The Bvaash fix, pinned by mechanism not by string, reframed post-cutover.
+/// The original probe checked bugbear's flagship specifically: bugbear's
+/// own lexicon roots "shadow" (its perception is sharp enough to name it),
+/// so a bugbear deity glossing exactly "shadow" had to carry the bugbear
+/// shadow word audibly. Under the niche-differentiated-K coexistence
+/// stack, bugbear never wins a settlement's dominance at seed 42 (see
+/// `bugbear_and_kobold_are_present_in_settlement_composition`), so
+/// `religion::genesis` — which runs only at a species' own flagship — never
+/// fires for bugbear: no bugbear belief, and so no bugbear "shadow" god,
+/// exists in this world at all. Worse, seed 42's actual flagshipping
+/// peoples (goblin, hobgoblin) have a perceptual GAP for "shadow" (their
+/// night-vision doesn't clear the luminance-rank threshold) — no species'
+/// pantheon can gloss "shadow" this seed, so the concept itself is no
+/// longer a live probe here.
+///
+/// What the Bvaash fix actually guarantees — repair never discards a
+/// glossed word's identity down to a fallback syllable — is still checked,
+/// generalized to whichever concept a seed's flagshipping species can
+/// actually name: both goblin and hobgoblin root "gloom" (the tide belief's
+/// sentiment concept, `sentiment_concept(Ambient) == "gloom"`), so this
+/// asserts every flagshipping species' deity glossing exactly "gloom"
+/// carries that species' own gloom word audibly in its committed name.
+#[test]
+fn the_gloom_gods_name_is_audibly_the_gloom_word_at_seed_42() {
+    let world = default_generated_seed_42();
+    let mut checked = 0;
+
+    for species in ["goblin", "hobgoblin", "bugbear", "kobold"] {
+        let Some(village) = hornvale_worldgen::flagship_of(&world, species) else {
+            continue;
+        };
+        let lex = hornvale_worldgen::lexicon_of(&world, species)
+            .unwrap_or_else(|e| panic!("lexicon_of({species}) failed: {e:?}"));
+        let Some(LexEntry::Root { views, .. }) = lex.entry("gloom") else {
+            // Not every species need root "gloom"; skip rather than fail —
+            // this probe only exercises species that can.
+            continue;
+        };
+        let gloom_word = views.roman.to_lowercase();
+
+        let gloom_gods: Vec<String> = hornvale_religion::beliefs_held_by(&world, village.id)
+            .into_iter()
+            .filter(|belief| {
+                world
+                    .ledger
+                    .text_of(belief.id, hornvale_worldgen::NAME_GLOSS)
+                    == Some("gloom")
+            })
+            .map(|belief| belief.deity)
+            .collect();
+        if gloom_gods.is_empty() {
+            continue;
+        }
+        assert!(
+            gloom_gods
+                .iter()
+                .any(|name| name.to_lowercase().contains(&gloom_word)),
+            "a {species} deity glossing exactly \"gloom\" must carry the \
+             {species} gloom word {gloom_word:?} audibly in its committed \
+             name; got {gloom_gods:?}"
+        );
+        checked += 1;
+    }
+
+    assert!(
+        checked > 0,
+        "no species' \"gloom\" god checked at seed 42 — probe is vacuous"
+    );
+}
+
+/// Readout, not a regression guard: per species over seeds 0..20, prints
+/// `{seed} {species}: {distinct-deity-name-count}/{deity-count}`. (Trimmed
+/// from the brief's 50 seeds to 20 — 50 live world builds ran ~14.5
+/// minutes, over the brief's ~10-minute ceiling; 20 is representative and
+/// fast enough to re-run.) Pre-fix, every collapsed species reads 1/N
+/// regardless of N; the post-fix table (quoted in the chronicle entry) is
+/// this campaign's measured evidence that distinct glosses now yield
+/// distinct names in the general case, not merely at seed 42. Ignored —
+/// nextest must never run it; invoke manually with `--ignored --nocapture`.
+#[test]
+#[ignore = "readout: chronicle evidence, run manually with --nocapture"]
+fn deity_name_distinctness_readout() {
+    for seed in 0..20u64 {
+        let world = generated_world_at(seed);
+        for species in ["bugbear", "goblin", "hobgoblin", "kobold"] {
+            let Some(village) = hornvale_worldgen::flagship_of(&world, species) else {
+                continue;
+            };
+            let beliefs = hornvale_religion::beliefs_held_by(&world, village.id);
+            let total = beliefs.len();
+            let distinct: BTreeSet<String> = beliefs.into_iter().map(|b| b.deity).collect();
+            println!("{seed} {species}: {}/{total}", distinct.len());
+        }
+    }
 }

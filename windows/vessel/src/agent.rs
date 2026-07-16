@@ -43,10 +43,12 @@ pub fn mint_flagship(world: &World, ctx: &LocaleContext) -> Result<Agent, Vessel
     let village = village_info(world).ok_or(VesselError::NoSettlement)?;
     let species = species_of(world, village.id)
         .ok_or_else(|| VesselError::NoSpecies(village.name.clone()))?;
-    let perception = registry()
-        .get(species.as_str())
-        .ok_or_else(|| VesselError::NoSpecies(species.clone()))?
-        .perception;
+    let perception = hornvale_worldgen::peopled(
+        registry()
+            .get(species.as_str())
+            .ok_or_else(|| VesselError::NoSpecies(species.clone()))?,
+    )
+    .perception;
     let lat = number_fact(world, village.id, LATITUDE)?;
     let lon = number_fact(world, village.id, LONGITUDE)?;
     let (la, lo) = (lat.to_radians(), lon.to_radians());

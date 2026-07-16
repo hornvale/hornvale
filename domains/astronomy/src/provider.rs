@@ -281,6 +281,7 @@ mod tests {
                 angular_diameter_rel: 1.0,
                 tide_rel: 1.0,
                 inclination_deg: 5.14,
+                node_longitude_deg: 0.0,
             }],
             neighbors: vec![Neighbor {
                 class: NeighborClass::SunLike,
@@ -381,6 +382,7 @@ mod tests {
             angular_diameter_rel: 1.0,
             tide_rel: 1.0,
             inclination_deg: 5.14,
+            node_longitude_deg: 0.0,
         }
     }
 
@@ -478,7 +480,10 @@ mod tests {
     }
 
     /// SKY-6 × SEQ-5: eclipses are seen where the sun is seen — a locked
-    /// world's day side gets the omen, its night side never does.
+    /// world's day side gets the solar-eclipse omen, its night side never
+    /// does (though the night side gets its own lunar-eclipse omen instead
+    /// — Eclipse Seasons — which is why this checks the DaySky venue
+    /// specifically rather than the shared `ECLIPSE` kind).
     #[test]
     fn locked_day_side_sees_the_eclipse_and_night_side_does_not() {
         let s = sky(SkyPins {
@@ -498,12 +503,128 @@ mod tests {
             s.phenomena(&obs)
         };
         assert!(
-            at(0.0).iter().any(|p| p.kind == ECLIPSE),
+            at(0.0)
+                .iter()
+                .any(|p| p.kind == ECLIPSE && p.venue == Venue::DaySky),
             "day side sees the eclipse"
         );
         assert!(
-            !at(180.0).iter().any(|p| p.kind == ECLIPSE),
+            !at(180.0)
+                .iter()
+                .any(|p| p.kind == ECLIPSE && p.venue == Venue::DaySky),
             "night side never sees the sun devoured"
+        );
+    }
+
+    /// The default seed-42 system's phenomena at a placed midnight — same
+    /// idiom as `neighbors_appear_only_in_darkness_or_on_locked_worlds`
+    /// (position-blind midnight of local day 10), reused here as a shared
+    /// night-venue fixture (Eclipse Seasons).
+    fn phenomena_for_default_seed_42_at_night() -> Vec<Phenomenon> {
+        let s = sky(SkyPins::default());
+        let day_len = s.calendar().day_length().map(|d| d.get()).unwrap_or(1.0);
+        let midnight = 10.0 * day_len + 0.01 * day_len;
+        s.phenomena(&ctx(midnight))
+    }
+
+    /// Eclipse Seasons: each mooned sky promises lunar eclipses in the
+    /// night sky — bloodred, salience 0.8, on the wider-shadow node beat.
+    #[test]
+    fn a_mooned_sky_promises_bloodred_lunar_eclipses_at_night() {
+        let ph = phenomena_for_default_seed_42_at_night();
+        let lunar = ph
+            .iter()
+            .find(|p| p.kind == ECLIPSE && p.venue == Venue::NightSky)
+            .expect("lunar eclipse phenomenon");
+        assert!(
+            lunar.description.contains("bloodred"),
+            "got: {}",
+            lunar.description
+        );
+        assert!((lunar.salience - 0.8).abs() < 1e-9);
+        assert!(lunar.period_days.expect("recurs") > 0.0);
+    }
+
+    /// Eclipse Seasons: on an event day, a placed in-band observer gets a
+    /// dated eclipse observation (no period — it is happening, not
+    /// promised); the same observer a synodic month early gets none.
+    #[test]
+    fn an_in_band_observer_sees_the_eclipse_on_its_day() {
+        use crate::eclipses::{EclipseBody, eclipse_events, ground_track, sub_solar_longitude_deg};
+        use crate::units::StdDays;
+        let (system, calendar) = crate::eclipses::luna_sol();
+        let sky = GeneratedSky::new(crate::system::GenesisOutcome {
+            system: system.clone(),
+            notes: Vec::new(),
+        });
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let solar = events
+            .iter()
+            .find(|e| matches!(e.body, EclipseBody::Solar))
+            .unwrap();
+        let track = ground_track(&system, &calendar, solar).unwrap();
+        let ss = sub_solar_longitude_deg(&calendar, solar.day);
+        let at = |day: f64| {
+            let obs = ObserverContext::at_position(
+                EntityId(0),
+                WorldTime { day },
+                GeoCoord {
+                    latitude: track.center_lat_deg,
+                    longitude: ss,
+                },
+            );
+            sky.phenomena(&obs)
+        };
+        let on_day = at(solar.day.0);
+        assert!(
+            on_day
+                .iter()
+                .any(|p| p.kind == ECLIPSE && p.period_days.is_none()),
+            "event-day observation present"
+        );
+        let month_early = at(solar.day.0 - 29.5);
+        assert!(
+            !month_early
+                .iter()
+                .any(|p| p.kind == ECLIPSE && p.period_days.is_none()),
+            "no dated observation off the day"
+        );
+    }
+
+    /// The night side gets the blood moon on a lunar event day.
+    #[test]
+    fn the_night_side_sees_the_blood_moon_on_its_day() {
+        use crate::eclipses::{EclipseBody, eclipse_events, sub_solar_longitude_deg};
+        use crate::units::StdDays;
+        let (system, calendar) = crate::eclipses::luna_sol();
+        let sky = GeneratedSky::new(crate::system::GenesisOutcome {
+            system: system.clone(),
+            notes: Vec::new(),
+        });
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * 10.0));
+        let lunar = events
+            .iter()
+            .find(|e| matches!(e.body, EclipseBody::Lunar))
+            .unwrap();
+        let ss = sub_solar_longitude_deg(&calendar, lunar.day);
+        // The antipode of `ss`, wrapped into [-180, 180): add 180 twice —
+        // once to cross to the opposite side, once as the wrap idiom's own
+        // offset — before reducing mod 360.
+        let night_lon = (ss + 360.0).rem_euclid(360.0) - 180.0;
+        let obs = ObserverContext::at_position(
+            EntityId(0),
+            WorldTime { day: lunar.day.0 },
+            GeoCoord {
+                latitude: 0.0,
+                longitude: night_lon,
+            },
+        );
+        let ph = sky.phenomena(&obs);
+        assert!(
+            ph.iter().any(|p| p.kind == ECLIPSE
+                && p.period_days.is_none()
+                && p.description.contains("bloodred")),
+            "blood-moon observation present"
         );
     }
 
@@ -922,6 +1043,59 @@ mod tests {
             seed
         );
     }
+
+    /// The rate model and the date model are two views of one geometry:
+    /// the dated scan's long-window cadence must agree with the
+    /// phenomenon's statistical period within 25%.
+    #[test]
+    fn rate_matches_the_dated_scan() {
+        use crate::eclipses::{EclipseBody, eclipse_events};
+        use crate::units::StdDays;
+        let (system, calendar) = crate::eclipses::luna_sol();
+        let years = 100.0;
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * years));
+        let solar = events
+            .iter()
+            .filter(|e| matches!(e.body, EclipseBody::Solar))
+            .count() as f64;
+        let scanned_period = 365.25 * years / solar;
+        let sun_angular = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
+        let moon = &system.moons[0];
+        let chance =
+            super::eclipse_chance(sun_angular, moon.angular_diameter_rel, moon.inclination_deg);
+        let rate_period = calendar.synodic_month(0).unwrap().get() / chance;
+        let ratio = scanned_period / rate_period;
+        assert!((0.75..=1.25).contains(&ratio), "ratio {ratio}");
+    }
+
+    /// The lunar twin of `rate_matches_the_dated_scan`: the same
+    /// coarse-constrains-fine check, but for the wider-shadow node beat
+    /// (Eclipse Seasons) — the dated scan's lunar cadence must agree with
+    /// the statistical period the lunar phenomenon reports.
+    #[test]
+    fn lunar_rate_matches_the_dated_scan() {
+        use crate::eclipses::{
+            EclipseBody, LUNAR_SHADOW_FACTOR, eclipse_events, node_crossing_chance,
+            solar_eclipse_threshold_deg,
+        };
+        use crate::units::StdDays;
+        let (system, calendar) = crate::eclipses::luna_sol();
+        let years = 100.0;
+        let events = eclipse_events(&system, &calendar, StdDays(0.0), StdDays(365.25 * years));
+        let lunar = events
+            .iter()
+            .filter(|e| matches!(e.body, EclipseBody::Lunar))
+            .count() as f64;
+        let scanned_period = 365.25 * years / lunar;
+        let sun_angular = crate::star::sun_angular_diameter_rel(&system.star, system.anchor.orbit);
+        let moon = &system.moons[0];
+        let threshold = LUNAR_SHADOW_FACTOR
+            * solar_eclipse_threshold_deg(sun_angular, moon.angular_diameter_rel);
+        let chance = node_crossing_chance(threshold, moon.inclination_deg);
+        let rate_period = calendar.synodic_month(0).unwrap().get() / chance;
+        let ratio = scanned_period / rate_period;
+        assert!((0.75..=1.25).contains(&ratio), "ratio {ratio}");
+    }
 }
 
 /// Phenomenon kind for the annual daylight cycle.
@@ -946,26 +1120,14 @@ pub const HELIACAL_SETTING: &str = "heliacal-setting";
 /// type-audit: bare-ok(identifier-text)
 pub const WANDERING_STAR: &str = "wandering-star";
 
-/// One angular-diameter unit (Sol from 1 AU ≈ Luna from Earth) in degrees
-/// — the shared scale of `sun_angular_diameter_rel` and a moon's
-/// `angular_diameter_rel` (declared approximation: the two units differ
-/// by under 1%).
-const ANGULAR_UNIT_DEG: f64 = 0.53;
-/// How far (degrees of lunar ecliptic latitude) past the discs' own touch
-/// an eclipse still falls somewhere on the world — the parallax allowance.
-/// Calibrated so a Luna–Sol pair at 5.14° inclination eclipses at ~19% of
-/// new moons (Earth's ~2.4 solar eclipses a year).
-const ECLIPSE_PARALLAX_DEG: f64 = 1.0;
-
 /// The fraction of new moons that eclipse the sun somewhere on the world
-/// (SKY-6): the moon's ecliptic latitude at new moon must fall inside the
-/// node threshold, and a sinusoidal latitude distribution gives
-/// P = (2/π)·asin(threshold / i), saturating at 1 for a flat orbit.
+/// (SKY-6) — the threshold and chance now live in `eclipses.rs` (Eclipse
+/// Seasons); this wrapper keeps the phenomenon path reading as before.
 fn eclipse_chance(sun_angular_rel: f64, moon_angular_rel: f64, inclination_deg: f64) -> f64 {
-    let threshold =
-        ANGULAR_UNIT_DEG * (sun_angular_rel + moon_angular_rel) / 2.0 + ECLIPSE_PARALLAX_DEG;
-    let x = (threshold / inclination_deg.max(f64::MIN_POSITIVE)).min(1.0);
-    (2.0 / std::f64::consts::PI) * math::asin(x)
+    crate::eclipses::node_crossing_chance(
+        crate::eclipses::solar_eclipse_threshold_deg(sun_angular_rel, moon_angular_rel),
+        inclination_deg,
+    )
 }
 
 fn round2(x: f64) -> f64 {
@@ -1034,8 +1196,8 @@ const PHASE_WORDS: [&str; 8] = [
 /// Which eighth of a cycle `phase` (in [0,1)) falls in, with windows
 /// *centered* on the phases they name: full spans [7/16, 9/16) around 0.5,
 /// new wraps around 0 (SKY-14 — the full window used to start at 0.5
-/// instead of straddling it). `render.rs`'s phase strip and orrery faces
-/// sample these same bands.
+/// instead of straddling it). `render.rs`'s phase strip samples these same
+/// bands.
 pub(crate) fn phase_eighth(phase: f64) -> usize {
     ((phase * 8.0).round() as usize) % 8
 }
@@ -1340,6 +1502,104 @@ impl PhenomenaSource for GeneratedSky {
                     salience: round2(0.35 + 0.35 * angular.min(2.0) / 2.0),
                     venue: Venue::NightSky,
                 });
+            }
+
+            // Eclipse Seasons: lunar eclipses — the night twin of SKY-6's
+            // solar rate, on the wider-shadow node beat, seen wherever
+            // the full moon is seen.
+            let sun_angular =
+                crate::star::sun_angular_diameter_rel(&self.system.star, self.system.anchor.orbit);
+            for (index, moon) in self.system.moons.iter().enumerate() {
+                let Some(synodic) = self.calendar.synodic_month(index) else {
+                    continue;
+                };
+                let threshold = crate::eclipses::LUNAR_SHADOW_FACTOR
+                    * crate::eclipses::solar_eclipse_threshold_deg(
+                        sun_angular,
+                        moon.angular_diameter_rel,
+                    );
+                let chance = crate::eclipses::node_crossing_chance(threshold, moon.inclination_deg);
+                out.push(Phenomenon {
+                    kind: ECLIPSE.to_string(),
+                    description: format!(
+                        "an eclipse of the moon: the full {} moon darkens to a bloodred coal",
+                        size_word(moon.angular_diameter_rel)
+                    ),
+                    period_days: Some(round2(synodic.get() / chance)),
+                    salience: 0.8,
+                    venue: Venue::NightSky,
+                });
+            }
+        }
+
+        // Eclipse Seasons: dated, placed event-day observations. A
+        // placed observer whose day contains a syzygy event sees it (or
+        // its partial bite) at their own sight tier — no period, because
+        // it is happening, not promised.
+        if let Some(coord) = ctx.position {
+            use crate::eclipses::{
+                EclipseBody, EclipseSight, eclipse_events, lunar_eclipse_seen, solar_eclipse_sight,
+            };
+            let half_day = self
+                .calendar
+                .day_length()
+                .map(|d| d.get() / 2.0)
+                .unwrap_or(0.5);
+            let window_from = crate::units::StdDays(t.0 - half_day);
+            let window_until = crate::units::StdDays(t.0 + half_day);
+            for event in eclipse_events(&self.system, &self.calendar, window_from, window_until) {
+                let moon = &self.system.moons[event.moon];
+                match event.body {
+                    EclipseBody::Solar => {
+                        let (description, salience) = match solar_eclipse_sight(
+                            &self.system,
+                            &self.calendar,
+                            &event,
+                            coord.latitude,
+                            coord.longitude,
+                        ) {
+                            EclipseSight::WholeSun => (
+                                format!(
+                                    "the {} moon devours the sun whole",
+                                    size_word(moon.angular_diameter_rel)
+                                ),
+                                0.95,
+                            ),
+                            EclipseSight::BurningRing => (
+                                format!(
+                                    "the {} moon leaves a burning ring of the sun",
+                                    size_word(moon.angular_diameter_rel)
+                                ),
+                                0.85,
+                            ),
+                            EclipseSight::Bitten => {
+                                ("a dark bite taken from the sun's edge".to_string(), 0.6)
+                            }
+                            EclipseSight::Unseen => continue,
+                        };
+                        out.push(Phenomenon {
+                            kind: ECLIPSE.to_string(),
+                            description,
+                            period_days: None,
+                            salience,
+                            venue: Venue::DaySky,
+                        });
+                    }
+                    EclipseBody::Lunar => {
+                        if lunar_eclipse_seen(&self.calendar, &event, coord.longitude) {
+                            out.push(Phenomenon {
+                                kind: ECLIPSE.to_string(),
+                                description: format!(
+                                    "the full {} moon darkens to a bloodred coal",
+                                    size_word(moon.angular_diameter_rel)
+                                ),
+                                period_days: None,
+                                salience: 0.8,
+                                venue: Venue::NightSky,
+                            });
+                        }
+                    }
+                }
             }
         }
 

@@ -62,6 +62,38 @@ pub fn insolation_rel(star: &Star, anchor: &crate::anchor::Anchor) -> f64 {
     star.luminosity.0 / (anchor.orbit.0 * anchor.orbit.0)
 }
 
+/// Standard days per gigayear — the timescale secular brightening lives on.
+/// type-audit: pending(wave-1)
+pub const GYR_DAYS: f64 = 1.0e9 * 365.25;
+
+/// Fractional main-sequence brightening per gigayear: b = 0.10 · M^2.5
+/// (declared approximation, model card — Sol-calibrated at ~10%/Gyr,
+/// scaled by the main-sequence lifetime t_MS ∝ M⁻²·⁵). Draw-free: mass
+/// drawn, everything else derived.
+/// type-audit: bare-ok(ratio)
+pub fn brightening_per_gyr(star: &Star) -> f64 {
+    0.10 * math::powf(star.mass.0, 2.5)
+}
+
+/// Luminosity at absolute time `t`, anchored so `luminosity_at(star, 0)`
+/// equals the genesis luminosity exactly. The habitable zone remains a
+/// genesis-epoch derivation from L₀ (the world lives on kiloyear scales,
+/// where this slope is honestly negligible — deep time is where it shows).
+pub fn luminosity_at(star: &Star, t: crate::units::StdDays) -> SolarLuminosities {
+    SolarLuminosities(star.luminosity.0 * (1.0 + brightening_per_gyr(star) * t.0 / GYR_DAYS))
+}
+
+/// Time-aware insolation: `luminosity_at / a²` — [`insolation_rel`]'s
+/// deep-time sibling (SKY-15's shared definition, evaluated at `t`).
+/// type-audit: pending(wave-1)
+pub fn insolation_rel_at(
+    star: &Star,
+    anchor: &crate::anchor::Anchor,
+    t: crate::units::StdDays,
+) -> f64 {
+    luminosity_at(star, t).0 / (anchor.orbit.0 * anchor.orbit.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -129,5 +161,41 @@ mod tests {
             };
             assert_eq!(s.class_name, expected);
         }
+    }
+
+    /// The Long Count (SKY-1 close-out): luminosity is anchored at the
+    /// present and brightens on the main-sequence slope — 10%/Gyr at one
+    /// solar mass, faster for heavier stars (b = 0.10·M^2.5).
+    #[test]
+    fn luminosity_brightens_on_the_main_sequence_slope() {
+        use crate::units::StdDays;
+        let s = generate_star(Seed(42));
+        assert_eq!(luminosity_at(&s, StdDays(0.0)), s.luminosity);
+        let after_gyr = luminosity_at(&s, StdDays(GYR_DAYS));
+        let expected = s.luminosity.get() * (1.0 + brightening_per_gyr(&s));
+        assert!((after_gyr.get() - expected).abs() < 1e-12);
+        let b = brightening_per_gyr(&s);
+        assert!((b - 0.10 * math::powf(s.mass.get(), 2.5)).abs() < 1e-15);
+    }
+
+    /// Heavier stars age faster, and insolation follows luminosity.
+    #[test]
+    fn brightening_scales_with_mass_and_reaches_insolation() {
+        use crate::pins::SkyPins;
+        use crate::units::StdDays;
+        let mut light = generate_star(Seed(42));
+        light.mass = SolarMasses::new(0.7).unwrap();
+        let mut heavy = light.clone();
+        heavy.mass = SolarMasses::new(1.3).unwrap();
+        assert!(brightening_per_gyr(&heavy) > brightening_per_gyr(&light));
+        let star = generate_star(Seed(42));
+        let anchor = crate::anchor::generate_anchor(Seed(42), &star, &SkyPins::default()).unwrap();
+        assert_eq!(
+            insolation_rel_at(&star, &anchor, StdDays(0.0)),
+            insolation_rel(&star, &anchor)
+        );
+        assert!(
+            insolation_rel_at(&star, &anchor, StdDays(GYR_DAYS)) > insolation_rel(&star, &anchor)
+        );
     }
 }

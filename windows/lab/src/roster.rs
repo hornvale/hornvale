@@ -7,13 +7,13 @@ use hornvale_species::SpeciesDef;
 
 /// The shipped goblin, placed alone (`[goblin]`).
 pub fn goblin_solo_roster() -> Vec<SpeciesDef> {
-    vec![hornvale_species::registry()["goblin"]]
+    vec![hornvale_species::registry()["goblin"].clone()]
 }
 
 /// A clone of goblin under the fresh name `goblin-twin`, placed alone. Identical
 /// vectors, independent name-salted streams — the null-control twin (spec §3).
 pub fn goblin_twin_solo_roster() -> Vec<SpeciesDef> {
-    let goblin = hornvale_species::registry()["goblin"];
+    let goblin = hornvale_species::registry()["goblin"].clone();
     vec![SpeciesDef {
         name: "goblin-twin",
         ..goblin
@@ -27,15 +27,22 @@ pub fn goblin_twin_solo_roster() -> Vec<SpeciesDef> {
 /// capacity floor met by pitch). The shipped peoples stay atonal by authoring
 /// (spec §9); tone is for the future bestiary.
 pub fn serpent_tonal_solo_roster() -> Vec<SpeciesDef> {
-    let goblin = hornvale_species::registry()["goblin"];
+    let goblin = hornvale_species::registry()["goblin"].clone();
+    let goblin_peopled = goblin
+        .peopled
+        .clone()
+        .expect("the shipped goblin carries peopled traits");
     vec![SpeciesDef {
         name: "serpent",
         family: "serpent",
-        articulation: hornvale_species::ArticulationVector {
-            tonality: 1.0,
-            vowel_space: 0.3,
-            ..goblin.articulation
-        },
+        peopled: Some(hornvale_species::PeopledTraits {
+            articulation: hornvale_species::ArticulationVector {
+                tonality: 1.0,
+                vowel_space: 0.3,
+                ..goblin_peopled.articulation
+            },
+            ..goblin_peopled
+        }),
         ..goblin
     }]
 }

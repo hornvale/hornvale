@@ -45,6 +45,15 @@ pub const RETROGRADE_SPIN: &str = "retrograde-spin";
 /// (non-functional, Number — one per moon; SKY-6).
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_INCLINATION_DEGREES: &str = "moon-inclination-degrees";
+/// Predicate: a moon's ascending-node ecliptic longitude at genesis, degrees
+/// (non-functional, Number — one per moon; Eclipse Seasons).
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_NODE_LONGITUDE_DEGREES: &str = "moon-node-longitude-degrees";
+/// Predicate: a moon's nodal-regression period, standard days
+/// (non-functional, Number — one per moon; Eclipse Seasons). The
+/// standstill interpretation of this beat is the deferred follow-up row.
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_NODE_PERIOD_DAYS: &str = "moon-node-period-days";
 /// Mass of a moon in lunar masses (non-functional, Number — one per moon).
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_MASS_LUNAR: &str = "moon-mass-lunar";
@@ -141,6 +150,10 @@ pub const ANCHOR_ORBIT_AU: &str = "anchor-orbit-au";
 /// L/a², global annual mean).
 /// type-audit: bare-ok(identifier-text)
 pub const INSOLATION_REL: &str = "insolation-rel";
+/// Predicate: the star's fractional main-sequence brightening per
+/// gigayear (The Long Count).
+/// type-audit: bare-ok(identifier-text)
+pub const BRIGHTENING_PER_GYR: &str = "brightening-per-gyr";
 /// How many star figures the reference observer's sky holds (functional,
 /// Number).
 /// type-audit: bare-ok(identifier-text)
@@ -166,6 +179,11 @@ pub const FIGURE_REGION: &str = "figure-region";
 /// wanting the per-figure detail must recompute from [`crate::figures`].
 /// type-audit: bare-ok(identifier-text)
 pub const FIGURE_ON_ECLIPTIC: &str = "figure-on-ecliptic";
+/// Predicate: the solstice-sunrise azimuth at a settlement's founding
+/// epoch, degrees clockwise from north (The Long Count) — the sightline
+/// whose deep-time drift makes the sky an archaeological clock.
+/// type-audit: bare-ok(identifier-text)
+pub const FOUNDING_SOLSTICE_AZIMUTH_DEGREES: &str = "founding-solstice-azimuth-degrees";
 
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     Fact {
@@ -323,6 +341,14 @@ pub fn genesis(
         ),
         &world.registry,
     )?;
+    world.ledger.commit(
+        fact(
+            subject,
+            BRIGHTENING_PER_GYR,
+            Value::Number(crate::star::brightening_per_gyr(&system.star)),
+        ),
+        &world.registry,
+    )?;
 
     for moon in &system.moons {
         world.ledger.commit(
@@ -338,6 +364,29 @@ pub fn genesis(
                 subject,
                 MOON_INCLINATION_DEGREES,
                 Value::Number(moon.inclination_deg),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                subject,
+                MOON_NODE_LONGITUDE_DEGREES,
+                Value::Number(moon.node_longitude_deg),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                subject,
+                MOON_NODE_PERIOD_DAYS,
+                Value::Number(
+                    crate::eclipses::node_regression_period(
+                        system.anchor.year,
+                        moon.period,
+                        moon.inclination_deg,
+                    )
+                    .get(),
+                ),
             ),
             &world.registry,
         )?;
@@ -505,6 +554,26 @@ pub fn genesis(
     Ok(())
 }
 
+/// Commit a settlement's founding solstice alignment (The Long Count).
+/// Called by the composition root — the one place settlements and the
+/// calendar meet; astronomy owns the predicate and the commit shape.
+/// type-audit: pending(wave-1)
+pub fn founding_alignment(
+    world: &mut World,
+    settlement: EntityId,
+    azimuth_deg: f64,
+) -> Result<(), LedgerError> {
+    world.ledger.commit(
+        fact(
+            settlement,
+            FOUNDING_SOLSTICE_AZIMUTH_DEGREES,
+            Value::Number(azimuth_deg),
+        ),
+        &world.registry,
+    )?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -517,6 +586,18 @@ mod tests {
         let mut w = World::new(Seed(seed));
         register_concepts(&mut w.registry).unwrap();
         w
+    }
+
+    /// Shared fixture (extracted from the per-moon fact tests' shared
+    /// idiom): generate `seed`'s unpinned system, commit its genesis facts,
+    /// and hand back the world, the subject entity, and the outcome for
+    /// per-moon fact assertions.
+    fn committed_world(seed: u64) -> (World, EntityId, GenesisOutcome) {
+        let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
+        let mut w = world_with(seed);
+        let subject = w.ledger.mint_entity();
+        genesis(&mut w, subject, &outcome).unwrap();
+        (w, subject, outcome)
     }
 
     #[test]
@@ -554,6 +635,13 @@ mod tests {
         assert!(w.ledger.value_of(subject, STAR_CLASS).is_some());
         assert!(w.ledger.value_of(subject, YEAR_LENGTH_STD).is_some());
         assert!(w.ledger.value_of(subject, OBLIQUITY_DEGREES).is_some());
+        assert_eq!(
+            w.ledger
+                .facts_about(subject)
+                .filter(|f| f.predicate == BRIGHTENING_PER_GYR)
+                .count(),
+            1
+        );
     }
 
     #[test]
@@ -1085,6 +1173,23 @@ mod tests {
                 count <= 1,
                 "seed {seed}: figure-on-ecliptic must dedupe to one fact"
             );
+        }
+    }
+
+    /// Eclipse Seasons: each moon commits its node longitude and its
+    /// nodal-regression period.
+    #[test]
+    fn each_moon_commits_node_facts() {
+        let (world, subject, outcome) = committed_world(42);
+        let moons = outcome.system.moons.len();
+        assert!(moons > 0);
+        for predicate in [MOON_NODE_LONGITUDE_DEGREES, MOON_NODE_PERIOD_DAYS] {
+            let count = world
+                .ledger
+                .facts_about(subject)
+                .filter(|f| f.predicate == predicate)
+                .count();
+            assert_eq!(count, moons, "{predicate}");
         }
     }
 }
