@@ -65,13 +65,14 @@ the single source of truth for everything sampled at that node.
 A node's geographic coordinate — latitude `asin(s_z)`, longitude
 `atan2(s_y, s_x)`, in degrees — is **derived**, never primary. **Sampling
 uses the unit vector `s` directly**, not a lat/lon round-trip: the producer
-looks up the nearest geosphere cell to `s` itself. This matters for
-cross-platform byte-identity — the lat/lon trig functions route through the
-platform's libm and can differ in the last ULP across machines (decision
-0041), so a sampling path that depended on `asin`/`atan2` before finding a
-cell would reintroduce exactly the divergence the quantization boundary
-exists to close. Skipping that round-trip removes a redundant, ULP-risky
-step, not just a formality.
+looks up the nearest geosphere cell to `s` itself. `s` already *is* the
+direction the cell lookup needs, so converting it to a latitude/longitude
+and letting the index convert that back to a direction would be redundant,
+lossy work for no gain. (Cross-platform byte-identity is not at stake either
+way: every transcendental in the sim, including the cell index's own, routes
+through the pure-Rust libm crate that makes them byte-identical across
+machines — decision 0041 — so the choice here is about avoiding a wasted
+round-trip, not about closing a platform gap.)
 
 The document does **not** carry per-node lat/lon or positions — a client
 reconstructs node geometry from the address via this same projection.
@@ -216,10 +217,16 @@ discipline as `scene/tiles/v1` and the rest of the world's on-disk formats:
   place. That mints `scene/tiles-region/v2` as a new schema alongside
   `v1`, which keeps emitting exactly what it always emitted.
 - The committed example, `gallery/scene-tiles-region-seed-42.json`, is
-  regenerated from seed 42 at a fixed address and checked byte-for-byte by
-  CI; if the generator's output ever drifts from the committed file, the
-  build fails rather than let the schema silently change underneath its
-  own example.
+  regenerated from seed 42 at a fixed address by
+  `scripts/regenerate-artifacts.sh`; drift from the committed file shows up
+  in the author's `git status` on regeneration. Like its sibling
+  `scene-tiles-seed-42.json`, it is **excluded from CI's cross-platform
+  strict diff**: its nearest-cell `biome`/`ocean`/`plate` classifications
+  ride worldgen values whose last-ULP results are host-libm-local, so
+  byte-identity holds per-platform but not necessarily between the CI runner
+  and a committed macOS file. Same-platform determinism (same machine, same
+  address → byte-identical) is enforced instead by the producer's unit
+  tests.
 
 The committed example is generated at address `face = 0, level = 3, ix =
 4, iy = 4, samples = 16` against the seed-42 sky world — a 17×17 node grid
