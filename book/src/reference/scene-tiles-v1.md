@@ -196,6 +196,11 @@ CLIM-cryosphere / CLIM-ice-albedo), a genuine `ice` layer would supersede
 this guidance additively — appended as a new field, this section retired,
 never a re-meaning of what's here.
 
+## Going closer
+
+For one tile's footprint at higher on-tile sample density, see
+[`scene/tiles-region/v1`](./scene-tiles-region-v1.md).
+
 ## Stability
 
 `scene/tiles/v1` is a save-format-class contract, held to the same
