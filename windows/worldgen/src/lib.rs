@@ -1667,11 +1667,26 @@ pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology
 /// `lexicon_of`'s resolution).
 /// type-audit: bare-ok(identifier-text: family)
 pub fn proto_phonology_of(world: &World, family: &'static str) -> hornvale_language::Phonology {
-    // The proto vector comes from language's canonical family-proto store
-    // (`WorldComponents::family_proto`), keyed by family label; a singleton
-    // family has no entry there and never reaches this function.
-    let proto = hornvale_language::family_proto();
-    let art = proto
+    // The convenience entry: assemble the canonical component set (the sole
+    // construction point for `family_proto`) and delegate to the wc-threaded
+    // read path, so the proto vector is always sourced from `wc.family_proto`.
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    proto_phonology_of_in(world, &wc, family)
+}
+
+/// [`proto_phonology_of`]'s proto draw against an ALREADY-built component set
+/// (ECS c3): read the family's proto ancestral vector from `wc.family_proto`
+/// — the composed proto store, `worldgen`'s sole proto read path — rather than
+/// re-fetch language's global `family_proto()` per call. A singleton family
+/// has no entry there and never reaches this function (see `lexicon_of`'s
+/// resolution). Panics if `family` is not in `wc.family_proto`.
+fn proto_phonology_of_in(
+    world: &World,
+    wc: &WorldComponents,
+    family: &'static str,
+) -> hornvale_language::Phonology {
+    let art = wc
+        .family_proto
         .get(&KindId(family))
         .unwrap_or_else(|| panic!("proto_phonology_of: family '{family}' has no proto vector"));
     hornvale_language::draw_phonology(&world.seed, family, &envelope_of(art))
@@ -2041,8 +2056,8 @@ pub fn lexicon_of_in(
     // singleton family (e.g. kobold) is absent there, so it stays its own
     // family label and its own phonology stands in for its proto — the
     // pre-family draw, preserved exactly.
-    let (fam_label, proto_ph) = match hornvale_language::family_proto().get(&KindId(family)) {
-        Some(_) => (family, proto_phonology_of(world, family)),
+    let (fam_label, proto_ph) = match wc.family_proto.get(&KindId(family)) {
+        Some(_) => (family, proto_phonology_of_in(world, wc, family)),
         None => (name, ph.clone()),
     };
     let daughters = family_daughters(world, wc, family);
@@ -2581,7 +2596,7 @@ fn build_to(
         // stays its own family label and its own phonology stands in for its
         // proto — the pre-family draw, preserved exactly.
         let (fam_label, proto_ph) = match wc.family_proto.get(&KindId(family)) {
-            Some(_) => (family, proto_phonology_of(&world, family)),
+            Some(_) => (family, proto_phonology_of_in(&world, wc, family)),
             None => (name, ph.clone()),
         };
         let daughters = family_daughters(&world, wc, family);
@@ -3838,6 +3853,26 @@ mod tests {
         // The cascade still runs on the flagship.
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
         assert!(!hornvale_religion::beliefs_of(&world).is_empty());
+    }
+
+    #[test]
+    fn species_facts_touch_no_pre_existing_predicate() {
+        // Ported from the deleted species-genesis test (spec §8): species
+        // genesis (`provenance == "species"`) commits facts ONLY under
+        // `species-*` predicates or `PEOPLED_BY` — it never writes into
+        // another domain's predicate namespace.
+        let world = generated(42);
+        for fact in world.ledger.iter() {
+            if fact.provenance != "species" {
+                continue;
+            }
+            assert!(
+                fact.predicate.starts_with("species-")
+                    || fact.predicate == hornvale_species::PEOPLED_BY,
+                "species-provenance fact touched a non-species predicate: {:?}",
+                fact.predicate
+            );
+        }
     }
 
     #[test]

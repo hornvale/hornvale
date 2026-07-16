@@ -55,6 +55,7 @@ impl WorldComponents {
             &perception,
             &articulation,
             &lexicon,
+            &family_proto,
             &family_of,
         )?;
 
@@ -93,6 +94,7 @@ impl WorldComponents {
             &perception,
             &articulation,
             &lexicon,
+            &family_proto,
             &family_of,
         )?;
 
@@ -110,13 +112,18 @@ impl WorldComponents {
 
 /// Enforce peopled-cluster coherence: the four peopled stores (psyche,
 /// perception, articulation, lexicon) share one key-set — the peoples — and
-/// every peopled kind has a biosphere row and a family row.
+/// every peopled kind has a biosphere row and a family row. Also enforce
+/// forward-proto coherence (the load-time invariant, both constructors): every
+/// family label carried by ≥2 kinds in `family_of` must have a `family_proto`
+/// entry, so a multi-member family always has a proto ancestral vector to draw
+/// its shared proto phonology from (a singleton family stays its own proto).
 fn check_integrity(
     biosphere: &ComponentStore<KindId, BiosphereTraits>,
     psyche: &ComponentStore<KindId, PsychVector>,
     perception: &ComponentStore<KindId, PerceptionVector>,
     articulation: &ComponentStore<KindId, hornvale_language::ArticulationVector>,
     lexicon: &ComponentStore<KindId, hornvale_language::speech::Lexicon>,
+    family_proto: &ComponentStore<KindId, hornvale_language::ArticulationVector>,
     family_of: &ComponentStore<KindId, &'static str>,
 ) -> Result<(), BuildError> {
     if !psyche.ids().eq(perception.ids()) {
@@ -146,13 +153,27 @@ fn check_integrity(
             )));
         }
     }
+    // Forward-proto coherence: count each family label's membership, then
+    // require a `family_proto` entry for every label carried by ≥2 kinds.
+    let mut family_counts: std::collections::BTreeMap<&'static str, usize> =
+        std::collections::BTreeMap::new();
+    for (_, fam) in family_of.iter() {
+        *family_counts.entry(*fam).or_insert(0) += 1;
+    }
+    for (fam, count) in &family_counts {
+        if *count >= 2 && !family_proto.contains(&KindId(fam)) {
+            return Err(BuildError::MalformedKind(format!(
+                "family {fam:?} has {count} members but no family_proto entry"
+            )));
+        }
+    }
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_language::{articulation_registry, lexicon_registry};
+    use hornvale_language::{articulation_registry, family_proto, lexicon_registry};
     use hornvale_species::{biosphere_registry, family_of, perception_registry, psyche_registry};
 
     #[test]
@@ -162,6 +183,7 @@ mod tests {
         let perception = perception_registry();
         let articulation = articulation_registry();
         let lexicon = lexicon_registry();
+        let family_proto = family_proto();
         let family_of = family_of();
         assert!(
             check_integrity(
@@ -170,6 +192,7 @@ mod tests {
                 &perception,
                 &articulation,
                 &lexicon,
+                &family_proto,
                 &family_of
             )
             .is_ok()
@@ -196,6 +219,7 @@ mod tests {
             &perception,
             &articulation,
             &lexicon,
+            &family_proto(),
             &family_of,
         );
         assert!(matches!(result, Err(BuildError::MalformedKind(_))));
@@ -226,6 +250,7 @@ mod tests {
             &perception,
             &articulation,
             &lexicon,
+            &family_proto(),
             &family_of,
         );
         assert!(matches!(result, Err(BuildError::MalformedKind(_))));
@@ -253,6 +278,7 @@ mod tests {
             &perception,
             &articulation,
             &lexicon,
+            &family_proto(),
             &family_of,
         );
         assert!(matches!(result, Err(BuildError::MalformedKind(_))));
@@ -283,6 +309,7 @@ mod tests {
             &perception,
             &articulation,
             &lexicon,
+            &family_proto(),
             &family_of,
         );
         assert!(matches!(result, Err(BuildError::MalformedKind(_))));
@@ -310,6 +337,46 @@ mod tests {
             &perception,
             &articulation,
             &lexicon,
+            &family_proto(),
+            &family_of,
+        );
+        assert!(matches!(result, Err(BuildError::MalformedKind(_))));
+    }
+
+    #[test]
+    fn multi_member_family_missing_its_proto_fails_loudly() {
+        let biosphere = biosphere_registry();
+        let psyche = psyche_registry();
+        let perception = perception_registry();
+        let articulation = articulation_registry();
+        let lexicon = lexicon_registry();
+        let family_proto = family_proto();
+        let canonical_family_of = family_of();
+
+        // Reassign two peopled kinds to a fresh family label that has no
+        // `family_proto` entry, so the roster carries a 2-member family with
+        // no proto ancestral vector — the forward-proto invariant must fire.
+        let mut ids = psyche.ids();
+        let a = *ids.next().expect("at least one peopled kind");
+        let b = *ids.next().expect("at least two peopled kinds");
+        let family_of: ComponentStore<KindId, &'static str> = canonical_family_of
+            .iter()
+            .map(|(k, v)| {
+                if *k == a || *k == b {
+                    (*k, "orphan-family")
+                } else {
+                    (*k, *v)
+                }
+            })
+            .collect();
+
+        let result = check_integrity(
+            &biosphere,
+            &psyche,
+            &perception,
+            &articulation,
+            &lexicon,
+            &family_proto,
             &family_of,
         );
         assert!(matches!(result, Err(BuildError::MalformedKind(_))));
