@@ -145,6 +145,11 @@ pub struct TectonicGlobe {
     /// never consumed as a `Stream`, so it carries no draw-order/save-format
     /// contract (see `streams::LITHOLOGY`).
     pub lithology_seed: Seed,
+    /// The drawn rift history (rift-and-fit, spec §3): the majors' assembly
+    /// frame, their seams, and one global spreading rate. The crust field
+    /// clips each major craton's cap along these seams. Recomputed at
+    /// genesis, never serialized.
+    pub rift: crate::rift::RiftHistory,
 }
 
 impl TectonicGlobe {
@@ -183,7 +188,7 @@ pub fn generate(
     // here, and threaded to both the craton budget and sea level below —
     // a pinned target conditions both identically to a drawn one.
     let ocean_target = elevation::resolve_ocean_fraction(terrain_seed, pins, &mut notes);
-    let cratons = crust::draw_cratons(terrain_seed, pins, ocean_target, &mut notes);
+    let mut cratons = crust::draw_cratons(terrain_seed, pins, ocean_target, &mut notes);
     // Microcontinents (Sculpting, spec §3): a second new drawn set of tiny
     // ocean-basin cratons, sized below the continent-count metric's floor.
     // A new stream label independent of `cratons`'/`terranes`' own, so
@@ -196,20 +201,65 @@ pub fn generate(
     // placement rides on the drawn cratons' rims. A new stream label, so
     // this consumes no draws the pre-Sculpting draw order relied on.
     let terranes = crust::draw_terranes(terrain_seed, &cratons, &plate_list);
+    // The rift (rift-and-fit, spec §3): the LAST drawn terrain stream —
+    // appended after every earlier draw so its single spreading-rate draw
+    // perturbs no pre-rift consumption order (conservative-epoch append
+    // discipline; the `terrain/rift` label sorts last in the stream
+    // manifest to match). Seamed over MAJORS ONLY (`&cratons`, before the
+    // microcontinent concat below), from the DRAWN craton positions.
+    let rift = crate::rift::draw_rift(terrain_seed, &cratons);
+    // `--supercontinent` (rift-and-fit spec §4): hold the world at its
+    // pre-breakup assembly. Replace each major craton's center with its
+    // `rift.assembly` position — done here, AFTER `draw_rift`, so the
+    // replacement targets the exact assembly the rift seamed against. This
+    // makes `CrustField`'s per-major `rotation_for(rift.assembly[i],
+    // cratons[i].center)` an EXACT identity (byte-identical inputs → zero
+    // cross-product → the near-parallel guard returns `([0,0,1], 0)`), so
+    // every major is clipped in the assembly frame with no rotation and the
+    // supercontinent is exactly sutured, its seams drawn but unopened. (The
+    // alternative — replace before `draw_rift`, then re-assemble the
+    // already-assembled set — was rejected: `assemble_cratons` is only a
+    // NEAR-fixed-point, its 64-iteration bisection leaving ~1e-15 residuals,
+    // so it yields near-identity, not exact-identity, rotations.) The
+    // replacement is post-draw arithmetic — zero draws — so consumption is
+    // identical to the unpinned path (pin isolation). Under the pin,
+    // microcontinents and terranes above placed against the drawn (pre-
+    // suture) rims rather than the assembled ones; accepted, because the pin
+    // already relocates terranes via its skipped repulsion, so no new
+    // determinism wart is introduced.
+    if pins.supercontinent == Some(true) {
+        for (i, c) in cratons.iter_mut().enumerate() {
+            c.center = rift.assembly[i];
+        }
+    }
     // Single-craton hypsometry: soften an unreachable land quota to the
     // shelf break instead of drowning the percentile into the abyss.
+    // `continental_supply` reads only radius and age (center-independent),
+    // so the supercontinent center replacement above leaves it unchanged.
     let supply = crust::continental_supply(&cratons);
     let effective_ocean = elevation::effective_ocean_target(ocean_target, supply, &mut notes);
-    let field = crust::CrustField::new_with_terranes(
+    let field = crust::CrustField::new_with_rift(
         terrain_seed,
         [cratons.clone(), micro.clone()].concat(),
         terranes.clone(),
+        Some(rift.clone()),
+        cratons.len(),
     );
     let crust_map = CellMap::from_fn(geosphere, |c| {
         field.thickness_at(geosphere.position(c)).get()
     });
     let crust_age_map = CellMap::from_fn(geosphere, |c| field.age_at(geosphere.position(c)));
-    let continental = CellMap::from_fn(geosphere, |c| field.continental_at(geosphere.position(c)));
+    // Continental mask, derived from `crust_map` rather than a third full
+    // field-sampling pass: `CrustField::continental_at(p)` is definitionally
+    // `thickness_at(p).get() >= CONTINENTAL_THRESHOLD_KM`, and `crust_map`
+    // already holds `thickness_at(position(c)).get()` per cell, so this
+    // comparison is byte-identical to sampling the field again — it just
+    // deletes one of the three per-cell field passes `generate` used to pay
+    // (Nathan-authorized during the Task 6 perf recovery, with the epoch's
+    // marginal near-seam clip cost recorded alongside the deletion).
+    let continental = CellMap::from_fn(geosphere, |c| {
+        *crust_map.get(c) >= crust::CONTINENTAL_THRESHOLD_KM
+    });
     let plate_of = plates::assign_plates(geosphere, terrain_seed, &plate_list);
     let boundary_map = boundaries::boundary_field(geosphere, &plate_of, &plate_list, &continental);
     let distances = boundaries::boundary_distance(geosphere, &plate_of, &boundary_map);
@@ -428,6 +478,7 @@ pub fn generate(
         trim_ocean_loss_m3,
         lithology: placeholder_lithology,
         lithology_seed,
+        rift,
     };
     globe.lithology = crate::lithology::assemble_material(geosphere, &globe);
 

@@ -389,11 +389,6 @@ fn terrane_envelope(t: &Terrane, p: [f64; 3]) -> f64 {
     terrane_contribution_km(t, p) / t.thickness_km
 }
 
-/// How far each non-anchor craton slides toward craton 0 when
-/// `--supercontinent` clusters them: 0 leaves it in place, 1 collapses it
-/// onto the anchor exactly.
-const CLUSTER_PULL: f64 = 0.75;
-
 /// Spherical interpolation from `a` toward `b` by `t` in [0, 1]: the
 /// great-circle analogue of a linear blend, so a slid center stays on the
 /// unit sphere exactly rather than needing a post-hoc renormalize-to-taste.
@@ -477,15 +472,21 @@ fn slerp(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
 /// 0.415\] — radii grow roughly 1.6x versus the plain-area match, since
 /// only a fraction of each nominal cap is actually continental.
 ///
-/// `--supercontinent` is applied after every position is drawn and every
-/// radius rescaled: it clusters cratons 1.. toward craton 0 by `slerp`,
-/// so the pin perturbs positions but never the draw sequence or the area
-/// normalization (pin isolation again).
+/// `--supercontinent` no longer transforms craton centers here (epoch v4,
+/// rift-and-fit spec §4): it holds the world at its pre-breakup ASSEMBLY
+/// frame, applied in `globe::generate` after the rift is drawn (each
+/// major's center becomes `rift.assembly[i]`). The draw stage leaves the
+/// pinned set exactly as the unpinned path draws it, so the pin still
+/// perturbs no draw and no area normalization (pin isolation).
 ///
 /// Repulsion (Task 9 iteration 2, retargeted in iteration 3') is applied
-/// last, and only when the world is *not* pinned `--supercontinent` (that
-/// pin wants clustering — repelling what it just pulled together would
-/// fight it): one deterministic pass, in id order, zero stream draws,
+/// last, and only when the world is *not* pinned `--supercontinent`: under
+/// that pin the drawn set feeds `assemble_cratons` at genesis, which pulls
+/// every craton back to first contact regardless of how the raw draw
+/// scattered them, so a repulsion pass first would only respread an input
+/// the assembly immediately collapses — skipping it keeps the pinned draw
+/// equal to its own unrepelled path. One deterministic pass, in id order,
+/// zero stream draws,
 /// separating overlap-merged craton centers so distinct cratons read as
 /// distinct landmasses (see `repel_cratons`). Like the radius rescale,
 /// this makes the final *center* of cratons 1.. a downstream arithmetic
@@ -585,12 +586,13 @@ fn draw_cratons_unrepelled(
             c.radius_rad = (c.radius_rad * scale).min(0.6);
         }
     }
-    if pins.supercontinent == Some(true) && cratons.len() > 1 {
-        let anchor = cratons[0].center;
-        for craton in cratons.iter_mut().skip(1) {
-            craton.center = slerp(craton.center, anchor, CLUSTER_PULL);
-        }
-    }
+    // Epoch v4 (rift-and-fit, spec §4): `--supercontinent` no longer
+    // transforms craton centers at the draw stage. The pin now holds the
+    // world at its pre-breakup ASSEMBLY frame, applied in `globe::generate`
+    // after the rift is drawn (each major's center is replaced by
+    // `rift.assembly[i]`), so the drawn set here is left exactly as the
+    // unpinned path draws it — the suture is a genesis-stage consequence of
+    // `crust::assemble_cratons`, not a raw-draw transform.
     cratons
 }
 
@@ -891,6 +893,12 @@ pub struct CrustField {
     /// — mirrors `lobing_seeds` — so `strongest` never re-derives a
     /// rotation per sample; empty when `rift` is `None`.
     craton_rotations: Vec<([f64; 3], f64)>,
+    /// Per-major-craton indices into `rift.seams` of the seams touching
+    /// that craton (`rift::seam_indices_for`), index-aligned with
+    /// `craton_rotations`. Precomputed once — the same caching shape as
+    /// `lobing_seeds` — so per-sample clipping scans only the craton's own
+    /// seams; empty when `rift` is `None`.
+    craton_seams: Vec<Vec<usize>>,
     /// Cratons with `id < major_count` are clip-eligible; microcontinents
     /// (appended after the majors) and terranes ride unclipped. Ignored
     /// entirely when `rift` is `None`.
@@ -937,12 +945,19 @@ impl CrustField {
                 .collect(),
             None => Vec::new(),
         };
+        let craton_seams = match &rift {
+            Some(r) => (0..major_count.min(cratons.len()))
+                .map(|i| crate::rift::seam_indices_for(r, cratons[i].id))
+                .collect(),
+            None => Vec::new(),
+        };
         CrustField {
             cratons,
             lobing_seeds,
             terranes,
             rift,
             craton_rotations,
+            craton_seams,
             major_count,
         }
     }
@@ -969,10 +984,38 @@ impl CrustField {
                 .map(|c| {
                     let seed = self.lobing_seeds[c.id as usize];
                     let envelope = lobed_envelope(seed, c.center, p, c.radius_rad);
-                    let envelope = if (c.id as usize) < self.major_count {
-                        let rotation = self.craton_rotations[c.id as usize];
-                        let clip =
-                            crate::rift::clip_with_rotation(rift, &self.cratons, c.id, rotation, p);
+                    // Two byte-identity-preserving skips, not fidelity calls
+                    // (the Task 6 perf budget's recovery — ~2.7x over ->
+                    // within budget — with zero output bytes moved):
+                    // (1) `envelope != 0.0`: the clip is a finite value in
+                    //     [0, 1] and `0.0 * clip == 0.0` exactly, so gating
+                    //     it behind a nonzero envelope is bit-equal
+                    //     everywhere. `lobed_envelope` returns a hard 0.0
+                    //     outside 1.5x radius, and at any sample only a
+                    //     craton or two is nonzero, so the (seam-noise-
+                    //     heavy) clip is paid per OVERLAPPING craton, not
+                    //     per craton.
+                    // (2) empty seam list: `clip_over_seams` returns exactly
+                    //     1.0 for a seamless craton, and `envelope * 1.0`
+                    //     is bit-equal to `envelope` (IEEE 754 multiply by
+                    //     1.0 is exact), so the call is skipped outright.
+                    // The seam subset itself is precomputed per major at
+                    // construction (`craton_seams`) — same seams, same
+                    // order, same min-fold as the full-scan filter.
+                    let idx = c.id as usize;
+                    let envelope = if envelope != 0.0
+                        && idx < self.major_count
+                        && !self.craton_seams[idx].is_empty()
+                    {
+                        let rotation = self.craton_rotations[idx];
+                        let clip = crate::rift::clip_over_seams(
+                            rift,
+                            &self.cratons,
+                            c.id,
+                            rotation,
+                            p,
+                            &self.craton_seams[idx],
+                        );
                         envelope * clip
                     } else {
                         envelope
@@ -1376,11 +1419,16 @@ mod tests {
     }
 
     #[test]
-    fn supercontinent_clusters_cratons_without_new_draws() {
+    fn supercontinent_no_longer_transforms_the_drawn_craton_set() {
+        // Epoch v4 (rift-and-fit, spec §4): `--supercontinent` no longer
+        // clusters cratons at the draw stage. Its only draw-stage effect is
+        // the (pre-existing) repulsion skip; the suture is now a
+        // genesis-stage consequence of `assemble_cratons` (see
+        // `pinned_supercontinent_is_sutured` in tests/tectonic_properties.rs).
         let seed = Seed(42).derive(streams::ROOT);
         let ocean_target = default_ocean_target(seed);
         let scattered = draw_cratons(seed, &TerrainPins::default(), ocean_target, &mut Vec::new());
-        let clustered = draw_cratons(
+        let pinned = draw_cratons(
             seed,
             &TerrainPins {
                 supercontinent: Some(true),
@@ -1389,22 +1437,30 @@ mod tests {
             ocean_target,
             &mut Vec::new(),
         );
-        assert_eq!(scattered.len(), clustered.len());
-        let center = scattered[0].center;
-        for (s, c) in scattered.iter().zip(&clustered) {
-            assert_eq!(s.radius_rad, c.radius_rad);
-            assert_eq!(s.age, c.age);
-            if s.id == 0 {
-                assert_eq!(s.center, c.center);
-            } else {
-                // Every clustered center is strictly closer to craton 0.
-                assert!(
-                    crate::plates::dot(c.center, center)
-                        > crate::plates::dot(s.center, center) - 1e-12
-                );
-            }
+        assert_eq!(scattered.len(), pinned.len());
+        // Position-independent draws (radius, age) are byte-identical: the
+        // pin perturbs no draw, and no longer moves any center toward
+        // craton 0.
+        for (s, p) in scattered.iter().zip(&pinned) {
+            assert_eq!(s.id, p.id);
+            assert_eq!(s.radius_rad, p.radius_rad);
+            assert_eq!(s.age, p.age);
         }
-        // Some(false) re-affirms scattered byte-identically.
+        // The pinned path equals its own unrepelled draw exactly — the only
+        // draw-stage difference from the scattered path is the repulsion
+        // skip (repulsion would respread an input the genesis assembly
+        // immediately collapses).
+        let pinned_unrepelled = draw_cratons_unrepelled(
+            seed,
+            &TerrainPins {
+                supercontinent: Some(true),
+                ..TerrainPins::default()
+            },
+            ocean_target,
+            &mut Vec::new(),
+        );
+        assert_eq!(pinned, pinned_unrepelled);
+        // Some(false) re-affirms the scattered (repelled) layout byte-identically.
         let reaffirmed = draw_cratons(
             seed,
             &TerrainPins {
@@ -1649,13 +1705,28 @@ mod tests {
                 with_none.thickness_at(p),
                 "empty-rift field diverged from v3 at {p:?}"
             );
+            // `age_at` shares the same `strongest` winner comparison as
+            // `thickness_at`, so the `None` rift path must leave it
+            // byte-identical too (Task 5 review carry-over): a clip that
+            // silently perturbed the winning craton would move ages even
+            // where it left thicknesses alone.
+            assert_eq!(
+                v3.age_at(p),
+                with_none.age_at(p),
+                "empty-rift age_at diverged from v3 at {p:?}"
+            );
         }
     }
 
     #[test]
     fn clip_flips_continental_at_across_a_synthetic_seam() {
-        // Two hand-placed cratons, contacting at assembly, no displacement
-        // (final centers == assembly centers) — the clip alone determines
+        // Two hand-placed cratons ~0.5 rad apart, radii 0.3 — closer than
+        // their contact separation (`CONTACT_FACTOR * 0.6 = 0.51 rad`), so
+        // `assemble_cratons` nudges craton 1 OUTWARD by ~0.01 rad
+        // (`push_clear_of_overlap`) to first contact: the final centers are
+        // NOT the assembly centers, they differ by that small push, and
+        // craton 1's clip therefore rides a real (if tiny) assembly->final
+        // rotation rather than the identity. The clip still determines
         // whether a point near the shared boundary reads continental.
         let a = Craton {
             id: 0,

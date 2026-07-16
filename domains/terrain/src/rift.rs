@@ -261,17 +261,102 @@ pub(crate) fn clip_with_rotation(
     rotation: ([f64; 3], f64),
     p_final: [f64; 3],
 ) -> f64 {
+    let indices = seam_indices_for(rift, craton_id);
+    clip_over_seams(rift, cratons, craton_id, rotation, p_final, &indices)
+}
+
+/// The indices into `rift.seams` of every seam touching `craton_id`, in
+/// seam order. `clip_with_rotation` derives this per call (fine for tests
+/// and one-off queries); `CrustField` precomputes it once per major craton
+/// at construction — mirroring `lobing_seeds`/`craton_rotations` — so
+/// per-sample clipping neither scans the full seam list nor allocates.
+/// Byte-identical either way: the filter preserves seam order, and the clip
+/// is a min-fold over exactly these seams.
+pub(crate) fn seam_indices_for(rift: &RiftHistory, craton_id: u32) -> Vec<usize> {
+    rift.seams
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| s.a == craton_id || s.b == craton_id)
+        .map(|(i, _)| i)
+        .collect()
+}
+
+/// Safety margin added to the fracture-noise bound in
+/// `SATURATION_SKIP_ENV_DIFF`. `sphere_fbm01` is [0, 1) in exact
+/// arithmetic (verified from source: `noise::lattice` returns an exact
+/// 53-bit fraction in [0, 1 - 2^-53]; `value_noise_2d`'s bilinear lerp and
+/// `fbm_2d`'s exact-amplitude normalization can escape the unit interval
+/// only by float-rounding ulps, conservatively < 1e-14), so this margin —
+/// five orders of magnitude above the worst rounding escape, and utterly
+/// negligible against the ~0.255 threshold it pads — makes the skip bound
+/// safe even against every accumulated rounding in the side expression's
+/// own combination arithmetic.
+const NOISE_ESCAPE_MARGIN: f64 = 1e-9;
+
+/// The plain-envelope difference (toward self) at or above which a seam's
+/// clip contribution is EXACTLY 1.0 regardless of the fracture noise, so
+/// the (expensive, 12-eval) `sphere_fbm01` sample can be skipped
+/// bit-identically: `side_toward_self = env_diff_toward_self +
+/// FRACTURE_AMP * (fbm01 - 0.5)` with `fbm01` in [0, 1) (+/- rounding, see
+/// `NOISE_ESCAPE_MARGIN`), so `side >= env_diff - FRACTURE_AMP * (0.5 +
+/// NOISE_ESCAPE_MARGIN)`; and `smoothstep(0.5 + side / (2 * CLIP_TAPER))`
+/// clamps to exactly 1.0 for every `side >= CLIP_TAPER` (the clamp lands
+/// on exactly 1.0, where `3.0 - 2.0 = 1.0` is exact), while a min-fold
+/// with an exactly-1.0 contribution is the identity. Threshold:
+/// `CLIP_TAPER + FRACTURE_AMP * (0.5 + NOISE_ESCAPE_MARGIN)` ~ 0.255.
+const SATURATION_SKIP_ENV_DIFF: f64 = CLIP_TAPER + FRACTURE_AMP * (0.5 + NOISE_ESCAPE_MARGIN);
+
+/// The clip evaluation proper, over a precomputed seam-index subset (every
+/// seam touching `craton_id`, in seam order — `seam_indices_for`'s output).
+/// Identical arithmetic to the former inline loop in `clip_with_rotation`
+/// — inverse-rotate into the assembly frame, min-fold the centered
+/// smoothstep over the given seams, 1.0 when the subset is empty — with
+/// one byte-identity-preserving fast path: when the noise-free
+/// plain-envelope bound already saturates the smoothstep at exactly 1.0
+/// (`SATURATION_SKIP_ENV_DIFF`), the fracture noise is never sampled and
+/// the seam is skipped (min-fold with 1.0 is the identity). The slow path
+/// mirrors `seam_side`'s arithmetic operation-for-operation (same envelope
+/// calls in the same order, same combination expression), so its `raw` is
+/// bit-equal to `seam_side`'s — `seam_side` itself stays the battery-facing
+/// definition of the margin function, untouched (the saturation is a
+/// property of the CLIP's clamp, not of `seam_side`'s value; the
+/// conjugate-fit battery keeps bisecting true `seam_side`).
+pub(crate) fn clip_over_seams(
+    rift: &RiftHistory,
+    cratons: &[Craton],
+    craton_id: u32,
+    rotation: ([f64; 3], f64),
+    p_final: [f64; 3],
+    seam_indices: &[usize],
+) -> f64 {
     let (pole, angle) = rotation;
     let p_assembly = rotate(pole, -angle, p_final);
     let mut clip = 1.0_f64;
     let mut touched = false;
-    for seam in rift
-        .seams
-        .iter()
-        .filter(|s| s.a == craton_id || s.b == craton_id)
-    {
+    for &si in seam_indices {
+        let seam = &rift.seams[si];
         touched = true;
-        let raw = seam_side(seam, cratons, &rift.assembly, p_assembly);
+        // The two plain-envelope terms of `seam_side`, computed in its
+        // exact order (a then b, assembly centers, same radii).
+        let ia = craton_index(seam.a, cratons);
+        let ib = craton_index(seam.b, cratons);
+        let env_a = plain_envelope(rift.assembly[ia], cratons[ia].radius_rad, p_assembly);
+        let env_b = plain_envelope(rift.assembly[ib], cratons[ib].radius_rad, p_assembly);
+        let env_diff = env_a - env_b;
+        let env_diff_toward_self = if seam.a == craton_id {
+            env_diff
+        } else {
+            -env_diff
+        };
+        if env_diff_toward_self >= SATURATION_SKIP_ENV_DIFF {
+            // Contribution is exactly 1.0 (see SATURATION_SKIP_ENV_DIFF's
+            // proof); min-fold with 1.0 is the identity — skip the noise.
+            continue;
+        }
+        // Slow path: `seam_side`'s own expression, bit-for-bit
+        // (`env_a - env_b + FRACTURE_AMP * (fracture - 0.5)`).
+        let fracture = sphere_fbm01(seam.noise_seed, p_assembly, FRACTURE_FREQ, FRACTURE_OCTAVES);
+        let raw = env_a - env_b + FRACTURE_AMP * (fracture - 0.5);
         let side_toward_self = if seam.a == craton_id { raw } else { -raw };
         clip = clip.min(smoothstep(0.5 + side_toward_self / (2.0 * CLIP_TAPER)));
     }

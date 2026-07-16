@@ -49,90 +49,79 @@ Eclipses of the first moon repeat every 1070 days (64 months); a family of them 
 ## The Land
 
 The globe breaks into 16 plates; the sea claims 73% of its surface.
-The highest land stands 5183 m above the sea.
+The highest land stands 5521 m above the sea.
 Notable: the Great Delta, salt flats.
 
 The air organizes into a single day–night overturning (tidally locked); 9 land biomes and 7 marine biomes cover the globe.
-Some 11% of the surface is habitable — land with water and a tolerable season.
+Some 10% of the surface is habitable — land with water and a tolerable season.
 
-- **Gkaavoonoagoo** — temperate-forest
-- **Ngjeeqqaaqkoaboe** — alpine
+- **Njeomjeoxaanoagoo** — alpine
 - **Xoomjoeboe** — alpine
-- **Njookboanoagoo** — alpine
-- **Foabtaoboenoagoo** — alpine
+- **Ngjaexoakteanoagoo** — temperate-forest
+- **Voaveaboe** — alpine
+- **Veamjeattaonoagoo** — temperate-forest
 - **Kbaefoegqoenoagooboe** — alpine
-- **Xeangjeoxoaboenoagoo** — alpine
-- **Voevaamjoeboenoagoo** — alpine
-- **Xeenjoofeeboe** — alpine
-- **Njaamjeanoagoonoenoa** — temperate-forest
-- **Njoexoanoagoo** — temperate-forest
-- **Kkeaxooboe** — alpine
-- **Foavaaboe** — alpine
-- **Ngjaetkaanjoenoagooboe** — alpine
-- **Qtaetqaoggaaboenoagoo** — alpine
-- **Feaqbaenoenoa** — temperate-forest
-- **Xoevoavoonoagooboe** — alpine
-- **Foongjoeboe** — alpine
-- **Ngjoemjeemjeenoagoo** — alpine
-- **Bgeoqqeoboenoagoo** — alpine
-- **Veenjeanoagooboe** — alpine
-- **Vootteanoagooboe** — alpine
-- **Qtookboenjaanoagoonoenoa** — temperate-forest
-- **Mjaofeavoanoagoo** — alpine
-- **Xeongjaaveoboenoagoo** — alpine
-- **Mjaevoanoagoo** — alpine
+- **Mjoeqteobtaeboenoagoo** — alpine
+- **Vaonjoonoagooboe** — alpine
+- **Njootgoenoagoo** — alpine
+- **Ktoakgeaxeaboe** — alpine
 - **Voangjaenoagooboe** — alpine
-- **Voagtaenjaoboenoagoo** — alpine
-- **Qqeongjeanjaanoagoo** — alpine
-- **Tteofaangjeanoagoo** — savanna
-- **Kgoaxaefeanoagoo** — alpine
-- **Veetgeovaenaabae** — savanna
-- **Voenjaaboenoagoo** — alpine
-- **Ngjeomjaenjoonoagoo** — alpine
-- **Ggaexoegtaaboe** — alpine
+- **Veevoaqqaaboenoagoo** — alpine
+- **Bqeangjeenjooboenoagoo** — alpine
+- **Faafeofaonoagoo** — alpine
+- **Mjoomjoaktoenoagoo** — alpine
+- **Njoevoenoagoo** — alpine
+- **Njeaveebqaenoenoanoagoo** — temperate-forest
+- **Tbaekteeboenoagoo** — alpine
+- **Xaexeekbeoboe** — alpine
+- **Ngjoemjeemjeenoagoo** — alpine
 - **Njaongjeenoagooboe** — alpine
-- **Ktaengjoomjaoboenoagoo** — alpine
-- **Mjoengjoenoagoo** — alpine
-- **Voebtaonoagooboe** — alpine
+- **Njeokqoomjoeboenoagoo** — alpine
+- **Xaengjeetgaaboe** — alpine
+- **Gtoekkoangjaenoagoo** — temperate-forest
+- **Foaqbeangjoanoagoo** — alpine
+- **Veofeabgaanoenoa** — temperate-forest
+- **Njeamjookgaanoagooboe** — alpine
+- **Tteofaangjeanoagoo** — savanna
+- **Fooveanoagooboe** — alpine
+- **Xoenjoanoagooboe** — alpine
+- **Ngjaoxooxooboe** — alpine
+- **Bqaobkoanoagooboe** — alpine
+- **Veetgeovaeboe** — alpine
+- **Faangjeemjoaboenoagoo** — alpine
 - **Veofeenoagoonaabae** — savanna
-- **Ngjaonjeanoagoo** — alpine
-- **Foagqeotkoenoenoa** — temperate-forest
-- **Veakkoanoagoo** — temperate-forest
-- **Mjoevaavoonoagoonoenoa** — temperate-forest
-- **Veoxeanjoenoagoonoenoa** — temperate-forest
-- **Xeekbaekqoenaabaenoagoo** — savanna
-- **Qteonjoegteenoagooboe** — alpine
-- **Faoxaaxeaboenoagoo** — alpine
 - **Kkaovoenoagoo** — alpine
-- **Xaavaenaabae** — savanna
+- **Tteongjeongjoaboe** — alpine
+- **Ngjaogboobqoanoagooboe** — alpine
+- **Xeekbaekqoenaabaenoagoo** — savanna
+- **Njeogqoanoagooboe** — alpine
+- **Xaavaeboe** — alpine
 - **Njeakkoenoagoo** — alpine
-- **Qbeobgoenoagoo** — temperate-forest
+- **Gkoevoenoenoa** — temperate-forest
 - **Njeexaanoagoo** — savanna
+- **Xaobgaoxoenoagoo** — alpine
+- **Ngjaonjeanoagoo** — alpine
 - **Gkoaqgeobtaegeetao** — tropical-seasonal-forest
-- **Btoangjeotkaenoagoo** — tropical-seasonal-forest
-- **Njeexaeboenoagoo** — alpine
-- **Fnebvnobzxadnoaboo** — temperate-forest
-- **Zhfobzxetvngakbeetao** — tropical-seasonal-forest
+- **Mjaonjaexaeboe** — alpine
+- **Vnokngokvnotbeetaonoaboo** — tropical-seasonal-forest
 - **Tboavaanoagoonaabae** — savanna
-- **Fnaksvotnoaboo** — temperate-forest
-- **Sxekngobngebnoaboo** — tropical-seasonal-forest
-- **Ngedsxodnoaboo** — temperate-forest
-- **Nokxnekxngabnoaboo** — temperate-forest
-- **Voavoatteanoagoonaabae** — savanna
+- **Voenjaaboenoagoo** — alpine
+- **Fnebvnobzxadnoaboo** — temperate-forest
+- **Xaemjeenoagooboe** — alpine
 - **Feekkaamjoenaabae** — savanna
+- **Tgeenjaofeonoagooboe** — alpine
+- **Voavoatteanoagoonaabae** — savanna
+- **Fnaksvotnoaboo** — temperate-forest
 - **Fnetsvakfngodbeetao** — tropical-seasonal-forest
-- **Xnetzhfobxnatbeetao** — tropical-seasonal-forest
-- **Bboangjoefeanoagoonaabae** — savanna
-- **Faavaonoagoonoenoa** — temperate-forest
-- **Nekvnobnednoaboobeetao** — tropical-seasonal-forest
-- **Zfokvngodzfadbeetaonoaboo** — tropical-seasonal-forest
-- **Kkaomjaogeetaonoagoo** — tropical-seasonal-forest
+- **Btoangjeotkaenoagoo** — tropical-seasonal-forest
+- **Nokxnekxngabnoaboo** — temperate-forest
 - **Tkeaqqoomjeonoagooboe** — alpine
 - **Mjoangjoekkoaboe** — alpine
-- **Fngoknabnoknaadaenoaboo** — savanna
-- **Nadngotvnekbeetao** — tropical-seasonal-forest
+- **Svadvngatnoenoanoaboo** — temperate-forest
 - **Qboavaanoagooboe** — alpine
-- **Svadvngatbeetaonoaboo** — tropical-seasonal-forest
+- **Ngjaotkeenoagoonaabae** — savanna
+- **Qteonjoegteenoagooboe** — alpine
+- **Njeexaeboenoagoo** — alpine
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -143,25 +132,25 @@ Notable: karst country, salt flats.
 
 ## Deep Time
 
-The frost retreated: at the glacial maximum (day -243500000), ice advanced over 16% of the land.
+The frost retreated: at the glacial maximum (day -243500000), ice advanced over 18% of the land.
 The sun brightens by 8 parts in a hundred over a gigayear — the slow fire under every deeper clock.
 
 ## The People
 
-The land holds 78 settlement(s).
-The chief goblin settlement, Fnebvnobzxadnoaboo, holds 1 souls amid temperate-forest.
-The chief hobgoblin settlement, Gkaavoonoagoo, holds 20 souls amid temperate-forest.
+The land holds 67 settlement(s).
+The chief goblin settlement, Vnokngokvnotbeetaonoaboo, holds 1 souls amid tropical-seasonal-forest.
+The chief hobgoblin settlement, Njeomjeoxaanoagoo, holds 12 souls amid alpine.
 
-The goblin village of **Fnebvnobzxadnoaboo**, population 1.
+The goblin village of **Vnokngokvnotbeetaonoaboo**, population 1.
 
-Fnebvnobzxadnoaboo lives by farming.
+Vnokngokvnotbeetaonoaboo lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
-The hobgoblin legion of **Gkaavoonoagoo**, population 20.
+The hobgoblin legion of **Njeomjeoxaanoagoo**, population 12.
 
-Gkaavoonoagoo lives by farming.
-Its roles, lowest to highest: laborer, augur, warlord.
+Njeomjeoxaanoagoo lives by foraging.
+Its roles, lowest to highest: laborer, warlord.
 The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, matures ~14 yr.
 
 ## The Gods
@@ -188,7 +177,7 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the legion of **Gkaavoonoagoo**, an organized priesthood tends its own pantheon:
+The legion of **Njeomjeoxaanoagoo** keeps its own folk pantheon:
 
 > Toeqea the Ngjeanoagoo is ever: Toeqea the Ngjeanoagoo watches unceasing. So it was, so it is.
 >
