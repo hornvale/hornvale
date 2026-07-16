@@ -2828,21 +2828,34 @@ pub fn flagship_of(world: &World, species: &str) -> Option<hornvale_settlement::
     })
 }
 
+/// Every peopled species holding a flagship settlement, in registry
+/// (alphabetical) order.
+///
+/// The single basis for the almanac's name-the-species-only-when-there-is-
+/// more-than-one convention. Both the People section (`settlement_lines`)
+/// and the Gods section's pantheon attribution read this one predicate, so
+/// the two sections cannot drift into naming a world's peoples in one place
+/// and withholding them in the other.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn placed_peoples(world: &World) -> Vec<(&'static str, hornvale_settlement::VillageInfo)> {
+    hornvale_species::registry()
+        .keys()
+        .filter_map(|name| flagship_of(world, name.0).map(|v| (name.0, v)))
+        .collect()
+}
+
 /// Headline lines describing the world's people for the almanac: how many
 /// settlements, then one chief-settlement line per species that placed
-/// (registry order, goblin first). A world with exactly one such species
-/// keeps the legacy unprefixed wording — byte-stable for goblin-only worlds;
-/// two-or-more-species worlds prefix each chief line with its species.
+/// (registry order — alphabetical; bugbear sorts first). A world with
+/// exactly one such species keeps the legacy unprefixed wording — byte-
+/// stable for goblin-only worlds; two-or-more-species worlds prefix each
+/// chief line with its species.
 /// type-audit: bare-ok(prose: return)
 pub fn settlement_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let places = hornvale_terrain::places(world);
     let mut lines = vec![format!("The land holds {} settlement(s).", places.len())];
 
-    let registry = hornvale_species::registry();
-    let flagships: Vec<(&str, hornvale_settlement::VillageInfo)> = registry
-        .keys()
-        .filter_map(|name| flagship_of(world, name.0).map(|v| (name.0, v)))
-        .collect();
+    let flagships = placed_peoples(world);
     let multi_species = flagships.len() > 1;
 
     for (species, v) in &flagships {
@@ -3614,6 +3627,22 @@ mod tests {
             lines
                 .iter()
                 .any(|l| l.contains("settlement") || l.contains("village"))
+        );
+    }
+
+    /// The Named: the People and Gods sections must answer to ONE predicate,
+    /// so they can never disagree about whether to name a world's peoples.
+    #[test]
+    fn placed_peoples_lists_flagship_holders_in_registry_order() {
+        let world = constant(42);
+        let placed = placed_peoples(&world);
+        assert!(!placed.is_empty(), "seed 42 places at least one people");
+        let names: Vec<&str> = placed.iter().map(|(s, _)| *s).collect();
+        let mut sorted = names.clone();
+        sorted.sort_unstable();
+        assert_eq!(
+            names, sorted,
+            "registry order is alphabetical (BTreeMap keys)"
         );
     }
 
